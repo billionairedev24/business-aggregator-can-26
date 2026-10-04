@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { overview } from '../../test/fixtures';
-import { renderConsole, staffApi } from '../../test/render';
+import { renderConsole, staffApi, screenReady } from '../../test/render';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const sidebar = (name = 'Main navigation') => screen.getByRole('navigation', { name });
@@ -45,7 +45,7 @@ describe('console shell (S-90, design 03)', () => {
     renderConsole('/finance');
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toBe("Not available in this role. Your role (Support) can't open that screen. Ask an admin for access or switch role view if you hold more than one.");
-    expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe('$212k GMV this week, 1,204 sellers, 7 verifications and 3 disputes waiting.');
+    expect((await screenReady()).textContent).toBe('$212k GMV this week, 1,204 sellers, 7 verifications and 3 disputes waiting.');
     expect(screen.queryByRole('heading', { name: 'Finance' })).toBeNull();
   });
 

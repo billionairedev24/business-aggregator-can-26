@@ -10,6 +10,16 @@ export function stuck(c: Courier, runs: readonly Run[], now: number): boolean {
   return !!c.runId && !!c.position && now - Date.parse(c.position.at) > 10 * 60_000;
 }
 
+/** A diamond of the dot's area around (x, y): the second cue of a stuck courier, with its ring (delivery.css). */
+const diamond = (x: number, y: number, r = 8) => `M${x} ${y - r}L${x + r} ${y}L${x} ${y + r}L${x - r} ${y}Z`;
+
+/** The legend's own marker, drawn like the map's. */
+const Marker = ({ stuck: late = false }: { stuck?: boolean }) => (
+  <svg className="nl-dl-key" width="14" height="14" viewBox="0 0 20 20" aria-hidden="true">
+    {late ? <path d={diamond(10, 10)} className="nl-dl-dot" data-stuck="true" /> : <circle cx={10} cy={10} r={6} className="nl-dl-dot" data-stuck="false" />}
+  </svg>
+);
+
 /**
  * The delivery ops map (S-81, design 03 lines 281–284): the market's delivery zones (region model polygons) and the
  * couriers' latest positions (S-88), on the basemap tiles when one is configured (`CONSOLE_MAP_TILES`), else on the
@@ -41,11 +51,15 @@ export function OpsMap({ map, couriers, runs, now = Date.now() }: { map: Deliver
         }) : null}
         {bounds ? placed.map(c => {
           const p = toView(bounds, c.position!);
-          return <circle key={c.id} cx={p.x} cy={p.y} r={6} className="nl-dl-dot" data-stuck={stuck(c, runs, now) ? 'true' : 'false'}><title>{c.name ?? c.id}</title></circle>;
+          const late = stuck(c, runs, now);
+          // S-146 (WCAG 1.4.1): a stuck courier is a ringed diamond, not only a rosehip dot
+          return late
+            ? <path key={c.id} d={diamond(p.x, p.y)} className="nl-dl-dot" data-courier="" data-stuck="true"><title>{`${c.name ?? c.id} · ${t('legendStuck')}`}</title></path>
+            : <circle key={c.id} cx={p.x} cy={p.y} r={6} className="nl-dl-dot" data-courier="" data-stuck="false"><title>{c.name ?? c.id}</title></circle>;
         }) : null}
       </svg>
       <figcaption className="nl-dl-legend">
-        <span>● {t('legendMoving')}</span> · <span><span className="nl-dl-stuck">●</span> {t('legendStuck')}</span>
+        <span><Marker /> {t('legendMoving')}</span> · <span><Marker stuck /> {t('legendStuck')}</span>
         {map.basemap?.attribution ? <span className="nl-dl-attr">{map.basemap.attribution}</span> : null}
       </figcaption>
     </figure>

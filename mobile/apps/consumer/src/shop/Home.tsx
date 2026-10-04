@@ -191,7 +191,7 @@ export function Home() {
             <Pressable
               key={p.merchantId}
               accessibilityRole="button"
-              accessibilityLabel={[p.name, f.tier(p.tier), p.category?.name, t('shop.rating', { rating: p.rating.toFixed(1) })].filter(Boolean).join(', ')}
+              accessibilityLabel={[p.name, f.tier(p.tier), p.category?.name, t('shop.ratingSpoken', { rating: p.rating.toFixed(1) })].filter(Boolean).join(', ')}
               disabled={!p.slug}
               onPress={() => p.slug && router.push(`/providers/${p.slug}` as Href)}
               style={shopStyles.row}

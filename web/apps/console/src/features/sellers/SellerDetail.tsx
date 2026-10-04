@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from '@tanstack/react-router';
-import { Button, ErrorState, formatNumber, OptionCard, PageSkeleton, Tag, useFormatters, useLocale, type Locale, type TagTone } from '@northline/ui';
+import { Button, ErrorState, formatNumber, OptionCard, PageSkeleton, RadioGroup, Tag, useFormatters, useLocale, type Locale, type TagTone } from '@northline/ui';
 import { ApiError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { sellerQuery, type Check, type Detail, type OversightAction, type Trail } from './api';
@@ -108,9 +108,9 @@ function DetailView({ data }: { data: Detail }) {
       <div className="nl-sl-cols">
         <div>
           <h2 className="nl-sl-h2">{t('oversightTitle')}</h2>
-          <div className="nl-sl-options" role="radiogroup" aria-label={t('oversightTitle')}>
+          <RadioGroup className="nl-sl-options" aria-label={t('oversightTitle')}>
             {actions.map(a => <OptionCard key={a.id} role="radio" aria-checked={pick === a.id} selected={pick === a.id} title={t(a.name)} description={t(a.desc)} onClick={() => { setPick(a.id); setApplied(false); }} />)}
-          </div>
+          </RadioGroup>
           <div className="nl-sl-apply">
             <Button disabled={!chosen.allowed || applied} onClick={() => setDialog(chosen.id)}>{applied ? t('applied') : t('apply', { action: t(chosen.name) })}</Button>
             <span className="nl-sl-note">{!chosen.allowed ? t('cannot') : applied ? t('noteApplied') : t('noteNow')}</span>

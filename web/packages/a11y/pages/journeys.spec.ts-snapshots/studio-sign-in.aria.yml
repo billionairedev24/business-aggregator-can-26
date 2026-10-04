@@ -1,0 +1,39 @@
+- main:
+  - text: Northline Studio · for providers, sellers & kitchens
+  - heading "Run your business from one place." [level=1]
+  - paragraph: "Appointments, listings, menus, escrow payouts and your reputation — all behind a login built for businesses: a strong second factor, per-member roles, and every sensitive action logged."
+  - list:
+    - listitem:
+      - strong: Roles for your team
+      - text: Owners, technicians, cooks and bookkeepers each see only what they need.
+    - listitem:
+      - strong: Step-up for money
+      - text: /Payout and bank changes re-prompt your passkey and hold \d+ hours\./
+    - listitem:
+      - strong: One login, both sides
+      - text: Your customer account works here too — just add a second factor.
+  - text: /Bilingual support 7 am – \d+ pm MT · Master tier gets a named account manager\./
+  - region "Sign in":
+    - tablist "Sign in or create an account":
+      - tab "Sign in" [selected]
+      - tab "Create account"
+    - heading "Sign in" [level=2]
+    - progressbar "Progress"
+    - paragraph: Business accounts require a passkey or authenticator app — you handle customer addresses and payouts.
+    - text: Email or mobile
+    - textbox "Email or mobile":
+      - /placeholder: you@example.ca
+    - button "Continue" [disabled]
+    - text: or continue with
+    - button "Passkey"
+    - link "Google":
+      - /url: http://localhost:9000/oauth2/authorization/google
+    - link "Apple":
+      - /url: http://localhost:9000/oauth2/authorization/apple
+    - text: New to Northline?
+    - button "Create an account"
+    - text: first — onboarding follows.
+    - paragraph:
+      - text: Trouble signing in?
+      - button "Recover with a backup code"
+      - text: /· sessions expire after \d+ h idle · every sign-in is logged\./

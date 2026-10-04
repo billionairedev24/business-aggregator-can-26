@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Alert, Button, Field, OptionCard, StepBars, TextInput, codeValue } from '@northline/ui';
+import { Alert, Button, Field, OptionCard, RadioGroup, StepBars, TextInput, codeValue } from '@northline/ui';
 import {
   authApi, backupCodeSchema, codeSchema, fieldErrors, firstIssue, flowError, getPasskey, isRestart, PasskeyError, passkeysSupported,
   RateLimitNotice, useAuthKitT, useRateLimit, type AuthKitKey, type AuthSession,
@@ -132,12 +132,12 @@ export function SignInPage({ next, error, navigate = url => window.location.assi
           {step === 'factor' && (
             <form noValidate onSubmit={verify}>
               <p className="nl-auth-p">{t('factorFor', { identifier: identifier.trim() })}</p>
-              <div className="nl-auth-options" role="radiogroup" aria-label={t('factorFor', { identifier: identifier.trim() })}>
+              <RadioGroup className="nl-auth-options" aria-label={t('factorFor', { identifier: identifier.trim() })}>
                 {FACTORS.map(f => (
                   <OptionCard key={f.key} role="radio" aria-checked={factor === f.key} selected={factor === f.key} title={t(f.name)} description={t(f.desc)}
                     onClick={() => { setFactor(f.key); setCode(''); setCodeError(''); setTried(false); setFailure(''); }} />
                 ))}
-              </div>
+              </RadioGroup>
               {factor !== 'passkey' && (
                 <Field label={factor === 'totp' ? t('code6') : t('backupLabel')} error={shownCodeError || undefined}>
                   <TextInput className={factor === 'totp' ? 'nl-auth-code' : undefined} name="code" autoComplete="one-time-code"

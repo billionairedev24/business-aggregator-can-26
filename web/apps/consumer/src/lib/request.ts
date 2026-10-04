@@ -36,12 +36,25 @@ export const forwardedFor = createIsomorphicFn()
   })
   .client((): string | undefined => undefined);
 
+/**
+ * This page's Content-Security-Policy nonce (S104-09). On the server: the one node-server.mjs chose for this request
+ * (`x-nl-csp-nonce`, never a client's — the server replaces it); the router puts it on every inline script it and React
+ * render. In the browser: read back from a server-rendered script (`.nonce`; browsers hide the attribute), so scripts
+ * the router inserts after hydration carry it too. Undefined in the dev server and tests (no CSP there).
+ */
+export const cspNonce = createIsomorphicFn()
+  .server((): string | undefined => {
+    try { return getRequestHeader('x-nl-csp-nonce') || undefined; } catch { return undefined; }
+  })
+  .client((): string | undefined => document.querySelector<HTMLScriptElement>('script[nonce]')?.nonce || undefined);
+
 export const publicConfig = createIsomorphicFn()
   .server((): PublicConfig => ({
     authOrigin: process.env.NL_AUTH_ORIGIN ?? FALLBACK_CONFIG.authOrigin,
     siteOrigin: (process.env.NL_SITE_ORIGIN ?? FALLBACK_CONFIG.siteOrigin).replace(/\/$/, ''),
     legalEntity: process.env.NL_LEGAL_ENTITY?.trim() || FALLBACK_CONFIG.legalEntity,
     studioOrigin: (process.env.NL_STUDIO_ORIGIN ?? FALLBACK_CONFIG.studioOrigin).replace(/\/$/, ''),
+    supportEmail: process.env.NL_SUPPORT_EMAIL?.trim() || null,
     page: pageFromHeaders(),
   }))
   .client((): PublicConfig => ({ ...FALLBACK_CONFIG, ...window.__NL_CONFIG__ }));

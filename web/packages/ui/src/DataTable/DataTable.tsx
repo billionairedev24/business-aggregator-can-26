@@ -43,7 +43,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type MouseEve
 import { useLocale } from '../i18n';
 import { downloadBlob, openPrintWindow, readThemeVars } from './download';
 import { buildFieldSpecs, initialValues, RecordForm } from './internal/RecordForm';
-import { Chip, ChipRadioGroup, DataTableCheckbox, DataTableDialog, useContainerWidth, useToast } from './internal/primitives';
+import { Chip, ChipRadioGroup, DataTableCheckbox, DataTableDialog, useContainerWidth, useOverflowSqueeze, useToast } from './internal/primitives';
 import { useDataTableMessages, type DataTableT } from './messages';
 import {
   actionAllowed,
@@ -137,6 +137,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [toast, flash] = useToast();
   const [boxRef, width] = useContainerWidth<HTMLDivElement>();
+  const [tableRef, squeeze] = useOverflowSqueeze<HTMLTableElement>(width);
   const uid = useId();
   const filtersBtn = useRef<HTMLButtonElement>(null);
   const colsBtn = useRef<HTMLButtonElement>(null);
@@ -307,7 +308,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   };
 
   // ── responsive layout ─────────────────────────────────────────────────────
-  const layout = computeLayout({ width, columns: visible, iconActions: 1 + (canUpdate ? 1 : 0) + (canDelete ? 1 : 0), hasInlineAction: custom.some((a) => a.inline) });
+  const layout = computeLayout({ width, columns: visible, iconActions: 1 + (canUpdate ? 1 : 0) + (canDelete ? 1 : 0), hasInlineAction: custom.some((a) => a.inline), squeeze });
   const cardMode = layout.cardMode;
   const shown = layout.shown;
   const firstTag = cols.find((c) => c.type === 'tag' && !c.primary && !hiddenMap[c.key]);
@@ -577,7 +578,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
         )}
 
         {showBody && filtered.length > 0 && !cardMode && (
-          <table className="table nl-dt-table" aria-label={tableLabel} aria-rowcount={filtered.length + 1}>
+          <table ref={tableRef} className="table nl-dt-table" aria-label={tableLabel} aria-rowcount={filtered.length + 1}>
             <thead>
               <tr aria-rowindex={1}>
                 <th scope="col" className="nl-dt-check-cell">

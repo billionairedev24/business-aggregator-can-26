@@ -18,8 +18,8 @@
 .nl-dl-zone polygon { fill: var(--color-accent); fill-opacity: 0.18; stroke: var(--color-accent); stroke-width: 2; }
 .nl-dl-zone text { font-family: var(--font-heading); font-size: 13px; fill: var(--color-accent-900); }
 .nl-dl-dot { fill: var(--color-text); }
-.nl-dl-dot[data-stuck='true'] { fill: var(--color-accent-2); }
+.nl-dl-dot[data-stuck='true'] { fill: var(--color-accent-2); stroke: var(--color-text); stroke-width: 2; }
+.nl-dl-key { flex: none; vertical-align: -2px; overflow: visible; }
 .nl-dl-legend { position: absolute; left: 14px; bottom: 14px; right: 14px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; width: fit-content; max-width: calc(100% - 28px);
   font-size: 12px; background: var(--color-bg); padding: 6px 10px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
-.nl-dl-stuck { color: var(--color-accent-2); }
 .nl-dl-attr { color: var(--color-neutral-700); }

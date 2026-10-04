@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent, type InputHTMLAttributes } from 'react';
 import { useForm, useStore } from '@tanstack/react-form';
-import { Alert, Button, Checkbox, Field, OptionCard, StepBars, TextInput, useLocale, codeValue } from '@northline/ui';
+import { Alert, Button, Checkbox, Field, OptionCard, RadioGroup, StepBars, TextInput, useLocale, codeValue } from '@northline/ui';
 import { visibleError } from '../../lib/forms';
 import { authApi, codeSchema, firstIssue, registerSchema, useAuthMutation, type AuthSession, type RegisterValues, type RegistrationStep, type TotpSetup, fieldErrors, flowError, isRestart, retryAfter, RateLimitNotice, useRateLimit, mmss, useCountdown, createPasskey, PasskeyError, passkeysSupported } from '@northline/auth-kit';
 import { useAuthT } from './messages';
@@ -255,10 +255,10 @@ function SecondFactorStep({ onCreated, onBack, onRestart }: { onCreated: (s: Aut
     <div>
       <div className="nl-field">
         <span className="nl-label" id="nl-mfa-label">{t('mfaLabel')}</span>
-        <div className="nl-auth-options" role="radiogroup" aria-labelledby="nl-mfa-label">
+        <RadioGroup className="nl-auth-options" aria-labelledby="nl-mfa-label">
           <OptionCard role="radio" aria-checked={method === 'passkey'} selected={method === 'passkey'} title={t('mfaPasskey')} description={t('mfaPasskeyDesc')} onClick={() => { setMethod('passkey'); setFailure(''); }} />
           <OptionCard role="radio" aria-checked={method === 'totp'} selected={method === 'totp'} title={t('mfaTotp')} description={t('mfaTotpDesc')} onClick={() => { setMethod('totp'); setFailure(''); }} />
-        </div>
+        </RadioGroup>
       </div>
       <div className="nl-auth-note">{t('smsBackup')}</div>
       {method === 'totp' && setup ? (

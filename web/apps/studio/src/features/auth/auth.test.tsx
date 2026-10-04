@@ -212,6 +212,44 @@ describe('Create account — code delivery (S-8)', () => {
   });
 });
 
+describe('Second-factor pickers: one Tab stop, arrow keys (S-140)', () => {
+  const tabStops = () => screen.getAllByRole('radio').filter(r => r.getAttribute('tabindex') === '0');
+
+  it('sign-in: the checked factor is the Tab stop; ↓ and End move and select', async () => {
+    const { ui } = renderPage({ mode: 'signin' });
+    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    const passkey = await screen.findByRole('radio', { name: /Passkey/ });
+    expect(tabStops()).toEqual([passkey]);
+    passkey.focus();
+    await ui.keyboard('{ArrowDown}');
+    const app = screen.getByRole('radio', { name: /Authenticator app/ });
+    expect(document.activeElement).toBe(app);
+    expect(app.getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByLabelText('6-digit code')).toBeTruthy();
+    expect(tabStops()).toEqual([app]);
+    await ui.keyboard('{End}');
+    expect(screen.getByRole('radio', { name: /Backup code/ }).getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('registration: ← and → switch between passkey and authenticator app', async () => {
+    const { ui } = renderPage();
+    await fillRegistration(ui);
+    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
+    await ui.type(await screen.findByLabelText(/Enter the 6-digit code/), '123456');
+    await ui.click(screen.getByRole('button', { name: 'Verify' }));
+    const passkey = await screen.findByRole('radio', { name: /Passkey/ });
+    expect(tabStops()).toEqual([passkey]);
+    passkey.focus();
+    await ui.keyboard('{ArrowRight}');
+    expect(screen.getByRole('radio', { name: /Authenticator app/ }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Scan QR code' })).toBeTruthy();
+    await ui.keyboard('{ArrowLeft}');
+    expect(passkey.getAttribute('aria-checked')).toBe('true');
+    expect(document.activeElement).toBe(passkey);
+  });
+});
+
 describe('Sign in', () => {
   it('email → authenticator code → signed in → hand-off to next', async () => {
     const { ui, navigate } = renderPage({ mode: 'signin', next: '/b/01J9ZD3V00000000000000PWM1/orders' });

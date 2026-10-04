@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { ChipTabs, Field, FileButton, TextInput } from '@northline/ui';
+import { ChipTabs, Field, FileButton, RadioGroup, TextInput } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import type { MerchantType } from '../shell/api';
 import { useArrangeSections, useUpdateStorefront, useUploadLogo, type SectionState, type Storefront } from './api';
@@ -58,7 +58,7 @@ export function PageBuilder({ storefront: s, canEdit, variant, children }: PageB
         <div className="nl-grid" style={{ ['--nl-min' as string]: '200px' }}>
           <div className="nl-field">
             <span className="nl-label" id={`${ids.sections}-brand`}>{t('brandColour')}</span>
-            <div className="nl-swatches" role="radiogroup" aria-labelledby={`${ids.sections}-brand`}>
+            <RadioGroup className="nl-swatches" aria-labelledby={`${ids.sections}-brand`}>
               {SWATCHES.map(w => (
                 <button
                   key={w.key}
@@ -73,7 +73,7 @@ export function PageBuilder({ storefront: s, canEdit, variant, children }: PageB
                   onClick={() => update.mutate({ brandColor: w.hex })}
                 />
               ))}
-            </div>
+            </RadioGroup>
             <div className="nl-hint">{t(ratio >= MIN_CONTRAST ? 'contrast' : 'contrastFail', { ratio: ratio.toFixed(1) })}</div>
             {serverError(update.error, 'brandColor') ? <div role="alert" className="nl-error">{serverError(update.error, 'brandColor')}</div> : null}
           </div>
@@ -145,11 +145,11 @@ function SectionDetail({ section, variant, ctaLabel, canEdit, onCta }: { section
       <div className="nl-section-detail-line"><strong>{variant === 'onboarding' ? t('whenOff') : t('offShort')}</strong> {sectionText(t, k, 'off')}</div>
       {variant === 'onboarding' && <div className="nl-section-detail-line"><strong>{t('source')}</strong> {sectionText(t, k, 'source')}</div>}
       {k === 'cta' && (
-        <div className="nl-chips" role="radiogroup" aria-label={t('ctaLabelOptions')} style={{ marginTop: 10 }}>
+        <RadioGroup className="nl-chips" aria-label={t('ctaLabelOptions')} style={{ marginTop: 10 }}>
           {CTA_LABELS.map(l => (
             <button key={l} type="button" role="radio" aria-checked={ctaLabel === l} className="nl-chip" disabled={!canEdit} onClick={() => onCta(l)}>{t(`cta_${l}`)}</button>
           ))}
-        </div>
+        </RadioGroup>
       )}
     </div>
   );

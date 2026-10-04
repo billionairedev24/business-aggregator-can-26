@@ -11,6 +11,7 @@ export const services: { [k in keyof typeof en]: string } = {
   'services.minutes': '{n} min',
   'services.hours': '{h} h{m, plural, =0 {} other { #}}',
   'services.rating': '★ {rating} ({n})',
+  'services.ratingSpoken': 'noté {rating}, {n} avis',
   'services.onTime': '{pct} % à l’heure',
   'services.stars': '{n, plural, one {# étoile} other {# étoiles}}',
   'services.newProvider': 'Nouveau sur Northline',

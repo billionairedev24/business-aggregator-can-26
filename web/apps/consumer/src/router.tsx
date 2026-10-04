@@ -1,3 +1,4 @@
+import './lib/zodJitless'; // first: before any zod schema is built (CSP without 'unsafe-eval', S104-09)
 import { createRouter } from '@tanstack/react-router';
 import { QueryClient } from '@tanstack/react-query';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
@@ -6,7 +7,7 @@ import { routeTree } from './routeTree.gen';
 import { RouteError } from './features/shell/RouteError';
 import { NotFound } from './features/shell/NotFound';
 import { pageRewrite } from './lib/pages';
-import { publicConfig } from './lib/request';
+import { cspNonce, publicConfig } from './lib/request';
 
 export interface RouterContext { queryClient: QueryClient }
 
@@ -33,6 +34,8 @@ export function getRouter() {
     scrollRestoration: true,
     defaultErrorComponent: RouteError,
     defaultNotFoundComponent: NotFound,
+    // S104-09: the CSP has no 'unsafe-inline' for scripts; every inline script carries this page's nonce
+    ssr: { nonce: cspNonce() },
   });
   setupRouterSsrQueryIntegration({ router, queryClient });
   return router;

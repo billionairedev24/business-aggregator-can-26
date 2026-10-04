@@ -1,6 +1,7 @@
-import { useEffect, useRef, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ButtonHTMLAttributes, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Check, Minus } from '@phosphor-icons/react';
+import { defineMessages } from './i18n';
 
 export interface CheckboxProps { checked: boolean; onChange: (checked: boolean) => void; label?: ReactNode; indeterminate?: boolean; disabled?: boolean; className?: string; 'aria-label'?: string; name?: string }
 export function Checkbox({ checked, onChange, label, indeterminate, disabled, className, name, ...aria }: CheckboxProps) {
@@ -83,7 +84,76 @@ export function UnderlineTabs<V extends string>({ options, value, onChange, ...a
   return <div className="nl-utabs" role="tablist" aria-label={aria['aria-label']} onKeyDown={tablistKeyDown(options.map(o => o.value), value, onChange)}>{options.map((o, i) => <button key={o.value} type="button" role="tab" aria-selected={o.value === value} tabIndex={rovingIndex(options, value, i)} className="nl-utab" onClick={() => onChange(o.value)}>{o.label}</button>)}</div>;
 }
 
-/** Thin progress bars (auth: 3 steps). */
-export const StepBars = ({ total, done, label }: { total: number; done: number; label?: string }) => (
-  <div className="nl-steps" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done + 1} aria-label={label}>{Array.from({ length: total }, (_, i) => <span key={i} data-done={i <= done} />)}</div>
-);
+const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
+/** The group's own radios (not those of a group nested inside it). */
+const radiosOf = (group: HTMLElement) =>
+  [...group.querySelectorAll<HTMLElement>('[role="radio"]')].filter(r => r.closest('[role="radiogroup"]') === group);
+const usable = (r: HTMLElement) => !(r as HTMLButtonElement).disabled && r.getAttribute('aria-disabled') !== 'true';
+
+export interface RadioGroupProps extends HTMLAttributes<HTMLDivElement> {
+  /**
+   * The ARIA radio pattern selects as the arrows move (default). `false` for a group whose radios start an action
+   * (a confirmation dialog, a save): the arrows then only move focus and Space selects.
+   */
+  selectOnMove?: boolean;
+}
+
+/**
+ * `role="radiogroup"` for radios that are not native inputs — OptionCards, chips, swatches (`role="radio"` +
+ * `aria-checked`). S-140 (WCAG 2.1.1): one Tab stop per group (the checked radio, else the first usable one),
+ * ←/→/↑/↓ move and select (wrapping), Home/End jump to the ends. The children keep their own onClick; moving clicks
+ * the radio, so a screen needs nothing but this wrapper. Native radio inputs (Segmented) do all this themselves.
+ */
+export function RadioGroup({ selectOnMove = true, onKeyDown, children, ...p }: RadioGroupProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const sync = () => {
+    const group = ref.current;
+    if (!group) return;
+    const radios = radiosOf(group);
+    const stop = radios.find(r => r.getAttribute('aria-checked') === 'true' && usable(r)) ?? radios.find(usable);
+    for (const r of radios) { const want = r === stop ? '0' : '-1'; if (r.getAttribute('tabindex') !== want) r.setAttribute('tabindex', want); }
+  };
+  useIsoLayoutEffect(sync);
+  useEffect(() => {
+    const group = ref.current;
+    if (!group || typeof MutationObserver === 'undefined') return;
+    // a radio's own re-render (aria-checked, disabled) does not re-render the group
+    const observer = new MutationObserver(sync);
+    observer.observe(group, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-checked', 'disabled', 'aria-disabled'] });
+    return () => observer.disconnect();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const keyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown?.(e);
+    const group = ref.current;
+    const from = (e.target as HTMLElement).closest<HTMLElement>('[role="radio"]');
+    if (e.defaultPrevented || !group || !from || e.altKey || e.ctrlKey || e.metaKey) return;
+    const radios = radiosOf(group).filter(r => r === from || usable(r));
+    const i = radios.indexOf(from);
+    if (i < 0) return;
+    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+    const next = step ? radios[(i + step + radios.length) % radios.length] : e.key === 'Home' ? radios[0] : e.key === 'End' ? radios[radios.length - 1] : undefined;
+    if (!next) return;
+    e.preventDefault();
+    if (next === from) return;
+    for (const r of radios) r.setAttribute('tabindex', r === next ? '0' : '-1');
+    next.focus();
+    if (selectOnMove && next.getAttribute('aria-checked') !== 'true') next.click();
+  };
+  return <div ref={ref} role="radiogroup" {...p} onKeyDown={keyDown}>{children}</div>;
+}
+
+const useStepT = defineMessages({ en: { step: 'Step {n} of {total}' }, fr: { step: 'Étape {n} sur {total}' } });
+
+/**
+ * Thin progress bars (auth: 3 steps). S-144 (WCAG 1.4.11): the steps still to do are neutral-600 (≥ 3:1 on the page and
+ * on panels; they were neutral-300 at 1.4:1), and the bar reads "Step 2 of 3" to screen readers.
+ */
+export const StepBars = ({ total, done, label }: { total: number; done: number; label?: string }) => {
+  const t = useStepT();
+  return (
+    <div className="nl-steps" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done + 1} aria-valuetext={t('step', { n: done + 1, total })} aria-label={label}>
+      {Array.from({ length: total }, (_, i) => <span key={i} data-done={i <= done} />)}
+    </div>
+  );
+};

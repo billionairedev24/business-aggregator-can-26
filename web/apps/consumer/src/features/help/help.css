@@ -1,0 +1,9 @@
+/* Help (S-145): one readable column; links get 44 px targets (docs/SCREENS.md). */
+.nl-help { padding-top: 32px; max-width: 70ch; }
+.nl-help h1 { font-size: 36px; margin: 0; letter-spacing: -0.02em; }
+.nl-help-lede { font-size: 14px; color: var(--color-neutral-700); margin: 6px 0 22px; }
+.nl-help section { margin-top: 22px; }
+.nl-help h2 { font-size: 22px; margin: 0 0 6px; }
+.nl-help p { font-size: 15px; margin: 0 0 8px; line-height: 1.5; }
+.nl-help-links { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+.nl-help-links a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; overflow-wrap: anywhere; }

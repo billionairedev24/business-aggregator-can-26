@@ -9,7 +9,7 @@ export const useShellT = defineMessages({
     signIn: 'Sign in', createAccount: 'Create account',
     guestNote: "You're browsing as a guest. Sign in to pay, book, track orders and earn points — your cart is kept.",
     skip: 'Skip to content',
-    privacy: 'Privacy', terms: 'Terms', langSwitch: 'Français',
+    privacy: 'Privacy', terms: 'Terms', helpLink: 'Help', langSwitch: 'Français',
     sell: 'Sell on Northline', offer: 'Offer a service', kitchen: 'Run a kitchen',
     // account menu
     activity: 'Activity', account: 'Account', preferences: 'Preferences',
@@ -33,7 +33,7 @@ export const useShellT = defineMessages({
     signIn: 'Se connecter', createAccount: 'Créer un compte',
     guestNote: "Vous naviguez en tant qu'invité. Connectez-vous pour payer, réserver, suivre vos commandes et gagner des points — votre panier est conservé.",
     skip: 'Aller au contenu',
-    privacy: 'Confidentialité', terms: 'Conditions', langSwitch: 'English',
+    privacy: 'Confidentialité', terms: 'Conditions', helpLink: 'Aide', langSwitch: 'English',
     sell: 'Vendre sur Northline', offer: 'Offrir un service', kitchen: 'Gérer une cuisine',
     activity: 'Activité', account: 'Compte', preferences: 'Préférences',
     orders: 'Commandes et réservations', favourites: 'Favoris', wallet: 'Portefeuille et points', profile: 'Profil',
@@ -58,14 +58,14 @@ export const SCREEN_NAMES: { en: Record<ScreenKey, string>; fr: Record<ScreenKey
     product: 'Product', cart: 'Cart', confirmed: 'Order confirmed', food: 'Food', restaurant: 'Restaurant',
     foodCheckout: 'Checkout', foodTrack: 'Track order', services: 'Services', svcCategory: 'Service category',
     providers: 'Providers', provider: 'Provider', book: 'Book a service', quote: 'Quote', quoteRequest: 'Request quotes', quoteCompare: 'Compare quotes', orders: 'Orders & bookings',
-    account: 'Account', problem: 'Report a problem', signIn: 'Sign in', register: 'Create account', sell: 'Sell or offer a service',
+    account: 'Account', problem: 'Report a problem', signIn: 'Sign in', register: 'Create account', sell: 'Sell or offer a service', help: 'Help',
   },
   fr: {
     home: 'Accueil', location: 'Où devons-nous livrer ?', search: 'Rechercher', shop: 'Boutique', category: 'Rayon',
     product: 'Produit', cart: 'Panier', confirmed: 'Commande confirmée', food: 'Restaurants', restaurant: 'Restaurant',
     foodCheckout: 'Paiement', foodTrack: 'Suivre la commande', services: 'Services', svcCategory: 'Catégorie de service',
     providers: 'Prestataires', provider: 'Prestataire', book: 'Réserver un service', quote: 'Devis', quoteRequest: 'Demander des devis', quoteCompare: 'Comparer les devis', orders: 'Commandes et réservations',
-    account: 'Compte', problem: 'Signaler un problème', signIn: 'Se connecter', register: 'Créer un compte', sell: 'Vendre ou offrir un service',
+    account: 'Compte', problem: 'Signaler un problème', signIn: 'Se connecter', register: 'Créer un compte', sell: 'Vendre ou offrir un service', help: 'Aide',
   },
 };
 export const useScreenT = defineMessages(SCREEN_NAMES);

@@ -1,0 +1,47 @@
+- main:
+  - complementary "Filters":
+    - heading "Show" [level=2]
+    - button "Everything" [pressed]
+    - button "Services · 1"
+    - button "Shop · 2"
+    - button "Food · 1"
+    - heading "Filter" [level=2]
+    - button "On tonight’s run"
+    - button /Under \$\d+/
+    - button "Master sellers"
+    - button "Halal"
+    - button "Gluten-free"
+    - heading "Distance" [level=2]
+    - button "Any distance" [pressed]
+    - button "Under 3 km"
+    - button /Under \d+ km/
+    - button /Under \d+ km/
+    - heading "Categories" [level=2]
+    - button "Bakery · 2"
+    - heading "Businesses" [level=2]
+    - text: Glenmore Bakery · 3 Sidewalk Citizen · 1
+  - navigation "Breadcrumb":
+    - link "Home":
+      - /url: /
+  - heading "“sourdough” · 4 results" [level=1]
+  - text: Sorted by
+  - combobox "Sorted by":
+    - option "relevance" [selected]
+    - option "distance"
+    - option "price, low to high"
+    - option "price, high to low"
+    - option "rating"
+  - list:
+    - listitem:
+      - link /Country sourdough \$\d+\.\d+ Glenmore Bakery · Bakery On \S+ run/:
+        - /url: /products/O1?offer=O1
+    - listitem:
+      - link /Brake pads Quote Prairie Wrench · Mobile mechanic · ★ 4\.9 \(\d+\) Instant book/:
+        - /url: /providers/prairie-wrench
+    - listitem:
+      - link /Pho tai \$\d+\.\d+ Pho Dau Bo · Vietnamese · 1\.2 km Open now/:
+        - /url: /food/pho-dau-bo
+    - listitem:
+      - link /Sidewalk Citizen from \$\d+\.\d+ Shop Trusted/:
+        - /url: /search?scope=shop&q=Sidewalk+Citizen
+  - text: Showing 4 of 4

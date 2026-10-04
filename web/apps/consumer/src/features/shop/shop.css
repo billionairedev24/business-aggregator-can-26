@@ -15,7 +15,7 @@
 .shop-crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; }
 .shop-crumbs li { display: inline-flex; align-items: center; }
 .shop-crumbs li + li::before { content: '›'; padding: 0 6px; color: var(--color-neutral-600); }
-.shop-crumbs a { display: inline-flex; align-items: center; min-height: 44px; }
+.shop-crumbs a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; }
 .shop-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .shop-chip { font-size: 14px; padding: 8px 14px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; border-radius: var(--radius-md); border: 1px solid var(--color-divider); color: var(--color-text); text-decoration: none; }
 .shop-chip:hover { background: var(--color-accent-100); color: var(--color-text); }

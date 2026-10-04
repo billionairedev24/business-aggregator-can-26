@@ -22,6 +22,8 @@
 
 /* ── switch ── */
 .nl-switch { position: relative; width: 44px; height: 26px; flex: none; border: 0; border-radius: var(--radius-pill); cursor: pointer; padding: 0; background: var(--color-neutral-600); transition: background .15s; } /* S-109: the knob needs 3:1 against the off track (neutral-300 was 1.5:1) */
+/* S-143: drawn 26 px tall, a 44 px hit area */
+.nl-switch::after { content: ''; position: absolute; inset: -9px 0; }
 .nl-switch[aria-checked='true'] { background: var(--color-accent); }
 .nl-switch:disabled { cursor: not-allowed; opacity: .55; }
 .nl-switch-knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--color-surface); box-shadow: var(--shadow-sm); transition: transform .15s; }
@@ -46,7 +48,8 @@
 
 /* ── progress bars (auth steps) ── */
 .nl-steps { display: flex; gap: 4px; }
-.nl-steps > span { flex: 1; height: 3px; border-radius: var(--radius-md); background: var(--color-neutral-300); }
+/* S-144: steps to do at neutral-600 (≥ 3:1 on bg and surface, contrast.test.ts) */
+.nl-steps > span { flex: 1; height: 3px; border-radius: var(--radius-md); background: var(--color-neutral-600); }
 .nl-steps > span[data-done='true'] { background: var(--color-accent); }
 
 /* ── panel ── */
@@ -140,7 +143,7 @@
 .nl-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 /* ── skip link (S-109, WCAG 2.4.1): off-screen until focused, then above the sticky top bar ── */
-.nl-skip-link { position: absolute; left: 12px; top: -80px; z-index: 60; padding: 10px 14px; background: var(--color-surface); color: var(--color-accent); border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-weight: 600; }
+.nl-skip-link { position: absolute; left: 12px; top: -80px; z-index: 60; display: inline-flex; align-items: center; min-height: 44px; padding: 10px 14px; background: var(--color-surface); color: var(--color-accent); border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-weight: 600; }
 .nl-skip-link:focus { top: 12px; }
 
 /* S-121 pilot feedback: the "Send feedback" control (pilot participants only) and its form */

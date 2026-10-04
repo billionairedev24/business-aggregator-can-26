@@ -1,4 +1,4 @@
-Issue Id,Parent Id,Issue Type,Summary,Epic Name,Description,Priority,Story Points,Labels,Labels,Labels,Component/s,Sprint,Start date,Due date
+Issue Id,Parent Id,Issue Type,Summary,Epic Name,Description,Priority,Story Points,Labels,Labels,Labels,Component/s,Sprint,Start date,Due date,Status
 S-140,E-11,Story,Radio groups of option cards: arrow-key navigation (ARIA radio pattern),,"S-109 audit item 22 (WCAG 2.1.1, moderate). OptionCard radio groups (Studio sign-in and registration factor, onboarding business type, verification checks dialog, payout frequency; consumer registration, food checkout) make every option a Tab stop and ignore the arrow keys.
 
 Acceptance criteria:
@@ -8,14 +8,14 @@ Acceptance criteria:
 - Testing Library tests per screen
 - axe still passes
 
-Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Medium,2,phase-5,a11y,web,consumer-web,Sprint 22,2027-07-26,2027-08-06
+Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Medium,2,phase-5,a11y,web,consumer-web,Sprint 22,2027-07-26,2027-08-06,Done
 S-141,E-11,Story,Data Table under user text spacing (WCAG 1.4.12),,"S-109 audit item 23 (moderate). The Data Table picks its columns from a width budget measured with the design's text metrics; with the 1.4.12 spacing (letter 0.12em, word 0.16em, line 1.5) the console's verification and vetting queues overflow at 1280 px.
 
 Acceptance criteria:
 - Column hiding measures rendered widths (or falls back to the card list) so no table scrolls sideways with user text spacing
 - a Playwright check in packages/a11y applies the spacing on the queues and finds no horizontal scroll
 
-Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Medium,3,phase-5,a11y,web,console,Sprint 22,2027-07-26,2027-08-06
+Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Medium,3,phase-5,a11y,web,console,Sprint 22,2027-07-26,2027-08-06,Done
 S-142,E-11,Story,"Headings: no skipped levels, error states keep the page h1",,"S-109 audit item 29 (WCAG 1.3.1/2.4.6, minor). Studio payouts and settings go from h1 to h3; when a screen fails to load (consumer cart, route errors) the error state replaces the page and its h1.
 
 Acceptance criteria:
@@ -23,7 +23,7 @@ Acceptance criteria:
 - every screen's error and loading states keep the screen's h1
 - the page sweep's heading-order and page-has-heading-one findings are gone
 
-Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Low,2,phase-5,a11y,web,studio,Sprint 22,2027-07-26,2027-08-06
+Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Low,2,phase-5,a11y,web,studio,Sprint 22,2027-07-26,2027-08-06,Done
 S-143,E-11,Story,Screens' own controls at 44 px (design rule),,"S-109 audit item 25 (WCAG 2.5.8 is met at 24 px; the 44 px is docs/SCREENS.md). The kit's buttons, chips, tabs and menu items are 44 px now; screens' own controls are not all — Data Table row actions (36 px), its chips (32–34 px), some icon buttons. The page sweep counts them per page (targetsUnder44 in a11y-results).
 
 Acceptance criteria:
@@ -31,37 +31,37 @@ Acceptance criteria:
 - inline text links exempt)
 - the sweep fails above zero
 
-Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Low,3,phase-5,a11y,web,studio,Sprint 22,2027-07-26,2027-08-06
+Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Low,3,phase-5,a11y,web,studio,Sprint 22,2027-07-26,2027-08-06,Done
 S-144,E-11,Story,Step bars: contrast of the steps still to do,,"S-109 audit item 30 (WCAG 1.4.11, minor). StepBars draws the steps not yet done at 1.4:1 against the page.
 
 Acceptance criteria:
 - Steps to do reach 3:1 (or the bar says ""Step 2 of 3"" in text next to it)
 - the token contrast test lists the pair
 
-Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Low,1,phase-5,a11y,web,consumer-web,Sprint 22,2027-07-26,2027-08-06
+Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Low,1,phase-5,a11y,web,consumer-web,Sprint 22,2027-07-26,2027-08-06,Done
 S-145,E-11,Story,Consumer web: help for guests in a consistent place (WCAG 3.2.6),,"S-109 audit item 31 (minor). ""Help & cases"" is only in the signed-in account menu; a guest has no help link.
 
 Acceptance criteria:
 - A Help link in the footer of every consumer page (en/fr) leading to help and contact for guests and signed-in people alike
 
-Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Low,1,phase-5,a11y,consumer,consumer-web,Sprint 22,2027-07-26,2027-08-06
+Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Low,1,phase-5,a11y,consumer,consumer-web,Sprint 22,2027-07-26,2027-08-06,Done
 S-146,E-11,Story,Console delivery map: stuck couriers not by colour alone (WCAG 1.4.1),,"S-109 audit item 32 (minor). On the ops map a stuck courier differs from a moving one only by colour (the runs table says ""stuck"" in text).
 
 Acceptance criteria:
 - Stuck couriers get a second cue on the map (shape or outline) and the legend shows it
 
-Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Low,1,phase-5,a11y,console,console,Sprint 22,2027-07-26,2027-08-06
+Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Low,1,phase-5,a11y,console,console,Sprint 22,2027-07-26,2027-08-06,Done
 S-147,E-11,Story,Consumer app: control names without the ▾ glyph,,"S-109 audit item 33 (WCAG 2.5.3, minor). VoiceOver/TalkBack read the ▾ in names such as the search sort (""price, low to high ▾""); the home address kicker is fixed.
 
 Acceptance criteria:
 - Every control's accessibilityLabel leaves out decorative glyphs (en/fr-CA)
 - __tests__/a11y.test.tsx checks for them
 
-Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Low,1,phase-5,a11y,mobile,mobile,Sprint 22,2027-07-26,2027-08-06
+Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Low,1,phase-5,a11y,mobile,mobile,Sprint 22,2027-07-26,2027-08-06,Done
 S-148,E-11,Story,Screen-reader pass of the journeys before launch,,"S-109 checked the accessibility tree automatically and by hand, on recorded fixtures; nobody listened. Before the pilot, run the main journeys (Studio sign-in to KDS, consumer search to checkout and booking, console queues) with real data.
 
 Acceptance criteria:
 - VoiceOver (macOS, iOS), NVDA (Windows) and TalkBack (Android) passes recorded in docs/a11y/audit.md with any new findings ticketed
 - the accessibility statement's ""last reviewed"" date updated
 
-Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Medium,3,phase-5,a11y,qa,compliance,Sprint 22,2027-07-26,2027-08-06
+Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Medium,3,phase-5,a11y,qa,compliance,Sprint 22,2027-07-26,2027-08-06,In Progress

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { onboarding } from '../../test/fixtures';
 import { mockFetch, renderWithProviders } from '../../test/render';
 import type { Onboarding, OwnerIdentity } from './api';
+import { CheckDialog } from './CheckDialog';
 import { IdentityDialog } from './IdentityDialog';
 import { IdentityDoneScreen } from './IdentityDoneScreen';
 import { ReviewStep } from './ReviewStep';
@@ -23,6 +24,25 @@ beforeEach(() => vi.unstubAllGlobals());
 
 const done = (o: Onboarding, key: string, patch: Partial<Onboarding['checklist'][number]> = {}): Onboarding => ({
   ...o, checklist: o.checklist.map(c => (c.key === key ? { ...c, status: 'verified', reference: 'passed', ...patch } : c)),
+});
+
+describe('CheckDialog choices (S-140)', () => {
+  it('the returns policy options are one Tab stop; the arrow keys move and select', async () => {
+    const onSubmit = vi.fn();
+    const check = { id: 'V9', key: 'returns_policy', checkType: 'returns_policy', action: 'choose' as const, registry: null, status: 'todo' as const, reference: null, document: null, expiresOn: null, updatedAt: '2026-09-29T16:00:00Z' };
+    renderWithProviders(<CheckDialog merchantId="M1" check={check} title="Returns policy" pending={false} errors={{}} onSubmit={onSubmit} onClose={() => {}} />);
+    const group = screen.getByRole('radiogroup', { name: 'Returns policy' });
+    const [standard, perishables] = within(group).getAllByRole('radio');
+    expect([standard, perishables].map(r => r!.getAttribute('tabindex'))).toEqual(['0', '-1']);
+    standard!.focus();
+    await user().keyboard('{ArrowDown}');
+    expect(document.activeElement).toBe(perishables);
+    expect(perishables!.getAttribute('aria-checked')).toBe('true');
+    await user().keyboard('{ArrowDown}');
+    expect(standard!.getAttribute('aria-checked')).toBe('true');
+    await user().click(screen.getByRole('button', { name: 'Submit' }));
+    expect(onSubmit).toHaveBeenCalledWith({ choice: 'standard' });
+  });
 });
 
 describe('VerificationStep', () => {

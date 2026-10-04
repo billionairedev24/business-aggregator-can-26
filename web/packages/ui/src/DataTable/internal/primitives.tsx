@@ -183,3 +183,27 @@ export function useContainerWidth<E extends HTMLElement>(initial = 1000) {
   }, []);
   return [ref, width] as const;
 }
+
+/**
+ * S-141 (WCAG 1.4.12): the column budget is an estimate from the design's text metrics; user text spacing, a larger
+ * font or long words can still make the rendered table wider than its box. Measures the table after each render and
+ * when it resizes, and returns how many more columns to drop for this container width (reset when the width changes).
+ */
+export function useOverflowSqueeze<E extends HTMLElement>(width: number) {
+  const ref = useRef<E>(null);
+  const [state, setState] = useState({ width, n: 0 });
+  useIsoLayoutEffect(() => {
+    const el = ref.current;
+    const box = el?.parentElement;
+    if (!el || !box) return;
+    const check = () => {
+      if (el.scrollWidth > box.clientWidth + 1) setState((s) => ({ width, n: (s.width === width ? s.n : 0) + 1 }));
+    };
+    check();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
+  return [ref, state.width === width ? state.n : 0] as const;
+}

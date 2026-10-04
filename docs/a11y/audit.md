@@ -5,6 +5,11 @@ Audit of the Studio (`web/apps/studio`), the consumer web (`web/apps/consumer`) 
 Done 2026-10-02 on main at S-107. Result: **no critical or serious issue left**; 2 moderate and 6 minor issues are
 ticketed in [tickets.csv](tickets.csv).
 
+**Follow-up 2026-10-04 (S-140–S-148):** the eight ticketed issues are fixed and each has a test (§ Follow-ups); the
+page sweep now fails on them. The screen-reader pass (S-148) has its automated part done — ARIA snapshots of the key
+journeys and Testing Library checks of names, roles and states — and a [manual script](screen-reader-script.md);
+**no person has run it yet**, so S-148 stays open.
+
 ## Method
 
 1. **Read the rules the product set itself**: `docs/SCREENS.md` § Every screen must implement (focus ring, 44 px
@@ -87,21 +92,22 @@ Severity follows axe's impact scale (critical, serious, moderate, minor). "Proje
 | 19 | 2.1.1 Keyboard (ARIA tabs) | moderate | kit ChipTabs, UnderlineTabs | every tab a Tab stop, no arrow keys | fixed: one tab stop, ←/→, Home/End |
 | 20 | 1.4.12 Text Spacing | moderate | consumer header, console overview | links and SLA lines did not wrap with user spacing at 320 px | fixed |
 | 21 | 1.3.1 (landmarks) | moderate | console | two unnamed search landmarks | fixed: the global search is named |
-| 22 | 2.1.1 Keyboard (ARIA radios) | moderate | OptionCard radio groups | each option is a Tab stop; no arrow keys | open — S-140 |
-| 23 | 1.4.12 Text Spacing | moderate | Data Table (console queues at 1280 px) | the column budget is measured without user text spacing; the table overflows | open — S-141 |
+| 22 | 2.1.1 Keyboard (ARIA radios) | moderate | OptionCard radio groups | each option is a Tab stop; no arrow keys | fixed (S-140): kit `RadioGroup` — one Tab stop, arrows, Home/End — on every button-radio group |
+| 23 | 1.4.12 Text Spacing | moderate | Data Table (console queues at 1280 px) | the column budget is measured without user text spacing; the table overflows | fixed (S-141): the rendered table is measured; it drops columns, then shows cards |
 | 24 | 2.5.8 Target Size (project rule) | minor | kit buttons, chips, tabs, menu and nav items | 40 px controls (WCAG AA asks 24, the design 44) | fixed in the kit: 44 px |
-| 25 | 2.5.8 Target Size (project rule) | minor | screens' own controls | the sweep still counts controls under 44 px per page (Data Table row actions 36 px, chips 32–34 px; inline text links are exempt) | open — S-143 |
+| 25 | 2.5.8 Target Size (project rule) | minor | screens' own controls | the sweep still counts controls under 44 px per page (Data Table row actions 36 px, chips 32–34 px; inline text links are exempt) | fixed (S-143): none left on the swept screens; the sweep fails above zero |
 | 26 | 2.3.3 Animation (AAA; reduced motion) | minor | kit | only skeletons honoured `prefers-reduced-motion` | fixed: global rule; the sweep finds no running animation |
 | 27 | 2.1.1 (menu keys) | minor | kit Menu | Tab left the menu open; no Home/End | fixed |
 | 28 | 2.5.8, 2.5.3 | minor | consumer app home | address kicker 32 pt; its name read the ▾ glyph | fixed: 48 pt touch area, plain label |
-| 29 | 1.3.1, 2.4.6 (headings) | minor | Studio payouts and settings; error states (consumer cart, route errors) | levels skip h2; an error state replaces the page and its h1 | open — S-142 |
-| 30 | 1.4.11 Non-text Contrast | minor | kit StepBars | steps still to do drawn at 1.4:1 | open — S-144 |
-| 31 | 3.2.6 Consistent Help | minor | consumer web | help ("Help & cases") is in the account menu only; guests have none | open — S-145 |
-| 32 | 1.4.1 Use of Color | minor | console delivery map | stuck couriers are told apart by colour (the runs table says "stuck" in text) | open — S-146 |
-| 33 | 2.5.3 Label in Name | minor | consumer app | other names still read the ▾ glyph (search sort) | open — S-147 |
+| 29 | 1.3.1, 2.4.6 (headings) | minor | Studio payouts and settings; error states (consumer cart, route errors) | levels skip h2; an error state replaces the page and its h1 | fixed (S-142): h2 sections; loading and error states keep the h1 |
+| 30 | 1.4.11 Non-text Contrast | minor | kit StepBars | steps still to do drawn at 1.4:1 | fixed (S-144): neutral-600 (≥ 3:1), "Step 2 of 3" for screen readers |
+| 31 | 3.2.6 Consistent Help | minor | consumer web | help ("Help & cases") is in the account menu only; guests have none | fixed (S-145): Help in every page's footer, a `/help` page for everyone |
+| 32 | 1.4.1 Use of Color | minor | console delivery map | stuck couriers are told apart by colour (the runs table says "stuck" in text) | fixed (S-146): a ringed diamond, in the legend too |
+| 33 | 2.5.3 Label in Name | minor | consumer app | other names still read the ▾ glyph (search sort) | fixed (S-147): no glyph in any control's name (★ too); the app test fails on one |
 
-**Counts.** Before: critical 2, serious 9, moderate 12, minor 10. After: critical 0, serious 0, moderate 2, minor 6
-(all ticketed). Not counted: the manual screen-reader pass still to do (S-148).
+**Counts.** Before: critical 2, serious 9, moderate 12, minor 10. After S-109: critical 0, serious 0, moderate 2,
+minor 6 (all ticketed). After S-140–S-147 (2026-10-04): **none open**. Not counted: the manual screen-reader pass
+still to do (S-148).
 
 ## Manual review notes
 
@@ -112,7 +118,8 @@ Severity follows axe's impact scale (critical, serious, moderate, minor). "Proje
 - **Target size (2.5.8)**: everything meets 24 px; the kit now meets the design's 44 px (item 24); screens' own small
   controls are ticketed.
 - **Consistent help (3.2.6)**: the Studio's Help is always in the sidebar's Help group and the account menu; the
-  console's on-call and support live in the same places on every screen; consumer as item 31.
+  console's on-call and support live in the same places on every screen; the consumer site's Help is in every page's
+  footer (item 31).
 - **Redundant entry (3.3.7)**: the journeys reuse what was given — saved addresses and cards at checkout, the booking's
   job details carried to the review step, the registration phone into the code step. No instance found.
 - **Accessible authentication (3.3.8)**: passkeys (WebAuthn), TOTP and SMS codes, backup codes; no CAPTCHA or cognitive
@@ -132,12 +139,38 @@ Severity follows axe's impact scale (critical, serious, moderate, minor). "Proje
 - **Charts**: text alternatives as above (item 9); the console's reports already had a table in a `<details>`.
 - **KDS live updates**: polite, one line per refresh, only new orders (item 10).
 - **Maps**: the consumer order map is a captioned figure whose content is in the timeline next to it; the console
-  delivery map is described by the runs and couriers tables below it (item 32 aside).
+  delivery map is described by the runs and couriers tables below it, and stuck couriers differ by shape (item 32).
+
+## Follow-ups S-140–S-148 (2026-10-04)
+
+| ticket | fix | test |
+|---|---|---|
+| S-140 radio groups (2.1.1) | `RadioGroup` in `@northline/ui`: one Tab stop (the checked radio, else the first usable one), ←/→/↑/↓ move and select with wrap, Home/End; disabled radios skipped. Used by every button-radio group: Studio sign-in and registration factor, onboarding business type, verification choices and visit slots, payout frequency, weekday and bank mode, availability accept mode, page builder swatches and CTA; consumer registration, food checkout, cart windows and substitutions; console sign-in, region rollout and seller oversight. The console's market stages move focus only (a stage opens a confirmation) | kit behaviour test; one test per screen (Studio sign-in, registration, business type, returns policy, payout frequency; consumer registration, food checkout; console sign-in) |
+| S-141 Data Table text spacing (1.4.12) | after rendering, a table wider than its box drops one more column at a time (lowest priority first), then shows cards; re-measured on resize. A long provider-page tag wraps | kit tests (layout maths, cards under overflow); the sweep fails on horizontal scroll with the 1.4.12 spacing — of the page or inside a Data Table — on every swept page at both widths |
+| S-142 headings (1.3.1, 2.4.6) | Studio payouts, settings and the editors' French panel: h2 sections. `PageHeadingProvider`: the Studio and console shells name the current screen; `PageSkeleton` and `ErrorState` show that name as the h1 when the page has none (also the route-level pending/error states). Consumer cart: loading and error keep "Checkout" | every console screen loading and failing keeps exactly one h1; Studio finance screens; the cart; the sweep fails on `heading-order` and `page-has-heading-one` |
+| S-143 44 px targets (project rule) | kit: skip links, Data Table chips, row actions, check boxes, bulk bar, search field, small buttons; switch hit area. Screens: footer, breadcrumbs, booking steps, auth links, cart line names, kitchen menu builder, payout documents, settings link, dispute evidence (hit areas by padding and negative margin where the line must not move) | the sweep probes each control's hit area (elementFromPoint 21 px around its centre), exempts links in a sentence and visually hidden controls, and fails above zero |
+| S-144 step bars (1.4.11) | steps to do at `neutral-600`; `aria-valuetext` "Step 2 of 3" / « Étape 2 sur 3 » | contrast test lists the pair (bg and surface); kit test |
+| S-145 consistent help (3.2.6) | footer link **Help** / **Aide** on every consumer page → `/help` (server-rendered): order problems (sign in or Help & cases), shopping as a guest, payments, accessibility, contact (`NL_SUPPORT_EMAIL` when set), businesses | Help page tests (guest, signed in, French, axe); footer tests |
+| S-146 map colour (1.4.1) | stuck couriers are ringed diamonds; the legend draws both markers | delivery test |
+| S-147 glyphs in names (2.5.3) | the search sort reads "Sort: price, low to high" / « Tri : prix croissant » (▾ on screen only); cards say "rated 4.9" instead of "★ 4.9" | `__tests__/a11y.test.tsx` fails on a decorative glyph in any control's name on the 17 screens; the sort in en and fr-CA |
+| S-148 screen-reader pass | automated part: ARIA snapshots of 11 key screens (`pages/journeys.spec.ts`), a Testing Library test of the consumer header's names and states, the per-screen tests above. Manual part: [screen-reader-script.md](screen-reader-script.md) | **open** — needs a person with VoiceOver, NVDA and TalkBack |
+
+### Screen-reader pass (S-148)
+
+Not run yet. To be filled by whoever runs [the script](screen-reader-script.md):
+
+| reader and version | device, browser or app | journeys (A–D) | date | by | result |
+|---|---|---|---|---|---|
+| VoiceOver (macOS) | | | | | |
+| NVDA (Windows) | | | | | |
+| VoiceOver (iOS) | | | | | |
+| TalkBack (Android) | | | | | |
 
 ## Re-running
 
 - Component level: `cd web && pnpm test` (runs in `make web-test`).
-- Page level: `make a11y` (builds the three apps, then `pnpm --filter @northline/a11y a11y`). Chromium: `CHROMIUM=…`, the
+- Page level: `make a11y` (builds the three apps, then `pnpm --filter @northline/a11y a11y`): the sweep, the ARIA
+  snapshots of the journeys (S-148) and the consumer CSP check (S104-09; alone: `make csp-check`). Chromium: `CHROMIUM=…`, the
   sandbox's `/opt/pw-browsers/chromium`, or `pnpm --filter @northline/ui exec playwright install chromium`.
 - After a screen's api changes, `make a11y-record` refreshes the fixtures from the apps' tests.
 - CI: GitHub `web.yml` input `a11y`, GitLab `RUN_A11Y=true` — manual only, like every pipeline here.
@@ -156,12 +189,12 @@ Severity follows axe's impact scale (critical, serious, moderate, minor). "Proje
 > pages reflow on small screens and when you enlarge text, we respect your reduced-motion setting, and sign-in never
 > asks you to solve a puzzle — you can use a passkey, an authenticator app or a code we text you, and paste it.
 >
-> What we know is not perfect yet: some small controls are under our 44-pixel target size, some lists need extra
-> keyboard shortcuts, and a few screens skip a heading level. We are fixing these.
+> What we know is not perfect yet: we check every page automatically, but we have not yet tested every journey by
+> hand with each screen reader. We are doing that now.
 >
 > We test with automated checks on every change and review the pages by hand. If something stops you, tell us: use
-> **Help** in your account, or write to accessibility@northline.example. We answer within two business days and can
-> give you the information in another format.
+> **Help** at the bottom of every page, or write to accessibility@northline.example. We answer within two business
+> days and can give you the information in another format.
 >
 > Last reviewed: October 2026.
 
@@ -178,13 +211,12 @@ Severity follows axe's impact scale (critical, serious, moderate, minor). "Proje
 > votre réglage de réduction des animations, et la connexion ne vous demande jamais de résoudre une énigme : vous
 > pouvez utiliser une clé d’accès, une application d’authentification ou un code reçu par texto, et le coller.
 >
-> Ce qui n’est pas encore parfait : certaines petites commandes n’atteignent pas notre taille cible de 44 pixels,
-> certaines listes demandent des raccourcis clavier de plus, et quelques écrans sautent un niveau de titre. Nous y
-> travaillons.
+> Ce qui n’est pas encore parfait : nous vérifions chaque page automatiquement, mais nous n’avons pas encore testé
+> chaque parcours à la main avec chaque lecteur d’écran. Nous y travaillons.
 >
 > Nous testons chaque changement avec des vérifications automatisées et révisons les pages à la main. Si quelque chose
-> vous bloque, dites-le-nous : utilisez **Aide** dans votre compte ou écrivez à accessibilite@northline.example. Nous
-> répondons en deux jours ouvrables et pouvons vous fournir l’information sous un autre format.
+> vous bloque, dites-le-nous : utilisez **Aide** au bas de chaque page ou écrivez à accessibilite@northline.example.
+> Nous répondons en deux jours ouvrables et pouvons vous fournir l’information sous un autre format.
 >
 > Dernière révision : octobre 2026.
 
