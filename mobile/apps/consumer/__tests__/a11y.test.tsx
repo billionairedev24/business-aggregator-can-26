@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { screen, waitFor } from 'expo-router/testing-library';
+import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { StyleSheet } from 'react-native';
 
 import { setServices } from '../src/services';
@@ -26,6 +26,12 @@ afterEach(async () => {
 type ReactTestInstance = typeof screen.root;
 
 const MIN = 44;
+/**
+ * S-147 (WCAG 2.5.3): decorative glyphs a screen reader reads out ("down-pointing small triangle"), never part of a
+ * control's name — arrows, carets, chevrons, ticks, stars, bullets
+ * (the middle dot "·" separating parts of a name is punctuation; screen readers pause on it).
+ */
+const GLYPHS = /[▾▴▸◂▼▲►◄›‹»«→←↑↓⌄⌃✓✔✕✖★☆●•◦]/u;
 const PRESS_ROLES = new Set(['button', 'link', 'tab', 'checkbox', 'radio', 'switch', 'menuitem', 'togglebutton', 'combobox', 'search', 'adjustable', 'imagebutton']);
 
 /** Host nodes a finger can press (Pressable/Touchable render a host View with onClick or a responder). */
@@ -63,6 +69,7 @@ function audit(name: string): Problem[] {
     const control = `${n.props.testID ?? n.props.accessibilityRole ?? n.type} "${label.slice(0, 40)}"`;
     if (!n.props.accessibilityRole || !PRESS_ROLES.has(n.props.accessibilityRole)) problems.push({ screen: name, what: `role ${n.props.accessibilityRole ?? 'missing'}`, control });
     if (!label) problems.push({ screen: name, what: 'no accessible name', control });
+    if (GLYPHS.test(label)) problems.push({ screen: name, what: `glyph in the name "${label.slice(0, 60)}"`, control });
     const h = targetHeight(n);
     if (h === undefined || h < MIN) problems.push({ screen: name, what: `target ${h ?? '?'} pt`, control });
   }
@@ -95,6 +102,21 @@ describe('roles, names and 44 pt touch targets on the key screens (S-109)', () =
     const place = await screen.findByTestId('home-place');
     expect(place.props.accessibilityLabel).toMatch(/^Delivery address: [^▾]+$/);
     expect(targetHeight(place)).toBeGreaterThanOrEqual(48);
+  });
+
+  it.each([
+    ['en', 'Sort: relevance', 'Sort: price, low to high', 'relevance ▾'],
+    ['fr-CA', 'Tri : pertinence', 'Tri : prix croissant', 'pertinence ▾'],
+  ])('names the search sort without its ▾ (%s, S-147)', async (tag, first, next, shown) => {
+    if (tag !== 'en') (jest.requireMock('expo-localization') as { getLocales: jest.Mock }).getLocales.mockReturnValueOnce([{ languageTag: tag }]);
+    await start({ welcomed: true, url: '/search', store: { 'nl.location': JSON.stringify({ label: '1204 Example Ave, Sampleville', city: 'Sampleville', province: 'XA', marketId: 'mkt-sampleville' }) } });
+    fireEvent.changeText(await screen.findByTestId('search-input'), 'sour');
+    expect(await screen.findByText(/^1 (result|résultat)/)).toBeTruthy();
+    const sort = () => pressables(screen.root).find((n: ReactTestInstance) => n.props.testID === 'search-sort')!;
+    expect(sort().props.accessibilityLabel).toBe(first);
+    expect(screen.getByText(shown)).toBeTruthy(); // the glyph stays on screen, out of the name
+    fireEvent.press(sort());
+    await waitFor(() => expect(sort().props.accessibilityLabel).toBe(next));
   });
 
   it.each(SCREENS)('$name', async ({ name, url, signedIn }) => {

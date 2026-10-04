@@ -112,15 +112,17 @@ function Card({ p }: { p: ProviderCard }) {
   const { t, time, locale } = useI18n();
   const tier = useTier()(p.tier);
   const avail = nextSlot(t, time, locale, p.nextAvailable, p.timeZone);
-  const stats = [
-    p.reviewCount > 0 ? t('services.rating', { rating: p.rating.toFixed(1), n: p.reviewCount }) : t('services.newProvider'),
-    p.onTimePct != null ? t('services.onTime', { pct: Math.round(p.onTimePct) }) : null,
-  ]
+  const onTime = p.onTimePct != null ? t('services.onTime', { pct: Math.round(p.onTimePct) }) : null;
+  const stats = [p.reviewCount > 0 ? t('services.rating', { rating: p.rating.toFixed(1), n: p.reviewCount }) : t('services.newProvider'), onTime]
     .filter(Boolean)
     .join(' · ');
+  // S-147: spoken without the ★ glyph
+  const spoken = [p.reviewCount > 0 ? t('services.ratingSpoken', { rating: p.rating.toFixed(1), n: p.reviewCount }) : t('services.newProvider'), onTime]
+    .filter(Boolean)
+    .join(', ');
   const from = p.fromCents != null ? t('services.providers.from', { price: price(p.fromCents, locale) }) : t('services.providers.quoted');
   return (
-    <Row onPress={() => router.push(`/providers/${p.slug}`)} label={[p.name, tier.label, stats, from, avail].join(', ')} testID={`provider-${p.slug}`}>
+    <Row onPress={() => router.push(`/providers/${p.slug}`)} label={[p.name, tier.label, spoken, from, avail].join(', ')} testID={`provider-${p.slug}`}>
       <View style={styles.card}>
         <Mark name={p.name} color={brand(p.brandColor)} />
         <View style={styles.cardMain}>
