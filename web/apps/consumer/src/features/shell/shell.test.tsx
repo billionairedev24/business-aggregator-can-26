@@ -177,6 +177,7 @@ describe('screens and states', () => {
     expect(within(footer).getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/legal/privacy.html');
     expect(within(footer).getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/legal/terms.html');
     expect(within(footer).getByRole('link', { name: 'Terms' })).toHaveAttribute('hreflang', 'en-CA');
+    expect(within(footer).getByRole('link', { name: 'Help' })).toHaveAttribute('href', '/help'); // S-145: for guests too
     expect(within(footer).getByRole('link', { name: 'Offer a service' })).toHaveAttribute('href', '/sell?type=provider');
     expect(within(footer).getByRole('link', { name: 'Sell on Northline' })).toHaveAttribute('href', '/sell?type=seller');
     expect(within(footer).getByRole('link', { name: 'Run a kitchen' })).toHaveAttribute('href', '/sell?type=kitchen');
@@ -187,7 +188,7 @@ describe('screens and states', () => {
     mockFetch(guest);
     renderApp('/', { locale: 'fr' });
     const footer = await screen.findByRole('contentinfo');
-    for (const name of ['Confidentialité', 'Conditions', 'Vendre sur Northline', 'Offrir un service', 'Gérer une cuisine']) {
+    for (const name of ['Confidentialité', 'Conditions', 'Aide', 'Vendre sur Northline', 'Offrir un service', 'Gérer une cuisine']) {
       expect(within(footer).getByRole('link', { name })).toBeInTheDocument();
     }
     expect(within(footer).getByRole('button', { name: 'English' })).toHaveAttribute('lang', 'en-CA');

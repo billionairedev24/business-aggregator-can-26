@@ -277,7 +277,9 @@ the image).
 
 the site. Both optional, set by the chart. S-61: `NL_STUDIO_ORIGIN` (= `urls.studio`, set by the chart; default
 `http://localhost:3100`) — `/sell` links into the Studio's onboarding there (signed in: the Studio BFF's
-`/bff/login?next=/onboarding?type=…` hand-off; a guest: `/onboarding?type=…`, which signs in on the Studio).
+`/bff/login?next=/onboarding?type=…` hand-off; a guest: `/onboarding?type=…`, which signs in on the Studio). S-145:
+`NL_SUPPORT_EMAIL` (optional, no default) — the support mailbox the Help page (`/help`, in every page's footer) names;
+unset, Help sends people to Help & cases only.
 
 ## Consumer BFF (S-45)
 
