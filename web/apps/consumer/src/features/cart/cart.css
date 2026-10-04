@@ -62,3 +62,7 @@ a.cart-line-name:hover { text-decoration: underline; text-underline-offset: 3px;
 .cart-bank { margin-top: 18px; padding: 16px; background: var(--color-bg); border-radius: var(--radius-md); }
 .cart-bank-title { font-weight: 600; margin: 8px 0 4px; }
 .cart-bank-code { letter-spacing: 0.3em; }
+/* Age step (2026-10-04) */
+.cart-age .cart-h2 { display: flex; align-items: center; gap: 8px; }
+.cart-age p { margin: 0 0 10px; }
+.cart-age .btn { min-height: 44px; }

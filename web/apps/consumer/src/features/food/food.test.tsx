@@ -276,6 +276,16 @@ describe('Food checkout (design 06 foodCheckout)', () => {
     await waitFor(() => expect(calls.some(c => (c.body as { scheduledFor?: string } | undefined)?.scheduledFor === '2026-10-01T01:00:00Z')).toBe(true));
   });
 
+  it('asks for the photo ID check for a dish with alcohol, returning to the food checkout (2026-10-04)', async () => {
+    const age = { required: true, minimumAge: 18, classes: ['alcohol'], state: 'none' };
+    const base = routes['POST /api/v1/me/food-orders/quote']!;
+    routes['POST /api/v1/me/food-orders/quote'] = c => { const r = base(c)!; return { ...r, body: { ...(r.body as object), age } }; };
+    open('/food/checkout');
+    expect(await screen.findByRole('heading', { level: 2, name: 'Photo ID needed' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Pay $50.08' })).toBeDisabled();
+    expect(screen.getByText(/the courier checks your photo ID/)).toBeInTheDocument();
+  });
+
   it('steps up with the authenticator when the sign-in was a phone code only (S-51’s rule)', async () => {
     vi.stubEnv('VITE_NL_DEV_STEP_UP', '1');
     let asked = 0;

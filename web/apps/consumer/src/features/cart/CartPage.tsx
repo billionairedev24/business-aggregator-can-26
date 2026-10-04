@@ -16,6 +16,9 @@ import {
 import { SERVER_FR, useCartT } from './messages';
 import { FakePayment, StripePayment } from './Payment';
 import { StepUpDialog } from './StepUpDialog';
+import { AgeCheck } from './AgeCheck';
+import { ageCleared, NO_AGE } from './age';
+import { useAgeT } from './ageMessages';
 
 type Substitution = CheckoutBody['substitution'];
 
@@ -27,6 +30,8 @@ export function localizeServer(message: string, locale: Locale): string {
   if (notServed) return `Nous ne livrons pas encore à ${notServed[1]}.`;
   const elsewhere = /^(.+) doesn't deliver to (.+)\.$/.exec(message);
   if (elsewhere) return `${elsewhere[1]} ne livre pas à ${elsewhere[2]}.`;
+  const restricted = /^Age-restricted items in your cart can't be delivered to (.+)\. Remove them to continue\.$/.exec(message);
+  if (restricted) return `Les articles soumis à un âge minimal de votre panier ne peuvent pas être livrés en ${restricted[1]}. Retirez-les pour continuer.`;
   const left = /^Only (\d+) left\.$/.exec(message);
   if (left) return `Plus que ${left[1]}.`;
   return message;
@@ -198,6 +203,9 @@ function Checkout({ cart }: { cart: Cart }) {
   const shownErrors = { ...(touched ? clientErrors : {}), ...serverErrors };
   const packBy = option?.kind === 'pooled' ? option.packBy ?? null : null;
   const total = quote.data?.totalCents;
+  const age = quote.data?.age ?? setup.data?.age ?? NO_AGE;
+  const tAge = useAgeT();
+  const refreshAge = () => { void qc.invalidateQueries({ queryKey: ['checkout'] }); };
 
   const fail = (e: unknown) => {
     if (e instanceof ValidationError) {
@@ -206,6 +214,11 @@ function Checkout({ cart }: { cart: Cart }) {
       return;
     }
     const code = problemCode(e);
+    if (code === 'age_verification_required' || code === 'age_under_minimum' || code === 'restricted_hours') {
+      setError(code === 'restricted_hours' ? t('err_restricted_hours') : code === 'age_under_minimum' ? tAge('underAge', { age: age.minimumAge }) : tAge('payBlocked'));
+      refreshAge();
+      return;
+    }
     setError(code && ['out_of_stock', 'window_closed', 'cart_empty', 'checkout_expired', 'payment_not_authorized'].includes(code)
       ? t(`err_${code as 'out_of_stock'}`) : t('err_generic'));
     if (code === 'out_of_stock' || code === 'cart_empty' || code === 'window_closed') {
@@ -287,6 +300,8 @@ function Checkout({ cart }: { cart: Cart }) {
             </div>
           </section>
 
+          <AgeCheck age={age} onChanged={refreshAge} />
+
           <section className="cart-section" aria-labelledby="cart-payment">
             <h2 id="cart-payment" className="cart-h2">{t('payment')}</h2>
             {started && started.payment.provider === 'stripe' && started.intents.some(i => i.status !== 'authorized')
@@ -309,10 +324,11 @@ function Checkout({ cart }: { cart: Cart }) {
             <BankApproval total={money(started.totalCents)} busy={busy} onApprove={() => void place(started)} />
           ) : started ? null : (
             <>
-              <button type="button" className="btn btn-primary cart-pay" disabled={busy || view.itemCount === 0} aria-busy={busy} onClick={() => void pay()}>
+              <button type="button" className="btn btn-primary cart-pay" disabled={busy || view.itemCount === 0 || !ageCleared(age)} aria-busy={busy} onClick={() => void pay()}>
                 {busy ? t('paying') : t('pay', { total: total === undefined ? money(view.subtotalCents + (option?.feeCents ?? 0)) : money(total) })}
               </button>
               {data.stepUp !== 'none' ? <p className="cart-note">{t('stepUpNeeded')}</p> : null}
+              {!ageCleared(age) ? <p className="cart-note">{tAge('payBlocked')}</p> : null}
             </>
           )}
           <p className="cart-note">{t('payNote')}</p>
