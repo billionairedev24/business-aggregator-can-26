@@ -95,6 +95,39 @@ paths:
           description: Not found.
       tags:
       - o-auth-callback-controller
+  /api/v1/dev/proof-photos/{token}:
+    get:
+      operationId: devProofPhotoPhoto
+      parameters:
+      - in: path
+        name: token
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - dev-proof-photo-controller
   /api/v1/email/unsubscribe:
     get:
       operationId: emailUnsubscribeConfirm
