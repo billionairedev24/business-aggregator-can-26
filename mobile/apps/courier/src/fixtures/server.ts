@@ -18,6 +18,8 @@ export interface FixtureOptions {
   packed?: boolean;
   /** Courier has a run (default true). */
   withRun?: boolean;
+  /** The courier takes part in the pilot as a courier (S-121; default false). */
+  pilot?: boolean;
 }
 
 export function createFixtureServer(options: FixtureOptions = {}) {
@@ -102,6 +104,9 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     return answer(200, r);
   }
 
+  const devices = new Map<string, Json>();
+  const feedback: Json[] = [];
+
   async function handle(url: string, init: RequestInit = {}): Promise<Response> {
     const method = (init.method ?? 'GET').toUpperCase();
     const u = new URL(url, 'http://fixtures.invalid');
@@ -183,6 +188,30 @@ export function createFixtureServer(options: FixtureOptions = {}) {
       settle();
       return current();
     }
+    // mobile gaps part 1: push installations (S-102) and pilot feedback from the courier app (S-121)
+    const device = /^\/me\/devices\/([^/]+)$/.exec(path);
+    if (device && method === 'PUT') {
+      devices.set(device[1]!, body);
+      return answer(200, { installationId: device[1], ...body });
+    }
+    if (device && method === 'DELETE') {
+      devices.delete(device[1]!);
+      return answer(204);
+    }
+    if (method === 'GET' && path === '/me/pilot') {
+      const courierApp = u.searchParams.get('app') === 'courier';
+      return answer(200, { participant: !!options.pilot && courierApp, persona: options.pilot && courierApp ? 'courier' : null, screenshotMaxBytes: 5242880, screenshotTypes: ['image/jpeg', 'image/png'] });
+    }
+    if (method === 'POST' && path === '/me/pilot/screenshots') {
+      if (!options.pilot) return answer(403, { code: 'forbidden', detail: 'Feedback here is for pilot participants.' });
+      feedback.push({ screenshot: true });
+      return answer(201, { id: `shot-${feedback.length}`, contentType: 'image/png', size: 1000 });
+    }
+    if (method === 'POST' && path === '/me/pilot/feedback') {
+      if (!options.pilot) return answer(403, { code: 'forbidden', detail: 'Feedback here is for pilot participants.' });
+      feedback.push(body);
+      return answer(201, { id: 'fb-1', reference: 'UAT-1101' });
+    }
     return answer(404, { code: 'not_found' });
   }
 
@@ -191,6 +220,8 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     fetch: fetchImpl,
     pings,
     calls,
+    devices,
+    feedback,
     shift,
     get run() {
       return run;

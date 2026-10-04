@@ -13,7 +13,7 @@ import { Screen } from '../ui/screen';
 import { LoadingList, QueryView, SignInPrompt, errorMessage } from '../ui/states';
 import { KEYS, account, clock, useAccountMutation } from './common';
 import { Heading, LineRow, Toggle, accountStyles } from './parts';
-import { phonePush } from './phonePush';
+import { usePhonePush } from './phonePush';
 
 const FROM = ['21:00', '22:00', '23:00'] as const;
 const TO = ['06:00', '07:00', '08:00'] as const;
@@ -59,7 +59,7 @@ export function NotificationSettings() {
 /** "This phone": whether the system lets Northline notify, and the way to turn it on. */
 function ThisPhone() {
   const { t } = useI18n();
-  const push = phonePush();
+  const push = usePhonePush();
   const [permission, setPermission] = useState<PushPermission | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);

@@ -20,7 +20,7 @@
     "PhotosorVideos": {
       "linked": true, "tracking": false, "optional": true, "ephemeral": false,
       "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
-      "why": "The photo at the door as proof of delivery (one of three proofs)."
+      "why": "The photo at the door as proof of delivery (one of three proofs; shown to that order's customer through a 5-minute link, never for a delivery with an ID check), and a pilot courier's screenshot on feedback, picked by the courier."
     },
     "UserID": {
       "linked": true, "tracking": false, "optional": false, "ephemeral": false,

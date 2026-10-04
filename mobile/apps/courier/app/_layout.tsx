@@ -5,9 +5,9 @@ import { Newsreader_500Medium } from '@expo-google-fonts/newsreader/500Medium';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { LOCALES, colors, type Locale } from '@northline/mobile-kit';
@@ -16,6 +16,7 @@ import { AuthProvider, useAuth } from '../src/auth';
 import { Loading } from '../src/components/ui';
 import { I18nProvider, LANGUAGE_KEY, useI18n } from '../src/i18n';
 import { defineLocationTask } from '../src/location/tracker';
+import { setUpPush } from '../src/push/install';
 import { services } from '../src/services';
 
 // The background location task must exist before anything else runs (also when the OS starts the app for it).
@@ -37,12 +38,36 @@ function LanguageSync({ children }: { children: ReactNode }) {
   return children;
 }
 
+/** Push (mobile gaps part 1): installed once the sign-in is known; a tap opens the run. */
+function PushSetup() {
+  const { status } = useAuth();
+  const { t } = useI18n();
+  const signedIn = useRef(status === 'signedIn');
+  useEffect(() => {
+    signedIn.current = status === 'signedIn';
+  }, [status]);
+  useEffect(
+    () =>
+      setUpPush({
+        open: (route) => signedIn.current && router.push(route as never),
+        signedIn: () => signedIn.current,
+        channelName: t('push.channel'),
+      }) ?? undefined,
+    // once per app start; the channel name follows the language at that moment
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  return null;
+}
+
 function Routes() {
   const { status } = useAuth();
   const { t } = useI18n();
   if (status === 'loading') return <Loading label={t('common.loading')} />;
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+    <>
+      <PushSetup />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       <Stack.Protected guard={status === 'signedIn'}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
@@ -50,7 +75,8 @@ function Routes() {
         <Stack.Screen name="sign-in" />
       </Stack.Protected>
       <Stack.Screen name="oauth2redirect" />
-    </Stack>
+      </Stack>
+    </>
   );
 }
 

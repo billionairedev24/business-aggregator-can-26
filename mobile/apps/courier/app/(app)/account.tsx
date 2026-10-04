@@ -6,8 +6,9 @@ import { LanguageSwitch } from '../../src/components/LanguageSwitch';
 import { Banner, Body, Button, Card, Screen } from '../../src/components/ui';
 import { useOutbox } from '../../src/hooks';
 import { useI18n } from '../../src/i18n';
+import { ThisPhone } from '../../src/push/PhonePush';
 
-/** Language, what is shared, sign-out (which warns when actions are still on the phone). */
+/** Language, run notifications on this phone, what is shared, sign-out (which warns when actions are still on the phone). */
 export default function AccountScreen() {
   const { t } = useI18n();
   const { signOut } = useAuth();
@@ -22,6 +23,7 @@ export default function AccountScreen() {
   return (
     <Screen testID="account-screen">
       <LanguageSwitch />
+      <ThisPhone />
       <Card>
         <Body>{t('account.privacy')}</Body>
       </Card>

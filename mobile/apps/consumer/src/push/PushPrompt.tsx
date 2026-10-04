@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { colors, radius, space } from '@northline/mobile-kit';
 
-import { phonePush } from '../account/phonePush';
+import { usePhonePush } from '../account/phonePush';
 import { useI18n } from '../i18n';
 import { services } from '../services';
 import { Body, Button } from '../ui/primitives';
@@ -19,7 +19,7 @@ export const PUSH_ASKED_KEY = 'nl.app.pushAsked';
  */
 export function PushPrompt({ what }: { what: 'order' | 'booking' }) {
   const { t } = useI18n();
-  const push = phonePush();
+  const push = usePhonePush();
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   useEffect(() => {

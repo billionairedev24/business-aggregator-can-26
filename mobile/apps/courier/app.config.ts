@@ -46,6 +46,8 @@ export const PERMISSION_TEXT = {
     'While you are on a run, Northline Courier shares your location so customers can follow their order on its way. Only your latest position is kept, never a history.',
   locationAlways:
     'While you are on a run, Northline Courier keeps sharing your location when the app is in the background, so customers can follow their order on its way. Sharing stops when your run ends; only your latest position is kept.',
+  // mobile gaps part 1: a pilot courier's screenshot on feedback, from the system photo picker (expo-image-picker)
+  photos: 'Northline Courier opens your photos only when you choose a screenshot to add to pilot feedback.',
 } as const;
 
 /**
@@ -178,6 +180,9 @@ export function createConfig(env: Env = process.env): ExpoConfig {
       'expo-localization',
       'expo-web-browser',
       ['expo-camera', { cameraPermission: PERMISSION_TEXT.camera, microphonePermission: false, recordAudioAndroid: false }],
+      // mobile gaps part 1: the system photo picker for a pilot's screenshot — no library or storage permission; the
+      // camera text stays expo-camera's (the picker's camera isn't used), no microphone
+      ['expo-image-picker', { photosPermission: PERMISSION_TEXT.photos, cameraPermission: PERMISSION_TEXT.camera, microphonePermission: false }],
       [
         'expo-location',
         {
