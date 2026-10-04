@@ -283,7 +283,7 @@ describe('Food checkout (design 06 foodCheckout)', () => {
     open('/food/checkout');
     expect(await screen.findByRole('heading', { level: 2, name: 'Photo ID needed' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Pay $50.08' })).toBeDisabled();
-    expect(screen.getByText(/the courier checks your photo ID/)).toBeInTheDocument();
+    expect(screen.getByText(/the alcohol goes back to the restaurant and is refunded; the rest of the meal, the fees and the tip are charged/)).toBeInTheDocument();
   });
 
   it('steps up with the authenticator when the sign-in was a phone code only (S-51’s rule)', async () => {
