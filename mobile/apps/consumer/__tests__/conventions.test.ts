@@ -42,7 +42,7 @@ describe('copy', () => {
 
   it('has the iOS permission text and display name in French too', () => {
     const fr = JSON.parse(readFileSync(join(ROOT, 'locales/fr.json'), 'utf8')) as Record<string, string>;
-    expect(Object.keys(fr).sort()).toEqual(['CFBundleDisplayName', 'NSLocationWhenInUseUsageDescription']);
+    expect(Object.keys(fr).sort()).toEqual(['CFBundleDisplayName', 'NSCameraUsageDescription', 'NSLocationWhenInUseUsageDescription', 'NSPhotoLibraryUsageDescription']);
   });
 });
 
@@ -119,8 +119,13 @@ describe('the native configuration', () => {
     const c = createConfig(env);
     expect(c.ios?.infoPlist?.NSLocationWhenInUseUsageDescription).toBe(PERMISSION_TEXT.locationWhenInUse);
     expect(c.ios?.infoPlist).not.toHaveProperty('NSLocationAlwaysAndWhenInUseUsageDescription');
-    expect(c.android?.blockedPermissions).toEqual(expect.arrayContaining(['android.permission.ACCESS_BACKGROUND_LOCATION', 'android.permission.CAMERA', 'android.permission.RECORD_AUDIO']));
+    expect(c.android?.blockedPermissions).toEqual(expect.arrayContaining(['android.permission.ACCESS_BACKGROUND_LOCATION', 'android.permission.RECORD_AUDIO', 'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.READ_MEDIA_IMAGES']));
     expect(c.android?.allowBackup).toBe(false);
+    // mobile gaps part 1: the camera for a report's photo (asked at the tap); the library through the system picker
+    expect(c.android?.permissions).toContain('android.permission.CAMERA');
+    expect(c.android?.blockedPermissions).not.toContain('android.permission.CAMERA');
+    const picker = c.plugins?.find((p) => Array.isArray(p) && p[0] === 'expo-image-picker') as [string, Record<string, unknown>] | undefined;
+    expect(picker?.[1]).toEqual({ photosPermission: PERMISSION_TEXT.photos, cameraPermission: PERMISSION_TEXT.camera, microphonePermission: false });
   });
 
   it('gives each variant its own bundle id, and EAS a profile per environment', () => {

@@ -22,4 +22,12 @@ export const pilot: { [k in keyof typeof en]: string } = {
   'pilot.send': 'Envoyer',
   'pilot.sent': 'Merci — nous l’avons reçu sous le numéro {reference}.',
   'pilot.error': 'Le commentaire n’a pas été envoyé. Réessayez.',
+  'pilot.shot': 'Capture d’écran (facultatif)',
+  'pilot.shotHint': 'Faites une capture avec les boutons de votre téléphone, puis ajoutez-la ici depuis vos photos. PNG ou JPEG, jusqu’à 5 Mo.',
+  'pilot.shotAdd': 'Ajouter une capture d’écran',
+  'pilot.shotRemove': 'Retirer',
+  'pilot.shotAttached': 'Capture d’écran jointe',
+  'pilot.shotType': 'Ajoutez une image PNG ou JPEG.',
+  'pilot.shotSize': 'Cette image dépasse 5 Mo. Choisissez-en une plus petite.',
+  'pilot.contextShot': 'Envoyés avec : votre capture d’écran, l’écran ({screen}), la version de l’app, votre langue et le système de votre téléphone — rien d’autre.',
 };

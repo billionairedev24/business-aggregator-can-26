@@ -21,4 +21,12 @@ export const pilot = {
   'pilot.send': 'Send',
   'pilot.sent': 'Thank you — we got it as {reference}.',
   'pilot.error': 'It wasn’t sent. Try again.',
+  'pilot.shot': 'Screenshot (optional)',
+  'pilot.shotHint': 'Take a screenshot with your phone’s buttons, then add it here from your photos. PNG or JPEG, up to 5 MB.',
+  'pilot.shotAdd': 'Add a screenshot',
+  'pilot.shotRemove': 'Remove',
+  'pilot.shotAttached': 'Screenshot attached',
+  'pilot.shotType': 'Add a PNG or JPEG image.',
+  'pilot.shotSize': 'That image is over 5 MB. Choose a smaller one.',
+  'pilot.contextShot': 'Sent with it: your screenshot, the screen ({screen}), the app version, your language and your phone’s system — nothing else.',
 };

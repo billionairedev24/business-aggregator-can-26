@@ -48,6 +48,9 @@ export const APP_VERSION: string = (JSON.parse(readFileSync(join(__dirname, 'pac
 export const PERMISSION_TEXT = {
   locationWhenInUse:
     'Northline uses your location to suggest your delivery address and show the shops and providers that serve it. It is used only while you have the app open and is never shared with businesses.',
+  // mobile gaps part 1 (expo-image-picker): photos on a problem report; a pilot's screenshot from the library
+  camera: 'Northline uses the camera only when you take a photo to add to a problem report.',
+  photos: 'Northline opens your photos only when you choose one to add to a problem report or to pilot feedback.',
 } as const;
 
 /**
@@ -60,12 +63,14 @@ export const ANDROID_PERMISSIONS = [
   'android.permission.ACCESS_FINE_LOCATION',
   // push (S-102/S-103): Android 13+ asks; the app asks at the moment the design chooses, never at launch
   'android.permission.POST_NOTIFICATIONS',
+  // mobile gaps part 1: "Take a photo" on a problem report (expo-image-picker's camera); asked at that tap. The photo
+  // library needs no permission (the system photo picker), so storage and media permissions stay removed.
+  'android.permission.CAMERA',
 ] as const;
 export const ANDROID_BLOCKED_PERMISSIONS = [
   'android.permission.ACCESS_BACKGROUND_LOCATION',
   'android.permission.FOREGROUND_SERVICE',
   'android.permission.FOREGROUND_SERVICE_LOCATION',
-  'android.permission.CAMERA',
   'android.permission.RECORD_AUDIO',
   'android.permission.SYSTEM_ALERT_WINDOW',
   'android.permission.READ_EXTERNAL_STORAGE',
@@ -151,7 +156,7 @@ export function createConfig(env: Env = process.env): ExpoConfig {
         ],
         // Linked to the person, for app functionality only: their account (name, email, phone), the delivery address
         // and location they choose, the push token (device id), orders and bookings, the card (entered in Stripe's
-        // sheet), problem reports, booking notes. No tracking. Kept equal to store/privacy.json (S-103 release check).
+        // sheet), problem reports (and their photos), booking notes. No tracking. Kept equal to store/privacy.json (S-103 release check).
         NSPrivacyCollectedDataTypes: [
           'NSPrivacyCollectedDataTypeName',
           'NSPrivacyCollectedDataTypeEmailAddress',
@@ -164,6 +169,8 @@ export function createConfig(env: Env = process.env): ExpoConfig {
           'NSPrivacyCollectedDataTypePaymentInfo',
           'NSPrivacyCollectedDataTypeCustomerSupport',
           'NSPrivacyCollectedDataTypeOtherUserContent',
+          // photos on a problem report, a pilot's screenshot (mobile gaps part 1)
+          'NSPrivacyCollectedDataTypePhotosorVideos',
         ].map((type) => ({
           NSPrivacyCollectedDataType: type,
           NSPrivacyCollectedDataTypeLinked: true,
@@ -211,6 +218,8 @@ export function createConfig(env: Env = process.env): ExpoConfig {
           isAndroidForegroundServiceEnabled: false,
         },
       ],
+      // Photos (mobile gaps part 1): the system photo picker and the camera, with our texts; no microphone (no video)
+      ['expo-image-picker', { photosPermission: PERMISSION_TEXT.photos, cameraPermission: PERMISSION_TEXT.camera, microphonePermission: false }],
       // Push (S-102's registration in @northline/mobile-kit): the native module, the aps-environment entitlement
       // (production APNs for store builds) and the Android channel `updates` the worker sends to.
       ['expo-notifications', { mode: isDev ? 'development' : 'production', defaultChannel: 'updates', color: brand.accent, enableBackgroundRemoteNotifications: false }],

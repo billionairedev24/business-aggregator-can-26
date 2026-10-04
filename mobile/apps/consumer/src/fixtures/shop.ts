@@ -54,6 +54,9 @@ interface Order {
   confirmedAt?: number;
   courier?: { courierName: string; stopsBefore: number; pin: string } | null;
   reported: string[];
+  /** The courier's proof (default photo); an order with an ID check at the door never has a photo to show. */
+  proof?: 'photo' | 'pin';
+  idCheck?: boolean;
 }
 
 export interface ShopFixtureState {
@@ -71,7 +74,16 @@ export interface ShopFixtureState {
   idempotent: Map<string, unknown>;
   upcoming: boolean;
   next: number;
+  /** Push installations (`PUT|DELETE /me/devices/{id}`, S-102), by installation id. */
+  devices: Map<string, Record<string, unknown>>;
+  /** Photos uploaded for reports (`POST /me/case-uploads`), and the reports sent. */
+  uploads: string[];
+  reports: Array<Record<string, unknown>>;
 }
+
+/** The door photo the fixture serves (a 1 × 1 PNG). */
+export const FIXTURE_PROOF_PHOTO =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
 export const FIXTURE_PROOF = 'fixture-proof';
 
@@ -87,6 +99,9 @@ export function newShopState(): ShopFixtureState {
     idempotent: new Map(),
     upcoming: true,
     next: 48213,
+    devices: new Map(),
+    uploads: [],
+    reports: [],
   };
 }
 
@@ -205,7 +220,7 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
         : { kind: 'pooled', runLabel: null, day: 'today', startsAt: r.startsAt, endsAt: r.endsAt, households: 5, etaAt: null },
       shops, steps,
       deliveredAt: o.deliveredAt ? new Date(o.deliveredAt).toISOString() : null,
-      deliveryProof: o.deliveredAt ? 'photo' : null,
+      deliveryProof: o.deliveredAt ? (o.proof ?? 'photo') : null,
       confirmedAt: o.confirmedAt ? new Date(o.confirmedAt).toISOString() : null,
       canConfirm: !!o.deliveredAt && !o.confirmedAt,
       paysShopsAt: o.deliveredAt ? new Date(o.deliveredAt + 7 * DAY).toISOString() : null,
@@ -338,7 +353,7 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
 
     // ── signed-in only from here ─────────────────────────────────────────────────────────────────────────────────
     if (!path.startsWith('/me/')) return undefined;
-    const known = ['/me/upcoming', '/me/checkout', '/me/checkout/quote', '/me/checkouts', '/me/payment-methods'].includes(path) || /^\/me\/(checkouts|orders|problems)\b/.test(path);
+    const known = ['/me/upcoming', '/me/checkout', '/me/checkout/quote', '/me/checkouts', '/me/payment-methods'].includes(path) || /^\/me\/(checkouts|orders|problems|case-uploads|devices)\b/.test(path);
     if (!known) return undefined;
     if (!signedIn(req)) return unauthorized();
     ownerOf(req);
@@ -441,7 +456,30 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
         reasons: ['missing', 'damaged', 'wrong_item', 'poor_quality', 'late'], status: overall, reportBy: null, card: { brand: 'Visa', last4: '4471' },
       });
     }
+    // mobile gaps part 1: the door photo's signed link (404: none to show — PIN, ID check), report photos, push devices
+    m = /^\/me\/orders\/([^/]+)\/proof-photo$/.exec(path);
+    if (method === 'GET' && m) {
+      const o = state.orders.get(decodeURIComponent(m[1]!));
+      if (!o) return ctx.answer(404, { code: 'not_found' });
+      if (!o.deliveredAt || (o.proof ?? 'photo') !== 'photo' || o.idCheck) return ctx.answer(404, { code: 'not_found', detail: 'No proof photo.' });
+      return ctx.answer(200, { url: FIXTURE_PROOF_PHOTO, expiresAt: new Date(ctx.now() + 5 * 60_000).toISOString() });
+    }
+    if (method === 'POST' && path === '/me/case-uploads') {
+      const id = `up-${state.uploads.length + 1}`;
+      state.uploads.push(id);
+      return ctx.answer(201, { id, fileName: `${id}.jpg`, contentType: 'image/jpeg', size: 1000 });
+    }
+    m = /^\/me\/devices\/([^/]+)$/.exec(path);
+    if (m && method === 'PUT') {
+      state.devices.set(m[1]!, req.body);
+      return ctx.answer(200, { installationId: m[1], ...req.body });
+    }
+    if (m && method === 'DELETE') {
+      state.devices.delete(m[1]!);
+      return ctx.answer(204, undefined);
+    }
     if (method === 'POST' && path === '/me/problems') {
+      state.reports.push(req.body);
       const o = state.orders.get(String(req.body.id ?? ''));
       const refs = (req.body.items as string[] | undefined) ?? [];
       if (!o) return ctx.answer(404, { code: 'not_found' });
@@ -459,7 +497,13 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
 }
 
 /** Tests and demos: an order in a given state (`picked_up` with a courier, `delivered`…). */
-export function seedOrder(state: ShopFixtureState, now: number, orderState: 'placed' | 'packing' | 'picked_up' | 'delivered', id = 'ord-1001'): string {
+export function seedOrder(
+  state: ShopFixtureState,
+  now: number,
+  orderState: 'placed' | 'packing' | 'picked_up' | 'delivered',
+  id = 'ord-1001',
+  extra: Pick<Order, 'proof' | 'idCheck'> = {},
+): string {
   const p = PRODUCTS[0]!;
   const k = PRODUCTS[5]!;
   state.orders.set(id, {
@@ -477,6 +521,7 @@ export function seedOrder(state: ShopFixtureState, now: number, orderState: 'pla
     deliveredAt: orderState === 'delivered' ? now - 10 * 60_000 : undefined,
     courier: orderState === 'picked_up' ? { courierName: 'Robin', stopsBefore: 0, pin: '4827' } : null,
     reported: [],
+    ...extra,
   });
   return id;
 }
