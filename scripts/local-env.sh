@@ -8,9 +8,16 @@
 
 _env_file_value() { # _env_file_value <file> <key> <strip-comments 0|1>
   [ -f "$1" ] || return 1
-  local line value found=1
+  local line key value found=1
   while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in "$2="*) value="${line#*=}"; found=0 ;; esac
+    # forgiving like compose: Windows line ends, leading blanks, "export KEY=…", blanks around '='
+    line="${line%$'\r'}"
+    line="${line#"${line%%[![:space:]]*}"}"
+    case "$line" in export[[:space:]]*) line="${line#export}"; line="${line#"${line%%[![:space:]]*}"}" ;; esac
+    case "$line" in "$2"=* | "$2"[[:space:]]*=*) ;; *) continue ;; esac
+    key="${line%%=*}"; key="${key%"${key##*[![:space:]]}"}"
+    [ "$key" = "$2" ] || continue
+    value="${line#*=}"; value="${value#"${value%%[![:space:]]*}"}"; found=0
   done <"$1"
   [ $found = 0 ] || return 1
   if [ "$3" = 1 ]; then value="${value%%[[:space:]]#*}"; fi
