@@ -148,6 +148,16 @@ northline:
     probe-interval: ${LIVE_PROBE_INTERVAL:30s}   # S-113: the live bus probe behind the KDS freshness SLO
   # S-113 (docs/runbooks/alerting.md): the on-call rota for paging tools, GET /api/v1/ops/oncall[.ics]; empty = off (404)
   oncall.export.token: ${ONCALL_EXPORT_TOKEN:}
+  # S-118 go-live checklist (docs/runbooks/go-live.md § Configuration): pilot businesses a market needs before launch,
+  # how long a manual gate's record counts, how long a launch request waits for its second admin, and where the alert
+  # gates read the deployed rules (blank = recorded by hand; default the console overview's Prometheus).
+  go-live:
+    min-pilot-businesses: ${GO_LIVE_MIN_PILOT_BUSINESSES:10}
+    record-max-age: ${GO_LIVE_RECORD_MAX_AGE:P14D}
+    request-ttl: ${GO_LIVE_REQUEST_TTL:PT24H}
+    prometheus:
+      url: ${GO_LIVE_PROMETHEUS_URL:${CONSOLE_HEALTH_PROMETHEUS_URL:}}
+      token: ${GO_LIVE_PROMETHEUS_TOKEN:${CONSOLE_HEALTH_PROMETHEUS_TOKEN:}}
   studio.base-url: ${STUDIO_ORIGIN:http://localhost:3100}      # invitation links, Stripe return URLs
   # S-76: the consumer site that serves the website embed script (<site>/embed.js) shown in the Studio's snippet
   developer.embed.site-origin: ${CONSUMER_ORIGIN:http://localhost:3000}

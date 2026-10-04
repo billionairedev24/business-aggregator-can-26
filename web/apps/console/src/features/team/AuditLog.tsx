@@ -6,7 +6,7 @@ import { useShellT, type ShellKey } from '../shell/messages';
 import { auditQuery, type AuditFilter, type AuditRow, type Member } from './api';
 import { useTeamT, type TeamKey } from './messages';
 
-const AREAS = ['console', 'merchant', 'payments', 'region', 'catalogue', 'trust', 'support', 'api_key', 'fulfilment'] as const;
+const AREAS = ['console', 'merchant', 'payments', 'region', 'golive', 'catalogue', 'trust', 'support', 'api_key', 'fulfilment'] as const;
 
 /**
  * The audit log (S-96): newest first, 50 at a time, filtered by action area, person, business and dates (`mine` = my

@@ -63,6 +63,17 @@ class StaffRoleTest {
     }
 
     @Test
+    void goLive_adminsSwitch_financeAndMerchantSuccessAttest_trustAndSafetyRead() {
+        assertThat(List.of(StaffRole.values()).stream().filter(r -> r.allows(ConsoleAction.ATTEST)))
+                .containsExactlyInAnyOrder(StaffRole.ADMIN, StaffRole.FINANCE, StaffRole.MERCHANT_SUCCESS);
+        assertThat(List.of(StaffRole.values()).stream().filter(r -> r.opens(ConsoleScreen.GO_LIVE)))
+                .containsExactlyInAnyOrder(
+                        StaffRole.ADMIN, StaffRole.FINANCE, StaffRole.MERCHANT_SUCCESS, StaffRole.TRUST_SAFETY);
+        assertThat(List.of(StaffRole.values()).stream().filter(r -> r.allows(ConsoleAction.PROVINCE)))
+                .containsExactly(StaffRole.ADMIN);
+    }
+
+    @Test
     void pilotUat_isSupportSupportLeadsAndMerchantSuccess() {
         assertThat(List.of(StaffRole.values()).stream().filter(r -> r.allows(ConsoleAction.UAT)))
                 .containsExactlyInAnyOrder(

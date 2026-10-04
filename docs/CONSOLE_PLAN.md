@@ -128,6 +128,7 @@ member.
 
 | `/privacy?state=open\|closed&request=` | `privacy` | `privacy` | admin, privacy, support_lead | S-105 | built |
 | `/uat?view=feedback\|participants\|report&state=&blocking=&persona=&item=` | `uat` (no design: S-121) | `uat` | admin, support, support_lead | S-121 | built |
+| `/go-live?market=` | `go_live` (no design: S-118) | `go_live` (+ `attest`, `province`) | admin; finance, merchant_success (record gates); trust_safety (read) | S-118 | built |
 | `/integrations` | `api` | `api` | admin | S-96 | built |
 | `/team` | `team` | `team` | admin, trust_safety, finance | S-96 | built |
 | `/profile?tab=security\|sessions\|audit\|prefs` | `profile` | `profile` | every staff member | S-96 | built |

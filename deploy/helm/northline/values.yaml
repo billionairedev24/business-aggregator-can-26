@@ -245,6 +245,7 @@ externalSecrets:
     PUSH_APNS_KEY: push-apns-key                                      # S-102 push (worker): the APNs .p8 key (PEM)
     PUSH_FCM_SERVICE_ACCOUNT: push-fcm-service-account                # S-102 push (worker): Firebase service account JSON
     ONCALL_EXPORT_TOKEN: oncall-export-token                          # S-113 on-call rota export (api), optional
+    GO_LIVE_PROMETHEUS_TOKEN: go-live-prometheus-token                # S-118 go-live alert gates (api), optional
     ALERTING_PAGERDUTY_ROUTING_KEY: alerting-pagerduty-routing-key    # S-113 alert routing (Alertmanager)
     ALERTING_OPSGENIE_API_KEY: alerting-opsgenie-api-key              # S-113 alert routing (Alertmanager)
     ALERTING_PAGE_WEBHOOK_URL: alerting-page-webhook-url              # S-113 alert routing (Alertmanager)
@@ -510,6 +511,7 @@ apps:
       OPENROUTER_API_KEY: false                # S-129: empty = every AI feature answers 503; add to optionalKeys once the key exists
       CONSOLE_HEALTH_PROMETHEUS_TOKEN: false   # S-91: only for a metrics store that needs a bearer token
       ONCALL_EXPORT_TOKEN: false               # S-113: the on-call rota export for paging tools; empty = off (404)
+      GO_LIVE_PROMETHEUS_TOKEN: false          # S-118: only when the go-live alert gates read another store than the console's
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }

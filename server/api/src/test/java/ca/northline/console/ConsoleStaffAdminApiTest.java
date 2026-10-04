@@ -94,7 +94,7 @@ class ConsoleStaffAdminApiTest extends IntegrationTest {
         mvc.perform(get("/api/v1/console/team").with(TestJwt.staff(adminId, StaffRole.FINANCE)))
                 .andExpect(status().isOk())
                 .andExpect(
-                        jsonPath("$.roles[?(@.role == 'finance')].actions[0]").value("payouts"))
+                        jsonPath("$.roles[?(@.role == 'finance')].actions[0]").value("attest"))
                 .andExpect(jsonPath("$.members[?(@.id == '" + person + "')].roles.length()")
                         .value(3));
 

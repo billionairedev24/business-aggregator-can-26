@@ -353,11 +353,22 @@ class PilotCohortService implements PilotCohort, PilotInviteLinks {
 
     @Override
     public int marketLaunched(String marketId, Actor actor) {
-        var shown = 0;
+        var ids = new java.util.LinkedHashSet<String>();
         for (var row : store.pilots(marketId)) {
-            var merchantId = row.merchantId();
-            if (merchantId != null
-                    && sanctions.restoreSearch(merchantId, PILOT, "The pilot market opened to customers.")) {
+            if (row.merchantId() != null) {
+                ids.add(row.merchantId());
+            }
+        }
+        // S-118: businesses a rollback hid (any business of the market, pilot cohort or not)
+        regions.marketById(marketId)
+                .ifPresent(m -> store.marketBusinesses(m.province(), m.city()).forEach((id, cause) -> {
+                    if (PILOT.equals(cause)) {
+                        ids.add(id);
+                    }
+                }));
+        var shown = 0;
+        for (var merchantId : ids) {
+            if (sanctions.restoreSearch(merchantId, PILOT, "The pilot market opened to customers.")) {
                 shown++;
             }
         }
@@ -365,6 +376,22 @@ class PilotCohortService implements PilotCohort, PilotInviteLinks {
             record(actor, null, "pilot.market_launched", marketId, Map.of("shown", shown));
         }
         return shown;
+    }
+
+    @Override
+    public int marketPaused(String marketId, Actor actor) {
+        var market = regions.marketById(marketId).orElseThrow(() -> new NotFound("market", marketId));
+        var hidden = 0;
+        for (var e : store.marketBusinesses(market.province(), market.city()).entrySet()) {
+            // hideFromSearch skips businesses that aren't active or are already hidden (another cause is kept)
+            if (e.getValue() == null
+                    && sanctions.hideFromSearch(
+                            e.getKey(), PILOT, "The market went back to pilot: hidden until it reopens.")) {
+                hidden++;
+            }
+        }
+        record(actor, null, "pilot.market_paused", marketId, Map.of("hidden", hidden));
+        return hidden;
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────────────────────────────────────────

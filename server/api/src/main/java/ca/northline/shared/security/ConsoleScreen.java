@@ -29,6 +29,8 @@ public enum ConsoleScreen implements CodedEnum {
     PILOT,
     /** S-121: UAT with the pilot group — feedback triage, participants' sign-offs, the go/no-go report. */
     UAT,
+    /** S-118: a market's go-live checklist, the two-person switch to live, rollback and hypercare. */
+    GO_LIVE,
     PROFILE,
     ONCALL;
 

@@ -68,6 +68,10 @@ class SwitchboardService implements Switchboard {
             if (m.stage().above(stage)) {
                 store.stage(m.id(), stage);
                 lowered.put(m.id(), m.stage().code());
+                if (m.stage() == LaunchStatus.LIVE) {
+                    // S-118: a market that stops being live stops new public discovery (its businesses are hidden)
+                    pilots.marketPaused(m.id(), new PilotCohort.Actor(actor.userId(), actor.role()));
+                }
             }
         }
         var after = new HashMap<String, Object>(Map.of("stage", stage.code()));
@@ -118,17 +122,13 @@ class SwitchboardService implements Switchboard {
             return reload(ref.province());
         }
         if (stage == LaunchStatus.LIVE) {
-            var zones = store.zones(province.id()).stream()
-                    .filter(z -> z.marketId().equals(ref.id()) && z.areaKm2() != null)
-                    .count();
-            if (zones == 0) {
-                throw new Conflict("not_ready", MARKET_NOT_READY);
-            }
+            // S-118: a market launches through the go-live checklist and a second admin (golive module), never here
+            throw new Conflict("use_go_live", USE_GO_LIVE);
         }
         store.stage(ref.id(), stage);
-        if (stage == LaunchStatus.LIVE) {
-            // S-120: the market's pilot businesses, hidden from search before launch, open with it
-            pilots.marketLaunched(ref.id(), new PilotCohort.Actor(actor.userId(), actor.role()));
+        if (ref.stage() == LaunchStatus.LIVE) {
+            // S-118: lowering a live market from here is a rollback too: new public discovery stops
+            pilots.marketPaused(ref.id(), new PilotCohort.Actor(actor.userId(), actor.role()));
         }
         record(
                 actor,

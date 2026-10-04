@@ -24,5 +24,7 @@ public enum ConsoleAction implements CodedEnum {
     /** S-120: onboard pilot businesses (invites, enrolment, owners, blockers, notes, kitchen visits). */
     ONBOARD,
     /** S-121: triage pilot feedback (state, owner, tracker link, duplicates), manage participants, record sign-offs. */
-    UAT
+    UAT,
+    /** S-118: record a manual go-live gate (pass, fail, not applicable) with its evidence. */
+    ATTEST
 }

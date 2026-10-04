@@ -16,6 +16,7 @@ import { Route as ConsoleCatalogueRouteImport } from './routes/_console/catalogu
 import { Route as ConsoleDeliveryRouteImport } from './routes/_console/delivery'
 import { Route as ConsoleDisputesRouteImport } from './routes/_console/disputes'
 import { Route as ConsoleFinanceRouteImport } from './routes/_console/finance'
+import { Route as ConsoleGoLiveRouteImport } from './routes/_console/go-live'
 import { Route as ConsoleIntegrationsRouteImport } from './routes/_console/integrations'
 import { Route as ConsoleOnCallRouteImport } from './routes/_console/on-call'
 import { Route as ConsoleOrdersRouteImport } from './routes/_console/orders'
@@ -65,6 +66,11 @@ const ConsoleDisputesRoute = ConsoleDisputesRouteImport.update({
 const ConsoleFinanceRoute = ConsoleFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleGoLiveRoute = ConsoleGoLiveRouteImport.update({
+  id: '/go-live',
+  path: '/go-live',
   getParentRoute: () => ConsoleRoute,
 } as any)
 const ConsoleIntegrationsRoute = ConsoleIntegrationsRouteImport.update({
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/delivery': typeof ConsoleDeliveryRoute
   '/disputes': typeof ConsoleDisputesRoute
   '/finance': typeof ConsoleFinanceRoute
+  '/go-live': typeof ConsoleGoLiveRoute
   '/integrations': typeof ConsoleIntegrationsRoute
   '/on-call': typeof ConsoleOnCallRoute
   '/orders': typeof ConsoleOrdersRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/delivery': typeof ConsoleDeliveryRoute
   '/disputes': typeof ConsoleDisputesRoute
   '/finance': typeof ConsoleFinanceRoute
+  '/go-live': typeof ConsoleGoLiveRoute
   '/integrations': typeof ConsoleIntegrationsRoute
   '/on-call': typeof ConsoleOnCallRoute
   '/orders': typeof ConsoleOrdersRoute
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/_console/delivery': typeof ConsoleDeliveryRoute
   '/_console/disputes': typeof ConsoleDisputesRoute
   '/_console/finance': typeof ConsoleFinanceRoute
+  '/_console/go-live': typeof ConsoleGoLiveRoute
   '/_console/integrations': typeof ConsoleIntegrationsRoute
   '/_console/on-call': typeof ConsoleOnCallRoute
   '/_console/orders': typeof ConsoleOrdersRoute
@@ -231,6 +240,7 @@ export interface FileRouteTypes {
     | '/delivery'
     | '/disputes'
     | '/finance'
+    | '/go-live'
     | '/integrations'
     | '/on-call'
     | '/orders'
@@ -254,6 +264,7 @@ export interface FileRouteTypes {
     | '/delivery'
     | '/disputes'
     | '/finance'
+    | '/go-live'
     | '/integrations'
     | '/on-call'
     | '/orders'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/_console/delivery'
     | '/_console/disputes'
     | '/_console/finance'
+    | '/_console/go-live'
     | '/_console/integrations'
     | '/_console/on-call'
     | '/_console/orders'
@@ -352,6 +364,13 @@ declare module '@tanstack/react-router' {
       path: '/finance'
       fullPath: '/finance'
       preLoaderRoute: typeof ConsoleFinanceRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/go-live': {
+      id: '/_console/go-live'
+      path: '/go-live'
+      fullPath: '/go-live'
+      preLoaderRoute: typeof ConsoleGoLiveRouteImport
       parentRoute: typeof ConsoleRoute
     }
     '/_console/integrations': {
@@ -474,6 +493,7 @@ interface ConsoleRouteChildren {
   ConsoleDeliveryRoute: typeof ConsoleDeliveryRoute
   ConsoleDisputesRoute: typeof ConsoleDisputesRoute
   ConsoleFinanceRoute: typeof ConsoleFinanceRoute
+  ConsoleGoLiveRoute: typeof ConsoleGoLiveRoute
   ConsoleIntegrationsRoute: typeof ConsoleIntegrationsRoute
   ConsoleOnCallRoute: typeof ConsoleOnCallRoute
   ConsoleOrdersRoute: typeof ConsoleOrdersRoute
@@ -498,6 +518,7 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleDeliveryRoute: ConsoleDeliveryRoute,
   ConsoleDisputesRoute: ConsoleDisputesRoute,
   ConsoleFinanceRoute: ConsoleFinanceRoute,
+  ConsoleGoLiveRoute: ConsoleGoLiveRoute,
   ConsoleIntegrationsRoute: ConsoleIntegrationsRoute,
   ConsoleOnCallRoute: ConsoleOnCallRoute,
   ConsoleOrdersRoute: ConsoleOrdersRoute,

@@ -54,10 +54,17 @@ public interface PilotCohort {
     List<Invite> invites(String pilotId);
 
     /**
-     * The market went live: its pilot businesses that were hidden from search before launch are shown. Returns how
-     * many.
+     * The market went live: its pilot businesses that were hidden from search before launch are shown, and (S-118)
+     * every other business of the market a rollback hid. Returns how many.
      */
     int marketLaunched(String marketId, Actor actor);
+
+    /**
+     * S-118: the live market went back to {@code pilot} (rollback): every active business of the market that customers
+     * could find is hidden from search again (cause {@code pilot}), so new public discovery stops; their pages, orders
+     * and bookings in progress are untouched. {@link #marketLaunched} shows them again. Returns how many.
+     */
+    int marketPaused(String marketId, Actor actor);
 
     /** @param role the console role(s) acted with, for the audit log */
     record Actor(String userId, String role) {}

@@ -7780,3 +7780,91 @@ story builds the tooling and the process and rehearses them; the sign-off itself
   /me/pilot/feedback`, which no screen shows yet); no feedback control in the courier app; no screenshot from the
   consumer app; no retention job for `uat`; nothing exercised with a real
   participant, device, browser capture prompt, or object store (local folder and the S-10 adapters' tests only).
+
+## 2026-10-03 — S-118 Go-live checklist and launch of the first market
+
+Branch `pilot/s-118-go-live`. Runbook: [runbooks/go-live.md](runbooks/go-live.md). Acceptance criteria: production
+live; a hypercare rota for two weeks.
+
+> **Plainly:** there is no production, so nothing went live. What exists is the switch, the checks, the process and a
+> rehearsal on a local stack ([go-live.md § Rehearsal](runbooks/go-live.md#rehearsal)). Nothing here has met live
+> Stripe, a real metrics store or paging tool, real pilot businesses or real people on a rota.
+
+- **A module of its own, `golive`** (schema `golive`, V330), not the console: the console module owns no schema, and
+  the checklist needs tables. It reads the region model, the pilot cohort, the on-call rota, Stripe's mode and S-121's
+  report through their `api` packages. The pilot-business count needs S-120's derived stages, which live in the
+  console; rather than a dependency on the console, `golive.api.PilotReadiness` is declared here and implemented by
+  the console (`PilotGoLiveReadiness`) — the "declare it in your api, let the other module implement it" pattern.
+- **Gates (20) are an enum, not data**: each has a kind (automatic, manual, automatic-where-a-metrics-store-is-set),
+  an owner role code, required or not, and its runbook. Automatic ones are evaluated on every read; a source that
+  throws makes only that gate `pending` (`source_error`). Manual ones take the newest record (pass / fail / not
+  applicable, evidence 1–1,000 chars, optional `https://` link, source console or script, who, when); a record counts
+  for `GO_LIVE_RECORD_MAX_AGE` (14 days) so each launch re-confirms the list. Automatic gates refuse records (409
+  `gate_automatic`). Choices the story left open: `app_stores` is **optional** (a web-first launch is possible);
+  `french_coverage` applies only where the market's language rules are French-first (S-116) and is not applicable
+  elsewhere; `backup_drill` outside `local` counts only a cloud drill; `pilot_businesses` counts businesses live or
+  waiting only for the launch (S-120's `market_launch` next step), against `GO_LIVE_MIN_PILOT_BUSINESSES` (10, S-120's
+  criterion); `stripe_live` reads configuration only (key prefixes, both webhook secrets — new
+  `payments.api.StripeMode`, never a key out of payments) and `stripe_webhooks` (registered in live mode) is manual;
+  `alert_rules` / `slo_alerts` read `/api/v1/rules` of a Prometheus-compatible API (`northline-*` groups; firing rules
+  with `severity=page`) when `GO_LIVE_PROMETHEUS_URL` (default the console's) is set, else they are recorded.
+- **What the server can't see, the script checks**: findings, the a11y audit, the drill log, the legal registry,
+  `make i18n-check STRICT=1`, the last e2e (`e2e-out/results.json`) and load (`loadtest/results/*-<env>-*/summary.json`)
+  results live in the repository or on the runner. `make go-live-check ENV=… MARKET=…` (Node, no deps) combines them
+  with the api's checklist and exits 0/1/2; `RECORD=1` records them as `source=script` on the gates that take records.
+  e2e and load results older than 7 days fail. A staff bearer token outside `local`; dev auth locally.
+- **Two-person launch, reusing S-120's launch logic.** S-120 had no two-person step (S-84 left the design's
+  co-signers unmodelled); its launch logic is `PilotCohort.marketLaunched`, called here. `golive.launch_requests`:
+  one pending request per market (unique partial index), requested by one admin, approved by **another** (409
+  `same_person`; also a DB CHECK), withdrawn by its requester or rejected by another admin, lapsing after
+  `GO_LIVE_REQUEST_TTL` (24 h; a lapsed request is shown expired and closed by the next request). Both asking and
+  approving re-evaluate the gates; a failing required gate refuses both (409 `not_ready`) unless the request carries an
+  **emergency override** (reason 20–500 chars, the failing gates snapshotted on the request, visible to the approver,
+  `after.override`/`after.blocking` in the audit). The override never lifts "province live" (422) or "a zone with a
+  boundary" (409). Approve and rollback type the market's name (as S-84). Audit: `golive.launch_requested`,
+  `golive.launch_approved | launch_rejected | launch_withdrawn`, `golive.rolled_back`, `golive.gate_recorded`,
+  `golive.hypercare_created`, plus the switchboard's `region.stage_changed` for the stage itself.
+- **The switchboard no longer launches markets**: a market → `live` from Console › Provinces is 409 `use_go_live`
+  ("A market goes live from its Go-live screen: …"); the screen disables Live and links to Go-live. Provinces still go
+  live there (their checklist is S-84's).
+- **Rollback (live → pilot) is one admin** with a reason (10–500 chars): speed over a second signature in an incident,
+  the audit log keeps it. Defined effect: nothing is cancelled (orders, bookings, escrow, payouts carry on); new public
+  discovery stops — the market resolves to the waitlist, leaves the shop's fallback, and **every active business of the
+  market** is hidden from search with cause `pilot` (new `PilotCohort.marketPaused`; no "you were hidden" email, as
+  S-120). Direct links still answer, as during the pilot. `marketLaunched` now also shows the market's non-pilot
+  businesses a rollback hid. Lowering a live market (or its province) from the switchboard pauses it the same way —
+  this closes S-120's "re-hiding pilot businesses if a live market is lowered again".
+- **Hypercare**: `golive.hypercare_days` (market, local date, primary, secondary, business contact). Planned from the
+  console once live: a start day (today in the market's zone, up to 14 days ahead) and three people lists taken in
+  turn; the secondary is never the primary that day (the next one in the list takes it, else 422). The primary and
+  secondary each get an `identity.oncall_shifts` row for that local day, duty `Hypercare · <city> · primary|secondary`
+  (the market's name from the region model), so S-113's on-call export carries them; the business contact isn't
+  paged. One rota per period (409 `hypercare_exists`); swaps on the On-call screen. Rollback keeps the rota.
+- **Hypercare dashboard** `northline-hypercare` (dashboards.py) with a `market` variable. No S-111 metric carries a
+  place, so new `northline.market.activity{market,kind}` counts orders, bookings, payouts sent/failed and support
+  tickets per region market id (plain `@EventListener`s on `OrderPlaced`, `BookingConfirmed`, `PayoutSent`,
+  `PayoutFailed`, `TicketOpened`, after commit; the business's market resolved through `MerchantDirectory` + the
+  region model and cached). Checkout errors, sign-in failures, payouts and SLO budgets stay platform-wide (one live
+  market = the platform). UAT gauges `northline.uat.feedback.reported` / `northline.uat.blocking.open` read S-121's
+  report at most every 5 minutes. No alert rule added.
+- **Templates are documents**, not platform emails: daily stand-up, merchant and customer launch emails (en / fr)
+  under `docs/runbooks/go-live/`, sent by people (the customer one only to the waitlist or consenting people, CASL).
+- **Roles**: screen `go_live` (admin; finance, merchant success, trust & safety read), new action `attest` (record a
+  gate: admin, finance, merchant success); switching and hypercare need `province` (admins). Dev seed V334 adds a
+  second admin (Marc Bélanger, fake) for the two-person switch locally.
+- **Schema (V330–V334, above main's V326):** V330 schema `golive` — `gate_records`, `launch_requests`,
+  `market_events`, `hypercare_days`; dev seed V334. DR masking `db/dr/mask/golive.sql`. New optional variables
+  `GO_LIVE_MIN_PILOT_BUSINESSES`, `GO_LIVE_RECORD_MAX_AGE`, `GO_LIVE_REQUEST_TTL`, `GO_LIVE_PROMETHEUS_URL`,
+  `GO_LIVE_PROMETHEUS_TOKEN` (secret, optional key `go-live-prometheus-token`).
+- **Region-neutral:** no place in code; the market's name, zone and language rules come from the region model. The
+  runbook names the pilot market.
+- **Rehearsal (2026-10-03, local, `mkt-calgary`):** 11 of 11 steps passed — dry run 12/12 live; back to pilot hides the
+  market (waitlist, 23 businesses hidden); the check blocks with 15 gates (manual pending, UAT no-go on the dev seed's
+  data, no on-call, no Stripe keys); records by script and by a second admin (stand-ins); a refused self-approval; the
+  two-person switch with an override (Stripe, UAT); rollback; launch again; hypercare 14 days / 28 shifts.
+  Details: [go-live.md § Rehearsal](runbooks/go-live.md#rehearsal).
+- **Not done:** the launch emails aren't sent by the platform (and the S-84 "waitlist emailed on Live" stays undone);
+  no per-market labels on the existing checkout / sign-in metrics; no alert rules for hypercare; the a11y page sweep has
+  no `/go-live` entry (axe runs in its Vitest tests); no CSV of the checklist (the script prints it); gates and their
+  owners are code, not editable; `make go-live-check` outside `local` needs a staff access token by hand. Never run
+  against a real Prometheus rules API, live Stripe keys, a paging tool or production.

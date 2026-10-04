@@ -67,6 +67,7 @@ See `docs/BACKEND_CONVENTIONS.md` (written by the backend foundation) — layeri
 | V305–V309 | security review before the penetration test (S-104: `privacy.verification_texts`) — above S-107's V301 by the ordering rule below |
 | V320–V324 | pilot merchant onboarding (S-120: `merchants.pilot_*`, `merchants.kitchen_visits`, the kitchen-visit rule on `region.regions` and `catalogue.categories`, the merchant success role; dev seed V323) — above S-116's V319 |
 | V325–V329 | UAT with the pilot group (S-121: schema `uat`, dev seed V326) — above S-120's V320–V324 (main's highest: V323) by the ordering rule below |
+| V330–V334 | go-live (S-118: schema `golive` V330, dev seed V334 — a second console admin) — above S-121's V325–V329 by the ordering rule below |
 
 **Ordering rule (2026-10-01):** Flyway applies versions in order and, outside the `local` profile, refuses a version lower than one already applied. A new migration must therefore be numbered **above the highest version on main** when it merges, not just inside its workstream's range. If a range is behind, take the next free range above the maximum and record it here (S-129/S-133's V125/V126 became V150/V151 for this reason).
 
