@@ -166,6 +166,13 @@ test: server-test web-test ## Server tests (Testcontainers) and every web packag
 .PHONY: lint
 lint: server-lint web-lint ## Static checks: Spotless, Checkstyle, Error Prone/NullAway, hex colours, typecheck
 
+# macOS ships bash 3.2: a script that parses on Linux's bash 5 can still fail there (e.g. a bare `case` pattern inside
+# $( )). Parses every tracked bash script with bash 3.2 in Docker; /bin/sh scripts are skipped.
+.PHONY: shell-compat
+shell-compat: ## Parse every bash script with bash 3.2 (macOS's), in Docker — catches syntax only bash 4+ accepts
+	@cd $(ROOT) && files=$$( (git ls-files '*.sh'; git ls-files | xargs grep -lsE '^#!.*\b(bash|sh)\b') | sort -u | grep -v node_modules ) && \
+	docker run --rm -v "$(ROOT)":/r:ro -w /r bash:3.2 bash -c 'bad=0; for f in "$$@"; do head -1 "$$f" | grep -q "^#!.*bin/sh\b" && continue; bash -n "$$f" || bad=1; done; [ $$bad = 0 ] && echo "shell-compat: $$# scripts parse with bash 3.2"; exit $$bad' _ $$files
+
 .PHONY: format
 format: server-format web-format ## Format the code (Spotless; Prettier on the web files you changed)
 
