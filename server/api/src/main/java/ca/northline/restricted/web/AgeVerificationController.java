@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <pre>
  * GET  /api/v1/me/age-verification            {state: none|pending|verified|failed, overAge, verifiedOn, ageFloor, method, lastError}
- * POST /api/v1/me/age-verification {returnTo: web|app}   {url, status} — open url (the provider's hosted flow) at once;
+ * POST /api/v1/me/age-verification {returnTo: web|web_food|app}   {url, status} — open url (the provider's hosted flow) at once;
  *                                             409 age_already_verified | age_check_attempts | age_check_unavailable
  * </pre>
  */
@@ -34,7 +34,8 @@ class AgeVerificationController {
     private final StartAgeCheck start;
 
     record StartRequest(
-            @NotBlank(message = AgeMessages.RETURN_URL) @Pattern(regexp = "web|app", message = AgeMessages.RETURN_URL)
+            @NotBlank(message = AgeMessages.RETURN_URL)
+            @Pattern(regexp = "web|web_food|app", message = AgeMessages.RETURN_URL)
             String returnTo) {}
 
     @GetMapping

@@ -7176,6 +7176,90 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - taxonomy-controller
+  /api/v1/console/taxonomy/categories/{id}/age-class:
+    put:
+      operationId: taxonomyClassify
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgeClassRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Row"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - taxonomy-controller
   /api/v1/console/taxonomy/categories/{id}/regulators/{province}:
     put:
       operationId: taxonomyRegulate
@@ -9648,6 +9732,102 @@ paths:
           description: Your sign-in doesn't allow this.
       tags:
       - vetting-controller
+  /api/v1/console/vetting/age-checks:
+    get:
+      operationId: ageChecksReportReport
+      parameters:
+      - in: query
+        name: from
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: to
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: province
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Report"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - age-checks-report-controller
+  /api/v1/console/vetting/age-rules:
+    get:
+      operationId: ageChecksReportRules
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseAgeRule"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - age-checks-report-controller
   /api/v1/console/vetting/dishes/{id}/decision:
     post:
       operationId: vettingDecideDish
@@ -9732,6 +9912,207 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - vetting-controller
+  /api/v1/console/vetting/licences:
+    get:
+      operationId: restrictedLicenceQueueList
+      parameters:
+      - in: query
+        name: status
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: province
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: market
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseQueueItem"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - restricted-licence-queue-controller
+  /api/v1/console/vetting/licences/{licenceId}/decision:
+    post:
+      operationId: restrictedLicenceQueueDecide
+      parameters:
+      - in: path
+        name: licenceId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecisionRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/QueueItem"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - restricted-licence-queue-controller
+  /api/v1/console/vetting/licences/{licenceId}/document:
+    get:
+      operationId: restrictedLicenceQueueDocument
+      parameters:
+      - in: path
+        name: licenceId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - restricted-licence-queue-controller
   /api/v1/console/vetting/listings/{id}/decision:
     post:
       operationId: vettingDecideListing
@@ -9831,6 +10212,45 @@ components:
           minLength: 0
       required:
       - action
+    AgeClassRequest:
+      type: object
+      properties:
+        ageClass:
+          type: string
+    AgeRule:
+      type: object
+      properties:
+        ageClass:
+          type: string
+          enum:
+          - alcohol
+          - tobacco
+          - cannabis
+        confirmed:
+          type: boolean
+        deliveryAllowed:
+          type: boolean
+        deliveryFrom:
+          type: string
+          format: time-local
+        deliveryUntil:
+          type: string
+          format: time-local
+        minimumAge:
+          type: integer
+          format: int32
+        pickupAllowed:
+          type: boolean
+        pickupFrom:
+          type: string
+          format: time-local
+        pickupUntil:
+          type: string
+          format: time-local
+        province:
+          type: string
+        source:
+          type: string
     ApplicationDetail:
       type: object
       properties:
@@ -10862,6 +11282,14 @@ components:
           $ref: "#/components/schemas/Person"
         secondary:
           $ref: "#/components/schemas/Person"
+    IdCheckView:
+      type: object
+      properties:
+        age:
+          type: integer
+          format: int32
+        recipient:
+          type: string
     Impact:
       type: object
       properties:
@@ -11083,6 +11511,40 @@ components:
           format: int32
         shortName:
           type: string
+    Licence:
+      type: object
+      properties:
+        ageClass:
+          type: string
+          enum:
+          - alcohol
+          - tobacco
+          - cannabis
+        decidedAt:
+          type: string
+          format: date-time
+        documentId:
+          type: string
+        expiresOn:
+          type: string
+          format: date
+        id:
+          type: string
+        licenceNumber:
+          type: string
+        merchantId:
+          type: string
+        note:
+          type: string
+        province:
+          type: string
+        rejectReason:
+          type: string
+        status:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
     Limit:
       type: object
       properties:
@@ -11105,6 +11567,13 @@ components:
         max:
           type: integer
           format: int32
+    ListResponseAgeRule:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgeRule"
     ListResponseCourierSummary:
       type: object
       properties:
@@ -12058,47 +12527,12 @@ components:
     QueueItem:
       type: object
       properties:
-        app:
+        businessName:
           type: string
-        blocking:
-          type: boolean
-        category:
+        businessProvince:
           type: string
-        createdAt:
-          type: string
-          format: date-time
-        duplicateOf:
-          type: string
-        duplicates:
-          type: integer
-          format: int32
-        id:
-          type: string
-        ownerId:
-          type: string
-        ownerName:
-          type: string
-        participant:
-          type: string
-        persona:
-          type: string
-        reference:
-          type: string
-        route:
-          type: string
-        screenshot:
-          type: boolean
-        severity:
-          type: string
-        state:
-          type: string
-        summary:
-          type: string
-        trackerUrl:
-          type: string
-        updatedAt:
-          type: string
-          format: date-time
+        licence:
+          $ref: "#/components/schemas/Licence"
     ReasonRequest:
       type: object
       properties:
@@ -12589,6 +13023,8 @@ components:
     Row:
       type: object
       properties:
+        ageClass:
+          type: string
         bookingType:
           type: string
         group:
@@ -12972,6 +13408,8 @@ components:
           format: date-time
         id:
           type: string
+        idCheck:
+          $ref: "#/components/schemas/IdCheckView"
         kind:
           type: string
         orderId:
