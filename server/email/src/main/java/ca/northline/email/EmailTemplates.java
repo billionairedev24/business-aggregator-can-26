@@ -118,7 +118,10 @@ public final class EmailTemplates {
             "action",
             "rule",
             "settingsPlace",
-            "businessType");
+            "businessType",
+            "what",
+            "ageClass",
+            "rejectReason");
 
     /** Lists whose items (or items' {@code code}) become message keys: {@code reasons}, {@code checks}. */
     static final Set<String> KEY_LISTS = Set.of("reasons", "checks");

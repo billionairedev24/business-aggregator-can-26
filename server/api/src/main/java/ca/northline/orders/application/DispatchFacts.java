@@ -15,6 +15,8 @@ public interface DispatchFacts {
      * @param addressId the shop order's delivery address ({@code identity.addresses})
      * @param deliveryArea the city the order is delivered in (shop orders)
      * @param foodDelivery a food order's delivery snapshot (JSON of {@code FoodCheckout.Delivery}), null for pickup
+     * @param idCheckAge the age the recipient proves at the door (age-restricted items), null without
+     * @param province the delivery address's province
      */
     record Facts(
             String orderId,
@@ -22,5 +24,7 @@ public interface DispatchFacts {
             @Nullable String addressId,
             @Nullable String deliveryArea,
             @Nullable String windowId,
-            @Nullable String foodDelivery) {}
+            @Nullable String foodDelivery,
+            @Nullable Integer idCheckAge,
+            @Nullable String province) {}
 }

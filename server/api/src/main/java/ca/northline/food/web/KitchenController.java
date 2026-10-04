@@ -8,6 +8,7 @@ import static ca.northline.shared.security.MerchantPermission.VIEW;
 import ca.northline.food.application.ComboUseCases.KitchenPromos;
 import ca.northline.food.application.ComboUseCases.PromoView;
 import ca.northline.food.application.KitchenUseCases.EditKitchenSetup;
+import ca.northline.food.application.KitchenUseCases.IdCheckAnswer;
 import ca.northline.food.application.KitchenUseCases.KitchenLive;
 import ca.northline.food.application.KitchenUseCases.LiveBoard;
 import ca.northline.food.application.KitchenUseCases.SetupView;
@@ -18,14 +19,18 @@ import ca.northline.food.web.KitchenRequests.HolidayRequest;
 import ca.northline.food.web.KitchenRequests.HoursRequest;
 import ca.northline.food.web.KitchenRequests.PrepRequest;
 import ca.northline.food.web.KitchenRequests.PromoRequest;
+import ca.northline.restricted.api.HandoffChecks;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.ListResponse;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.security.CurrentMember;
 import ca.northline.shared.security.RequiresMerchant;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import java.util.Arrays;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -68,8 +73,31 @@ class KitchenController {
 
     @PostMapping("/live/{orderId}/handoff")
     @RequiresMerchant(OPERATE)
-    LiveBoard handOff(@PathVariable String merchantId, @PathVariable String orderId, CurrentMember member) {
-        return live.handOff(merchantId, orderId, member.userId());
+    LiveBoard handOff(
+            @PathVariable String merchantId,
+            @PathVariable String orderId,
+            @RequestBody(required = false) @Nullable HandoffRequest body,
+            CurrentMember member) {
+        return live.handOff(merchantId, orderId, member.userId(), body == null ? null : body.idCheck());
+    }
+
+    /** Age-restricted dishes (2026-10-04): the counter's confirmations, for a pickup that needs them. */
+    record HandoffRequest(@Nullable IdCheckAnswer idCheck) {}
+
+    record RefuseRequest(
+            @NotBlank(message = HandoffChecks.REASON)
+            @Pattern(regexp = "no_id|underage|mismatch|nobody_of_age|intoxicated|other", message = HandoffChecks.REASON)
+            String reason) {}
+
+    /** Age-restricted dishes: a pickup not handed over at the counter (refund rules: docs/runbooks/age-restricted.md). */
+    @PostMapping("/live/{orderId}/refuse")
+    @RequiresMerchant(OPERATE)
+    LiveBoard refuse(
+            @PathVariable String merchantId,
+            @PathVariable String orderId,
+            @Valid @RequestBody RefuseRequest body,
+            CurrentMember member) {
+        return live.refuse(merchantId, orderId, member.userId(), body.reason());
     }
 
     @PostMapping("/prep-bump")

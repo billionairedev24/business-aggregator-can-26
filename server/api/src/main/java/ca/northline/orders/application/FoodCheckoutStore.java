@@ -17,8 +17,12 @@ public interface FoodCheckoutStore {
 
     void paymentStarted(String id, String paymentIntent);
 
-    /** Pending → placed and the {@code orders.orders} / {@code order_lines} rows; false when it wasn't pending. */
-    boolean place(CheckoutRow row, List<OrderLineRow> lines, Instant at);
+    /**
+     * Pending → placed and the {@code orders.orders} / {@code order_lines} rows; false when it wasn't pending.
+     *
+     * @param idCheckAge the age the recipient proves at handoff (age-restricted dishes), null without
+     */
+    boolean place(CheckoutRow row, List<OrderLineRow> lines, @Nullable Integer idCheckAge, Instant at);
 
     /** {@code orders.orders.state} and {@code delivered_at} of a placed order. */
     Optional<OrderState> state(String orderId);
@@ -63,7 +67,8 @@ public interface FoodCheckoutStore {
             String title,
             int qty,
             long unitCents,
-            String modifiers) {}
+            String modifiers,
+            @Nullable String ageClass) {}
 
     record OrderState(String state, @Nullable Instant deliveredAt) {}
 }

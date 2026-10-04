@@ -151,7 +151,8 @@ export function createConfig(env: Env = process.env): ExpoConfig {
         ],
         // Linked to the person, for app functionality only: their account (name, email, phone), the delivery address
         // and location they choose, the push token (device id), orders and bookings, the card (entered in Stripe's
-        // sheet), problem reports, booking notes. No tracking. Kept equal to store/privacy.json (S-103 release check).
+        // sheet), problem reports, booking notes, the age check's result (2026-10-04: "verified over N", never the ID).
+        // No tracking. Kept equal to store/privacy.json (S-103 release check).
         NSPrivacyCollectedDataTypes: [
           'NSPrivacyCollectedDataTypeName',
           'NSPrivacyCollectedDataTypeEmailAddress',
@@ -164,6 +165,7 @@ export function createConfig(env: Env = process.env): ExpoConfig {
           'NSPrivacyCollectedDataTypePaymentInfo',
           'NSPrivacyCollectedDataTypeCustomerSupport',
           'NSPrivacyCollectedDataTypeOtherUserContent',
+          'NSPrivacyCollectedDataTypeOtherDataTypes',
         ].map((type) => ({
           NSPrivacyCollectedDataType: type,
           NSPrivacyCollectedDataTypeLinked: true,

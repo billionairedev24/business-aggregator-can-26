@@ -5,12 +5,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ApiError, MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
 
-import type { AddressInput, CheckoutBody, CheckoutSetup, DeliveryOption, Substitution } from '../api/shop';
+import { ageCleared, type AddressInput, type CheckoutBody, type CheckoutSetup, type DeliveryOption, type Substitution } from '../api/shop';
 import { useAuth } from '../auth/AuthProvider';
 import { useDeliveryLocation, type DeliveryLocation } from '../location/DeliveryLocation';
 import { Body, Button, Notice } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { EmptyState, ErrorState, LoadingList, QueryView, SignInPrompt, Skeleton, errorMessage } from '../ui/states';
+import { AgeCheck } from './AgeCheck';
 import { serverMessage, shop, useMarket, useShopFormat } from './common';
 import { Chip, Kicker, SumRow, shopStyles } from './parts';
 
@@ -102,7 +103,8 @@ export function quoteProblem(error: unknown, t: ReturnType<typeof useShopFormat>
  * B5 Checkout (design 01 `checkout`; signed in): deliver to (Change → the Location screen and back), the delivery
  * window (the market's pooled runs and the direct courier with their fees), substitutions, then the quote: items,
  * delivery, each tax by name and rate (from the province — never a fixed "GST 5%"), total. "Redeem points" has no
- * checkout api (S-51) and isn't offered. Continue → Payment with the choices in the route.
+ * checkout api (S-51) and isn't offered. A cart with age-restricted items shows the age step (2026-10-04) and Continue
+ * waits for it. Continue → Payment with the choices in the route.
  */
 export function Checkout() {
   const { status } = useAuth();
@@ -124,6 +126,8 @@ export function Checkout() {
   const body = option && address && data && data.cart.itemCount > 0 ? bodyOf(option, address.input, substitution) : null;
   const quote = useQuote(body);
   const problem = quoteProblem(quote.error, t);
+  // 2026-10-04: the age step — the quote's answer for the chosen address (its province), else the setup's
+  const age = quote.data?.age ?? data?.age;
 
   if (status !== 'signedIn') {
     return (
@@ -149,7 +153,8 @@ export function Checkout() {
         data && data.cart.itemCount > 0 ? (
           <>
             {data.stepUp !== 'none' ? <Body tone="small">{t('shop.checkout.stepUp')}</Body> : null}
-            <Button label={t('shop.checkout.continue')} large disabled={!body || !quote.data || quote.isPlaceholderData} onPress={next} testID="checkout-continue" />
+            {!ageCleared(age) ? <Body tone="small">{t('shop.age.blocked')}</Body> : null}
+            <Button label={t('shop.checkout.continue')} large disabled={!body || !quote.data || quote.isPlaceholderData || !ageCleared(age)} onPress={next} testID="checkout-continue" />
           </>
         ) : undefined
       }
@@ -199,6 +204,7 @@ export function Checkout() {
                 ))}
               </View>
 
+              {age?.required ? <AgeCheck age={age} /> : null}
               {problem ? <Notice message={problem} /> : null}
               {quote.isError && !problem ? <ErrorState error={quote.error} onRetry={() => void quote.refetch()} /> : null}
               <Sums subtotalCents={s.cart.subtotalCents} deliveryCents={option?.feeCents} quote={quote} />

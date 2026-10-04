@@ -8,6 +8,8 @@ export const Category = z.object({
   id: z.string(), parentId: z.string().nullish(), root: z.enum(['service', 'shop', 'food']), group: z.boolean(), nameEn: z.string(), nameFr: z.string().nullish(),
   bookingType: z.string().nullish(), regulatedRegistry: z.string().nullish(), requiresVsCheck: z.boolean(), regulators: z.array(Rule),
   sellers: z.number(), liveIn: z.array(z.string()), liveListings: z.number(), medianPriceCents: z.number().nullish(), priceMode: z.string().nullish(),
+  /** 2026-10-04: the category's own age-restriction class (leaves inherit a group's) */
+  ageClass: z.enum(['alcohol', 'tobacco', 'cannabis']).nullish(),
 });
 export type Category = z.infer<typeof Category>;
 export const Regulator = z.object({ code: z.string(), name: z.string(), province: z.string(), website: z.string().nullish(), categories: z.number() });
@@ -45,6 +47,9 @@ export const useUpdateCategory = () => useTaxonomyMutation(({ id, ...v }: Catego
 /** `regulator`: a code, `none` (not regulated there) or null (back to the default registry). */
 export const useRegulate = () => useTaxonomyMutation(({ id, province, regulator }: { id: string; province: string; regulator: string | null }) =>
   http(`${BASE}/categories/${enc(id)}/regulators/${enc(province)}`, { method: 'PUT', body: { regulator } }, Category));
+/** 2026-10-04: the category's age-restriction class, or null for none (audited). */
+export const useClassify = () => useTaxonomyMutation(({ id, ageClass }: { id: string; ageClass: string | null }) =>
+  http(`${BASE}/categories/${enc(id)}/age-class`, { method: 'PUT', body: { ageClass } }, Category));
 export const useSaveRegulator = () => useTaxonomyMutation(({ create, ...v }: RegulatorInput & { create: boolean }) => (create
   ? http(`${BASE}/regulators`, { method: 'POST', body: v }, Regulator)
   : http(`${BASE}/regulators/${enc(v.code ?? '')}`, { method: 'PUT', body: v }, Regulator)));

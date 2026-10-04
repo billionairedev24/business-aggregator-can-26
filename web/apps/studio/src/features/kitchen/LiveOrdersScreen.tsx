@@ -5,6 +5,8 @@ import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useLivePoll } from '../../lib/live';
 import { LIVE_POLL_MS, liveQuery, useKitchenToggle, useLiveAction, type Ticket } from './api';
 import { useKitchenT } from './messages';
+import { CounterCheckDialog } from './CounterCheckDialog';
+import { useCounterT } from './counterMessages';
 import { lineText, mealOf, minutesUntil, prepText, weekdayIn, whereText, whoText } from './model';
 import './Kitchen.css';
 
@@ -28,7 +30,7 @@ export function useNewOrderAnnouncement(items: readonly Ticket[] | undefined, sa
   return message;
 }
 
-const TAG: Record<Ticket['stage'], string> = { new: 'tag-accent-2', cooking: 'tag-accent', ready: 'tag-neutral', handed_off: 'tag-neutral' };
+const TAG: Record<Ticket['stage'], string> = { new: 'tag-accent-2', cooking: 'tag-accent', ready: 'tag-neutral', handed_off: 'tag-neutral', refused: 'tag-neutral' };
 
 /** Kitchen · Live orders (design 02 lines 831–841, `kds`): New → Cooking → Ready → handed off, busy bump, pause. */
 export function LiveOrdersScreen() {
@@ -43,6 +45,8 @@ export function LiveOrdersScreen() {
   const canOperate = role !== 'bookkeeper';
   const [now, setNow] = useState(() => new Date());
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 30_000); return () => clearInterval(id); }, []);
+  const tc = useCounterT();
+  const [checking, setChecking] = useState<Ticket | null>(null);
   const announcement = useNewOrderAnnouncement(q.data?.items, refs => t('announceNew', { n: refs.length, refs: refs.join(', ') }));
 
   const kicker = t('liveKicker', { name: merchant?.displayName ?? '' });
@@ -81,6 +85,8 @@ export function LiveOrdersScreen() {
             const cta = o.stage === 'new' ? t('cta_new') : o.stage === 'cooking' ? t('cta_cooking') : o.fulfilmentMode === 'pickup' ? t('cta_ready_pickup') : t('cta_ready_delivery');
             const action = o.stage === 'new' ? 'accept' : o.stage === 'cooking' ? 'ready' : 'handoff';
             const prep = prepText(o, t, now);
+            // 2026-10-04: an age-restricted pickup is handed over only after the counter's ID check
+            const counterCheck = action === 'handoff' && o.fulfilmentMode === 'pickup' && !!o.idCheckAge;
             return (
               <li key={o.orderId} className="nl-k-ticket">
                 <div className="nl-k-ticket-head"><strong id={`kds-${o.orderId}`}>{o.ref ?? o.orderId}</strong><span className={`tag ${TAG[o.stage]}`}>{t(`stage_${o.stage}`)}</span></div>
@@ -88,8 +94,10 @@ export function LiveOrdersScreen() {
                 {o.scheduledFor ? <div className="nl-k-meta">{t('scheduledFor', { time: new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { timeZone: timeZone(), hour: 'numeric', minute: '2-digit' }).format(new Date(o.scheduledFor)) })}</div> : null}
                 <div className="nl-k-lines">{o.lines.map((l, i) => <div key={i}>{lineText(l, t)}</div>)}</div>
                 <div className="nl-k-where">{whereText(o, t, locale, now)}</div>
+                {o.idCheckAge && o.fulfilmentMode === 'pickup' ? <div className="nl-k-meta"><span className="tag tag-highlight">{tc('checkId', { age: o.idCheckAge })}</span></div> : null}
                 {canOperate ? (
-                  <button type="button" className="btn btn-primary nl-k-cta" aria-describedby={`kds-${o.orderId}`} disabled={act.isPending && act.variables?.orderId === o.orderId} onClick={() => act.mutate({ orderId: o.orderId, action }, { onError: () => void q.refetch() })}>{cta}</button>
+                  <button type="button" className="btn btn-primary nl-k-cta" aria-describedby={`kds-${o.orderId}`} disabled={act.isPending && act.variables?.orderId === o.orderId}
+                    onClick={() => (counterCheck ? setChecking(o) : act.mutate({ orderId: o.orderId, action }, { onError: () => void q.refetch() }))}>{cta}</button>
                 ) : null}
               </li>
             );
@@ -97,6 +105,7 @@ export function LiveOrdersScreen() {
         </ul>
       )}
       <p className="nl-k-foot">{t('liveFooter')}</p>
+      {checking ? <CounterCheckDialog merchantId={merchantId} ticket={checking} onClose={() => setChecking(null)} /> : null}
     </div>
   );
 }

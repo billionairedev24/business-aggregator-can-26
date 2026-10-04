@@ -28,6 +28,7 @@ public interface KitchenOrderFeed {
      * @param groupSize people in a group order (host included), 0 when not a group order
      * @param fulfilmentMode delivery | pickup
      * @param state the order's state (placed, accepted, packing, ready, delivered, cancelled, refunded …)
+     * @param idCheckAge age-restricted dishes: the age the recipient proves with photo ID at handoff, else null
      */
     record FoodOrder(
             String id,
@@ -38,7 +39,8 @@ public interface KitchenOrderFeed {
             @Nullable Instant scheduledFor,
             String fulfilmentMode,
             @Nullable Instant customerEta,
-            String state) {}
+            String state,
+            @Nullable Integer idCheckAge) {}
 
     /**
      * @param title the line's title at checkout, when it kept one

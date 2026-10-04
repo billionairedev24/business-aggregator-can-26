@@ -173,6 +173,7 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
                         0,
                         0,
                         false,
+                        null,
                         null));
                 continue;
             }
@@ -192,7 +193,8 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
                     s.unitCents() * item.qty(),
                     s.stock(),
                     open && s.stock() >= item.qty(),
-                    s.handlingDays());
+                    s.handlingDays(),
+                    s.ageClass());
             groups.computeIfAbsent(s.merchantId(), _ -> new ArrayList<>()).add(line);
         }
         var shopGroups = new ArrayList<ShopGroup>();

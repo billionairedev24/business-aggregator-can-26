@@ -19,7 +19,8 @@ mock_provider "google" {
 mock_provider "google-beta" {}
 
 variables {
-  project_id = "northline-staging"
+  project_id        = "northline-staging"
+  api_allowed_cidrs = ["203.0.113.0/24"]
 }
 
 mock_provider "ec" {
@@ -92,6 +93,16 @@ run "rejects_region_outside_canada" {
   }
 
   expect_failures = [var.region]
+}
+
+run "requires_api_allowed_cidrs" {
+  command = plan
+
+  variables {
+    api_allowed_cidrs = []
+  }
+
+  expect_failures = [var.api_allowed_cidrs]
 }
 
 run "helm_values" {

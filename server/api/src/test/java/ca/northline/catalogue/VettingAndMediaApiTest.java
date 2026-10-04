@@ -115,22 +115,51 @@ class VettingAndMediaApiTest extends CatalogueApiTest {
             var id = product(
                     biz, "shop.restricted.cannabis-accessories", 2500, upload(biz, png(1000, 1000, Color.WHITE)));
             submit(biz, id);
-            awaitFlags(biz, id, "banned_category");
+            // a banned leaf of an age-restricted group: banned, and (2026-10-04) its class's licence and a person
+            awaitFlags(biz, id, "banned_category", "missing_licence", "age_restricted");
         }
 
         @Test
         void regulatedCategoryNeedsAVerifiedLicence() throws Exception {
             var unlicensed = seller(MerchantRole.OWNER);
-            var id = product(
-                    unlicensed, "shop.restricted.alcohol", 3000, upload(unlicensed, png(1000, 1200, Color.WHITE)));
+            var pharmacy = "shop.health-and-beauty.pharmacy-otc";
+            var id = product(unlicensed, pharmacy, 3000, upload(unlicensed, png(1000, 1200, Color.WHITE)));
             submit(unlicensed, id);
             awaitFlags(unlicensed, id, "missing_licence");
 
             var licensed = seller(MerchantRole.OWNER);
-            verifiedLicence(licensed.merchantId(), "AGLC");
-            var ok = product(licensed, "shop.restricted.alcohol", 3000, upload(licensed, png(1000, 1300, Color.WHITE)));
+            verifiedLicence(licensed.merchantId(), "ACP");
+            var ok = product(licensed, pharmacy, 3000, upload(licensed, png(1000, 1300, Color.WHITE)));
             submit(licensed, ok);
             awaitApproved(licensed, ok);
+        }
+
+        /**
+         * 2026-10-04: an age-restricted category needs the class's licence in the business's province (not a registry
+         * check), and every listing in it goes to a person even when the licence is on file.
+         */
+        @Test
+        void ageRestrictedCategoryNeedsTheClassLicenceAndAPerson() throws Exception {
+            var unlicensed = seller(MerchantRole.OWNER);
+            verifiedLicence(unlicensed.merchantId(), "AGLC"); // a registry check no longer covers alcohol
+            var id = product(
+                    unlicensed, "shop.restricted.alcohol", 3000, upload(unlicensed, png(1000, 1400, Color.WHITE)));
+            submit(unlicensed, id);
+            awaitFlags(unlicensed, id, "missing_licence", "age_restricted");
+
+            var licensed = seller(MerchantRole.OWNER);
+            jdbc.sql("update merchants.merchants set province = 'AB' where id = ?")
+                    .params(licensed.merchantId())
+                    .update();
+            jdbc.sql("""
+                            insert into merchants.restricted_licences (id, merchant_id, age_class, province, licence_number,
+                                   document_id, expires_on, status, submitted_by, submitted_at, decided_by, decided_at)
+                            values (?, ?, 'alcohol', 'AB', 'RLS-1', 'doc', current_date + 300, 'approved', ?, now(), ?, now())""")
+                    .params(ca.northline.shared.Ids.next(), licensed.merchantId(), licensed.userId(), licensed.userId())
+                    .update();
+            var ok = product(licensed, "shop.restricted.alcohol", 3000, upload(licensed, png(1000, 1500, Color.WHITE)));
+            submit(licensed, ok);
+            awaitFlags(licensed, ok, "age_restricted");
         }
 
         @Test

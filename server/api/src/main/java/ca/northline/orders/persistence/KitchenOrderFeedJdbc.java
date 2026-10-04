@@ -30,7 +30,7 @@ class KitchenOrderFeedJdbc implements KitchenOrderFeed {
                    case when g.id is null then 0
                         else 1 + coalesce(cardinality(array_remove(g.member_user_ids, g.host_user_id)), 0)
                    end as group_size,
-                   o.placed_at, o.scheduled_for, o.fulfilment_mode as mode, o.customer_eta, o.state
+                   o.placed_at, o.scheduled_for, o.fulfilment_mode as mode, o.customer_eta, o.state, o.id_check_age
               from orders.orders o
               left join orders.group_orders g on g.id = o.group_order_id
              where o.type = 'food'
@@ -96,7 +96,8 @@ class KitchenOrderFeedJdbc implements KitchenOrderFeed {
                 JdbcTimes.instant(rs, "scheduled_for"),
                 rs.getString("mode"),
                 JdbcTimes.instant(rs, "customer_eta"),
-                rs.getString("state"));
+                rs.getString("state"),
+                rs.getObject("id_check_age", Integer.class));
     }
 
     /** {@code order_lines.modifiers}: {@code ["Large", …]} or {@code [{"name": "Large", …}, …]}. */

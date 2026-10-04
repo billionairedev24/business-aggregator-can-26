@@ -61,6 +61,29 @@ class OrderDeliveriesJdbc implements OrderDeliveries {
     }
 
     @Override
+    public boolean markReturned(String orderId, boolean allLines, Instant at) {
+        var moved = jdbc.sql("""
+                        update orders.orders set state = 'returned'
+                         where id = :id and state not in ('returned', 'refunded', 'cancelled')
+                        """).param("id", orderId).update() > 0;
+        if (moved) {
+            jdbc.sql("""
+                            update orders.order_lines set state = 'refunded'
+                             where order_id = :id and (:all or age_class is not null)
+                            """).param("id", orderId).param("all", allLines).update();
+        }
+        return moved;
+    }
+
+    @Override
+    public long restrictedCents(String orderId) {
+        return jdbc.sql("""
+                        select coalesce(sum(unit_cents * qty), 0) from orders.order_lines
+                         where order_id = :id and age_class is not null
+                        """).param("id", orderId).query(Long.class).single();
+    }
+
+    @Override
     public List<String> escrowLines(String orderId) {
         return jdbc.sql("""
                         select id from orders.order_lines

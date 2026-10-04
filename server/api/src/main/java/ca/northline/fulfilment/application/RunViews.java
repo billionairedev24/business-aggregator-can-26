@@ -2,6 +2,7 @@ package ca.northline.fulfilment.application;
 
 import ca.northline.fulfilment.application.DeliveryStore.Delivery;
 import ca.northline.fulfilment.application.DispatchUseCases.CourierRef;
+import ca.northline.fulfilment.application.DispatchUseCases.IdCheckView;
 import ca.northline.fulfilment.application.DispatchUseCases.Place;
 import ca.northline.fulfilment.application.DispatchUseCases.RunSummary;
 import ca.northline.fulfilment.application.DispatchUseCases.RunView;
@@ -72,7 +73,28 @@ class RunViews {
                 place,
                 s.kind().equals("dropoff") && d != null ? d.dropoff() : null,
                 packed,
-                s.proofKind());
+                s.proofKind(),
+                idCheck(s));
+    }
+
+    /** Age-restricted drop-offs: the age to check and the account holder's name the ID must show. */
+    private @Nullable IdCheckView idCheck(Stop s) {
+        if (!s.kind().equals("dropoff") || s.state().equals("done")) {
+            return null;
+        }
+        return deliveries
+                .idCheck(s.orderId())
+                .map(c -> {
+                    var customer = deliveries
+                            .find(s.orderId())
+                            .map(Delivery::customerId)
+                            .orElse(null);
+                    var person = customer == null
+                            ? null
+                            : people.people(List.of(customer)).get(customer);
+                    return new IdCheckView(c.age(), person == null ? null : person.displayName());
+                })
+                .orElse(null);
     }
 
     private @Nullable Place place(String merchantId) {

@@ -1,0 +1,14 @@
+[(#{__${'restricted-licence.heading.' + what}__})]
+
+[(#{__${'restricted-licence.body.' + what}__(#{__${'restricted-licence.class.' + ageClass}__}, ${businessName}, ${expiresOn})})]
+[# th:if="${rejectReason != ''}"]
+[(#{__${'restricted-licence.why.' + rejectReason}__})]
+[/]
+[# th:if="${note != ''}"]
+[(#{restricted-licence.note(${note})})]
+[/]
+[(#{__${'restricted-licence.next.' + what}__})]
+
+[(#{restricted-licence.cta})]: [(${link})]
+
+[# th:insert="~{footer.txt}" /]

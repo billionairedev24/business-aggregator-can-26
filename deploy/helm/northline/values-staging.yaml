@@ -48,6 +48,7 @@ apps:
       # S-13: EMAIL_PROVIDER comes from the cloud overlay (ses / sendgrid / azure); the sender is per environment.
       TAX_PROVIDER: stripe          # S-21: Stripe Tax (with STRIPE_SECRET_KEY); `local` is refused here
       IDENTITY_PROVIDER: stripe       # S-22: Stripe Identity for owners ≥ 25 % (uses STRIPE_SECRET_KEY)
+      AGE_VERIFICATION_PROVIDER: stripe  # 2026-10-04: customers' age check before alcohol (Stripe Identity; `local` refused)
       # S-23: business registries. Corporations Canada needs the API Store subscription (URL in configEnv, key as a
       # secret); without it use `manual`. Alberta has no public API: `manual` = registry-agent searches by agents.
       REGISTRY_CORPORATIONS_CANADA_PROVIDER: manual
@@ -106,8 +107,14 @@ apps:
   worker:
     env:
       EMAIL_FROM: "Northline <no-reply@staging.northline.ca>"   # S-27 notifications (payout.failed email)
+      # S-102 push, owner decision 2026-10-04: staging refuses `local` like prod (APNs production endpoint — preview
+      # builds come from TestFlight — and FCM). PUSH_APNS_KEY_ID, PUSH_APNS_TEAM_ID and the .preview topics come from
+      # the operator's overlay with the key (docs/runbooks/push.md § Set-up).
+      PUSH_PROVIDER: native
     secretEnv:
       EMAIL_UNSUBSCRIBE_KEY: true   # S-27: required under staging/prod (the same key as the api)
+      PUSH_APNS_KEY: true           # S-102: required in staging and prod (2026-10-04)
+      PUSH_FCM_SERVICE_ACCOUNT: true  # S-102: required in staging and prod
     replicas: 2
   studio:
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 3 }

@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { newIdempotencyKey, ValidationError } from '@northline/client';
 import { Alert, Button, EmptyState, Field, OptionCard, RadioGroup, Select, Skeleton, SiteLink, TextInput, useFormatters } from '@northline/ui';
 import { StripePayment } from '../cart/Payment';
+import { AgeCheck } from '../cart/AgeCheck';
+import { ageCleared, NO_AGE } from '../cart/age';
 import { StepUpDialog } from '../cart/StepUpDialog';
 import type { Started as CartStarted } from '../cart/api';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
@@ -96,6 +98,7 @@ export function CheckoutScreen() {
     const code = problemCode(e);
     if (code === 'step_up_required' || code === 'second_factor_required') { setPhase({ step: 'stepUp', mode: code === 'step_up_required' ? 'required' : 'enrol' }); return; }
     if (code === 'kitchen_closed') { setError(t('err_closed')); return; }
+    if (code === 'age_verification_required' || code === 'age_under_minimum' || code === 'restricted_hours') { void quote.refetch(); return; }
     if (e instanceof ValidationError) { setError(e.errors.map(x => x.message).join(' ')); return; }
     setError(e instanceof Error && code ? e.message : t('err_generic'));
   };
@@ -120,7 +123,8 @@ export function CheckoutScreen() {
   };
 
   const totals = phase.step === 'pay' ? phase.started.totals : quote.data;
-  const payable = !!body && (pickup || hasAddress) && !(when === 'schedule' && !slot) && !!quote.data;
+  const age = quote.data?.age ?? NO_AGE;
+  const payable = !!body && (pickup || hasAddress) && !(when === 'schedule' && !slot) && !!quote.data && ageCleared(age);
 
   return (
     <div className="nl-fco">
@@ -161,6 +165,7 @@ export function CheckoutScreen() {
             </fieldset>
           </>
         )}
+        <AgeCheck age={age} returnTo="web_food" onChanged={() => void quote.refetch()} />
         <h2>{t('payment')}</h2>
         {phase.step === 'pay' && phase.started.mode === 'stripe'
           ? <StripePayment started={asCartStarted(phase.started)} busy={busy} onPaid={() => void place(phase.started)} onError={m => setError(m)} />

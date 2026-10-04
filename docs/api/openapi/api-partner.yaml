@@ -373,6 +373,8 @@ components:
             - duplicate_image
             - main_not_on_white
             - restricted_keyword
+            - age_restricted
+            - age_class_mismatch
     MediaResponse:
       type: object
       properties:
@@ -617,6 +619,8 @@ components:
               - duplicate_image
               - main_not_on_white
               - restricted_keyword
+              - age_restricted
+              - age_class_mismatch
           warranty:
             type: boolean
     ServiceResponse:
@@ -692,6 +696,8 @@ components:
               - duplicate_image
               - main_not_on_white
               - restricted_keyword
+              - age_restricted
+              - age_class_mismatch
     Ulid:
       type: string
       description: "A ULID: 26 characters, Crockford base 32, sortable by creation\

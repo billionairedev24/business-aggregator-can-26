@@ -8,6 +8,8 @@ public final class DeliveryRules {
     private DeliveryRules() {}
 
     public static final String NOT_PACKED = "This shop hasn't packed the order yet.";
+    public static final String NO_ID_CHECK =
+            "This order has no age-restricted items: hand it over with the usual proof.";
     public static final String NOT_PICKED_UP = "Pick the order up from every shop before dropping it off.";
     public static final String STOP_DONE = "This stop is already done.";
     public static final String PIN_WRONG = "That PIN doesn't match. Ask the customer for the 4 digits on their order.";

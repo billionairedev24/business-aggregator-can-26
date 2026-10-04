@@ -111,7 +111,7 @@ terraform apply tfplan
 | `region` | Canadian region (defaults above) |
 | `owner` | value of the `owner` tag/label (default `platform`) |
 | `admin_principals` | cluster admins: IAM ARNs (AWS), `user:`/`group:` members (Google Cloud), Entra object ids (Azure) |
-| `api_allowed_cidrs` | who can reach the Kubernetes API; **required in prod** (office/VPN/CI egress) |
+| `api_allowed_cidrs` | who can reach the Kubernetes API; **required in staging and prod** (office/VPN/CI egress; staging since the owner decision of 2026-10-04 — an empty list fails `plan`) |
 | `bucket_name_suffix` | only if `northline-<env>-uploads` is already taken (bucket names are global) |
 | `project_id` / `subscription_id` | Google Cloud / Azure only |
 

@@ -110,6 +110,27 @@ describe('catalogue taxonomy (S-94, design 03)', () => {
       .toMatchObject({ nameEn: 'Mobile mechanic', nameFr: 'Mécanicien mobile', bookingType: 'visit', requiresVsCheck: true }));
   });
 
+  it('sets the age restriction of a shop category (2026-10-04)', async () => {
+    const calls = api(['admin']);
+    const user = userEvent.setup({ delay: null });
+    renderConsole('/catalogue');
+    await user.click(await screen.findByText('Butcher'));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit · Butcher' });
+    const age = within(dialog).getByRole('combobox', { name: /Age restriction/ }) as HTMLSelectElement;
+    expect(age.value).toBe('');
+    await user.selectOptions(age, 'alcohol');
+    await waitFor(() => expect(calls.find(c => c.method === 'PUT' && c.url.endsWith('/categories/shop.food-and-grocery.butcher/age-class'))?.body).toEqual({ ageClass: 'alcohol' }));
+  });
+
+  it('offers no age restriction for services', async () => {
+    api(['admin']);
+    const user = userEvent.setup({ delay: null });
+    renderConsole('/catalogue');
+    await user.click(await screen.findByText('Mobile mechanic'));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit · Mobile mechanic' });
+    expect(within(dialog).queryByRole('combobox', { name: /Age restriction/ })).toBeNull();
+  });
+
   it('adds a regulator, and changes a category limit', async () => {
     const calls = api(['admin']);
     const user = userEvent.setup({ delay: null });

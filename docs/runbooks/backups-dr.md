@@ -342,8 +342,9 @@ not merged when this was written; add the links from its runbook when it is):
 
 - **Never run in a cloud.** Every RPO/RTO above is a target until the first cloud drill.
 - **Same account.** Backups and copies live in the same AWS account / Google Cloud project / Azure subscription as
-  prod: a compromised or deleted account takes them too. Next step: AWS Backup with a locked vault in a separate
-  account, Google Cloud Backup and DR / a locked bucket in another project, Azure Backup vault with immutability.
+  prod: a compromised or deleted account takes them too. Next step — **S-149** in the backlog (owner decision
+  2026-10-04, not built): AWS Backup with a locked vault in a separate account, Google Cloud Backup and DR / a locked
+  bucket in another project, Azure Backup vault with immutability.
 - **Secrets in the secondary region**: Google Cloud secrets are replicated in the primary region only, AWS Secrets
   Manager secrets are not replicated; a regional disaster means re-creating them in the new region (they are created
   empty by Terraform; the values come from the operators' password manager). Secret replication to the secondary

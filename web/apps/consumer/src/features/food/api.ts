@@ -2,6 +2,7 @@ import { queryOptions, useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { ApiError, http } from '@northline/client';
 import { CourierProgress } from '../tracking/courier';
+import { CheckoutAge } from '../cart/age';
 
 /**
  * Food (S-57). Public reads: `GET /api/v1/public/kitchens?city=&lat=&lng=` (landing, loaded in the browser once the
@@ -78,6 +79,8 @@ export const Totals = z.object({
   subtotalCents: z.number().int(), deliveryFeeCents: z.number().int(), serviceFeeCents: z.number().int(), tipCents: z.number().int(),
   taxCents: z.number().int(), feeTaxCents: z.number().int(), totalCents: z.number().int(),
   etaFromMin: z.number().int().nullish(), etaToMin: z.number().int().nullish(), estimate: z.boolean(),
+  /** 2026-10-04: the age step for age-restricted dishes; absent from an api without it */
+  age: CheckoutAge.optional(),
 });
 export type Totals = z.infer<typeof Totals>;
 export const FoodStarted = z.object({

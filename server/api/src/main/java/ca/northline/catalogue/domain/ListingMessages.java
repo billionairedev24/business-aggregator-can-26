@@ -107,6 +107,10 @@ public final class ListingMessages {
     public static final String BUNDLE_QTY_RANGE = "Quantity must be between 1 and 99.";
     public static final String BUNDLE_ITEMS_APPROVED = "Every item in a bundle must be an approved listing.";
     public static final String QUICK_UPDATE_BUNDLE_STOCK = "A bundle's stock follows its items.";
+    /** Age-restricted listings (2026-10-04). */
+    public static final String LICENCE_REQUIRED =
+            "This product is age-restricted. Add your licence for it under Compliance; it goes live once approved.";
+
     public static final String LISTING_IN_BUNDLE = "This product is part of a bundle. Remove it from the bundle first.";
     public static final String DOCUMENT_REQUIRED = "Choose a file to upload.";
     public static final String DOCUMENT_TYPE = "Upload a PDF, PNG or JPEG under 10 MB.";

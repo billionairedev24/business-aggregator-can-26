@@ -34,7 +34,7 @@ E-11,,Epic,"Security, privacy and legal compliance","Security, privacy and legal
 Phase 5. 8 stories, 39 points.",High,,phase-5,sec,,compliance,,2027-06-28,2027-08-06
 E-12,,Epic,Observability and operations,Observability and operations,"Tracing, metrics, logs, alerts, runbooks, backups and disaster recovery.
 
-Phase 5. 3 stories, 13 points.",High,,phase-5,ops,,platform,,2027-07-12,2027-07-23
+Phase 5. 4 stories, 18 points.",High,,phase-5,ops,,platform,,2027-07-12,2027-07-23
 E-13,,Epic,"QA, pilot and Calgary launch","QA, pilot and Calgary launch","End-to-end test suite, load test, pilot merchants, go-live in Calgary (Alberta live market).
 
 Phase 6. 5 stories, 26 points.",High,,phase-6,launch,,release,,2027-07-26,2027-08-06
@@ -985,6 +985,18 @@ S-115,E-12,Story,"Runbooks: key rotation, Stripe incidents, Kafka DLQ replay, re
 - Runbooks in docs/ and exercised once.
 
 Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-5,operations,,platform,Sprint 21,2027-07-12,2027-07-23
+S-149,E-12,Story,Locked backup vault in a separate cloud account (immutable copies),,"Owner decision 2026-10-04 (docs/DECISIONS.md ""2026-10-04 — Owner decisions"" item 11): backups and their copies live in the same AWS account / Google Cloud project / Azure subscription as prod (docs/runbooks/backups-dr.md ""Same account""), so a compromised or deleted account takes them too. Add a locked copy in a separate account. Backlog only — not built.
+
+Acceptance criteria:
+- A separate backup account/project/subscription per cloud, created by Terraform (its own state and admins; prod's operators and CI identities cannot delete or change retention there).
+- AWS: AWS Backup vault in the backup account with Vault Lock in compliance mode (min retention 35 days, max per the retention schedule); cross-account copy of the RDS snapshots and the uploads bucket from prod; KMS key owned by the backup account.
+- Google Cloud: Backup and DR vault (or a bucket with a locked retention policy) in a separate project; Cloud SQL and Cloud Storage copies into it; CMEK in that project.
+- Azure: Recovery Services / Backup vault with immutability locked, in a separate subscription; PostgreSQL Flexible Server and blob backups copied there.
+- Retention respects docs/runbooks/retention.md and the Privacy Policy's 35-day backup roll-off (counsel B9); deletions after expiry are automatic.
+- A restore from the locked copy into staging is drilled once and timed (RPO/RTO recorded in backups-dr.md), alerts on copy failures (backup alerting like S-113).
+- backups-dr.md, infrastructure.md and the three envs' terraform tests updated; terraform test proves prod cannot shorten the lock.
+
+Refs: docs/runbooks/backups-dr.md, docs/DECISIONS.md, S-114",High,5,phase-5,reliability,security,platform,Sprint 21,2027-07-12,2027-07-23
 S-116,E-11,Story,Loi 96 French-first readiness for Québec expansion,,"Acceptance criteria:
 - All customer-facing text available in fr-CA before Québec launch.
 

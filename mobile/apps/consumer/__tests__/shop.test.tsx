@@ -298,6 +298,42 @@ describe('B5 Checkout', () => {
     expect(server.calls.filter((c) => c.path === '/me/checkout/quote').every((c) => c.signed)).toBe(true);
   });
 
+  it('age-restricted cart: the age step holds Continue until the ID check, which opens in the in-app browser (2026-10-04)', async () => {
+    const { server, services } = await signedInWithCart({ url: '/checkout' });
+    server.shop.age = { required: true, minimumAge: 19, classes: ['alcohol'], state: 'none' };
+    await act(async () => {
+      await services.queryClient.invalidateQueries();
+    });
+    expect(await screen.findByText('Your cart has alcohol. You must be 19 or older to buy them where they’re delivered.')).toBeTruthy();
+    expect(screen.getByText('Verify your age to continue.')).toBeTruthy();
+    expect(screen.getByTestId('checkout-continue').props.accessibilityState).toMatchObject({ disabled: true });
+    const WebBrowser = jest.requireMock('expo-web-browser') as { openAuthSessionAsync: jest.Mock };
+    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: 'success', url: 'ca.northline.app:/age-verified' });
+    fireEvent.press(screen.getByRole('button', { name: 'Verify my age' }));
+    await waitFor(() => expect(WebBrowser.openAuthSessionAsync).toHaveBeenCalledWith('https://identity.fixture.invalid/session/1', 'ca.northline.app:/age-verified'));
+    expect(await screen.findByText(/^Verified 19\+/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId('checkout-continue').props.accessibilityState).toMatchObject({ disabled: false }));
+    expect(server.calls.some((c) => c.method === 'POST' && c.path === '/me/age-verification' && c.signed)).toBe(true);
+  });
+
+  it('age step in French; under age the items can’t be bought', async () => {
+    const { getLocales } = jest.requireMock('expo-localization') as { getLocales: jest.Mock };
+    getLocales.mockReturnValueOnce([{ languageTag: 'fr-CA' }]);
+    const { server, services } = await signedInWithCart({ url: '/checkout' });
+    server.shop.age = { required: true, minimumAge: 18, classes: ['alcohol', 'tobacco'], state: 'none' };
+    await act(async () => {
+      await services.queryClient.invalidateQueries();
+    });
+    expect(await screen.findByText('Votre panier contient de l’alcool et des produits du tabac ou de vapotage. Vous devez avoir 18 ans ou plus pour les acheter là où ils sont livrés.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Vérifier mon âge' })).toBeTruthy();
+    server.shop.age = { ...server.shop.age, state: 'under_age' };
+    await act(async () => {
+      await services.queryClient.invalidateQueries();
+    });
+    expect(await screen.findByText(/moins de 18 ans/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Continuer vers le paiement' }).props.accessibilityState).toMatchObject({ disabled: true });
+  });
+
   it('asks for an address when none is complete, and the api’s rules come in the person’s language', async () => {
     const { view } = await signedInWithCart({ url: '/checkout', store: saved({ label: 'Sampleville', city: 'Sampleville' }) });
     expect(await screen.findByText('Where should we bring it?')).toBeTruthy();

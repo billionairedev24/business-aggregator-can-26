@@ -107,7 +107,7 @@ T = launch day. Owners are roles ([§ Contacts](#contacts)).
 | T-10 | Load test against staging with the release candidate ([load-testing.md](load-testing.md)); e2e suite green on staging | SRE, QA |
 | T-7 | Release candidate on staging; UAT sign-offs complete (S-121); pilot businesses all "waiting for the launch" | product, merchant success |
 | T-7 | Merchant launch email prepared ([go-live/email-merchant-launch.md](go-live/email-merchant-launch.md)); support macros for launch questions | merchant success, support lead |
-| T-5 | Production deploy of the release (market still `pilot`); smoke test by staff with direct links | SRE |
+| T-5 | Production deploy of the release (market still `pilot` — production starts there since V345, owner decision 2026-10-04); smoke test by staff with direct links | SRE |
 | T-3 | Every manual gate recorded in the console; on-call rota covers T-1 → T+14 | gate owners |
 | T-2 | **Go/no-go meeting** ([§ The go/no-go meeting](#the-gono-go-meeting)) | launch lead |
 | T-1 | Customer launch email scheduled ([go-live/email-customer-launch.md](go-live/email-customer-launch.md)), waitlist export ready; freeze: no deploy until T+2 except fixes | marketing, SRE |

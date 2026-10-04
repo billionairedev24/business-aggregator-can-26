@@ -31,4 +31,18 @@ public final class CheckoutMessages {
     public static final String EXPIRED = "This checkout expired. Check your cart and pay again.";
     public static final String STEP_UP = "Confirm it's you with your passkey or authenticator app to pay.";
     public static final String ENROL = "Add a passkey to pay: payments sit behind a second factor.";
+
+    // Age-restricted items (2026-10-04)
+    public static final String AGE_VERIFY =
+            "Your cart has age-restricted items. Confirm you're %d or older with photo ID to continue.";
+    public static final String AGE_UNDER =
+            "Your ID check shows you're under %d, so these items can't be sold to you. Remove them to continue.";
+    public static final String AGE_NOT_HERE =
+            "Age-restricted items in your cart can't be delivered to %s. Remove them to continue.";
+    public static final String AGE_NO_PICKUP =
+            "Age-restricted items in your cart can't be picked up in %s. Remove them to continue.";
+    public static final String AGE_HOURS =
+            "Age-restricted items can't be handed over at that time where you are. Choose another time.";
+    public static final String AGE_GIFT =
+            "Age-restricted items can only go to the person who ordered them. Remove them to send this order to someone else.";
 }

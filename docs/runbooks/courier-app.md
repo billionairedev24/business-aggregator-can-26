@@ -181,9 +181,20 @@ native layer (`make mobile-update MOBILE_APP=courier UPDATE_CHANNEL=preview UPDA
 | App Store Connect app record `ca.northline.courier` | an Admin / App Manager | TestFlight and release; privacy labels; review notes for background location |
 | Google Play Console, **organisation** account (D-U-N-S, verified) | the legal entity | internal testing track, release, Data safety, the location-permissions declaration |
 
-Couriers are Northline's workforce, not the public: consider an unlisted App Store app (or Apple Business Manager custom
-app) and a Play internal/closed track or managed private app. Store review still applies, including the background
-location declarations below.
+Couriers are Northline's workforce, not the public: **the app is unlisted** (owner decision 2026-10-04) — Apple Unlisted
+App distribution (requested after the first approval; couriers install from the direct link) and Google Play's closed
+testing track (testers: the couriers' Google Group). `store/policy.json` records it and the release check holds
+`eas.json` to the closed track ([mobile-release.md § Distribution](mobile-release.md#distribution-and-age-restricted-goods)).
+Store review still applies, including the background location declarations below.
+
+**Age-restricted drop-offs** (2026-10-04): a stop whose order has alcohol shows "ID check: N+"; the drop-off screen asks
+for three confirmations (government photo ID checked, the name — the account holder's, shown — and photo match, of
+age) before the proof, or *Can't hand it over* with a reason (no ID, under age, not the person who ordered, nobody of
+age, seems intoxicated, other). A refusal adds a **return stop** to the run: the courier brings the order back to the
+business and taps *It's back at the business*. All three actions go through the outbox like the others (offline-safe,
+one Idempotency-Key each); the outbox stores only the yes/no answers or the reason. API: `POST
+/courier/stops/{id}/dropoff` `{proof, pin?, idCheck: {idChecked, recipientMatches, ofAge}}`, `POST …/refuse {reason}`,
+`POST …/returned` ([age-restricted.md](age-restricted.md)).
 
 ## Signing
 

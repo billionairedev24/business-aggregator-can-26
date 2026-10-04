@@ -23,6 +23,7 @@ public final class AutomatedVetting {
      * @param duplicateImage one of the seller's own images matches another merchant's image
      * @param mainOnWhite the main image (own images only) has a white background; true when catalogue images are used
      * @param restrictedTerm S-93: a restricted keyword (trust &amp; safety rules) found in the listing's words, or null
+     * @param text the listing's own words (name, description), for the age-restricted words check; null to skip it
      */
     public record Subject(
             ListingKind kind,
@@ -31,7 +32,8 @@ public final class AutomatedVetting {
             boolean licenceOk,
             boolean duplicateImage,
             boolean mainOnWhite,
-            @Nullable String restrictedTerm) {}
+            @Nullable String restrictedTerm,
+            @Nullable String text) {}
 
     public static List<VettingFlag> check(Subject s) {
         var flags = new ArrayList<VettingFlag>();
@@ -46,8 +48,15 @@ public final class AutomatedVetting {
             if (median != null && price != null && isOutlier(price, median)) {
                 flags.add(VettingFlag.PRICE_OUTLIER);
             }
-            if (category.regulatedRegistry() != null && !s.licenceOk()) {
+            if ((category.regulatedRegistry() != null || category.ageClass() != null) && !s.licenceOk()) {
                 flags.add(VettingFlag.MISSING_LICENCE);
+            }
+            if (category.ageClass() != null) {
+                flags.add(VettingFlag.AGE_RESTRICTED);
+            } else if (s.kind() == ListingKind.PRODUCT
+                    && s.text() != null
+                    && AgeRestrictedWords.find(s.text()) != null) {
+                flags.add(VettingFlag.AGE_CLASS_MISMATCH);
             }
         }
         if (s.duplicateImage()) {

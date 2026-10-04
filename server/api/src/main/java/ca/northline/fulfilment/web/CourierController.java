@@ -2,10 +2,12 @@ package ca.northline.fulfilment.web;
 
 import ca.northline.fulfilment.application.DispatchUseCases.CourierApp;
 import ca.northline.fulfilment.application.DispatchUseCases.CourierView;
+import ca.northline.fulfilment.application.DispatchUseCases.IdCheckAnswer;
 import ca.northline.fulfilment.application.DispatchUseCases.Ping;
 import ca.northline.fulfilment.application.DispatchUseCases.RunView;
 import ca.northline.fulfilment.application.DispatchUseCases.ShiftView;
 import ca.northline.fulfilment.domain.DeliveryRules;
+import ca.northline.restricted.api.HandoffChecks;
 import ca.northline.shared.Bytes;
 import ca.northline.shared.ListResponse;
 import ca.northline.shared.security.CurrentUser;
@@ -42,7 +44,11 @@ import org.springframework.web.multipart.MultipartFile;
  * POST /api/v1/courier/stops/{id}/arrive
  * POST /api/v1/courier/stops/{id}/pickup         {scanOk}; 409 not_packed
  * POST /api/v1/courier/stops/{id}/proof          multipart kind=photo|signature, file (JPG/PNG/WebP ≤ 5 MB)
- * POST /api/v1/courier/stops/{id}/dropoff        {proof: photo|signature|pin, pin?}; 409 not_picked_up / proof_missing
+ * POST /api/v1/courier/stops/{id}/dropoff        {proof: photo|signature|pin, pin?, idCheck?: {idChecked, recipientMatches,
+ *                                                ofAge}}; 409 not_picked_up / proof_missing; 422 idCheck (age-restricted)
+ * POST /api/v1/courier/stops/{id}/refuse         {reason: no_id|underage|mismatch|nobody_of_age|intoxicated|other}
+ *                                                age-restricted: not handed over → a return stop at the business
+ * POST /api/v1/courier/stops/{id}/returned       the refused order is back at the business
  * POST /api/v1/courier/location                  S-88 {lat, lng, heading?} while on shift → {acceptedAt, nextAfterMs};
  *                                                429 too_many_pings (Retry-After) faster than every 2 s
  * </pre>
@@ -62,7 +68,14 @@ class CourierController {
             String proof,
 
             @Nullable @Pattern(regexp = "\\s*\\d{4}\\s*", message = DeliveryRules.PIN_REQUIRED)
-            String pin) {}
+            String pin,
+
+            @Nullable IdCheckAnswer idCheck) {}
+
+    record RefuseRequest(
+            @NotBlank(message = HandoffChecks.REASON)
+            @Pattern(regexp = "no_id|underage|mismatch|nobody_of_age|intoxicated|other", message = HandoffChecks.REASON)
+            String reason) {}
 
     record LocationRequest(
             @NotNull(message = DeliveryRules.POSITION)
@@ -137,6 +150,16 @@ class CourierController {
 
     @PostMapping("/stops/{stopId}/dropoff")
     RunView dropoff(CurrentUser user, @PathVariable String stopId, @Valid @RequestBody DropoffRequest body) {
-        return app.dropOff(user.userId(), stopId, body.proof(), body.pin());
+        return app.dropOff(user.userId(), stopId, body.proof(), body.pin(), body.idCheck());
+    }
+
+    @PostMapping("/stops/{stopId}/refuse")
+    RunView refuse(CurrentUser user, @PathVariable String stopId, @Valid @RequestBody RefuseRequest body) {
+        return app.refuse(user.userId(), stopId, body.reason());
+    }
+
+    @PostMapping("/stops/{stopId}/returned")
+    RunView returned(CurrentUser user, @PathVariable String stopId) {
+        return app.returned(user.userId(), stopId);
     }
 }

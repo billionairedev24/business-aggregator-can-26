@@ -30,7 +30,8 @@ class TaxonomyJdbc implements TaxonomyStore {
             select c.id, c.parent_id, c.root, c.name_i18n->>'en' as name_en,
                    coalesce(nullif(c.name_i18n->>'fr', ''), l.name) as name_fr,
                    nullif(c.booking_type, 'null') as booking_type, c.regulated_registry,
-                   coalesce(c.requires_vs_check, false) as requires_vs_check, c.edited_at
+                   coalesce(c.requires_vs_check, false) as requires_vs_check, c.edited_at,
+                   (select a.age_class from catalogue.category_age_classes a where a.category_id = c.id) as age_class
               from catalogue.categories c
               left join catalogue.category_labels l on l.category_id = c.id and l.lang = 'fr'""";
 
@@ -258,7 +259,29 @@ class TaxonomyJdbc implements TaxonomyStore {
                 price == null ? 0 : price.listings(),
                 price == null ? null : price.medianCents(),
                 price == null ? null : price.mode(),
-                JdbcTimes.instant(rs, "edited_at"));
+                JdbcTimes.instant(rs, "edited_at"),
+                rs.getString("age_class"));
+    }
+
+    @Override
+    public void classify(String categoryId, @Nullable String ageClass, String actorId, Instant at) {
+        if (ageClass == null) {
+            jdbc.sql("delete from catalogue.category_age_classes where category_id = :id")
+                    .param("id", categoryId)
+                    .update();
+            return;
+        }
+        jdbc.sql("""
+                        insert into catalogue.category_age_classes (category_id, age_class, updated_by, updated_at)
+                        values (:id, :c, :by, :at)
+                        on conflict (category_id) do update set age_class = excluded.age_class,
+                          updated_by = excluded.updated_by, updated_at = excluded.updated_at
+                        """)
+                .param("id", categoryId)
+                .param("c", ageClass)
+                .param("by", actorId)
+                .param("at", JdbcTimes.ts(at))
+                .update();
     }
 
     private static Regulator regulator(ResultSet rs) throws SQLException {

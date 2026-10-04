@@ -31,7 +31,9 @@ import ca.northline.food.domain.MenuStatus;
 import ca.northline.food.domain.ModifierGroup;
 import ca.northline.food.domain.OpeningRanges;
 import ca.northline.food.domain.PriceCheck;
+import ca.northline.merchants.api.RestrictedLicences;
 import ca.northline.messaging.api.ListingRejectedNotice;
+import ca.northline.region.api.AgeClass;
 import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.Bytes;
 import ca.northline.shared.Conflict;
@@ -85,6 +87,7 @@ class MenuBuilderService
     private final MerchantPlaces places;
     private final PriceBenchmarks prices;
     private final AuditTrail audit;
+    private final RestrictedLicences licences;
 
     // ── menus ─────────────────────────────────────────────────────────────────
 
@@ -244,6 +247,7 @@ class MenuBuilderService
     @Transactional
     public ItemView create(String merchantId, ItemCommand command) {
         var section = validate(merchantId, command);
+        requireLicence(merchantId, command);
         var sort = (int) menus.items(merchantId, command.menuId()).stream()
                 .filter(i -> i.sectionId().equals(section.id()))
                 .count();
@@ -257,6 +261,7 @@ class MenuBuilderService
     public ItemView update(String merchantId, String itemId, ItemCommand command) {
         var before = requireItem(merchantId, itemId);
         validate(merchantId, command);
+        requireLicence(merchantId, command);
         var sort = before.sectionId().equals(command.sectionId())
                 ? before.sort()
                 : (int) menus.items(merchantId, command.menuId()).stream()
@@ -517,9 +522,53 @@ class MenuBuilderService
                                 ? prices.median(merchantId)
                                 : before == null ? null : before.priceMedianCents())
                 .priceConfirmedCents(before == null ? null : before.priceConfirmedCents())
+                .ageClass(c.ageClass())
                 .build();
         return draft.withVetting(
                 visibility(draft, merchant.approved(merchantId)).vetting());
+    }
+
+    /**
+     * Age-restricted dishes (2026-10-04): the class must be one the platform knows, and publishing one needs the
+     * kitchen's licence for it (409 {@code licence_required}); a draft may be saved without.
+     */
+    private void requireLicence(String merchantId, ItemCommand command) {
+        var code = command.ageClass();
+        if (code == null) {
+            return;
+        }
+        var ageClass = AgeClass.of(code)
+                .orElseThrow(() -> RuleViolation.of("ageClass", "required", KitchenMessages.AGE_CLASS));
+        if (command.publish() && !licences.licensed(merchantId, ageClass)) {
+            throw new Conflict("licence_required", KitchenMessages.LICENCE_REQUIRED);
+        }
+    }
+
+    /**
+     * Age-restricted dishes: the kitchen's licence for the class ended — its published dishes of the class go back to
+     * draft, held for the licence; or it came into force — the held ones are published again.
+     */
+    @Transactional
+    void licenceChanged(String merchantId, AgeClass ageClass, boolean licensed) {
+        for (var item : menus.items(merchantId, null)) {
+            if (!ageClass.code().equals(item.ageClass())) {
+                continue;
+            }
+            if (!licensed && item.status() == ItemStatus.PUBLISHED) {
+                var row = item.toBuilder().status(ItemStatus.DRAFT).build();
+                menus.updateItem(row);
+                menus.licenceHold(item.id(), true);
+                afterWrite(row, visible(item, merchant.approved(merchantId)));
+            } else if (licensed && menus.licenceHeld(item.id())) {
+                var row = item.toBuilder()
+                        .status(ItemStatus.PUBLISHED)
+                        .publishedAt(clock.instant())
+                        .build();
+                menus.updateItem(row);
+                menus.licenceHold(item.id(), false);
+                afterWrite(row, visible(item, merchant.approved(merchantId)));
+            }
+        }
     }
 
     /**
@@ -604,7 +653,8 @@ class MenuBuilderService
                 visibility(i, approved),
                 i.photoKey() != null,
                 i.updatedAt(),
-                priceFlag(i));
+                priceFlag(i),
+                i.ageClass());
     }
 
     private static @Nullable PriceFlag priceFlag(ItemRow i) {

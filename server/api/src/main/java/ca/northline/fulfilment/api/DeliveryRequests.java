@@ -32,6 +32,9 @@ public interface DeliveryRequests {
      * @param pickups the shops / the kitchen the courier collects from
      * @param dropoff where it goes (personal data: kept for the courier until 30 days after delivery)
      * @param readyBy food: when the kitchen expects it ready, when known
+     * @param idCheckAge age-restricted items (2026-10-04): the age the recipient proves with photo ID at the door;
+     *     null for an order without them
+     * @param idCheckProvince the province whose rules set {@code idCheckAge}
      */
     record Request(
             String orderId,
@@ -43,10 +46,27 @@ public interface DeliveryRequests {
             List<String> pickups,
             Dropoff dropoff,
             @Nullable String customerId,
-            @Nullable Instant readyBy) {
+            @Nullable Instant readyBy,
+            @Nullable Integer idCheckAge,
+            @Nullable String idCheckProvince) {
 
         public Request {
             pickups = List.copyOf(pickups);
+        }
+
+        /** An order without age-restricted items. */
+        public Request(
+                String orderId,
+                @Nullable String orderRef,
+                String orderType,
+                String kind,
+                String market,
+                @Nullable Window window,
+                List<String> pickups,
+                Dropoff dropoff,
+                @Nullable String customerId,
+                @Nullable Instant readyBy) {
+            this(orderId, orderRef, orderType, kind, market, window, pickups, dropoff, customerId, readyBy, null, null);
         }
     }
 

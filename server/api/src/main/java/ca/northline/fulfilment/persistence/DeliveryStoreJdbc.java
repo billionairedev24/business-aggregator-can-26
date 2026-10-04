@@ -145,10 +145,30 @@ class DeliveryStoreJdbc implements DeliveryStore {
     }
 
     @Override
+    public void idCheck(String orderId, int age, @Nullable String province) {
+        jdbc.sql("update fulfilment.deliveries set id_check_age = :a, id_check_province = :p where order_id = :o")
+                .param("a", age)
+                .param("p", province, Types.VARCHAR)
+                .param("o", orderId)
+                .update();
+    }
+
+    @Override
+    public Optional<IdCheck> idCheck(String orderId) {
+        return jdbc.sql("""
+                        select id_check_age, id_check_province from fulfilment.deliveries
+                         where order_id = :o and id_check_age is not null""")
+                .param("o", orderId)
+                .query((rs, _) -> new IdCheck(rs.getInt("id_check_age"), rs.getString("id_check_province")))
+                .optional();
+    }
+
+    @Override
     public int forgetAddresses(Instant before) {
         return jdbc.sql("""
                         update fulfilment.deliveries set dropoff = null
-                         where dropoff is not null and state in ('delivered', 'cancelled') and updated_at < :before""")
+                         where dropoff is not null and state in ('delivered', 'cancelled', 'returned')
+                           and updated_at < :before""")
                 .param("before", JdbcTimes.ts(before), Types.TIMESTAMP_WITH_TIMEZONE)
                 .update();
     }

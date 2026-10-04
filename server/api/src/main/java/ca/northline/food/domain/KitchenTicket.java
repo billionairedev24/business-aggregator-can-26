@@ -1,6 +1,7 @@
 package ca.northline.food.domain;
 
 import ca.northline.food.api.FoodOrderHandedOff;
+import ca.northline.food.api.FoodOrderRefused;
 import ca.northline.food.api.KitchenOrderAccepted;
 import ca.northline.food.api.KitchenOrderReady;
 import ca.northline.shared.Conflict;
@@ -75,6 +76,15 @@ public class KitchenTicket {
         handedOffAt = at;
         handedOffBy = actorId;
         return new FoodOrderHandedOff(Ids.next(), at, orderId, merchantId, actorId, fulfilmentMode);
+    }
+
+    /** Age-restricted dishes: a pickup the kitchen didn't hand over (no one of age with photo ID came for it). */
+    public FoodOrderRefused refuse(String actorId, Instant at, String reason) {
+        require(KitchenStage.READY);
+        stage = KitchenStage.REFUSED;
+        handedOffAt = at;
+        handedOffBy = actorId;
+        return new FoodOrderRefused(Ids.next(), at, orderId, merchantId, actorId, reason);
     }
 
     private void require(KitchenStage expected) {

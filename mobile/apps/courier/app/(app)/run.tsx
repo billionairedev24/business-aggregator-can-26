@@ -8,7 +8,7 @@ import { LocationCard, OutboxBar } from '../../src/components/tracking';
 import { Body, Card, Chip, Heading, Loading, Row, Screen } from '../../src/components/ui';
 import { useMarketZone, useRun } from '../../src/hooks';
 import { useI18n, type MessageKey } from '../../src/i18n';
-import { nextStop, orderedStops, stopName } from '../../src/stops';
+import { kindKey, nextStop, orderedStops, stopName } from '../../src/stops';
 
 /** The open run: its stops in the api's order, the next one first in mind, location sharing while it is open. */
 export default function RunScreen() {
@@ -45,7 +45,7 @@ export default function RunScreen() {
       </Row>
       <LocationCard />
       {stops.map((s) => {
-        const kind = s.kind === 'pickup' ? t('stop.pickup') : t('stop.dropoff');
+        const kind = t(kindKey(s));
         const isNext = s.id === next?.id;
         return (
           <Card

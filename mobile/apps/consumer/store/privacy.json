@@ -4,7 +4,8 @@
   "sharedWithThirdParties": [],
   "serviceProviders": [
     { "name": "Stripe", "data": ["PaymentInfo"], "why": "Card payments: the card is entered in Stripe's payment sheet and goes to Stripe, never to Northline (processor acting for Northline, not sharing)." },
-    { "name": "Apple Push Notification service, Firebase Cloud Messaging", "data": ["DeviceID"], "why": "Delivering notifications: the push token, the words, a link and ids — no name, email, phone or address (docs/runbooks/push.md)." }
+    { "name": "Apple Push Notification service, Firebase Cloud Messaging", "data": ["DeviceID"], "why": "Delivering notifications: the push token, the words, a link and ids — no name, email, phone or address (docs/runbooks/push.md)." },
+    { "name": "Stripe Identity", "data": ["OtherDataTypes"], "why": "2026-10-04: the one-time age check before buying alcohol. The customer photographs a government photo ID and takes a selfie in Stripe's hosted page, opened in the in-app browser. The photos, the ID details and the face match stay with Stripe (processor acting for Northline; the session is redacted once the age is known); Northline receives and keeps only 'verified over N, on date, by method'." }
   ],
   "encryptedInTransit": true,
   "accountDeletion": {
@@ -67,6 +68,11 @@
       "linked": true, "tracking": false, "optional": true, "ephemeral": false,
       "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
       "why": "Notes on a booking or quote request (the vehicle, access instructions) sent to the business."
+    },
+    "OtherDataTypes": {
+      "linked": true, "tracking": false, "optional": true, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality", "Fraud prevention, security, and compliance"],
+      "why": "2026-10-04: the age check's result, only for a customer who buys alcohol: verified over N (N capped at the strictest legal age), the date and the method. Never the ID, its number, the photos or the date of birth."
     }
   },
   "notCollected": [
