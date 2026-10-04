@@ -3,7 +3,10 @@ package ca.northline.worker.notifications;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -182,6 +185,21 @@ public final class DeferredNotifications {
         return jdbc.sql("delete from messaging.deferred_notifications where dead_at < :before")
                 .param("before", at(before))
                 .update();
+    }
+
+    /** Dead rows per channel (one grouped query; engineering follow-ups: the dead-letter gauge). */
+    public Map<Channel, Integer> deadCounts() {
+        var counts = new EnumMap<Channel, Integer>(Channel.class);
+        jdbc.sql("""
+                        select channel, count(*) as n from messaging.deferred_notifications
+                         where dead_at is not null group by channel""")
+                .query((rs, _) -> Map.entry(rs.getString("channel"), rs.getInt("n")))
+                .list()
+                .forEach(e -> Arrays.stream(Channel.values())
+                        .filter(c -> c.code().equals(e.getKey()))
+                        .findFirst()
+                        .ifPresent(c -> counts.put(c, e.getValue())));
+        return counts;
     }
 
     public int pending(String userId) {

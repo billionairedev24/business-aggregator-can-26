@@ -15,6 +15,7 @@ Routing, SLOs and the on-call rota: [alerting.md](../alerting.md).
 | [kds-ticket-delivery](kds-ticket-delivery.md) | NorthlineKdsTicketDeliveryBurn | SLO burn — page / ticket |
 | [kds-freshness](kds-freshness.md) | NorthlineKdsFreshnessBurn | SLO burn — page / ticket |
 | [outbox-backlog](outbox-backlog.md) | NorthlineOutboxBacklog (ticket), NorthlineOutboxStuck (page) | threshold |
+| [dead-deferred-notifications](dead-deferred-notifications.md) | NorthlineDeadDeferredNotifications | threshold — ticket |
 | [event-dead-lettered](event-dead-lettered.md) | NorthlineEventDeadLettered | threshold — page |
 | [consumer-lag](consumer-lag.md) | NorthlineConsumerLag (ticket), NorthlineConsumerLagCritical (page) | threshold |
 | [high-error-rate](high-error-rate.md) | NorthlineHighErrorRate | threshold — page |
