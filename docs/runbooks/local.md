@@ -82,7 +82,7 @@ cd server
 ./gradlew :api:flywayMigrate -Pdb.devSeed=true   # db/migrations + db/seed-dev personas (optional: the api and auth also migrate on start under `local`)
 # The dev seed is local-only (S-16): refused under dev/staging/prod profiles or for a non-local database host, and not
 # packaged in the boot jars/images — `bootRun` and the tests see it; a jar started with `local` needs
-# SPRING_FLYWAY_LOCATIONS=classpath:db/migration,filesystem:../db/seed-dev (as ci/studio-smoke.sh does).
+# SPRING_FLYWAY_LOCATIONS=classpath:db/migration,filesystem:../db/seed-dev (as ci/e2e.sh does).
 ./gradlew :api:seedCategories                    # db/seed/categories.json — required once, nothing else loads categories
 ```
 

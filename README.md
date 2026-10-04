@@ -72,7 +72,7 @@ It runs `:api:flywayMigrate -Pdb.devSeed=true`, `:api:seedCategories`, `:api:boo
 (api :8080, accepts X-Dev-User) and the Studio dev server with `NL_DEV_USER=01J9ZD3V00000000000000RAV1
 VITE_NL_DEV_STEP_UP=1` (studio :3100 as Ravi Sandhu).
 Ravi owns the three seeded businesses (Switch business in the account menu): **Prairie Wrench** (provider), **Prairie Wrench Parts** (seller) and **Pho Dau Bo** (kitchen). Settings › Security needs the auth server (see Local sign-in below).
-Smoke sweep of every screen (migrates + seeds a disposable database, starts api, auth and the studio, then checks 135 screens): `make e2e` (`ci/studio-smoke.sh`) — ports, database and Chromium are set by environment variables, see `docs/runbooks/ci.md`.
+End-to-end suite (S-117): `make e2e` starts a disposable Postgres and the whole stack under `local`, runs the Playwright journeys (sign-in, onboarding, quote → booking → escrow, order → pack → deliver, payout) and the Studio smoke sweep of every screen, then stops everything — `docs/runbooks/e2e.md`.
 
 ## Local sign-in (Studio → auth → BFF → api, Postgres only)
 ```

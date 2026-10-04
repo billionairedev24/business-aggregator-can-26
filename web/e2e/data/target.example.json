@@ -1,0 +1,50 @@
+{
+  "$comment": "Template for a deployed environment (make e2e-target ENV=staging E2E_DATA=…). Copy it, put the environment's pilot market and its long-lived test businesses in, and keep credentials out: E2E_OWNER_IDENTIFIER / E2E_OWNER_TOTP_SECRET, E2E_STAFF_*, E2E_COURIER_*, E2E_CONSUMER_IDENTIFIER and E2E_CONSUMER_PASSKEY come from CI secrets (docs/runbooks/e2e.md).",
+  "market": {
+    "name": "Calgary",
+    "timeZone": "America/Edmonton",
+    "geolocation": {
+      "latitude": 51.0378,
+      "longitude": -114.087
+    },
+    "address": {
+      "street": "1204 17 Ave SW",
+      "postalCode": "T2T 0B8"
+    }
+  },
+  "provider": {
+    "merchantId": "<the e2e provider business id>",
+    "slug": "<its page slug>",
+    "name": "<its display name>",
+    "serviceCategory": "mobile-mechanic"
+  },
+  "seller": {
+    "merchantId": "<the e2e seller business id>",
+    "name": "<its display name>",
+    "departmentLevel1": "Shop › Hardware & auto",
+    "departmentLevel2": "Hardware"
+  },
+  "onboarding": {
+    "type": "seller",
+    "department": "Hardware",
+    "categoryLevel1": "Shop › Hardware & auto",
+    "categoryLevel2": "Hardware",
+    "gstNumber": "123456789 RT0001",
+    "address": "12 Test Trail SW"
+  },
+  "personas": {
+    "owner": {
+      "identifier": "set E2E_OWNER_IDENTIFIER",
+      "firstName": "E2E"
+    },
+    "staff": {
+      "identifier": "set E2E_STAFF_IDENTIFIER"
+    },
+    "courier": {
+      "identifier": "set E2E_COURIER_IDENTIFIER"
+    },
+    "consumer": {
+      "identifier": "set E2E_CONSUMER_IDENTIFIER"
+    }
+  }
+}

@@ -3,6 +3,10 @@
 .env.*
 !.env.example
 smoke-out/
+# make e2e (ci/e2e.sh, S-117): logs, Playwright report, traces, screenshots, videos
+e2e-out/
+# make e2e-target: an environment's URLs and test credentials (docs/runbooks/e2e.md) — never committed
+web/e2e/env/
 # make up / make run (scripts/stack.sh): pids and app logs
 .run/
 # S-104: pinned security scanners (make security-tools)

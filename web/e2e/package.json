@@ -1,0 +1,19 @@
+{
+  "name": "@northline/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end suite (S-117): Playwright against the real stack — `make e2e` (local profile, disposable database) or `make e2e-target ENV=staging` (a deployed environment). docs/runbooks/e2e.md.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "report": "playwright show-report ../../e2e-out/report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}
