@@ -168,8 +168,21 @@ standin_services() {
 APPS="${SERVICES:-$APPS_DEFAULT}"
 contains_app() { case " $APPS " in *" $1 "* | *" all "*) return 0 ;; esac; return 1; }
 
+# Nothing in BYO_SERVICES: say where it was looked for, and catch it in the apps' file (a common slip)
+byo_hint() {
+  if [ ! -f "$ROOT/.env" ]; then
+    say "  ${c_dim}no $ROOT/.env — create it (cp .env.example .env) and set BYO_SERVICES=db,cache,grafana for the ones you run${c_off}"
+  else
+    say "  ${c_dim}read from $ROOT/.env (BYO_SERVICES=…), or BYO=… on the command line${c_off}"
+  fi
+  if _env_file_value "$ROOT/server/.env" BYO_SERVICES 1 >/dev/null; then
+    warn "BYO_SERVICES is in server/.env, which only the apps read — move it to the root .env"
+  fi
+}
+
 cmd_check() {
   say "${c_b}Your own services${c_off} ${c_dim}(BYO_SERVICES=${BYO_LIST:-none})${c_off}"
+  if [ -z "$BYO_LIST" ]; then byo_hint; fi
   if byo db; then check_postgres; else check_port postgres "$PG_PORT" PG_PORT db; fi
   if byo cache; then check_valkey; else check_port valkey "$VALKEY_PORT" VALKEY_PORT cache; fi
   if byo grafana; then check_grafana; else check_port grafana "$GRAFANA_PORT" GRAFANA_PORT grafana; fi
