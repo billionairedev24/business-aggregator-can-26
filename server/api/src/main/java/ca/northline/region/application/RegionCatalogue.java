@@ -325,7 +325,11 @@ class RegionCatalogue implements Regions, Markets {
                 language(row, LanguageRules.NONE, r.province()));
     }
 
-    /** The row's language rules over {@code inherited} (a market's province); REGION_FRENCH_FIRST wins. */
+    /**
+     * The row's language rules over {@code inherited} (a market's province); REGION_FRENCH_FIRST wins. A French-first
+     * place always requires French listing text (owner decision 2026-10-04, S-116): {@code warn} or {@code off} on such
+     * a place reads as {@code require}; {@code warn} remains for places that aren't French-first.
+     */
     private LanguageRules language(ProfileRow row, LanguageRules inherited, String configKey) {
         if (frenchFirst.contains(configKey)) {
             return new LanguageRules(true, FrenchListings.REQUIRE);
@@ -334,7 +338,7 @@ class RegionCatalogue implements Regions, Markets {
         var listings = row.frenchListings() == null
                 ? inherited.frenchListings()
                 : CodedEnum.fromCode(FrenchListings.class, row.frenchListings());
-        return new LanguageRules(first, listings);
+        return new LanguageRules(first, first ? FrenchListings.REQUIRE : listings);
     }
 
     private MarketProfile market(ProfileRow row, Map<String, ProvinceProfile> provinces) {
