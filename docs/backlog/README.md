@@ -1,6 +1,6 @@
 # Backlog
 
-`northline-backlog.csv` is the full remaining-work backlog after the Studio build: 14 epics, 139 stories, 796 story points, laid out over 20 two-week sprints (5 Oct 2026 → 9 Jul 2027).
+`northline-backlog.csv` is the full remaining-work backlog after the Studio build: 14 epics, 140 stories, 801 story points, laid out over 20 two-week sprints (5 Oct 2026 → 9 Jul 2027).
 
 ## Importing into Jira
 Jira → *Settings › System › External system import › CSV* (Cloud: *Import issues from CSV*). Map the columns:
@@ -45,3 +45,4 @@ Jira → *Settings › System › External system import › CSV* (Cloud: *Impor
 - Follow-ups found while merging phase 2 (2026-10-01): S-135 BFF relay race, S-136 calendar disconnect deadlock, S-137 indexer refresh before stale lookup, S-138 Error Prone -Werror, S-139 docs OAuth client.
 - Mobile (2026-10-01): the iOS/Android consumer app (E-10, S-97–S-103) stays in phase 4 as planned (the user confirmed it is in scope, not to be pulled forward). Stack when it starts: Expo + React Native + expo-router, following billionairedev24/samop-inv-ship-26. The courier app (S-87) is in fulfilment (phase 3).
 - Accessibility follow-ups (2026-10-02, S-109): the issues the WCAG 2.2 AA audit left open are in [`docs/a11y/tickets.csv`](../a11y/tickets.csv), same columns as this file, under E-11 (S-140–S-148, provisional ids). The generator is kept outside the repo, so they join `northline-backlog.csv` at its next run.
+- Owner decision 2026-10-04: S-149 locked backup vault in a separate cloud account (E-12, Sprint 21; added by hand — the next free id after the a11y tickets' S-140–S-148; not built).
