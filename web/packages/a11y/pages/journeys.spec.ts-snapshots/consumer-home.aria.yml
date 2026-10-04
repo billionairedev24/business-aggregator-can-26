@@ -1,6 +1,6 @@
 - main:
   - region "What do you need in Calgary today?":
-    - paragraph: Good morning · Calgary
+    - paragraph: /Good (morning|afternoon|evening) · Calgary/
     - heading "What do you need in Calgary today?" [level=1]
     - search:
       - text: Search
