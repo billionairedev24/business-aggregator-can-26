@@ -116,7 +116,8 @@ check_valkey() {
       if [ -n "$REDIS_PASSWORD" ]; then
         if [ -n "$REDIS_USERNAME" ]; then printf 'AUTH %s %s\r\n' "$REDIS_USERNAME" "$REDIS_PASSWORD" >&3; else printf 'AUTH %s\r\n' "$REDIS_PASSWORD" >&3; fi
         IFS= read -r -t 3 line <&3 || true
-        case "$line" in +OK*) ;; *) printf '%s' "$line"; exit 0 ;; esac
+        # (pattern) form: bash 3.2 (macOS) ends the $( ) at a bare pattern's ')' and fails to parse
+        case "$line" in (+OK*) ;; (*) printf '%s' "$line"; exit 0 ;; esac
       fi
       printf 'PING\r\n' >&3; IFS= read -r -t 3 line <&3 || true; printf '%s' "${line%$'\r'}") 2>/dev/null || true)
   fi
