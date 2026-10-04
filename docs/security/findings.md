@@ -24,7 +24,7 @@ described by impact and location, without exploit detail.
 | S104-06 | Medium (5.3) | privacy (S-105) | Verification texts were unlimited across reopened requests, and each code added guesses | fixed |
 | S104-07 | Medium (5.3) | auth (SMS) | No platform-wide budget for texted codes (SMS pumping across many numbers and addresses) | fixed |
 | S104-08 | Medium (5.4) | exports (api, Studio) | Spreadsheet formula injection in the sales CSV; the Studio's guard let `-<digit>…` formulas through | fixed |
-| S104-09 | Medium (4.7) | consumer web | No Content-Security-Policy on the consumer site | fixed (follow-up: nonces) |
+| S104-09 | Medium (4.7) | consumer web | No Content-Security-Policy on the consumer site | fixed (nonces, `script-src` without `'unsafe-inline'`: 2026-10-04) |
 | S104-10 | Low | mobile (deep links) | A malformed escape in a notification's link threw out of the tap handler | fixed |
 | S104-11 | Low | web/mobile tooling | Advisories in build-time-only packages (Docusaurus, Expo CLI, Vitest) | open, accepted |
 | S104-12 | Low | infra (staging) | The staging cluster API accepts any source address unless `api_allowed_cidrs` is set | open, action before the test |
@@ -138,11 +138,22 @@ from Stripe only; `connect-src` and `form-action` limited to the site and the au
 third-party script origins come from `SCRIPT_INVENTORY`, the payment-page script inventory (Stripe.js only;
 docs/compliance/pci/payment-page-scripts.md), and the policy reports violations (`report-uri /csp-report`,
 `report-to csp`, `Reporting-Endpoints`) to the Node server, which logs one `csp.violation` JSON line each (no query
-strings, ≤ 300 a minute, bodies ≤ 16 KB). One enforced policy; no separate report-only one. **Residual:**
-`script-src` keeps `'unsafe-inline'` because the SSR document's inline configuration and hydration scripts carry no
-nonce yet (follow-up; a report-only copy without `'unsafe-inline'` should measure the nonce work first). The same
-residual keeps SAQ A eligibility criterion E7 "not yet" (docs/compliance/pci/saq-a.md).
-**Test:** `securityHeaders.test.ts` (policy, inventory vs the code's script loads, report parsing, rate cap).
+strings, ≤ 300 a minute, bodies ≤ 16 KB). One enforced policy; no separate report-only one.
+**Nonces (2026-10-04, closes the residual):** `script-src 'self' 'nonce-…' https://js.stripe.com` — no
+`'unsafe-inline'`, no `'unsafe-eval'`, no `'strict-dynamic'`. `node-server.mjs` makes a fresh 128-bit nonce for every
+page the app renders, puts it in that answer's policy and hands it to the app in `x-nl-csp-nonce` (a client's own
+header is replaced); the router's `ssr.nonce` puts it on every inline script TanStack Start and React 19 emit
+(configuration, hydration state, route scripts, streaming), and the root document's configuration script carries it.
+Other answers (files, robots.txt, app-link files) get the policy without a nonce. Zod parses jitless in all three apps
+(its `new Function` probe was reported as an eval violation on every page). The Studio and the console (SPAs on nginx)
+already had no `'unsafe-inline'` in `script-src`; their `index.html` has no inline script (now tested).
+**Tests:** `securityHeaders.test.ts` (policy with and without a nonce, fresh 128-bit nonces, every inline `<script>` in
+the source carries the nonce, the Studio/console policy and `index.html`, inventory vs the code's script loads, report
+parsing, rate cap); `web/packages/a11y/pages/csp.spec.ts` in Chromium against the built server (`make csp-check`, part
+of `make a11y`): a fresh nonce per response, every inline script carries it, a forged nonce header is ignored, the main
+pages, the signed-in pages and checkout with a Stripe.js stand-in load with zero violations, an injected inline script
+is refused. **Not done:** a report-only measurement on a deployed environment (none exists); the alert on
+`csp.violation` lines and the weekly synthetic check stay with the owners (SAQ A E7).
 
 ### S104-10 — Malformed deep link threw in the tap handler (Low)
 
