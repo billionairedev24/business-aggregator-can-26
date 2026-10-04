@@ -72,6 +72,11 @@ a11y: $(WEB_INSTALLED) ## Accessibility page sweep (S-109): builds Studio, conso
 	$(PNPM) --filter @northline/consumer build
 	$(PNPM) --filter @northline/a11y a11y
 
+.PHONY: csp-check
+csp-check: $(WEB_INSTALLED) ## S104-09: the consumer site's CSP in Chromium — a fresh nonce per page, none of its inline scripts without it, zero violations (checkout with a Stripe.js stand-in)
+	$(PNPM) --filter @northline/consumer build
+	$(PNPM) --filter @northline/a11y csp
+
 .PHONY: a11y-record
 a11y-record: $(WEB_INSTALLED) ## Re-record the sweep's mock api answers from the apps' vitest suites (packages/a11y/fixtures)
 	$(PNPM) --filter @northline/a11y record
