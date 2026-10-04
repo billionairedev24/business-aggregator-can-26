@@ -1,0 +1,30 @@
+- main:
+  - heading "Help" [level=1]
+  - paragraph: Answers for everyone — with an account or without one.
+  - region "A problem with an order, a booking or a quote":
+    - heading "A problem with an order, a booking or a quote" [level=2]
+    - paragraph: Orders, bookings and quotes belong to an account. Sign in to report a problem — it opens a case our team follows with you.
+    - paragraph:
+      - link "Sign in for help with an order":
+        - /url: /sign-in?next=%2Faccount%3Ftab%3Dhelp
+  - region "Shopping as a guest":
+    - heading "Shopping as a guest" [level=2]
+    - paragraph: You can browse and fill a cart without an account. Paying, booking and asking for quotes need one — sign-in takes a passkey, an authenticator app or a code we text you.
+  - region "Payments":
+    - heading "Payments" [level=2]
+    - paragraph: "/You enter card details only in Stripe’s secure form; Northline never sees your card number\\. We hold the payment until the job is done: \\d+ hours after a service is completed, 7 days after goods are delivered, and at handoff for food\\./"
+  - region "Accessibility":
+    - heading "Accessibility" [level=2]
+    - paragraph: Every page works with a keyboard and with screen readers, in English and in French. If something stops you, tell us — we answer within two business days and can give you the information in another format.
+  - region "Contact us":
+    - heading "Contact us" [level=2]
+    - paragraph: Sign in and open a case in Help & cases, and we answer you there.
+    - paragraph:
+      - link "Help & cases":
+        - /url: /sign-in?next=%2Faccount%3Ftab%3Dhelp
+  - region "Selling or offering a service?":
+    - heading "Selling or offering a service?" [level=2]
+    - paragraph: Northline Studio has its own help for businesses.
+    - paragraph:
+      - link "Sell or offer a service":
+        - /url: /sell

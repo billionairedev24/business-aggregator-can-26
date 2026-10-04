@@ -43,7 +43,7 @@ export function ApiTab() {
   return (
     <div className="nl-set-api">
       <div>
-        <h3 className="nl-set-h3">{t('apiKeys')}</h3>
+        <h2 className="nl-set-h3">{t('apiKeys')}</h2>
         <DataTable<KeyRow> entity={t('keyEntity')} plural={t('keyPlural')} columns={columns} rows={rows} loading={keys.isPending}
           error={keys.isError ? t('loadError') : null} onRetry={() => void keys.refetch()} emptyText={t('keysEmpty')}
           roleName={t(`role_${role}` as Parameters<SettingsT>[0])} can={{ create: owner, update: false, delete: owner, export: true }} createLabel={t('issueKey')}
@@ -75,7 +75,7 @@ function Webhooks({ owner, onSecret }: { owner: boolean; onSecret: (s: Secret) =
   const delivery = (w: Webhook) => (w.lastStatus == null ? t('noDelivery') : t('lastDelivery', { status: `${w.lastStatus} ${w.lastStatus < 300 ? t('ok') : t('failed')}` }));
   return (
     <section aria-labelledby="set-hooks">
-      <h3 id="set-hooks" className="nl-set-h3 nl-set-gap">{t('webhooks')}</h3>
+      <h2 id="set-hooks" className="nl-set-h3 nl-set-gap">{t('webhooks')}</h2>
       {q.isPending ? <PageSkeleton kpis={0} rows={2} /> : q.isError ? <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /> : q.data.length === 0 ? <p className="nl-small nl-muted">{t('webhooksEmpty')}</p> : (
         <ul className="nl-set-hooks">
           {q.data.map(w => (
@@ -202,7 +202,7 @@ function Embed() {
   const slug = business.data?.storeSlug;
   return (
     <section aria-labelledby="set-embed">
-      <h3 id="set-embed" className="nl-set-h3">{t('embedTitle')}</h3>
+      <h2 id="set-embed" className="nl-set-h3">{t('embedTitle')}</h2>
       {/* S-76: the real publishable key; without a page yet there is nothing to embed */}
       {slug ? <EmbedSnippet slug={slug} manageSites /> : business.isPending ? null : <p className="nl-muted">{t('embedNoPage')}</p>}
     </section>
@@ -228,7 +228,7 @@ function Integrations({ keys, owner, onQuickBooks }: { keys: ApiKey[]; owner: bo
   );
   return (
     <section aria-labelledby="set-int">
-      <h3 id="set-int" className="nl-set-h3 nl-set-gap">{t('integrations')}</h3>
+      <h2 id="set-int" className="nl-set-h3 nl-set-gap">{t('integrations')}</h2>
       <ul className="nl-set-rows">
         {provider && (googleCal?.state === 'reconnect'
           ? <li className="nl-set-row"><span>{t('int_google')}</span><Button variant="ghost" onClick={toSync}>{t('int_reconnect')}</Button></li>

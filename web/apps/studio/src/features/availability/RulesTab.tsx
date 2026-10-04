@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Chip, ErrorState, Field, OptionCard, PageSkeleton, Select, formatMoney, useLocale } from '@northline/ui';
+import { Alert, Chip, ErrorState, Field, OptionCard, PageSkeleton, RadioGroup, Select, formatMoney, useLocale } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { ValidationError } from '../../lib/http';
 import { rulesQuery, useSaveRules, type Rules, type RulesInput } from './api';
@@ -54,11 +54,11 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
           <h3 className="nl-av-h3">{t('acceptance')}</h3>
           <div className="nl-field">
             <span className="nl-label" id="av-accept">{t('howBookings')}</span>
-            <div className="nl-av-options" role="radiogroup" aria-labelledby="av-accept">
+            <RadioGroup className="nl-av-options" aria-labelledby="av-accept">
               {(['instant', 'approve', 'request'] as const).map(m => (
                 <OptionCard key={m} role="radio" aria-checked={form.acceptMode === m} selected={form.acceptMode === m} disabled={!canEdit} title={t(`accept_${m}`)} description={t(`accept_${m}_desc`)} onClick={() => set({ acceptMode: m })} />
               ))}
-            </div>
+            </RadioGroup>
           </div>
           {sel(t('reschedule'), String(form.rescheduleFreeMin), [180, 720, 1440].map(v => ({ value: String(v), label: t(`reschedule${v}` as Parameters<T>[0]) })), v => set({ rescheduleFreeMin: Number(v) }))}
           {sel(t('lateFee'), lateValue(form), [

@@ -7868,3 +7868,70 @@ live; a hypercare rota for two weeks.
   no `/go-live` entry (axe runs in its Vitest tests); no CSV of the checklist (the script prints it); gates and their
   owners are code, not editable; `make go-live-check` outside `local` needs a staff access token by hand. Never run
   against a real Prometheus rules API, live Stripe keys, a paging tool or production.
+
+## 2026-09-30 — S-140–S-148 Accessibility follow-ups; CSP nonces (S104-09, SAQ A E7)
+
+Branch `a11y/tickets-and-csp-nonces`. Statuses in [a11y/tickets.csv](a11y/tickets.csv) (new trailing `Status` column)
+and [a11y/audit.md § Follow-ups](a11y/audit.md#follow-ups-s-140s-148-2026-10-04). S-140–S-147 done; **S-148 stays open**
+for the human screen-reader pass. No migration, no server change.
+
+- **S-140 `RadioGroup` in `@northline/ui`** wraps the existing button radios instead of a new option API: it manages
+  the roving tabindex from the DOM (`[role=radio]` children, `aria-checked`, `disabled`; a MutationObserver catches a
+  radio re-rendering alone) and moves with a `click()`, so each screen keeps its own `onClick` and markup — one wrapper
+  per group, no screen rewritten. Selection follows focus (APG); `selectOnMove={false}` where a radio starts an action
+  (the console's market stages open a confirmation). Applied to every button-radio group of the three apps, beyond the
+  tickets' list (cart windows and substitutions, page builder, availability, regions, seller oversight). Native radio
+  groups (`Segmented`, the Data Table's chips) already had arrows.
+- **S-141 Data Table:** the estimate stays (it decides the first render); after render, a table whose `scrollWidth`
+  exceeds its box drops one more column (`computeLayout({ squeeze })`), re-checked on resize, reset when the container
+  width changes; cards when nothing is left to drop. The estimate's widths follow the 44 px targets (checkbox 60, icon
+  action 44). The sweep's text-spacing check now fails on any page and also on a Data Table scrolling inside its box.
+- **S-142 h1 in loading/error states, generically:** `PageHeadingProvider` (the Studio and console shells pass the
+  current nav label) + `PageSkeleton` / `ErrorState` render that name as the h1 only when the page's `main` has no h1
+  yet (layout effect, one claim per page). Chosen over editing ~40 screens' error branches; screens that keep their own
+  h1 are untouched. `PageState` does the same for route-level pending/error components. The consumer (SSR, no nav
+  labels) is fixed by hand where the audit found it (cart). Side effect: "an h1 appeared" no longer means "loaded" —
+  console tests wait for `screenReady()` (no `aria-busy`); three consumer cart tests wait for content.
+- **S-143 measure, then fix:** the sweep's old count (any control's box under 44 px, 655 on 64 page checks) counted
+  hit areas and inline links wrongly. It now probes each small control with `elementFromPoint` 21 px around its centre
+  (a pseudo-element or padding hit area counts), exempts links and link-styled buttons inside a sentence and visually
+  hidden (≤ 1 px) controls, lists offenders per page, and **fails above zero**. 231 were left; all fixed by size where
+  the design has room, by padding + negative margin where a line must not move (breadcrumbs, cart names, evidence
+  links, settings link), by a pseudo-element on the switch.
+- **S-144:** neutral-600 (the token the S-109 fixes already use for control borders), not a visible "Step 2 of 3"
+  (the design has none); `aria-valuetext` says it.
+- **S-145 Help page** `/help` (en/fr, server-rendered, indexable) because a guest can't open the account's Help & cases.
+  Not in design 06: the copy restates rules the product already has (escrow release, card entry, the accessibility
+  statement's promise). **New optional variable `NL_SUPPORT_EMAIL`** (consumer web; runbooks dev/staging/prod/local,
+  README, `.env.example`; not a secret, no Helm key — set like `NL_LEGAL_ENTITY`): without it the page names no
+  mailbox and sends people to Help & cases (signed in) or sign-in. The accessibility statement draft now points to
+  this Help link and says what is still open (the manual screen-reader pass).
+- **S-146:** a ringed diamond for stuck couriers (shape + outline), drawn by the same SVG in the legend.
+- **S-147:** the check is a glyph list (arrows, carets, ticks, stars, bullets — not the middle dot, which is
+  punctuation and used as a separator everywhere); it also caught "★ 4.9" in provider and shop cards ("rated 4.9").
+- **S-148 automated part:** Playwright ARIA snapshots of `main` on 11 key screens (`pages/journeys.spec.ts-snapshots`),
+  running inside each app's sweep project; time-dependent text (today/tonight, times of day) is matched by regular
+  expressions, so a re-record of the fixtures may need the snapshots refreshed (`--update-snapshots`, reviewed). A
+  Testing Library test of the consumer header's landmarks, names and states. The manual script is
+  [a11y/screen-reader-script.md](a11y/screen-reader-script.md); its results table is in audit.md.
+- **CSP nonces (S104-09):** the nonce is made in `node-server.mjs` (the only place that writes the header) and passed
+  to the app as a request header the server always overwrites; TanStack Start reads it through `getRequestHeader` into
+  `createRouter({ ssr: { nonce } })`, which TanStack (1.168/1.170) hands to React's stream renderer and puts on its own
+  hydration, route and head scripts; the root document's `__NL_CONFIG__` script takes it explicitly. In the browser the
+  router reads it back from a script's `.nonce` (the attribute is hidden after parse). **No `'strict-dynamic'`**: every
+  script file is `'self'` or Stripe.js, which is allowed by host. Answers that are not pages get the same policy without
+  a nonce. `style-src` keeps `'unsafe-inline'` (React style attributes; not in the ticket's scope).
+- **Zod jitless** in all three apps (`src/lib/zodJitless.ts`, imported first): Zod 4 probes `new Function` once per page
+  load; under a CSP without `'unsafe-eval'` the probe is refused and was reported as a `script-src` violation on every
+  page — it would have filled `/csp-report`'s 300-a-minute budget. Jitless parsing is slower only for very large objects.
+- **Measured in a browser instead of a report-only phase:** payment-page-scripts.md planned a report-only copy first;
+  with no deployed site, `make csp-check` (and `make a11y`) load the main pages, the signed-in pages and checkout with
+  a Stripe.js stand-in (routed `js.stripe.com`, which mounts a frame from `js.stripe.com`) in Chromium with zero
+  violations, and check that an injected inline script is refused. Recommended: watch `csp.violation` lines on staging
+  after deploying, before production.
+- **Studio and console:** their nginx `script-src` already had no `'unsafe-inline'`; `index.html` has only `src`
+  scripts (`/config.js` is a file). Now pinned by `securityHeaders.test.ts`.
+- **Not done / never run for real:** no screen reader was used (S-148 open); the CSP has never been served by a deployed
+  site to real browsers or reported to a real log backend; Stripe.js and its frames were a stand-in (no Stripe account);
+  Safari and Firefox not run (Chromium only); the `csp.violation` alert and the weekly synthetic check stay with their
+  owners (SAQ A E7 stays "not yet" for those); the accessibility statement's mailboxes are still placeholders.

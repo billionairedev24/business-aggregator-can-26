@@ -1,0 +1,19 @@
+- main:
+  - status
+  - text: Live orders · Pho Dau Bo
+  - heading /\w+ \w+ · 2 open/ [level=1]
+  - text: "Prep time shown to customers:"
+  - strong: /\d+ min/
+  - button "Busy · +5 min"
+  - button "Reset" [disabled]
+  - button "Pause new orders"
+  - list:
+    - listitem:
+      - strong: /FD-\d+/
+      - text: /New A\. Osei · placed [^/]+ 1× Pho dac biet · Large, extra beef 2× Spring rolls Deliver · courier assigned/
+      - button "Accept · start cooking"
+    - listitem:
+      - strong: /FD-\d+/
+      - text: /Ready A\. Osei · placed [^/]+ 1× Pho dac biet · Large, extra beef 2× Spring rolls Deliver · Sam waiting/
+      - button "Handed to courier"
+  - paragraph: Orders print to the kitchen printer and appear here; the customer's ETA updates when you tap Accept (their app shows "cooking") and Ready (courier is dispatched to arrive as you finish). Late-ready orders beyond your prep time reduce your on-time score.

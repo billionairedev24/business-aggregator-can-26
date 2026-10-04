@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { renderConsole, SESSION, staffApi, type Call } from '../../test/render';
+import { renderConsole, SESSION, staffApi, type Call, screenReady } from '../../test/render';
 import type { Day, Finance } from './api';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
@@ -87,7 +87,7 @@ describe('finance (S-85, design 03)', () => {
     const calls = api(['admin']);
     const user = userEvent.setup({ delay: null });
     renderConsole('/finance');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     const input = screen.getByLabelText('Day') as HTMLInputElement;
     await user.clear(input);
     await user.type(input, '2026-09-01');

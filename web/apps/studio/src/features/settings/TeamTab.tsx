@@ -66,7 +66,7 @@ export function TeamTab() {
       </div>
       {q.data.invitations.length > 0 && (
         <section aria-labelledby="set-inv" className="nl-set-invitations">
-          <h3 id="set-inv" className="nl-set-h3">{t('pendingTitle')}</h3>
+          <h2 id="set-inv" className="nl-set-h3">{t('pendingTitle')}</h2>
           <ul className="nl-set-rows">
             {q.data.invitations.map(i => {
               const contact = i.email ?? i.phone ?? '';

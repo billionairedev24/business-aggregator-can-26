@@ -188,6 +188,14 @@ describe('computeLayout', () => {
     expect(computeLayout({ width: 599, columns: layoutCols.slice(0, 2), iconActions: 1, hasInlineAction: false }).cardMode).toBe(true);
     expect(computeLayout({ width: 640, columns: layoutCols, iconActions: 3, hasInlineAction: true }).cardMode).toBe(true);
   });
+  it('drops more columns when the rendered table overflowed (S-141), then falls back to cards', () => {
+    const width = tableWidthFor(6, 3, false);
+    expect(computeLayout({ width, columns: layoutCols, iconActions: 3, hasInlineAction: false, squeeze: 1 }).autoHidden.map((c) => c.key)).toEqual(['live']);
+    const two = computeLayout({ width, columns: layoutCols, iconActions: 3, hasInlineAction: false, squeeze: 2 });
+    expect(two.shown).toHaveLength(4);
+    expect(two.cardMode).toBe(false);
+    expect(computeLayout({ width, columns: layoutCols, iconActions: 3, hasInlineAction: false, squeeze: 4 }).cardMode).toBe(true);
+  });
 });
 
 describe('record form model', () => {

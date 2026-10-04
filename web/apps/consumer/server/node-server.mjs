@@ -19,7 +19,7 @@ import { deepLinkAnswer, isDeepLinkPath } from './deep-links.mjs'; // S-102: the
 import { createPageRouter, PAGE_HEADERS } from './page-hosts.mjs';
 import { createSeo, isSeoPath } from './seo.mjs';
 import { appLinkAnswer, appLinksConfig, isAppLinkPath } from './app-links.mjs';
-import { CSP_REPORT_MAX_BODY, createCspReporter, isCspReportPath, securityHeaders as createSecurityHeaders } from './security-headers.mjs';
+import { CSP_REPORT_MAX_BODY, createCspReporter, createNonce, isCspReportPath, NONCE_HEADER, securityHeaders as createSecurityHeaders } from './security-headers.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const clientDir = join(root, 'dist', 'client');
@@ -45,7 +45,8 @@ const types = {
 };
 
 // S-104: nosniff, framing, referrer, permissions and a Content-Security-Policy (security-headers.mjs); S-110: the
-// policy's violations are reported to POST /csp-report, logged here.
+// policy's violations are reported to POST /csp-report, logged here. Pages rendered by the app get their own nonce
+// (S104-09): a fresh one per request, in the policy and handed to the app as NONCE_HEADER.
 const securityHeaders = createSecurityHeaders(process.env);
 const cspReport = createCspReporter();
 
@@ -78,7 +79,7 @@ async function staticFile(pathname) {
 
 const publicHost = req => (trustProxy && req.headers['x-forwarded-host']?.split(',')[0].trim()) || req.headers.host || 'localhost';
 
-function toRequest(req, page) {
+function toRequest(req, page, nonce) {
   const proto = (trustProxy && req.headers['x-forwarded-proto']?.split(',')[0].trim()) || 'http';
   const authority = publicHost(req);
   const headers = new Headers();
@@ -87,6 +88,7 @@ function toRequest(req, page) {
   // The visitor's address chain for the api's per-client search limit (S-44/S-48): the ingress's X-Forwarded-For
   // when trusted, then the peer. Only this server sets it.
   headers.delete(FORWARDED_HEADER);
+  headers.set(NONCE_HEADER, nonce); // only this server chooses a page's nonce (a client's own header is replaced)
   const chain = [trustProxy ? req.headers['x-forwarded-for'] : undefined, req.socket.remoteAddress].filter(Boolean).join(', ');
   if (chain) headers.set(FORWARDED_HEADER, chain);
   if (page) { headers.set('x-nl-page-mode', page.mode); headers.set('x-nl-page-host', page.host); headers.set('x-nl-page-slug', page.slug); }
@@ -102,12 +104,12 @@ function toRequest(req, page) {
   });
 }
 
-async function send(res, response, head) {
+async function send(res, response, head, nonce) {
   const headers = {};
   response.headers.forEach((value, key) => { if (key !== 'set-cookie') headers[key] = value; });
   const cookies = response.headers.getSetCookie();
   if (cookies.length) headers['set-cookie'] = cookies;
-  res.writeHead(response.status, { ...securityHeaders, ...headers });
+  res.writeHead(response.status, { ...createSecurityHeaders(process.env, nonce), ...headers });
   if (head || !response.body) { res.end(); return; }
   Readable.fromWeb(response.body).on('error', () => res.destroy()).pipe(res);
 }
@@ -173,7 +175,8 @@ const server = createServer(async (req, res) => {
       res.end(route.type === 'notFound' ? 'No Northline page is connected to this domain.' : 'Try again in a moment.');
       return;
     }
-    await send(res, await app.fetch(toRequest(req, route.page)), req.method === 'HEAD');
+    const nonce = createNonce();
+    await send(res, await app.fetch(toRequest(req, route.page, nonce)), req.method === 'HEAD', nonce);
   } catch (error) {
     console.error(`${req.method} ${req.url} failed`, error);
     if (!res.headersSent) res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });

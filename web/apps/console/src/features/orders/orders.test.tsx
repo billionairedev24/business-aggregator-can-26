@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { renderConsole, staffApi } from '../../test/render';
+import { renderConsole, staffApi, screenReady } from '../../test/render';
 import type { Monitor } from './api';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
@@ -44,7 +44,7 @@ describe('orders & bookings (S-81, design 03)', () => {
     const calls = staffApi(['support'], c => (c.url.includes('/api/v1/console/orders') ? { body: monitor() } : undefined));
     const user = userEvent.setup({ delay: null });
     const { router } = renderConsole('/orders');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user.click(screen.getByRole('button', { name: 'Late · 9' }));
     await waitFor(() => expect(calls.some(c => c.url.includes('/api/v1/console/orders?view=late'))).toBe(true));
     expect(router.state.location.search).toMatchObject({ view: 'late' });

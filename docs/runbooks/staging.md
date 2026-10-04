@@ -175,6 +175,7 @@ Every app reads its configuration from environment variables; nothing environmen
 
 | `NL_STUDIO_ORIGIN` | web/apps/consumer (S-61) | no — the chart sets it from `urls.studio` | `https://studio.staging.northline.ca` | where "Sell or offer a service" enters Studio onboarding (README § Consumer web) |
 | `NL_LEGAL_ENTITY` | web/apps/consumer (S-134) | no (`Northline Marketplace Inc.`) | `Northline Marketplace Inc. · Calgary` | the footer's company line — legal entity data, configuration rather than copy |
+| `NL_SUPPORT_EMAIL` | web/apps/consumer (S-145) | no (unset: Help points to Help & cases only) | `support@staging.northline.ca` | the support mailbox the Help page (`/help`, linked from every page's footer) names — set it once the mailbox exists |
 | `NL_APPLE_TEAM_ID`, `NL_IOS_BUNDLE_IDS`, `NL_ANDROID_PACKAGES`, `NL_ANDROID_CERT_SHA256` | web/apps/consumer (S-97) | for App Links / Universal Links — the chart sets them from `mobileApps` (values-staging.yaml sets the ids) | `ABCDE12345` / `ca.northline.app.preview,ca.northline.courier.preview` / … / `AA:BB:…` (Play app-signing certificate) | the native apps' `/.well-known/apple-app-site-association` and `assetlinks.json`; without a team id / fingerprint those answer 404 and the apps use their custom scheme ([mobile.md § App Links](mobile.md#app-links)) |
 | `VITE_NL_PLATFORM_TIME_ZONE` (Studio build) | web/apps/studio (S-134) | no (UTC until the region model answers) | `America/Edmonton` | the platform zone before `GET /api/v1/geo/regions` answers; business dates use the merchant's market zone |
 

@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { I18nProvider } from '@northline/ui';
+import { I18nProvider, PageHeadingProvider } from '@northline/ui';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -301,6 +301,40 @@ describe('Payouts', () => {
     await ui.click(screen.getByRole('button', { name: 'Save schedule' }));
     expect(((await screen.findByRole('button', { name: 'Saved' })) as HTMLButtonElement).disabled).toBe(true);
     expect(calls.find(c => c.method === 'PUT')!.body).toEqual({ frequency: 'weekly', reserve: 'none', weekday: 1, monthlyAnchor: null });
+  });
+
+  it('payout frequency is one Tab stop; the arrow keys move and select (S-140)', async () => {
+    const ui = renderScreen(<PayoutsScreen />);
+    await ui.click(await screen.findByRole('button', { name: 'Change schedule' }));
+    const group = screen.getByRole('radiogroup', { name: 'Payout schedule' });
+    const radios = within(group).getAllByRole('radio');
+    expect(radios.filter(r => r.getAttribute('tabindex') === '0')).toHaveLength(1);
+    const checked = radios.find(r => r.getAttribute('aria-checked') === 'true')!;
+    checked.focus();
+    await ui.keyboard('{ArrowDown}');
+    const next = radios[(radios.indexOf(checked) + 1) % radios.length]!;
+    expect(document.activeElement).toBe(next);
+    expect(next.getAttribute('aria-checked')).toBe('true');
+    await ui.keyboard('{Home}');
+    expect(radios[0]!.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('sections are h2 under the page h1 (S-142)', async () => {
+    renderScreen(<PayoutsScreen />);
+    await screen.findByRole('button', { name: 'Change schedule' });
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.queryAllByRole('heading', { level: 3 })).toHaveLength(0);
+    expect(screen.getAllByRole('heading', { level: 2 }).length).toBeGreaterThan(0);
+  });
+});
+
+describe('loading and error states keep the h1 (S-142)', () => {
+  it.each([['Earnings', <EarningsScreen key="e" />], ['Reports', <ReportsScreen key="r" />], ['Refunds', <RefundsScreen key="f" />]])('%s', async (name, ui) => {
+    routes = {};
+    renderScreen(<main><PageHeadingProvider value={name}>{ui}</PageHeadingProvider></main>);
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    await waitFor(() => expect(screen.queryAllByRole('alert').length).toBeGreaterThan(0));
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 });
 

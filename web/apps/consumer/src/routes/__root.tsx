@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
+import { createRootRouteWithContext, HeadContent, Outlet, Scripts, useRouter } from '@tanstack/react-router';
 import { I18nProvider, SiteLinkProvider } from '@northline/ui';
 import { configureAuthOrigin } from '@northline/auth-kit';
 import tokensCss from '@northline/tokens/tokens.css?url';
@@ -44,11 +44,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 /** The HTML document (server-rendered): language from the cookie / Accept-Language, public config for the browser. */
 function Document({ children }: { children: ReactNode }) {
   const { locale, config } = Route.useRouteContext();
+  const nonce = useRouter().options.ssr?.nonce; // S104-09: the page's CSP nonce (router.tsx)
   return (
     <html lang={htmlLang(locale)}>
       <head>
         <HeadContent />
-        <script dangerouslySetInnerHTML={{ __html: `window.__NL_CONFIG__=${JSON.stringify(config).replace(/</g, '\\u003c')}` }} />
+        <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `window.__NL_CONFIG__=${JSON.stringify(config).replace(/</g, '\\u003c')}` }} />
       </head>
       <body>
         {children}

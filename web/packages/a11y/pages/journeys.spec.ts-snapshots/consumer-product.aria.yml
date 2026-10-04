@@ -1,0 +1,44 @@
+- main:
+  - navigation "Breadcrumb":
+    - list:
+      - listitem:
+        - link "Shop":
+          - /url: /shop
+      - listitem:
+        - text: ›
+        - link "Bakery":
+          - /url: /shop/bakery
+      - listitem: › Glenmore Bakery
+  - group "Photos"
+  - heading "Country sourdough" [level=1]
+  - link "Glenmore Bakery":
+    - /url: /search?scope=shop&q=Glenmore%20Bakery
+  - text: /· Master tier · ★ 4\.8 \(\d+ verified\) On \S+ run Final sale \$\d+\.\d+ \d+ g loaf · GST included at checkout/
+  - paragraph: /Naturally leavened, \d+-hour ferment, Alberta hard red wheat\. Sliced on request\./
+  - group "Options":
+    - button "Whole" [pressed]
+    - button "Sliced"
+    - button "Half" [disabled]
+  - group "Quantity":
+    - button "One less" [disabled]
+    - button "One more"
+  - button /Add 1 to cart · \$\d+\.\d+/
+  - strong: Delivery.
+  - text: /Order by .+; the shop is paid only after you confirm delivery\./
+  - region "Also from Glenmore Bakery":
+    - heading "Also from Glenmore Bakery" [level=2]
+    - list:
+      - listitem:
+        - link /Rye · \$\d+\.\d+/:
+          - /url: /products/P2
+      - listitem:
+        - link /Baguette · \$\d+\.\d+/:
+          - /url: /products/P3
+  - region "Also sold by":
+    - heading "Also sold by" [level=2]
+    - list:
+      - listitem:
+        - strong: Sidewalk Citizen
+        - text: /Trusted On \S+ run \$\d+\.\d+/
+        - link "Choose — Sidewalk Citizen":
+          - /url: /products/P1?offer=O2

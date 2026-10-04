@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { renderConsole, staffApi, type Call } from '../../test/render';
+import { renderConsole, staffApi, type Call, screenReady } from '../../test/render';
 import type { Detail, Seller } from './api';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
@@ -64,7 +64,7 @@ describe('sellers & providers (S-82, design 03)', () => {
     const calls = api(['trust_safety']);
     const user = userEvent.setup({ delay: null });
     const first = renderConsole('/sellers');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user.click(within(card('Prairie Wrench')).getByRole('button', { name: /Suspend/ }));
     const dialog = await screen.findByRole('dialog', { name: 'Suspend · Prairie Wrench' });
     await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Off-platform payments');
@@ -76,7 +76,7 @@ describe('sellers & providers (S-82, design 03)', () => {
     first.unmount();
     api(['support']);
     renderConsole('/sellers');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     expect(screen.getByText(/View only · Support/)).toBeTruthy();
     expect(within(card('Prairie Wrench')).queryByRole('button', { name: /Suspend/ })).toBeNull();
   });
@@ -85,7 +85,7 @@ describe('sellers & providers (S-82, design 03)', () => {
     const calls = api(['admin']);
     const user = userEvent.setup({ delay: null });
     renderConsole('/sellers');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user.click(screen.getByRole('button', { name: 'At risk' }));
     await waitFor(() => expect(screen.queryByText('Prairie Wrench')).toBeNull());
     expect(screen.getByText('Bow River Mechanics')).toBeTruthy();
@@ -118,7 +118,7 @@ describe('sellers & providers (S-82, design 03)', () => {
     const calls = api(['admin']);
     const user = userEvent.setup({ delay: null });
     renderConsole('/sellers/m2');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user.click(screen.getByRole('radio', { name: /Change tier/ }));
     await user.click(screen.getByRole('button', { name: 'Apply: Change tier' }));
     let dialog = await screen.findByRole('dialog', { name: 'Change tier · Bow River Mechanics' });
@@ -143,7 +143,7 @@ describe('sellers & providers (S-82, design 03)', () => {
     const calls = api(['admin']);
     const user = userEvent.setup({ delay: null });
     renderConsole('/sellers/m2');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user.click(screen.getByRole('radio', { name: /Hide from search/ }));
     expect(screen.getByText('Existing customers can still book')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Apply: Hide from search' }));
@@ -178,7 +178,7 @@ describe('sellers & providers (S-82, design 03)', () => {
     api(['admin'], c => (c.method === 'POST' ? { status: 422, body: { errors: [{ field: 'reason', rule: 'required', message: 'Give the reason the business will see.' }] } } : undefined));
     const user = userEvent.setup({ delay: null });
     renderConsole('/sellers/m2');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user.click(screen.getByRole('button', { name: 'Suspend…' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
@@ -188,7 +188,7 @@ describe('sellers & providers (S-82, design 03)', () => {
   it('keeps oversight off for roles without the action and denies roles that don’t open sellers', async () => {
     api(['support']);
     const first = renderConsole('/sellers/m2');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     expect((screen.getByRole('button', { name: 'Suspend…' }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole('button', { name: 'Apply: Suspend' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText('Your role can’t apply this action.')).toBeTruthy();

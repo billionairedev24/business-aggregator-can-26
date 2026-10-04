@@ -1,4 +1,4 @@
-import { useId, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { WarningCircle } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
@@ -22,6 +22,43 @@ export function PageHeader({ kicker, title, lede, actions }: PageHeaderProps) {
     </div>
   );
 }
+
+const PageHeadingContext = createContext<string | undefined>(undefined);
+/**
+ * The current screen's name (the shell's nav label), for loading and error states that replace a whole screen (S-142,
+ * WCAG 1.3.1 / 2.4.6): `PageSkeleton` and `ErrorState` then show it as the page's h1 when the page has none.
+ */
+export const PageHeadingProvider = PageHeadingContext.Provider;
+
+const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+const CLAIM = 'data-nl-fallback-h1';
+
+/**
+ * The screen's h1 while the screen itself cannot show its own (loading, failed): only when a PageHeadingProvider names
+ * the screen and nothing else in the page's `main` is an h1 — an error state inside a tab under the screen's heading
+ * adds none. Decided before paint (a layout effect); one per page (the first to claim `main`).
+ */
+function FallbackHeading({ placeholder }: { placeholder?: ReactNode }) {
+  const title = useContext(PageHeadingContext);
+  const probe = useRef<HTMLSpanElement>(null);
+  const [show, setShow] = useState(false);
+  useIsoLayoutEffect(() => {
+    const main = probe.current?.closest('main') ?? probe.current?.ownerDocument.body;
+    if (!title || !main || main.querySelector('h1') || main.hasAttribute(CLAIM)) return;
+    main.setAttribute(CLAIM, '');
+    setShow(true);
+    return () => main.removeAttribute(CLAIM);
+  }, [title]);
+  if (show && title) return <h1 className="nl-page-title">{title}</h1>;
+  return <><span ref={probe} hidden />{placeholder}</>;
+}
+
+/**
+ * A whole-page loading or error state outside the app shell (a route's pendingComponent / errorComponent): a `main`
+ * whose `PageSkeleton` / `ErrorState` show `title` as the page's h1 (S-142).
+ */
+export const PageState = ({ title, children }: { title: string; children: ReactNode }) =>
+  <main id="main" style={{ padding: 32 }}><PageHeadingProvider value={title}>{children}</PageHeadingProvider></main>;
 
 export const Kpi = ({ value, label }: { value: ReactNode; label: ReactNode }) => <div><div className="nl-kpi-value">{value}</div><div className="nl-kpi-label">{label}</div></div>;
 export const KpiRow = ({ children }: { children: ReactNode }) => <div className="nl-kpis">{children}</div>;
@@ -62,7 +99,7 @@ export function PageSkeleton({ kpis = 4, rows = 5 }: { kpis?: number; rows?: num
     <div aria-busy="true" aria-live="polite">
       <span className="nl-sr-only">{t('loading')}</span>
       <Skeleton width={180} height={12} style={{ marginBottom: 14 }} />
-      <Skeleton width="min(420px, 80%)" height={38} style={{ marginBottom: 28 }} />
+      <FallbackHeading placeholder={<Skeleton width="min(420px, 80%)" height={38} style={{ marginBottom: 28 }} />} />
       {kpis > 0 && <div className="nl-kpis" style={{ marginBottom: 36 }}>{Array.from({ length: kpis }, (_, i) => <div key={i}><Skeleton width="60%" height={34} /><Skeleton width="80%" height={12} style={{ marginTop: 8 }} /></div>)}</div>}
       {Array.from({ length: rows }, (_, i) => <Skeleton key={i} height={44} style={{ marginBottom: 8 }} />)}
     </div>
@@ -76,9 +113,12 @@ export function EmptyState({ children, action }: { children: ReactNode; action?:
 export function ErrorState({ message, onRetry }: { message: ReactNode; onRetry?: () => void }) {
   const t = useT();
   return (
-    <div className="nl-errorstate" role="alert">
-      <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}><WarningCircle size={18} weight="duotone" aria-hidden />{message}</span>
-      {onRetry ? <button type="button" className="btn btn-secondary" onClick={onRetry}>{t('retry')}</button> : null}
-    </div>
+    <>
+      <FallbackHeading />
+      <div className="nl-errorstate" role="alert">
+        <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}><WarningCircle size={18} weight="duotone" aria-hidden />{message}</span>
+        {onRetry ? <button type="button" className="btn btn-secondary" onClick={onRetry}>{t('retry')}</button> : null}
+      </div>
+    </>
   );
 }

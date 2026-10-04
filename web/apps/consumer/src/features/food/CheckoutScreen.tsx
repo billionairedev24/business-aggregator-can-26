@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { newIdempotencyKey, ValidationError } from '@northline/client';
-import { Alert, Button, EmptyState, Field, OptionCard, Select, Skeleton, SiteLink, TextInput, useFormatters } from '@northline/ui';
+import { Alert, Button, EmptyState, Field, OptionCard, RadioGroup, Select, Skeleton, SiteLink, TextInput, useFormatters } from '@northline/ui';
 import { StripePayment } from '../cart/Payment';
 import { StepUpDialog } from '../cart/StepUpDialog';
 import type { Started as CartStarted } from '../cart/api';
@@ -127,11 +127,11 @@ export function CheckoutScreen() {
       <div>
         <h1>{t('checkoutTitle', { name: cart.name })}</h1>
         <h2>{t('when')}</h2>
-        <div className="nl-fco-when" role="radiogroup" aria-label={t('when')}>
+        <RadioGroup className="nl-fco-when" aria-label={t('when')}>
           {data?.kitchen.open !== false && <OptionCard selected={when === 'asap'} role="radio" aria-checked={when === 'asap'} title={t('asap')} description={data ? t('etaRange', { from: data.kitchen.etaFromMin, to: data.kitchen.etaToMin }) : ''} onClick={() => setWhen('asap')} />}
           {data && data.slots.length > 0 && <OptionCard selected={when === 'schedule'} role="radio" aria-checked={when === 'schedule'} title={t('scheduleOpt')} description={t('scheduleDesc')} onClick={() => setWhen('schedule')} />}
           {data?.kitchen.fulfilment.includes('pickup') && <OptionCard selected={pickup} role="radio" aria-checked={pickup} title={t('pickupOpt')} description={t('pickupDesc', { from: data.kitchen.pickupFromMin, to: data.kitchen.pickupToMin })} onClick={() => setWhen('pickup')} />}
-        </div>
+        </RadioGroup>
         {when === 'schedule' && (
           <Field label={t('window')}>
             <Select value={slot} onChange={e => setSlot(e.target.value)} options={slots.map(s => ({ value: s, label: `${date(s, 'long')} · ${date(s, 'time')}–${date(new Date(new Date(s).getTime() + 30 * 60_000), 'time')}` }))} />

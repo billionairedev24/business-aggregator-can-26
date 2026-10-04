@@ -11,6 +11,7 @@ export const services = {
   'services.minutes': '{n} min',
   'services.hours': '{h} h{m, plural, =0 {} other { #}}',
   'services.rating': '★ {rating} ({n})',
+  'services.ratingSpoken': 'rated {rating}, {n} reviews',
   'services.onTime': '{pct}% on time',
   'services.stars': '{n, plural, one {# star} other {# stars}}',
   'services.newProvider': 'New on Northline',

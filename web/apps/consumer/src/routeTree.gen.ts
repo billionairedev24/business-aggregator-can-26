@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CartRouteImport } from './routes/cart'
+import { Route as HelpRouteImport } from './routes/help'
 import { Route as LocationRouteImport } from './routes/location'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SearchRouteImport } from './routes/search'
@@ -44,6 +45,11 @@ const IndexRoute = IndexRouteImport.update({
 const CartRoute = CartRouteImport.update({
   id: '/cart',
   path: '/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LocationRoute = LocationRouteImport.update({
@@ -171,6 +177,7 @@ const AccountProblemKindIdRoute = AccountProblemKindIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cart': typeof CartRoute
+  '/help': typeof HelpRoute
   '/location': typeof LocationRoute
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
@@ -199,6 +206,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cart': typeof CartRoute
+  '/help': typeof HelpRoute
   '/location': typeof LocationRoute
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
@@ -228,6 +236,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/cart': typeof CartRoute
+  '/help': typeof HelpRoute
   '/location': typeof LocationRoute
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
@@ -258,6 +267,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/cart'
+    | '/help'
     | '/location'
     | '/register'
     | '/search'
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/cart'
+    | '/help'
     | '/location'
     | '/register'
     | '/search'
@@ -314,6 +325,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/cart'
+    | '/help'
     | '/location'
     | '/register'
     | '/search'
@@ -343,6 +355,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CartRoute: typeof CartRoute
+  HelpRoute: typeof HelpRoute
   LocationRoute: typeof LocationRoute
   RegisterRoute: typeof RegisterRoute
   SearchRoute: typeof SearchRoute
@@ -383,6 +396,13 @@ declare module '@tanstack/react-router' {
       path: '/cart'
       fullPath: '/cart'
       preLoaderRoute: typeof CartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/location': {
@@ -559,6 +579,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CartRoute: CartRoute,
+  HelpRoute: HelpRoute,
   LocationRoute: LocationRoute,
   RegisterRoute: RegisterRoute,
   SearchRoute: SearchRoute,

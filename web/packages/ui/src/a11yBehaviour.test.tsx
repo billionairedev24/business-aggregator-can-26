@@ -1,10 +1,10 @@
 /** S-109: keyboard, focus and announcement behaviour of the shared components (what axe cannot see). */
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Bank, House } from '@phosphor-icons/react';
-import { AppShell, Button, ChipTabs, codeValue, DataTable, Dialog, I18nProvider, LineChart, Menu, Meter, SiteHeader, StackedBarChart, UnderlineTabs, type Locale } from './index';
+import { AppShell, Button, ChipTabs, codeValue, DataTable, Dialog, I18nProvider, LineChart, Menu, Meter, OptionCard, RadioGroup, SiteHeader, StackedBarChart, StepBars, UnderlineTabs, type Locale } from './index';
 import { CAN, listingColumns, listings } from './DataTable/DataTable.fixtures';
 
 const wrap = (ui: React.ReactNode, locale: Locale = 'en') => render(<I18nProvider initial={locale}>{ui}</I18nProvider>);
@@ -162,6 +162,83 @@ describe('tabs', () => {
   });
 });
 
+describe('radio groups (S-140)', () => {
+  function Factor({ initial, disabled, selectOnMove }: { initial?: string; disabled?: string; selectOnMove?: boolean }) {
+    const [v, setV] = useState(initial);
+    return <>
+      <button type="button">Before</button>
+      <RadioGroup aria-label="Second factor" selectOnMove={selectOnMove}>
+        {['Passkey', 'Authenticator app', 'Backup code'].map(k => <OptionCard key={k} role="radio" selected={v === k} title={k} disabled={k === disabled} onClick={() => setV(k)} />)}
+      </RadioGroup>
+      <button type="button">After</button>
+    </>;
+  }
+  const radio = (name: string) => screen.getByRole('radio', { name });
+
+  it('is one Tab stop (the first radio when none is checked); arrows move and select, wrapping; Home/End jump', async () => {
+    const user = userEvent.setup();
+    wrap(<Factor />);
+    await user.click(screen.getByRole('button', { name: 'Before' }));
+    await user.tab();
+    expect(radio('Passkey')).toHaveFocus();
+    expect(radio('Passkey')).toHaveAttribute('aria-checked', 'false');
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'After' })).toHaveFocus();
+    await user.tab({ shift: true });
+    await user.keyboard('{ArrowDown}');
+    expect(radio('Authenticator app')).toHaveFocus();
+    expect(radio('Authenticator app')).toHaveAttribute('aria-checked', 'true');
+    await user.keyboard('{ArrowRight}');
+    expect(radio('Backup code')).toHaveAttribute('aria-checked', 'true');
+    await user.keyboard('{ArrowRight}');
+    expect(radio('Passkey')).toHaveFocus();
+    expect(radio('Passkey')).toHaveAttribute('aria-checked', 'true');
+    await user.keyboard('{ArrowLeft}');
+    expect(radio('Backup code')).toHaveFocus();
+    await user.keyboard('{Home}');
+    expect(radio('Passkey')).toHaveAttribute('aria-checked', 'true');
+    await user.keyboard('{End}');
+    expect(radio('Backup code')).toHaveAttribute('aria-checked', 'true');
+    await user.keyboard('{ArrowUp}');
+    expect(radio('Authenticator app')).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('the checked radio is the Tab stop, and the arrows skip a disabled radio', async () => {
+    const user = userEvent.setup();
+    wrap(<Factor initial="Backup code" disabled="Authenticator app" />);
+    expect(screen.getAllByRole('radio').map(r => r.getAttribute('tabindex'))).toEqual(['-1', '-1', '0']);
+    await user.click(screen.getByRole('button', { name: 'Before' }));
+    await user.tab();
+    expect(radio('Backup code')).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(radio('Passkey')).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    expect(radio('Backup code')).toHaveFocus();
+  });
+
+  it('with selectOnMove={false} the arrows only move focus and Space selects', async () => {
+    const user = userEvent.setup();
+    wrap(<Factor initial="Passkey" selectOnMove={false} />);
+    await user.click(screen.getByRole('button', { name: 'Before' }));
+    await user.tab();
+    await user.keyboard('{ArrowDown}');
+    expect(radio('Authenticator app')).toHaveFocus();
+    expect(radio('Passkey')).toHaveAttribute('aria-checked', 'true');
+    await user.keyboard(' ');
+    expect(radio('Authenticator app')).toHaveAttribute('aria-checked', 'true');
+  });
+});
+
+describe('step bars (S-144)', () => {
+  it('read their step as text, in both languages', () => {
+    wrap(<StepBars total={3} done={1} label="Progress" />);
+    expect(screen.getByRole('progressbar', { name: 'Progress' })).toHaveAttribute('aria-valuetext', 'Step 2 of 3');
+    cleanup();
+    wrap(<StepBars total={3} done={0} label="Progression" />, 'fr');
+    expect(screen.getByRole('progressbar', { name: 'Progression' })).toHaveAttribute('aria-valuetext', 'Étape 1 sur 3');
+  });
+});
+
 describe('DataTable announcements', () => {
   it('says what a sort did and how many rows a search leaves', async () => {
     const user = userEvent.setup();
@@ -178,6 +255,24 @@ describe('DataTable announcements', () => {
     await user.type(screen.getByRole('searchbox', { name: 'Search table' }), 'zzzz-no-match');
     await waitFor(() => expect(status()).toContain('No matching listings'));
     rect.mockRestore();
+  });
+});
+
+describe('DataTable under user text spacing (S-141)', () => {
+  it('drops columns while the rendered table is wider than its box, then shows cards — never a sideways scroll', async () => {
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 1200, height: 600, x: 0, y: 0, top: 0, left: 0, right: 1200, bottom: 600, toJSON: () => ({}) });
+    const { unmount } = wrap(<DataTable entity="listing" columns={listingColumns} rows={listings} can={CAN.ledger} />);
+    const fits = within(await screen.findByRole('table')).getAllByRole('columnheader').length;
+    unmount();
+    // the 1.4.12 spacing makes the rendered table 1 px wider than its box at every column count
+    const parent = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1000);
+    const scroll = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (this: HTMLElement) { return this.tagName === 'TABLE' ? 1002 : 0; });
+    wrap(<DataTable entity="listing" columns={listingColumns} rows={listings} can={CAN.ledger} />);
+    await waitFor(() => expect(screen.queryByRole('table')).toBeNull());
+    expect(screen.getByRole('list', { name: /listings/i })).toBeInTheDocument();
+    scroll.mockImplementation(function (this: HTMLElement) { return 0; });
+    expect(fits).toBeGreaterThan(3);
+    [rect, parent, scroll].forEach(m => m.mockRestore());
   });
 });
 

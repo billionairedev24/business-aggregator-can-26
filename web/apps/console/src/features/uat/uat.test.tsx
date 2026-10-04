@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
-import { renderConsole, staffApi, type Call } from '../../test/render';
+import { renderConsole, staffApi, type Call, screenReady } from '../../test/render';
 
 type Fake = { [k: string]: unknown; id: string; reference: string; state: string; blocking: boolean | null; summary: string; duplicates: number };
 const ITEM: Fake = {
@@ -166,7 +166,7 @@ describe('the console\'s "Send feedback" control (S-121)', () => {
   it('is not there for staff outside the pilot', async () => {
     staffApi(['support'], c => (c.url.endsWith('/api/v1/me/pilot') ? { body: { participant: false, persona: null, screenshotMaxBytes: 5242880, screenshotTypes: [] } } : c.url.includes('/api/v1/console/uat/') ? { body: { items: [] } } : undefined));
     renderConsole('/uat');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     expect(screen.queryByRole('button', { name: 'Send feedback' })).toBeNull();
   });
 });

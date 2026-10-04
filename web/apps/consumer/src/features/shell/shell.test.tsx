@@ -136,6 +136,30 @@ describe('the account menu', () => {
     expect(orders).toHaveTextContent(/^Orders & bookings$/);
   });
 
+  it('gives a screen reader the landmarks, names and states of the header (S-148)', async () => {
+    mockFetch(signedIn());
+    renderApp('/search?q=x');
+    const banner = await screen.findByRole('banner');
+    expect(within(banner).getByRole('link', { name: 'Northline — home' })).toBeInTheDocument();
+    expect(within(banner).getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+    expect(within(banner).getByRole('search')).toBeInTheDocument();
+    expect(within(banner).getByRole('combobox', { name: 'Search' })).toBeInTheDocument();
+    expect(within(banner).getByRole('button', { name: 'EN — Switch language: Français' })).toBeInTheDocument();
+    const account = await within(banner).findByRole('button', { name: 'Account menu' });
+    expect(account).toHaveAttribute('aria-expanded', 'false');
+    expect(account).toHaveAttribute('aria-haspopup', 'menu');
+    await userEvent.click(account);
+    expect(account).toHaveAttribute('aria-expanded', 'true');
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getAllByRole('menuitem').length).toBeGreaterThan(3);
+    expect(within(menu).getByRole('menuitem', { name: /Sign out/ })).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(account).toHaveFocus();
+    expect(screen.getByRole('main')).toBeInTheDocument();
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+  });
+
   it('opens Orders & bookings', async () => {
     mockFetch(signedIn());
     const { router } = renderApp('/');
@@ -177,6 +201,7 @@ describe('screens and states', () => {
     expect(within(footer).getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/legal/privacy.html');
     expect(within(footer).getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/legal/terms.html');
     expect(within(footer).getByRole('link', { name: 'Terms' })).toHaveAttribute('hreflang', 'en-CA');
+    expect(within(footer).getByRole('link', { name: 'Help' })).toHaveAttribute('href', '/help'); // S-145: for guests too
     expect(within(footer).getByRole('link', { name: 'Offer a service' })).toHaveAttribute('href', '/sell?type=provider');
     expect(within(footer).getByRole('link', { name: 'Sell on Northline' })).toHaveAttribute('href', '/sell?type=seller');
     expect(within(footer).getByRole('link', { name: 'Run a kitchen' })).toHaveAttribute('href', '/sell?type=kitchen');
@@ -187,7 +212,7 @@ describe('screens and states', () => {
     mockFetch(guest);
     renderApp('/', { locale: 'fr' });
     const footer = await screen.findByRole('contentinfo');
-    for (const name of ['Confidentialité', 'Conditions', 'Vendre sur Northline', 'Offrir un service', 'Gérer une cuisine']) {
+    for (const name of ['Confidentialité', 'Conditions', 'Aide', 'Vendre sur Northline', 'Offrir un service', 'Gérer une cuisine']) {
       expect(within(footer).getByRole('link', { name })).toBeInTheDocument();
     }
     expect(within(footer).getByRole('button', { name: 'English' })).toHaveAttribute('lang', 'en-CA');

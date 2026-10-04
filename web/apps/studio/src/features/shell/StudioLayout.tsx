@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { CaretDown } from '@phosphor-icons/react';
-import { AppShell, Avatar, Menu, useLocale, type MenuEntry } from '@northline/ui';
+import { AppShell, Avatar, Menu, PageHeadingProvider, useLocale, type MenuEntry } from '@northline/ui';
 import { useSession, useSignOut } from '../../lib/session';
 import { businessesQuery, navBadgesQuery, type MerchantSummary } from './api';
 import { useShellT } from './messages';
@@ -32,6 +32,9 @@ export function StudioLayout({ merchant, children }: { merchant: MerchantSummary
   const { pinned, groups } = buildNav(merchant.type, merchant.id, t, badges);
   const tier = tierTag(merchant);
   const [rail, setRail] = useState(readRail);
+  const current = screenFromPath(pathname);
+  // S-142: a screen that is loading or failed keeps its name (the nav label) as the page's h1
+  const heading = [...pinned, ...groups.flatMap(g => g.items)].find(i => i.key === current)?.label;
   return (
     <AppShell
       brand={<Brand label={t('studio')} />}
@@ -40,10 +43,10 @@ export function StudioLayout({ merchant, children }: { merchant: MerchantSummary
         <span className={`tag ${tier.cls}`}>{t(tier.key)}</span>
       </>}
       headerEnd={<><AssistantButton merchantId={merchant.id} /><AccountMenu merchant={merchant} badges={badges} /></>}
-      pinned={pinned} groups={groups} currentKey={screenFromPath(pathname)}
+      pinned={pinned} groups={groups} currentKey={current}
       onNavigate={i => nav({ to: i.href })}
       rail={rail} onRailChange={r => { setRail(r); try { localStorage.setItem(RAIL_KEY, r ? '1' : '0'); } catch { /* private mode */ } }}
-    >{children}<PilotControl merchantId={merchant.id} /></AppShell>
+    ><PageHeadingProvider value={heading}>{children}</PageHeadingProvider><PilotControl merchantId={merchant.id} /></AppShell>
   );
 }
 
