@@ -2,7 +2,7 @@
 
 **Alerts:** `NorthlineCheckoutAvailabilityBurn` · SLO burn — page / ticket · [all alerts](README.md) · [alerting](../alerting.md)
 
-**What it measures.** Checkout availability: 99.9 % of checkout calls (`POST /api/v1/me/checkouts`, `…/{checkoutId}/place`, `/api/v1/me/bookings/checkout`) don't fail with a 5xx, over 30 days.
+**What it measures.** Checkout availability: 99.9 % of checkout calls (`POST /api/v1/me/checkouts`, `…/{checkoutId}/place`, `/api/v1/me/bookings/checkout`, and since 2026-10-04 the food orders `POST /api/v1/me/food-orders` and `…/food-orders/{orderId}/confirm`) don't fail with a 5xx, over 30 days.
 
 **Impact.** Customers can't pay: orders, food orders and booking deposits are lost revenue. Declined cards (4xx) don't count.
 

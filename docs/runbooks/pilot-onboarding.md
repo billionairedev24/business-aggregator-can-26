@@ -46,10 +46,19 @@ Pages stay reachable **by direct link** while hidden: a business's public page a
 holding the URL. That is what S-121's user-acceptance testing uses (pilot customers get the links); it is not a
 secret. Don't share the links publicly before launch.
 
-**Production prerequisite.** The region data ships the first province and its markets `live` (V131). Before the first
-pilot invite in production, an admin lowers the pilot market to `pilot` in Console › Provinces (type the market's name
-to confirm). Raise it back to `live` on launch day (§ 7). A business enrolled while its market is already live is never
-hidden.
+**Production starts at `pilot` (owner decision 2026-10-04, V345).** The region data shipped the first province's
+markets `live` (V131); migration V345 moves the first of them (lowest sort — the pilot market) to `pilot` and the
+others V131 made live to `waitlist`, unless a market already went live through the go-live switch (an approved launch
+request is never undone). So nobody has to lower the market by hand before the first invite; it goes `live` only
+through the two-person go-live switch on launch day (§ 7, [go-live.md](go-live.md)). A business enrolled while its
+market is already live is never hidden.
+
+Local development, `make e2e`, `make pilot-dry-run` and the local go-live rehearsal keep their markets live: the local
+dev seed `db/seed-dev/V349__dev_markets_live.sql` (local profile only) sets them live again, and the dry run picks the
+first market that is `live` or `pilot`. **Staging** runs the same migrations as production, so its first market is
+`pilot` too: the staging rehearsal of the go-live (and `make e2e-target ENV=staging`, whose journeys order in the
+market) need it live first — raise it in Console › Provinces (or run the go-live rehearsal, which does), and lower it
+again afterwards if the next rehearsal starts from `pilot`.
 
 The rehearsal on staging: run the same steps with fake businesses (the dry run's script against staging's api works
 with a staff token; or click through), Stripe in test mode, Identity in test mode (`IDENTITY_PROVIDER=stripe`), and

@@ -113,7 +113,8 @@ public final class FoodCheckout {
             long unitCents,
             long totalCents,
             List<String> choices,
-            @Nullable String note) {
+            @Nullable String note,
+            @Nullable String ageClass) {
         public Line {
             choices = List.copyOf(choices);
         }
@@ -139,7 +140,8 @@ public final class FoodCheckout {
             long totalCents,
             @Nullable Integer etaFromMin,
             @Nullable Integer etaToMin,
-            boolean estimate) {
+            boolean estimate,
+            CheckoutUseCases.CheckoutAge age) {
         public Totals {
             lines = List.copyOf(lines);
         }

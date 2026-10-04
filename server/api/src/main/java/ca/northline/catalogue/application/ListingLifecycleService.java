@@ -46,6 +46,7 @@ class ListingLifecycleService implements ManageListing, VetListing {
     private final ListingKeywordRules keywords;
     private final ListingFrench french;
     private final ListingTexts texts;
+    private final LicenceGuard guard;
 
     @Override
     public ListingView submit(String merchantId, String listingId, String actorId) {
@@ -84,8 +85,10 @@ class ListingLifecycleService implements ManageListing, VetListing {
     public void publish(String merchantId, String listingId) {
         var listing = load(merchantId, listingId);
         french.checkBeforeLive(merchantId, listingId);
+        guard.requirePublishable(listing);
         var event = listing.publish(clock.instant());
         save(listing);
+        guard.release(listing);
         event.ifPresent(events::publishEvent);
     }
 
@@ -94,6 +97,7 @@ class ListingLifecycleService implements ManageListing, VetListing {
         var listing = load(merchantId, listingId);
         var event = listing.hide(clock.instant());
         save(listing);
+        guard.release(listing);
         event.ifPresent(events::publishEvent);
     }
 
@@ -117,7 +121,10 @@ class ListingLifecycleService implements ManageListing, VetListing {
         var listing = found.get();
         var category = profile(listing.categoryId());
         var registry = category == null ? null : category.regulatedRegistry();
-        var licenceOk = registry == null || licences.hasVerifiedLicence(listing.getMerchantId(), registry);
+        // an age-restricted category needs the class's licence in the business's province, not a registry's
+        var licenceOk = (category != null && category.ageClass() != null)
+                ? guard.licensed(listing)
+                : registry == null || licences.hasVerifiedLicence(listing.getMerchantId(), registry);
         var duplicate = false;
         var mainOnWhite = true;
         if (listing instanceof ProductListing p) {
@@ -149,9 +156,12 @@ class ListingLifecycleService implements ManageListing, VetListing {
                 licenceOk,
                 duplicate,
                 mainOnWhite,
-                keywords.restrictedTerm(text(listing)).orElse(null)));
-        var outcome = listing.vetted(flags, clock.instant());
+                keywords.restrictedTerm(text(listing)).orElse(null),
+                text(listing)));
+        var now = clock.instant();
+        var outcome = guard.gate(listing, listing.vetted(flags, now), now);
         save(listing);
+        guard.holdIfHidden(listing);
         outcome.ifPresent(events::publishEvent);
         log.debug("Vetted listing {}: {}", listingId, flags.isEmpty() ? "approved" : flags);
     }

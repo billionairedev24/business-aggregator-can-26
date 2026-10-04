@@ -19,9 +19,6 @@ const ALLOWED: Record<string, { fragment: RegExp; reason: string }[]> = {
   'apps/studio/src/features/compliance/messages.ts': [
     { fragment: /French required when serving Québec|français requis pour servir le Québec/, reason: 'a fact about one named province’s language law, not the business’s place' },
   ],
-  'apps/consumer/src/features/account/settingsMessages.ts': [
-    { fragment: /requis au Québec/, reason: 'design 06 Language tab: a fact about one named province’s language law, not the person’s place' },
-  ],
   'apps/studio/src/features/onboarding/legal.ts': [
     { fragment: /^(?:BC|SK|MB|ON|QC)$/, reason: 'home-jurisdiction values of docs/spec/legal-details.schema.json (the spec’s enum; labels come from the region model)' },
   ],

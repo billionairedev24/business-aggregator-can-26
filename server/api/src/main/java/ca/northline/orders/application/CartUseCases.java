@@ -70,5 +70,6 @@ public final class CartUseCases {
             long lineCents,
             int stock,
             boolean available,
-            @Nullable Integer handlingDays) {}
+            @Nullable Integer handlingDays,
+            @Nullable String ageClass) {}
 }

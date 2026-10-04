@@ -20,6 +20,16 @@ public interface OrderDeliveries {
     /** The order's lines that hold goods escrow ({@code order_line} references), refunded lines left out. */
     List<String> escrowLines(String orderId);
 
+    /**
+     * Age-restricted items (2026-10-04): nobody of age took the order — {@code returned}; false when it was already
+     * returned (a retried event). The refunded lines are marked: every line ({@code allLines}, goods) or the
+     * age-restricted ones (food).
+     */
+    boolean markReturned(String orderId, boolean allLines, Instant at);
+
+    /** What the order's age-restricted lines cost, before tax ({@code unit_cents × qty} of lines with an age class). */
+    long restrictedCents(String orderId);
+
     /** The businesses with lines on the order, by id (an order from several shops has several). */
     List<String> merchants(String orderId);
 

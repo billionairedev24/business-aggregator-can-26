@@ -263,14 +263,18 @@ class RegionCatalogueTest {
         rows.marketWithRules("mkt-f", "XF", "Effeville", null, null); // inherits its province's
         rows.marketWithRules("mkt-g", "XF", "Gville", null, "warn"); // its own listing rule
         rows.marketWithRules("mkt-a", "XA", "Alphaville", true, null); // French-first market, province not
+        rows.marketWithRules("mkt-w", "XA", "Wville", null, "warn"); // a warning where French isn't first
         var regions = catalogue(rows, "", "XA");
 
         assertThat(regions.languageRules("XA", null)).isEqualTo(LanguageRules.NONE);
         assertThat(regions.languageRules("XF", null)).isEqualTo(new LanguageRules(true, FrenchListings.REQUIRE));
         assertThat(regions.languageRules("XF", "effeville").frenchListings()).isEqualTo(FrenchListings.REQUIRE);
-        assertThat(regions.languageRules("XF", "Gville")).isEqualTo(new LanguageRules(true, FrenchListings.WARN));
-        assertThat(regions.languageRules(null, "mkt-g").frenchListings()).isEqualTo(FrenchListings.WARN);
-        assertThat(regions.languageRules("XA", "Alphaville")).isEqualTo(new LanguageRules(true, FrenchListings.OFF));
+        // owner decision 2026-10-04: a French-first place requires French listings, whatever its row says
+        assertThat(regions.languageRules("XF", "Gville")).isEqualTo(new LanguageRules(true, FrenchListings.REQUIRE));
+        assertThat(regions.languageRules(null, "mkt-g").frenchListings()).isEqualTo(FrenchListings.REQUIRE);
+        assertThat(regions.languageRules("XA", "Alphaville"))
+                .isEqualTo(new LanguageRules(true, FrenchListings.REQUIRE));
+        assertThat(regions.languageRules("XA", "Wville")).isEqualTo(new LanguageRules(false, FrenchListings.WARN));
         assertThat(regions.languageRules("ZZ", "Nowhere")).isEqualTo(LanguageRules.NONE);
 
         // configuration makes a place French-first whatever its row says (REGION_FRENCH_FIRST)

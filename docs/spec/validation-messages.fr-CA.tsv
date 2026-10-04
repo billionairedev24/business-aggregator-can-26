@@ -1022,3 +1022,29 @@ This participant no longer takes part.	Ce participant ne fait plus partie du pil
 Pilot businesses come from Pilot onboarding: invite or enrol the business there.	Les entreprises pilotes viennent de l’intégration pilote : invitez ou inscrivez l’entreprise là.	new
 A pilot business takes part while it is in the pilot cohort (Pilot onboarding).	Une entreprise pilote participe tant qu’elle fait partie de la cohorte pilote (intégration pilote).	new
 No Northline account matches that.	Aucun compte Northline ne correspond.	new
+Choose alcohol, tobacco and vape, or cannabis accessories.	Choisissez alcool, tabac et vapotage, ou accessoires de cannabis.	new
+Enter the licence or permit number, 2 to 40 characters.	Entrez le numéro du permis, de 2 à 40 caractères.	new
+Enter an expiry date in the future.	Entrez une date d’expiration future.	new
+Upload the licence as a PDF, PNG or JPEG under 10 MB.	Téléversez le permis en PDF, PNG ou JPEG de moins de 10 Mo.	new
+Choose why the licence is rejected.	Choisissez pourquoi le permis est refusé.	new
+Add your business's province before adding a licence.	Indiquez la province de votre entreprise avant d’ajouter un permis.	new
+This licence was already decided. Refresh to see it.	Ce permis a déjà fait l’objet d’une décision. Actualisez pour la voir.	new
+Give the address to come back to after the ID check.	Indiquez l’adresse où revenir après la vérification d’identité.	new
+Your age is already verified.	Votre âge est déjà vérifié.	new
+You've tried the ID check too many times. Contact support and we'll help you finish it.	Vous avez tenté la vérification d’identité trop de fois. Communiquez avec le soutien et nous vous aiderons à la terminer.	new
+The ID check isn't available right now. Try again in a moment.	La vérification d’identité n’est pas disponible pour le moment. Réessayez dans un instant.	new
+Confirm you checked government photo ID, the name matches and the person is of age.	Confirmez avoir vérifié une pièce d’identité gouvernementale avec photo, que le nom correspond et que la personne a l’âge requis.	new
+Choose why the order can't be handed over.	Choisissez pourquoi la commande ne peut pas être remise.	new
+Your cart has age-restricted items. Confirm you're %d or older with photo ID to continue.	Votre panier contient des articles soumis à un âge minimal. Confirmez avec une pièce d’identité avec photo que vous avez %d ans ou plus pour continuer.	new
+Your ID check shows you're under %d, so these items can't be sold to you. Remove them to continue.	Votre vérification d’identité indique que vous avez moins de %d ans : ces articles ne peuvent pas vous être vendus. Retirez-les pour continuer.	new
+Age-restricted items in your cart can't be delivered to %s. Remove them to continue.	Les articles soumis à un âge minimal de votre panier ne peuvent pas être livrés en %s. Retirez-les pour continuer.	new
+Age-restricted items in your cart can't be picked up in %s. Remove them to continue.	Les articles soumis à un âge minimal de votre panier ne peuvent pas être ramassés en %s. Retirez-les pour continuer.	new
+Age-restricted items can't be handed over at that time where you are. Choose another time.	Les articles soumis à un âge minimal ne peuvent pas être remis à cette heure-là chez vous. Choisissez une autre heure.	new
+Age-restricted items can only go to the person who ordered them. Remove them to send this order to someone else.	Les articles soumis à un âge minimal ne peuvent être remis qu’à la personne qui les a commandés. Retirez-les pour envoyer cette commande à quelqu’un d’autre.	new
+This product is age-restricted. Add your licence for it under Compliance; it goes live once approved.	Ce produit est soumis à un âge minimal. Ajoutez votre permis sous Conformité; il sera publié une fois approuvé.	new
+Choose alcohol, or no age restriction.	Choisissez alcool, ou aucun âge minimal.	new
+This dish is age-restricted. Add your liquor licence under Compliance; you can publish it once approved.	Ce plat est soumis à un âge minimal. Ajoutez votre permis d’alcool sous Conformité; vous pourrez le publier une fois approuvé.	new
+This order has no age-restricted dishes: hand it over as usual.	Cette commande ne contient aucun plat soumis à un âge minimal : remettez-la comme d’habitude.	new
+This order has no age-restricted items: hand it over with the usual proof.	Cette commande ne contient aucun article soumis à un âge minimal : remettez-la avec la preuve habituelle.	new
+Choose alcohol, tobacco and vape, cannabis accessories, or none.	Choisissez alcool, tabac et vapotage, accessoires de cannabis, ou aucun.	new
+Choose a period of at most a year, the start before the end.	Choisissez une période d’au plus un an, le début avant la fin.	new

@@ -97,7 +97,9 @@ class DispatchHandover {
                 List.of(e.merchantId()),
                 dropoff,
                 f.customerId(),
-                null);
+                null,
+                f.idCheckAge(),
+                f.province());
     }
 
     private String marketOf(DispatchFacts.Facts f) {
@@ -134,7 +136,9 @@ class DispatchHandover {
                 List.of(e.merchantId()),
                 dropoff,
                 f.customerId(),
-                null);
+                null,
+                f.idCheckAge(),
+                f.province());
     }
 
     private static @Nullable String text(JsonNode node, String field) {

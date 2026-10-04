@@ -3,7 +3,7 @@
 For outside counsel. The Terms of Service and the Privacy Policy shipped with the product are the design's drafts
 (design 09 and 10, "strong draft, not legal advice"), published word for word. Nothing in the product has been
 reviewed by a lawyer. This packet lists every legal text in the product, where each one appears, its version and its
-languages; the questions are in [counsel-questions.md](counsel-questions.md) (51, each with its source and the decision
+languages; the questions are in [counsel-questions.md](counsel-questions.md) (53, each with its source and the decision
 needed). The S-106 acceptance — "counsel sign-off recorded, pages updated verbatim" — works through the registry
 described in [§ Sign-off mechanism](#sign-off-mechanism).
 

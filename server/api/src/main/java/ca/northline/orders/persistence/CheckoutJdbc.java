@@ -111,15 +111,21 @@ class CheckoutJdbc implements CheckoutStore {
     }
 
     @Override
-    public void createOrder(Checkout c, @Nullable String deliveryArea, @Nullable Instant scheduledFor, Instant at) {
+    public void createOrder(
+            Checkout c,
+            @Nullable String deliveryArea,
+            @Nullable Instant scheduledFor,
+            @Nullable Integer idCheckAge,
+            Instant at) {
         jdbc.sql("""
                         insert into orders.orders (id, ref, customer_id, type, state, address_id, window_id, scheduled_for,
                                substitution_policy, subtotal_cents, delivery_fee_cents, service_fee_cents, tax_cents,
                                tip_cents, payment_intent_id, placed_at, delivery_area, fulfilment_mode, delivery_kind,
-                               checkout_id)
+                               checkout_id, id_check_age)
                         values (:id, :ref, :customer, 'goods', 'placed', :address, :window, :scheduled, :substitution,
-                                :subtotal, :fee, 0, :tax, 0, :intent, :at, :area, 'delivery', :kind, :checkout)
+                                :subtotal, :fee, 0, :tax, 0, :intent, :at, :area, 'delivery', :kind, :checkout, :age)
                         """)
+                .param("age", idCheckAge)
                 .param("id", c.orderId())
                 .param("ref", c.ref())
                 .param("customer", c.customerId())
@@ -139,9 +145,10 @@ class CheckoutJdbc implements CheckoutStore {
         for (var l : c.lines()) {
             jdbc.sql("""
                             insert into orders.order_lines (id, order_id, merchant_id, offer_id, variant_id, qty, unit_cents,
-                                   state, title)
-                            values (:id, :order, :merchant, :offer, :variant, :qty, :unit, 'pending', :title)
+                                   state, title, age_class)
+                            values (:id, :order, :merchant, :offer, :variant, :qty, :unit, 'pending', :title, :age)
                             """)
+                    .param("age", l.ageClass())
                     .param("id", l.lineId())
                     .param("order", c.orderId())
                     .param("merchant", l.merchantId())

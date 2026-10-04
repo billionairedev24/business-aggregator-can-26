@@ -148,6 +148,7 @@ export function ProductEditor({ detail, portal, typePicker, type = 'product' }: 
               <CategoryPicker categories={categories} value={form.categoryId} rootLabel={t('rootShop')} disabled={readOnlyContent || categoriesQ.isPending}
                 invalid={!!err('categoryId')} onChange={id => { update({ categoryId: id, attributes: {} }, ['categoryId', 'attributes']); touch('categoryId'); }} />
             </Field>
+            {category?.ageClass ? <p className="nl-small nl-muted" role="note">{t('ageRestricted')}</p> : null}
             {category?.leaf && (
               <Field label={t('requiredAttributes', { category: category.name })}>
                 {category.attributes.length ? (

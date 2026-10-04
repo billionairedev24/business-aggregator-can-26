@@ -125,3 +125,66 @@ describe('Stripe & compliance', () => {
     expect(within(alert.parentElement!.parentElement!).getByRole('button', { name: 'Retry' })).toBeTruthy();
   });
 });
+
+describe('Age-restricted sales licences (2026-10-04)', () => {
+  afterEach(() => { vi.unstubAllGlobals(); role = 'owner'; });
+  const seller = () => data({ business: { ...data().business, type: 'seller', displayName: 'Prairie Cellars' } });
+  const WINE = { id: 'L1', ageClass: 'alcohol', province: 'AB', licenceNumber: 'RLS-778812', expiresOn: '2027-03-31', status: 'approved', submittedAt: '2026-09-01T16:00:00Z', decidedAt: '2026-09-02T16:00:00Z', rejectReason: null, note: null };
+  const VAPE = { ...WINE, id: 'L2', ageClass: 'tobacco', licenceNumber: 'TP-1', status: 'rejected', rejectReason: 'unreadable', note: 'Blurred photo.' };
+
+  it('lists the licences with their review state and what the business may sell', async () => {
+    mockFetch({
+      'GET /api/v1/merchants/m1/compliance': () => seller(),
+      'GET /api/v1/merchants/m1/restricted-licences': () => ({ licensed: ['alcohol'], items: [WINE, VAPE] }),
+    });
+    renderWithProviders(<ComplianceScreen />);
+    expect(await screen.findByRole('heading', { level: 2, name: 'Age-restricted sales' })).toBeTruthy();
+    await expectNoAxeViolations(document.body);
+    expect(await screen.findByText(/Alcohol · RLS-778812 · expires/)).toBeTruthy();
+    expect(screen.getByText('Approved')).toBeTruthy();
+    expect(screen.getByText('Not approved')).toBeTruthy();
+    expect(screen.getByText(/We couldn’t read the document — Blurred photo\./)).toBeTruthy();
+    expect(screen.getByText('You can sell: Alcohol.')).toBeTruthy();
+  });
+
+  it('sends a licence for review as multipart and shows the server’s messages', async () => {
+    let posted: FormData | undefined;
+    mockFetch({
+      'GET /api/v1/merchants/m1/compliance': () => seller(),
+      'GET /api/v1/merchants/m1/restricted-licences': () => ({ licensed: [], items: [] }),
+      'POST /api/v1/merchants/m1/restricted-licences': (_url, init) => {
+        posted = init.body as FormData;
+        if (!posted.get('file')) throw { status: 422, body: { errors: [{ field: 'file', rule: 'required', message: 'Upload the licence as a PDF, PNG or JPEG under 10 MB.' }] } };
+        return { ...WINE, status: 'pending' };
+      },
+    });
+    renderWithProviders(<ComplianceScreen />);
+    const u = userEvent.setup({ delay: null });
+    expect(await screen.findByText('No licence on file. Your age-restricted listings stay hidden until one is approved.')).toBeTruthy();
+    await u.click(screen.getByRole('button', { name: 'Add a licence' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add a licence for age-restricted sales' });
+    await u.type(within(dialog).getByLabelText(/Licence or permit number/), 'RLS-778812');
+    await u.click(within(dialog).getByRole('button', { name: 'Send for review' }));
+    expect(await within(dialog).findByText('Upload the licence as a PDF, PNG or JPEG under 10 MB.')).toBeTruthy();
+    expect(posted?.get('ageClass')).toBe('alcohol');
+    expect(posted?.get('licenceNumber')).toBe('RLS-778812');
+  });
+
+  it('is in French', async () => {
+    mockFetch({
+      'GET /api/v1/merchants/m1/compliance': () => seller(),
+      'GET /api/v1/merchants/m1/restricted-licences': () => ({ licensed: [], items: [WINE] }),
+    });
+    renderWithProviders(<ComplianceScreen />, 'fr');
+    expect(await screen.findByRole('heading', { level: 2, name: 'Ventes soumises à un âge minimal' })).toBeTruthy();
+    expect(await screen.findByText(/Alcool · RLS-778812 · expire le/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ajouter un permis' })).toBeTruthy();
+  });
+
+  it('is not shown to service providers', async () => {
+    mockFetch({ 'GET /api/v1/merchants/m1/compliance': () => data() });
+    renderWithProviders(<ComplianceScreen />);
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.queryByRole('heading', { name: 'Age-restricted sales' })).toBeNull();
+  });
+});

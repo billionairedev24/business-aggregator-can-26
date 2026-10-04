@@ -48,8 +48,9 @@ echo "--- migrate + dev seed + categories, api boot jar"
 (cd "$repo/server" && ./gradlew :api:flywayMigrate -Pdb.devSeed=true "${gradle[@]}" \
   && ./gradlew :api:seedCategories :api:bootJar "${gradle[@]}") >"$OUT/build.log" 2>&1 || { tail -30 "$OUT/build.log"; exit 1; }
 
-# The pilot market: PILOT_MARKET, else the first live market of the region model (data, never a name in this script).
-MARKET="${PILOT_MARKET:-$($PSQL -c "select id from region.regions where kind = 'market' and stage = 'live' order by sort, id limit 1")}"
+# The pilot market: PILOT_MARKET, else the region model's first market that is live or at pilot (V345 starts production
+# at pilot; the local dev seed V349 sets it live again) — data, never a name in this script.
+MARKET="${PILOT_MARKET:-$($PSQL -c "select id from region.regions where kind = 'market' and stage in ('live', 'pilot') order by sort, id limit 1")}"
 [ -n "$MARKET" ] || { echo "No live market in the region model; set PILOT_MARKET"; exit 1; }
 echo "--- pilot market $MARKET: kitchens there need a passed kitchen visit (region.regions.kitchen_visit)"
 $PSQL -c "update region.regions set kitchen_visit = 'required' where id = '$MARKET'"

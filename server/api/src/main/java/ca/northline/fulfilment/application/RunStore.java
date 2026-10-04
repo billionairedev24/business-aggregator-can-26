@@ -53,6 +53,9 @@ public interface RunStore {
 
     void droppedOff(String stopId, String proofKind, Instant at);
 
+    /** Age-restricted items: a stop back at the business after a refused drop-off; returns its id. */
+    String addReturnStop(String runId, String orderId, String merchantId, Instant at);
+
     /** Runs of a market starting in [{@code from}, {@code to}), by start (ops view). */
     List<Run> runs(@Nullable String market, Instant from, Instant to);
 

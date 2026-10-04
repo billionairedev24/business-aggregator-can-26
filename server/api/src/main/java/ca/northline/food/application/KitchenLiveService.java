@@ -1,10 +1,12 @@
 package ca.northline.food.application;
 
+import ca.northline.food.api.KitchenOrderFeed;
 import ca.northline.food.api.KitchenPaused;
 import ca.northline.food.api.KitchenResumed;
 import ca.northline.food.application.KitchenTicketStore.LiveOrderRow;
 import ca.northline.food.application.KitchenUseCases.AutoPause;
 import ca.northline.food.application.KitchenUseCases.Handoff;
+import ca.northline.food.application.KitchenUseCases.IdCheckAnswer;
 import ca.northline.food.application.KitchenUseCases.KitchenAutoPause;
 import ca.northline.food.application.KitchenUseCases.KitchenLive;
 import ca.northline.food.application.KitchenUseCases.LiveBoard;
@@ -12,12 +14,16 @@ import ca.northline.food.application.KitchenUseCases.LiveCounts;
 import ca.northline.food.application.KitchenUseCases.LiveLine;
 import ca.northline.food.application.KitchenUseCases.LiveTicket;
 import ca.northline.food.application.KitchenUseCases.PrepShown;
+import ca.northline.food.domain.KitchenMessages;
 import ca.northline.food.domain.KitchenPause;
 import ca.northline.food.domain.KitchenStage;
 import ca.northline.food.domain.KitchenTicket;
 import ca.northline.food.domain.PrepPolicy;
 import ca.northline.identity.api.PersonDirectory;
 import ca.northline.identity.api.PersonDirectory.Person;
+import ca.northline.region.api.MerchantPlaces;
+import ca.northline.restricted.api.HandoffChecks;
+import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import java.time.Clock;
@@ -45,6 +51,9 @@ class KitchenLiveService implements KitchenLive {
     private final Clock clock;
     private final KitchenMetrics metrics;
     private final KitchenAutoPause autoPause;
+    private final KitchenOrderFeed feed;
+    private final HandoffChecks handoffs;
+    private final MerchantPlaces places;
 
     @Override
     public LiveBoard board(String merchantId) {
@@ -114,14 +123,72 @@ class KitchenLiveService implements KitchenLive {
 
     @Override
     @Transactional
-    public LiveBoard handOff(String merchantId, String orderId, String actorId) {
+    public LiveBoard handOff(String merchantId, String orderId, String actorId, @Nullable IdCheckAnswer idCheck) {
         var ticket = require(merchantId, orderId);
-        var event = ticket.handOff(actorId, clock.instant());
+        var now = clock.instant();
+        var age = counterCheck(merchantId, orderId, ticket);
+        if (age != null) {
+            var answer = idCheck == null ? new IdCheckAnswer(false, false, false) : idCheck;
+            handoffs.record(new HandoffChecks.Check(
+                    orderId,
+                    "food",
+                    merchantId,
+                    places.of(merchantId).province(),
+                    age,
+                    actorId,
+                    "merchant",
+                    "counter",
+                    answer.idChecked(),
+                    answer.recipientMatches(),
+                    answer.ofAge(),
+                    null,
+                    now));
+        }
+        var event = ticket.handOff(actorId, now);
         tickets.save(ticket);
         events.publishEvent(event);
         metrics.handedOff(ticket);
         autoPause.check(merchantId);
         return board(merchantId);
+    }
+
+    @Override
+    @Transactional
+    public LiveBoard refuse(String merchantId, String orderId, String actorId, String reason) {
+        var ticket = require(merchantId, orderId);
+        var age = counterCheck(merchantId, orderId, ticket);
+        if (age == null) {
+            throw new Conflict("no_id_check", KitchenMessages.NO_ID_CHECK);
+        }
+        var now = clock.instant();
+        handoffs.record(new HandoffChecks.Check(
+                orderId,
+                "food",
+                merchantId,
+                places.of(merchantId).province(),
+                age,
+                actorId,
+                "merchant",
+                "counter",
+                false,
+                false,
+                false,
+                reason,
+                now));
+        var event = ticket.refuse(actorId, now, reason);
+        tickets.save(ticket);
+        events.publishEvent(event);
+        return board(merchantId);
+    }
+
+    /** The age a pickup's recipient proves at the counter; null for a delivery (the courier checks) or none needed. */
+    private @Nullable Integer counterCheck(String merchantId, String orderId, KitchenTicket ticket) {
+        if (!"pickup".equals(ticket.getFulfilmentMode())) {
+            return null;
+        }
+        return feed.order(merchantId, orderId)
+                .map(KitchenOrderFeed.FoodOrder::idCheckAge)
+                .orElse(null);
     }
 
     @Override
@@ -179,7 +246,7 @@ class KitchenLiveService implements KitchenLive {
             case NEW -> 0;
             case COOKING -> 1;
             case READY -> 2;
-            case HANDED_OFF -> 3;
+            case HANDED_OFF, REFUSED -> 3;
         };
     }
 
@@ -199,7 +266,8 @@ class KitchenLiveService implements KitchenLive {
                         .toList(),
                 r.fulfilmentMode(),
                 handoff(r, names),
-                r.readyBy());
+                r.readyBy(),
+                "pickup".equals(r.fulfilmentMode()) ? r.idCheckAge() : null);
     }
 
     private static Handoff handoff(LiveOrderRow r, Map<String, Person> names) {

@@ -24,8 +24,17 @@ public interface CheckoutStore {
     /** Open → placed; false when it wasn't open. */
     boolean placed(String checkoutId, Instant at);
 
-    /** Inserts {@code orders.orders} + {@code order_lines} (state placed / pending). */
-    void createOrder(Checkout checkout, @Nullable String deliveryArea, @Nullable Instant scheduledFor, Instant at);
+    /**
+     * Inserts {@code orders.orders} + {@code order_lines} (state placed / pending).
+     *
+     * @param idCheckAge the age the recipient proves at the door (age-restricted lines), null without
+     */
+    void createOrder(
+            Checkout checkout,
+            @Nullable String deliveryArea,
+            @Nullable Instant scheduledFor,
+            @Nullable Integer idCheckAge,
+            Instant at);
 
     /**
      * @param state {@code open} | {@code placed} | {@code abandoned}
@@ -71,5 +80,6 @@ public interface CheckoutStore {
             long amountCents,
             long taxCents,
             @Nullable String taxCalculationId,
-            String paymentIntent) {}
+            String paymentIntent,
+            @Nullable String ageClass) {}
 }

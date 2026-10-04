@@ -698,8 +698,8 @@ apps:
       SMTP_PASSWORD: false          # EMAIL_PROVIDER=smtp
       SMS_AUTH_TOKEN: false         # SMS_PROVIDER=twilio
       WEBHOOK_SECRET_KEY: true      # S-33: decrypts partner webhook signing secrets (the api's key; required in the cloud)
-      PUSH_APNS_KEY: false          # S-102: PUSH_PROVIDER=native (required in prod, values-prod.yaml)
-      PUSH_FCM_SERVICE_ACCOUNT: false  # S-102: PUSH_PROVIDER=native (required in prod)
+      PUSH_APNS_KEY: false          # S-102: PUSH_PROVIDER=native (required in staging and prod, values-{staging,prod}.yaml)
+      PUSH_FCM_SERVICE_ACCOUNT: false  # S-102: PUSH_PROVIDER=native (required in staging and prod)
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }

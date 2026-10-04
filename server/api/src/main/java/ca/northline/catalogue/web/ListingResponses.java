@@ -14,6 +14,7 @@ import ca.northline.catalogue.domain.ReturnsPolicy;
 import ca.northline.catalogue.domain.VariantTheme;
 import ca.northline.catalogue.domain.Vetting;
 import ca.northline.catalogue.domain.VettingFlag;
+import ca.northline.region.api.AgeClass;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -163,7 +164,8 @@ final class ListingResponses {
             boolean perishable,
             List<AttributeResponse> attributes,
             List<VariantTheme> variantThemes,
-            @Nullable Long medianPriceCents) {}
+            @Nullable Long medianPriceCents,
+            @Nullable AgeClass ageClass) {}
 
     record AttributeResponse(String key, String label, List<String> options, boolean required) {}
 

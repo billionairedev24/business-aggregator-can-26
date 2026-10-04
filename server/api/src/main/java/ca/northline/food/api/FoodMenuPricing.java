@@ -50,7 +50,10 @@ public interface FoodMenuPricing {
         }
     }
 
-    /** One order line: a dish ({@code itemId}) or a combo ({@code comboId}); {@code unitCents} includes the choices. */
+    /**
+     * One order line: a dish ({@code itemId}) or a combo ({@code comboId}); {@code unitCents} includes the choices.
+     * {@code ageClass}: the dish's age-restriction class, a combo's from the first restricted dish in it (2026-10-04).
+     */
     record Line(
             @Nullable String itemId,
             @Nullable String comboId,
@@ -58,7 +61,8 @@ public interface FoodMenuPricing {
             int qty,
             long unitCents,
             List<Choice> choices,
-            @Nullable String note) {
+            @Nullable String note,
+            @Nullable String ageClass) {
         public Line {
             choices = List.copyOf(choices);
         }

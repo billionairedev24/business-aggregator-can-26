@@ -13,14 +13,17 @@
  *   store/play/details.json            Play store settings, content rating and target audience answers
  *   store/privacy.json                 App Privacy (Apple) and Data safety (Google) answers
  *   store/screenshots.json             the screenshots to take, with captions; the files under store/
+ *   store/policy.json                  how the app is distributed (public · unlisted) and the age-restricted goods it
+ *                                      sells, against the stores' policies (2026-10-04)
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { pngSize } from './png.mjs';
 import {
-  ADVISORY_VALUES, APPLE_ADVISORY_FLAGS, APPLE_ADVISORY_LEVELS, APPLE_CATEGORIES, APPLE_LIMITS, DATA_TYPES, ENVIRONMENTS,
-  FEATURE_GRAPHIC, LOCALES, PERMISSION_DATA, PLACE_NAMES, PLAY_LIMITS, SCREENSHOT_COUNT, SCREENSHOT_SIZES,
+  ADVISORY_VALUES, AGE_CLASSES, APPLE_ADVISORY_FLAGS, APPLE_ADVISORY_LEVELS, APPLE_CATEGORIES, APPLE_LIMITS, DATA_TYPES,
+  DISTRIBUTIONS, ENVIRONMENTS, FEATURE_GRAPHIC, LOCALES, PERMISSION_DATA, PLACE_NAMES, PLAY_LIMITS, SCREENSHOT_COUNT,
+  SCREENSHOT_SIZES, STORE_ALLOWED_AGE_CLASSES,
 } from './spec.mjs';
 
 /** @typedef {import('./spec.mjs').AppSpec} AppSpec */
@@ -148,8 +151,13 @@ export function checkEas(/** @type {AppSpec} */ app, /** @type {string} */ appDi
   // The flow (mobile-release.md): builds go to TestFlight and the Play internal track, production is promoted from there.
   if (resolveSubmit(eas.submit, 'internal')?.android?.track !== 'internal') r.errors.push('eas.json: submit.internal.android.track must be "internal"');
   const prodSubmit = resolveSubmit(eas.submit, 'production');
-  if (prodSubmit?.android && !(prodSubmit.android.track === 'production' && prodSubmit.android.releaseStatus === 'draft')) {
-    r.errors.push('eas.json: submit.production.android must be the production track as a draft (a person starts the staged rollout)');
+  const track = DISTRIBUTIONS[app.distribution].track;
+  if (prodSubmit?.android && !(prodSubmit.android.track === track && prodSubmit.android.releaseStatus === 'draft')) {
+    r.errors.push(
+      track === 'production'
+        ? 'eas.json: submit.production.android must be the production track as a draft (a person starts the staged rollout)'
+        : `eas.json: submit.production.android must be the closed testing track ("${track}") as a draft — the app is unlisted (owner decision 2026-10-04), never a public Play listing`,
+    );
   }
 }
 
@@ -262,6 +270,45 @@ export function checkPlayListing(/** @type {string} */ appDir, /** @type {Report
   if (!d.appAccess) r.errors.push('store/play/details.json: appAccess (how reviewers sign in) missing');
 }
 
+/**
+ * store/policy.json (2026-10-04): the distribution the owner chose (public; or unlisted — Apple Unlisted App
+ * distribution, a Play closed testing track) and the age-restricted goods the app sells, held to the stores' policies:
+ * only alcohol (App Store 1.4.3, Play's Inappropriate Content policy), with the age rating and audience that go with it.
+ */
+export function checkPolicy(/** @type {AppSpec} */ app, /** @type {string} */ appDir, /** @type {Report} */ r) {
+  const file = join(appDir, 'store/policy.json');
+  if (!existsSync(file)) return void r.errors.push('store/policy.json: missing');
+  const p = readJson(file);
+  const where = 'store/policy.json';
+  const want = DISTRIBUTIONS[app.distribution];
+  if (p.distribution?.apple !== want.apple || p.distribution?.play !== want.play) {
+    r.errors.push(`${where}: distribution must be {apple: "${want.apple}", play: "${want.play}"} (${app.distribution}; spec.mjs APPS)`);
+  }
+  if (!p.distribution?.why) r.errors.push(`${where}: distribution.why: say who the app is for`);
+  if (app.distribution === 'unlisted') {
+    r.pending.push(`${where}: Apple Unlisted App distribution — request it (developer.apple.com/support/unlisted-app-distribution) once the app is approved, and give couriers the link; Play: add the couriers' Google Group to the closed testing track`);
+  }
+  const goods = p.ageRestrictedGoods;
+  if (!goods || !Array.isArray(goods.inApp)) return void r.errors.push(`${where}: ageRestrictedGoods.inApp missing (a list, [] for none)`);
+  for (const c of goods.inApp) {
+    if (!AGE_CLASSES.includes(c)) r.errors.push(`${where}: ageRestrictedGoods.inApp: unknown class ${c}`);
+    else if (!STORE_ALLOWED_AGE_CLASSES.includes(c)) r.errors.push(`${where}: ageRestrictedGoods.inApp: ${c} — the App Store (1.4.3) and Google Play do not allow apps that facilitate its sale`);
+  }
+  if (goods.inApp.length === 0) return;
+  for (const key of ['ageGate', 'geoRestriction']) if (!goods[key]) r.errors.push(`${where}: ageRestrictedGoods.${key}: say how the app restricts the sale`);
+  const apple = existsSync(join(appDir, 'store/store.config.json')) ? readJson(join(appDir, 'store/store.config.json')).apple : undefined;
+  if (apple?.advisory?.alcoholTobaccoOrDrugUseOrReferences !== 'FREQUENT_OR_INTENSE') {
+    r.errors.push(`${where}: an app that sells ${goods.inApp.join(', ')} answers apple.advisory.alcoholTobaccoOrDrugUseOrReferences FREQUENT_OR_INTENSE (store.config.json)`);
+  }
+  const details = existsSync(join(appDir, 'store/play/details.json')) ? readJson(join(appDir, 'store/play/details.json')) : undefined;
+  if (details?.contentRating?.answers?.sellsAlcoholTobaccoOrAgeRestrictedGoods !== true) {
+    r.errors.push(`${where}: an app that sells ${goods.inApp.join(', ')} answers sellsAlcoholTobaccoOrAgeRestrictedGoods true (store/play/details.json)`);
+  }
+  if (JSON.stringify(details?.targetAudience) !== JSON.stringify(['18 and over'])) {
+    r.errors.push(`${where}: an app that sells ${goods.inApp.join(', ')} has the Play target audience ["18 and over"] only (store/play/details.json)`);
+  }
+}
+
 /** App Privacy and Data safety: both stores told the same, matching the privacy manifest and the permissions. */
 export function checkPrivacy(/** @type {string} */ appDir, /** @type {Report} */ r) {
   const file = join(appDir, 'store/privacy.json');
@@ -299,7 +346,9 @@ export function checkPrivacy(/** @type {string} */ appDir, /** @type {Report} */
     if (asked.includes(`'${permission}'`) && !declared.includes(type)) r.errors.push(`app.config.ts asks for ${permission}: store/privacy.json must declare ${type}`);
   }
   const deletion = p.accountDeletion ?? {};
-  if (deletion.inApp !== true || !isHttps(deletion.webUrl)) r.pending.push(`${where}: accountDeletion — Apple (5.1.1(v)) wants deletion in the app and Google a web link: ${deletion.status ?? 'not available'}`);
+  // an app that creates no accounts may send people to the website, when the owner decided so (2026-10-04, the courier app)
+  const webOnly = deletion.inApp === false && typeof deletion.webOnlyDecision === 'string' && /decision/i.test(deletion.webOnlyDecision) && isHttps(deletion.webUrl);
+  if (!webOnly && (deletion.inApp !== true || !isHttps(deletion.webUrl))) r.pending.push(`${where}: accountDeletion — Apple (5.1.1(v)) wants deletion in the app and Google a web link: ${deletion.status ?? 'not available'}`);
 }
 
 /** The screenshots to take: each listed shot exists per store and locale at the store's size. */
@@ -358,6 +407,7 @@ export function checkApp(app, appDir) {
   checkAppleListing(appDir, r);
   checkPlayListing(appDir, r);
   checkPrivacy(appDir, r);
+  checkPolicy(app, appDir, r);
   checkScreenshots(appDir, r);
   return { errors: [...new Set(r.errors)], pending: [...new Set(r.pending)] };
 }

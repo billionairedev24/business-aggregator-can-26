@@ -36,8 +36,15 @@ public final class KitchenUseCases {
         /** "Mark ready". Publishes {@code order.ready}. */
         LiveBoard ready(String merchantId, String orderId, String actorId);
 
-        /** "Handed to courier" / "Handed to customer". Publishes {@code order.handed_off} (food escrow releases). */
-        LiveBoard handOff(String merchantId, String orderId, String actorId);
+        /**
+         * "Handed to courier" / "Handed to customer". Publishes {@code order.handed_off} (food escrow releases).
+         *
+         * @param idCheck the counter's confirmations, required for a pickup with age-restricted dishes
+         */
+        LiveBoard handOff(String merchantId, String orderId, String actorId, @Nullable IdCheckAnswer idCheck);
+
+        /** Age-restricted dishes: a pickup not handed over ({@code reason} one of {@code HandoffChecks.REASONS}). */
+        LiveBoard refuse(String merchantId, String orderId, String actorId, String reason);
 
         /** "Busy · +5 min" (up to +30). */
         LiveBoard bumpPrep(String merchantId);
@@ -82,7 +89,8 @@ public final class KitchenUseCases {
 
     /**
      * One ticket. {@code customerName} "A. Osei", or the host's first name for a group order ({@code groupSize} people).
-     * {@code readyBy} is set once accepted.
+     * {@code readyBy} is set once accepted. {@code idCheckAge}: a pickup with age-restricted dishes — check photo ID for
+     * this age and the customer's name at the counter (2026-10-04).
      */
     public record LiveTicket(
             String orderId,
@@ -95,7 +103,11 @@ public final class KitchenUseCases {
             List<LiveLine> lines,
             String fulfilmentMode,
             Handoff handoff,
-            @Nullable Instant readyBy) {}
+            @Nullable Instant readyBy,
+            @Nullable Integer idCheckAge) {}
+
+    /** What the team member confirmed at the counter (never the ID itself). */
+    public record IdCheckAnswer(boolean idChecked, boolean recipientMatches, boolean ofAge) {}
 
     /** {@code open} = every ticket on the board; {@code fresh} = New. */
     public record LiveCounts(int open, int fresh, int cooking, int ready) {}

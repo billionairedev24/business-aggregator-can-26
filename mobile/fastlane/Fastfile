@@ -13,9 +13,12 @@
 require 'json'
 
 MOBILE = File.expand_path('..', __dir__)
+# track: where a release goes on Google Play. The courier app is unlisted (owner decision 2026-10-04): its releases go
+# to the closed testing track ("alpha"; testers = the couriers' Google Group), never the public production track
+# (store/policy.json, held by the release check).
 APPS = {
-  'consumer' => { package: 'ca.northline.app', dir: 'apps/consumer' },
-  'courier' => { package: 'ca.northline.courier', dir: 'apps/courier' }
+  'consumer' => { package: 'ca.northline.app', dir: 'apps/consumer', track: 'production' },
+  'courier' => { package: 'ca.northline.courier', dir: 'apps/courier', track: 'alpha' }
 }.freeze
 
 def app
@@ -59,10 +62,10 @@ platform :android do
                                      skip_upload_metadata: false)
   end
 
-  desc 'Promote the tested internal build to production as a staged rollout (ROLLOUT, default 10 %), with release notes'
+  desc "Promote the tested internal build to the app's release track (production; the courier app's closed track) as a staged rollout (ROLLOUT, default 10 %), with release notes"
   lane :promote do
     upload_to_play_store(**SKIP_ALL, json_key: play_key, package_name: app[:package], metadata_path: play_metadata,
-                                     version_code: version_code, track: 'internal', track_promote_to: 'production',
+                                     version_code: version_code, track: 'internal', track_promote_to: app[:track],
                                      release_status: 'inProgress', rollout: rollout_fraction.to_s,
                                      skip_upload_changelogs: false)
   end
@@ -71,14 +74,14 @@ platform :android do
   lane :rollout do
     fraction = rollout_fraction
     upload_to_play_store(**SKIP_ALL, json_key: play_key, package_name: app[:package], version_code: version_code,
-                                     track: 'production', rollout: fraction.to_s,
+                                     track: app[:track], rollout: fraction.to_s,
                                      release_status: fraction >= 1 ? 'completed' : 'inProgress')
   end
 
   desc 'Halt the production staged rollout (people who have the update keep it; nobody new gets it)'
   lane :halt do
     upload_to_play_store(**SKIP_ALL, json_key: play_key, package_name: app[:package], version_code: version_code,
-                                     track: 'production', release_status: 'halted')
+                                     track: app[:track], release_status: 'halted')
   end
 end
 

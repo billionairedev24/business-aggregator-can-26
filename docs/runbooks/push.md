@@ -173,7 +173,7 @@ domain event (Kafka) ──► worker: notifications / personal-notifications co
 
 | variable | value |
 |---|---|
-| `PUSH_PROVIDER` | `native` (prod requires it; `local` = the log) |
+| `PUSH_PROVIDER` | `native` (staging and prod require it — staging since the owner decision of 2026-10-04; `local` = the log, dev and local only) |
 | `PUSH_APNS_KEY_ID`, `PUSH_APNS_TEAM_ID` | from step 2 |
 | `PUSH_APNS_KEY` (secret) | the `.p8` PEM |
 | `PUSH_FCM_SERVICE_ACCOUNT` (secret) | the service account JSON |
@@ -181,7 +181,7 @@ domain event (Kafka) ──► worker: notifications / personal-notifications co
 | `CONSUMER_ORIGIN` | set by the chart (`urls.consumer`): the deep links' host |
 
 Terraform creates `push-apns-key` and `push-fcm-service-account` empty in all three clouds (`app_secrets`); the chart
-maps them for the worker (`apps.worker.secretEnv`, required in `values-prod.yaml`, optional elsewhere — set them to
+maps them for the worker (`apps.worker.secretEnv`, required in `values-staging.yaml` and `values-prod.yaml`, optional in dev — set them to
 `true` in the overlay once the secret holds a value: one empty remote secret fails the whole ExternalSecret).
 `PUSH_PROVIDER=native` with anything missing stops the worker at start-up naming every missing variable.
 

@@ -248,6 +248,24 @@ class RunStoreJdbc implements RunStore {
     }
 
     @Override
+    public String addReturnStop(String runId, String orderId, String merchantId, Instant at) {
+        var id = ca.northline.shared.Ids.next();
+        jdbc.sql("""
+                        insert into fulfilment.stops (id, run_id, order_id, kind, seq, merchant_id, eta, state)
+                        values (:id, :run, :order, 'return',
+                                (select coalesce(max(seq), 0) + 1 from fulfilment.stops where run_id = :run),
+                                :merchant, :at, 'pending')
+                        """)
+                .param("id", id)
+                .param("run", runId)
+                .param("order", orderId)
+                .param("merchant", merchantId)
+                .param("at", JdbcTimes.ts(at), Types.TIMESTAMP_WITH_TIMEZONE)
+                .update();
+        return id;
+    }
+
+    @Override
     public List<Run> runs(@Nullable String market, Instant from, Instant to) {
         return jdbc.sql("select " + RUN + """
                          from fulfilment.runs

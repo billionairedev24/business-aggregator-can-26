@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 class FulfilmentPersonalData implements PersonalDataContributor {
 
-    static final String ACTIVE = "('waiting', 'planned', 'picked_up')";
+    static final String ACTIVE = "('waiting', 'planned', 'picked_up', 'returning')";
 
     private final JdbcClient jdbc;
 

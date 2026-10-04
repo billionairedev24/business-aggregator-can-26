@@ -254,6 +254,12 @@ Notes:
   ends (verified, name mismatch, `document_expired`, …); emailed links land in Mailpit and open the same page. To try
   the real adapter, set `IDENTITY_PROVIDER=stripe` with a test-mode `STRIPE_SECRET_KEY` and forward webhooks with
   `stripe listen` ([stripe.md § Identity](stripe.md#8-identity-s-22)).
+- **Age-restricted purchases (2026-10-04, [age-restricted.md](age-restricted.md)):** `AGE_VERIFICATION_PROVIDER=local`
+  (the default) — a cart with alcohol asks for the ID check; "Verify my age" opens
+  http://localhost:8080/api/v1/dev/age-sessions/vs_age_fake_… where you pick the outcome (over 30, 19, 18, under 18,
+  expired ID, unreadable ID, selfie mismatch, cancelled) and come back to the cart (`CONSUMER_ORIGIN`). Licences:
+  Studio › Compliance › Restricted licences; the console's Listing vetting › Licences approves them. The nightly job
+  (`RESTRICTED_LICENCE_CRON`, `0 17 0 * * *`) expires licences and sends the 30-day reminders.
 - **Business registries (S-23):** the three sources answer from `server/api/src/main/resources/registries/fixtures.json`
   (e.g. Alberta `2021456789` = Prairie Wrench, Calgary `BL 22-118840` = Pho Dau Bo); unknown numbers go to the manual
   review queue (`GET /api/v1/console/registry-reviews`, staff). To try Calgary's real dataset:

@@ -48,8 +48,21 @@ public final class DispatchUseCases {
         /** @param kind {@code photo} | {@code signature} */
         RunView proof(String userId, String stopId, String kind, Bytes file);
 
-        /** @param proof {@code photo} | {@code signature} (uploaded first) | {@code pin} (the customer's 4 digits) */
-        RunView dropOff(String userId, String stopId, String proof, @Nullable String pin);
+        /**
+         * @param proof {@code photo} | {@code signature} (uploaded first) | {@code pin} (the customer's 4 digits)
+         * @param idCheck the courier's confirmations, required when the stop's order has age-restricted items
+         */
+        RunView dropOff(
+                String userId, String stopId, String proof, @Nullable String pin, @Nullable IdCheckAnswer idCheck);
+
+        /**
+         * Age-restricted items: the order isn't handed over ({@code reason} one of {@code HandoffChecks.REASONS}); the
+         * drop-off is done as refused and a stop back at the business is added to the run.
+         */
+        RunView refuse(String userId, String stopId, String reason);
+
+        /** The refused order is back at the business ({@code return} stop). */
+        RunView returned(String userId, String stopId);
 
         /**
          * S-88: the phone's position while on shift — kept only as the latest one, in Valkey; at most one per
@@ -57,6 +70,15 @@ public final class DispatchUseCases {
          */
         Ping ping(String userId, double lat, double lng, @Nullable Double heading);
     }
+
+    /** What the courier confirmed at the door of an age-restricted delivery (never the ID itself). */
+    public record IdCheckAnswer(boolean idChecked, boolean recipientMatches, boolean ofAge) {}
+
+    /**
+     * An age-restricted drop-off: the age to check on government photo ID and whose name it must show (the account
+     * holder: age-restricted items go only to the person who ordered them).
+     */
+    public record IdCheckView(int age, @Nullable String recipient) {}
 
     /** @param nextAfterMs when the app may send the next position */
     public record Ping(Instant acceptedAt, long nextAfterMs) {}
@@ -137,7 +159,8 @@ public final class DispatchUseCases {
      * @param place the shop of a pickup
      * @param dropoff the customer's address and note, for a drop-off
      * @param packed a pickup's shop has packed this order
-     * @param proofKind the proof given ({@code photo} | {@code signature} | {@code pin}) or uploaded so far
+     * @param proofKind the proof given ({@code photo} | {@code signature} | {@code pin} | {@code id_refused}) or uploaded so far
+     * @param idCheck the ID check an age-restricted drop-off needs; null otherwise
      */
     public record StopView(
             String id,
@@ -152,7 +175,8 @@ public final class DispatchUseCases {
             @Nullable Place place,
             @Nullable Dropoff dropoff,
             boolean packed,
-            @Nullable String proofKind) {}
+            @Nullable String proofKind,
+            @Nullable IdCheckView idCheck) {}
 
     public record Place(
             String merchantId,

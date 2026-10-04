@@ -49,6 +49,10 @@ class DeliveryRequestService implements DeliveryRequests {
                 null,
                 List.of()));
         r.pickups().forEach(m -> deliveries.addPickup(r.orderId(), m));
+        var age = r.idCheckAge();
+        if (age != null) {
+            deliveries.idCheck(r.orderId(), age, r.idCheckProvince());
+        }
     }
 
     @Override

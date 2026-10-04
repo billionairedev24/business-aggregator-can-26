@@ -94,7 +94,8 @@ final class KitchenRequests {
 
             @Nullable Integer dailyLimit,
             @Nullable Boolean comboEligible,
-            @Nullable Boolean publish) {
+            @Nullable Boolean publish,
+            @Nullable String ageClass) {
 
         ItemCommand toCommand() {
             return new ItemCommand(
@@ -110,7 +111,8 @@ final class KitchenRequests {
                     availability == null ? ItemWindow.ALWAYS : CodedEnum.fromCode(ItemWindow.class, availability),
                     dailyLimit,
                     !Boolean.FALSE.equals(comboEligible),
-                    !Boolean.FALSE.equals(publish));
+                    !Boolean.FALSE.equals(publish),
+                    ageClass == null || ageClass.isBlank() ? null : ageClass.strip());
         }
     }
 

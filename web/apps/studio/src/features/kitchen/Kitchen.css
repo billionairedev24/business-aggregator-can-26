@@ -103,3 +103,4 @@
 .nl-k-diff { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; font-size: 14px; }
 .nl-k-diff li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--color-divider); }
 .nl-k-diff-detail { color: var(--color-neutral-700); flex-basis: 100%; }
+.nl-k-check { border: 0; padding: 0; margin: 12px 0; display: grid; gap: 8px; }

@@ -223,6 +223,31 @@ retention:
       action: delete
       enforcement: job
       holds: []
+    - code: restricted.age_verifications
+      module: restricted
+      period: P30D
+      starts: { en: "the account's closure (an erasure starts)", fr: "la fermeture du compte (début de la suppression)" }
+      name: { en: "Customers' age checks (verified over N, date, method)", fr: "Vérifications d'âge des clients (âge minimal vérifié, date, méthode)" }
+      basis:
+        en: "Kept while the account is open so the customer verifies once (owner decision 2026-10-04); only the result is kept, never the ID, selfie or date of birth. Not named in the Privacy Policy — for counsel."
+        fr: "Gardée tant que le compte est ouvert pour que le client ne se vérifie qu'une fois (décision du 2026-10-04); seul le résultat est gardé, jamais la pièce d'identité, l'égoportrait ni la date de naissance. Absent de la politique — à revoir par les conseillers juridiques."
+      action: delete
+      enforcement: none
+      holds: []
+      note:
+        en: "Deleted with the account: closing an account is an S-105 erasure, and the restricted module's step deletes the age check (account.closed_profile runs it within 30 days)."
+        fr: "Supprimée avec le compte : fermer un compte est une suppression S-105, et l'étape du module restricted supprime la vérification d'âge (account.closed_profile l'exécute dans les 30 jours)."
+    - code: restricted.handoff_checks
+      module: restricted
+      period: P2Y
+      starts: { en: "the ID check at handoff", fr: "la vérification d'identité à la remise" }
+      name: { en: "ID checks at handoff of age-restricted items (what was confirmed, no ID data)", fr: "Vérifications d'identité à la remise d'articles soumis à un âge minimal (ce qui a été confirmé, aucune donnée de la pièce)" }
+      basis:
+        en: "Evidence that alcohol or tobacco was handed over lawfully, for a provincial inspector or a dispute (owner decision 2026-10-04). Not named in the Privacy Policy — for counsel."
+        fr: "Preuve que l'alcool ou le tabac a été remis légalement, pour un inspecteur provincial ou un litige (décision du 2026-10-04). Absent de la politique — à revoir par les conseillers juridiques."
+      action: delete
+      enforcement: job
+      holds: [open_dispute]
   # Short-lived technical data that other jobs already delete (not in the policy: none of it outlives the categories
   # above). Listed so the report shows every automatic deletion in one place.
   operational:

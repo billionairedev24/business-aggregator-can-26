@@ -2,7 +2,7 @@
 region = "ca-central-1"
 owner  = "platform"
 admin_principals  = []  # e.g. ["arn:aws:iam::<account>:role/northline-admin"]
-api_allowed_cidrs = []  # set in prod: office/VPN/CI egress CIDRs
+api_allowed_cidrs = []  # required (staging and prod): office/VPN/CI egress CIDRs
 # Token signing key rotation only (docs/runbooks/key-rotation.md); leave unset otherwise.
 # signing_key_ids = { active = "<old key id>", published = ["<new key id>"] }
 # Phone codes through AWS End User Messaging instead of Twilio (S-8): the number/pool ARN requested by hand.

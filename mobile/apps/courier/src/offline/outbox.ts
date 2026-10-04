@@ -1,6 +1,6 @@
 import { ApiError, NetworkError, SignedOutError } from '@northline/mobile-kit';
 
-import type { ProofFile, ProofKind, Run } from '../api/courier';
+import type { IdCheckAnswer, ProofFile, ProofKind, RefuseReason, Run } from '../api/courier';
 
 /**
  * The courier's stop actions, kept on the phone until the api has them (S-87: offline-tolerant).
@@ -13,14 +13,16 @@ import type { ProofFile, ProofKind, Run } from '../api/courier';
  * - A refusal (409/422/404): the action and the later ones for the same stop are dropped, and the person sees why
  *   (a wrong PIN, a shop that hasn't packed). A proof upload refused with `stop_done` was already used: success.
  * - The sign-in ended: kept, paused until the courier signs in again.
- * - Only what the api needs is stored: stop ids, the proof kind, the PIN until it is sent, and the proof file's path.
- *   No address or name. Cleared at sign-out.
+ * - Only what the api needs is stored: stop ids, the proof kind, the PIN until it is sent, the proof file's path, the
+ *   ID check's three yes/no answers and a refusal's reason (2026-10-04). No address, name or ID detail. Cleared at sign-out.
  */
 export type OutboxAction =
   | { id: string; kind: 'arrive'; stopId: string; createdAt: number; attempts: number }
   | { id: string; kind: 'pickup'; stopId: string; scanOk: boolean; createdAt: number; attempts: number }
   | { id: string; kind: 'proof'; stopId: string; proofKind: 'photo' | 'signature'; file: ProofFile; createdAt: number; attempts: number }
-  | { id: string; kind: 'dropoff'; stopId: string; proof: ProofKind; pin?: string; createdAt: number; attempts: number };
+  | { id: string; kind: 'dropoff'; stopId: string; proof: ProofKind; pin?: string; idCheck?: IdCheckAnswer; createdAt: number; attempts: number }
+  | { id: string; kind: 'refuse'; stopId: string; reason: RefuseReason; createdAt: number; attempts: number }
+  | { id: string; kind: 'returned'; stopId: string; createdAt: number; attempts: number };
 
 /** What enqueue takes: the outbox adds id, createdAt and attempts. */
 export type NewAction = OutboxAction extends infer A ? (A extends OutboxAction ? Omit<A, 'id' | 'createdAt' | 'attempts'> : never) : never;
@@ -211,7 +213,7 @@ export function withPending(run: Run | null | undefined, pending: readonly Outbo
     const mine = pending.filter((a) => a.stopId === s.id);
     if (mine.length === 0 || s.state === 'done') return s;
     unsent.add(s.id);
-    if (mine.some((a) => a.kind === 'pickup' || a.kind === 'dropoff')) return { ...s, state: 'done' as const, arrivedAt: s.arrivedAt ?? new Date(mine[0]!.createdAt).toISOString() };
+    if (mine.some((a) => a.kind === 'pickup' || a.kind === 'dropoff' || a.kind === 'refuse' || a.kind === 'returned')) return { ...s, state: 'done' as const, arrivedAt: s.arrivedAt ?? new Date(mine[0]!.createdAt).toISOString() };
     if (mine.some((a) => a.kind === 'arrive')) return { ...s, state: 'arrived' as const, arrivedAt: s.arrivedAt ?? new Date(mine[0]!.createdAt).toISOString() };
     return s;
   });

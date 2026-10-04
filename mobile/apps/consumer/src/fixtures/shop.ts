@@ -71,6 +71,10 @@ export interface ShopFixtureState {
   idempotent: Map<string, unknown>;
   upcoming: boolean;
   next: number;
+  /** 2026-10-04: the age step the quote answers with (null = nothing age-restricted in the cart). */
+  age: { required: boolean; minimumAge: number; classes: string[]; state: 'verified' | 'none' | 'pending' | 'failed' | 'under_age' } | null;
+  /** The customer's ID check; a started check verifies when the in-app browser comes back. */
+  ageStarted: number;
 }
 
 export const FIXTURE_PROOF = 'fixture-proof';
@@ -87,6 +91,8 @@ export function newShopState(): ShopFixtureState {
     idempotent: new Map(),
     upcoming: true,
     next: 48213,
+    age: null,
+    ageStarted: 0,
   };
 }
 
@@ -338,7 +344,7 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
 
     // ── signed-in only from here ─────────────────────────────────────────────────────────────────────────────────
     if (!path.startsWith('/me/')) return undefined;
-    const known = ['/me/upcoming', '/me/checkout', '/me/checkout/quote', '/me/checkouts', '/me/payment-methods'].includes(path) || /^\/me\/(checkouts|orders|problems)\b/.test(path);
+    const known = ['/me/upcoming', '/me/checkout', '/me/checkout/quote', '/me/checkouts', '/me/payment-methods', '/me/age-verification'].includes(path) || /^\/me\/(checkouts|orders|problems)\b/.test(path);
     if (!known) return undefined;
     if (!signedIn(req)) return unauthorized();
     ownerOf(req);
@@ -352,12 +358,25 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
     if (method === 'GET' && path === '/me/payment-methods') {
       return ctx.answer(200, { provider: state.provider, publishableKey: state.provider === 'stripe' ? 'pk_test_fixture' : null, items: state.cards });
     }
+    // 2026-10-04: the customer's one-time ID check (the identity provider's hosted flow is the in-app browser)
+    if (path === '/me/age-verification') {
+      // the hosted check finished in the in-app browser: the fixture's provider says verified on the next read
+      if (method === 'GET' && state.ageStarted && state.age && state.age.state !== 'under_age') state.age = { ...state.age, state: 'verified' };
+      const status = () => ({ state: state.age?.state === 'verified' ? 'verified' : state.ageStarted ? 'pending' : 'none', overAge: state.age?.state === 'verified' ? 21 : null, ageFloor: state.age?.state === 'verified' ? 21 : 0, method: 'fake', lastError: null });
+      if (method === 'POST') {
+        state.ageStarted += 1;
+        return ctx.answer(200, { url: `https://identity.fixture.invalid/session/${state.ageStarted}`, status: status() });
+      }
+      return ctx.answer(200, status());
+    }
+    if (state.ageStarted && state.age && (state.age.state === 'none' || state.age.state === 'failed')) state.age = { ...state.age, state: 'verified' };
     if (method === 'GET' && path === '/me/checkout') {
       const market = q.get('market') ?? MARKETS[0].city;
       const ok = served(market);
       return ctx.answer(200, {
         cart: cartView('user'), addresses: state.addresses, options: ok ? options() : [],
         payment: { provider: state.provider, publishableKey: state.provider === 'stripe' ? 'pk_test_fixture' : null }, stepUp: state.stepUp, market, served: ok,
+        ...(state.age ? { age: state.age } : {}),
       });
     }
     if (method === 'POST' && path === '/me/checkout/quote') {
@@ -366,7 +385,7 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
       if (p.cart.itemCount === 0) return ctx.answer(409, { code: 'cart_empty', detail: 'Your cart is empty.' });
       return ctx.answer(200, {
         subtotalCents: p.cart.subtotalCents, deliveryFeeCents: p.fee, taxCents: p.tax, taxes: [{ type: p.type, percent: p.percent, cents: p.tax }],
-        totalCents: p.cart.subtotalCents + p.fee + p.tax, market: MARKETS[0].city,
+        totalCents: p.cart.subtotalCents + p.fee + p.tax, market: MARKETS[0].city, ...(state.age ? { age: state.age } : {}),
       });
     }
     if (method === 'POST' && path === '/me/checkouts') {

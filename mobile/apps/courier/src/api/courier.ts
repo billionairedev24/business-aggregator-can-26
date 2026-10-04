@@ -4,7 +4,8 @@ import type { ApiClient } from '@northline/mobile-kit';
 
 export type CourierStatus = 'offline' | 'available' | 'on_run';
 export type ShiftState = 'scheduled' | 'on' | 'done';
-export type StopKind = 'pickup' | 'dropoff';
+/** `return`: a refused age-restricted order going back to the business (2026-10-04). */
+export type StopKind = 'pickup' | 'dropoff' | 'return';
 export type StopState = 'pending' | 'arrived' | 'done';
 export type ProofKind = 'photo' | 'signature' | 'pin';
 
@@ -43,6 +44,23 @@ export interface Dropoff {
   lng: number | null;
 }
 
+/** 2026-10-04: an age-restricted drop-off — the age to check on government photo ID and whose name it must show. */
+export interface IdCheck {
+  age: number;
+  recipient: string | null;
+}
+
+/** The courier's three confirmations at the door (never the ID itself: no photo, number or date of birth). */
+export interface IdCheckAnswer {
+  idChecked: boolean;
+  recipientMatches: boolean;
+  ofAge: boolean;
+}
+
+/** Why an age-restricted order wasn't handed over (the api's list). */
+export const REFUSE_REASONS = ['no_id', 'underage', 'mismatch', 'nobody_of_age', 'intoxicated', 'other'] as const;
+export type RefuseReason = (typeof REFUSE_REASONS)[number];
+
 export interface Stop {
   id: string;
   seq: number;
@@ -57,6 +75,8 @@ export interface Stop {
   dropoff: Dropoff | null;
   packed: boolean;
   proofKind: string | null;
+  /** Age-restricted drop-off (2026-10-04); absent from older servers. */
+  idCheck?: IdCheck | null;
 }
 
 export interface Run {
@@ -134,11 +154,21 @@ export class CourierApi {
     return (await this.api.post<Run>(`/courier/stops/${encodeURIComponent(stopId)}/proof`, { form, idempotencyKey }))!;
   }
 
-  async dropoff(stopId: string, proof: ProofKind, pin: string | undefined, idempotencyKey: string): Promise<Run> {
+  async dropoff(stopId: string, proof: ProofKind, pin: string | undefined, idempotencyKey: string, idCheck?: IdCheckAnswer): Promise<Run> {
     return (await this.api.post<Run>(`/courier/stops/${encodeURIComponent(stopId)}/dropoff`, {
-      json: proof === 'pin' ? { proof, pin } : { proof },
+      json: { proof, ...(proof === 'pin' ? { pin } : {}), ...(idCheck ? { idCheck } : {}) },
       idempotencyKey,
     }))!;
+  }
+
+  /** An age-restricted drop-off that can't be handed over: the order goes back to the business (a return stop). */
+  async refuse(stopId: string, reason: RefuseReason, idempotencyKey: string): Promise<Run> {
+    return (await this.api.post<Run>(`/courier/stops/${encodeURIComponent(stopId)}/refuse`, { json: { reason }, idempotencyKey }))!;
+  }
+
+  /** The refused order is back at the business. */
+  async returned(stopId: string, idempotencyKey: string): Promise<Run> {
+    return (await this.api.post<Run>(`/courier/stops/${encodeURIComponent(stopId)}/returned`, { idempotencyKey }))!;
   }
 
   async ping(lat: number, lng: number, heading?: number | null): Promise<Ping> {
