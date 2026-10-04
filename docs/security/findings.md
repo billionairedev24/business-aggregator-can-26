@@ -27,7 +27,7 @@ described by impact and location, without exploit detail.
 | S104-09 | Medium (4.7) | consumer web | No Content-Security-Policy on the consumer site | fixed (follow-up: nonces) |
 | S104-10 | Low | mobile (deep links) | A malformed escape in a notification's link threw out of the tap handler | fixed |
 | S104-11 | Low | web/mobile tooling | Advisories in build-time-only packages (Docusaurus, Expo CLI, Vitest) | open, accepted |
-| S104-12 | Low | infra (staging) | The staging cluster API accepts any source address unless `api_allowed_cidrs` is set | open, action before the test |
+| S104-12 | Low | infra (staging) | The staging cluster API accepts any source address unless `api_allowed_cidrs` is set | **fixed 2026-10-04**: staging requires `api_allowed_cidrs` (Terraform validation, as prod; owner decision) |
 | S104-13 | Low | uploads (booking) | Job photos are checked by declared type only, not by content | open |
 | S104-14 | Info | api | Object-level authorization harness over every documented operation: no finding | — |
 | S104-15 | Info | scanners | False positives and hardening advice triaged (§ Scanners) | — |
