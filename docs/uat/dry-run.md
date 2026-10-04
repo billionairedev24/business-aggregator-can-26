@@ -41,11 +41,11 @@ No blocking issue in the tooling. Observations taken into the process (README):
    "go" by not reading the queue. Triage daily.
 2. **The staff persona needs its own participants.** Coverage is per persona; with no staff participant the report
    says so. Add the console staff who will work the launch.
-3. **Couriers have no in-app control yet** (the courier app is out of S-121's scope). Their script says to tell the
+3. **Couriers had no in-app control** (the courier app was out of S-121's scope; mobile gaps part 1 added it since — `Feedback` in the courier app's header, persona courier). Their script says to tell the
    pilot contact; staff log it in the queue on their behalf — the item then carries the staff member as sender. A
    courier-app control is a follow-up.
-4. **The consumer app sends no screenshot** (it would need a native screen-capture module and a new store build);
-   participants describe the screen, and the app sends the screen's path.
+4. **The consumer app sent no screenshot** at the dry run; mobile gaps part 1 added one (picked from the photo library
+   with `expo-image-picker`, in the next store build), in the courier app too.
 5. **Script versions:** the sign-off records the version run; after a script change the report still counts older
    sign-offs. The support lead decides whether to ask again (README § Scripts).
 

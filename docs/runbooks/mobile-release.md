@@ -147,9 +147,10 @@ An example of the shape only (fake): `ASC_API_KEY_ID=FAKEKEY123`, `ASC_API_ISSUE
 
 S-102 built the server side and mobile-kit's registration; S-103 adds the native module: `expo-notifications` and its
 config plugin are in both apps (the `aps-environment` entitlement — `production` for preview and store builds,
-`development` for development builds —, the Android channel `updates`, `POST_NOTIFICATIONS`). The registrar
-(`setPushRegistrar(pushRegistrar(...))` at start-up and the permission moment) is **not wired yet**: it is app code in
-`app/_layout.tsx`, and because the native module is already in the binary it can ship as an over-the-air update.
+`development` for development builds —, the Android channel `updates`, `POST_NOTIFICATIONS`). Mobile gaps part 1
+wired the registrar in both apps (`src/push/install.ts`: mobile-kit's `installPush`, the permission asked after the
+first order / booking or on shift, and from the settings rows); it needs no new native module beyond S-103's, but
+`expo-image-picker` (photos, same release) does, so this ships in a **new store build**, not over the air.
 When the accounts exist:
 
 1. **Apple**: enable *Push Notifications* on `ca.northline.app` and `ca.northline.courier` (and `.dev` / `.preview`
@@ -161,7 +162,7 @@ When the accounts exist:
    --value ./google-services.json --visibility secret` (likewise `preview`, `development`). `app.config.ts` sets
    `android.googleServicesFile` from it. Without it builds still work; Android just gets no push token. The service
    account for sending goes to the **worker** ([push.md § Firebase](push.md#firebase-fcm)).
-3. Wire the registrar, then do [push.md's first-send checklist](push.md#first-real-send-checklist).
+3. Do [push.md's first-send checklist](push.md#first-real-send-checklist) on a device of each platform.
 
 ## The first release, step by step
 
@@ -321,7 +322,7 @@ development builds). Every data type is *linked to the person* and used for *app
 | Purchases › Purchase history | ✓ | | orders, bookings, quotes, refunds |
 | Financial info › Payment info | ✓ | | entered in Stripe's sheet (the SDK collects it); Northline keeps brand and last 4 |
 | Customer support › Other in-app messages | ✓ (optional) | | problem reports |
-| Photos | | ✓ (optional) | the proof-of-delivery photo |
+| Photos | ✓ (optional) | ✓ (optional) | consumer: up to 3 photos on a problem report, a pilot's screenshot; courier: the proof-of-delivery photo, a pilot courier's screenshot |
 | Other user content › Other user-generated content | ✓ (optional) | ✓ (optional) | consumer: booking notes; courier: the customer's signature |
 | Other data › Other data types; Personal info › Other info | ✓ (optional) | | the age check's result for a customer who buys alcohol: "verified over N, on date, by method" (2026-10-04) — never the ID, photos or date of birth |
 

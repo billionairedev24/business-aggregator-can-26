@@ -101,6 +101,13 @@
           "sha256": "37ac15636503da297c0aed6dd02fb0aed962286ad3f8ed776a41d23ea1cd247a",
           "note": "2026-10-04: Stripe Identity as a service provider and the age check's result as Other data types (age-restricted purchases). Not submitted to either store yet.",
           "signOff": null
+        },
+        {
+          "version": "2026-10-04.2",
+          "effective": "2026-10-04",
+          "sha256": "20e58b46933f893203e8a40faf85bf84cf469eb5499bc1b359825443af4b0ddb",
+          "note": "Mobile gaps part 1: Photos or videos collected (up to 3 photos on a problem report, a pilot's screenshot), no longer listed as not collected. Not submitted to either store yet.",
+          "signOff": null
         }
       ]
     },
@@ -124,6 +131,13 @@
           "effective": "2026-10-04",
           "sha256": "2c0d3338c728eb8c5f9956ddfd0605849dee79b69694c80e28f843ee97b71a1b",
           "note": "2026-10-04: website-only account deletion recorded as the owner's decision. Not submitted to either store yet.",
+          "signOff": null
+        },
+        {
+          "version": "2026-10-04.2",
+          "effective": "2026-10-04",
+          "sha256": "101716f900286aa9fe629d148d4ca0dcf431d763e67fa130b399d7a742330463",
+          "note": "Mobile gaps part 1: the door photo is shown to that order's customer (never after an ID check); a pilot courier's screenshot on feedback. Not submitted to either store yet.",
           "signOff": null
         }
       ]

@@ -217,11 +217,36 @@ Review, the staged rollout, rollback — is [mobile-release.md](mobile-release.m
 |---|---|---|---|
 | Location while using (`NSLocationWhenInUseUsageDescription`, `ACCESS_FINE_LOCATION` / `COARSE`) | Delivery address › "Use my location" (S-98), never at launch; once allowed, the app also uses it to name where you are until you save an address | Northline uses your location to suggest your delivery address and show the shops and providers that serve it. It is used only while you have the app open and is never shared with businesses. | Northline utilise votre position pour suggérer votre adresse de livraison et afficher les commerces et prestataires qui la desservent. Elle n’est utilisée que lorsque l’app est ouverte et n’est jamais transmise aux entreprises. |
 
-No background location, camera, microphone, storage or motion: removed from the merged Android manifest and kept
+| Camera (`NSCameraUsageDescription`, `CAMERA`) | Report a problem › "Take a photo" (mobile gaps part 1) | Northline uses the camera only when you take a photo to add to a problem report. | Northline utilise l’appareil photo seulement quand vous prenez une photo à joindre à un signalement de problème. |
+| Photos (`NSPhotoLibraryUsageDescription`; none on Android) | Report a problem › "Choose from photos", pilot feedback › "Add a screenshot" — the system photo picker, which needs no permission on iOS 14+ and Android | Northline opens your photos only when you choose one to add to a problem report or to pilot feedback. | Northline ouvre vos photos seulement quand vous en choisissez une à joindre à un signalement de problème ou à un commentaire du pilote. |
+
+No background location, microphone, storage, media reads or motion: removed from the merged Android manifest and kept
 out of Info.plist (checked by `mobile-consumer-native-check`). `allowBackup=false`. Notifications (S-103 adds
-`expo-notifications`): `POST_NOTIFICATIONS` on Android 13+, asked at the moment the design chooses, never at launch
-(the registrar isn't wired yet — [mobile-release.md § Push credentials](mobile-release.md#push-credentials)); the
+`expo-notifications`): `POST_NOTIFICATIONS` on Android 13+, asked at the moment below, never at launch; the
 `aps-environment` entitlement (checked by `mobile-consumer-native-check`).
+
+### Push in the app
+
+Mobile gaps part 1 wires S-102's parts (`src/push/install.ts`, `app/_layout.tsx`): mobile-kit's `installPush` installs
+the registrar at S-97's hook point (sign-in registers this installation with `PUT /me/devices/{installation}`, sign-out
+removes it before revoking the tokens), tells the registry again at every start and every return to the foreground
+while signed in (a permission turned off in the system settings, a new version or language), follows token rotation
+and routes taps through the strict deep-link parser (`/app/orders/<id>` → tracking, …). **When it asks:** a card on
+Order confirmed and on Booked ("Turn on notifications" / "Not now", once), and You › Notifications › "This phone" —
+never at launch. Not installed on the web build or with the fixture backend. The Android channel `updates` is created
+at start in the app's language. Tests mock `expo-notifications` (`jest.setup.ts`, `__tests__/push.test.tsx`).
+**Never run on a phone:** no APNs key or Firebase project exists, so no real token has been registered or delivered
+([push.md § First real send checklist](push.md#first-real-send-checklist)).
+
+### Photos
+
+`expo-image-picker` (Expo SDK 57) for both apps' photos: chosen over `react-native-view-shot` because one module covers
+the camera and the library — a report's photos and a pilot's screenshot (taken with the phone's buttons, then picked)
+— with no storage permission (the system photo picker). Report a problem takes up to 3 (JPEG/PNG, ≤ 5 MB, checked on
+the phone and again by the api — S-104), uploaded at once (`POST /me/case-uploads`) and attached to the case; support
+sees them on the console case. Pilot feedback takes one screenshot (PNG/JPEG ≤ 5 MB, `POST /me/pilot/screenshots`).
+The delivered screen shows the courier's door photo from `GET /me/orders/{id}/proof-photo` (a 5-minute signed URL;
+none after a PIN, a signature or an ID check).
 App Privacy / Data safety: name, email, phone, address, precise location, user id, device id (push), purchase
 history, payment info (Stripe's sheet), support reports, booking notes — linked to the person, app functionality
 only, no tracking (the privacy manifest in `app.config.ts`, equal to `store/privacy.json` —

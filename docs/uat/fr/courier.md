@@ -34,4 +34,4 @@ title: "Scénario de test d’acceptation — Livreur"
 | 6 | Remettez la commande avec le NIP du client (et une photo). | L’arrêt est terminé; le client voit livrée. | ☐ Réussi ☐ Échoué | |
 | 7 | Terminez votre quart. | Vous êtes averti si quelque chose n’a pas été envoyé; le quart se termine. | ☐ Réussi ☐ Échoué | |
 | 8 | Passez l’application en français et ouvrez un arrêt. | Tout est en français. | ☐ Réussi ☐ Échoué | |
-| 9 | Dites à l’équipe une chose qui vous a ralenti (l’application pour livreurs n’a pas encore de bouton : utilisez le formulaire ou parlez à votre contact). | L’équipe l’inscrit dans la file du pilote et vous donne le numéro. | ☐ Réussi ☐ Échoué | |
+| 9 | Dites à l’équipe une chose qui vous a ralenti : **Commentaires** en haut de n’importe quel écran de l’app des coursiers (ajoutez une capture d’écran si c’est utile; recadrez les renseignements des clients). | Vous voyez le numéro (UAT-…) sur le téléphone; l’élément est dans la file du pilote comme celui d’un coursier. | ☐ Réussi ☐ Échoué | |

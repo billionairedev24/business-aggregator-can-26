@@ -175,8 +175,8 @@ port; `stepUp.ts`), `src/api/shop.ts`, `src/fixtures/shop.ts`, `__tests__/shop.t
 - **Tracking polls** `GET /me/orders/{id}` every 15 s instead of the SSE stream; the map is the design's schematic
   (no map SDK), where the courier is in words ("You're next", "2 stops before yours").
 - **Not on the phone** for lack of an api: promo / points codes and "Redeem points" (checkout has no points), the
-  delivery rating and the tip, the proof photo itself, "Because you booked …" (Home shows "Trusted near you"),
-  photos on a report (no photo picker; the case takes them on the site). "Organic" isn't a search filter (no data, as
+  delivery rating and the tip, "Because you booked …" (Home shows "Trusted near you"). (Mobile gaps part 1 added the
+  courier's door photo on Delivered and up to 3 photos on a report.) "Organic" isn't a search filter (no data, as
   on the web). Suggestions (`/search/suggest`) and AI search (`/search/interpret`) aren't used: results follow the
   typing.
 - Every amount, tax name and rate, time (the market's zone) and place comes from the api or the region model.
@@ -249,8 +249,8 @@ S-98's temporary You screen (`src/journeyA/You.tsx`) is gone. What S-101 decided
   website (no native WebAuthn, S-98). "Download my data" hands the JSON export to the system share sheet (no file
   module). "Sign out of all devices" = revoke the others, then this phone's sign-out.
 - **Notifications:** every row × push / SMS / email, security locked on, quiet hours, the language and marketing
-  email, saved together with only the changed cells. "This phone" (the permission, `PushRegistration.enable()`) shows
-  once the app installs push (`setPhonePush`, with S-102's registrar — not yet, § Contracts › Push).
+  email, saved together with only the changed cells. "This phone" (the permission, `PushRegistration.enable()`): the
+  app installs push at start-up (`setPhonePush` with S-102's registrar, mobile gaps part 1, § Contracts › Push).
 - **Language / Langue** stays on the You tab (in place, S-98) and also sets the account's language
   (`PATCH /me/preferences {language}`; offline it stays the phone's choice and says so).
 - **Payment methods:** a card is saved with a SetupIntent — Stripe's PaymentSheet in setup mode, or nothing with the
@@ -291,16 +291,18 @@ api above; personal stubs already show guests the sign-in prompt.
   area is under `['account', …]`: another journey that changes the account invalidates `['account']`.
 - **Push notifications** (S-102): `@northline/mobile-kit` exports `setPushRegistrar(registrar)` and `PushHooks`. The
   AuthProvider calls `PushHooks.signedIn(api)` after every sign-in and `PushHooks.signingOut(api)` before revoking the
-  tokens; until S-102 installs a registrar (at start-up, e.g. in `app/_layout.tsx`) they do nothing. The registrar
+  tokens; the registrar is installed at start-up (mobile gaps part 1: `src/push/install.ts` from `app/_layout.tsx`). The registrar
   owns the push SDK, the device-registration api and asking for the notification permission (at a moment the design
   chooses — not at launch). Deep links from notifications open the routes in § Screens.
   S-102 ships the parts: `pushRegistrar({platform, storage, appVersion, locale})` (pass it to `setPushRegistrar`),
   `PushRegistration.enable()` for the permission screen, `expoPushPlatform(Notifications, Platform.OS)` over
-  `expo-notifications` (not yet a dependency of the app: it needs the config plugin and EAS push credentials) and
+  `expo-notifications` and
   `handleNotificationTaps(platform, hosts, link => router.push(routeOf(link)))`. Server side, set-up and failures:
   [runbooks/push.md](runbooks/push.md). S-103 added `expo-notifications` and its config plugin to both apps (the
-  native module, the `aps-environment` entitlement, Android's `updates` channel, `POST_NOTIFICATIONS`); installing the
-  registrar is app code still to do, and can ship as an over-the-air update (the native layer is already there).
+  native module, the `aps-environment` entitlement, Android's `updates` channel, `POST_NOTIFICATIONS`). Mobile gaps
+  part 1 installs it in both apps with mobile-kit's `installPush` (registrar, a sync at every start and foreground
+  return, token rotation, taps); the permission is asked after the first order or booking (consumer) or on shift
+  (courier), or from the settings rows — never at launch.
 - **Deep links** (S-102) — under the paths the association files give each app (`/app/*`, `/courier/*`); the consumer
   web redirects each to its web page when the app isn't installed:
 
@@ -344,16 +346,19 @@ Areas: `shop` (S-99), `services` (S-100), `account` (S-101). Don't edit another 
   from the api); S-100 uses it for bookings. Apple Pay / Google Pay need an Apple merchant id, the config plugin and
   Google Pay on the account.
 - **Shop (S-99):** no consumer api for a promo / points code or redeeming points at checkout, the delivery rating
-  (B9) and the courier tip, nor a URL for the proof-of-delivery photo; photos on a report need a photo picker (a
-  native module and a permission).
+  (B9) and the courier tip. (Closed in mobile gaps part 1: the proof-of-delivery photo — `GET /me/orders/{id}/proof-photo`,
+  a 5-minute signed URL, never after an ID check; photos on a report — `expo-image-picker`, up to 3, seen by support.)
 - **Account (S-101):** no consumer api for points activity (the ledger has no earning rules yet, DECISIONS S-58),
   provider-funded rewards near a person, referrals ("Invite a neighbour"), messages to a provider about a quote ("Ask a
   question"), or a payment step-up threshold ("Require Face ID for payments over $100"). (Closed in the phase 4
   follow-ups: `PATCH /me/preferences` with `province: ""` goes back to "follow my location".) The data export has no file to save without a file-system module: it goes through the share sheet.
 - **Passkeys in the app:** creating or using a passkey natively needs a native module (none in Expo); the app sends
   people to the consumer site in the system browser for passkeys, Google and Apple (S-98).
-- **Push:** the server, mobile-kit's registration and the deep links are S-102's; `expo-notifications` is in the app
-  since S-103; the registrar still needs installing (above), and APNs / Firebase accounts to deliver anything.
+- **Push:** closed in the app (mobile gaps part 1: the registrar, the permission moments, "This phone" in both apps,
+  taps through the deep-link parser). Still needed to deliver anything: the APNs key and Firebase projects
+  ([runbooks/push.md](runbooks/push.md)) — nothing has reached a real phone.
+- **Pilot feedback (S-121):** closed in mobile gaps part 1 — a screenshot from both apps (picked from the photo library,
+  the web's checks) and the courier app's own "Feedback" (`GET /me/pilot?app=courier`, persona courier).
 
 ## Journey C as built (S-100)
 
