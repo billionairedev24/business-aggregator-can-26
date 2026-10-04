@@ -13,7 +13,7 @@ $(WEB_INSTALLED): $(ROOT)/web/pnpm-lock.yaml $(ROOT)/web/package.json
 web-install: $(WEB_INSTALLED) ## pnpm install (frozen lockfile); a no-op while node_modules is up to date
 
 .PHONY: web-check
-web-check: web-lint web-test web-build-studio web-build-console ## What CI's web checks run: hex colours, typecheck, vitest, Studio + console builds
+web-check: web-lint web-test i18n-check web-build-studio web-build-console ## What CI's web checks run: hex colours, typecheck, vitest, French coverage, Studio + console builds
 
 .PHONY: web-build
 web-build: $(WEB_INSTALLED) ## Build every web package that has a build script (tokens, studio, consumer, …)

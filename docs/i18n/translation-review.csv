@@ -189,3 +189,25 @@ web/apps/studio/src/features/catalogue/french.ts#saved,French text saved.,Texte 
 web/apps/studio/src/features/catalogue/french.ts#error,The French text couldn't be saved. Try again.,Le texte français n’a pas pu être enregistré. Réessayez.,needs translator review
 web/apps/studio/src/features/catalogue/french.ts#loadError,The French text couldn't load.,Le texte français n’a pas pu être chargé.,needs translator review
 web/apps/studio/src/features/catalogue/french.ts#saveFirst,"Save the listing first, then add its French text.","Enregistrez d’abord l’annonce, puis ajoutez son texte en français.",needs translator review
+NotFound:invite,No invite with id %s,Aucune invitation avec l’identifiant %s,needs translator review
+NotFound:kitchen visit,No kitchen visit with id %s,Aucune visite de cuisine avec l’identifiant %s,needs translator review
+NotFound:launch request,No launch request with id %s,Aucune demande de lancement avec l’identifiant %s,needs translator review
+NotFound:market,No market with id %s,Aucun marché avec l’identifiant %s,needs translator review
+NotFound:photo,No photo with id %s,Aucune photo avec l’identifiant %s,needs translator review
+NotFound:pilot business,No pilot business with id %s,Aucune entreprise pilote avec l’identifiant %s,needs translator review
+NotFound:uat_feedback,No uat_feedback with id %s,Aucun commentaire d’essai utilisateur avec l’identifiant %s,needs translator review
+NotFound:uat_participant,No uat_participant with id %s,Aucun participant aux essais utilisateurs avec l’identifiant %s,needs translator review
+web/apps/console/src/features/golive/messages.ts#byScript,"{name} (script), {at}","{name} (par script), {at}",needs translator review
+web/apps/console/src/features/pilot/messages.ts#notesTitle,Notes,Notes,needs translator review
+web/apps/console/src/features/pilot/messages.ts#photo,Photo {n},Photo {n},needs translator review
+web/apps/console/src/features/uat/messages.ts#context,{app} · {route} · version {version} · {locale} · {platform},{app} · {route} · version {version} · {locale} · {platform},needs translator review
+web/apps/studio/src/features/finance/messages.ts#colHeld,Held (incl. GST/HST),Retenu (TPS/TVH incl.),needs translator review
+web/apps/studio/src/features/finance/messages.ts#colTax,GST/HST,TPS/TVH,needs translator review
+web/apps/studio/src/features/finance/messages.ts#colNetYou,Net to you,Net pour vous,needs translator review
+web/apps/studio/src/features/finance/messages.ts#kpiEscrow_provider,"net in escrow · {count, plural, one {# job} other {# jobs}}","net en fiducie · {count, plural, one {# travail} other {# travaux}}",needs translator review
+web/apps/studio/src/features/finance/messages.ts#kpiEscrow_seller,"net in escrow · {count, plural, one {# order} other {# orders}}","net en fiducie · {count, plural, one {# commande} other {# commandes}}",needs translator review
+web/apps/studio/src/features/finance/messages.ts#kpiEscrow_both,"net in escrow · {count, plural, one {# job or order} other {# jobs & orders}}","net en fiducie · {count, plural, one {# travail ou commande} other {# travaux et commandes}}",needs translator review
+web/apps/studio/src/features/appointments/messages.ts#escrowOnHold,{money} on hold (case open),{money} bloqués (dossier ouvert),needs translator review
+web/apps/studio/src/features/appointments/messages.ts#escrowRefunded,{money} refunded,{money} remboursés,needs translator review
+web/apps/studio/src/features/appointments/messages.ts#escrowBreakdown,Incl. {tax} GST/HST · {net} to you after the tax and Northline’s {fee} fee,Dont {tax} de TPS/TVH · {net} pour vous après la taxe et les frais Northline de {fee},needs translator review
+web/apps/studio/src/features/dashboard/messages.ts#escrow,{money} held (incl. GST/HST),{money} retenus (TPS/TVH incl.),needs translator review

@@ -1022,3 +1022,11 @@ This participant no longer takes part.	Ce participant ne fait plus partie du pil
 Pilot businesses come from Pilot onboarding: invite or enrol the business there.	Les entreprises pilotes viennent de l’intégration pilote : invitez ou inscrivez l’entreprise là.	new
 A pilot business takes part while it is in the pilot cohort (Pilot onboarding).	Une entreprise pilote participe tant qu’elle fait partie de la cohorte pilote (intégration pilote).	new
 No Northline account matches that.	Aucun compte Northline ne correspond.	new
+No invite with id %s	Aucune invitation avec l’identifiant %s	new
+No kitchen visit with id %s	Aucune visite de cuisine avec l’identifiant %s	new
+No launch request with id %s	Aucune demande de lancement avec l’identifiant %s	new
+No market with id %s	Aucun marché avec l’identifiant %s	new
+No photo with id %s	Aucune photo avec l’identifiant %s	new
+No pilot business with id %s	Aucune entreprise pilote avec l’identifiant %s	new
+No uat_feedback with id %s	Aucun commentaire d’essai utilisateur avec l’identifiant %s	new
+No uat_participant with id %s	Aucun participant aux essais utilisateurs avec l’identifiant %s	new

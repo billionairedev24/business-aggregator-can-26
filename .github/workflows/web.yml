@@ -37,7 +37,7 @@ defaults:
 
 jobs:
   checks:
-    name: colours, typecheck, unit tests, studio + console builds
+    name: colours, typecheck, unit tests, French coverage, studio + console builds
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -49,6 +49,8 @@ jobs:
         run: make -C .. web-lint
       - name: Unit tests (vitest)
         run: make -C .. web-test
+      - name: French coverage (make i18n-check; S-116, engineering follow-ups)
+        run: make -C .. i18n-check
       - name: Studio build
         run: make -C .. web-build-studio
       - name: Console build (S-90)
