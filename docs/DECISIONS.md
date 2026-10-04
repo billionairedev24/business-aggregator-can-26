@@ -8053,3 +8053,123 @@ The owner's answers to open items, applied on the same branch:
     pilot invite token (S-120); the go-live `app_stores` gate is optional and a rollback needs one admin (S-118).
 11. **Backlog S-149**: a locked backup vault in a separate account per cloud, with acceptance criteria
     (`docs/backlog/northline-backlog.csv`, E-12). Not built.
+
+## 2026-10-04 — Engineering follow-ups: escrow GST, hydration, caches, payout job, key rotation, i18n gate, flaky tests
+
+Findings collected during S-115, S-117 and S-119 and the verification of later stories, fixed in one change. Migration:
+V350 only (V351–V354 unused).
+
+- **Escrow amounts (S-117 finding).** The Studio's job card and dashboard showed the booking's price before GST/HST
+  ($300.00) where the customer was charged and saw $315.00 held; the Earnings ledger had only the pre-tax "gross".
+  Decision: **the merchant sees what the customer paid and is held, and their net after the tax and Northline's fee,
+  labelled as such** — "$315.00 held · Incl. $15.00 GST/HST · $273.00 to you after the tax and Northline's $27.00 fee";
+  the ledger's columns are *Held (incl. GST/HST)*, *GST/HST*, *Fee*, *Net to you*; the Earnings KPI says *net in
+  escrow*. **The customer sees what was charged** — the consumer site and the apps already did (price + tax), unchanged.
+  Every Studio figure now comes from the payments ledger (`payments.escrows`): `booking.api.JobEscrows` (declared in
+  booking, implemented by payments — payments already depends on booking, so the other way round would be a module
+  cycle) feeds the job card and the dashboard; the ledger line gains `heldCents` and `taxCents` (`grossCents` keeps its
+  meaning: the sale before tax, which the take rate applies to). Payouts were already net and consistent with the
+  ledger's `merchant:<id>` postings; unchanged. Platform charges captured with a food escrow (service fee, its tax, the
+  tip) are Northline's and are not in the merchant's "held". A booking whose escrow row is missing (none in real
+  flows) falls back to the booking's price plus its tax.
+- **Hydration mismatch (S-117 finding).** Two differences between the server's render and the browser's first render
+  of the consumer product page: (1) Node's ICU (78) writes a range as `6–9 p.m.` where Chrome writes a plain space —
+  React error #418 on every load; (2) the region model (each market's time zone) was fetched only by `useQuery`, so the
+  server rendered times in UTC and the browser in the market's zone. Fixes: the shop's time helpers write plain spaces
+  (`plainSpaces`, also for U+00A0 and U+2009); the root route's loader prefetches the regions (in the server's render
+  and the hydrated state; `prefetchQuery` never throws, so a page without the api still renders); the product page's
+  delivery text recomputes when the zone changes. **Regression gate:** the a11y Playwright sweep (`make a11y`) fails
+  on any React hydration warning (development wording or production error #418–#425) on every consumer page; it failed
+  on the product page before the fix and passes on all ten after.
+- **Landing pages (S-119 F5).** A per-instance read-through cache (`shared.ShortCache`, lock-free: on a miss each caller
+  loads for itself — never wait on another request's load while holding a connection, the F1 lesson) keeps the home
+  summary per market and language, and the kitchens list's city-level part (kitchens, open state, calendars, ratings)
+  per market — distance, fees and the cards' order stay per request. `PUBLIC_PAGES_CACHE_TTL` (default 30 s; `0s`
+  turns it off; the test profile runs with 0 s). Invalidation: `@ApplicationModuleListener`s in discovery and food drop
+  the whole cache on `MerchantApproved`, `MerchantSuspended`, `MerchantReinstated`, `MerchantSearchVisibilityChanged`,
+  `MerchantRenamed`, `MerchantCategoriesChanged`, `MerchantTierChanged`, `StorefrontPublished`, `KitchenPaused`,
+  `KitchenResumed`, `KitchenAutoPaused`, `KitchenAutoResumed`, `MenuPublished` — on the instance that handles the
+  event; **other replicas see the change when their entry expires (≤ 30 s)**. Not invalidated: ratings (a new review
+  shows within 30 s), an item sold out (`MenuItemAvailabilityChanged`, frequent; the list shows kitchens, not items).
+  A cache hit takes no database connection (the two services' read methods run with `Propagation.SUPPORTS`). Chosen
+  over a materialized read model (a table to keep in step with three modules' writes) and over an edge cache (none
+  exists yet; it can still go in front of `/api/v1/public/**` later). Measured (docs/perf/results.md § Landing page cache): database time of a 1-minute search + landing run 5.9 s → 1.7 s; the city reads 69 % → 9 % of it; p95 unchanged within noise. The load-test seed had to skip `trust.ai_screening_marks` (a job cursor added after S-119 whose CHECK refused cloned rows).
+- **Payout run (S-119 F6).** `PayoutRepository.scheduledRunFacts()` reads every business's schedule, latest scheduled
+  payout and bank-change hold in one query, and `MerchantPlaces.ofAll` (backed by a new `MerchantDirectory.profiles`)
+  their zones in one more: **two queries per run whatever the number of businesses** (was ≈ 3 per business per
+  minute). Only a business that is due is read on its own, and `payOut` now checks the connected and bank accounts
+  before computing the overview. `ofAll` is a new name, not an overload of `of`, so existing `when(places.of(any()))`
+  mocks stay unambiguous.
+- **Pool timeout in a filter (S-119 F7).** `shared.web.OverloadedFilter`, ordered just before Spring Security, answers
+  a `DataAccessResourceFailureException` / `SQLTransientConnectionException` anywhere in the filter chain like the
+  controller advice does: 503 `overloaded`, `Retry-After: 2`, in the caller's language. Anything else passes through.
+- **Key rotation (S-115 gaps).**
+  - `platform.AesKeyRing`: AES-256-GCM with a current key (encrypts) and previous keys (decrypt only), each with an id.
+    The stored layout (`nonce ‖ ciphertext ‖ tag`) is unchanged, so old values open as they are; the id lives in a
+    column. Decryption tries the key the row names first, then the others (GCM's tag rejects a wrong key), so a row
+    whose reference is stale still opens. Errors name the variable and never echo a key.
+  - `TOTP_KEY`: `TOTP_KEY_ID` (default `v1`), `TOTP_PREVIOUS_KEYS` (`id=base64,…`, a secret), `TOTP_REENCRYPT_EVERY`
+    (1 h). **V350** adds `auth.totp_secrets.key_id` (NULL = before key ids = `v1`) and its index. `TotpKeyRotation`
+    (auth) re-encrypts rows not under the current key, 200 a run, only while the row still holds what was read.
+  - `WEBHOOK_SECRET_KEY`: `WEBHOOK_SECRET_KEY_ID` (default `v1`), `WEBHOOK_SECRET_PREVIOUS_KEYS` (api **and** worker, a
+    secret), `WEBHOOK_REENCRYPT_EVERY` (api, 1 h). The id is in the existing `secret_ref` (`db:aes-gcm:<id>`; rows from
+    before are `db:aes-gcm:v1`, the old constant) — no migration. `WebhookKeyRotation` (api, developer module) also
+    re-encrypts a previous secret still signing during a business's own rotation (it keeps the key it was written
+    with when the business rotates).
+  - Both jobs report the count (`Outcome`), log it and count `northline.crypto.reencrypted{table,outcome}` — the
+    re-wrap job's pattern; `stale()` says when the old key can go. key-rotation.md § 3 and a new § 7; Helm
+    `secretNames` + optional `secretEnv` (synced only when listed in `externalSecrets.optionalKeys` during a rotation);
+    the variables in README/dev/staging/prod, secrets.md, `.env.example`. No Terraform change: the previous-keys
+    secrets exist only during a rotation and are created by the operator.
+  - `rotate --immediately` now also removes a pending NEXT signing key (it never signed anything).
+  - Dead deferred notifications: gauge `northline_notifications_deferred_dead{channel}`, refreshed by the every-minute
+    deferred job (one grouped query, never by the scrape) and after the nightly purge; alert
+    `NorthlineDeadDeferredNotifications` (`max by (channel) > 0` for 15 m, ticket; max because every replica reads the
+    same database count) with docs/runbooks/alerts/dead-deferred-notifications.md and a promtool test.
+- **i18n gate.** `make i18n-check` failed on main: 4 console strings (go-live, pilot, UAT) and 8 server 404 resource
+  names (`invite`, `kitchen visit`, `launch request`, `market`, `photo`, `pilot business`, `uat_feedback`,
+  `uat_participant`). French written where words differ (`{name} (par script), {at}` and the eight 404 details in the
+  validation catalogue, status `new`); `Notes`, `Photo {n}` and the UAT context line are the same in French
+  (`sameInFrench`); `https://` is a placeholder, not language (`jsx` allowlist). Every new string of this change —
+  those, the Studio's escrow and ledger wording — is in docs/i18n/translation-review.csv as `needs translator review`.
+  After merging PR #166 (age-restricted purchases): `age session` and `licence` 404s written in French; the consumer
+  language picker's French option (`Interface, reçus, notifications`, `requis {places}` — each option is written in
+  its own language on purpose) and the console's `Source` column are the same in French (`sameInFrench`).
+  The gate now runs in `make web-check` (CI's web jobs, GitHub and GitLab) and as a vitest in `@northline/ui`
+  (`frenchCoverage.test.ts`, ≈ 3 s) so `pnpm -r test` catches it. The 404 names `uat_feedback` / `uat_participant`
+  keep their English wording (an API detail; renaming is the UAT module's call).
+- **Flaky tests — root causes:**
+  - `CommercialNoticesTest`: the worker tests' `Events.id()` wrote Java base-32 digits and replaced I/L/O/U with Z, so
+    ids did not sort in creation order (16,391 of 200,000 out of order); two consent records written in the same
+    instant were ordered by id, and a withdrawal could lose to the grant before it — more often under load, when more
+    digits differ. Ids are now Crockford and monotonic (`EventsIdTest`); the fixture's consent records get increasing
+    times; the clock is reset before each test (it is shared by every worker test class); the test drains the global
+    deferred batch until its own rows are processed (`sendDue(50)` takes the oldest 50 due rows of every class); and
+    its phone numbers have their own exchange (PushEndToEndTest used the same one).
+  - `RelayRaceTest`: JUnit's default order ran the test whose stand-in api closes kept-alive connections first; it left
+    closed connections in the relay's pool, and the next test's POSTs and DELETEs — never retried by the JDK client —
+    could take one before the client's selector noticed the close (later under load). Order fixed (bodies first).
+  - `VettingAndMediaApiTest` (Ownership › gtinLookup…): products at a fixed $20 were a price outlier (±60 %) whenever
+    other test classes had moved the shared database's auto-parts median above $50 (they approve $39.99 and $68.00
+    items) — flagged, so "await approval" timed out. Approval-expecting tests price at the current median
+    (`CatalogueApiTest.inBandPrice`).
+  - `SearchApiTest`: the p95 < 150 ms wall-clock assertion became a deterministic one — one Elasticsearch search
+    request per uncached search (shard-level `query_total` of the listings indices), a page within the default size,
+    and none for a repeat (the hot-query cache). Latency is the load test's and the SLO's.
+  - consumer `provider.test.tsx`: the provider page suspended twice in turn (storefront, then facts) — a request
+    waterfall in the app and the slowest first render in the file (3.6 s → 1.0 s for its tests); now
+    `useSuspenseQueries`. console `privacy.test.tsx` (and the Studio's tests): the router plugin's code splitting made
+    every route component a lazy chunk, transformed by vitest on the first navigation — inside the first test's 5 s
+    wait for its heading (543 ms vs 290 ms to the heading here; over 5 s on a loaded machine). Under vitest
+    (`process.env.VITEST`) code splitting is off; builds keep it.
+  - consumer `auth.test.tsx` (sign in with a phone code): "Resend in 0:45" is computed from the real clock and the axe
+    run before the assertion took over a second under load. The test stands the clock still (`vi.useFakeTimers({
+    toFake: ['Date'] })`; timers stay real for Testing Library); with a simulated 1.5 s delay it fails without that
+    and passes with it.
+  - console `uat.test.tsx` (the dry run): the list's console stayed mounted when the drawer's was rendered, so every
+    query, axe run and re-render worked on two whole consoles (4.8 s → 3.0 s here; 20 s under load). The first is
+    unmounted.
+- **Not done / never run for real:** no cloud rotation of `TOTP_KEY` / `WEBHOOK_SECRET_KEY` with External Secrets (no
+  environment); the worker reading `WEBHOOK_SECRET_PREVIOUS_KEYS` from its environment (covered by the shared
+  `WebhookSecretBox` the tests use); the landing cache's cross-replica behaviour (one replica locally); the dead-letter
+  alert never routed to a real receiver; Chromium only for the hydration gate.
