@@ -281,7 +281,10 @@
     "{points} pts · {value}",
     "Notes",
     "Photo {n}",
-    "{app} · {route} · version {version} · {locale} · {platform}"
+    "{app} · {route} · version {version} · {locale} · {platform}",
+    "Interface, reçus, notifications",
+    "requis {places}",
+    "Source"
   ],
   "jsx": {
     "web/apps/consumer/src/features/cart/Payment.tsx": [

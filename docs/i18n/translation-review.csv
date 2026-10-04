@@ -211,3 +211,6 @@ web/apps/studio/src/features/appointments/messages.ts#escrowOnHold,{money} on ho
 web/apps/studio/src/features/appointments/messages.ts#escrowRefunded,{money} refunded,{money} remboursés,needs translator review
 web/apps/studio/src/features/appointments/messages.ts#escrowBreakdown,Incl. {tax} GST/HST · {net} to you after the tax and Northline’s {fee} fee,Dont {tax} de TPS/TVH · {net} pour vous après la taxe et les frais Northline de {fee},needs translator review
 web/apps/studio/src/features/dashboard/messages.ts#escrow,{money} held (incl. GST/HST),{money} retenus (TPS/TVH incl.),needs translator review
+NotFound:age session,No age session with id %s,Aucune session de vérification d’âge avec l’identifiant %s,needs translator review
+NotFound:licence,No licence with id %s,Aucun permis avec l’identifiant %s,needs translator review
+web/apps/console/src/features/vetting/ageMessages.ts#colSource,Source,Source,needs translator review

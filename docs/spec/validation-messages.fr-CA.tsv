@@ -1056,3 +1056,5 @@ This order has no age-restricted dishes: hand it over as usual.	Cette commande n
 This order has no age-restricted items: hand it over with the usual proof.	Cette commande ne contient aucun article soumis à un âge minimal : remettez-la avec la preuve habituelle.	new
 Choose alcohol, tobacco and vape, cannabis accessories, or none.	Choisissez alcool, tabac et vapotage, accessoires de cannabis, ou aucun.	new
 Choose a period of at most a year, the start before the end.	Choisissez une période d’au plus un an, le début avant la fin.	new
+No age session with id %s	Aucune session de vérification d’âge avec l’identifiant %s	new
+No licence with id %s	Aucun permis avec l’identifiant %s	new
