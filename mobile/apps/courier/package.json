@@ -15,6 +15,7 @@
     "export:android": "expo export --platform android --output-dir dist-android",
     "export:web": "EXPO_PUBLIC_FIXTURES=1 expo export --platform web --output-dir dist-web",
     "smoke:web": "node e2e/smoke.mjs",
+    "native:check": "node scripts/native-check.mjs",
     "icons": "node scripts/gen-icons.mjs",
     "doctor": "expo-doctor"
   },

@@ -39,7 +39,10 @@ try {
     check(`${variant}: android OAuth redirect ca.northline.app:/oauth2redirect`, /<data android:scheme="ca.northline.app" android:path="\/oauth2redirect"\/>/.test(manifest));
     check(`${variant}: android verified App Link on ${host}/app`, new RegExp(`autoVerify="true"[\\s\\S]*?android:host="${host.replace(/\./g, '\\.')}" android:pathPrefix="/app"`).test(manifest));
     check(`${variant}: android location while in use only`, manifest.includes('ACCESS_FINE_LOCATION"/>') && /ACCESS_BACKGROUND_LOCATION" tools:node="remove"/.test(manifest));
-    check(`${variant}: android no camera, microphone or storage`, ['CAMERA', 'RECORD_AUDIO', 'READ_EXTERNAL_STORAGE'].every((p) => new RegExp(`${p}" tools:node="remove"`).test(manifest)));
+    // mobile gaps part 1: the camera for a report's photo (expo-image-picker); the library is the system photo picker, so
+    // no microphone, storage or media permission
+    check(`${variant}: android camera only for report photos; no microphone, storage or media`, manifest.includes('android.permission.CAMERA"/>') && ['RECORD_AUDIO', 'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE', 'READ_MEDIA_IMAGES'].every((p) => new RegExp(`${p}" tools:node="remove"`).test(manifest)));
+    check(`${variant}: ios camera and photo-library texts (ours), no microphone`, plist.includes('Northline uses the camera only when you take a photo') && plist.includes('Northline opens your photos only when you choose') && !plist.includes('NSMicrophoneUsageDescription'));
     check(`${variant}: android no backup`, manifest.includes('android:allowBackup="false"'));
     check(`${variant}: android cleartext only in development`, manifest.includes(`android:usesCleartextTraffic="${variant === 'development'}"`));
     check(`${variant}: ios bundle id ${id}`, new RegExp(`PRODUCT_BUNDLE_IDENTIFIER = "?${id.replace(/\./g, '\\.')}"?;`).test(pbx));

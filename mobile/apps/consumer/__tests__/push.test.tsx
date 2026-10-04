@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { PushHooks } from '@northline/mobile-kit';
@@ -20,7 +21,6 @@ interface PhoneMock {
 const notifications = () => jest.requireMock('expo-notifications') as { __phone: PhoneMock; requestPermissionsAsync: jest.Mock; setNotificationChannelAsync: jest.Mock };
 const phone = () => notifications().__phone;
 const HOME = { label: '1204 Example Ave, Sampleville', city: 'Sampleville', province: 'XA', street: '1204 Example Ave', postalCode: 'A1A 1A1', marketId: 'mkt-sampleville' };
-const flush = () => act(async () => new Promise((r) => setTimeout(r, 0)));
 
 beforeEach(() => setPushAvailable(true));
 afterEach(async () => {
@@ -45,7 +45,7 @@ describe('push in the consumer app (mobile gaps part 1, expo-notifications mocke
     // the order is placed: "Turn on notifications" on Order confirmed asks the system, then registers the token
     seedOrder(server.shop, Date.now(), 'placed');
     act(() => {
-      require('expo-router').router.push('/orders/ord-1001/confirmed');
+      router.push('/orders/ord-1001/confirmed');
     });
     fireEvent.press(await screen.findByTestId('push-prompt-on'));
     await waitFor(() => expect([...server.shop.devices.values()][0]).toMatchObject({ permission: 'granted', token: 'apns-device-token-0001' }));
@@ -59,13 +59,13 @@ describe('push in the consumer app (mobile gaps part 1, expo-notifications mocke
     await screen.findByTestId('home');
     seedOrder(server.shop, Date.now(), 'placed');
     act(() => {
-      require('expo-router').router.push('/orders/ord-1001/confirmed');
+      router.push('/orders/ord-1001/confirmed');
     });
     fireEvent.press(await screen.findByTestId('push-prompt-later'));
     await waitFor(() => expect(store.data.get(PUSH_ASKED_KEY)).toBe('1'));
     expect(phone().state.asked).toBe(0);
     act(() => {
-      require('expo-router').router.push('/account/notifications');
+      router.push('/account/notifications');
     });
     expect(await screen.findByText('This phone')).toBeTruthy();
     fireEvent.press(await screen.findByTestId('push-enable'));

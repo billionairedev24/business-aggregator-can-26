@@ -40,6 +40,10 @@ courier-export: $(MOBILE_INSTALLED) ## expo export: the Hermes bundles for iOS a
 	$(COURIER_PNPM) export:ios
 	$(COURIER_PNPM) export:android
 
+.PHONY: courier-native-check
+courier-native-check: $(MOBILE_INSTALLED) ## expo prebuild of both platforms (dev + prod variants) and checks of the generated manifests (camera, run location, push, photo picker), then deleted
+	$(COURIER_PNPM) native:check
+
 .PHONY: courier-web-smoke
 courier-web-smoke: $(MOBILE_INSTALLED) ## Web build on the fixture backend + headless Chromium: sign in, pickup, PIN drop-off, French
 	$(COURIER_PNPM) export:web
