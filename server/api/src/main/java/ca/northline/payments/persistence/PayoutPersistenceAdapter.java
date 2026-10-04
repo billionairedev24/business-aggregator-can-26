@@ -6,6 +6,9 @@ import ca.northline.payments.domain.PayoutAccount;
 import ca.northline.payments.domain.PayoutSchedule;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.CodedEnums;
+import ca.northline.shared.JdbcTimes;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -49,34 +52,28 @@ class PayoutPersistenceAdapter implements PayoutRepository {
     }
 
     @Override
-    public boolean scheduledBetween(String merchantId, Instant from, Instant to) {
-        return payouts.existsByMerchantIdAndKindAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
-                merchantId, Payout.Kind.SCHEDULED.code(), from, to);
-    }
-
-    @Override
     public Optional<PayoutSchedule> schedule(String merchantId) {
         return jdbc.sql("""
                         select schedule, weekday, monthly_anchor, reserve_cents, reserve_percent
                           from payments.payout_settings where merchant_id = :id""")
                 .param("id", merchantId)
-                .query((rs, _) -> {
-                    var weekday = rs.getObject("weekday", Integer.class);
-                    var reserveCents = rs.getLong("reserve_cents");
-                    var reservePercent = rs.getObject("reserve_percent", Integer.class);
-                    var reserve = reservePercent != null && reservePercent > 0
-                            ? PayoutSchedule.Reserve.PERCENT_10
-                            : reserveCents > 0 ? PayoutSchedule.Reserve.KEEP_500 : PayoutSchedule.Reserve.NONE;
-                    var frequency = CodedEnum.fromCode(PayoutSchedule.Frequency.class, rs.getString("schedule"));
-                    return new PayoutSchedule(
-                            frequency,
-                            frequency == PayoutSchedule.Frequency.WEEKLY && weekday == null
-                                    ? Integer.valueOf(5)
-                                    : weekday,
-                            CodedEnums.fromCode(rs.getString("monthly_anchor"), PayoutSchedule.MonthlyAnchor.class),
-                            reserve);
-                })
+                .query((rs, _) -> schedule(rs))
                 .optional();
+    }
+
+    private static PayoutSchedule schedule(ResultSet rs) throws SQLException {
+        var weekday = rs.getObject("weekday", Integer.class);
+        var reserveCents = rs.getLong("reserve_cents");
+        var reservePercent = rs.getObject("reserve_percent", Integer.class);
+        var reserve = reservePercent != null && reservePercent > 0
+                ? PayoutSchedule.Reserve.PERCENT_10
+                : reserveCents > 0 ? PayoutSchedule.Reserve.KEEP_500 : PayoutSchedule.Reserve.NONE;
+        var frequency = CodedEnum.fromCode(PayoutSchedule.Frequency.class, rs.getString("schedule"));
+        return new PayoutSchedule(
+                frequency,
+                frequency == PayoutSchedule.Frequency.WEEKLY && weekday == null ? Integer.valueOf(5) : weekday,
+                CodedEnums.fromCode(rs.getString("monthly_anchor"), PayoutSchedule.MonthlyAnchor.class),
+                reserve);
     }
 
     @Override
@@ -102,12 +99,23 @@ class PayoutPersistenceAdapter implements PayoutRepository {
     }
 
     @Override
-    public List<String> merchantsWithSchedules() {
+    public List<ScheduledRunFacts> scheduledRunFacts() {
         return jdbc.sql("""
-                        select merchant_id from payments.connected_accounts c
-                         where not exists (select 1 from payments.payout_settings s
-                                            where s.merchant_id = c.merchant_id and s.schedule = 'manual')
-                         order by merchant_id""").query((rs, _) -> rs.getString(1)).list();
+                        select c.merchant_id, s.schedule, s.weekday, s.monthly_anchor, s.reserve_cents, s.reserve_percent,
+                               (select max(p.created_at) from payments.payouts p
+                                 where p.merchant_id = c.merchant_id and p.kind = 'scheduled') as last_scheduled_at,
+                               exists (select 1 from payments.payout_accounts a
+                                        where a.merchant_id = c.merchant_id and a.state = 'pending') as pending_account
+                          from payments.connected_accounts c
+                          left join payments.payout_settings s on s.merchant_id = c.merchant_id
+                         where s.schedule is distinct from 'manual'
+                         order by c.merchant_id""")
+                .query((rs, _) -> new ScheduledRunFacts(
+                        rs.getString("merchant_id"),
+                        rs.getString("schedule") == null ? PayoutSchedule.DEFAULT : schedule(rs),
+                        JdbcTimes.instant(rs, "last_scheduled_at"),
+                        rs.getBoolean("pending_account")))
+                .list();
     }
 
     @Override

@@ -175,23 +175,28 @@ class PayoutService implements ViewPayouts, MovePayouts, RunPayouts, PayoutPlan,
     @Transactional
     int runScheduled() {
         var now = clock.instant();
+        // S-119 F6: a constant number of reads per run (the facts, then the zones), not three per business every minute
+        var facts = payouts.scheduledRunFacts();
+        var zones = time.ofAll(facts.stream()
+                .map(PayoutRepository.ScheduledRunFacts::merchantId)
+                .toList());
         int sent = 0;
-        for (var merchantId : payouts.merchantsWithSchedules()) {
+        for (var f : facts) {
+            var merchantId = f.merchantId();
             // each business's own day and 9:00 (region model): a run sweeps every zone it has reached
-            var zone = time.of(merchantId);
+            var zone = zones.getOrDefault(merchantId, time.platform());
             var today = LocalDate.ofInstant(now, zone);
             var payoutTime =
                     today.atTime(PayoutSchedule.PAYOUT_TIME).atZone(zone).toInstant();
-            if (now.isBefore(payoutTime)) {
+            if (now.isBefore(payoutTime) || !f.schedule().isPayoutDay(today)) {
                 continue;
             }
             var dayStart = today.atStartOfDay(zone).toInstant();
-            var dayEnd = today.plusDays(1).atStartOfDay(zone).toInstant();
-            var schedule = schedule(merchantId);
-            if (!schedule.isPayoutDay(today) || payouts.scheduledBetween(merchantId, dayStart, dayEnd)) {
-                continue;
+            var last = f.lastScheduledAt();
+            if (last != null && !last.isBefore(dayStart)) {
+                continue; // already paid out today (the run is idempotent)
             }
-            if (payouts.pendingAccount(merchantId).isPresent()) {
+            if (f.pendingAccount()) {
                 continue; // 24 h hold after a bank change
             }
             if (payOut(merchantId, now, StripeIdempotencyKeys.of("scheduled-payout", merchantId, today.toString()))
@@ -220,9 +225,15 @@ class PayoutService implements ViewPayouts, MovePayouts, RunPayouts, PayoutPlan,
     /** One scheduled payout of everything payable; empty when there is nothing to pay or nowhere to pay it. */
     private Optional<Payout> payOut(String merchantId, Instant now, String idempotencyKey) {
         var connected = payouts.connectedAccount(merchantId).orElse(null);
+        if (connected == null || !connected.payoutsEnabled()) {
+            return Optional.empty();
+        }
         var account = payouts.activeAccount(merchantId).orElse(null);
+        if (account == null) {
+            return Optional.empty();
+        }
         var amount = overview(merchantId).payableCents();
-        if (connected == null || !connected.payoutsEnabled() || account == null || amount <= 0) {
+        if (amount <= 0) {
             return Optional.empty();
         }
         var result = gateway.payout(connected.stripeAccount(), amount, false, account.getExternalRef(), idempotencyKey);
