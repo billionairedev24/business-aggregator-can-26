@@ -4,6 +4,7 @@ import ca.northline.catalogue.application.CategoryCatalog;
 import ca.northline.catalogue.domain.CategoryProfile;
 import ca.northline.catalogue.domain.CategoryProfile.AttributeSpec;
 import ca.northline.catalogue.domain.VariantTheme;
+import ca.northline.region.api.AgeClass;
 import ca.northline.shared.CodedEnum;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -52,7 +53,7 @@ class CategoryCatalogAdapter implements CategoryCatalog {
             select c.id, c.parent_id, c.root, coalesce(c.name_i18n ->> :lang, c.name_i18n ->> 'en', c.id) as name,
                    c.regulated_registry,
                    not exists (select 1 from catalogue.categories ch where ch.parent_id = c.id) as leaf,
-                   t.attributes, t.variant_themes, m.median
+                   t.attributes, t.variant_themes, m.median, catalogue.age_class_of(c.id) as age_class
               from catalogue.categories c
               left join catalogue.attribute_templates t on t.category_id = c.id
               left join medians m on m.category_id = c.id
@@ -105,6 +106,7 @@ class CategoryCatalogAdapter implements CategoryCatalog {
                 id.startsWith("shop.food-and-grocery."),
                 Sql.list(rs.getString("attributes"), AttributeSpec.class),
                 themes.isEmpty() ? DEFAULT_THEMES : themes,
-                Sql.longOrNull(rs, "median"));
+                Sql.longOrNull(rs, "median"),
+                AgeClass.of(rs.getString("age_class")).orElse(null));
     }
 }

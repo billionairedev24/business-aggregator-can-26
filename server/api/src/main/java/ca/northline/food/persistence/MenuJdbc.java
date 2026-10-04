@@ -36,7 +36,7 @@ class MenuJdbc implements MenuStore {
             coalesce(i.prep_add_min, 0) as prep_add_min, i.daily_limit, coalesce(i.sold_today, 0) as sold_today,
             i.sold_out_on, i.availability, i.combo_eligible, i.status, coalesce(i.vetting, 'draft') as vetting,
             coalesce(i.available, true) as available, i.photo_key, i.photo_content_type, i.sort, i.published_at,
-            i.updated_at, i.price_median_cents, i.price_confirmed_cents,
+            i.updated_at, i.price_median_cents, i.price_confirmed_cents, i.age_class,
             array(select m.group_id from food.item_modifiers m where m.item_id = i.id order by m.sort, m.group_id)
               as group_ids
             """;
@@ -218,11 +218,11 @@ class MenuJdbc implements MenuStore {
                         insert into food.menu_items (id, section_id, merchant_id, name, name_i18n, description, desc_i18n,
                                price_cents, allergens, dietary, prep_add_min, daily_limit, sold_today, sold_out_on,
                                available, vetting, availability, combo_eligible, status, photo_key, photo_content_type,
-                               sort, published_at, updated_at, price_median_cents, price_confirmed_cents)
+                               sort, published_at, updated_at, price_median_cents, price_confirmed_cents, age_class)
                         values (:id, :section, :m, :name, cast(:nameI18n as jsonb), :description, cast(:descI18n as jsonb),
                                :price, case when :declared then cast(:allergens as text[]) end, cast(:dietary as text[]),
                                :prep, :limit, :soldToday, :soldOutOn, :available, :vetting, :availability, :comboEligible,
-                               :status, :photoKey, :photoType, :sort, :publishedAt, now(), :median, :confirmed)
+                               :status, :photoKey, :photoType, :sort, :publishedAt, now(), :median, :confirmed, :ageClass)
                         """).params(params(i)).update();
         replaceGroups(i);
     }
@@ -238,7 +238,7 @@ class MenuJdbc implements MenuStore {
                                vetting = :vetting, availability = :availability, combo_eligible = :comboEligible,
                                status = :status, photo_key = :photoKey, photo_content_type = :photoType, sort = :sort,
                                published_at = :publishedAt, updated_at = now(), price_median_cents = :median,
-                               price_confirmed_cents = :confirmed
+                               price_confirmed_cents = :confirmed, age_class = :ageClass
                          where id = :id and merchant_id = :m
                         """).params(params(i)).update();
         replaceGroups(i);
@@ -253,6 +253,23 @@ class MenuJdbc implements MenuStore {
                 .param("id", itemId)
                 .param("m", merchantId)
                 .update();
+    }
+
+    @Override
+    public void licenceHold(String itemId, boolean held) {
+        jdbc.sql("update food.menu_items set licence_hold = :h where id = :id")
+                .param("h", held)
+                .param("id", itemId)
+                .update();
+    }
+
+    @Override
+    public boolean licenceHeld(String itemId) {
+        return jdbc.sql("select licence_hold from food.menu_items where id = :id")
+                .param("id", itemId)
+                .query(Boolean.class)
+                .optional()
+                .orElse(false);
     }
 
     private void replaceGroups(ItemRow i) {
@@ -297,6 +314,7 @@ class MenuJdbc implements MenuStore {
         p.put("publishedAt", JdbcTimes.ts(i.publishedAt()));
         p.put("median", i.priceMedianCents());
         p.put("confirmed", i.priceConfirmedCents());
+        p.put("ageClass", i.ageClass());
         return p;
     }
 
@@ -342,6 +360,7 @@ class MenuJdbc implements MenuStore {
                 .updatedAt(JdbcTimes.instant(rs, "updated_at"))
                 .priceMedianCents(longOrNull(rs, "price_median_cents"))
                 .priceConfirmedCents(longOrNull(rs, "price_confirmed_cents"))
+                .ageClass(rs.getString("age_class"))
                 .build();
     }
 

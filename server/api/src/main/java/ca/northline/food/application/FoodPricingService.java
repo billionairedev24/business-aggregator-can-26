@@ -79,7 +79,8 @@ class FoodPricingService implements FoodMenuPricing {
             var unit = item.priceCents()
                     + choices.stream().mapToLong(Choice::deltaCents).sum();
             prepAdd = Math.max(prepAdd, item.prepAddMin());
-            lines.add(new Line(item.id(), null, item.name(), Math.max(1, line.qty()), unit, choices, note));
+            lines.add(new Line(
+                    item.id(), null, item.name(), Math.max(1, line.qty()), unit, choices, note, item.ageClass()));
         }
         for (int i = 0; i < request.combos().size(); i++) {
             var line = request.combos().get(i);
@@ -98,6 +99,7 @@ class FoodPricingService implements FoodMenuPricing {
                 continue;
             }
             var choices = new ArrayList<Choice>();
+            @Nullable String comboAge = null;
             long separately = 0;
             var k = 0;
             var ok = true;
@@ -114,6 +116,9 @@ class FoodPricingService implements FoodMenuPricing {
                         throw unavailable(dish.get().name());
                     }
                     separately += dish.get().priceCents();
+                    if (comboAge == null) {
+                        comboAge = dish.get().ageClass();
+                    }
                     prepAdd = Math.max(prepAdd, dish.get().prepAddMin());
                     choices.add(new Choice(
                             null, slot.label(), dish.get().id(), dish.get().name(), 0));
@@ -129,7 +134,14 @@ class FoodPricingService implements FoodMenuPricing {
                     Objects.requireNonNullElse(combo.priceCents(), 0L),
                     Objects.requireNonNullElse(combo.discountBps(), 0));
             lines.add(new Line(
-                    null, combo.id(), combo.name(), Math.max(1, line.qty()), price.priceCents(), choices, null));
+                    null,
+                    combo.id(),
+                    combo.name(),
+                    Math.max(1, line.qty()),
+                    price.priceCents(),
+                    choices,
+                    null,
+                    comboAge));
         }
         if (!violations.isEmpty()) {
             throw new RuleViolation(violations);

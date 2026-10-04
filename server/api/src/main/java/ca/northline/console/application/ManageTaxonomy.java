@@ -25,6 +25,9 @@ public interface ManageTaxonomy {
     /** {@code regulator}: a regulator code, {@code none} (not regulated there) or null (the default registry). */
     Row regulate(String id, String province, @Nullable String regulator, Actor actor);
 
+    /** Age-restricted purchases (2026-10-04): the category's age class, or null for none. */
+    Row classify(String id, @Nullable String ageClass, Actor actor);
+
     RegulatorRow createRegulator(RegulatorInput input, Actor actor);
 
     RegulatorRow updateRegulator(String code, RegulatorInput input, Actor actor);
@@ -81,7 +84,8 @@ public interface ManageTaxonomy {
             List<String> liveIn,
             int liveListings,
             @Nullable Long medianPriceCents,
-            @Nullable String priceMode) {
+            @Nullable String priceMode,
+            @Nullable String ageClass) {
 
         public Row {
             regulators = List.copyOf(regulators);

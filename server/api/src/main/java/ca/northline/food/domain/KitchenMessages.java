@@ -9,6 +9,9 @@ public final class KitchenMessages {
     private KitchenMessages() {}
 
     public static final String MENU_NAME = "Enter a menu name.";
+    public static final String AGE_CLASS = "Choose alcohol, or no age restriction.";
+    public static final String LICENCE_REQUIRED =
+            "This dish is age-restricted. Add your liquor licence under Compliance; you can publish it once approved.";
     public static final String SECTION_NAME = "Enter a section name.";
     public static final String AT_MOST_40 = "At most 40 characters.";
     public static final String AT_MOST_60 = "At most 60 characters.";

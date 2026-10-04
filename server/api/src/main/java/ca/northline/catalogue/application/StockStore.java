@@ -29,5 +29,6 @@ public interface StockStore {
             long unitCents,
             int stock,
             @Nullable Integer handlingDays,
-            @Nullable String imageId) {}
+            @Nullable String imageId,
+            @Nullable String ageClass) {}
 }

@@ -34,6 +34,13 @@ public interface TaxonomyAdmin {
      */
     Change<Category> regulate(String id, String province, @Nullable String regulator, String actorId);
 
+    /**
+     * Age-restricted purchases (2026-10-04): the age-restriction class of category {@code id} ({@code alcohol |
+     * tobacco | cannabis}), or null for none. Its leaves inherit a group's class; listings in it need the business's
+     * licence and an age-verified customer.
+     */
+    Change<Category> classify(String id, @Nullable String ageClass, String actorId);
+
     Regulator createRegulator(RegulatorInput input, String actorId);
 
     Change<Regulator> updateRegulator(String code, RegulatorInput input, String actorId);
@@ -57,12 +64,14 @@ public interface TaxonomyAdmin {
     String REGULATOR_ELSEWHERE = "That regulator is in another province.";
     String CATEGORY_EXISTS = "That group already has a category with this name.";
     String REGULATOR_EXISTS = "A regulator with this code already exists.";
+    String AGE_CLASS = "Choose alcohol, tobacco and vape, cannabis accessories, or none.";
 
     /**
      * @param parentId the group a leaf belongs to; null for a group
      * @param regulators where staff set it, the regulator by province (a rule without a regulator = not regulated there)
      * @param medianPriceCents the median price of the live listings in {@code priceMode} (the mode most of them use)
      * @param priceMode {@code fixed}, {@code hourly}, {@code quote} (every live listing is quoted) or null (none live)
+     * @param ageClass the category's own age-restriction class (not one inherited from its group), or null
      */
     record Category(
             String id,
@@ -77,7 +86,8 @@ public interface TaxonomyAdmin {
             int liveListings,
             @Nullable Long medianPriceCents,
             @Nullable String priceMode,
-            @Nullable Instant editedAt) {
+            @Nullable Instant editedAt,
+            @Nullable String ageClass) {
 
         public Category {
             regulators = List.copyOf(regulators);

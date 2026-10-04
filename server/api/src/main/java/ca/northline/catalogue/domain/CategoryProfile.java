@@ -1,5 +1,6 @@
 package ca.northline.catalogue.domain;
 
+import ca.northline.region.api.AgeClass;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -9,6 +10,8 @@ import org.jspecify.annotations.Nullable;
  *
  * @param root {@code service} | {@code shop} | {@code food}
  * @param perishable food & grocery leaves (final sale allowed)
+ * @param ageClass the age-restriction class the category carries (its own or its group's), or null — listings in it
+ *     need the business's licence for the class and an age-verified customer
  */
 public record CategoryProfile(
         String id,
@@ -21,7 +24,8 @@ public record CategoryProfile(
         boolean perishable,
         List<AttributeSpec> attributes,
         List<VariantTheme> variantThemes,
-        @Nullable Long medianPriceCents) {
+        @Nullable Long medianPriceCents,
+        @Nullable AgeClass ageClass) {
 
     public CategoryProfile {
         attributes = List.copyOf(attributes);

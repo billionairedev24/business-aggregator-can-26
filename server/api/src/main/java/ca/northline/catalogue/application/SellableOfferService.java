@@ -1,6 +1,8 @@
 package ca.northline.catalogue.application;
 
+import ca.northline.merchants.api.RestrictedLicences;
 import ca.northline.orders.api.SellableOffers;
+import ca.northline.region.api.AgeClass;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -19,6 +21,12 @@ class SellableOfferService implements SellableOffers {
 
     private final StockStore stock;
     private final MediaRepository media;
+    private final RestrictedLicences licences;
+
+    /** Defence in depth: a restricted offer is sellable only while its business holds the class's licence. */
+    private boolean licensed(String merchantId, String ageClass) {
+        return AgeClass.of(ageClass).map(c -> licences.licensed(merchantId, c)).orElse(false);
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -47,7 +55,9 @@ class SellableOfferService implements SellableOffers {
                         r.handlingDays(),
                         r.imageId() != null && approved.contains(r.imageId())
                                 ? ShopBrowsingService.MEDIA_URL + r.imageId()
-                                : null))
+                                : null,
+                        r.ageClass()))
+                .filter(s -> s.ageClass() == null || licensed(s.merchantId(), s.ageClass()))
                 .toList();
     }
 

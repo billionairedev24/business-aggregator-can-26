@@ -86,7 +86,7 @@ class FoodCheckoutJdbc implements FoodCheckoutStore {
     }
 
     @Override
-    public boolean place(CheckoutRow r, List<OrderLineRow> lines, Instant at) {
+    public boolean place(CheckoutRow r, List<OrderLineRow> lines, @Nullable Integer idCheckAge, Instant at) {
         var moved =
                 jdbc.sql("""
                         update orders.food_checkouts set state = 'placed', placed_at = :at
@@ -98,10 +98,11 @@ class FoodCheckoutJdbc implements FoodCheckoutStore {
         jdbc.sql("""
                         insert into orders.orders (id, ref, customer_id, type, state, fulfilment_mode, customer_eta,
                                scheduled_for, subtotal_cents, delivery_fee_cents, service_fee_cents, tax_cents, tip_cents,
-                               placed_at, delivery_area)
+                               placed_at, delivery_area, id_check_age)
                         values (:id, :ref, :customer, 'food', 'placed', :mode, :eta, :scheduled, :subtotal, :delivery_fee,
-                               :service_fee, :tax, :tip, :at, cast(:delivery as jsonb) ->> 'zone')
+                               :service_fee, :tax, :tip, :at, cast(:delivery as jsonb) ->> 'zone', :age)
                         """)
+                .param("age", idCheckAge, Types.INTEGER)
                 .param("id", r.id())
                 .param("ref", r.ref())
                 .param("customer", r.customerId())
@@ -119,9 +120,11 @@ class FoodCheckoutJdbc implements FoodCheckoutStore {
         for (var l : lines) {
             jdbc.sql("""
                             insert into orders.order_lines (id, order_id, merchant_id, menu_item_id, qty, unit_cents, modifiers,
-                                   title, state)
-                            values (:id, :order, :merchant, :item, :qty, :unit, cast(:modifiers as jsonb), :title, 'pending')
+                                   title, state, age_class)
+                            values (:id, :order, :merchant, :item, :qty, :unit, cast(:modifiers as jsonb), :title, 'pending',
+                                    :age)
                             """)
+                    .param("age", l.ageClass(), Types.VARCHAR)
                     .param("id", l.id())
                     .param("order", r.id())
                     .param("merchant", r.merchantId())

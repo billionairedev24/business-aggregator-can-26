@@ -78,7 +78,8 @@ public final class CheckoutUseCases {
             Payment payment,
             String stepUp,
             String market,
-            boolean served) {
+            boolean served,
+            CheckoutAge age) {
 
         public Setup {
             addresses = List.copyOf(addresses);
@@ -127,7 +128,8 @@ public final class CheckoutUseCases {
             long taxCents,
             List<TaxLine> taxes,
             long totalCents,
-            String market) {
+            String market,
+            CheckoutAge age) {
 
         public Quote {
             taxes = List.copyOf(taxes);
@@ -152,4 +154,21 @@ public final class CheckoutUseCases {
     }
 
     public record Placed(String orderId, String ref) {}
+
+    /**
+     * Checkout's age step (2026-10-04): a cart with age-restricted items needs a customer verified for the strictest
+     * class in it under the delivery address's (pickup: the kitchen's) province rules.
+     *
+     * @param required the cart has age-restricted items
+     * @param minimumAge the age asked (0 when not required, or before an address is known)
+     * @param classes {@code alcohol | tobacco | cannabis}
+     * @param state {@code verified} (old enough) | {@code none} | {@code pending} | {@code failed} | {@code under_age}
+     */
+    public record CheckoutAge(boolean required, int minimumAge, List<String> classes, String state) {
+        public static final CheckoutAge NONE = new CheckoutAge(false, 0, List.of(), "verified");
+
+        public CheckoutAge {
+            classes = List.copyOf(classes);
+        }
+    }
 }

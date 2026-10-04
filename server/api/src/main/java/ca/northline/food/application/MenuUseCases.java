@@ -92,5 +92,6 @@ public final class MenuUseCases {
             ItemWindow availability,
             @Nullable Integer dailyLimit,
             boolean comboEligible,
-            boolean publish) {}
+            boolean publish,
+            @Nullable String ageClass) {}
 }

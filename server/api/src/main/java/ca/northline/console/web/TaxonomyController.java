@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  * POST /api/v1/console/taxonomy/categories {root?, parentId?, nameEn, nameFr?, bookingType?, regulatedRegistry?,
  *                                           requiresVsCheck}       201 Row   409 category_exists
  * PUT  /api/v1/console/taxonomy/categories/{id} {nameEn, nameFr?, bookingType?, regulatedRegistry?, requiresVsCheck}
+ * PUT  /api/v1/console/taxonomy/categories/{id}/age-class {ageClass: alcohol|tobacco|cannabis|null}   2026-10-04
  * PUT  /api/v1/console/taxonomy/categories/{id}/regulators/{province} {regulator: code|none|null}   Row
  * POST /api/v1/console/taxonomy/regulators {code, name, province, website?}   201   409 regulator_exists
  * PUT  /api/v1/console/taxonomy/regulators/{code} {name, province, website?}       409 regulator_in_use
@@ -109,6 +110,14 @@ class TaxonomyController {
             @RequestBody RegulateRequest body,
             CurrentStaff staff) {
         return taxonomy.regulate(id, province, body.regulator(), actor(staff));
+    }
+
+    record AgeClassRequest(@Nullable String ageClass) {}
+
+    @PutMapping("/categories/{id}/age-class")
+    @RequiresConsole(value = ConsoleScreen.TAXONOMY, actions = ConsoleAction.VET)
+    Row classify(@PathVariable String id, @RequestBody AgeClassRequest body, CurrentStaff staff) {
+        return taxonomy.classify(id, body.ageClass(), actor(staff));
     }
 
     @PostMapping("/regulators")

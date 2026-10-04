@@ -9,6 +9,7 @@ import ca.northline.email.EmailContent.DisputeUpdate;
 import ca.northline.email.EmailContent.ListingRejected;
 import ca.northline.email.EmailContent.PayoutSent;
 import ca.northline.email.EmailContent.RefundCaseUpdate;
+import ca.northline.email.EmailContent.RestrictedLicenceNotice;
 import ca.northline.email.EmailContent.TrustWarning;
 import ca.northline.email.EmailDeliveryFailed;
 import ca.northline.email.Mailer;
@@ -16,6 +17,7 @@ import ca.northline.identity.api.NotificationContacts;
 import ca.northline.merchants.api.ApplicationDecided;
 import ca.northline.merchants.api.BusinessNames;
 import ca.northline.merchants.api.CustomDomainChanged;
+import ca.northline.merchants.api.RestrictedLicenceUpdated;
 import ca.northline.merchants.api.TeamRoster;
 import ca.northline.messaging.api.ListingRejectedNotice;
 import ca.northline.messaging.api.TrustWarningNotice;
@@ -212,6 +214,28 @@ class MerchantEmailNotices {
                 null,
                 business -> new ListingRejected(
                         business, event.kind(), event.listingName(), event.reasons(), event.note(), link));
+    }
+
+    /**
+     * Age-restricted sales (2026-10-04): a licence was approved or rejected in the console's vetting queue, expires
+     * within 30 days or expired. A service notice about the business's own licence: always sent, to the owners.
+     */
+    @ApplicationModuleListener
+    void on(RestrictedLicenceUpdated event) {
+        var link = links.studio(event.merchantId(), "compliance");
+        notify(
+                event.eventId(),
+                event.merchantId(),
+                OWNERS,
+                null,
+                business -> new RestrictedLicenceNotice(
+                        business,
+                        event.what(),
+                        event.ageClass(),
+                        event.expiresOn(),
+                        event.rejectReason(),
+                        event.note(),
+                        link));
     }
 
     /** S-93: trust &amp; safety warned the business from a flag; always sent, to the owners. */
