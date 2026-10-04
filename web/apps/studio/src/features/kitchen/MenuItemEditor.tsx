@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Alert, Checkbox, Chip, Field, Select, TextArea, TextInput, useFormatters } from '@northline/ui';
-import { ValidationError } from '../../lib/http';
+import { ApiError, ValidationError } from '../../lib/http';
 import { attentionCount } from '../../lib/forms';
 import { ALLERGENS, DIETARY, WINDOWS, useConfirmPrice, useDeleteItem, useSaveItem, useUploadPhoto, type ItemBody, type MenuDetail, type MenuItem, type ModifierGroup } from './api';
 import { ItemPhoto } from './ItemPhoto';
@@ -39,6 +39,8 @@ export function MenuItemEditor({ merchantId, menu, groups, item, sectionId, canD
   const [availability, setAvailability] = useState<ItemBody['availability']>(item?.availability ?? 'always');
   const [limit, setLimit] = useState(item?.dailyLimit ? String(item.dailyLimit) : '');
   const [comboEligible, setComboEligible] = useState(item?.comboEligible ?? true);
+  // 2026-10-04: a dish with alcohol is age-restricted (licence to publish, ID check at handoff)
+  const [alcohol, setAlcohol] = useState(item?.ageClass === 'alcohol');
   const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({});
   const [tried, setTried] = useState(false);
   const [photoVersion, setPhotoVersion] = useState(item?.updatedAt ?? null);
@@ -67,6 +69,7 @@ export function MenuItemEditor({ merchantId, menu, groups, item, sectionId, canD
     const body: ItemBody = {
       menuId: menu.id, sectionId: section, name: name.trim(), description: description.trim(), priceCents: cents!, prepAddMin: prep,
       allergens: allergens === 'none' || allergens === null ? [] : allergens, dietary, modifierGroupIds: groupIds, availability, dailyLimit: limitNum, comboEligible, publish,
+      ageClass: alcohol ? 'alcohol' : null,
     };
     save.mutate({ id: item?.id, body }, { onSuccess: onClose });
   };
@@ -128,7 +131,9 @@ export function MenuItemEditor({ merchantId, menu, groups, item, sectionId, canD
       </div>
       <Field label={t('f_limit')} error={err('dailyLimit')}><TextInput inputMode="numeric" value={limit} placeholder={t('f_limitPh')} onChange={e => setLimit(e.target.value)} onBlur={touch('dailyLimit')} /></Field>
       <Checkbox checked={comboEligible} onChange={setComboEligible} label={t('f_combo')} />
-      {save.isError && !(save.error instanceof ValidationError) ? <div role="alert" className="nl-error">{t('saveError')}</div> : null}
+      <Checkbox checked={alcohol} onChange={setAlcohol} label={t('f_alcohol')} />
+      {alcohol ? <p className="nl-k-muted">{t('f_alcoholHint')}</p> : null}
+      {save.isError && !(save.error instanceof ValidationError) ? <div role="alert" className="nl-error">{save.error instanceof ApiError && (save.error.body as { code?: string } | undefined)?.code === 'licence_required' ? t('licenceRequired') : t('saveError')}</div> : null}
       <div className="nl-k-editor-actions">
         <button type="submit" className="btn btn-primary" disabled={save.isPending}>{save.isPending ? t('saving') : t('savePublish')}</button>
         <button type="button" className="btn btn-secondary" disabled={save.isPending} onClick={() => submit(false)}>{t('saveDraft')}</button>

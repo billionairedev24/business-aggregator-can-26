@@ -301,3 +301,56 @@ describe('Hours, prep & capacity', () => {
     expect(within(dialog).getByText('1 thing needs attention.')).toBeTruthy();
   });
 });
+
+describe('Age-restricted pickups at the counter (2026-10-04)', () => {
+  const pickup = (extra: Partial<Ticket> = {}) => ticket('o9', 'FD-9940', 'ready', { fulfilmentMode: 'pickup', handoff: { party: 'customer', state: 'arriving', name: null, eta: null }, idCheckAge: 18, ...extra });
+
+  it('hands over only after the three confirmations', async () => {
+    const calls = mockFetch({
+      [`GET ${B}/kitchen/live`]: () => board([pickup()]),
+      [`POST ${B}/kitchen/live/o9/handoff`]: () => board([]),
+    });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<LiveOrdersScreen />);
+    expect(await screen.findByText('Check ID · 18+')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Handed to customer' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Check ID · FD-9940' });
+    await expectNoAxeViolations(document.body);
+    expect(within(dialog).getByText(/Hand it over only to A\. Osei, 18 or older/)).toBeTruthy();
+    const hand = within(dialog).getByRole('button', { name: 'Hand over' });
+    expect((hand as HTMLButtonElement).disabled).toBe(true);
+    await user.click(within(dialog).getByLabelText('I checked a valid government photo ID'));
+    await user.click(within(dialog).getByLabelText('The name on the ID is A. Osei'));
+    await user.click(within(dialog).getByLabelText('The person is 18 or older'));
+    await user.click(hand);
+    await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url.endsWith('/o9/handoff'))?.body).toEqual({ idCheck: { idChecked: true, recipientMatches: true, ofAge: true } }));
+  });
+
+  it('refuses with a reason, in French', async () => {
+    const calls = mockFetch({
+      [`GET ${B}/kitchen/live`]: () => board([pickup()]),
+      [`POST ${B}/kitchen/live/o9/refuse`]: () => board([]),
+    });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<LiveOrdersScreen />, 'fr');
+    expect(await screen.findByText('Vérifier l’identité · 18 ans et plus')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Remise au client' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Vérifier l’identité · FD-9940' });
+    await user.click(within(dialog).getByRole('button', { name: 'Impossible de remettre' }));
+    await user.selectOptions(within(dialog).getByLabelText('Pourquoi'), 'underage');
+    await user.click(within(dialog).getByRole('button', { name: 'Ne pas remettre' }));
+    await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url.endsWith('/o9/refuse'))?.body).toEqual({ reason: 'underage' }));
+  });
+
+  it('a delivery is handed to the courier as before (the courier checks ID)', async () => {
+    const calls = mockFetch({
+      [`GET ${B}/kitchen/live`]: () => board([ticket('o8', 'FD-9941', 'ready', { idCheckAge: 18 })]),
+      [`POST ${B}/kitchen/live/o8/handoff`]: () => board([]),
+    });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<LiveOrdersScreen />);
+    await user.click(await screen.findByRole('button', { name: 'Handed to courier' }));
+    await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/o8/handoff'))).toBe(true));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});

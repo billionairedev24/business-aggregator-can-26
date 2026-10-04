@@ -31,6 +31,8 @@ export const MenuItem = z.object({
   soldOut: z.boolean(), availability: z.enum(WINDOWS), comboEligible: z.boolean(), modifierGroups: z.array(z.object({ id: z.string(), name: z.string() })),
   status: z.enum(['draft', 'published']), visibility: Visibility, hasPhoto: z.boolean(), updatedAt: z.string().nullish(),
   priceCheck: PriceCheck.nullish(),
+  /** 2026-10-04: age-restricted dish (alcohol) */
+  ageClass: z.string().nullish(),
 });
 export type MenuItem = z.infer<typeof MenuItem>;
 export const MenuDetail = z.object({
@@ -75,13 +77,15 @@ export const Setup = z.object({
 });
 export type Setup = z.infer<typeof Setup>;
 
-export const Stage = z.enum(['new', 'cooking', 'ready', 'handed_off']);
+export const Stage = z.enum(['new', 'cooking', 'ready', 'handed_off', 'refused']);
 export type Stage = z.infer<typeof Stage>;
 export const Ticket = z.object({
   orderId: z.string(), ref: z.string().nullish(), customerName: z.string().nullish(), groupSize: z.number(), placedAt: z.string(), scheduledFor: z.string().nullish(),
   stage: Stage, lines: z.array(z.object({ qty: z.number(), title: z.string(), modifiers: z.array(z.string()) })), fulfilmentMode: z.enum(['delivery', 'pickup']),
   handoff: z.object({ party: z.enum(['courier', 'customer']), state: z.enum(['finding', 'assigned', 'arriving', 'waiting', 'none']), name: z.string().nullish(), eta: z.string().nullish() }),
   readyBy: z.string().nullish(),
+  /** 2026-10-04: a pickup with age-restricted dishes — check photo ID for this age at the counter */
+  idCheckAge: z.number().nullish(),
 });
 export type Ticket = z.infer<typeof Ticket>;
 export const LiveBoard = z.object({
@@ -108,6 +112,22 @@ export const setupQuery = (merchantId: string) => queryOptions({ queryKey: kitch
 export const photoUrl = (merchantId: string, itemId: string, version?: string | null) => `${m(merchantId)}/menu-items/${itemId}/photo${version ? `?v=${encodeURIComponent(version)}` : ''}`;
 
 // ── mutations ───────────────────────────────────────────────────────────────
+
+export interface IdCheck { idChecked: boolean; recipientMatches: boolean; ofAge: boolean }
+export const REFUSE_REASONS = ['no_id', 'underage', 'mismatch', 'nobody_of_age', 'intoxicated', 'other'] as const;
+export type RefuseReason = (typeof REFUSE_REASONS)[number];
+
+/** Age-restricted pickups (2026-10-04): hand over after the ID check, or refuse (the order is returned). */
+export function useCounterCheck(merchantId: string) {
+  const qc = useQueryClient();
+  const key = liveQuery(merchantId).queryKey;
+  return useMutation({
+    mutationFn: (v: { orderId: string; idCheck: IdCheck } | { orderId: string; reason: RefuseReason }) => 'reason' in v
+      ? http(`${m(merchantId)}/kitchen/live/${v.orderId}/refuse`, { method: 'POST', body: { reason: v.reason } }, LiveBoard)
+      : http(`${m(merchantId)}/kitchen/live/${v.orderId}/handoff`, { method: 'POST', body: { idCheck: v.idCheck } }, LiveBoard),
+    onSuccess: board => { qc.setQueryData(key, board); void qc.invalidateQueries({ queryKey: badges(merchantId) }); },
+  });
+}
 
 const badges = (merchantId: string) => ['merchant', merchantId, 'nav-badges'];
 
@@ -139,7 +159,7 @@ export function useKitchenToggle(merchantId: string) {
   });
 }
 
-export interface ItemBody { menuId: string; sectionId: string; name: string; description: string; priceCents: number; prepAddMin: number; allergens: string[]; dietary: string[]; modifierGroupIds: string[]; availability: ItemWindow; dailyLimit: number | null; comboEligible: boolean; publish: boolean }
+export interface ItemBody { menuId: string; sectionId: string; name: string; description: string; priceCents: number; prepAddMin: number; allergens: string[]; dietary: string[]; modifierGroupIds: string[]; availability: ItemWindow; dailyLimit: number | null; comboEligible: boolean; publish: boolean; ageClass?: 'alcohol' | null }
 
 function useMenuMutation<V, R>(merchantId: string, fn: (v: V) => Promise<R>) {
   const qc = useQueryClient();

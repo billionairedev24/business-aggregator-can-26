@@ -87,6 +87,8 @@ export const Category = z.object({
   id: z.string(), parentId: z.string().nullish(), name: z.string(), leaf: z.boolean(), regulatedRegistry: z.string().nullish(), banned: z.boolean(), perishable: z.boolean(),
   attributes: z.array(z.object({ key: z.string(), label: z.string(), options: z.array(z.string()), required: z.boolean() })),
   variantThemes: z.array(VariantTheme), medianPriceCents: z.number().nullish(),
+  /** 2026-10-04: the age-restriction class the category carries (licence + customer age check) */
+  ageClass: z.enum(['alcohol', 'tobacco', 'cannabis']).nullish(),
 });
 export type Category = z.infer<typeof Category>;
 
