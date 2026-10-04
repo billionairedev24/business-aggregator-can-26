@@ -10,6 +10,9 @@ public interface TrackingStore {
 
     Optional<Header> order(String customerId, String orderId);
 
+    /** Whether the order exists at all (anyone's): tells "not yours" (403) from "no such order" (404). */
+    boolean exists(String orderId);
+
     List<LineState> lines(String orderId);
 
     record Header(

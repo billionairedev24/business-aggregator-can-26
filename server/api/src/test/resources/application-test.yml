@@ -23,7 +23,7 @@ logging.level:
 northline:                               # a STRIPE_SECRET_KEY exported in the shell must never reach Stripe from tests
   # Consumer Shop (S-49…S-52): each test class browses its own market, so rows other tests leave in the shared
   # database (sellers in Calgary) never show up in its lists.
-  orders.delivery.markets: [Shopville, Productville, Cartville, Trackville, Deliveryville, Dispatchville, Pingville]   # extra test markets; the live ones are region data
+  orders.delivery.markets: [Shopville, Productville, Cartville, Trackville, Deliveryville, Dispatchville, Pingville, Photoville]   # extra test markets; the live ones are region data
   payments.stripe-secret-key: ""
   catalogue.import-images.allow-local: true   # S-72: image URLs served by WireMock on loopback
   payments.stripe-webhook-secret: whsec_test_platform_fake    # obviously fake: S-12 tests sign with these

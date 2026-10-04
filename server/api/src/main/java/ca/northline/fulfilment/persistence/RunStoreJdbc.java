@@ -236,6 +236,15 @@ class RunStoreJdbc implements RunStore {
     }
 
     @Override
+    public Optional<String> proofPhotoKey(String orderId) {
+        return jdbc.sql("""
+                        select proof_media_id from fulfilment.stops
+                         where order_id = :o and kind = 'dropoff' and state = 'done' and proof_kind = 'photo'
+                           and proof_media_id is not null
+                         order by done_at desc limit 1""").param("o", orderId).query(String.class).optional();
+    }
+
+    @Override
     public void droppedOff(String stopId, String proofKind, Instant at) {
         jdbc.sql("""
                         update fulfilment.stops set state = 'done', done_at = :at, proof_kind = :k,

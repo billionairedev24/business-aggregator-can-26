@@ -3,6 +3,8 @@ package ca.northline.fulfilment.infra;
 import ca.northline.fulfilment.application.ProofStorage;
 import ca.northline.shared.storage.ObjectStore;
 import ca.northline.shared.storage.UsesObjectStorage;
+import java.net.URI;
+import java.time.Duration;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
@@ -30,5 +32,10 @@ class ObjectStoreProofStorage implements ProofStorage {
     @Override
     public void delete(String key) {
         objects.delete(key);
+    }
+
+    @Override
+    public URI signedUrl(String key, Duration ttl) {
+        return objects.presignGet(key, ttl);
     }
 }

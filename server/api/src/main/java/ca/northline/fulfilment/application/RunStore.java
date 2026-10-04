@@ -53,6 +53,12 @@ public interface RunStore {
 
     void droppedOff(String stopId, String proofKind, Instant at);
 
+    /**
+     * The storage key of the photo a courier left as an order's proof of delivery: a done drop-off whose proof is a
+     * photo still kept (S-107 retention clears it). Empty for a PIN or signature, before the drop-off, after retention.
+     */
+    Optional<String> proofPhotoKey(String orderId);
+
     /** Runs of a market starting in [{@code from}, {@code to}), by start (ops view). */
     List<Run> runs(@Nullable String market, Instant from, Instant to);
 
