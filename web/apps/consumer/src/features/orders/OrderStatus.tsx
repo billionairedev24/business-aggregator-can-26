@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { EmptyState, ErrorState, SiteLink, Skeleton, useFormatters, useLocale } from '@northline/ui';
 import { useZone } from '../location/regions';
 import { isNotFound } from '@northline/client';
 import { signInHref, useViewer } from '../session/api';
 import { clock, runWhen, weekday, windowRange } from '../shop/format';
-import { useConfirmDelivery, useOrder, useOrderStream, type OrderTracking } from './api';
+import { useConfirmDelivery, useOrder, useOrderStream, useProofPhoto, type OrderTracking } from './api';
 import { useOrderT } from './messages';
 import { CourierStatus } from '../tracking/CourierStatus';
 
@@ -85,6 +86,7 @@ function OrderView({ order }: { order: OrderTracking }) {
           ) : null}
           <CourierStatus courier={order.courier} />
           {order.deliveryProof ? <p className="order-note">{t(`proof_${order.deliveryProof}`)}</p> : null}
+          <DoorPhoto orderId={order.orderId} enabled={order.deliveryProof === 'photo'} />
           {order.confirmedAt ? <p className="order-note">{t('confirmed')}</p> : paysOn ? <p className="order-note">{t('paysShops', { date: paysOn })}</p> : null}
           {confirm.isError ? <p className="order-error" role="alert">{t('confirmError')}</p> : null}
           <div className="order-actions">
@@ -134,5 +136,18 @@ export function OrderSkeleton() {
         <Skeleton height={0} radius={12} style={{ aspectRatio: '4 / 3', height: 'auto' }} />
       </div>
     </div>
+  );
+}
+
+/** The courier's photo at the door, when the api has one to show (mobile gaps part 1); nothing otherwise. */
+function DoorPhoto({ orderId, enabled }: { orderId: string; enabled: boolean }) {
+  const t = useOrderT();
+  const photo = useProofPhoto(orderId, enabled);
+  const [broken, setBroken] = useState(false);
+  if (!photo.data || broken) return null;
+  return (
+    <figure className="order-proof">
+      <img src={photo.data.url} alt={t('proofAlt')} loading="lazy" onError={() => setBroken(true)} />
+    </figure>
   );
 }

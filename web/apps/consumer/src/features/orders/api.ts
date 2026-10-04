@@ -55,6 +55,22 @@ export function useOrderStream(orderId: string, enabled: boolean) {
 
 export const useOrder = (orderId: string, enabled: boolean) => useQuery({ ...orderQuery(orderId), enabled });
 
+/**
+ * The courier's door photo (mobile gaps part 1): `GET …/proof-photo` → a signed URL that works for 5 minutes (object
+ * storage's presigned GET; the api's own link under `local`, relative to this origin and relayed by the bff). 404 = none
+ * to show (a PIN or signature, retention, or a delivery with an ID check — never shown): no photo, no retry.
+ */
+export const ProofPhoto = z.object({ url: z.string(), expiresAt: z.string() });
+export const useProofPhoto = (orderId: string, enabled: boolean) => useQuery({
+  queryKey: ['order', orderId, 'proof-photo'],
+  queryFn: () => http(`/api/v1/me/orders/${encodeURIComponent(orderId)}/proof-photo`, {}, ProofPhoto),
+  enabled,
+  retry: false,
+  // read a fresh link before the old one lapses while the page stays open
+  staleTime: 4 * 60_000,
+  refetchInterval: 4 * 60_000,
+});
+
 /** "Got everything" (S-78): `POST …/confirm` releases the shops' escrow at once; the answer is the updated order. */
 export function useConfirmDelivery(orderId: string) {
   const qc = useQueryClient();
