@@ -16,9 +16,11 @@ class DispatchFactsJdbc implements DispatchFacts {
     @Override
     public Optional<Facts> of(String orderId) {
         return jdbc.sql("""
-                        select o.id, o.customer_id, o.address_id, o.delivery_area, o.window_id, fc.delivery::text as food
+                        select o.id, o.customer_id, o.address_id, o.delivery_area, o.window_id, fc.delivery::text as food,
+                               o.id_check_age, coalesce(fc.province, c.province) as province
                           from orders.orders o
                           left join orders.food_checkouts fc on fc.id = o.id
+                          left join orders.checkouts c on c.id = o.checkout_id
                          where o.id = :id
                         """)
                 .param("id", orderId)
@@ -28,7 +30,11 @@ class DispatchFactsJdbc implements DispatchFacts {
                         rs.getString("address_id"),
                         rs.getString("delivery_area"),
                         rs.getString("window_id"),
-                        rs.getString("food")))
+                        rs.getString("food"),
+                        rs.getObject("id_check_age", Integer.class),
+                        rs.getString("province") == null
+                                ? null
+                                : rs.getString("province").strip()))
                 .optional();
     }
 

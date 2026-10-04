@@ -55,7 +55,8 @@ class KitchenTicketJdbc implements KitchenTicketStore {
         }
         var tickets = tickets(merchantId, all.stream().map(FoodOrder::id).toList());
         var live = all.stream()
-                .filter(o -> stage(tickets, o.id()) != KitchenStage.HANDED_OFF)
+                .filter(o -> stage(tickets, o.id()) != KitchenStage.HANDED_OFF
+                        && stage(tickets, o.id()) != KitchenStage.REFUSED)
                 .toList();
         if (live.isEmpty()) {
             return List.of();
@@ -82,7 +83,8 @@ class KitchenTicketJdbc implements KitchenTicketStore {
                             leg.courierAssigned(),
                             leg.courierUserId(),
                             leg.eta(),
-                            leg.arrivedAt());
+                            leg.arrivedAt(),
+                            o.idCheckAge());
                 })
                 .toList();
     }

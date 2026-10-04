@@ -35,6 +35,14 @@ public interface DeliveryStore {
 
     void moveState(String orderId, String state, Instant at);
 
+    /** Age-restricted items: the recipient proves {@code age} with photo ID at the door. */
+    void idCheck(String orderId, int age, @Nullable String province);
+
+    /** The ID check a delivery needs, if any. */
+    Optional<IdCheck> idCheck(String orderId);
+
+    record IdCheck(int age, @Nullable String province) {}
+
     /** Clears drop-off addresses of deliveries that ended before {@code before}; returns how many. */
     int forgetAddresses(Instant before);
 

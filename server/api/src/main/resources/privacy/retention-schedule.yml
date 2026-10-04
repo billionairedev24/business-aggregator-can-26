@@ -232,8 +232,11 @@ retention:
         en: "Kept while the account is open so the customer verifies once (owner decision 2026-10-04); only the result is kept, never the ID, selfie or date of birth. Not named in the Privacy Policy — for counsel."
         fr: "Gardée tant que le compte est ouvert pour que le client ne se vérifie qu'une fois (décision du 2026-10-04); seul le résultat est gardé, jamais la pièce d'identité, l'égoportrait ni la date de naissance. Absent de la politique — à revoir par les conseillers juridiques."
       action: delete
-      enforcement: pipeline
+      enforcement: none
       holds: []
+      note:
+        en: "Deleted with the account: closing an account is an S-105 erasure, and the restricted module's step deletes the age check (account.closed_profile runs it within 30 days)."
+        fr: "Supprimée avec le compte : fermer un compte est une suppression S-105, et l'étape du module restricted supprime la vérification d'âge (account.closed_profile l'exécute dans les 30 jours)."
     - code: restricted.handoff_checks
       module: restricted
       period: P2Y

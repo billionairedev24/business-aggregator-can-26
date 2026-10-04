@@ -13,7 +13,9 @@ ALTER TABLE orders.orders ADD CONSTRAINT orders_state_check
 ALTER TABLE orders.order_lines ADD COLUMN age_class text CHECK (age_class IS NULL OR age_class IN ('alcohol', 'tobacco', 'cannabis'));
 
 -- fulfilment: a delivery that needs the ID check, the refused drop-off and the courier's stop back at the business.
-ALTER TABLE fulfilment.deliveries ADD COLUMN id_check_age integer CHECK (id_check_age IS NULL OR id_check_age BETWEEN 16 AND 25);
+ALTER TABLE fulfilment.deliveries
+  ADD COLUMN id_check_age integer CHECK (id_check_age IS NULL OR id_check_age BETWEEN 16 AND 25),
+  ADD COLUMN id_check_province text CHECK (id_check_province IS NULL OR id_check_province ~ '^[A-Z]{2}$');
 ALTER TABLE fulfilment.deliveries DROP CONSTRAINT deliveries_state_check;
 ALTER TABLE fulfilment.deliveries ADD CONSTRAINT deliveries_state_check
   CHECK (state IN ('waiting', 'planned', 'picked_up', 'delivered', 'cancelled', 'returning', 'returned'));
