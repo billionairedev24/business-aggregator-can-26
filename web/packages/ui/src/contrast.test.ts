@@ -85,7 +85,8 @@ const PAIRS: Pair[] = [
   ['accent-2', 'bg', 3, 'error border of inputs, stars'],
   ['neutral-600', 'surface', 3, 'input borders'], ['neutral-600', 'bg', 3, 'input borders in the Studio (surface = bg)'],
   ['neutral-600', 'surface', 3, 'checkbox and radio borders'], ['surface', 'neutral-600', 3, 'switch knob on the off track'], ['surface', 'accent', 3, 'switch knob on the on track'],
-  ['neutral-500', 'surface', 3, 'Data Table checkbox ring'], ['highlight', 'accent', 3, 'hero search focus ring on the spruce hero'],
+  ['neutral-500', 'surface', 3, 'Data Table checkbox ring'],
+  ['neutral-600', 'surface', 3, 'step bars: steps still to do, in the auth cards (S-144)'], ['neutral-600', 'bg', 3, 'step bars: steps still to do, on the page (S-144)'], ['highlight', 'accent', 3, 'hero search focus ring on the spruce hero'],
 ];
 
 const THEMES: Record<string, Record<string, string>> = { light: base };

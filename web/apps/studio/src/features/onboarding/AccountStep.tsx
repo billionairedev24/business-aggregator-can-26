@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Avatar, Checkbox, Field, FormGrid, OptionCard, Select, TextInput, useLocale, platformTimeZone } from '@northline/ui';
+import { Alert, Avatar, Checkbox, Field, FormGrid, OptionCard, RadioGroup, Select, TextInput, useLocale, platformTimeZone } from '@northline/ui';
 import { useSession, useSignOut } from '../../lib/session';
 import { serverFieldErrors } from '../../lib/forms';
 import type { MerchantType } from '../shell/api';
@@ -74,12 +74,12 @@ export function AccountStep({ type, onboarding, isNew, pilot, onTypeChange, onDo
           {(onboarding && onboarding.status !== 'applicant') || pilotInvite ? null : <button type="button" className="btn btn-ghost" onClick={() => setPicking(true)}>{t('change')}</button>}
         </div>
       ) : (
-        <div role="radiogroup" aria-labelledby={ids.picker} className="nl-ob-types">
+        <RadioGroup aria-labelledby={ids.picker} className="nl-ob-types">
           <span id={ids.picker} className="nl-sr-only">{t('pickerLabel')}</span>
           {PICKER_TYPES.map(k => (
             <OptionCard key={k} role="radio" aria-checked={type === k} selected={type === k} title={t(`pick_${k}`)} description={t(`pickDesc_${k}`)} onClick={() => { onTypeChange(k); setPicking(false); }} />
           ))}
-        </div>
+        </RadioGroup>
       )}
       {show('type') ? <div role="alert" className="nl-error" style={{ marginTop: -14, marginBottom: 14 }}>{show('type')}</div> : null}
 

@@ -52,6 +52,24 @@ describe('console sign-in (design 03 signed out)', () => {
     expect(calls.find(c => c.url.endsWith('/backup-code'))?.body).toEqual({ code: 'priya-n-00001' });
   });
 
+  it('the factor picker is one Tab stop; the arrow keys move and select (S-140)', async () => {
+    mockFetch(call => (call.url.endsWith('/api/auth/sign-in') ? { body: { identifier: 'x', factors: [] } } : undefined));
+    const user = userEvent.setup({ delay: null });
+    renderPage({ next: '/', navigate: vi.fn() });
+    await user.type(screen.getByRole('textbox', { name: 'Work email or mobile' }), 'x');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    const radios = await screen.findAllByRole('radio');
+    const stop = radios.filter(r => r.getAttribute('tabindex') === '0');
+    expect(stop).toHaveLength(1);
+    stop[0]!.focus();
+    await user.keyboard('{End}');
+    const backup = screen.getByRole('radio', { name: /Backup code/ });
+    expect(document.activeElement).toBe(backup);
+    expect(backup.getAttribute('aria-checked')).toBe('true');
+    await user.keyboard('{ArrowRight}');
+    expect(radios[0]!.getAttribute('aria-checked')).toBe('true');
+  });
+
   it('never hands off to another site', async () => {
     mockFetch(call => (call.url.endsWith('/api/auth/sign-in/backup-code') ? { body: { user: { id: 'u', firstName: 'Priya', lastName: 'N', initials: 'PN' } } } : call.url.endsWith('/api/auth/sign-in') ? { body: { identifier: 'x', factors: [] } } : undefined));
     const navigate = vi.fn();

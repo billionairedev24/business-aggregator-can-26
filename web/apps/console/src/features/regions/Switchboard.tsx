@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { Button, Dialog, ErrorState, Field, formatNumber, PageSkeleton, Segmented, Select, Tag, TextArea, TextInput, useFormatters, useLocale, type Locale } from '@northline/ui';
+import { Button, Dialog, ErrorState, Field, formatNumber, PageSkeleton, RadioGroup, Segmented, Select, Tag, TextArea, TextInput, useFormatters, useLocale, type Locale } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { SCREEN_PATH } from '../shell/screens';
@@ -101,13 +101,13 @@ function ProvincePanel({ province: p }: { province: Province }) {
         <Markets province={p} name={name} allowed={allowed} onStage={(market, s) => setConfirming({ kind: 'market', market, stage: s })} />
         <Zones province={p} name={name} allowed={allowed} />
         <div className="nl-rg-field"><span className="nl-rg-label">{t('rollout')}</span>
-          <div className="nl-rg-stages" role="radiogroup" aria-label={t('rollout')}>
+          <RadioGroup className="nl-rg-stages" aria-label={t('rollout')}>
             {STAGES.map(s => (
               <button key={s} type="button" role="radio" aria-checked={stage === s} className="nl-rg-stage" disabled={!allowed} onClick={() => setStage(s)}>
                 <strong>{t(`st_${s}` as RegionsKey)}</strong><span> · {t(`sd_${s}` as RegionsKey)}</span>
               </button>
             ))}
-          </div>
+          </RadioGroup>
         </div>
         <div className="nl-rg-actions">
           <Button disabled={!allowed} onClick={() => setConfirming({ kind: 'province' })}>{t(`cta_${stage}` as RegionsKey)}</Button>
@@ -139,12 +139,12 @@ function Markets({ province: p, name, allowed, onStage }: { province: Province; 
       {p.markets.length ? p.markets.map(m => (
         <div key={m.id} className="nl-rg-market">
           <span><strong>{m.city}</strong><span className="nl-rg-meta nl-rg-block">{t('marketMeta', { zones: m.zones, waitlist: m.waitlist })}</span></span>
-          <div className="nl-rg-mstages" role="radiogroup" aria-label={t('marketStages', { city: m.city })}>
+          <RadioGroup className="nl-rg-mstages" aria-label={t('marketStages', { city: m.city })} selectOnMove={false}>
             {STAGES.map((s, i) => (
               <button key={s} type="button" role="radio" aria-checked={m.stage === s} className="nl-rg-mstage" data-live={s === 'live' || undefined}
                 disabled={!allowed || i > ceiling || m.stage === s || s === 'live'} onClick={() => onStage(m, s)}>{t(`st_${s}` as RegionsKey)}</button>
             ))}
-          </div>
+          </RadioGroup>
           {m.stage === 'pilot' ? <Link className="nl-rg-meta" to={SCREEN_PATH.go_live} search={{ market: m.id } as never}>{t('goLiveLink')}</Link> : null}
         </div>
       )) : <div className="nl-rg-meta">{t('noMarkets')}</div>}

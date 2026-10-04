@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Checkbox, Dialog, Field, FileButton, OptionCard, TextArea, TextInput, useLocale } from '@northline/ui';
+import { Checkbox, Dialog, Field, FileButton, OptionCard, RadioGroup, TextArea, TextInput, useLocale } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { uploadDocument } from '../storefront/api';
 import type { Check, CompleteInput } from './api';
@@ -82,7 +82,7 @@ export function CheckDialog({ merchantId, check, title, pending, errors, onSubmi
         </>
       )}
       {check.action === 'choose' && (
-        <div className="nl-ob-stack" role="radiogroup" aria-label={title}>
+        <RadioGroup className="nl-ob-stack" aria-label={title}>
           {key === 'returns_policy' && <>{radio('standard', t('ret_standard'))}{radio('perishables', t('ret_perishables'))}</>}
           {key === 'category_permits' && <>{radio('none', t('permitsNone'))}{radio('reference', t('permitsNumbers'))}</>}
           {key === 'aglc' && <>{radio('not_applicable', t('aglcNone'))}{radio('reference', t('aglcLicence'))}</>}
@@ -91,14 +91,14 @@ export function CheckDialog({ merchantId, check, title, pending, errors, onSubmi
             : <Field label={t('aglcLicence')} error={err('reference')}><TextInput value={reference} onChange={e => setReference(e.target.value)} /></Field>)}
           {err('choice') ? <div role="alert" className="nl-error">{err('choice')}</div> : null}
           {choice !== 'reference' && err('reference') ? <div role="alert" className="nl-error">{err('reference')}</div> : null}
-        </div>
+        </RadioGroup>
       )}
       {check.action === 'slot' && (
         <div className="nl-ob-stack">
           <span className="nl-label">{t('dlgSlots')}</span>
-          <div className="nl-ob-slots" role="radiogroup" aria-label={t('dlgSlots')}>
+          <RadioGroup className="nl-ob-slots" aria-label={t('dlgSlots')}>
             {visitSlots(new Date()).map(s => { const iso = s.toISOString(); return radio(iso, slotLabel(iso, locale)); })}
-          </div>
+          </RadioGroup>
           {err('reference') ? <div role="alert" className="nl-error">{err('reference')}</div> : null}
         </div>
       )}

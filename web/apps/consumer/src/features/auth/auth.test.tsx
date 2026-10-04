@@ -220,6 +220,30 @@ describe('create account (design 06 auth, new)', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Account created.');
   });
 
+  it('the second-factor options are one Tab stop; the arrow keys move and select (S-140)', async () => {
+    open('/register');
+    await userEvent.type(await screen.findByLabelText('Full name'), 'Amara Osei');
+    await userEvent.type(screen.getByLabelText('Mobile number'), '4035550201');
+    await userEvent.type(screen.getByLabelText('Email (receipts)'), 'amara@example.ca');
+    await userEvent.click(screen.getByRole('checkbox'));
+    await userEvent.click(screen.getByRole('button', { name: 'Send code' }));
+    await userEvent.type(await screen.findByLabelText(/6-digit code sent to/), '654321');
+    await userEvent.click(screen.getByRole('button', { name: 'Verify' }));
+    const options = await screen.findByRole('radiogroup', { name: 'Second factor' });
+    const [passkey, app, sms] = within(options).getAllByRole('radio');
+    expect([passkey, app, sms].map(r => r!.getAttribute('tabindex'))).toEqual(['0', '-1', '-1']);
+    passkey!.focus();
+    await userEvent.keyboard('{ArrowDown}');
+    expect(app).toHaveFocus();
+    expect(app).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('button', { name: 'Scan QR code' })).toBeInTheDocument();
+    await userEvent.keyboard('{ArrowUp}{ArrowUp}');
+    expect(sms).toHaveFocus();
+    expect(sms).toHaveAttribute('aria-checked', 'true');
+    await userEvent.keyboard('{Home}');
+    expect(passkey).toHaveAttribute('aria-checked', 'true');
+  });
+
   it('pre-fills what Google / Apple gave us', async () => {
     open('/register?firstName=Amara&lastName=Osei&email=amara%40example.ca&provider=apple&relay=1');
     expect(await screen.findByLabelText('Full name')).toHaveValue('Amara Osei');

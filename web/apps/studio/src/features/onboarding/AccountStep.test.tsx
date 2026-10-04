@@ -34,6 +34,18 @@ describe('AccountStep', () => {
     expect(screen.getByText('Next: business, then the full AHS food checklist.')).toBeTruthy();
   });
 
+  it('the business type picker is one Tab stop; the arrow keys move and select (S-140)', async () => {
+    mockFetch(c => (c.url === '/bff/session' ? { body: SESSION } : undefined));
+    const onTypeChange = vi.fn();
+    renderWithProviders(<AccountStep type={undefined} onboarding={undefined} isNew={false} onTypeChange={onTypeChange} onDone={() => {}} />);
+    const radios = screen.getAllByRole('radio');
+    expect(radios.map(r => r.getAttribute('tabindex'))).toEqual(radios.map((_, i) => (i === 0 ? '0' : '-1')));
+    radios[0]!.focus();
+    await user().keyboard('{ArrowDown}');
+    expect(document.activeElement).toBe(radios[1]);
+    expect(onTypeChange).toHaveBeenCalledTimes(1);
+  });
+
   it('existing customer: optional work email is validated, then the applicant is created', async () => {
     const onDone = vi.fn();
     const calls = mockFetch(c => {
