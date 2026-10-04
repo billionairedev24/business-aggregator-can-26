@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -34,9 +35,16 @@ class HomeService implements ViewHome {
     private final KitchenAvailability kitchens;
     private final RatingQuery ratings;
     private final CategorySource categories;
+    private final HomeCache cache;
 
+    /** A cache hit takes no database connection (SUPPORTS: one is bound on the first query of a miss). */
     @Override
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public HomeSummary of(String city, Locale locale) {
+        return cache.get(city, locale, () -> read(city, locale));
+    }
+
+    private HomeSummary read(String city, Locale locale) {
         var businesses = directory.active(Set.of("provider", "seller", "kitchen", "both"), city);
         var providers =
                 only(businesses, b -> b.type().equals("provider") || b.type().equals("both"));

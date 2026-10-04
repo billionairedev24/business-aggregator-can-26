@@ -154,6 +154,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | ✓ | ✓ | | ✓ | yes |
 | `DB_POOL_SIZE` | ✓ | ✓ | | ✓ | no (10; worker 5) |
 | `DB_CONNECTION_TIMEOUT_MS` | ✓ | | | | no (`5000`: a request waits this long for a database connection, then gets 503 `overloaded` — S-119, [load-testing.md](load-testing.md)) |
+| `PUBLIC_PAGES_CACHE_TTL` | ✓ | | | | no (`30s`: the home page and kitchens list's city-level reads are kept this long per instance, dropped on visibility events; `0s` = off — engineering follow-ups, [load-testing.md](load-testing.md)) |
 | `REDIS_HOST` | ✓ | ✓ | ✓ | ✓ | yes |
 | `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`, `REDIS_SSL` | ✓ | ✓ | ✓ | ✓ | no (6379, none, none, false) |
 | `KAFKA_BOOTSTRAP` | ✓ | ✓ | | ✓ | yes (auth since S-28: user.registered) |

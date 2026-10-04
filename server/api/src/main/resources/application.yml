@@ -195,6 +195,10 @@ northline:
   stripe:                                                      # Stripe Connect (merchants) outside local/test
     secret-key: ${STRIPE_SECRET_KEY:}
     api-base: ${STRIPE_API_BASE:}
+  # Engineering follow-ups (S-119 F5, docs/runbooks/load-testing.md): the home page's summary and the kitchens list's
+  # city-level part are kept this long per instance (keyed by market, language), dropped at once when a business's
+  # visibility or a kitchen's state changes on this instance. 0s turns the cache off.
+  public-pages.cache-ttl: ${PUBLIC_PAGES_CACHE_TTL:30s}
   # Search API (S-44, docs/runbooks/search.md): elasticsearch (listings_en / listings_fr, filled by the worker) | local
   # (no index: every search is empty; the `local` profile's default, refused under staging/prod).
   search:
