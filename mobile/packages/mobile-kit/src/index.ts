@@ -13,8 +13,12 @@ export {
   expoPushPlatform,
   pushRegistrar,
   handleNotificationTaps,
+  installPush,
+  siteHostOf,
   parseDeepLink,
   routeOf,
+  type AppPush,
+  type AppPushOptions,
   type DeepLink,
   type DeviceRegistryApi,
   type ExpoNotificationsModule,
@@ -51,3 +55,23 @@ export {
 } from './i18n';
 export { MIN_TARGET, colors, fonts, radius, space, theme, type Theme } from './theme';
 export { PushHooks, setPushRegistrar, type PushRegistrar } from './push/hooks';
+// mobile gaps part 1: photos from the apps (pilot feedback screenshots, problem-report photos) and pilot feedback
+export {
+  REPORT_PHOTO_MAX,
+  REPORT_PHOTO_MAX_BYTES,
+  REPORT_PHOTO_TYPES,
+  SCREENSHOT_MAX_BYTES,
+  SCREENSHOT_TYPES,
+  checkPhoto,
+  photoForm,
+  photoType,
+  pilotApi,
+  screenOf,
+  type FeedbackApp,
+  type FeedbackCategory,
+  type FeedbackSeverity,
+  type PhotoProblem,
+  type PickedImage,
+  type PilotFeedback,
+  type PilotStatus,
+} from './photos';
