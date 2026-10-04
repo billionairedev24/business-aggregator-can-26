@@ -50,7 +50,7 @@ describe('Listing vetting › Licences (2026-10-04)', () => {
   it('rejects with a reason and a note', async () => {
     const calls = api(['admin']);
     renderConsole('/vetting?view=licences');
-    await screen.findByRole('heading', { level: 1 });
+    await screen.findAllByText('TP-1');
     await user().click(within(row('TP-1')).getByRole('button', { name: /Reject/ }));
     const dialog = await screen.findByRole('dialog', { name: 'Reject the licence of Prairie Cellars' });
     await user().selectOptions(within(dialog).getByLabelText('Why'), 'wrong_class');
