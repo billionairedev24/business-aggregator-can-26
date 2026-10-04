@@ -35,13 +35,28 @@ export async function mockApi(page: Page, app: App, { signedIn }: { signedIn?: b
   return missing;
 }
 
-/** Opens `path` in `locale` and waits for the page heading. */
+/**
+ * React's hydration warnings (development wording and production error codes #418 text, #419, #421, #422, #423, #425):
+ * the server-rendered page and the browser's first render differ, so React throws the server's HTML away and renders
+ * again on the client (engineering follow-ups: the consumer product page did that on every load, S-117 finding).
+ */
+export const HYDRATION = /hydrat|did not match|server rendered|Minified React error #(418|419|421|422|423|425)\b/i;
+
+/** Opens `path` in `locale` and waits for the page heading. Fails on a hydration warning (server-rendered apps). */
 export async function open(page: Page, app: App, path: string, locale: Locale, ready = 'h1') {
   if (app !== 'consumer') await page.addInitScript(l => { try { localStorage.setItem('nl.locale', l); } catch { /* ignore */ } }, locale);
   const url = app === 'consumer' ? `${path}${path.includes('?') ? '&' : '?'}lang=${locale}` : path;
+  const hydration: string[] = [];
+  const onConsole = (m: { type(): string; text(): string }) => { if ((m.type() === 'error' || m.type() === 'warning') && HYDRATION.test(m.text())) hydration.push(m.text().slice(0, 300)); };
+  const onError = (e: Error) => { if (HYDRATION.test(e.message)) hydration.push(e.message.slice(0, 300)); };
+  page.on('console', onConsole);
+  page.on('pageerror', onError);
   await page.goto(url, { waitUntil: 'networkidle' });
   await page.locator(ready).first().waitFor({ state: 'visible', timeout: 20_000 });
   await page.waitForTimeout(300);
+  page.off('console', onConsole);
+  page.off('pageerror', onError);
+  if (app === 'consumer') expect.soft(hydration, `${path} (${locale}): React hydration warnings`).toEqual([]);
 }
 
 interface Finding { id: string; impact: string; wcag: boolean; help: string; nodes: number; targets: string[] }

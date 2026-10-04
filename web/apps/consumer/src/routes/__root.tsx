@@ -11,12 +11,18 @@ import { RouteError } from '../features/shell/RouteError';
 import { htmlLang, persistLocale, urlLocale } from '../lib/locale';
 import { publicConfig, requestLocale } from '../lib/request';
 import { RouterSiteLink } from '../lib/SiteLinkAdapter';
+import { regionsQuery } from '../features/location/regions';
 import type { RouterContext } from '../router';
 
 const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Instrument+Sans:wght@400;500;600;700&display=swap';
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: () => ({ locale: requestLocale(), config: publicConfig() }),
+  // Engineering follow-ups (S-117 finding): the region model gives every page its market's time zone. Fetched here, it
+  // is in the server's render and in the state the browser hydrates from; fetched by the page's useQuery only, the
+  // server rendered times in UTC and the browser in the market's zone — a hydration mismatch on every product page.
+  // prefetchQuery never throws: without the api the page still renders (in the platform zone, on both sides).
+  loader: ({ context }) => context.queryClient.prefetchQuery(regionsQuery(context.locale)),
   head: () => ({
     meta: [{ charSet: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1' }, { title: 'Northline' }],
     links: [
