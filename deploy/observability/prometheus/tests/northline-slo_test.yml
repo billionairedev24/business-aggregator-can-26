@@ -221,6 +221,56 @@ tests:
         runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/checkout-availability.md
         summary: Checkout errors are burning the 30-day error budget (99.9 %)
         title: (ticket) northline-checkout availability SLO error budget burn rate is too fast.
+- name: 'checkout (2026-10-04, S-119 F10): food orders count — every food order confirm answers 502, page; food quotes do not'
+  interval: 1m
+  input_series:
+  - series: http_server_requests_seconds_count{application="northline-api",method="POST",uri="/api/v1/me/food-orders/{orderId}/confirm",status="502"}
+    values: 0+20x20
+  - series: http_server_requests_seconds_count{application="northline-api",method="POST",uri="/api/v1/me/food-orders",status="201"}
+    values: 0+20x20
+  - series: http_server_requests_seconds_count{application="northline-api",method="POST",uri="/api/v1/me/food-orders/quote",status="200"}
+    values: 0+500x20
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: NorthlineCheckoutAvailabilityBurn
+    exp_alerts:
+    - exp_labels:
+        category: availability
+        severity: page
+        sloth_severity: page
+        journey: checkout
+        owner: platform
+        sloth_id: northline-checkout-availability
+        sloth_service: northline-checkout
+        sloth_slo: availability
+      exp_annotations:
+        runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/checkout-availability.md
+        summary: Checkout errors are burning the 30-day error budget (99.9 %)
+        title: (page) northline-checkout availability SLO error budget burn rate is too fast.
+    - exp_labels:
+        category: availability
+        severity: ticket
+        sloth_severity: ticket
+        journey: checkout
+        owner: platform
+        sloth_id: northline-checkout-availability
+        sloth_service: northline-checkout
+        sloth_slo: availability
+      exp_annotations:
+        runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/checkout-availability.md
+        summary: Checkout errors are burning the 30-day error budget (99.9 %)
+        title: (ticket) northline-checkout availability SLO error budget burn rate is too fast.
+- name: 'checkout: a failing food quote alone burns nothing (quotes are not in the SLO)'
+  interval: 1m
+  input_series:
+  - series: http_server_requests_seconds_count{application="northline-api",method="POST",uri="/api/v1/me/food-orders/quote",status="503"}
+    values: 0+20x20
+  - series: http_server_requests_seconds_count{application="northline-api",method="POST",uri="/api/v1/me/food-orders",status="201"}
+    values: 0+20x20
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: NorthlineCheckoutAvailabilityBurn
+    exp_alerts: []
 - name: 'payouts: every payout run fails for 20 minutes — page'
   interval: 1m
   input_series:
