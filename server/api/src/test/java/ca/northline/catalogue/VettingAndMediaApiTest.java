@@ -88,7 +88,7 @@ class VettingAndMediaApiTest extends CatalogueApiTest {
         @Test
         void cleanProductIsApprovedAndPublished() throws Exception {
             var biz = seller(MerchantRole.TECHNICIAN);
-            var id = product(biz, AUTO_PARTS, 2000, upload(biz, png(1200, 1200, Color.WHITE)));
+            var id = product(biz, AUTO_PARTS, inBandPrice(AUTO_PARTS, 2000), upload(biz, png(1200, 1200, Color.WHITE)));
             submit(biz, id);
             awaitApproved(biz, id);
             // resubmitting an approved listing is a conflict
@@ -287,7 +287,7 @@ class VettingAndMediaApiTest extends CatalogueApiTest {
             var owner = seller(MerchantRole.OWNER);
             var bytes = png(1250, 1250, Color.WHITE);
             var image = upload(owner, bytes);
-            var id = product(owner, AUTO_PARTS, 2000, image);
+            var id = product(owner, AUTO_PARTS, inBandPrice(AUTO_PARTS, 2000), image);
             submit(owner, id);
             awaitApproved(owner, id);
             var unused = upload(owner, png(1260, 1260, Color.WHITE));
@@ -329,10 +329,10 @@ class VettingAndMediaApiTest extends CatalogueApiTest {
             var image = upload(first, png(1400, 1400, Color.WHITE));
             var body = """
                     {"identifierType":"gtin","gtin":"%s","title":"New wiper","brand":"Acme","categoryId":"%s",
-                     "attributes":{"partType":"Brakes","length":"n/a","position":"Front"},"priceCents":2000,"stock":3,
+                     "attributes":{"partType":"Brakes","length":"n/a","position":"Front"},"priceCents":%d,"stock":3,
                      "imageSource":"own","imageIds":["%s"],"fulfilment":["pickup"],"countryOfOrigin":"CA",
                      "restrictedOk":true,"bilingualOk":true}
-                    """.formatted(gtin, AUTO_PARTS, image);
+                    """.formatted(gtin, AUTO_PARTS, inBandPrice(AUTO_PARTS, 2000), image);
             var id = json(mvc.perform(postJson("/api/v1/merchants/{m}/products", body, first.merchantId())
                                     .with(TestJwt.member(first.userId())))
                             .andExpect(status().isCreated()))

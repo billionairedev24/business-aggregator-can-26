@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -53,6 +54,8 @@ class CommercialNoticesTest extends WorkerIntegrationTest {
     @Autowired
     PersonalNotices personal;
 
+    /** The clock is shared by every worker test class: start from noon whatever the previous class left. */
+    @BeforeEach
     @AfterEach
     void noon() {
         clock.set(NotificationTestBeans.NOON_IN_EDMONTON);
@@ -119,7 +122,10 @@ class CommercialNoticesTest extends WorkerIntegrationTest {
 
         consent(kofi.id(), "marketing_sms", "withdrawn"); // e.g. the opt-out link of an earlier text
         clock.set(MORNING);
-        notifier.sendDue(50);
+        // the job's batch is global: rows other test classes left due by the morning may come first
+        for (var i = 0; i < 100 && deferred(kofi.id()) > 0; i++) {
+            notifier.sendDue(50);
+        }
 
         assertThat(pushes.to(kofi.id())).hasSize(1);
         assertThat(texts.to(kofi.phone())).isEmpty();
@@ -163,7 +169,9 @@ class CommercialNoticesTest extends WorkerIntegrationTest {
     Member customer(String locale) {
         var id = "u_" + Events.id();
         var email = id.toLowerCase(Locale.ROOT) + "@example.com";
-        var phone = "+1587557" + String.format("%04d", NUMBERS.incrementAndGet() % 10_000);
+        // its own exchange: PushEndToEndTest picks numbers in +1587557 too, and a shared number mixes the recorded
+        // texts
+        var phone = "+1587558" + String.format("%04d", NUMBERS.incrementAndGet() % 10_000);
         jdbc.sql("""
                         insert into identity.users (id, email, phone, first_name, last_name, display_name, locale, status)
                         values (:id, :email, :phone, 'Amara', 'Osei', 'Amara Osei', :locale, 'active')""")
@@ -175,7 +183,12 @@ class CommercialNoticesTest extends WorkerIntegrationTest {
         return new Member(id, email, phone);
     }
 
-    /** As the api writes them (V300). */
+    static final AtomicLong CONSENT_ORDER = new AtomicLong();
+
+    /**
+     * As the api writes them (V300), each a little later than the one before: the newest record is the person's
+     * consent, and two records with the same time were ordered by their ids alone.
+     */
     void consent(String userId, String category, String action) {
         jdbc.sql("""
                         insert into messaging.consent_records (id, user_id, category, action, at, source, wording_version)
@@ -184,7 +197,10 @@ class CommercialNoticesTest extends WorkerIntegrationTest {
                 .param("u", userId)
                 .param("c", category)
                 .param("a", action)
-                .param("at", java.sql.Timestamp.from(clock.instant().minusSeconds(60)))
+                .param(
+                        "at",
+                        java.sql.Timestamp.from(
+                                clock.instant().minusSeconds(60).plusMillis(CONSENT_ORDER.incrementAndGet())))
                 .param("w", "granted".equals(action) ? "account.sms.2026-10" : null)
                 .update();
     }
