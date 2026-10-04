@@ -6,17 +6,22 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.payments.application.PaymentsJobs;
+import ca.northline.shared.security.StaffRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
 import com.jayway.jsonpath.JsonPath;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import javax.imageio.ImageIO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -308,7 +313,17 @@ class SomethingWrongApiTest extends IntegrationTest {
     @Test
     void photos_helpAndCases_andANote() throws Exception {
         var order = delivered(446);
-        var jpeg = new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0x10};
+        var out = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(40, 30, BufferedImage.TYPE_INT_RGB), "jpg", out);
+        var jpeg = out.toByteArray();
+        // S-104: a JPEG must be a readable image, not only start like one (photos come from the apps now too)
+        mvc.perform(multipart("/api/v1/me/case-uploads")
+                        .file(new MockMultipartFile(
+                                "file", "fake.jpg", "image/jpeg", new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 0
+                                }))
+                        .with(TestJwt.customer(amara)))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors[0].message").value("Attach JPG, PNG, HEIC or PDF files."));
         var upload = mvc.perform(multipart("/api/v1/me/case-uploads")
                         .file(new MockMultipartFile("file", "kale.jpg", "image/jpeg", jpeg))
                         .with(TestJwt.customer(amara)))
@@ -357,6 +372,45 @@ class SomethingWrongApiTest extends IntegrationTest {
         mvc.perform(get("/api/v1/me/cases/{id}", refundId).with(TestJwt.customer(stranger)))
                 .andExpect(status().isNotFound());
         mvc.perform(get("/api/v1/me/case-uploads/{id}", photo).with(TestJwt.customer(stranger)))
+                .andExpect(status().isNotFound());
+
+        // support sees the photo on the case in the console (mobile gaps part 1): listed on the message, then opened
+        var ticket = jdbc.sql("""
+                        select h.ref_id from messaging.threads h join messaging.messages m on m.thread_id = h.id
+                         where h.ref_type = 'ticket' and h.kind = 'case' and ? = any(m.attachments)""").params(photo).query(String.class).single();
+        var agent = data.user("Ana Agent");
+        mvc.perform(get("/api/v1/console/support/tickets/{id}", ticket).with(TestJwt.staff(agent, StaffRole.SUPPORT)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notes[0].attachments[0].id").value(photo))
+                .andExpect(jsonPath("$.notes[0].attachments[0].fileName").value("kale.jpg"))
+                .andExpect(jsonPath("$.notes[0].attachments[0].contentType").value("image/jpeg"));
+        var file = mvc.perform(get("/api/v1/console/support/tickets/{id}/attachments/{f}", ticket, photo)
+                        .with(TestJwt.staff(agent, StaffRole.SUPPORT)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andReturn()
+                .getResponse()
+                .getContentAsByteArray();
+        assertThat(file).isEqualTo(jpeg);
+        // the customer, a staff member without the support screen: refused; a file of no message on this case: 404
+        mvc.perform(get("/api/v1/console/support/tickets/{id}/attachments/{f}", ticket, photo)
+                        .with(TestJwt.customer(amara)))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/console/support/tickets/{id}/attachments/{f}", ticket, photo)
+                        .with(TestJwt.staff(agent, StaffRole.FINANCE)))
+                .andExpect(status().isForbidden());
+        String loose = JsonPath.read(
+                mvc.perform(multipart("/api/v1/me/case-uploads")
+                                .file(new MockMultipartFile("file", "other.jpg", "image/jpeg", jpeg))
+                                .with(TestJwt.customer(amara)))
+                        .andExpect(status().isCreated())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString(),
+                "$.id");
+        mvc.perform(get("/api/v1/console/support/tickets/{id}/attachments/{f}", ticket, loose)
+                        .with(TestJwt.staff(agent, StaffRole.SUPPORT)))
                 .andExpect(status().isNotFound());
     }
 

@@ -1,10 +1,12 @@
 package ca.northline.messaging.application;
 
+import ca.northline.shared.Bytes;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.MerchantScope;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -45,6 +47,14 @@ public interface SupportDesk {
     Queue queue(MerchantScope scope, Filter filter, String staffId);
 
     TicketDetail ticket(String ticketId);
+
+    /**
+     * A file attached to a message of the case's conversation (a customer's problem-report photos, a business's file):
+     * empty when the file isn't on this case (or is gone — retention, erasure).
+     */
+    Optional<File> attachment(String ticketId, String attachmentId);
+
+    record File(Bytes bytes, String contentType, String fileName) {}
 
     TicketDetail reply(Reply command);
 
@@ -164,7 +174,14 @@ public interface SupportDesk {
      * @param by {@code merchant | customer | agent | system}
      * @param name display snapshot ("Dev K.")
      */
-    record Note(String by, @Nullable String name, String body, Instant at) {}
+    record Note(String by, @Nullable String name, String body, Instant at, List<NoteFile> attachments) {
+        public Note {
+            attachments = List.copyOf(attachments);
+        }
+    }
+
+    /** A file on a message (photos from the app or the web), opened through the ticket's attachment endpoint. */
+    record NoteFile(String id, String fileName, String contentType, long size) {}
 
     record PendingRefund(RefundRequest request, Ticket ticket) {}
 
