@@ -17,6 +17,11 @@ obs-status: ## Is the observability stack running, does each backend and Grafana
 obs-open: ## The Northline overview dashboard in Grafana
 	@$(byo_arg) $(ROOT)/scripts/observability.sh open
 
+# Your Grafana on :3000 collides with the consumer web app: this moves it (scripts/grafana-move-port.sh).
+.PHONY: grafana-move-port
+grafana-move-port: ## Move YOUR Grafana (Homebrew or Docker) from :3000 to PORT (default 3001) and set GRAFANA_URL in .env
+	@PORT="$(or $(PORT),3001)" bash $(ROOT)/scripts/grafana-move-port.sh
+
 # Your own Grafana: GRAFANA_URL + GRAFANA_TOKEN (or GRAFANA_USER + GRAFANA_PASSWORD), GRAFANA_ALERT_RULES=1 to import
 # the rules as Grafana-managed ones; GRAFANA_BACKEND_HOST=host.docker.internal when that Grafana runs in Docker.
 obs-grafana-provision: ## Data sources (Prometheus, Loki, Tempo, Alertmanager), folder Northline, every dashboard into GRAFANA_URL (idempotent)
