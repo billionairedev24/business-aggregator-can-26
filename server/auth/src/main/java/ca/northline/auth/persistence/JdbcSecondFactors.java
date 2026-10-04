@@ -22,12 +22,15 @@ class JdbcSecondFactors implements SecondFactors {
     @Override
     public void saveTotp(String userId, String secret, Instant confirmedAt) {
         jdbc.sql("""
-                        INSERT INTO auth.totp_secrets (user_id, secret_enc, confirmed_at) VALUES (:id, :enc, :at)
+                        INSERT INTO auth.totp_secrets (user_id, secret_enc, key_id, confirmed_at)
+                        VALUES (:id, :enc, :key, :at)
                         ON CONFLICT (user_id) DO UPDATE
-                           SET secret_enc = excluded.secret_enc, confirmed_at = excluded.confirmed_at, last_used_step = NULL
+                           SET secret_enc = excluded.secret_enc, key_id = excluded.key_id,
+                               confirmed_at = excluded.confirmed_at, last_used_step = NULL
                         """)
                 .param("id", userId)
                 .param("enc", cipher.encrypt(secret))
+                .param("key", cipher.keyId())
                 .param("at", utc(confirmedAt))
                 .update();
     }
@@ -35,11 +38,12 @@ class JdbcSecondFactors implements SecondFactors {
     @Override
     public Optional<StoredTotp> findTotp(String userId) {
         return jdbc.sql("""
-                        SELECT secret_enc, coalesce(last_used_step, -1) AS last_step FROM auth.totp_secrets
+                        SELECT secret_enc, key_id, coalesce(last_used_step, -1) AS last_step FROM auth.totp_secrets
                          WHERE user_id = :id AND confirmed_at IS NOT NULL
                         """)
                 .param("id", userId)
-                .query((rs, _) -> new StoredTotp(cipher.decrypt(rs.getBytes("secret_enc")), rs.getLong("last_step")))
+                .query((rs, _) -> new StoredTotp(
+                        cipher.decrypt(rs.getBytes("secret_enc"), rs.getString("key_id")), rs.getLong("last_step")))
                 .optional();
     }
 

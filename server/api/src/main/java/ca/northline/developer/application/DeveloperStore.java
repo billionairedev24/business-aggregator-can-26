@@ -4,6 +4,7 @@ import ca.northline.developer.domain.ApiKey;
 import ca.northline.developer.domain.AuditRecord;
 import ca.northline.developer.domain.WebhookDelivery;
 import ca.northline.developer.domain.WebhookEndpoint;
+import ca.northline.shared.Bytes;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +31,28 @@ public interface DeveloperStore {
      * Stores the new secret; the current one keeps signing until {@code previousUntil} (null = it is dropped at once).
      */
     void replaceSecret(String endpointId, byte[] encryptedSecret, String secretRef, @Nullable Instant previousUntil);
+
+    /**
+     * Engineering follow-ups (S-115): endpoints whose stored secrets may not be under the current key — {@code
+     * secret_ref} names another key, or a previous secret still signs (it keeps the key it was encrypted with when the
+     * secret is rotated) — oldest first, at most {@code limit}.
+     */
+    List<StoredSecrets> secretsToReencrypt(String currentRef, Instant now, int limit);
+
+    /** Endpoints whose {@code secret_ref} isn't {@code currentRef} (0 = the previous key can go once no previous secret needs it). */
+    int secretsUnderOtherKeys(String currentRef);
+
+    /**
+     * Writes the re-encrypted secrets, only while the row still holds what was read (a rotation by the business at
+     * the same moment wins); true when it was written.
+     */
+    boolean reencrypt(StoredSecrets read, Bytes secret, @Nullable Bytes previous, String currentRef);
+
+    record StoredSecrets(
+            String endpointId,
+            @Nullable String secretRef,
+            Bytes secret,
+            @Nullable Bytes previous) {}
 
     /** Active again, with a clean health record (S-33). */
     void enableEndpoint(String endpointId);

@@ -213,6 +213,8 @@ externalSecrets:
     ES_PASSWORD: es-password
     TOTP_KEY: totp-key
     WEBHOOK_SECRET_KEY: webhook-secret-key
+    TOTP_PREVIOUS_KEYS: totp-previous-keys                          # only during a TOTP_KEY rotation (key-rotation.md § 7)
+    WEBHOOK_SECRET_PREVIOUS_KEYS: webhook-secret-previous-keys      # only during a WEBHOOK_SECRET_KEY rotation (§ 3)
     STUDIO_BFF_SECRET: studio-bff-secret
     STUDIO_BFF_SECRET_HASH: studio-bff-secret-hash
     CONSUMER_BFF_SECRET: consumer-bff-secret              # S-45: the consumer-bff's client secret (plain)
@@ -485,6 +487,7 @@ apps:
     secretEnv:
       DB_PASSWORD: true
       WEBHOOK_SECRET_KEY: true
+      WEBHOOK_SECRET_PREVIOUS_KEYS: false   # a key rotation only: add it to externalSecrets.optionalKeys meanwhile
       REDIS_PASSWORD: false
       KAFKA_SASL_JAAS_CONFIG: false
       ES_PASSWORD: false
@@ -554,6 +557,7 @@ apps:
     secretEnv:
       DB_PASSWORD: true
       TOTP_KEY: true
+      TOTP_PREVIOUS_KEYS: false        # a key rotation only: add it to externalSecrets.optionalKeys meanwhile
       STUDIO_BFF_SECRET_HASH: true
       CONSUMER_BFF_SECRET_HASH: true   # S-45: the consumer-bff exists (required since then)
       CONSOLE_BFF_SECRET_HASH: true    # S-90: the console-bff exists (required since then)
@@ -698,6 +702,7 @@ apps:
       SMTP_PASSWORD: false          # EMAIL_PROVIDER=smtp
       SMS_AUTH_TOKEN: false         # SMS_PROVIDER=twilio
       WEBHOOK_SECRET_KEY: true      # S-33: decrypts partner webhook signing secrets (the api's key; required in the cloud)
+      WEBHOOK_SECRET_PREVIOUS_KEYS: false  # a key rotation only (the api's previous keys; externalSecrets.optionalKeys)
       PUSH_APNS_KEY: false          # S-102: PUSH_PROVIDER=native (required in prod, values-prod.yaml)
       PUSH_FCM_SERVICE_ACCOUNT: false  # S-102: PUSH_PROVIDER=native (required in prod)
     runAsUser: 65532

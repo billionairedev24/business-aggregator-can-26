@@ -168,6 +168,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `CONSUMER_ORIGIN` | ✓ (S-76: the embed script's site) | ✓ | | | yes |
 | `CONSOLE_ORIGIN`, `WEBAUTHN_RP_ID` | | ✓ | | | yes |
 | `TOTP_KEY` | | ✓ | | | yes |
+| `TOTP_KEY_ID`, `TOTP_PREVIOUS_KEYS`, `TOTP_REENCRYPT_EVERY` | | ✓ | | | no (`v1`, empty, `1h`: the key's id, older keys that only decrypt during a rotation — a secret —, the re-encryption job; [key-rotation.md § 7](key-rotation.md#7-authenticator-secrets-key-totp_key)) |
 | `STUDIO_BFF_SECRET` | | | ✓ | | yes |
 | `STUDIO_BFF_SECRET_HASH` | | ✓ | | | yes |
 | `CONSUMER_BFF_SECRET` | | | ✓ (`consumer` profile) | | yes, for the consumer-bff (S-45, [Consumer BFF](#consumer-bff-s-45)) |
@@ -185,6 +186,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | ✓ | | | | staging and prod (`fixtures` refused there — S-23, [registries.md](registries.md)) |
 | `REGISTRY_CORPORATIONS_CANADA_URL`/`_KEY`/`_KEY_HEADER`, `REGISTRY_ALBERTA_URL`/`_KEY`, `REGISTRY_CALGARY_URL`/`_DATASET`/`_APP_TOKEN`, `REGISTRY_RECHECK_AFTER`, `REGISTRY_RECHECK_CRON` | ✓ | | | | per provider ([registries.md](registries.md#set-up-per-environment)) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | ✓ | yes (the same value in both: the api encrypts partner webhook secrets, the worker decrypts them to sign — S-33) |
+| `WEBHOOK_SECRET_KEY_ID`, `WEBHOOK_SECRET_PREVIOUS_KEYS` | ✓ | | | ✓ | no (`v1`, empty: the key's id and older keys that only decrypt during a rotation — a secret —, the same in both; [key-rotation.md § 3](key-rotation.md#the-key-that-encrypts-the-stored-secrets-webhook_secret_key)) |
+| `WEBHOOK_REENCRYPT_EVERY` | ✓ | | | | no (`1h`: the job that re-encrypts stored webhook secrets with the current key) |
 | `WEBHOOKS_ALLOW_LOCAL` | | | | ✓ | no (`false`; `true` only locally — http://localhost endpoints; refused in the cloud) |
 | `IMPORT_IMAGES_ALLOW_LOCAL` | ✓ | | | | no (`false`; `true` only locally — bulk-import image URLs on http:// or loopback, never private or metadata addresses; refused in the cloud — S-72, [webhooks.md § SSRF rules](webhooks.md#ssrf-rules-platform-egresspolicy)) |
 | `SEARCH_PROVIDER` | ✓ | | | | no (`elasticsearch`; `local` = no index, the `local` profile's default, refused in staging/prod — [search.md § 7](search.md#7-the-search-api-s-44)) |

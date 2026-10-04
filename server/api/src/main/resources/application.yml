@@ -183,6 +183,11 @@ northline:
       - { name: morning, starts: "08:00", ends: "11:00", cutoff: "07:30", fee-cents: 199, capacity: 40 }
     direct: { eta: 45m, fee-cents: 999 }
   developer.webhook-key: ${WEBHOOK_SECRET_KEY:}                # base64 32 bytes; blank = fixed dev key under local/test
+  # Engineering follow-ups (S-115, docs/runbooks/key-rotation.md § 3): the key's id, keys that only decrypt during a
+  # rotation (id=base64,…, the worker's too) and the job that re-encrypts every stored secret with the current key.
+  developer.webhook-key-id: ${WEBHOOK_SECRET_KEY_ID:v1}
+  developer.webhook-previous-keys: ${WEBHOOK_SECRET_PREVIOUS_KEYS:}
+  developer.webhook-reencrypt-every: ${WEBHOOK_REENCRYPT_EVERY:1h}
   payments:                                                    # blank key = fake Stripe gateway (DECISIONS.md, Finance)
     stripe-secret-key: ${STRIPE_SECRET_KEY:}
     stripe-publishable-key: ${STRIPE_PUBLISHABLE_KEY:}

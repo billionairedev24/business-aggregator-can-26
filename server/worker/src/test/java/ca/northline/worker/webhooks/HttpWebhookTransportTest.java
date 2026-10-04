@@ -64,6 +64,8 @@ class HttpWebhookTransportTest {
     static WebhookProperties settings(boolean allowLocal) {
         return new WebhookProperties(
                 null,
+                null,
+                null,
                 allowLocal,
                 4,
                 20,
