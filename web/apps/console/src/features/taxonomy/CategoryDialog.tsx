@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button, Checkbox, Dialog, Field, Select, TextInput, useLocale } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useRegions } from '../shell/api';
-import { useApproveSuggestion, useCreateCategory, useRegulate, useUpdateCategory, type Category, type CategoryInput, type Screen, type Suggestion } from './api';
+import { useApproveSuggestion, useCreateCategory, useRegulate, useUpdateCategory, type Category, type CategoryInput, type Screen, type Suggestion, useClassify } from './api';
 import { errorText } from './format';
 import { useTaxonomyT, type TaxonomyKey } from './messages';
 
@@ -66,9 +66,28 @@ export function CategoryDialog({ data, category, suggestion, onClose, onResolved
       ) : null}
       <Field label={t('f_registry')} error={errors.regulatedRegistry}><TextInput value={registry} maxLength={80} onChange={e => setRegistry(e.target.value)} /></Field>
       <Checkbox checked={vs} onChange={setVs} label={t('f_vs')} />
+      {category && category.root !== 'service' ? <AgeClassField data={data} category={category} /> : null}
       {category ? <ProvinceRules data={data} category={category} /> : null}
       {run.error && !(run.error instanceof ValidationError) ? <p role="alert" className="nl-tx-error">{errorText(run.error)}</p> : null}
     </Dialog>
+  );
+}
+
+/**
+ * 2026-10-04: the age-restriction class (alcohol, tobacco and vape, cannabis accessories). Listings in the category then
+ * need the business's licence and an age-verified customer; the minimum age per province is region data.
+ */
+function AgeClassField({ data, category }: { data: Screen; category: Category }) {
+  const t = useTaxonomyT();
+  const classify = useClassify();
+  const current = data.categories.find(c => c.id === category.id) ?? category;
+  const error = classify.error instanceof ValidationError ? Object.values(classify.error.byField())[0] : errorText(classify.error);
+  return (
+    <Field label={t('f_ageClass')} hint={t('f_ageClassHint')} error={error ?? undefined}>
+      <Select value={current.ageClass ?? ''} disabled={classify.isPending}
+        options={[{ value: '', label: t('age_none') }, ...(['alcohol', 'tobacco', 'cannabis'] as const).map(c => ({ value: c, label: t(`age_${c}`) }))]}
+        onChange={e => classify.mutate({ id: category.id, ageClass: e.target.value || null })} />
+    </Field>
   );
 }
 
