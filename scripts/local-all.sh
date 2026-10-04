@@ -194,8 +194,21 @@ export_default() {
   export "$1=$2"; WIRED="$WIRED $1=$2"
 }
 
+# Docker: the stand-ins and the observability stack run in it. Says which of "no CLI", "no engine" or "wrong engine" it
+# is, with docker's own error, instead of one message for all three.
+check_docker() {
+  command -v docker >/dev/null 2>&1 || die "the docker command is not installed. Install Docker Desktop, OrbStack or Colima (+ brew install docker), then run make up-all again"
+  local err
+  if err=$(docker info 2>&1 >/dev/null); then return 0; fi
+  local ctx; ctx=$(docker context show 2>/dev/null || echo default)
+  die "Docker's engine does not answer (context '$ctx'${DOCKER_HOST:+, DOCKER_HOST=$DOCKER_HOST}): $(printf '%s' "$err" | head -n 1)
+    Start it: Docker Desktop: open -a Docker · OrbStack: open -a OrbStack · Colima: colima start --cpu 4 --memory 8
+    Engine running but this still fails? Pick the right one: docker context ls, then docker context use <name> (or unset DOCKER_HOST)
+    Give it about 8 GB of memory: Kafka, Elasticsearch and the observability stack run there"
+}
+
 cmd_up() {
-  command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 || die "Docker is not running (the stand-ins and the observability stack need it)"
+  check_docker
   cmd_check
   local services; services="$(standin_services)"
   say ""; say "${c_b}Stand-ins${c_off} ${c_dim}$services${c_off}"
