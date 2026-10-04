@@ -69,7 +69,7 @@ export function AgeCheck({ age, onChanged, returnTo = 'web' }: { age: CheckoutAg
           {error ? <Alert tone="error" role="alert">{error}</Alert> : null}
         </>
       )}
-      <p className="cart-note">{t('door')}</p>
+      <p className="cart-note">{t(returnTo === 'web_food' ? 'doorFood' : 'door')}</p>
     </section>
   );
 }

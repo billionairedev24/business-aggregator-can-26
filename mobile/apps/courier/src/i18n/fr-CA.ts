@@ -151,7 +151,7 @@ export const frCA: Record<MessageKey, string> = {
   'idcheck.reason.intoxicated': 'La personne semble en état d’ébriété',
   'idcheck.reason.other': 'Autre raison',
   'idcheck.refuseConfirm': 'La rapporter au commerce',
-  'idcheck.refuseNote': 'Ne laissez rien à la porte. Le client est remboursé pour les articles, et votre course vous est payée.',
+  'idcheck.refuseNote': 'Ne laissez rien à la porte. La commande retourne au commerce, et le client est remboursé pour les articles.',
   'idcheck.chooseReason': 'Choisissez d’abord une raison.',
   'idcheck.cancel': 'Retour',
 };

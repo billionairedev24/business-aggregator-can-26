@@ -152,7 +152,7 @@ export const en = {
   'idcheck.reason.intoxicated': 'The person seems intoxicated',
   'idcheck.reason.other': 'Another reason',
   'idcheck.refuseConfirm': 'Take it back to the business',
-  'idcheck.refuseNote': "Leave nothing at the door. The customer is refunded for the items, and you're paid for the trip.",
+  'idcheck.refuseNote': 'Leave nothing at the door. The order goes back to the business, and the customer is refunded for the items.',
   'idcheck.chooseReason': 'Choose a reason first.',
   'idcheck.cancel': 'Back',
 } as const;

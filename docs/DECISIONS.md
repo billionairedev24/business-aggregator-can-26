@@ -7868,3 +7868,121 @@ live; a hypercare rota for two weeks.
   no `/go-live` entry (axe runs in its Vitest tests); no CSV of the checklist (the script prints it); gates and their
   owners are code, not editable; `make go-live-check` outside `local` needs a staff access token by hand. Never run
   against a real Prometheus rules API, live Stripe keys, a paging tool or production.
+
+## 2026-10-04 — Age-restricted purchases (age verification driven by the items)
+
+Owner decision. Runbook: [docs/runbooks/age-restricted.md](runbooks/age-restricted.md). Migrations V340–V345 (dev seed
+V349), above main's V334.
+
+- **Restricted categories are data.** A taxonomy category (or its group) carries an age class — `alcohol`, `tobacco`
+  (tobacco and vaping products), `cannabis` (cannabis accessories) — in `catalogue.category_age_classes` (V341), kept
+  beside the categories like `category_labels` because categories are seeded after the migrations;
+  `catalogue.age_class_of(category)` reads a leaf's own class or its group's. Products inherit the class from their
+  category and nothing a seller sends can lower it. Staff change it in the console taxonomy (audited). Kitchens mark a
+  dish "contains alcohol" (`food.menu_items.age_class`). Booking services are not restricted.
+- **Tobacco/vape and cannabis accessories stay banned** (`northline.catalogue.banned-categories`, unchanged): counsel H2
+  is open and the App Store (1.4.3) and Google Play don't allow apps that facilitate their sale. Their age rows exist.
+  Only alcohol can be sold today.
+- **Ages, hours and delivery permissions are region data** (`region.age_rules`, V340: province × class → minimum age,
+  `delivery_allowed`, `pickup_allowed`, optional delivery and pickup windows that may run past midnight, `source`,
+  `confirmed`). No province literal in code; no row = that class can't go to that province. Values from public
+  summaries (the statute sites were unreachable: egress blocked), all `confirmed = false`, counsel H4. Seeded hours:
+  alcohol ON (AGCO: delivery 09–23, pickup 07–23) and AB (AGLC: 10:00–02:00); none elsewhere.
+- **The strictest class in the cart decides**, under the delivery address's province (pickup: the business's). Checkout
+  (goods and food) answers `age` on the setup and the quote, and refuses at start and place: 409
+  `age_verification_required`, `age_under_minimum`, `restricted_hours` (the delivery window or pickup time outside the
+  province's hours, in the market's zone), 422 `age_rules` on the province field when a class can't go there.
+- **Sellers' licences** (`merchants.restricted_licences`, V342) live in the merchants module beside the other
+  compliance documents: class, province, number, the document through the storage port, expiry; staff decide in the
+  console's Listing vetting › Licences; every step audited and emailed (en/fr). One licence in force per class; a
+  renewal replaces the previous one when approved. **Hidden until approved**: restricted listings can't be submitted or
+  published without one (409 `licence_required`); losing it hides the platform-held listings (`licence_hold` flags on
+  offers and dishes) and an approval brings back exactly those. The nightly job expires licences and reminds 30 days
+  before, once. Every restricted listing goes to a person (`AGE_RESTRICTED`), and alcohol/tobacco words outside a
+  restricted category raise `AGE_CLASS_MISMATCH` (en/fr word lists).
+- **The customer's ID check** is a new module, `restricted` (schema `restricted`, V343), behind the port
+  `AgeIdentityProvider`: `stripe` (Stripe Identity, document + matching live selfie, `metadata.northline_purpose=age`,
+  no merchant id so owners' S-22 handling ignores it) and `local` (outcome page; refused in staging/prod). Results come
+  through the existing platform webhook (`payments.IdentitySessionUpdated`) or a read on return. **Kept: "verified over
+  N, on date, by method"** — N is the age in whole years on the day, capped at the strictest minimum in the table (21),
+  so an adult's real age is not kept; the age floor later is N plus the whole years since. The Stripe session is
+  redacted once the result is kept; no document, selfie, date of birth or ID number is stored. Five attempts, then
+  support. The web returns to `CONSUMER_ORIGIN` (now required for the api in staging/prod), the app to
+  `AGE_VERIFICATION_APP_RETURN_URL`.
+- **ID check at handoff.** The order and delivery carry `id_check_age` (V344). Courier app: the stop says "ID check:
+  N+"; the drop-off needs three confirmations (photo ID checked, the account holder's name — shown — matches, of age)
+  before the proof, or a refusal reason (no ID, under age, mismatch, nobody of age, seems intoxicated, other). Studio
+  kitchen display: the same check at the counter for a food pickup with alcohol. Every check is recorded in
+  `restricted.handoff_checks` (answers or reason, who, door/counter, the age) — never an ID image. Northline has no
+  merchant self-delivery, so the counter is the only merchant handoff.
+- **No gifting.** There is no gift or group-order flow; the handoff requires the account holder ("the name matches"),
+  which is the rule. A future gift feature must not include restricted items.
+- **Refusals and returns.** Goods: the courier gets a return stop to the shop (`return` stop kind, delivery
+  `returning` → `returned`), every line is refunded and the delivery fee kept (the trip was made; checkout said so).
+  Food: cooked food can't be resold, so only the alcohol dishes are refunded; the rest, the fees and the tip are
+  charged; the ticket is `refused`. Refunds go through the refund queue as auto-approved cases. Order state
+  `returned` (V344).
+- **Trust & safety:** Listing vetting › Age checks — checks and refusals by reason, province, courier and business, and
+  the age table.
+- **Retention:** `restricted.age_verifications` deleted with the account (no stand-alone period); handoff checks 2
+  years (`AGE_CHECK_RECORDS`, hold `open_dispute`), pseudonymous after erasure; masked to `pending` in the staging
+  copy (S-114). Counsel H5.
+- **Mobile.** Consumer app: Checkout's age step (in-app browser auth session, back to `ca.northline.app:/age-verified`),
+  Continue waits for it. Courier app: the three confirmations, the refusal, the return stop — all through the offline
+  outbox (it stores only the yes/no answers or the reason). Store answers (S-103): `store/policy.json` per app, held by
+  the release check — the consumer app sells alcohol only, rated 18+ with the age gate described; Stripe Identity is a
+  service provider and the result is declared as *Other data types*.
+- **Schema:** V340 `region.age_rules`; V341 `catalogue.category_age_classes`, `catalogue.age_class_of()`,
+  `catalogue.offers.licence_hold`; V342 `merchants.restricted_licences`; V343 schema `restricted`
+  (`age_verifications`, `handoff_checks`); V344 `orders.orders.id_check_age`, state `returned`,
+  `orders.order_lines.age_class`, `fulfilment.deliveries.id_check_age|id_check_province`, states
+  `returning|returned`, stop kind `return`, proof `id_refused`, kitchen stage `refused`,
+  `food.menu_items.age_class|licence_hold`. All additive (CHECKs widened). **Variables:** `AGE_VERIFICATION_PROVIDER`
+  (required in staging/prod), `AGE_VERIFICATION_APP_RETURN_URL`, `RESTRICTED_LICENCE_CRON`; `CONSUMER_ORIGIN` now
+  required by the api in staging/prod.
+- **Tests:** `AgeRestrictedPurchaseApiTest` (licences, queue, expiry and reminders, roles, validation; the cart's age
+  step, under age, untouched carts; the courier's door check; refusal → return and refunds), `KitchenAgeCheckApiTest`,
+  `RestrictedPersonalDataTest`, `AgeRecordTest`, `AgeRulesTest`, `AgeRestrictedVettingTest`, `VettingAndMediaApiTest`,
+  `StripeAgeIdentityStripeMockTest`; web consumer cart/food, Studio compliance/kitchen/menu, console vetting/taxonomy
+  (en/fr-CA); mobile consumer B5 and courier drop-off (en/fr-CA, offline); release check tests.
+- **Not done / never run for real:** Stripe Identity for customers ran only against stripe-mock; no liquor board has
+  been asked whether a marketplace courier may deliver a licensed business's alcohol (H2); no age or hour is confirmed
+  (H4); the biometric/consent questions are open (H5); the consumer web's age step has no a11y page-sweep entry of its
+  own (its Vitest tests run axe); no courier has done a real door check.
+
+## 2026-10-04 — Owner decisions
+
+The owner's answers to open items, applied on the same branch:
+
+1. **Pilot onboarding in production.** Pilot businesses onboard in production while their market is `pilot` (S-120's
+   recommendation, now decided). V345 moves the first of V131's live markets to `pilot` and the others to `waitlist`
+   (never one that went live through an approved launch request); the market goes live only through the two-person
+   switch (S-118). The local dev seed V349 keeps local development, `make e2e`, `make pilot-dry-run` and the go-live
+   rehearsal on live markets; staging (same migrations as prod) needs its market raised before `make e2e-target`
+   ([pilot-onboarding.md § 1](runbooks/pilot-onboarding.md#1-the-path-rehearse-on-staging-onboard-in-production),
+   [e2e.md](runbooks/e2e.md#target-an-environment)).
+2. **The checkout SLO includes food orders** (S-119 F10): `POST /api/v1/me/food-orders` and `…/{orderId}/confirm` in
+   `deploy/observability/slo/checkout.yaml` (availability and latency); quotes stay out. Rules regenerated (and the
+   chart's copies), promtool tests for a failing confirm (pages) and a failing quote (doesn't).
+3. **The courier app is unlisted**: Apple Unlisted App distribution and Google Play's closed testing track (`alpha`,
+   testers = the couriers' Google Group). `store/policy.json`, `eas.json` and the Fastfile's per-app track; the
+   release check holds them ([mobile-release.md § Distribution](runbooks/mobile-release.md#distribution-and-age-restricted-goods)).
+4. **Staging refuses the log-only push and SMS senders like prod.** SMS already did (auth, api, worker); push now
+   refuses `PUSH_PROVIDER=local` under staging too (`PushConfiguration`, required variables, `values-staging.yaml`
+   sets `native` and requires the two secrets). Dev may keep `local`.
+5. **French-first merchants' Stripe receipts may be French only** (Stripe makes no bilingual receipt; S-116's counsel
+   item closed by the owner). No change in behaviour; i18n.md says so.
+6. **Staging requires `api_allowed_cidrs`**: a Terraform validation in the three staging roots (as prod), a
+   `terraform test` run proving an empty list fails, tfvars examples updated; security finding S104-12 fixed.
+7. **Marketplace defaults stand:** the platform SMS budget of 1000 codes an hour (S-104), the darker input borders and
+   placeholders (S-109), the committed a11y fixtures, 44 px controls, marketing consent off by default (S-108). No change.
+8. **French listings are required, not warned, in French-first places** (S-116): the api reads `warn`/`off` on a
+   French-first province or market as `require`; `warn` remains for places that aren't French-first.
+9. **The consumer language picker's "requis au Québec"** now names the French-first places from the region
+   configuration, in French (`requis {places}` with the provinces' French "in" names); the literal and its allowlist
+   entry are gone.
+10. **Confirmed, no change:** masked production copies in staging (S-114); courier account deletion on the website
+    (S-105 — `store/privacy.json` records the decision, so the release check no longer lists it as pending); the hashed
+    pilot invite token (S-120); the go-live `app_stores` gate is optional and a rollback needs one admin (S-118).
+11. **Backlog S-149**: a locked backup vault in a separate account per cloud, with acceptance criteria
+    (`docs/backlog/northline-backlog.csv`, E-12). Not built.

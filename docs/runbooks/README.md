@@ -23,6 +23,7 @@ say where a step is still manual or missing.
 | [registries.md](registries.md) | business registry lookups: Corporations Canada API, Alberta Corporate Registry (search service or registry-agent searches), City of Calgary licences (Socrata), manual review queue, re-checks (S-23) |
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11), webhooks (S-12), Stripe Tax (S-21) |
 | [stripe-incidents.md](stripe-incidents.md) | Stripe incidents: an outage (checkout degrades to 503, what queues), a webhook backlog or replay, Stripe vs ledger mismatches, a dispute spike, leaked keys — decision trees, commands, comms (S-115) |
+| [age-restricted.md](age-restricted.md) | age-restricted purchases (2026-10-04): restricted categories and the region model's minimum ages, hours and delivery rules (sources, counsel), sellers' licences and the console queue, the customer's ID check (Stripe Identity), the ID check at the door and counter, refusals and returns with their refunds, the report, store policies |
 | [key-rotation.md](key-rotation.md) | rotating every key and secret: auth signing keys (JWKS rollover), KMS data keys and the envelope re-wrap job, merchants' webhook secrets, Stripe keys, DB / Kafka / push / OpenRouter / on-call credentials, External Secrets commands per cloud (S-7, S-115) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures (S-13/S-27) |
@@ -81,6 +82,7 @@ say where a step is still manual or missing.
 | Addresses (`PLACES_PROVIDER`) | `local`: fixture Canadian addresses | `local`, or `google` with the dev key | **`google`** (`local` refused) | same |
 | AI (`AI_PROVIDER`, S-129) | `fake`: deterministic answers, no key | `fake`, or `openrouter` with the dev key | **`openrouter`** (`fake` refused; no key yet = AI answers 503) | same |
 | Identity verification (`IDENTITY_PROVIDER`) | `local`: pick the outcome on a page | `local` (owners can't finish) or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
+| Age verification (`AGE_VERIFICATION_PROVIDER`, 2026-10-04) | `local`: pick the outcome on a page | `local` or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
 | SMS / email | logged | *no provider yet (S-8, S-13)* | same | same |
 | Required variables checked at start-up | none | yes | yes (+ Stripe, storage) | yes (+ Stripe, storage) |
 | Log level `ca.northline` | debug | debug | info | info |
@@ -131,6 +133,7 @@ say where a step is still manual or missing.
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` (SMTP to Mailpit) · `smtp` · `ses` · `sendgrid` · `azure` | **done** (S-13, api invitations and money notices — [email.md](email.md); S-27 worker: `payout.failed`) |
   | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
   | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#8-identity-s-22)) |
+  | `northline.age-verification.provider` | `AGE_VERIFICATION_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity, document + selfie) | **done** (2026-10-04, the customer's age check — [age-restricted.md](age-restricted.md)) |
   | `northline.registries.<source>.provider` | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | `fixtures` · `manual` · `api` (Corporations Canada) / `opencorporates` (Alberta) / `socrata` (Calgary) | **done** (S-23, business registry lookups — [registries.md](registries.md)) |
   | `northline.push.provider` | `PUSH_PROVIDER` | `local` (the worker log) · `native` (APNs + FCM) | **done** (S-102, worker push — [push.md](push.md)) |
   | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `aws` (End User Messaging SMS and voice) · `azure` (reserved) | **done** (S-8, auth phone codes — [SMS and voice codes](#sms-and-voice-codes-s-8); S-27: shared library `server/sms`, also api invitations and worker notifications — [notifications.md](notifications.md)) |
@@ -164,7 +167,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `AUTH_INTERNAL_URL` | | | ✓ | | no (= `AUTH_ISSUER`) |
 | `API_URL` | | | ✓ | | yes |
 | `STUDIO_ORIGIN` | ✓ | ✓ | | | yes |
-| `CONSUMER_ORIGIN` | ✓ (S-76: the embed script's site) | ✓ | | | yes |
+| `CONSUMER_ORIGIN` | ✓ (S-76: the embed script's site; 2026-10-04: where the age check returns customers — required in staging and prod) | ✓ | | | yes |
 | `CONSOLE_ORIGIN`, `WEBAUTHN_RP_ID` | | ✓ | | | yes |
 | `TOTP_KEY` | | ✓ | | | yes |
 | `STUDIO_BFF_SECRET` | | | ✓ | | yes |
@@ -181,6 +184,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `TAX_PROVIDER` | ✓ | | | | staging and prod: `stripe` (`local` refused there — S-21, [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
 | `TAX_CODE_SERVICE`, `TAX_CODE_GOODS`, `TAX_CODE_FOOD`, `TAX_RECONCILE_CRON` | ✓ | | | | no (Stripe's general service / goods / prepared-food codes; 03:17 in the platform zone) |
 | `IDENTITY_PROVIDER` | ✓ | | | | staging and prod (`stripe`; `local` refused there — S-22, [stripe.md § Identity](stripe.md#8-identity-s-22)) |
+| `AGE_VERIFICATION_PROVIDER`, `AGE_VERIFICATION_APP_RETURN_URL`, `RESTRICTED_LICENCE_CRON` | ✓ | | | | `AGE_VERIFICATION_PROVIDER` in staging and prod (`stripe`; `local` refused there — 2026-10-04, [age-restricted.md](age-restricted.md)); the others optional |
 | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | ✓ | | | | staging and prod (`fixtures` refused there — S-23, [registries.md](registries.md)) |
 | `REGISTRY_CORPORATIONS_CANADA_URL`/`_KEY`/`_KEY_HEADER`, `REGISTRY_ALBERTA_URL`/`_KEY`, `REGISTRY_CALGARY_URL`/`_DATASET`/`_APP_TOKEN`, `REGISTRY_RECHECK_AFTER`, `REGISTRY_RECHECK_CRON` | ✓ | | | | per provider ([registries.md](registries.md#set-up-per-environment)) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | ✓ | yes (the same value in both: the api encrypts partner webhook secrets, the worker decrypts them to sign — S-33) |
@@ -234,7 +238,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `SMS_PROVIDER`, `SMS_FROM` | ✓ | ✓ | | ✓ | staging and prod (`local` refused there; `dev` may keep `local`). api: team invitations, worker: notifications (S-27) |
 | `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | ✓ | ✓ | | ✓ | with `SMS_PROVIDER=twilio` |
 | `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | ✓ | ✓ | | ✓ | no (`= SMS_FROM`; SDK default region; provider API) |
-| `PUSH_PROVIDER` | | | | ✓ | prod: `native` (`local` refused there; dev and staging may keep `local` until the Apple and Firebase accounts exist — S-102, [push.md](push.md)) |
+| `PUSH_PROVIDER` | | | | ✓ | staging and prod: `native` (`local` refused there — staging since the owner decision of 2026-10-04; dev may keep `local` — S-102, [push.md](push.md)) |
 | `PUSH_APNS_KEY_ID`, `PUSH_APNS_TEAM_ID`, `PUSH_APNS_KEY`, `PUSH_FCM_SERVICE_ACCOUNT` | | | | ✓ | with `PUSH_PROVIDER=native`; `PUSH_APNS_KEY` and `PUSH_FCM_SERVICE_ACCOUNT` are secrets ([push.md § Set-up](push.md#set-up)) |
 | `PUSH_APNS_URL`, `PUSH_APNS_CONSUMER_TOPIC`, `PUSH_APNS_COURIER_TOPIC`, `PUSH_FCM_URL`, `PUSH_STALE_AFTER` | | | | ✓ | no (`https://api.push.apple.com` — `https://api.sandbox.push.apple.com` for development builds; `ca.northline.app`; `ca.northline.courier`; `https://fcm.googleapis.com`; `90d`) |
 | `CONSUMER_ORIGIN` (worker) | | | | ✓ | staging and prod (the chart sets it from `urls.consumer`): the deep links in customers' and couriers' pushes and emails (S-102) |

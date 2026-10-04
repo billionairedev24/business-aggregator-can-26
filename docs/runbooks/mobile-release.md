@@ -338,7 +338,7 @@ data is retained" answer. The courier app creates no accounts: couriers use the 
 **Stripe Identity** (consumer, 2026-10-04) is a service provider: the age check's photo ID, selfie and face match
 happen in Stripe's hosted page in the in-app browser and stay with Stripe (the session is redacted once the age is
 known). Northline declares only the result (*Other data types*). The face match is Stripe's, not Northline's: the
-answer to *Sensitive info › biometric* stays "not collected" — counsel confirms (docs/legal/counsel-questions.md H4).
+answer to *Sensitive info › biometric* stays "not collected" — counsel confirms ([counsel-questions.md H5](../compliance/legal/counsel-questions.md)).
 
 ## Age ratings
 
