@@ -1,6 +1,6 @@
 import { createFileRoute, Navigate, Outlet, useRouterState } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { ErrorState, PageSkeleton, useLocale } from '@northline/ui';
+import { ErrorState, PageSkeleton, PageState, useLocale } from '@northline/ui';
 import { ApiError } from '../lib/http';
 import { merchantQuery } from '../features/shell/api';
 import { requireSession } from '../features/shell/guards';
@@ -16,7 +16,7 @@ export const Route = createFileRoute('/b/$merchantId')({
   codeSplitGroupings: [['component'], ['pendingComponent'], ['errorComponent'], ['notFoundComponent']],
   beforeLoad: ({ context, location }) => requireSession(context.queryClient, location.href),
   loader: ({ context, params }) => context.queryClient.ensureQueryData(merchantQuery(params.merchantId)),
-  pendingComponent: () => <div style={{ padding: 32 }}><PageSkeleton /></div>,
+  pendingComponent: function MerchantPending() { const t = useShellT(); return <PageState title={`Northline ${t('studio')}`}><PageSkeleton /></PageState>; },
   errorComponent: MerchantError,
   component: StudioRoute,
 });
@@ -48,5 +48,5 @@ function StudioRoute() {
 function MerchantError({ error, reset }: { error: unknown; reset: () => void }) {
   const t = useShellT();
   const missing = error instanceof ApiError && (error.status === 403 || error.status === 404);
-  return <div style={{ padding: 32 }}><ErrorState message={missing ? t('notFound') : t('loadError')} onRetry={missing ? undefined : reset} /></div>;
+  return <PageState title={`Northline ${t('studio')}`}><ErrorState message={missing ? t('notFound') : t('loadError')} onRetry={missing ? undefined : reset} /></PageState>;
 }

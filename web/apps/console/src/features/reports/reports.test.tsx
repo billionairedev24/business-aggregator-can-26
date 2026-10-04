@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { renderConsole, staffApi } from '../../test/render';
+import { renderConsole, staffApi, screenReady } from '../../test/render';
 import type { Report } from './api';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
@@ -50,7 +50,7 @@ describe('reports & analytics (S-95, design 03)', () => {
     const calls = staffApi(['finance'], c => (c.url.includes('/api/v1/console/reports') ? { body: REPORT } : undefined));
     const user = userEvent.setup({ delay: null });
     renderConsole('/reports');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user.click(screen.getByRole('radio', { name: 'Alberta' }));
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/reports?province=AB'))).toBe(true));
   });

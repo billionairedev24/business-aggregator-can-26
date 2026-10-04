@@ -77,7 +77,7 @@ function MarketingConsent() {
   const date = (iso: string) => new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { dateStyle: 'medium' }).format(new Date(iso));
   return (
     <section className="nl-set-consent" aria-labelledby="nl-set-consent">
-      <h3 id="nl-set-consent">{t('consentTitle')}</h3>
+      <h2 id="nl-set-consent">{t('consentTitle')}</h2>
       <p className="nl-set-quiet">{t('consentLede')}</p>
       <div className="nl-set-consent-row">
         <Switch checked={email.granted} disabled={change.isPending} label={t('consentSwitch')}

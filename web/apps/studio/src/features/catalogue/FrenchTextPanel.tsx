@@ -42,7 +42,7 @@ function FrenchFields({ merchantId, listingId, disabled }: { merchantId: string;
 
   return (
     <section className="nl-cat-french" aria-labelledby={`french-${listingId}`}>
-      <h3 id={`french-${listingId}`} className="nl-label">{t('title')}</h3>
+      <h2 id={`french-${listingId}`} className="nl-label">{t('title')}</h2>
       <p className="nl-hint">{t('hint')}</p>
       {rule !== 'off' && missing && <Alert tone={rule === 'require' ? 'error' : 'neutral'} role="status">{t(rule === 'require' ? 'require' : 'warn')}</Alert>}
       <Field label={t('name')} error={errors.title}>
