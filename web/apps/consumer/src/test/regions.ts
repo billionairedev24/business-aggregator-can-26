@@ -4,7 +4,8 @@
  * code never does.
  */
 const p = (code: string, name: string, nameFr: string, status: string, timeZone: string, privacyLaw = 'pipeda', inFr = `en ${nameFr}`, ofFr = `de ${nameFr}`) =>
-  ({ code, name, nameFr, nameIn: `in ${name}`, nameOf: name, inFr, ofFr, status, timeZone, timeZones: [timeZone], privacyLaw, taxBps: 500 });
+  ({ code, name, nameFr, nameIn: `in ${name}`, nameOf: name, inFr, ofFr, status, timeZone, timeZones: [timeZone], privacyLaw, taxBps: 500,
+    frenchFirst: privacyLaw === 'qc_law25' }); // S-116: the French-first rows V315 seeds (French the first official language)
 
 const PROVINCES = [
   p('AB', 'Alberta', 'Alberta', 'live', 'America/Edmonton', 'ab_pipa', 'en Alberta', "de l'Alberta"),
