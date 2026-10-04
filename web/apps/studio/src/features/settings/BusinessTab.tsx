@@ -151,7 +151,7 @@ function Licences() {
               })}
             </ul>
           )}
-          <Link className="nl-small" to={screenHref(merchantId, 'compliance')}>{t('manageCompliance')}</Link>
+          <Link className="nl-small nl-set-tolink" to={screenHref(merchantId, 'compliance')}>{t('manageCompliance')}</Link>
         </>
       )}
     </section>

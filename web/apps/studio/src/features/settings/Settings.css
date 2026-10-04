@@ -96,3 +96,5 @@
 .nl-set-section { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--color-divider); }
 .nl-set-section h2 { font-size: 20px; margin: 0 0 6px; }
 .nl-set-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+/* S-143: a 44 px target for the standalone link, without moving the line */
+.nl-set-tolink { display: inline-block; padding-block: 12px; margin-block: -12px; }

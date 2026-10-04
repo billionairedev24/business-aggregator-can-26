@@ -46,3 +46,5 @@
 .nl-result-tag .tag { font-size: 10px; padding: 1px 7px; }
 
 .nl-results-more { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 28px; font-size: 13px; color: var(--color-neutral-700); }
+/* S-143: breadcrumb links get a 44 px target without moving the line */
+.nl-results-crumbs a { display: inline-block; min-width: 44px; padding-block: 14px; margin-block: -14px; text-align: center; }
