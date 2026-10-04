@@ -17,6 +17,8 @@ export const config = {
   clientId: 'mobile-consumer',
   /** The system-browser sign-in's redirect (RFC 8252 § 7.1). */
   redirectUri: 'ca.northline.app:/oauth2redirect',
+  /** 2026-10-04: where the identity provider sends the customer back after the ID check (the api's AGE_VERIFICATION_APP_RETURN_URL). */
+  ageReturnUri: 'ca.northline.app:/age-verified',
   /** The in-app sign-in's redirect: the claimed https link on the consumer site (src/auth/handoff.ts). */
   httpsRedirectUri: `${siteOrigin}/app/oauth2redirect`,
   scopes: ['openid', 'profile', 'orders', 'bookings', 'offline_access'],

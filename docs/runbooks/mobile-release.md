@@ -23,7 +23,7 @@ and the push credentials. For release managers first, then mobile developers. Ru
 4. [The first release, step by step](#the-first-release-step-by-step) · [TestFlight and internal testing](#testflight-and-internal-testing)
 5. [Going public: App Review and the staged rollout](#going-public-app-review-and-the-staged-rollout) · [Every later release](#every-later-release)
 6. [Over-the-air updates](#over-the-air-updates) · [Rollback](#rollback)
-7. [Store listings](#store-listings) · [Privacy answers](#privacy-answers) · [Age ratings](#age-ratings) · [Screenshots](#screenshots)
+7. [Store listings](#store-listings) · [Privacy answers](#privacy-answers) · [Age ratings](#age-ratings) · [Distribution and age-restricted goods](#distribution-and-age-restricted-goods) · [Screenshots](#screenshots)
 8. [Checks and make targets](#checks-and-make-targets) · [CI](#ci) · [Troubleshooting](#troubleshooting)
 
 ## At a glance
@@ -220,6 +220,9 @@ from App Store Connect if something is wrong (up to 30 days).
 internal release is promoted to **production at 10 %**, with the release notes. Watch Play Console › Android vitals
 (crash and ANR rates) and the api's errors for a day, then `action=rollout` with `0.5`, then `1` (completes it).
 `action=halt` stops it ([Rollback](#rollback)). Play may review the first production release for several days.
+**The courier app** goes the same way to its **closed testing track** (`alpha`), not production (unlisted, owner
+decision 2026-10-04): the Fastfile picks the track per app. On iOS, an approved courier version is released the same
+way; after the first approval, request Unlisted App distribution ([§ Distribution](#distribution-and-age-restricted-goods)).
 
 Release notes per locale: `store.config.json` `releaseNotes` (≤ 4000) and `changelogs/default.txt` (≤ 500); the
 check holds them to the limits and to French being translated.
@@ -291,11 +294,10 @@ city or time zone (the check refuses them).
   `mobile/`). Pull what someone changed in App Store Connect: `npx eas-cli metadata:pull` in the app directory, then
   review the diff.
 - The App Review contact and demo account are never in `store.config.json` (the check refuses `apple.review`).
-- **The courier app** is written as a public listing that says a Northline courier account is needed. Couriers are
-  Northline's workforce: an *unlisted* App Store app (requested from Apple after approval) or Apple Business Manager,
-  and a Play closed track, are alternatives ([courier-app.md § Store accounts](courier-app.md#store-accounts)) — the
-  listing files stay the same either way. Google wants the background-location declaration and a short video
-  (`details.json` `backgroundLocation`).
+- **The courier app is unlisted** (owner decision 2026-10-04, [§ Distribution and age-restricted
+  goods](#distribution-and-age-restricted-goods)). Its listing files still exist (App Review and the Play closed track
+  show them to the couriers who have the link) and say a Northline courier account is needed. Google wants the
+  background-location declaration and a short video (`details.json` `backgroundLocation`).
 
 ## Privacy answers
 
@@ -321,6 +323,7 @@ development builds). Every data type is *linked to the person* and used for *app
 | Customer support › Other in-app messages | ✓ (optional) | | problem reports |
 | Photos | | ✓ (optional) | the proof-of-delivery photo |
 | Other user content › Other user-generated content | ✓ (optional) | ✓ (optional) | consumer: booking notes; courier: the customer's signature |
+| Other data › Other data types; Personal info › Other info | ✓ (optional) | | the age check's result for a customer who buys alcohol: "verified over N, on date, by method" (2026-10-04) — never the ID, photos or date of birth |
 
 Data safety also asks: *Is all collected data required?* (no — the optional ones above), *Can users request deletion?*
 — **yes (S-105)**: the consumer app deletes the account in the app (You › Personal details › Your data › Delete my
@@ -329,12 +332,19 @@ period — docs/runbooks/privacy-requests.md), and the web link Google asks for 
 `https://northline.ca/account?tab=profile#your-data` (`store/privacy.json` `accountDeletion`). What the law makes
 Northline keep after deletion (receipts, tax and payment records, without the name) is the Data safety form's "some
 data is retained" answer. The courier app creates no accounts: couriers use the same web page — ask App Review whether
-5.1.1(v) applies (the release check keeps it pending).
+5.1.1(v) applies — **owner decision 2026-10-04: courier deletion stays on the website** (`store/privacy.json`
+`accountDeletion.webOnlyDecision`); answer App Review with that page if it asks.
+
+**Stripe Identity** (consumer, 2026-10-04) is a service provider: the age check's photo ID, selfie and face match
+happen in Stripe's hosted page in the in-app browser and stay with Stripe (the session is redacted once the age is
+known). Northline declares only the result (*Other data types*). The face match is Stripe's, not Northline's: the
+answer to *Sensitive info › biometric* stays "not collected" — counsel confirms (docs/legal/counsel-questions.md H4).
 
 ## Age ratings
 
-- **Consumer: 18+.** The marketplace lists alcohol, tobacco and vape products from licensed shops (seed categories),
-  and the Terms require the age of majority. App Store: `alcoholTobaccoOrDrugUseOrReferences: FREQUENT_OR_INTENSE`, the
+- **Consumer: 18+.** The marketplace sells alcohol from licensed shops behind an ID check (2026-10-04; tobacco, vape
+  and cannabis accessories are banned on the platform — the stores don't allow apps that facilitate their sale), and
+  the Terms require the age of majority. App Store: `alcoholTobaccoOrDrugUseOrReferences: FREQUENT_OR_INTENSE`, the
   rest `NONE`, no gambling, no unrestricted web access (`store.config.json` `apple.advisory`). Play: the IARC
   questionnaire answers in `store/play/details.json` (`sellsAlcoholTobaccoOrAgeRestrictedGoods: true`); target
   audience 18 and over; not designed for children.
@@ -342,6 +352,26 @@ data is retained" answer. The courier app creates no accounts: couriers use the 
   adults); record the rating IARC gives in `details.json`.
 - App Store Connect's newer age-rating questions (in-app controls, user-generated content, messaging, advertising):
   none of these exist in either app — answer *No* in the console (EAS Metadata does not carry them yet).
+
+## Distribution and age-restricted goods
+
+`store/policy.json` per app (2026-10-04), held by the release check:
+
+| | consumer | courier |
+|---|---|---|
+| App Store | public | **Unlisted App distribution**: after the first approval, request it at developer.apple.com/support/unlisted-app-distribution (the App Store Connect app id and why: Northline's couriers only); couriers install from the direct link. Not searchable, no charts. |
+| Google Play | production track (staged rollout) | **closed testing track** (`alpha`): `eas.json` `submit.production.android.track` and the Fastfile's `track`; testers = the couriers' Google Group (Testing › Closed testing › Testers), the opt-in link goes to new couriers. Managed Google Play private apps would need the couriers' phones in a managed organisation — they are contractors' own phones. |
+| age-restricted goods | **alcohol only** — App Store Review Guideline 1.4.3 and Play's Inappropriate Content policy don't allow facilitating tobacco or vape sales (Play: nor marijuana products), so those categories stay banned (`northline.catalogue.banned-categories`). Before unbanning one, the apps must hide it. | none (couriers sell nothing) |
+| age gate | checkout's ID check (Stripe Identity), the courier's ID check at the door — [age-restricted.md](age-restricted.md) | the door check: three confirmations or a refusal reason |
+| rating that goes with it | Apple `alcoholTobaccoOrDrugUseOrReferences: FREQUENT_OR_INTENSE` (18+ in the current scheme); Play IARC `sellsAlcoholTobaccoOrAgeRestrictedGoods: true`, target audience 18 and over only | unchanged (mild references) |
+
+App Review notes for the consumer app (enter by hand with the review account): *"Alcohol is sold only by licensed
+businesses, only where its sale and delivery are legal (provincial minimum age and delivery hours from our region
+configuration), after a one-time ID check (Stripe Identity), and the courier checks photo ID at delivery. No tobacco,
+vape or cannabis products are sold."* The review build talks to production, where the ID check is Stripe Identity in
+live mode (a real ID): the reviewer's path (browse, book, buy a non-alcohol item) never meets it. If App Review asks to
+see the age step, attach a screen recording of it from a staging build (Stripe Identity test mode, whose test
+documents verify without a real ID) rather than weakening the check for a review account.
 
 ## Screenshots
 

@@ -47,6 +47,8 @@ export const ENVIRONMENTS = {
  * @property {string} productionId   bundle id / package of the store variant
  * @property {boolean} siteOrigin    whether the build carries EXPO_PUBLIC_SITE_ORIGIN (the consumer app's App Links)
  * @property {string} tagPrefix      release tags: <tagPrefix>X.Y.Z
+ * @property {'public' | 'unlisted'} distribution  owner decision 2026-10-04: the courier app is not a public listing —
+ *                                   Apple Unlisted App distribution and a Play closed testing track (store/policy.json)
  */
 /** @type {Readonly<Record<'consumer' | 'courier', AppSpec>>} */
 export const APPS = {
@@ -56,6 +58,7 @@ export const APPS = {
     productionId: 'ca.northline.app',
     siteOrigin: true,
     tagPrefix: 'consumer-v',
+    distribution: 'public',
   },
   courier: {
     dir: 'apps/courier',
@@ -63,6 +66,7 @@ export const APPS = {
     productionId: 'ca.northline.courier',
     siteOrigin: false,
     tagPrefix: 'courier-v',
+    distribution: 'unlisted',
   },
 };
 
@@ -113,7 +117,27 @@ export const DATA_TYPES = {
   CustomerSupport: { apple: 'NSPrivacyCollectedDataTypeCustomerSupport', play: 'Messages/Other in-app messages' },
   PhotosorVideos: { apple: 'NSPrivacyCollectedDataTypePhotosorVideos', play: 'Photos and videos/Photos' },
   OtherUserContent: { apple: 'NSPrivacyCollectedDataTypeOtherUserContent', play: 'App activity/Other user-generated content' },
+  OtherDataTypes: { apple: 'NSPrivacyCollectedDataTypeOtherDataTypes', play: 'Personal info/Other info' },
 };
+
+/**
+ * What each distribution means in each store (store/policy.json `distribution`) and the Play track the production
+ * submit profile sends to: a public app goes to production as a draft; an unlisted one to the closed testing track
+ * (EAS calls it `alpha`), whose testers are the couriers' Google Group.
+ */
+export const DISTRIBUTIONS = {
+  public: { apple: 'public', play: 'production', track: 'production' },
+  unlisted: { apple: 'unlisted', play: 'closed', track: 'alpha' },
+};
+
+/**
+ * Age-restricted goods the apps may sell (store/policy.json `ageRestrictedGoods.inApp`): App Store Review Guideline
+ * 1.4.3 does not allow facilitating the sale of tobacco or vape products (or cannabis outside licensed dispensaries),
+ * and Google Play's Inappropriate Content policy does not allow facilitating the sale of tobacco, e-cigarettes or
+ * marijuana products. Alcohol is allowed with an age gate and only where it is legal — what Northline does (2026-10-04).
+ */
+export const STORE_ALLOWED_AGE_CLASSES = ['alcohol'];
+export const AGE_CLASSES = ['alcohol', 'tobacco', 'cannabis'];
 
 /** Which Android permission means which data type must be declared. */
 export const PERMISSION_DATA = {

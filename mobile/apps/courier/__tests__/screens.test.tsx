@@ -227,6 +227,81 @@ describe('the drop-off', () => {
   });
 });
 
+describe('age-restricted drop-offs (2026-10-04)', () => {
+  async function restricted(options: Parameters<typeof start>[0] = {}) {
+    const ctx = await start({ url: '/stops/st-3/dropoff', fixture: { idCheck: true }, ...options });
+    await act(async () => {
+      await ctx.services.courier.pickup('st-1', true, 'k1');
+      await ctx.services.queryClient.invalidateQueries();
+    });
+    return ctx;
+  }
+
+  it('asks for the three ID confirmations before the hand-over and sends only the answers', async () => {
+    const { server } = await restricted();
+    expect(await screen.findByText('Check photo ID before you hand it over')).toBeTruthy();
+    expect(screen.getByText('The ID must show: Sam Example')).toBeTruthy();
+    fireEvent.press(screen.getByRole('tab', { name: 'PIN' }));
+    fireEvent.changeText(screen.getByLabelText("Customer's PIN"), FIXTURE_PIN);
+    fireEvent.press(screen.getByRole('button', { name: 'Complete drop-off' }));
+    expect(await screen.findByText(/Confirm all three before you hand it over/)).toBeTruthy();
+    expect(server.calls.some((c) => c.path.endsWith('/stops/st-3/dropoff'))).toBe(false);
+    fireEvent.press(screen.getByRole('checkbox', { name: 'I checked a valid government photo ID' }));
+    fireEvent.press(screen.getByRole('checkbox', { name: 'The name and photo match the person in front of me' }));
+    fireEvent.press(screen.getByRole('checkbox', { name: 'The ID shows they are 19 or older' }));
+    expect(screen.getByRole('checkbox', { name: 'The ID shows they are 19 or older' }).props.accessibilityState).toMatchObject({ checked: true });
+    fireEvent.press(screen.getByRole('button', { name: 'Complete drop-off' }));
+    await waitFor(() => expect(server.run!.stops.find((s) => s.id === 'st-3')!.state).toBe('done'));
+    expect(server.idChecks).toEqual([{ stopId: 'st-3', outcome: 'passed' }]);
+  });
+
+  it("can't hand it over: a reason, then a return stop back to the business", async () => {
+    const { server, view } = await restricted();
+    fireEvent.press(await screen.findByRole('button', { name: "Can't hand it over" }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Take it back to the business' }));
+    expect(await screen.findByText('Choose a reason first.')).toBeTruthy();
+    fireEvent.press(screen.getByRole('radio', { name: 'Nobody of age is here' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Take it back to the business' }));
+    await waitFor(() => expect(server.idChecks).toEqual([{ stopId: 'st-3', outcome: 'refused', reason: 'nobody_of_age' }]));
+    await waitFor(() => expect(view.getPathname()).toBe('/run'));
+    expect(await screen.findByLabelText('Stop 5 of 5: Return to the business, Juniper Bakery, To do')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Stop 5 of 5: Return to the business, Juniper Bakery, To do'));
+    expect(await screen.findByText(/Bring it back to the business/)).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: "It's back at the business" }));
+    await waitFor(() => expect(server.run!.stops.find((s) => s.kind === 'return')!.state).toBe('done'));
+  });
+
+  it('a refusal made offline waits on the phone, in French', async () => {
+    const { getLocales } = jest.requireMock('expo-localization') as { getLocales: jest.Mock };
+    getLocales.mockReturnValue([{ languageTag: 'fr-CA' }]);
+    let offline = false;
+    const { server, services } = await restricted({
+      wrap: (f) => (async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (offline && String(input).includes('/courier/stops/')) throw new TypeError('Network request failed');
+        return f(input, init);
+      }) as typeof fetch,
+    });
+    try {
+      expect(await screen.findByText('Vérifiez la pièce d’identité avant de remettre la commande')).toBeTruthy();
+      expect(screen.getByRole('checkbox', { name: 'La pièce indique que la personne a 19 ans ou plus' })).toBeTruthy();
+      offline = true;
+      fireEvent.press(screen.getByRole('button', { name: 'Impossible de la remettre' }));
+      fireEvent.press(await screen.findByRole('radio', { name: 'Aucune pièce d’identité avec photo' }));
+      fireEvent.press(screen.getByRole('button', { name: 'La rapporter au commerce' }));
+      await waitFor(() => expect(services.outbox.snapshot.pending.map((a) => a.kind)).toEqual(['refuse']));
+      expect(JSON.stringify(services.outbox.snapshot.pending)).not.toMatch(/Sam Example/);
+      offline = false;
+      await act(async () => {
+        services.outbox.wake();
+        await services.outbox.flush();
+      });
+      expect(server.idChecks).toEqual([{ stopId: 'st-3', outcome: 'refused', reason: 'no_id' }]);
+    } finally {
+      getLocales.mockReturnValue([{ languageTag: 'en-CA' }]);
+    }
+  });
+});
+
 describe('the account', () => {
   it('warns before signing out with unsent actions, then signs out', async () => {
     const { services } = await start({ url: '/account', wrap: (f) => (async (i: RequestInfo | URL, o?: RequestInit) => {

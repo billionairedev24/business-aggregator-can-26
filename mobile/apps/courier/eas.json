@@ -75,7 +75,7 @@
     },
     "production": {
       "extends": "base",
-      "android": { "track": "production", "releaseStatus": "draft" }
+      "android": { "track": "alpha", "releaseStatus": "draft" }
     }
   }
 }

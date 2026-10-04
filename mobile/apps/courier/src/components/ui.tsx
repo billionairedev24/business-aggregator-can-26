@@ -143,6 +143,23 @@ export function Segmented<T extends string>({ options, value, onChange, label }:
   );
 }
 
+/** A checkbox (or one radio of a group) with a 48 dp target: the ID check's confirmations and the refusal's reasons. */
+export function Check({ label, on, onPress, role = 'checkbox', testID }: { label: string; on: boolean; onPress: () => void; role?: 'checkbox' | 'radio'; testID?: string }) {
+  return (
+    <Pressable
+      accessibilityRole={role}
+      accessibilityLabel={label}
+      accessibilityState={role === 'radio' ? { selected: on, checked: on } : { checked: on }}
+      onPress={onPress}
+      testID={testID}
+      style={({ pressed }) => [styles.check, (on || pressed) && styles.checkOn]}
+    >
+      <View style={[styles.box, role === 'radio' && styles.round, on && styles.boxOn]}>{on ? <Text style={[styles.tick, styles.onAccent]}>✓</Text> : null}</View>
+      <Text style={styles.body}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function Row({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[styles.row, style]}>{children}</View>;
 }
@@ -219,5 +236,11 @@ const styles = StyleSheet.create({
   segment: { flex: 1, minHeight: MIN_TARGET, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   segmentOn: { backgroundColor: colors.accent },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], flexWrap: 'wrap' },
+  check: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET, paddingHorizontal: space[3], paddingVertical: space[2], borderRadius: radius.md, borderWidth: 1, borderColor: colors.neutral300, backgroundColor: colors.surface },
+  checkOn: { borderColor: colors.accent, backgroundColor: colors.accent100 },
+  box: { width: 24, height: 24, borderRadius: radius.sm, borderWidth: 2, borderColor: colors.neutral500, alignItems: 'center', justifyContent: 'center' },
+  round: { borderRadius: radius.pill },
+  boxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  tick: { fontFamily: fonts.bodyStrong, fontSize: 16 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space[8] },
 });
