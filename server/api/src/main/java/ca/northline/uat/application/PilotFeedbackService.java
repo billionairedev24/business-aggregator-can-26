@@ -21,8 +21,10 @@ import ca.northline.uat.api.PilotParticipants;
 import ca.northline.uat.application.UatStore.Feedback;
 import ca.northline.uat.application.UatStore.Participant;
 import ca.northline.uat.application.UatStore.Screenshot;
+import ca.northline.uat.domain.FeedbackApp;
 import ca.northline.uat.domain.FeedbackRules;
 import ca.northline.uat.domain.FeedbackState;
+import ca.northline.uat.domain.Persona;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Comparator;
@@ -52,13 +54,13 @@ class PilotFeedbackService implements PilotFeedback, PilotParticipants {
     @Override
     @Transactional(readOnly = true)
     public boolean isParticipant(String userId, @Nullable String merchantId) {
-        return participant(userId, merchantId).isPresent();
+        return participant(userId, merchantId, null).isPresent();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Status status(String userId, @Nullable String merchantId) {
-        var participant = participant(userId, merchantId);
+    public Status status(String userId, @Nullable String merchantId, @Nullable FeedbackApp app) {
+        var participant = participant(userId, merchantId, app);
         return new Status(
                 participant.isPresent(),
                 participant.map(p -> p.persona().code()).orElse(null),
@@ -69,7 +71,7 @@ class PilotFeedbackService implements PilotFeedback, PilotParticipants {
     @Override
     @Transactional
     public Uploaded screenshot(String userId, String contentType, Bytes bytes) {
-        requireParticipant(userId, null, true);
+        requireParticipant(userId, null, true, null);
         if (bytes.isEmpty()) {
             throw RuleViolation.of("file", "required", SCREENSHOT_REQUIRED);
         }
@@ -100,7 +102,7 @@ class PilotFeedbackService implements PilotFeedback, PilotParticipants {
     @Override
     @Transactional
     public Sent send(Submission s) {
-        var participant = requireParticipant(s.userId(), s.merchantId(), false);
+        var participant = requireParticipant(s.userId(), s.merchantId(), false, s.app());
         var body = FeedbackRules.text(s.body());
         if (body.isBlank() || body.length() > BODY_MAX) {
             throw RuleViolation.of("body", body.isBlank() ? "required" : "length", BODY_REQUIRED);
@@ -158,19 +160,30 @@ class PilotFeedbackService implements PilotFeedback, PilotParticipants {
 
     /**
      * The participant row the feedback belongs to: the business's when the person acts for one they're on the team of
-     * (Studio), else their own.
+     * (Studio), else their own. From the courier app only the courier persona counts; elsewhere it comes last (someone
+     * who is both a pilot customer and a pilot courier reports from the consumer app as the customer).
      */
-    private Optional<Participant> participant(String userId, @Nullable String merchantId) {
+    private Optional<Participant> participant(String userId, @Nullable String merchantId, @Nullable FeedbackApp app) {
         var merchants =
                 merchantId != null && memberships.roleOf(merchantId, userId).isPresent()
                         ? List.of(merchantId)
                         : List.<String>of();
-        return directory.activeFor(userId, merchants).stream()
-                .min(Comparator.comparing((Participant p) -> p.merchantId() == null));
+        return pick(directory.activeFor(userId, merchants), app);
     }
 
-    /** @param anyBusiness a screenshot is uploaded before the business is known: any of the person's businesses counts */
-    private Participant requireParticipant(String userId, @Nullable String merchantId, boolean anyBusiness) {
+    private static Optional<Participant> pick(List<Participant> rows, @Nullable FeedbackApp app) {
+        return rows.stream()
+                .filter(p -> app != FeedbackApp.COURIER || p.persona() == Persona.COURIER)
+                .min(Comparator.comparing((Participant p) -> p.merchantId() == null)
+                        .thenComparing(p -> p.persona() == Persona.COURIER));
+    }
+
+    /**
+     * @param anyBusiness a screenshot is uploaded before the business is known: any of the person's businesses counts
+     * @param app the courier app sends as the person's courier persona only
+     */
+    private Participant requireParticipant(
+            String userId, @Nullable String merchantId, boolean anyBusiness, @Nullable FeedbackApp app) {
         if (merchantId != null && memberships.roleOf(merchantId, userId).isEmpty()) {
             throw new AccessDeniedException(NOT_A_MEMBER);
         }
@@ -179,8 +192,7 @@ class PilotFeedbackService implements PilotFeedback, PilotParticipants {
                         .map(MerchantMemberships.Membership::merchantId)
                         .toList()
                 : merchantId == null ? List.<String>of() : List.of(merchantId);
-        return directory.activeFor(userId, merchants).stream()
-                .min(Comparator.comparing((Participant p) -> p.merchantId() == null))
+        return pick(directory.activeFor(userId, merchants), app)
                 .orElseThrow(() -> new AccessDeniedException(NOT_A_PARTICIPANT));
     }
 

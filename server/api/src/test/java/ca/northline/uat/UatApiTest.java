@@ -149,6 +149,48 @@ class UatApiTest extends IntegrationTest {
         }
 
         @Test
+        void theCourierAppSendsAsThePilotCourier_andShowsTheButtonOnlyToThem() throws Exception {
+            // a customer only: no button in the courier app, nothing sent from it
+            addCustomer(customerEmail).andExpect(status().isCreated());
+            mvc.perform(get(ME).param("app", "courier").with(TestJwt.courier(customer)))
+                    .andExpect(jsonPath("$.participant").value(false));
+            send(TestJwt.courier(customer), feedback("").replace("\"consumer\"", "\"courier\""))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.detail").value("Feedback here is for pilot participants."));
+
+            // also a pilot courier: the courier app reports as the courier, the consumer app still as the customer
+            mvc.perform(json(
+                            post(CONSOLE + "/participants").with(TestJwt.staff(lead, StaffRole.SUPPORT_LEAD)),
+                            "{\"persona\":\"courier\",\"label\":\"Pilot courier\",\"contact\":\"%s\"}"
+                                    .formatted(customerEmail)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.persona").value("courier"));
+            mvc.perform(get(ME).param("app", "courier").with(TestJwt.courier(customer)))
+                    .andExpect(jsonPath("$.participant").value(true))
+                    .andExpect(jsonPath("$.persona").value("courier"));
+            mvc.perform(get(ME).with(TestJwt.consumerApp(customer)))
+                    .andExpect(jsonPath("$.persona").value("customer"));
+            var shot = read(
+                    mvc.perform(multipart(ME + "/screenshots")
+                                    .file(new MockMultipartFile("file", "run.png", "image/png", png(390, 844)))
+                                    .with(TestJwt.courier(customer)))
+                            .andExpect(status().isCreated()),
+                    "$.id");
+            var sent = read(
+                    send(
+                                    TestJwt.courier(customer),
+                                    feedback(",\"screenshotId\":\"%s\"".formatted(shot))
+                                            .replace("\"consumer\"", "\"courier\""))
+                            .andExpect(status().isCreated()),
+                    "$.id");
+            mvc.perform(get(CONSOLE + "/feedback/{id}", sent).with(TestJwt.staff(agent, StaffRole.SUPPORT)))
+                    .andExpect(jsonPath("$.item.persona").value("courier"))
+                    .andExpect(jsonPath("$.item.participant").value("Pilot courier"))
+                    .andExpect(jsonPath("$.item.app").value("courier"))
+                    .andExpect(jsonPath("$.item.screenshot").value(true));
+        }
+
+        @Test
         void aPilotBusinessOfS120TakesPartAsAWhole_forItsMembersOnly() throws Exception {
             var biz = data.business(MerchantRole.TECHNICIAN);
             var outsider = data.user("Not on the team");
