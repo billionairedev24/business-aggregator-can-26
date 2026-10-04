@@ -215,6 +215,15 @@ northline:
   # /api/v1/dev/identity-sessions/{id}; refused under staging/prod) | stripe (Stripe Identity with STRIPE_SECRET_KEY).
   identity:
     provider: ${IDENTITY_PROVIDER:local}
+  # Age-restricted purchases (2026-10-04, docs/runbooks/age-restricted.md): customers' one-time ID check. provider: local
+  # (a fake with an outcome page; refused under staging/prod) · stripe (Stripe Identity, STRIPE_SECRET_KEY). The
+  # provider sends the customer back to the consumer site's checkout or to the consumer app.
+  age-verification:
+    provider: ${AGE_VERIFICATION_PROVIDER:local}
+    web-origin: ${CONSUMER_ORIGIN:http://localhost:3000}
+    app-return-url: ${AGE_VERIFICATION_APP_RETURN_URL:ca.northline.app:/age-verified}
+  restricted:
+    licence-cron: ${RESTRICTED_LICENCE_CRON:0 17 0 * * *}   # licences: expire and remind, platform zone
   # Business registry lookups (S-23, docs/runbooks/registries.md). provider per source: fixtures (local/test default;
   # refused under staging/prod) · manual (every lookup to an agent) · the source's API. Which sources serve a business
   # is region data (region.regions.registries of its province and city market, S-134), never a default.

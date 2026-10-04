@@ -89,6 +89,21 @@ class TaxonomyService implements ManageTaxonomy {
     }
 
     @Override
+    public Row classify(String id, @Nullable String ageClass, Actor actor) {
+        var change = taxonomy.classify(id, ageClass, actor.userId());
+        var before = new LinkedHashMap<String, Object>();
+        before.put(
+                "ageClass",
+                change.before().ageClass() == null ? "none" : change.before().ageClass());
+        var after = new LinkedHashMap<String, Object>();
+        after.put(
+                "ageClass",
+                change.after().ageClass() == null ? "none" : change.after().ageClass());
+        record(actor, "catalogue.category_age_class", "category", id, before, after);
+        return row(change.after());
+    }
+
+    @Override
     public RegulatorRow createRegulator(RegulatorInput input, Actor actor) {
         var r = taxonomy.createRegulator(input, actor.userId());
         record(actor, "catalogue.regulator_created", "regulator", r.code(), null, Map.of("province", r.province()));
@@ -214,7 +229,8 @@ class TaxonomyService implements ManageTaxonomy {
                 u == null ? List.of() : u.provinces().stream().sorted().toList(),
                 c.liveListings(),
                 c.medianPriceCents(),
-                c.priceMode());
+                c.priceMode(),
+                c.ageClass());
     }
 
     private static Map<String, ?> rule(Category c, String province) {

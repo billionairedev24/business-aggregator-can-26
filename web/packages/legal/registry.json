@@ -94,6 +94,13 @@
           "sha256": "3f4a5154645fc70987ebe845fdd19a14493259b73000ca11447dc7312c47a692",
           "note": "Not submitted to either store yet (S-103).",
           "signOff": null
+        },
+        {
+          "version": "2026-10-04",
+          "effective": "2026-10-04",
+          "sha256": "37ac15636503da297c0aed6dd02fb0aed962286ad3f8ed776a41d23ea1cd247a",
+          "note": "2026-10-04: Stripe Identity as a service provider and the age check's result as Other data types (age-restricted purchases). Not submitted to either store yet.",
+          "signOff": null
         }
       ]
     },
@@ -110,6 +117,13 @@
           "effective": "2026-10-02",
           "sha256": "2f13f73d9a59ed42934d7014e242c87aef4eef744e3abca1d12b4409f1cb0a1b",
           "note": "Not submitted to either store yet (S-103).",
+          "signOff": null
+        },
+        {
+          "version": "2026-10-04",
+          "effective": "2026-10-04",
+          "sha256": "2c0d3338c728eb8c5f9956ddfd0605849dee79b69694c80e28f843ee97b71a1b",
+          "note": "2026-10-04: website-only account deletion recorded as the owner's decision. Not submitted to either store yet.",
           "signOff": null
         }
       ]

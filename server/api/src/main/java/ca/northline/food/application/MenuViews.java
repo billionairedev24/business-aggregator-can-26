@@ -68,7 +68,8 @@ public final class MenuViews {
             ItemVisibility visibility,
             boolean hasPhoto,
             @Nullable Instant updatedAt,
-            @Nullable PriceFlag priceCheck) {}
+            @Nullable PriceFlag priceCheck,
+            @Nullable String ageClass) {}
 
     /**
      * S-67: the price is more than 40 % off comparable dishes ({@code deviationPct} +52 = above, -45 = below).

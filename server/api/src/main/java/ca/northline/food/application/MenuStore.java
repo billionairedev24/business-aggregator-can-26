@@ -70,6 +70,11 @@ public interface MenuStore {
 
     record SectionRow(String id, String menuId, String name, int sort) {}
 
+    /** Age-restricted dishes: the platform took it off the menu for a missing licence ({@code licence_hold}, V344). */
+    void licenceHold(String itemId, boolean held);
+
+    boolean licenceHeld(String itemId);
+
     @With
     @Builder(toBuilder = true)
     record ItemRow(
@@ -98,7 +103,8 @@ public interface MenuStore {
             @Nullable Instant publishedAt,
             @Nullable Instant updatedAt,
             @Nullable Long priceMedianCents,
-            @Nullable Long priceConfirmedCents) {
+            @Nullable Long priceConfirmedCents,
+            @Nullable String ageClass) {
 
         /** S-67: the price against comparable dishes. */
         public PriceCheck priceCheck() {

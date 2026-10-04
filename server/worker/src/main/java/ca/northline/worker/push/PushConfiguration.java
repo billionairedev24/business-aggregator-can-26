@@ -24,7 +24,8 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Push wiring (S-102): {@code northline.push.provider} ({@code PUSH_PROVIDER}) = {@code local} keeps the
  * notifications' logging {@link PushSender}; {@code native} replaces it with {@link DevicePushSender} over APNs and
- * FCM, and fails at start-up naming every missing variable. Production refuses {@code local}. The registry is pruned
+ * FCM, and fails at start-up naming every missing variable. Staging and production refuse {@code local} (owner decision
+ * 2026-10-04: staging like prod). The registry is pruned
  * daily either way.
  */
 @Slf4j
@@ -35,12 +36,12 @@ public class PushConfiguration {
     static final String PROVIDER = "northline.push.provider";
 
     PushConfiguration(PushProperties props, Environment environment) {
-        if (props.provider() == PushProperties.Provider.LOCAL && environment.matchesProfiles("prod")) {
+        if (props.provider() == PushProperties.Provider.LOCAL && environment.matchesProfiles("staging | prod")) {
             throw new IllegalStateException(
-                    "PUSH_PROVIDER=local is not allowed under prod: set PUSH_PROVIDER=native and"
+                    "PUSH_PROVIDER=local is not allowed under staging/prod: set PUSH_PROVIDER=native and"
                             + " the APNs and FCM credentials (docs/runbooks/push.md)");
         }
-        if (props.provider() == PushProperties.Provider.LOCAL && environment.matchesProfiles("dev | staging")) {
+        if (props.provider() == PushProperties.Provider.LOCAL && environment.matchesProfiles("dev")) {
             log.warn("PUSH_PROVIDER=local: pushes are only logged (docs/runbooks/push.md)");
         }
     }

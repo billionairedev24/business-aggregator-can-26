@@ -49,5 +49,6 @@ public interface KitchenTicketStore {
             boolean courierAssigned,
             @Nullable String courierUserId,
             @Nullable Instant courierEta,
-            @Nullable Instant courierArrivedAt) {}
+            @Nullable Instant courierArrivedAt,
+            @Nullable Integer idCheckAge) {}
 }

@@ -52,6 +52,7 @@ class ListingVettingService implements ListingVetting {
     private final AuditTrail audit;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final LicenceGuard guard;
 
     @Override
     public List<FlaggedListing> queue(MerchantScope scope, Collection<String> alsoListingIds, int limit) {
@@ -131,8 +132,11 @@ class ListingVettingService implements ListingVetting {
         var flags =
                 listing.getState().getFlags().stream().map(VettingFlag::code).toList();
         Optional<? extends DomainEvent> event =
-                approve ? listing.approveByReviewer(now) : listing.rejectByReviewer(now);
+                approve ? guard.gate(listing, listing.approveByReviewer(now), now) : listing.rejectByReviewer(now);
         save(listing);
+        if (approve) {
+            guard.holdIfHidden(listing);
+        }
         event.ifPresent(events::publishEvent);
         var decision = approve ? "approved" : "rejected";
         decisions.insert(new VettingDecisionStore.Decision(

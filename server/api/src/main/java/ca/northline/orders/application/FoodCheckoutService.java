@@ -26,6 +26,7 @@ import ca.northline.payments.api.PaymentAuthorizations;
 import ca.northline.payments.api.PaymentSettings;
 import ca.northline.payments.api.PaymentStepUp;
 import ca.northline.payments.api.TaxCalculations;
+import ca.northline.region.api.AgeRules;
 import ca.northline.region.api.Markets;
 import ca.northline.region.api.TaxRates;
 import ca.northline.shared.Conflict;
@@ -78,6 +79,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
     private final PaymentSettings settings;
     private final Markets markets;
     private final CourierProgressReader couriers;
+    private final AgeGate ageGate;
     private final JsonMapper json = JsonMapper.builder().build();
 
     FoodCheckoutService(
@@ -96,7 +98,8 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             PaymentStepUp stepUp,
             PaymentSettings settings,
             Markets markets,
-            CourierProgressReader couriers) {
+            CourierProgressReader couriers,
+            AgeGate ageGate) {
         this.pricing = pricing;
         this.kitchens = kitchens;
         this.progress = progress;
@@ -113,6 +116,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
         this.settings = settings;
         this.markets = markets;
         this.couriers = couriers;
+        this.ageGate = ageGate;
     }
 
     /** Everything decided before any money moves: the kitchen, the priced lines, fees, tip, place of supply. */
@@ -125,14 +129,15 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             long feeTaxCents,
             long tipCents,
             @Nullable Integer etaFromMin,
-            @Nullable Integer etaToMin) {}
+            @Nullable Integer etaToMin,
+            AgeRules.@Nullable Requirement age) {}
 
     @Override
     @Transactional(readOnly = true)
     public Totals quote(String customerId, Order order) {
         var p = price(order);
         var tax = Math.round(p.dishes().subtotalCents() * rates.bpsFor(p.province()) / 10_000.0);
-        return totals(order, p, tax, true);
+        return totals(order, p, tax, true, ageGate.view(customerId, p.age()));
     }
 
     @Override
@@ -151,6 +156,10 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                     : new StepUpNeeded("second_factor_required", CheckoutMessages.ENROL);
         }
         var p = price(order);
+        var age = p.age();
+        if (age != null) {
+            ageGate.requireVerified(customerId, age);
+        }
         var postal = order.delivery() == null ? null : order.delivery().postalCode();
         var quote = taxes.calculate(new TaxCalculations.Request(
                 p.kitchen().merchantId(),
@@ -158,7 +167,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 p.province(),
                 postal,
                 p.dishes().subtotalCents()));
-        var totals = totals(order, p, quote.taxCents(), false);
+        var totals = totals(order, p, quote.taxCents(), false, ageGate.view(customerId, age));
         var id = Ids.next();
         var now = clock.instant();
         var ref = store.nextRef();
@@ -245,9 +254,18 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                         row.deliveryFeeCents() + row.serviceFeeCents(), row.feeTaxCents(), row.tipCents())));
         var orderLines = lines.stream()
                 .map(l -> new OrderLineRow(
-                        Ids.next(), l.itemId(), l.comboId(), l.title(), l.qty(), l.unitCents(), modifiers(l)))
+                        Ids.next(),
+                        l.itemId(),
+                        l.comboId(),
+                        l.title(),
+                        l.qty(),
+                        l.unitCents(),
+                        modifiers(l),
+                        l.ageClass()))
                 .toList();
-        if (store.place(row, orderLines, now)) {
+        var idCheckAge = ageGate.idCheckAge(
+                AgeGate.classes(lines.stream().map(Line::ageClass).toList()), row.province());
+        if (store.place(row, orderLines, idCheckAge, now)) {
             // S-51's event; one kitchen per food order, "direct" = the hot courier
             events.publishEvent(new OrderPlaced(
                     Ids.next(),
@@ -386,10 +404,27 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                     : kitchen.pickupFromMin() + dishes.prepAddMin();
             to = isDelivery ? kitchen.etaToMin() + dishes.prepAddMin() : kitchen.pickupToMin() + dishes.prepAddMin();
         }
-        return new Priced(kitchen, dishes, province, deliveryFee, serviceFee, feeTax, tip, from, to);
+        // 2026-10-04: age-restricted dishes — sold, delivered or picked up there, in its hours, the strictest class's
+        // age
+        var age = ageGate.requirement(
+                        AgeGate.classes(dishes.lines().stream()
+                                .map(FoodMenuPricing.Line::ageClass)
+                                .toList()),
+                        province,
+                        !isDelivery,
+                        isDelivery ? "delivery.province" : "mode")
+                .orElse(null);
+        if (age != null) {
+            var handover =
+                    at != null ? at : clock.instant().plus(Duration.ofMinutes(Objects.requireNonNullElse(to, 0)));
+            var zone = markets.zone(province);
+            ageGate.checkTimes(age, !isDelivery, List.of(handover), zone);
+        }
+        return new Priced(kitchen, dishes, province, deliveryFee, serviceFee, feeTax, tip, from, to, age);
     }
 
-    private static Totals totals(Order order, Priced p, long dishTax, boolean estimate) {
+    private static Totals totals(
+            Order order, Priced p, long dishTax, boolean estimate, CheckoutUseCases.CheckoutAge age) {
         var lines = p.dishes().lines().stream()
                 .map(l -> new Line(
                         l.itemId(),
@@ -399,7 +434,8 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                         l.unitCents(),
                         l.totalCents(),
                         l.choices().stream().map(FoodMenuPricing.Choice::name).toList(),
-                        l.note()))
+                        l.note(),
+                        l.ageClass()))
                 .toList();
         var tax = dishTax + p.feeTaxCents();
         return new Totals(
@@ -416,7 +452,8 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 p.dishes().subtotalCents() + p.deliveryFeeCents() + p.serviceFeeCents() + p.tipCents() + tax,
                 p.etaFromMin(),
                 p.etaToMin(),
-                estimate);
+                estimate,
+                age);
     }
 
     /** Pickup: when the customer is expected at the counter (ready time); delivery: none (the courier's). */

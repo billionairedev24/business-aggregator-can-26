@@ -20,6 +20,8 @@ export interface FixtureOptions {
   withRun?: boolean;
   /** The courier takes part in the pilot as a courier (S-121; default false). */
   pilot?: boolean;
+  /** 2026-10-04: the first order has age-restricted items (its drop-off needs the ID check). */
+  idCheck?: boolean;
 }
 
 export function createFixtureServer(options: FixtureOptions = {}) {
@@ -65,7 +67,8 @@ export function createFixtureServer(options: FixtureOptions = {}) {
             stop({ id: 'st-2', seq: 2, kind: 'pickup', orderId: 'ord-b', orderRef: 'NL-48107', eta: iso(t0 + 18 * 60_000), packed: true,
               place: { merchantId: 'm-2', name: 'Fern & Field Grocer', address: '88 Mill Road', lat: null, lng: null } }),
             stop({ id: 'st-3', seq: 3, kind: 'dropoff', orderId: 'ord-a', orderRef: 'NL-48102', eta: iso(t0 + 31 * 60_000),
-              dropoff: { street: '1204 Example Ave', unit: '804', city: 'Sampleville', postal: 'A1A 1A1', note: 'Buzz 0804', lat: null, lng: null } }),
+              dropoff: { street: '1204 Example Ave', unit: '804', city: 'Sampleville', postal: 'A1A 1A1', note: 'Buzz 0804', lat: null, lng: null },
+              ...(options.idCheck ? { idCheck: { age: 19, recipient: 'Sam Example' } } : {}) }),
             stop({ id: 'st-4', seq: 4, kind: 'dropoff', orderId: 'ord-b', orderRef: 'NL-48107', eta: iso(t0 + 40 * 60_000),
               dropoff: { street: '57 Sample Street', unit: null, city: 'Sampleville', postal: 'A1B 2C3', note: null, lat: null, lng: null } }),
           ],
@@ -76,6 +79,8 @@ export function createFixtureServer(options: FixtureOptions = {}) {
   let lastPing = 0;
   let issued = 0;
   const pings: Array<{ lat: number; lng: number }> = [];
+  /** What the ID checks recorded (the api keeps these three answers or the reason; never the ID). */
+  const idChecks: Array<{ stopId: string; outcome: 'passed' | 'refused'; reason?: string }> = [];
   const calls: Array<{ method: string; path: string; idempotencyKey?: string }> = [];
 
   const answer = (status: number, body?: unknown, headers: Record<string, string> = {}) =>
@@ -148,7 +153,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
       pings.push({ lat: Number(body.lat), lng: Number(body.lng) });
       return answer(200, { acceptedAt: iso(now()), nextAfterMs: 2000 });
     }
-    const m = /^\/courier\/stops\/([^/]+)\/(arrive|pickup|proof|dropoff)$/.exec(path);
+    const m = /^\/courier\/stops\/([^/]+)\/(arrive|pickup|proof|dropoff|refuse|returned)$/.exec(path);
     if (method === 'POST' && m) {
       const s = stopOf(m[1]!);
       if (!s) {
@@ -181,9 +186,33 @@ export function createFixtureServer(options: FixtureOptions = {}) {
         } else if (body.proof !== s.proofKind) {
           return conflict('proof_missing', 'Take the photo or signature first.');
         }
+        if (s.idCheck) {
+          const c = (body.idCheck ?? {}) as Json;
+          if (!(c.idChecked && c.recipientMatches && c.ofAge)) {
+            return answer(422, { errors: [{ field: 'idCheck', message: "Confirm you checked government photo ID, the name matches and the person is of age." }] });
+          }
+          idChecks.push({ stopId: s.id, outcome: 'passed' });
+        }
         s.state = 'done';
         s.doneAt = iso(now());
         s.proofKind = String(body.proof);
+        s.idCheck = null;
+      } else if (action === 'refuse' && s.state !== 'done') {
+        if (!s.idCheck) return conflict('no_id_check', 'This order has no age-restricted items: hand it over with the usual proof.');
+        const pickedUp = run!.stops.filter((p) => p.kind === 'pickup' && p.orderId === s.orderId).every((p) => p.state === 'done');
+        if (!pickedUp) return conflict('not_picked_up', 'Pick the order up before you drop it off.');
+        idChecks.push({ stopId: s.id, outcome: 'refused', reason: String(body.reason) });
+        s.state = 'done';
+        s.doneAt = iso(now());
+        s.proofKind = 'id_refused';
+        s.idCheck = null;
+        const shop = run!.stops.find((p) => p.kind === 'pickup' && p.orderId === s.orderId)?.place ?? null;
+        run!.stops.push(stop({ id: `st-r-${s.id}`, seq: run!.stops.length + 1, kind: 'return', orderId: s.orderId, orderRef: s.orderRef, place: shop }));
+      } else if (action === 'returned' && s.state !== 'done') {
+        if (s.kind !== 'return') return conflict('not_a_return', 'This stop is not on your run.');
+        s.state = 'done';
+        s.doneAt = iso(now());
+        s.proofKind = 'id_refused';
       }
       settle();
       return current();
@@ -222,6 +251,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     calls,
     devices,
     feedback,
+    idChecks,
     shift,
     get run() {
       return run;

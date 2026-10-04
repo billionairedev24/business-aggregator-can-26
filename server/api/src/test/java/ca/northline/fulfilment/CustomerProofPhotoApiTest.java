@@ -205,6 +205,16 @@ class CustomerProofPhotoApiTest extends IntegrationTest {
         mvc.perform(get("/api/v1/me/orders/{id}/proof-photo", a.orderId()).with(TestJwt.consumerApp(amara)))
                 .andExpect(status().isOk());
 
+        // a delivery with an ID check at the door (age-restricted items) never shows its photo, whatever was uploaded
+        jdbc.sql("update fulfilment.deliveries set id_check_age = 19 where order_id = ?")
+                .params(a.orderId())
+                .update();
+        mvc.perform(get("/api/v1/me/orders/{id}/proof-photo", a.orderId()).with(TestJwt.customer(amara)))
+                .andExpect(status().isNotFound());
+        jdbc.sql("update fulfilment.deliveries set id_check_age = null where order_id = ?")
+                .params(a.orderId())
+                .update();
+
         // anyone else: 403 for another customer's order (also the courier and the shop), 401 signed out
         mvc.perform(get("/api/v1/me/orders/{id}/proof-photo", a.orderId()).with(TestJwt.customer(ben)))
                 .andExpect(status().isForbidden())

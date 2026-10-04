@@ -97,7 +97,7 @@ promotion, not retention (the full GC took it back). A 2-hour soak on staging is
 | F7 | A servlet filter that needs the database (here: dev auth) answers a pool timeout with **403** (error dispatch → access denied) instead of 503, with a stack trace per request. | low | open — map it in the filters too |
 | F8 | Saving a first card twice at the same moment for one customer can answer 404/409 (two Stripe customers created; one loses). Only seen when the test reused customers across VUs. | low | open — the load test gives each VU its own customers |
 | F9 | The fake payment gateway and fake saved cards keep every intent and card in memory (local and test only). Over a long local soak they grow (~1 KB per payment). | info | not a production path |
-| F10 | `food-orders` calls (`POST /api/v1/me/food-orders`, `…/confirm`) are not in the checkout SLO's `uri` pattern (`/api/v1/me/(checkouts.*|bookings/checkout)`), though food is the busiest checkout. | medium | open — add them to `deploy/observability/slo/checkout.yaml` (S-113's owner) |
+| F10 | `food-orders` calls (`POST /api/v1/me/food-orders`, `…/confirm`) are not in the checkout SLO's `uri` pattern (`/api/v1/me/(checkouts.*|bookings/checkout)`), though food is the busiest checkout. | medium | **fixed 2026-10-04** (owner decision): both are in `deploy/observability/slo/checkout.yaml` (availability and latency); quotes stay out; promtool tests in `northline-slo_test.yml` |
 | F11 | Under the stress test's top load the api's old generation held ~0.8 GiB of 1 GiB (queued requests); prod's 2 GiB pods (1.5 GiB heap) have room, staging's must too. | info | capacity plan |
 
 ### Before and after the fixes — one page view, warm, 150 providers / kitchens in the market

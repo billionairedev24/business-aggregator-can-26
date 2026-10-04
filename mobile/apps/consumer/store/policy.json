@@ -1,0 +1,15 @@
+{
+  "$comment": "2026-10-04: how the app is distributed and the age-restricted goods it sells, held to the stores' policies by the release check (packages/release). docs/runbooks/mobile-release.md § Distribution and age-restricted goods; docs/runbooks/age-restricted.md.",
+  "distribution": {
+    "apple": "public",
+    "play": "production",
+    "why": "The customer app: anyone may install it; signing in is needed only to book and pay."
+  },
+  "ageRestrictedGoods": {
+    "inApp": ["alcohol"],
+    "notInApp": ["tobacco", "cannabis"],
+    "storePolicies": "App Store Review Guideline 1.4.3 and Google Play's Inappropriate Content policy (alcohol and tobacco) do not allow apps that facilitate the sale of tobacco or vape products, and Play does not allow marijuana products: those categories stay banned on the platform (northline.catalogue.banned-categories), so no app shows them. Alcohol is allowed with an age gate and only where its sale is legal. Unbanning a tobacco or cannabis category needs the apps to hide it first.",
+    "ageGate": "A cart with alcohol needs the customer verified old enough for the delivery province (the region model's minimum age) before Continue: a one-time ID check through Stripe Identity (government photo ID and a matching selfie, in the in-app browser). Northline keeps only 'verified over N, on date, by method'. The courier checks photo ID at the door and hands the order only to the account holder of age; otherwise it goes back to the business.",
+    "geoRestriction": "Sold only by businesses with an approved, unexpired licence for the class in their province, delivered only within the province's delivery hours and where the province allows delivery (region configuration); the store listing is region-neutral."
+  }
+}

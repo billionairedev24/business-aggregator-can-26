@@ -1,0 +1,12 @@
+{
+  "$comment": "2026-10-04 (owner decision): the courier app is unlisted — not searchable or browsable in either store. docs/runbooks/mobile-release.md § Distribution and age-restricted goods.",
+  "distribution": {
+    "apple": "unlisted",
+    "play": "closed",
+    "why": "Only Northline's couriers use it. Apple: Unlisted App distribution (requested after the first approval; couriers install from the direct link). Google Play: the closed testing track, its testers the couriers' Google Group (Managed Google Play private apps need a managed organisation the couriers' own phones are not in)."
+  },
+  "ageRestrictedGoods": {
+    "inApp": [],
+    "note": "Couriers sell nothing. An age-restricted drop-off shows the age to check and the account holder's name; the courier confirms three answers (photo ID checked, name matches, of age) or gives a reason and returns the order to the business. The app keeps no ID detail."
+  }
+}

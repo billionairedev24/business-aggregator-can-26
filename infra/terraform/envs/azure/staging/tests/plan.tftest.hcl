@@ -21,7 +21,8 @@ mock_provider "azurerm" {
 mock_provider "random" {}
 
 variables {
-  subscription_id = "00000000-0000-0000-0000-000000000000"
+  subscription_id   = "00000000-0000-0000-0000-000000000000"
+  api_allowed_cidrs = ["203.0.113.0/24"]
 }
 
 mock_provider "ec" {
@@ -97,6 +98,16 @@ run "rejects_region_outside_canada" {
   }
 
   expect_failures = [var.region]
+}
+
+run "requires_api_allowed_cidrs" {
+  command = plan
+
+  variables {
+    api_allowed_cidrs = []
+  }
+
+  expect_failures = [var.api_allowed_cidrs]
 }
 
 run "helm_values" {

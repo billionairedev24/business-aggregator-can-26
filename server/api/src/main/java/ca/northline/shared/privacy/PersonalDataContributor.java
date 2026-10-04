@@ -142,7 +142,12 @@ public interface PersonalDataContributor {
          * S-108: proof of consent to commercial messages and of its withdrawal (CASL s. 13), three years after the
          * withdrawal (who, what, when, where, the wording; no network or browser evidence).
          */
-        CONSENT_PROOF
+        CONSENT_PROOF,
+        /**
+         * Age-restricted sales (2026-10-04): the ID checks recorded at handoffs — what a courier or team member
+         * confirmed, never the ID — two years, as evidence of a lawful sale.
+         */
+        AGE_CHECK_RECORDS
     }
 
     /** What stops erasure for now; the step is retried until it clears. */

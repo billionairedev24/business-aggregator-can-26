@@ -6,9 +6,9 @@ import { Image, Linking, StyleSheet, TextInput, View } from 'react-native';
 
 import { MIN_TARGET, colors, fonts, radius, randomId, space } from '@northline/mobile-kit';
 
-import type { ProofKind } from '../../../../src/api/courier';
+import { REFUSE_REASONS, type IdCheckAnswer, type ProofKind, type RefuseReason } from '../../../../src/api/courier';
 import { SignaturePad } from '../../../../src/components/SignaturePad';
-import { Banner, Body, Button, Heading, Row, Screen, Segmented } from '../../../../src/components/ui';
+import { Banner, Body, Button, Card, Check, Heading, Row, Screen, Segmented } from '../../../../src/components/ui';
 import { useRun } from '../../../../src/hooks';
 import { useI18n } from '../../../../src/i18n';
 import { keepPhoto, keepSignature } from '../../../../src/proof/files';
@@ -22,6 +22,10 @@ const PHOTO_WIDTH = 1600;
 /**
  * Drop-off with proof (S-86): a photo at the door, the customer's signature, or the customer's 4-digit PIN. The proof
  * upload and the drop-off go into the outbox together, in that order, and are sent as soon as there is a connection.
+ *
+ * 2026-10-04 age-restricted orders: before the proof, the courier confirms they checked government photo ID, that it
+ * is the person who ordered (the name the api gives) and that they are of age — three yes/no answers, never the ID
+ * itself. Can't hand it over (a reason) → the order goes back to the business: a return stop on the run.
  */
 export default function DropoffScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -37,6 +41,9 @@ export default function DropoffScreen() {
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [answers, setAnswers] = useState<IdCheckAnswer>({ idChecked: false, recipientMatches: false, ofAge: false });
+  const [refusing, setRefusing] = useState(false);
+  const [reason, setReason] = useState<RefuseReason | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
 
@@ -70,34 +77,79 @@ export default function DropoffScreen() {
     }
   };
 
+  const idCheck = stop.idCheck ? answers : undefined;
+  const confirmed = !idCheck || (idCheck.idChecked && idCheck.recipientMatches && idCheck.ofAge);
+  const toggle = (k: keyof IdCheckAnswer) => {
+    setAnswers((a) => ({ ...a, [k]: !a[k] }));
+    setError(null);
+  };
+
+  const refuse = async () => {
+    if (!reason) return setError(t('idcheck.chooseReason'));
+    setBusy(true);
+    await services().outbox.enqueue({ kind: 'refuse', stopId: stop.id, reason });
+    setBusy(false);
+    router.dismissTo('/run');
+  };
+
   const complete = async () => {
     setError(null);
+    if (!confirmed) return setError(t('idcheck.confirmAll'));
     const outbox = services().outbox;
     const key = randomId();
     if (mode === 'pin') {
       if (!/^\d{4}$/.test(pin.trim())) return setError(t('dropoff.pinInvalid'));
-      await outbox.enqueue({ kind: 'dropoff', stopId: stop.id, proof: 'pin', pin: pin.trim() });
+      await outbox.enqueue({ kind: 'dropoff', stopId: stop.id, proof: 'pin', pin: pin.trim(), ...(idCheck ? { idCheck } : {}) });
     } else if (mode === 'photo') {
       if (!photo) return setError(t('dropoff.photoMissing'));
       setBusy(true);
       const file = await keepPhoto(photo, key);
-      await outbox.enqueue({ kind: 'proof', stopId: stop.id, proofKind: 'photo', file }, { kind: 'dropoff', stopId: stop.id, proof: 'photo' });
+      await outbox.enqueue({ kind: 'proof', stopId: stop.id, proofKind: 'photo', file }, { kind: 'dropoff', stopId: stop.id, proof: 'photo', ...(idCheck ? { idCheck } : {}) });
     } else {
       const png = signaturePng(strokes, padSize.w, padSize.h);
       if (!png) return setError(t('dropoff.signatureEmpty'));
       setBusy(true);
       await outbox.enqueue(
         { kind: 'proof', stopId: stop.id, proofKind: 'signature', file: keepSignature(png, key) },
-        { kind: 'dropoff', stopId: stop.id, proof: 'signature' },
+        { kind: 'dropoff', stopId: stop.id, proof: 'signature', ...(idCheck ? { idCheck } : {}) },
       );
     }
     setBusy(false);
     router.dismissTo('/run');
   };
 
+  if (stop.idCheck && refusing) {
+    return (
+      <Screen testID="refuse-screen">
+        <Heading>{t('idcheck.refuseTitle')}</Heading>
+        <View accessibilityRole="radiogroup" accessibilityLabel={t('idcheck.refuseTitle')} style={styles.list}>
+          {REFUSE_REASONS.map((r) => (
+            <Check key={r} role="radio" label={t(`idcheck.reason.${r}`)} on={reason === r} onPress={() => { setReason(r); setError(null); }} testID={`reason-${r}`} />
+          ))}
+        </View>
+        <Body muted>{t('idcheck.refuseNote')}</Body>
+        {error ? <Banner tone="error">{error}</Banner> : null}
+        <Button tone="danger" label={t('idcheck.refuseConfirm')} onPress={() => void refuse()} busy={busy} testID="confirm-refuse" />
+        <Button tone="ghost" label={t('idcheck.cancel')} onPress={() => { setRefusing(false); setError(null); }} />
+      </Screen>
+    );
+  }
+
   return (
     <Screen testID="dropoff-screen">
       <Heading>{stopName(stop)}</Heading>
+      {stop.idCheck ? (
+        <Card testID="id-check">
+          <Body strong>{t('idcheck.title')}</Body>
+          <Body>{stop.idCheck.recipient ? t('idcheck.why', { age: stop.idCheck.age }) : t('idcheck.whyNoName', { age: stop.idCheck.age })}</Body>
+          {stop.idCheck.recipient ? <Body strong>{t('idcheck.name', { name: stop.idCheck.recipient })}</Body> : null}
+          <Check label={t('idcheck.checked')} on={answers.idChecked} onPress={() => toggle('idChecked')} testID="id-checked" />
+          <Check label={t('idcheck.matches')} on={answers.recipientMatches} onPress={() => toggle('recipientMatches')} testID="id-matches" />
+          <Check label={t('idcheck.ofAge', { age: stop.idCheck.age })} on={answers.ofAge} onPress={() => toggle('ofAge')} testID="id-of-age" />
+          <Body muted>{t('idcheck.private')}</Body>
+          <Button tone="danger" label={t('idcheck.refuse')} onPress={() => { setRefusing(true); setError(null); }} testID="refuse" />
+        </Card>
+      ) : null}
       <Body strong>{t('dropoff.how')}</Body>
       <Segmented<ProofKind>
         label={t('dropoff.how')}
@@ -193,4 +245,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[4],
   },
   pinError: { borderColor: colors.accent2, borderWidth: 2 },
+  list: { gap: space[2] },
 });

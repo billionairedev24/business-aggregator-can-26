@@ -71,12 +71,16 @@ export interface DeliveryOption {
 }
 export type Provider = 'stripe' | 'fake';
 export interface PaymentConfig { provider: Provider; publishableKey?: string | null }
+/** 2026-10-04: checkout's age step (a cart with age-restricted items needs a customer verified old enough). */
+export interface CheckoutAge { required: boolean; minimumAge: number; classes: string[]; state: 'verified' | 'none' | 'pending' | 'failed' | 'under_age' }
+export interface AgeStatus { state: 'none' | 'pending' | 'verified' | 'failed'; overAge?: number | null; ageFloor: number; method?: string | null; lastError?: string | null }
+export const ageCleared = (age: CheckoutAge | undefined) => !age || !age.required || age.state === 'verified';
 export interface CheckoutSetup {
   cart: Cart; addresses: SavedAddress[]; options: DeliveryOption[]; payment: PaymentConfig;
-  stepUp: 'none' | 'required' | 'enrol'; market: string; served: boolean;
+  stepUp: 'none' | 'required' | 'enrol'; market: string; served: boolean; age?: CheckoutAge;
 }
 export interface TaxLine { type: string; percent: number; cents: number }
-export interface Quote { subtotalCents: number; deliveryFeeCents: number; taxCents: number; taxes: TaxLine[]; totalCents: number; market: string }
+export interface Quote { subtotalCents: number; deliveryFeeCents: number; taxCents: number; taxes: TaxLine[]; totalCents: number; market: string; age?: CheckoutAge }
 export interface AddressInput { addressId?: string; street?: string; unit?: string; city?: string; province?: string; postal?: string; note?: string }
 export type Substitution = 'similar' | 'refund' | 'ask';
 export interface CheckoutBody { kind: 'pooled' | 'direct'; windowId: string | null; address: AddressInput; substitution: Substitution }
@@ -163,6 +167,9 @@ export const shopApi = (api: ApiClient) => ({
     api.post<Started>(`/me/checkouts?${qs({ lang: lang(l) })}`, { json: body, idempotencyKey: key, headers: proof ? { 'X-Step-Up': proof } : undefined }),
   place: (checkoutId: string, key: string) => api.post<Placed>(`/me/checkouts/${id(checkoutId)}/place`, { idempotencyKey: key }),
   cards: () => api.get<Cards>('/me/payment-methods'),
+  ageStatus: () => api.get<AgeStatus>('/me/age-verification'),
+  /** Opens the identity provider's session; the app opens `url` in the in-app browser, which returns to the app. */
+  startAgeCheck: () => api.post<{ url: string; status: AgeStatus }>('/me/age-verification', { json: { returnTo: 'app' } }),
 
   order: (orderId: string) => api.get<OrderTracking>(`/me/orders/${id(orderId)}`),
   confirm: (orderId: string) => api.post<OrderTracking>(`/me/orders/${id(orderId)}/confirm`),

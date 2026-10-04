@@ -203,3 +203,55 @@ describe('Cart and checkout (design 06 cart)', () => {
     expect(await screen.findByText('4 items · 2 shops · one delivery')).toBeInTheDocument();
   });
 });
+
+describe('Age-restricted items at checkout (2026-10-04)', () => {
+  const ALCOHOL_AGE = { required: true, minimumAge: 18, classes: ['alcohol'], state: 'none' };
+
+  it('asks for a one-time photo ID check before paying, and opens the provider', async () => {
+    const { leave } = await import('./age');
+    const go = vi.spyOn(leave, 'to').mockImplementation(() => {});
+    routes['GET /api/v1/me/checkout'] = () => ({ body: setup({ age: ALCOHOL_AGE }) });
+    routes['POST /api/v1/me/checkout/quote'] = () => ({ body: { ...quote(299), age: ALCOHOL_AGE } });
+    routes['POST /api/v1/me/age-verification'] = () => ({ body: { url: 'https://verify.example/vs_1', status: { state: 'pending', ageFloor: 0 } } });
+    const { calls } = open();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Photo ID needed' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
+    expect(screen.getByText('Your cart has alcohol. You must be 18 or older to buy them where they’re delivered.')).toBeInTheDocument();
+    expect(screen.getByText(/never your ID, photo or date of birth/)).toBeInTheDocument();
+    const summary = screen.getByRole('complementary', { name: 'Total' });
+    await waitFor(() => expect(within(summary).getByRole('button', { name: /^Pay/ })).toBeDisabled());
+    expect(within(summary).getByText('Verify your age to pay.')).toBeInTheDocument();
+    await userEvent.setup({ delay: null }).click(screen.getByRole('button', { name: 'Verify my age' }));
+    await waitFor(() => expect(go).toHaveBeenCalledWith('https://verify.example/vs_1'));
+    expect(calls.find(c => c.method === 'POST' && c.url.startsWith('/api/v1/me/age-verification'))?.body).toEqual({ returnTo: 'web' });
+    go.mockRestore();
+  });
+
+  it('lets a verified customer pay and says the courier checks ID at the door', async () => {
+    const verified = { ...ALCOHOL_AGE, state: 'verified' };
+    routes['GET /api/v1/me/checkout'] = () => ({ body: setup({ age: verified }) });
+    routes['POST /api/v1/me/checkout/quote'] = () => ({ body: { ...quote(299), age: verified } });
+    open();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Age verified' })).toBeInTheDocument();
+    expect(screen.getByText(/Verified 18\+ · The courier checks photo ID at the door/)).toBeInTheDocument();
+    const summary = screen.getByRole('complementary', { name: 'Total' });
+    await waitFor(() => expect(within(summary).getByRole('button', { name: 'Pay $45.03' })).toBeEnabled());
+  });
+
+  it('tells an under-age customer to remove the items, in French', async () => {
+    const under = { ...ALCOHOL_AGE, minimumAge: 19, state: 'under_age' };
+    routes['GET /api/v1/me/checkout'] = () => ({ body: setup({ age: under }) });
+    routes['POST /api/v1/me/checkout/quote'] = () => ({ body: { ...quote(299), age: under } });
+    open('fr');
+    expect(await screen.findByRole('heading', { level: 2, name: 'Pièce d’identité avec photo requise' })).toBeInTheDocument();
+    expect(screen.getByText('Votre panier contient de l’alcool. Vous devez avoir 19 ans ou plus pour les acheter là où ils sont livrés.')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('vous avez moins de 19 ans');
+    expect(screen.queryByRole('button', { name: 'Vérifier mon âge' })).toBeNull();
+  });
+
+  it('leaves a cart without restricted items untouched', async () => {
+    open();
+    await screen.findByRole('heading', { level: 1, name: 'Checkout' });
+    expect(screen.queryByRole('heading', { name: 'Photo ID needed' })).toBeNull();
+  });
+});

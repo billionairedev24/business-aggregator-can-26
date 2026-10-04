@@ -48,6 +48,8 @@ import ca.northline.payments.api.PaymentAuthorizations;
 import ca.northline.payments.api.PaymentSettings;
 import ca.northline.payments.api.PaymentStepUp;
 import ca.northline.payments.api.TaxCalculations;
+import ca.northline.region.api.AgeClass;
+import ca.northline.region.api.AgeRules;
 import ca.northline.region.api.Regions;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
@@ -117,6 +119,7 @@ class CheckoutService
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final Regions regions;
+    private final AgeGate ageGate;
 
     // ── set-up and quote ──────────────────────────────────────────────────────────────────────────────────────────
 
@@ -130,6 +133,11 @@ class CheckoutService
                 .map(a -> new AddressView(
                         a.id(), a.street(), a.unit(), a.city(), a.province(), a.postal(), a.note(), a.isDefault()))
                 .toList();
+        var province = saved.stream()
+                .filter(AddressView::isDefault)
+                .map(AddressView::province)
+                .findFirst()
+                .orElse(null);
         return new Setup(
                 view,
                 saved,
@@ -137,7 +145,8 @@ class CheckoutService
                 new Payment(paymentSettings.provider(), paymentSettings.publishableKey()),
                 mfa ? "none" : stepUpNeeded(userId),
                 name,
-                served.isPresent());
+                served.isPresent(),
+                ageGate.preview(userId, ageClasses(view), province));
     }
 
     @Override
@@ -152,7 +161,8 @@ class CheckoutService
                 tax,
                 summarize(taxed),
                 plan.subtotal() + deliveryFee + tax,
-                plan.market());
+                plan.market(),
+                ageGate.view(userId, plan.age()));
     }
 
     // ── start ─────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -171,6 +181,10 @@ class CheckoutService
                     : new StepUpNeeded("second_factor_required", ENROL);
         }
         var plan = plan(userId, request, lang, true);
+        var age = plan.age();
+        if (age != null) {
+            ageGate.requireVerified(userId, age);
+        }
         var now = clock.instant();
         checkouts.open(userId).forEach(this::abandon);
 
@@ -219,7 +233,8 @@ class CheckoutService
                     amount,
                     taxQuote.taxCents(),
                     taxQuote.calculationId(),
-                    started.paymentIntent()));
+                    started.paymentIntent(),
+                    l.ageClass()));
         }
         var fee = plan.option().feeCents();
         var deliveryTax = 0L;
@@ -324,7 +339,9 @@ class CheckoutService
                 .map(DeliveryAddresses.Address::city)
                 .orElse(null);
         var scheduled = DIRECT.equals(checkout.kind()) ? now.plus(runs.direct().eta()) : null;
-        checkouts.createOrder(checkout, area, scheduled, now);
+        var idCheckAge = ageGate.idCheckAge(
+                AgeGate.classes(checkout.lines().stream().map(Line::ageClass).toList()), checkout.province());
+        checkouts.createOrder(checkout, area, scheduled, idCheckAge, now);
         publishPlaced(checkout, now);
         carts.cartOf(new CartOwner(userId, null))
                 .ifPresent(cartId -> carts.removeLines(
@@ -439,9 +456,20 @@ class CheckoutService
                         l.option(),
                         l.qty(),
                         l.unitCents(),
-                        l.lineCents()))
+                        l.lineCents(),
+                        l.ageClass()))
                 .toList();
-        return new Plan(planned, view.subtotalCents(), option, address, market, request.substitution());
+        var age = ageGate.requirement(ageClasses(view), address.province(), false, "address.province")
+                .orElse(null);
+        if (age != null) {
+            var times = DIRECT.equals(option.kind())
+                    ? List.of(clock.instant().plus(runs.direct().eta()))
+                    : List.of(
+                            Objects.requireNonNull(option.startsAt()),
+                            Objects.requireNonNull(option.endsAt()).minusSeconds(60));
+            ageGate.checkTimes(age, false, times, runs.zone(market));
+        }
+        return new Plan(planned, view.subtotalCents(), option, address, market, request.substitution(), age);
     }
 
     /**
@@ -592,7 +620,8 @@ class CheckoutService
             @Nullable String option,
             int qty,
             long unitCents,
-            long lineCents) {}
+            long lineCents,
+            @Nullable String ageClass) {}
 
     private record Plan(
             List<PlannedLine> lines,
@@ -600,5 +629,13 @@ class CheckoutService
             Option option,
             DeliveryAddresses.Address address,
             String market,
-            String substitution) {}
+            String substitution,
+            AgeRules.@Nullable Requirement age) {}
+
+    private static List<AgeClass> ageClasses(CartView view) {
+        return AgeGate.classes(view.groups().stream()
+                .flatMap(g -> g.items().stream())
+                .map(CartLine::ageClass)
+                .toList());
+    }
 }

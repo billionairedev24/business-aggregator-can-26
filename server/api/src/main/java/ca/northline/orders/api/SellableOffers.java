@@ -35,6 +35,7 @@ public interface SellableOffers {
      * @param stock units available (the variant's, else the offer's)
      * @param handlingDays 0 same day, 1 next day, 2; null when it doesn't go on pooled runs
      * @param imageUrl an approved image, or null
+     * @param ageClass the age-restriction class its category carries ({@code alcohol | tobacco | cannabis}), or null
      */
     record Sellable(
             String offerId,
@@ -48,5 +49,6 @@ public interface SellableOffers {
             long unitCents,
             int stock,
             @Nullable Integer handlingDays,
-            @Nullable String imageUrl) {}
+            @Nullable String imageUrl,
+            @Nullable String ageClass) {}
 }

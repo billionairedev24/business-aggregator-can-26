@@ -3,6 +3,6 @@ project_id = "northline-dev"
 region = "northamerica-northeast1"
 owner  = "platform"
 admin_principals  = []  # e.g. ["group:northline-ops@northline.ca"]
-api_allowed_cidrs = []  # set in prod: office/VPN/CI egress CIDRs
+api_allowed_cidrs = []  # optional in dev; required in staging and prod: office/VPN/CI egress CIDRs
 # Token signing key rotation only (docs/runbooks/key-rotation.md); leave unset otherwise.
 # signing_key_ids = { active = "<old key id>", published = ["<new key id>"] }

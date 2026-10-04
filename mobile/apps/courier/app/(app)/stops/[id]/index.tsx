@@ -6,11 +6,12 @@ import { Banner, Body, Button, Card, Chip, Heading, Loading, Row, Screen } from 
 import { useMarketZone, useRun } from '../../../../src/hooks';
 import { useI18n, type MessageKey } from '../../../../src/i18n';
 import { services } from '../../../../src/services';
-import { mapsUrl, pickedUp, stopAddress, stopName } from '../../../../src/stops';
+import { kindKey, mapsUrl, pickedUp, stopAddress, stopName } from '../../../../src/stops';
 
 /**
  * One stop: where, what, and the next action. No customer name or phone number is shown (the api gives the courier
- * none); there is no in-app call or message yet (DECISIONS S-87).
+ * none); there is no in-app call or message yet (DECISIONS S-87). An age-restricted drop-off says the ID check's age;
+ * a return stop (2026-10-04: a refused age-restricted order) takes the order back to the business.
  */
 export default function StopScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,10 +31,11 @@ export default function StopScreen() {
     );
   }
 
-  const kind = stop.kind === 'pickup' ? t('stop.pickup') : t('stop.dropoff');
+  const kind = t(kindKey(stop));
   const maps = mapsUrl(stop, Platform.OS);
   const ready = stop.kind === 'pickup' || pickedUp(run, stop);
   const arrive = () => void services().outbox.enqueue({ kind: 'arrive', stopId: stop.id });
+  const returned = () => void services().outbox.enqueue({ kind: 'returned', stopId: stop.id });
 
   return (
     <Screen testID="stop-screen">
@@ -56,6 +58,12 @@ export default function StopScreen() {
           <Body>{stop.dropoff.note}</Body>
         </Card>
       ) : null}
+      {stop.idCheck && stop.state !== 'done' ? <Chip tone="warn" label={t('stop.idCheck', { age: stop.idCheck.age })} /> : null}
+      {stop.kind === 'return' && stop.state !== 'done' ? (
+        <Banner tone="warn" role="text">
+          {t('stop.returnHint')}
+        </Banner>
+      ) : null}
       {stop.kind === 'pickup' ? (
         <Banner tone={stop.packed ? 'info' : 'warn'} role="text">
           {stop.packed ? t('stop.packed') : t('stop.notPacked')}
@@ -72,6 +80,7 @@ export default function StopScreen() {
           {!ready ? <Body muted>{t('stop.waitPickup')}</Body> : null}
         </>
       ) : null}
+      {stop.state !== 'done' && stop.kind === 'return' ? <Button label={t('stop.returned')} onPress={returned} testID="returned" /> : null}
       <Body muted>{t('stop.contact')}</Body>
     </Screen>
   );

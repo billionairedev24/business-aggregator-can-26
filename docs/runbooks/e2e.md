@@ -88,7 +88,11 @@ route, the outbox's proxies) check that neither the beans nor the routes are the
 make e2e-target ENV=staging        # dev or staging; prod is refused (the suite creates businesses, orders, payouts)
 ```
 
-No stack is started; the suite runs with `E2E_MODE=target` against the environment's URLs. It needs:
+No stack is started; the suite runs with `E2E_MODE=target` against the environment's URLs. **The data's market must be
+`live`**: since V345 (owner decision 2026-10-04) dev and staging start their first market at `pilot`, like production,
+and a pilot market takes no orders — raise it in Console › Provinces before the run
+([pilot-onboarding.md § 1](pilot-onboarding.md#1-the-path-rehearse-on-staging-onboard-in-production)). The local run
+(`make e2e`) is unaffected: the dev seed keeps the markets live. It needs:
 
 | variable | what | GitHub (`e2e.yml`) / GitLab (`e2e:target`) |
 |---|---|---|

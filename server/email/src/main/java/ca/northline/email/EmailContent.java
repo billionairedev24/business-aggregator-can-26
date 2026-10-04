@@ -3,6 +3,7 @@ package ca.northline.email;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -640,6 +641,52 @@ public sealed interface EmailContent {
     }
 
     /**
+     * Age-restricted sales (2026-10-04): a licence for a restricted class was decided, expires soon or expired.
+     *
+     * @param what {@code approved | rejected | expiring | expired}
+     * @param ageClass {@code alcohol | tobacco | cannabis}
+     * @param reason a rejection's code ({@code unreadable | wrong_class | wrong_business | expired | not_valid | other})
+     */
+    record RestrictedLicenceNotice(
+            String businessName,
+            String what,
+            String ageClass,
+            LocalDate expiresOn,
+            @Nullable String reason,
+            @Nullable String note,
+            URI link)
+            implements EmailContent {
+
+        @Override
+        public String template() {
+            return "restricted-licence";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("what", what);
+            v.put("ageClass", ageClass);
+            v.put("expiresOn", expiresOn.toString());
+            v.put("rejectReason", reason == null ? "" : reason);
+            v.put("note", note == null ? "" : note);
+            v.put("link", link.toString());
+            return v;
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(businessName);
+        }
+    }
+
+    /**
      * S-92: a Northline reviewer rejected a listing or a dish (console listing vetting). Transactional: a service notice
      * about the business's own listing, sent to the owners whatever the matrix.
      *
@@ -1001,6 +1048,20 @@ public sealed interface EmailContent {
                         List.of("pricing", "misleading"),
                         "The price is far below what the job costs; customers would be charged more on site.",
                         URI.create(studio + "/listings")));
+        for (var what : List.of("approved", "rejected", "expiring", "expired")) {
+            all.put(
+                    "restricted-licence." + what,
+                    new RestrictedLicenceNotice(
+                            business,
+                            what,
+                            "alcohol",
+                            LocalDate.of(2027, 3, 31),
+                            "rejected".equals(what) ? "unreadable" : null,
+                            "rejected".equals(what)
+                                    ? "The photo is blurred; upload a scan of the whole licence."
+                                    : null,
+                            URI.create(studio + "/compliance")));
+        }
         all.put(
                 "trust-warning",
                 new TrustWarning(

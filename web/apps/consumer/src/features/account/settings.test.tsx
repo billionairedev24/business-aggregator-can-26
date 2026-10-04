@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderApp, type Call } from '../../test/render';
+import { isRegions, regionsBody } from '../../test/regions';
 import { AccountScreen } from './AccountScreen';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
@@ -292,6 +293,23 @@ describe('Language & region, Dietary & accessibility, Plus', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Langue / Language et région' })).toBeInTheDocument();
     expect(body('PATCH', '/api/v1/me/preferences')).toEqual([{ language: 'fr', province: 'AB', units: 'metric', timeFormat: '12h' }]);
+  });
+
+  it('Français names where French is required from the region configuration, in French (2026-10-04)', async () => {
+    open('language');
+    expect(await screen.findByRole('button', { name: /Interface, reçus, notifications · requis au Québec/ })).toBeInTheDocument();
+    expect(calls.some(c => isRegions(c.url) && /lang=fr/.test(c.url))).toBe(true);
+    screen.getByRole('button', { name: /^English/ });
+  });
+
+  it('Français says nothing about a place when no place is French-first', async () => {
+    calls = mockFetch(c => isRegions(c.url)
+      ? { body: { ...regionsBody(c.url), provinces: regionsBody(c.url).provinces.map(p => ({ ...p, frenchFirst: false })) } }
+      : server(c));
+    renderApp('/account?tab=language', { locale: 'en', routes: { account: () => <AccountScreen /> } });
+    const fr = await screen.findByRole('button', { name: /^Français.*Interface, reçus, notifications/ });
+    await waitFor(() => expect(calls.some(c => isRegions(c.url) && /lang=fr/.test(c.url))).toBe(true));
+    expect(fr).toHaveAccessibleName(expect.not.stringMatching(/requis/));
   });
 
   it('a chosen province goes back to Follow my location (province "")', async () => {

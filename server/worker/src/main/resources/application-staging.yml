@@ -1,5 +1,6 @@
-# Pre-production (also activates `cloud`, see application-cloud.yml). Push may still be `local` here (S-102, push.md).
+# Pre-production (also activates `cloud`, see application-cloud.yml). Like prod, push must be real (S-102; owner decision
+# 2026-10-04: staging refuses the log-only push and SMS senders).
 northline.required-env:               # S-27 notifications: real providers only (`local` is refused here)
   email: EMAIL_PROVIDER, EMAIL_FROM, EMAIL_UNSUBSCRIBE_KEY, API_PUBLIC_URL, STUDIO_ORIGIN
   sms-provider: SMS_PROVIDER, SMS_FROM
-  links: CONSUMER_ORIGIN                # S-102: deep links in pushes and customer emails
+  push: PUSH_PROVIDER, PUSH_APNS_KEY_ID, PUSH_APNS_TEAM_ID, PUSH_APNS_KEY, PUSH_FCM_SERVICE_ACCOUNT, CONSUMER_ORIGIN

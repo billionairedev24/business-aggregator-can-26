@@ -143,6 +143,7 @@ class SecurityConfig {
                                 "/api/v1/dev/emails/**",
                                 "/api/v1/dev/identity-sessions/**",
                                 "/api/v1/dev/proof-photos/**",
+                                "/api/v1/dev/age-sessions/**",
                                 "/api/v1/dev/outbox")
                         .permitAll()
                         // Stripe webhooks: authenticated by the Stripe-Signature, not a token (S-12)

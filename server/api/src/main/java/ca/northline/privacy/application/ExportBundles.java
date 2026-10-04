@@ -58,7 +58,12 @@ class ExportBundles {
                     "Proof of your consent to marketing messages and of its withdrawal (three years, as anti-spam law"
                             + " allows)",
                     "La preuve de votre consentement aux messages publicitaires et de son retrait (trois ans, comme le"
-                            + " permet la loi anti-pourriel)"));
+                            + " permet la loi anti-pourriel)"),
+            Retention.AGE_CHECK_RECORDS,
+            List.of(
+                    "ID checks recorded when age-restricted items were handed over (two years; never the ID itself)",
+                    "Vérifications d’identité inscrites à la remise d’articles soumis à un âge minimal (deux ans; jamais"
+                            + " la pièce d’identité elle-même)"));
 
     private final SecretSealer sealer;
     private final JsonMapper json;

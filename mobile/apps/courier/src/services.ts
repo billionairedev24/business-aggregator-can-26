@@ -75,7 +75,11 @@ export function createServices(options: ServiceOptions = {}): Services {
       case 'proof':
         return courier.uploadProof(a.stopId, a.proofKind, a.file, a.id);
       case 'dropoff':
-        return courier.dropoff(a.stopId, a.proof, a.pin, a.id);
+        return courier.dropoff(a.stopId, a.proof, a.pin, a.id, a.idCheck);
+      case 'refuse':
+        return courier.refuse(a.stopId, a.reason, a.id);
+      case 'returned':
+        return courier.returned(a.stopId, a.id);
     }
   };
   const outbox = new Outbox({

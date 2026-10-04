@@ -12,6 +12,10 @@ mock_provider "aws" {
   }
 }
 
+variables {
+  api_allowed_cidrs = ["203.0.113.0/24"]
+}
+
 mock_provider "ec" {
   mock_data "ec_stack" {
     defaults = { version = "9.1.3" }
@@ -89,6 +93,16 @@ run "rejects_region_outside_canada" {
   }
 
   expect_failures = [var.region]
+}
+
+run "requires_api_allowed_cidrs" {
+  command = plan
+
+  variables {
+    api_allowed_cidrs = []
+  }
+
+  expect_failures = [var.api_allowed_cidrs]
 }
 
 run "helm_values" {

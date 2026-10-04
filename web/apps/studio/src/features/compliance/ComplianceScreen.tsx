@@ -9,6 +9,7 @@ import { screenHref } from '../shell/nav';
 import { complianceQuery, useAcceptObligations, useRenewDocument, useStripeLink, type Compliance, type ComplianceDoc, type TaxRow } from './api';
 import { docName, docNote, docShortName, docState, groupBn, requirementState } from './docs';
 import { useComplianceT, type ComplianceT } from './messages';
+import { RestrictedLicences } from './RestrictedLicences';
 import './Compliance.css';
 
 const ACCEPT = 'application/pdf,image/png,image/jpeg';
@@ -47,6 +48,7 @@ export function ComplianceView({ data }: { data: Compliance }) {
         </div>
         <div>
           <Documents data={data} owner={owner} />
+          {data.business.type !== 'provider' ? <RestrictedLicences owner={owner} /> : null}
           <ObligationsSection data={data} owner={owner} />
         </div>
       </div>

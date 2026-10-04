@@ -1,6 +1,7 @@
 package ca.northline.catalogue.application;
 
 import ca.northline.catalogue.api.TaxonomyAdmin;
+import ca.northline.region.api.AgeClass;
 import ca.northline.region.api.Regions;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
@@ -101,6 +102,17 @@ class TaxonomyAdminService implements TaxonomyAdmin {
             }
         }
         store.regulate(id, province, code == null, NONE.equals(code) ? null : code, actorId, clock.instant());
+        return new Change<>(before, store.category(id).orElseThrow());
+    }
+
+    @Override
+    public Change<Category> classify(String id, @Nullable String ageClass, String actorId) {
+        var before = store.category(id).orElseThrow(() -> new NotFound("category", id));
+        var code = blank(ageClass);
+        if (code != null && AgeClass.of(code).isEmpty()) {
+            throw RuleViolation.of("ageClass", "required", AGE_CLASS);
+        }
+        store.classify(id, code, actorId, clock.instant());
         return new Change<>(before, store.category(id).orElseThrow());
     }
 

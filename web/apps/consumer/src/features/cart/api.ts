@@ -2,6 +2,7 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/r
 import { z } from 'zod';
 import { ApiError, http } from '@northline/client';
 import type { Locale } from '@northline/ui';
+import { CheckoutAge } from './age';
 
 /**
  * The cart (S-51; docs/CONSUMER_WEB_PLAN.md § Guest id and cart): `GET /api/v1/cart` → the multi-shop cart of the
@@ -64,10 +65,12 @@ export const Payment = z.object({ provider: z.enum(['stripe', 'fake']), publisha
 export const Setup = z.object({
   cart: Cart, addresses: z.array(AddressView), options: z.array(DeliveryOption), payment: Payment,
   stepUp: z.enum(['none', 'required', 'enrol']), market: z.string(), served: z.boolean(),
+  /** 2026-10-04: the age step; absent from an api without it */
+  age: CheckoutAge.optional(),
 });
 export type Setup = z.infer<typeof Setup>;
 export const TaxLine = z.object({ type: z.string(), percent: z.number(), cents: z.number().int() });
-export const Quote = z.object({ subtotalCents: z.number().int(), deliveryFeeCents: z.number().int(), taxCents: z.number().int(), taxes: z.array(TaxLine), totalCents: z.number().int(), market: z.string() });
+export const Quote = z.object({ subtotalCents: z.number().int(), deliveryFeeCents: z.number().int(), taxCents: z.number().int(), taxes: z.array(TaxLine), totalCents: z.number().int(), market: z.string(), age: CheckoutAge.optional() });
 export type Quote = z.infer<typeof Quote>;
 export const Intent = z.object({ paymentIntent: z.string(), clientSecret: z.string().nullish(), status: z.string(), amountCents: z.number().int() });
 export type Intent = z.infer<typeof Intent>;

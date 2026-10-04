@@ -86,7 +86,10 @@ describe('eas.json', () => {
     });
     failsWith('courier', dir, /appVersionSource must be "remote"/);
     failsWith('courier', dir, /build\.production \(prod\): autoIncrement must be true/);
-    failsWith('courier', dir, /submit\.production\.android must be the production track as a draft/);
+    failsWith('courier', dir, /submit\.production\.android must be the closed testing track \("alpha"\) as a draft/);
+    const consumer = copyOf('consumer');
+    editJson(consumer, 'eas.json', (e) => (e.submit.production.android.releaseStatus = 'completed'));
+    failsWith('consumer', consumer, /submit\.production\.android must be the production track as a draft/);
   });
 
   it('accepts real store ids and refuses malformed ones', () => {
@@ -181,6 +184,39 @@ describe('privacy answers', () => {
     editJson(dir, 'store/privacy.json', (p) => delete p.collected.PhotosorVideos);
     editText(dir, 'app.config.ts', (s) => s.replace("'NSPrivacyCollectedDataTypePhotosorVideos',", ''));
     failsWith('courier', dir, /asks for android\.permission\.CAMERA: store\/privacy\.json must declare PhotosorVideos/);
+  });
+});
+
+describe('distribution and age-restricted goods (2026-10-04)', () => {
+  it('keeps the courier app unlisted in both stores, never on the public Play track', () => {
+    const dir = copyOf('courier');
+    editJson(dir, 'store/policy.json', (p) => (p.distribution.apple = 'public'));
+    editJson(dir, 'eas.json', (e) => (e.submit.production.android.track = 'production'));
+    failsWith('courier', dir, /store\/policy\.json: distribution must be \{apple: "unlisted", play: "closed"\}/);
+    failsWith('courier', dir, /closed testing track \("alpha"\)/);
+    const { pending } = checkApp(APPS.courier, join(MOBILE, APPS.courier.dir));
+    assert.ok(pending.some((p) => /Apple Unlisted App distribution/.test(p)));
+  });
+
+  it('sells only what the stores allow, with the 18+ rating and an age gate', () => {
+    const dir = copyOf('consumer');
+    editJson(dir, 'store/policy.json', (p) => {
+      p.ageRestrictedGoods.inApp.push('tobacco');
+      delete p.ageRestrictedGoods.ageGate;
+    });
+    editJson(dir, 'store/store.config.json', (c) => (c.apple.advisory.alcoholTobaccoOrDrugUseOrReferences = 'INFREQUENT_OR_MILD'));
+    editJson(dir, 'store/play/details.json', (d) => (d.targetAudience = ['16-17', '18 and over']));
+    failsWith('consumer', dir, /ageRestrictedGoods\.inApp: tobacco — the App Store \(1\.4\.3\) and Google Play do not allow/);
+    failsWith('consumer', dir, /ageRestrictedGoods\.ageGate: say how/);
+    failsWith('consumer', dir, /alcoholTobaccoOrDrugUseOrReferences FREQUENT_OR_INTENSE/);
+    failsWith('consumer', dir, /target audience \["18 and over"\] only/);
+  });
+
+  it('accepts website-only deletion for an app that creates no accounts only with the owner’s decision', () => {
+    const dir = copyOf('courier');
+    editJson(dir, 'store/privacy.json', (p) => delete p.accountDeletion.webOnlyDecision);
+    assert.ok(checkApp(APPS.courier, dir).pending.some((p) => /accountDeletion/.test(p)));
+    assert.ok(!checkApp(APPS.courier, join(MOBILE, APPS.courier.dir)).pending.some((p) => /accountDeletion/.test(p)));
   });
 });
 

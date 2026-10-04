@@ -9,7 +9,8 @@
   "accountDeletion": {
     "inApp": false,
     "webUrl": "https://northline.ca/account?tab=profile#your-data",
-    "status": "courier accounts are created by Northline, not in the app (5.1.1(v) covers apps that create accounts); a courier deletes the account on the consumer site's Your data page (S-105) — confirm with review"
+    "status": "courier accounts are created by Northline, not in the app (5.1.1(v) covers apps that create accounts); a courier deletes the account on the consumer site's Your data page (S-105)",
+    "webOnlyDecision": "Owner decision 2026-10-04 (docs/DECISIONS.md): courier account deletion is on the website; the app links to it. Revisit only if App Review asks."
   },
   "collected": {
     "PreciseLocation": {

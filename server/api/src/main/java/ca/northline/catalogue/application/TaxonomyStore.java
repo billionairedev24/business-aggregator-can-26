@@ -27,6 +27,8 @@ public interface TaxonomyStore {
     void regulate(
             String categoryId, String province, boolean clear, @Nullable String regulator, String actorId, Instant at);
 
+    void classify(String categoryId, @Nullable String ageClass, String actorId, Instant at);
+
     List<Regulator> regulators();
 
     Optional<Regulator> regulator(String code);

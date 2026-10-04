@@ -22,9 +22,14 @@ variable "admin_principals" {
 }
 
 variable "api_allowed_cidrs" {
-  description = "CIDRs allowed to reach the Kubernetes API endpoint."
+  description = "CIDRs allowed to reach the Kubernetes API endpoint. Required in staging, as in prod (owner decision 2026-10-04)."
   type        = list(string)
   default     = []
+
+  validation {
+    condition     = length(var.api_allowed_cidrs) > 0
+    error_message = "staging: set api_allowed_cidrs (office/VPN/CI egress CIDRs); the API must not be open to the internet (owner decision 2026-10-04, as in prod)."
+  }
 }
 
 variable "bucket_name_suffix" {

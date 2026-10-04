@@ -125,7 +125,8 @@ class MenuCsvImportService implements ImportMenuCsv {
                     ItemWindow.ALWAYS,
                     null,
                     true,
-                    false);
+                    false,
+                    null);
             MenuItemRules.check(prefix, command, section, Set.of(), errors);
             commands.add(command);
         }

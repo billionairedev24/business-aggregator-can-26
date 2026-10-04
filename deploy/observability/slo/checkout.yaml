@@ -1,5 +1,7 @@
 # S-113 SLOs as code (docs/runbooks/alerting.md) — see sign-in.yaml. Checkout = the money-moving POSTs of the consumer
-# site and apps: start a checkout (orders: goods and food), place it, and a booking's checkout (deposit hold).
+# site and apps: start a goods checkout, place it, a booking's checkout (deposit hold), and — owner decision 2026-10-04
+# (S-119 F10) — a food order: place it (POST /me/food-orders) and confirm its payment (POST …/{orderId}/confirm).
+# Quotes (/me/checkout/quote, /me/food-orders/quote) are not money-moving and stay out.
 version: "prometheus/v1"
 service: "northline-checkout"
 labels:
@@ -8,13 +10,13 @@ labels:
 slos:
   - name: "availability"
     objective: 99.9
-    description: "Checkout calls (start, place, booking checkout) that don't fail on Northline's side (5xx). Declined cards and validation (4xx) count as good."
+    description: "Checkout calls (start, place, booking checkout, food order place and confirm) that don't fail on Northline's side (5xx). Declined cards and validation (4xx) count as good."
     sli:
       events:
         error_query: |
-          sum(rate(http_server_requests_seconds_count{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout)",status=~"5.."}[{{.window}}]))
+          sum(rate(http_server_requests_seconds_count{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout|food-orders|food-orders/[^/]+/confirm)",status=~"5.."}[{{.window}}]))
         total_query: |
-          sum(rate(http_server_requests_seconds_count{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout)"}[{{.window}}]))
+          sum(rate(http_server_requests_seconds_count{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout|food-orders|food-orders/[^/]+/confirm)"}[{{.window}}]))
     alerting:
       name: NorthlineCheckoutAvailabilityBurn
       labels:
@@ -35,12 +37,12 @@ slos:
       events:
         error_query: |
           (
-            sum(rate(http_server_requests_seconds_count{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout)"}[{{.window}}]))
+            sum(rate(http_server_requests_seconds_count{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout|food-orders|food-orders/[^/]+/confirm)"}[{{.window}}]))
             -
-            sum(rate(http_server_requests_seconds_bucket{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout)",le="2.5"}[{{.window}}]))
+            sum(rate(http_server_requests_seconds_bucket{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout|food-orders|food-orders/[^/]+/confirm)",le="2.5"}[{{.window}}]))
           )
         total_query: |
-          sum(rate(http_server_requests_seconds_count{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout)"}[{{.window}}]))
+          sum(rate(http_server_requests_seconds_count{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout|food-orders|food-orders/[^/]+/confirm)"}[{{.window}}]))
     alerting:
       name: NorthlineCheckoutLatencyBurn
       labels:
