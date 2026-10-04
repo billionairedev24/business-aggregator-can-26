@@ -1,5 +1,6 @@
 package ca.northline.booking.application;
 
+import ca.northline.booking.api.JobEscrows;
 import ca.northline.booking.domain.Approval;
 import ca.northline.booking.domain.BookingState;
 import java.math.BigDecimal;
@@ -42,8 +43,10 @@ public final class JobViews {
             @Nullable String vehicle,
             @Nullable String customerNote,
             @Nullable Long priceCents,
-            // held while the job runs, released after sign-off, null without payment
+            // held while the job runs, released after sign-off, null without payment (the payments ledger's state)
             @Nullable String escrow,
+            // what was charged and is held, its GST/HST, Northline's fee and the merchant's net; null without payment
+            JobEscrows.@Nullable Held escrowMoney,
             List<TimelineEntry> timeline,
             List<Approval> approvals) {}
 

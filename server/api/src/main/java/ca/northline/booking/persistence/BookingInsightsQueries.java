@@ -106,7 +106,7 @@ class BookingInsightsQueries implements BookingCalendar, BookingInsights, Servic
                         select id, coalesce(title, 'Job') as title, starts_at, state, customer_id, member_user_id, area,
                                details ->> 'access' as access,
                                case when escrow_id is not null and state not in ('signed_off', 'cancelled')
-                                    then price_cents end as held
+                                    then price_cents + coalesce(tax_cents, 0) end as held
                           from booking.bookings
                          where merchant_id = :merchantId and starts_at >= :from and starts_at < :to and state <> 'cancelled'
                          order by starts_at, id

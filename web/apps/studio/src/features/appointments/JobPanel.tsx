@@ -35,7 +35,7 @@ export function stage(j: JobDetail, t: T, money: (c: number) => string): { cta: 
     case 'confirmed': return { cta: t('startTravel'), step: 'en-route', hint: t('hintStart') };
     case 'en_route': return { cta: t('checkIn'), step: 'on-site', hint: t('hintCheckIn') };
     case 'on_site': return { cta: t('complete'), step: 'complete', hint: t('hintComplete') };
-    case 'completed': return { cta: t('waiting'), hint: t('hintWaiting', { money: money(j.priceCents ?? 0) }) };
+    case 'completed': return { cta: t('waiting'), hint: t('hintWaiting', { money: money(j.escrowMoney?.heldCents ?? j.priceCents ?? 0) }) };
     case 'signed_off': return { cta: t('signedOff'), hint: t('hintSigned') };
     default: return { cta: t(`state_${j.state}`), hint: t('hintOther', { state: t(`state_${j.state}`).toLowerCase() }) };
   }
@@ -80,7 +80,7 @@ function JobCard({ job: j }: { job: JobDetail }) {
         {j.customer ? <><dt>{t('customer')}</dt><dd>{j.customer.reliability != null ? t('customerLine', { name: j.customer.name, score: j.customer.reliability.toFixed(1), jobs: j.customer.pastJobs }) : t('customerLineNoScore', { name: j.customer.name, jobs: j.customer.pastJobs })}</dd></> : null}
         {j.addressLine || j.access ? <><dt>{t('where')}</dt><dd>{[j.addressLine, j.access].filter(Boolean).join(' · ')}</dd></> : null}
         {j.vehicle ? <><dt>{t('vehicle')}</dt><dd>{j.vehicle}</dd></> : null}
-        <dt>{t('escrow')}</dt><dd><strong>{j.escrow === 'held' ? t('escrowHeld', { money: f.money(j.priceCents ?? 0) }) : j.escrow === 'released' ? t('escrowReleased', { money: f.money(j.priceCents ?? 0) }) : t('escrowNone')}</strong></dd>
+        <dt>{t('escrow')}</dt><dd><EscrowFact j={j} /></dd>
       </dl>
       {j.customerNote ? <div className="nl-appt-quote">“{j.customerNote}”</div> : null}
       {j.approvals.length > 0 ? (
@@ -172,5 +172,25 @@ function ApprovalDialog({ open, onClose, jobId }: { open: boolean; onClose: () =
       <Field label={t('approvalDesc')} error={show('description', 'description')}><TextInput value={v.description} maxLength={200} onBlur={() => setTouched(x => ({ ...x, description: true }))} onChange={e => setV(x => ({ ...x, description: e.target.value }))} /></Field>
       <Field label={t('approvalAmount')} error={show('amount', 'amountCents')}><TextInput inputMode="decimal" value={v.amount} onBlur={() => setTouched(x => ({ ...x, amount: true }))} onChange={e => setV(x => ({ ...x, amount: e.target.value }))} /></Field>
     </Dialog>
+  );
+}
+
+/** What the customer paid and is held (incl. GST/HST), then what the business gets after the tax and Northline's fee — the Earnings ledger's figures. */
+function EscrowFact({ j }: { j: JobDetail }) {
+  const t = useAppointmentsT();
+  const f = useFormatters();
+  const m = j.escrowMoney;
+  const held = m?.heldCents ?? j.priceCents ?? 0;
+  const state = m?.state ?? j.escrow;
+  const line = state === 'held' ? t('escrowHeld', { money: f.money(held) })
+    : state === 'released' ? t('escrowReleased', { money: f.money(held) })
+    : state === 'disputed' ? t('escrowOnHold', { money: f.money(held) })
+    : state === 'refunded' ? t('escrowRefunded', { money: f.money(held) })
+    : t('escrowNone');
+  return (
+    <>
+      <strong>{line}</strong>
+      {m && state !== 'refunded' ? <div className="nl-muted">{t('escrowBreakdown', { tax: f.money(m.taxCents), fee: f.money(m.feeCents), net: f.money(m.netCents) })}</div> : null}
+    </>
   );
 }

@@ -33,7 +33,11 @@ final class EarningsResponses {
             int takeRateBps,
             Map<String, Integer> takeRates) {}
 
-    /** One row of the ledger table ({@code GET /earnings/ledger}). */
+    /**
+     * One row of the ledger table ({@code GET /earnings/ledger}): {@code heldCents} is what the customer was charged
+     * (sale plus GST/HST), {@code grossCents} the sale before tax, {@code netCents} the business's share after the tax
+     * and Northline's fee.
+     */
     record LedgerLine(
             String id,
             EscrowKind kind,
@@ -41,7 +45,9 @@ final class EarningsResponses {
             @Nullable String orderNumber,
             Instant occurredAt,
             @Nullable String customerName,
+            long heldCents,
             long grossCents,
+            long taxCents,
             long feeCents,
             long netCents,
             EscrowState state,

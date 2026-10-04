@@ -64,7 +64,8 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
     public List<LedgerLine> ledger(String merchantId, int limit) {
         return jdbc.sql("""
                         select id, kind, label, order_number, occurred_at, customer_name, amount_cents,
-                               coalesce(fee_cents, 0) as fee_cents, state, release_at, released_at
+                               coalesce(tax_cents, 0) as tax_cents, coalesce(fee_cents, 0) as fee_cents, state,
+                               release_at, released_at
                           from payments.escrows where merchant_id = :m
                          order by occurred_at desc, id desc limit :limit""")
                 .param("m", merchantId)
@@ -76,7 +77,9 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
                         rs.getString("order_number"),
                         instant(rs, "occurred_at"),
                         rs.getString("customer_name"),
+                        rs.getLong("amount_cents") + rs.getLong("tax_cents"),
                         rs.getLong("amount_cents"),
+                        rs.getLong("tax_cents"),
                         rs.getLong("fee_cents"),
                         rs.getLong("amount_cents") - rs.getLong("fee_cents"),
                         CodedEnum.fromCode(EscrowState.class, rs.getString("state")),

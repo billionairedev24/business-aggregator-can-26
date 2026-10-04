@@ -33,10 +33,10 @@ const earnings = {
   nextPayoutAt: nextPayout, frequency: 'weekly', tier: 'master', takeRateBps: 900, takeRates: { master: 900, trusted: 1200, registered: 1500 },
 };
 const ledger = { items: [
-  { id: 'e1', kind: 'goods', label: 'Brake pads', orderNumber: null, occurredAt: '2026-09-06T17:00:00Z', customerName: 'D. Kowalski', grossCents: 24700, feeCents: 2223, netCents: 22477, state: 'released', releaseAt: null, releasedAt: '2026-09-08T17:00:00Z' },
-  { id: 'e2', kind: 'service', label: 'Diagnostic', orderNumber: null, occurredAt: '2026-09-06T17:00:00Z', customerName: 'M. Tran', grossCents: 12000, feeCents: 1080, netCents: 10920, state: 'held', releaseAt: hours(30.5), releasedAt: null },
-  { id: 'e3', kind: 'goods', label: 'Wiper blades ×2', orderNumber: 'NL-48190', occurredAt: '2026-09-05T17:00:00Z', customerName: 'S. Bouchard', grossCents: 3800, feeCents: 342, netCents: 3458, state: 'released', releaseAt: null, releasedAt: null },
-  { id: 'e4', kind: 'service', label: 'Pre-purchase', orderNumber: null, occurredAt: '2026-09-04T17:00:00Z', customerName: 'A. Osei', grossCents: 16000, feeCents: 1440, netCents: 14560, state: 'disputed', releaseAt: null, releasedAt: null },
+  { id: 'e1', kind: 'goods', label: 'Brake pads', orderNumber: null, occurredAt: '2026-09-06T17:00:00Z', customerName: 'D. Kowalski', heldCents: 25935, grossCents: 24700, taxCents: 1235, feeCents: 2223, netCents: 22477, state: 'released', releaseAt: null, releasedAt: '2026-09-08T17:00:00Z' },
+  { id: 'e2', kind: 'service', label: 'Diagnostic', orderNumber: null, occurredAt: '2026-09-06T17:00:00Z', customerName: 'M. Tran', heldCents: 12600, grossCents: 12000, taxCents: 600, feeCents: 1080, netCents: 10920, state: 'held', releaseAt: hours(30.5), releasedAt: null },
+  { id: 'e3', kind: 'goods', label: 'Wiper blades ×2', orderNumber: 'NL-48190', occurredAt: '2026-09-05T17:00:00Z', customerName: 'S. Bouchard', heldCents: 3990, grossCents: 3800, taxCents: 190, feeCents: 342, netCents: 3458, state: 'released', releaseAt: null, releasedAt: null },
+  { id: 'e4', kind: 'service', label: 'Pre-purchase', orderNumber: null, occurredAt: '2026-09-04T17:00:00Z', customerName: 'A. Osei', heldCents: 16800, grossCents: 16000, taxCents: 800, feeCents: 1440, netCents: 14560, state: 'disputed', releaseAt: null, releasedAt: null },
 ] };
 const report = (period: string) => ({
   period, from: '2026-07-02T06:00:00Z', to: '2026-09-29T17:00:00Z', grossCents: 1944000, grossChangePct: 22, count: 118, averageTicketCents: 16475,
@@ -109,7 +109,7 @@ describe('Earnings', () => {
     expect(await screen.findByRole('heading', { level: 1, name: `$2,140.60 releasing ${weekdayLong(nextPayout, 'en')}` })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('$1,318.00')).toBeTruthy();
-    expect(screen.getByText('in escrow · 11 jobs')).toBeTruthy();
+    expect(screen.getByText('net in escrow · 11 jobs')).toBeTruthy();
     expect(screen.getByText('released, next payout')).toBeTruthy();
     expect(screen.getByText('9%')).toBeTruthy();
     expect(screen.getByText('take rate · Master (Trusted 12%, Registered 15%)')).toBeTruthy();
@@ -118,6 +118,11 @@ describe('Earnings', () => {
     expect(await screen.findAllByText('Escrow · 31 h')).not.toHaveLength(0);
     expect(screen.getAllByText('Disputed · on hold')).not.toHaveLength(0);
     expect(screen.getAllByText('Wiper blades ×2 · NL-48190')).not.toHaveLength(0);
+    // engineering follow-ups (S-117 finding): the held amount is what the customer paid (incl. GST/HST), the net is after tax and fee
+    expect(screen.getAllByText('Held (incl. GST/HST)')).not.toHaveLength(0);
+    expect(screen.getAllByText('Net to you')).not.toHaveLength(0);
+    expect(screen.getAllByText('$259.35')).not.toHaveLength(0);
+    expect(screen.getAllByText('$224.77')).not.toHaveLength(0);
     expect(screen.getByText(/View only/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /add/i })).toBeNull();
   });
@@ -125,7 +130,7 @@ describe('Earnings', () => {
   it('uses kitchen wording in French', async () => {
     shell.type = 'kitchen';
     renderScreen(<EarningsScreen />, 'fr');
-    expect(await screen.findByText('en fiducie · 11 commandes')).toBeTruthy();
+    expect(await screen.findByText('net en fiducie · 11 commandes')).toBeTruthy();
     expect(screen.getByText('3 · À la remise')).toBeTruthy();
   });
 
@@ -135,7 +140,7 @@ describe('Earnings', () => {
     const retry = await screen.findByRole('button', { name: 'Retry' });
     routes['GET /api/v1/merchants/PWM1/earnings'] = () => ok(earnings);
     await ui.click(retry);
-    expect(await screen.findByText('in escrow · 11 jobs')).toBeTruthy();
+    expect(await screen.findByText('net in escrow · 11 jobs')).toBeTruthy();
   });
 });
 
