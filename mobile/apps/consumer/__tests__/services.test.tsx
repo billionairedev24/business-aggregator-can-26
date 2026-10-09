@@ -346,6 +346,30 @@ describe('C4–C7 booking a visit', () => {
     expect(pay).toHaveBeenCalledWith(expect.objectContaining({ clientSecret: 'pi_01J9BKTEST_secret_fixture', publishableKey: 'pk_test_fixture' }), { kind: 'saved', paymentMethodId: 'pm_fixture_visa' });
   });
 
+  it('a promo code and points lower the hold (mobile gaps part 2); the job site goes with it for the live ETA', async () => {
+    const { server, view } = await start({ signedIn: true, url: '/book/prairie-wrench/review', store: SAVED });
+    holdFor(server);
+    updateDraft('prairie-wrench', { address: '1204 Example Ave, Buzz 804' });
+    expect(await screen.findByText('Hold $93.45 in escrow')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('promo-code'), 'shoponly');
+    fireEvent.press(screen.getByTestId('promo-apply'));
+    expect(await screen.findByText("This code doesn't apply to this order.")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('promo-code'), 'welcome5');
+    fireEvent.press(screen.getByTestId('promo-apply'));
+    expect(await screen.findByText('WELCOME5 applied: $5.00 off')).toBeTruthy();
+    expect(screen.getByText('Promo code WELCOME5')).toBeTruthy();
+    // 5 % on $84.00 after the code
+    expect(await screen.findByText('$4.20')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('use-points'));
+    expect(await screen.findByText('$12.00 paid with points')).toBeTruthy();
+    await agreeAndPay('Hold $76.20 in escrow');
+    await waitFor(() => expect(view.getPathname()).toBe('/bookings/01J9BKTEST/booked'));
+    expect(server.calls.find((c) => c.method === 'POST' && c.path === '/me/bookings/checkout')?.body).toMatchObject({
+      promoCode: 'WELCOME5', usePoints: true, siteLat: 45.11, siteLng: -75.21,
+    });
+    expect(server.calls.filter((c) => c.path === '/me/bookings/price').every((c) => c.signed)).toBe(true);
+  });
+
   it('stays on the review when the card sheet is cancelled, and says a declined card plainly', async () => {
     const pay = jest.fn<ReturnType<BookingPayments['pay']>, Parameters<BookingPayments['pay']>>(async () => ({ status: 'cancelled' }));
     setBookingPayments({ pay });
@@ -488,6 +512,19 @@ describe('C9 Day-of ETA', () => {
     expect(screen.queryByTestId('go-sign-off')).toBeNull();
   });
 
+  it('minutes away while the member shares their position on the way (mobile gaps part 2) — never where they are', async () => {
+    const { server, services } = await start({ signedIn: true, url: '/bookings/01J9BOOKINGROUTE/eta' });
+    expect(await screen.findByText('About 12 minutes away')).toBeTruthy();
+    expect(screen.getByText(/^5\.6 km in a straight line · updated /)).toBeTruthy();
+    expect(server.calls.some((c) => c.path === '/me/bookings/01J9BOOKINGROUTE/eta' && c.signed)).toBe(true);
+    server.services.etas.set('01J9BOOKINGROUTE', { sharing: false });
+    await act(async () => {
+      await services.queryClient.invalidateQueries();
+    });
+    expect(await screen.findByText('Ravi isn’t sharing their location right now.')).toBeTruthy();
+    expect(screen.queryByTestId('eta-minutes')).toBeNull();
+  });
+
   it('says when a confirmed job is coming', async () => {
     await start({ signedIn: true, url: '/bookings/01J9BOOKING/eta' });
     expect(await screen.findByText(/^Ravi comes /)).toBeTruthy();
@@ -532,21 +569,56 @@ describe('C10 Completion & sign-off', () => {
 });
 
 describe('C11 Two-way review', () => {
-  it('says plainly the review isn’t sent yet, and saves the favourite', async () => {
+  it('posts the review (mobile gaps part 2) and saves the favourite; the review can be changed for a day', async () => {
     const { server, view } = await start({ signedIn: true, url: '/bookings/01J9BOOKINGPAID/review' });
     expect(await screen.findByText('How was Ravi?')).toBeTruthy();
-    expect(screen.getByTestId('review-gap')).toBeTruthy();
+    expect(screen.queryByTestId('review-gap')).toBeNull();
+    fireEvent.press(screen.getByTestId('submit-review'));
+    expect(await screen.findByText('Choose from 1 to 5 stars.')).toBeTruthy();
     fireEvent.press(screen.getByTestId('star-5'));
     expect(screen.getByTestId('star-5').props.accessibilityState).toMatchObject({ checked: true });
     fireEvent.press(screen.getByRole('button', { name: 'On time' }));
-    fireEvent.press(screen.getByRole('button', { name: 'Submit review' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Clear explanation' }));
+    fireEvent.changeText(screen.getByTestId('field-review'), 'Too short');
+    fireEvent.press(screen.getByTestId('submit-review'));
+    expect(await screen.findByText('Write at least 10 characters, or leave the review empty.')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('field-review'), 'Explained the brakes clearly and was right on time.');
+    fireEvent.press(screen.getByTestId('submit-review'));
+    expect(await screen.findByText('Your review of Prairie Wrench: ★★★★★')).toBeTruthy();
+    expect(screen.getByText('On time · Clear explanation')).toBeTruthy();
+    expect(screen.getByText(/^You can change it until /)).toBeTruthy();
+    expect(server.calls.filter((c) => c.method === 'POST' && c.path === '/me/reviews').at(-1)?.body).toEqual({
+      kind: 'booking', id: '01J9BOOKINGPAID', merchantId: 'm-prairie', rating: 5, tags: ['on_time', 'clear_explanation'], text: 'Explained the brakes clearly and was right on time.',
+    });
+    await waitFor(() => expect(server.services.favourites.has('m-prairie')).toBe(true));
+    fireEvent.press(screen.getByRole('button', { name: 'Done' }));
     await waitFor(() => expect(view.getPathname()).toBe('/orders'));
-    expect(server.services.favourites.has('m-prairie')).toBe(true);
+  });
+
+  it('a second review of the same job is refused; the favourite stays off when unticked', async () => {
+    const { server } = await start({ signedIn: true, url: '/bookings/01J9BOOKINGPAID/review' });
+    fireEvent.press(await screen.findByTestId('star-3'));
+    fireEvent.press(screen.getByTestId('review-favourite'));
+    // someone posted it from the website meanwhile
+    server.aftercare.reviews.set('rev-web', { id: 'rev-web', merchantId: 'm-prairie', rating: 4, tags: [], text: null, screened: false, createdAt: new Date().toISOString(), editUntil: null, editedAt: null, reply: 'Thanks!', hidden: false, kind: 'booking', refId: '01J9BOOKINGPAID' });
+    fireEvent.press(screen.getByTestId('submit-review'));
+    expect(await screen.findByText("You've already reviewed this.")).toBeTruthy();
+    expect(server.services.favourites.has('m-prairie')).toBe(false);
   });
 
   it('only for finished jobs', async () => {
     await start({ signedIn: true, url: '/bookings/01J9BOOKING/review' });
     expect(await screen.findByText('Only paid bookings can be reviewed, once the job is done.')).toBeTruthy();
+  });
+
+  it('is in French on a French phone', async () => {
+    const { getLocales } = jest.requireMock('expo-localization') as { getLocales: jest.Mock };
+    getLocales.mockReturnValueOnce([{ languageTag: 'fr-CA' }]);
+    await start({ signedIn: true, url: '/bookings/01J9BOOKINGPAID/review' });
+    expect(await screen.findByRole('button', { name: 'Publier l’avis' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Explications claires' })).toBeTruthy();
+    fireEvent.press(screen.getByTestId('submit-review'));
+    expect(await screen.findByText('Choisissez de 1 à 5 étoiles.')).toBeTruthy();
   });
 });
 

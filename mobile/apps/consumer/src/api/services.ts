@@ -139,6 +139,9 @@ export interface Checkout {
   priceCents: number;
   taxCents: number;
   totalCents: number;
+  discountCents?: number;
+  pointsCents?: number;
+  promoCode?: string | null;
   /** `requires_action` / `requires_payment_method` (confirm the card with Stripe), `authorized`, or `confirmed` (free: booked). */
   status: string;
   paymentIntent?: string | null;
@@ -161,6 +164,11 @@ export interface BookingRequest {
   accessNote?: string;
   agreePolicies: boolean;
   agreeTerms: boolean;
+  /** Mobile gaps part 2: a promo code, points, and the job site on the map (for the live ETA). */
+  promoCode?: string;
+  usePoints?: boolean;
+  siteLat?: number;
+  siteLng?: number;
 }
 
 export interface QuoteAsk {

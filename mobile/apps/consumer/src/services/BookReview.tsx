@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -6,10 +6,13 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { ApiError, colors, randomId, space } from '@northline/mobile-kit';
 
+import { PromoPoints } from '../aftercare/PromoPoints';
+import { aftercare } from '../aftercare/Review';
 import type { Booking, BookingRequest, Checkout, ProviderPage, SavedCard } from '../api/services';
 import { useAuth } from '../auth/AuthProvider';
 import { config } from '../config';
 import { useI18n } from '../i18n';
+import { useDeliveryLocation, type DeliveryLocation } from '../location/DeliveryLocation';
 import { Body, Button, Checkbox, Field, Notice, Option, Title, type } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { EmptyState, errorMessage, QueryView, SignInPrompt, Skeleton } from '../ui/states';
@@ -22,8 +25,21 @@ import { stepUpProof } from './stepUp';
 type Phase = 'form' | 'paying' | 'stepUp' | 'enrol';
 const SPOT_VALUES = { vehicle: ['Driveway', 'Street parking', 'Underground parkade', 'Workplace lot'], home: ['Front door', 'Side or back door', 'Concierge / buzzer', 'Lockbox'] };
 
+/**
+ * The job site on the map (mobile gaps part 2, for the live ETA): the saved delivery address's point when the booking's
+ * address is that one; nothing otherwise (no ETA minutes then — the address isn't geocoded here).
+ */
+export function siteOf(d: Pick<BookingDraft, 'address'>, location: DeliveryLocation): { siteLat: number; siteLng: number } | undefined {
+  const saved = location.street ?? location.label;
+  if (location.status !== 'saved' || location.lat == null || location.lng == null || !saved || !d.address.trim().startsWith(saved)) return undefined;
+  return { siteLat: location.lat, siteLng: location.lng };
+}
+
+/** The promo code and points the customer chose on the review step. */
+export interface Discounts { promoCode?: string; usePoints?: boolean; site?: { siteLat: number; siteLng: number } }
+
 /** The checkout request from the wizard's answers (the api's BookingRequest). */
-export function bookingRequest(p: ProviderPage, d: BookingDraft, agree: { policies: boolean; terms: boolean }, area?: string): BookingRequest {
+export function bookingRequest(p: ProviderPage, d: BookingDraft, agree: { policies: boolean; terms: boolean }, area?: string, extra: Discounts = {}): BookingRequest {
   const v = parseVehicle(d.vehicle);
   const service = p.services.find((s) => s.id === d.serviceId);
   const where = service?.kind === 'appointment' ? {} : {
@@ -40,13 +56,17 @@ export function bookingRequest(p: ProviderPage, d: BookingDraft, agree: { polici
     ...where,
     agreePolicies: agree.policies,
     agreeTerms: agree.terms,
+    ...(extra.promoCode ? { promoCode: extra.promoCode } : {}),
+    ...(extra.usePoints ? { usePoints: true } : {}),
+    ...(service?.kind === 'appointment' ? {} : (extra.site ?? {})),
   };
 }
 
 /**
  * C6 Review & escrow (design 01 `book_review`): the price, the time in the business's zone, tax, the total held in
  * escrow and how escrow works; the card (a saved one, or a new one in Stripe's own sheet — the app never sees card
- * numbers); the cancellation policy and terms. "Hold $… in escrow" prices it on the api (`Idempotency-Key`, S-51
+ * numbers); a promo code and points (mobile gaps part 2: `POST /me/bookings/price` — tax on the price after the code,
+ * points pay like money); the cancellation policy and terms. "Hold $… in escrow" prices it on the api (`Idempotency-Key`, S-51
  * step-up with the authenticator app when the sign-in had no second factor), authorizes the card and confirms the
  * booking.
  */
@@ -90,12 +110,27 @@ function Pay({ p, draft }: { p: ProviderPage; draft: BookingDraft }) {
   const keys = useRef(new Map<string, string>());
   const confirmKey = useRef(randomId());
   const proof = useRef<string | undefined>(undefined);
+  const [promoCode, setPromoCode] = useState<string>();
+  const [usePoints, setUsePoints] = useState(false);
+  const { location } = useDeliveryLocation();
+  const ask = { holdId: hold.holdId, serviceId: service.id, ...(promoCode ? { promoCode } : {}), usePoints };
+  const price = useQuery({
+    queryKey: ['aftercare', 'booking-price', ask],
+    queryFn: () => aftercare().bookingPrice(ask),
+    placeholderData: keepPreviousData,
+    retry: false,
+    staleTime: 30_000,
+  });
+  const priced = price.data ?? undefined;
+  const promoError = price.error instanceof ApiError ? (price.error.fieldMessage('promoCode') ?? null) : null;
 
   const saved: SavedCard[] = cards.data?.items ?? [];
   const chosenCard = method ?? saved.find((c) => c.isDefault)?.id ?? saved[0]?.id ?? 'new';
-  const subtotal = checkout?.priceCents ?? service.priceCents ?? 0;
-  const tax = checkout?.taxCents ?? Math.round((subtotal * p.taxBps) / 10_000);
-  const total = checkout?.totalCents ?? subtotal + tax;
+  const subtotal = checkout?.priceCents ?? priced?.priceCents ?? service.priceCents ?? 0;
+  const discount = checkout?.discountCents ?? priced?.discountCents ?? 0;
+  const pointsCents = checkout?.pointsCents ?? priced?.pointsCents ?? 0;
+  const tax = checkout?.taxCents ?? priced?.taxCents ?? Math.round(((subtotal - discount) * p.taxBps) / 10_000);
+  const total = checkout?.totalCents ?? priced?.totalCents ?? subtotal - discount + tax - pointsCents;
   const when = `${day(hold.startsAt, p.timeZone)} · ${time(hold.startsAt, p.timeZone)}`;
   const cancelBy = new Date(Date.parse(hold.startsAt) - 12 * 3_600_000).toISOString();
   const provider = cards.data?.provider ?? 'fake';
@@ -134,7 +169,7 @@ function Pay({ p, draft }: { p: ProviderPage; draft: BookingDraft }) {
     if (Object.keys(found).length) return;
     setPhase('paying');
     try {
-      const body = bookingRequest(p, draft, agree);
+      const body = bookingRequest(p, draft, agree, undefined, { promoCode: promoError ? undefined : promoCode, usePoints, site: siteOf(draft, location) });
       const json = JSON.stringify(body);
       if (!keys.current.has(json)) keys.current.set(json, randomId());
       const started = await api.checkout(body, keys.current.get(json)!, proof.current);
@@ -201,11 +236,24 @@ function Pay({ p, draft }: { p: ProviderPage; draft: BookingDraft }) {
       <Title>{t('services.book.reviewTitle')}</Title>
       <View style={styles.lines}>
         <Line left={service.name} right={money(subtotal, locale)} />
+        {discount > 0 ? <Line left={t('promo.sum.discount', { code: priced?.promoCode ?? promoCode ?? '' })} right={`−${money(discount, locale)}`} testID="review-discount" /> : null}
         <Line left={when} right={p.name} muted testID="review-when" />
         {service.kind === 'appointment' ? null : <Line left={t('services.book.travel')} right={t('services.book.included')} />}
         <Line left={t('services.book.tax', { pct: (p.taxBps / 100).toLocaleString(locale === 'fr-CA' ? 'fr-CA' : 'en-CA') })} right={money(tax, locale)} />
+        {pointsCents > 0 ? <Line left={t('promo.sum.points')} right={`−${money(pointsCents, locale)}`} testID="review-points" /> : null}
         <Line left={t('services.book.held')} right={money(total, locale)} strong testID="review-total" />
       </View>
+      <PromoPoints
+        code={promoCode}
+        onCode={setPromoCode}
+        error={promoError}
+        discountCents={priced?.discountCents}
+        usePoints={usePoints}
+        onUsePoints={setUsePoints}
+        pointsAvailable={priced?.pointsAvailable}
+        pointsCents={priced?.pointsCents}
+        disabled={phase === 'paying'}
+      />
       <Panel tone="accent">
         <Text style={[type.small, styles.escrow]}>
           <Text style={type.strong}>{t('services.book.escrowTitle')}</Text> {t('services.book.escrowBody', { name: p.name })}

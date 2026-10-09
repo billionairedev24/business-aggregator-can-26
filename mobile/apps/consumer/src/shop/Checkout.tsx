@@ -5,6 +5,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ApiError, MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
 
+import { PromoPoints, TipPicker } from '../aftercare/PromoPoints';
+import type { TipChoice } from '../api/aftercare';
 import { ageCleared, type AddressInput, type CheckoutBody, type CheckoutSetup, type DeliveryOption, type Substitution } from '../api/shop';
 import { useAuth } from '../auth/AuthProvider';
 import { useDeliveryLocation, type DeliveryLocation } from '../location/DeliveryLocation';
@@ -49,13 +51,28 @@ export function chooseAddress(location: DeliveryLocation, setup: Pick<CheckoutSe
   };
 }
 
-/** The checkout form as a request body (pooled run or direct courier, the address, the substitution choice). */
-export const bodyOf = (option: Pick<DeliveryOption, 'kind' | 'windowId'>, address: AddressInput, substitution: Substitution): CheckoutBody => ({
+/** Mobile gaps part 2: the promo code, points and the courier's tip — each sent only when set. */
+export interface Extras { promoCode?: string; usePoints?: boolean; tip?: TipChoice }
+export const NO_TIP: TipChoice = { kind: 'none', value: 0 };
+
+/** The checkout form as a request body (pooled run or direct courier, the address, the substitution choice, extras). */
+export const bodyOf = (option: Pick<DeliveryOption, 'kind' | 'windowId'>, address: AddressInput, substitution: Substitution, extras: Extras = {}): CheckoutBody => ({
   kind: option.kind,
   windowId: option.windowId ?? null,
   address,
   substitution,
+  ...(extras.promoCode ? { promoCode: extras.promoCode } : {}),
+  ...(extras.usePoints ? { usePoints: true } : {}),
+  ...(extras.tip && extras.tip.kind !== 'none' ? { tip: extras.tip } : {}),
 });
+
+/** The extras as route params (Checkout → Payment) and back. */
+export const extrasParams = (x: Extras) => ({ promo: x.promoCode ?? '', points: x.usePoints ? '1' : '', tip: x.tip && x.tip.kind !== 'none' ? `${x.tip.kind}:${x.tip.value}` : '' });
+export function extrasOf(p: { promo?: string; points?: string; tip?: string }): Extras {
+  const [kind, value] = (p.tip ?? '').split(':');
+  const tip: TipChoice | undefined = (kind === 'amount' || kind === 'percent') && Number(value) > 0 ? { kind, value: Number(value) } : undefined;
+  return { ...(p.promo ? { promoCode: p.promo } : {}), ...(p.points === '1' ? { usePoints: true } : {}), ...(tip ? { tip } : {}) };
+}
 
 /** The quote for a checkout body (`POST /me/checkout/quote`): Checkout and Payment share it by key. */
 export function useQuote(body: CheckoutBody | null) {
@@ -71,7 +88,7 @@ export function useQuote(body: CheckoutBody | null) {
   });
 }
 
-/** Items, delivery, each tax and the total — the quote's numbers, or the cart's while the tax is being worked out. */
+/** Items, delivery, the code and points, each tax, the tip and the total — the quote's numbers, or the cart's while the tax is being worked out. */
 export function Sums({ subtotalCents, deliveryCents, quote }: { subtotalCents: number; deliveryCents?: number; quote: ReturnType<typeof useQuote> }) {
   const f = useShopFormat();
   const { t } = f;
@@ -80,6 +97,7 @@ export function Sums({ subtotalCents, deliveryCents, quote }: { subtotalCents: n
     <View style={styles.sums} testID="sums">
       <SumRow label={t('shop.sum.items')} value={f.money(q?.subtotalCents ?? subtotalCents)} />
       <SumRow label={t('shop.sum.delivery')} value={q ? f.fee(q.deliveryFeeCents) : deliveryCents !== undefined ? f.fee(deliveryCents) : '—'} />
+      {q?.discountCents ? <SumRow label={t('promo.sum.discount', { code: q.promoCode ?? '' })} value={`−${f.money(q.discountCents)}`} tone="accent2" /> : null}
       {q ? (
         q.taxes.map((x) => <SumRow key={`${x.type}${x.percent}`} label={f.tax(x.type, x.percent)} value={f.money(x.cents)} />)
       ) : quote.isFetching ? (
@@ -87,23 +105,31 @@ export function Sums({ subtotalCents, deliveryCents, quote }: { subtotalCents: n
       ) : (
         <SumRow label={t('shop.sum.tax')} value={t('shop.sum.taxLater')} />
       )}
+      {q?.tipCents ? <SumRow label={t('promo.sum.tip')} value={f.money(q.tipCents)} /> : null}
+      {q?.pointsCents ? <SumRow label={t('promo.sum.points')} value={`−${f.money(q.pointsCents)}`} tone="accent2" /> : null}
       <SumRow label={t('shop.sum.total')} value={q ? f.money(q.totalCents) : '—'} strong />
     </View>
   );
 }
 
-/** The api's answer to a quote, worded for the person: field rules (the address) or the problem's own words. */
+/** The api's answer to a quote, worded for the person: field rules (the address) or the problem's own words. The promo code's own rule shows at its field. */
 export function quoteProblem(error: unknown, t: ReturnType<typeof useShopFormat>['t']): string | null {
   if (!error) return null;
-  if (error instanceof ApiError && error.errors.length > 0) return error.errors.map((e) => serverMessage(e.message, t)).join(' ');
+  if (error instanceof ApiError && error.errors.length > 0) {
+    const rest = error.errors.filter((e) => e.field !== 'promoCode');
+    return rest.length ? rest.map((e) => serverMessage(e.message, t)).join(' ') : null;
+  }
   return errorMessage(error, t);
 }
 
+/** Why the promo code wasn't taken (`promoCode` in a 422), in the app's language. */
+export const promoProblem = (error: unknown) => (error instanceof ApiError ? (error.fieldMessage('promoCode') ?? null) : null);
+
 /**
  * B5 Checkout (design 01 `checkout`; signed in): deliver to (Change → the Location screen and back), the delivery
- * window (the market's pooled runs and the direct courier with their fees), substitutions, then the quote: items,
- * delivery, each tax by name and rate (from the province — never a fixed "GST 5%"), total. "Redeem points" has no
- * checkout api (S-51) and isn't offered. A cart with age-restricted items shows the age step (2026-10-04) and Continue
+ * window (the market's pooled runs and the direct courier with their fees), substitutions, a promo code and points
+ * and the courier's tip (mobile gaps part 2), then the quote: items, delivery, the code's discount, each tax by name and
+ * rate (from the province — never a fixed "GST 5%"; tax is on the price after the code), the tip, the points, total. A cart with age-restricted items shows the age step (2026-10-04) and Continue
  * waits for it. Continue → Payment with the choices in the route.
  */
 export function Checkout() {
@@ -120,10 +146,14 @@ export function Checkout() {
   });
   const [optionId, setOptionId] = useState<string>();
   const [substitution, setSubstitution] = useState<Substitution>('similar');
+  const [promoCode, setPromoCode] = useState<string>();
+  const [usePoints, setUsePoints] = useState(false);
+  const [tip, setTip] = useState<TipChoice>(NO_TIP);
+  const extras: Extras = { promoCode, usePoints, tip };
   const data = setup.data ?? undefined;
   const option = data?.options.find((o) => o.id === optionId) ?? data?.options[0];
   const address = chooseAddress(location, data);
-  const body = option && address && data && data.cart.itemCount > 0 ? bodyOf(option, address.input, substitution) : null;
+  const body = option && address && data && data.cart.itemCount > 0 ? bodyOf(option, address.input, substitution, extras) : null;
   const quote = useQuote(body);
   const problem = quoteProblem(quote.error, t);
   // 2026-10-04: the age step — the quote's answer for the chosen address (its province), else the setup's
@@ -141,7 +171,7 @@ export function Checkout() {
     if (!option || !address) return;
     router.push({
       pathname: '/pay',
-      params: { kind: option.kind, window: option.windowId ?? '', sub: substitution, address: address.source },
+      params: { kind: option.kind, window: option.windowId ?? '', sub: substitution, address: address.source, ...extrasParams(extras) },
     });
   };
 
@@ -204,9 +234,25 @@ export function Checkout() {
                 ))}
               </View>
 
+              <Kicker>{t('promo.title')}</Kicker>
+              <PromoPoints
+                code={promoCode}
+                onCode={setPromoCode}
+                error={promoProblem(quote.error)}
+                discountCents={quote.data?.discountCents}
+                usePoints={usePoints}
+                onUsePoints={setUsePoints}
+                pointsAvailable={quote.data?.pointsAvailable}
+                pointsCents={quote.data?.pointsCents}
+              />
+
+              <Kicker>{t('tip.title')}</Kicker>
+              <TipPicker value={tip} onChange={setTip} />
+              <Body tone="small">{t('tip.note')}</Body>
+
               {age?.required ? <AgeCheck age={age} /> : null}
               {problem ? <Notice message={problem} /> : null}
-              {quote.isError && !problem ? <ErrorState error={quote.error} onRetry={() => void quote.refetch()} /> : null}
+              {quote.isError && !problem && !promoProblem(quote.error) ? <ErrorState error={quote.error} onRetry={() => void quote.refetch()} /> : null}
               <Sums subtotalCents={s.cart.subtotalCents} deliveryCents={option?.feeCents} quote={quote} />
             </View>
           ) : null

@@ -6,15 +6,16 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { colors, fonts, space } from '@northline/mobile-kit';
 
+import { aftercare, ReviewPanel } from '../aftercare/Review';
 import type { Booking } from '../api/services';
 import { useAuth } from '../auth/AuthProvider';
 import { useI18n } from '../i18n';
 import { PushPrompt } from '../push/PushPrompt';
-import { Body, Button, Checkbox, Field, Notice, Section, Tag, Title, type } from '../ui/primitives';
+import { Body, Button, Checkbox, Notice, Section, Tag, Title, type } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { errorMessage, Loading, QueryView, SignInPrompt, Skeleton } from '../ui/states';
 import { hoursUntil, money } from './format';
-import { Chip, favouritesChanged, Kicker, Panel, useServicesApi, type T } from './parts';
+import { favouritesChanged, Kicker, Panel, useServicesApi, type T } from './parts';
 
 /** The live states refresh on their own (the push says so too, S-102); the rest only on demand. */
 const LIVE: ReadonlySet<string> = new Set(['confirmed', 'en_route', 'on_site']);
@@ -128,9 +129,35 @@ function stateTag(b: Booking, t: T): { label: string; tone: 'accent' | 'accent2'
 }
 
 /**
+ * Minutes away while the member is on the way (mobile gaps part 2): `GET /me/bookings/{id}/eta`, read every 30 s. The
+ * member shares their position from the Studio only while on the way; the api keeps the latest for 5 minutes and
+ * answers a straight-line estimate — never the position. No minutes when the job site wasn't picked on the map.
+ */
+function LiveEta({ b }: { b: Booking }) {
+  const { t, time } = useI18n();
+  const eta = useQuery({
+    queryKey: ['aftercare', 'eta', b.bookingId],
+    queryFn: () => aftercare().eta(b.bookingId),
+    refetchInterval: 30_000,
+    retry: false,
+  });
+  const e = eta.data;
+  if (!e || e.state !== 'en_route') return null;
+  if (!e.sharing) return <Body tone="small">{t('eta.notSharing', { name: who(b) })}</Body>;
+  if (e.minutesAway == null) return <Body tone="small">{t('eta.sharing', { name: who(b) })}</Body>;
+  return (
+    <Panel tone="accent" testID="eta-minutes">
+      <Text accessibilityLiveRegion="polite" style={[type.body, type.strong, styles.released]}>{t('eta.minutes', { n: e.minutesAway })}</Text>
+      {e.kmAway != null && e.updatedAt ? <Text style={type.small}>{t('eta.km', { km: e.kmAway.toLocaleString(), time: time(e.updatedAt, b.timeZone) })}</Text> : null}
+    </Panel>
+  );
+}
+
+/**
  * C9 Day-of ETA (design 01 `eta`): where the job is — booked, on the way, arrived, done — with the steps and their
  * times in the business's zone, who is coming and the booking. Refreshes every 30 s while the member travels or works.
- * The live map, minutes away, vehicle and plate and access sharing need data the api doesn't have yet (DECISIONS S-100).
+ * On the way: minutes away when the member shares their position (mobile gaps part 2). The live map, vehicle and plate
+ * and access sharing need data the api doesn't have yet (DECISIONS S-100).
  */
 export function Eta({ id }: { id: string }) {
   const { t, day, time } = useI18n();
@@ -175,6 +202,7 @@ export function Eta({ id }: { id: string }) {
                 <Text style={type.small}>{t('services.eta.verified')}</Text>
               </View>
             </View>
+            {b.state === 'en_route' ? <LiveEta b={b} /> : null}
             {b.addressLine ? <Body tone="small">{t('services.eta.where', { address: b.addressLine })}</Body> : null}
             <View style={styles.timeline} accessibilityLabel={t('services.eta.timeline')}>
               <View style={styles.step}>
@@ -271,73 +299,46 @@ export function SignOff({ id }: { id: string }) {
   );
 }
 
-const PRAISE = ['onTime', 'clear', 'fairPrice', 'clean', 'extraMile', 'friendly'] as const;
-
 /**
- * C11 Two-way review (design 01 `review`): stars, what stood out, a note and "Add … to my favourites". Posting the
- * review has no consumer endpoint yet (MOBILE_PLAN § API gaps): the screen says so plainly and saves only the
- * favourite.
+ * C11 Two-way review (design 01 `review`): stars, what stood out, a note (mobile gaps part 2: posted with
+ * `POST /me/reviews`, once per job, within 30 days; changeable for 24 h until the business replies) and "Add … to my
+ * favourites", saved with the review.
  */
 export function Review({ id }: { id: string }) {
   const { t } = useI18n();
   const api = useServicesApi();
-  const [stars, setStars] = useState(0);
-  const [praise, setPraise] = useState<ReadonlySet<string>>(new Set());
-  const [note, setNote] = useState('');
   const [favourite, setFavourite] = useState(true);
   const qc = useQueryClient();
   const save = useMutation({
-    mutationFn: (b: Booking) => (favourite ? api.favourite(b.merchantId, true) : Promise.resolve(null)),
-    onSuccess: () => {
-      if (favourite) void favouritesChanged(qc);
-      router.replace('/orders');
-    },
+    mutationFn: (merchantId: string) => api.favourite(merchantId, true),
+    onSuccess: () => void favouritesChanged(qc),
   });
   return (
-    <BookingScreen id={id} title={t('title.review')} testID="review">
+    <BookingScreen
+      id={id}
+      title={t('title.review')}
+      testID="review"
+      footer={() => <Button label={t('services.done')} tone="ghost" onPress={() => router.replace('/orders')} testID="review-done" />}
+    >
       {(b) => {
         if (b.state !== 'completed' && b.state !== 'signed_off') return <Body tone="muted">{t('services.review.onlyPaid')}</Body>;
         return (
           <View style={styles.stack}>
-            <Title>{t('services.review.title', { name: who(b) })}</Title>
             <Body tone="muted">{t('services.review.lede', { name: who(b) })}</Body>
-            <Notice tone="info" message={t('services.review.notYet', { name: b.providerName })} testID="review-gap" />
-            <View style={styles.stars} accessibilityRole="radiogroup" accessibilityLabel={t('services.review.stars')}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Text
-                  key={n}
-                  accessibilityRole="radio"
-                  accessibilityLabel={t('services.stars', { n })}
-                  accessibilityState={{ checked: stars === n }}
-                  onPress={() => setStars(n)}
-                  style={[styles.star, stars >= n && styles.starOn]}
-                  testID={`star-${n}`}
-                >
-                  ★
-                </Text>
-              ))}
-            </View>
-            <Kicker>{t('services.review.stoodOut')}</Kicker>
-            <View style={styles.chips}>
-              {PRAISE.map((k) => (
-                <Chip
-                  key={k}
-                  label={t(`services.praise.${k}`)}
-                  selected={praise.has(k)}
-                  onPress={() => setPraise((s) => {
-                    const next = new Set(s);
-                    if (!next.delete(k)) next.add(k);
-                    return next;
-                  })}
-                />
-              ))}
-            </View>
-            <Field label={t('services.review.noteLabel')} placeholder={t('services.review.note')} value={note} onChangeText={setNote} multiline testID="field-review" />
-            <Checkbox checked={favourite} onChange={setFavourite} label={t('services.review.favourite', { name: who(b) })} testID="review-favourite">
-              <Body tone="small">{t('services.review.favourite', { name: who(b) })}</Body>
-            </Checkbox>
+            <ReviewPanel
+              kind="booking"
+              id={b.bookingId}
+              title={() => t('services.review.title', { name: who(b) })}
+              onPosted={(target) => {
+                if (favourite) save.mutate(target.merchantId);
+              }}
+              extra={() => (
+                <Checkbox checked={favourite} onChange={setFavourite} label={t('services.review.favourite', { name: who(b) })} testID="review-favourite">
+                  <Body tone="small">{t('services.review.favourite', { name: who(b) })}</Body>
+                </Checkbox>
+              )}
+            />
             {save.isError ? <Notice message={errorMessage(save.error, t)} /> : null}
-            <Button label={t('services.review.submit')} large busy={save.isPending} onPress={() => save.mutate(b)} testID="submit-review" />
           </View>
         );
       }}

@@ -6,6 +6,8 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { colors, fonts, radius, space } from '@northline/mobile-kit';
 
+import { CourierTip } from '../aftercare/CourierTip';
+import { ReviewPanel } from '../aftercare/Review';
 import type { OrderTracking } from '../api/shop';
 import { useAuth } from '../auth/AuthProvider';
 import type { MessageKey } from '../i18n';
@@ -203,8 +205,8 @@ export function Track() {
  * without a confirmation (the api's `paysShopsAt` — 7 days for goods, CLAUDE.md; the design's "24 h" is older), All
  * good (`POST /me/orders/{id}/confirm` releases the shops' escrow) or Something's wrong (the report). The courier's
  * door photo comes from `GET /me/orders/{id}/proof-photo` (a 5-minute signed URL, mobile gaps part 1) when the proof is
- * a photo — never for a delivery with an ID check (the api answers 404). The delivery rating and the tip have no
- * consumer api yet (MOBILE_PLAN § API gaps) and aren't shown.
+ * a photo — never for a delivery with an ID check (the api answers 404). Mobile gaps part 2: the courier's tip after
+ * the delivery (up to 7 days, 100 % to the courier) and a review of each shop (`GET|POST /me/reviews`).
  */
 export function Delivered() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -253,6 +255,8 @@ export function Delivered() {
                 </View>
               </>
             )}
+            <CourierTip orderId={o.orderId} />
+            <ReviewPanel kind="order" id={o.orderId} />
           </View>
         );
       }}

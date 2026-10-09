@@ -3,6 +3,7 @@ import { colors } from '@northline/mobile-kit';
 import type { Booking, BookingState, ProviderPage, ProviderService, ReviewPage } from '../api/services';
 import { STEP_UP_PROOF } from './auth';
 import type { FixtureArea, FixtureContext, FixtureRequest } from './context';
+import { applyCode, pointsFor, promoError } from './promotions';
 
 /**
  * Journey C's api (S-100) with made-up businesses: the services landing, one bookable category (a mobile mechanic, with
@@ -81,6 +82,9 @@ export interface ServicesFixtureState {
   /** Slot starts someone else just took (the hold answers 409). */
   taken: Set<string>;
   seq: number;
+  /** Mobile gaps part 2: the customer's points (1 point = 1 ¢) and what the visit ETA answers per booking. */
+  points: number;
+  etas: Map<string, { sharing: boolean; minutesAway?: number; kmAway?: number }>;
 }
 
 const fixtureBooking = (id: string, state: BookingState, at: number, extra: Partial<FixtureBooking> = {}): FixtureBooking => ({
@@ -146,6 +150,8 @@ export function newServicesState(now: () => number = Date.now): ServicesFixtureS
     idempotent: new Map(),
     taken: new Set(),
     seq: 0,
+    points: 1200,
+    etas: new Map([['01J9BOOKINGROUTE', { sharing: true, minutesAway: 12, kmAway: 5.6 }]]),
   };
 }
 
@@ -182,6 +188,20 @@ export function servicesFixtures(ctx: FixtureContext, state: ServicesFixtureStat
     fromCents: p.services.find((s) => s.priceCents)?.priceCents ?? null, pricingMode: 'fixed', instantBook: p.services.some((s) => s.instantBook),
     nextAvailable: new Date(at(localDate(ctx.now()), 15) + (i % 2) * 86_400_000).toISOString(), zones: p.zones, timeZone: BUSINESS_ZONE,
   });
+  /** A booking's price with a promo code and points (mobile gaps part 2): tax on the price after the code. */
+  const priceOf = (serviceId: string, body: Record<string, unknown>) => {
+    const service = MECHANIC_SERVICES.find((s) => s.id === serviceId) ?? MECHANIC_SERVICES[0]!;
+    const price = service.priceCents ?? 0;
+    const promo = applyCode(body.promoCode, 'service', price);
+    if ('error' in promo) return { error: promo.error };
+    const discount = promo.discountCents;
+    const tax = Math.round((price - discount) * 0.05);
+    const points = pointsFor(state.points, price - discount + tax, body.usePoints);
+    return {
+      priceCents: price, discountCents: discount, taxCents: tax, points, pointsCents: points, pointsAvailable: state.points,
+      totalCents: price - discount + tax - points, promoCode: promo.code ?? null,
+    };
+  };
   const once = (req: FixtureRequest, scope: string, make: () => Response) => {
     const key = req.headers['idempotency-key'];
     if (!key) return ctx.answer(422, { errors: [{ field: 'Idempotency-Key', rule: 'required', message: 'Idempotency-Key header is required.' }] });
@@ -277,13 +297,16 @@ export function servicesFixtures(ctx: FixtureContext, state: ServicesFixtureStat
         if (errors.length) return ctx.answer(422, { errors });
         if (state.stepUp === 'required' && req.headers['x-step-up'] !== STEP_UP_PROOF) return ctx.answer(403, { code: 'step_up_required', detail: "Confirm it's you with your passkey or authenticator app to pay." });
         if (state.stepUp === 'enrol') return ctx.answer(403, { code: 'second_factor_required', detail: 'Add a passkey to pay: payments sit behind a second factor.' });
-        const service = MECHANIC_SERVICES.find((s) => s.id === hold.serviceId) ?? MECHANIC_SERVICES[0]!;
-        const price = service.priceCents ?? 0;
-        const tax = Math.round(price * 0.05);
+        if (body.siteLat !== undefined && (typeof body.siteLat !== 'number' || typeof body.siteLng !== 'number')) {
+          return ctx.answer(422, { errors: [{ field: 'siteLat', rule: 'site', message: 'Pick the address on the map again.' }] });
+        }
+        const priced = priceOf(hold.serviceId, body);
+        if ('error' in priced) return ctx.answer(422, promoError(priced.error!));
         hold.checkout = body;
         const stripe = state.payment === 'stripe';
         return ctx.answer(200, {
-          holdId: hold.holdId, bookingId: hold.bookingId, priceCents: price, taxCents: tax, totalCents: price + tax,
+          holdId: hold.holdId, bookingId: hold.bookingId, priceCents: priced.priceCents, taxCents: priced.taxCents, totalCents: priced.totalCents,
+          discountCents: priced.discountCents, pointsCents: priced.pointsCents, promoCode: priced.promoCode,
           status: stripe ? 'requires_payment_method' : 'authorized', paymentIntent: `pi_${hold.bookingId}`,
           clientSecret: stripe ? `pi_${hold.bookingId}_secret_fixture` : null, provider: state.payment, publishableKey: stripe ? 'pk_test_fixture' : null, booking: null,
         });
@@ -306,6 +329,22 @@ export function servicesFixtures(ctx: FixtureContext, state: ServicesFixtureStat
         state.holds.delete(hold.holdId);
         state.taken.add(hold.startsAt);
         return ctx.answer(201, view(b));
+      });
+    }
+    if (req.method === 'POST' && p === '/me/bookings/price') {
+      const body = req.body as Record<string, unknown>;
+      const hold = state.holds.get(String(body.holdId));
+      if (!hold) return ctx.answer(409, { code: 'hold_expired', detail: 'Your 10-minute hold ended. Pick the time again.' });
+      const priced = priceOf(String(body.serviceId ?? hold.serviceId), body);
+      return 'error' in priced ? ctx.answer(422, promoError(priced.error!)) : ctx.answer(200, priced);
+    }
+    if (req.method === 'GET' && (r = m(/^\/me\/bookings\/([^/]+)\/eta$/))) {
+      const b = state.bookings.get(decodeURIComponent(r[1]!));
+      if (!b) return ctx.answer(404, { code: 'not_found', detail: 'No such booking.' });
+      const live = b.state === 'en_route' ? state.etas.get(b.bookingId) : undefined;
+      return ctx.answer(200, {
+        state: b.state, sharing: !!live?.sharing, minutesAway: live?.sharing ? (live.minutesAway ?? null) : null, kmAway: live?.sharing ? (live.kmAway ?? null) : null,
+        updatedAt: live?.sharing ? new Date(ctx.now() - 20_000).toISOString() : null, method: 'straight_line',
       });
     }
     if (req.method === 'GET' && (r = m(/^\/me\/bookings\/([^/]+)$/))) {

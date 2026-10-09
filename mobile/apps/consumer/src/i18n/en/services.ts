@@ -257,18 +257,6 @@ export const services = {
   // C11 Two-way review
   'services.review.title': 'How was {name}?',
   'services.review.lede': 'Only paid bookings can be reviewed. {name} rates you too.',
-  'services.review.notYet': 'Posting reviews from the app isn’t available yet, so your rating isn’t sent. Adding {name} to your favourites works now.',
   'services.review.onlyPaid': 'Only paid bookings can be reviewed, once the job is done.',
-  'services.review.stars': 'Rating',
-  'services.review.stoodOut': 'What stood out',
-  'services.praise.onTime': 'On time',
-  'services.praise.clear': 'Clear explanation',
-  'services.praise.fairPrice': 'Fair price',
-  'services.praise.clean': 'Clean work',
-  'services.praise.extraMile': 'Went the extra mile',
-  'services.praise.friendly': 'Friendly',
-  'services.review.noteLabel': 'Your review',
-  'services.review.note': 'What should the next customer know?',
   'services.review.favourite': 'Add {name} to my favourites — book them first next time',
-  'services.review.submit': 'Submit review',
 };
