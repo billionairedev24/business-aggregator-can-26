@@ -34,6 +34,15 @@ class BookingPromotionsApiTest extends IntegrationTest {
     @Autowired
     JdbcClient jdbc;
 
+    @Autowired
+    ca.northline.payments.api.CustomerCases cases;
+
+    @Autowired
+    ca.northline.payments.api.DisputeDecisions decisions;
+
+    @Autowired
+    ca.northline.payments.application.PaymentsJobs jobs;
+
     BookingFlow flow;
     String customer;
     String finance;
@@ -223,5 +232,41 @@ class BookingPromotionsApiTest extends IntegrationTest {
                         .query(Long.class)
                         .single())
                 .isEqualTo(4450);
+    }
+
+    @Test
+    void aRefundGivesThePointsBackToTheWallet_once() throws Exception {
+        points(customer, 2_000);
+        var bookingId = flow.book(customer, tomorrowAt(19), Map.of("usePoints", true));
+        assertThat(wallet(customer)).isZero();
+        flow.job(bookingId, "en-route", Map.of()).andExpect(status().isOk());
+        flow.job(bookingId, "on-site", Map.of()).andExpect(status().isOk());
+        flow.job(bookingId, "complete", Map.of("report", "Done.")).andExpect(status().isOk());
+        var escrowId = jdbc.sql("select id from payments.escrows where ref_type = 'booking' and ref_id = ?")
+                .params(bookingId)
+                .query(String.class)
+                .single();
+        // the completion reaches the escrow first (its 48 h clock starts)
+        org.awaitility.Awaitility.await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() -> jdbc.sql("select fulfilled_at is not null from payments.escrows where id = ?")
+                        .params(escrowId)
+                        .query(Boolean.class)
+                        .single());
+        // half of the $89 back: half of the $20 of points back to the wallet
+        var refund = cases.requestReview(escrowId, customer, 4_450, "Half the job");
+        decisions.decideRefund(refund, true, "agent-" + Ids.next());
+        jobs.payRefundQueue();
+        org.awaitility.Awaitility.await().atMost(Duration.ofSeconds(10)).until(() -> wallet(customer) == 1_000);
+        assertThat(jdbc.sql("select points_cents from payments.refunds where id = ?")
+                        .params(refund)
+                        .query(Long.class)
+                        .single())
+                .isEqualTo(1_000);
+        assertThat(jdbc.sql("select points_returned_cents from promotions.redemption_lines where escrow_ref_id = ?")
+                        .params(bookingId)
+                        .query(Long.class)
+                        .single())
+                .isEqualTo(1_000);
     }
 }

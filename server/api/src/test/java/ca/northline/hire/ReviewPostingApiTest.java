@@ -155,11 +155,22 @@ class ReviewPostingApiTest extends IntegrationTest {
                         .content("{\"rating\":1}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("review_locked"));
-        jdbc.sql("update trust.reviews set edit_until = now() - interval '1 minute' where id = ?")
-                .params(reviewId)
+        // the window itself can't be reopened
+        assertThatThrownBy(() -> jdbc.sql("update trust.reviews set edit_until = now() + interval '1 day' where id = ?")
+                        .params(reviewId)
+                        .update())
+                .hasMessageContaining("cannot be edited");
+        // and a review whose window has passed (by the database's clock) keeps its stars
+        var old = ca.northline.shared.Ids.next();
+        jdbc.sql("""
+                        insert into trust.reviews (id, ref_type, ref_id, author_id, target_type, target_id, rating, tags,
+                               lang, created_at, edit_until)
+                        values (?, 'booking', ?, ?, 'merchant', ?, 4, '{}', 'en', now() - interval '2 days',
+                                now() - interval '1 day')""")
+                .params(old, ca.northline.shared.Ids.next(), customer, flow.provider.merchantId())
                 .update();
         assertThatThrownBy(() -> jdbc.sql("update trust.reviews set rating = 1 where id = ?")
-                        .params(reviewId)
+                        .params(old)
                         .update())
                 .hasMessageContaining("cannot be edited");
     }

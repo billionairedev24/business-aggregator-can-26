@@ -62,6 +62,9 @@ class FoodOrderingApiTest extends IntegrationTest {
     Markets markets;
 
     @Autowired
+    ca.northline.payments.api.CourierTips courierTips;
+
+    @Autowired
     ca.northline.fulfilment.application.DispatchUseCases.PlanRuns plan;
 
     KitchenFixtures fx;
@@ -273,6 +276,114 @@ class FoodOrderingApiTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.deliveryFeeCents").value(0))
                 .andExpect(jsonPath("$.tipCents").value(0));
+    }
+
+    /**
+     * Mobile gaps part 2: the kitchen's own code takes 10 % off the dishes (taxed after), points pay $10, the tip goes
+     * with the order to the couriers' pool at hand-off and to the courier who delivers; every posting balances.
+     */
+    @Test
+    void aKitchensCodeAndPointsLowerTheDishes_andTheTipIsTheCouriers() throws Exception {
+        var code = "PHO" + Ids.next().substring(20);
+        jdbc.sql("""
+                        insert into promotions.codes (id, code, kind, percent, starts_at, ends_at, per_customer_limit,
+                               funded_by, merchant_id, applies_to, created_by, created_at, updated_at)
+                        values (?, ?, 'percent', 10, now() - interval '1 day', now() + interval '7 days', 1,
+                                'merchant', ?, '{food}', 'test', now(), now())""").params(Ids.next(), code, k.merchantId()).update();
+        jdbc.sql(
+                        "insert into trust.points_ledger (id, user_id, delta, ref_type, ref_id) values (?, ?, 1000, 'earn', ?)")
+                .params(Ids.next(), customer, Ids.next())
+                .update();
+        var extra = ",\"promoCode\":\"%s\",\"usePoints\":true".formatted(code);
+        mvc.perform(json(
+                                post("/api/v1/me/food-orders/quote"),
+                                order("delivery", twoLargePho(), delivery(NEAR_LAT), extra))
+                        .with(TestJwt.customer(customer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.discountCents").value(380))
+                .andExpect(jsonPath("$.pointsCents").value(1000))
+                .andExpect(jsonPath("$.promoCode").value(code));
+        var started = start(
+                        TestJwt.customerWithMfa(customer),
+                        null,
+                        order("delivery", twoLargePho(), delivery(NEAR_LAT), extra),
+                        Ids.next())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.totals.discountCents").value(380))
+                .andExpect(jsonPath("$.totals.pointsCents").value(1000))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String orderId = JsonPath.read(started, "$.orderId");
+        int dishTax = (Integer) JsonPath.read(started, "$.totals.taxCents") - 30;
+        assertThat(dishTax).isEqualTo(171); // GST on the $34.20 left, not on $38
+        confirm(orderId, TestJwt.customerWithMfa(customer)).andExpect(status().isOk());
+
+        var escrow = jdbc.sql("""
+                        select amount_cents, discount_cents, discount_funded_by, points_cents, tip_cents
+                          from payments.escrows where ref_type = 'food_order' and ref_id = ?""").params(orderId).query().singleRow();
+        assertThat(escrow)
+                .containsEntry("amount_cents", 3420L)
+                .containsEntry("discount_cents", 380L)
+                .containsEntry("discount_funded_by", "merchant")
+                .containsEntry("points_cents", 1000L)
+                .containsEntry("tip_cents", 400L);
+        assertThat(jdbc.sql("select coalesce(sum(delta), 0) from trust.points_ledger where user_id = ?")
+                        .params(customer)
+                        .query(Long.class)
+                        .single())
+                .isZero();
+        var tipId = jdbc.sql("select id from payments.courier_tips where order_id = ?")
+                .params(orderId)
+                .query(String.class)
+                .single();
+        // not charged yet: nothing to refund
+        mvc.perform(json(post("/api/v1/console/tips/{id}/refund", tipId), "{\"reason\":\"not_delivered\"}")
+                        .with(TestJwt.staff(data.user("Fin"), ca.northline.shared.security.StaffRole.FINANCE)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("tip_not_charged"));
+
+        var cook = TestJwt.member(fx.member(k, MerchantRole.COOK));
+        mvc.perform(post(k.base() + "/kitchen/live/{o}/accept", orderId).with(cook))
+                .andExpect(status().isOk());
+        mvc.perform(post(k.base() + "/kitchen/live/{o}/ready", orderId).with(cook))
+                .andExpect(status().isOk());
+        mvc.perform(post(k.base() + "/kitchen/live/{o}/handoff", orderId).with(cook))
+                .andExpect(status().isOk());
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() -> "captured"
+                        .equals(jdbc.sql("select state from payments.courier_tips where id = ?")
+                                .params(tipId)
+                                .query(String.class)
+                                .single()));
+        var courier = data.user("Kai Courier");
+        courierTips.allocate(orderId, courier, Instant.now());
+        var ledger = jdbc.sql("""
+                        select account, sum(debit_cents) as d, sum(credit_cents) as c from payments.ledger_entries
+                         where (ref_type = 'escrow' and ref_id = (select id from payments.escrows
+                                                                    where ref_type = 'food_order' and ref_id = :o))
+                            or (ref_type = 'courier_tip' and ref_id = :t)
+                         group by account""")
+                .param("o", orderId)
+                .param("t", tipId)
+                .query((rs, _) -> java.util.Map.entry(rs.getString(1), new long[] {rs.getLong(2), rs.getLong(3)}))
+                .list();
+        var accounts = ledger.stream()
+                .collect(java.util.stream.Collectors.toMap(java.util.Map.Entry::getKey, java.util.Map.Entry::getValue));
+        assertThat(ledger.stream().mapToLong(e -> e.getValue()[0]).sum())
+                .isEqualTo(ledger.stream().mapToLong(e -> e.getValue()[1]).sum());
+        assertThat(accounts.get("points_redeemed")[0]).isEqualTo(1000);
+        assertThat(accounts.get("stripe_balance")[0]).isEqualTo(3420 + 171 + 299 + 304 + 30 + 400 - 1000);
+        assertThat(accounts.get("courier:" + courier)[1]).isEqualTo(400);
+        assertThat(accounts.get("courier_tips")[0]).isEqualTo(400);
+        assertThat(accounts.get("courier_tips")[1]).isEqualTo(400);
+        assertThat(jdbc.sql("select state, courier_user_id from payments.courier_tips where id = ?")
+                        .params(tipId)
+                        .query()
+                        .singleRow())
+                .containsEntry("state", "allocated")
+                .containsEntry("courier_user_id", courier);
     }
 
     @Test
