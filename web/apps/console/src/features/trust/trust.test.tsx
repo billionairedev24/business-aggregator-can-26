@@ -70,6 +70,17 @@ describe('trust & safety (S-93, design 03 trust)', () => {
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/flags/F2/decision') && (c.body as { decision: string }).decision === 'dismissed')).toBe(true));
   });
 
+  it('hides a screened or reported review (mobile gaps part 2)', async () => {
+    const calls = api(['trust_safety'], c => (c.method === 'GET' && c.url.includes('/flags/queue')
+      ? { body: { items: [flag({ id: 'F9', rule: 'review_screened', targetType: 'review', targetId: 'R1', businessName: 'Sample Wrench', explanation: 'The review filter masked profanity in a customer’s review.' })] } }
+      : undefined));
+    renderConsole('/trust');
+    const f9 = (await screen.findByText('Sample Wrench')).closest('li') as HTMLElement;
+    expect(within(f9).getByText(/Review with masked words/)).toBeTruthy();
+    await user().click(within(f9).getByRole('button', { name: 'Hide review' }));
+    await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url.endsWith('/flags/F9/action'))?.body).toEqual({ action: 'hide_review' }));
+  });
+
   it('simulates the rating floor and saves the keyword lists', async () => {
     const calls = api(['admin']);
     renderConsole('/trust');
