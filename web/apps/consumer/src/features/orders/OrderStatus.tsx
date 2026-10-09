@@ -7,6 +7,7 @@ import { clock, runWhen, weekday, windowRange } from '../shop/format';
 import { useConfirmDelivery, useOrder, useOrderStream, useProofPhoto, type OrderTracking } from './api';
 import { useOrderT } from './messages';
 import { CourierStatus } from '../tracking/CourierStatus';
+import { CourierTip, ReviewPanel } from '../aftercare/Aftercare';
 
 /**
  * Order confirmed and tracking (S-52, design 06 `confirmed`): the check mark, "Order placed. Arriving tonight 6–9
@@ -99,6 +100,12 @@ function OrderView({ order }: { order: OrderTracking }) {
               : null}
             <SiteLink href="/" className="btn btn-ghost">{t('backHome')}</SiteLink>
           </div>
+          {order.state === 'delivered' || order.state === 'confirmed' ? (
+            <>
+              <CourierTip orderId={order.orderId} />
+              <ReviewPanel kind="order" id={order.orderId} />
+            </>
+          ) : null}
         </div>
         <figure className="order-map halftone" aria-label={t('map')}>
           <svg viewBox="0 0 400 300" aria-hidden className="order-map-svg">

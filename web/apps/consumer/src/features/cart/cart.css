@@ -68,3 +68,11 @@ a.cart-line-name:hover { text-decoration: underline; text-underline-offset: 3px;
 .cart-age .cart-h2 { display: flex; align-items: center; gap: 8px; }
 .cart-age p { margin: 0 0 10px; }
 .cart-age .btn { min-height: 44px; }
+
+/* mobile gaps part 2: promo code, points, tip (features/promotions) */
+.nl-promo { display: grid; gap: 10px; }
+.nl-promo-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.nl-promo-form .nl-field { flex: 1 1 180px; }
+.nl-promo-applied { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.nl-promo-note { margin: 0; font-size: 13px; color: var(--color-neutral-700); }
+.nl-tip-chips .nl-chip { min-height: 44px; }

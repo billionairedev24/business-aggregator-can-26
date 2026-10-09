@@ -70,7 +70,12 @@ export const Setup = z.object({
 });
 export type Setup = z.infer<typeof Setup>;
 export const TaxLine = z.object({ type: z.string(), percent: z.number(), cents: z.number().int() });
-export const Quote = z.object({ subtotalCents: z.number().int(), deliveryFeeCents: z.number().int(), taxCents: z.number().int(), taxes: z.array(TaxLine), totalCents: z.number().int(), market: z.string(), age: CheckoutAge.optional() });
+export const Quote = z.object({
+  subtotalCents: z.number().int(), deliveryFeeCents: z.number().int(), taxCents: z.number().int(), taxes: z.array(TaxLine), totalCents: z.number().int(), market: z.string(), age: CheckoutAge.optional(),
+  // mobile gaps part 2: the promo code, points and the courier's tip
+  promoCode: z.string().nullish(), discountCents: z.number().int().optional().default(0), points: z.number().int().optional().default(0),
+  pointsCents: z.number().int().optional().default(0), pointsAvailable: z.number().int().optional().default(0), tipCents: z.number().int().optional().default(0),
+});
 export type Quote = z.infer<typeof Quote>;
 export const Intent = z.object({ paymentIntent: z.string(), clientSecret: z.string().nullish(), status: z.string(), amountCents: z.number().int() });
 export type Intent = z.infer<typeof Intent>;
@@ -79,7 +84,10 @@ export type Started = z.infer<typeof Started>;
 export const Placed = z.object({ orderId: z.string(), ref: z.string() });
 
 export interface AddressInput { addressId?: string; street?: string; unit?: string; city?: string; province?: string; postal?: string; note?: string }
-export interface CheckoutBody { kind: 'pooled' | 'direct' | ''; windowId?: string | null; address: AddressInput; substitution: 'similar' | 'refund' | 'ask' }
+export interface CheckoutBody {
+  kind: 'pooled' | 'direct' | ''; windowId?: string | null; address: AddressInput; substitution: 'similar' | 'refund' | 'ask';
+  promoCode?: string; usePoints?: boolean; tip?: { kind: 'none' | 'amount' | 'percent'; value: number };
+}
 
 /** @param market the visitor's city; undefined = the api's fallback market (region configuration) */
 export const setupQuery = (market: string | undefined, locale: Locale, enabled: boolean) => queryOptions({

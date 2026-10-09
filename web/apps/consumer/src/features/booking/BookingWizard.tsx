@@ -10,10 +10,13 @@ import { signInHref, useViewer } from '../session/api';
 import { percent, rating, shortTime } from '../services/format';
 import { useServicesT } from '../services/messages';
 import { dyn } from '../services/text';
-import { bookingQuery, calendarQuery, confirmBooking, holdSlot, startCheckout, type Checkout, type Confirmation } from './api';
+import { bookingQuery, calendarQuery, confirmBooking, holdSlot, priceQuery, startCheckout, type Checkout, type Confirmation } from './api';
+import { PromoPoints } from '../promotions/PromoPoints';
+import { usePromoT } from '../promotions/messages';
 import { homeHours, toRequest, useDraft, VALUES, type Draft } from './draft';
 import { useBookingT } from './messages';
 import { StripeCard } from './StripeCard';
+import { useDeliveryLocation } from '../location/useDeliveryLocation';
 
 export type Step = 'details' | 'location' | 'schedule' | 'pay' | 'done';
 const CLEANING = new Set(['house-cleaning', 'move-in-move-out-clean', 'carpet-and-upholstery', 'window-cleaning', 'duct-cleaning']);
@@ -355,7 +358,18 @@ function Pay({ facts, service, draft, update, kind, vehicle, cleaning, onBack, o
   const hold = draft.hold;
   const free = kind === 'consult';
   const estimate = estimateOf(service, draft, cleaning);
-  const total = free ? 0 : estimate + taxOf(estimate, facts.taxBps);
+  const tp = usePromoT();
+  const [promoCode, setPromoCode] = useState<string>();
+  const [usePoints, setUsePoints] = useState(false);
+  const { location } = useDeliveryLocation();
+  const hours = kind === 'home' ? draft.hours : undefined;
+  const priced = useQuery({ ...priceQuery({ holdId: hold?.holdId ?? '', serviceId: service.id, ...(hours ? { hours } : {}), ...(promoCode ? { promoCode } : {}), usePoints }), enabled: !!hold && !free && (!!promoCode || usePoints) });
+  const promoError = priced.error instanceof ValidationError ? priced.error.byField().promoCode : fieldErrors.promoCode;
+  const total = free ? 0 : priced.data?.totalCents ?? estimate + taxOf(estimate, facts.taxBps);
+  // the job site's coordinates when the address is the saved location's (the provider's live ETA measures to it)
+  const street = location.status === 'saved' ? location.street?.trim() : undefined;
+  const site = street && location.lat != null && location.lng != null && draft.addressLine.trim().startsWith(street)
+    ? { siteLat: location.lat, siteLng: location.lng } : {};
   const cancelBy = hold ? new Date(new Date(hold.startsAt).getTime() - 12 * 3_600_000) : null;
 
   const finish = async (checkout: Checkout) => {
@@ -374,7 +388,7 @@ function Pay({ facts, service, draft, update, kind, vehicle, cleaning, onBack, o
   const pay = async (proof?: string) => {
     if (!hold) return;
     setBusy(true); setError(undefined); setFieldErrors({});
-    const body = toRequest(draft, hold.holdId, service.id, { vehicle, kind, cleaning });
+    const body = { ...toRequest(draft, hold.holdId, service.id, { vehicle, kind, cleaning }), ...site, ...(promoCode ? { promoCode } : {}), ...(usePoints ? { usePoints } : {}) };
     const text = JSON.stringify(body);
     if (!keys.current || keys.current.body !== text) keys.current = { body: text, key: newIdempotencyKey() };
     try {
@@ -400,6 +414,11 @@ function Pay({ facts, service, draft, update, kind, vehicle, cleaning, onBack, o
           ) : (
             <p className="nl-bk-card nl-bk-muted">{t('cardNext')}</p>
           )}
+          <h2 className="nl-bk-h2">{tp('promoTitle')}</h2>
+          <PromoPoints code={promoCode} onCode={setPromoCode} error={promoError} discountCents={priced.data?.discountCents}
+            usePoints={usePoints} onUsePoints={setUsePoints} pointsAvailable={priced.data?.pointsAvailable}
+            pointsCents={priced.data?.pointsCents} disabled={phase.step === 'card'} />
+          {!usePoints && !priced.data ? <button type="button" className="btn btn-ghost" onClick={() => setUsePoints(true)}>{tp('pointsCheck')}</button> : null}
           <h2 className="nl-bk-h2">{t('policies')}</h2>
           <div className="nl-bk-policies">
             <label className="nl-bk-check"><input type="checkbox" checked={draft.agreePolicies} onChange={e => update({ agreePolicies: e.target.checked })} /><span>{t('agreePolicies', { cancelBy: cancelBy ? date(cancelBy, 'dateTime') : '' })}</span></label>
@@ -485,6 +504,7 @@ function Done({ slug, bookingId, onAgain }: { slug: string; bookingId: string; o
           <ul className="nl-bk-next">{[0, 1, 2, 3, 4].map(i => <li key={i}>{t(`next_${i}` as 'next_0', { name: b.providerName })}</li>)}</ul>
           <div className="nl-bk-actions">
             <Link to="/account/orders" className="btn btn-primary">{t('seeBookings')}</Link>
+            <Link to="/bookings/$bookingId" params={{ bookingId }} className="btn btn-secondary">{t('followBooking')}</Link>
             <button type="button" className="btn btn-ghost" onClick={() => { onAgain(); void navigate({ to: '/providers/$slug', params: { slug } }); }}>{t('bookElse')}</button>
           </div>
         </section>

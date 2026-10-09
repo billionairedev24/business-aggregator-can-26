@@ -103,3 +103,10 @@
 .nl-track-caption { position: absolute; left: 16px; bottom: 16px; background: var(--color-bg); padding: 8px 12px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-size: 13px; }
 /* S-143: breadcrumb links get a 44 px target without moving the line */
 .nl-rest-crumbs a { display: inline-block; min-width: 44px; padding-block: 14px; margin-block: -14px; text-align: center; }
+/* mobile gaps part 2: promo code, points, tip (features/promotions) */
+.nl-promo { display: grid; gap: 10px; }
+.nl-promo-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.nl-promo-form .nl-field { flex: 1 1 180px; }
+.nl-promo-applied { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.nl-promo-note { margin: 0; font-size: 13px; color: var(--color-neutral-700); }
+.nl-tip-chips .nl-chip { min-height: 44px; }
