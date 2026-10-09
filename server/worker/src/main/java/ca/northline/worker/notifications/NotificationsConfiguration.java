@@ -152,13 +152,19 @@ public class NotificationsConfiguration {
     }
 
     @Bean
+    DeadDeferredGauge deadDeferredGauge(MeterRegistry meters) {
+        return new DeadDeferredGauge(meters);
+    }
+
+    @Bean
     DeferredNotificationsJob deferredNotificationsJob(
             Notifier notifier,
             DeferredNotifications deferred,
+            DeadDeferredGauge deadGauge,
             TransactionOperations transactions,
             Clock clock,
             @Value("${northline.notifications.deferred-dead-retention:30d}") Duration deadRetention) {
-        return new DeferredNotificationsJob(notifier, deferred, transactions, clock, deadRetention);
+        return new DeferredNotificationsJob(notifier, deferred, deadGauge, transactions, clock, deadRetention);
     }
 
     /**
@@ -169,6 +175,7 @@ public class NotificationsConfiguration {
     static class DeferredNotificationsJob {
         private final Notifier notifier;
         private final DeferredNotifications deferred;
+        private final DeadDeferredGauge deadGauge;
         private final TransactionOperations transactions;
         private final Clock clock;
         private final Duration deadRetention;
@@ -176,11 +183,13 @@ public class NotificationsConfiguration {
         DeferredNotificationsJob(
                 Notifier notifier,
                 DeferredNotifications deferred,
+                DeadDeferredGauge deadGauge,
                 TransactionOperations transactions,
                 Clock clock,
                 Duration deadRetention) {
             this.notifier = notifier;
             this.deferred = deferred;
+            this.deadGauge = deadGauge;
             this.transactions = transactions;
             this.clock = clock;
             this.deadRetention = deadRetention;
@@ -191,6 +200,16 @@ public class NotificationsConfiguration {
                 initialDelayString = "${northline.notifications.deferred-initial-delay:30s}")
         void run() {
             transactions.executeWithoutResult(_ -> notifier.sendDue(50));
+            refreshDeadGauge();
+        }
+
+        /** Engineering follow-ups: the dead-letter gauge, after each send (its failures never stop the sending). */
+        void refreshDeadGauge() {
+            try {
+                deadGauge.refresh(deferred.deadCounts());
+            } catch (RuntimeException e) {
+                log.warn("Dead deferred notification gauge not refreshed: {}", e.toString());
+            }
         }
 
         @Scheduled(
@@ -199,6 +218,7 @@ public class NotificationsConfiguration {
         void purgeDead() {
             var deleted = deferred.purgeDead(clock.instant().minus(deadRetention));
             log.info("Purged {} dead deferred notification(s) older than {}", deleted, deadRetention);
+            refreshDeadGauge();
         }
     }
 }

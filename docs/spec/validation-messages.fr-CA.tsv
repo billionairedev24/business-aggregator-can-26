@@ -1022,6 +1022,14 @@ This participant no longer takes part.	Ce participant ne fait plus partie du pil
 Pilot businesses come from Pilot onboarding: invite or enrol the business there.	Les entreprises pilotes viennent de l’intégration pilote : invitez ou inscrivez l’entreprise là.	new
 A pilot business takes part while it is in the pilot cohort (Pilot onboarding).	Une entreprise pilote participe tant qu’elle fait partie de la cohorte pilote (intégration pilote).	new
 No Northline account matches that.	Aucun compte Northline ne correspond.	new
+No invite with id %s	Aucune invitation avec l’identifiant %s	new
+No kitchen visit with id %s	Aucune visite de cuisine avec l’identifiant %s	new
+No launch request with id %s	Aucune demande de lancement avec l’identifiant %s	new
+No market with id %s	Aucun marché avec l’identifiant %s	new
+No photo with id %s	Aucune photo avec l’identifiant %s	new
+No pilot business with id %s	Aucune entreprise pilote avec l’identifiant %s	new
+No uat_feedback with id %s	Aucun commentaire d’essai utilisateur avec l’identifiant %s	new
+No uat_participant with id %s	Aucun participant aux essais utilisateurs avec l’identifiant %s	new
 No proof photo with id %s	Aucune photo de preuve de livraison avec l’identifiant %s	new
 This order isn't yours.	Cette commande n’est pas la vôtre.	new
 This link has expired. Open the order again.	Ce lien a expiré. Ouvrez la commande de nouveau.	new
@@ -1051,3 +1059,5 @@ This order has no age-restricted dishes: hand it over as usual.	Cette commande n
 This order has no age-restricted items: hand it over with the usual proof.	Cette commande ne contient aucun article soumis à un âge minimal : remettez-la avec la preuve habituelle.	new
 Choose alcohol, tobacco and vape, cannabis accessories, or none.	Choisissez alcool, tabac et vapotage, accessoires de cannabis, ou aucun.	new
 Choose a period of at most a year, the start before the end.	Choisissez une période d’au plus un an, le début avant la fin.	new
+No age session with id %s	Aucune session de vérification d’âge avec l’identifiant %s	new
+No licence with id %s	Aucun permis avec l’identifiant %s	new

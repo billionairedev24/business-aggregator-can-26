@@ -10,6 +10,7 @@ import ca.northline.developer.domain.ApiKey;
 import ca.northline.developer.domain.AuditRecord;
 import ca.northline.developer.domain.WebhookDelivery;
 import ca.northline.developer.domain.WebhookEndpoint;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.Ids;
 import java.sql.Array;
 import java.sql.ResultSet;
@@ -115,6 +116,55 @@ class DeveloperJdbc implements DeveloperStore, AuditTrail, ca.northline.develope
                 .param("by", createdBy)
                 .param("at", ts(e.createdAt()))
                 .update();
+    }
+
+    @Override
+    public List<StoredSecrets> secretsToReencrypt(String currentRef, Instant now, int limit) {
+        return jdbc.sql("""
+                        select id, secret_ref, secret_enc,
+                               case when secret_prev_until > :now then secret_prev_enc end as secret_prev_enc
+                          from developer.webhook_endpoints
+                         where secret_enc is not null
+                           and (secret_ref is distinct from :current
+                                or (secret_prev_enc is not null and secret_prev_until > :now))
+                         order by created_at, id limit :limit""")
+                .param("current", currentRef)
+                .param("now", ts(now))
+                .param("limit", limit)
+                .query((rs, _) -> {
+                    var previous = rs.getBytes("secret_prev_enc");
+                    return new StoredSecrets(
+                            rs.getString("id"),
+                            rs.getString("secret_ref"),
+                            Bytes.of(rs.getBytes("secret_enc")),
+                            previous == null ? null : Bytes.of(previous));
+                })
+                .list();
+    }
+
+    @Override
+    public int secretsUnderOtherKeys(String currentRef) {
+        return jdbc.sql("""
+                        select count(*) from developer.webhook_endpoints
+                         where secret_enc is not null and secret_ref is distinct from :current""").param("current", currentRef).query(Integer.class).single();
+    }
+
+    @Override
+    public boolean reencrypt(StoredSecrets read, Bytes secret, @Nullable Bytes previous, String currentRef) {
+        return jdbc.sql("""
+                        update developer.webhook_endpoints
+                           set secret_enc = :enc, secret_ref = :ref,
+                               secret_prev_enc = case when cast(:prev as bytea) is null then secret_prev_enc
+                                                      else cast(:prev as bytea) end
+                         where id = :id and secret_enc = :oldEnc and secret_ref is not distinct from :oldRef""")
+                        .param("enc", secret.toArray())
+                        .param("ref", currentRef)
+                        .param("prev", previous == null ? null : previous.toArray(), java.sql.Types.BINARY)
+                        .param("id", read.endpointId())
+                        .param("oldEnc", read.secret().toArray())
+                        .param("oldRef", read.secretRef(), java.sql.Types.VARCHAR)
+                        .update()
+                == 1;
     }
 
     @Override

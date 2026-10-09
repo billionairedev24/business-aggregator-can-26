@@ -17729,6 +17729,27 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Week"
+    EscrowMoneyResponse:
+      type: object
+      properties:
+        feeCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        heldCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        netCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        state:
+          type: string
+        taxCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
     Evidence:
       type: object
       properties:
@@ -18396,6 +18417,8 @@ components:
           format: date-time
         escrow:
           type: string
+        escrowMoney:
+          $ref: "#/components/schemas/EscrowMoneyResponse"
         id:
           type: string
         memberName:
@@ -18481,6 +18504,10 @@ components:
           type: integer
           format: int64
           description: Cents of Canadian dollars (CAD).
+        heldCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
         id:
           type: string
         kind:
@@ -18513,6 +18540,10 @@ components:
           - released
           - refunded
           - disputed
+        taxCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
     Licence:
       type: object
       properties:

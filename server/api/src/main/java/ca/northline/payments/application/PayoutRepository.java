@@ -41,15 +41,27 @@ public interface PayoutRepository {
 
     List<Payout> inTransit(int limit);
 
-    /** Whether a scheduled payout was already created in {@code [from, to)} (the scheduled run is idempotent). */
-    boolean scheduledBetween(String merchantId, Instant from, Instant to);
-
     Optional<PayoutSchedule> schedule(String merchantId);
 
     void saveSchedule(String merchantId, PayoutSchedule schedule, String userId, Instant now);
 
-    /** Merchants whose schedule has a payout day (not manual), for the scheduled run. */
-    List<String> merchantsWithSchedules();
+    /**
+     * Engineering follow-ups (S-119 F6): what the minutely scheduled run needs about every business with a connected
+     * account whose schedule has a payout day (not manual) — its schedule, its last scheduled payout and whether a bank
+     * change is on hold — in one read, instead of three reads per business every minute.
+     */
+    List<ScheduledRunFacts> scheduledRunFacts();
+
+    /**
+     * @param schedule the business's schedule ({@link PayoutSchedule#DEFAULT} without settings)
+     * @param lastScheduledAt when its latest scheduled payout was created, null when none was
+     * @param pendingAccount a new bank account is in its 24 h hold
+     */
+    record ScheduledRunFacts(
+            String merchantId,
+            PayoutSchedule schedule,
+            @Nullable Instant lastScheduledAt,
+            boolean pendingAccount) {}
 
     void bankChanged(String merchantId, Instant at);
 

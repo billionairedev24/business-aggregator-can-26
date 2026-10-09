@@ -25,6 +25,8 @@ northline:                               # a STRIPE_SECRET_KEY exported in the s
   # database (sellers in Calgary) never show up in its lists.
   orders.delivery.markets: [Shopville, Productville, Cartville, Trackville, Deliveryville, Dispatchville, Pingville, Liquorville, Photoville]   # extra test markets; the live ones are region data
   payments.stripe-secret-key: ""
+  # Tests change businesses with SQL, not events: the landing pages read them fresh (ShortCache/HomeCache unit tests).
+  public-pages.cache-ttl: 0s
   catalogue.import-images.allow-local: true   # S-72: image URLs served by WireMock on loopback
   payments.stripe-webhook-secret: whsec_test_platform_fake    # obviously fake: S-12 tests sign with these
   payments.stripe-connect-webhook-secret: whsec_test_connect_fake

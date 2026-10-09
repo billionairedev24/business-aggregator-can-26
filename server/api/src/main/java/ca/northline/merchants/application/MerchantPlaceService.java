@@ -5,7 +5,11 @@ import ca.northline.region.api.MarketProfile;
 import ca.northline.region.api.Markets;
 import ca.northline.region.api.MerchantPlaces;
 import ca.northline.region.api.Regions;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +24,18 @@ class MerchantPlaceService implements MerchantPlaces {
 
     @Override
     public MerchantPlace of(String merchantId) {
-        var profile = directory.profile(merchantId);
+        return place(directory.profile(merchantId));
+    }
+
+    @Override
+    public Map<String, MerchantPlace> ofAll(Collection<String> merchantIds) {
+        var profiles = directory.profiles(merchantIds);
+        var places = new LinkedHashMap<String, MerchantPlace>();
+        merchantIds.forEach(id -> places.put(id, place(Optional.ofNullable(profiles.get(id)))));
+        return places;
+    }
+
+    private MerchantPlace place(Optional<MerchantDirectory.MerchantProfile> profile) {
         var own = profile.map(MerchantDirectory.MerchantProfile::province)
                 .filter(p -> !p.isBlank())
                 .map(p -> p.strip().toUpperCase(Locale.ROOT))

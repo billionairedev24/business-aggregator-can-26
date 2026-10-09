@@ -80,6 +80,11 @@ northline:
     terms-version: "3.0"               # design/09 Terms of Service · Version 3.0 · Effective 1 October 2026
     platform-zone: ${REGION_PLATFORM_ZONE:America/Edmonton}   # "member since" dates (region configuration, S-134)
     totp-key: ${TOTP_KEY}              # base64 AES-256; no default outside local/test (secrets manager)
+    # Engineering follow-ups (S-115, docs/runbooks/key-rotation.md § 7): the key's id, older keys that only decrypt
+    # during a rotation (id=base64,…) and the job that re-encrypts every authenticator secret with the current key.
+    totp-key-id: ${TOTP_KEY_ID:v1}
+    totp-previous-keys: ${TOTP_PREVIOUS_KEYS:}
+    totp-reencrypt-every: ${TOTP_REENCRYPT_EVERY:1h}
     login-page: ${STUDIO_ORIGIN:http://localhost:3100}/sign-in
     # S-62: the consumer web app's sign-in page (consumer-bff's unauthenticated authorization requests, Google / Apple
     # started there), and which clients only get a code after a second factor.

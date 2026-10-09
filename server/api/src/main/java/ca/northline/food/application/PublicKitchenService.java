@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -67,16 +68,17 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
     private final Clock clock;
     private final Markets markets;
     private final TaxRates taxes;
+    private final KitchenListCache cityKitchens;
 
+    /** A cache hit takes no database connection (SUPPORTS: one is bound on the first query of a miss). */
     @Override
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public Kitchens kitchens(String city, @Nullable Double lat, @Nullable Double lng) {
-        var kitchens = directory.active(Set.of("kitchen"), city);
-        var ids = kitchens.stream().map(PublicBusiness::merchantId).toList();
-        var status = availability.now(
-                kitchens.stream().map(PublicKitchenService::ref).toList());
-        var rows = calendarsOf(ids);
-        var rated = ratings.summaries(ids); // S-119: one query for every card's rating
-        var cards = kitchens.stream()
+        var known = cityKitchens.get(city, () -> cityKitchens(city));
+        var status = known.status();
+        var rows = known.rows();
+        var rated = known.ratings();
+        var cards = known.kitchens().stream()
                 .flatMap(k -> Optional.ofNullable(rows.get(k.merchantId()))
                         .map(row -> card(
                                 k,
@@ -94,6 +96,16 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
                         .thenComparing(Card::name))
                 .toList();
         return new Kitchens(city, cards);
+    }
+
+    /** The list's city-level part (S-119 F5: kept a short while by {@link KitchenListCache}). */
+    private KitchenListCache.CityKitchens cityKitchens(String city) {
+        var kitchens = directory.active(Set.of("kitchen"), city);
+        var ids = kitchens.stream().map(PublicBusiness::merchantId).toList();
+        var status = availability.now(
+                kitchens.stream().map(PublicKitchenService::ref).toList());
+        // S-119: one query for every card's rating
+        return new KitchenListCache.CityKitchens(kitchens, status, calendarsOf(ids), ratings.summaries(ids));
     }
 
     @Override

@@ -31,12 +31,14 @@ class DashboardApiTest extends IntegrationTest {
         data.member(biz.merchantId(), jas, MerchantRole.TECHNICIAN);
         var customer = data.user("Amara Osei");
         var today = LocalDate.now(zone);
-        fx.job(
+        var nine = fx.job(
                 biz.merchantId(),
                 biz.userId(),
                 customer,
                 today.atTime(9, 0).atZone(zone).toInstant(),
                 "confirmed");
+        // what the customer paid and is held: the payments ledger's sale + GST/HST, not the price before tax
+        fx.escrow(biz.merchantId(), nine, 30_000, 1_500, 900, "held");
         fx.job(biz.merchantId(), jas, customer, today.atTime(14, 0).atZone(zone).toInstant(), "confirmed");
         fx.job(
                 biz.merchantId(),
@@ -55,7 +57,8 @@ class DashboardApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.today").value(today.toString()))
                 .andExpect(jsonPath("$.jobsToday", hasSize(2)))
                 .andExpect(jsonPath("$.jobsToday[0].customerName").value("A. Osei"))
-                .andExpect(jsonPath("$.jobsToday[0].escrowHeldCents").value(9345))
+                .andExpect(jsonPath("$.jobsToday[0].escrowHeldCents").value(31_500))
+                .andExpect(jsonPath("$.jobsToday[1].escrowHeldCents").value(9345))
                 .andExpect(jsonPath("$.jobsToday[0].mine").value(true))
                 .andExpect(jsonPath("$.jobsToday[1].mine").value(false))
                 .andExpect(jsonPath("$.jobsToday[1].memberName").value("Jas"))

@@ -9,8 +9,10 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -31,15 +33,35 @@ class MerchantDirectoryQueries implements MerchantDirectory, MerchantVerificatio
                         select id, type, tier, status, take_rate_bps, province, city from merchants.merchants where id = :id
                         """)
                 .param("id", merchantId)
-                .query((rs, _) -> new MerchantProfile(
-                        rs.getString("id"),
-                        rs.getString("type"),
-                        rs.getString("tier"),
-                        rs.getString("status"),
-                        rs.getObject("take_rate_bps", Integer.class),
-                        rs.getString("province"),
-                        rs.getString("city")))
+                .query((rs, _) -> profile(rs))
                 .optional();
+    }
+
+    @Override
+    public Map<String, MerchantProfile> profiles(Collection<String> merchantIds) {
+        if (merchantIds.isEmpty()) {
+            return Map.of();
+        }
+        return jdbc
+                .sql("""
+                        select id, type, tier, status, take_rate_bps, province, city from merchants.merchants
+                         where id = any(:ids)""")
+                .param("ids", merchantIds.toArray(String[]::new))
+                .query((rs, _) -> profile(rs))
+                .list()
+                .stream()
+                .collect(Collectors.toUnmodifiableMap(MerchantProfile::merchantId, p -> p));
+    }
+
+    private static MerchantProfile profile(ResultSet rs) throws SQLException {
+        return new MerchantProfile(
+                rs.getString("id"),
+                rs.getString("type"),
+                rs.getString("tier"),
+                rs.getString("status"),
+                rs.getObject("take_rate_bps", Integer.class),
+                rs.getString("province"),
+                rs.getString("city"));
     }
 
     private static final String SHOP = """

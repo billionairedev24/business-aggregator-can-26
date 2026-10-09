@@ -38,6 +38,33 @@ public record OperationsFixtures(JdbcClient jdbc) {
         return id;
     }
 
+    /**
+     * Puts the job's money in escrow as checkout does: the booking's price and GST/HST, and the payments escrow (sale,
+     * tax, Northline's fee at {@code takeRateBps}) the booking points to.
+     */
+    public String escrow(
+            String merchantId, String bookingId, long priceCents, long taxCents, int takeRateBps, String state) {
+        var id = Ids.next();
+        jdbc.sql("""
+                        insert into payments.escrows (id, ref_type, ref_id, merchant_id, amount_cents, tax_cents, take_rate_bps,
+                               fee_cents, state, kind, label, customer_name, occurred_at)
+                        values (?, 'booking', ?, ?, ?, ?, ?, ?, ?, 'service', 'Brake inspection', 'A. Osei', now())""")
+                .params(
+                        id,
+                        bookingId,
+                        merchantId,
+                        priceCents,
+                        taxCents,
+                        takeRateBps,
+                        priceCents * takeRateBps / 10_000,
+                        state)
+                .update();
+        jdbc.sql("update booking.bookings set escrow_id = ?, price_cents = ?, tax_cents = ? where id = ?")
+                .params(id, priceCents, taxCents, bookingId)
+                .update();
+        return id;
+    }
+
     /** A quote request addressed to {@code merchantId}, respond within 2 h, valid 3 days. */
     public String quoteRequest(String merchantId, String customerId) {
         var id = Ids.next();

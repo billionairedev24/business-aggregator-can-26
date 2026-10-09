@@ -24,7 +24,14 @@ public interface EarningsReadModel {
 
     RefundHolds refundHolds(String merchantId);
 
-    /** One row of the Earnings ledger table. */
+    /**
+     * One row of the Earnings ledger table.
+     *
+     * @param heldCents what the customer paid for it and is held: {@code grossCents + taxCents}
+     * @param grossCents the sale before tax (what the take rate applies to)
+     * @param taxCents the GST/HST collected on it, which Northline remits
+     * @param netCents what the merchant receives: {@code grossCents − feeCents}
+     */
     record LedgerLine(
             String escrowId,
             EscrowKind kind,
@@ -32,7 +39,9 @@ public interface EarningsReadModel {
             @Nullable String orderNumber,
             Instant occurredAt,
             @Nullable String customerName,
+            long heldCents,
             long grossCents,
+            long taxCents,
             long feeCents,
             long netCents,
             EscrowState state,

@@ -1,5 +1,8 @@
 package ca.northline.merchants.api;
 
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
@@ -11,6 +14,13 @@ import org.jspecify.annotations.Nullable;
 public interface MerchantDirectory {
 
     Optional<MerchantProfile> profile(String merchantId);
+
+    /** The profiles of many businesses at once, by id; unknown ids are left out. */
+    default Map<String, MerchantProfile> profiles(Collection<String> merchantIds) {
+        var found = new LinkedHashMap<String, MerchantProfile>();
+        merchantIds.forEach(id -> profile(id).ifPresent(p -> found.put(id, p)));
+        return found;
+    }
 
     /**
      * @param takeRateBps the business's own take rate, or null for its tier's default

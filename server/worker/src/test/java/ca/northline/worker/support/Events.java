@@ -11,14 +11,25 @@ import org.apache.kafka.common.header.internals.RecordHeaders;
 /** Records shaped like the api's externalized events (key = aggregate id, JSON value, nl-event-* headers). */
 public final class Events {
 
-    private static int counter;
+    private static final String CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+    private static long last;
 
     private Events() {}
 
-    /** A fresh 26-character ULID-shaped id (Crockford alphabet). */
+    /**
+     * A fresh 26-character ULID-shaped id (Crockford alphabet) that sorts after every id made before it, like a real
+     * ULID. Engineering follow-ups: the earlier version wrote Java's base-32 digits and replaced I, L, O and U with Z,
+     * which broke the order — a later consent record could sort before an earlier one with the same time, and
+     * {@code CommercialNoticesTest} then read a withdrawn consent as granted (more often under load, when more digits
+     * differ between two ids).
+     */
     public static synchronized String id() {
-        var base = Long.toString(System.nanoTime() + counter++, 32).toUpperCase(java.util.Locale.ROOT);
-        var padded = ("01J9ZD3V" + "0".repeat(26) + base).replaceAll("[ILOU]", "Z");
+        last = Math.max(System.nanoTime(), last + 1);
+        var digits = new StringBuilder();
+        for (var v = last; v > 0; v >>>= 5) {
+            digits.append(CROCKFORD.charAt((int) (v & 31)));
+        }
+        var padded = "0".repeat(26) + digits.reverse();
         return padded.substring(padded.length() - 26);
     }
 

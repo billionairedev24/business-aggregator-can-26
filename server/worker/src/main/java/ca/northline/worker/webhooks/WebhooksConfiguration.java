@@ -75,7 +75,11 @@ public class WebhooksConfiguration {
             TransactionOperations transactions,
             Clock clock,
             MeterRegistry meters) {
-        var box = WebhookSecretBox.of(settings.secretKey(), !environment.acceptsProfiles(Profiles.of("cloud")))
+        var box = WebhookSecretBox.of(
+                        settings.secretKey(),
+                        settings.secretKeyId(),
+                        settings.secretPreviousKeys(),
+                        !environment.acceptsProfiles(Profiles.of("cloud")))
                 .orElse(null);
         if (box == null) {
             log.error("WEBHOOK_SECRET_KEY is not set: webhook deliveries fail until it is");

@@ -1,6 +1,7 @@
 package ca.northline.studio.application;
 
 import ca.northline.booking.api.BookingInsights;
+import ca.northline.booking.api.JobEscrows;
 import ca.northline.catalogue.api.CatalogueFacts;
 import ca.northline.identity.api.PersonDirectory;
 import ca.northline.identity.api.PersonDirectory.Person;
@@ -53,6 +54,7 @@ class DashboardService implements ViewDashboard {
     static final int COACHING_JOBS = 20;
 
     private final BookingInsights bookings;
+    private final JobEscrows escrows;
     private final OrderInsights orders;
     private final EarningsSummary earnings;
     private final EarningsQuery earningsQuery;
@@ -75,6 +77,12 @@ class DashboardService implements ViewDashboard {
         var nextMonth = start(today.withDayOfMonth(1).plusMonths(1), zone);
 
         var jobs = bookings.jobs(merchantId, dayStart, dayEnd);
+        var held = escrows.of(
+                merchantId,
+                jobs.stream()
+                        .filter(j -> j.escrowHeldCents() != null)
+                        .map(BookingInsights.JobAtAGlance::id)
+                        .toList());
         var packing = orders.packing(merchantId, now);
         var run = orders.run(merchantId, now.minus(Duration.ofHours(12)), dayEnd.plus(Duration.ofDays(1)));
         var inbox = bookings.quoteInbox(merchantId, now);
@@ -137,7 +145,7 @@ class DashboardService implements ViewDashboard {
                                 shortName(names, j.customerId()),
                                 j.area(),
                                 j.access(),
-                                j.escrowHeldCents(),
+                                heldCents(j, held.get(j.id())),
                                 j.state(),
                                 firstName(names, j.memberUserId()),
                                 j.memberUserId() == null || viewerUserId.equals(j.memberUserId())))
@@ -205,5 +213,16 @@ class DashboardService implements ViewDashboard {
     private static @Nullable String firstName(Map<String, Person> names, @Nullable String id) {
         var p = id == null ? null : names.get(id);
         return p == null ? null : p.firstName();
+    }
+
+    /** The payments ledger's figure while the money is held (or on hold), else the booking's own price plus tax. */
+    private static @Nullable Long heldCents(BookingInsights.JobAtAGlance job, JobEscrows.@Nullable Held escrow) {
+        if (escrow == null) {
+            return job.escrowHeldCents();
+        }
+        return switch (escrow.state()) {
+            case "held", "disputed" -> escrow.heldCents();
+            default -> null;
+        };
     }
 }

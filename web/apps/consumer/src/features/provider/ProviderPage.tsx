@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useInfiniteQuery, useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useSuspenseQueries } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { Alert, ErrorState, Skeleton, Tag, useLocale, type Locale } from '@northline/ui';
 import { siteHref, type PageHost } from '../../lib/pages';
@@ -23,8 +23,9 @@ const MAIN: readonly string[] = ['about', 'reviews', 'area', 'faq', 'policies'];
  */
 export function ProviderPage({ slug }: { slug: string }) {
   const { locale } = useLocale();
-  const { data: page } = useSuspenseQuery(storefrontQuery(slug));
-  const { data: facts } = useSuspenseQuery(providerQuery(slug, locale));
+  // both at once: two useSuspenseQuery calls suspended twice in turn — the facts were only asked for once the page
+  // had arrived (a request waterfall on client navigation, and the slowest first render in the tests)
+  const [{ data: page }, { data: facts }] = useSuspenseQueries({ queries: [storefrontQuery(slug), providerQuery(slug, locale)] });
   const config = useSiteConfig();
   useStorefrontVisit(slug);
   const enabled = new Set(page.sections.map(s => s.kind));

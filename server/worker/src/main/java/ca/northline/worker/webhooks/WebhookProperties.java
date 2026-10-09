@@ -12,6 +12,9 @@ import org.springframework.util.unit.DataSize;
  *
  * @param secretKey {@code WEBHOOK_SECRET_KEY}, the api's key for the endpoints' signing secrets (blank = the public
  *     development key, refused under the cloud profiles)
+ * @param secretKeyId {@code WEBHOOK_SECRET_KEY_ID}, the current key's id (blank = {@code v1})
+ * @param secretPreviousKeys {@code WEBHOOK_SECRET_PREVIOUS_KEYS}, keys that only decrypt while the api re-encrypts
+ *     the stored secrets after a rotation ({@code id=base64,…}; docs/runbooks/key-rotation.md)
  * @param allowLocal lets deliveries go to {@code http://localhost} / loopback — local development and tests only;
  *     private, link-local and metadata addresses are refused regardless
  * @param maxInFlight endpoints delivered to at once by one worker replica (one virtual thread each)
@@ -23,6 +26,8 @@ import org.springframework.util.unit.DataSize;
 @ConfigurationProperties("northline.webhooks")
 public record WebhookProperties(
         @Nullable String secretKey,
+        @Nullable String secretKeyId,
+        @Nullable String secretPreviousKeys,
         @DefaultValue("false") boolean allowLocal,
         @DefaultValue("64") int maxInFlight,
         @DefaultValue("20") int batch,

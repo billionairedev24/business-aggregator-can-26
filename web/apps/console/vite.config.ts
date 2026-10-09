@@ -35,7 +35,10 @@ export default defineConfig(({ mode }) => {
     : { '^/api/': toBff, '^/bff/': toBff, '^/oauth2/': toBff, '^/login/': toBff };
   return {
     plugins: [tanstackRouter({
-      target: 'react', autoCodeSplitting: true,
+      // Engineering follow-ups (flaky privacy.test.tsx): split route chunks load lazily, and under vitest a lazy chunk
+      // is transformed on first navigation — inside the first test's 5 s wait for its heading, which a loaded machine
+      // exceeded. Tests import the whole route tree up front instead; builds keep their code splitting.
+      target: 'react', autoCodeSplitting: !process.env.VITEST,
       codeSplittingOptions: { defaultBehavior: [['loader', 'component'], ['pendingComponent'], ['errorComponent'], ['notFoundComponent']] },
     }), react(), devAuth(env)],
     server: { port: 3200, proxy },

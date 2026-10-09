@@ -24,12 +24,23 @@ class AesWebhookSecretCipher implements WebhookSecretCipher {
 
     private final @Nullable WebhookSecretBox box;
 
+    /**
+     * @param webhookKey {@code WEBHOOK_SECRET_KEY}
+     * @param webhookKeyId {@code WEBHOOK_SECRET_KEY_ID}: the current key's id (default {@code v1})
+     * @param webhookPreviousKeys {@code WEBHOOK_SECRET_PREVIOUS_KEYS}: keys that only decrypt during a rotation
+     */
     @ConfigurationProperties("northline.developer")
-    record Properties(@Nullable String webhookKey) {}
+    record Properties(
+            @Nullable String webhookKey,
+            @Nullable String webhookKeyId,
+            @Nullable String webhookPreviousKeys) {}
 
     AesWebhookSecretCipher(Properties properties, Environment environment) {
         this.box = WebhookSecretBox.of(
-                        properties.webhookKey(), environment.acceptsProfiles(Profiles.of("local", "test")))
+                        properties.webhookKey(),
+                        properties.webhookKeyId(),
+                        properties.webhookPreviousKeys(),
+                        environment.acceptsProfiles(Profiles.of("local", "test")))
                 .orElse(null);
         if (box == null) {
             log.warn("northline.developer.webhook-key is not set: webhook endpoints cannot be created");
@@ -38,7 +49,7 @@ class AesWebhookSecretCipher implements WebhookSecretCipher {
 
     @Override
     public String keyRef() {
-        return WebhookSecretBox.KEY_REF;
+        return box().keyRef();
     }
 
     @Override
@@ -49,6 +60,12 @@ class AesWebhookSecretCipher implements WebhookSecretCipher {
     @Override
     public String decrypt(byte[] encrypted) {
         return box().decrypt(encrypted);
+    }
+
+    @Override
+    public Opened open(byte[] encrypted, @Nullable String keyRef) {
+        var opened = box().open(encrypted, keyRef);
+        return new Opened(opened.secret(), opened.keyRef());
     }
 
     private WebhookSecretBox box() {

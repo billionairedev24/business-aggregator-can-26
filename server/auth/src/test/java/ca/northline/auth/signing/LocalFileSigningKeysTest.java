@@ -130,6 +130,27 @@ class LocalFileSigningKeysTest {
         assertThatThrownBy(() -> keys.retire(keys.active().keyId())).isInstanceOf(IllegalStateException.class);
     }
 
+    /**
+     * Engineering follow-ups (S-115 drill finding): a planned rotation still pending survived {@code rotate
+     * --immediately} and would have taken over from the emergency key at its time.
+     */
+    @Test
+    void immediateRotation_alsoRetiresAPendingScheduledKey() {
+        var keys = store();
+        var compromised = keys.active().keyId();
+        var planned = keys.rotate(false); // NEXT, created before the compromise
+
+        var emergency = keys.rotate(true);
+
+        assertThat(keys.active().keyId()).isEqualTo(emergency.keyId());
+        assertThat(keys.published()).extracting(JWK::getKeyID).doesNotContain(planned.keyId());
+        assertThat(keys.describe()).extracting(SigningKeys.KeyState::status).doesNotContain(Status.NEXT);
+        keys.retire(compromised);
+        clock.advanceSeconds(AHEAD.toSeconds() + 1); // the planned key's time comes: the emergency key keeps signing
+        assertThat(keys.active().keyId()).isEqualTo(emergency.keyId());
+        assertThat(keys.published()).extracting(JWK::getKeyID).containsExactly(emergency.keyId());
+    }
+
     @Test
     void rotationJob_rotatesOnlyWhenTheNewestKeyIsOldEnough() {
         var keys = store();
