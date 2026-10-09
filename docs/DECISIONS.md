@@ -8085,8 +8085,9 @@ V350 only (V351–V354 unused).
   loads for itself — never wait on another request's load while holding a connection, the F1 lesson) keeps the home
   summary per market and language, and the kitchens list's city-level part (kitchens, open state, calendars, ratings)
   per market — distance, fees and the cards' order stay per request. `PUBLIC_PAGES_CACHE_TTL` (default 30 s; `0s`
-  turns it off; the test profile runs with 0 s). Invalidation: `@ApplicationModuleListener`s in discovery and food drop
-  the whole cache on `MerchantApproved`, `MerchantSuspended`, `MerchantReinstated`, `MerchantSearchVisibilityChanged`,
+  turns it off; the test profile runs with 0 s). Invalidation: plain `@EventListener`s in discovery and food drop the whole
+  cache after the change commits (not `@ApplicationModuleListener`s: a cache drop needs no outbox row per event — those
+  rows also made `MerchantEventsExternalizationTest` count three publications of a rename) on `MerchantApproved`, `MerchantSuspended`, `MerchantReinstated`, `MerchantSearchVisibilityChanged`,
   `MerchantRenamed`, `MerchantCategoriesChanged`, `MerchantTierChanged`, `StorefrontPublished`, `KitchenPaused`,
   `KitchenResumed`, `KitchenAutoPaused`, `KitchenAutoResumed`, `MenuPublished` — on the instance that handles the
   event; **other replicas see the change when their entry expires (≤ 30 s)**. Not invalidated: ratings (a new review
