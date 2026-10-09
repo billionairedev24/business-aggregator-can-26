@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 
 import ca.northline.food.api.KitchenAvailability;
 import ca.northline.merchants.api.CategorySource;
-import ca.northline.merchants.api.MerchantApproved;
 import ca.northline.merchants.api.PublicDirectory;
 import ca.northline.merchants.api.PublicDirectory.PublicBusiness;
 import ca.northline.support.MovableClock;
@@ -23,6 +22,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Engineering follow-ups (S-119 F5): the home page read every business of the city on each view. Within the cache's
@@ -76,11 +77,30 @@ class HomeCacheTest {
         verify(directory, times(2)).active(anyCollection(), any());
 
         when(directory.active(anyCollection(), any())).thenReturn(List.of(provider("p1"), provider("p2")));
-        cache.on(new MerchantApproved("e1", clock.instant(), "p2", "staff", "provider", "trusted")); // became visible
+        cache.onVisibilityChange(); // a business became visible (outside a transaction: dropped at once)
         assertThat(home.of("Townsville", Locale.ENGLISH).providers()).isEqualTo(2);
 
         clock.advance(Duration.ofSeconds(31));
         home.of("Townsville", Locale.ENGLISH);
         verify(directory, times(4)).active(anyCollection(), any());
+    }
+
+    @Test
+    void insideATransaction_theEntryIsDroppedOnlyOnceTheChangeCommitted() {
+        when(directory.active(anyCollection(), any())).thenReturn(List.of());
+        when(kitchens.now(anyCollection())).thenReturn(Map.of());
+        when(ratings.summaries(anyCollection())).thenReturn(Map.of());
+        home.of("Townsville", Locale.ENGLISH);
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            cache.onVisibilityChange();
+            home.of("Townsville", Locale.ENGLISH); // not committed yet: still the kept entry
+            verify(directory, times(1)).active(anyCollection(), any());
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+        home.of("Townsville", Locale.ENGLISH);
+        verify(directory, times(2)).active(anyCollection(), any());
     }
 }

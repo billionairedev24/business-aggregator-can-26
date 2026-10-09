@@ -19,8 +19,10 @@ import java.time.Duration;
 import java.util.Locale;
 import java.util.function.Supplier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.modulith.events.ApplicationModuleListener;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Engineering follow-ups (S-119 F5): the home page read every business of the city and every kitchen's calendar on
@@ -51,68 +53,36 @@ class HomeCache {
         cache.invalidateAll();
     }
 
-    @ApplicationModuleListener
-    void on(MerchantApproved event) {
-        invalidate();
-    }
-
-    @ApplicationModuleListener
-    void on(MerchantSuspended event) {
-        invalidate();
-    }
-
-    @ApplicationModuleListener
-    void on(MerchantReinstated event) {
-        invalidate();
-    }
-
-    @ApplicationModuleListener
-    void on(MerchantSearchVisibilityChanged event) {
-        invalidate();
-    }
-
-    @ApplicationModuleListener
-    void on(MerchantRenamed event) {
-        invalidate();
-    }
-
-    @ApplicationModuleListener
-    void on(MerchantCategoriesChanged event) {
-        invalidate();
-    }
-
-    @ApplicationModuleListener
-    void on(MerchantTierChanged event) {
-        invalidate();
-    }
-
-    @ApplicationModuleListener
-    void on(StorefrontPublished event) {
-        invalidate();
-    }
-
-    @ApplicationModuleListener
-    void on(KitchenPaused event) {
-        invalidate();
-    }
-
-    @ApplicationModuleListener
-    void on(KitchenResumed event) {
-        invalidate();
-    }
-
-    @ApplicationModuleListener
-    void on(KitchenAutoPaused event) {
-        invalidate();
-    }
-
-    @ApplicationModuleListener
-    void on(KitchenAutoResumed event) {
-        invalidate();
-    }
-
-    @ApplicationModuleListener
-    void on(MenuPublished event) {
-        invalidate();
+    /**
+     * A business's visibility or what the page shows changed: dropped once the change has committed (a read in between
+     * would keep the old rows otherwise). A plain listener, not an {@code @ApplicationModuleListener}: a cache drop
+     * needs no outbox row per event, and a lost one only means the entry lives out its ttl.
+     */
+    @EventListener({
+        MerchantApproved.class,
+        MerchantSuspended.class,
+        MerchantReinstated.class,
+        MerchantSearchVisibilityChanged.class,
+        MerchantRenamed.class,
+        MerchantCategoriesChanged.class,
+        MerchantTierChanged.class,
+        StorefrontPublished.class,
+        KitchenPaused.class,
+        KitchenResumed.class,
+        KitchenAutoPaused.class,
+        KitchenAutoResumed.class,
+        MenuPublished.class
+    })
+    void onVisibilityChange() {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    invalidate();
+                }
+            });
+        } else {
+            invalidate();
+        }
     }
 }

@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import ca.northline.food.api.KitchenAvailability;
-import ca.northline.food.api.KitchenPaused;
 import ca.northline.merchants.api.PublicDirectory;
 import ca.northline.region.api.Markets;
 import ca.northline.region.api.TaxRates;
@@ -55,8 +54,7 @@ class KitchenListCacheTest {
         verify(directory, times(1)).active(anyCollection(), any());
         verify(availability, times(1)).now(anyCollection());
 
-        cache.on(new KitchenPaused(
-                "e1", clock.instant(), "k1", "u1", clock.instant().plusSeconds(900)));
+        cache.onVisibilityChange(); // a kitchen paused
         service.kitchens("Townsville", null, null);
         verify(directory, times(2)).active(anyCollection(), any());
     }

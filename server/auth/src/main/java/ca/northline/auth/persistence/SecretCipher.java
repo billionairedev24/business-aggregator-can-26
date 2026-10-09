@@ -3,11 +3,11 @@ package ca.northline.auth.persistence;
 import ca.northline.auth.application.AuthProperties;
 import ca.northline.platform.AesKeyRing;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * AES-256-GCM for TOTP secrets at rest ({@code auth.totp_secrets.secret_enc} = 12-byte IV ‖ ciphertext+tag). The key
@@ -17,9 +17,17 @@ import org.springframework.stereotype.Component;
  * row, V350) and {@code TOTP_PREVIOUS_KEYS} ({@code id=base64,…}) keeps older keys for decryption while {@link
  * TotpKeyRotation} re-encrypts every secret with the current one.
  */
-@Component
-@EnableConfigurationProperties(SecretCipher.Keys.class)
 class SecretCipher {
+
+    /** The bean: the configured key and its id, the previous keys. */
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(SecretCipher.Keys.class)
+    static class Config {
+        @Bean
+        SecretCipher secretCipher(AuthProperties props, Keys keys) {
+            return SecretCipher.of(props.totpKey(), keys);
+        }
+    }
 
     /**
      * @param totpKeyId {@code TOTP_KEY_ID}: the current key's id
@@ -34,13 +42,13 @@ class SecretCipher {
 
     private final AesKeyRing keys;
 
-    @Autowired
-    SecretCipher(AuthProperties props, Keys keys) {
-        this(props.totpKey(), keys);
+    private SecretCipher(AesKeyRing keys) {
+        this.keys = keys;
     }
 
-    SecretCipher(String totpKey, Keys keys) {
-        this.keys = AesKeyRing.of("TOTP_KEY", keys.totpKeyId(), totpKey, keys.totpPreviousKeys());
+    /** A cipher over {@code totpKey} and the given ids (a rotation in tests and tools). */
+    static SecretCipher of(String totpKey, Keys keys) {
+        return new SecretCipher(AesKeyRing.of("TOTP_KEY", keys.totpKeyId(), totpKey, keys.totpPreviousKeys()));
     }
 
     /** The id stored next to a value encrypted now. */

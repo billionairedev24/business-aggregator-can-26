@@ -29,12 +29,12 @@ class TotpKeyRotationTest extends AuthIntegrationTest {
 
     @Test
     void rotateTheKey_oldSecretsStillWork_theJobMovesThem_thenTheOldKeyCanGo() {
-        var v1 = new SecretCipher(TEST_KEY, new SecretCipher.Keys("v1", null));
+        var v1 = SecretCipher.of(TEST_KEY, new SecretCipher.Keys("v1", null));
         var users = List.of(user(), user(), user());
         users.forEach(u -> new JdbcSecondFactors(jdbc, v1).saveTotp(u, "SECRET" + u, Instant.now()));
 
         // the rotation: a new key with a new id; the old key kept for decryption
-        var v2 = new SecretCipher(NEW_KEY, new SecretCipher.Keys("v2", "v1=" + TEST_KEY));
+        var v2 = SecretCipher.of(NEW_KEY, new SecretCipher.Keys("v2", "v1=" + TEST_KEY));
         var afterSwitch = new JdbcSecondFactors(jdbc, v2);
         assertThat(afterSwitch.findTotp(users.getFirst()).orElseThrow().secret())
                 .as("secrets under the previous key still verify codes")
@@ -57,7 +57,7 @@ class TotpKeyRotationTest extends AuthIntegrationTest {
                     .isGreaterThanOrEqualTo(2);
 
             // the old key leaves TOTP_PREVIOUS_KEYS: the new key alone opens everything
-            var onlyNew = new JdbcSecondFactors(jdbc, new SecretCipher(NEW_KEY, new SecretCipher.Keys("v2", null)));
+            var onlyNew = new JdbcSecondFactors(jdbc, SecretCipher.of(NEW_KEY, new SecretCipher.Keys("v2", null)));
             assertThat(onlyNew.findTotp(users.getFirst()).orElseThrow().secret())
                     .isEqualTo("SECRET" + users.getFirst());
             assertThat(onlyNew.findTotp(users.get(1)).orElseThrow().secret()).isEqualTo("ENROLLED-AGAIN");
@@ -66,7 +66,7 @@ class TotpKeyRotationTest extends AuthIntegrationTest {
                     .isInstanceOf(IllegalStateException.class);
         } finally {
             // the database is shared: put every row back under the test profile's key for the other test classes
-            var back = new SecretCipher(TEST_KEY, new SecretCipher.Keys("v1", "v2=" + NEW_KEY));
+            var back = SecretCipher.of(TEST_KEY, new SecretCipher.Keys("v1", "v2=" + NEW_KEY));
             var restore = new TotpKeyRotation(jdbc, back, meters);
             while (restore.run().reencrypted() > 0) {
                 // batches of 200
@@ -76,11 +76,11 @@ class TotpKeyRotationTest extends AuthIntegrationTest {
 
     @Test
     void aMisconfiguredRotationFailsAtStart_notOnTheFirstSignIn() {
-        assertThatThrownBy(() -> new SecretCipher(NEW_KEY, new SecretCipher.Keys("v1", "v1=" + TEST_KEY)))
+        assertThatThrownBy(() -> SecretCipher.of(NEW_KEY, new SecretCipher.Keys("v1", "v1=" + TEST_KEY)))
                 .hasMessageContaining("both the current key and a previous one");
-        assertThatThrownBy(() -> new SecretCipher(NEW_KEY, new SecretCipher.Keys("v2", TEST_KEY)))
+        assertThatThrownBy(() -> SecretCipher.of(NEW_KEY, new SecretCipher.Keys("v2", TEST_KEY)))
                 .hasMessageContaining("id=base64");
-        assertThatThrownBy(() -> new SecretCipher(NEW_KEY, new SecretCipher.Keys("v2", "v1=c2hvcnQ=")))
+        assertThatThrownBy(() -> SecretCipher.of(NEW_KEY, new SecretCipher.Keys("v2", "v1=c2hvcnQ=")))
                 .hasMessageContaining("32 bytes");
     }
 
