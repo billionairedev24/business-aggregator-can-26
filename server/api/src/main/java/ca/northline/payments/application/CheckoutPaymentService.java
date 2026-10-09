@@ -36,14 +36,20 @@ class CheckoutPaymentService implements PaymentAuthorizations {
 
     @Override
     public Started start(Request request) {
-        if (request.amountCents() <= 0 || request.taxCents() < 0 || request.platformCents() < 0) {
+        if (request.amountCents() < 0
+                || request.amountCents() + request.platformCents() <= 0
+                || request.taxCents() < 0
+                || request.platformCents() < 0
+                || request.creditCents() < 0
+                || request.creditCents() > request.amountCents() + request.taxCents()) {
             throw RuleViolation.of("amountCents", "range", "Enter an amount.");
         }
         var calculationId = request.taxCalculationId();
         if (calculationId != null) {
             taxCalculations.use(calculationId, request);
         }
-        var total = request.amountCents() + request.taxCents() + request.platformCents();
+        var total =
+                request.amountCents() + request.taxCents() + request.platformCents() - request.creditCents();
         var customer = escrows.stripeCustomer(request.customerId()).orElseGet(() -> {
             var created =
                     gateway.customer(request.customerId(), StripeIdempotencyKeys.of("customer", request.customerId()));

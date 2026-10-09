@@ -35,7 +35,46 @@ public interface EscrowLifecycle {
             @Nullable String source,
             String stripePaymentIntent,
             Instant occurredAt,
-            @Nullable PlatformCharges platform) {
+            @Nullable PlatformCharges platform,
+            @Nullable Discount discount) {
+
+        /** Without a promo code or points (the S-57 shape). */
+        public Hold(
+                String merchantId,
+                EscrowKind kind,
+                String refType,
+                String refId,
+                long amountCents,
+                long taxCents,
+                String customerId,
+                String customerName,
+                String label,
+                @Nullable String orderNumber,
+                @Nullable String listingId,
+                @Nullable String listingName,
+                @Nullable String source,
+                String stripePaymentIntent,
+                Instant occurredAt,
+                @Nullable PlatformCharges platform) {
+            this(
+                    merchantId,
+                    kind,
+                    refType,
+                    refId,
+                    amountCents,
+                    taxCents,
+                    customerId,
+                    customerName,
+                    label,
+                    orderNumber,
+                    listingId,
+                    listingName,
+                    source,
+                    stripePaymentIntent,
+                    occurredAt,
+                    platform,
+                    null);
+        }
 
         /** Without platform charges (the pre-S-57 shape). */
         public Hold(
@@ -70,11 +109,44 @@ public interface EscrowLifecycle {
                     source,
                     stripePaymentIntent,
                     occurredAt,
+                    null,
                     null);
         }
 
         public long platformTotal() {
             return platform == null ? 0 : platform.totalCents();
+        }
+
+        /** What the card was authorized for: the amount, its tax and Northline's charges, less what points pay. */
+        public long cardCents() {
+            return amountCents + taxCents + platformTotal() - (discount == null ? 0 : discount.pointsCents());
+        }
+    }
+
+    /**
+     * Mobile gaps part 2: what a promo code and points took off this escrow. {@code amountCents} of the hold is already
+     * the amount after the code (the tax was computed on it).
+     *
+     * @param codeCents the promo code's discount on this line
+     * @param fundedBy {@code northline} (Northline tops the merchant up at release: ledger {@code promotions}) or
+     *     {@code merchant} (the business sold for less); null without a code
+     * @param pointsCents what points pay of the amount and tax (ledger {@code points_redeemed}, Northline's money)
+     */
+    record Discount(long codeCents, @Nullable String fundedBy, long pointsCents) {
+        public Discount {
+            if (codeCents < 0 || pointsCents < 0) {
+                throw new IllegalArgumentException("discounts can't be negative");
+            }
+            if ((codeCents > 0) != (fundedBy != null)) {
+                throw new IllegalArgumentException("a code's discount needs its funder");
+            }
+            if (fundedBy != null && !fundedBy.equals("northline") && !fundedBy.equals("merchant")) {
+                throw new IllegalArgumentException("funded by northline or merchant: " + fundedBy);
+            }
+        }
+
+        public boolean any() {
+            return codeCents > 0 || pointsCents > 0;
         }
     }
 

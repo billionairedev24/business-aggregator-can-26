@@ -26,5 +26,7 @@ public enum ConsoleAction implements CodedEnum {
     /** S-121: triage pilot feedback (state, owner, tracker link, duplicates), manage participants, record sign-offs. */
     UAT,
     /** S-118: record a manual go-live gate (pass, fail, not applicable) with its evidence. */
-    ATTEST
+    ATTEST,
+    /** Mobile gaps part 2: make promo codes and switch them on and off (finance, admins). */
+    PROMOTIONS
 }

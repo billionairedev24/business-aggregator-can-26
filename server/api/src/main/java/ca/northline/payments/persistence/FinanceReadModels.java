@@ -27,9 +27,13 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
     @Override
     public EscrowTotals escrowTotals(String merchantId, @Nullable Instant releasingBy) {
         return jdbc.sql("""
-                        select coalesce(sum(amount_cents - coalesce(fee_cents, 0)) filter (where state = 'held'), 0) as held_net,
+                        select coalesce(sum(amount_cents - coalesce(fee_cents, 0)
+                                            + case when discount_funded_by = 'northline' then discount_cents else 0 end)
+                                        filter (where state = 'held'), 0) as held_net,
                                count(*) filter (where state = 'held') as held_count,
-                               coalesce(sum(amount_cents - coalesce(fee_cents, 0)) filter (
+                               coalesce(sum(amount_cents - coalesce(fee_cents, 0)
+                                            + case when discount_funded_by = 'northline' then discount_cents else 0 end)
+                                        filter (
                                    where state = 'held' and release_at is not null
                                      and cast(:by as timestamptz) is not null and release_at <= :by), 0) as releasing,
                                coalesce(sum(amount_cents) filter (where state = 'disputed'), 0) as on_hold,
@@ -88,7 +92,8 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
     @Override
     public List<Released> released(String merchantId, Instant from, Instant to) {
         return jdbc.sql("""
-                        select released_at, amount_cents - coalesce(fee_cents, 0) as net, kind
+                        select released_at, amount_cents - coalesce(fee_cents, 0)
+                               + case when discount_funded_by = 'northline' then discount_cents else 0 end as net, kind
                           from payments.escrows
                          where merchant_id = :m and state = 'released' and released_at >= :from and released_at < :to""")
                 .param("m", merchantId)

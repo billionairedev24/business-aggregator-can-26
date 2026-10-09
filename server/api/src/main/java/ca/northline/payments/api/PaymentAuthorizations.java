@@ -24,6 +24,8 @@ public interface PaymentAuthorizations {
      * @param platformCents Northline's own charges authorized on the same card payment and captured with the escrow
      *     (S-57 food: courier fee, service fee, their tax, the courier's tip) — never transferred to the merchant; 0 for
      *     none. The matching {@link EscrowLifecycle.PlatformCharges} go with the hold.
+     * @param creditCents what points pay (mobile gaps part 2): the card is authorized for that much less; at most the
+     *     amount and its tax. The matching {@link EscrowLifecycle.Discount} goes with the hold.
      */
     record Request(
             String merchantId,
@@ -35,7 +37,34 @@ public interface PaymentAuthorizations {
             String transferGroup,
             @Nullable String clientKey,
             @Nullable String taxCalculationId,
-            long platformCents) {
+            long platformCents,
+            long creditCents) {
+
+        /** Without points (the S-57 shape). */
+        public Request(
+                String merchantId,
+                String refType,
+                String refId,
+                String customerId,
+                long amountCents,
+                long taxCents,
+                String transferGroup,
+                @Nullable String clientKey,
+                @Nullable String taxCalculationId,
+                long platformCents) {
+            this(
+                    merchantId,
+                    refType,
+                    refId,
+                    customerId,
+                    amountCents,
+                    taxCents,
+                    transferGroup,
+                    clientKey,
+                    taxCalculationId,
+                    platformCents,
+                    0);
+        }
 
         /** Without platform charges (S-21 shape). */
         public Request(
@@ -58,6 +87,7 @@ public interface PaymentAuthorizations {
                     transferGroup,
                     clientKey,
                     taxCalculationId,
+                    0,
                     0);
         }
 
@@ -71,7 +101,7 @@ public interface PaymentAuthorizations {
                 long taxCents,
                 String transferGroup,
                 @Nullable String clientKey) {
-            this(merchantId, refType, refId, customerId, amountCents, taxCents, transferGroup, clientKey, null, 0);
+            this(merchantId, refType, refId, customerId, amountCents, taxCents, transferGroup, clientKey, null, 0, 0);
         }
     }
 

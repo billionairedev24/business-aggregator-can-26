@@ -39,6 +39,7 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
     private final Clock clock;
     private final BusinessNames names;
     private final MerchantPlaces places;
+    private final ReviewModeration moderation;
 
     @Override
     @Transactional(readOnly = true)
@@ -90,8 +91,14 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
         if (action == FlagAction.WARN && flag.merchantId() == null) {
             throw RuleViolation.of("action", "option", NO_BUSINESS);
         }
+        if (action == FlagAction.HIDE_REVIEW && !"review".equals(flag.targetType())) {
+            throw RuleViolation.of("action", "option", ReviewModeration.NOT_A_REVIEW);
+        }
         if (!record(flag, "actioned", action.code(), staffId, role, note)) {
             throw new Conflict("flag_decided", NOT_OPEN);
+        }
+        if (action == FlagAction.HIDE_REVIEW) {
+            moderation.hide(flag.targetId(), flag.rule(), staffId, role, note);
         }
         if (action == FlagAction.WARN) {
             events.publishEvent(new TrustWarningNotice(
@@ -226,6 +233,11 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
         return switch (f.rule()) {
             case "off_platform_payment" ->
                 "The message detector found masked contact details or words about paying outside Northline.";
+            case "review_screened" ->
+                "The review filter masked "
+                        + f.evidence().getOrDefault("categories", "").replace("personal_info", "personal information")
+                                .replace(",", " and ")
+                        + " in a customer's review. It is published masked until you decide.";
             case "review_report" ->
                 "The business reported this review"
                         + (f.evidence().containsKey("reason")

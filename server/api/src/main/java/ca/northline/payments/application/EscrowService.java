@@ -43,6 +43,7 @@ class EscrowService implements EscrowLifecycle {
     private final PaymentGateway gateway;
     private final TaxTransactions taxes;
     private final TaxRepository deliveryTax;
+    private final CourierTipService tips;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -52,7 +53,7 @@ class EscrowService implements EscrowLifecycle {
                 .map(Escrow::getId)
                 .orElseGet(() -> {
                     var now = clock.instant();
-                    var total = hold.amountCents() + hold.taxCents() + hold.platformTotal();
+                    var total = hold.cardCents();
                     var authorization = requireAuthorized(gateway.authorization(hold.stripePaymentIntent()), total);
                     var known = escrows.intentByStripeId(hold.stripePaymentIntent());
                     var intent = escrows.recordPaymentIntent(new EscrowRepository.IntentRecord(
@@ -77,6 +78,10 @@ class EscrowService implements EscrowLifecycle {
                     var escrow =
                             Escrow.hold(hold, tiers.rateOf(hold.merchantId()).takeRateBps(), intent, now);
                     escrows.insert(escrow);
+                    if (escrow.getTipCents() > 0 && "food_order".equals(hold.refType())) {
+                        tips.atCheckout(
+                                hold.refId(), hold.customerId(), escrow.getTipCents(), hold.stripePaymentIntent());
+                    }
                     return escrow.getId();
                 });
     }
@@ -147,13 +152,15 @@ class EscrowService implements EscrowLifecycle {
                 intent.amountCents(),
                 StripeIdempotencyKeys.of("capture-delivery", orderId, intent.id()));
         escrows.recordCapture(intent.id(), charge);
+        var tip = Math.min(intent.amountCents(), tips.checkoutTipCents(orderId));
         var tax = Math.min(
-                intent.amountCents(),
+                intent.amountCents() - tip,
                 deliveryTax
                         .calculationFor(LedgerEntry.DELIVERY_FEE, orderId)
                         .map(TaxRepository.Calculation::taxCents)
                         .orElse(0L));
-        ledger.post(LedgerEntry.deliveryFeeCaptured(orderId, intent.amountCents(), tax, at));
+        ledger.post(LedgerEntry.deliveryFeeCaptured(orderId, intent.amountCents(), tax, tip, at));
+        tips.captured(orderId, at);
         log.info("Order {}: delivery fee captured ({} cents)", orderId, intent.amountCents());
         return true;
     }
@@ -317,6 +324,9 @@ class EscrowService implements EscrowLifecycle {
             });
         }
         ledger.post(LedgerEntry.captured(escrow, at));
+        if (escrow.getTipCents() > 0 && "food_order".equals(escrow.getRefType())) {
+            tips.captured(escrow.getRefId(), at);
+        }
         taxes.captured(escrow, at); // reported to Stripe Tax after commit (S-21)
     }
 
@@ -331,19 +341,22 @@ class EscrowService implements EscrowLifecycle {
                             var group = intent != null && intent.transferGroup() != null
                                     ? intent.transferGroup()
                                     : StripeMetadata.defaultTransferGroup(escrow.getRefType(), escrow.getRefId());
-                            var net = Fees.transferCents(escrow.getAmountCents(), escrow.getFeeCents());
+                            var net = Fees.transferCents(escrow.saleCents(), escrow.getFeeCents());
+                            // a Northline top-up can make the transfer larger than the charge it would draw on:
+                            // then it comes from Northline's balance (no source transaction)
+                            var source = intent == null || net > escrow.capturedCents() ? null : intent.charge();
                             var transfer = gateway.transfer(new PaymentGateway.Transfer(
                                     account.stripeAccount(),
                                     net,
                                     group,
-                                    intent == null ? null : intent.charge(),
+                                    source,
                                     StripeMetadata.escrow(escrow),
                                     StripeIdempotencyKeys.of("transfer", escrow.getId())));
                             escrows.recordTransfer(
                                     escrow.getId(),
                                     transfer,
                                     group,
-                                    escrow.getAmountCents(),
+                                    escrow.saleCents(),
                                     escrow.getFeeCents(),
                                     net,
                                     now);
