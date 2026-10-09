@@ -1096,3 +1096,17 @@ This tip was already refunded.	Ce pourboire a déjà été remboursé.	new
 Pick the address on the map again.	Choisissez de nouveau l’adresse sur la carte.	new
 Start travel first — positions are shared only on the way.	Partez d’abord : la position n’est partagée qu’en route.	new
 Only the team member doing this job can share their position.	Seul le membre de l’équipe qui fait ce travail peut partager sa position.	new
+
+# Mobile gaps part 2: 404 details of resources the earlier stories and this one added
+No age session with id %s	Aucune séance de vérification d’âge avec l’identifiant %s	new
+No invite with id %s	Aucune invitation avec l’identifiant %s	new
+No kitchen visit with id %s	Aucune visite de cuisine avec l’identifiant %s	new
+No launch request with id %s	Aucune demande de lancement avec l’identifiant %s	new
+No licence with id %s	Aucun permis avec l’identifiant %s	new
+No market with id %s	Aucun marché avec l’identifiant %s	new
+No photo with id %s	Aucune photo avec l’identifiant %s	new
+No pilot business with id %s	Aucune entreprise pilote avec l’identifiant %s	new
+No promo code with id %s	Aucun code promo avec l’identifiant %s	new
+No tip with id %s	Aucun pourboire avec l’identifiant %s	new
+No uat_feedback with id %s	Aucun commentaire de pilote avec l’identifiant %s	new
+No uat_participant with id %s	Aucun participant au pilote avec l’identifiant %s	new

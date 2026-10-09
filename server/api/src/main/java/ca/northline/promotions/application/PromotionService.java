@@ -293,7 +293,7 @@ class PromotionService implements Promotions, ManagePromoCodes {
 
     @Override
     public CodeView setActive(String id, boolean active, String staffId, String role) {
-        var promo = store.byId(id).orElseThrow(() -> new NotFound("promo_code", id));
+        var promo = store.byId(id).orElseThrow(() -> new NotFound("promo code", id));
         if (store.setActive(id, active, clock.instant())) {
             audit.record(new AuditTrail.Entry(
                     promo.merchantId(),

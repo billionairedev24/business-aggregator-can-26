@@ -278,7 +278,14 @@
     "{label} minimum",
     "{n, plural, one {# minute} other {# minutes}}",
     "{points} pts",
-    "{points} pts · {value}"
+    "{points} pts · {value}",
+    "Interface, reçus, notifications",
+    "requis {places}",
+    "{name} (script), {at}",
+    "Notes",
+    "Source",
+    "Photo {n}",
+    "{app} · {route} · version {version} · {locale} · {platform}"
   ],
   "jsx": {
     "web/apps/consumer/src/features/cart/Payment.tsx": [
@@ -289,6 +296,9 @@
     ],
     "web/apps/studio/src/features/settings/BusinessTab.tsx": [
       "123456789 RT0001"
+    ],
+    "web/apps/console/src/features/golive/GoLive.tsx": [
+      "https://"
     ]
   },
   "emailTemplateWords": [],
