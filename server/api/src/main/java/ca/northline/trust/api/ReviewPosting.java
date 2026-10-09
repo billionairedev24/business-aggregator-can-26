@@ -22,7 +22,7 @@ public interface ReviewPosting {
 
     /**
      * @param refType {@code booking} | {@code order} (shop or food order)
-     * @param authorName the display form stored with the review ("Dana K.")
+     * @param authorName the display form stored with the review ("D. Kowalski")
      * @param jobLabel what was done or bought ("Brake inspection", "Food order FD-10012")
      * @param lang {@code en} | {@code fr}
      */
