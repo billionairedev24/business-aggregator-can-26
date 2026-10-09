@@ -7,6 +7,7 @@ import ca.northline.messaging.application.SupportDeskStore.TicketRow;
 import ca.northline.messaging.domain.SupportCase;
 import ca.northline.payments.api.AgentCases;
 import ca.northline.payments.api.DisputeDecisions;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.MerchantScope;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +52,7 @@ class SupportDeskService implements SupportDesk {
     static final Pattern KEY = Pattern.compile("[a-z0-9][a-z0-9.-]{1,59}");
 
     private final SupportDeskStore store;
+    private final AttachmentStorage files;
     private final BusinessNames businesses;
     private final NotificationContacts contacts;
     private final DisputeDecisions decisions;
@@ -110,6 +113,13 @@ class SupportDeskService implements SupportDesk {
     public TicketDetail ticket(String ticketId) {
         var row = store.find(ticketId).orElseThrow(() -> new NotFound("case", ticketId));
         return detail(row);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<File> attachment(String ticketId, String attachmentId) {
+        return store.attachment(ticketId, attachmentId)
+                .flatMap(f -> files.get(f.storageKey()).map(b -> new File(Bytes.of(b), f.contentType(), f.fileName())));
     }
 
     @Override

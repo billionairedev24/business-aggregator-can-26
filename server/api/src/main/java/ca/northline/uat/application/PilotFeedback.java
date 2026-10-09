@@ -11,8 +11,11 @@ import org.jspecify.annotations.Nullable;
 /** Inbound port: a pilot participant's side of UAT — the feedback control in the Studio, the web, the console, the app. */
 public interface PilotFeedback {
 
-    /** Whether the feedback control shows; for anyone signed in. */
-    Status status(String userId, @Nullable String merchantId);
+    /**
+     * Whether the feedback control shows; for anyone signed in. {@code app} {@link FeedbackApp#COURIER}: only as a pilot
+     * courier (the courier app's button); any other app prefers the person's other personas.
+     */
+    Status status(String userId, @Nullable String merchantId, @Nullable FeedbackApp app);
 
     /** A screenshot to attach to the next feedback (PNG/JPEG, ≤ 5 MB, S-104's checks). Participants only. */
     Uploaded screenshot(String userId, String contentType, Bytes bytes);

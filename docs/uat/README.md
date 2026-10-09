@@ -79,8 +79,9 @@ records the version that was run. **Changing a script:** edit both languages, ra
   **browser and OS** (“Firefox 131 · macOS”; app: “Northline app · ios 18”) — nothing else from the device.
 - The text, the screen and the device line go through the log redaction (S-112) before they are stored: secrets and
   tokens, emails, phone numbers, card numbers, one-time codes and postal codes are masked even when the person typed them.
-- **Screenshot** (web only, optional): the browser's own screen capture (the person picks what to share; the dialog hides
-  while capturing) or an attached image. PNG or JPEG, at most 5 MB, checked as S-104 asks (declared type, magic bytes,
+- **Screenshot** (optional): on the web the browser's own screen capture (the person picks what to share; the dialog
+  hides while capturing) or an attached image; in the consumer and courier apps (mobile gaps part 1) a screenshot taken
+  with the phone's buttons, picked from the photo library. PNG or JPEG, at most 5 MB, checked as S-104 asks (declared type, magic bytes,
   a readable image within the pixel ceiling). Stored in object storage under `uat/customers/` followed by the person's id, served only to
   staff on the Pilot UAT screen. An attached screenshot that is never sent is removed after a day.
 - Access, correction and erasure (S-105): the `uat` module exports the person's feedback and participation; erasure

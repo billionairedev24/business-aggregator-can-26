@@ -8173,3 +8173,70 @@ V350 only (V351–V354 unused).
   environment); the worker reading `WEBHOOK_SECRET_PREVIOUS_KEYS` from its environment (covered by the shared
   `WebhookSecretBox` the tests use); the landing cache's cross-replica behaviour (one replica locally); the dead-letter
   alert never routed to a real receiver; Chromium only for the hydration gate.
+
+## 2026-10-04 — Mobile gaps part 1: push on, courier feedback, screenshots, proof-of-delivery photo, photos on reports
+
+Branch `mobile/gaps-part-1`. **No migration** (V355–V359 unused), no new environment variable or secret. Closes the
+MOBILE_PLAN § API gaps rows for push, the proof photo, photos on a report and the S-121 mobile gaps.
+
+- **Push on, both apps.** mobile-kit gains `installPush` (one call at start-up): S-102's `pushRegistrar` at S-97's hook
+  point, a registry sync at every start and every return to the foreground while signed in (so a permission turned off
+  in the system settings, a new version or language reaches the server; unchanged state sends nothing), token rotation
+  and taps through the strict `parseDeepLink`. The apps install it from `src/push/install.ts` once the sign-in is known
+  (not on the web build or the fixture backend). The courier app now calls `PushHooks` at sign-in and before sign-out
+  (it never did). Push state lives in the services' secure storage (the session's), not a second Keychain handle.
+- **When it asks** (never at launch): consumer — a card on Order confirmed and on Booked ("Turn on notifications" /
+  "Not now", answered once, remembered on the phone), and You › Notifications › "This phone" (S-101's hidden row, now
+  shown); courier — a card on the shift screen once on shift ("Get a notification when a run is yours"), and Account ›
+  "Run notifications on this phone". Denied → the button opens the system settings. The "This phone" port is observable
+  (`usePhonePush`) so a screen opened before push is installed still shows it.
+- **Courier links:** the courier app has no site origin; its consumer host is derived from the api URL by the runbooks'
+  naming (`api.<zone>` → `<zone>`, `siteHostOf`) so `https://<zone>/courier/run` is accepted; the custom scheme works too.
+  Courier notifications show while the app is open and play a sound (a new run is time-sensitive); the channel
+  `updates` is created at start in the app's language (Android importance HIGH for couriers, DEFAULT for customers).
+- **Photos: `expo-image-picker` (~57.0.20, in Expo SDK 57's bundled modules)** for both apps — over
+  `react-native-view-shot`: one native module covers both jobs (a report's photo from the camera or the library, a
+  pilot's screenshot taken with the phone's buttons and then picked) and the library goes through the system photo
+  picker, so no storage or media permission. Config plugin with our texts, `microphonePermission: false`. Consumer:
+  `CAMERA` is now asked (at "Take a photo") and the privacy manifest / store answers declare Photos or videos;
+  `READ_*`/`WRITE_EXTERNAL_STORAGE`, `READ_MEDIA_*` and `RECORD_AUDIO` stay removed. No EXIF is read; iOS hands HEIC
+  over as JPEG (`Compatible`). Because it is a native module, this ships in a **new store build**, not over the air.
+- **Screenshots** use the same server checks as the web (PNG/JPEG, ≤ 5 MB, S-104 type + magic bytes + readable image);
+  the apps check type and size first. Uploaded when Send is pressed, then referenced by id.
+- **Courier feedback (S-121):** "Feedback" in the header of every courier screen for pilot couriers only. `GET
+  /me/pilot?app=courier` is a participant only with the **courier persona**; `POST /me/pilot/feedback` with `app:
+  courier` files the item under that persona (403 otherwise). A person who is both a pilot customer and a pilot courier
+  reports from the consumer app and the web as the customer (the courier persona sorts last for other apps). The
+  courier's text hint asks not to include customers' names, addresses or PINs; the screenshot hint asks to crop them.
+- **Proof-of-delivery photo for the customer:** `GET /api/v1/me/orders/{orderId}/proof-photo` → `{url, expiresAt}`, a
+  5-minute signed URL from the `ProofStorage` port (`signedUrl` → object storage's presigned GET). Under `local`/`test`
+  a disk can't presign, so `LocalProofLinks` signs its own link (HMAC-SHA256, key made at start-up, relative
+  `/api/v1/dev/proof-photos/{token}`, served by a local-only controller, 403 forged/expired); clients resolve a
+  relative URL against the api origin (app) or their own origin through the bff (web). Owner only: someone else's
+  order is **403** `This order isn't yours.` (the brief asked for 403; `GET /me/orders/{id}` keeps its 404), no such
+  order or nothing to show is 404. Shown only for a done drop-off whose proof is a photo still kept (S-107 retention
+  removes it) and **never for a delivery with an ID check** (`fulfilment.deliveries.id_check_age`, #166): a door photo
+  of an age-checked handoff could show the ID. Signatures are not shown. New fulfilment api `DeliveryProofPhotos`;
+  orders' `TrackOrder.proofPhoto` checks ownership.
+- **Photos on a report:** up to 3 in the apps (the api keeps its 5 per message, as the web), uploaded at once to the
+  existing `POST /me/case-uploads` (storage port), attached as `attachmentIds`. `CustomerCaseService.upload` now also
+  applies S-104's readable-image check (`ImageDecoding.size`) to JPEG/PNG (HEIC and PDF unchanged). The console case
+  (`GET /console/support/tickets/{id}`) lists each message's attachments, and `GET
+  /console/support/tickets/{id}/attachments/{fileId}` serves one (support screen; no-store, nosniff; 404 for a file not
+  on that case) — the console shows photos as thumbnails linking to full size, other files as links.
+- **Native checks:** the consumer check now expects the camera, our camera/photo texts and no microphone, storage or
+  media; a new `make courier-native-check` (the courier app had none) prebuilds both variants and checks bundle ids,
+  the redirect scheme, camera + background location, push entitlement and channel, photo texts, no microphone/storage.
+- **Store answers / legal registry:** consumer privacy answers declare Photos or videos; courier's Photos reason
+  mentions the customer view and the screenshot; both registry entries get version `2026-10-04.2`.
+- **UAT scripts:** the courier script's step 9 (en/fr) now uses the app's Feedback; script version unchanged (1.0, no
+  sign-off recorded yet).
+- **Tests:** api `CustomerProofPhotoApiTest` (signed link, bytes, no-store/nosniff, 403 for another customer / the
+  courier / a shop member, 401, 404 PIN / no order / ID check, forged, foreign-key and expired links),
+  `SomethingWrongApiTest` (fake JPEG refused, console attachments listed and served, 403 customer and finance, 404 off
+  the case), `UatApiTest` (courier persona from the courier app, screenshot); mobile-kit `installPush`/photos; consumer
+  `push.test.tsx`, `photos.test.tsx`, pilot screenshot; courier `gaps.test.tsx`; web consumer door photo, console
+  attachments (axe). `expo-notifications` and `expo-image-picker` are mocked in Jest.
+- **Never run:** on a phone, simulator or emulator — no APNs key, no Firebase project, so no token has been registered or
+  any push delivered; the permission prompts, the camera and the system photo picker; the presigned GET against a real
+  bucket (only the S-10 adapters' own tests and the local link here).

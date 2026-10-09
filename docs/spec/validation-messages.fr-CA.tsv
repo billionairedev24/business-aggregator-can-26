@@ -1030,6 +1030,9 @@ No photo with id %s	Aucune photo avec l’identifiant %s	new
 No pilot business with id %s	Aucune entreprise pilote avec l’identifiant %s	new
 No uat_feedback with id %s	Aucun commentaire d’essai utilisateur avec l’identifiant %s	new
 No uat_participant with id %s	Aucun participant aux essais utilisateurs avec l’identifiant %s	new
+No proof photo with id %s	Aucune photo de preuve de livraison avec l’identifiant %s	new
+This order isn't yours.	Cette commande n’est pas la vôtre.	new
+This link has expired. Open the order again.	Ce lien a expiré. Ouvrez la commande de nouveau.	new
 Choose alcohol, tobacco and vape, or cannabis accessories.	Choisissez alcool, tabac et vapotage, ou accessoires de cannabis.	new
 Enter the licence or permit number, 2 to 40 characters.	Entrez le numéro du permis, de 2 à 40 caractères.	new
 Enter an expiry date in the future.	Entrez une date d’expiration future.	new

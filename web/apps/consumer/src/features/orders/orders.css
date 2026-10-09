@@ -24,3 +24,5 @@
 .order-note { margin: 16px 0 0; color: var(--color-neutral-700); font-size: 14px; }
 .order-error { margin: 12px 0 0; color: var(--color-accent-2-700); font-size: 14px; }
 .order-courier { fill: var(--color-accent-2); }
+.order-proof { margin: 12px 0 0; }
+.order-proof img { display: block; width: 100%; max-width: 420px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius-md); background: var(--color-neutral-100); }

@@ -3,6 +3,7 @@ package ca.northline.orders.web;
 import ca.northline.orders.application.ConfirmDelivery;
 import ca.northline.orders.application.TrackOrder;
 import ca.northline.orders.application.TrackOrder.OrderTracking;
+import ca.northline.orders.application.TrackOrder.ProofPhoto;
 import ca.northline.shared.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
@@ -26,6 +27,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  *                                          carrying it (OrderStreams)
  * POST /api/v1/me/orders/{orderId}/confirm  the customer received it (S-78): goods escrow releases at once; 409
  *                                          not_delivered before the courier's pickup; repeating it changes nothing
+ * GET /api/v1/me/orders/{orderId}/proof-photo  {url, expiresAt}: the courier's door photo as a 5-minute signed URL;
+ *                                          403 someone else's order, 404 none to show (mobile gaps part 1)
  * </pre>
  */
 @RestController
@@ -47,6 +50,11 @@ class ConsumerOrderController {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(confirmDelivery.confirm(user.userId(), orderId));
+    }
+
+    @GetMapping("/{orderId}/proof-photo")
+    ResponseEntity<ProofPhoto> proofPhoto(CurrentUser user, @PathVariable String orderId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(track.proofPhoto(user.userId(), orderId));
     }
 
     @GetMapping(path = "/{orderId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

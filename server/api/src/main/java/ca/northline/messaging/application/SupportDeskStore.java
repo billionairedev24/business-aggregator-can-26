@@ -57,6 +57,11 @@ public interface SupportDeskStore {
 
     List<Note> notes(String ticketId);
 
+    /** Where an attachment of one of the case's messages is stored: {@code storageKey}, type and name. */
+    Optional<StoredFile> attachment(String ticketId, String attachmentId);
+
+    record StoredFile(String storageKey, String contentType, String fileName) {}
+
     /** @param senderName display snapshot ("Dev K.", "Northline support") */
     void message(String threadId, String senderRole, String senderId, String senderName, String body, Instant at);
 

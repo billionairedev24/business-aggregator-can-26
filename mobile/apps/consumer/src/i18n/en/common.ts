@@ -28,4 +28,10 @@ export const common = {
 
   'stub.body': 'This screen is being built ({story}).',
   'stub.api': 'It will use {apis}.',
+
+  'push.channel': 'Order and booking updates',
+  'push.prompt.order': 'Want to know when your order is packed, on its way and at your door? Turn on notifications for this phone.',
+  'push.prompt.booking': 'Want a reminder the evening before and a heads-up when they’re on the way? Turn on notifications for this phone.',
+  'push.prompt.turnOn': 'Turn on notifications',
+  'push.prompt.later': 'Not now',
 };

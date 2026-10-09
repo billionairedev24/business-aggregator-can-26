@@ -236,6 +236,18 @@ class RunStoreJdbc implements RunStore {
     }
 
     @Override
+    public Optional<String> proofPhotoKey(String orderId) {
+        return jdbc.sql("""
+                        select s.proof_media_id from fulfilment.stops s
+                         where s.order_id = :o and s.kind = 'dropoff' and s.state = 'done' and s.proof_kind = 'photo'
+                           and s.proof_media_id is not null
+                           -- 2026-10-04: a handoff with an ID check never shows a photo (it could show the ID)
+                           and not exists (select 1 from fulfilment.deliveries d
+                                            where d.order_id = s.order_id and d.id_check_age is not null)
+                         order by s.done_at desc limit 1""").param("o", orderId).query(String.class).optional();
+    }
+
+    @Override
     public void droppedOff(String stopId, String proofKind, Instant at) {
         jdbc.sql("""
                         update fulfilment.stops set state = 'done', done_at = :at, proof_kind = :k,

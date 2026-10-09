@@ -6671,6 +6671,72 @@ paths:
           description: Not found.
       tags:
       - support-desk-controller
+  /api/v1/console/support/tickets/{id}/attachments/{fileId}:
+    get:
+      operationId: supportDeskAttachment
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: fileId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - support-desk-controller
   /api/v1/console/support/tickets/{id}/escalate:
     post:
       operationId: supportDeskEscalate
@@ -11909,12 +11975,28 @@ components:
         at:
           type: string
           format: date-time
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/NoteFile"
         body:
           type: string
         by:
           type: string
         name:
           type: string
+    NoteFile:
+      type: object
+      properties:
+        contentType:
+          type: string
+        fileName:
+          type: string
+        id:
+          type: string
+        size:
+          type: integer
+          format: int64
     NoteRequest:
       type: object
       properties:

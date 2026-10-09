@@ -83,3 +83,60 @@ jest.mock('expo-file-system', () => {
   return { Directory, File, Paths: { document: { uri: 'file:///doc' }, cache: { uri: 'file:///cache' } } };
 });
 jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '0.1.0' } } }));
+// Push (mobile gaps part 1): expo-notifications as a scripted phone — permission, token, taps (`__phone` drives it).
+type MockTokenListener = (token: { data: unknown }) => void;
+type MockTapListener = (response: unknown) => void;
+const mockPhone = {
+  permission: 'undetermined' as string,
+  token: 'apns-device-token-0001' as string | null,
+  asked: 0,
+  tokenListeners: new Set<MockTokenListener>(),
+  tapListeners: new Set<MockTapListener>(),
+  launch: null as unknown,
+};
+const mockResponse = (data: Record<string, unknown>) => ({ notification: { request: { content: { data } } } });
+jest.mock('expo-notifications', () => ({
+  __phone: {
+    state: mockPhone,
+    tap: (data: Record<string, unknown>) => mockPhone.tapListeners.forEach((l) => l(mockResponse(data))),
+    launchWith: (data: Record<string, unknown> | null) => (mockPhone.launch = data ? mockResponse(data) : null),
+    reset: () => {
+      mockPhone.permission = 'undetermined';
+      mockPhone.token = 'apns-device-token-0001';
+      mockPhone.asked = 0;
+      mockPhone.launch = null;
+      mockPhone.tokenListeners.clear();
+      mockPhone.tapListeners.clear();
+    },
+  },
+  AndroidImportance: { DEFAULT: 3 },
+  setNotificationHandler: jest.fn(),
+  setNotificationChannelAsync: jest.fn(async () => null),
+  getPermissionsAsync: jest.fn(async () => ({ status: mockPhone.permission })),
+  requestPermissionsAsync: jest.fn(async () => {
+    mockPhone.asked++;
+    mockPhone.permission = 'granted';
+    return { status: mockPhone.permission };
+  }),
+  getDevicePushTokenAsync: jest.fn(async () => ({ type: 'ios', data: mockPhone.token })),
+  addPushTokenListener: jest.fn((l: MockTokenListener) => (mockPhone.tokenListeners.add(l), { remove: () => mockPhone.tokenListeners.delete(l) })),
+  addNotificationResponseReceivedListener: jest.fn((l: MockTapListener) => (mockPhone.tapListeners.add(l), { remove: () => mockPhone.tapListeners.delete(l) })),
+  getLastNotificationResponseAsync: jest.fn(async () => mockPhone.launch),
+}));
+// Photos (mobile gaps part 1): expo-image-picker returns what the test queued (`__queue`), else "cancelled".
+const mockPicked: unknown[] = [];
+const mockCamera = { granted: true };
+const mockPick = async () => {
+  const asset = mockPicked.shift();
+  return asset ? { canceled: false, assets: [asset] } : { canceled: true, assets: null };
+};
+jest.mock('expo-image-picker', () => ({
+  __queue: mockPicked,
+  __camera: mockCamera,
+  UIImagePickerPreferredAssetRepresentationMode: { Automatic: 'automatic', Compatible: 'compatible', Current: 'current' },
+  requestCameraPermissionsAsync: jest.fn(async () => ({ granted: mockCamera.granted, status: mockCamera.granted ? 'granted' : 'denied' })),
+  launchCameraAsync: jest.fn(mockPick),
+  launchImageLibraryAsync: jest.fn(mockPick),
+}));
+// The screen tests run without push (the app installs it at start on a phone); __tests__/push.test.tsx turns it on.
+require('./src/push/install').setPushAvailable(false);

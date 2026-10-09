@@ -31,7 +31,11 @@ export const Detail = z.object({
   ticket: Ticket,
   context: z.record(z.string(), z.unknown()),
   refLabel: z.string().nullish(),
-  notes: z.array(z.object({ by: z.string(), name: z.string().nullish(), body: z.string(), at: z.string() })),
+  notes: z.array(z.object({
+    by: z.string(), name: z.string().nullish(), body: z.string(), at: z.string(),
+    // mobile gaps part 1: the photos a customer attached to a report (app or web), opened through the ticket
+    attachments: z.array(z.object({ id: z.string(), fileName: z.string(), contentType: z.string(), size: z.number() })).optional(),
+  })),
   refundRequests: z.array(RefundRequest),
 });
 export type Detail = z.infer<typeof Detail>;
@@ -83,3 +87,7 @@ export const useSaveMacro = () => useDeskMutation((v: { id?: string; key: string
   http(`${BASE}/macros${v.id ? `/${encodeURIComponent(v.id)}` : ''}`, { method: v.id ? 'PUT' : 'POST', body: { key: v.key, title: v.title, body: v.body } }, Macro));
 export const useDeleteMacro = () => useDeskMutation((id: string) =>
   http(`${BASE}/macros/${encodeURIComponent(id)}`, { method: 'DELETE' }, z.unknown()));
+
+/** A file on a case message, served to support only (no-store): `GET /console/support/tickets/{id}/attachments/{file}`. */
+export const attachmentUrl = (ticketId: string, fileId: string) =>
+  `/api/v1/console/support/tickets/${encodeURIComponent(ticketId)}/attachments/${encodeURIComponent(fileId)}`;

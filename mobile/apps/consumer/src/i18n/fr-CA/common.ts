@@ -29,4 +29,10 @@ export const common: { [k in keyof typeof en]: string } = {
 
   'stub.body': 'Cet écran est en construction ({story}).',
   'stub.api': 'Il utilisera {apis}.',
+
+  'push.channel': 'Suivi des commandes et des réservations',
+  'push.prompt.order': 'Voulez-vous savoir quand votre commande est emballée, en route et à votre porte? Activez les notifications sur ce téléphone.',
+  'push.prompt.booking': 'Voulez-vous un rappel la veille et un avis quand le prestataire est en route? Activez les notifications sur ce téléphone.',
+  'push.prompt.turnOn': 'Activer les notifications',
+  'push.prompt.later': 'Pas maintenant',
 };

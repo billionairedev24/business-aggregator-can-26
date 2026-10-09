@@ -1,13 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
+import {
+  ApiError,
+  MIN_TARGET,
+  REPORT_PHOTO_MAX,
+  REPORT_PHOTO_MAX_BYTES,
+  REPORT_PHOTO_TYPES,
+  checkPhoto,
+  colors,
+  fonts,
+  photoForm,
+  radius,
+  randomId,
+  space,
+  type PickedImage,
+} from '@northline/mobile-kit';
 
 import type { ProblemContext, ProblemItem, Reported } from '../api/shop';
 import { useAuth } from '../auth/AuthProvider';
 import type { MessageKey } from '../i18n';
+import { pickImage } from '../photos/pick';
 import { Body, Button, Field, Notice } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { LoadingList, QueryView, SignInPrompt, errorMessage } from '../ui/states';
@@ -19,9 +34,11 @@ const NOTE_MAX = 1000;
 /**
  * B10 Report a problem / refund request (design 01 `refund`; `/problem/{kind}/{id}`): the case rules in one line, the
  * items to pick (each with its amount and tax), the reason, an optional note, "Request {amount} refund" →
- * `POST /me/problems` (S-60) → the case: "Case … · in review", the seller's payout paused, the four steps. Photos
- * (`POST /me/case-uploads`) need a photo picker the app doesn't have yet (a native module and a permission) — the case
- * takes them later from the website; the AI triage (`POST /me/help/triage`) is optional on the web and not used here.
+ * `POST /me/problems` (S-60) → the case: "Case … · in review", the seller's payout paused, the four steps. Up to 3
+ * photos from the camera or the photo library (mobile gaps part 1, `expo-image-picker`): each is checked on the phone
+ * (JPEG or PNG, ≤ 5 MB) and uploaded at once (`POST /me/case-uploads`, the api checks it again — S-104), then attached
+ * to the case (`attachmentIds`), where support sees them in the console. The AI triage (`POST /me/help/triage`) is
+ * optional on the web and not used here.
  */
 export function Problem() {
   const { kind, id } = useLocalSearchParams<{ kind: string; id: string }>();
@@ -34,6 +51,26 @@ export function Problem() {
   const [reason, setReason] = useState<string>();
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState<{ items?: string; reason?: string; note?: string }>({});
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [photoError, setPhotoError] = useState<string>();
+  const addPhoto = async (source: 'camera' | 'library') => {
+    setPhotoError(undefined);
+    if (photos.length >= REPORT_PHOTO_MAX) return setPhotoError(t('shop.problem.photoMax'));
+    const picked = await pickImage(source, 0.7).catch(() => null);
+    if (picked === 'denied') return setPhotoError(t('shop.problem.cameraDenied'));
+    if (!picked) return;
+    const problem = checkPhoto(picked, REPORT_PHOTO_TYPES, REPORT_PHOTO_MAX_BYTES);
+    if (problem) return setPhotoError(t(problem === 'size' ? 'shop.problem.photoSize' : 'shop.problem.photoType'));
+    const key = randomId();
+    setPhotos((p) => [...p, { key, image: picked }]);
+    try {
+      const uploaded = await shop().uploadPhoto(photoForm(picked, `photo-${photos.length + 1}`));
+      setPhotos((p) => p.map((x) => (x.key === key ? { ...x, id: uploaded?.id } : x)));
+    } catch (e) {
+      setPhotos((p) => p.filter((x) => x.key !== key));
+      setPhotoError(e instanceof ApiError && e.errors.length ? e.errors.map((x) => x.message).join(' ') : errorMessage(e, t));
+    }
+  };
   const report = useMutation({
     mutationFn: (r: Parameters<ReturnType<typeof shop>['report']>[0]) => shop().report(r),
     onSuccess: () => {
@@ -64,7 +101,15 @@ export function Problem() {
     if (note.trim().length > NOTE_MAX) e.note = t('shop.problem.v.note');
     setErrors(e);
     if (Object.keys(e).length) return;
-    report.mutate({ kind: ctx.kind, id: ctx.id, items: chosen.map((i) => i.ref), reason: reason!, ...(note.trim() ? { note: note.trim() } : {}), attachmentIds: [] });
+    if (photos.some((p) => !p.id)) return setPhotoError(t('shop.problem.photoUploading'));
+    report.mutate({
+      kind: ctx.kind,
+      id: ctx.id,
+      items: chosen.map((i) => i.ref),
+      reason: reason!,
+      ...(note.trim() ? { note: note.trim() } : {}),
+      attachmentIds: photos.map((p) => p.id!),
+    });
   };
   const serverError = report.error
     ? report.error instanceof ApiError && report.error.errors.length
@@ -129,7 +174,25 @@ export function Problem() {
                   </View>
                   {errors.reason ? <Text accessibilityRole="alert" style={styles.error}>{errors.reason}</Text> : null}
                   <Field label={t('shop.problem.note')} value={note} onChangeText={setNote} multiline error={errors.note} testID="refund-note" />
-                  <Body tone="small">{t('shop.problem.photos')}</Body>
+                  <Kicker>{t('shop.problem.photosTitle')}</Kicker>
+                  <Body tone="small">{t('shop.problem.photos', { max: REPORT_PHOTO_MAX })}</Body>
+                  {photos.length ? (
+                    <View style={styles.photos}>
+                      {photos.map((p, n) => (
+                        <View key={p.key} style={styles.photoItem}>
+                          <Image source={{ uri: p.image.uri }} style={styles.photo} accessibilityLabel={t(p.id ? 'shop.problem.photoN' : 'shop.problem.photoSending', { n: n + 1 })} testID={`refund-photo-${n}`} />
+                          <Button label={t('shop.problem.photoRemove')} tone="ghost" onPress={() => setPhotos((x) => x.filter((y) => y.key !== p.key))} testID={`refund-photo-remove-${n}`} />
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+                  {photos.length < REPORT_PHOTO_MAX ? (
+                    <View style={styles.chips}>
+                      <Button label={t('shop.problem.takePhoto')} tone="secondary" onPress={() => void addPhoto('camera')} testID="refund-photo-camera" />
+                      <Button label={t('shop.problem.choosePhoto')} tone="secondary" onPress={() => void addPhoto('library')} testID="refund-photo-library" />
+                    </View>
+                  ) : null}
+                  {photoError ? <Text accessibilityRole="alert" style={styles.error} testID="refund-photo-error">{photoError}</Text> : null}
                 </>
               )}
             </View>
@@ -138,6 +201,13 @@ export function Problem() {
       </QueryView>
     </Screen>
   );
+}
+
+/** A photo on the report: shown at once, `id` once the api has it. */
+interface Photo {
+  key: string;
+  image: PickedImage;
+  id?: string;
 }
 
 function Done({ reported }: { reported: Reported }) {
@@ -184,4 +254,7 @@ const styles = StyleSheet.create({
   small: { fontFamily: fonts.body, fontSize: 13, color: colors.text },
   error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent2_700 },
   h3: { fontFamily: fonts.bodyStrong, fontSize: 18, color: colors.text },
+  photos: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  photoItem: { alignItems: 'center', gap: 2 },
+  photo: { width: 88, height: 88, borderRadius: radius.md, backgroundColor: colors.neutral200 },
 });

@@ -38,7 +38,10 @@ domain event (Kafka) ──► worker: notifications / personal-notifications co
   `notification.tag` the same subject key, `priority: high`, `ttl: 86400s`, channel `updates` (the apps create it).
 - **Where people choose:** the consumer app's You › Notifications (S-101) edits the same matrix, quiet hours and
   language as the website (`GET`/`PUT /api/v1/me/notifications`), and its "This phone" row asks for the system
-  permission (`PushRegistration.enable()`) — shown once the app installs push (`expo-notifications`, not yet).
+  permission (`PushRegistration.enable()`). Both apps install push at start-up (mobile gaps part 1: mobile-kit's
+  `installPush` over `expo-notifications`; [mobile.md § Push](mobile.md#push-in-the-app)). The consumer app asks after
+  the first order or booking (a card on Order confirmed / Booked) or from "This phone"; the courier app from a card on
+  the shift screen once on shift, or Account › "Run notifications on this phone" — never at launch.
 - **Language:** each installation shows the person's notification language (Account › Notifications "English" /
   "Français"); "Same as app" = each installation's own app language (the `locale` it registered). Couriers: their
   account language. Both languages are written for every push.
