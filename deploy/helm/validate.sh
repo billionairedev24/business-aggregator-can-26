@@ -5,14 +5,17 @@
 #
 # Needs helm (3.14+) and kubeconform (0.6+). KUBE_VERSION is the Kubernetes version the schemas are checked
 # against (default 1.33.0, the oldest the clusters run); KUBECONFORM_SCHEMAS adds schema locations (air-gapped
-# mirrors); the CRD catalog covers Gateway API, External Secrets (S-6), cert-manager and Envoy Gateway (S-17).
+# mirrors); the CRD catalog covers Gateway API, cert-manager and Envoy Gateway (S-17). External Secrets (S-6) comes
+# first from deploy/helm/schemas, generated from the operator version Argo CD installs (make helm-crd-schemas): the
+# catalog's main branch changes under us (its SecretStore schema stopped compiling in kubeconform in Oct 2026).
 set -euo pipefail
 
 cd "$(dirname "$0")"
 CHART=northline
 KUBE_VERSION=${KUBE_VERSION:-1.33.0}
 CRD_CATALOG='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
-schema_args=(-schema-location default -schema-location "$CRD_CATALOG")
+LOCAL_SCHEMAS="$PWD/schemas/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
+schema_args=(-schema-location default -schema-location "$LOCAL_SCHEMAS" -schema-location "$CRD_CATALOG")
 for s in ${KUBECONFORM_SCHEMAS:-}; do schema_args+=(-schema-location "$s"); done
 
 failed=0
