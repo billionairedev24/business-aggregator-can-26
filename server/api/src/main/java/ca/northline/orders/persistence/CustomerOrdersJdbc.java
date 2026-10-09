@@ -51,7 +51,7 @@ class CustomerOrdersJdbc implements CustomerOrders {
                                case when o.type = 'food' then o.fulfilment_mode else o.delivery_kind end as delivery,
                                coalesce(o.subtotal_cents, 0) + coalesce(o.delivery_fee_cents, 0)
                                  + coalesce(o.service_fee_cents, 0) + coalesce(o.tax_cents, 0)
-                                 + coalesce(o.tip_cents, 0) as total,
+                                 + coalesce(o.tip_cents, 0) - o.discount_cents - o.points_cents as total,
                                o.placed_at, o.delivered_at, w.starts_at as window_start, w.ends_at as window_end,
                                coalesce(o.customer_eta, o.scheduled_for) as eta,
                                coalesce((select array_agg(m.merchant_id order by m.first)

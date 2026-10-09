@@ -26,6 +26,7 @@ import ca.northline.payments.api.PaymentAuthorizations;
 import ca.northline.payments.api.PaymentSettings;
 import ca.northline.payments.api.PaymentStepUp;
 import ca.northline.payments.api.TaxCalculations;
+import ca.northline.promotions.api.Promotions;
 import ca.northline.region.api.AgeRules;
 import ca.northline.region.api.Markets;
 import ca.northline.region.api.TaxRates;
@@ -61,6 +62,9 @@ import tools.jackson.databind.json.JsonMapper;
 class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOrder, TrackFoodOrder {
 
     static final String REF_TYPE = "food_order";
+    /** How long a food checkout holds its promo code and points while the card is confirmed. */
+    static final Duration RESERVE = Duration.ofMinutes(30);
+
     private static final TypeReference<List<Line>> LINES = new TypeReference<>() {};
 
     private final FoodMenuPricing pricing;
@@ -80,6 +84,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
     private final Markets markets;
     private final CourierProgressReader couriers;
     private final AgeGate ageGate;
+    private final Promotions promotions;
     private final JsonMapper json = JsonMapper.builder().build();
 
     FoodCheckoutService(
@@ -99,7 +104,8 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             PaymentSettings settings,
             Markets markets,
             CourierProgressReader couriers,
-            AgeGate ageGate) {
+            AgeGate ageGate,
+            Promotions promotions) {
         this.pricing = pricing;
         this.kitchens = kitchens;
         this.progress = progress;
@@ -117,6 +123,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
         this.markets = markets;
         this.couriers = couriers;
         this.ageGate = ageGate;
+        this.promotions = promotions;
     }
 
     /** Everything decided before any money moves: the kitchen, the priced lines, fees, tip, place of supply. */
@@ -136,8 +143,10 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
     @Transactional(readOnly = true)
     public Totals quote(String customerId, Order order) {
         var p = price(order);
-        var tax = Math.round(p.dishes().subtotalCents() * rates.bpsFor(p.province()) / 10_000.0);
-        return totals(order, p, tax, true, ageGate.view(customerId, p.age()));
+        var promo = promotions.price(basket(customerId, p, "quote"), ask(order));
+        var taxable = promo.lines().getFirst().taxableCents();
+        var tax = Math.round(taxable * rates.bpsFor(p.province()) / 10_000.0);
+        return totals(order, p, tax, true, ageGate.view(customerId, p.age()), promo);
     }
 
     @Override
@@ -161,15 +170,13 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             ageGate.requireVerified(customerId, age);
         }
         var postal = order.delivery() == null ? null : order.delivery().postalCode();
-        var quote = taxes.calculate(new TaxCalculations.Request(
-                p.kitchen().merchantId(),
-                EscrowKind.FOOD,
-                p.province(),
-                postal,
-                p.dishes().subtotalCents()));
-        var totals = totals(order, p, quote.taxCents(), false, ageGate.view(customerId, age));
         var id = Ids.next();
         var now = clock.instant();
+        var promo = promotions.reserve(id, now.plus(RESERVE), basket(customerId, p, id), ask(order));
+        var line = promo.lines().getFirst();
+        var quote = taxes.calculate(new TaxCalculations.Request(
+                p.kitchen().merchantId(), EscrowKind.FOOD, p.province(), postal, line.taxableCents()));
+        var totals = totals(order, p, quote.taxCents(), false, ageGate.view(customerId, age), promo);
         var ref = store.nextRef();
         store.insert(new CheckoutRow(
                 id,
@@ -197,18 +204,22 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 null,
                 order.delivery() == null ? null : json.writeValueAsString(order.delivery()),
                 now,
-                null));
+                null,
+                promo.discountCents(),
+                promo.pointsCents(),
+                promo.code()));
         var started = payments.start(new PaymentAuthorizations.Request(
                 p.kitchen().merchantId(),
                 REF_TYPE,
                 id,
                 customerId,
-                p.dishes().subtotalCents(),
+                line.taxableCents(),
                 quote.taxCents(),
                 "order:" + id,
                 clientKey,
                 quote.calculationId(),
-                p.deliveryFeeCents() + p.serviceFeeCents() + p.feeTaxCents() + p.tipCents()));
+                p.deliveryFeeCents() + p.serviceFeeCents() + p.feeTaxCents() + p.tipCents(),
+                line.pointsCents()));
         store.paymentStarted(id, started.paymentIntent());
         return new Started(
                 id,
@@ -239,7 +250,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 EscrowKind.FOOD,
                 REF_TYPE,
                 row.id(),
-                row.subtotalCents(),
+                row.subtotalCents() - row.discountCents(),
                 row.taxCents(),
                 customerId,
                 name == null ? "Customer" : name.shortName(),
@@ -251,7 +262,9 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 row.paymentIntent(),
                 now,
                 new EscrowLifecycle.PlatformCharges(
-                        row.deliveryFeeCents() + row.serviceFeeCents(), row.feeTaxCents(), row.tipCents())));
+                        row.deliveryFeeCents() + row.serviceFeeCents(), row.feeTaxCents(), row.tipCents()),
+                discount(row)));
+        promotions.redeem("food", row.id());
         var orderLines = lines.stream()
                 .map(l -> new OrderLineRow(
                         Ids.next(),
@@ -423,8 +436,33 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
         return new Priced(kitchen, dishes, province, deliveryFee, serviceFee, feeTax, tip, from, to, age);
     }
 
+    private static Promotions.Basket basket(String customerId, Priced p, String id) {
+        return new Promotions.Basket(
+                customerId,
+                "food",
+                List.of(new Promotions.Item(
+                        REF_TYPE, id, p.kitchen().merchantId(), p.dishes().subtotalCents())));
+    }
+
+    private static Promotions.Ask ask(Order order) {
+        return new Promotions.Ask(order.promoCode(), order.usePoints());
+    }
+
+    /** The escrow's part of the promo code and points the checkout held. */
+    private EscrowLifecycle.Discount discount(CheckoutRow row) {
+        var held = promotions.reserved("food", row.id());
+        return held.line(REF_TYPE, row.id())
+                .map(l -> new EscrowLifecycle.Discount(l.discountCents(), l.fundedBy(), l.pointsCents()))
+                .orElseGet(() -> new EscrowLifecycle.Discount(0, null, 0));
+    }
+
     private static Totals totals(
-            Order order, Priced p, long dishTax, boolean estimate, CheckoutUseCases.CheckoutAge age) {
+            Order order,
+            Priced p,
+            long dishTax,
+            boolean estimate,
+            CheckoutUseCases.CheckoutAge age,
+            Promotions.Priced promo) {
         var lines = p.dishes().lines().stream()
                 .map(l -> new Line(
                         l.itemId(),
@@ -449,11 +487,22 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 p.tipCents(),
                 tax,
                 p.feeTaxCents(),
-                p.dishes().subtotalCents() + p.deliveryFeeCents() + p.serviceFeeCents() + p.tipCents() + tax,
+                p.dishes().subtotalCents()
+                        - promo.discountCents()
+                        + p.deliveryFeeCents()
+                        + p.serviceFeeCents()
+                        + p.tipCents()
+                        + tax
+                        - promo.pointsCents(),
                 p.etaFromMin(),
                 p.etaToMin(),
                 estimate,
-                age);
+                age,
+                promo.code(),
+                promo.discountCents(),
+                promo.points(),
+                promo.pointsCents(),
+                promo.pointsAvailable());
     }
 
     /** Pickup: when the customer is expected at the counter (ready time); delivery: none (the courier's). */

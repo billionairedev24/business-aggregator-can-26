@@ -44,6 +44,33 @@ public final class BookingCheckout {
                 @Nullable String stepUpProof);
     }
 
+    /**
+     * Mobile gaps part 2: the booking's price with a promo code and points, before paying (the review step's "Apply").
+     */
+    public interface PriceBooking {
+        Price price(
+                String customerId,
+                String holdId,
+                String serviceId,
+                @Nullable BigDecimal hours,
+                @Nullable String promoCode,
+                boolean usePoints);
+    }
+
+    /**
+     * @param priceCents the service's price before the code; {@code taxCents} is on the price less the discount
+     * @param pointsCents what points pay ({@code points} of them); {@code pointsAvailable} for the switch
+     */
+    public record Price(
+            long priceCents,
+            long discountCents,
+            long taxCents,
+            long points,
+            long pointsCents,
+            long pointsAvailable,
+            long totalCents,
+            @Nullable String promoCode) {}
+
     /** The card was authorized (Stripe.js): record the escrow hold and write the booking. */
     public interface ConfirmBooking {
         Confirmation confirm(String customerId, String holdId);
@@ -86,7 +113,10 @@ public final class BookingCheckout {
             @Nullable String clientSecret,
             String provider,
             @Nullable String publishableKey,
-            @Nullable Confirmation booking) {}
+            @Nullable Confirmation booking,
+            long discountCents,
+            long pointsCents,
+            @Nullable String promoCode) {}
 
     /**
      * The booked job as the confirmation shows it, and how it went so far (consumer app S-100: day-of ETA, sign-off).

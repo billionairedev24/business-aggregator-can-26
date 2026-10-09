@@ -235,7 +235,9 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
                 "The message detector found masked contact details or words about paying outside Northline.";
             case "review_screened" ->
                 "The review filter masked "
-                        + f.evidence().getOrDefault("categories", "").replace("personal_info", "personal information")
+                        + f.evidence()
+                                .getOrDefault("categories", "")
+                                .replace("personal_info", "personal information")
                                 .replace(",", " and ")
                         + " in a customer's review. It is published masked until you decide.";
             case "review_report" ->

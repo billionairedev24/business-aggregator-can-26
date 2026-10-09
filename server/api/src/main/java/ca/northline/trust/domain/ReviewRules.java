@@ -21,9 +21,6 @@ public final class ReviewRules {
 
     // ── customers posting (mobile gaps part 2) ──────────────────────────────────────────────────────────────────
 
-    /** A review can be written up to 30 days after the job was completed or the order delivered. */
-    public static final java.time.Duration REVIEW_WINDOW = java.time.Duration.ofDays(30);
-
     /** The author may change it for 24 h after posting, while the business hasn't replied (DB trigger V360). */
     public static final java.time.Duration EDIT_WINDOW = java.time.Duration.ofHours(24);
 
@@ -49,9 +46,6 @@ public final class ReviewRules {
     public static final String TEXT_TOO_SHORT = "Write at least 10 characters, or leave the review empty.";
     public static final String TEXT_TOO_LONG = "Keep your review under 1,000 characters.";
     public static final String TAGS_INVALID = "Choose up to 5 of the tags offered.";
-    public static final String NOT_REVIEWABLE = "You can review this once it's done.";
-    public static final String WINDOW_CLOSED = "Reviews can be written up to 30 days after the job or delivery.";
     public static final String ALREADY_REVIEWED = "You've already reviewed this.";
     public static final String EDIT_CLOSED = "This review can't be changed any more.";
-    public static final String NOT_A_SELLER = "Choose a business from this order.";
 }

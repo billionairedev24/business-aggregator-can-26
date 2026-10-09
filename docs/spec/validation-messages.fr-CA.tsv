@@ -1051,3 +1051,48 @@ This order has no age-restricted dishes: hand it over as usual.	Cette commande n
 This order has no age-restricted items: hand it over with the usual proof.	Cette commande ne contient aucun article soumis à un âge minimal : remettez-la avec la preuve habituelle.	new
 Choose alcohol, tobacco and vape, cannabis accessories, or none.	Choisissez alcool, tabac et vapotage, accessoires de cannabis, ou aucun.	new
 Choose a period of at most a year, the start before the end.	Choisissez une période d’au plus un an, le début avant la fin.	new
+Choose from 1 to 5 stars.	Choisissez de 1 à 5 étoiles.	new
+Write at least 10 characters, or leave the review empty.	Écrivez au moins 10 caractères, ou laissez l’avis vide.	new
+Keep your review under 1,000 characters.	Votre avis doit faire moins de 1 000 caractères.	new
+Choose up to 5 of the tags offered.	Choisissez jusqu’à 5 des mentions proposées.	new
+You've already reviewed this.	Vous avez déjà donné votre avis.	new
+This review can't be changed any more.	Cet avis ne peut plus être modifié.	new
+You can review this once it's done.	Vous pourrez donner votre avis une fois le travail terminé.	new
+Reviews can be written up to 30 days after the job or delivery.	Vous pouvez donner votre avis jusqu’à 30 jours après le travail ou la livraison.	new
+Choose a business from this order.	Choisissez une entreprise de cette commande.	new
+Choose what you're reviewing.	Choisissez ce que vous évaluez.	new
+Only a review can be hidden.	Seul un avis peut être masqué.	new
+Say why the review is hidden.	Indiquez pourquoi l’avis est masqué.	new
+This code isn't valid.	Ce code n’est pas valide.	new
+This code isn't active yet.	Ce code n’est pas encore actif.	new
+This code has expired.	Ce code a expiré.	new
+You've already used this code.	Vous avez déjà utilisé ce code.	new
+This code has been fully used.	Ce code a été entièrement utilisé.	new
+This code doesn't apply to this order.	Ce code ne s’applique pas à cette commande.	new
+Spend at least $%d.%02d to use this code.	Dépensez au moins %d,%02d $ pour utiliser ce code.	new
+Use 3 to 20 letters, digits or dashes.	Utilisez de 3 à 20 lettres, chiffres ou tirets.	new
+That code already exists.	Ce code existe déjà.	new
+Choose percent or amount off.	Choisissez un pourcentage ou un montant de rabais.	new
+Enter a percentage from 1 to 100.	Entrez un pourcentage de 1 à 100.	new
+Enter an amount of at least $1.00.	Entrez un montant d’au moins 1,00 $.	new
+Enter a cap of at least $1.00, or none.	Entrez un plafond d’au moins 1,00 $, ou aucun.	new
+Enter a minimum spend of $0 or more.	Entrez un achat minimum de 0 $ ou plus.	new
+End the code after it starts.	Le code doit se terminer après son début.	new
+Choose when the code starts and ends.	Choisissez quand le code commence et se termine.	new
+Enter a limit of 1 or more.	Entrez une limite de 1 ou plus.	new
+Choose who funds the code.	Choisissez qui finance le code.	new
+Choose the business that funds this code.	Choisissez l’entreprise qui finance ce code.	new
+Choose at least one of shop, food or services.	Choisissez au moins un parmi boutique, restauration ou services.	new
+Choose on or off.	Choisissez activé ou désactivé.	new
+Your points were used elsewhere. Start the checkout again.	Vos points ont été utilisés ailleurs. Recommencez le paiement.	new
+Tips start at $1.00.	Les pourboires commencent à 1,00 $.	new
+You can tip once the courier has delivered.	Vous pourrez donner un pourboire une fois la livraison faite.	new
+This order wasn't brought by a courier.	Cette commande n’a pas été livrée par un livreur.	new
+You've already tipped for this delivery.	Vous avez déjà donné un pourboire pour cette livraison.	new
+Tips can be added up to 7 days after the delivery.	Vous pouvez ajouter un pourboire jusqu’à 7 jours après la livraison.	new
+The tip hasn't been charged yet.	Le pourboire n’a pas encore été prélevé.	new
+Choose why the tip is refunded.	Choisissez pourquoi le pourboire est remboursé.	new
+This tip was already refunded.	Ce pourboire a déjà été remboursé.	new
+Pick the address on the map again.	Choisissez de nouveau l’adresse sur la carte.	new
+Start travel first — positions are shared only on the way.	Partez d’abord : la position n’est partagée qu’en route.	new
+Only the team member doing this job can share their position.	Seul le membre de l’équipe qui fait ce travail peut partager sa position.	new

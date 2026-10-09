@@ -18,6 +18,7 @@ public interface CourierTips {
     int MAX_PERCENT = 30;
 
     String TOO_MUCH = "Choose a tip between $0 and $100, or up to 30 %.";
+    String TOO_SMALL = "Tips start at $1.00.";
     String NOT_DELIVERED = "You can tip once the courier has delivered.";
     String NO_COURIER = "This order wasn't brought by a courier.";
     String ALREADY = "You've already tipped for this delivery.";

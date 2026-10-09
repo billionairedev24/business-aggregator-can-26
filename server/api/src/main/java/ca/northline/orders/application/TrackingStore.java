@@ -31,7 +31,8 @@ public interface TrackingStore {
             @Nullable Instant scheduledFor,
             @Nullable Instant deliveredAt,
             @Nullable String deliveryProof,
-            @Nullable Instant confirmedAt) {}
+            @Nullable Instant confirmedAt,
+            long offCents) {}
 
     /** @param state {@code pending} | {@code packed} | {@code short} | {@code refunded} */
     record LineState(String merchantId, int qty, String state) {}

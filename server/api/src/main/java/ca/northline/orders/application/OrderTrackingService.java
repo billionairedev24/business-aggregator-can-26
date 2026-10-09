@@ -76,7 +76,7 @@ class OrderTrackingService implements TrackOrder {
                 o.subtotalCents(),
                 o.deliveryFeeCents(),
                 o.taxCents(),
-                o.subtotalCents() + o.deliveryFeeCents() + o.taxCents() + o.tipCents(),
+                o.subtotalCents() + o.deliveryFeeCents() + o.taxCents() + o.tipCents() - o.offCents(),
                 delivery(o),
                 shops,
                 steps(o.state()),

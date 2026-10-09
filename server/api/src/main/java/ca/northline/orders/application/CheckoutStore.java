@@ -60,7 +60,11 @@ public interface CheckoutStore {
             @Nullable String deliveryPaymentIntent,
             List<Line> lines,
             Instant createdAt,
-            Instant expiresAt) {
+            Instant expiresAt,
+            long discountCents,
+            long pointsCents,
+            long tipCents,
+            @Nullable String promoCode) {
 
         public Checkout {
             lines = List.copyOf(lines);
@@ -81,5 +85,14 @@ public interface CheckoutStore {
             long taxCents,
             @Nullable String taxCalculationId,
             String paymentIntent,
-            @Nullable String ageClass) {}
+            @Nullable String ageClass,
+            long discountCents,
+            @Nullable String fundedBy,
+            long pointsCents) {
+
+        /** What the goods were before the promo code: {@code amountCents} is after it (the escrow's, taxed). */
+        public long listCents() {
+            return amountCents + discountCents;
+        }
+    }
 }

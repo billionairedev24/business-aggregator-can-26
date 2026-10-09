@@ -50,11 +50,16 @@ class CustomerBookingJdbc implements CustomerBookingStore {
         jdbc.sql("""
                         insert into booking.bookings (id, ref, customer_id, merchant_id, member_user_id, service_id, quote_id,
                                type, state, starts_at, ends_at, title, address_line, area, details, escrow_id, price_cents,
-                               deposit_cents, tax_cents, source, free_cancel_until, created_at, updated_at)
+                               deposit_cents, tax_cents, source, free_cancel_until, created_at, updated_at,
+                               discount_cents, points_cents, site_lat, site_lng)
                         values (:id, :ref, :customer, :merchant, :member, :service, :quote, :type, 'confirmed', :starts,
                                 :ends, :title, :address, :area, cast(:details as jsonb), :escrow, :price, :deposit, :tax,
-                                'customer', :freeCancel, :at, :at)
+                                'customer', :freeCancel, :at, :at, :discount, :points, :siteLat, :siteLng)
                         """)
+                .param("discount", b.discountCents())
+                .param("points", b.pointsCents())
+                .param("siteLat", b.siteLat(), Types.DOUBLE)
+                .param("siteLng", b.siteLng(), Types.DOUBLE)
                 .param("id", b.bookingId())
                 .param("ref", ref)
                 .param("customer", b.customerId())

@@ -9,7 +9,6 @@ import java.util.List;
  */
 public interface LoyaltyPoints {
 
-
     /**
      * @param balance points not yet expired (earned − redeemed − expired)
      * @param weekly points earned in each of the last eight weeks, oldest first (eight values)

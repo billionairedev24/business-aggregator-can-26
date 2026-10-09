@@ -46,6 +46,8 @@ public final class FoodCheckout {
      * @param mode {@code delivery} | {@code pickup}
      * @param scheduledFor the start of a scheduled window (one of the restaurant's {@code slots}); null = as soon as possible
      * @param delivery required for delivery: the saved address (Location screen) and drop-off preferences
+     * @param promoCode mobile gaps part 2: a promo code on the dishes, null for none
+     * @param usePoints spend points (up to the configured share of the dishes)
      */
     public record Order(
             String merchantId,
@@ -54,10 +56,23 @@ public final class FoodCheckout {
             List<ItemLine> items,
             List<ComboLine> combos,
             Tip tip,
-            @Nullable Delivery delivery) {
+            @Nullable Delivery delivery,
+            @Nullable String promoCode,
+            boolean usePoints) {
         public Order {
             items = List.copyOf(items);
             combos = List.copyOf(combos);
+        }
+
+        public Order(
+                String merchantId,
+                String mode,
+                @Nullable Instant scheduledFor,
+                List<ItemLine> items,
+                List<ComboLine> combos,
+                Tip tip,
+                @Nullable Delivery delivery) {
+            this(merchantId, mode, scheduledFor, items, combos, tip, delivery, null, false);
         }
     }
 
@@ -125,6 +140,8 @@ public final class FoodCheckout {
      * the province's rates in a quote) + on the fees ({@code feeTaxCents} of it).
      *
      * @param etaFromMin minutes until it arrives / is ready (as soon as possible), null when scheduled
+     * @param discountCents the promo code's discount on the dishes ({@code taxCents} is on what's left)
+     * @param pointsCents what points pay ({@code points} of them); {@code pointsAvailable} for the switch
      */
     public record Totals(
             String kitchen,
@@ -141,7 +158,12 @@ public final class FoodCheckout {
             @Nullable Integer etaFromMin,
             @Nullable Integer etaToMin,
             boolean estimate,
-            CheckoutUseCases.CheckoutAge age) {
+            CheckoutUseCases.CheckoutAge age,
+            @Nullable String promoCode,
+            long discountCents,
+            long points,
+            long pointsCents,
+            long pointsAvailable) {
         public Totals {
             lines = List.copyOf(lines);
         }

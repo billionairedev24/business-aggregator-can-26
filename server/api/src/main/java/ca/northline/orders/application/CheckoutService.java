@@ -42,12 +42,15 @@ import ca.northline.orders.application.CheckoutUseCases.Request;
 import ca.northline.orders.application.CheckoutUseCases.Setup;
 import ca.northline.orders.application.CheckoutUseCases.Started;
 import ca.northline.orders.application.CheckoutUseCases.TaxLine;
+import ca.northline.orders.domain.FoodOrderRules;
+import ca.northline.payments.api.CourierTips;
 import ca.northline.payments.api.EscrowKind;
 import ca.northline.payments.api.EscrowLifecycle;
 import ca.northline.payments.api.PaymentAuthorizations;
 import ca.northline.payments.api.PaymentSettings;
 import ca.northline.payments.api.PaymentStepUp;
 import ca.northline.payments.api.TaxCalculations;
+import ca.northline.promotions.api.Promotions;
 import ca.northline.region.api.AgeClass;
 import ca.northline.region.api.AgeRules;
 import ca.northline.region.api.Regions;
@@ -120,6 +123,8 @@ class CheckoutService
     private final Clock clock;
     private final Regions regions;
     private final AgeGate ageGate;
+    private final Promotions promotions;
+    private final CourierTips courierTips;
 
     // ── set-up and quote ──────────────────────────────────────────────────────────────────────────────────────────
 
@@ -152,17 +157,48 @@ class CheckoutService
     @Override
     public Quote quote(String userId, Request request, String lang) {
         var plan = plan(userId, request, lang, false);
-        var taxed = taxLines(plan);
+        var refs = new ArrayList<String>();
+        for (int i = 0; i < plan.lines().size(); i++) {
+            refs.add("quote-" + i);
+        }
+        var priced = promotions.price(basket(userId, plan, refs), ask(request));
+        var taxed = taxLines(
+                plan, priced.lines().stream().map(Promotions.Line::taxableCents).toList());
         var tax = taxed.stream().mapToLong(TaxCalculations.Quote::taxCents).sum();
         var deliveryFee = plan.option().feeCents();
+        var tip = tip(request, plan);
         return new Quote(
                 plan.subtotal(),
                 deliveryFee,
                 tax,
                 summarize(taxed),
-                plan.subtotal() + deliveryFee + tax,
+                plan.subtotal() - priced.discountCents() + deliveryFee + tax + tip - priced.pointsCents(),
                 plan.market(),
-                ageGate.view(userId, plan.age()));
+                ageGate.view(userId, plan.age()),
+                priced.code(),
+                priced.discountCents(),
+                priced.points(),
+                priced.pointsCents(),
+                priced.pointsAvailable(),
+                tip);
+    }
+
+    private static Promotions.Basket basket(String userId, Plan plan, List<String> lineIds) {
+        var items = new ArrayList<Promotions.Item>();
+        for (int i = 0; i < plan.lines().size(); i++) {
+            var l = plan.lines().get(i);
+            items.add(new Promotions.Item("order_line", lineIds.get(i), l.merchantId(), l.lineCents()));
+        }
+        return new Promotions.Basket(userId, "goods", items);
+    }
+
+    private static Promotions.Ask ask(Request request) {
+        return new Promotions.Ask(request.promoCode(), request.usePoints());
+    }
+
+    /** The courier's tip: up to $100 or 30 % of the goods, as for food (S-57). */
+    private static long tip(Request request, Plan plan) {
+        return FoodOrderRules.tipCents(request.tip().kind(), request.tip().value(), plan.subtotal());
     }
 
     // ── start ─────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -203,9 +239,14 @@ class CheckoutService
         var postal = plan.address().postal();
         var lines = new ArrayList<Line>();
         var intents = new ArrayList<Intent>();
-        for (var l : plan.lines()) {
-            var lineId = Ids.next();
-            var amount = l.lineCents();
+        var lineIds = plan.lines().stream().map(_ -> Ids.next()).toList();
+        var priced = promotions.reserve(orderId, now.plus(HOLD), basket(userId, plan, lineIds), ask(request));
+        var tip = tip(request, plan);
+        for (int i = 0; i < plan.lines().size(); i++) {
+            var l = plan.lines().get(i);
+            var lineId = lineIds.get(i);
+            var promo = priced.lines().get(i);
+            var amount = promo.taxableCents();
             var taxQuote = taxes.calculate(
                     new TaxCalculations.Request(l.merchantId(), EscrowKind.GOODS, province, postal, amount));
             var started = payments.start(new PaymentAuthorizations.Request(
@@ -217,9 +258,14 @@ class CheckoutService
                     taxQuote.taxCents(),
                     group,
                     clientKey,
-                    taxQuote.calculationId()));
+                    taxQuote.calculationId(),
+                    0,
+                    promo.pointsCents()));
             intents.add(new Intent(
-                    started.paymentIntent(), started.clientSecret(), started.status(), amount + taxQuote.taxCents()));
+                    started.paymentIntent(),
+                    started.clientSecret(),
+                    started.status(),
+                    amount + taxQuote.taxCents() - promo.pointsCents()));
             lines.add(new Line(
                     lineId,
                     l.offerId(),
@@ -234,15 +280,21 @@ class CheckoutService
                     taxQuote.taxCents(),
                     taxQuote.calculationId(),
                     started.paymentIntent(),
-                    l.ageClass()));
+                    l.ageClass(),
+                    promo.discountCents(),
+                    promo.fundedBy(),
+                    promo.pointsCents()));
         }
         var fee = plan.option().feeCents();
         var deliveryTax = 0L;
         String deliveryIntent = null;
-        if (fee > 0) {
-            var feeTax = taxes.calculate(new TaxCalculations.Request(
-                    PaymentAuthorizations.PLATFORM, EscrowKind.GOODS, province, postal, fee));
-            deliveryTax = feeTax.taxCents();
+        if (fee > 0 || tip > 0) {
+            // the delivery fee and the courier's tip share Northline's PaymentIntent; the tip is never taxed
+            var feeTax = fee == 0
+                    ? null
+                    : taxes.calculate(new TaxCalculations.Request(
+                            PaymentAuthorizations.PLATFORM, EscrowKind.GOODS, province, postal, fee));
+            deliveryTax = feeTax == null ? 0 : feeTax.taxCents();
             var started = payments.start(new PaymentAuthorizations.Request(
                     PaymentAuthorizations.PLATFORM,
                     "order_delivery",
@@ -252,14 +304,15 @@ class CheckoutService
                     deliveryTax,
                     group,
                     clientKey,
-                    feeTax.calculationId()));
+                    feeTax == null ? null : feeTax.calculationId(),
+                    tip));
             deliveryIntent = started.paymentIntent();
-            intents.add(
-                    new Intent(started.paymentIntent(), started.clientSecret(), started.status(), fee + deliveryTax));
+            intents.add(new Intent(
+                    started.paymentIntent(), started.clientSecret(), started.status(), fee + deliveryTax + tip));
         }
         var lineTax = lines.stream().mapToLong(Line::taxCents).sum();
         var tax = lineTax + deliveryTax;
-        var total = plan.subtotal() + fee + tax;
+        var total = plan.subtotal() - priced.discountCents() + fee + tax + tip - priced.pointsCents();
         var checkout = new Checkout(
                 checkoutId,
                 userId,
@@ -280,7 +333,11 @@ class CheckoutService
                 deliveryIntent,
                 lines,
                 now,
-                now.plus(HOLD));
+                now.plus(HOLD),
+                priced.discountCents(),
+                priced.pointsCents(),
+                tip,
+                priced.code());
         checkouts.insert(checkout);
         return new Started(
                 checkoutId,
@@ -306,7 +363,9 @@ class CheckoutService
         }
         var deliveryIntent = checkout.deliveryPaymentIntent();
         if (deliveryIntent != null
-                && !payments.authorized(deliveryIntent, checkout.deliveryFeeCents() + checkout.deliveryTaxCents())) {
+                && !payments.authorized(
+                        deliveryIntent,
+                        checkout.deliveryFeeCents() + checkout.deliveryTaxCents() + checkout.tipCents())) {
             throw new Conflict("payment_not_authorized", NOT_AUTHORIZED);
         }
         var name = people.people(List.of(userId)).values().stream()
@@ -329,10 +388,16 @@ class CheckoutService
                     line.name(),
                     "search",
                     line.paymentIntent(),
-                    now));
+                    now,
+                    null,
+                    new EscrowLifecycle.Discount(line.discountCents(), line.fundedBy(), line.pointsCents())));
         }
         if (!checkouts.placed(checkoutId, now)) {
             throw new Conflict("checkout_expired", EXPIRED);
+        }
+        promotions.redeem("goods", checkout.orderId());
+        if (checkout.tipCents() > 0 && deliveryIntent != null) {
+            courierTips.atCheckout(checkout.orderId(), userId, checkout.tipCents(), deliveryIntent);
         }
         var area = addresses
                 .find(userId, checkout.addressId())
@@ -389,6 +454,7 @@ class CheckoutService
         if (!checkouts.abandon(checkout.id())) {
             return;
         }
+        promotions.release("goods", checkout.orderId());
         offers.giveBack(checkout.lines().stream()
                 .map(l -> new SellableOffers.Take(l.offerId(), l.variantId(), l.qty()))
                 .toList());
@@ -573,13 +639,14 @@ class CheckoutService
         return value == null || value.isBlank() ? null : value.strip();
     }
 
-    private List<TaxCalculations.Quote> taxLines(Plan plan) {
+    /** The tax of each line on its amount after the promo code ({@code taxable}, in the plan's order). */
+    private List<TaxCalculations.Quote> taxLines(Plan plan, List<Long> taxable) {
         var out = new ArrayList<TaxCalculations.Quote>();
         var province = plan.address().province();
         var postal = plan.address().postal();
-        for (var l : plan.lines()) {
-            out.add(taxes.calculate(
-                    new TaxCalculations.Request(l.merchantId(), EscrowKind.GOODS, province, postal, l.lineCents())));
+        for (int i = 0; i < plan.lines().size(); i++) {
+            out.add(taxes.calculate(new TaxCalculations.Request(
+                    plan.lines().get(i).merchantId(), EscrowKind.GOODS, province, postal, taxable.get(i))));
         }
         if (plan.option().feeCents() > 0) {
             out.add(taxes.calculate(new TaxCalculations.Request(

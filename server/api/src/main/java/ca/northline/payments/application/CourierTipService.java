@@ -1,5 +1,6 @@
 package ca.northline.payments.application;
 
+import ca.northline.developer.api.AuditTrail;
 import ca.northline.payments.api.CourierTips;
 import ca.northline.payments.api.PaymentAuthorizations;
 import ca.northline.payments.application.PaymentGateway.IntentStatus;
@@ -10,7 +11,6 @@ import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.stripe.StripeIdempotencyKeys;
-import ca.northline.developer.api.AuditTrail;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -64,14 +64,12 @@ class CourierTipService implements CourierTips {
 
     /** The order's PaymentIntent carrying its checkout tip was captured (escrow or delivery fee). */
     void captured(String orderId, Instant at) {
-        tips.checkoutTip(orderId)
-                .filter(t -> "pending".equals(t.state()))
-                .ifPresent(t -> {
-                    tips.captured(t.id(), at);
-                    if (t.courierUserId() != null) {
-                        allocateNow(t, t.courierUserId(), at);
-                    }
-                });
+        tips.checkoutTip(orderId).filter(t -> "pending".equals(t.state())).ifPresent(t -> {
+            tips.captured(t.id(), at);
+            if (t.courierUserId() != null) {
+                allocateNow(t, t.courierUserId(), at);
+            }
+        });
     }
 
     /** The checkout tip that will be captured with this order's charge (0 when none). */

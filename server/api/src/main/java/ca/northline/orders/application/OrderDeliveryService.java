@@ -1,10 +1,12 @@
 package ca.northline.orders.application;
 
 import ca.northline.fulfilment.api.DeliveryCompleted;
+import ca.northline.fulfilment.api.DeliveryStatuses;
 import ca.northline.orders.api.OrderConfirmed;
 import ca.northline.orders.api.OrderDelivered;
 import ca.northline.orders.application.TrackOrder.OrderTracking;
 import ca.northline.orders.domain.OrderDelivery;
+import ca.northline.payments.api.CourierTips;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
@@ -31,6 +33,8 @@ class OrderDeliveryService implements ConfirmDelivery {
     private final TrackOrder track;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final DeliveryStatuses deliveries;
+    private final CourierTips tips;
 
     /** The courier dropped the order off with proof. Replays and late events (already delivered) change nothing. */
     void delivered(DeliveryCompleted e) {
@@ -43,6 +47,11 @@ class OrderDeliveryService implements ConfirmDelivery {
             return;
         }
         orders.markDelivered(order.id(), e.proof(), e.occurredAt());
+        // 100 % of a checkout tip goes to the courier who delivered (mobile gaps part 2)
+        deliveries
+                .of(order.id())
+                .map(DeliveryStatuses.Status::courierUserId)
+                .ifPresent(courier -> tips.allocate(order.id(), courier, e.occurredAt()));
         events.publishEvent(new OrderDelivered(
                 Ids.next(), e.occurredAt(), order.id(), order.type(), e.proof(), orders.merchants(order.id())));
     }

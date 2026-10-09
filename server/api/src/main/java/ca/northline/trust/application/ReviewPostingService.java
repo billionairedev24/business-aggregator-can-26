@@ -36,7 +36,8 @@ class ReviewPostingService implements ReviewPosting, ReviewModeration {
     private final AuditTrail audit;
     private final Clock clock;
 
-    private record Content(int rating, List<String> tags, @Nullable String text, boolean screened, List<String> why) {}
+    private record Content(
+            int rating, List<String> tags, @Nullable String text, boolean screened, List<String> why) {}
 
     @Override
     public Posted post(Draft d) {
@@ -112,7 +113,12 @@ class ReviewPostingService implements ReviewPosting, ReviewModeration {
     }
 
     private void audited(
-            String action, Authored review, String staffId, String role, @Nullable String reason, @Nullable String note) {
+            String action,
+            Authored review,
+            String staffId,
+            String role,
+            @Nullable String reason,
+            @Nullable String note) {
         var after = new java.util.LinkedHashMap<String, String>();
         after.put("hidden", String.valueOf(reason != null));
         if (reason != null) {

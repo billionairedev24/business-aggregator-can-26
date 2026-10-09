@@ -63,7 +63,8 @@ class ConsolePromotionsController {
             @Nullable String merchantId,
             @Nullable List<String> appliesTo) {}
 
-    record ActiveRequest(@NotNull(message = "Choose on or off.") Boolean active) {}
+    record ActiveRequest(
+            @NotNull(message = "Choose on or off.") Boolean active) {}
 
     @GetMapping
     @RequiresConsole(ConsoleScreen.FINANCE)

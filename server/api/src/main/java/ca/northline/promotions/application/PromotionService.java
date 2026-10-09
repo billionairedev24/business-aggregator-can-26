@@ -83,7 +83,8 @@ class PromotionService implements Promotions, ManagePromoCodes {
     public Priced reserved(String kind, String refId) {
         return store.redemption(kind, refId)
                 .filter(r -> !"released".equals(r.state()))
-                .map(r -> new Priced(r.code(), r.discountCents(), r.fundedBy(), r.points(), r.pointsCents(), 0, r.lines()))
+                .map(r -> new Priced(
+                        r.code(), r.discountCents(), r.fundedBy(), r.points(), r.pointsCents(), 0, r.lines()))
                 .orElseGet(() -> new Priced(null, 0, null, 0, 0, 0, List.of()));
     }
 
@@ -183,7 +184,9 @@ class PromotionService implements Promotions, ManagePromoCodes {
                 weights.add(taxable);
                 caps.add(taxable * settings.maxOrderPercent() / 100);
             }
-            var wanted = Math.min(settings.centsOf(available), caps.stream().mapToLong(Long::longValue).sum());
+            var wanted = Math.min(
+                    settings.centsOf(available),
+                    caps.stream().mapToLong(Long::longValue).sum());
             var spread = Allocation.spread(wanted, weights, caps);
             pointsCents = spread.stream().mapToLong(Long::longValue).sum();
             points = Math.min(available, settings.pointsFor(pointsCents));
@@ -210,8 +213,7 @@ class PromotionService implements Promotions, ManagePromoCodes {
                     pointShares.get(i)));
         }
         var discount = discounts.stream().mapToLong(Long::longValue).sum();
-        return new Priced(
-                code == null ? null : code.code(), discount, funder, points, pointsCents, available, lines);
+        return new Priced(code == null ? null : code.code(), discount, funder, points, pointsCents, available, lines);
     }
 
     // ── console ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -242,7 +244,9 @@ class PromotionService implements Promotions, ManagePromoCodes {
                 n.description());
         if (problems.isEmpty()
                 && PromoCode.MERCHANT.equals(n.fundedBy())
-                && businesses.displayName(Objects.requireNonNull(n.merchantId())).isEmpty()) {
+                && businesses
+                        .displayName(Objects.requireNonNull(n.merchantId()))
+                        .isEmpty()) {
             problems = List.of(new RuleViolation.Violation("merchantId", "required", PromoMessages.MERCHANT));
         }
         if (!problems.isEmpty()) {
@@ -252,7 +256,9 @@ class PromotionService implements Promotions, ManagePromoCodes {
         var promo = new PromoCode(
                 Ids.next(),
                 code,
-                n.description() == null || n.description().isBlank() ? null : n.description().strip(),
+                n.description() == null || n.description().isBlank()
+                        ? null
+                        : n.description().strip(),
                 Objects.requireNonNull(n.kind()),
                 percent ? n.percent() : null,
                 percent ? null : n.amountCents(),
@@ -315,7 +321,8 @@ class PromotionService implements Promotions, ManagePromoCodes {
         } else {
             state = "live";
         }
-        @Nullable String merchantName = c.merchantId() == null
+        @Nullable
+        String merchantName = c.merchantId() == null
                 ? null
                 : businesses.displayName(c.merchantId()).orElse(null);
         return new CodeView(

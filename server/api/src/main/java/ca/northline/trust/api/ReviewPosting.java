@@ -13,6 +13,13 @@ import org.jspecify.annotations.Nullable;
  */
 public interface ReviewPosting {
 
+    /** A review can be written up to 30 days after the job was completed or the order delivered. */
+    java.time.Duration WINDOW = java.time.Duration.ofDays(30);
+
+    String NOT_REVIEWABLE = "You can review this once it's done.";
+    String WINDOW_CLOSED = "Reviews can be written up to 30 days after the job or delivery.";
+    String NOT_A_SELLER = "Choose a business from this order.";
+
     /**
      * @param refType {@code booking} | {@code order} (shop or food order)
      * @param authorName the display form stored with the review ("Dana K.")

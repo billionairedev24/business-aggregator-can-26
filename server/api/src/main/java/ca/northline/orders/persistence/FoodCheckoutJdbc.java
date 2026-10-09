@@ -57,14 +57,19 @@ class FoodCheckoutJdbc implements FoodCheckoutStore {
         p.put("pi", r.paymentIntent());
         p.put("delivery", r.delivery());
         p.put("created", JdbcTimes.ts(r.createdAt()));
+        p.put("discount", r.discountCents());
+        p.put("points", r.pointsCents());
+        p.put("promo", r.promoCode());
         jdbc.sql("""
                         insert into orders.food_checkouts (id, ref, customer_id, merchant_id, kitchen_name, kitchen_slug, state,
                                fulfilment_mode, scheduled_for, customer_eta, eta_from_min, eta_to_min, lines, subtotal_cents,
                                delivery_fee_cents, service_fee_cents, fee_tax_cents, tax_cents, tip_cents, total_cents,
-                               province, tax_calculation_id, payment_intent, delivery, created_at)
+                               province, tax_calculation_id, payment_intent, delivery, created_at, discount_cents,
+                               points_cents, promo_code)
                         values (:id, :ref, :customer, :merchant, :kitchen, :slug, :state, :mode, :scheduled, :eta, :etaFrom,
                                :etaTo, cast(:lines as jsonb), :subtotal, :delivery_fee, :service_fee, :fee_tax, :tax, :tip,
-                               :total, :province, :calc, :pi, cast(:delivery as jsonb), :created)
+                               :total, :province, :calc, :pi, cast(:delivery as jsonb), :created, :discount, :points,
+                               :promo)
                         """).params(p).update();
     }
 
@@ -98,10 +103,14 @@ class FoodCheckoutJdbc implements FoodCheckoutStore {
         jdbc.sql("""
                         insert into orders.orders (id, ref, customer_id, type, state, fulfilment_mode, customer_eta,
                                scheduled_for, subtotal_cents, delivery_fee_cents, service_fee_cents, tax_cents, tip_cents,
-                               placed_at, delivery_area, id_check_age)
+                               placed_at, delivery_area, id_check_age, discount_cents, points_cents, promo_code)
                         values (:id, :ref, :customer, 'food', 'placed', :mode, :eta, :scheduled, :subtotal, :delivery_fee,
-                               :service_fee, :tax, :tip, :at, cast(:delivery as jsonb) ->> 'zone', :age)
+                               :service_fee, :tax, :tip, :at, cast(:delivery as jsonb) ->> 'zone', :age, :discount,
+                               :points, :promo)
                         """)
+                .param("discount", r.discountCents())
+                .param("points", r.pointsCents())
+                .param("promo", r.promoCode(), Types.VARCHAR)
                 .param("age", idCheckAge, Types.INTEGER)
                 .param("id", r.id())
                 .param("ref", r.ref())
@@ -173,6 +182,9 @@ class FoodCheckoutJdbc implements FoodCheckoutStore {
                 rs.getString("payment_intent"),
                 rs.getString("delivery_text"),
                 JdbcTimes.requiredInstant(rs, "created_at"),
-                JdbcTimes.instant(rs, "placed_at"));
+                JdbcTimes.instant(rs, "placed_at"),
+                rs.getLong("discount_cents"),
+                rs.getLong("points_cents"),
+                rs.getString("promo_code"));
     }
 }

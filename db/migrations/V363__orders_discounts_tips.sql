@@ -4,7 +4,8 @@
 ALTER TABLE orders.checkouts
   ADD COLUMN discount_cents bigint NOT NULL DEFAULT 0 CHECK (discount_cents >= 0),
   ADD COLUMN points_cents   bigint NOT NULL DEFAULT 0 CHECK (points_cents >= 0),
-  ADD COLUMN tip_cents      bigint NOT NULL DEFAULT 0 CHECK (tip_cents >= 0);
+  ADD COLUMN tip_cents      bigint NOT NULL DEFAULT 0 CHECK (tip_cents >= 0),
+  ADD COLUMN promo_code     text;
 
 ALTER TABLE orders.orders
   ADD COLUMN discount_cents bigint NOT NULL DEFAULT 0 CHECK (discount_cents >= 0),

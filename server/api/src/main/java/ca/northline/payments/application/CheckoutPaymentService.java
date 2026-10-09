@@ -48,8 +48,7 @@ class CheckoutPaymentService implements PaymentAuthorizations {
         if (calculationId != null) {
             taxCalculations.use(calculationId, request);
         }
-        var total =
-                request.amountCents() + request.taxCents() + request.platformCents() - request.creditCents();
+        var total = request.amountCents() + request.taxCents() + request.platformCents() - request.creditCents();
         var customer = escrows.stripeCustomer(request.customerId()).orElseGet(() -> {
             var created =
                     gateway.customer(request.customerId(), StripeIdempotencyKeys.of("customer", request.customerId()));

@@ -156,9 +156,11 @@ final class DocumentSource {
                           union all
                           select merchant_id, updated_at from availability.availability_rules where updated_at > :since
                           union all
-                          select target_id, greatest(created_at, reply_at, reported_at) from trust.reviews
+                          select target_id, greatest(created_at, reply_at, reported_at, edited_at, moderated_at)
+                            from trust.reviews
                            where target_type = 'merchant'
-                             and (created_at > :since or reply_at > :since or reported_at > :since)
+                             and (created_at > :since or reply_at > :since or reported_at > :since
+                                  or edited_at > :since or moderated_at > :since)
                         ) c
                         where merchant_id is not null
                         group by merchant_id
@@ -221,7 +223,8 @@ final class DocumentSource {
                           left join food.kitchen_settings ks on ks.merchant_id = m.id
                           left join lateral (
                             select round(avg(rating)::numeric, 2)::float8 as rating, count(*) as reviews
-                              from trust.reviews where target_type = 'merchant' and target_id = m.id) r on true
+                              from trust.reviews
+                             where target_type = 'merchant' and target_id = m.id and hidden_at is null) r on true
                          where m.id = :m""")
                 .param("m", merchantId)
                 .query((rs, _) -> new MerchantFacts(

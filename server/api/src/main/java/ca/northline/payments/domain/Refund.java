@@ -118,8 +118,8 @@ public class Refund {
                 .amountCents(amountCents)
                 .taxCents(CanadianTax.refundShare(amountCents, escrow.getAmountCents(), escrow.getTaxCents()))
                 .pointsCents(pointsShare(amountCents, escrow))
-                .promoReturnCents(CanadianTax.refundShare(
-                        amountCents, escrow.getAmountCents(), escrow.northlineDiscountCents()))
+                .promoReturnCents(
+                        CanadianTax.refundShare(amountCents, escrow.getAmountCents(), escrow.northlineDiscountCents()))
                 .reason("customer_request")
                 .chargedTo(ChargedTo.MERCHANT)
                 .kind(Kind.REFUND)
@@ -144,8 +144,8 @@ public class Refund {
                 .amountCents(amountCents)
                 .taxCents(CanadianTax.refundShare(amountCents, escrow.getAmountCents(), escrow.getTaxCents()))
                 .pointsCents(pointsShare(amountCents, escrow))
-                .promoReturnCents(CanadianTax.refundShare(
-                        amountCents, escrow.getAmountCents(), escrow.northlineDiscountCents()))
+                .promoReturnCents(
+                        CanadianTax.refundShare(amountCents, escrow.getAmountCents(), escrow.northlineDiscountCents()))
                 .reason("dispute")
                 .chargedTo(ChargedTo.MERCHANT)
                 .kind(Kind.REFUND)

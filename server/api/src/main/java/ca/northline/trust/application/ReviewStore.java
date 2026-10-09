@@ -3,10 +3,10 @@ package ca.northline.trust.application;
 import ca.northline.trust.application.BrowseReviews.Praise;
 import ca.northline.trust.application.BrowseReviews.StarCount;
 import ca.northline.trust.domain.Review;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.time.Instant;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
@@ -66,8 +66,7 @@ public interface ReviewStore {
     List<Authored> byAuthor(String authorId, Collection<String> refIds);
 
     /** The author's change inside the window; false when the window closed or the business replied meanwhile. */
-    boolean edit(String reviewId, int rating, List<String> tags, @Nullable String text, boolean screened,
-            Instant at);
+    boolean edit(String reviewId, int rating, List<String> tags, @Nullable String text, boolean screened, Instant at);
 
     /** Trust &amp; safety hides ({@code reason} set) or shows again ({@code reason} null) a review. */
     boolean moderate(String reviewId, @Nullable String reason, String staffId, Instant at);

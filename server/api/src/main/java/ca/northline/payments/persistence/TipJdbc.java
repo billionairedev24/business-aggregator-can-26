@@ -76,10 +76,7 @@ class TipJdbc implements TipStore {
     public void captured(String id, Instant at) {
         jdbc.sql("""
                         update payments.courier_tips set state = 'captured', captured_at = :at
-                         where id = :id and state = 'pending'""")
-                .param("id", id)
-                .param("at", JdbcTimes.ts(at))
-                .update();
+                         where id = :id and state = 'pending'""").param("id", id).param("at", JdbcTimes.ts(at)).update();
     }
 
     @Override
@@ -94,10 +91,7 @@ class TipJdbc implements TipStore {
     public void allocated(String id, Instant at) {
         jdbc.sql("""
                         update payments.courier_tips set state = 'allocated', allocated_at = :at
-                         where id = :id and state = 'captured'""")
-                .param("id", id)
-                .param("at", JdbcTimes.ts(at))
-                .update();
+                         where id = :id and state = 'captured'""").param("id", id).param("at", JdbcTimes.ts(at)).update();
     }
 
     @Override

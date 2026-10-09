@@ -22,9 +22,8 @@ import org.springframework.stereotype.Repository;
 class PromotionsJdbc implements PromotionStore {
 
     /** A use that counts: redeemed, or held by a checkout that hasn't lapsed. */
-    private static final String COUNTS =
-            "(r.state = 'redeemed' or (r.state = 'reserved' and r.reserved_until > :now))"
-                    + " and not (r.kind = :exceptKind and r.ref_id = :exceptRef)";
+    private static final String COUNTS = "(r.state = 'redeemed' or (r.state = 'reserved' and r.reserved_until > :now))"
+            + " and not (r.kind = :exceptKind and r.ref_id = :exceptRef)";
 
     private final JdbcClient jdbc;
 
@@ -233,22 +232,14 @@ class PromotionsJdbc implements PromotionStore {
     public boolean redeemed(String id, Instant at) {
         return jdbc.sql("""
                         update promotions.redemptions set state = 'redeemed', redeemed_at = :at
-                         where id = :id and state = 'reserved'""")
-                        .param("id", id)
-                        .param("at", JdbcTimes.ts(at))
-                        .update()
-                == 1;
+                         where id = :id and state = 'reserved'""").param("id", id).param("at", JdbcTimes.ts(at)).update() == 1;
     }
 
     @Override
     public boolean released(String id, Instant at) {
         return jdbc.sql("""
                         update promotions.redemptions set state = 'released', released_at = :at
-                         where id = :id and state <> 'released'""")
-                        .param("id", id)
-                        .param("at", JdbcTimes.ts(at))
-                        .update()
-                == 1;
+                         where id = :id and state <> 'released'""").param("id", id).param("at", JdbcTimes.ts(at)).update() == 1;
     }
 
     @Override

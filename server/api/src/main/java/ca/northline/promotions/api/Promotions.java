@@ -81,7 +81,8 @@ public interface Promotions {
 
         public Optional<Line> line(String escrowRefType, String escrowRefId) {
             return lines.stream()
-                    .filter(l -> l.escrowRefType().equals(escrowRefType) && l.escrowRefId().equals(escrowRefId))
+                    .filter(l -> l.escrowRefType().equals(escrowRefType)
+                            && l.escrowRefId().equals(escrowRefId))
                     .findFirst();
         }
 

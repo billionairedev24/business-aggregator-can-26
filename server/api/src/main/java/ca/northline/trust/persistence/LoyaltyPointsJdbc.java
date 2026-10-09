@@ -8,8 +8,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**

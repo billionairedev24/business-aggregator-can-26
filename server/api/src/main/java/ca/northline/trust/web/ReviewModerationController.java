@@ -42,7 +42,9 @@ class ReviewModerationController {
             @Nullable @Size(max = 500, message = "At most 500 characters.")
             String note) {}
 
-    record ShowRequest(@Nullable @Size(max = 500, message = "At most 500 characters.") String note) {}
+    record ShowRequest(
+            @Nullable @Size(max = 500, message = "At most 500 characters.")
+            String note) {}
 
     @PostMapping("/hide")
     @RequiresConsole(value = ConsoleScreen.TRUST, actions = ConsoleAction.DECIDE)

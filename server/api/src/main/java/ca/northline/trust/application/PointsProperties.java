@@ -18,7 +18,8 @@ public record PointsProperties(
 
     public PointsProperties {
         if (pointsPerDollar < 1 || maxOrderPercent < 0 || maxOrderPercent > 100 || minRedeem < 1) {
-            throw new IllegalArgumentException("northline.points: pointsPerDollar ≥ 1, maxOrderPercent 0–100, minRedeem ≥ 1");
+            throw new IllegalArgumentException(
+                    "northline.points: pointsPerDollar ≥ 1, maxOrderPercent 0–100, minRedeem ≥ 1");
         }
     }
 }

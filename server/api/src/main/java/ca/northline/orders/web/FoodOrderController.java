@@ -88,7 +88,9 @@ class FoodOrderController {
             @Nullable List<ItemLine> items,
             @Nullable List<ComboLine> combos,
             @Nullable Tip tip,
-            @Nullable Delivery delivery) {}
+            @Nullable Delivery delivery,
+            @Nullable String promoCode,
+            @Nullable Boolean usePoints) {}
 
     @PostMapping("/quote")
     Totals quote(@RequestBody OrderRequest body, CurrentUser user) {
@@ -185,7 +187,9 @@ class FoodOrderController {
                                     d.zone(),
                                     Objects.requireNonNullElse(d.dropoff(), "hand"),
                                     d.note(),
-                                    Objects.requireNonNullElse(d.extras(), List.<String>of())));
+                                    Objects.requireNonNullElse(d.extras(), List.<String>of())),
+                    b.promoCode(),
+                    Boolean.TRUE.equals(b.usePoints()));
         }
     }
 }

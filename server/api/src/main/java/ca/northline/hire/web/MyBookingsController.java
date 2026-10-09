@@ -1,5 +1,7 @@
 package ca.northline.hire.web;
 
+import ca.northline.booking.api.VisitEtas;
+import ca.northline.hire.application.BookingCheckout;
 import ca.northline.hire.application.BookingCheckout.Calendar;
 import ca.northline.hire.application.BookingCheckout.ConfirmBooking;
 import ca.northline.hire.application.BookingCheckout.Confirmation;
@@ -12,6 +14,7 @@ import ca.northline.hire.application.BookingCheckout.ViewBooking;
 import ca.northline.hire.application.BookingCheckout.ViewCalendar;
 import ca.northline.hire.domain.BookingRequest;
 import ca.northline.payments.api.IdempotentRequests;
+import ca.northline.shared.NotFound;
 import ca.northline.shared.security.CurrentUser;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -55,6 +58,16 @@ class MyBookingsController {
     private final ViewBooking bookings;
     private final SignOffBooking signOffs;
     private final IdempotentRequests idempotent;
+    private final BookingCheckout.PriceBooking prices;
+    private final VisitEtas etas;
+
+    /** Mobile gaps part 2: the review step's price with a promo code and points. */
+    record PriceRequest(
+            @NotBlank(message = SLOT_REQUIRED) String holdId,
+            @NotBlank(message = SERVICE_REQUIRED) String serviceId,
+            @Nullable BigDecimal hours,
+            @Nullable String promoCode,
+            @Nullable Boolean usePoints) {}
 
     record HoldRequest(
             @NotBlank(message = SERVICE_REQUIRED) String slug,
@@ -99,6 +112,27 @@ class MyBookingsController {
                 HttpStatus.OK.value(),
                 () -> checkouts.start(user.userId(), body, key, user.mfa(), stepUp));
         return json(answer);
+    }
+
+    /** The price with a promo code and points (checks the code; holds nothing). */
+    @PostMapping("/api/v1/me/bookings/price")
+    BookingCheckout.Price price(@Valid @RequestBody PriceRequest body, CurrentUser user) {
+        return prices.price(
+                user.userId(),
+                body.holdId(),
+                body.serviceId(),
+                body.hours(),
+                body.promoCode(),
+                Boolean.TRUE.equals(body.usePoints()));
+    }
+
+    /**
+     * Mobile gaps part 2 (design 01 C9): minutes away while the provider is on the way and shares their position —
+     * the screen asks again every 30 s. Never the provider's position itself.
+     */
+    @GetMapping("/api/v1/me/bookings/{bookingId}/eta")
+    VisitEtas.Eta eta(@PathVariable String bookingId, CurrentUser user) {
+        return etas.eta(user.userId(), bookingId).orElseThrow(() -> new NotFound("booking", bookingId));
     }
 
     /** The card is authorized: record the escrow hold and write the booking. */
