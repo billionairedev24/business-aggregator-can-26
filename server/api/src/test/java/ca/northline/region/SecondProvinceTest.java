@@ -178,7 +178,13 @@ class SecondProvinceTest extends IntegrationTest {
 
     @Test
     void hoursAndSlotsAreSaskatoonLocalTime() throws Exception {
+        // the next Monday that isn't a statutory holiday there: closed on holidays, the slots were empty in
+        // Thanksgiving
+        // week (engineering follow-ups: the test passed or failed with the calendar)
         var monday = LocalDate.now(REGINA).with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+        while (regions.holiday("SK", monday).isPresent()) {
+            monday = monday.plusWeeks(1);
+        }
         mvc.perform(put(path("/availability/hours"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
