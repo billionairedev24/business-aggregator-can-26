@@ -81,6 +81,9 @@ export const Totals = z.object({
   etaFromMin: z.number().int().nullish(), etaToMin: z.number().int().nullish(), estimate: z.boolean(),
   /** 2026-10-04: the age step for age-restricted dishes; absent from an api without it */
   age: CheckoutAge.optional(),
+  // mobile gaps part 2: the promo code and points on the dishes
+  promoCode: z.string().nullish(), discountCents: z.number().int().optional().default(0), points: z.number().int().optional().default(0),
+  pointsCents: z.number().int().optional().default(0), pointsAvailable: z.number().int().optional().default(0),
 });
 export type Totals = z.infer<typeof Totals>;
 export const FoodStarted = z.object({
@@ -111,6 +114,8 @@ export interface OrderBody {
     street: string; unit?: string; city?: string; province: string; postalCode?: string; lat: number; lng: number;
     zoneId?: string; zone?: string; dropoff: 'hand' | 'door' | 'lobby'; note?: string; extras: string[];
   };
+  promoCode?: string;
+  usePoints?: boolean;
 }
 
 export const quoteFood = (body: OrderBody) => http('/api/v1/me/food-orders/quote', { method: 'POST', body }, Totals);

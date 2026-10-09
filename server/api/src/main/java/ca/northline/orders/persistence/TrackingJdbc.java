@@ -22,6 +22,7 @@ class TrackingJdbc implements TrackingStore {
                         select id, ref, type, state, placed_at, coalesce(subtotal_cents, 0) as subtotal,
                                coalesce(delivery_fee_cents, 0) + coalesce(service_fee_cents, 0) as fees,
                                coalesce(tax_cents, 0) as tax, coalesce(tip_cents, 0) as tip, delivery_kind,
+                               discount_cents + points_cents as off,
                                fulfilment_mode, window_id, scheduled_for, delivered_at, delivery_proof, confirmed_at
                           from orders.orders where id = :id and customer_id = :c
                         """)
@@ -43,7 +44,8 @@ class TrackingJdbc implements TrackingStore {
                         JdbcTimes.instant(rs, "scheduled_for"),
                         JdbcTimes.instant(rs, "delivered_at"),
                         rs.getString("delivery_proof"),
-                        JdbcTimes.instant(rs, "confirmed_at")))
+                        JdbcTimes.instant(rs, "confirmed_at"),
+                        rs.getLong("off")))
                 .optional();
     }
 

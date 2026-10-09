@@ -57,7 +57,10 @@ public interface FoodCheckoutStore {
             @Nullable String paymentIntent,
             @Nullable String delivery,
             Instant createdAt,
-            @Nullable Instant placedAt) {}
+            @Nullable Instant placedAt,
+            long discountCents,
+            long pointsCents,
+            @Nullable String promoCode) {}
 
     /** @param modifiers JSON list the kitchen display reads ({@code [{"name": "Large"}, …]}) */
     record OrderLineRow(

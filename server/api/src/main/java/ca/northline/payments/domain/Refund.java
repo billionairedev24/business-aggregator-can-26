@@ -83,6 +83,12 @@ public class Refund {
     private @Nullable String stripeRefund;
     private @Nullable String stripeTransferReversal;
     private long reversedCents;
+    // Mobile gaps part 2: the refunded share of what points paid (back to the wallet, not the card), and of a
+    // Northline-funded code's top-up (taken back from the merchant when the escrow had been released, so topped up).
+    private final long pointsCents;
+
+    private final long promoReturnCents;
+
     private final @Nullable Integer version;
 
     /** A customer asked for money back on {@code escrow}. */
@@ -111,6 +117,9 @@ public class Refund {
                 .customerName(escrow.getCustomerName())
                 .amountCents(amountCents)
                 .taxCents(CanadianTax.refundShare(amountCents, escrow.getAmountCents(), escrow.getTaxCents()))
+                .pointsCents(pointsShare(amountCents, escrow))
+                .promoReturnCents(
+                        CanadianTax.refundShare(amountCents, escrow.getAmountCents(), escrow.northlineDiscountCents()))
                 .reason("customer_request")
                 .chargedTo(ChargedTo.MERCHANT)
                 .kind(Kind.REFUND)
@@ -134,6 +143,9 @@ public class Refund {
                 .customerName(dispute.getCustomerName())
                 .amountCents(amountCents)
                 .taxCents(CanadianTax.refundShare(amountCents, escrow.getAmountCents(), escrow.getTaxCents()))
+                .pointsCents(pointsShare(amountCents, escrow))
+                .promoReturnCents(
+                        CanadianTax.refundShare(amountCents, escrow.getAmountCents(), escrow.northlineDiscountCents()))
                 .reason("dispute")
                 .chargedTo(ChargedTo.MERCHANT)
                 .kind(Kind.REFUND)
@@ -171,9 +183,17 @@ public class Refund {
                 .build();
     }
 
-    /** What goes back to the customer's card: the amount plus the tax on it (a credit gives back no tax). */
+    /**
+     * What goes back to the customer's card: the amount plus the tax on it, less the share points paid (that goes back
+     * to the wallet). A credit gives back no tax.
+     */
     public long cardCents() {
-        return amountCents + taxCents;
+        return amountCents + taxCents - pointsCents;
+    }
+
+    /** The share of the points an escrow's refund of {@code amountCents} gives back (all of them for the whole). */
+    static long pointsShare(long amountCents, Escrow escrow) {
+        return CanadianTax.refundShare(amountCents, escrow.getAmountCents(), escrow.getPointsCents());
     }
 
     /** Money the merchant can't pay out while this case is open. */

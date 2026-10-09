@@ -44,6 +44,13 @@ public class Escrow {
 
     private final long platformTaxCents;
     private final long tipCents;
+    // Mobile gaps part 2: a promo code's discount on this line (amountCents is already after it), who funds it
+    // ("northline" or "merchant", null without a code) and what points paid of amount + tax (Northline's money).
+    private final long discountCents;
+
+    private final @Nullable String discountFundedBy;
+    private final long pointsCents;
+
     private final String label;
     private final @Nullable String orderNumber;
     private final @Nullable String customerId;
@@ -64,6 +71,11 @@ public class Escrow {
 
     /** A new hold at the merchant's take rate (the tier's, unless the merchant has its own). */
     public static Escrow hold(EscrowLifecycle.Hold hold, int takeRateBps, String paymentIntentId, Instant now) {
+        var discount = hold.discount();
+        var code = discount == null ? 0 : discount.codeCents();
+        var funder = discount == null || code == 0 ? null : discount.fundedBy();
+        // Northline-funded: the merchant's sale is the full price, so the take rate is on it too (as without the code)
+        var feeBase = hold.amountCents() + ("northline".equals(funder) ? code : 0);
         return Escrow.builder()
                 .id(Ids.next())
                 .paymentIntentId(paymentIntentId)
@@ -73,11 +85,14 @@ public class Escrow {
                 .kind(hold.kind())
                 .amountCents(hold.amountCents())
                 .takeRateBps(takeRateBps)
-                .feeCents(Fees.percentOf(hold.amountCents(), takeRateBps))
+                .feeCents(Fees.percentOf(feeBase, takeRateBps))
                 .taxCents(hold.taxCents())
                 .platformFeeCents(hold.platform() == null ? 0 : hold.platform().feeCents())
                 .platformTaxCents(hold.platform() == null ? 0 : hold.platform().feeTaxCents())
                 .tipCents(hold.platform() == null ? 0 : hold.platform().tipCents())
+                .discountCents(code)
+                .discountFundedBy(funder)
+                .pointsCents(discount == null ? 0 : discount.pointsCents())
                 .label(hold.label())
                 .orderNumber(hold.orderNumber())
                 .customerId(hold.customerId())
@@ -91,13 +106,31 @@ public class Escrow {
                 .build();
     }
 
-    /** What the card is charged at capture: the merchant's amount, its tax and Northline's own charges. */
+    /**
+     * What the card is charged at capture: the merchant's amount, its tax and Northline's own charges, less what
+     * points paid.
+     */
     public long capturedCents() {
-        return amountCents + taxCents + platformFeeCents + platformTaxCents + tipCents;
+        return amountCents + taxCents + platformFeeCents + platformTaxCents + tipCents - pointsCents;
+    }
+
+    /** The top-up Northline pays the merchant at release for a Northline-funded code (0 otherwise). */
+    public long northlineDiscountCents() {
+        return "northline".equals(discountFundedBy) ? discountCents : 0;
+    }
+
+    /** The discount the merchant funded (0 otherwise). */
+    public long merchantDiscountCents() {
+        return "merchant".equals(discountFundedBy) ? discountCents : 0;
+    }
+
+    /** The merchant's sale: what the customer's amount and a Northline-funded code together pay. */
+    public long saleCents() {
+        return amountCents + northlineDiscountCents();
     }
 
     public long netCents() {
-        return amountCents - feeCents;
+        return saleCents() - feeCents;
     }
 
     /** Completed / delivered / handed off: the release clock of the kind starts (food releases at once). */

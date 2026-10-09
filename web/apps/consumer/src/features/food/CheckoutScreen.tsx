@@ -6,6 +6,8 @@ import { Alert, Button, EmptyState, Field, OptionCard, RadioGroup, Select, Skele
 import { StripePayment } from '../cart/Payment';
 import { AgeCheck } from '../cart/AgeCheck';
 import { ageCleared, NO_AGE } from '../cart/age';
+import { PromoPoints } from '../promotions/PromoPoints';
+import { usePromoT } from '../promotions/messages';
 import { StepUpDialog } from '../cart/StepUpDialog';
 import type { Started as CartStarted } from '../cart/api';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
@@ -43,6 +45,9 @@ export function CheckoutScreen() {
   const [note, setNote] = useState('');
   const [extras, setExtras] = useState<Set<string>>(new Set());
   const [tip, setTip] = useState(2);
+  const [promoCode, setPromoCode] = useState<string>();
+  const [usePoints, setUsePoints] = useState(false);
+  const tp = usePromoT();
   const [phase, setPhase] = useState<Phase>({ step: 'form' });
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -69,8 +74,10 @@ export function CheckoutScreen() {
         lat: location.lat!, lng: location.lng!, ...(location.zoneId ? { zoneId: location.zoneId } : {}), ...(location.zone ? { zone: location.zone } : {}),
         dropoff, ...(note.trim() ? { note: note.trim() } : {}), extras: [...extras],
       },
+      ...(promoCode ? { promoCode } : {}),
+      ...(usePoints ? { usePoints } : {}),
     };
-  }, [cart, data, pickup, when, slot, tip, hasAddress, location, dropoff, note, extras]);
+  }, [cart, data, pickup, when, slot, tip, hasAddress, location, dropoff, note, extras, promoCode, usePoints]);
 
   const quoteKey = JSON.stringify(body);
   const quote = useQuery({
@@ -166,6 +173,11 @@ export function CheckoutScreen() {
           </>
         )}
         <AgeCheck age={age} returnTo="web_food" onChanged={() => void quote.refetch()} />
+        <h2>{tp('promoTitle')}</h2>
+        <PromoPoints code={promoCode} onCode={setPromoCode} discountCents={quote.data?.discountCents}
+          error={quote.error instanceof ValidationError ? quote.error.byField().promoCode : undefined}
+          usePoints={usePoints} onUsePoints={setUsePoints} pointsAvailable={quote.data?.pointsAvailable}
+          pointsCents={quote.data?.pointsCents} disabled={phase.step === 'pay'} />
         <h2>{t('payment')}</h2>
         {phase.step === 'pay' && phase.started.mode === 'stripe'
           ? <StripePayment started={asCartStarted(phase.started)} busy={busy} onPaid={() => void place(phase.started)} onError={m => setError(m)} />
@@ -204,6 +216,7 @@ function asCartStarted(s: FoodStarted): CartStarted {
 
 function Summary({ t, totals, loading, lines }: { t: T; totals?: Totals; loading: boolean; lines: { key: string; qty: number; title: string; cents: number }[] }) {
   const { money } = useFormatters();
+  const tp = usePromoT();
   return (
     <>
       <ul className="nl-rest-lines">
@@ -214,10 +227,12 @@ function Summary({ t, totals, loading, lines }: { t: T; totals?: Totals; loading
       {loading ? <Skeleton height={120} /> : totals ? (
         <dl className="nl-rest-totals">
           <div><dt>{t('items')}</dt><dd>{money(totals.subtotalCents)}</dd></div>
+          {totals.discountCents > 0 && <div><dt>{tp('discount', { code: totals.promoCode ?? '' })}</dt><dd>−{money(totals.discountCents)}</dd></div>}
           {totals.mode === 'delivery' && <div><dt>{t('delivery')}</dt><dd>{money(totals.deliveryFeeCents)}</dd></div>}
           <div><dt>{t('serviceFee')}</dt><dd>{money(totals.serviceFeeCents)}</dd></div>
           {totals.mode === 'delivery' && <div><dt>{t('tip')}</dt><dd>{money(totals.tipCents)}</dd></div>}
           <div><dt>{t('tax')}</dt><dd>{money(totals.taxCents)}</dd></div>
+          {totals.pointsCents > 0 && <div><dt>{tp('pointsLine')}</dt><dd>−{money(totals.pointsCents)}</dd></div>}
           <div className="nl-rest-total"><dt>{t('total')}</dt><dd>{money(totals.totalCents)}</dd></div>
         </dl>
       ) : null}

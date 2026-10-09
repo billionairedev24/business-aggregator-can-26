@@ -50,6 +50,8 @@ public interface TrustRules {
         /** Suspend the business's listing rights (needs the {@code suspend} action). */
         SUSPEND_LISTINGS,
         /** Hand it to the operations on-call. */
-        ESCALATE
+        ESCALATE,
+        /** Mobile gaps part 2: hide the reported or screened review (public pages and the rating). */
+        HIDE_REVIEW
     }
 }

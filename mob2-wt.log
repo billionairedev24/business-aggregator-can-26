@@ -1,0 +1,14 @@
+
+ RUN  v3.2.7 /tmp/claude-0/-home-claude-repo/bf185b81-5a0f-55ec-8f30-c3534bbf7899/scratchpad/wt-mob2/web/apps/console
+
+ ✓ src/features/trust/trust.test.tsx (7 tests) 3523ms
+   ✓ trust & safety (S-93, design 03 trust) > shows the design copy, tier rules and consequences from the rules, and the open flags  1693ms
+   ✓ trust & safety (S-93, design 03 trust) > acts on flags with the role header  313ms
+   ✓ trust & safety (S-93, design 03 trust) > simulates the rating floor and saves the keyword lists  559ms
+   ✓ trust & safety (S-93, design 03 trust) > edits a tier rule and shows the api messages  399ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  17:53:07
+   Duration  12.09s (transform 2.61s, setup 4.77s, collect 2.23s, tests 3.52s, environment 627ms, prepare 196ms)
+

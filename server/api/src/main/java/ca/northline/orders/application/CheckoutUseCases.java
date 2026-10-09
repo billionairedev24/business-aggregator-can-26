@@ -54,8 +54,23 @@ public final class CheckoutUseCases {
      * @param kind {@code pooled} | {@code direct}
      * @param windowId the pooled run chosen
      * @param substitution {@code similar} | {@code refund} | {@code ask} (design: "Similar item · Refund it · Text me")
+     * @param promoCode a promo code (mobile gaps part 2), null for none
+     * @param usePoints spend the customer's points (up to the configured share of the goods)
+     * @param tip the courier's tip, 100 % theirs (none for none)
      */
-    public record Request(String kind, @Nullable String windowId, AddressInput address, String substitution) {}
+    public record Request(
+            String kind,
+            @Nullable String windowId,
+            AddressInput address,
+            String substitution,
+            @Nullable String promoCode,
+            boolean usePoints,
+            FoodCheckout.Tip tip) {
+
+        public Request(String kind, @Nullable String windowId, AddressInput address, String substitution) {
+            this(kind, windowId, address, substitution, null, false, FoodCheckout.Tip.NONE);
+        }
+    }
 
     /** A saved address ({@code addressId}) or a new one. */
     public record AddressInput(
@@ -122,6 +137,11 @@ public final class CheckoutUseCases {
 
     public record TaxLine(String type, BigDecimal percent, long cents) {}
 
+    /**
+     * @param discountCents what the promo code took off the goods (tax is on what's left)
+     * @param pointsCents what points pay ({@code points} of them); {@code pointsAvailable} for the switch
+     * @param tipCents the courier's tip (no tax on it)
+     */
     public record Quote(
             long subtotalCents,
             long deliveryFeeCents,
@@ -129,7 +149,13 @@ public final class CheckoutUseCases {
             List<TaxLine> taxes,
             long totalCents,
             String market,
-            CheckoutAge age) {
+            CheckoutAge age,
+            @Nullable String promoCode,
+            long discountCents,
+            long points,
+            long pointsCents,
+            long pointsAvailable,
+            long tipCents) {
 
         public Quote {
             taxes = List.copyOf(taxes);

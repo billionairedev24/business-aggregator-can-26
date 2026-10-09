@@ -1,5 +1,7 @@
 import type { ApiClient, Locale } from '@northline/mobile-kit';
 
+import type { TipChoice } from './aftercare';
+
 /**
  * Journey B's api (S-99): the consumer web's endpoints, called directly with the app's DPoP tokens
  * (docs/MOBILE_PLAN.md § B). Public reads (`/public/**`, `/search`, `/cart` for guests) go out with `auth: 'optional'`;
@@ -80,10 +82,18 @@ export interface CheckoutSetup {
   stepUp: 'none' | 'required' | 'enrol'; market: string; served: boolean; age?: CheckoutAge;
 }
 export interface TaxLine { type: string; percent: number; cents: number }
-export interface Quote { subtotalCents: number; deliveryFeeCents: number; taxCents: number; taxes: TaxLine[]; totalCents: number; market: string; age?: CheckoutAge }
+export interface Quote {
+  subtotalCents: number; deliveryFeeCents: number; taxCents: number; taxes: TaxLine[]; totalCents: number; market: string; age?: CheckoutAge;
+  /** Mobile gaps part 2: the code applied, its discount, the points spent and their value, the points there are, the tip. */
+  promoCode?: string | null; discountCents?: number; points?: number; pointsCents?: number; pointsAvailable?: number; tipCents?: number;
+}
 export interface AddressInput { addressId?: string; street?: string; unit?: string; city?: string; province?: string; postal?: string; note?: string }
 export type Substitution = 'similar' | 'refund' | 'ask';
-export interface CheckoutBody { kind: 'pooled' | 'direct'; windowId: string | null; address: AddressInput; substitution: Substitution }
+export interface CheckoutBody {
+  kind: 'pooled' | 'direct'; windowId: string | null; address: AddressInput; substitution: Substitution;
+  /** Mobile gaps part 2: sent only when set (the code, points switched on, a tip). */
+  promoCode?: string; usePoints?: boolean; tip?: TipChoice;
+}
 export interface Intent { paymentIntent: string; clientSecret?: string | null; status: string; amountCents: number }
 export interface Started { checkoutId: string; orderId: string; ref: string; totalCents: number; expiresAt: string; payment: PaymentConfig; intents: Intent[] }
 export interface Placed { orderId: string; ref: string }

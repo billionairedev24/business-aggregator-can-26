@@ -42,9 +42,62 @@ public interface CustomerBookings {
             long depositCents,
             long taxCents,
             @Nullable String escrowId,
-            @Nullable Instant freeCancelUntil) {
+            @Nullable Instant freeCancelUntil,
+            long discountCents,
+            long pointsCents,
+            @Nullable Double siteLat,
+            @Nullable Double siteLng) {
         public NewBooking {
             details = Map.copyOf(details);
+        }
+
+        /** Without a promo code, points or a located job site (before mobile gaps part 2). */
+        public NewBooking(
+                String bookingId,
+                String merchantId,
+                String memberUserId,
+                String customerId,
+                @Nullable String serviceId,
+                @Nullable String quoteId,
+                String type,
+                String title,
+                Instant startsAt,
+                Instant endsAt,
+                @Nullable String addressLine,
+                @Nullable String area,
+                Map<String, Object> details,
+                @Nullable String accessNote,
+                @Nullable String contactPhone,
+                long priceCents,
+                long depositCents,
+                long taxCents,
+                @Nullable String escrowId,
+                @Nullable Instant freeCancelUntil) {
+            this(
+                    bookingId,
+                    merchantId,
+                    memberUserId,
+                    customerId,
+                    serviceId,
+                    quoteId,
+                    type,
+                    title,
+                    startsAt,
+                    endsAt,
+                    addressLine,
+                    area,
+                    details,
+                    accessNote,
+                    contactPhone,
+                    priceCents,
+                    depositCents,
+                    taxCents,
+                    escrowId,
+                    freeCancelUntil,
+                    0,
+                    0,
+                    null,
+                    null);
         }
     }
 

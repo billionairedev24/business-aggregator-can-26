@@ -248,18 +248,6 @@ export const services: { [k in keyof typeof en]: string } = {
 
   'services.review.title': 'Comment était {name} ?',
   'services.review.lede': 'Seules les réservations payées peuvent être évaluées. {name} vous évalue aussi.',
-  'services.review.notYet': 'La publication d’avis depuis l’application n’est pas encore offerte : votre note n’est pas envoyée. L’ajout de {name} à vos favoris fonctionne déjà.',
   'services.review.onlyPaid': 'Seules les réservations payées peuvent être évaluées, une fois le travail terminé.',
-  'services.review.stars': 'Note',
-  'services.review.stoodOut': 'Ce qui s’est démarqué',
-  'services.praise.onTime': 'À l’heure',
-  'services.praise.clear': 'Explications claires',
-  'services.praise.fairPrice': 'Prix juste',
-  'services.praise.clean': 'Travail propre',
-  'services.praise.extraMile': 'A fait plus que demandé',
-  'services.praise.friendly': 'Sympathique',
-  'services.review.noteLabel': 'Votre avis',
-  'services.review.note': 'Que devrait savoir le prochain client ?',
   'services.review.favourite': 'Ajouter {name} à mes favoris — le réserver en premier la prochaine fois',
-  'services.review.submit': 'Envoyer l’avis',
 };

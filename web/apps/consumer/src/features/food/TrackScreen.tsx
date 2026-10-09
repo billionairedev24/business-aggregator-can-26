@@ -4,6 +4,7 @@ import { isNotFound } from '@northline/client';
 import { EmptyState, ErrorState, Skeleton, SiteLink, useFormatters } from '@northline/ui';
 import { signInHref, useViewer } from '../session/api';
 import { Tracking, trackingQuery, trackingStreamUrl } from './api';
+import { CourierTip, ReviewPanel } from '../aftercare/Aftercare';
 import { CourierStatus } from '../tracking/CourierStatus';
 import { useTrackingStream } from '../tracking/courier';
 import { useFoodT } from './messages';
@@ -66,6 +67,12 @@ function Track({ t, o }: { t: T; o: Tracking }) {
             : null}
           <Link to="/account/orders" className="btn btn-ghost">{t('orders')}</Link>
         </div>
+        {o.stage === 'delivered' ? (
+          <>
+            {pickup ? null : <CourierTip orderId={o.orderId} />}
+            <ReviewPanel kind="food" id={o.orderId} />
+          </>
+        ) : null}
       </div>
       <div className="nl-track-map halftone" aria-hidden>
         <svg viewBox="0 0 400 300">

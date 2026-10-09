@@ -28,6 +28,7 @@ import ca.northline.payments.api.EscrowKind;
 import ca.northline.payments.api.EscrowLifecycle;
 import ca.northline.payments.api.PaymentAuthorizations;
 import ca.northline.payments.api.PaymentSettings;
+import ca.northline.promotions.api.Promotions;
 import ca.northline.region.api.TaxRates;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
@@ -55,7 +56,14 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 @RequiredArgsConstructor
 class BookingCheckoutService
-        implements ViewCalendar, HoldSlot, ReleaseSlot, StartCheckout, ConfirmBooking, ViewBooking, SignOffBooking {
+        implements ViewCalendar,
+                HoldSlot,
+                ReleaseSlot,
+                StartCheckout,
+                ConfirmBooking,
+                ViewBooking,
+                SignOffBooking,
+                BookingCheckout.PriceBooking {
 
     /** Design 06: "free cancellation until 12 h before". */
     static final Duration FREE_CANCEL = Duration.ofHours(12);
@@ -81,6 +89,7 @@ class BookingCheckoutService
     private final SecretSealer sealer;
     private final RegionDefaults region;
     private final Clock clock;
+    private final Promotions promotions;
 
     /** What travels with the hold between "Hold $…" and the card confirmation (sealed: it has the access note). */
     record Draft(
@@ -156,7 +165,7 @@ class BookingCheckoutService
                 taxRates.bpsFor(province(hold.merchantId())));
         request.validate(kind, vehicle(offer), pricing.free());
         if (pricing.free()) {
-            var booked = book(hold, request, offer, kind, pricing.priceCents(), pricing.taxCents(), null);
+            var booked = book(hold, request, offer, kind, pricing.priceCents(), pricing.taxCents(), null, 0, 0);
             holds.release(hold.id());
             return new Checkout(
                     hold.id(),
@@ -169,31 +178,86 @@ class BookingCheckoutService
                     null,
                     paymentSettings.provider(),
                     null,
-                    booked);
+                    booked,
+                    0,
+                    0,
+                    null);
         }
         gate.require(customerId, mfa, stepUpProof);
+        var promo = promotions.reserve(
+                hold.bookingId(),
+                hold.expiresAt(),
+                basket(customerId, hold.bookingId(), hold.merchantId(), pricing.priceCents()),
+                new Promotions.Ask(request.promoCode(), request.spendPoints()));
+        var line = promo.lines().getFirst();
+        var taxable = line.taxableCents();
+        var tax = Pricing.taxOn(taxable, taxRates.bpsFor(province(hold.merchantId())));
         var started = payments.start(new PaymentAuthorizations.Request(
                 hold.merchantId(),
                 "booking",
                 hold.bookingId(),
                 customerId,
-                pricing.priceCents(),
-                pricing.taxCents(),
+                taxable,
+                tax,
                 "booking:" + hold.bookingId(),
-                clientKey));
-        attach(hold.id(), new Draft(request, pricing.priceCents(), pricing.taxCents(), started.paymentIntent()));
+                clientKey,
+                null,
+                0,
+                line.pointsCents()));
+        attach(hold.id(), new Draft(request, taxable, tax, started.paymentIntent()));
         return new Checkout(
                 hold.id(),
                 hold.bookingId(),
                 pricing.priceCents(),
-                pricing.taxCents(),
-                pricing.priceCents() + pricing.taxCents(),
+                tax,
+                taxable + tax - line.pointsCents(),
                 started.status(),
                 started.paymentIntent(),
                 started.clientSecret(),
                 paymentSettings.provider(),
                 paymentSettings.publishableKey(),
-                null);
+                null,
+                promo.discountCents(),
+                promo.pointsCents(),
+                promo.code());
+    }
+
+    @Override
+    public BookingCheckout.Price price(
+            String customerId,
+            String holdId,
+            String serviceId,
+            @Nullable BigDecimal hours,
+            @Nullable String promoCode,
+            boolean usePoints) {
+        var hold = ownHold(customerId, holdId);
+        var offer = offers.find(serviceId, "en")
+                .filter(o -> o.merchantId().equals(hold.merchantId()))
+                .orElseThrow(() -> new NotFound("service", serviceId));
+        var bps = taxRates.bpsFor(province(hold.merchantId()));
+        var pricing = Pricing.of(kind(offer), offer.pricingMode(), offer.priceCents(), hours, bps);
+        if (pricing.free()) {
+            return new BookingCheckout.Price(0, 0, 0, 0, 0, 0, 0, null);
+        }
+        var promo = promotions.price(
+                basket(customerId, hold.bookingId(), hold.merchantId(), pricing.priceCents()),
+                new Promotions.Ask(promoCode, usePoints));
+        var line = promo.lines().getFirst();
+        var tax = Pricing.taxOn(line.taxableCents(), bps);
+        return new BookingCheckout.Price(
+                pricing.priceCents(),
+                promo.discountCents(),
+                tax,
+                promo.points(),
+                promo.pointsCents(),
+                promo.pointsAvailable(),
+                line.taxableCents() + tax - promo.pointsCents(),
+                promo.code());
+    }
+
+    private static Promotions.Basket basket(String customerId, String bookingId, String merchantId, long cents) {
+        return new Promotions.Basket(
+                customerId, "service", List.of(new Promotions.Item("booking", bookingId, merchantId, cents)));
     }
 
     @Override
@@ -210,6 +274,9 @@ class BookingCheckoutService
                 .orElseThrow(() -> new NotFound("service", String.valueOf(hold.serviceId())));
         var kind = kind(offer);
         var customer = people.people(List.of(customerId)).get(customerId);
+        var promo = promotions.reserved("service", hold.bookingId()).line("booking", hold.bookingId());
+        var discount = promo.map(l -> new EscrowLifecycle.Discount(l.discountCents(), l.fundedBy(), l.pointsCents()))
+                .orElse(null);
         var escrowId = escrow.hold(new EscrowLifecycle.Hold(
                 hold.merchantId(),
                 EscrowKind.SERVICE,
@@ -225,8 +292,20 @@ class BookingCheckoutService
                 offer.name(),
                 "search",
                 intent,
-                clock.instant()));
-        var booked = book(hold, draft.request(), offer, kind, draft.priceCents(), draft.taxCents(), escrowId);
+                clock.instant(),
+                null,
+                discount));
+        promotions.redeem("service", hold.bookingId());
+        var booked = book(
+                hold,
+                draft.request(),
+                offer,
+                kind,
+                draft.priceCents(),
+                draft.taxCents(),
+                escrowId,
+                discount == null ? 0 : discount.codeCents(),
+                discount == null ? 0 : discount.pointsCents());
         holds.release(hold.id());
         return booked;
     }
@@ -249,7 +328,9 @@ class BookingCheckoutService
             ServiceKind kind,
             long priceCents,
             long taxCents,
-            @Nullable String escrowId) {
+            @Nullable String escrowId,
+            long discountCents,
+            long pointsCents) {
         var line = trimmed(request.addressLine());
         var unit = trimmed(request.unit());
         var address = line == null ? null : unit == null ? line : line + ", " + unit;
@@ -273,7 +354,11 @@ class BookingCheckoutService
                 priceCents,
                 taxCents,
                 escrowId,
-                priceCents == 0 ? null : hold.startsAt().minus(FREE_CANCEL)));
+                priceCents == 0 ? null : hold.startsAt().minus(FREE_CANCEL),
+                discountCents,
+                pointsCents,
+                request.siteLat(),
+                request.siteLng()));
         return confirmation(hold.customerId(), booked);
     }
 

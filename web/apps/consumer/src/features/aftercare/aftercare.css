@@ -1,0 +1,16 @@
+/* mobile gaps part 2: reviews, the courier's tip after the delivery and the visit's ETA */
+.nl-after { margin-top: 24px; padding: 16px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); display: grid; gap: 10px; }
+.nl-after-h2 { font-family: var(--font-heading); font-size: 20px; margin: 0; }
+.nl-after-muted { margin: 0; color: var(--color-neutral-700); font-size: 14px; }
+.nl-after-stars { margin: 0; font-size: 20px; color: var(--color-text); }
+.nl-after-quote { margin: 0; padding-left: 12px; border-left: 3px solid var(--color-divider); }
+.nl-after-reply { margin: 0; font-style: italic; }
+.nl-after-form { display: grid; gap: 12px; }
+.nl-after-starpick { display: flex; gap: 4px; }
+.nl-after-star { min-width: 44px; min-height: 44px; font-size: 24px; background: none; border: 1px solid var(--color-divider); border-radius: var(--radius-md); color: var(--color-text); cursor: pointer; }
+.nl-after-star[aria-checked='true'] { border-color: var(--color-accent); }
+.nl-after-tags { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.nl-after-tags legend { margin-bottom: 6px; font-weight: 600; }
+.nl-after-tags .nl-chip { min-height: 44px; }
+.nl-after-eta { margin: 0; font-size: 18px; font-weight: 600; }
+.nl-after-title { font-family: var(--font-heading); font-size: 28px; margin: 0 0 6px; }

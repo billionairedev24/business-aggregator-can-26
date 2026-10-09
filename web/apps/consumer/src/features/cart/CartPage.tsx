@@ -18,6 +18,8 @@ import { FakePayment, StripePayment } from './Payment';
 import { StepUpDialog } from './StepUpDialog';
 import { AgeCheck } from './AgeCheck';
 import { ageCleared, NO_AGE } from './age';
+import { PromoPoints, TipPicker, type TipChoice } from '../promotions/PromoPoints';
+import { usePromoT } from '../promotions/messages';
 import { useAgeT } from './ageMessages';
 
 type Substitution = CheckoutBody['substitution'];
@@ -184,6 +186,10 @@ function Checkout({ cart }: { cart: Cart }) {
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<Phase>({ step: 'form' });
   const key = useRef<string>(newIdempotencyKey());
+  const tp = usePromoT();
+  const [promoCode, setPromoCode] = useState<string>();
+  const [usePoints, setUsePoints] = useState(false);
+  const [tip, setTip] = useState<TipChoice>({ kind: 'none', value: 0 });
 
   const data = setup.data;
   useEffect(() => {
@@ -198,12 +204,17 @@ function Checkout({ cart }: { cart: Cart }) {
   const option = data?.options.find(o => o.id === optionId);
   const address: AddressInput = !editing && addressId ? { addressId } : trimAddress(draft);
   const clientErrors = addressErrors(address, provinceCodes);
-  const body: CheckoutBody = { kind: option?.kind ?? '', windowId: option?.windowId ?? null, address, substitution };
+  const body: CheckoutBody = {
+    kind: option?.kind ?? '', windowId: option?.windowId ?? null, address, substitution,
+    ...(promoCode ? { promoCode } : {}), ...(usePoints ? { usePoints } : {}), ...(tip.kind !== 'none' ? { tip } : {}),
+  };
   const complete = !!option && Object.keys(clientErrors).length === 0;
   const quote = useQuery(quoteQuery(body, locale, complete));
   const shownErrors = { ...(touched ? clientErrors : {}), ...serverErrors };
   const packBy = option?.kind === 'pooled' ? option.packBy ?? null : null;
   const total = quote.data?.totalCents;
+  const promoError = serverErrors.promoCode
+    ?? (quote.error instanceof ValidationError ? quote.error.byField().promoCode : undefined);
   const age = quote.data?.age ?? setup.data?.age ?? NO_AGE;
   const tAge = useAgeT();
   const refreshAge = () => { void qc.invalidateQueries({ queryKey: ['checkout'] }); };
@@ -303,6 +314,18 @@ function Checkout({ cart }: { cart: Cart }) {
 
           <AgeCheck age={age} onChanged={refreshAge} />
 
+          <section className="cart-section" aria-labelledby="cart-tip">
+            <h2 id="cart-tip" className="cart-h2">{tp('tipTitle')}</h2>
+            <TipPicker value={tip} onChange={setTip} disabled={!!started} />
+          </section>
+
+          <section className="cart-section" aria-labelledby="cart-promo">
+            <h2 id="cart-promo" className="cart-h2">{tp('promoTitle')}</h2>
+            <PromoPoints code={promoCode} onCode={c => { setPromoCode(c); setServerErrors(({ promoCode: _, ...rest }) => rest); }}
+              error={promoError} discountCents={quote.data?.discountCents} usePoints={usePoints} onUsePoints={setUsePoints}
+              pointsAvailable={quote.data?.pointsAvailable} pointsCents={quote.data?.pointsCents} disabled={!!started} />
+          </section>
+
           <section className="cart-section" aria-labelledby="cart-payment">
             <h2 id="cart-payment" className="cart-h2">{t('payment')}</h2>
             {started && started.payment.provider === 'stripe' && started.intents.some(i => i.status !== 'authorized')
@@ -315,9 +338,12 @@ function Checkout({ cart }: { cart: Cart }) {
           <div className="cart-sums">
             <div className="cart-sum-row"><span>{t('items')}</span><span>{money(view.subtotalCents)}</span></div>
             <div className="cart-sum-row"><span>{t('delivery')}</span><span>{option ? (option.feeCents === 0 ? t('free') : money(option.feeCents)) : '—'}</span></div>
+            {quote.data && quote.data.discountCents > 0 ? <div className="cart-sum-row"><span>{tp('discount', { code: quote.data.promoCode ?? '' })}</span><span>−{money(quote.data.discountCents)}</span></div> : null}
             {quote.data
               ? quote.data.taxes.map(tax => <div key={`${tax.type}${tax.percent}`} className="cart-sum-row"><span>{taxLabel(t, tax.type, tax.percent, locale)}</span><span>{money(tax.cents)}</span></div>)
               : <div className="cart-sum-row"><span>{t('taxPending')}</span><span className="cart-muted">{quote.isFetching ? <Skeleton width={48} height={14} /> : t('taxLater')}</span></div>}
+            {quote.data && quote.data.tipCents > 0 ? <div className="cart-sum-row"><span>{tp('tip')}</span><span>{money(quote.data.tipCents)}</span></div> : null}
+            {quote.data && quote.data.pointsCents > 0 ? <div className="cart-sum-row"><span>{tp('pointsLine')}</span><span>−{money(quote.data.pointsCents)}</span></div> : null}
             <div className="cart-sum-row cart-total"><span>{t('total')}</span><span>{total === undefined ? '—' : money(total)}</span></div>
           </div>
           {error ? <div className="cart-alert"><Alert tone="error" role="alert">{error}</Alert></div> : null}

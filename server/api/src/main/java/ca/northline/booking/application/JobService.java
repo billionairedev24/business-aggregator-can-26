@@ -46,6 +46,7 @@ class JobService implements ListJobs, ViewJob, AdvanceJob, RequestApproval {
     private final AccessNotes access;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final ProviderPositions positions;
 
     @Override
     public List<JobSummary> list(ListJobs.Query query) {
@@ -125,6 +126,9 @@ class JobService implements ListJobs, ViewJob, AdvanceJob, RequestApproval {
         bookings.save(booking);
         bookings.append(progress.log());
         events.publishEvent(progress.event());
+        if (command.step() != AdvanceJob.Step.START_TRAVEL) {
+            positions.clear(booking.getId()); // arrived: the live position is no longer shared
+        }
         return view(command.actor(), booking.getId());
     }
 

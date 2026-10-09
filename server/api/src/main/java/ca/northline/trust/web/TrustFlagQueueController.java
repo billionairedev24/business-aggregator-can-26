@@ -62,7 +62,9 @@ class TrustFlagQueueController {
 
     record ActionRequest(
             @NotBlank(message = TrustRules.ACTION_REQUIRED)
-            @Pattern(regexp = "warn|coach|confirm|suspend_listings|escalate", message = TrustRules.ACTION_REQUIRED)
+            @Pattern(
+                    regexp = "warn|coach|confirm|suspend_listings|escalate|hide_review",
+                    message = TrustRules.ACTION_REQUIRED)
             String action,
 
             @Nullable @Size(max = 500, message = "At most 500 characters.")

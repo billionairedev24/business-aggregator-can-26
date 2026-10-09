@@ -31,6 +31,11 @@ public record Pricing(long priceCents, long taxCents) {
         return new Pricing(price, bps(price, taxBps));
     }
 
+    /** The tax on an amount after a promo code (mobile gaps part 2): the same province rate, half-up. */
+    public static long taxOn(long cents, int taxBps) {
+        return bps(cents, taxBps);
+    }
+
     public static long hourly(long rateCents, BigDecimal hours) {
         return BigDecimal.valueOf(rateCents)
                 .multiply(hours)

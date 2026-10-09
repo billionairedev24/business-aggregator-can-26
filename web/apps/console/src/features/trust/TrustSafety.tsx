@@ -14,9 +14,11 @@ type Values = Record<string, unknown>;
 const num = (v: Values | undefined, k: string) => Number(v?.[k] ?? 0);
 const pct = (bps: number) => String(Math.round(bps) / 100);
 
-/** The staff action a flag's rule calls for (design 03 flags: Warn, Start coaching, Confirm, Suspend listing rights, Escalate to ops). */
+/** The staff action a flag's rule calls for (design 03 flags: Warn, Start coaching, Confirm, Suspend listing rights, Escalate to ops; Hide review). */
 export function actionFor(f: Flag): string {
   if (f.targetType === 'listing') return 'actioned';
+  // mobile gaps part 2: a reported or screened review is hidden from the public page and the rating
+  if (f.targetType === 'review') return 'hide_review';
   if (f.rule === 'off_platform_payment') return 'warn';
   if (f.rule === 'floor_breach') return 'coach';
   if (f.rule === 'no_show' && f.targetType === 'customer') return 'confirm';

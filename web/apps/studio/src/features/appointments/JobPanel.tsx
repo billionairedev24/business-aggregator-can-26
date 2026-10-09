@@ -10,6 +10,7 @@ import { useSession } from '../../lib/session';
 import { clock } from '../../lib/time';
 import { jobQuery, useAdvanceJob, useRequestApproval, useUploadMedia, type JobDetail, type Media, type Step } from './api';
 import { useAppointmentsT } from './messages';
+import { LiveShare } from './LiveShare';
 import { APPROVAL_MESSAGES, QUOTE_MESSAGES_FR } from './quote';
 import { useLocalizeMessage } from '../../lib/validation';
 
@@ -98,6 +99,7 @@ function JobCard({ job: j }: { job: JobDetail }) {
         </div>
       ) : null}
       <div className="nl-appt-hint" aria-live="polite">{st.hint}</div>
+      {canOperate && j.state === 'en_route' && (j.memberUserId === me || (!j.memberUserId && role === 'owner')) ? <LiveShare merchantId={merchantId} jobId={j.id} /> : null}
       {advance.isError ? <Alert tone="error">{t('advanceError')}</Alert> : null}
       <CompleteDialog open={completing} onClose={() => setCompleting(false)} job={j} />
       <ApprovalDialog open={approving} onClose={() => setApproving(false)} jobId={j.id} />

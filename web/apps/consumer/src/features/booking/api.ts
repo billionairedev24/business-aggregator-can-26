@@ -23,6 +23,8 @@ export const Confirmation = z.object({
   bookingId: z.string(), ref: z.string(), providerName: z.string(), providerSlug: z.string(), memberFirstName: z.string().nullish(),
   title: z.string(), type: z.string(), startsAt: z.string(), endsAt: z.string(), addressLine: z.string().nullish(),
   priceCents: z.number(), taxCents: z.number(), heldCents: z.number(), freeCancelUntil: z.string().nullish(),
+  // S-100: how the job went so far (the booking page, mobile gaps part 2)
+  state: z.string().optional(), timeZone: z.string().optional(),
 });
 export type Confirmation = z.infer<typeof Confirmation>;
 
@@ -30,6 +32,7 @@ export const Checkout = z.object({
   holdId: z.string(), bookingId: z.string(), priceCents: z.number(), taxCents: z.number(), totalCents: z.number(),
   status: z.string(), paymentIntent: z.string().nullish(), clientSecret: z.string().nullish(),
   provider: z.enum(['stripe', 'fake']).catch('fake'), publishableKey: z.string().nullish(), booking: Confirmation.nullish(),
+  discountCents: z.number().int().optional(), pointsCents: z.number().int().optional(), promoCode: z.string().nullish(),
 });
 export type Checkout = z.infer<typeof Checkout>;
 
@@ -51,6 +54,19 @@ export const releaseHold = (holdId: string) => http(`/api/v1/me/bookings/holds/$
 
 export const startCheckout = (body: unknown, idempotencyKey: string, stepUp?: string) =>
   http('/api/v1/me/bookings/checkout', { method: 'POST', body, idempotencyKey, headers: stepUp ? { 'x-step-up': stepUp } : undefined }, Checkout);
+
+/** Mobile gaps part 2: the price with a promo code and points (`POST /api/v1/me/bookings/price`; 422 on promoCode). */
+export const BookingPrice = z.object({
+  priceCents: z.number().int(), discountCents: z.number().int(), taxCents: z.number().int(), points: z.number().int(),
+  pointsCents: z.number().int(), pointsAvailable: z.number().int(), totalCents: z.number().int(), promoCode: z.string().nullish(),
+});
+export type BookingPrice = z.infer<typeof BookingPrice>;
+export const priceQuery = (body: { holdId: string; serviceId: string; hours?: number; promoCode?: string; usePoints: boolean }) => queryOptions({
+  queryKey: ['booking', 'price', body],
+  queryFn: () => http('/api/v1/me/bookings/price', { method: 'POST', body }, BookingPrice),
+  retry: false,
+  staleTime: 30_000,
+});
 
 export const confirmBooking = (holdId: string, idempotencyKey: string) =>
   http(`/api/v1/me/bookings/holds/${encodeURIComponent(holdId)}/confirm`, { method: 'POST', idempotencyKey }, Confirmation);

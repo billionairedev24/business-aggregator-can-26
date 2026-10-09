@@ -40,13 +40,17 @@ class TrustReviewService implements BrowseReviews, RespondToReview, PublicReview
 
     @Override
     public Page reviews(String merchantId, int limit, int offset) {
-        var rows = reviews.page(merchantId, limit + 1, offset);
+        return page(merchantId, limit, offset, true);
+    }
+
+    private Page page(String merchantId, int limit, int offset, boolean withHidden) {
+        var rows = reviews.page(merchantId, limit + 1, offset, withHidden);
         return rows.size() > limit ? new Page(rows.subList(0, limit), offset + limit) : new Page(rows, null);
     }
 
     @Override
     public ReviewPage newest(String merchantId, int limit, int offset) {
-        var page = reviews(merchantId, limit, offset);
+        var page = page(merchantId, limit, offset, false);
         return new ReviewPage(
                 page.items().stream()
                         .map(r -> new PublicReview(

@@ -6,6 +6,7 @@ import { useGrant } from '../shell/grant';
 import { dayQuery, daysQuery, exportUrl, financeQuery, ledgerExportUrl, useReconcileTax, useResolveDay, useRunDay, type Day, type Finance, type Item } from './api';
 import { useFinanceT, type FinanceKey } from './messages';
 import { RefundRequests } from './RefundRequests';
+import { PromoCodes } from './PromoCodes';
 import './finance.css';
 
 const STATUS_TONE: Record<Day['status'], DataTableTone> = { matched: 'tag-accent', mismatch: 'tag-accent-2', resolved: 'tag-neutral' };
@@ -77,6 +78,7 @@ function FinanceView({ data, days }: { data: Finance; days: Day[] }) {
       <h2 className="nl-fi-h2 nl-fi-gap">{t('refundsTitle')}</h2>
       <p className="nl-fi-sub">{t('refundsSub')}</p>
       <RefundRequests />
+      <PromoCodes />
     </div>
   );
 }

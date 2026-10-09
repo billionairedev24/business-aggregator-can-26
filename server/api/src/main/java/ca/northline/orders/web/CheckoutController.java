@@ -8,6 +8,7 @@ import ca.northline.orders.application.CheckoutUseCases.QuoteCheckout;
 import ca.northline.orders.application.CheckoutUseCases.SetUpCheckout;
 import ca.northline.orders.application.CheckoutUseCases.Setup;
 import ca.northline.orders.application.CheckoutUseCases.StartCheckout;
+import ca.northline.orders.application.FoodCheckout;
 import ca.northline.payments.api.IdempotentRequests;
 import ca.northline.region.api.FallbackMarket;
 import ca.northline.shared.security.CurrentUser;
@@ -33,7 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <pre>
  * GET  /api/v1/me/checkout?market=           cart, saved addresses, delivery options, payment provider, step-up need
- * POST /api/v1/me/checkout/quote             { kind, windowId?, address, substitution } → subtotal, delivery, tax, total
+ * POST /api/v1/me/checkout/quote             { kind, windowId?, address, substitution, promoCode?, usePoints?, tip? }
+ *                                            → subtotal, discount, points, delivery, tax, tip, total
  * POST /api/v1/me/checkouts                  same body; Idempotency-Key, X-Step-Up → 201 { checkoutId, orderId, intents }
  * POST /api/v1/me/checkouts/{id}/place       Idempotency-Key → 201 { orderId, ref } (every payment authorized)
  * </pre>
@@ -53,12 +55,18 @@ class CheckoutController {
     private final IdempotentRequests idempotent;
     private final FallbackMarket fallback;
 
-    /** The checkout form: {@code kind} pooled | direct, the address saved or new, the substitution choice. */
+    /**
+     * The checkout form: {@code kind} pooled | direct, the address saved or new, the substitution choice; mobile gaps
+     * part 2: {@code promoCode}, {@code usePoints} and the courier's {@code tip} ({kind: none | amount | percent, value}).
+     */
     record CheckoutRequest(
             @Nullable String kind,
             @Nullable String windowId,
             @Nullable AddressInput address,
-            @Nullable String substitution) {
+            @Nullable String substitution,
+            @Nullable String promoCode,
+            @Nullable Boolean usePoints,
+            FoodCheckout.@Nullable Tip tip) {
 
         CheckoutUseCases.Request toCommand() {
             return new CheckoutUseCases.Request(
@@ -66,7 +74,10 @@ class CheckoutController {
                     windowId,
                     Objects.requireNonNullElseGet(
                             address, () -> new AddressInput(null, null, null, null, null, null, null)),
-                    Objects.requireNonNullElse(substitution, ""));
+                    Objects.requireNonNullElse(substitution, ""),
+                    promoCode,
+                    Boolean.TRUE.equals(usePoints),
+                    Objects.requireNonNullElse(tip, FoodCheckout.Tip.NONE));
         }
     }
 

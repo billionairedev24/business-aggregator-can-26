@@ -22,6 +22,7 @@ export const useReviewsT = defineMessages({
     reason_fake: 'Not a real customer or not about my business', reason_offensive: 'Offensive or abusive',
     reason_personal_info: 'Shares personal information', reason_wrong_business: 'Meant for another business', reason_other: 'Something else',
     reported: 'Reported · under review',
+    hidden: 'Hidden by Northline · not in your rating', edited: 'Edited by the customer',
     more: 'Show more reviews', loadingMore: 'Loading…',
     empty: 'No reviews yet — they appear after your first completed jobs and orders.',
     loadError: "We couldn't load your reviews.",
@@ -30,7 +31,7 @@ export const useReviewsT = defineMessages({
     anonymous: 'A customer',
     attention: '{count, plural, one {# thing needs attention.} other {# things need attention.}}',
     tag_on_time: 'On time', tag_clear_explanation: 'Clear explanation', tag_fair_price: 'Fair price', tag_well_packed: 'Well packed',
-    tag_hot_on_arrival: 'Hot on arrival', tag_tasty: 'Tasty', tag_generous_portions: 'Generous portions', tag_friendly: 'Friendly',
+    tag_hot_on_arrival: 'Hot on arrival', tag_tasty: 'Tasty', tag_generous_portions: 'Generous portions', tag_friendly: 'Friendly', tag_clean_work: 'Clean work', tag_extra_mile: 'Went the extra mile', tag_as_described: 'As described',
   },
   fr: {
     kicker: 'Avis',
@@ -52,6 +53,7 @@ export const useReviewsT = defineMessages({
     reason_fake: 'Pas un vrai client ou pas à propos de mon entreprise', reason_offensive: 'Offensant ou abusif',
     reason_personal_info: 'Divulgue des renseignements personnels', reason_wrong_business: 'Destiné à une autre entreprise', reason_other: 'Autre chose',
     reported: 'Signalé · en examen',
+    hidden: 'Masqué par Northline · hors de votre note', edited: 'Modifié par le client',
     more: "Voir plus d'avis", loadingMore: 'Chargement…',
     empty: 'Aucun avis pour le moment — ils apparaissent après vos premiers travaux et commandes terminés.',
     loadError: 'Impossible de charger vos avis.',
@@ -60,6 +62,6 @@ export const useReviewsT = defineMessages({
     anonymous: 'Un client',
     attention: '{count, plural, one {# élément à corriger.} other {# éléments à corriger.}}',
     tag_on_time: "À l'heure", tag_clear_explanation: 'Explications claires', tag_fair_price: 'Prix juste', tag_well_packed: 'Bien emballé',
-    tag_hot_on_arrival: 'Chaud à la livraison', tag_tasty: 'Savoureux', tag_generous_portions: 'Portions généreuses', tag_friendly: 'Sympathique',
+    tag_hot_on_arrival: 'Chaud à la livraison', tag_tasty: 'Savoureux', tag_generous_portions: 'Portions généreuses', tag_friendly: 'Sympathique', tag_clean_work: 'Travail propre', tag_extra_mile: 'A fait plus que demandé', tag_as_described: 'Conforme à la description',
   },
 });

@@ -464,6 +464,16 @@ northline:
       initial-lookback: P1D
       anomaly-scan: ${TRUST_AI_ANOMALY_SCAN_ENABLED:true}
       anomaly-cron: ${TRUST_AI_ANOMALY_CRON:0 10 12 * * MON}        # UTC; scans the week that ended
+  # Mobile gaps part 2: points at checkout (trust.application.PointsProperties) and the service visit's live ETA
+  # (booking.application.VisitEtaProperties; positions follow LIVE_BUS like couriers', S-88).
+  points:
+    points-per-dollar: ${NORTHLINE_POINTS_PER_DOLLAR:100}           # 100 = 1 point is 1 cent
+    max-order-percent: ${NORTHLINE_POINTS_MAX_ORDER_PERCENT:50}     # at most this share of an order paid with points
+    min-redeem: ${NORTHLINE_POINTS_MIN_REDEEM:100}
+  booking.eta:
+    minutes-per-km: ${BOOKING_ETA_MINUTES_PER_KM:2.0}              # straight-line estimate (≈ 30 km/h)
+    share-interval: PT5S
+    ttl: PT5M
   # S-91 console overview, "System health": PromQL over the S-111 metrics (docs/runbooks/observability.md § Console
   # health). `none` = every signal unknown (local, test, or no metrics store yet).
   # S-81 delivery ops map: an XYZ raster basemap under the zones and couriers (docs/runbooks/README.md § Console map).

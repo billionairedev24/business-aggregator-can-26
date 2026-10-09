@@ -19,6 +19,7 @@ import { Route as SellRouteImport } from './routes/sell'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AccountIndexRouteImport } from './routes/account/index'
 import { Route as AccountOrdersRouteImport } from './routes/account/orders'
+import { Route as BookingsBookingIdRouteImport } from './routes/bookings/$bookingId'
 import { Route as FoodIndexRouteImport } from './routes/food/index'
 import { Route as FoodKitchenRouteImport } from './routes/food/$kitchen'
 import { Route as FoodCheckoutRouteImport } from './routes/food/checkout'
@@ -85,6 +86,11 @@ const AccountIndexRoute = AccountIndexRouteImport.update({
 const AccountOrdersRoute = AccountOrdersRouteImport.update({
   id: '/account/orders',
   path: '/account/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookingsBookingIdRoute = BookingsBookingIdRouteImport.update({
+  id: '/bookings/$bookingId',
+  path: '/bookings/$bookingId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FoodIndexRoute = FoodIndexRouteImport.update({
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/sell': typeof SellRoute
   '/sign-in': typeof SignInRoute
   '/account/orders': typeof AccountOrdersRoute
+  '/bookings/$bookingId': typeof BookingsBookingIdRoute
   '/food/$kitchen': typeof FoodKitchenRoute
   '/food/checkout': typeof FoodCheckoutRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/sell': typeof SellRoute
   '/sign-in': typeof SignInRoute
   '/account/orders': typeof AccountOrdersRoute
+  '/bookings/$bookingId': typeof BookingsBookingIdRoute
   '/food/$kitchen': typeof FoodKitchenRoute
   '/food/checkout': typeof FoodCheckoutRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
@@ -243,6 +251,7 @@ export interface FileRoutesById {
   '/sell': typeof SellRoute
   '/sign-in': typeof SignInRoute
   '/account/orders': typeof AccountOrdersRoute
+  '/bookings/$bookingId': typeof BookingsBookingIdRoute
   '/food/$kitchen': typeof FoodKitchenRoute
   '/food/checkout': typeof FoodCheckoutRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/sell'
     | '/sign-in'
     | '/account/orders'
+    | '/bookings/$bookingId'
     | '/food/$kitchen'
     | '/food/checkout'
     | '/orders/$orderId'
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/sell'
     | '/sign-in'
     | '/account/orders'
+    | '/bookings/$bookingId'
     | '/food/$kitchen'
     | '/food/checkout'
     | '/orders/$orderId'
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/sell'
     | '/sign-in'
     | '/account/orders'
+    | '/bookings/$bookingId'
     | '/food/$kitchen'
     | '/food/checkout'
     | '/orders/$orderId'
@@ -362,6 +374,7 @@ export interface RootRouteChildren {
   SellRoute: typeof SellRoute
   SignInRoute: typeof SignInRoute
   AccountOrdersRoute: typeof AccountOrdersRoute
+  BookingsBookingIdRoute: typeof BookingsBookingIdRoute
   FoodKitchenRoute: typeof FoodKitchenRoute
   FoodCheckoutRoute: typeof FoodCheckoutRoute
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
@@ -452,6 +465,13 @@ declare module '@tanstack/react-router' {
       path: '/account/orders'
       fullPath: '/account/orders'
       preLoaderRoute: typeof AccountOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bookings/$bookingId': {
+      id: '/bookings/$bookingId'
+      path: '/bookings/$bookingId'
+      fullPath: '/bookings/$bookingId'
+      preLoaderRoute: typeof BookingsBookingIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/food/': {
@@ -586,6 +606,7 @@ const rootRouteChildren: RootRouteChildren = {
   SellRoute: SellRoute,
   SignInRoute: SignInRoute,
   AccountOrdersRoute: AccountOrdersRoute,
+  BookingsBookingIdRoute: BookingsBookingIdRoute,
   FoodKitchenRoute: FoodKitchenRoute,
   FoodCheckoutRoute: FoodCheckoutRoute,
   OrdersOrderIdRoute: OrdersOrderIdRoute,

@@ -1,4 +1,5 @@
 import { accountFixtures, newAccountState } from './account';
+import { aftercareFixtures, newAftercareState } from './aftercare';
 import { FIXTURE_TOTP, authFixtures, newAuthState, type AuthFixtureState } from './auth';
 import { lower, type FixtureArea, type FixtureContext, type FixtureRequest } from './context';
 import { geoFixtures } from './geo';
@@ -28,9 +29,10 @@ export function createFixtureServer(options: FixtureOptions = {}) {
   };
   const auth: AuthFixtureState = newAuthState();
   const geo = { waitlist: [] as Array<{ regionId: string; email?: string }> };
-  const calls: Array<{ method: string; path: string; signed: boolean; guest?: string }> = [];
+  const calls: Array<{ method: string; path: string; signed: boolean; guest?: string; body?: Record<string, unknown> }> = [];
   const shop = newShopState();
   const servicesState = newServicesState(now);
+  const aftercare = newAftercareState();
   const account = newAccountState({
     shop,
     services: servicesState,
@@ -43,6 +45,8 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     accountFixtures(ctx, account),
     authFixtures(ctx, auth),
     geoFixtures(ctx, geo),
+    // before the shop's and services' own areas: reviews, tips (shop's /me/orders/…) are this one's
+    aftercareFixtures(ctx, aftercare, shop, servicesState),
     shopFixtures(ctx, shop),
     servicesFixtures(ctx, servicesState),
   ];
@@ -58,7 +62,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
         : (JSON.parse(init.body) as Record<string, unknown>);
     }
     const path = url.pathname.includes('/api/v1') ? url.pathname.replace(/^.*\/api\/v1/, '') : url.pathname;
-    calls.push({ method, path, signed: (headers.authorization ?? '').startsWith('DPoP '), guest: headers['x-northline-guest'] });
+    calls.push({ method, path, signed: (headers.authorization ?? '').startsWith('DPoP '), guest: headers['x-northline-guest'], ...(method === 'GET' ? {} : { body }) });
     const req: FixtureRequest = { method, url, path, headers, body };
     for (const area of areas) {
       const out = await area(req);
@@ -74,6 +78,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     shop,
     account,
     services: servicesState,
+    aftercare,
     calls,
   };
 }

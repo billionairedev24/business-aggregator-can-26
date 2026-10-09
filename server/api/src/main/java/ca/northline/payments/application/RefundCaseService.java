@@ -3,6 +3,7 @@ package ca.northline.payments.application;
 import ca.northline.payments.api.CustomerCases;
 import ca.northline.payments.api.DisputeDecided;
 import ca.northline.payments.api.DisputeDecisions;
+import ca.northline.payments.api.PointsReturned;
 import ca.northline.payments.application.PaymentGateway.IntentStatus;
 import ca.northline.payments.domain.CaseMessages;
 import ca.northline.payments.domain.ChargedTo;
@@ -303,6 +304,17 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
                 }
             }
             events.publishEvent(issued);
+            var customer = escrow == null ? null : escrow.getCustomerId();
+            if (escrow != null && customer != null && refund.getPointsCents() > 0) {
+                events.publishEvent(new PointsReturned(
+                        Ids.next(),
+                        now,
+                        refund.getId(),
+                        customer,
+                        escrow.getRefType(),
+                        escrow.getRefId(),
+                        refund.getPointsCents()));
+            }
         }
         return queue.size();
     }
@@ -341,8 +353,8 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
         if (transfer == null) {
             return new StripeRefund(stripeRefund, null, 0, false);
         }
-        var reverse =
-                Fees.transferReversalCents(refund.getAmountCents(), transfer.netCents(), transfer.reversedCents());
+        var reverse = Fees.transferReversalCents(
+                refund.getAmountCents() + refund.getPromoReturnCents(), transfer.netCents(), transfer.reversedCents());
         if (reverse == 0) {
             return new StripeRefund(stripeRefund, null, 0, false);
         }

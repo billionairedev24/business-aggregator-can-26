@@ -42,6 +42,7 @@ class BookingRetention implements RetentionContributor {
             from booking.bookings b
              where coalesce(b.ends_at, b.starts_at, b.created_at) < :cutoff and b.state not in %s
                and (b.customer_id is not null or b.address_id is not null or b.address_line is not null
+                    or b.site_lat is not null
                     or b.area is not null or coalesce(b.details, '{}'::jsonb) <> '{}'::jsonb
                     or exists (select 1 from booking.access_notes n where n.booking_id = b.id))
                and not ('booking:' || b.id = any(:held)) and not (coalesce(b.customer_id, '') = any(:subjects))
@@ -123,7 +124,8 @@ class BookingRetention implements RetentionContributor {
             done += jdbc.sql("""
                             update booking.bookings
                                set customer_id = null, address_id = null, address_line = null, area = null,
-                                   details = '{}'::jsonb, updated_at = now(), version = version + 1
+                                   site_lat = null, site_lng = null, details = '{}'::jsonb, updated_at = now(),
+                                   version = version + 1
                              where id = any(:ids)
                             """).param("ids", array).update();
         }

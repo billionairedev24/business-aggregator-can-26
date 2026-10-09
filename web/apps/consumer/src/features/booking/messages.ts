@@ -87,7 +87,7 @@ export const useBookingT = defineMessages({
     next_0: '{name} confirms receipt and may message with questions', next_1: "Reminder the evening before with the technician's photo and plate",
     next_2: 'Live ETA on the day; access code shared for 2 hours around the slot', next_3: 'Any extra parts need your tap to approve — never a surprise bill',
     next_4: 'Completion photos and report → you release payment → rate each other',
-    seeBookings: 'See bookings', bookElse: 'Book something else',
+    seeBookings: 'See bookings', followBooking: 'Follow this booking', bookElse: 'Book something else',
     // summary
     sumService: 'Service', sumProblem: 'Problem', sumWhere: 'Where', sumWhen: 'When',
     sum_visit: 'Vehicle', sum_home: 'Home', sum_event: 'Event', sum_appointment: 'Stylist', sum_consult: 'Looking to',
@@ -172,7 +172,7 @@ export const useBookingT = defineMessages({
     next_0: '{name} confirme la réception et pourrait vous écrire', next_1: 'Rappel la veille avec la photo et la plaque du technicien',
     next_2: 'Heure d’arrivée en direct le jour même; code d’accès transmis 2 heures autour de la plage', next_3: 'Toute pièce supplémentaire exige votre approbation — jamais de facture surprise',
     next_4: 'Photos et rapport de fin → vous libérez le paiement → évaluation mutuelle',
-    seeBookings: 'Voir les réservations', bookElse: 'Réserver autre chose',
+    seeBookings: 'Voir les réservations', followBooking: 'Suivre cette réservation', bookElse: 'Réserver autre chose',
     sumService: 'Service', sumProblem: 'Problème', sumWhere: 'Où', sumWhen: 'Quand',
     sum_visit: 'Véhicule', sum_home: 'Logement', sum_event: 'Événement', sum_appointment: 'Coiffeur', sum_consult: 'Je souhaite',
     travel: 'Déplacement', included: 'Inclus', tax: 'Taxes {pct}', heldInEscrow: 'Retenu en fiducie', nothingToPay: 'Rien à payer',

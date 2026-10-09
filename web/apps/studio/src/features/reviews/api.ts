@@ -19,6 +19,8 @@ export const Review = z.object({
   id: z.string(), rating: z.number(), authorName: z.string().nullish(), jobLabel: z.string().nullish(), refType: z.string(),
   text: z.string().nullish(), tags: z.array(z.string()), createdAt: z.string(), reply: z.string().nullish(), replyAt: z.string().nullish(),
   reportedAt: z.string().nullish(), reportReason: ReportReason.nullish(),
+  // mobile gaps part 2: customers may change a review for 24 h; trust & safety may hide it from the public page
+  editedAt: z.string().nullish(), hiddenAt: z.string().nullish(),
 });
 export type Review = z.infer<typeof Review>;
 const Page = z.object({ items: z.array(Review), nextOffset: z.number().nullish() });

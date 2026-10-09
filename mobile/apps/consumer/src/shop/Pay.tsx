@@ -14,7 +14,7 @@ import { useDeliveryLocation } from '../location/DeliveryLocation';
 import { Body, Button, Field, Notice, Option, Title } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { EmptyState, LoadingList, SignInPrompt, errorMessage } from '../ui/states';
-import { SUBSTITUTIONS, Sums, chooseAddress, useQuote } from './Checkout';
+import { SUBSTITUTIONS, Sums, bodyOf, chooseAddress, extrasOf, useQuote } from './Checkout';
 import { CART_KEY, problemCode, shop, useMarket, useShopFormat } from './common';
 import { cardPaymentsFor, pendingIntents, type PayMethod } from './payments';
 import { Kicker, Panel } from './parts';
@@ -40,7 +40,7 @@ export function Pay() {
   const f = useShopFormat();
   const { t, locale } = f;
   const qc = useQueryClient();
-  const params = useLocalSearchParams<{ kind?: string; window?: string; sub?: string; address?: string }>();
+  const params = useLocalSearchParams<{ kind?: string; window?: string; sub?: string; address?: string; promo?: string; points?: string; tip?: string }>();
   const { location } = useDeliveryLocation();
   const market = useMarket();
   const signedIn = status === 'signedIn';
@@ -60,7 +60,7 @@ export function Pay() {
         : undefined;
   const kind = params.kind === 'pooled' || params.kind === 'direct' ? params.kind : undefined;
   const sub = SUBSTITUTIONS.includes(params.sub as Substitution) ? (params.sub as Substitution) : 'similar';
-  const body: CheckoutBody | null = kind && address ? { kind, windowId: params.window || null, address, substitution: sub } : null;
+  const body: CheckoutBody | null = kind && address ? bodyOf({ kind, windowId: params.window || null }, address, sub, extrasOf(params)) : null;
   const quote = useQuote(signedIn ? body : null);
 
   const [method, setMethod] = useState<string>();

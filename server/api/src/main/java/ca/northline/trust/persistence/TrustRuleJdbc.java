@@ -66,7 +66,7 @@ class TrustRuleJdbc implements TrustRuleStore {
         return jdbc.sql("""
                         select count(*) filter (where avg_rating < :rating) as affected, count(*) as total
                           from (select target_id, avg(rating) as avg_rating from trust.reviews
-                                 where target_type = 'merchant' and created_at >= :since
+                                 where target_type = 'merchant' and created_at >= :since and hidden_at is null
                                    and (:everyone or target_id = any(:merchants))
                                  group by target_id having count(*) >= :min) r
                         """)

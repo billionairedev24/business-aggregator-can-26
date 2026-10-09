@@ -106,7 +106,8 @@ public enum StaffRole implements CodedEnum {
                         ConsoleAction.VET,
                         ConsoleAction.SUPPORT);
             case DISPATCH -> Set.of(ConsoleAction.DISPATCH);
-            case FINANCE -> Set.of(ConsoleAction.REFUND, ConsoleAction.PAYOUTS, ConsoleAction.ATTEST);
+            case FINANCE ->
+                Set.of(ConsoleAction.REFUND, ConsoleAction.PAYOUTS, ConsoleAction.ATTEST, ConsoleAction.PROMOTIONS);
             // S-121: support triages the pilot group's feedback, as it does their cases
             case SUPPORT -> Set.of(ConsoleAction.SUPPORT, ConsoleAction.UAT);
             case SUPPORT_LEAD ->

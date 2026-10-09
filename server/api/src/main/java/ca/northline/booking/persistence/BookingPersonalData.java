@@ -36,7 +36,8 @@ class BookingPersonalData implements PersonalDataContributor {
         return List.of(
                 section(jdbc, "booking.bookings", "Bookings", "Réservations", """
                         select id, ref, merchant_id, service_id, title, type, state, starts_at, ends_at, address_line,
-                               area, details, price_cents, deposit_cents, tax_cents, created_at
+                               area, site_lat, site_lng, details, price_cents, deposit_cents, tax_cents, discount_cents,
+                               points_cents, created_at
                           from booking.bookings where customer_id = :u order by created_at
                         """, p),
                 section(jdbc, "booking.quoteRequests", "Quote requests", "Demandes de soumission", """
@@ -72,9 +73,10 @@ class BookingPersonalData implements PersonalDataContributor {
                         """ + UPCOMING).param("u", u).update();
         jdbc.sql("""
                         update booking.bookings
-                           set address_line = null, details = '{}'::jsonb, updated_at = now(), version = version + 1
+                           set address_line = null, site_lat = null, site_lng = null, details = '{}'::jsonb,
+                               updated_at = now(), version = version + 1
                          where customer_id = :u and state not in
-                        """ + UPCOMING + " and (address_line is not null or details <> '{}'::jsonb)")
+                        """ + UPCOMING + " and (address_line is not null or site_lat is not null or details <> '{}'::jsonb)")
                 .param("u", u)
                 .update();
         jdbc.sql("""

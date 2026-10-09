@@ -27,7 +27,7 @@ class OrderMonitorJdbc implements OrderMonitor {
                                w.ends_at as window_ends_at,
                                coalesce(o.subtotal_cents, 0) + coalesce(o.delivery_fee_cents, 0)
                                  + coalesce(o.service_fee_cents, 0) + coalesce(o.tax_cents, 0)
-                                 + coalesce(o.tip_cents, 0) as total_cents,
+                                 + coalesce(o.tip_cents, 0) - o.discount_cents - o.points_cents as total_cents,
                                (select array_agg(m.merchant_id order by m.first)
                                   from (select l.merchant_id, min(l.id) as first from orders.order_lines l
                                          where l.order_id = o.id group by l.merchant_id) m) as merchant_ids,

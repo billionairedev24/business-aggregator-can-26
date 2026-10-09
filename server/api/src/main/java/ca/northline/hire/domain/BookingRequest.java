@@ -38,7 +38,13 @@ public record BookingRequest(
         @Nullable String contactPreference,
         @Nullable String flexibility,
         boolean agreePolicies,
-        boolean agreeTerms) {
+        boolean agreeTerms,
+        @Nullable String promoCode,
+        @Nullable Boolean usePoints,
+        @Nullable Double siteLat,
+        @Nullable Double siteLng) {
+
+    public static final String SITE = "Pick the address on the map again.";
 
     public static final String DESCRIBE = "Describe the problem in at least 10 characters.";
     public static final String TOO_LONG_500 = "At most 500 characters.";
@@ -94,6 +100,11 @@ public record BookingRequest(
             @Nullable String preapproved,
             @Nullable String meeting) {}
 
+    /** Spend points (mobile gaps part 2). */
+    public boolean spendPoints() {
+        return Boolean.TRUE.equals(usePoints);
+    }
+
     /**
      * Every broken rule at once (422, one error per field).
      *
@@ -102,6 +113,11 @@ public record BookingRequest(
      */
     public BookingRequest validate(ServiceKind kind, boolean vehicleCategory, boolean free) {
         var errors = new ArrayList<Violation>();
+        if ((siteLat == null) != (siteLng == null)
+                || (siteLat != null && (siteLat < -90 || siteLat > 90))
+                || (siteLng != null && (siteLng < -180 || siteLng > 180))) {
+            errors.add(new Violation("siteLat", "range", SITE));
+        }
         var text = nz(description);
         if ((kind == ServiceKind.VISIT || kind == ServiceKind.EVENT) && text.length() < 10) {
             errors.add(new Violation("description", "length", DESCRIBE));

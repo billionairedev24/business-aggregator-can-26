@@ -7,6 +7,7 @@ import ca.northline.booking.application.AdvanceJob;
 import ca.northline.booking.application.AdvanceJob.Step;
 import ca.northline.booking.application.ListJobs;
 import ca.northline.booking.application.RequestApproval;
+import ca.northline.booking.application.ShareTravel;
 import ca.northline.booking.application.UploadMedia;
 import ca.northline.booking.application.ViewJob;
 import ca.northline.booking.domain.GeoPoint;
@@ -23,6 +24,9 @@ import ca.northline.shared.RuleViolation;
 import ca.northline.shared.security.CurrentMember;
 import ca.northline.shared.security.RequiresMerchant;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
@@ -32,6 +36,7 @@ import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -57,6 +62,41 @@ class JobController {
     private final RequestApproval requestApproval;
     private final UploadMedia uploadMedia;
     private final JobWebMapper mapper;
+    private final ShareTravel sharing;
+
+    /** A live position on the way (both required here; the en-route step's position stays optional). */
+    record SharedPosition(
+            @NotNull(message = "Location is not a valid position.")
+            @DecimalMin(value = "-90", message = "Location is not a valid position.")
+            @DecimalMax(value = "90", message = "Location is not a valid position.")
+            Double lat,
+
+            @NotNull(message = "Location is not a valid position.")
+            @DecimalMin(value = "-180", message = "Location is not a valid position.")
+            @DecimalMax(value = "180", message = "Location is not a valid position.")
+            Double lng) {}
+
+    /**
+     * Mobile gaps part 2: the member on the way shares their latest position (only while en route; kept 5 minutes in
+     * Valkey, never stored). A share sooner than the interval is answered {@code accepted: false}.
+     */
+    @PostMapping("/jobs/{jobId}/position")
+    @RequiresMerchant(OPERATE)
+    ShareTravel.Shared share(
+            @PathVariable String merchantId,
+            @PathVariable String jobId,
+            @Valid @RequestBody SharedPosition body,
+            CurrentMember member) {
+        return sharing.share(member, jobId, body.lat(), body.lng());
+    }
+
+    /** Stops sharing (the member switched it off). */
+    @DeleteMapping("/jobs/{jobId}/position")
+    @RequiresMerchant(OPERATE)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void stopSharing(@PathVariable String merchantId, @PathVariable String jobId, CurrentMember member) {
+        sharing.stop(member, jobId);
+    }
 
     /** Jobs starting in [from, to) — the week calendar, day and list views. */
     @GetMapping("/jobs")

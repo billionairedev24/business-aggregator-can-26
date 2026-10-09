@@ -185,3 +185,32 @@ fail loudly.
   refresh.
 - **Configuration:** `northline.fulfilment.ping-interval` (2s) and `position-ttl` (5m). The adapter follows `LIVE_BUS`
   (S-68), so there is no new variable.
+
+## Promo codes, points and tips (mobile gaps part 2)
+
+Money rules and the reasons are in [DECISIONS.md § Mobile gaps part 2](../DECISIONS.md); open legal and tax points are
+[counsel-questions.md § K](../compliance/legal/counsel-questions.md#k-promo-codes-points-courier-tips-and-reviews-mobile-gaps-part-2).
+
+- **Making a code:** console › Finance › Promo codes (`finance` or `admin`, second factor). Kind (percent with an
+  optional cap, or amount), minimum spend, window, per-customer and total limits, where it applies (shop, food,
+  services) and who funds it (Northline, or one merchant — then only that merchant's lines are discounted). "Switch
+  off" stops it at once; reservations already made are honoured. Every change is in the audit log
+  (`promotions.code_created`, `promotions.code_on` / `promotions.code_off`). Api: `GET|POST /api/v1/console/promotions/codes`,
+  `PATCH /api/v1/console/promotions/codes/{id}` `{active}`.
+- **What the ledger shows:** `promotions` (Northline's cost of its codes, debited at release), `points_redeemed`
+  (points spent as money), `courier_tips` (tips captured, waiting for the delivery) and `courier:<userId>` (a courier's
+  tips). Refunds give back the points share (the customer's wallet, `refund_return`) and take back the refunded share
+  of a Northline top-up from the merchant.
+- **Points settings:** `NORTHLINE_POINTS_PER_DOLLAR` (100), `NORTHLINE_POINTS_MAX_ORDER_PERCENT` (50),
+  `NORTHLINE_POINTS_MIN_REDEEM` (100). A change applies to the next quote; points already spent keep their value.
+- **Tips:** console order › Tips lists them (`GET /api/v1/console/orders/{orderId}/tips`); refund only when the order
+  wasn't delivered, a tip was charged twice or the amount was wrong (`POST /api/v1/console/tips/{id}/refund` with
+  `reason` `not_delivered` | `duplicate` | `amount_error`; FINANCE + refund). A refunded tip that was already allocated
+  is taken back from the courier's account. Couriers aren't paid out yet (S-89): tips accrue on their ledger account.
+- **Reviews:** a screened review (masked contact details or swearing) raises a `review_screened` flag in the trust
+  queue; "Hide review" there or `POST /api/v1/console/trust/reviews/{id}/hide|show` (TRUST, second factor). Hidden
+  reviews leave the business's rating at once and its search document on the worker's next sweep.
+- **Visit ETA:** `BOOKING_ETA_MINUTES_PER_KM` (2.0). Positions follow `LIVE_BUS` (Valkey keys `nl:visit-pos:*` and
+  `nl:visit-ping:*`, 5-minute TTL, no history). A customer seeing "isn't sharing" while the member says they are: the
+  member's Studio tab must stay open (the browser shares every 5 s) and the job must be en route; a booking without a
+  map point shows "sharing" without minutes.

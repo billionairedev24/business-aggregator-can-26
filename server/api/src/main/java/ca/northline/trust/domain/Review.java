@@ -15,8 +15,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * A verified review of a business, written by the customer of a completed booking or delivered order. Its rating and
- * text never change (DB trigger {@code trust.reviews_immutable}); the business may reply publicly once and report it
- * once.
+ * text never change once the author's 24-hour edit window has passed (DB trigger {@code trust.reviews_immutable}); the
+ * business may reply publicly once and report it once; trust &amp; safety may hide it ({@code hiddenAt}).
  */
 public record Review(
         String id,
@@ -31,7 +31,9 @@ public record Review(
         @Nullable String reply,
         @Nullable Instant replyAt,
         @Nullable Instant reportedAt,
-        @Nullable ReportReason reportReason) {
+        @Nullable ReportReason reportReason,
+        @Nullable Instant editedAt,
+        @Nullable Instant hiddenAt) {
 
     public Review {
         tags = List.copyOf(tags);
@@ -61,7 +63,9 @@ public record Review(
                 text,
                 now,
                 reportedAt,
-                reportReason);
+                reportReason,
+                editedAt,
+                hiddenAt);
     }
 
     /** @return the review as reported, with the trimmed note (null when none) */
@@ -89,7 +93,9 @@ public record Review(
                 reply,
                 replyAt,
                 now,
-                reason);
+                reason,
+                editedAt,
+                hiddenAt);
         return new Reported(review, note);
     }
 

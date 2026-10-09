@@ -32,4 +32,6 @@ record RefundRow(
         @Nullable String stripeRefund,
         @Nullable String stripeTransferReversal,
         long reversedCents,
+        long pointsCents,
+        long promoReturnCents,
         @Version @Nullable Integer version) {}

@@ -35,11 +35,16 @@ class CheckoutJdbc implements CheckoutStore {
         jdbc.sql("""
                         insert into orders.checkouts (id, customer_id, state, order_id, ref, market, delivery, window_id,
                                substitution, address_id, province, subtotal_cents, delivery_fee_cents, delivery_tax_cents,
-                               tax_cents, total_cents, delivery_payment_intent, lines, created_at, expires_at)
+                               tax_cents, total_cents, delivery_payment_intent, lines, created_at, expires_at,
+                               discount_cents, points_cents, tip_cents, promo_code)
                         values (:id, :customer, :state, :order, :ref, :market, :delivery, :window, :substitution,
                                 :address, :province, :subtotal, :fee, :feeTax, :tax, :total, :deliveryIntent,
-                                cast(:lines as jsonb), :created, :expires)
+                                cast(:lines as jsonb), :created, :expires, :discount, :points, :tip, :promoCode)
                         """)
+                .param("promoCode", c.promoCode())
+                .param("discount", c.discountCents())
+                .param("points", c.pointsCents())
+                .param("tip", c.tipCents())
                 .param("id", c.id())
                 .param("customer", c.customerId())
                 .param("state", c.state())
@@ -121,10 +126,15 @@ class CheckoutJdbc implements CheckoutStore {
                         insert into orders.orders (id, ref, customer_id, type, state, address_id, window_id, scheduled_for,
                                substitution_policy, subtotal_cents, delivery_fee_cents, service_fee_cents, tax_cents,
                                tip_cents, payment_intent_id, placed_at, delivery_area, fulfilment_mode, delivery_kind,
-                               checkout_id, id_check_age)
+                               checkout_id, id_check_age, discount_cents, points_cents, promo_code)
                         values (:id, :ref, :customer, 'goods', 'placed', :address, :window, :scheduled, :substitution,
-                                :subtotal, :fee, 0, :tax, 0, :intent, :at, :area, 'delivery', :kind, :checkout, :age)
+                                :subtotal, :fee, 0, :tax, :tip, :intent, :at, :area, 'delivery', :kind, :checkout, :age,
+                                :discount, :points, :promo)
                         """)
+                .param("tip", c.tipCents())
+                .param("discount", c.discountCents())
+                .param("points", c.pointsCents())
+                .param("promo", c.promoCode())
                 .param("age", idCheckAge)
                 .param("id", c.orderId())
                 .param("ref", c.ref())
@@ -184,6 +194,10 @@ class CheckoutJdbc implements CheckoutStore {
                 rs.getString("delivery_payment_intent"),
                 lines,
                 JdbcTimes.requiredInstant(rs, "created_at"),
-                JdbcTimes.requiredInstant(rs, "expires_at"));
+                JdbcTimes.requiredInstant(rs, "expires_at"),
+                rs.getLong("discount_cents"),
+                rs.getLong("points_cents"),
+                rs.getLong("tip_cents"),
+                rs.getString("promo_code"));
     }
 }

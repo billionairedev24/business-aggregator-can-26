@@ -8,7 +8,7 @@ export type ScreenKey =
   | 'home' | 'location' | 'search'
   | 'shop' | 'category' | 'product' | 'cart' | 'confirmed'
   | 'food' | 'restaurant' | 'foodCheckout' | 'foodTrack'
-  | 'services' | 'svcCategory' | 'providers' | 'provider' | 'book' | 'quote' | 'quoteRequest' | 'quoteCompare'
+  | 'services' | 'svcCategory' | 'providers' | 'provider' | 'book' | 'booking' | 'quote' | 'quoteRequest' | 'quoteCompare'
   | 'orders' | 'account' | 'problem' | 'signIn' | 'register' | 'sell' | 'help';
 
 export interface Screen {
@@ -42,6 +42,8 @@ export const SCREENS: Record<ScreenKey, Screen> = {
   providers: { path: '/services/$category/providers', story: 'S-53', section: 'services' },
   provider: { path: '/providers/$slug', story: 'S-54', section: 'services' },
   book: { path: '/providers/$slug/book', story: 'S-55', section: 'services', guestBanner: true },
+  /** Mobile gaps part 2: a booking after it's made — the provider's live ETA on the day, then the review. */
+  booking: { path: '/bookings/$bookingId', story: 'Mobile gaps 2', section: 'services' },
   quote: { path: '/quotes/$quoteId', story: 'S-56', section: 'services', guestBanner: true },
   /** design 06 `book` in quote mode started from a category ("Describe the job, get 3 quotes"), no provider yet. */
   quoteRequest: { path: '/services/$category/quote', story: 'S-56', section: 'services', guestBanner: true },

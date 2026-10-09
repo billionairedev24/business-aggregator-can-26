@@ -47,6 +47,15 @@ public final class ShopOrderFlow {
     /** @param postal the delivery address's postal code (drop-offs without coordinates are ordered by it) */
     public Placed place(String market, String kind, String customer, String postal, Listing... listings)
             throws Exception {
+        return place(market, kind, customer, postal, "", listings);
+    }
+
+    /**
+     * @param extra more checkout fields, as JSON members without braces (mobile gaps part 2:
+     *     {@code "promoCode":"…","usePoints":true,"tip":{"kind":"amount","value":300}}), empty for none
+     */
+    public Placed place(String market, String kind, String customer, String postal, String extra, Listing... listings)
+            throws Exception {
         var auth = TestJwt.customerWithMfa(customer);
         for (var l : listings) {
             mvc.perform(post("/api/v1/cart/items")
@@ -72,9 +81,10 @@ public final class ShopOrderFlow {
         }
         var address = """
                 {"street":"1204 17 Ave SW","unit":"Apt 804","city":"%s","province":"AB","postal":"%s","note":"Buzz 0804"}""".formatted(market, postal);
+        var more = extra.isBlank() ? "" : "," + extra;
         var body = kind.equals("pooled") ? """
-                        {"kind":"pooled","windowId":"%s","address":%s,"substitution":"similar"}""".formatted(windowId, address) : """
-                        {"kind":"direct","address":%s,"substitution":"similar"}""".formatted(address);
+                        {"kind":"pooled","windowId":"%s","address":%s,"substitution":"similar"%s}""".formatted(windowId, address, more) : """
+                        {"kind":"direct","address":%s,"substitution":"similar"%s}""".formatted(address, more);
         var started = json(mvc.perform(post("/api/v1/me/checkouts")
                         .with(auth)
                         .header("Idempotency-Key", Ids.next())

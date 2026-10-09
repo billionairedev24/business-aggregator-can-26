@@ -1,5 +1,6 @@
 import type { FixtureArea, FixtureContext, FixtureRequest } from './context';
 import { MARKETS, PROVINCES } from './geo';
+import { applyCode, pointsFor, promoError } from './promotions';
 
 /**
  * Journey B's api (S-99) on the fixture backend: the Shop's public pages, search, the cart (guest-keyed and merged at
@@ -83,6 +84,9 @@ export interface ShopFixtureState {
   age: { required: boolean; minimumAge: number; classes: string[]; state: 'verified' | 'none' | 'pending' | 'failed' | 'under_age' } | null;
   /** The customer's ID check; a started check verifies when the in-app browser comes back. */
   ageStarted: number;
+  /** Mobile gaps part 2: the customer's points (1 point = 1 ¢) and the courier tips by order. */
+  points: number;
+  tips: Map<string, Array<{ id: string; orderId: string; amountCents: number; source: 'checkout' | 'after_delivery'; state: string; courierUserId: string | null; createdAt: string; clientSecret: string | null }>>;
 }
 
 /** The door photo the fixture serves (a 1 × 1 PNG). */
@@ -108,6 +112,8 @@ export function newShopState(): ShopFixtureState {
     reports: [],
     age: null,
     ageStarted: 0,
+    points: 1200,
+    tips: new Map(),
   };
 }
 
@@ -206,8 +212,19 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
     const cart = cartView('user');
     const fee = option?.feeCents ?? 0;
     const bps = PROVINCES.find((p) => p.code === province)?.taxBps ?? 500;
-    const tax = Math.round(((cart.subtotalCents + fee) * bps) / 10_000);
-    return { errors, option, cart, fee, tax, type: bps === 500 ? 'gst' : 'hst', percent: bps / 100 };
+    // mobile gaps part 2: the code comes off the items before tax; points pay like money; the tip is never taxed
+    const promo = applyCode(body.promoCode, 'goods', cart.subtotalCents);
+    if ('error' in promo) errors.push(promoError(promo.error).errors[0]!);
+    const discount = 'error' in promo ? 0 : promo.discountCents;
+    const tax = Math.round(((cart.subtotalCents - discount + fee) * bps) / 10_000);
+    const t = (body.tip ?? {}) as { kind?: string; value?: number };
+    const tip = t.kind === 'amount' ? Number(t.value ?? 0) : t.kind === 'percent' ? Math.round((cart.subtotalCents * Number(t.value ?? 0)) / 100) : 0;
+    const points = pointsFor(state.points, cart.subtotalCents - discount + fee + tax, body.usePoints);
+    const total = cart.subtotalCents - discount + fee + tax + tip - points;
+    const extras = {
+      promoCode: 'error' in promo ? null : (promo.code ?? null), discountCents: discount, points, pointsCents: points, pointsAvailable: state.points, tipCents: tip,
+    };
+    return { errors, option, cart, fee, tax, type: bps === 500 ? 'gst' : 'hst', percent: bps / 100, total, extras, tip };
   }
 
   function tracking(o: Order) {
@@ -400,7 +417,7 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
       if (p.cart.itemCount === 0) return ctx.answer(409, { code: 'cart_empty', detail: 'Your cart is empty.' });
       return ctx.answer(200, {
         subtotalCents: p.cart.subtotalCents, deliveryFeeCents: p.fee, taxCents: p.tax, taxes: [{ type: p.type, percent: p.percent, cents: p.tax }],
-        totalCents: p.cart.subtotalCents + p.fee + p.tax, market: MARKETS[0].city, ...(state.age ? { age: state.age } : {}),
+        totalCents: p.total, market: MARKETS[0].city, ...(state.age ? { age: state.age } : {}), ...p.extras,
       });
     }
     if (method === 'POST' && path === '/me/checkouts') {
@@ -431,11 +448,14 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
         amountCents: amount,
       });
       const started = {
-        checkoutId, orderId: order.orderId, ref: order.ref, totalCents: p.cart.subtotalCents + p.fee + p.tax, expiresAt: new Date(ctx.now() + 15 * 60_000).toISOString(),
+        checkoutId, orderId: order.orderId, ref: order.ref, totalCents: p.total, expiresAt: new Date(ctx.now() + 15 * 60_000).toISOString(),
         payment: { provider: state.provider, publishableKey: stripe ? 'pk_test_fixture' : null },
         intents: [...items.map((i, n) => intent(n, i.lineCents)), ...(p.fee > 0 ? [intent(items.length, p.fee)] : [])],
       };
       if (key) state.idempotent.set(`start:${key}`, started);
+      if (p.tip > 0) {
+        state.tips.set(order.orderId, [{ id: `tip-${order.orderId}`, orderId: order.orderId, amountCents: p.tip, source: 'checkout', state: 'pending', courierUserId: null, createdAt: new Date(ctx.now()).toISOString(), clientSecret: null }]);
+      }
       return ctx.answer(201, started);
     }
     m = /^\/me\/checkouts\/([^/]+)\/place$/.exec(path);

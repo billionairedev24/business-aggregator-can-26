@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
-import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { parseDeepLink, routeOf } from '@northline/mobile-kit';
 
@@ -658,3 +658,92 @@ describe('links from the api', () => {
   });
 });
 
+
+describe('mobile gaps part 2: promo codes, points and the courier’s tip', () => {
+  it('checkout: the code’s rule in words, then the code, points and a tip in the sums, sent with the payment', async () => {
+    const { view, server } = await signedInWithCart({ url: '/checkout' });
+    expect(await screen.findByText('$23.35')).toBeTruthy();
+    // $19.25 of items: under the code's minimum spend — the api's words at the field, no error screen
+    fireEvent.changeText(screen.getByTestId('promo-code'), 'welcome5');
+    fireEvent.press(screen.getByTestId('promo-apply'));
+    expect(await screen.findByText('Spend at least $20.00 to use this code.')).toBeTruthy();
+    expect(screen.queryByText('Try again')).toBeNull();
+    fireEvent.changeText(screen.getByTestId('promo-code'), 'save10');
+    fireEvent.press(screen.getByTestId('promo-apply'));
+    expect(await screen.findByText('SAVE10 applied: $1.93 off')).toBeTruthy();
+    expect(screen.getByText('Promo code SAVE10')).toBeTruthy();
+    expect(screen.getByText('−$1.93')).toBeTruthy();
+    // tax on what's left after the code: 5 % of $17.32 + $2.99
+    expect(await screen.findByText('$1.02')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('use-points'));
+    expect(await screen.findByText('$10.66 paid with points')).toBeTruthy();
+    expect(screen.getByText('Use my points (1200 points available)')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('tip-amount-400'));
+    expect(await screen.findByText('Courier tip')).toBeTruthy();
+    expect(screen.getByText('100 % of the tip goes to your courier. Tips aren’t taxed.')).toBeTruthy();
+    expect(await screen.findByText('$14.67')).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId('checkout-continue').props.accessibilityState).toMatchObject({ disabled: false }));
+    fireEvent.press(screen.getByTestId('checkout-continue'));
+    await waitFor(() => expect(view.getPathname()).toBe('/pay'));
+    expect(view.getSearchParams()).toMatchObject({ promo: 'SAVE10', points: '1', tip: 'amount:400' });
+    fireEvent.press(await screen.findByRole('button', { name: 'Pay $14.67' }));
+    fireEvent.press(await screen.findByTestId('bank-approve'));
+    await waitFor(() => expect(view.getPathname()).toBe('/orders/ord-48213/confirmed'));
+    const started = server.calls.find((c) => c.method === 'POST' && c.path === '/me/checkouts');
+    expect(started?.body).toMatchObject({ promoCode: 'SAVE10', usePoints: true, tip: { kind: 'amount', value: 400 } });
+    expect(server.shop.tips.get('ord-48213')?.[0]).toMatchObject({ amountCents: 400, source: 'checkout' });
+  });
+
+  it('without a code, points or tip the checkout body is as before', async () => {
+    const { server } = await signedInWithCart({ url: '/checkout' });
+    expect(await screen.findByText('$23.35')).toBeTruthy();
+    const quote = server.calls.find((c) => c.path === '/me/checkout/quote');
+    expect(Object.keys(quote?.body ?? {}).sort()).toEqual(['address', 'kind', 'substitution', 'windowId']);
+  });
+
+  it('delivered: tips the courier afterwards and reviews each shop — stars first, contact details masked, changeable for a day', async () => {
+    const { server } = await withOrder('delivered', '/orders/ord-1001/delivered');
+    expect(await screen.findByText('Tip Robin')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('tip-percent-15'));
+    fireEvent.press(screen.getByTestId('tip-send'));
+    expect(await screen.findByText('Thanks — $2.89 goes to your courier.')).toBeTruthy();
+    expect(server.shop.tips.get('ord-1001')).toEqual([expect.objectContaining({ amountCents: 289, source: 'after_delivery', state: 'allocated' })]);
+    expect(server.calls.filter((c) => c.method === 'POST' && c.path === '/me/orders/ord-1001/tips/tip-ord-1001-1/confirm')).toHaveLength(1);
+
+    expect(await screen.findByText('How was Maple Lane Bakery?')).toBeTruthy();
+    expect(screen.getByText('How was Leafy Lane Greens?')).toBeTruthy();
+    const bakery = within(screen.getByTestId('review-form-m-bakery'));
+    fireEvent.press(bakery.getByTestId('submit-review'));
+    expect(await bakery.findByText('Choose from 1 to 5 stars.')).toBeTruthy();
+    fireEvent.press(bakery.getByTestId('star-4'));
+    fireEvent.press(bakery.getByRole('button', { name: 'Well packed' }));
+    fireEvent.changeText(bakery.getByTestId('field-review'), 'Great loaf, call me at 403 555 0199 anytime');
+    fireEvent.press(bakery.getByTestId('submit-review'));
+    expect(await screen.findByText('Your review of Maple Lane Bakery: ★★★★')).toBeTruthy();
+    expect(screen.getByText('Some words were hidden: reviews don’t show contact details or swearing.')).toBeTruthy();
+    expect(screen.getByText('Great loaf, call me at **** anytime')).toBeTruthy();
+    expect(server.calls.find((c) => c.method === 'POST' && c.path === '/me/reviews')?.body).toMatchObject({ kind: 'order', id: 'ord-1001', merchantId: 'm-bakery', rating: 4, tags: ['well_packed'] });
+    fireEvent.press(screen.getByTestId('review-edit'));
+    fireEvent.press(within(screen.getByTestId('review-form-m-bakery')).getByTestId('star-5'));
+    fireEvent.press(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByText('Your review of Maple Lane Bakery: ★★★★★')).toBeTruthy();
+    expect(server.calls.some((c) => c.method === 'PATCH' && c.path === '/me/reviews/rev-1')).toBe(true);
+  });
+
+  it('nothing to tip or review before the delivery', async () => {
+    const started = await withOrder('packing', '/orders/ord-1001/delivered');
+    expect(await screen.findByText('This order hasn’t been delivered yet.')).toBeTruthy();
+    expect(screen.queryByTestId('courier-tip')).toBeNull();
+    expect(screen.queryByTestId('review-panel')).toBeNull();
+    expect(started.server.calls.some((c) => c.path === '/me/reviews/order/ord-1001')).toBe(false);
+  });
+
+  it('is in French on a French phone', async () => {
+    const { getLocales } = jest.requireMock('expo-localization') as { getLocales: jest.Mock };
+    getLocales.mockReturnValueOnce([{ languageTag: 'fr-CA' }]);
+    await withOrder('delivered', '/orders/ord-1001/delivered');
+    expect(await screen.findByText('Laisser un pourboire à Robin')).toBeTruthy();
+    expect(await screen.findByText('Comment s’est passé Maple Lane Bakery?')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Publier l’avis' })).toHaveLength(2);
+  });
+});
