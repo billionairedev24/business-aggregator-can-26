@@ -276,6 +276,13 @@ Notes:
   (`PUT /api/v1/me/devices/{installationId}`) are stored all the same. Real pushes from your laptop need an Apple `.p8`
   key and a Firebase service account: `PUSH_PROVIDER=native` and the `PUSH_*` variables of `server/.env.example`
   (development builds: `PUSH_APNS_URL=https://api.sandbox.push.apple.com`). [push.md](push.md)
+- **Promo codes, points, tips, reviews, live visit ETA (mobile gaps part 2):** nothing to set. Make a code in the
+  console (Finance › Promo codes, a `finance` or `admin` staff role with a second factor) and type it at checkout;
+  points come from the S-59 points ledger (`NORTHLINE_POINTS_*` change the rate and caps); tips and their
+  PaymentIntents go through the payments stand-in like every other charge (no Stripe call). The visit ETA needs the
+  Studio member on the way to share their position (`POST /api/v1/merchants/{id}/jobs/{id}/position`) and a job site
+  picked on the map; positions sit in memory (`LIVE_BUS=memory`) or Valkey (`redis`), 5 minutes, never in Postgres.
+  [fulfilment.md](fulfilment.md#promo-codes-points-and-tips-mobile-gaps-part-2)
 - **Privacy requests (S-105):** Account › Profile › Your data (consumer site), You › Personal details › Your data
   (app) and Studio › Settings › Security ask for a copy, a correction or deletion. Without northline-auth the step-up
   proof is `dev` (`VITE_NL_DEV_STEP_UP=1`); with real auth the code to confirm is texted to the account's mobile and

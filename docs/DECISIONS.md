@@ -8120,3 +8120,85 @@ MOBILE_PLAN § API gaps rows for push, the proof photo, photos on a report and t
 - **Never run:** on a phone, simulator or emulator — no APNs key, no Firebase project, so no token has been registered or
   any push delivered; the permission prompts, the camera and the system photo picker; the presigned GET against a real
   bucket (only the S-10 adapters' own tests and the local link here).
+
+## 2026-10-09 — Mobile gaps part 2: reviews, live visit ETA, promo codes and points, courier tips
+
+Branch `mobile/gaps-part-2`. Migrations **V360–V364** (V365–V369 unused). New environment variables (all optional,
+defaults in code): `NORTHLINE_POINTS_PER_DOLLAR`, `NORTHLINE_POINTS_MAX_ORDER_PERCENT`, `NORTHLINE_POINTS_MIN_REDEEM`,
+`BOOKING_ETA_MINUTES_PER_KM` (runbooks README/dev/staging/prod, `server/.env.example`). No secret. Closes the MOBILE_PLAN
+§ API gaps rows for reviews, the visit's minutes away, promo / points codes and the courier tip; the consumer web and
+the consumer app use all of it; the Studio shares the member's position; the console makes codes, hides reviews and
+refunds tips.
+
+- **Reviews (trust).** `GET /me/reviews/{kind}/{id}` (kind `booking` | `order` | `food`) lists the businesses to review
+  for that job or delivery with each one's state; `POST /me/reviews` posts one, `PATCH /me/reviews/{id}` changes it.
+  Rules: **once per business and job** (unique `(ref_id, author_id, target_type, target_id)`), only once the job is
+  completed / the order delivered, **within 30 days** of that (`ReviewPosting.WINDOW`); 1–5 stars, up to 5 of the kind's
+  tags, an optional text of 10–1,000 characters. **Edit window 24 h** (`edit_until`), closed early by the business's
+  reply; the existing immutability trigger (V360) now allows rating/tags/text/lang changes only while `now() <
+  edit_until` and no reply, and `edit_until` itself never changes — after that a review is fixed. **Screening:** the text goes through the platform's `Redaction` (S-112's rules for personal data and secrets — emails, phone
+  numbers and the like) and a short whole-word swearing list (en/fr) → `****`; a masked review is `screened` and raises a `review_screened` trust flag (once) for the
+  console queue. **Moderation:** console `POST /console/trust/reviews/{id}/hide|show` (TRUST role + decide), and the
+  queue's "Hide review" action; hidden reviews leave the public page, the rating, the distribution and the worker's
+  search document; the author sees that it was hidden. Merchant replies stay the Studio's (S-63, once). **Erasure
+  (S-105):** unchanged — stars stay, words and name are blanked. Courier ratings (design B9) aren't built: a delivered
+  order's review is of each shop.
+- **Live ETA for services (booking).** The Studio member doing the job shares their position while **en route** only
+  (`POST /merchants/{id}/jobs/{jobId}/position`, OPERATE, second factor; `DELETE` stops it), at most every 5 s; the
+  latest position sits in Valkey (`nl:visit-pos:<booking>`, TTL 5 min, like S-88's couriers; `LIVE_BUS=memory` keeps it
+  in memory) and is cleared at check-in, completion or "stop". The job site is the point the customer picked
+  (`bookings.site_lat/site_lng`, V364, sent from the saved address's coordinates; pseudonymised with the booking).
+  The customer reads `GET /me/bookings/{id}/eta` → `{state, sharing, minutesAway, kmAway, updatedAt, method}`:
+  **straight-line (haversine) distance × `BOOKING_ETA_MINUTES_PER_KM` (2.0 ≈ 30 km/h), rounded up, at least 1**;
+  `method: straight_line` says so. **Never the position.** No coordinates are hard-coded; no road routing (no maps
+  provider call). Consent: sharing is the member's explicit switch in the Studio, per visit.
+- **Promo codes (new module `promotions`, V361).** Console (Finance › Promo codes; `finance` and `admin`, new
+  `ConsoleAction.PROMOTIONS`, second factor; audit-logged): percent (1–100, optional cap) or amount off, minimum spend,
+  start/end, per-customer and total limits, scope (any of shop, food, services), **funded by Northline or by one
+  merchant** (the code then applies only to that merchant's lines). Normalised upper-case, 3–20 letters/digits/dashes,
+  unique. At checkout (`promoCode` on the shop quote/checkout, the food order, `POST /me/bookings/price` and the booking
+  checkout) the discount is spread over eligible lines in proportion (largest remainder; every line keeps ≥ $1.00 for
+  the card); the reservation is made when the checkout starts (code row locked so the last use can't be spent twice),
+  redeemed when the order is placed / the booking confirmed, released on abandon or expiry. Refused codes are a 422 on
+  `promoCode` with the reason (en + fr-CA).
+- **Money: tax and the ledger.** The code comes **off the price before tax**: GST/HST/PST/QST are on the discounted
+  price (as a coupon), for either funder (counsel/accountant K1). The escrow amount is the discounted price;
+  `payments.escrows` records `discount_cents`, `discount_funded_by`, `points_cents` (V362). **Merchant-funded:** the
+  merchant's account shows the full price credit and the discount as its own debit (gross presentation); the take
+  rate applies to what was sold (the discounted price). **Northline-funded:** at release Northline tops the merchant up
+  from the new `promotions` account — the merchant receives the full price less the fee **on the full price** (the same
+  as without the code); the transfer is from Northline's balance for the part the card didn't pay. **Refunds** take
+  back the refunded share of the top-up (`refunds.promo_return_cents`, reversed in the transfer reversal). Every
+  posting balances (DiscountLedgerTest).
+- **Points (trust's S-59 ledger).** `usePoints` spends what the configured share allows: `NORTHLINE_POINTS_PER_DOLLAR`
+  (100 = 1 point is 1 ¢), at most `NORTHLINE_POINTS_MAX_ORDER_PERCENT` (50 %) of each line after the code, from
+  `NORTHLINE_POINTS_MIN_REDEEM` (100) points. Points **pay like money**: tax is on the price after the code (not
+  lowered by points); the card pays the rest; the ledger debits `points_redeemed` (Northline's cost). Reserved with
+  the checkout under a per-customer advisory lock, spent at place/confirm (`trust.points_ledger` `redemption`, unique
+  per ref — V360), given back on release (`redemption_return`) and **on refunds** in proportion
+  (`refunds.points_cents` → `PointsReturned` event → `refund_return`). Earning rules are still not built (S-58).
+- **Courier tips (payments, V362 `payments.courier_tips`).** At checkout (`tip: {kind: amount|percent, value}` on
+  the shop checkout and the food order; percent of the items) or **after delivery** (`/me/orders/{id}/tips`, up to 7
+  days, one per order, delivered by a courier). Its own manual-capture PaymentIntent (`ref_type courier_tip`, or on
+  the order's delivery PaymentIntent at checkout), $1–$100 or ≤ 30 %. **100 % to the courier**: captured into the
+  `courier_tips` pool, then allocated to `courier:<userId>` when the delivery is done; **no platform fee, never in the
+  merchant's sale, not a taxable supply** (a voluntary gratuity — accountant K5). Couriers' payouts still don't exist
+  (S-89), so tips accrue on their ledger account. **Refunds** only for `not_delivered`, `duplicate` or `amount_error`
+  (console `POST /console/tips/{id}/refund`, FINANCE + refund, audit-logged); otherwise final (counsel K6).
+- **Clients.** Consumer web: cart, food checkout and booking wizard (code, points, tip), the order/food tracking pages
+  (after-delivery tip, review), a new booking page `/bookings/{id}` (live ETA, review). Studio: "Share my location"
+  on the job panel while en route; reviews show "edited" and "hidden". Console: Finance › Promo codes, trust queue
+  "Hide review", tips on the order. Consumer app: Checkout/Payment, Delivered (tip, review per shop), the visit's
+  ETA, the review screen (posts now; the "not available yet" notice is gone), the booking review (code, points, job
+  site); fixtures and tests for each.
+- **Schema additions:** V360 `trust.reviews` (`edit_until`, `edited_at`, `screened`, `hidden_at/by/reason`,
+  `moderated_at`, uniqueness, trigger), unique redemption keys on `trust.points_ledger`; V361 schema `promotions`
+  (`codes`, `redemptions`, `redemption_lines`); V362 `payments.escrows`/`refunds` discount and points columns,
+  `payments.courier_tips`, `payment_intents.ref_type` `courier_tip`; V363 orders' and food checkouts' codes, points and
+  tips; V364 `booking.bookings` site point and discounts.
+- **Not done:** booking quotes (S-56 `QuoteFlowService`) take no code or points; codes can't be limited to new
+  customers or to categories; no earning of points; courier reviews; road-network ETAs; payouts of tips to couriers
+  (S-89); a merchant can't make its own codes in the Studio (console only).
+- **Never run against real services:** Stripe (tips' and discounted PaymentIntents ran on the `FakeStripeGateway` /
+  the api's stand-in only), Valkey (the integration tests run with `redis.enabled: false`, so the visit positions ran on the
+  in-memory adapter; `RedisProviderPositions` mirrors S-88's courier adapter but never ran), any tax filing. No phone, simulator or real Stripe sheet was used for the app's tip.

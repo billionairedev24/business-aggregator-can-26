@@ -174,9 +174,13 @@ port; `stepUp.ts`), `src/api/shop.ts`, `src/fixtures/shop.ts`, `__tests__/shop.t
   no second factor → the consumer site's Security.
 - **Tracking polls** `GET /me/orders/{id}` every 15 s instead of the SSE stream; the map is the design's schematic
   (no map SDK), where the courier is in words ("You're next", "2 stops before yours").
-- **Not on the phone** for lack of an api: promo / points codes and "Redeem points" (checkout has no points), the
-  delivery rating and the tip, "Because you booked …" (Home shows "Trusted near you"). (Mobile gaps part 1 added the
-  courier's door photo on Delivered and up to 3 photos on a report.) "Organic" isn't a search filter (no data, as
+- **Promo code, points, tip** (mobile gaps part 2): Checkout has a promo code field (the quote checks it; the api's
+  reason shows at the field), "Use my points" and the courier's tip (no tip · $2 · $4 · 15 % · $6); the sums show
+  the code's discount, tax on what's left, the tip and the points; Payment re-quotes from the route's `promo`,
+  `points`, `tip`. Delivered offers a tip afterwards (7 days, Stripe's sheet through the same port) and a review of
+  each shop (`GET|POST|PATCH /me/reviews…`).
+- **Not on the phone** for lack of an api: "Because you booked …" (Home shows "Trusted near you"). (Mobile gaps part 1
+  added the courier's door photo on Delivered and up to 3 photos on a report.) "Organic" isn't a search filter (no data, as
   on the web). Suggestions (`/search/suggest`) and AI search (`/search/interpret`) aren't used: results follow the
   typing.
 - Every amount, tax name and rate, time (the market's zone) and place comes from the api or the region model.
@@ -190,12 +194,12 @@ port; `stepUp.ts`), `src/api/shop.ts`, `src/fixtures/shop.ts`, `__tests__/shop.t
 | `provider` | `/providers/[slug]` | | `GET /public/providers/{slug}`, `/public/providers/{slug}/reviews`, `GET /me/favourites`, `PUT`/`DELETE /me/favourites/{businessId}` |
 | `book_service` | `/book/[slug]/service` | | `GET /public/providers/{slug}`, `POST /me/quote-requests` ("ask for a quote") |
 | `book_slot` | `/book/[slug]/time` | | `GET /public/providers/{slug}/slots`, `POST /me/bookings/holds` |
-| `book_review` | `/book/[slug]/review` | ✓ | `GET /me/payment-methods`, `POST /me/bookings/checkout` (Idempotency-Key, X-Step-Up), Stripe's PaymentSheet (port), `POST /me/bookings/holds/{id}/confirm` |
+| `book_review` | `/book/[slug]/review` | ✓ | `GET /me/payment-methods`, `POST /me/bookings/price` (promo code, points — mobile gaps part 2), `POST /me/bookings/checkout` (Idempotency-Key, X-Step-Up; `promoCode`, `usePoints`, `siteLat`/`siteLng` from the saved address), Stripe's PaymentSheet (port), `POST /me/bookings/holds/{id}/confirm` |
 | `booked` | `/bookings/[id]/booked` | ✓ | `GET /me/bookings/{id}` |
 | `notifications` | `/notifications` | ✓ | `GET /me/activity`, `GET`/`PUT /me/notifications` (quiet hours) |
-| `eta` | `/bookings/[id]/eta` | ✓ | `GET /me/bookings/{id}` (state, steps; every 30 s while en route / on site) |
+| `eta` | `/bookings/[id]/eta` | ✓ | `GET /me/bookings/{id}` (state, steps; every 30 s while en route / on site), `GET /me/bookings/{id}/eta` (minutes away while the member shares — mobile gaps part 2) |
 | `signoff` | `/bookings/[id]/sign-off` | ✓ | `GET /me/bookings/{id}`, `POST /me/bookings/{id}/sign-off` (S-100), "Raise an issue" → `/problem/booking/[id]` (Journey B's screen) |
-| `review` | `/bookings/[id]/review` | ✓ | `GET /me/bookings/{id}`, `PUT /me/favourites/{businessId}`; posting a review has no consumer endpoint yet (§ API gaps) |
+| `review` | `/bookings/[id]/review` | ✓ | `GET /me/bookings/{id}`, `GET /me/reviews/booking/{id}`, `POST /me/reviews`, `PATCH /me/reviews/{id}` (24 h, until a reply — mobile gaps part 2), `PUT /me/favourites/{businessId}` |
 
 `/bookings/[id]` (no screen of its own) is where S-102's booking deep link lands: it opens `sign-off` once the job is
 completed or signed off, `eta` before. How S-100 built it — the files, the wizard, payments, time zones, the server
@@ -334,19 +338,23 @@ Areas: `shop` (S-99), `services` (S-100), `account` (S-101). Don't edit another 
 
 ## API gaps (for the journeys to raise, not to work around)
 
-- **Reviews:** no consumer endpoint posts a two-way review (design C11) or a delivery rating (B9). S-100's review screen
-  says so on the screen and saves only the favourite.
-- **Day-of ETA (C9):** no live position or minutes away for a booking, no member photo, vehicle or plate, no in-app
-  call, no time-boxed sharing of the access code; completion photos can't be downloaded by the customer (the screen
-  shows how many there are). S-100 shows the job's state and steps instead (§ Journey C as built).
+- **Reviews:** closed in mobile gaps part 2 — `GET /me/reviews/{kind}/{id}`, `POST /me/reviews`, `PATCH
+  /me/reviews/{id}` for a booking, an order (each shop) or a food order: once per business and job, within 30 days of
+  completion or delivery, 24 h to change it until the business replies; contact details and swearing are masked
+  (`screened`); the console hides a reported one. The design's courier rating on B9 isn't built (no courier reviews
+  yet: the review is of the shop).
+- **Day-of ETA (C9):** closed in part in mobile gaps part 2 — minutes away (`GET /me/bookings/{id}/eta`, a
+  straight-line estimate while the Studio member shares their position on the way; never the position). Still no
+  map, member photo, vehicle or plate, in-app call, or time-boxed access-code sharing; completion photos can't be
+  downloaded by the customer.
 - **Messages (C3 "Message"):** no consumer messaging endpoint; the provider page offers favourites instead.
 - **SSE on React Native:** `GET /me/orders/{id}/events` needs an EventSource; React Native has none built in (S-99
   polls every 15 s).
 - **Payments:** S-99 added Stripe's React Native SDK (no config plugin needed for cards; the publishable key comes
   from the api); S-100 uses it for bookings. Apple Pay / Google Pay need an Apple merchant id, the config plugin and
   Google Pay on the account.
-- **Shop (S-99):** no consumer api for a promo / points code or redeeming points at checkout, the delivery rating
-  (B9) and the courier tip. (Closed in mobile gaps part 1: the proof-of-delivery photo — `GET /me/orders/{id}/proof-photo`,
+- **Shop (S-99):** closed in mobile gaps part 2 — promo codes and points at checkout (`promoCode`, `usePoints` on the
+  quote and checkout), the courier's tip at checkout (`tip`) or after delivery (`/me/orders/{id}/tips`). (Closed in mobile gaps part 1: the proof-of-delivery photo — `GET /me/orders/{id}/proof-photo`,
   a 5-minute signed URL, never after an ID check; photos on a report — `expo-image-picker`, up to 3, seen by support.)
 - **Account (S-101):** no consumer api for points activity (the ledger has no earning rules yet, DECISIONS S-58),
   provider-funded rewards near a person, referrals ("Invite a neighbour"), messages to a provider about a quote ("Ask a

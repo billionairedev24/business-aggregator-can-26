@@ -6,7 +6,7 @@ in [#147](https://github.com/billionairedev24/business-aggregator-can-26/pull/14
 against what the product does. Each item names its source and the decision needed. The texts themselves
 are listed in [review-packet.md](review-packet.md).
 
-**53 questions** in ten groups. "Product" means the answer may change code; "Text" means it changes a legal text (a
+**60 questions** in eleven groups. "Product" means the answer may change code; "Text" means it changes a legal text (a
 new registered version, [review-packet.md § Sign-off](review-packet.md#sign-off-mechanism)).
 
 ## A. Privacy requests (S-105)
@@ -111,3 +111,19 @@ new registered version, [review-packet.md § Sign-off](review-packet.md#sign-off
 | # | question | source | decision needed |
 |---|---|---|---|
 | J1 | Who is the **merchant executive officer** who signs the PCI DSS SAQ A attestation, and which Stripe entity contracts with Northline (Stripe Payments Canada, Ltd.)? | [saq-a.md](../pci/saq-a.md#who-signs-and-what-needs-a-real-stripe-account), [aoc.md](../pci/aoc.md) | names |
+
+## K. Promo codes, points, courier tips and reviews (mobile gaps part 2)
+
+For counsel and for the accountant (marked). Built as described in [DECISIONS.md § Mobile gaps part 2](../../DECISIONS.md);
+nothing has run against a real Stripe account or tax filing.
+
+| # | question | source | decision needed |
+|---|---|---|---|
+| K1 | **Accountant — tax on promo codes.** A code lowers the price before tax: GST/HST, PST and QST are charged on the price after the code, whoever funds it. A merchant-funded code is a plain price reduction. A **Northline-funded** code is reimbursed to the merchant by Northline at release (the merchant receives the full price less the fee on the full price). Is taxing the discounted price right for the Northline-funded case (ETA s. 181 coupon rules and the QST and PST equivalents), or must tax be on the full price, or does the merchant adjust its net tax? | DECISIONS § Mobile gaps part 2 "Money"; `LedgerEntry.released` (`promotions` account) | confirm the treatment per tax; who remits what (Product if it changes) |
+| K2 | **Accountant — points.** Points are treated as a means of payment funded by Northline (`points_redeemed` account): tax is on the full price, the card pays the rest, and a refund gives the points back. Is that the right reading for a marketplace operator's own loyalty points, and does redeeming them create a supply by Northline? | DECISIONS § Mobile gaps part 2 "Points" | confirm or change (Product) |
+| K3 | **Promo terms.** Codes have a window, a minimum spend, per-customer and total limits, a scope (shop, food, services) and a funder; they have no cash value and aren't transferable. No published terms exist yet. What must the Terms (and each code's description) say, and are there Competition Act ("ordinary price", conditions disclosed) or Québec Consumer Protection Act requirements on how a code is advertised? | DECISIONS § Mobile gaps part 2 "Promo codes" | Text; any Product rule |
+| K4 | **Points expiry and reversal.** Points don't expire in the product today; a refund takes the spent points' share back to the wallet. Some provinces restrict expiry of prepaid value (e.g. Ontario's gift-card rules) — do loyalty points fall under any of them if we add expiry later, and must the reversal on refunds be disclosed? | `PointsReturned`, `trust.points_ledger` | Text; whether expiry may be added |
+| K5 | **Accountant and counsel — tips.** A tip is 100 % the courier's (held in `courier_tips`, then the courier's account), never part of the merchant's sale, not a taxable supply, no platform fee. Is that right for GST/HST/QST, and does CRA's reportable-platform-operator reporting (and Québec's) have to include tips in what is reported for couriers? Any employment-standards tip rules that reach independent couriers? | DECISIONS § Mobile gaps part 2 "Tips" | confirm; reporting (Product) |
+| K6 | **Tip refunds** happen only when the order wasn't delivered, a tip was charged twice, or the amount was wrong (support decides, audit-logged); otherwise a tip is final. Acceptable under consumer protection law, and must the checkout say so? | `ConsoleTipController`, refund reasons | Text; reasons list |
+| K7 | **Review moderation.** Contact details and a short swearing list are masked automatically (the review is marked "screened"); staff hide a review after a report (audit-logged, the customer is told it was hidden); the rating no longer counts hidden reviews; a review can be changed for 24 h until the business replies, then is fixed; erasure keeps the stars and blanks the words and name. Anything the Competition Act (fake or suppressed reviews), Québec law or platform-liability rules require — e.g. publishing the moderation rules, telling the business, an appeal? | DECISIONS § Mobile gaps part 2 "Reviews" | Text (moderation policy); Product (appeal) |
+
