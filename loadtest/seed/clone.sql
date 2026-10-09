@@ -35,6 +35,9 @@ select c.oid::regclass
    and s.nspname not in ('pg_catalog', 'information_schema', 'public', 'topology', 'tiger', 'tiger_data',
                          'events', 'auth', 'loadtest', 'i18n', 'region')
    and c.relname not like '%archive%'
+   -- a background job's cursor (one row per source, after_id = the last row it screened), not a unit's data: cloning
+   -- it made "listing-lt1" sources its CHECK refuses (engineering follow-ups; the table came after S-119)
+   and (s.nspname, c.relname) not in (('trust', 'ai_screening_marks'))
 $$;
 
 -- The text (and text[]) columns of a table, and whether each is unique on its own (a one-column unique index; in a

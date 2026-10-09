@@ -107,7 +107,9 @@ public final class LocalFileSigningKeys implements SigningKeys {
 
     /**
      * Adds a key that signs from {@code now + publishAhead} (or at once when {@code immediately}); the keys that sign
-     * until then are retired {@code retireAfter} after the switch. Safe to run from several instances or the command.
+     * until then are retired {@code retireAfter} after the switch. An immediate rotation also removes keys still waiting
+     * to sign (NEXT): created before the emergency, they would otherwise take over later. Safe to run from several
+     * instances or the command.
      */
     public Rotation rotate(boolean immediately) {
         return locked(() -> rotateLocked(immediately));
@@ -118,15 +120,25 @@ public final class LocalFileSigningKeys implements SigningKeys {
         var activatesAt = immediately ? now : now.plus(publishAhead);
         var retiresAt = activatesAt.plus(retireAfter);
         var keys = new ArrayList<ECKey>();
+        var dropped = new ArrayList<String>();
         for (var key : read()) {
             if (expired(key, now)) {
                 continue; // clean-up: nobody can hold a valid token signed by it any more
+            }
+            if (immediately && notBefore(key).isAfter(now)) {
+                // a planned rotation still pending (NEXT) would take over from the emergency key at its time; it never
+                // signed anything, so it goes at once (engineering follow-ups, found in the S-115 drill)
+                dropped.add(key.getKeyID());
+                continue;
             }
             keys.add(key.getExpirationTime() == null ? withExpiry(key, retiresAt) : key);
         }
         var fresh = generate(now, activatesAt);
         keys.add(fresh);
         write(keys);
+        if (!dropped.isEmpty()) {
+            log.warn("Immediate rotation: pending key(s) {} removed before they could sign ({})", dropped, file);
+        }
         log.info(
                 "Signing key rotation: new key {} signs from {}; previous keys retire at {} ({})",
                 fresh.getKeyID(),

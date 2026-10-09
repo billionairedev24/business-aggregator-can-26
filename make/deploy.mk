@@ -13,6 +13,10 @@ image_props = $(if $(REGISTRY),-Pimage.registry=$(REGISTRY)) -Pimage.tag=$(IMAGE
 deploy-validate: helm-validate argocd-validate ## Every offline Helm and Argo CD check
 
 .PHONY: helm-validate
+.PHONY: helm-crd-schemas
+helm-crd-schemas: ## Regenerate deploy/helm/schemas (External Secrets CRD schemas) for the operator version Argo CD installs
+	python3 $(ROOT)/deploy/helm/crd-schemas.py
+
 helm-validate: ## helm lint --strict + helm template | kubeconform for every env × cloud, kind, Gateway API
 	cd $(ROOT) && bash deploy/helm/validate.sh
 

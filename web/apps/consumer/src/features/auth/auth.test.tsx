@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useSearch } from '@tanstack/react-router';
@@ -72,6 +72,10 @@ describe('sign in (design 06 auth)', () => {
   });
 
   it('signs in with a code to the phone, then hands off to the consumer-bff', async () => {
+    // the resend countdown reads the clock: on a loaded machine the axe run below took over a second and the text was
+    // "Resend in 0:44" (engineering follow-ups). The clock stands still here; timers stay real for Testing Library.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    onTestFinished(() => { vi.useRealTimers(); });
     const { calls } = open('/sign-in?next=%2Fcart');
     await userEvent.type(await screen.findByLabelText('Mobile number'), '403 555 0201');
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }));

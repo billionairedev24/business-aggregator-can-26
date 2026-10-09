@@ -35,7 +35,7 @@ describe('Dashboard', () => {
     expect(screen.getByText('Tuesday 8 September · Calgary')).toBeTruthy();
     expect(screen.getByText('jobs this month · 2 quotes open')).toBeTruthy();
     expect(screen.getByText('net this month · +18% vs Aug')).toBeTruthy();
-    expect(screen.getByText('A. Osei · Beltline · P2 stall 118 · $93.45 escrow')).toBeTruthy();
+    expect(screen.getByText('A. Osei · Beltline · P2 stall 118 · $93.45 held (incl. GST/HST)')).toBeTruthy();
     expect(screen.getByText('Jas')).toBeTruthy();
     expect(screen.getByRole('button', { name: /2 quote requests · respond within 1 h 1\d m to keep response score/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /1 dispute · A\. Osei, pre-purchase inspection/ })).toBeTruthy();

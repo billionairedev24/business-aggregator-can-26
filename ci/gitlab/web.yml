@@ -25,7 +25,8 @@ web:checks:
   image: node:22-bookworm
   timeout: 20m
   script:
-    # make web-check = web-lint (hex colours + typecheck) + web-test + web-build-studio + web-build-console (S-124, S-90)
+    # make web-check = web-lint (hex colours + typecheck) + web-test + i18n-check + web-build-studio + web-build-console
+    # (S-124, S-90; the French coverage gate since the engineering follow-ups)
     - make -C .. web-check
   artifacts:
     expire_in: 7 days

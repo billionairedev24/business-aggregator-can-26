@@ -67,7 +67,8 @@ export default defineConfig(({ mode }) => {
     // S-69: each route's loader travels with its component (one lazy chunk), so the features' api modules and their
     // zod schemas stay out of the initial bundle; the error/pending/not-found components get their own chunks.
     plugins: [tanstackRouter({
-      target: 'react', autoCodeSplitting: true,
+      // as the console's (engineering follow-ups): lazy route chunks were transformed inside the tests' waits
+      target: 'react', autoCodeSplitting: !process.env.VITEST,
       codeSplittingOptions: { defaultBehavior: [['loader', 'component'], ['pendingComponent'], ['errorComponent'], ['notFoundComponent']] },
     }), react(), devAuth(env), legalPages(), preloadLanding()],
     server: {

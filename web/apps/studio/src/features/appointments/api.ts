@@ -16,6 +16,8 @@ export type Approval = z.infer<typeof Approval>;
 export const JobDetail = Job.extend({
   customer: z.object({ name: z.string(), reliability: z.number().nullish(), pastJobs: z.number() }).nullish(),
   addressLine: z.string().nullish(), access: z.string().nullish(), vehicle: z.string().nullish(), customerNote: z.string().nullish(), escrow: z.string().nullish(),
+  /** The payments ledger's figures: what the customer paid and is held (incl. GST/HST), the tax, Northline's fee and the business's net. */
+  escrowMoney: z.object({ state: z.string(), heldCents: z.number(), taxCents: z.number(), feeCents: z.number(), netCents: z.number() }).nullish(),
   timeline: z.array(z.object({ type: z.string(), at: z.string(), actorName: z.string().nullish(), note: z.string().nullish(), mediaId: z.string().nullish() })),
   approvals: z.array(Approval),
 });

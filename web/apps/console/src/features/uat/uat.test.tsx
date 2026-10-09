@@ -61,10 +61,13 @@ const user = () => userEvent.setup({ delay: null });
 describe('pilot UAT (S-121)', () => {
   it('the dry run: triage a reported blocker from new to closed, with owner and tracker link', async () => {
     const calls = api(['support']);
-    renderConsole('/uat');
+    const list = renderConsole('/uat');
     expect(await screen.findByRole('heading', { level: 1, name: '2 items · 0 blocking' })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByRole('link', { name: 'Export CSV' }).getAttribute('href')).toBe('/api/v1/console/uat/feedback/export?state=open');
+    // one console at a time: the list's app stayed mounted beside the drawer's, so every query, axe run and
+    // re-render below worked on two whole consoles — 20 s on a loaded machine (engineering follow-ups)
+    list.unmount();
 
     renderConsole('/uat?item=F1');
     const drawer = await screen.findByRole('dialog', { name: 'UAT-1001 · Bug' });

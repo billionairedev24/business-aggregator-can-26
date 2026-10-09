@@ -85,7 +85,7 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
       orderBy: clock(run.orderBy, locale, zone), first: windowText(run), fee: run.feeCents === 0 ? t('free') : money(run.feeCents),
       second: second ? windowText(second) : 'none', eta, shop: offer.shopName, packBy: clock(run.packBy, locale, zone),
     });
-  }, [stock, run, offer, data.direct, locale]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stock, run, offer, data.direct, locale, zone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onAdd = () => add.mutate({ offerId: offer.offerId, variantId: variant?.variantId, qty }, { onSuccess: () => void navigate({ to: '/cart' }) });
   const others = data.offers.filter(o => o.offerId !== offer.offerId);

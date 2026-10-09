@@ -55,6 +55,8 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 | `ES_PASSWORD` | `es-password` | api, worker | with Elastic Cloud (`optionalKeys`) | generated (S-3) |
 | `TOTP_KEY` | `totp-key` | auth | yes | operator: `openssl rand -base64 32` |
 | `WEBHOOK_SECRET_KEY` | `webhook-secret-key` | api, worker (S-33) | yes | operator: `openssl rand -base64 32` |
+| `TOTP_PREVIOUS_KEYS` | `totp-previous-keys` | auth | no — only during a `TOTP_KEY` rotation (`externalSecrets.optionalKeys`) | operator: `v1=<old key>` ([key-rotation.md § 7](key-rotation.md#7-authenticator-secrets-key-totp_key)) |
+| `WEBHOOK_SECRET_PREVIOUS_KEYS` | `webhook-secret-previous-keys` | api, worker | no — only during a `WEBHOOK_SECRET_KEY` rotation (`externalSecrets.optionalKeys`) | operator: `v1=<old key>` ([key-rotation.md § 3](key-rotation.md#the-key-that-encrypts-the-stored-secrets-webhook_secret_key)) |
 | `STUDIO_BFF_SECRET` | `studio-bff-secret` | bff | yes | operator: `openssl rand -base64 32` |
 | `STUDIO_BFF_SECRET_HASH` | `studio-bff-secret-hash` | auth | yes | operator: `{bcrypt}` of `STUDIO_BFF_SECRET` ([dev.md](dev.md#environment-variables)) |
 | `CONSUMER_BFF_SECRET` | `consumer-bff-secret` | consumer-bff (S-45) | yes | operator: `openssl rand -base64 32` |
@@ -200,8 +202,8 @@ kubectl -n northline-<env> rollout restart deploy/northline-<app>
 | `STUDIO_BFF_SECRET` + `STUDIO_BFF_SECRET_HASH` | new secret and its bcrypt hash in the secrets manager, force-sync bff and auth, re-run the OAuth client sync (`helm upgrade` runs the Job again, or restart auth), restart the bff | sign-ins fail between the auth update and the bff restart (one secret per client, no overlap — [README § OAuth clients](README.md#oauth-clients-s-122)) |
 | `STRIPE_SECRET_KEY` | roll the key in the Stripe dashboard (Stripe keeps the old one valid for the period you choose), update, restart api | none within the overlap |
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | "Roll secret" on the endpoint (Stripe signs with both for up to 24 h), update, restart api | none within the overlap |
-| `TOTP_KEY` | **don't** without re-encrypting `auth.totp_secrets` — a new key breaks every authenticator enrolment | — |
-| `WEBHOOK_SECRET_KEY` | **don't** without re-encrypting the stored partner webhook signing secrets | — |
+| `TOTP_KEY` | new key with a new `TOTP_KEY_ID`, the old one in `TOTP_PREVIOUS_KEYS` until the job re-encrypted `auth.totp_secrets` ([key-rotation.md § 7](key-rotation.md#7-authenticator-secrets-key-totp_key)) | the old key decrypts meanwhile |
+| `WEBHOOK_SECRET_KEY` | new key with a new `WEBHOOK_SECRET_KEY_ID`, the old one in `WEBHOOK_SECRET_PREVIOUS_KEYS` (api and worker) until the api's job re-encrypted the stored secrets ([key-rotation.md § 3](key-rotation.md#the-key-that-encrypts-the-stored-secrets-webhook_secret_key)) | the old key decrypts meanwhile |
 | `EMAIL_UNSUBSCRIBE_KEY` | new value, restart api | links in emails already sent stop working (the page points to Settings) |
 | `EMAIL_API_KEY`, `SMTP_PASSWORD`, `SMS_AUTH_TOKEN` | create the new credential at the provider, update, restart, revoke the old | none |
 | `GOOGLE_CALENDAR_CLIENT_SECRET`, `MICROSOFT_CALENDAR_CLIENT_SECRET` | add a second client secret in the Google Cloud console / Entra app registration (both stay valid), update, restart api, delete the old one | none: stored refresh tokens belong to the client id, not the secret ([calendar-sync.md](calendar-sync.md#rotating)) |

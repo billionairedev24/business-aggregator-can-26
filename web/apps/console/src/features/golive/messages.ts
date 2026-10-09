@@ -60,7 +60,7 @@ export const useGoLiveT = defineMessages({
     gatesTitle: 'Liste de contrôle', colGate: 'Point', colOwner: 'Responsable', colStatus: 'État', colEvidence: 'Preuve', optional: 'facultatif',
     s_pass: 'Réussi', s_fail: 'Échoué', s_pending: 'En attente', s_not_applicable: 'Sans objet',
     k_auto: 'vérifié par la plateforme', k_manual: 'consigné par son responsable', k_auto_or_manual: 'vérifié si les métriques sont branchées, sinon consigné',
-    by: '{name}, {at}', byScript: '{name} (script), {at}', runbook: 'Procédure : {path}', record: 'Consigner', evidenceLink: 'Lien vers la preuve',
+    by: '{name}, {at}', byScript: '{name} (par script), {at}', runbook: 'Procédure : {path}', record: 'Consigner', evidenceLink: 'Lien vers la preuve',
     g_market_zones: 'Zones de livraison', g_province_live: 'Province en service', g_uat_go_no_go: 'Feu vert des essais d’acceptation', g_pilot_businesses: 'Entreprises pilotes prêtes',
     g_security_findings: 'Constats de sécurité', g_pentest: 'Test d’intrusion externe', g_backup_drill: 'Exercice de sauvegarde et de restauration',
     g_alert_rules: 'Règles d’alerte déployées', g_oncall_coverage: 'Garde, 14 prochains jours', g_slo_alerts: 'Aucune alerte d’appel en cours',

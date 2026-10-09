@@ -30,7 +30,8 @@ export type EarningsOverview = z.infer<typeof EarningsOverview>;
 
 export const LedgerLine = z.object({
   id: z.string(), kind: Kind, label: z.string(), orderNumber: z.string().nullish(), occurredAt: z.string(), customerName: z.string().nullish(),
-  grossCents: z.number(), feeCents: z.number(), netCents: z.number(), state: z.enum(['held', 'released', 'refunded', 'disputed']),
+  /** What the customer paid and is held (sale + GST/HST); `grossCents` is the sale before tax, `netCents` the business's share. */
+  heldCents: z.number(), grossCents: z.number(), taxCents: z.number(), feeCents: z.number(), netCents: z.number(), state: z.enum(['held', 'released', 'refunded', 'disputed']),
   releaseAt: z.string().nullish(), releasedAt: z.string().nullish(),
 });
 export type LedgerLine = z.infer<typeof LedgerLine>;

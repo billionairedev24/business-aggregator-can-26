@@ -1,5 +1,6 @@
 package ca.northline.booking.application;
 
+import ca.northline.booking.api.JobEscrows;
 import ca.northline.booking.application.JobQueries.JobRow;
 import ca.northline.booking.application.JobViews.Customer;
 import ca.northline.booking.application.JobViews.JobDetail;
@@ -38,6 +39,7 @@ class JobService implements ListJobs, ViewJob, AdvanceJob, RequestApproval {
     static final String PHOTO_NOT_FOUND = "This photo wasn't uploaded to this business.";
 
     private final JobQueries queries;
+    private final JobEscrows escrows;
     private final BookingRepository bookings;
     private final MediaCatalog media;
     private final PersonDirectory people;
@@ -72,6 +74,9 @@ class JobService implements ListJobs, ViewJob, AdvanceJob, RequestApproval {
         }
         log.forEach(l -> ids.add(l.actorId()));
         var names = people.people(ids);
+        var money = card.paid()
+                ? escrows.of(viewer.merchantId(), List.of(bookingId)).get(bookingId)
+                : null;
         var customerPerson = job.customerId() == null ? null : names.get(job.customerId());
         var customer = customerPerson == null
                 ? null
@@ -95,7 +100,8 @@ class JobService implements ListJobs, ViewJob, AdvanceJob, RequestApproval {
                 card.vehicle(),
                 card.customerNote(),
                 job.priceCents(),
-                escrow(card.paid(), job.state()),
+                money == null ? escrow(card.paid(), job.state()) : money.state(),
+                money,
                 log.stream()
                         .map(l -> new TimelineEntry(
                                 l.type(), l.at(), firstName(names, l.actorId()), l.note(), l.mediaId()))
@@ -193,7 +199,7 @@ class JobService implements ListJobs, ViewJob, AdvanceJob, RequestApproval {
         return person == null ? null : person.firstName();
     }
 
-    /** Escrow is "held" while the job runs and "released" after sign-off (no cross-module call into payments). */
+    /** Before payments has the escrow: "held" while the job runs and "released" after sign-off. */
     private static @Nullable String escrow(boolean paid, BookingState state) {
         if (!paid) {
             return null;

@@ -157,6 +157,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | ✓ | ✓ | | ✓ | yes |
 | `DB_POOL_SIZE` | ✓ | ✓ | | ✓ | no (10; worker 5) |
 | `DB_CONNECTION_TIMEOUT_MS` | ✓ | | | | no (`5000`: a request waits this long for a database connection, then gets 503 `overloaded` — S-119, [load-testing.md](load-testing.md)) |
+| `PUBLIC_PAGES_CACHE_TTL` | ✓ | | | | no (`30s`: the home page and kitchens list's city-level reads are kept this long per instance, dropped on visibility events; `0s` = off — engineering follow-ups, [load-testing.md](load-testing.md)) |
 | `REDIS_HOST` | ✓ | ✓ | ✓ | ✓ | yes |
 | `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`, `REDIS_SSL` | ✓ | ✓ | ✓ | ✓ | no (6379, none, none, false) |
 | `KAFKA_BOOTSTRAP` | ✓ | ✓ | | ✓ | yes (auth since S-28: user.registered) |
@@ -170,6 +171,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `CONSUMER_ORIGIN` | ✓ (S-76: the embed script's site; 2026-10-04: where the age check returns customers — required in staging and prod) | ✓ | | | yes |
 | `CONSOLE_ORIGIN`, `WEBAUTHN_RP_ID` | | ✓ | | | yes |
 | `TOTP_KEY` | | ✓ | | | yes |
+| `TOTP_KEY_ID`, `TOTP_PREVIOUS_KEYS`, `TOTP_REENCRYPT_EVERY` | | ✓ | | | no (`v1`, empty, `1h`: the key's id, older keys that only decrypt during a rotation — a secret —, the re-encryption job; [key-rotation.md § 7](key-rotation.md#7-authenticator-secrets-key-totp_key)) |
 | `STUDIO_BFF_SECRET` | | | ✓ | | yes |
 | `STUDIO_BFF_SECRET_HASH` | | ✓ | | | yes |
 | `CONSUMER_BFF_SECRET` | | | ✓ (`consumer` profile) | | yes, for the consumer-bff (S-45, [Consumer BFF](#consumer-bff-s-45)) |
@@ -188,6 +190,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | ✓ | | | | staging and prod (`fixtures` refused there — S-23, [registries.md](registries.md)) |
 | `REGISTRY_CORPORATIONS_CANADA_URL`/`_KEY`/`_KEY_HEADER`, `REGISTRY_ALBERTA_URL`/`_KEY`, `REGISTRY_CALGARY_URL`/`_DATASET`/`_APP_TOKEN`, `REGISTRY_RECHECK_AFTER`, `REGISTRY_RECHECK_CRON` | ✓ | | | | per provider ([registries.md](registries.md#set-up-per-environment)) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | ✓ | yes (the same value in both: the api encrypts partner webhook secrets, the worker decrypts them to sign — S-33) |
+| `WEBHOOK_SECRET_KEY_ID`, `WEBHOOK_SECRET_PREVIOUS_KEYS` | ✓ | | | ✓ | no (`v1`, empty: the key's id and older keys that only decrypt during a rotation — a secret —, the same in both; [key-rotation.md § 3](key-rotation.md#the-key-that-encrypts-the-stored-secrets-webhook_secret_key)) |
+| `WEBHOOK_REENCRYPT_EVERY` | ✓ | | | | no (`1h`: the job that re-encrypts stored webhook secrets with the current key) |
 | `WEBHOOKS_ALLOW_LOCAL` | | | | ✓ | no (`false`; `true` only locally — http://localhost endpoints; refused in the cloud) |
 | `IMPORT_IMAGES_ALLOW_LOCAL` | ✓ | | | | no (`false`; `true` only locally — bulk-import image URLs on http:// or loopback, never private or metadata addresses; refused in the cloud — S-72, [webhooks.md § SSRF rules](webhooks.md#ssrf-rules-platform-egresspolicy)) |
 | `SEARCH_PROVIDER` | ✓ | | | | no (`elasticsearch`; `local` = no index, the `local` profile's default, refused in staging/prod — [search.md § 7](search.md#7-the-search-api-s-44)) |

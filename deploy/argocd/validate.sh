@@ -18,7 +18,9 @@ ROOT=$(cd ../.. && pwd)
 AOA=app-of-apps
 KUBE_VERSION=${KUBE_VERSION:-1.33.0}
 CRD_CATALOG='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
-schema_args=(-schema-location default -schema-location "$CRD_CATALOG")
+# External Secrets first from the schemas pinned to the installed operator (deploy/helm/schemas, make helm-crd-schemas)
+LOCAL_SCHEMAS="$(cd .. && pwd)/helm/schemas/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
+schema_args=(-schema-location default -schema-location "$LOCAL_SCHEMAS" -schema-location "$CRD_CATALOG")
 for s in ${KUBECONFORM_SCHEMAS:-}; do schema_args+=(-schema-location "$s"); done
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT

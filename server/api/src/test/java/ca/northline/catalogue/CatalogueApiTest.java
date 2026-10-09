@@ -113,6 +113,24 @@ abstract class CatalogueApiTest extends IntegrationTest {
                         """).params(Ids.next(), merchantId, registry).update();
     }
 
+    /**
+     * A price the automated vetting can't call an outlier (engineering follow-ups, flaky approval waits): the
+     * category's current median of approved listings — which other test classes move, since the database is shared
+     * — or {@code fallbackCents} while fewer than three are approved (no median yet). A fixed price passed only while
+     * the shared median happened to stay within ±60 % of it.
+     */
+    long inBandPrice(String categoryId, long fallbackCents) {
+        return jdbc.sql("""
+                        select round(percentile_cont(0.5) within group (order by price_cents))::bigint
+                          from (select o.price_cents from catalogue.offers o
+                                  join catalogue.catalog_products cp on cp.id = o.product_id
+                                 where cp.category_id = :c and o.vetting = 'approved' and o.price_cents is not null
+                                union all
+                                select s.price_cents from catalogue.services s
+                                 where s.category_id = :c and s.vetting = 'approved' and s.price_cents is not null) p
+                        having count(*) >= 3""").param("c", categoryId).query(Long.class).optional().orElse(fallbackCents);
+    }
+
     /** An approved, live offer of another merchant in {@code categoryId} (a price comparable for vetting). */
     void approvedComparable(String categoryId, long priceCents) {
         var productId = Ids.next();

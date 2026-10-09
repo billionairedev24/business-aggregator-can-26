@@ -183,6 +183,11 @@ northline:
       - { name: morning, starts: "08:00", ends: "11:00", cutoff: "07:30", fee-cents: 199, capacity: 40 }
     direct: { eta: 45m, fee-cents: 999 }
   developer.webhook-key: ${WEBHOOK_SECRET_KEY:}                # base64 32 bytes; blank = fixed dev key under local/test
+  # Engineering follow-ups (S-115, docs/runbooks/key-rotation.md § 3): the key's id, keys that only decrypt during a
+  # rotation (id=base64,…, the worker's too) and the job that re-encrypts every stored secret with the current key.
+  developer.webhook-key-id: ${WEBHOOK_SECRET_KEY_ID:v1}
+  developer.webhook-previous-keys: ${WEBHOOK_SECRET_PREVIOUS_KEYS:}
+  developer.webhook-reencrypt-every: ${WEBHOOK_REENCRYPT_EVERY:1h}
   payments:                                                    # blank key = fake Stripe gateway (DECISIONS.md, Finance)
     stripe-secret-key: ${STRIPE_SECRET_KEY:}
     stripe-publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
@@ -195,6 +200,10 @@ northline:
   stripe:                                                      # Stripe Connect (merchants) outside local/test
     secret-key: ${STRIPE_SECRET_KEY:}
     api-base: ${STRIPE_API_BASE:}
+  # Engineering follow-ups (S-119 F5, docs/runbooks/load-testing.md): the home page's summary and the kitchens list's
+  # city-level part are kept this long per instance (keyed by market, language), dropped at once when a business's
+  # visibility or a kitchen's state changes on this instance. 0s turns the cache off.
+  public-pages.cache-ttl: ${PUBLIC_PAGES_CACHE_TTL:30s}
   # Search API (S-44, docs/runbooks/search.md): elasticsearch (listings_en / listings_fr, filled by the worker) | local
   # (no index: every search is empty; the `local` profile's default, refused under staging/prod).
   search:

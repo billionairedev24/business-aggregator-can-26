@@ -69,7 +69,7 @@ const Step = ({ k, v, current }: { k: string; v: string; current?: boolean }) =>
   <li className="fin-step" data-current={current ? 'true' : undefined} aria-current={current ? 'step' : undefined}><div className="fin-step-k">{k}</div><div className="fin-step-v">{v}</div></li>
 );
 
-interface LedgerRow { id: string; job: string; customer: string; gross: number; fee: number; net: number; state: string; tone: 'tag-accent' | 'tag-accent-2' | 'tag-neutral' }
+interface LedgerRow { id: string; job: string; customer: string; held: number; tax: number; fee: number; net: number; state: string; tone: 'tag-accent' | 'tag-accent-2' | 'tag-neutral' }
 
 export function ledgerRows(lines: LedgerLine[], t: FinanceT, date: (iso: string) => string, now = Date.now()): LedgerRow[] {
   return lines.map(l => {
@@ -82,7 +82,7 @@ export function ledgerRows(lines: LedgerLine[], t: FinanceT, date: (iso: string)
       : [t('stEscrowHours', { hours: hoursUntil(l.releaseAt, now) }), 'tag-neutral' as const];
     return {
       id: l.id, job: `${l.label} · ${l.orderNumber ?? date(l.occurredAt)}`, customer: l.customerName ?? '',
-      gross: l.grossCents, fee: l.feeCents, net: l.netCents, state, tone,
+      held: l.heldCents, tax: l.taxCents, fee: l.feeCents, net: l.netCents, state, tone,
     };
   });
 }
@@ -97,9 +97,10 @@ function Ledger() {
   const columns: DataTableColumn<LedgerRow>[] = [
     { key: 'job', label: t('colJob'), primary: true },
     { key: 'customer', label: t('colCustomer'), priority: 2 },
-    { key: 'gross', label: t('colGross'), type: 'money', priority: 3 },
+    { key: 'held', label: t('colHeld'), type: 'money', priority: 3 },
+    { key: 'tax', label: t('colTax'), type: 'money', priority: 1 },
     { key: 'fee', label: t('colFee'), type: 'money', priority: 1 },
-    { key: 'net', label: t('colNet'), type: 'money', priority: 4 },
+    { key: 'net', label: t('colNetYou'), type: 'money', priority: 4 },
     { key: 'state', label: t('colState'), type: 'tag' },
   ];
   if (ledger.isPending) return <Skeleton height={300} />;

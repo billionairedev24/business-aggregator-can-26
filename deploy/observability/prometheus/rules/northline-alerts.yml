@@ -35,6 +35,16 @@ groups:
         annotations:
           summary: "{{ $labels.consumer }} dead-lettered an event from {{ $labels.topic }}"
           runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/event-dead-lettered.md
+      # Engineering follow-ups (S-115 gap): deferred SMS / push / email given up after their ten attempts — the
+      # messaging.deferred_notifications table's own dead letters (docs/runbooks/events.md). Every worker replica reads
+      # the same count from the database, hence max. Ticket: someone requeues them in office hours.
+      - alert: NorthlineDeadDeferredNotifications
+        expr: max by (channel) (northline_notifications_deferred_dead) > 0
+        for: 15m
+        labels: { severity: ticket }
+        annotations:
+          summary: "{{ $value }} deferred {{ $labels.channel }} notification(s) were given up and wait for a requeue"
+          runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/dead-deferred-notifications.md
       - alert: NorthlineConsumerLag
         expr: max by (application, client_id) (kafka_consumer_fetch_manager_records_lag_max{application="northline-worker"}) > 1000
         for: 10m

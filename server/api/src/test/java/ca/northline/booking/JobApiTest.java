@@ -120,6 +120,36 @@ class JobApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.priceCents").value(9345));
         }
 
+        /**
+         * Engineering follow-ups (S-117 finding): the job card showed the escrow before GST ($300.00) where the customer
+         * saw $315.00 held. The card, the Earnings ledger and the dashboard now show the payments ledger's figures.
+         */
+        @Test
+        void jobCardLedgerAndDashboardShowWhatWasChargedAndTheNetAfterTaxAndFee() throws Exception {
+            var job = fx.job(
+                    biz.merchantId(), biz.userId(), customer, Instant.now().plus(Duration.ofMinutes(5)), "confirmed");
+            fx.escrow(biz.merchantId(), job, 30_000, 1_500, 900, "held");
+
+            mvc.perform(get("/api/v1/merchants/{m}/jobs/{j}", biz.merchantId(), job)
+                            .with(TestJwt.member(biz.userId())))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.escrow").value("held"))
+                    .andExpect(jsonPath("$.escrowMoney.heldCents").value(31_500))
+                    .andExpect(jsonPath("$.escrowMoney.taxCents").value(1_500))
+                    .andExpect(jsonPath("$.escrowMoney.feeCents").value(2_700))
+                    .andExpect(jsonPath("$.escrowMoney.netCents").value(27_300));
+            mvc.perform(get("/api/v1/merchants/{m}/earnings/ledger", biz.merchantId())
+                            .with(TestJwt.member(biz.userId())))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.items[0].heldCents").value(31_500))
+                    .andExpect(jsonPath("$.items[0].grossCents").value(30_000))
+                    .andExpect(jsonPath("$.items[0].taxCents").value(1_500))
+                    .andExpect(jsonPath("$.items[0].feeCents").value(2_700))
+                    .andExpect(jsonPath("$.items[0].netCents").value(27_300));
+            mvc.perform(get("/api/v1/merchants/{m}/earnings", biz.merchantId()).with(TestJwt.member(biz.userId())))
+                    .andExpect(jsonPath("$.escrowNetCents").value(27_300));
+        }
+
         @Test
         void otherBusinessesJobsAreNotFound() throws Exception {
             var other = data.business(MerchantRole.OWNER);

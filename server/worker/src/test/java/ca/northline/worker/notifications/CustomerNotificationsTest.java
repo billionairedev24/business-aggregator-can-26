@@ -58,6 +58,12 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
     Notifier notifier;
 
     @Autowired
+    NotificationsConfiguration.DeferredNotificationsJob deferredJob;
+
+    @Autowired
+    io.micrometer.core.instrument.MeterRegistry meters;
+
+    @Autowired
     BookingReminders reminders;
 
     @BeforeAll
@@ -217,6 +223,13 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
         clock.set(at.plus(Duration.ofHours(1)));
         notifier.sendDue(50);
         assertThat(texts.to(amara.phone())).isEmpty(); // the job leaves dead rows alone
+        // engineering follow-ups: the dead row shows on the gauge the NorthlineDeadDeferredNotifications ticket reads
+        deferredJob.refreshDeadGauge();
+        assertThat(meters.get(DeadDeferredGauge.METRIC)
+                        .tag("channel", "sms")
+                        .gauge()
+                        .value())
+                .isGreaterThanOrEqualTo(1);
 
         var listed = ca.northline.worker.events.DlqReplayCommand.runDeferred(
                 deferredArgs("list", "--event=" + id, "--channel=sms"));

@@ -41,8 +41,15 @@ final class JobResponses {
             @Nullable String customerNote,
             @Nullable Long priceCents,
             @Nullable String escrow,
+            @Nullable EscrowMoneyResponse escrowMoney,
             List<TimelineResponse> timeline,
             List<ApprovalResponse> approvals) {}
+
+    /**
+     * The job's escrow as the payments ledger has it: {@code heldCents} is what the customer was charged (price plus
+     * GST/HST), {@code netCents} what the business receives after the GST/HST and Northline's fee.
+     */
+    record EscrowMoneyResponse(String state, long heldCents, long taxCents, long feeCents, long netCents) {}
 
     record CustomerResponse(String name, @Nullable BigDecimal reliability, long pastJobs) {}
 

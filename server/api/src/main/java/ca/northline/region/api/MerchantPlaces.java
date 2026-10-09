@@ -1,7 +1,10 @@
 package ca.northline.region.api;
 
 import java.time.ZoneId;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -14,6 +17,13 @@ public interface MerchantPlaces {
 
     /** The business's place; an unknown business gets the defaults (never throws). */
     MerchantPlace of(String merchantId);
+
+    /** The places of many businesses at once (one read for all), by id; unknown businesses get the defaults. */
+    default Map<String, MerchantPlace> ofAll(Collection<String> merchantIds) {
+        var places = new LinkedHashMap<String, MerchantPlace>();
+        merchantIds.forEach(id -> places.put(id, of(id)));
+        return places;
+    }
 
     /**
      * @param province the business's own province, else the configured default province; null when neither is set

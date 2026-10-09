@@ -26,6 +26,7 @@ public interface BookingInsights {
     /** Title of a job ("Pre-purchase inspection"), for case descriptions. */
     Optional<String> jobTitle(String bookingId);
 
+    /** @param escrowHeldCents what the customer paid and is held (price plus GST/HST), null when nothing is held */
     record JobAtAGlance(
             String id,
             String title,

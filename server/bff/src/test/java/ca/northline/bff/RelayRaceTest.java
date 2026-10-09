@@ -28,7 +28,10 @@ import java.util.stream.IntStream;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -48,10 +51,17 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * {@code Http1Exchange.requestMoreBody} (DECISIONS, S-135). {@link #relayedGets_onConnectionsTheApiClosed_neverFail}
  * failed on every run before the fix; {@link #relayedBodies_arriveByteForByte} checks that the look-ahead
  * ({@code RelayBody}) forwards every body exactly.
+ *
+ * <p>Engineering follow-ups (flaky): the order is fixed — bodies first, then the test whose api closes connections. In
+ * JUnit's default order the closing test ran first and left connections the api had closed in the relay's pool; the
+ * next test's POSTs and DELETEs could take one before the JDK client had noticed the close (more often under load,
+ * when its selector thread runs late), and a non-idempotent request is not retried, so it failed. The bodies test is
+ * about exact bodies, not about closed connections: it must start with a pool the api keeps alive.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles({"test", "consumer"})
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class RelayRaceTest {
 
     static final int REQUESTS = 400;
@@ -124,6 +134,7 @@ class RelayRaceTest {
      * POST or DELETE (that is HTTP, not this race; see DECISIONS, S-135).
      */
     @Test
+    @Order(2)
     void relayedGets_onConnectionsTheApiClosed_neverFail() throws Exception {
         closesKeptAliveConnections = true;
         hammer(i -> switch (i % 3) {
@@ -134,6 +145,7 @@ class RelayRaceTest {
     }
 
     @Test
+    @Order(1)
     void relayedBodies_arriveByteForByte() throws Exception {
         closesKeptAliveConnections = false;
         var client =

@@ -92,9 +92,9 @@ promotion, not retention (the full GC took it back). A 2-hour soak on staging is
 | F2 | **Overload ends in OutOfMemoryError.** Past the knee, requests queued up to Hikari's 30 s default for a connection; the queue (thousands of virtual threads) filled the 1 GiB heap and the api died. | high | **fixed** — `DB_CONNECTION_TIMEOUT_MS` = 5 s, then 503 `overloaded` + `Retry-After: 2` (`OverloadedTest`); the stress run now degrades and recovers |
 | F3 | **N+1 on the provider list.** `GET /api/v1/public/services/{slug}/providers` read a rating summary (3 aggregates), a quality score and the next free slot (~20 calendar queries) per provider: 1,160 queries and 0.7 s for 41 providers, 2.5–2.8 s for 150. Home, the kitchens list and quote requests read a rating summary per business too. | high | **fixed** — ratings and quality scores in one query per page (`RatingQuery.summaries`, `QualityQuery.latestOf`); next free starts kept a minute per instance and refreshed in the background (`NextFreeSlotsTest`, `ReviewsApiTest`) |
 | F4 | The nav badges' rating computed the Reviews screen's whole summary (star distribution and praise tags, three aggregates) on every Studio page. | low | **fixed** — one grouped query |
-| F5 | **City-wide reads per landing page.** Home and the kitchens list read every business of the city (`PublicDirectory.active`: 541 rows, ~10 ms) and every kitchen's calendar row (`KitchenCalendarJdbc`: late tickets, menu-live and average-price subqueries per kitchen, ~6–8 ms) on each view: the two largest consumers of database time in every run (≈ 60 % of it). They grow with the number of businesses. The responses already say `Cache-Control: public, max-age=60/30`, but nothing between the consumer web and the api caches them. | medium | open — keep the city-level read model for 30 s per instance (as search's hot-query cache does), or put a CDN/edge cache in front of `/api/v1/public/**`; precompute `menu_live`/`avg_item` |
-| F6 | **The payout run is an N+1 every minute**: `PayoutService.runScheduled` reads each merchant's zone, schedule and today's payouts one by one (≈ 3 queries × merchants with a schedule, every minute, ≈ 1,600 queries/min with 541 merchants). Not user-facing; grows linearly with businesses. | low | open — batch the schedules, zones and "paid today" into three queries |
-| F7 | A servlet filter that needs the database (here: dev auth) answers a pool timeout with **403** (error dispatch → access denied) instead of 503, with a stack trace per request. | low | open — map it in the filters too |
+| F5 | **City-wide reads per landing page.** Home and the kitchens list read every business of the city (`PublicDirectory.active`: 541 rows, ~10 ms) and every kitchen's calendar row (`KitchenCalendarJdbc`: late tickets, menu-live and average-price subqueries per kitchen, ~6–8 ms) on each view: the two largest consumers of database time in every run (≈ 60 % of it). They grow with the number of businesses. The responses already say `Cache-Control: public, max-age=60/30`, but nothing between the consumer web and the api caches them. | medium | **fixed** (engineering follow-ups) — the home summary and the kitchens list's city-level part kept 30 s per instance (`PUBLIC_PAGES_CACHE_TTL`), dropped on visibility events: the city reads went from 69 % to 9 % of database time ([below](#landing-page-cache--engineering-follow-ups-f5)). An edge cache can still go in front of `/api/v1/public/**` |
+| F6 | **The payout run is an N+1 every minute**: `PayoutService.runScheduled` reads each merchant's zone, schedule and today's payouts one by one (≈ 3 queries × merchants with a schedule, every minute, ≈ 1,600 queries/min with 541 merchants). Not user-facing; grows linearly with businesses. | low | **fixed** (engineering follow-ups) — two queries per run whatever the number of businesses (`ScheduledPayoutRunTest`) |
+| F7 | A servlet filter that needs the database (here: dev auth) answers a pool timeout with **403** (error dispatch → access denied) instead of 503, with a stack trace per request. | low | **fixed** (engineering follow-ups) — `OverloadedFilter` answers 503 `overloaded` + `Retry-After` ahead of Spring Security (`OverloadedTest`) |
 | F8 | Saving a first card twice at the same moment for one customer can answer 404/409 (two Stripe customers created; one loses). Only seen when the test reused customers across VUs. | low | open — the load test gives each VU its own customers |
 | F9 | The fake payment gateway and fake saved cards keep every intent and card in memory (local and test only). Over a long local soak they grow (~1 KB per payment). | info | not a production path |
 | F10 | `food-orders` calls (`POST /api/v1/me/food-orders`, `…/confirm`) are not in the checkout SLO's `uri` pattern (`/api/v1/me/(checkouts.*|bookings/checkout)`), though food is the busiest checkout. | medium | **fixed 2026-10-04** (owner decision): both are in `deploy/observability/slo/checkout.yaml` (availability and latency); quotes stay out; promtool tests in `northline-slo_test.yml` |
@@ -113,6 +113,28 @@ requests, "after" on the soak's.)
 
 Fixes were verified by re-running the profiles; the earlier stress runs (pool 10 with the 30 s timeout: OOM at
 ~180 req/s; pool 20 with the 5 s timeout before F1: deadlock after 7 min) are kept in the findings, not in the tables.
+
+### Landing page cache — engineering follow-ups (F5)
+
+`make load-smoke`, then the search scenario (search + landing pages) at `LOAD_SCALE=0.25` for 1 minute, once with the
+cache (`PUBLIC_PAGES_CACHE_TTL=30s`, the default) and once without (`0s`, i.e. before), on the same api jar and data.
+A smaller seed than the tables above (`SEED_BUSINESSES=60 SEED_SHOP_UNITS=4 SEED_CUSTOMERS=1000`: the machine had
+about 2 GB of disk), same shared 4-vCPU box, 2026-10-04.
+
+| | without the cache | with the cache (30 s) |
+|---|---:|---:|
+| database time in the minute (pg_stat_statements, all statements) | 5.9 s | 1.7 s (−71 %) |
+| kitchens' calendar read (`KitchenCalendarJdbc`): calls · time | 654 · 2.86 s | 16 · 0.10 s |
+| city's businesses (`PublicDirectory.active`): calls · time | 450 · 1.22 s | 8 · 0.04 s |
+| share of database time of those city reads | 69 % | 9 % |
+| search + landing requests, p95 / p99 | 30 ms / 54 ms | 40 ms / 82 ms |
+| errors | 0 | 0 |
+
+The latency difference is within this box's noise (the first minute includes the api's warm-up; p95 of the second
+minute: 24 ms without, 28 ms with) — at a quarter of the target the database was never the bottleneck. What the cache
+removes is the work that grew with the number of businesses: the database time of the landing pages is now flat in
+their traffic (one read per market and language every 30 s per replica). `make load-smoke`: every journey passed in
+both runs (k6 exit 0). Results: `loadtest/results/20261004T1421*` and `…T1424*` (not committed).
 
 ## Still to run on staging
 
