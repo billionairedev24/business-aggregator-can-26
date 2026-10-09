@@ -1,0 +1,43 @@
+import { defineMessages } from '@northline/ui';
+
+/** Promo codes on the Finance screen (mobile gaps part 2). */
+export const usePromoT = defineMessages({
+  en: {
+    title: 'Promo codes',
+    sub: 'Codes customers enter at checkout. Northline-funded codes top the business up; a business-funded code is its own discount. Tax is on the price after the code.',
+    none: 'No promo codes yet.',
+    error: 'Promo codes couldn’t be loaded.',
+    new: 'New promo code',
+    percentOff: '{percent}% off',
+    amountOff: '{amount} off',
+    fundedNorthline: 'Funded by Northline',
+    fundedMerchant: 'Funded by {name}',
+    fundedMerchantPick: 'Funded by one business',
+    used: '{n, plural, one {# use} other {# uses}} · {amount} given',
+    state_scheduled: 'Scheduled', state_live: 'Live', state_ended: 'Ended', state_off: 'Off',
+    kind_goods: 'Shop', kind_food: 'Food', kind_service: 'Services', kind_percent: 'Percent off', kind_amount: 'Amount off',
+    activeLabel: '{code} on',
+    code: 'Code', kind: 'Discount', percent: 'Percent off', amount: 'Amount off ($)', max: 'Cap ($, optional)', minSpend: 'Minimum spend ($)',
+    startsAt: 'Starts', endsAt: 'Ends', perCustomer: 'Uses per customer', total: 'Uses overall (optional)', fundedBy: 'Who funds it',
+    merchantId: 'Business id', appliesTo: 'Applies to', description: 'Note for the team (optional)', create: 'Create code', cancel: 'Cancel',
+  },
+  fr: {
+    title: 'Codes promo',
+    sub: 'Codes que les clients saisissent au paiement. Northline complète le montant de l’entreprise pour ses propres codes; un code financé par une entreprise est son propre rabais. Les taxes portent sur le prix après le code.',
+    none: 'Aucun code promo pour l’instant.',
+    error: 'Les codes promo n’ont pas pu être chargés.',
+    new: 'Nouveau code promo',
+    percentOff: '{percent} % de rabais',
+    amountOff: '{amount} de rabais',
+    fundedNorthline: 'Financé par Northline',
+    fundedMerchant: 'Financé par {name}',
+    fundedMerchantPick: 'Financé par une entreprise',
+    used: '{n, plural, one {# utilisation} other {# utilisations}} · {amount} accordés',
+    state_scheduled: 'Prévu', state_live: 'Actif', state_ended: 'Terminé', state_off: 'Désactivé',
+    kind_goods: 'Boutique', kind_food: 'Restauration', kind_service: 'Services', kind_percent: 'Pourcentage de rabais', kind_amount: 'Montant de rabais',
+    activeLabel: '{code} activé',
+    code: 'Code', kind: 'Rabais', percent: 'Pourcentage de rabais', amount: 'Montant de rabais ($)', max: 'Plafond ($, facultatif)', minSpend: 'Achat minimum ($)',
+    startsAt: 'Début', endsAt: 'Fin', perCustomer: 'Utilisations par client', total: 'Utilisations au total (facultatif)', fundedBy: 'Qui le finance',
+    merchantId: 'Identifiant de l’entreprise', appliesTo: 'S’applique à', description: 'Note pour l’équipe (facultatif)', create: 'Créer le code', cancel: 'Annuler',
+  },
+});

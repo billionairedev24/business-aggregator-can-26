@@ -99,6 +99,8 @@ function ReviewItem({ merchantId, review, canRespond }: { merchantId: string; re
         <div className="nl-rev-replied">{t('replied', { text: review.reply })}</div>
       ) : canRespond ? <ReplyBox merchantId={merchantId} review={review} who={who} /> : null}
       <div className="nl-rev-actions">
+        {review.hiddenAt ? <span className="tag tag-accent-2">{t('hidden')}</span> : null}
+        {review.editedAt ? <span className="tag tag-neutral">{t('edited')}</span> : null}
         {review.reportedAt ? <span className="tag tag-neutral">{t('reported')}</span>
           : canRespond ? <Button variant="ghost" className="nl-rev-report" onClick={() => setReporting(true)}>{t('report')}</Button> : null}
       </div>

@@ -1,0 +1,48 @@
+
+ RUN  v3.2.7 /tmp/claude-0/-home-claude-repo/bf185b81-5a0f-55ec-8f30-c3534bbf7899/scratchpad/wt-mob2/web/apps/console
+
+stderr | src/features/finance/finance.test.tsx > finance (S-85, design 03) > shows escrow, payouts, revenue, the mix, take by tier, the daily reconciliation and tax
+An update to RefundRequests inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/finance/finance.test.tsx > finance (S-85, design 03) > shows escrow, payouts, revenue, the mix, take by tier, the daily reconciliation and tax
+An update to PromoCodes inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/features/finance/promoCodes.test.tsx (2 tests) 3515ms
+   ✓ promo codes (Finance) > lists the codes with their use, and finance makes a new one  3130ms
+   ✓ promo codes (Finance) > switches a code off  382ms
+ ✓ src/features/trust/trust.test.tsx (6 tests) 4586ms
+   ✓ trust & safety (S-93, design 03 trust) > shows the design copy, tier rules and consequences from the rules, and the open flags  2093ms
+   ✓ trust & safety (S-93, design 03 trust) > acts on flags with the role header  488ms
+   ✓ trust & safety (S-93, design 03 trust) > simulates the rating floor and saves the keyword lists  1098ms
+   ✓ trust & safety (S-93, design 03 trust) > edits a tier rule and shows the api messages  533ms
+   ✓ trust & safety (S-93, design 03 trust) > speaks French  322ms
+ ✓ src/features/finance/finance.test.tsx (6 tests) 6264ms
+   ✓ finance (S-85, design 03) > shows escrow, payouts, revenue, the mix, take by tier, the daily reconciliation and tax  2998ms
+   ✓ finance (S-85, design 03) > drills into a day that doesn’t match and resolves it with a note  1221ms
+   ✓ finance (S-85, design 03) > reconciles a day and Stripe Tax on demand  762ms
+   ✓ finance (S-85, design 03) > lists support’s refund requests and approves one with a note, never one’s own  427ms
+   ✓ finance (S-85, design 03) > shows the api’s conflict on a decision, and an empty list  646ms
+
+ Test Files  3 passed (3)
+      Tests  14 passed (14)
+   Start at  17:52:36
+   Duration  14.95s (transform 3.25s, setup 14.65s, collect 7.06s, tests 14.36s, environment 2.17s, prepare 567ms)
+

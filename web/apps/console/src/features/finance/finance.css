@@ -26,3 +26,9 @@
 .nl-fi-refund .nl-fi-actions { margin-top: 4px; }
 .nl-fi-refund .input { min-height: 40px; width: auto; flex: 1 1 200px; }
 .nl-fi-note { font-size: 14px; }
+
+/* mobile gaps part 2: promo codes */
+.nl-fi-promos { margin-top: 28px; display: grid; gap: 10px; }
+.nl-fi-promo-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: end; }
+.nl-fi-promo-kinds { border: 0; padding: 0; margin: 0; display: flex; gap: 12px; flex-wrap: wrap; }
+.nl-fi-promo-actions { display: flex; gap: 8px; }

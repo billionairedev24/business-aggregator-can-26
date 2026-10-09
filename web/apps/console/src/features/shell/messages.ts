@@ -43,7 +43,7 @@ export const useShellT = defineMessages({
     filterProvince: 'Province', filterMarket: 'Market', allProvinces: 'All provinces', allMarkets: 'All markets',
     regionPilot: '{code} pilot',
     ageMin: '{n} min', ageH: '{n} h', ageD: '{n} d',
-    a_suspend: 'suspend', a_decide: 'decide', a_refund: 'refund', a_province: 'province', a_payouts: 'payouts', a_keys: 'keys', a_verify: 'verify', a_vet: 'vet', a_dispatch: 'dispatch', a_support: 'support', a_privacy: 'privacy', a_onboard: 'onboard', a_uat: 'UAT triage', a_attest: 'record go-live gates',
+    a_suspend: 'suspend', a_decide: 'decide', a_refund: 'refund', a_province: 'province', a_payouts: 'payouts', a_keys: 'keys', a_verify: 'verify', a_vet: 'vet', a_dispatch: 'dispatch', a_support: 'support', a_privacy: 'privacy', a_onboard: 'onboard', a_uat: 'UAT triage', a_attest: 'record go-live gates', a_promotions: 'promo codes',
   },
   fr: {
     console: 'Console',
@@ -86,7 +86,7 @@ export const useShellT = defineMessages({
     filterProvince: 'Province', filterMarket: 'Marché', allProvinces: 'Toutes les provinces', allMarkets: 'Tous les marchés',
     regionPilot: '{code} pilote',
     ageMin: '{n} min', ageH: '{n} h', ageD: '{n} j',
-    a_suspend: 'suspendre', a_decide: 'trancher', a_refund: 'rembourser', a_province: 'provinces', a_payouts: 'versements', a_keys: 'clés', a_verify: 'vérifier', a_vet: 'contrôler', a_dispatch: 'répartir', a_support: 'soutien', a_privacy: 'renseignements personnels', a_onboard: 'intégrer', a_uat: 'tri des tests', a_attest: 'consigner les points de mise en service',
+    a_suspend: 'suspendre', a_decide: 'trancher', a_refund: 'rembourser', a_province: 'provinces', a_payouts: 'versements', a_keys: 'clés', a_verify: 'vérifier', a_vet: 'contrôler', a_dispatch: 'répartir', a_support: 'soutien', a_privacy: 'renseignements personnels', a_onboard: 'intégrer', a_uat: 'tri des tests', a_attest: 'consigner les points de mise en service', a_promotions: 'codes promo',
   },
 });
 export type ShellT = ReturnType<typeof useShellT>;

@@ -1,0 +1,101 @@
+
+ RUN  v3.2.7 /tmp/claude-0/-home-claude-repo/bf185b81-5a0f-55ec-8f30-c3534bbf7899/scratchpad/wt-mob2/web/apps/consumer
+
+stderr | src/features/cart/cart.test.tsx > Cart and checkout (design 06 cart) > shows the multi-shop cart, windows, address, substitutions and the summary with tax
+An update to Checkout inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/features/cart/cart.test.tsx > Cart and checkout (design 06 cart) > shows the multi-shop cart, windows, address, substitutions and the summary with tax
+An update to Checkout inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Checkout inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Checkout inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/features/orders/orders.test.tsx (13 tests) 4646ms
+   ✓ Order confirmed and tracking (design 06 confirmed) > shows the confirmation, the timeline and the run  1227ms
+   ✓ Order confirmed and tracking (design 06 confirmed) > updates live from the order’s event stream  497ms
+   ✓ Order confirmed and tracking (design 06 confirmed) > lets the customer confirm a delivered order, which pays the shops (S-78)  400ms
+   ✓ Order confirmed and tracking (design 06 confirmed) > shows the courier’s door photo through its short-lived link, and nothing when there is none (mobile gaps part 1)  591ms
+   ✓ Order confirmed and tracking (design 06 confirmed) > shows the courier coming, then live on the way, with the drop-off PIN (S-88)  344ms
+stderr | src/features/cart/cart.test.tsx > Age-restricted items at checkout (2026-10-04) > asks for a one-time photo ID check before paying, and opens the provider
+An update to Checkout inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/features/food/food.test.tsx (25 tests) 8438ms
+   ✓ Food landing (design 06 food) > lists the kitchens delivering to the saved location, open ones with their ETA and fee  1176ms
+   ✓ Food landing (design 06 food) > switches to pickup, where paused kitchens say so  385ms
+   ✓ Food landing (design 06 food) > filters by diet and cuisine, and clears filters when nothing matches  402ms
+   ✓ Food landing (design 06 food) > says when no kitchen serves the area, and when loading fails  346ms
+   ✓ Restaurant (design 06 restaurant) > shows the banner, combos first, dish tags, sold-out dishes and the empty order  303ms
+   ✓ Restaurant (design 06 restaurant) > enforces the pick rules, prices the choices and adds to the food order  1162ms
+   ✓ Restaurant (design 06 restaurant) > holds checkout until the minimum, and adds combos with their picks  622ms
+   ✓ Food checkout (design 06 foodCheckout) > prices on the server, pays into escrow with an idempotency key and opens tracking  349ms
+   ✓ Food checkout (design 06 foodCheckout) > steps up with the authenticator when the sign-in was a phone code only (S-51’s rule)  333ms
+   ✓ Food checkout (design 06 foodCheckout) > shows the kitchen closing and validation messages  489ms
+ ✓ src/features/cart/cart.test.tsx (16 tests) 9081ms
+   ✓ Cart and checkout (design 06 cart) > shows the multi-shop cart, windows, address, substitutions and the summary with tax  718ms
+   ✓ Cart and checkout (design 06 cart) > changes quantities and removes lines  819ms
+   ✓ Cart and checkout (design 06 cart) > quotes the window picked and pays with the local stand-in, then opens the order  796ms
+   ✓ Cart and checkout (design 06 cart) > asks for a new address with its messages when none is saved  1832ms
+   ✓ Cart and checkout (design 06 cart) > shows the server’s answers: sold out, not delivered here  1001ms
+   ✓ Cart and checkout (design 06 cart) > steps up with the authenticator when the sign-in was a phone code only  570ms
+   ✓ Cart and checkout (design 06 cart) > offers to add a passkey when the account has no second factor  337ms
+   ✓ Cart and checkout (design 06 cart) > is in French  411ms
+   ✓ Age-restricted items at checkout (2026-10-04) > asks for a one-time photo ID check before paying, and opens the provider  1205ms
+   ✓ Age-restricted items at checkout (2026-10-04) > lets a verified customer pay and says the courier checks ID at the door  310ms
+   ✓ Age-restricted items at checkout (2026-10-04) > tells an under-age customer to remove the items, in French  317ms
+ ✓ src/features/booking/booking.test.tsx (9 tests) 5042ms
+   ✓ booking wizard (design 06 book) > walks a guest through job details and location, shows the live calendar, and asks them to sign in to hold a time  2426ms
+   ✓ booking wizard (design 06 book) > holds the slot, pays the escrow hold with an Idempotency-Key and shows the confirmation  723ms
+   ✓ booking wizard (design 06 book) > tells the customer when the slot was just taken and reloads the calendar  535ms
+   ✓ booking wizard (design 06 book) > asks an account without a second factor to add a passkey (S-51 rule), and resends the same Idempotency-Key  524ms
+   ✓ booking wizard (design 06 book) > sends the customer back to the calendar when the 10-minute hold ended  462ms
+   ✓ booking wizard (design 06 book) > is in French for fr-CA  366ms
+
+ Test Files  4 passed (4)
+      Tests  63 passed (63)
+   Start at  17:44:23
+   Duration  28.48s (transform 3.32s, setup 27.03s, collect 7.40s, tests 27.21s, environment 4.08s, prepare 1.05s)
+
