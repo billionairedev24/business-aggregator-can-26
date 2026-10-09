@@ -6,9 +6,11 @@ import ca.northline.shared.Bytes;
 import ca.northline.shared.storage.UsesLocalStorage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import org.springframework.context.annotation.Profile;
@@ -16,7 +18,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Proofs of delivery on the local disk ({@code local} / {@code test}; {@code northline.fulfilment.proof-dir}, default
- * {@code $TMPDIR/northline-proofs}). Other providers: {@link ObjectStoreProofStorage}.
+ * {@code $TMPDIR/northline-proofs}). Other providers: {@link ObjectStoreProofStorage}. A signed URL is the api's own
+ * short-lived link ({@link LocalProofLinks}) — a disk has no presigned GET.
  */
 @Component
 @Profile({"local", "test"})
@@ -24,8 +27,10 @@ import org.springframework.stereotype.Component;
 class ProofFiles implements ProofStorage {
 
     private final Path root;
+    private final LocalProofLinks links;
 
-    ProofFiles(FulfilmentProperties props) {
+    ProofFiles(FulfilmentProperties props, LocalProofLinks links) {
+        this.links = links;
         this.root = Objects.requireNonNullElseGet(
                         props.proofDir(), () -> Path.of(System.getProperty("java.io.tmpdir"), "northline-proofs"))
                 .toAbsolutePath()
@@ -76,5 +81,11 @@ class ProofFiles implements ProofStorage {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    @Override
+    public URI signedUrl(String key, Duration ttl) {
+        resolve(key);
+        return links.url(key, ttl);
     }
 }

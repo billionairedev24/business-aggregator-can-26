@@ -74,6 +74,22 @@ describe('support desk (S-83, design 03 support)', () => {
     expect(screen.getByText(/Every action is logged to the audit trail and visible to the requester as a case update\./)).toBeTruthy();
   });
 
+  it('shows the photos a customer attached to a report, opened through the ticket (mobile gaps part 1)', async () => {
+    const files = [
+      { id: 'UP1', fileName: 'kale.jpg', contentType: 'image/jpeg', size: 120000 },
+      { id: 'UP2', fileName: 'receipt.pdf', contentType: 'application/pdf', size: 40000 },
+    ];
+    api(['support'], c => (c.method === 'GET' && c.url.endsWith('/api/v1/console/support/tickets/T1')
+      ? { body: detail(HD4471, { notes: [{ by: 'customer', name: null, body: 'Reported: Damaged', at: '2026-09-08T17:20:00Z', attachments: files }] }) }
+      : undefined));
+    renderConsole('/support');
+    const list = await screen.findByRole('list', { name: '2 files attached' });
+    const photo = within(list).getByRole('img', { name: 'Photo kale.jpg (opens full size)' });
+    expect(photo.getAttribute('src')).toBe('/api/v1/console/support/tickets/T1/attachments/UP1');
+    expect(within(list).getByRole('link', { name: 'receipt.pdf' }).getAttribute('href')).toBe('/api/v1/console/support/tickets/T1/attachments/UP2');
+    await expectNoAxeViolations(document.body);
+  });
+
   it('filters by chip through the api', async () => {
     const calls = api(['support']);
     const { router } = renderConsole('/support');

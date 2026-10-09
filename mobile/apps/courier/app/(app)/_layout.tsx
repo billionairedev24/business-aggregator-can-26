@@ -8,6 +8,7 @@ import { Banner, Button, Heading, Screen } from '../../src/components/ui';
 import { useFrenchFirst, useMe, useOnline, useRun } from '../../src/hooks';
 import { useI18n } from '../../src/i18n';
 import { useRunTracking } from '../../src/location/useRunTracking';
+import { FeedbackButton } from '../../src/pilot/Feedback';
 
 /** Signed in: the courier's screens, location sharing that follows the run, the outbox woken by connectivity. */
 export default function AppLayout() {
@@ -39,6 +40,8 @@ export default function AppLayout() {
           headerShadowVisible: false,
           contentStyle: { backgroundColor: colors.bg },
           headerBackTitle: t('common.back'),
+          // S-121 for pilot couriers (mobile gaps part 1): "Feedback" on every screen; nothing for other couriers
+          headerRight: () => <FeedbackButton />,
         }}
       >
         <Stack.Screen name="index" options={{ title: t('shift.title') }} />
@@ -47,6 +50,7 @@ export default function AppLayout() {
         <Stack.Screen name="stops/[id]/pickup" options={{ title: t('pickup.title') }} />
         <Stack.Screen name="stops/[id]/dropoff" options={{ title: t('dropoff.title') }} />
         <Stack.Screen name="account" options={{ title: t('account.title') }} />
+        <Stack.Screen name="feedback" options={{ title: t('pilot.title') }} />
       </Stack>
     </TrackingContext.Provider>
   );

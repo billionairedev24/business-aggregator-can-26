@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { colors, fonts, radius, space } from '@northline/mobile-kit';
@@ -9,6 +9,7 @@ import { colors, fonts, radius, space } from '@northline/mobile-kit';
 import type { OrderTracking } from '../api/shop';
 import { useAuth } from '../auth/AuthProvider';
 import type { MessageKey } from '../i18n';
+import { PushPrompt } from '../push/PushPrompt';
 import { Body, Button, Notice, Tag, Title } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { QueryView, SignInPrompt, Skeleton, errorMessage } from '../ui/states';
@@ -119,6 +120,7 @@ export function Confirmed() {
           {/* the sentence's own full stop, not a second one after "p.m." */}
           <Title>{t('shop.order.placed', { when: when(o).replace(/\.$/, '') })}</Title>
           <Body tone="muted">{t('shop.order.sub', { ref: o.ref ?? '', total: f.money(o.totalCents), shops: o.shops.length })}</Body>
+          <PushPrompt what="order" />
           <Ladder steps={steps(o)} />
         </View>
       )}
@@ -199,8 +201,10 @@ export function Track() {
 /**
  * B9 Delivered · confirm (design 01 `delivered`): the courier's proof, "Delivered at {time}", when the shops are paid
  * without a confirmation (the api's `paysShopsAt` — 7 days for goods, CLAUDE.md; the design's "24 h" is older), All
- * good (`POST /me/orders/{id}/confirm` releases the shops' escrow) or Something's wrong (the report). The proof photo
- * itself, the delivery rating and the tip have no consumer api yet (MOBILE_PLAN § API gaps) and aren't shown.
+ * good (`POST /me/orders/{id}/confirm` releases the shops' escrow) or Something's wrong (the report). The courier's
+ * door photo comes from `GET /me/orders/{id}/proof-photo` (a 5-minute signed URL, mobile gaps part 1) when the proof is
+ * a photo — never for a delivery with an ID check (the api answers 404). The delivery rating and the tip have no
+ * consumer api yet (MOBILE_PLAN § API gaps) and aren't shown.
  */
 export function Delivered() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -233,9 +237,7 @@ export function Delivered() {
         const done = !!o.confirmedAt || o.state === 'confirmed';
         return (
           <View style={styles.gap}>
-            <View style={styles.proof}>
-              <Text style={styles.proofText}>{t(`shop.delivered.proof.${o.deliveryProof ?? 'none'}` as MessageKey, { time: at })}</Text>
-            </View>
+            <Proof orderId={o.orderId} kind={o.deliveryProof ?? null} caption={t(`shop.delivered.proof.${o.deliveryProof ?? 'none'}` as MessageKey, { time: at })} />
             <Title>{t('shop.delivered.title', { time: at })}</Title>
             <Body tone="muted">{o.paysShopsAt ? t('shop.delivered.body', { date: f.date(o.paysShopsAt) }) : t('shop.delivered.bodyNoDate')}</Body>
             {done ? (
@@ -258,8 +260,45 @@ export function Delivered() {
   );
 }
 
+/** The door photo when there is one to show, else the placeholder naming the proof (PIN, signature, none). */
+function Proof({ orderId, kind, caption }: { orderId: string; kind: string | null; caption: string }) {
+  const { t } = useShopFormat();
+  const [broken, setBroken] = useState(false);
+  const photo = useQuery({
+    queryKey: ['shop', 'order', orderId, 'proof-photo'],
+    queryFn: () => shop().proofPhoto(orderId),
+    enabled: kind === 'photo',
+    retry: false,
+    // the link works 5 minutes: a screen left open reads a fresh one before it lapses
+    staleTime: 4 * 60_000,
+    refetchInterval: 4 * 60_000,
+  });
+  if (photo.data && !broken) {
+    return (
+      <View style={styles.gapSmall}>
+        <Image
+          source={{ uri: photo.data.url }}
+          style={styles.photo}
+          resizeMode="cover"
+          accessibilityLabel={t('shop.delivered.photoAlt')}
+          onError={() => setBroken(true)}
+          testID="proof-photo"
+        />
+        <Text style={styles.small}>{caption}</Text>
+      </View>
+    );
+  }
+  return (
+    <View style={styles.proof} testID="proof-placeholder">
+      <Text style={styles.proofText}>{caption}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   gap: { gap: space[3] },
+  gapSmall: { gap: space[1] },
+  photo: { height: 240, borderRadius: radius.md, backgroundColor: colors.neutral200 },
   flex: { flex: 1 },
   actions: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   map: { height: 220, marginHorizontal: -24, backgroundColor: colors.neutral200, overflow: 'hidden' },

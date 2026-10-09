@@ -38,7 +38,8 @@ import org.springframework.web.multipart.MultipartFile;
  * signed-in person may ask whether they take part; only participants may upload and send (403 otherwise).
  *
  * <pre>
- * GET  /api/v1/me/pilot[?merchantId=]   {participant, persona, screenshotMaxBytes, screenshotTypes}
+ * GET  /api/v1/me/pilot[?merchantId=][&amp;app=courier]   {participant, persona, screenshotMaxBytes, screenshotTypes}
+ *                                       (app=courier: only as a pilot courier — the courier app's button)
  * POST /api/v1/me/pilot/screenshots     multipart "file" (PNG or JPEG, ≤ 5 MB) → 201 {id, contentType, size}
  * POST /api/v1/me/pilot/feedback        FeedbackBody → 201 {id, reference}
  * GET  /api/v1/me/pilot/feedback        {items: [what I sent, with its triage state]}
@@ -53,8 +54,11 @@ class PilotFeedbackController {
 
     @Operation(summary = "Whether the caller (or the business they act for) takes part in the pilot")
     @GetMapping
-    Status status(CurrentUser user, @RequestParam(required = false) @Nullable String merchantId) {
-        return feedback.status(user.userId(), merchantId);
+    Status status(
+            CurrentUser user,
+            @RequestParam(required = false) @Nullable String merchantId,
+            @RequestParam(required = false) @Nullable String app) {
+        return feedback.status(user.userId(), merchantId, "courier".equals(app) ? FeedbackApp.COURIER : null);
     }
 
     @Operation(summary = "Upload a screenshot to attach to pilot feedback")

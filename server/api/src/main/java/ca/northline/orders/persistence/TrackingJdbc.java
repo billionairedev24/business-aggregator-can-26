@@ -48,6 +48,14 @@ class TrackingJdbc implements TrackingStore {
     }
 
     @Override
+    public boolean exists(String orderId) {
+        return jdbc.sql("select exists (select 1 from orders.orders where id = :id)")
+                .param("id", orderId)
+                .query(Boolean.class)
+                .single();
+    }
+
+    @Override
     public List<LineState> lines(String orderId) {
         return jdbc.sql("""
                         select merchant_id, qty, coalesce(state, 'pending') as state from orders.order_lines

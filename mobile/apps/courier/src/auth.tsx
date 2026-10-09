@@ -2,7 +2,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 
-import { OAuthError } from '@northline/mobile-kit';
+import { OAuthError, PushHooks } from '@northline/mobile-kit';
 
 import { config } from './config';
 import { stopTracking } from './location/tracker';
@@ -62,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await session.completeSignIn(result.url, pending);
       }
       setEnded(false);
+      void PushHooks.signedIn(services().api); // mobile gaps part 1: this phone gets the courier's run notifications
       return { ok: true };
     } catch (e) {
       return { ok: false, reason: 'failed', detail: e instanceof OAuthError ? (e.description ?? e.error) : e instanceof Error ? e.message : undefined };
@@ -69,9 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    const { session, outbox } = services();
+    const { session, outbox, api } = services();
     await stopTracking();
     await outbox.clear();
+    await PushHooks.signingOut(api); // while the tokens still work: this phone stops getting the courier's pushes
     await session.signOut();
     setEnded(false);
   }, []);

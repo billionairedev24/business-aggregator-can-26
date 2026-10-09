@@ -13,6 +13,19 @@ public interface TrackOrder {
 
     OrderTracking view(String customerId, String orderId);
 
+    /** Shown on the proof-of-delivery photo endpoint when the order is someone else's. */
+    String NOT_YOUR_ORDER = "This order isn't yours.";
+
+    /**
+     * The courier's proof-of-delivery photo of the customer's own order as a short-lived signed URL (fulfilment's
+     * {@code DeliveryProofPhotos}): 403 for someone else's order, 404 for no such order or no photo to show (PIN or
+     * signature, removed by retention, a delivery with an ID check at the door).
+     */
+    ProofPhoto proofPhoto(String customerId, String orderId);
+
+    /** @param url absolute (object storage) or relative to the api's origin ({@code local}: {@code /api/v1/dev/…}) */
+    record ProofPhoto(String url, Instant expiresAt) {}
+
     /**
      * @param state {@code "placed"} | {@code "accepted"} | {@code "packing"} | {@code "ready"} | {@code "picked_up"} |
      *     {@code "delivered"} | {@code "confirmed"} | {@code "refunded"} | {@code "cancelled"}

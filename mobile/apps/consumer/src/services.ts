@@ -38,6 +38,8 @@ export interface Services {
   fetch: typeof fetch;
   queryClient: QueryClient;
   store: KeyValueStore;
+  /** The Keychain / Keystore (memory on the web and the fixture backend): the session, push's installation id. */
+  secure: SecureStorage;
   fixtures: FixtureServer | null;
   language(): Locale;
   setLanguage(locale: Locale): void;
@@ -102,6 +104,7 @@ export function createServices(options: ServiceOptions = {}): Services {
     fetch: fetchImpl,
     queryClient,
     store,
+    secure,
     fixtures,
     language: () => language,
     setLanguage: (l) => {

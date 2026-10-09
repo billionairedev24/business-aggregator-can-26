@@ -17,12 +17,14 @@ import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
+import ca.northline.shared.storage.ImageDecoding;
 import ca.northline.shared.storage.ObjectKeys;
 import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,8 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 @Transactional
 class CustomerCaseService implements CustomerCaseDesk {
+
+    private static final Set<String> RASTERS = Set.of("image/jpeg", "image/png");
 
     static final String NOTE_REQUIRED = "Write a message or add a photo.";
     static final String NOTE_TOO_LONG = "Keep messages under 2,000 characters.";
@@ -122,6 +126,11 @@ class CustomerCaseService implements CustomerCaseDesk {
         }
         var type = contentType.toLowerCase(Locale.ROOT);
         if (!FILE_TYPES.contains(type) || !MessageAttachmentService.signatureMatches(type, bytes.toArray())) {
+            throw RuleViolation.of("file", "format", FILE_TYPE);
+        }
+        // S-104, as for the pilot screenshots: a JPEG or PNG must be a readable image within the pixel ceiling (the
+        // header is read, no pixels decoded) — photos now come from the apps' camera and library too
+        if (RASTERS.contains(type) && ImageDecoding.size(bytes.toArray()).isEmpty()) {
             throw RuleViolation.of("file", "format", FILE_TYPE);
         }
         if (bytes.size() > FILE_MAX_BYTES) {

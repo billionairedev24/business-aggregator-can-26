@@ -173,6 +173,16 @@ export const shopApi = (api: ApiClient) => ({
 
   order: (orderId: string) => api.get<OrderTracking>(`/me/orders/${id(orderId)}`),
   confirm: (orderId: string) => api.post<OrderTracking>(`/me/orders/${id(orderId)}/confirm`),
+  /**
+   * The courier's door photo (mobile gaps part 1): a signed URL good for 5 minutes, absolute (object storage) or
+   * relative to the api's origin (the api's own link under `local`). 404 = none to show (PIN, signature, ID check).
+   */
+  proofPhoto: async (orderId: string) => {
+    const p = await api.get<{ url: string; expiresAt: string }>(`/me/orders/${id(orderId)}/proof-photo`);
+    return p ? { ...p, url: new URL(p.url, api.baseUrl).toString() } : null;
+  },
+  /** A photo for a report (`POST /me/case-uploads`, S-60): JPEG or PNG from the camera or the library. */
+  uploadPhoto: (form: FormData) => api.post<{ id: string; fileName: string; contentType: string; size: number }>('/me/case-uploads', { form }),
   problem: (kind: string, refId: string) => api.get<ProblemContext>(`/me/problems/${id(kind)}/${id(refId)}`),
   report: (r: { kind: string; id: string; items: string[]; reason: string; note?: string; attachmentIds: string[] }) =>
     api.post<Reported>('/me/problems', { json: r }),

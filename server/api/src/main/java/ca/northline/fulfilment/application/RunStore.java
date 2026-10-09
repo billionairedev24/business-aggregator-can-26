@@ -53,6 +53,12 @@ public interface RunStore {
 
     void droppedOff(String stopId, String proofKind, Instant at);
 
+    /**
+     * The storage key of the photo a courier left as an order's proof of delivery: a done drop-off whose proof is a
+     * photo still kept (S-107 retention clears it). Empty for a PIN or signature, before the drop-off, after retention,
+     * and always for a delivery with an ID check at the door (2026-10-04).
+     */
+    Optional<String> proofPhotoKey(String orderId);
     /** Age-restricted items: a stop back at the business after a refused drop-off; returns its id. */
     String addReturnStop(String runId, String orderId, String merchantId, Instant at);
 

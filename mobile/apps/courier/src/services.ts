@@ -29,7 +29,10 @@ export interface Services {
   courier: CourierApi;
   outbox: Outbox;
   queryClient: QueryClient;
+  /** The Keychain / Keystore (memory on the web and the fixture backend): the session, push's installation id. */
+  secure: SecureStorage;
   fixtures: FixtureServer | null;
+  language(): Locale;
   setLanguage(locale: Locale): void;
 }
 
@@ -106,7 +109,9 @@ export function createServices(options: ServiceOptions = {}): Services {
     courier,
     outbox,
     queryClient,
+    secure,
     fixtures,
+    language: () => language,
     setLanguage: (l) => {
       language = l;
     },

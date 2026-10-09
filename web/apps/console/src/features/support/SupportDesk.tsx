@@ -9,7 +9,7 @@ import { useGrant } from '../shell/grant';
 import { PlaceFilters, type PlaceFilter } from '../shell/PlaceFilters';
 import { SCREEN_PATH } from '../shell/screens';
 import {
-  FILTERS, ticketQuery, ticketsQuery, useDecideRefund, useDeleteMacro, useEscalate, useMacros, useReply, useRequestRefund, useSaveMacro, useTake,
+  FILTERS, attachmentUrl, ticketQuery, ticketsQuery, useDecideRefund, useDeleteMacro, useEscalate, useMacros, useReply, useRequestRefund, useSaveMacro, useTake,
   type Detail, type Macro, type Ticket, type TicketFilter,
 } from './api';
 import { useSupportT, type SupportKey } from './messages';
@@ -191,7 +191,20 @@ function TicketPanel({ id }: { id: string }) {
         {d.notes.map((n, i) => (
           <li key={i} className={`nl-sd-note nl-sd-note-${n.by}`}>
             <span className="nl-q-note">{n.name ?? t(`by_${n.by}` as SupportKey)} · {age(n.at)}</span>
-            <p>{n.body}</p>
+            {n.body ? <p>{n.body}</p> : null}
+            {n.attachments?.length ? (
+              <ul className="nl-sd-files" aria-label={t('attachments', { count: n.attachments.length })}>
+                {n.attachments.map(f => (
+                  <li key={f.id}>
+                    <a href={attachmentUrl(tk.id, f.id)} target="_blank" rel="noopener noreferrer">
+                      {f.contentType.startsWith('image/') && f.contentType !== 'image/heic' && f.contentType !== 'image/heif'
+                        ? <img src={attachmentUrl(tk.id, f.id)} alt={t('attachmentPhoto', { name: f.fileName })} loading="lazy" />
+                        : f.fileName}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </li>
         ))}
       </ol>

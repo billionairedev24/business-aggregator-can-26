@@ -34,8 +34,10 @@ type Reply = { status?: number; body?: unknown } | undefined;
 let user: typeof AMARA | null;
 let order: (c: Call) => Reply;
 let confirm: (c: Call) => Reply = () => undefined;
+let photo: (c: Call) => Reply = () => ({ status: 404, body: { code: 'not_found', detail: 'No proof photo with id ORD1' } });
 const server = (c: Call): Reply => (c.url === '/bff/session' ? { body: { user, guestId: 'g' } }
   : c.url === '/api/v1/me/orders/ORD1' ? order(c)
+  : c.url === '/api/v1/me/orders/ORD1/proof-photo' ? photo(c)
     : c.url === '/api/v1/me/orders/ORD1/confirm' ? confirm(c) : undefined);
 function Page() {
   const { orderId } = useParams({ strict: false }) as { orderId: string };
@@ -52,7 +54,10 @@ beforeEach(() => {
   FakeEventSource.last = undefined;
   vi.stubGlobal('EventSource', FakeEventSource);
 });
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  photo = () => ({ status: 404, body: { code: 'not_found' } });
+});
 
 describe('Order confirmed and tracking (design 06 confirmed)', () => {
   it('shows the confirmation, the timeline and the run', async () => {
@@ -136,6 +141,25 @@ describe('Order confirmed and tracking (design 06 confirmed)', () => {
     await user.click(screen.getByRole('button', { name: 'Got everything' }));
     expect(await screen.findByText('You confirmed it. The shops are paid.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Got everything' })).not.toBeInTheDocument();
+  });
+
+  it('shows the courier’s door photo through its short-lived link, and nothing when there is none (mobile gaps part 1)', async () => {
+    const DELIVERED = { ...ORDER, state: 'delivered', steps: steps(4), deliveredAt: '2026-10-01T01:10:00Z', deliveryProof: 'photo', canConfirm: true, paysShopsAt: '2026-10-08T01:10:00Z', confirmedAt: null };
+    order = () => ({ body: DELIVERED });
+    photo = () => ({ body: { url: 'https://objects.example/fulfilment/proofs/r/s-photo?sig=abc', expiresAt: '2026-10-01T01:20:00Z' } });
+    open();
+    expect(await screen.findByRole('img', { name: 'The courier’s photo of your order at your door' })).toHaveAttribute('src', 'https://objects.example/fulfilment/proofs/r/s-photo?sig=abc');
+    await expectNoAxeViolations(document.body);
+  });
+
+  it('asks for no photo after a PIN, and shows none when the api has none to show (an ID check)', async () => {
+    const asked: string[] = [];
+    photo = c => { asked.push(c.url); return { status: 404, body: { code: 'not_found' } }; };
+    order = () => ({ body: { ...ORDER, state: 'delivered', steps: steps(4), deliveredAt: '2026-10-01T01:10:00Z', deliveryProof: 'pin' } });
+    open();
+    expect(await screen.findByText('Delivered with your PIN.')).toBeInTheDocument();
+    expect(asked).toEqual([]);
+    expect(screen.queryByRole('img', { name: /door/ })).not.toBeInTheDocument();
   });
 
   it('offers the confirmation in French', async () => {

@@ -9,6 +9,7 @@ import { colors, fonts, space } from '@northline/mobile-kit';
 import type { Booking } from '../api/services';
 import { useAuth } from '../auth/AuthProvider';
 import { useI18n } from '../i18n';
+import { PushPrompt } from '../push/PushPrompt';
 import { Body, Button, Checkbox, Field, Notice, Section, Tag, Title, type } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { errorMessage, Loading, QueryView, SignInPrompt, Skeleton } from '../ui/states';
@@ -95,6 +96,7 @@ export function Booked({ id }: { id: string }) {
           <Body tone="muted">
             {b.heldCents > 0 ? t('services.booked.held', { ref: b.ref, total: money(b.heldCents, locale) }) : t('services.booked.free', { ref: b.ref })}
           </Body>
+          <PushPrompt what="booking" />
           <Section>{t('services.booked.next')}</Section>
           {(['next1', 'next2', 'next3', 'next4'] as const).map((k) => (
             <Text key={k} style={[type.body, styles.next]}>· {t(`services.booked.${k}`, { name: who(b) })}</Text>

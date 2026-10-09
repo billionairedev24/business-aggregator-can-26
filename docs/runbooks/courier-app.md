@@ -216,6 +216,17 @@ one Idempotency-Key each); the outbox stores only the yes/no answers or the reas
 | Camera (`NSCameraUsageDescription`, `CAMERA`) | Drop-off › Photo › Allow camera | Northline Courier uses the camera to photograph a delivery at the door as proof of delivery. | Northline Coursier utilise l’appareil photo pour photographier une livraison à la porte comme preuve de livraison. |
 | Location while using (`NSLocationWhenInUseUsageDescription`, `ACCESS_FINE_LOCATION`) | Run › Share location (after the app's own explanation) | While you are on a run, Northline Courier shares your location so customers can follow their order on its way. Only your latest position is kept, never a history. | Pendant une tournée, Northline Coursier partage votre position pour que les clients suivent leur commande en route. Seule votre dernière position est conservée, jamais un historique. |
 | Location always (`NSLocationAlwaysAndWhenInUseUsageDescription`, `ACCESS_BACKGROUND_LOCATION`, `FOREGROUND_SERVICE_LOCATION`) | right after "while using" | While you are on a run, Northline Courier keeps sharing your location when the app is in the background, so customers can follow their order on its way. Sharing stops when your run ends; only your latest position is kept. | Pendant une tournée, Northline Coursier continue de partager votre position quand l’app est en arrière-plan, pour que les clients suivent leur commande en route. Le partage s’arrête à la fin de la tournée; seule votre dernière position est conservée. |
+| Photos (`NSPhotoLibraryUsageDescription`; none on Android) | Feedback › "Add a screenshot" (pilot couriers, mobile gaps part 1) — the system photo picker | Northline Courier opens your photos only when you choose a screenshot to add to pilot feedback. | Northline Coursier ouvre vos photos seulement quand vous choisissez une capture d’écran à joindre à un commentaire du pilote. |
+| Notifications (`POST_NOTIFICATIONS`, iOS alert) | the shift screen's card once on shift ("Get a notification when a run is yours"), or Account › Run notifications on this phone | the system's text | the system's text |
+
+**Push** (mobile gaps part 1): `src/push/install.ts` installs mobile-kit's `installPush` — registration at sign-in
+(`PUT /me/devices/{installation}`; the token's scope `courier` files it under the courier app), removal at sign-out
+before the tokens are revoked, a sync at every start and foreground return, token rotation; a tap on "New run" opens
+`/run` (links `https://<zone>/courier/run`, the zone taken from the api URL `api.<zone>`, or `ca.northline.courier://run`).
+**Pilot feedback** (S-121): pilot couriers (`GET /me/pilot?app=courier`) get "Feedback" in the header of every screen:
+the same UAT api as the web, sent as `app: courier` (persona courier), with an optional screenshot. `make
+courier-native-check` prebuilds both variants and checks the manifests (camera, run location, push, no microphone or
+storage). Never run on a phone; no APNs/FCM accounts.
 
 Blocked from the merged Android manifest: `RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`, external storage and media reads.
 `allowBackup=false`. Store declarations to prepare:

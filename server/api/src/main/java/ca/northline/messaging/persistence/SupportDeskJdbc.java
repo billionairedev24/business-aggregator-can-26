@@ -8,14 +8,17 @@ import static ca.northline.messaging.persistence.MessagingSql.ts;
 
 import ca.northline.messaging.application.SupportDesk.Macro;
 import ca.northline.messaging.application.SupportDesk.Note;
+import ca.northline.messaging.application.SupportDesk.NoteFile;
 import ca.northline.messaging.application.SupportDesk.RefundRequest;
 import ca.northline.messaging.application.SupportDeskStore;
 import ca.northline.messaging.domain.SupportCase;
 import ca.northline.shared.Ids;
 import ca.northline.shared.MerchantScope;
+import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -137,19 +140,78 @@ class SupportDeskJdbc implements SupportDeskStore {
 
     @Override
     public List<Note> notes(String ticketId) {
-        return jdbc.sql("""
-                        select m.sender_role, m.sender_name, m.body, m.at
+        record Row(String by, @Nullable String name, String body, Instant at, List<String> files) {}
+        var rows = jdbc.sql("""
+                        select m.sender_role, m.sender_name, m.body, m.at, m.attachments
                           from messaging.threads h join messaging.messages m on m.thread_id = h.id
                          where h.ref_type = 'ticket' and h.ref_id = :t and h.kind = 'case'
                          order by m.at, m.id
                         """)
                 .param("t", ticketId)
-                .query((rs, _) -> new Note(
+                .query((rs, _) -> new Row(
                         Objects.requireNonNullElse(rs.getString("sender_role"), "merchant"),
                         rs.getString("sender_name"),
                         Objects.requireNonNullElse(rs.getString("body"), ""),
-                        requiredInstant(rs, "at")))
+                        requiredInstant(rs, "at"),
+                        strings(rs.getArray("attachments"))))
                 .list();
+        var ids = rows.stream().flatMap(r -> r.files().stream()).distinct().toList();
+        var files = new LinkedHashMap<String, NoteFile>();
+        if (!ids.isEmpty()) {
+            jdbc.sql("""
+                            select id, file_name, content_type, byte_size from messaging.customer_uploads
+                             where id in (:ids)
+                            union all
+                            select id, file_name, content_type, byte_size from messaging.attachments where id in (:ids)
+                            """)
+                    .param("ids", ids)
+                    .query((rs, _) -> new NoteFile(
+                            rs.getString("id"),
+                            rs.getString("file_name"),
+                            rs.getString("content_type"),
+                            rs.getLong("byte_size")))
+                    .list()
+                    .forEach(f -> files.put(f.id(), f));
+        }
+        return rows.stream()
+                .map(r -> new Note(
+                        r.by(),
+                        r.name(),
+                        r.body(),
+                        r.at(),
+                        r.files().stream()
+                                .map(files::get)
+                                .filter(Objects::nonNull)
+                                .toList()))
+                .toList();
+    }
+
+    @Override
+    public Optional<StoredFile> attachment(String ticketId, String attachmentId) {
+        return jdbc.sql("""
+                        select f.storage_key, f.content_type, f.file_name
+                          from (select id, storage_key, content_type, file_name from messaging.customer_uploads
+                                union all
+                                select id, storage_key, content_type, file_name from messaging.attachments) f
+                         where f.id = :f
+                           and exists (select 1 from messaging.threads h join messaging.messages m on m.thread_id = h.id
+                                        where h.ref_type = 'ticket' and h.ref_id = :t and h.kind = 'case'
+                                          and :f = any(m.attachments))
+                         limit 1
+                        """)
+                .param("t", ticketId)
+                .param("f", attachmentId)
+                .query((rs, _) -> new StoredFile(
+                        rs.getString("storage_key"), rs.getString("content_type"), rs.getString("file_name")))
+                .optional();
+    }
+
+    private static List<String> strings(@Nullable Array array) throws SQLException {
+        return array == null
+                ? List.of()
+                : Arrays.stream((Object[]) array.getArray())
+                        .map(String::valueOf)
+                        .toList();
     }
 
     @Override

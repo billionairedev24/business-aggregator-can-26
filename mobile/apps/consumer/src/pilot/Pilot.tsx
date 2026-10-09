@@ -2,11 +2,12 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { router, useLocalSearchParams, usePathname } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
+import { MIN_TARGET, SCREENSHOT_MAX_BYTES, SCREENSHOT_TYPES, checkPhoto, colors, fonts, radius, space, type PickedImage } from '@northline/mobile-kit';
 
 import { pilotApi, screenOf, type FeedbackCategory, type FeedbackSeverity } from '../api/pilot';
+import { pickImage } from '../photos/pick';
 import { useAuth } from '../auth/AuthProvider';
 import { useI18n } from '../i18n';
 import { services } from '../services';
@@ -22,7 +23,7 @@ export function usePilot() {
   const { status } = useAuth();
   return useQuery({
     queryKey: ['pilot', 'status'],
-    queryFn: async () => (await pilotApi(services().api).status().catch(() => null))?.participant === true,
+    queryFn: async () => (await pilotApi(services().api, 'mobile').status().catch(() => null))?.participant === true,
     enabled: status === 'signedIn',
     staleTime: 5 * 60_000,
   });
@@ -51,7 +52,11 @@ export function PilotButton() {
   );
 }
 
-/** The feedback form: what it is, how much it got in the way, what happened. */
+/**
+ * The feedback form: what it is, how much it got in the way, what happened, and optionally a screenshot (mobile gaps
+ * part 1): the person takes it with the phone's own buttons, then picks it from the photo library here (PNG or JPEG,
+ * ≤ 5 MB — the web's limits; the api checks it again). It is uploaded when they press Send, then referenced.
+ */
 export function FeedbackScreen() {
   const { t, locale } = useI18n();
   const { from } = useLocalSearchParams<{ from?: string }>();
@@ -60,9 +65,13 @@ export function FeedbackScreen() {
   const [severity, setSeverity] = useState<FeedbackSeverity>('minor');
   const [body, setBody] = useState('');
   const [error, setError] = useState<string>();
+  const [shot, setShot] = useState<PickedImage | null>(null);
+  const [shotError, setShotError] = useState<string>();
   const send = useMutation({
-    mutationFn: () =>
-      pilotApi(services().api).send({
+    mutationFn: async () => {
+      const api = pilotApi(services().api, 'mobile');
+      const screenshotId = shot ? (await api.screenshot(shot))?.id : undefined;
+      return api.send({
         category,
         severity,
         body: body.trim(),
@@ -70,8 +79,18 @@ export function FeedbackScreen() {
         appVersion: (Constants.expoConfig?.version ?? 'dev').replace(/[^A-Za-z0-9._+-]/g, '') || 'dev',
         locale,
         platform: `Northline app · ${Platform.OS} ${String(Platform.Version)}`,
-      }),
+        ...(screenshotId ? { screenshotId } : {}),
+      });
+    },
   });
+  const attach = async () => {
+    setShotError(undefined);
+    const picked = await pickImage('library', 1).catch(() => null);
+    if (!picked || picked === 'denied') return;
+    const problem = checkPhoto(picked, SCREENSHOT_TYPES, SCREENSHOT_MAX_BYTES);
+    if (problem) return setShotError(t(problem === 'size' ? 'pilot.shotSize' : 'pilot.shotType'));
+    setShot(picked);
+  };
   const submit = () => {
     const text = body.trim();
     if (!text || text.length > MAX) return setError(t('pilot.bodyRequired'));
@@ -101,7 +120,18 @@ export function FeedbackScreen() {
             ))}
           </View>
           <Field label={t('pilot.body')} hint={t('pilot.bodyHint')} value={body} onChangeText={setBody} multiline maxLength={MAX} error={error} testID="pilot-body" />
-          <Body tone="small">{t('pilot.context', { screen })}</Body>
+          <Text style={styles.legend}>{t('pilot.shot')}</Text>
+          <Body tone="small">{t('pilot.shotHint')}</Body>
+          {shot ? (
+            <View style={styles.shotRow}>
+              <Image source={{ uri: shot.uri }} style={styles.shot} accessibilityLabel={t('pilot.shotAttached')} testID="pilot-shot" />
+              <Button label={t('pilot.shotRemove')} tone="ghost" onPress={() => setShot(null)} testID="pilot-shot-remove" />
+            </View>
+          ) : (
+            <Button label={t('pilot.shotAdd')} tone="secondary" onPress={() => void attach()} testID="pilot-shot-add" />
+          )}
+          {shotError ? <Notice message={shotError} testID="pilot-shot-error" /> : null}
+          <Body tone="small">{t(shot ? 'pilot.contextShot' : 'pilot.context', { screen })}</Body>
           {send.isError ? <Notice message={t('pilot.error')} /> : null}
         </View>
       )}
@@ -127,4 +157,6 @@ const styles = StyleSheet.create({
   form: { gap: space[3] },
   legend: { fontFamily: fonts.bodyStrong, fontSize: 15, color: colors.neutral900 },
   options: { gap: space[2] },
+  shotRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  shot: { width: 72, height: 128, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.divider },
 });

@@ -2,5 +2,6 @@
   "CFBundleDisplayName": "Coursier Northline",
   "NSCameraUsageDescription": "Northline Coursier utilise l’appareil photo pour photographier une livraison à la porte comme preuve de livraison.",
   "NSLocationWhenInUseUsageDescription": "Pendant une tournée, Northline Coursier partage votre position pour que les clients suivent leur commande en route. Seule votre dernière position est conservée, jamais un historique.",
-  "NSLocationAlwaysAndWhenInUseUsageDescription": "Pendant une tournée, Northline Coursier continue de partager votre position quand l’app est en arrière-plan, pour que les clients suivent leur commande en route. Le partage s’arrête à la fin de la tournée; seule votre dernière position est conservée."
+  "NSLocationAlwaysAndWhenInUseUsageDescription": "Pendant une tournée, Northline Coursier continue de partager votre position quand l’app est en arrière-plan, pour que les clients suivent leur commande en route. Le partage s’arrête à la fin de la tournée; seule votre dernière position est conservée.",
+  "NSPhotoLibraryUsageDescription": "Northline Coursier ouvre vos photos seulement quand vous choisissez une capture d’écran à joindre à un commentaire du pilote."
 }

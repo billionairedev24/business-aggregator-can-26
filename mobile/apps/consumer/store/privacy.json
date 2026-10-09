@@ -69,6 +69,11 @@
       "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
       "why": "Notes on a booking or quote request (the vehicle, access instructions) sent to the business."
     },
+    "PhotosorVideos": {
+      "linked": true, "tracking": false, "optional": true, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
+      "why": "Only the photos the customer chooses: up to 3 on a problem report (camera or photo picker, sent to Northline support and the business on the case), and a pilot participant's screenshot on feedback. No photo library access beyond the picked image."
+    },
     "OtherDataTypes": {
       "linked": true, "tracking": false, "optional": true, "ephemeral": false,
       "applePurposes": ["App Functionality"], "playPurposes": ["App functionality", "Fraud prevention, security, and compliance"],
@@ -76,7 +81,7 @@
     }
   },
   "notCollected": [
-    "Health and fitness", "Contacts", "Photos or videos", "Audio", "Browsing history", "Search history (queries are answered, not kept)",
+    "Health and fitness", "Contacts", "Audio", "Browsing history", "Search history (queries are answered, not kept)",
     "Sensitive info", "Advertising data", "Crash or performance data (no crash reporter in the app yet)", "Coarse location beyond the precise location above"
   ]
 }

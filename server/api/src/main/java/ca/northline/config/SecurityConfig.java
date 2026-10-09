@@ -135,12 +135,14 @@ class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/public/storefronts/*/visits")
                         .permitAll()
                         // Email unsubscribe links: the signed token is the authorisation (S-13). The template
-                        // previews, the fake Stripe Identity page (S-22) and the outbox (S-117) exist only under
-                        // `local` (404 elsewhere).
+                        // previews, the fake Stripe Identity page (S-22), the outbox (S-117) and the signed
+                        // proof-of-delivery photo links (the presigned GET's stand-in, mobile gaps part 1) exist only
+                        // under `local` (404 elsewhere).
                         .requestMatchers(
                                 "/api/v1/email/unsubscribe",
                                 "/api/v1/dev/emails/**",
                                 "/api/v1/dev/identity-sessions/**",
+                                "/api/v1/dev/proof-photos/**",
                                 "/api/v1/dev/age-sessions/**",
                                 "/api/v1/dev/outbox")
                         .permitAll()

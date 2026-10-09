@@ -34,4 +34,4 @@ title: "UAT script — Courier"
 | 6 | Hand over with the customer’s PIN (and a photo). | The stop is complete; the customer sees delivered. | ☐ Pass ☐ Fail | |
 | 7 | End your shift. | You are warned if anything is still unsent; the shift ends. | ☐ Pass ☐ Fail | |
 | 8 | Switch the app to French and open a stop. | Everything is in French. | ☐ Pass ☐ Fail | |
-| 9 | Tell the pilot team one thing that slowed you down (the courier app has no feedback button yet: use the form or tell your contact). | The pilot team logs it in the UAT queue and gives you the reference. | ☐ Pass ☐ Fail | |
+| 9 | Tell the pilot team one thing that slowed you down: **Feedback** at the top of any screen of the courier app (add a screenshot if it helps; crop out customer details). | You see the reference (UAT-…) on the phone; the item is in the UAT queue as a courier's. | ☐ Pass ☐ Fail | |

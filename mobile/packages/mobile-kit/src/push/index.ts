@@ -10,3 +10,4 @@ export {
   type PushPlatform,
   type PushRegistrationOptions,
 } from './registration';
+export { installPush, siteHostOf, type AppPush, type AppPushOptions } from './install';

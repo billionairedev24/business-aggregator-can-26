@@ -1,5 +1,6 @@
 package ca.northline.orders.application;
 
+import ca.northline.fulfilment.api.DeliveryProofPhotos;
 import ca.northline.merchants.api.BusinessNames;
 import ca.northline.orders.api.DeliveryRuns;
 import ca.northline.orders.domain.OrderDelivery;
@@ -13,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +36,20 @@ class OrderTrackingService implements TrackOrder {
     private final BusinessNames names;
     private final Clock clock;
     private final CourierProgressReader couriers;
+    private final DeliveryProofPhotos photos;
+
+    @Override
+    public ProofPhoto proofPhoto(String customerId, String orderId) {
+        if (orders.order(customerId, orderId).isEmpty()) {
+            if (orders.exists(orderId)) {
+                throw new AccessDeniedException(NOT_YOUR_ORDER);
+            }
+            throw new NotFound("order", orderId);
+        }
+        return photos.photo(orderId)
+                .map(p -> new ProofPhoto(p.url().toString(), p.expiresAt()))
+                .orElseThrow(() -> new NotFound("proof photo", orderId));
+    }
 
     @Override
     public OrderTracking view(String customerId, String orderId) {

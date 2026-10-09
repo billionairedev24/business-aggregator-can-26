@@ -7,6 +7,7 @@ import ca.northline.messaging.application.SupportDesk.MacroInput;
 import ca.northline.messaging.application.SupportDesk.PendingRefund;
 import ca.northline.messaging.application.SupportDesk.Queue;
 import ca.northline.messaging.application.SupportDesk.TicketDetail;
+import ca.northline.shared.NotFound;
 import ca.northline.shared.PlaceFilter;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.security.ConsoleAction;
@@ -24,7 +25,12 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,6 +52,7 @@ import org.springframework.web.bind.annotation.RestController;
  * GET    /api/v1/console/support/tickets[?filter=all|urgent|unassigned|mine|sla_risk|providers|…][&amp;province=][&amp;market=]
  *                                                                            {kpis, counts, items: [Ticket]}
  * GET    /api/v1/console/support/tickets/{id}                                TicketDetail
+ * GET    /api/v1/console/support/tickets/{id}/attachments/{fileId}           the file (photos on a customer's report)
  * POST   /api/v1/console/support/tickets/{id}/reply      {body, resolve?, macroKey?}   TicketDetail
  * POST   /api/v1/console/support/tickets/{id}/take                                     TicketDetail
  * POST   /api/v1/console/support/tickets/{id}/escalate   {note?}                       TicketDetail
@@ -119,6 +126,24 @@ class SupportDeskController {
     @RequiresConsole(ConsoleScreen.SUPPORT)
     TicketDetail ticket(@PathVariable String id) {
         return desk.ticket(id);
+    }
+
+    /** S-99 follow-up: the photos a customer attached to a problem report, for the agent (no-store, never sniffed). */
+    @GetMapping("/tickets/{id}/attachments/{fileId}")
+    @RequiresConsole(ConsoleScreen.SUPPORT)
+    ResponseEntity<byte[]> attachment(@PathVariable String id, @PathVariable String fileId) {
+        var file = desk.attachment(id, fileId).orElseThrow(() -> new NotFound("attachment", fileId));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .contentType(MediaType.parseMediaType(file.contentType()))
+                .header("X-Content-Type-Options", "nosniff")
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.inline()
+                                .filename(file.fileName())
+                                .build()
+                                .toString())
+                .body(file.bytes().toArray());
     }
 
     @PostMapping("/tickets/{id}/reply")

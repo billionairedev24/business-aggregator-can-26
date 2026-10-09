@@ -9,6 +9,8 @@ import { OutboxBar } from '../../src/components/tracking';
 import { Banner, Body, Button, Card, Chip, Heading, Loading, Row, Screen } from '../../src/components/ui';
 import { useMarketZone, useMe, useRun, useShifts } from '../../src/hooks';
 import { useI18n, type MessageKey } from '../../src/i18n';
+import { FeedbackButton } from '../../src/pilot/Feedback';
+import { PushPrompt } from '../../src/push/PhonePush';
 import { ME_KEY, RUN_KEY, SHIFTS_KEY, services } from '../../src/services';
 
 const EARLY_START_MS = 15 * 60_000;
@@ -51,7 +53,18 @@ export default function ShiftScreen() {
     },
   });
 
-  const header = <Stack.Screen options={{ headerRight: () => <Button tone="ghost" label={t('account.title')} onPress={() => router.push('/account')} /> }} />;
+  const header = (
+    <Stack.Screen
+      options={{
+        headerRight: () => (
+          <Row>
+            <FeedbackButton />
+            <Button tone="ghost" label={t('account.title')} onPress={() => router.push('/account')} />
+          </Row>
+        ),
+      }}
+    />
+  );
   if (me.isPending) {
     return (
       <>
@@ -118,6 +131,7 @@ export default function ShiftScreen() {
         </Card>
       )}
 
+      {current ? <PushPrompt /> : null}
       {error ? <Banner tone="error">{error}</Banner> : null}
 
       {run ? (

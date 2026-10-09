@@ -1,4 +1,6 @@
 {
   "CFBundleDisplayName": "Northline",
-  "NSLocationWhenInUseUsageDescription": "Northline utilise votre position pour suggérer votre adresse de livraison et afficher les commerces et prestataires qui la desservent. Elle n’est utilisée que lorsque l’app est ouverte et n’est jamais transmise aux entreprises."
+  "NSLocationWhenInUseUsageDescription": "Northline utilise votre position pour suggérer votre adresse de livraison et afficher les commerces et prestataires qui la desservent. Elle n’est utilisée que lorsque l’app est ouverte et n’est jamais transmise aux entreprises.",
+  "NSCameraUsageDescription": "Northline utilise l’appareil photo seulement quand vous prenez une photo à joindre à un signalement de problème.",
+  "NSPhotoLibraryUsageDescription": "Northline ouvre vos photos seulement quand vous en choisissez une à joindre à un signalement de problème ou à un commentaire du pilote."
 }
