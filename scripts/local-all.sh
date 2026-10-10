@@ -153,6 +153,9 @@ check_port() { # check_port <service> <port> <setting> [byo-name]
 }
 
 # --- what to start --------------------------------------------------------------------------------------------------
+# Compose services that do their work and exit (deploy/kafka topics, the storage bucket); not servers to wait for
+ONESHOT_JOBS="kafka-topics storage-bucket"
+
 standin_services() {
   local s=""
   byo db || s="$s postgres"
@@ -225,8 +228,17 @@ cmd_up() {
   cmd_check
   local services; services="$(standin_services)"
   say ""; say "${c_b}Stand-ins${c_off} ${c_dim}$services${c_off}"
+  # --wait fails on a container that has exited, even with 0, so the one-shot jobs (topics, bucket) run apart: the
+  # servers first, healthy, then each job to completion
+  local svc servers="" jobs=""
+  for svc in $services; do
+    case " $ONESHOT_JOBS " in *" $svc "*) jobs="$jobs $svc" ;; *) servers="$servers $svc" ;; esac
+  done
   # shellcheck disable=SC2086 # a list of compose service names
-  docker compose up -d --wait $services
+  [ -z "$servers" ] || docker compose up -d --wait $servers
+  for svc in $jobs; do
+    docker compose run --rm -T "$svc" >/dev/null || die "the $svc stand-in job failed — docker compose run --rm $svc shows why"
+  done
   # Kafka UI is a convenience: a failed pull (Docker Hub rate limits) must not stop the stack.
   byo events || docker compose up -d kafka-ui >/dev/null 2>&1 || warn "Kafka UI did not start (docker compose up -d kafka-ui to see why); Kafka itself runs"
   say ""; say "${c_b}Observability${c_off}"
