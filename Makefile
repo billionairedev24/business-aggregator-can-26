@@ -129,10 +129,16 @@ status: ## What runs, on which port, whether it answers, the useful URLs; then t
 logs: ## Follow the app logs (.run/logs; SERVICES=api for one); make standins-logs for the containers
 	@$(STACK) logs $(if $(filter command line,$(origin SERVICES)),$(SERVICES))
 
+# One-shot compose jobs (they exit when done, which up --wait reports as a failure): run to completion after the servers
+ONESHOT_JOBS := kafka-topics|storage-bucket
+
 .PHONY: standins-up
 standins-up: ## Only the compose stand-ins (PROFILES=db,cache,events,search,mail,storage,payments or all), healthy
 	@if [ "$(PROFILES)" = none ]; then echo "PROFILES=none: no stand-ins (your own Postgres per server/.env)"; \
-	else $(COMPOSE) $(compose_profiles) up -d --wait; fi
+	else cd $(ROOT) && all=$$(docker compose $(compose_profiles) config --services) && \
+	  docker compose $(compose_profiles) up -d --wait $$(printf '%s\n' $$all | grep -vxE '$(ONESHOT_JOBS)') && \
+	  for job in $$(printf '%s\n' $$all | grep -xE '$(ONESHOT_JOBS)'); do \
+	    docker compose $(compose_profiles) run --rm -T $$job >/dev/null || exit 1; done; fi
 
 .PHONY: standins-down
 standins-down: ## Stop the compose stand-ins, every profile (VOLUMES=1 also deletes their data)
