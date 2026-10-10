@@ -110,8 +110,9 @@ while read -r name partitions retention cleanup; do
 done < "$TMP"
 
 # Missing topics, a few CLI calls at a time (each is a JVM start). --if-not-exists: a concurrent run is harmless.
+# Only when some are missing: xargs runs its command once even on empty input, and a --create without a topic fails.
 export CMD BOOTSTRAP RF
-xargs -n 4 -P "${KAFKA_TOPICS_PARALLEL:-4}" sh -c '
+[ ! -s "$MISSING" ] || xargs -n 4 -P "${KAFKA_TOPICS_PARALLEL:-4}" sh -c '
   $CMD --bootstrap-server "$BOOTSTRAP" --create --if-not-exists --topic "$0" --partitions "$1" \
     --replication-factor "$RF" --config "retention.ms=$2" --config "cleanup.policy=$3" >/dev/null
   echo "CREATE $0 (partitions $1, retention.ms $2)"' < "$MISSING"
