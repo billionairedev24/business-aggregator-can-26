@@ -3,8 +3,13 @@ import { defineMessages } from '@northline/ui';
 /** Sellers & providers and the seller detail (S-82, design 03 lines 195–242). en = the design's copy; fr-CA after design/i18n-fr.js. */
 export const useSellersT = defineMessages({
   en: {
-    kicker: 'Sellers & providers',
-    title: '{active} active · {atRisk} at risk',
+    title: 'Sellers & providers',
+    sub: '{active} active · {atRisk} at risk',
+    kpis: 'Against the floors', belowFloor: 'Below the floor',
+    sheetGlance: 'At a glance', sheetFlags: 'Flags', sheetRecent: 'Recent activity', openPage: 'Open the full page', noFlags: 'Nothing puts this business at risk.',
+    f_type: 'Type', f_place: 'Location', f_tier: 'Tier', f_status: 'Status', f_joined: 'Joined', f_stripe: 'Stripe account',
+    f_rating: 'Rating', f_quality: 'Quality', f_onTime: 'On time', f_disputes: 'Disputes', f_gmv: '90-day GMV',
+    reviews: '{avg} · {n, plural, one {# review} other {# reviews}}',
     atRiskChip: 'At risk',
     search: 'Search a business',
     entity: 'seller', plural: 'sellers',
@@ -70,8 +75,13 @@ export const useSellersT = defineMessages({
     detailError: "This seller couldn't load. Try again.",
   },
   fr: {
-    kicker: 'Vendeurs et fournisseurs',
-    title: '{active} actifs · {atRisk} à risque',
+    title: 'Vendeurs et fournisseurs',
+    sub: '{active} actifs · {atRisk} à risque',
+    kpis: 'Par rapport aux seuils', belowFloor: 'Sous le seuil',
+    sheetGlance: 'En bref', sheetFlags: 'Signalements', sheetRecent: 'Activité récente', openPage: 'Ouvrir la page complète', noFlags: 'Rien ne met cette entreprise à risque.',
+    f_type: 'Type', f_place: 'Emplacement', f_tier: 'Niveau', f_status: 'Statut', f_joined: 'Inscription', f_stripe: 'Compte Stripe',
+    f_rating: 'Note', f_quality: 'Qualité', f_onTime: 'À l’heure', f_disputes: 'Litiges', f_gmv: 'VMB sur 90 jours',
+    reviews: '{avg} · {n, plural, one {# avis} other {# avis}}',
     atRiskChip: 'À risque',
     search: 'Chercher une entreprise',
     entity: 'vendeur', plural: 'vendeurs',
