@@ -173,7 +173,9 @@ customer; single-factor like a real consumer) — or `NL_DEV_GUEST=1` to browse 
 `NL_BFF_URL=http://localhost:8080`; `/api` then goes to the api with `X-Dev-User` and `/bff/session` is answered by
 the dev server. Location: the header asks for the browser's position once per visit (Chrome DevTools › Sensors
 overrides it); `localStorage['nl.location']` holds an address chosen on the Location screen. Language: the FR/EN
-toggle writes the `nl.locale` cookie, so the server renders the next page in French.
+toggle writes the `nl.locale` cookie, so the server renders the next page in French. The redesign's demo navigation
+hides Food as its own vertical and the account's Wallet & points, Dietary, Plus and Language (§ 3.6–3.7):
+`VITE_NL_FULL_NAV=1` in `.env` brings them back (their routes answer a typed URL either way).
 
 Shop (S-49…): the dev seed `db/seed-dev/V113__consumer_shop.sql` adds design 06's Calgary shops (Glenmore Bakery,
 Bridgeland Butcher, Sunnyside Greens, Prairie Pantry, …) with approved, live products — run `seedCategories` too so
