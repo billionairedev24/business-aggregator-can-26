@@ -10,3 +10,14 @@ export function testingToolsEnabled(): boolean {
   const v: unknown = import.meta.env.VITE_NL_TESTING_TOOLS;
   return v === true || v === '1' || v === 'true';
 }
+
+/**
+ * The second flag of the redesign's thrash list (§ 3.6–3.7): what the demo hides beyond the testing tools — Food as its
+ * own vertical (the department bar's Food, the home's Food row, the search's Food type) and the account's Wallet &
+ * points, Dietary, Plus and Language pages. Hidden unless the build sets `VITE_NL_FULL_NAV=1`; the routes and every
+ * backend endpoint stay.
+ */
+export function fullNavEnabled(): boolean {
+  const v: unknown = import.meta.env.VITE_NL_FULL_NAV;
+  return v === true || v === '1' || v === 'true';
+}

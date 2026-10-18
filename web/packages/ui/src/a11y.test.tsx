@@ -12,7 +12,7 @@ import { expectNoAxeViolations } from '@northline/a11y/vitest';
 import {
   AccountMenu, Alert, AppShell, Avatar, BarList, BrandMark, Button, ChatBubble, ChatLog, Checkbox, Chip, ChipTabs, DataTable, DepartmentTile,
   Dialog, Drawer, EmptyState, ErrorState, Field, FileButton, FormGrid, GroupedMultiSelect, I18nProvider, Input, Kpi, KpiRow, Legend, LineChart,
-  LinkRow, LocationPill, Menu, Meter, OptionCard, PageHeader, PageSkeleton, Panel, ProductTile, SearchBar, Segmented, Select, ShopTile, SiteHeader,
+  LinkRow, LocationPill, Menu, Meter, OptionCard, PageHeader, PageSkeleton, Panel, Price, ProductCard, ProductTile, QuantityStepper, ServiceCard, SearchBar, Segmented, Select, ShopTile, SiteHeader,
   Skeleton, StackedBarChart, Stars, StepBars, Switch, Tag, TextArea, TextInput, TileGrid, UnderlineTabs, type Locale, type NavGroup,
 } from './index';
 import { CAN, listingActions, listingColumns, listings } from './DataTable/DataTable.fixtures';
@@ -91,6 +91,22 @@ describe.each(['en', 'fr'] as const)('axe · primitives (%s)', locale => {
       <li><ShopTile href="/s/1" id="m1" name="Glenmore Bakery" meta="Bakery" tier={{ label: 'Master' }} tag={{ label: 'Tomorrow' }} /></li>
       <li><DepartmentTile href="/d/1" name="Bakery" count="12 shops" /></li>
     </TileGrid>, locale);
+    await expectNoAxeViolations(container);
+  });
+
+  it('commerce kit: price, stars, stepper, product and service cards', async () => {
+    const { container } = page(<>
+      <Price cents={4504} compareAtCents={5200} size="lg" /><Stars rating={4.5} reviewCount={12} showValue />
+      <QuantityStepper value={2} max={5} onChange={noop} name="Baguette" />
+      <ul className="nl-card-grid" aria-label="Results">
+        <li><ProductCard href="/p/1" name="Sourdough" priceCents={750} meta="Glenmore Bakery" rating={4.6} reviewCount={3} eta="Tonight" onAdd={noop} /></li>
+        <li><ProductCard href="/p/2" name="Rye" priceCents={650} inCart={2} onAdd={noop} onQuantity={noop} /></li>
+        <li><ProductCard href="/p/3" name="Baguette" priceCents={640} soldOut /></li>
+        <li><ProductCard href="/p/4" name="Croissant" priceCents={350} variant="rail" /></li>
+        <li><ServiceCard href="/pr/1" kind="Mobile mechanic" name="Prairie Wrench" rating={4.9} reviewCount={312} place="2.4 km" priceCents={8900} verified /></li>
+      </ul>
+      <ServiceCard onSelect={noop} selected name="Brake pads" priceCents={18900} fromPrice={false} />
+    </>, locale);
     await expectNoAxeViolations(container);
   });
 });

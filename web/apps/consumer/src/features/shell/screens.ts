@@ -7,7 +7,7 @@
  */
 export type ScreenKey =
   | 'home' | 'location' | 'search'
-  | 'shop' | 'category' | 'product' | 'cart' | 'confirmed'
+  | 'shop' | 'category' | 'product' | 'cart' | 'checkout' | 'checkoutComplete' | 'confirmed'
   | 'food' | 'restaurant' | 'foodCheckout' | 'foodTrack'
   | 'services' | 'svcCategory' | 'providers' | 'provider' | 'book' | 'booking' | 'quote' | 'quoteRequest' | 'quoteCompare'
   | 'orders' | 'account' | 'problem' | 'signIn' | 'register' | 'sell' | 'help';
@@ -31,6 +31,10 @@ export const SCREENS: Record<ScreenKey, Screen> = {
   category: { path: '/shop/$department', story: 'S-49', section: 'shop' },
   product: { path: '/products/$productId', story: 'S-50', section: 'shop' },
   cart: { path: '/cart', story: 'S-51', section: 'shop' },
+  /** Redesign phase 1 (§ 2.1, AT Shop:502): the 3-step checkout the payment moved to from the cart. */
+  checkout: { path: '/checkout', story: 'S-51 · redesign', section: 'shop' },
+  /** Redesign phase 1: the order placed (AT CheckoutComplete), then its tracking at /orders/$orderId. */
+  checkoutComplete: { path: '/checkout/complete', story: 'S-52 · redesign', section: 'shop' },
   confirmed: { path: '/orders/$orderId', story: 'S-52' },
   food: { path: '/food', story: 'S-57', section: 'food' },
   restaurant: { path: '/food/$kitchen', story: 'S-57', section: 'food' },

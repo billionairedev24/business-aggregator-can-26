@@ -1,47 +1,70 @@
 - main:
-  - complementary "Filters":
-    - heading "Show" [level=2]
-    - button "Everything" [pressed]
-    - button "Services · 1"
-    - button "Shop · 2"
-    - button "Food · 1"
-    - heading "Filter" [level=2]
-    - button "On tonight’s run"
-    - button /Under \$\d+/
-    - button "Master sellers"
-    - button "Halal"
-    - button "Gluten-free"
-    - heading "Distance" [level=2]
-    - button "Any distance" [pressed]
-    - button "Under 3 km"
-    - button /Under \d+ km/
-    - button /Under \d+ km/
-    - heading "Categories" [level=2]
-    - button "Bakery · 2"
-    - heading "Businesses" [level=2]
-    - text: Glenmore Bakery · 3 Sidewalk Citizen · 1
-  - navigation "Breadcrumb":
-    - link "Home":
-      - /url: /
-  - heading "“sourdough” · 4 results" [level=1]
+  - heading "4 results for “sourdough”" [level=1]:
+    - strong: “sourdough”
   - text: Sorted by
   - combobox "Sorted by":
     - option "relevance" [selected]
-    - option "distance"
     - option "price, low to high"
     - option "price, high to low"
     - option "rating"
-  - list:
+  - complementary "Filters":
+    - region "Type":
+      - heading "Type" [level=2]
+      - radio "Products and services" [checked]
+      - text: Products and services
+      - radio "Products 2"
+      - text: Products 2
+      - radio "Services 1"
+      - text: Services 1
+    - region "Categories":
+      - heading "Categories" [level=2]
+      - checkbox "Bakery 2"
+    - region "Distance":
+      - heading "Distance" [level=2]
+      - paragraph:
+        - text: Set your location to sort and filter by distance.
+        - link "Set location":
+          - /url: /location?next=/search
+    - region "Availability":
+      - heading "Availability" [level=2]
+      - checkbox "Open now"
+      - checkbox "On tonight’s run"
+      - text: On tonight’s run
+    - region "Price":
+      - heading "Price" [level=2]
+      - radio "Any price" [checked]
+      - text: Any price
+      - radio /Under \$\d+/
+      - text: /Under \$\d+/
+      - radio /Under \$\d+/
+      - text: /Under \$\d+/
+      - radio /Under \$\d+/
+      - text: /Under \$\d+/
+      - radio /Under \$\d+/
+      - text: /Under \$\d+/
+  - list "Results":
     - listitem:
-      - link /Country sourdough \$\d+\.\d+ Glenmore Bakery · Bakery On \S+ run/:
-        - /url: /products/O1?offer=O1
+      - article "Country sourdough":
+        - heading "Country sourdough" [level=2]:
+          - link "Country sourdough":
+            - /url: /products/O1?offer=O1
+        - text: /Glenmore Bakery · Bakery \$\d+\.\d+ Get it/
+        - strong: tonight
+        - 'button "Add to cart: Country sourdough"'
     - listitem:
-      - link /Brake pads Quote Prairie Wrench · Mobile mechanic · ★ 4\.9 \(\d+\) Instant book/:
+      - link /Mobile mechanic Brake pads 4\.9 out of 5 stars \d+ reviews Prairie Wrench Instant book Verified Quote/:
         - /url: /providers/prairie-wrench
+        - heading "Brake pads" [level=2]
+        - img "4.9 out of 5 stars"
     - listitem:
-      - link /Pho tai \$\d+\.\d+ Pho Dau Bo · Vietnamese · 1\.2 km Open now/:
-        - /url: /food/pho-dau-bo
+      - article "Pho tai":
+        - heading "Pho tai" [level=2]:
+          - link "Pho tai":
+            - /url: /food/pho-dau-bo
+        - text: /Pho Dau Bo · Vietnamese · 1\.2 km \$\d+\.\d+/
+        - strong: Open now
     - listitem:
-      - link /Sidewalk Citizen from \$\d+\.\d+ Shop Trusted/:
+      - link /Shop Sidewalk Citizen New Verified from \$\d+\.\d+/:
         - /url: /search?scope=shop&q=Sidewalk+Citizen
-  - text: Showing 4 of 4
+        - heading "Sidewalk Citizen" [level=2]
+  - status: You’ve seen all 4

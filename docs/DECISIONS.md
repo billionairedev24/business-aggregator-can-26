@@ -8566,3 +8566,89 @@ Branch `feat/redesign-foundation`: the spec's phase 0 (day 1). Decisions the spe
   product tiles are restyled; the new cards come with their pages in phase 1), the announcement bar, the mobile-kit
   Logo, `@fontsource` fonts, the backend's `app.brand.*` + `/api/v1/config`, everything page-level of the thrash list.
 - **Schema additions:** none. No backend change.
+
+## 2026-10-18 — Redesign phase 1: the consumer demo path (spec § 4 phase 1)
+
+Built on `web/apps/consumer` and `@northline/ui` (branch `feat/redesign-consumer`): home → search → product /
+service → cart → the new 3-step checkout → order placed → order tracking and booking detail; the account menu and a
+slimmed account area. Layouts and flows from AfroTransact (`design/AfroTransact Shop.dc.html`, `web/apps/storefront`),
+colours, fonts and copy from our tokens and catalogues only.
+
+- **Commerce kit in `@northline/ui`** (spec § 1.3): `Price` (whole figure, superscript sign and cents, the plain amount
+  for screen readers; the sign after the figure in fr-CA), `Stars` (five SVG stars filled to the half, "4.5 out of 5
+  stars", the count in the link colour), `QuantityStepper` ("− 2 in cart +"), `ProductCard` (grid and rail; one link
+  per card, the image link hidden from assistive technology; Add to cart → stepper), `ServiceCard` (96px | 1fr | auto;
+  a link, or a pressable choice with `aria-pressed`; stacks on narrow grids). `Stars` replaces the chat's ★ text
+  stars (same props; the Studio's reviews list now draws the new stars).
+- **Second nav flag.** `VITE_NL_FULL_NAV=1` (consumer build; `fullNavEnabled()` in `@northline/ui`) shows what the
+  demo hides beyond the testing tools: Food in the department bar, the home and the search's Type facet, and the
+  account's Wallet & points, Dietary, Plus and Language. Hidden = out of the navigation; `/food/*` still answers a typed
+  URL, `/account?tab=wallet|dietary|plus|language` opens the account card grid until the flag is set; every endpoint
+  stays. In the runbooks' build-variable tables (dev, staging, prod) and the consumer `.env.example`.
+- **Home.** Hero carousel (three slides, copy only: no marketing photography exists, so the 16:9 panel is a token
+  colour with an icon), never turning by itself (WCAG 2.2.2); four tiles over the hero — services, shop departments,
+  groceries (food is a Shop department, not a vertical, § 3.7), jobs around the home; rails of real listings from the
+  public search (`GET /api/v1/search?kind=product|service&size=12` with the visitor's province and coordinates, in the
+  browser once the place is known); a seller banner. The home no longer calls `GET /api/v1/public/home` (its counts
+  were thrash item 2) or `/me/upcoming` ("Your week"); both endpoints stay. Empty rails in a city = "Nothing near
+  {city} yet" with Choose another location.
+- **Search.** The summary bar ("N results for “q”" is the h1), the 230px aside (Type: products and services
+  together / products / services; Category; Distance; Availability: open now, instant book, on tonight's run; Price:
+  under $10/25/50/100 = the existing `maxPrice`; Clear all) folding behind a Filters button under 900px, one grid of
+  ProductCards and ServiceCards, an IntersectionObserver sentinel plus "Show more results". Dropped from the UI (the URL
+  parameters still work): the tier filters, dietary chips and the "Sold by" list (§ 3.13 / spec § 2.1). Food items the
+  index returns still show in the mixed grid (the API takes one `kind`, no exclusion); only the Food type is hidden.
+- **Add to cart from a card** posts `{ offerId, qty: 1 }` (a search result's id is its offer); when the shop needs an
+  option first (422) the card opens the product page. The stepper changes the line when the offer has one line in the
+  cart, else opens the cart.
+- **PDP** (Shop:342): thumbs | sticky image | info (Visit the shop, stars, price, options, facts grid, About this item)
+  | 300px sticky buy box (price, the delivery promise with the cut-off, stock, quantity, Add to cart, Buy now → cart
+  then `/checkout`, sold by, returns, payment held, other sellers). Tier tags left the byline and the sellers list.
+- **Cart** (Shop:425): lines by shop (image, name, option, stock, stepper | Delete), "Subtotal (N items)", the 300px
+  aside with Proceed to checkout (guests: Sign in to check out → `/checkout`). Payment, windows, address,
+  substitutions, tip, promo and the age step left the cart (§ 3.8). Save for later and per-line select: not built (the
+  cart API has neither; spec: later).
+- **Checkout** (`/checkout`, Shop:502; same APIs, no backend change): 1 address and time (saved addresses as radios or
+  the new-address form with the server's messages, the window, substitutions, the courier's tip, the age check), 2
+  payment (promo code and points, then the method), 3 review (each shop's items beside the delivery), and the sticky
+  summary with Place your order (enabled at the review). *Decisions the spec didn't make:* `POST /me/checkouts` runs
+  when the payment step opens ("Continue to payment") because it creates the PaymentIntents Stripe's element needs and
+  fixes the total — so the tip sits in step 1 and the code/points in step 2 before it; changing the delivery, the code
+  or the points after that drops the opened checkout (a new Idempotency-Key; the old one expires on its own,
+  `checkout_expired`) and opens a new one. The step-up dialog and the key reuse on its retry are as before. Stripe:
+  "Use this payment method" runs `elements.submit()`; Place runs `confirmPayment` (+ `confirmCardPayment` for the order's
+  other intents with the same PaymentMethod), then `…/place`; the element stays mounted (hidden) while the review is
+  open. The local stand-in places on Place — design 06's bank-approval step (`pay3ds`) is gone. Errors that need an
+  earlier step (address fields, age, a closed window) reopen it. `useStripePayment` (cart/Payment.tsx) is the hook; the
+  food checkout's one-step `StripePayment` is built on it.
+- **Order placed** (`/checkout/complete?order=&ref=`, AT CheckoutComplete): thanks, reference and total, when it
+  arrives, what happens next, Track your order. The cart is read again (the api removes the ordered lines on place).
+- **Order detail** (`/orders/$orderId`, Shop:688 detail): head row (placed, total, shops, order #), the status card
+  (title, four-step horizontal timeline, the live courier, proof, Got everything / Something's wrong), the shops with
+  packed/packing, and a 320px column (the run, the payment summary from the order's own totals, help). The decorative
+  SVG "map" is gone.
+- **Booking detail** (`/bookings/$bookingId`, Shop:898 expanded, MA:515): the state sentence and a booked → on the way
+  → on site → done line from `booking.state`, the live ETA or the review, details (who, when, where, price, tax, held
+  in escrow), the cancellation policy (`freeCancelUntil`) and help. *Not done:* cancel and reschedule (the web client
+  has no consumer cancel call yet).
+- **Account.** The menu: Orders, Bookings, Saved; Your account, Profile, Addresses, Payment methods, Login & security;
+  Notifications, FR/EN; Help & cases, Sell or offer a service, Sign out (Wallet, Dietary, Plus and the points card
+  behind the flag). `/account` = "Your account", the AT card grid; `?tab=` opens one section under a crumb (the 11-tab
+  rail is gone). Favourites → Saved. `/account/orders` (`?tab=bookings`, `?view=past|cases`): Orders | Bookings tabs,
+  the view chips, order cards (head row, title, with whom, status, action) and the help / order-again column (it is
+  never empty: a sentence and a way back to the Shop or Services). The Data Table (and its CSV export) left this
+  screen.
+- **Services.** The provider list is ServiceCards under filter chips (stars, on-time rate, next opening, "from" price,
+  the verified seal for master/trusted instead of tier tags). The booking wizard keeps its steps and its own payment
+  (`/me/bookings/checkout`, holds and per-booking escrow): spec § 2.1 says "payment goes through the checkout payment
+  step", which needs the booking and goods checkouts to share an API — later. It gets AT's 380px sticky aside, the 56px
+  day strip and the three-column slot grid. Services, provider and booking styles moved to the semantic tokens;
+  `lint:tokens` now covers every demo-path feature directory.
+- **i18n / a11y.** Every new string in en and fr-CA (quotes « » in French). 44px targets (stepper buttons and dots get
+  hit areas), labelled radios/checkboxes, one h1 per page, focus moves to the next checkout step's heading. ARIA
+  snapshots updated deliberately (consumer home, search, product, checkout; the cart journey is now `/cart` +
+  `/checkout`).
+- **Not done in this phase:** sign-in / register in two columns (phase 1 item 9), the provider page's AT layout (only
+  restyled), the services landing and category pages beyond tokens, quotes, the Deliver-to dialog, the announcement
+  bar, demo seed data with images.
+- **Schema additions:** none. No backend change.

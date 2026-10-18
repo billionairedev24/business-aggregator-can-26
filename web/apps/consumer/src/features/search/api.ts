@@ -199,3 +199,18 @@ export function suggestionHref(s: Suggestion): string {
 /** A catalogue image (`media:<id>`) has a public URL; dish photos (`object:`) don't yet (S-44 decision). */
 export const imageUrl = (key: string | null | undefined) =>
   key?.startsWith('media:') ? `/api/v1/public/catalogue/media/${encodeURIComponent(key.slice('media:'.length))}` : null;
+
+/**
+ * A home rail (redesign § 1.3 "Rails"): the first dozen products or services where the visitor is, from the same
+ * public search — the browser asks once the place is known (the server doesn't know where the visitor is).
+ */
+export const railQuery = (kind: 'product' | 'service', place: Place, locale: Locale) => {
+  const qs = new URLSearchParams({ kind, lang: locale, size: '12' });
+  if (place.market) qs.set('market', place.market);
+  if (place.lat !== undefined && place.lng !== undefined) { qs.set('lat', place.lat.toFixed(5)); qs.set('lng', place.lng.toFixed(5)); }
+  return queryOptions({
+    queryKey: ['search', 'rail', qs.toString()],
+    queryFn: ({ signal }) => http(`/api/v1/search?${qs}`, { signal }, SearchPage),
+    staleTime: 60_000,
+  });
+};

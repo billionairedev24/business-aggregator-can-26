@@ -20,6 +20,8 @@ import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AccountIndexRouteImport } from './routes/account/index'
 import { Route as AccountOrdersRouteImport } from './routes/account/orders'
 import { Route as BookingsBookingIdRouteImport } from './routes/bookings/$bookingId'
+import { Route as CheckoutIndexRouteImport } from './routes/checkout/index'
+import { Route as CheckoutCompleteRouteImport } from './routes/checkout/complete'
 import { Route as FoodIndexRouteImport } from './routes/food/index'
 import { Route as FoodKitchenRouteImport } from './routes/food/$kitchen'
 import { Route as FoodCheckoutRouteImport } from './routes/food/checkout'
@@ -91,6 +93,16 @@ const AccountOrdersRoute = AccountOrdersRouteImport.update({
 const BookingsBookingIdRoute = BookingsBookingIdRouteImport.update({
   id: '/bookings/$bookingId',
   path: '/bookings/$bookingId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutIndexRoute = CheckoutIndexRouteImport.update({
+  id: '/checkout/',
+  path: '/checkout/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutCompleteRoute = CheckoutCompleteRouteImport.update({
+  id: '/checkout/complete',
+  path: '/checkout/complete',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FoodIndexRoute = FoodIndexRouteImport.update({
@@ -191,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/account/orders': typeof AccountOrdersRoute
   '/bookings/$bookingId': typeof BookingsBookingIdRoute
+  '/checkout/complete': typeof CheckoutCompleteRoute
   '/food/$kitchen': typeof FoodKitchenRoute
   '/food/checkout': typeof FoodCheckoutRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
@@ -198,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/quotes/$quoteId': typeof QuotesQuoteIdRoute
   '/shop/$department': typeof ShopDepartmentRoute
   '/account/': typeof AccountIndexRoute
+  '/checkout/': typeof CheckoutIndexRoute
   '/food/': typeof FoodIndexRoute
   '/services/': typeof ServicesIndexRoute
   '/shop/': typeof ShopIndexRoute
@@ -221,6 +235,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/account/orders': typeof AccountOrdersRoute
   '/bookings/$bookingId': typeof BookingsBookingIdRoute
+  '/checkout/complete': typeof CheckoutCompleteRoute
   '/food/$kitchen': typeof FoodKitchenRoute
   '/food/checkout': typeof FoodCheckoutRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
@@ -228,6 +243,7 @@ export interface FileRoutesByTo {
   '/quotes/$quoteId': typeof QuotesQuoteIdRoute
   '/shop/$department': typeof ShopDepartmentRoute
   '/account': typeof AccountIndexRoute
+  '/checkout': typeof CheckoutIndexRoute
   '/food': typeof FoodIndexRoute
   '/services': typeof ServicesIndexRoute
   '/shop': typeof ShopIndexRoute
@@ -252,6 +268,7 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/account/orders': typeof AccountOrdersRoute
   '/bookings/$bookingId': typeof BookingsBookingIdRoute
+  '/checkout/complete': typeof CheckoutCompleteRoute
   '/food/$kitchen': typeof FoodKitchenRoute
   '/food/checkout': typeof FoodCheckoutRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
@@ -259,6 +276,7 @@ export interface FileRoutesById {
   '/quotes/$quoteId': typeof QuotesQuoteIdRoute
   '/shop/$department': typeof ShopDepartmentRoute
   '/account/': typeof AccountIndexRoute
+  '/checkout/': typeof CheckoutIndexRoute
   '/food/': typeof FoodIndexRoute
   '/services/': typeof ServicesIndexRoute
   '/shop/': typeof ShopIndexRoute
@@ -284,6 +302,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/account/orders'
     | '/bookings/$bookingId'
+    | '/checkout/complete'
     | '/food/$kitchen'
     | '/food/checkout'
     | '/orders/$orderId'
@@ -291,6 +310,7 @@ export interface FileRouteTypes {
     | '/quotes/$quoteId'
     | '/shop/$department'
     | '/account/'
+    | '/checkout/'
     | '/food/'
     | '/services/'
     | '/shop/'
@@ -314,6 +334,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/account/orders'
     | '/bookings/$bookingId'
+    | '/checkout/complete'
     | '/food/$kitchen'
     | '/food/checkout'
     | '/orders/$orderId'
@@ -321,6 +342,7 @@ export interface FileRouteTypes {
     | '/quotes/$quoteId'
     | '/shop/$department'
     | '/account'
+    | '/checkout'
     | '/food'
     | '/services'
     | '/shop'
@@ -344,6 +366,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/account/orders'
     | '/bookings/$bookingId'
+    | '/checkout/complete'
     | '/food/$kitchen'
     | '/food/checkout'
     | '/orders/$orderId'
@@ -351,6 +374,7 @@ export interface FileRouteTypes {
     | '/quotes/$quoteId'
     | '/shop/$department'
     | '/account/'
+    | '/checkout/'
     | '/food/'
     | '/services/'
     | '/shop/'
@@ -375,6 +399,7 @@ export interface RootRouteChildren {
   SignInRoute: typeof SignInRoute
   AccountOrdersRoute: typeof AccountOrdersRoute
   BookingsBookingIdRoute: typeof BookingsBookingIdRoute
+  CheckoutCompleteRoute: typeof CheckoutCompleteRoute
   FoodKitchenRoute: typeof FoodKitchenRoute
   FoodCheckoutRoute: typeof FoodCheckoutRoute
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
@@ -382,6 +407,7 @@ export interface RootRouteChildren {
   QuotesQuoteIdRoute: typeof QuotesQuoteIdRoute
   ShopDepartmentRoute: typeof ShopDepartmentRoute
   AccountIndexRoute: typeof AccountIndexRoute
+  CheckoutIndexRoute: typeof CheckoutIndexRoute
   FoodIndexRoute: typeof FoodIndexRoute
   ServicesIndexRoute: typeof ServicesIndexRoute
   ShopIndexRoute: typeof ShopIndexRoute
@@ -472,6 +498,20 @@ declare module '@tanstack/react-router' {
       path: '/bookings/$bookingId'
       fullPath: '/bookings/$bookingId'
       preLoaderRoute: typeof BookingsBookingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/': {
+      id: '/checkout/'
+      path: '/checkout'
+      fullPath: '/checkout/'
+      preLoaderRoute: typeof CheckoutIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/complete': {
+      id: '/checkout/complete'
+      path: '/checkout/complete'
+      fullPath: '/checkout/complete'
+      preLoaderRoute: typeof CheckoutCompleteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/food/': {
@@ -607,6 +647,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignInRoute: SignInRoute,
   AccountOrdersRoute: AccountOrdersRoute,
   BookingsBookingIdRoute: BookingsBookingIdRoute,
+  CheckoutCompleteRoute: CheckoutCompleteRoute,
   FoodKitchenRoute: FoodKitchenRoute,
   FoodCheckoutRoute: FoodCheckoutRoute,
   OrdersOrderIdRoute: OrdersOrderIdRoute,
@@ -614,6 +655,7 @@ const rootRouteChildren: RootRouteChildren = {
   QuotesQuoteIdRoute: QuotesQuoteIdRoute,
   ShopDepartmentRoute: ShopDepartmentRoute,
   AccountIndexRoute: AccountIndexRoute,
+  CheckoutIndexRoute: CheckoutIndexRoute,
   FoodIndexRoute: FoodIndexRoute,
   ServicesIndexRoute: ServicesIndexRoute,
   ShopIndexRoute: ShopIndexRoute,

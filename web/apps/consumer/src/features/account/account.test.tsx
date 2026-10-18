@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderApp, type Call } from '../../test/render';
@@ -65,57 +65,72 @@ beforeEach(() => {
   favourites = [...FAVS];
 });
 
-describe('Orders & bookings (design 06 orders)', () => {
-  it('lists what is under way with the design’s columns, tags and actions', async () => {
+describe('Orders & bookings (redesign § 2.1, AT Shop:688)', () => {
+  it('opens on Orders: tabs, the view chips, order cards and the help / order-again column', async () => {
     orders();
     expect(await screen.findByRole('heading', { level: 1, name: 'Orders & bookings' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Active · 3' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Orders · 2' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Bookings · 3' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Active · 1' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Past' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Refunds & cases · 1' })).toBeInTheDocument();
-    expect(await screen.findByText('Grocery run · 3 shops')).toBeInTheDocument();
+    const card = (await screen.findByRole('heading', { level: 2, name: 'Grocery run · 3 shops' })).closest('li')!;
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByText('Bridgeland Butcher, Sunnyside Greens, Glenmore Bakery')).toBeInTheDocument();
-    expect(screen.getByText('Packing')).toBeInTheDocument();
-    expect(screen.getByText('$47.76')).toBeInTheDocument();
-    expect(screen.getByText('Brake inspection')).toBeInTheDocument();
+    expect(card).toHaveTextContent('Bridgeland Butcher, Sunnyside Greens, Glenmore Bakery');
+    expect(card).toHaveTextContent('Packing');
+    expect(card).toHaveTextContent('$47.76');
+    expect(card).toHaveTextContent('Order #NL-48213');
+    expect(within(card).getByRole('button', { name: 'Track' })).toBeEnabled();
+    expect(screen.queryByText('Brake inspection')).not.toBeInTheDocument();
+    const side = screen.getByRole('complementary', { name: 'Help and ordering again' });
+    expect(within(side).getByRole('link', { name: 'Refunds & cases' })).toHaveAttribute('href', '/account?tab=help');
+    expect(within(side).getByRole('link', { name: 'Grocery run · 2 shops' })).toHaveAttribute('href', '/account?tab=help&case=RF1');
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Your account › Orders & bookings');
+  });
+
+  it('switches to Bookings: jobs and quotes', async () => {
+    const { router } = orders();
+    await userEvent.click(await screen.findByRole('button', { name: 'Bookings · 3' }));
+    await waitFor(() => expect(router.state.location.search).toEqual({ tab: 'bookings' }));
+    expect(await screen.findByText('Brake inspection')).toBeInTheDocument();
     expect(screen.getByText('Prairie Wrench · Ravi')).toBeInTheDocument();
     expect(screen.getByText('Escrow')).toBeInTheDocument();
     expect(screen.getByText('Quote ready')).toBeInTheDocument();
     expect(screen.getByText('$640.00')).toBeInTheDocument();
-    expect(screen.queryByText('Winter tire swap')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Track' }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: 'View quote' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'View quote' })).toBeInTheDocument();
+    expect(screen.queryByText('Grocery run · 3 shops')).not.toBeInTheDocument();
   });
 
-  it('a row’s action opens it', async () => {
+  it('a card’s action opens it', async () => {
     const { router } = orders();
-    await userEvent.click((await screen.findAllByRole('button', { name: 'Track' }))[0]!);
+    await userEvent.click(await screen.findByRole('button', { name: 'Track' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/orders/O1'));
   });
 
   it('Past and Refunds & cases filter the list', async () => {
-    const { router } = orders();
+    const { router } = orders('/account/orders?tab=bookings');
     await userEvent.click(await screen.findByRole('button', { name: 'Past' }));
-    expect(await screen.findByText('Winter tire swap')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Winter tire swap' })).toBeInTheDocument();
     expect(screen.getByText('Done')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Re-book' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Re-book' })).toBeInTheDocument();
     expect(screen.queryByText('Brake inspection')).not.toBeInTheDocument();
-    expect(router.state.location.search).toEqual({ view: 'past' });
-    await userEvent.click(screen.getByRole('button', { name: 'Refunds & cases · 1' }));
+    expect(router.state.location.search).toEqual({ tab: 'bookings', view: 'past' });
+    await userEvent.click(screen.getByRole('button', { name: 'Orders · 2' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Refunds & cases · 1' }));
     expect(await screen.findByText('Case RF-2201')).toBeInTheDocument();
-    expect(screen.getByText('Grocery run · 2 shops')).toBeInTheDocument();
-    expect(screen.queryByText('Winter tire swap')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Grocery run · 2 shops' })).toBeInTheDocument();
   });
 
   it('empty: one line and a way to start', async () => {
     activity = () => ({ body: { items: [] } });
     orders();
     expect(await screen.findByText('Nothing on the go right now.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Start shopping' })).toHaveAttribute('href', '/shop');
+    expect(screen.getAllByRole('link', { name: 'Start shopping' })[0]).toHaveAttribute('href', '/shop');
     expect(screen.getByRole('button', { name: 'Refunds & cases' })).toBeInTheDocument();
+    expect(screen.getByText('What you order or book shows up here, ready to do again.')).toBeInTheDocument();
   });
 
-  it('error: rosehip inline with Retry', async () => {
+  it('error: inline with Retry', async () => {
     let fail = true;
     activity = () => (fail ? { status: 500, body: {} } : { body: { items: ITEMS } });
     orders();
@@ -140,23 +155,62 @@ describe('Orders & bookings (design 06 orders)', () => {
   });
 
   it('in French', async () => {
-    orders('/account/orders', 'fr');
+    orders('/account/orders?tab=bookings', 'fr');
     expect(await screen.findByRole('heading', { level: 1, name: 'Commandes et réservations' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'En cours · 3' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Réservations · 3' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'En cours · 2' })).toBeInTheDocument();
+    expect(await screen.findByText('Fiducie')).toBeInTheDocument();
+    expect(screen.getByText('Devis prêt')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Commandes · 2' }));
     expect(await screen.findByText('Tournée d’épicerie · 3 commerces')).toBeInTheDocument();
     expect(screen.getByText('Emballage')).toBeInTheDocument();
-    expect(screen.getByText('Fiducie')).toBeInTheDocument();
-    expect(screen.getByText('Devis prêt')).toBeInTheDocument();
   });
 });
 
-describe('Account area (design 06 account)', () => {
-  it('Wallet & points by default: balance, value, eight weeks, Plus', async () => {
+describe('Your account (redesign § 2.1, AT Shop:596)', () => {
+  it('opens on the card grid, not Wallet & points (§ 3.6)', async () => {
     account();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your account' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
+    const cards = within(screen.getByRole('list', { name: 'Account sections' })).getAllByRole('link');
+    expect(cards.map(c => c.getAttribute('href'))).toEqual([
+      '/account/orders', '/account/orders?tab=bookings', '/account?tab=addresses', '/account?tab=payments', '/account?tab=security',
+      '/account?tab=notifications', '/account?tab=favourites', '/account?tab=profile', '/account?tab=help', '/sell',
+    ]);
+    expect(cards[0]).toHaveTextContent('OrdersTrack, return or buy things again');
+    expect(cards[6]).toHaveTextContent('Saved');
+    expect(screen.queryByRole('navigation', { name: 'Your account' })).toBeNull(); // the eleven-tab rail is gone
+    expect(calls.some(c => c.url === '/api/v1/me/wallet')).toBe(false);
+  });
+
+  it('opens the card grid for a section hidden for the demo', async () => {
+    account('/account?tab=wallet');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Your account' })).toBeInTheDocument();
+    expect(screen.queryByText('1,240 pts')).toBeNull();
+  });
+
+  it('opens a section under the Your account crumb', async () => {
+    account('/account?tab=favourites');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Saved providers & shops' })).toBeInTheDocument();
+    const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(crumbs).getByRole('link', { name: 'Your account' })).toHaveAttribute('href', '/account');
+    expect(crumbs).toHaveTextContent('Your account › Saved');
+  });
+
+  it('in French', async () => {
+    account('/account', 'fr');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Votre compte' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Connexion et sécurité/ })).toHaveAttribute('href', '/account?tab=security');
+  });
+});
+
+describe('Account sections behind the full navigation (VITE_NL_FULL_NAV)', () => {
+  beforeEach(() => { vi.stubEnv('VITE_NL_FULL_NAV', '1'); });
+  afterEach(() => { vi.unstubAllEnvs(); });
+
+  it('Wallet & points: balance, value, eight weeks, Plus', async () => {
+    account('/account?tab=wallet');
     expect(await screen.findByRole('heading', { level: 1, name: 'Wallet & points' })).toBeInTheDocument();
-    const nav = screen.getByRole('navigation', { name: 'Your account' });
-    expect(within(nav).getByRole('link', { name: 'Wallet & points' })).toHaveAttribute('aria-current', 'page');
-    expect(within(nav).getByRole('link', { name: 'Sell or offer a service' })).toHaveAttribute('href', '/sell');
     expect(screen.getByText('1,240 pts')).toBeInTheDocument();
     expect(screen.getByText('= $12.40 off anything · Standard')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /^Points earned, last 8 weeks: 120 pts, 7 weeks ago,.*300 pts, this week$/ })).toBeInTheDocument();
@@ -175,7 +229,7 @@ describe('Account area (design 06 account)', () => {
   it('wallet error + Retry', async () => {
     let fail = true;
     wallet = () => (fail ? { status: 503, body: {} } : { body: WALLET });
-    account();
+    account('/account?tab=wallet');
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     fail = false;
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
@@ -184,21 +238,21 @@ describe('Account area (design 06 account)', () => {
 
   it('no points yet', async () => {
     wallet = () => ({ body: { points: { balance: 0, valueCents: 0, weekly: [0, 0, 0, 0, 0, 0, 0, 0] }, plus: null } });
-    account();
+    account('/account?tab=wallet');
     expect(await screen.findByText(/No points yet/)).toBeInTheDocument();
   });
 
   it('Favourites: what the person did with each, where to go, Remove', async () => {
     account('/account?tab=favourites');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Favourite providers & shops' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Saved providers & shops' })).toBeInTheDocument();
     expect(await screen.findByText('Mobile mechanic · 3 jobs · last Oct 12')).toBeInTheDocument();
-    const links = within(screen.getByRole('list', { name: 'Favourite providers & shops' })).getAllByRole('link');
+    const links = within(screen.getByRole('list', { name: 'Saved providers & shops' })).getAllByRole('link');
     expect(links.map(l => [l.textContent, l.getAttribute('href')])).toEqual([
       ['Book', '/providers/prairie-wrench'],
       ['Shop', '/search?q=Glenmore+Bakery&scope=shop'],
       ['View quote', '/quotes/QQ1'],
     ]);
-    await userEvent.click(screen.getByRole('button', { name: 'Remove Prairie Wrench from favourites' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Prairie Wrench from saved' }));
     await waitFor(() => expect(screen.queryByText('Prairie Wrench')).not.toBeInTheDocument());
     expect(calls.some(c => c.method === 'DELETE' && c.url === '/api/v1/me/favourites/M1')).toBe(true);
   });
@@ -206,7 +260,7 @@ describe('Account area (design 06 account)', () => {
   it('no favourites yet', async () => {
     favourites = [];
     account('/account?tab=favourites');
-    expect(await screen.findByText('No favourites yet — tap ♡ on any provider or shop.')).toBeInTheDocument();
+    expect(await screen.findByText('Nothing saved yet — tap ♡ on any provider or shop.')).toBeInTheDocument();
   });
 
   it('asks a guest to sign in', async () => {
@@ -216,8 +270,8 @@ describe('Account area (design 06 account)', () => {
     expect(screen.getAllByRole('link', { name: 'Sign in' }).map(l => l.getAttribute('href'))).toContain('/sign-in?next=%2Faccount%3Ftab%3Dfavourites');
   });
 
-  it('in French', async () => {
-    account('/account', 'fr');
+  it('Wallet & points in French', async () => {
+    account('/account?tab=wallet', 'fr');
     expect(await screen.findByRole('heading', { level: 1, name: 'Portefeuille et points' })).toBeInTheDocument();
     expect(await screen.findByText(/^= 12,40\s\$ de rabais sur tout · Standard$/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Essai gratuit' })).toBeInTheDocument();

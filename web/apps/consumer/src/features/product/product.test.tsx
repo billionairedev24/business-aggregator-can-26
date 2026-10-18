@@ -38,6 +38,12 @@ const open = (path: string, locale: 'en' | 'fr' = 'en') => {
   return { calls, ...view };
 };
 
+const mockAndOpenCheckout = () => {
+  const calls = mockFetch(server);
+  renderApp('/products/P1', { routes: { product: () => <Page />, checkout: () => <h1>Checkout page</h1> } });
+  return { calls };
+};
+
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
@@ -49,7 +55,7 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); });
 
-describe('Product detail (design 06 product)', () => {
+describe('Product detail (redesign § 1.3 PDP)', () => {
   it('shows the product, the shop, options, price and the delivery cut-off', async () => {
     open('/products/P1');
     expect(await screen.findByRole('heading', { level: 1, name: 'Country sourdough' })).toBeInTheDocument();
@@ -57,9 +63,17 @@ describe('Product detail (design 06 product)', () => {
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(within(crumbs).getByRole('link', { name: 'Shop' })).toHaveAttribute('href', '/shop');
     expect(within(crumbs).getByRole('link', { name: 'Bakery' })).toHaveAttribute('href', '/shop/bakery');
-    expect(screen.getByText(/Master tier · ★ 4\.8 \(211 verified\)/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Visit the Glenmore Bakery store' })).toHaveAttribute('href', '/search?scope=shop&q=Glenmore%20Bakery');
+    expect(screen.getByRole('img', { name: '4.8 out of 5 stars' })).toBeInTheDocument();
+    expect(screen.queryByText(/Master/)).toBeNull(); // § 3.13: stars and reviews, not tier tags
     expect(screen.getByText('On tonight’s run')).toBeInTheDocument();
-    expect(screen.getByText('$7.50')).toBeInTheDocument();
+    expect(screen.getAllByText('$7.50')).toHaveLength(2); // the info column and the buy box
+    const buy = screen.getByRole('complementary', { name: 'Buy' });
+    expect(within(buy).getByText('In stock')).toBeInTheDocument();
+    expect(within(buy).getByRole('button', { name: 'Add to cart' })).toBeEnabled();
+    expect(within(buy).getByRole('button', { name: 'Buy now' })).toBeEnabled();
+    expect(within(buy).getByText('Held until you confirm delivery')).toBeInTheDocument();
+    expect(screen.getAllByText('Final sale', { selector: 'dd' })).toHaveLength(2);
     expect(screen.getByText('900 g loaf · GST included at checkout')).toBeInTheDocument();
     expect(screen.getByText(/36-hour ferment/)).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Options' })).toBeInTheDocument();
@@ -74,66 +88,76 @@ describe('Product detail (design 06 product)', () => {
     const { calls } = open('/products/P1');
     const user = userEvent.setup({ delay: null });
     await user.click(await screen.findByRole('button', { name: 'Sliced' }));
-    await user.click(screen.getByRole('button', { name: 'One more' }));
-    await user.click(screen.getByRole('button', { name: 'Add 2 to cart · $15.00' }));
+    await user.click(screen.getByRole('button', { name: 'One more Country sourdough' }));
+    await user.click(screen.getByRole('button', { name: 'Add to cart' }));
     expect(await screen.findByRole('heading', { name: 'Cart page' })).toBeInTheDocument();
     expect(calls.find(c => c.url === '/api/v1/cart/items')?.body).toEqual({ offerId: 'O1', variantId: 'V2', qty: 2 });
+  });
+
+  it('buys now: adds to the cart and opens the checkout', async () => {
+    const { calls } = mockAndOpenCheckout();
+    await userEvent.setup({ delay: null }).click(await screen.findByRole('button', { name: 'Buy now' }));
+    expect(await screen.findByRole('heading', { name: 'Checkout page' })).toBeInTheDocument();
+    expect(calls.find(c => c.url === '/api/v1/cart/items')?.body).toEqual({ offerId: 'O1', variantId: 'V1', qty: 1 });
   });
 
   it("shows the chosen option's own photos (S-65), else the offer's", async () => {
     const withPhotos = { ...GLENMORE, images: ['/img/loaf.jpg'], variants: [GLENMORE.variants[0], { ...GLENMORE.variants[1], images: ['/img/sliced.jpg', '/img/sliced-2.jpg'] }] };
     api = c => (c.url.startsWith('/api/v1/public/shop/products/P1') ? { body: { ...PRODUCT, offers: [withPhotos] } } : undefined);
     open('/products/P1');
-    const gallery = await screen.findByRole('group', { name: 'Photos' });
-    expect(within(gallery).getByRole('img', { name: 'Country sourdough' })).toHaveAttribute('src', '/img/loaf.jpg');
+    expect(await screen.findByRole('img', { name: 'Country sourdough' })).toHaveAttribute('src', '/img/loaf.jpg');
     await userEvent.setup({ delay: null }).click(screen.getByRole('button', { name: 'Sliced' }));
-    expect(within(gallery).getByRole('img', { name: 'Country sourdough' })).toHaveAttribute('src', '/img/sliced.jpg');
-    expect(within(gallery).getByRole('button', { name: 'Show photo 2' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Country sourdough' })).toHaveAttribute('src', '/img/sliced.jpg');
+    expect(within(screen.getByRole('group', { name: 'Photos' })).getByRole('button', { name: 'Show photo 2' })).toBeInTheDocument();
   });
 
   it('never lets the quantity pass the stock', async () => {
     open('/products/P1?offer=O2');
     const user = userEvent.setup({ delay: null });
     expect(await screen.findByText('Only 2 left')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'One more' }));
-    expect(screen.getByRole('button', { name: 'One more' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add 2 to cart · $14.00' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'One more Country sourdough' }));
+    expect(screen.getByRole('button', { name: 'One more Country sourdough' })).toBeDisabled();
+    expect(screen.getByRole('group', { name: 'Quantity of Country sourdough' })).toHaveTextContent('2');
+    expect(screen.getByRole('button', { name: 'Add to cart' })).toBeEnabled();
   });
 
   it('lists the other shops selling it and switches to one', async () => {
     const { router } = open('/products/P1');
-    const sellers = await screen.findByRole('region', { name: 'Also sold by' });
+    const sellers = await screen.findByRole('region', { name: 'Other sellers' });
     expect(within(sellers).getByText('Sidewalk Citizen')).toBeInTheDocument();
     expect(within(sellers).getByText('On tomorrow’s run')).toBeInTheDocument();
     await userEvent.setup({ delay: null }).click(within(sellers).getByRole('link', { name: 'Choose — Sidewalk Citizen' }));
     await waitFor(() => expect(router.state.location.search).toEqual({ offer: 'O2' }));
-    expect(await screen.findByText('$7.00')).toBeInTheDocument();
+    expect((await screen.findAllByText('$7.00')).length).toBeGreaterThan(0);
     expect(screen.getByText(/Order by 7:05 a\.m\. for tomorrow 8–11 a\.m\. pooled \(\$1\.99\), or direct courier in 45 min\. Sidewalk Citizen packs at 7:30 a\.m\./)).toBeInTheDocument();
-    expect(within(screen.getByRole('region', { name: 'Also sold by' })).getByText('Glenmore Bakery')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Other sellers' })).getByText('Glenmore Bakery')).toBeInTheDocument();
   });
 
   it('says when it is out of stock and disables Add', async () => {
     api = () => ({ body: { ...PRODUCT, offers: [{ ...GLENMORE, stock: 0, variants: [], runs: [] }] } });
     open('/products/P1');
     expect(await screen.findByText('Out of stock at Glenmore Bakery right now.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Add 1 to cart/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add to cart' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Buy now' })).toBeDisabled();
   });
 
   it('shows an error when the cart refuses', async () => {
     api = c => (c.url === '/api/v1/cart/items' ? { status: 500, body: { detail: 'no' } } : { body: PRODUCT });
     open('/products/P1');
-    await userEvent.setup({ delay: null }).click(await screen.findByRole('button', { name: /Add 1 to cart/ }));
+    await userEvent.setup({ delay: null }).click(await screen.findByRole('button', { name: 'Add to cart' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('We couldn’t add it to your cart. Try again.');
   });
 
   it('is in French', async () => {
     open('/products/P1', 'fr');
-    expect(await screen.findByText(/Niveau Maître · ★ 4,8 \(211 vérifiés\)/)).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Visiter la boutique Glenmore Bakery' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '4,8 sur 5 étoiles' })).toBeInTheDocument();
     expect(screen.getByText('Sur la tournée de ce soir')).toBeInTheDocument();
     expect(screen.getByText('900 g loaf · TPS calculée au paiement')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Ajouter 1 au panier · 7,50\s\$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ajouter au panier' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Acheter maintenant' })).toBeInTheDocument();
     expect(screen.getByText(/Commandez avant 17 h 20 pour ce soir 18 h – 21 h en tournée groupée \(2,99\s\$\)/)).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Aussi vendu par' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Autres vendeurs' })).toBeInTheDocument();
   });
 
   it('has empty states when no shop of the market sells it', async () => {

@@ -18,11 +18,12 @@ const JOURNEYS: Journey[] = [
   { app: 'studio', name: 'studio-sign-in', path: '/sign-in', signedIn: false },
   { app: 'studio', name: 'studio-kds', path: `/b/${KITCHEN}/kitchen/live`, signedIn: true },
   { app: 'studio', name: 'studio-payouts', path: `/b/${PROVIDER}/payouts`, signedIn: true },
-  // consumer: search → product → cart and checkout; services → booking
+  // consumer: search → product → cart → checkout (redesign phase 1); services → booking
   { app: 'consumer', name: 'consumer-home', path: '/', signedIn: false },
   { app: 'consumer', name: 'consumer-search', path: '/search?q=sourdough', signedIn: false },
   { app: 'consumer', name: 'consumer-product', path: '/products/P1', signedIn: false },
-  { app: 'consumer', name: 'consumer-checkout', path: '/cart', signedIn: true },
+  { app: 'consumer', name: 'consumer-cart', path: '/cart', signedIn: true },
+  { app: 'consumer', name: 'consumer-checkout', path: '/checkout', signedIn: true },
   { app: 'consumer', name: 'consumer-booking', path: '/providers/prairie-wrench/book', signedIn: true },
   { app: 'consumer', name: 'consumer-help', path: '/help', signedIn: false },
   // console: the queues
