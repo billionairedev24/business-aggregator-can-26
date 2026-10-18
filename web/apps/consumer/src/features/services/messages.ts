@@ -24,7 +24,7 @@ export const useServicesT = defineMessages({
     group_tech_and_digital: 'On-site visits · fixed prices · quotes for projects',
     group_childcare_and_family: 'Hourly care at your home · vulnerable-sector check',
     // category
-    crumbHome: 'Home', crumbServices: 'Services', breadcrumb: 'Breadcrumb',
+    crumbHome: 'Home', crumbServices: 'Services', breadcrumb: 'Breadcrumb', providersCrumb: 'Providers', hourSuffix: '/ hr',
     verifiedProviders: '{count, plural, one {# verified provider} other {# verified providers}}',
     licenceChecked: 'Licence checked · {registry}',
     commonJobs: 'Common jobs & typical prices',
@@ -119,7 +119,7 @@ export const useServicesT = defineMessages({
     group_education_and_coaching: 'Cours à l’heure, chez vous ou chez eux',
     group_tech_and_digital: 'Visites sur place · prix fixes · devis pour les projets',
     group_childcare_and_family: 'Garde à l’heure à domicile · vérification pour secteur vulnérable',
-    crumbHome: 'Accueil', crumbServices: 'Services', breadcrumb: "Fil d'Ariane",
+    crumbHome: 'Accueil', crumbServices: 'Services', breadcrumb: "Fil d'Ariane", providersCrumb: 'Prestataires', hourSuffix: '/ h',
     verifiedProviders: '{count, plural, one {# prestataire vérifié} other {# prestataires vérifiés}}',
     licenceChecked: 'Permis vérifié · {registry}',
     commonJobs: 'Travaux courants et prix typiques',

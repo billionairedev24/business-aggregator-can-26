@@ -497,7 +497,7 @@ function Done({ slug, bookingId, onAgain }: { slug: string; bookingId: string; o
     <div className="nl-page nl-bk">
       {q.isPending ? <Skeleton height={200} /> : q.isError || !b ? <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /> : (
         <section aria-labelledby="bk-done" className="nl-bk-done">
-          <svg width="64" height="64" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="34" fill="var(--color-accent-100)" stroke="var(--color-accent)" strokeWidth="2" /><path d="M22 37 L32 47 L51 27" fill="none" stroke="var(--color-accent-700)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <svg width="64" height="64" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="34" fill="var(--color-surface-brand)" stroke="var(--color-action-primary)" strokeWidth="2" /><path d="M22 37 L32 47 L51 27" fill="none" stroke="var(--color-link)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <h1 id="bk-done" className="nl-bk-title">{b.type === 'appointment' ? t('doneTitleShop', { when: date(b.startsAt, 'dateTime') }) : t('doneTitle', { who: b.memberFirstName ?? b.providerName, when: date(b.startsAt, 'dateTime') })}</h1>
           <p className="nl-bk-lede">{b.heldCents > 0 ? t('doneBody', { ref: b.ref, total: money(b.heldCents), name: b.providerName }) : t('doneBodyFree', { ref: b.ref, name: b.providerName })}</p>
           <h2 className="nl-bk-h2">{t('nextTitle')}</h2>
