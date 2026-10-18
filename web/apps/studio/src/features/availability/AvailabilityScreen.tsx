@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChipTabs, PageHeader, formatDate, useLocale } from '@northline/ui';
+import { ChipTabs, formatDate, useLocale } from '@northline/ui';
+import { BoHeader } from '../../components/BackOffice';
 import { useMerchantId } from '../shell/api';
 import { hoursQuery, rulesQuery } from './api';
 import { HoursTab } from './HoursTab';
@@ -27,7 +28,7 @@ export function AvailabilityScreen({ returned, onReturnSeen }: { returned?: Cale
   const change = (s: SaveState) => setState(s);
   return (
     <div className="nl-av">
-      <PageHeader kicker={t('kicker')} title={t('title')} lede={t('lede')} />
+      <BoHeader title={t('title')} sub={t('lede')} />
       <div className="nl-av-tabs">
         <ChipTabs<AvTab> aria-label={t('tabs')} value={tab} onChange={v => { setTab(v); setState(s => (s === 'saved' ? 'clean' : s)); }}
           options={(['hours', 'rules', 'timeoff', 'sync'] as const).map(v => ({ value: v, label: t(`tab_${v}`) }))} />

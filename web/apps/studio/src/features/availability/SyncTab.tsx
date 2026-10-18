@@ -59,7 +59,7 @@ export function SyncTab({ returned, onReturnSeen }: { returned?: CalendarReturn;
   };
   return (
     <div className="nl-av-rules">
-      <div>
+      <div className="nl-av-card">
         {banner?.calendar && banner.result ? (
           <Alert tone={banner.result === 'connected' ? 'info' : 'error'} role="status"
             actions={<button type="button" className="btn btn-ghost" onClick={() => setBanner(undefined)}>{t('dismiss')}</button>}>
@@ -94,7 +94,7 @@ export function SyncTab({ returned, onReturnSeen }: { returned?: CalendarReturn;
           <li>{ical?.feedUrl ? <>{t('sync4')} <code className="nl-av-code">{ical.feedUrl}</code></> : t('sync4none')}</li>
         </ul>
       </div>
-      <div>
+      <div className="nl-av-card">
         <h3 className="nl-av-h3">{t('team')}</h3>
         <ul className="nl-av-list">
           {q.data.team.map(m => (
