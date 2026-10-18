@@ -8323,3 +8323,57 @@ refunds tips.
 - **Never run against real services:** Stripe (tips' and discounted PaymentIntents ran on the `FakeStripeGateway` /
   the api's stand-in only), Valkey (the integration tests run with `redis.enabled: false`, so the visit positions ran on the
   in-memory adapter; `RedisProviderPositions` mirrors S-88's courier adapter but never ran), any tax filing. No phone, simulator or real Stripe sheet was used for the app's tip.
+
+## 2026-10-18 — GCP dry-run environment for client demos
+
+A production-shaped environment on Google Cloud for client demos next week, paid from a $300 free-trial credit, fake
+data only ([docs/runbooks/dryrun-gcp.md](runbooks/dryrun-gcp.md)). Owner direction:
+
+> - Kubernetes on Google Cloud (GKE).
+> - Minimise egress/ingress: GKE in a single zone; region a variable.
+
+Postgres, Valkey and Meilisearch were first to be hosted by **Layerbase** (a third-party managed database provider
+with flat monthly plans). **Layerbase considered: no PostGIS, Hetzner Ashburn → cross-provider egress; supported as
+an external option.** Its Postgres can't run Northline (PostGIS is required next to citext and pgcrypto), and from
+GKE every query would cross providers (internet egress, ≈ 20–25 ms per round trip). The owner hasn't decided where
+the data services live, so both work, per service.
+
+- **Environment `dryrun`** (`infra/terraform/envs/gcp/dryrun`, chart `global.environment: dryrun`): the GCP stack
+  with `data_stores = null` and the new `data_services` variable. Region default **`northamerica-northeast1`**
+  (Montréal), zone default `<region>-a` — the Canadian-regions rule holds; the root validates it like every other
+  root. Zonal GKE Standard, one pool of 2 × `e2-standard-4` (autoscaling 2–3) on Spot VMs by default
+  (`spot_nodes = false` before a demo), CMEK, Workload Identity, Cloud NAT, the same registry/buckets/secrets/KMS/DNS
+  modules. Not Autopilot: with the in-cluster data services the requests (≈ 2.5 vCPU, ≈ 9 GiB) would cost ≈ $110/month
+  on Autopilot against ≈ $66 for two Spot nodes (management fee the same, covered by the GKE free tier).
+- **Each data service `in-cluster` (default) or `external`.** In the cluster (new chart `deploy/helm/northline-data`,
+  every volume pinned to the zone): PostgreSQL 17 + PostGIS through **CloudNativePG** (operator chart 0.26 / 1.27,
+  one instance, extensions created after initdb, daily base backup + WAL to the new GCS bucket
+  `northline-dryrun-pg-backups` as a new workload identity `postgres-backup` → ServiceAccount `northline-pg`, 7 days),
+  Valkey (one pod, AOF, password), Meilisearch (one pod, master key), Kafka 4.1 single KRaft node (PLAINTEXT, RF 1; the
+  northline chart's topics Job unchanged, `kafkaTopics.replicationFactor: "1"`). Credentials: Terraform generates
+  them into Secret Manager (`db-app-password`, `redis-password`, `meilisearch-api-key`); both charts read them
+  through External Secrets. External: endpoint in `data_services`, the credential secret created empty for the
+  operator (plus `kafka-sasl-jaas-config` for an external Kafka).
+- **Search = Meilisearch** in the dry run: `config_env` sets `SEARCH_PROVIDER=meilisearch` and `MEILISEARCH_URL`,
+  `secret_env` `MEILISEARCH_API_KEY` (names announced by the search-provider work; the adapter is not in this change).
+  No `ES_*` variables; the Elasticsearch-only `searchIndices` Job is off in `values-dryrun.yaml`.
+- **Spring profile `dev`** (`global.springProfiles`; the chart now requires one for `dryrun`): staging/prod refuse the
+  local fakes and need accounts that don't exist (Google/Apple sign-in, Twilio, APNs/FCM, Google Maps, OpenRouter).
+  Stripe in test mode is required by the dry-run values. Emails logged (`EMAIL_PROVIDER=local`) until a SendGrid key
+  exists. HTTPS and an ACME issuer are enforced for `dryrun` like staging/prod.
+- **Delivery:** plain Helm (no Argo CD for two to three weeks), add-ons installed with the Argo CD add-ons' values.
+- **Observability:** Google Cloud's own backends through the chart's one Collector (Cloud Trace, Cloud Logging,
+  Managed Service for Prometheus, as `values-gcp.yaml`) — ≈ $16/month of samples instead of ≈ 2 GiB of
+  Prometheus/Loki/Tempo/Grafana pods.
+- **Demo data through the product**, never the dev seed (its personas' credentials are public; DevSeedGuard refuses
+  it anyway). The first console admin by the documented SQL.
+- **Module contract:** `context` gains `zone` (optional) and `environment` accepts `dryrun`, identically for AWS,
+  Google Cloud and Azure; GCP modules treat `dryrun` like `dev` (zonal cluster in `context.zone`, flow-log sampling,
+  DNS zone `force_destroy`). The GCP stack's managed data-store modules got `count` (with `moved` blocks, so existing
+  addresses stay valid) and its outputs use `one(…)`.
+- **Cost:** ≈ $130/month on Spot nodes (≈ $60 for 2 weeks, ≈ $89 for 3), ≈ $279/month on demand — the table in the
+  runbook; list prices from memory, to re-check in the calculator.
+- **Not done / never run:** nothing applied to a Google Cloud project; CloudNativePG, the PostGIS image's barman-cloud,
+  the Kafka/Valkey/Meilisearch pods, Layerbase and the Meilisearch adapter never ran; no Argo CD environment for
+  `dryrun`; AWS/Azure modules accept `dryrun` but no env root uses it there. A region outside Canada for the dry run
+  (to sit next to an external provider) would need a new owner decision.
