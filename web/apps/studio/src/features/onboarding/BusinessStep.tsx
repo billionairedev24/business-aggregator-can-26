@@ -21,10 +21,25 @@ function legalDefaults(structure: Structure, values: LegalValues = {}): LegalVal
 }
 const firstOwner = (s: Structure): OwnerRow[] => (OWNERS[s] ? [{ legalName: '', role: OWNERS[s]!.roles[0]!, pct: '' }] : []);
 
-export interface BusinessStepProps { onboarding: Onboarding; onBack: () => void; onDone: () => void }
+export interface BusinessStepProps {
+  onboarding: Onboarding;
+  /**
+   * `business`: names, structure + legal details + principals, GST, public profile; `categories`: what the business
+   * offers. One form across both steps (the wizard keeps this component mounted between them), saved with one `PUT` on
+   * the Categories step — the api needs the categories with the business.
+   */
+  part?: 'business' | 'categories';
+  onBack: () => void;
+  /** Business part: go on to Categories. */
+  onNext?: () => void;
+  /** Saved: go on to Verification. */
+  onDone: () => void;
+}
 
-/** Step 2 · Business (design 02 lines 140–177): names, structure + legal details + principals, GST, categories, public profile. */
-export function BusinessStep({ onboarding, onBack, onDone }: BusinessStepProps) {
+const isCategoryField = (k: string) => k === 'categories';
+
+/** Steps 2 and 3 · Business and Categories (design 02 lines 140–177; redesign § 2.2 onboarding steps). */
+export function BusinessStep({ onboarding, part = 'categories', onBack, onNext, onDone }: BusinessStepProps) {
   const t = useOnboardingT();
   const type: MerchantType = onboarding.type;
   const saved = onboarding.business;
@@ -55,27 +70,69 @@ export function BusinessStep({ onboarding, onBack, onDone }: BusinessStepProps) 
   }), [type, structure, t, displayName, legalName, gstNumber, categoryIds, suggestions, legal, owners]);
   const errorsAll: Record<string, string> = { ...server, ...clientErrors };
   const visible: Record<string, string | undefined> = Object.fromEntries(Object.entries(errorsAll).map(([k, v]) => [k, tried || touched[k] || server[k] ? v : undefined]));
-  const count = tried ? attentionCount(errorsAll) : 0;
+  const partOf = (k: string) => (isCategoryField(k) ? 'categories' : 'business');
+  const partErrors = (p: 'business' | 'categories', all: Record<string, string>) => Object.fromEntries(Object.entries(all).filter(([k]) => partOf(k) === p));
+  const count = tried ? attentionCount(partErrors(part, errorsAll)) : 0;
   const clearServer = (k: string) => setServer(s => { if (!(k in s)) return s; const n = { ...s }; delete n[k]; return n; });
 
   const changeStructure = (s: Structure) => { setStructure(s); setLegal(legalDefaults(s)); setOwners(firstOwner(s)); setServer({}); };
 
+  const next = () => {
+    setTried(true);
+    if (attentionCount(partErrors('business', clientErrors))) return;
+    setTried(false);
+    onNext?.();
+  };
   const submit = () => {
     setTried(true);
+    // reloaded on Categories before the business was ever saved: its own fields are still empty
+    if (attentionCount(partErrors('business', clientErrors))) { onBack(); return; }
     if (attentionCount(clientErrors)) return;
     save.mutate({
       displayName: displayName.trim(), legalName: legalName.trim(), structure, gstNumber: gstNumber.trim() || undefined,
       legalDetails: toLegalDetails(structure, legal), principals: toPrincipals(structure, owners), categoryIds, suggestedCategories: suggestions, profile,
     }, {
       onSuccess: onDone,
-      onError: e => { if (e instanceof ValidationError) setServer(Object.fromEntries(e.errors.map(x => [x.field, x.message]))); },
+      onError: e => {
+        if (!(e instanceof ValidationError)) return;
+        const map = Object.fromEntries(e.errors.map(x => [x.field, x.message]));
+        setServer(map);
+        if (Object.keys(map).some(k => partOf(k) === 'business')) onBack();
+      },
     });
   };
+
+  if (part === 'categories') {
+    return (
+      <>
+        <h1 className="nl-ob-title">{t(`catTitle_${type}`)}</h1>
+        <p className="nl-ob-intro">{t(`catIntro_${type}`)}</p>
+        <FormGrid className="nl-ob-form">
+          <CategoryPicker
+            type={type}
+            value={categoryIds}
+            onChange={ids => { setCategoryIds(ids); clearServer('categories'); }}
+            suggestions={suggestions}
+            onSuggestionsChange={s => { setSuggestions(s); clearServer('categories'); }}
+            error={visible.categories}
+            onClose={() => touch('categories')}
+          />
+        </FormGrid>
+        {count > 0 ? <div role="alert" className="nl-alert nl-alert-error"><strong>{t('attention', { count })}</strong> {t('attentionTail')}</div> : null}
+        {save.isError && !(save.error instanceof ValidationError) ? <div role="alert" className="nl-alert nl-alert-error">{t('saveError')}</div> : null}
+        <div className="nl-ob-actions">
+          <button type="button" className="btn btn-secondary" onClick={onBack}>{t('back')}</button>
+          <span className="nl-ob-hint">{t('catHint')}</span>
+          <button type="button" className="btn btn-primary" disabled={save.isPending} onClick={submit}>{t('bizNext')}</button>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
       <h1 className="nl-ob-title">{t('bizTitle')}</h1>
-      <p className="nl-ob-intro" style={{ marginBottom: 24 }}>{t('bizIntro')}</p>
+      <p className="nl-ob-intro">{t('bizIntro')}</p>
       <FormGrid className="nl-ob-form">
         <Field label={t(`nameLabel_${type}`)} error={visible.displayName}>
           <TextInput placeholder={t(`namePh_${type}`)} value={displayName} onChange={e => { setDisplayName(e.target.value); clearServer('displayName'); }} onBlur={() => touch('displayName')} />
@@ -101,15 +158,6 @@ export function BusinessStep({ onboarding, onBack, onDone }: BusinessStepProps) 
           errors={visible}
           onTouch={touch}
         />
-        <CategoryPicker
-          type={type}
-          value={categoryIds}
-          onChange={ids => { setCategoryIds(ids); clearServer('categories'); }}
-          suggestions={suggestions}
-          onSuggestionsChange={s => { setSuggestions(s); clearServer('categories'); }}
-          error={visible.categories}
-          onClose={() => touch('categories')}
-        />
         {PROFILE_FIELDS[type].map(f => {
           const value = profile[f.key];
           const set = (v: unknown) => setProfile(p => ({ ...p, [f.key]: v }));
@@ -130,11 +178,11 @@ export function BusinessStep({ onboarding, onBack, onDone }: BusinessStepProps) 
             : <Field key={f.key} label={t(f.label)} span={f.span} error={err}><TextInput placeholder={t(f.ph)} maxLength={f.max} value={text} onChange={e => set(e.target.value)} /></Field>;
         })}
       </FormGrid>
-      {count > 0 ? <div role="alert" className="nl-alert nl-alert-error" style={{ marginTop: 22, maxWidth: 720 }}><strong>{t('attention', { count })}</strong> {t('attentionTail')}</div> : null}
-      {save.isError && !(save.error instanceof ValidationError) ? <div role="alert" className="nl-alert nl-alert-error" style={{ marginTop: 22, maxWidth: 720 }}>{t('saveError')}</div> : null}
+      {count > 0 ? <div role="alert" className="nl-alert nl-alert-error"><strong>{t('attention', { count })}</strong> {t('attentionTail')}</div> : null}
       <div className="nl-ob-actions">
-        <button type="button" className="btn btn-primary" disabled={save.isPending} onClick={submit}>{t('bizNext')}</button>
-        <button type="button" className="btn btn-ghost" onClick={onBack}>{t('back')}</button>
+        <button type="button" className="btn btn-secondary" onClick={onBack}>{t('back')}</button>
+        <span className="nl-ob-hint">{t('bizHint')}</span>
+        <button type="button" className="btn btn-primary" onClick={next}>{t('bizToCategories')}</button>
       </div>
     </>
   );

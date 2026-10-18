@@ -65,11 +65,11 @@ export function AccountStep({ type, onboarding, isNew, pilot, onTypeChange, onDo
       <h1 className="nl-ob-title">{t(type ? `title_${type}` : 'title_none')}</h1>
       <p className="nl-ob-intro">{t(type ? `intro_${type}` : 'intro_none')}</p>
 
-      {pilotInvite ? <div style={{ marginBottom: 14, maxWidth: 640 }}><Alert tone="info" title={t('pilotTitle', { city: pilotInvite.city })}>{t('pilotBody', { name: pilotInvite.label })}</Alert></div> : null}
-      {invite.data && !pilotInvite ? <div style={{ marginBottom: 14, maxWidth: 640 }}><Alert tone="error" role="alert">{t(`pilot_${invite.data.state}` as 'pilot_expired')}</Alert></div> : null}
+      {pilotInvite ? <Alert tone="info" title={t('pilotTitle', { city: pilotInvite.city })}>{t('pilotBody', { name: pilotInvite.label })}</Alert> : null}
+      {invite.data && !pilotInvite ? <Alert tone="error" role="alert">{t(`pilot_${invite.data.state}` as 'pilot_expired')}</Alert> : null}
       {type && !picking ? (
         <div className="nl-ob-box">
-          <span className="tag tag-accent">{t(`label_${type}`)}</span>
+          <span className="tag tag-brand">{t(`label_${type}`)}</span>
           <span className="nl-ob-box-desc">{t(`desc_${type}`)}</span>
           {(onboarding && onboarding.status !== 'applicant') || pilotInvite ? null : <button type="button" className="btn btn-ghost" onClick={() => setPicking(true)}>{t('change')}</button>}
         </div>
@@ -81,7 +81,7 @@ export function AccountStep({ type, onboarding, isNew, pilot, onTypeChange, onDo
           ))}
         </RadioGroup>
       )}
-      {show('type') ? <div role="alert" className="nl-error" style={{ marginTop: -14, marginBottom: 14 }}>{show('type')}</div> : null}
+      {show('type') ? <div role="alert" className="nl-error">{show('type')}</div> : null}
 
       <div className="nl-ob-kicker">{t('signedInAs')}</div>
       <div className="nl-ob-user">
@@ -94,7 +94,7 @@ export function AccountStep({ type, onboarding, isNew, pilot, onTypeChange, onDo
       </div>
       <p className="nl-ob-note">{t('ownerNote')}</p>
 
-      <FormGrid className="nl-ob-narrow" style={{ marginTop: 14 }}>
+      <FormGrid className="nl-ob-narrow">
         {!isNew && (
           <Field label={t('workEmail')} error={show('workEmail')}>
             <TextInput id={ids.email} type="email" autoComplete="email" placeholder={t('workEmailPh')} value={workEmail} onChange={e => setWorkEmail(e.target.value)} onBlur={() => setTouched(s => ({ ...s, workEmail: true }))} />
@@ -111,13 +111,13 @@ export function AccountStep({ type, onboarding, isNew, pilot, onTypeChange, onDo
           {show('businessTermsAccepted') ? <div role="alert" className="nl-error">{show('businessTermsAccepted')}</div> : null}
         </div>
       ) : (
-        <div style={{ marginTop: 14, maxWidth: 640 }}><Alert tone="info" title={t('stepUpTitle')}>{t('stepUp')}</Alert></div>
+        <Alert tone="info" title={t('stepUpTitle')}>{t('stepUp')}</Alert>
       )}
 
-      {(start.isError || update.isError) && !Object.keys(server).length ? <div style={{ marginTop: 14, maxWidth: 640 }}><Alert tone="error">{t('saveError')}</Alert></div> : null}
+      {(start.isError || update.isError) && !Object.keys(server).length ? <Alert tone="error">{t('saveError')}</Alert> : null}
       <div className="nl-ob-actions">
-        <button type="button" className="btn btn-primary" disabled={pending || !type} onClick={submit}>{t('acctCta', { name: user?.firstName ?? '' })}</button>
         <span className="nl-ob-hint">{t(type === 'kitchen' ? 'acctHint_kitchen' : 'acctHint')}</span>
+        <button type="button" className="btn btn-primary" disabled={pending || !type} onClick={submit}>{t('acctCta', { name: user?.firstName ?? '' })}</button>
       </div>
     </>
   );

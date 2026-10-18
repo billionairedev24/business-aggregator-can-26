@@ -30,6 +30,10 @@ function StudioRoute() {
   useFrenchFirst(merchant.region?.frenchFirst); // S-116: a French-first place opens in French unless the person chose
   const pathname = useRouterState({ select: s => s.location.pathname });
   const screen = screenFromPath(pathname);
+  // the approval gate (redesign § 3.10, BO:235): an application not yet approved stays in the wizard; Help stays open
+  if ((merchant.status === 'applicant' || merchant.status === 'pending') && screen !== 'help') {
+    return <Navigate to="/onboarding/$step" params={{ step: 'review' }} search={{ m: merchant.id, type: merchant.type }} replace />;
+  }
   if (!screensFor(merchant.type).includes(screen)) return <Navigate to={screenHref(merchant.id, homeScreen(merchant.type))} replace />;
   const region = merchant.region;
   return (

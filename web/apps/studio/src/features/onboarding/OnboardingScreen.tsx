@@ -7,13 +7,11 @@ import { ProvincePlace } from '../shell/place';
 import { AccountStep } from './AccountStep';
 import { onboardingQuery } from './api';
 import { BusinessStep } from './BusinessStep';
-import { ListingsStep } from './ListingsStep';
 import { OnboardingLayout, reachable } from './OnboardingLayout';
-import { PageStep } from './PageStep';
 import { ReviewStep } from './ReviewStep';
 import { VerificationStep } from './VerificationStep';
 import { useOnboardingT } from './messages';
-import { STEPS, studioHome, type OnboardingSearch, type Step } from './model';
+import { STEPS, resumeStep, studioHome, type OnboardingSearch, type Step } from './model';
 
 /** Whether the signed-in user registered today (07d: brand-new account → Business Terms + all provinces). */
 function useIsNewAccount(flag: boolean | undefined) {
@@ -33,7 +31,7 @@ export function OnboardingEntry({ search }: { search: OnboardingSearch }) {
   if (!search.m && !search.type) {
     if (businesses.isPending || (applicant && resume.isPending)) return <OnboardingLayout step="account" type={undefined} onboarding={undefined} onGo={() => {}}><PageSkeleton kpis={0} /></OnboardingLayout>;
     if (applicant && resume.data) {
-      const step: Step = resume.data.step === 'done' ? 'listings' : resume.data.step;
+      const step: Step = resumeStep(resume.data.step);
       return <Navigate to="/onboarding/$step" params={{ step }} search={{ m: applicant.id, type: resume.data.type }} replace />;
     }
   }
@@ -62,7 +60,7 @@ export function OnboardingScreen({ step, search }: { step: Step; search: Onboard
   if (m && query.isPending) return layout(<PageSkeleton kpis={0} rows={6} />);
   if (m && query.isError) return layout(<ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />);
   if (o && STEPS.indexOf(step) > reachable(o)) {
-    const target: Step = o.step === 'done' ? 'listings' : o.step;
+    const target: Step = resumeStep(o.step);
     return <Navigate to="/onboarding/$step" params={{ step: target }} search={{ m, type: o.type }} replace />;
   }
 
@@ -77,10 +75,12 @@ export function OnboardingScreen({ step, search }: { step: Step; search: Onboard
         onTypeChange={t2 => void navigate({ to: '.', search: s => ({ ...s, type: t2 }), replace: true })}
         onDone={(id, t2) => go('business', id, t2)}
       />);
-    case 'business': return layout(<BusinessStep key={o!.merchantId} onboarding={o!} onBack={() => go('account')} onDone={() => go('verification')} />);
-    case 'verification': return layout(<VerificationStep onboarding={o!} identityReturned={search.identity === 'returned'} onBack={() => go('business')} onSubmitted={() => go('review')} />);
-    case 'review': return layout(<ReviewStep onboarding={o!} onNext={() => go('page')} />);
-    case 'page': return layout(<PageStep onboarding={o!} onBack={() => go('review')} onNext={() => go('listings')} />);
-    case 'listings': return layout(<ListingsStep onboarding={o!} onBack={() => go('page')} onDone={() => void navigate({ to: studioHome(o!.merchantId, o!.type) })} />);
+    // Business and Categories are one form (same element, same key: it stays mounted from one step to the other)
+    case 'business':
+    case 'categories':
+      return layout(<BusinessStep key={o!.merchantId} onboarding={o!} part={step}
+        onBack={() => go(step === 'business' ? 'account' : 'business')} onNext={() => go('categories')} onDone={() => go('verification')} />);
+    case 'verification': return layout(<VerificationStep onboarding={o!} identityReturned={search.identity === 'returned'} onBack={() => go('categories')} onSubmitted={() => go('review')} />);
+    case 'review': return layout(<ReviewStep onboarding={o!} onOpenStudio={() => void navigate({ to: studioHome(o!.merchantId, o!.type) })} />);
   }
 }

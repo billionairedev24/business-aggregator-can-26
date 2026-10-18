@@ -149,24 +149,35 @@ describe('Identity (Stripe KYC) — S-22', () => {
   });
 });
 
-describe('ReviewStep', () => {
-  it('lists the checks, shows the food block for kitchens and offers the dev-only approval', async () => {
+describe('ReviewStep (the approval gate)', () => {
+  it('lists the checks, explains the lock, shows the food block for kitchens and offers the dev-only approval', async () => {
     const o = { ...onboarding({ type: 'kitchen', status: 'pending', step: 'review', submittedAt: new Date().toISOString() }) };
-    const onNext = vi.fn();
-    const calls = mockFetch(c => {
-      if (c.url.endsWith('/approve')) return { body: { ...o, status: 'active' } };
-      if (c.method === 'PATCH') return { body: { ...o, step: 'page' } };
-      return undefined;
-    });
-    renderWithProviders(<ReviewStep onboarding={o} onNext={onNext} />);
+    const onOpenStudio = vi.fn();
+    const calls = mockFetch(c => (c.url.endsWith('/approve') ? { body: { ...o, status: 'active' } } : undefined));
+    renderWithProviders(<ReviewStep onboarding={o} onOpenStudio={onOpenStudio} />);
     expect(screen.getByText('Under review')).toBeTruthy();
     expect(screen.getByText('No shortcuts for food.')).toBeTruthy();
     expect(screen.getByText(/Submitted today/)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Why is my kitchen locked?' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Open your Studio' })).toBeNull(); // locked until approved
+    expect(screen.getByRole('button', { name: 'Sign out — resume later' })).toBeTruthy();
     await user().click(screen.getByRole('button', { name: 'Simulate approval →' }));
-    await waitFor(() => expect(onNext).toHaveBeenCalled());
-    expect(calls.map(c => `${c.method} ${c.url}`)).toEqual([
-      'POST /api/v1/dev/merchants/01J9ZD3V00000000000000TST1/approve',
-      'PATCH /api/v1/merchants/01J9ZD3V00000000000000TST1/onboarding',
-    ]);
+    await waitFor(() => expect(calls.map(c => `${c.method} ${c.url}`)).toEqual(['POST /api/v1/dev/merchants/01J9ZD3V00000000000000TST1/approve']));
+    expect(onOpenStudio).not.toHaveBeenCalled();
+  });
+
+  it('once approved: says what comes next in the Studio and opens it (step done)', async () => {
+    const o = onboarding({ type: 'provider', status: 'active', step: 'review', submittedAt: new Date().toISOString() });
+    const onOpenStudio = vi.fn();
+    const calls = mockFetch(c => (c.method === 'PATCH' ? { body: { ...o, step: 'done' } } : undefined));
+    renderWithProviders(<ReviewStep onboarding={o} onOpenStudio={onOpenStudio} />);
+    expect(screen.getByRole('heading', { name: "You're approved." })).toBeTruthy();
+    expect(screen.getByText('Set up your public page: logo, tagline and what customers see.')).toBeTruthy();
+    expect(screen.getByText('Add your first services and prices.')).toBeTruthy();
+    expect(screen.queryByText('Add your first products.')).toBeNull(); // provider copy only
+    await expectNoAxeViolations(document.body);
+    await user().click(screen.getByRole('button', { name: 'Open your Studio' }));
+    await waitFor(() => expect(onOpenStudio).toHaveBeenCalled());
+    expect(calls.find(c => c.method === 'PATCH')!.body).toEqual({ step: 'done' });
   });
 });
