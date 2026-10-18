@@ -496,4 +496,5 @@ in [DECISIONS.md](../DECISIONS.md) (Meilisearch search provider). In short:
 |---|---|---|
 | 2026-10-18 | `MeilisearchBootstrapTest`, `MeilisearchIndexAdminTest`, `MeilisearchSearchApiTest`, `MeilisearchIndexerTest`, `MeilisearchReindexTest` (incl. the S-115 drill through `SearchReindexCommand`), `SearchIndicesCommandTest` — Testcontainers `getmeili/meilisearch:v1.28.0`, Kafka 4, PostGIS | **passed** |
 | 2026-10-18 | compose `search-meili` + `./gradlew :worker:searchIndices --args='apply'` then `verify` | **passed**: both indexes created, then in sync |
+| 2026-10-18 | the same tests with `MEILISEARCH_TEST_IMAGE=getmeili/meilisearch:v1.15.2` (the GCP dry run's in-cluster image, [dryrun-gcp.md](dryrun-gcp.md)) | **passed** |
 | — | **not exercised:** a hosted Meilisearch (Layerbase), its TLS and API keys; the chart's Jobs against it | |
