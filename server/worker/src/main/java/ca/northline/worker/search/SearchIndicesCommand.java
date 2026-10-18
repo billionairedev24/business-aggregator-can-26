@@ -1,13 +1,9 @@
 package ca.northline.worker.search;
 
-import ca.northline.searchindex.IndexBootstrap;
 import ca.northline.searchindex.IndexBootstrap.Finding;
 import ca.northline.searchindex.IndexBootstrap.Mode;
 import ca.northline.searchindex.IndexBootstrap.Report;
-import ca.northline.searchindex.IndexLayout;
-import ca.northline.searchindex.ListingIndices;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import java.time.Clock;
 import java.util.Arrays;
 import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +11,7 @@ import org.springframework.boot.Banner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.elasticsearch.autoconfigure.ElasticsearchClientAutoConfiguration;
 import org.springframework.boot.elasticsearch.autoconfigure.ElasticsearchRestClientAutoConfiguration;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
@@ -30,8 +27,9 @@ import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
  * java -cp @/app/jib-classpath-file ca.northline.worker.search.SearchIndicesCommand apply     # in the worker image
  * </pre>
  *
- * Connection settings are the worker's own ({@code spring.elasticsearch.*} ← {@code ES_URIS}, {@code ES_USERNAME},
- * {@code ES_PASSWORD}). A change that needs a reindex is reported ({@code REINDEX REQUIRED}, exit 3 under
+ * Connection settings are the worker's own: the engine of {@code SEARCH_PROVIDER}, then {@code spring.elasticsearch.*}
+ * ← {@code ES_URIS}, {@code ES_USERNAME}, {@code ES_PASSWORD}, or {@code northline.search.meilisearch.*} ←
+ * {@code MEILISEARCH_URL}, {@code MEILISEARCH_API_KEY} (Meilisearch: {@code MeilisearchBootstrap}). A change that needs a reindex is reported ({@code REINDEX REQUIRED}, exit 3 under
  * {@code verify}) and left to the reindex Job (S-71, docs/runbooks/search.md). Exit codes: 0 done, 3 drift left
  * ({@code verify}), 1 error.
  */
@@ -61,11 +59,10 @@ public final class SearchIndicesCommand {
                 .bannerMode(Banner.Mode.OFF)
                 .logStartupInfo(false)
                 .run(args)) {
-            var bootstrap = new IndexBootstrap(
-                    new ListingIndices(context.getBean(ElasticsearchClient.class)),
-                    IndexLayout.fromClasspath(),
-                    Clock.systemUTC());
-            var report = bootstrap.reconcile(mode);
+            var engine = new SearchEngine(
+                    context.getBean(SearchProperties.class), () -> context.getBean(ElasticsearchClient.class));
+            log.info("Search indices on {}", engine.provider());
+            var report = engine.bootstrap(mode);
             log(report);
             return mode == Mode.VERIFY && report.hasDrift() ? DRIFT : 0;
         }
@@ -93,9 +90,9 @@ public final class SearchIndicesCommand {
                 case Finding.IndexMissing(var alias) -> log.warn("MISSING   {}", alias);
                 case Finding.IndexCreated(var alias, var index) -> log.info("CREATED   {} → {}", alias, index);
                 case Finding.MappingsChanged(var alias, var index) ->
-                    log.warn("CHANGED   {} → {}: new mappings to add in place", alias, index);
+                    log.warn("CHANGED   {} → {}: new mappings or settings to apply in place", alias, index);
                 case Finding.MappingsUpdated(var alias, var index) ->
-                    log.info("UPDATED   {} → {}: new mappings added in place", alias, index);
+                    log.info("UPDATED   {} → {}: new mappings or settings applied in place", alias, index);
                 case Finding.ReindexRequired(var alias, var index, var reason) ->
                     log.warn(
                             "REINDEX REQUIRED {} → {}: {} — run the reindex Job (docs/runbooks/search.md § Reindex)",
@@ -107,11 +104,12 @@ public final class SearchIndicesCommand {
         log.info("Search indices {}", report.summary());
     }
 
-    /** The Elasticsearch client only: no listeners, database, Kafka or Valkey. */
+    /** The search engine's client only: no listeners, database, Kafka or Valkey. */
     @ImportAutoConfiguration({
         JacksonAutoConfiguration.class,
         ElasticsearchRestClientAutoConfiguration.class,
         ElasticsearchClientAutoConfiguration.class
     })
+    @EnableConfigurationProperties(SearchProperties.class)
     static class CommandContext {}
 }

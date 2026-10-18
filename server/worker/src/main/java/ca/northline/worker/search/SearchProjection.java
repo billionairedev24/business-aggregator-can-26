@@ -2,12 +2,6 @@ package ca.northline.worker.search;
 
 import ca.northline.searchindex.ListingDocument;
 import ca.northline.searchindex.SearchLanguage;
-import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch._types.VersionType;
-import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -22,16 +16,15 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * to look at; the document is always built from the current rows, so a redelivered, replayed or out-of-order event
  * does no harm.
  *
- * <p><b>Versions.</b> Every write carries {@code version_type=external_gte} with a version taken from Postgres'
- * {@code clock_timestamp()} (µs) <em>after</em> a transaction-scoped advisory lock on the merchant: refreshes of one
- * merchant (the indexer's replicas, the reconciler, the reindex) run one after the other and each reads what the
- * previous committed, so a later version is never older data, and Elasticsearch refuses to let an older snapshot
- * overwrite a newer one (a 409 on an item = someone already wrote something newer; that's fine). Deletes carry the
- * version too, so a stale write can't resurrect a deleted document within {@code index.gc_deletes}.
+ * <p><b>Versions.</b> Every write carries a version taken from Postgres' {@code clock_timestamp()} (µs) <em>after</em> a
+ * transaction-scoped advisory lock on the merchant: refreshes of one merchant (the indexer's replicas, the reconciler,
+ * the reindex) run one after the other and each reads what the previous committed, so a later version is never older
+ * data. The {@link ListingWriter} keeps an older snapshot from overwriting a newer one: Elasticsearch with
+ * {@code version_type=external_gte}, Meilisearch by applying its tasks in the order they were enqueued under the lock.
  *
- * <p><b>Rows deleted from Postgres</b> are found in the index: a whole-merchant refresh searches for the merchant's
- * ids. A search only sees what Elasticsearch has refreshed (every second), so the index is refreshed first (S-137):
- * a dish indexed a moment before its deletion is removed on the first event, not at the next reconcile sweep.
+ * <p><b>Rows deleted from Postgres</b> are found in the index: a whole-merchant refresh asks the writer for the
+ * merchant's ids, which includes what was written a moment ago (S-137: Elasticsearch refreshes first, Meilisearch
+ * writes were awaited), so a dish indexed a moment before its deletion is removed on the first event.
  *
  * <p>Must run inside a transaction (the lock is held until it ends): the indexer's comes from {@code EventProcessing},
  * the reconciler and the reindex open their own.
@@ -45,13 +38,13 @@ public class SearchProjection {
     private final JdbcClient jdbc;
     private final DocumentSource source;
     private final DocumentBuilder builder;
-    private final ElasticsearchClient es;
+    private final ListingWriter writer;
 
-    SearchProjection(JdbcClient jdbc, DocumentSource source, DocumentBuilder builder, ElasticsearchClient es) {
+    SearchProjection(JdbcClient jdbc, DocumentSource source, DocumentBuilder builder, ListingWriter writer) {
         this.jdbc = jdbc;
         this.source = source;
         this.builder = builder;
-        this.es = es;
+        this.writer = writer;
     }
 
     /** Where to write: the live aliases, or the new indices of a reindex. */
@@ -110,87 +103,12 @@ public class SearchProjection {
             case Scope.Merchant merchant -> {
                 deletes.add(merchant.merchantId());
                 if (findStale) {
-                    deletes.addAll(indexedIds(targets.of(SearchLanguage.EN), merchant.merchantId()));
+                    deletes.addAll(writer.indexedIds(targets.of(SearchLanguage.EN), merchant.merchantId()));
                 }
                 built.visibleIds().forEach(deletes::remove);
             }
             default -> {}
         }
-        return write(targets, built, List.copyOf(deletes), version);
-    }
-
-    private Outcome write(Targets targets, DocumentBuilder.Built built, List<String> deletes, long version) {
-        var operations = new ArrayList<BulkOperation>();
-        for (var language : SearchLanguage.values()) {
-            var index = targets.of(language);
-            for (var doc : built.of(language)) {
-                operations.add(BulkOperation.of(b -> b.index(i -> i.index(index)
-                        .id(doc.id())
-                        .version(version)
-                        .versionType(VersionType.ExternalGte)
-                        .document(doc))));
-            }
-            for (var id : deletes) {
-                operations.add(BulkOperation.of(b ->
-                        b.delete(d -> d.index(index).id(id).version(version).versionType(VersionType.ExternalGte))));
-            }
-        }
-        if (operations.isEmpty()) {
-            return new Outcome(version, 0, 0, 0);
-        }
-        try {
-            var response = es.bulk(b -> b.operations(operations));
-            var failures = new ArrayList<String>();
-            int indexed = 0;
-            int deleted = 0;
-            int stale = 0;
-            for (var item : response.items()) {
-                var result = Objects.requireNonNullElse(item.result(), "");
-                if (item.status() == 409) {
-                    stale++; // a newer version is already there
-                } else if (item.error() != null && item.status() != 404) {
-                    failures.add(item.id() + " → " + item.index() + ": "
-                            + item.error().reason());
-                } else if (result.equals("created") || result.equals("updated")) {
-                    indexed++;
-                } else if (result.equals("deleted")) {
-                    deleted++;
-                }
-            }
-            if (!failures.isEmpty()) {
-                throw new IllegalStateException("Elasticsearch refused " + failures.size() + " write(s): "
-                        + String.join("; ", failures.subList(0, Math.min(5, failures.size()))));
-            }
-            return new Outcome(version, indexed, deleted, stale);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    /**
-     * Ids the index holds for a merchant (its own document included). Both languages are written in one bulk request
-     * with the same ids, so one index answers for both. The refresh makes documents written in the last second
-     * searchable; it costs a new segment only when something was written since the last one.
-     */
-    private List<String> indexedIds(String index, String merchantId) {
-        try {
-            es.indices().refresh(r -> r.index(index));
-            return es
-                    .search(
-                            s -> s.index(index)
-                                    .query(q ->
-                                            q.term(t -> t.field("merchantId").value(merchantId)))
-                                    .source(src -> src.fetch(false))
-                                    .size(MAX_DOCUMENTS_PER_MERCHANT),
-                            Void.class)
-                    .hits()
-                    .hits()
-                    .stream()
-                    .map(h -> h.id())
-                    .filter(Objects::nonNull)
-                    .toList();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return writer.write(targets, built, List.copyOf(deletes), version);
     }
 }

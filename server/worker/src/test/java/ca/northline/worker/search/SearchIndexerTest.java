@@ -358,7 +358,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
                         .settings(st -> st.refreshInterval(t -> t.time(interval))));
     }
 
-    private static String menuPublished(String menuId, String merchantId) {
+    static String menuPublished(String menuId, String merchantId) {
         return """
                 {"eventId":"%s","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"%s","merchantId":"%s",\
                 "actorId":"%s"}""".formatted(Events.id(), menuId, merchantId, Events.id());
@@ -399,7 +399,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         }
     }
 
-    private static String listing(String id, String merchantId, String kind) {
+    static String listing(String id, String merchantId, String kind) {
         return """
                 {"eventId":"%s","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"%s","merchantId":"%s","kind":"%s"}""".formatted(Events.id(), id, merchantId, kind);
     }
@@ -410,13 +410,13 @@ class SearchIndexerTest extends WorkerIntegrationTest {
                 "actionId":"%s","hidden":%s,"cause":"rating_floor"}""".formatted(Events.id(), merchantId, Events.id(), hidden);
     }
 
-    private static String renamed(String merchantId) {
+    static String renamed(String merchantId) {
         return """
                 {"eventId":"%s","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"%s","actorId":"%s",\
                 "displayName":"Renamed"}""".formatted(Events.id(), merchantId, Events.id());
     }
 
-    private static String availability(String id, String merchantId, String menuId, boolean visible, String soldOutOn) {
+    static String availability(String id, String merchantId, String menuId, boolean visible, String soldOutOn) {
         return """
                 {"eventId":"%s","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"%s","merchantId":"%s","menuId":"%s",\
                 "visible":%s,"soldOutOn":%s}""".formatted(

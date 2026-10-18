@@ -48,6 +48,7 @@ server:
   shutdown: graceful
 management:
   endpoints.web.exposure.include: health,prometheus   # prometheus: consumer lag, DLQ and outcome counters (S-26)
+  health.elasticsearch.enabled: ${northline.search.elasticsearch-health.${SEARCH_PROVIDER:elasticsearch}:false}
   endpoint.health.probes.enabled: true  # /actuator/health/liveness and /readiness for Kubernetes
 logging.pattern.correlation: "[%X{consumer:-}|%X{eventType:-}|%X{eventId:-}|%X{traceId:-}] "   # S-26: every consumer log line names its event
 northline:
@@ -111,6 +112,21 @@ northline:
   # Search read model (S-43, docs/runbooks/search.md): events refresh documents at once; the reconcile sweep picks up
   # edits no event announces (prices, names, hours, reviews) within `every`.
   search:
+    # The engine the read model is written to: elasticsearch (spring.elasticsearch.*) | meilisearch (below) — the same
+    # as the api's SEARCH_PROVIDER (docs/runbooks/search.md § Meilisearch).
+    provider: ${SEARCH_PROVIDER:elasticsearch}
+    meilisearch:
+      url: ${MEILISEARCH_URL:http://localhost:7700}  # https://… for a hosted instance (TLS from the URL)
+      api-key: ${MEILISEARCH_API_KEY:}              # writes documents, manages the listings indexes; blank = none (local)
+      timeout: ${MEILISEARCH_TIMEOUT:10s}
+      task-timeout: ${MEILISEARCH_TASK_TIMEOUT:60s} # how long a write waits for Meilisearch to apply it
+    # Variables the deployed profiles require (northline.required-env.search) per provider.
+    required-env:
+      elasticsearch: ES_URIS
+      meilisearch: MEILISEARCH_URL, MEILISEARCH_API_KEY
+    # Elasticsearch's health indicator only when Elasticsearch is the engine.
+    elasticsearch-health:
+      elasticsearch: true
     reconcile:
       enabled: ${SEARCH_RECONCILE_ENABLED:true}
       every: ${SEARCH_RECONCILE_EVERY:1m}
