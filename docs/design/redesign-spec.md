@@ -443,6 +443,16 @@ Have demo seed data ready: listings with images, at least 2 service providers wi
 **Phase 2: merchant demo path (days 3–5)**
 Register → onboarding wizard (no sidebar) → submitted gate → (approve in the console) → Dashboard (KPIs) → Listings table → New listing form (product, and the service/price variant) → Orders table and sheet (status update) → Appointments calendar → Availability.
 
+*Phase 2 as built (2026-10-18, branch `feat/redesign-studio`; `docs/DECISIONS.md` § "Redesign phase 2"):* the
+signed-out page as one card with the dark advertorial panel; the wizard account → business → categories →
+verification → review with the 240px rail and the form card, Review being the approval gate (page and first listings
+moved to the Studio, linked from the dashboard's "Get set up" card); the dashboard's KPI strip, two charts and to-do
+cards (no headline sentence, no coaching); the listings table with providers' "Services & prices" columns and the
+editors' Catalog step strip and cards; orders with KPIs and the 680px sheet; the PH:62 calendar time grid with the
+booking sheet; availability as PH:117 rows and cards; the PH:171 public-page form in place of the block builder;
+earnings (PH:230) and payouts (BO:472). UI only; the back-office blocks are in `web/apps/studio/src/components` until
+they move to `@northline/ui`.
+
 **Phase 3: staff console basics (day 5)**
 Overview KPIs → Applications (two-stage review and sheet with every submitted field) → Sellers & providers → Orders → Disputes. All on the generic DataTable and Sheet.
 

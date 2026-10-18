@@ -8566,3 +8566,69 @@ Branch `feat/redesign-foundation`: the spec's phase 0 (day 1). Decisions the spe
   product tiles are restyled; the new cards come with their pages in phase 1), the announcement bar, the mobile-kit
   Logo, `@fontsource` fonts, the backend's `app.brand.*` + `/api/v1/config`, everything page-level of the thrash list.
 - **Schema additions:** none. No backend change.
+
+## 2026-10-18 — Redesign phase 2: the merchant demo path in the Studio (spec § 4)
+
+Branch `feat/redesign-studio`. The Studio screens of the merchant demo path rebuilt on the AT layouts
+(`docs/design/redesign-spec.md` § 2.2, § 3); UI only — no backend, schema or api change. `@northline/ui` and the
+consumer app are untouched (another branch owns them): the back-office blocks this needed live in
+`web/apps/studio/src/components/BackOffice.tsx` (KPI strip, chart card, to-do card, sheet section, fact list, page head)
+and can move to `@northline/ui` as they are (no Studio imports, semantic tokens only).
+
+- **Onboarding order (thrash item 10).** The wizard is account → business → categories → verification → review, and
+  Review is the BO:235 gate. The Studio's page and first listings are no longer wizard steps: after approval the
+  gate's "Open your Studio" sets the server step to `done` and opens the dashboard, whose "Get set up" card links the
+  public page and the first listing until they exist. The api's `onboarding_step` enum is unchanged (`page`,
+  `listings`, `done` stay): the wizard resumes `review`/`page`/`listings`/`done` on the gate; the old
+  `/onboarding/page` and `/onboarding/listings` links redirect to the gate.
+- **Categories step.** The server saves the business and its categories in one `PUT …/onboarding/business` and requires
+  the categories, so Business and Categories are one form shown as two steps (one mounted component; the PUT is sent
+  from Categories). A reload on Categories before the business was ever saved sends the owner back to Business with
+  its messages; a 422 on a Business field does the same. *Not done:* saving the Business half on its own (needs the
+  api to accept a business without categories).
+- **The gate.** Application card (each check with its state, then trust & safety), "Why is my Studio locked?",
+  the dev-only "Demo the approval" (simulate, `local` profile), "Sign out — resume later". The wizard card has a
+  "Finish later" sign-out (every step already saves on Continue). A `/b/$merchantId` route of an `applicant` or
+  `pending` business opens the gate; Help stays reachable (the verification step links it).
+- **Copy per type.** The rail's second lines and the Categories titles are worded per declared type only; the gate's
+  next steps too ("Add your first services and prices" for a provider, never the seller's).
+- **Pilot invite route.** `pilot.$token` now redirects to `/onboarding` unless `VITE_NL_TESTING_TOOLS=1` (spec § 3:
+  "routes gated behind a flag"); the pilot-invite endpoints stay.
+- **Dashboard (thrash item 9).** KPI strip (net this month with the change vs last month in green/red, jobs and/or
+  orders this month, open quotes or orders to pack, releasing next, rating, quality score or refund rate — each opens
+  its screen), two charts from the dashboard api's 12 weeks (net per week stacked services/products; the weekly trend),
+  to-do cards (Get set up, Today / the next run, Needs you). Removed: the generated headline sentence, the coaching
+  paragraph, the quality meters (the score is one KPI), and the assistant's insight card on this screen. *Not built:*
+  AT's donut and "by service" bars — the dashboard api has no per-service or per-status counts (backend unchanged).
+- **Listings.** The DataTable as before, with a page head; providers' table is PH:139 "Services & prices": the
+  duration line under the name (the api's `meta`), "You get" after the platform fee and card processing
+  (`fees()` — the same estimate as the editor's fee panel), 30-day bookings; no stock column for providers.
+- **Listing editors.** Kept the tab model (ARIA tabs, S-109) but drawn as the Catalog "Add a product" step strip
+  (bar + label per section, primary = current, success = complete); the section is a bordered card titled with its
+  name, beside a 320px sticky aside. The service editor is three cards (name & category; price, duration & booking;
+  what's included).
+- **Orders.** KPI strip (to pack, awaiting pickup, delivered today, issues), the table, the 680px sheet with Items,
+  Customer and Delivery sections. *Not built:* "Shipped" — the seller api has `pack` only (delivery moves on through
+  the courier and the platform), as the spec's "the platform and webhooks set Delivered".
+- **Calendar.** PH:62: Day / Week / List, previous · today · next, the status legend; a time grid (56px hour column,
+  64px per hour, entries placed by start and length, status-coloured left edge, the now line). Under 760px the days
+  stack as lists. A booking opens the job card in the right sheet (it was a column under the calendar; nothing opens
+  until the provider picks one). Open slots and quote holds stay information, not buttons (S-74).
+- **Availability.** PH:117 look over the existing tabs: one bordered row per weekday (`day · switch | ranges`), the
+  rules, time off and sync as cards. Behaviour unchanged.
+- **Public page (thrash item 11).** The block PageBuilder is out of the UI; the screen is the PH:171 form: logo,
+  tagline, brand colour (the 4.5:1 swatches), button label, which parts customers see (on/off in the recommended
+  order; hero and call to action always on), announcement, reward and Publish, with the phone preview beside it.
+  *Not built:* gallery, featured work and social links — the storefront api has no fields for them (sections carry
+  free `settings`, but nothing writes them yet); the "About" text is shown from the business profile.
+  The PageBuilder component and its tests stay for the later builder.
+- **Earnings and payouts.** PH:230: page head with "… releasing Friday" as the sub line, the KPI tiles, money in
+  motion, the ledger. BO:472: balance tiles (available now highlighted; "can pay out now" and the reserve only when a
+  reserve is held; next payout), the request row (paid to · change schedule · instant payout), then history and tax
+  documents as cards.
+- **Sign in / sign up.** One card (max 1040px): the dark advertorial panel with the logo and the pitch, and the form —
+  no top bar. The support line dropped "7 am – 11 pm MT" (a time zone in copy; region-neutral rule).
+- **Tokens.** Every rebuilt screen uses the semantic roles; `pnpm lint:tokens` now covers `apps/studio/src/components`
+  and the Studio's auth, onboarding, dashboard, catalogue, orders, appointments, availability, finance and storefront
+  features.
+- **Schema additions:** none. No backend change.
