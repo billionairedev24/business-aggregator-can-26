@@ -40,7 +40,7 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
   return (
     <div>
       <div className="nl-av-rules">
-        <div className="nl-av-col">
+        <div className="nl-av-col nl-av-card">
           <h3 className="nl-av-h3">{t('timing')}</h3>
           {sel(t('interval'), String(form.intervalMin), ['15', '30', '60'].map(v => ({ value: v, label: v })), v => set({ intervalMin: Number(v) }), undefined, serverErrors.intervalMin)}
           {sel(t('buffer'), String(form.bufferMin), ['0', '15', '20', '30', '45'].map(v => ({ value: v, label: v })), v => set({ bufferMin: Number(v) }), t('bufferHint'), serverErrors.bufferMin)}
@@ -50,7 +50,7 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
           {sel(t('horizon'), String(form.horizonDays), [14, 28, 42, 90].map(v => ({ value: String(v), label: t(`horizon${v}` as Parameters<T>[0]) })), v => set({ horizonDays: Number(v) }), undefined, serverErrors.horizonDays)}
           {sel(t('maxJobs'), String(form.maxJobsPerDay), ['3', '4', '5', '6', '99'].map(v => ({ value: v, label: v })), v => set({ maxJobsPerDay: Number(v) }), undefined, serverErrors.maxJobsPerDay)}
         </div>
-        <div className="nl-av-col">
+        <div className="nl-av-col nl-av-card">
           <h3 className="nl-av-h3">{t('acceptance')}</h3>
           <div className="nl-field">
             <span className="nl-label" id="av-accept">{t('howBookings')}</span>

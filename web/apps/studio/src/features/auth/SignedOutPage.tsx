@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { brand } from '@northline/tokens';
 import { Alert, UnderlineTabs } from '@northline/ui';
 import type { RegisterValues } from '@northline/auth-kit';
 import { appAuthorizationUrl, bffLoginUrl } from '../../lib/auth-server';
@@ -32,8 +31,9 @@ export interface SignedOutPageProps {
 }
 
 /**
- * The Studio's signed-out page (design 02, lines 17–96): top bar "Signed out", the pitch on the left, and the
- * Sign in / Create account card. The Studio renders its own sign-in UI against northline-auth's JSON API, then hands
+ * The Studio's signed-out page (redesign § 2.2: AfroTransact BO:77 seller account, Shop:795 two columns): one card,
+ * the dark advertorial panel with the logo and the pitch on the left, the Sign in / Create account form on the right;
+ * no site nav. The Studio renders its own sign-in UI against northline-auth's JSON API, then hands
  * off to the BFF (`/bff/login?next=`), which gets its tokens without showing another page — or, when a mobile app sent
  * the browser here (S-29), back to that app's authorization request.
  */
@@ -51,12 +51,9 @@ export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeI
 
   return (
     <div className="nl-auth-page">
-      <nav className="nav nl-auth-nav" aria-label={`${brand.name} Studio`}>
-        <Brand label={t('studio')} />
-        <span className="nl-auth-signedout">{t('signedOut')}</span>
-      </nav>
-      <main className="nl-auth-main">
+      <main className="nl-auth-main" id="main">
         <div className="nl-auth-intro">
+          <div className="nl-auth-brand"><Brand label={t('studio')} /><span className="nl-auth-signedout">{t('signedOut')}</span></div>
           <div className="nl-auth-kicker">{t('kicker')}</div>
           <h1 className="nl-auth-hero">{t('heroTitle')}</h1>
           <p className="nl-auth-lede">{t('heroLede')}</p>

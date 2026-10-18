@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CaretDown } from '@phosphor-icons/react';
+import { CaretDown, Check } from '@phosphor-icons/react';
 import { Avatar, Menu, useLocale, SkipLink } from '@northline/ui';
 import { useSession, useSignOut } from '../../lib/session';
 import type { MerchantType } from '../shell/api';
@@ -9,20 +9,17 @@ import { useOnboardingT, type OnboardingT } from './messages';
 import { STEPS, stepIndex, type Step } from './model';
 import './Onboarding.css';
 
-export function stepName(step: Step, type: MerchantType | undefined, t: OnboardingT): string {
-  if (step === 'page') return t(type === 'seller' ? 'step_page_seller' : type === 'kitchen' ? 'step_page_kitchen' : 'step_page_other');
-  return t(`step_${step}`);
-}
+export const stepName = (step: Step, t: OnboardingT): string => t(`step_${step}`);
 
+/** The rail's second line, worded for the declared type only (§ 3.10: a provider never reads the seller's copy). */
 function stepSub(step: Step, type: MerchantType | undefined, t: OnboardingT): string {
   const food = type === 'kitchen';
   switch (step) {
     case 'account': return t('sub_account');
     case 'business': return t(food ? 'sub_business_kitchen' : 'sub_business');
+    case 'categories': return t(food ? 'sub_categories_kitchen' : type === 'seller' ? 'sub_categories_seller' : type === 'both' ? 'sub_categories_both' : 'sub_categories');
     case 'verification': return t(food ? 'sub_verification_kitchen' : type === 'seller' ? 'sub_verification_seller' : 'sub_verification');
     case 'review': return t(food ? 'sub_review_kitchen' : 'sub_review');
-    case 'page': return t('sub_page');
-    case 'listings': return t(food ? 'sub_listings_kitchen' : type === 'seller' ? 'sub_listings_seller' : type === 'both' ? 'sub_listings_both' : 'sub_listings_provider');
   }
 }
 
@@ -39,38 +36,50 @@ export interface OnboardingLayoutProps {
   children: ReactNode;
 }
 
-/** Onboarding chrome (design 02 lines 99–109): top bar, "Getting on Northline" step rail, content column. */
+/**
+ * Onboarding chrome (redesign § 1.3 Forms, AfroTransact BO:113): the dark top bar with no site nav and no sidebar,
+ * then a `240px step rail | form card` grid. The card shows "Step n of 5" and a progress bar above the step; "Finish
+ * later" signs out (every step saves on Continue, and the wizard resumes where the owner left off).
+ */
 export function OnboardingLayout({ step, type, onboarding, onGo, children }: OnboardingLayoutProps) {
   const t = useOnboardingT();
+  const signOut = useSignOut();
   const current = STEPS.indexOf(step);
   const furthest = reachable(onboarding);
-  const approved = onboarding?.status === 'active';
+  const submitted = onboarding ? onboarding.status !== 'applicant' : false;
+  const pct = `${Math.round(((current + (submitted ? 1 : 0)) / STEPS.length) * 100)}%`;
   return (
     <div className="nl-shell">
       <SkipLink />
       <TopBar onboarding={onboarding} />
       <div className="nl-ob">
-        <aside>
+        <nav className="nl-ob-rail" aria-labelledby="nl-ob-rail">
           <div className="nl-ob-rail-title" id="nl-ob-rail">{t('railTitle')}</div>
-          <nav aria-labelledby="nl-ob-rail">
-            <ol className="nl-ob-steps">
-              {STEPS.map((s, i) => {
-                const done = i < current || (approved && i <= 3) || i < furthest;
-                return (
-                  <li key={s}>
-                    <button type="button" className="nl-ob-step" aria-current={i === current ? 'step' : undefined} disabled={i > furthest} onClick={() => onGo(s)}>
-                      <span className="nl-ob-num" data-state={i === current ? 'current' : done ? 'done' : 'todo'} aria-hidden>{i + 1}</span>
-                      <span className="nl-ob-step-text">{stepName(s, type, t)}<span className="nl-ob-step-sub">{stepSub(s, type, t)}</span></span>
-                      <span className="nl-sr-only">{t('stepOf', { n: i + 1, total: STEPS.length })}{done && i !== current ? ` · ${t('stepDone')}` : ''}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
+          <ol className="nl-ob-steps">
+            {STEPS.map((s, i) => {
+              const done = i < current || i < furthest || (submitted && i < STEPS.length - 1);
+              const state = i === current ? 'current' : done ? 'done' : 'todo';
+              return (
+                <li key={s}>
+                  <button type="button" className="nl-ob-step" aria-current={i === current ? 'step' : undefined} disabled={i > furthest} onClick={() => onGo(s)}>
+                    <span className="nl-ob-num" data-state={state} aria-hidden>{state === 'done' ? <Check size={14} weight="bold" /> : i + 1}</span>
+                    <span className="nl-ob-step-text">{stepName(s, t)}<span className="nl-ob-step-sub">{stepSub(s, type, t)}</span></span>
+                    <span className="nl-sr-only">{t('stepOf', { n: i + 1, total: STEPS.length })}{done && i !== current ? ` · ${t('stepDone')}` : ''}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
           <p className="nl-ob-rail-note">{t('railNote')}</p>
-        </aside>
-        <main className="nl-ob-main" id="main" tabIndex={-1}>{children}</main>
+        </nav>
+        <main className="nl-ob-card" id="main" tabIndex={-1}>
+          <div className="nl-ob-card-head">
+            <span className="nl-ob-stepof">{t('stepOf', { n: current + 1, total: STEPS.length })}</span>
+            {onboarding && step !== 'review' ? <button type="button" className="btn btn-secondary btn-sm" onClick={() => void signOut()}>{t('finishLater')}</button> : null}
+          </div>
+          <div className="nl-ob-progress" aria-hidden><span style={{ width: pct }} /></div>
+          {children}
+        </main>
       </div>
     </div>
   );
@@ -83,12 +92,12 @@ function TopBar({ onboarding }: { onboarding: Onboarding | undefined }) {
   const signOut = useSignOut();
   const user = session?.user;
   const name = onboarding?.business ? onboarding.displayName : t('newBusiness');
-  const tag = onboarding?.status === 'pending' ? { cls: 'tag-accent-2', text: t('pending') } : onboarding?.status === 'active' ? null : { cls: 'tag-neutral', text: t('applicant') };
+  const tag = onboarding?.status === 'pending' ? { cls: 'tag-warning', text: t('pending') } : onboarding?.status === 'active' ? { cls: 'tag-success', text: t('approved') } : { cls: 'tag-neutral', text: t('applicant') };
   return (
     <header className="nav nl-topbar">
       <Brand label={t('studio')} />
       <span className="nl-ob-biz">{name}{onboarding?.city ? ` · ${onboarding.city}` : ''}</span>
-      {tag ? <span className={`tag ${tag.cls}`}>{tag.text}</span> : null}
+      <span className={`tag ${tag.cls}`}>{tag.text}</span>
       <div className="nl-topbar-end">
         <Menu label={t('accountMenu')} width={260} items={[
           { label: t('language'), meta: t('languageMeta'), onSelect: () => setLocale(locale === 'en' ? 'fr' : 'en') },
@@ -97,8 +106,8 @@ function TopBar({ onboarding }: { onboarding: Onboarding | undefined }) {
         ]} trigger={({ props }) => (
           <button type="button" aria-label={t('accountMenu')} {...props} className="nl-ob-account">
             <Avatar initials={user?.initials ?? '··'} />
-            <span>{user ? `${user.firstName} ${user.lastName}` : ''}</span>
-            <CaretDown size={13} />
+            <span className="nl-ob-account-name">{user ? `${user.firstName} ${user.lastName}` : ''}</span>
+            <CaretDown size={13} aria-hidden />
           </button>
         )} />
       </div>

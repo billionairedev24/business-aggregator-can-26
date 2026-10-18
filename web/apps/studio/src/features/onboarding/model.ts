@@ -1,13 +1,23 @@
 import type { MerchantType } from '../shell/api';
 
-/** Wizard steps (design 02 `obKeys`); the URL segment of `/onboarding/$step`. */
-export const STEPS = ['account', 'business', 'verification', 'review', 'page', 'listings'] as const;
+/**
+ * Wizard steps (redesign § 3.10, AfroTransact BO:113 → BO:235): account → business → categories → verification →
+ * review, where Review is the approval gate. The public page and the first listings come after approval, in the
+ * normal Studio. `categories` is the second half of the server's Business step (one `PUT …/onboarding/business`).
+ */
+export const STEPS = ['account', 'business', 'categories', 'verification', 'review'] as const;
 export type Step = (typeof STEPS)[number];
 export const isStep = (s: string): s is Step => (STEPS as readonly string[]).includes(s);
+/** The old wizard's last two steps: their links open the Studio screens (approved) or the gate. */
+export const LEGACY_STEPS = ['page', 'listings'] as const;
+export type LegacyStep = (typeof LEGACY_STEPS)[number];
+export const isLegacyStep = (s: string): s is LegacyStep => (LEGACY_STEPS as readonly string[]).includes(s);
 
-/** Server `onboarding_step` → how far the rail is clickable. */
-export type ServerStep = Step | 'done';
-export const stepIndex = (s: ServerStep) => (s === 'done' ? STEPS.length - 1 : STEPS.indexOf(s));
+/** Server `onboarding_step` (unchanged: page, listings and done stay in the api) → the wizard step it resumes on. */
+export type ServerStep = 'account' | 'business' | 'verification' | 'review' | 'page' | 'listings' | 'done';
+export const resumeStep = (s: ServerStep): Step => (s === 'account' || s === 'business' || s === 'verification' ? s : 'review');
+/** How far the rail is clickable: the Business step's server state also opens Categories. */
+export const stepIndex = (s: ServerStep) => (s === 'business' ? STEPS.indexOf('categories') : STEPS.indexOf(resumeStep(s)));
 
 /** Type picker order (design 02 `bizTypes`: Sell products · Offer services · Both · Food · kitchen). */
 export const PICKER_TYPES: readonly MerchantType[] = ['seller', 'provider', 'both', 'kitchen'];
@@ -26,7 +36,7 @@ export function validateOnboardingSearch(search: Record<string, unknown>): Onboa
   };
 }
 
-/** Studio home after "Go live" (kitchens land on Live orders). */
+/** Studio home after "Open your Studio" (kitchens land on Live orders). */
 export const studioHome = (merchantId: string, type: MerchantType) => (type === 'kitchen' ? `/b/${merchantId}/kitchen/live` : `/b/${merchantId}`);
 
 /** Next business days at 10:00 and 14:00 in the business's time zone, starting tomorrow, for the kitchen-visit booking. */

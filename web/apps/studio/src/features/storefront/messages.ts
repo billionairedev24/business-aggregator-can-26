@@ -57,6 +57,7 @@ export const useStorefrontT = defineMessages({
     notApproved: 'Your page goes live once {brand} approves your business.', publishedOk: 'Published. Your page is live.',
     embedTitle: 'Embed your page', embedHelp: 'Paste this where you want the Book / Order button on your own website.', copy: 'Copy', copied: 'Copied',
     close: 'Close', viewOnly: 'View only · {role}',
+    ppLook: 'How your page looks', ppAbout: 'About', ppAboutNote: 'From your business profile (Settings › Business).', ppParts: 'What customers see', ppPartsNote: 'Switch a part off to hide it; its content is kept.', ppShow: 'Show {name}', ppPublish: 'Announcement, reward and publishing', ppOpenLive: 'Open your live page',
     saving: 'Saving…', saved: 'Saved', saveError: "We couldn't save that change.",
     loadError: "We couldn't load your page.", empty: "You don't have a page yet.", create: 'Create my page',
     // preview content
@@ -144,6 +145,7 @@ export const useStorefrontT = defineMessages({
     notApproved: 'Votre page sera en ligne dès que {brand} aura approuvé votre entreprise.', publishedOk: 'Publiée. Votre page est en ligne.',
     embedTitle: 'Intégrer votre page', embedHelp: 'Collez ce code là où vous voulez le bouton Réserver / Commander sur votre site.', copy: 'Copier', copied: 'Copié',
     close: 'Fermer', viewOnly: 'Lecture seule · {role}',
+    ppLook: 'L’apparence de votre page', ppAbout: 'À propos', ppAboutNote: 'Tiré de votre profil d’entreprise (Paramètres › Entreprise).', ppParts: 'Ce que voient les clients', ppPartsNote: 'Désactivez une partie pour la masquer; son contenu est conservé.', ppShow: 'Afficher {name}', ppPublish: 'Annonce, récompense et publication', ppOpenLive: 'Ouvrir votre page en ligne',
     saving: 'Enregistrement…', saved: 'Enregistré', saveError: "Impossible d'enregistrer ce changement.",
     loadError: 'Impossible de charger votre page.', empty: "Vous n'avez pas encore de page.", create: 'Créer ma page',
     noReviews: "pas encore d'avis", verified: 'vérifié', insured: 'assuré', permitValid: 'permis valide', cutoff: 'heure limite jour même',

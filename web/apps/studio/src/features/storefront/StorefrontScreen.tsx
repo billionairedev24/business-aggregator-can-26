@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Dialog, EmptyState, ErrorState, Field, FormGrid, PageHeader, PageSkeleton, Select, Switch, TextInput, formatDate, useFormatters, useLocale } from '@northline/ui';
+import { Alert, Dialog, EmptyState, ErrorState, Field, FormGrid, PageSkeleton, Select, Switch, TextInput, formatDate, useFormatters, useLocale } from '@northline/ui';
+import { BoHeader } from '../../components/BackOffice';
 import { ApiError } from '../../lib/http';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';
 import { rewardQuery, storefrontQuery, storefrontStatsQuery, useCreateStorefront, usePublishStorefront, useSaveReward, useUpdateStorefront, type Reward, type Storefront } from './api';
 import { EmbedSnippet } from '../settings/EmbedSnippet';
-import { PageBuilder, serverError } from './PageBuilder';
+import { serverError } from './PageBuilder';
+import { PublicPageForm } from './PublicPageForm';
 import { StorefrontPreview } from './StorefrontPreview';
 import { useStorefrontT } from './messages';
 
-/** Studio → Business page / Store / Menu page (design 02 `v.storefront`). */
+/** Studio → Business page / Store / Menu page: the public-page form (redesign § 3.11, PH:171), not the block builder. */
 export function StorefrontScreen() {
   const t = useStorefrontT();
   const merchantId = useMerchantId();
@@ -18,22 +20,22 @@ export function StorefrontScreen() {
   const role = useRole();
   const query = useQuery(storefrontQuery(merchantId));
   const create = useCreateStorefront(merchantId);
-  const kicker = t(`kind_${merchant.type}`);
+  const title = t(`kind_${merchant.type}`);
 
   if (query.isPending) return <PageSkeleton kpis={0} rows={6} />;
-  if (query.isError) return <><PageHeader kicker={kicker} title={t(`title_${merchant.type}`)} /><ErrorState message={t('loadError')} onRetry={() => void query.refetch()} /></>;
+  if (query.isError) return <><BoHeader title={title} /><ErrorState message={t('loadError')} onRetry={() => void query.refetch()} /></>;
   if (!query.data) {
     return (
       <>
-        <PageHeader kicker={kicker} title={t(`title_${merchant.type}`)} />
+        <BoHeader title={title} />
         <EmptyState action={role === 'owner' ? <button type="button" className="btn btn-primary" disabled={create.isPending} onClick={() => create.mutate()}>{t('create')}</button> : undefined}>{t('empty')}</EmptyState>
       </>
     );
   }
-  return <Loaded storefront={query.data} kicker={kicker} canEdit={role === 'owner'} role={role} />;
+  return <Loaded storefront={query.data} title={title} canEdit={role === 'owner'} role={role} />;
 }
 
-function Loaded({ storefront: s, kicker, canEdit, role }: { storefront: Storefront; kicker: string; canEdit: boolean; role: string }) {
+function Loaded({ storefront: s, title, canEdit, role }: { storefront: Storefront; title: string; canEdit: boolean; role: string }) {
   const t = useStorefrontT();
   const shellT = useShellT();
   const { date } = useFormatters();
@@ -55,8 +57,8 @@ function Loaded({ storefront: s, kicker, canEdit, role }: { storefront: Storefro
 
   return (
     <>
-      <PageHeader kicker={kicker} title={s.url} lede={lede} actions={canEdit ? undefined : <span className="tag tag-neutral">{t('viewOnly', { role: roleName })}</span>} />
-      <PageBuilder storefront={s} canEdit={canEdit} variant="studio">
+      <BoHeader title={title} sub={<>{lede} <strong className="nl-pp-url">{s.url}</strong></>} actions={canEdit ? undefined : <span className="tag tag-neutral">{t('viewOnly', { role: roleName })}</span>} />
+      <PublicPageForm storefront={s} canEdit={canEdit}>
         <Field label={t('announcement')} error={announcementError}>
           <TextInput value={announcement} disabled={!canEdit} onChange={e => setAnnouncement(e.target.value)} onBlur={() => { if (announcement.length <= 120 && announcement !== (s.announcement ?? '')) update.mutate({ announcement }); }} />
         </Field>
@@ -69,7 +71,7 @@ function Loaded({ storefront: s, kicker, canEdit, role }: { storefront: Storefro
           <button type="button" className="btn btn-secondary" onClick={() => setDialog('preview')}>{t('previewAsCustomer')}</button>
           <button type="button" className="btn btn-ghost" onClick={() => setDialog('embed')}>{t('embedCode')}</button>
         </div>
-      </PageBuilder>
+      </PublicPageForm>
       <Dialog open={dialog === 'preview'} onClose={() => setDialog(null)} title={t('previewAsCustomer')} width={760} actions={<button type="button" className="btn btn-secondary" onClick={() => setDialog(null)}>{t('close')}</button>}>
         <StorefrontPreview storefront={s} device="web" />
       </Dialog>

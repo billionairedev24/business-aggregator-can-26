@@ -15,6 +15,8 @@ export const useCatalogueT = defineMessages({
     kickerListings: 'Listings', kickerProducts: 'Products',
 
     // listings table
+    sub_seller: 'Everything you sell, with its variants, stock and vetting.', sub_provider: 'What customers can book, how long it takes and what you get after the fee.', sub_both: 'Your services and products in one table.',
+    colDetails: 'Details', colNet: 'You get', colBookings: '30-day bookings',
     colType: 'Type', colPrice: 'Price', colStock: 'Stock', colSales: '30-day sales', colVetting: 'Vetting', colStatus: 'Status', sku: 'SKU',
     typeService: 'Service', typeProduct: 'Product',
     vetApproved: 'Approved', vetPending: 'Pending · {min} min', vetReview: 'In review', vetDraft: 'Draft', vetRejected: 'Rejected',
@@ -139,7 +141,7 @@ export const useCatalogueT = defineMessages({
     duration: 'Duration', buffer: 'Buffer after', included: "What's included", includedPlaceholder: "Scope, what the customer gets, what's excluded.",
     instantBook: 'Instant book (no approval needed)',
     dur_30: '30 min', dur_45: '45 min', dur_60: '60 min', dur_90: '90 min', dur_120: '2 h', dur_240: 'Half day', buf_0: '0', buf_15: '15 min', buf_20: '20 min', buf_30: '30 min',
-    secDetails: 'Name & category', secPricing: 'Pricing', secSchedule: 'Duration & buffer', secIncluded: "What's included",
+    secPricingSchedule: 'Price, duration & booking', secDetails: 'Name & category', secPricing: 'Pricing', secSchedule: 'Duration & buffer', secIncluded: "What's included",
 
     // bulk upload
     bulkKicker: '{section} · bulk upload', bulkTitle: 'Add or update hundreds of products at once',
@@ -182,6 +184,8 @@ export const useCatalogueT = defineMessages({
     editorKicker: '{section} · {kind, select, service {éditeur de service} other {éditeur de produit}}',
     kickerListings: 'Annonces', kickerProducts: 'Produits',
 
+    sub_seller: 'Tout ce que vous vendez, avec variantes, stock et contrôle.', sub_provider: 'Ce que les clients peuvent réserver, sa durée et ce que vous recevez après les frais.', sub_both: 'Vos services et vos produits dans un seul tableau.',
+    colDetails: 'Détails', colNet: 'Vous recevez', colBookings: 'Réservations (30 j)',
     colType: 'Type', colPrice: 'Prix', colStock: 'Stock', colSales: 'Ventes (30 j)', colVetting: 'Contrôle', colStatus: 'Statut', sku: 'UGS',
     typeService: 'Service', typeProduct: 'Produit',
     vetApproved: 'Approuvée', vetPending: 'En attente · {min} min', vetReview: 'En révision', vetDraft: 'Brouillon', vetRejected: 'Refusée',
@@ -296,7 +300,7 @@ export const useCatalogueT = defineMessages({
     duration: 'Durée', buffer: 'Battement après', included: 'Ce qui est inclus', includedPlaceholder: 'Portée, ce que le client obtient, ce qui est exclu.',
     instantBook: 'Réservation instantanée (sans approbation)',
     dur_30: '30 min', dur_45: '45 min', dur_60: '60 min', dur_90: '90 min', dur_120: '2 h', dur_240: 'Demi-journée', buf_0: '0', buf_15: '15 min', buf_20: '20 min', buf_30: '30 min',
-    secDetails: 'Nom et catégorie', secPricing: 'Tarification', secSchedule: 'Durée et battement', secIncluded: 'Ce qui est inclus',
+    secPricingSchedule: 'Prix, durée et réservation', secDetails: 'Nom et catégorie', secPricing: 'Tarification', secSchedule: 'Durée et battement', secIncluded: 'Ce qui est inclus',
 
     bulkKicker: '{section} · import en masse', bulkTitle: 'Ajoutez ou modifiez des centaines de produits à la fois',
     bulkLede: 'Téléchargez le modèle de votre catégorie, remplissez-le, téléversez-le. Les lignes sont validées avant tout changement; les erreurs reviennent dans un rapport avec les numéros de ligne. Les UGS existantes sont mises à jour avec chaque colonne remplie (une cellule vide garde la valeur actuelle), les nouvelles sont créées en brouillon. Les URL d’images doivent être des liens https publics vers des images JPG ou PNG; nous les vérifions une à une.',

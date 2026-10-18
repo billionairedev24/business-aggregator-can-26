@@ -39,7 +39,7 @@ a journey's story builds its screens.
 - Wrappers: `02b Seller Studio`, `02c Kitchen Studio`
 
 ## Onboarding — `07a–07d` (wrap Studio with `start-at="onboarding"`)
-Steps: account → business (legal fields per `docs/spec/legal-details.schema.json`) → categories (DB-limited) → verify → store builder (`storefront-sections.json`) → listings → review. 07d = brand-new user path.
+Steps (redesign § 3.10, 2026-10-18): account → business (legal fields per `docs/spec/legal-details.schema.json`) → categories (DB-limited) → verify → review = the approval gate (AT BO:235). The store page (`storefront-sections.json`) and the first listings come after approval, in the Studio. 07d = brand-new user path.
 
 ## Platform console — `design/03 Platform Console.dc.html` (`role` prop)
 overview · orders · disputes · delivery · sellers · seller_detail · verify · vetting · trust · taxonomy · support · regions · finance · reports · api · team · profile (security, sessions, audit, prefs) · oncall · denied (role gate)

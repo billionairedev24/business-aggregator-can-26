@@ -1,34 +1,48 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { ErrorState, Kpi, KpiRow, LinkRow, Meter, PageSkeleton, StackedBarChart, useFormatters, useLocale, type Locale, timeZone } from '@northline/ui';
+import { ArrowUUpLeft, ChatCircleText, FileText, Package, ShieldWarning, Storefront, Tag, Warning } from '@phosphor-icons/react';
+import { ErrorState, LineChart, PageSkeleton, StackedBarChart, useFormatters, useLocale, type Locale, timeZone } from '@northline/ui';
 import { useMerchant, useMerchantId, type MerchantType } from '../shell/api';
 import { screenHref, type ScreenKey } from '../shell/nav';
 import { clock, clockWithPeriod } from '../../lib/time';
+import { ChartCard, KpiStrip, TodoCard, BoHeader, type KpiItem, type TodoItem } from '../../components/BackOffice';
+import { listingsQuery } from '../catalogue/api';
+import { storefrontQuery } from '../storefront/api';
 import { dashboardQuery, type Dashboard } from './api';
-import { InsightCard } from '../assistant/InsightCard';
-import { numberWord, useDashboardT } from './messages';
+import { useDashboardT } from './messages';
 import './Dashboard.css';
 
 type T = ReturnType<typeof useDashboardT>;
 type Fmt = ReturnType<typeof useFormatters>;
+export type DashboardKind = 'provider' | 'seller' | 'both';
 
 /** Portal variant: provider-only, seller-only or both (kitchens have no dashboard). */
-const variant = (type: MerchantType) => (type === 'seller' ? 'seller' : type === 'both' ? 'both' : 'provider');
+const variant = (type: MerchantType): DashboardKind => (type === 'seller' ? 'seller' : type === 'both' ? 'both' : 'provider');
+
+/** What a newly approved business still has to set up (§ 3.10: page and first listings come after approval). */
+export interface Setup { page: 'none' | 'draft' | 'live' | 'unknown'; listings: number | null }
 
 export function DashboardScreen() {
   const merchantId = useMerchantId();
   const merchant = useMerchant();
   const q = useQuery(dashboardQuery(merchantId));
+  const page = useQuery(storefrontQuery(merchantId));
+  const listings = useQuery(listingsQuery(merchantId));
   const t = useDashboardT();
   if (q.isPending) return <PageSkeleton kpis={4} rows={6} />;
   if (q.isError) return <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} />;
-  return <>
-    <DashboardView data={q.data} kind={variant(merchant.type)} city={merchant.city ?? ''} merchantId={merchantId} />
-    <InsightCard merchantId={merchantId} screen="dashboard" />
-  </>;
+  const setup: Setup = {
+    page: page.isSuccess ? (page.data === null ? 'none' : page.data.publishedAt ? 'live' : 'draft') : 'unknown',
+    listings: listings.isSuccess ? listings.data.length : null,
+  };
+  return <DashboardView data={q.data} kind={variant(merchant.type)} city={merchant.city ?? ''} merchantId={merchantId} setup={setup} />;
 }
 
-export function DashboardView({ data, kind, city, merchantId }: { data: Dashboard; kind: 'provider' | 'seller' | 'both'; city: string; merchantId: string }) {
+/**
+ * Dashboard (redesign § 3.9, AfroTransact BO:263 + DashCharts, PH:53 for providers): the KPI strip, the charts and the
+ * to-do cards — figures only, no generated headline, no coaching paragraph. The quality score is one KPI card.
+ */
+export function DashboardView({ data, kind, city, merchantId, setup }: { data: Dashboard; kind: DashboardKind; city: string; merchantId: string; setup?: Setup }) {
   const t = useDashboardT();
   const f = useFormatters();
   const { locale } = useLocale();
@@ -36,100 +50,100 @@ export function DashboardView({ data, kind, city, merchantId }: { data: Dashboar
   const go = (k: ScreenKey) => () => void nav({ to: screenHref(merchantId, k) });
   const prov = kind !== 'seller', sell = kind !== 'provider';
   const e = data.earnings;
-  const qualityRows = (['on_time', 'photos', 'response', 'rebook', 'dispute_rate'] as const).filter(k => data.reputation.quality[k] !== undefined);
+  const series = [
+    ...(prov ? [{ key: 'services', label: t('services'), color: 'var(--color-action-primary)' }] : []),
+    ...(sell ? [{ key: 'products', label: t(kind === 'both' ? 'parts' : 'products'), color: 'var(--color-action-accent)' }] : []),
+  ];
+  const weeks = e.weeks.map((w, i) => ({ label: weekLabel(w.start, i, locale), values: { services: w.servicesCents, products: w.partsCents } }));
+  const totals = e.weeks.map(w => (prov ? w.servicesCents : 0) + (sell ? w.partsCents : 0));
 
   return (
     <div className="nl-dash">
-      <span className="nl-kicker">{t('kicker', { date: longDate(data.today, locale), city })}</span>
-      <h1 className="nl-page-title nl-dash-title">{headline(data, kind, t, f, locale)}</h1>
-      <KpiRow>
-        <Kpi value={f.money(e.netThisMonthCents, { whole: true })} label={netLabel(e, data.today, t, locale)} />
-        {kind === 'seller' ? <Kpi value={f.number(data.counts.ordersThisMonth)} label={t('ordersMonth', { items: data.counts.itemsThisMonth })} />
-          : kind === 'provider' ? <Kpi value={f.number(data.counts.jobsThisMonth)} label={t('jobsMonth', { quotes: data.counts.quoteRequestsOpen })} />
-          : <Kpi value={f.number(data.counts.jobsThisMonth + data.counts.ordersThisMonth)} label={t('bothMonth', { services: data.counts.jobsThisMonth, parts: data.counts.ordersThisMonth })} />}
-        <Kpi value={data.reputation.rating != null ? f.number(data.reputation.rating, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}
-          label={data.reputation.rating == null ? t('noRating') : t(kind === 'seller' ? 'ratingOrders' : 'ratingReviews', { count: f.number(data.reputation.reviews) })} />
-        {kind === 'seller'
-          ? <Kpi value={data.reputation.refundRateBps != null ? f.number(data.reputation.refundRateBps / 10000, { style: 'percent', maximumFractionDigits: 1 }) : '—'} label={t('refundKpi')} />
-          : <Kpi value={data.reputation.qualityScore ?? '—'} label={t('qualityKpi')} />}
-      </KpiRow>
+      <BoHeader title={t('title')} sub={[longDate(data.today, locale), city].filter(Boolean).join(' · ')} />
+      <KpiStrip label={t('kpis')} items={kpis(data, kind, t, f, locale, go)} />
 
-      <div className="nl-dash-cols">
-        <section aria-labelledby="dash-today">
-          <h2 id="dash-today" className="nl-h2">{kind === 'seller' ? (data.counts.runCutoff ? t('tonightRun', { time: clockWithPeriod(data.counts.runCutoff, locale) }) : t('nextRun')) : t('today')}</h2>
+      <div className="bo-grid nl-dash-charts">
+        <ChartCard id="dash-earn" title={t('earningsTitle')}>
+          <StackedBarChart title={t('earningsTitle')} series={series} data={weeks} format={c => f.money(c, { whole: true })} />
+        </ChartCard>
+        <ChartCard id="dash-trend" title={t('trendTitle')}>
+          <LineChart title={t('trendTitle')} current={totals} labels={weeks.map(w => w.label)} legend={{ current: t('trendLegend') }} format={c => f.money(c, { whole: true })} />
+        </ChartCard>
+      </div>
+
+      <div className="bo-grid">
+        {setup ? <SetupCard setup={setup} kind={kind} t={t} go={go} /> : null}
+        <ChartCard id="dash-today" title={kind === 'seller' ? (data.counts.runCutoff ? t('tonightRun', { time: clockWithPeriod(data.counts.runCutoff, locale) }) : t('nextRun')) : t('today')}>
           {kind === 'seller' ? <RunList data={data} t={t} /> : <TodayList data={data} t={t} f={f} locale={locale} />}
-
-          <h2 className="nl-h2 nl-dash-needs">{t('needsYou')}</h2>
-          <div className="nl-dash-needs-list">
-            {needsYou(data, { prov, sell, sellerOnly: kind === 'seller' }, t, f, locale, go)}
-          </div>
-        </section>
-
-        <section aria-labelledby="dash-earn">
-          <h2 id="dash-earn" className="nl-h2" style={{ marginBottom: 10 }}>{t('earningsTitle')}</h2>
-          <StackedBarChart
-            title={t('earningsTitle')}
-            series={[{ key: 'services', label: t('services'), color: 'var(--color-accent)' }, { key: 'parts', label: t('parts'), color: 'var(--color-accent-2-400)' }]}
-            data={e.weeks.map((w, i) => ({ label: `W${i + 1}`, values: { services: w.servicesCents, parts: w.partsCents } }))}
-            format={c => f.money(c, { whole: true })}
-          />
-          <h2 className="nl-h2 nl-dash-quality">{t('quality')}{data.reputation.qualityScore != null ? <> · <span className="nl-dash-score">{data.reputation.qualityScore}</span></> : null}</h2>
-          {qualityRows.length === 0 ? <p className="nl-muted nl-small">{t('qualityPending')}</p> : qualityRows.map(k => {
-            const v = data.reputation.quality[k]!;
-            const isDispute = k === 'dispute_rate';
-            return <Meter key={k} label={t(`q_${k}`)} value={isDispute ? 100 - v * 10 : v} floor={FLOORS[k]} display={`${f.number(v, { maximumFractionDigits: 1 })}%`} />;
-          })}
-          <p className="nl-dash-coaching"><strong>{t('coaching')}</strong> {coaching(data, t, locale)}</p>
-        </section>
+        </ChartCard>
+        <TodoCard id="dash-needs" title={t('needsYou')} items={needsYou(data, { prov, sell, sellerOnly: kind === 'seller' }, t, f, locale, go)} empty={t('allCaughtUp')} />
       </div>
     </div>
   );
 }
 
-/** "Tuesday 8 September" (design) / « mardi 8 septembre ». */
+function kpis(d: Dashboard, kind: DashboardKind, t: T, f: Fmt, locale: Locale, go: (k: ScreenKey) => () => void): KpiItem[] {
+  const e = d.earnings, c = d.counts, r = d.reputation;
+  const items: KpiItem[] = [{ key: 'net', label: t('netMonth'), value: f.money(e.netThisMonthCents, { whole: true }), ...netDelta(e, d.today, t, locale), onClick: go('earnings') }];
+  if (kind !== 'seller') items.push({ key: 'jobs', label: t('jobsMonth'), value: f.number(c.jobsThisMonth), delta: t('visitsTodayDelta', { count: c.visitsToday }), onClick: go('appointments') });
+  if (kind !== 'provider') items.push({ key: 'orders', label: t('ordersMonth'), value: f.number(c.ordersThisMonth), delta: t('itemsDelta', { items: c.itemsThisMonth }), onClick: go('orders') });
+  if (kind === 'provider') items.push({ key: 'quotes', label: t('quotesOpen'), value: f.number(c.quoteRequestsOpen), onClick: go('appointments') });
+  else items.push({ key: 'pack', label: t('toPack'), value: f.number(c.toPack), delta: c.runLabel ? t('runDelta', { run: c.runLabel }) : undefined, onClick: go('orders') });
+  items.push({
+    key: 'releasing', label: t('releasingKpi'), value: e.releasingCents != null ? f.money(e.releasingCents, { whole: true }) : '—',
+    delta: e.releasingCents != null && e.releasingAt ? new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'long', timeZone: timeZone() }).format(new Date(e.releasingAt)) : t('nothingReleasing'),
+    onClick: go('payouts'),
+  });
+  items.push({
+    key: 'rating', label: t('ratingKpi'), value: r.rating != null ? f.number(r.rating, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—',
+    delta: r.rating == null ? t('noRating') : t(kind === 'seller' ? 'ratingOrders' : 'ratingReviews', { count: f.number(r.reviews) }),
+  });
+  items.push(kind === 'seller'
+    ? { key: 'refunds', label: t('refundKpi'), value: r.refundRateBps != null ? f.number(r.refundRateBps / 10000, { style: 'percent', maximumFractionDigits: 1 }) : '—', onClick: go('refunds') }
+    : { key: 'quality', label: t('qualityKpi'), value: r.qualityScore != null ? f.number(r.qualityScore) : '—', delta: r.qualityScore == null ? t('qualityPending') : t('qualityOutOf') });
+  return items;
+}
+
+/** "+18% vs Aug" in green, "−4% vs Aug" in red. */
+function netDelta(e: Dashboard['earnings'], today: string, t: T, locale: Locale): Pick<KpiItem, 'delta' | 'trend'> {
+  if (e.netLastMonthCents <= 0) return {};
+  const pct = Math.round(((e.netThisMonthCents - e.netLastMonthCents) / e.netLastMonthCents) * 100);
+  const month = new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, Number(today.slice(5, 7)) - 2, 15))).replace('.', '');
+  return { delta: t('vsMonth', { pct: `${pct >= 0 ? '+' : '−'}${Math.abs(pct)}%`, month }), trend: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat' };
+}
+
+/** "Tuesday 8 September" / « mardi 8 septembre ». */
 function longDate(date: string, locale: Locale): string {
   const d = new Date(`${date}T12:00:00Z`);
   const p = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { ...o, timeZone: 'UTC' }).format(d);
   return `${p({ weekday: 'long' })} ${p({ day: 'numeric' })} ${p({ month: 'long' })}`;
 }
 
-/** Floors below which a metric shows in rosehip (design: bar(val, floor)). */
-const FLOORS = { on_time: 95, photos: 90, response: 90, rebook: 40, dispute_rate: 90 } as const;
-
-function headline(d: Dashboard, kind: 'provider' | 'seller' | 'both', t: T, f: Fmt, locale: Locale): string {
-  const parts: string[] = [];
-  const word = (n: number) => numberWord(n, locale, parts.length === 0);
-  const c = d.counts;
-  if (kind !== 'seller') parts.push(t('visits', { count: c.visitsToday, word: word(c.visitsToday) }));
-  if (kind === 'provider') parts.push(t('quotes', { count: c.quoteRequestsOpen, word: word(c.quoteRequestsOpen) }));
-  if (kind === 'seller') parts.push(c.runCutoff ? t('packBy', { count: c.toPack, word: word(c.toPack), time: clockWithPeriod(c.runCutoff, locale).replace(/ (am|pm)$/, '') }) : t('pack', { count: c.toPack, word: word(c.toPack) }));
-  if (kind === 'both') parts.push(t('pack', { count: c.toPack, word: word(c.toPack) }));
-  if (kind === 'seller') { const n = d.cases.filter(x => x.kind === 'refund').length; parts.push(t('cases', { count: n, word: word(n) })); }
-  const e = d.earnings;
-  parts.push(e.releasingCents != null && e.releasingAt
-    ? t('releasing', { money: f.money(e.releasingCents, { whole: true }), day: new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'long', timeZone: timeZone() }).format(new Date(e.releasingAt)) })
-    : t('nothingReleasing'));
-  return `${parts.join(', ')}.`;
+/** A week's start as "Sep 8" (the axis of both charts); W1… when the day is missing. */
+function weekLabel(start: string, i: number, locale: Locale): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return `W${i + 1}`;
+  return new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${start}T12:00:00Z`)).replace('.', '');
 }
 
-function netLabel(e: Dashboard['earnings'], today: string, t: T, locale: Locale): string {
-  if (e.netLastMonthCents <= 0) return t('netMonth');
-  const pct = Math.round(((e.netThisMonthCents - e.netLastMonthCents) / e.netLastMonthCents) * 100);
-  const month = new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, Number(today.slice(5, 7)) - 2, 15))).replace('.', '');
-  return t('netMonthVs', { pct: `${pct >= 0 ? '+' : '−'}${Math.abs(pct)}%`, month });
+function SetupCard({ setup, kind, t, go }: { setup: Setup; kind: DashboardKind; t: T; go: (k: ScreenKey) => () => void }) {
+  const items: TodoItem[] = [];
+  if (setup.page === 'none' || setup.page === 'draft') items.push({ key: 'page', icon: Storefront, text: t(setup.page === 'none' ? `setupPage_${kind}` : `publishPage_${kind}`), onClick: go('storefront') });
+  if (setup.listings === 0) items.push({ key: 'listings', icon: Tag, text: t(`setupListings_${kind}`), onClick: go('products') });
+  if (!items.length) return null;
+  return <TodoCard id="dash-setup" title={t('setupTitle')} items={items} empty="" />;
 }
 
 function TodayList({ data, t, f, locale }: { data: Dashboard; t: T; f: Fmt; locale: Locale }) {
-  if (data.jobsToday.length === 0) return <p className="nl-muted">{t('nothingToday')}</p>;
+  if (data.jobsToday.length === 0) return <p className="bo-muted">{t('nothingToday')}</p>;
   return (
     <ul className="nl-dash-list">
       {data.jobsToday.map(j => (
-        <li key={j.id} className="nl-row">
+        <li key={j.id} className="nl-dash-row">
           <span className="nl-dash-time">{clock(j.startsAt, locale)}</span>
           <span className="nl-dash-what"><strong>{j.title}</strong><span className="nl-dash-who">{[j.customerName, j.area, j.access, j.escrowHeldCents != null ? t('escrow', { money: f.money(j.escrowHeldCents) }) : null].filter(Boolean).join(' · ')}</span></span>
           {j.mine || !j.memberName
             ? <span className="tag tag-neutral nl-dash-tag">{t(`state_${j.state}` as Parameters<T>[0])}</span>
-            : <span className="tag tag-accent nl-dash-tag">{j.memberName}</span>}
+            : <span className="tag tag-brand nl-dash-tag">{j.memberName}</span>}
         </li>
       ))}
     </ul>
@@ -137,47 +151,40 @@ function TodayList({ data, t, f, locale }: { data: Dashboard; t: T; f: Fmt; loca
 }
 
 function RunList({ data, t }: { data: Dashboard; t: T }) {
-  if (data.run.length === 0) return <p className="nl-muted">{t('nothingToPack')}</p>;
+  if (data.run.length === 0) return <p className="bo-muted">{t('nothingToPack')}</p>;
   return (
     <ul className="nl-dash-list">
       {data.run.map(o => (
-        <li key={o.orderId} className="nl-row">
+        <li key={o.orderId} className="nl-dash-row">
           <span className="nl-dash-time">{o.runLabel ?? '—'}</span>
           <span className="nl-dash-what"><strong>{[o.items.map(i => (i.qty > 1 ? `${i.title} ×${i.qty}` : i.title)).join(', '), o.ref].filter(Boolean).join(' · ')}</strong><span className="nl-dash-who">{[o.customerName, o.area].filter(Boolean).join(' · ')}</span></span>
-          <span className={`tag ${o.packed ? 'tag-neutral' : 'tag-accent'} nl-dash-tag`}>{o.packed ? t('packedTag') : t('toPackTag')}</span>
+          <span className={`tag ${o.packed ? 'tag-neutral' : 'tag-warning'} nl-dash-tag`}>{o.packed ? t('packedTag') : t('toPackTag')}</span>
         </li>
       ))}
     </ul>
   );
 }
 
-function needsYou(d: Dashboard, p: { prov: boolean; sell: boolean; sellerOnly: boolean }, t: T, f: Fmt, locale: Locale, go: (k: ScreenKey) => () => void) {
-  const rows: { key: string; text: string; onClick: () => void }[] = [];
+function needsYou(d: Dashboard, p: { prov: boolean; sell: boolean; sellerOnly: boolean }, t: T, f: Fmt, locale: Locale, go: (k: ScreenKey) => () => void): TodoItem[] {
+  const rows: TodoItem[] = [];
   const c = d.counts;
   if (p.prov && c.quoteRequestsOpen > 0) {
     const left = c.quoteRespondBy ? Math.round((new Date(c.quoteRespondBy).getTime() - Date.now()) / 60000) : -1;
-    rows.push({ key: 'quotes', onClick: go('appointments'), text: left > 0 ? t('quoteRequests', { count: c.quoteRequestsOpen, left: `${Math.floor(left / 60)} h ${left % 60} m` }) : t('quoteRequestsLate', { count: c.quoteRequestsOpen }) });
+    rows.push({ key: 'quotes', icon: ChatCircleText, onClick: go('appointments'), text: left > 0 ? t('quoteRequests', { count: c.quoteRequestsOpen, left: `${Math.floor(left / 60)} h ${left % 60} m` }) : t('quoteRequestsLate', { count: c.quoteRequestsOpen }) });
   }
-  if (p.sell && c.toPack > 0) rows.push({ key: 'pack', onClick: go('orders'), text: c.runCutoff && c.runLabel ? t('ordersToPack', { count: c.toPack, run: c.runLabel, time: clockWithPeriod(c.runCutoff, locale) }) : t('ordersToPackNoRun', { count: c.toPack }) });
+  if (p.sell && c.toPack > 0) rows.push({ key: 'pack', icon: Package, onClick: go('orders'), text: c.runCutoff && c.runLabel ? t('ordersToPack', { count: c.toPack, run: c.runLabel, time: clockWithPeriod(c.runCutoff, locale) }) : t('ordersToPackNoRun', { count: c.toPack }) });
   const cases = d.cases.filter(x => (p.sellerOnly ? x.kind === 'refund' : true));
   const first = cases[0];
-  if (first) rows.push({ key: 'case', onClick: go('refunds'), text: t(first.kind === 'refund' ? 'refundCase' : 'dispute', { count: cases.filter(x => x.kind === first.kind).length, who: first.customerName ?? '—', what: (first.subject ?? '').toLowerCase() }) });
+  if (first) rows.push({ key: 'case', icon: first.kind === 'refund' ? ArrowUUpLeft : Warning, onClick: go('refunds'), text: t(first.kind === 'refund' ? 'refundCase' : 'dispute', { count: cases.filter(x => x.kind === first.kind).length, who: first.customerName ?? '—', what: (first.subject ?? '').toLowerCase() }) });
   const low = d.lowStock[0];
-  if (p.sell && low) rows.push({ key: 'stock', onClick: go('products'), text: t('lowStock', { name: low.name, stock: low.stock }) });
+  if (p.sell && low) rows.push({ key: 'stock', icon: Tag, onClick: go('products'), text: t('lowStock', { name: low.name, stock: low.stock }) });
   const doc = d.compliance[0];
   if (doc) {
     const name = t(`doc_${doc.checkType}` as Parameters<T>[0]);
     const days = doc.pausesAt ? Math.ceil((new Date(doc.pausesAt).getTime() - Date.now()) / 86400000) : 0;
-    rows.push({ key: 'doc', onClick: go('compliance'), text: doc.status === 'expired' && doc.expiresAt
+    rows.push({ key: 'doc', icon: doc.status === 'expired' ? ShieldWarning : FileText, onClick: go('compliance'), text: doc.status === 'expired' && doc.expiresAt
       ? (days > 0 ? t('complianceExpired', { doc: name, date: f.date(doc.expiresAt), days }) : t('complianceExpiredPaused', { doc: name, date: f.date(doc.expiresAt) }))
       : t('complianceTodo', { doc: name }) });
   }
-  if (rows.length === 0) return <p className="nl-muted nl-small">{t('allCaughtUp')}</p>;
-  return rows.map(r => <LinkRow key={r.key} onClick={r.onClick}>{r.text}</LinkRow>);
-}
-
-function coaching(d: Dashboard, t: T, locale: Locale): string {
-  const date = new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${d.coaching.nextTierReview}T12:00:00Z`));
-  if (d.coaching.jobs === 0) return t('coachingNone', { date });
-  return d.coaching.withoutPhotos > 0 ? t('coachingPhotos', { missing: d.coaching.withoutPhotos, jobs: d.coaching.jobs, date }) : t('coachingGood', { jobs: d.coaching.jobs, date });
+  return rows;
 }

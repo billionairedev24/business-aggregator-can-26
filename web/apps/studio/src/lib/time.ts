@@ -72,3 +72,10 @@ export function hhmmLabel(hhmm: string, locale: Locale): string {
 
 export const toMinutes = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return (h ?? 0) * 60 + (m ?? 0); };
 export const fromMinutes = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+
+/** Minutes since local (merchant time zone) midnight of an instant — where it sits on a calendar's time grid. */
+export function minuteOfDay(value: string | Date): number {
+  const d = value instanceof Date ? value : new Date(value);
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: timeZone(), hour: 'numeric', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d);
+  return Number(parts.find(p => p.type === 'hour')?.value ?? 0) * 60 + Number(parts.find(p => p.type === 'minute')?.value ?? 0);
+}

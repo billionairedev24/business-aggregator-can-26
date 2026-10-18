@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test/ops';
 import { DashboardView } from './DashboardScreen';
 import type { Dashboard } from './api';
@@ -7,7 +8,7 @@ import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const navigate = vi.fn();
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }));
-vi.mock('../shell/api', () => ({ useMerchantId: () => 'm1', useMerchant: () => ({ type: 'provider', city: 'Calgary' }) }));
+vi.mock('../shell/api', async orig => ({ ...(await orig<typeof import('../shell/api')>()), useMerchantId: () => 'm1', useMerchant: () => ({ type: 'provider', city: 'Calgary' }) }));
 
 const soon = (min: number) => new Date(Date.now() + min * 60_000).toISOString();
 const data: Dashboard = {
@@ -28,36 +29,64 @@ const data: Dashboard = {
 };
 
 describe('Dashboard', () => {
-  it('provider: headline, KPIs, today and needs-you like the design', async () => {
+  it('provider: KPI strip, charts, today and needs-you; no headline sentence, no coaching', async () => {
     renderWithProviders(<DashboardView data={data} kind="provider" city="Calgary" merchantId="m1" />);
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Three visits today, two quotes waiting, $2,140 releasing Friday.');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Dashboard');
     expect(screen.getByText('Tuesday 8 September · Calgary')).toBeTruthy();
-    expect(screen.getByText('jobs this month · 2 quotes open')).toBeTruthy();
-    expect(screen.getByText('net this month · +18% vs Aug')).toBeTruthy();
+    const kpis = within(screen.getByRole('list', { name: 'Key figures' }));
+    expect(kpis.getByRole('button', { name: /Net this month \$6,820 \+18% vs Aug/ })).toBeTruthy();
+    expect(kpis.getByRole('button', { name: /Jobs this month 29 3 visits today/ })).toBeTruthy();
+    expect(kpis.getByRole('button', { name: /Quote requests open 2/ })).toBeTruthy();
+    expect(kpis.getByText('91')).toBeTruthy(); // the quality score is one KPI card
+    expect(screen.queryByText('Orders this month')).toBeNull();
+    expect(screen.getByRole('img', { name: 'Net earnings · 12 weeks' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Weekly net · trend' })).toBeTruthy();
     expect(screen.getByText('A. Osei · Beltline · P2 stall 118 · $93.45 held (incl. GST/HST)')).toBeTruthy();
     expect(screen.getByText('Jas')).toBeTruthy();
     expect(screen.getByRole('button', { name: /2 quote requests · respond within 1 h 1\d m to keep response score/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /1 dispute · A\. Osei, pre-purchase inspection/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /WCB clearance letter expired Aug 31 · instant book pauses in 7 days/ })).toBeTruthy();
     expect(screen.queryByText(/orders to pack/)).toBeNull();
-    expect(screen.getByText(/completion photos missing on 3 of your last 20 jobs/)).toBeTruthy();
+    expect(screen.queryByText(/completion photos/)).toBeNull();
+    expect(screen.queryByText(/releasing Friday\./)).toBeNull();
+    await userEvent.click(kpis.getByRole('button', { name: /Releasing next/ }));
+    expect(navigate).toHaveBeenCalledWith({ to: '/b/m1/payouts' });
   });
 
-  it('seller: orders headline, tonight’s run and low stock', () => {
+  it('seller: orders KPIs, tonight’s run and low stock', () => {
     renderWithProviders(<DashboardView data={{ ...data, cases: [{ kind: 'refund', customerName: 'P. Nguyen', subject: 'Wiper blades wrong size' }] }} kind="seller" city="Calgary" merchantId="m1" />);
-    // runCutoff is now + 2 h: on the hour it reads "by 4" (clockWithPeriod drops ":00"), so the minutes are optional.
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/^Four orders to pack by \d+(:\d\d)?, one refund case, \$2,140 releasing Friday\.$/);
-    expect(screen.getByText('orders this month · 112 items')).toBeTruthy();
+    const kpis = within(screen.getByRole('list', { name: 'Key figures' }));
+    expect(kpis.getByRole('button', { name: /Orders this month 38 112 items/ })).toBeTruthy();
+    expect(kpis.getByRole('button', { name: /Orders to pack 4 run R-611/ })).toBeTruthy();
+    expect(kpis.getByRole('button', { name: /Refund rate 1\.2%/ })).toBeTruthy();
+    expect(kpis.queryByText('Jobs this month')).toBeNull();
     expect(screen.getByText('Wiper blades ×2 · NL-48213')).toBeTruthy();
     expect(screen.getByRole('button', { name: /4 orders to pack · run R-611 closes/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Synthetic oil 5W-30 low \(3 left\)/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /1 refund case · P\. Nguyen, wiper blades wrong size/ })).toBeTruthy();
   });
 
-  it('both: visits and orders', () => {
+  it('both: jobs and orders', () => {
     renderWithProviders(<DashboardView data={data} kind="both" city="Calgary" merchantId="m1" />);
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Three visits today, four orders to pack, $2,140 releasing Friday.');
-    expect(screen.getByText('jobs & orders · 29 services, 38 parts')).toBeTruthy();
+    const kpis = within(screen.getByRole('list', { name: 'Key figures' }));
+    expect(kpis.getByText('Jobs this month')).toBeTruthy();
+    expect(kpis.getByText('Orders this month')).toBeTruthy();
+  });
+
+  it('a newly approved business: set up the public page and the first listing from here (§ 3.10)', async () => {
+    navigate.mockReset();
+    renderWithProviders(<DashboardView data={data} kind="provider" city="Calgary" merchantId="m1" setup={{ page: 'none', listings: 0 }} />);
+    const card = within(screen.getByRole('region', { name: 'Get set up' }));
+    await userEvent.click(card.getByRole('button', { name: /Set up your public page/ }));
+    expect(navigate).toHaveBeenCalledWith({ to: '/b/m1/page' });
+    expect(card.getByRole('button', { name: /Add your first service and price/ })).toBeTruthy();
+  });
+
+  it('reads French', () => {
+    renderWithProviders(<DashboardView data={data} kind="provider" city="Calgary" merchantId="m1" setup={{ page: 'draft', listings: 3 }} />, 'fr');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Tableau de bord');
+    expect(screen.getByText('Net ce mois-ci')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Publiez votre page publique/ })).toBeTruthy();
   });
 });

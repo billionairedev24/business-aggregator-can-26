@@ -68,6 +68,17 @@ describe('ListingsScreen', () => {
     expect(screen.getAllByText('Product').length).toBeGreaterThan(0);
   });
 
+  it('provider portal: Services & prices with the duration and what the provider gets after the fee (PH:139)', async () => {
+    shell.type = 'provider';
+    stubFetch({ [`GET ${base}/listings`]: { items: LISTINGS.map(l => (l.id === 's1' ? { ...l, meta: '60 min · instant book' } : l)) } });
+    renderScreen(<ListingsScreen />);
+    expect(screen.getByRole('heading', { name: 'Services & prices' })).toBeTruthy();
+    expect(await screen.findAllByText('Brake inspection')).not.toHaveLength(0);
+    expect(screen.getAllByText('60 min · instant book').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('$75.44').length).toBeGreaterThan(0); // $89 − 12% (Trusted) − card processing
+    expect(screen.queryByText('Brake pads · ceramic (front)')).toBeNull();
+  });
+
   it('hides a live listing through the inline action', async () => {
     const calls = stubFetch({ [`GET ${base}/listings`]: { items: LISTINGS }, [`POST ${base}/listings/p1/hide`]: { status: 204 } });
     renderScreen(<ListingsScreen />);

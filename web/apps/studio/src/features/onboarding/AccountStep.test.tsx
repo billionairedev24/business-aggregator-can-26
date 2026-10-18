@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -31,7 +31,7 @@ describe('AccountStep', () => {
     expect(onTypeChange).toHaveBeenCalledWith('kitchen');
     expect(screen.getByText('Kitchen · food')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Change' })).toBeTruthy();
-    expect(screen.getByText('Next: business, then the full AHS food checklist.')).toBeTruthy();
+    expect(screen.getByText('Next: business and categories, then the full AHS food checklist.')).toBeTruthy();
   });
 
   it('the business type picker is one Tab stop; the arrow keys move and select (S-140)', async () => {
@@ -111,14 +111,19 @@ describe('AccountStep with a pilot invite (S-120)', () => {
 });
 
 describe('OnboardingLayout rail', () => {
-  it('names the steps per type and only lets you reach steps you got to', () => {
+  it('names the five steps per type, with no page or listings step, and only lets you reach steps you got to', () => {
     mockFetch(c => (c.url === '/bff/session' ? { body: SESSION } : undefined));
     renderWithProviders(<OnboardingLayout step="business" type="seller" onboarding={onboarding({ type: 'seller', step: 'business' })} onGo={() => {}}><p>body</p></OnboardingLayout>);
-    const store = screen.getByRole('button', { name: /Store/ });
-    expect(store.textContent).toContain('brand & sections');
-    expect((store as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByRole('button', { name: /^Business/ }).getAttribute('aria-current')).toBe('step');
-    expect((screen.getByRole('button', { name: /^Account you/ }) as HTMLButtonElement).disabled).toBe(false);
+    const rail = screen.getByRole('navigation', { name: /Getting on/ });
+    expect(within(rail).getAllByRole('button')).toHaveLength(5);
+    expect(within(rail).queryByRole('button', { name: /Store|Listings/ })).toBeNull();
+    const categories = within(rail).getByRole('button', { name: /^Categories/ });
+    expect(categories.textContent).toContain('what you sell');
+    expect((categories as HTMLButtonElement).disabled).toBe(false); // the Business step's server state opens Categories
+    expect((within(rail).getByRole('button', { name: /^Verification/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(within(rail).getByRole('button', { name: /^Business/ }).getAttribute('aria-current')).toBe('step');
+    expect((within(rail).getByRole('button', { name: /^Account you/ }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByText('KYC, GST, product permits')).toBeTruthy();
+    expect(screen.getAllByText('Step 2 of 5').length).toBeGreaterThan(0);
   });
 });

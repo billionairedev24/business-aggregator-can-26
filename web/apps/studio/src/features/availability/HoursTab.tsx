@@ -89,7 +89,7 @@ export function HoursTab({ onState }: { onState: (s: SaveState) => void }) {
           {members.map(m => <Chip key={m.userId} selected={m.userId === current} onClick={() => setMember(m.userId)}>{m.name}</Chip>)}
           {canEdit && members.length > 1 ? <button type="button" className="btn btn-ghost nl-av-copy" onClick={() => { if (!current || !days) return; setDrafts(() => Object.fromEntries(members.map(m => [m.userId, m.userId === current ? days : structuredClone(days)]))); }}>{t('copyHours')}</button> : null}
         </div>
-        {days ? DAYS.map(day => {
+        {days ? <div className="nl-av-week">{DAYS.map(day => {
           const on = days[day].length > 0;
           return (
             <div key={day} className="nl-av-day">
@@ -119,7 +119,7 @@ export function HoursTab({ onState }: { onState: (s: SaveState) => void }) {
               </div>
             </div>
           );
-        }) : null}
+        })}</div> : null}
         {tried && summaryCount > 0 ? <Alert tone="error">{t('attention', { n: summaryCount })}</Alert> : null}
         {save.isError && !(save.error instanceof ValidationError) ? <Alert tone="error">{t('saveError')}</Alert> : null}
         {canEdit ? (
@@ -156,7 +156,7 @@ function PreviewPanel({ t, name, day, setDay, duration, serviceId, setServiceId,
     : t('previewNote', { free, total: preview.slots.length, min: duration, jobs: preview.jobs, buffer: preview.bufferMin, interval: preview.intervalMin })
       + (preview.busyBlocks ? ` · ${t('previewBusy', { n: preview.busyBlocks })}` : '');
   return (
-    <section aria-labelledby="av-preview">
+    <section aria-labelledby="av-preview" className="nl-av-card">
       <h3 id="av-preview" className="nl-av-h3">{t('previewTitle')}</h3>
       <p className="nl-small nl-muted nl-av-help">{t('previewHelp')}</p>
       <Select aria-label={t('previewService')} className="nl-av-svc" value={serviceId ?? ''} onChange={e => setServiceId(e.target.value)}

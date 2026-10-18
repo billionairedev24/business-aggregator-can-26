@@ -43,8 +43,8 @@ export function VerificationStep({ onboarding, onBack, onSubmitted, identityRetu
   return (
     <>
       <h1 className="nl-ob-title">{t('verifyTitle')}</h1>
-      <p className="nl-ob-intro" style={{ maxWidth: '62ch', marginBottom: 24 }}>{t(onboarding.type === 'kitchen' ? 'verifyIntro_kitchen' : 'verifyIntro')}</p>
-      {identityReturned && kycOpen ? <div style={{ marginBottom: 16, maxWidth: 720 }}><Alert tone="info" role="status">{t('idReturned')}</Alert></div> : null}
+      <p className="nl-ob-intro">{t(onboarding.type === 'kitchen' ? 'verifyIntro_kitchen' : 'verifyIntro')}</p>
+      {identityReturned && kycOpen ? <Alert tone="info" role="status">{t('idReturned')}</Alert> : null}
       <ul className="nl-ob-checks" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
         {checks.map(c => {
           const text = checkText(c, onboarding.type, t, locale);
@@ -52,21 +52,20 @@ export function VerificationStep({ onboarding, onBack, onSubmitted, identityRetu
             <li key={c.id} className="nl-ob-check">
               <div><div className="nl-ob-check-name">{text.name}</div><div className="nl-ob-check-desc">{text.desc}</div></div>
               {isComplete(c)
-                ? <span className="tag tag-accent">{text.done}</span>
+                ? <span className="tag tag-success">{text.done}</span>
                 : <button type="button" className="btn btn-secondary" disabled={busy === c.id || !applicant && onboarding.status !== 'pending'} aria-busy={busy === c.id || undefined} onClick={() => run(c)}>{text.cta}</button>}
             </li>
           );
         })}
       </ul>
-      {complete.isError && !open && !(complete.error instanceof ValidationError) ? <div style={{ marginTop: 12, maxWidth: 720 }}><Alert tone="error">{t('saveError')}</Alert></div> : null}
-      {submitError ? <div style={{ marginTop: 12, maxWidth: 720 }}><Alert tone="error">{submitError}</Alert></div> : null}
+      {complete.isError && !open && !(complete.error instanceof ValidationError) ? <Alert tone="error">{t('saveError')}</Alert> : null}
+      {submitError ? <Alert tone="error">{submitError}</Alert> : null}
       <div className="nl-ob-actions">
+        <button type="button" className="btn btn-secondary" onClick={onBack}>{t('back')}</button>
+        <span className="nl-ob-hint"><span>{t('checksDone', { done, total: checks.length })}</span> · <Link to="/b/$merchantId/help" params={{ merchantId: onboarding.merchantId }} search={{ topic: "verification" } as never}>{t('helpDoc')}</Link></span>
         {applicant
           ? <button type="button" className="btn btn-primary" disabled={done < checks.length || submit.isPending} onClick={() => submit.mutate(undefined, { onSuccess: onSubmitted })}>{submit.isPending ? t('submitting') : t('submit')}</button>
           : <button type="button" className="btn btn-primary" onClick={onSubmitted}>{t('step_review')} →</button>}
-        <span className="nl-ob-hint">{t('checksDone', { done, total: checks.length })}</span>
-        <button type="button" className="btn btn-ghost" onClick={onBack}>{t('back')}</button>
-        <Link to="/b/$merchantId/help" params={{ merchantId: onboarding.merchantId }} search={{ topic: "verification" } as never} className="nl-small" style={{ marginLeft: 'auto' }}>{t('helpDoc')}</Link>
       </div>
       {identityOpen && <IdentityDialog merchantId={onboarding.merchantId} title={t('ck_kyc')} onClose={() => setIdentityOpen(false)} />}
       {open && (

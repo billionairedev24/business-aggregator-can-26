@@ -7,6 +7,7 @@ import { listingsQuery, type Listing } from '../onboarding/listingsApi';
 import type { Storefront } from './api';
 import { sectionText, useStorefrontT, type StorefrontT } from './messages';
 import type { SectionKind } from './sections';
+import './PageBuilder.css';
 
 type Row = { a: string; b: string };
 type Block =

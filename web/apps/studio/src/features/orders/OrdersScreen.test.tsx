@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderWithProviders } from '../../test/ops';
 import { OrdersScreen, courierText } from './OrdersScreen';
@@ -28,24 +28,26 @@ describe('Orders · products', () => {
     });
     const user = userEvent.setup({ delay: null });
     renderWithProviders(<OrdersScreen />);
-    expect(await screen.findByText('To pack · 1')).toBeTruthy();
+    const kpis = within(await screen.findByRole('list', { name: 'Order figures' }));
+    expect(kpis.getByText('To pack').nextElementSibling?.textContent).toBe('1');
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByText('Delivered today · 6')).toBeTruthy();
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/^Pack by /);
+    expect(kpis.getByText('Delivered today').nextElementSibling?.textContent).toBe('6');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Orders');
+    expect(screen.getByText(/^Pack by /)).toBeTruthy();
     expect(screen.getAllByText('Issue · wrong size').length).toBeGreaterThan(0);
 
     // jsdom has no layout width, so the table renders as cards: the inline action is a labelled button.
     await user.click(screen.getByRole('button', { name: /^Mark packed/ }));
     await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/o1/pack'))).toBe(true));
     await waitFor(() => expect(screen.queryByRole('button', { name: /^Mark packed/ })).toBeNull());
-    expect(screen.getAllByText('Awaiting pickup')).toHaveLength(2);
+    expect(screen.getAllByText('Awaiting pickup')).toHaveLength(3); // two rows + the KPI card's label
   });
 
   it('bookkeepers see the list without the action', async () => {
     role = 'bookkeeper';
     mockFetch({ 'GET /api/v1/merchants/m1/orders': () => board() });
     renderWithProviders(<OrdersScreen />);
-    expect(await screen.findByText('To pack · 1')).toBeTruthy();
+    expect(await screen.findByRole('list', { name: 'Order figures' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Mark packed/ })).toBeNull();
   });
 
