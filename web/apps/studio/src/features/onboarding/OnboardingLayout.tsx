@@ -75,7 +75,7 @@ export function OnboardingLayout({ step, type, onboarding, onGo, children }: Onb
         <main className="nl-ob-card" id="main" tabIndex={-1}>
           <div className="nl-ob-card-head">
             <span className="nl-ob-stepof">{t('stepOf', { n: current + 1, total: STEPS.length })}</span>
-            {onboarding ? <button type="button" className="btn btn-secondary btn-sm" onClick={() => void signOut()}>{t('finishLater')}</button> : null}
+            {onboarding && step !== 'review' ? <button type="button" className="btn btn-secondary btn-sm" onClick={() => void signOut()}>{t('finishLater')}</button> : null}
           </div>
           <div className="nl-ob-progress" aria-hidden><span style={{ width: pct }} /></div>
           {children}

@@ -155,7 +155,7 @@ export const useOnboardingT = defineMessages({
     dlgSlots: 'Pick a visit slot', slotRequired: 'Pick one of the offered visit slots.', choiceRequired: 'Pick one option.',
     // review
     underReview: 'Under review', approved: 'Approved', reviewTitle: "We're checking your application.",
-    reviewLede: 'Submitted {when}. Most decisions land within 1–2 business days. Your Studio opens as soon as you are approved.', today: 'today {time}',
+    reviewLede: 'Submitted {when} · most decisions land within 1–2 business days. Your Studio opens as soon as you are approved.', today: 'today {time}',
     reviewApproved: 'Open your Studio to set up your page and add your first listings.',
     rv_audit: 'Menu allergen audit · runs automatically when you publish your first menu', rv_ts_after_visit: 'Trust & safety final review · after the visit',
     rv_passed: 'passed', rv_matched: 'matched', rv_valid: 'valid', rv_signed: 'signed', rv_submitted: 'submitted, in review', rv_todo: 'to do',
@@ -328,7 +328,7 @@ export const useOnboardingT = defineMessages({
     ret_standard: 'Norme {brand} · 14 jours', ret_perishables: 'Plus stricte pour les périssables', permitsNone: "Aucune de mes catégories n'exige de permis", permitsNumbers: 'Numéros de permis / licence', aglcNone: "Je ne vends pas d'alcool", aglcLicence: 'Numéro de permis AGLC',
     dlgSlots: 'Choisissez un créneau de visite', slotRequired: 'Choisissez un des créneaux proposés.', choiceRequired: 'Choisissez une option.',
     underReview: 'En examen', approved: 'Approuvée', reviewTitle: 'Nous examinons votre demande.',
-    reviewLede: 'Soumise {when}. La plupart des décisions sont rendues en 1 à 2 jours ouvrables. Votre Studio ouvre dès que vous êtes approuvé.', today: "aujourd'hui à {time}",
+    reviewLede: 'Soumise {when} · la plupart des décisions sont rendues en 1 à 2 jours ouvrables. Votre Studio ouvre dès que vous êtes approuvé.', today: "aujourd'hui à {time}",
     reviewApproved: 'Ouvrez votre Studio pour configurer votre page et ajouter vos premières annonces.',
     rv_audit: 'Audit des allergènes du menu · lancé automatiquement à la publication de votre premier menu', rv_ts_after_visit: 'Examen final confiance et sécurité · après la visite',
     rv_passed: 'réussi', rv_matched: 'trouvé', rv_valid: 'valide', rv_signed: 'signée', rv_submitted: 'soumis, en examen', rv_todo: 'à faire',
