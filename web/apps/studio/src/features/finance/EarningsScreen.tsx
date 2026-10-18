@@ -7,24 +7,24 @@ import { hoursUntil, pctFromBps, weekdayLong } from './format';
 import { useFinanceT, type FinanceKey, type FinanceT } from './messages';
 import { QueryState } from './QueryState';
 import { InsightCard } from '../assistant/InsightCard';
+import { BoHeader, KpiStrip } from '../../components/BackOffice';
 import './finance.css';
 
 const TIERS = ['master', 'trusted', 'registered'] as const;
 
-/** Design 02 · Earnings: "… releasing Friday", KPIs, Money in motion, ledger (view-only). */
+/** Earnings (redesign § 2.2, Provider Hub PH:230): page head with "… releasing Friday", KPI tiles, money in motion, the ledger (view-only). */
 export function EarningsScreen() {
   const merchantId = useMerchantId();
   const t = useFinanceT();
   const overview = useQuery(earningsQuery(merchantId));
   return (
-    <>
-      <span className="nl-kicker">{t('earningsKicker')}</span>
+    <div className="fin-page">
       <QueryState query={overview} skeleton={<PageSkeleton kpis={4} rows={0} />}>
         {o => <Overview o={o} />}
       </QueryState>
       <InsightCard merchantId={merchantId} screen="earnings" />
       <Ledger />
-    </>
+    </div>
   );
 }
 
@@ -46,13 +46,13 @@ function Overview({ o }: { o: EarningsOverview }) {
     : o.onHoldRefunds ? t('kpiOnHoldRefunds', { count: o.onHoldRefunds }) : t('kpiOnHold');
   return (
     <>
-      <h1 className="nl-page-title" style={{ margin: '0 0 28px' }}>{headline}</h1>
-      <div className="fin-kpis">
-        <Kpi value={f.money(o.escrowNetCents)} label={t(`kpiEscrow_${type}` as FinanceKey, { count: o.escrowCount })} />
-        <Kpi value={f.money(o.availableCents)} label={t('kpiReleased')} />
-        <Kpi value={pctOf(o.takeRateBps)} label={t('kpiTakeRate', { tier: t(`tier_${o.tier}`), others })} />
-        <Kpi value={f.money(o.onHoldCents)} label={onHold} />
-      </div>
+      <BoHeader title={t('earningsKicker')} sub={headline} />
+      <KpiStrip label={t('earningsKpis')} items={[
+        { key: 'escrow', value: f.money(o.escrowNetCents), label: t(`kpiEscrow_${type}` as FinanceKey, { count: o.escrowCount }) },
+        { key: 'released', value: f.money(o.availableCents), label: t('kpiReleased') },
+        { key: 'take', value: pctOf(o.takeRateBps), label: t('kpiTakeRate', { tier: t(`tier_${o.tier}`), others }) },
+        { key: 'hold', value: f.money(o.onHoldCents), label: onHold },
+      ]} />
       <h2 className="fin-h2">{t('moneyInMotion')}</h2>
       <ol className="fin-steps" aria-label={t('moneyInMotion')}>
         <Step k={t('step1')} v={t('step1b')} />
@@ -64,7 +64,6 @@ function Overview({ o }: { o: EarningsOverview }) {
   );
 }
 
-const Kpi = ({ value, label }: { value: string; label: string }) => <div><div className="fin-kpi-value">{value}</div><div className="fin-kpi-label">{label}</div></div>;
 const Step = ({ k, v, current }: { k: string; v: string; current?: boolean }) => (
   <li className="fin-step" data-current={current ? 'true' : undefined} aria-current={current ? 'step' : undefined}><div className="fin-step-k">{k}</div><div className="fin-step-v">{v}</div></li>
 );

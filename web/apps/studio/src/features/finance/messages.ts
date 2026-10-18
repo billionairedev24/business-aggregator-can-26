@@ -13,7 +13,7 @@ export const useFinanceT = defineMessages({
     attention: '{count, plural, one {# thing needs} other {# things need}} attention.',
 
     // earnings
-    earningsKicker: 'Earnings',
+    earningsKicker: 'Earnings', earningsKpis: 'Earnings figures',
     headlineReleasing: '{amount} releasing {day}',
     headlineAvailable: '{amount} available to pay out',
     kpiEscrow_provider: 'net in escrow · {count, plural, one {# job} other {# jobs}}',
@@ -61,7 +61,7 @@ export const useFinanceT = defineMessages({
     reportEmpty: 'No sales in this period yet.',
 
     // payouts
-    payoutsKicker: 'Payouts',
+    payoutsKicker: 'Payouts', balanceTitle: 'Your balance', payableNow: 'Can pay out now', payableNote: 'after the reserve', reserveHeld: 'Reserve held', reserveNote: 'kept back for refunds and disputes', paidTo: 'Paid to', nextPayoutTile: 'Next payout', manualTile: 'When you ask', freq_weekly: 'weekly schedule', freq_daily: 'daily schedule', freq_monthly: 'monthly schedule', freq_manual: 'manual payouts',
     payoutsTitle: 'Getting your money',
     availableNow: 'Available now',
     scheduledTo: 'Scheduled {date} → {account} · free',
@@ -203,7 +203,7 @@ export const useFinanceT = defineMessages({
     tier_master: 'Maître', tier_trusted: 'Fiable', tier_registered: 'Inscrit',
     attention: '{count, plural, one {# élément demande} other {# éléments demandent}} votre attention.',
 
-    earningsKicker: 'Revenus',
+    earningsKicker: 'Revenus', earningsKpis: 'Chiffres des revenus',
     headlineReleasing: '{amount} libérés {day}',
     headlineAvailable: '{amount} disponibles pour versement',
     kpiEscrow_provider: 'net en fiducie · {count, plural, one {# travail} other {# travaux}}',
@@ -249,7 +249,7 @@ export const useFinanceT = defineMessages({
     src_search: 'Recherche {brand}', src_repeat: 'Clients fidèles / favoris', src_embed: 'Intégration à votre site (API)', src_referral: 'Recommandations',
     reportEmpty: 'Aucune vente pour cette période.',
 
-    payoutsKicker: 'Versements',
+    payoutsKicker: 'Versements', balanceTitle: 'Votre solde', payableNow: 'Versable maintenant', payableNote: 'après la réserve', reserveHeld: 'Réserve retenue', reserveNote: 'gardée pour les remboursements et les litiges', paidTo: 'Versé à', nextPayoutTile: 'Prochain versement', manualTile: 'Sur demande', freq_weekly: 'calendrier hebdomadaire', freq_daily: 'calendrier quotidien', freq_monthly: 'calendrier mensuel', freq_manual: 'versements manuels',
     payoutsTitle: 'Recevoir votre argent',
     availableNow: 'Disponible maintenant',
     scheduledTo: 'Prévu le {date} → {account} · gratuit',

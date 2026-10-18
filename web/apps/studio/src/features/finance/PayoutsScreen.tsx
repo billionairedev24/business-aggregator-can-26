@@ -12,30 +12,25 @@ import { dateTime, dayDate, timeOf, toCents, toDollars } from './format';
 import { useFinanceT, type FinanceKey } from './messages';
 import { QueryState } from './QueryState';
 import { StepUpPanel } from './StepUpPanel';
+import { BoHeader } from '../../components/BackOffice';
 import './finance.css';
 
 type Panel = null | 'instant' | 'schedule' | 'bank';
 
-/** Design 02 · Payouts: available now, instant payout, schedule, bank account change, tax documents, history. */
+/** Payouts (redesign § 2.2, BO:472 payout wallet): the balance, instant payout and schedule, bank account, tax documents, history. */
 export function PayoutsScreen() {
   const merchantId = useMerchantId();
   const t = useFinanceT();
   const overview = useQuery(payoutOverviewQuery(merchantId));
   return (
-    <>
-      <span className="nl-kicker">{t('payoutsKicker')}</span>
-      <h1 className="nl-page-title" style={{ margin: '0 0 24px' }}>{t('payoutsTitle')}</h1>
-      <div className="fin-cols fin-cols-300">
-        <div>
-          <QueryState query={overview} skeleton={<PageSkeleton kpis={0} rows={4} />}>{o => <Money o={o} />}</QueryState>
-          <TaxDocuments />
-        </div>
-        <div>
-          <h2 className="fin-h3" style={{ marginTop: 0 }}>{t('payoutHistory')}</h2>
-          <History />
-        </div>
+    <div className="fin-page">
+      <BoHeader title={t('payoutsKicker')} sub={t('payoutsTitle')} />
+      <QueryState query={overview} skeleton={<PageSkeleton kpis={3} rows={2} />}>{o => <Money o={o} />}</QueryState>
+      <div className="fin-cols">
+        <section className="fin-card" aria-labelledby="fin-history"><h2 className="fin-h3" id="fin-history">{t('payoutHistory')}</h2><History /></section>
+        <TaxDocuments />
       </div>
-    </>
+    </div>
   );
 }
 
@@ -57,19 +52,29 @@ function Money({ o }: { o: PayoutOverview }) {
   const pending = o.pendingAccount;
   const ended = [pending, account].find(a => a?.disconnectedAt);
   return (
-    <>
-      <div className="fin-available">
-        <div className="fin-available-k">{t('availableNow')}</div>
-        <div className="fin-available-v">{f.money(o.availableCents)}</div>
-        <div style={{ fontSize: 13, marginTop: 4 }}>{line}</div>
-        {owner ? (
-          <div className="fin-actions">
-            <Button onClick={() => setPanel(p => (p === 'instant' ? null : 'instant'))} disabled={!canInstant} aria-expanded={panel === 'instant'}>{t('instantButton')}</Button>
-            <Button variant="secondary" onClick={() => setPanel(p => (p === 'schedule' ? null : 'schedule'))} aria-expanded={panel === 'schedule'}>{t('changeSchedule')}</Button>
-          </div>
-        ) : null}
-        {owner && !o.instant.eligible ? <div className="fin-small" style={{ marginTop: 8, color: 'inherit' }}>{t('ineligible')}</div> : null}
-      </div>
+    <section className="fin-wallet" aria-labelledby="fin-balance">
+      <h2 className="fin-h2" id="fin-balance">{t('balanceTitle')}</h2>
+      <ul className="fin-balance" aria-label={t('balanceTitle')}>
+        <li className="fin-available">
+          <span className="fin-available-k">{t('availableNow')}</span>
+          <span className="fin-available-v">{f.money(o.availableCents)}</span>
+          <span className="fin-small">{line}</span>
+        </li>
+        {o.reserveCents > 0 ? <>
+          <li className="fin-tile"><span className="fin-available-k">{t('payableNow')}</span><span className="fin-tile-v">{f.money(o.payableCents)}</span><span className="fin-small">{t('payableNote')}</span></li>
+          <li className="fin-tile"><span className="fin-available-k">{t('reserveHeld')}</span><span className="fin-tile-v">{f.money(o.reserveCents)}</span><span className="fin-small">{t('reserveNote')}</span></li>
+        </> : null}
+        <li className="fin-tile"><span className="fin-available-k">{t('nextPayoutTile')}</span><span className="fin-tile-v">{o.schedule.frequency !== 'manual' && o.nextPayoutAt ? dayDate(o.nextPayoutAt, locale) : t('manualTile')}</span><span className="fin-small">{t(`freq_${o.schedule.frequency}` as FinanceKey)}</span></li>
+      </ul>
+      {owner ? (
+        <div className="fin-request">
+          <span className="fin-request-to"><span className="fin-small">{t('paidTo')}</span><strong>{account ? t('bankLabel', { bank: bankName(account), last4: account.last4, holder: account.holderName }) : t('noAccount')}</strong></span>
+          <span className="fin-request-gap" />
+          <Button variant="secondary" onClick={() => setPanel(p => (p === 'schedule' ? null : 'schedule'))} aria-expanded={panel === 'schedule'}>{t('changeSchedule')}</Button>
+          <Button onClick={() => setPanel(p => (p === 'instant' ? null : 'instant'))} disabled={!canInstant} aria-expanded={panel === 'instant'}>{t('instantButton')}</Button>
+          {!o.instant.eligible ? <span className="fin-small fin-request-note">{t('ineligible')}</span> : null}
+        </div>
+      ) : null}
       {panel === 'instant' && account ? <InstantPanel o={o} account={account} onClose={() => setPanel(null)} /> : null}
       {panel === 'schedule' ? <SchedulePanel o={o} onClose={() => setPanel(null)} /> : null}
       <h2 className="fin-h3">{t('bankTitle')}</h2>
@@ -88,7 +93,7 @@ function Money({ o }: { o: PayoutOverview }) {
         ) : null}
       </div>
       {panel === 'bank' ? <BankPanel o={o} onClose={() => setPanel(null)} /> : null}
-    </>
+    </section>
   );
 }
 
@@ -424,13 +429,13 @@ function TaxDocuments() {
   const merchantId = useMerchantId();
   const year = new Date().getFullYear();
   return (
-    <>
-      <h2 className="fin-h3">{t('taxDocuments')}</h2>
+    <section className="fin-card" aria-labelledby="fin-tax">
+      <h2 className="fin-h3" id="fin-tax">{t('taxDocuments')}</h2>
       <div className="fin-rows">
         <div className="fin-row fin-row-40"><span>{t('gstYtd', { year })}</span><span className="fin-doc-links"><a href={downloads.gstPdf(merchantId, year, locale)} download aria-label={t('downloadPdfOf', { doc: t('gstYtd', { year }) })}>{t('pdf')}</a> · <a href={downloads.gst(merchantId, year)} download aria-label={t('downloadCsvOf', { doc: t('gstYtd', { year }) })}>{t('csv')}</a></span></div>
         <div className="fin-row fin-row-40"><span>{t('annualStatement', { year: year - 1 })}</span><span className="fin-doc-links"><a href={downloads.annualPdf(merchantId, year - 1, locale)} download aria-label={t('downloadPdfOf', { doc: t('annualStatement', { year: year - 1 }) })}>{t('pdf')}</a> · <a href={downloads.annual(merchantId, year - 1)} download aria-label={t('downloadCsvOf', { doc: t('annualStatement', { year: year - 1 }) })}>{t('csv')}</a></span></div>
       </div>
-    </>
+    </section>
   );
 }
 

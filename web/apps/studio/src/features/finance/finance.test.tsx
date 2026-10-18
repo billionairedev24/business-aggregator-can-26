@@ -106,7 +106,8 @@ function renderScreen(ui: ReactNode, locale: 'en' | 'fr' = 'en') {
 describe('Earnings', () => {
   it('shows the headline, KPIs, money in motion and a view-only ledger', async () => {
     renderScreen(<EarningsScreen />);
-    expect(await screen.findByRole('heading', { level: 1, name: `$2,140.60 releasing ${weekdayLong(nextPayout, 'en')}` })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Earnings' })).toBeTruthy();
+    expect(screen.getByText(`$2,140.60 releasing ${weekdayLong(nextPayout, 'en')}`)).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('$1,318.00')).toBeTruthy();
     expect(screen.getByText('net in escrow · 11 jobs')).toBeTruthy();

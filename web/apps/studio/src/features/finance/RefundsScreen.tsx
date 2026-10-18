@@ -35,7 +35,7 @@ function Body({ c }: { c: CasesOverview }) {
   return (
     <>
       <h1 className="nl-page-title" style={{ margin: '0 0 8px' }}>{t('refundsTitle', { disputes: c.openDisputes, refunds: c.refundsLast30Days })}</h1>
-      <p className="nl-lede" style={{ maxWidth: '60ch', color: 'var(--color-neutral-700)', margin: '0 0 24px' }}>{t('refundsLede')}</p>
+      <p className="nl-lede" style={{ maxWidth: '60ch', color: 'var(--color-text-muted)', margin: '0 0 24px' }}>{t('refundsLede')}</p>
       <div className="fin-cols">
         <div>
           {c.open.length ? c.open.map(x => (x.type === 'dispute' ? <DisputeCase key={x.id} d={x} /> : <RefundCase key={x.id} r={x} />))
