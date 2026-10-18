@@ -1,8 +1,9 @@
 /* Onboarding wizard (design 02 lines 99–301). Tokens only. */
 .nl-ob { max-width: 1100px; width: 100%; margin: 0 auto; padding: 20px clamp(16px, 4vw, 48px) 80px; display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 0 clamp(28px, 5vw, 80px); box-sizing: border-box; }
 @media (max-width: 759.98px) { .nl-ob { grid-template-columns: minmax(0, 1fr); gap: 20px; } .nl-ob-rail-note { display: none; } }
-.nl-ob-biz { font-size: 14px; color: var(--color-neutral-700); }
-.nl-ob-account { display: flex; align-items: center; gap: 8px; border: 0; background: transparent; font: inherit; font-size: 13px; cursor: pointer; color: var(--color-text); padding: 4px; min-height: 44px; }
+.nl-ob-biz { font-size: var(--text-sm); color: var(--color-header-muted); }
+.nl-ob-account { display: flex; align-items: center; gap: 8px; border: 1px solid transparent; border-radius: var(--radius-xs); background: transparent; font: inherit; font-size: var(--text-sm); cursor: pointer; color: var(--color-header-text); padding: 4px 8px; min-height: 44px; }
+.nl-ob-account:hover { border-color: var(--color-header-ring); }
 .nl-ob-rail-title { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700); margin-bottom: 14px; }
 .nl-ob-steps { list-style: none; margin: 0; padding: 0; }
 .nl-ob-step { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; font: inherit; font-size: 15px; padding: 10px 12px; min-height: 48px; border: 0; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text); background: transparent; }

@@ -103,7 +103,7 @@ export function Composer({ merchantId, label, quickReplies = [], attach = 'icon'
         />
         <input ref={fileInput} type="file" hidden multiple accept={FILE_ACCEPT} onChange={e => void pickFiles(e.target.files)} data-testid="composer-file" />
         {attach === 'icon'
-          ? <Button type="button" variant="ghost" icon aria-label={t('attach')} title={t('attach')} onClick={() => fileInput.current?.click()}><Paperclip size={20} weight="duotone" aria-hidden /></Button>
+          ? <Button type="button" variant="ghost" icon aria-label={t('attach')} title={t('attach')} onClick={() => fileInput.current?.click()}><Paperclip size={20} aria-hidden /></Button>
           : <Button type="button" variant="secondary" onClick={() => fileInput.current?.click()}>{attachText ?? t('attach')}</Button>}
         <Button type="submit" variant={sendVariant} disabled={sending || uploading.length > 0}>{sending ? t('sending') : t('send')}</Button>
       </div>

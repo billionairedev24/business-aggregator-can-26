@@ -172,7 +172,7 @@ export function VettingPanel({ checks, t }: { checks: Check[]; t: CatalogueT }) 
       <ul className="nl-cat-checks">
         {checks.map(c => (
           <li key={c.key} data-ok={String(c.ok)}>
-            {c.ok === true ? <CheckCircle size={16} weight="duotone" aria-hidden /> : c.ok === false ? <XCircle size={16} weight="duotone" aria-hidden /> : <Circle size={16} aria-hidden />}
+            {c.ok === true ? <CheckCircle size={16} aria-hidden /> : c.ok === false ? <XCircle size={16} aria-hidden /> : <Circle size={16} aria-hidden />}
             <span>{t(c.key as Parameters<CatalogueT>[0], c.values)}</span>
           </li>
         ))}

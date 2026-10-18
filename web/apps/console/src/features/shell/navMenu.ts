@@ -1,5 +1,5 @@
 import { RocketLaunch, Briefcase, ChartBar, ClipboardText, CurrencyCircleDollar, Gauge, GearSix, Headset, IdentificationCard, ListChecks, LockKey, Storefront, MapTrifold, Package, PlugsConnected, Scales, ShieldWarning, TreeStructure, Truck, UserList, UsersThree, type Icon } from '@phosphor-icons/react';
-import type { NavGroup, NavItem } from '@northline/ui';
+import { testingToolsEnabled, type NavGroup, type NavItem } from '@northline/ui';
 import { opens, type RoleGrant } from './api';
 import type { ShellT } from './messages';
 import { NAV_GROUPS, PINNED, SCREEN_PATH, type NavGroupKey, type ScreenKey } from './screens';
@@ -12,9 +12,15 @@ const ICON: Partial<Record<ScreenKey, Icon>> = {
 };
 const GROUP_ICON: Record<NavGroupKey, Icon> = { operations: Briefcase, marketplace: UsersThree, platform: GearSix };
 
-export function buildNav(grant: RoleGrant | undefined, t: ShellT): { pinned: NavItem[]; groups: NavGroup[] } {
+/**
+ * The pilot and testing screens (redesign § 3.5 and § 3.12: Pilot, UAT, Go-live; the API screen): out of the sidebar
+ * unless the testing tools are on (`VITE_NL_TESTING_TOOLS`). Their routes and the api stay; the role still decides.
+ */
+export const TESTING_SCREENS: readonly ScreenKey[] = ['pilot', 'uat', 'go_live', 'api'];
+
+export function buildNav(grant: RoleGrant | undefined, t: ShellT, testingTools = testingToolsEnabled()): { pinned: NavItem[]; groups: NavGroup[] } {
   const item = (k: ScreenKey): NavItem => ({ key: k, label: t(k as Parameters<ShellT>[0]), icon: ICON[k] ?? Gauge, href: SCREEN_PATH[k] });
-  const visible = (keys: readonly ScreenKey[]) => keys.filter(k => opens(grant, k)).map(item);
+  const visible = (keys: readonly ScreenKey[]) => keys.filter(k => opens(grant, k) && (testingTools || !TESTING_SCREENS.includes(k))).map(item);
   return {
     pinned: visible(PINNED),
     // groups without a visible item are dropped by the shell (design: a head shows only above an item it may see)

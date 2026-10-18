@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 import { renderConsole, staffApi, type Call, screenReady } from '../../test/render';
 
@@ -148,7 +148,10 @@ describe('pilot UAT (S-121)', () => {
 });
 
 describe('the console\'s "Send feedback" control (S-121)', () => {
+  afterEach(() => { vi.unstubAllEnvs(); });
+
   it('shows only for staff in the pilot, and sends the screen without its query string', async () => {
+    vi.stubEnv('VITE_NL_TESTING_TOOLS', '1'); // redesign § 3.5: the testing tools are off unless the build turns them on
     const calls = staffApi(['support'], c => {
       if (c.url.endsWith('/api/v1/me/pilot')) return { body: { participant: true, persona: 'staff', screenshotMaxBytes: 5242880, screenshotTypes: ['image/jpeg', 'image/png'] } };
       if (c.method === 'POST' && c.url.endsWith('/api/v1/me/pilot/feedback')) return { status: 201, body: { id: 'F9', reference: 'UAT-1009' } };
@@ -166,7 +169,15 @@ describe('the console\'s "Send feedback" control (S-121)', () => {
     expect(sent.route).not.toContain('?');
   });
 
+  it('is not there without the testing tools, even for staff in the pilot (redesign § 3.5)', async () => {
+    staffApi(['support'], c => (c.url.endsWith('/api/v1/me/pilot') ? { body: { participant: true, persona: 'staff', screenshotMaxBytes: 5242880, screenshotTypes: [] } } : c.url.includes('/api/v1/console/uat/') ? { body: { items: [] } } : undefined));
+    renderConsole('/uat');
+    await screenReady();
+    expect(screen.queryByRole('button', { name: 'Send feedback' })).toBeNull();
+  });
+
   it('is not there for staff outside the pilot', async () => {
+    vi.stubEnv('VITE_NL_TESTING_TOOLS', '1');
     staffApi(['support'], c => (c.url.endsWith('/api/v1/me/pilot') ? { body: { participant: false, persona: null, screenshotMaxBytes: 5242880, screenshotTypes: [] } } : c.url.includes('/api/v1/console/uat/') ? { body: { items: [] } } : undefined));
     renderConsole('/uat');
     await screenReady();

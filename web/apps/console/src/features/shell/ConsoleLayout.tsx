@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { CaretDown, MagnifyingGlass } from '@phosphor-icons/react';
-import { Alert, AppShell, Avatar, Menu, PageHeadingProvider, useLocale, type MenuEntry } from '@northline/ui';
+import { Alert, AppShell, Avatar, Menu, PageHeadingProvider, testingToolsEnabled, useLocale, type MenuEntry } from '@northline/ui';
 import { PilotControl } from '../pilot/PilotControl';
 import { useSession, useSignOut } from '../../lib/session';
 import { meQuery, opens, useRegions, useSwitchRole, type Me, type RoleGrant, type Regions } from './api';
@@ -53,7 +53,7 @@ export function ConsoleLayout({ children, denied }: { children: ReactNode; denie
       brand={<Brand label={t('console')} />}
       headerStart={<>
         <form role="search" aria-label={t('searchLabel')} className="nl-console-search" onSubmit={e => e.preventDefault()}>
-          <MagnifyingGlass size={18} weight="duotone" className="nl-console-search-icon" aria-hidden />
+          <MagnifyingGlass size={18} className="nl-console-search-icon" aria-hidden />
           <input className="input" type="search" aria-label={t('searchLabel')} placeholder={t('searchPlaceholder')} />
         </form>
         <span className="nl-console-region">{regionLine(regions, t)}</span>
@@ -65,7 +65,7 @@ export function ConsoleLayout({ children, denied }: { children: ReactNode; denie
     >
       {/* S-142: a screen that is loading or failed keeps its name as the page's h1 */}
       <PageHeadingProvider value={allowed && screen ? t(screen as Parameters<typeof t>[0]) : undefined}>{allowed ? children : denied}</PageHeadingProvider>
-      <PilotControl />
+      {testingToolsEnabled() ? <PilotControl /> : null}
     </AppShell>
   );
 }
@@ -115,7 +115,8 @@ function AccountMenu({ me, grant, screen }: { me: Me; grant: RoleGrant | undefin
       { kind: 'custom', render: <div className="nl-console-role-note">{me.roles.length ? t('roleNote') : t('noRoles')}</div> } as MenuEntry,
     ] : []),
     { label: t('myAudit'), onSelect: () => nav({ to: SCREEN_PATH.profile, search: { tab: 'audit' } as never }) },
-    { label: t('oncall'), onSelect: () => nav({ to: SCREEN_PATH.oncall }) },
+    // redesign § 3.5: On-call is a testing/operations tool — hidden unless the testing tools are on (the route stays)
+    ...(testingToolsEnabled() ? [{ label: t('oncall'), onSelect: () => nav({ to: SCREEN_PATH.oncall }) }] : []),
     { kind: 'separator' },
     { label: t('language'), meta: t('languageMeta'), onSelect: () => setLocale(locale === 'en' ? 'fr' : 'en') },
     { label: t('signOut'), onSelect: () => void signOut() },
@@ -125,10 +126,10 @@ function AccountMenu({ me, grant, screen }: { me: Me; grant: RoleGrant | undefin
     <>
       {switchRole.isError ? <span role="alert" className="nl-console-switch-error">{t('switchFailed')}</span> : null}
       <Menu label={t('accountMenu')} width={280} items={items} trigger={({ props }) => (
-        <button type="button" aria-label={t('accountMenu')} {...props} className="nl-console-account">
-          <Avatar initials={user?.initials ?? '··'} />
-          <span className="nl-console-account-name">{name}<span>{roleName(grant?.role, t)}</span></span>
-          <CaretDown size={13} color="var(--color-neutral-700)" />
+        <button type="button" aria-label={t('accountMenu')} {...props} className="nl-topbar-item">
+          <Avatar initials={user?.initials ?? '··'} size={32} />
+          <span className="nl-topbar-item-text">{name}<span>{roleName(grant?.role, t)}</span></span>
+          <CaretDown size={13} aria-hidden />
         </button>
       )} />
     </>

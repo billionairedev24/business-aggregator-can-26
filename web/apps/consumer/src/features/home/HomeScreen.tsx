@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { ForkKnife, Storefront, Wrench } from '@phosphor-icons/react';
 import { EmptyState, ErrorState, SiteLink, Skeleton, Tag, useFormatters, useLocale, type TagTone } from '@northline/ui';
@@ -13,20 +13,12 @@ import { useHomeT } from './messages';
 
 type T = ReturnType<typeof useHomeT>;
 
-/** The hour on the visitor's own clock, read after mount (the server's time zone may disagree about "evening"). */
-function useLocalHour(): number | null {
-  const [hour, setHour] = useState<number | null>(null);
-  useEffect(() => { setHour(new Date().getHours()); }, []);
-  return hour;
-}
-
-const partOfDay = (hour: number) => (hour >= 5 && hour < 12 ? 'morning' : hour >= 12 && hour < 17 ? 'afternoon' : 'evening');
-
 /**
- * Home (design 06 `home`, S-46): the search-first hero (greeting, "What do you need in … today?", the search pill that
+ * Home (design 06 `home`, S-46; redesign 2026-10-18 removed the time-of-day greeting, § 3.2 — the rest of this
+ * screen is rebuilt in phase 1): the search-first hero ("What do you need in … today?", the search pill that
  * lands on /search?q=, Services / Shop / Food chips with the city's numbers), entry tiles for shop departments,
  * cuisines and service categories, the four promises, "Trusted near you" and "Your week". The server renders the
- * layout, names and links (the same for everyone); the numbers, greeting and week load in the browser once the
+ * layout, names and links (the same for everyone); the numbers and week load in the browser once the
  * location and session are known.
  */
 export function HomeScreen() {
@@ -34,28 +26,22 @@ export function HomeScreen() {
   const shell = useShellT();
   const { user, loading: sessionLoading } = useViewer();
   const { location } = useDeliveryLocation();
-  const hour = useLocalHour();
   const summary = useHomeSummary(location.city);
   const place = location.label?.split(',')[0]?.trim();
   const data = summary.data;
   const empty = data && data.providers + data.shops + data.kitchensOpen === 0 && Object.keys(data.categories).length === 0;
 
-  const greeting = hour !== null && place && !sessionLoading
-    ? (user ? t('greetingNamed', { greeting: t(partOfDay(hour)), name: user.firstName, place: location.label! }) : t('greetingGuest', { greeting: t(partOfDay(hour)), place: location.label! }))
-    : null;
-
   return (
     <div className="nl-home">
       <section className="nl-home-hero" aria-labelledby="home-hero-title">
-        <p className="nl-home-greeting">{greeting ?? <Skeleton width={240} height={14} radius={4} style={{ opacity: 0.4 }} />}</p>
         <h1 id="home-hero-title" className="nl-home-title">{place ? t('heroQ', { place }) : t('heroQAnywhere')}</h1>
         <div className="nl-home-search">
           <SiteSearch variant="hero" placeholder={shell('search')} />
         </div>
         <nav className="nl-home-scopes" aria-label={t('scopes')}>
-          <Scope to="/services" icon={<Wrench weight="duotone" size={18} aria-hidden />} label={t('scopeServices')} meta={data && t('pros', { count: data.providers })} loading={summary.isPending && !!location.city} />
-          <Scope to="/shop" icon={<Storefront weight="duotone" size={18} aria-hidden />} label={t('scopeShop')} meta={data && t('shopsCount', { count: data.shops })} loading={summary.isPending && !!location.city} />
-          <Scope to="/food" icon={<ForkKnife weight="duotone" size={18} aria-hidden />} label={t('scopeFood')} meta={data && t('openCount', { count: data.kitchensOpen })} loading={summary.isPending && !!location.city} />
+          <Scope to="/services" icon={<Wrench size={18} aria-hidden />} label={t('scopeServices')} meta={data && t('pros', { count: data.providers })} loading={summary.isPending && !!location.city} />
+          <Scope to="/shop" icon={<Storefront size={18} aria-hidden />} label={t('scopeShop')} meta={data && t('shopsCount', { count: data.shops })} loading={summary.isPending && !!location.city} />
+          <Scope to="/food" icon={<ForkKnife size={18} aria-hidden />} label={t('scopeFood')} meta={data && t('openCount', { count: data.kitchensOpen })} loading={summary.isPending && !!location.city} />
         </nav>
       </section>
 

@@ -22,7 +22,7 @@ export const ACCOUNT_LINKS = {
 } as const;
 
 /** Signed in: the design's account menu. Values come from the account summary when the api has it. */
-export function AccountArea({ user, onSignOut }: { user: SessionUser; onSignOut: () => void }) {
+export function AccountArea({ user, onSignOut, onToggleLocale }: { user: SessionUser; onSignOut: () => void; onToggleLocale: () => void }) {
   const t = useShellT();
   const { locale } = useLocale();
   const { data: s } = useAccountSummary(true);
@@ -32,7 +32,8 @@ export function AccountArea({ user, onSignOut }: { user: SessionUser; onSignOut:
   const sections: AccountMenuSection[] = [
     { heading: t('activity'), items: [item('orders', Receipt, v.orders), item('favourites', Heart, v.favourites), item('wallet', Wallet, v.wallet)] },
     { heading: t('account'), items: [item('profile', User, name), item('addresses', MapPinLine, v.addresses), item('payments', CreditCard, v.payments), item('security', ShieldCheck, v.security)] },
-    { heading: t('preferences'), items: [item('notifications', Bell, v.quiet), item('language', Translate, v.language), item('dietary', Leaf, v.dietary), item('plus', Star, v.plus)] },
+    // redesign § 3.3: the FR/EN switch lives here and in the footer (it left the header)
+    { heading: t('preferences'), items: [item('notifications', Bell, v.quiet), { key: 'language', label: t('langSwitch'), lang: locale === 'fr' ? 'en-CA' : 'fr-CA', icon: Translate, value: v.language, onSelect: onToggleLocale }, item('dietary', Leaf, v.dietary), item('plus', Star, v.plus)] },
     { heading: '', items: [item('help', Lifebuoy, v.help), item('sell', Storefront), { key: 'signOut', label: t('signOut'), icon: SignOut, onSelect: onSignOut }] },
   ];
   const email = user.email ?? '';

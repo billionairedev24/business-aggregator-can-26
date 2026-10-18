@@ -2,6 +2,7 @@ import { defineConfig, loadEnv, type Plugin, type ProxyOptions } from 'vite';
 import react from '@vitejs/plugin-react';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import { legalPages } from '@northline/legal/vite';
+import { brandHtml } from '@northline/tokens/vite';
 
 /**
  * Local "dev auth": when NL_DEV_USER is set (a seeded identity.users id), /api calls go straight to the api with
@@ -70,7 +71,7 @@ export default defineConfig(({ mode }) => {
       // as the console's (engineering follow-ups): lazy route chunks were transformed inside the tests' waits
       target: 'react', autoCodeSplitting: !process.env.VITEST,
       codeSplittingOptions: { defaultBehavior: [['loader', 'component'], ['pendingComponent'], ['errorComponent'], ['notFoundComponent']] },
-    }), react(), devAuth(env), legalPages(), preloadLanding()],
+    }), react(), devAuth(env), legalPages(), brandHtml(), preloadLanding()],
     server: {
       port: 3100,
       proxy,

@@ -49,7 +49,7 @@ export function AgeCheck({ age, onChanged, returnTo = 'web' }: { age: CheckoutAg
   const done = age.state === 'verified';
   return (
     <section className="cart-section cart-age" aria-labelledby="cart-age">
-      <h2 id="cart-age" className="cart-h2"><IdentificationCard weight="duotone" aria-hidden="true" /> {done ? t('titleDone') : t('title')}</h2>
+      <h2 id="cart-age" className="cart-h2"><IdentificationCard aria-hidden="true" /> {done ? t('titleDone') : t('title')}</h2>
       {done ? (
         <p className="cart-muted">{age.minimumAge > 0 ? t('verified', { age: age.minimumAge }) : t('verifiedNoAge')}</p>
       ) : (
