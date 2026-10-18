@@ -33,7 +33,7 @@ export const useOnboardingT = defineMessages({
     pilotKicker: 'Pilot invite', pilotInvalid: 'This invite link isn’t valid. Ask {brand} for a new one.',
     pilotTitle: 'You’re joining the {brand} pilot in {city}.', pilotBody: '{brand} invited {name}. Your business type and province are set from the invite; the business stays hidden from customers until the market opens.',
     pilot_expired: 'This pilot invite has expired. Ask {brand} for a new link.', pilot_accepted: 'This pilot invite was already used.', pilot_revoked: 'This pilot invite was withdrawn. Ask {brand} for a new link.', pilot_pending: '',
-    acctCta: 'Continue as {name} → business details', acctHint_kitchen: 'Next: business, then the full AHS food checklist.', acctHint: 'Next: business details, then verification.',
+    acctCta: 'Continue as {name} → business details', acctHint_kitchen: 'Next: business and categories, then the full AHS food checklist.', acctHint: 'Next: business details and categories, then verification.',
     // business step
     bizTitle: 'Tell us about the business.', bizIntro: 'Legal details go to Stripe for KYC; the public bits become your storefront. Categories decide which licences we check.',
     nameLabel_provider: 'Business name (shown to customers)', nameLabel_seller: 'Store name (shown to customers)', nameLabel_both: 'Business name (shown to customers)', nameLabel_kitchen: 'Kitchen / restaurant name (shown to customers)',
@@ -215,7 +215,7 @@ export const useOnboardingT = defineMessages({
     pilotKicker: 'Invitation pilote', pilotInvalid: "Ce lien d'invitation n'est pas valide. Demandez-en un nouveau à {brand}.",
     pilotTitle: 'Vous rejoignez le projet pilote de {brand} à {city}.', pilotBody: "{brand} a invité {name}. Le type d'entreprise et la province viennent de l'invitation; l'entreprise reste cachée aux clients jusqu'à l'ouverture du marché.",
     pilot_expired: "Cette invitation pilote a expiré. Demandez un nouveau lien à {brand}.", pilot_accepted: 'Cette invitation pilote a déjà été utilisée.', pilot_revoked: 'Cette invitation pilote a été retirée. Demandez un nouveau lien à {brand}.', pilot_pending: '',
-    acctCta: "Continuer en tant que {name} → détails de l'entreprise", acctHint_kitchen: "Ensuite : l'entreprise, puis la liste alimentaire AHS complète.", acctHint: "Ensuite : les détails de l'entreprise, puis la vérification.",
+    acctCta: "Continuer en tant que {name} → détails de l'entreprise", acctHint_kitchen: "Ensuite : l'entreprise et les catégories, puis la liste alimentaire AHS complète.", acctHint: "Ensuite : les détails de l'entreprise et les catégories, puis la vérification.",
     bizTitle: "Parlez-nous de l'entreprise.", bizIntro: 'Les renseignements juridiques vont à Stripe pour le KYC; les éléments publics deviennent votre vitrine. Les catégories déterminent les permis que nous vérifions.',
     nameLabel_provider: "Nom de l'entreprise (visible par les clients)", nameLabel_seller: 'Nom de la boutique (visible par les clients)', nameLabel_both: "Nom de l'entreprise (visible par les clients)", nameLabel_kitchen: 'Nom de la cuisine / du restaurant (visible par les clients)',
     namePh_provider: 'p. ex. Prairie Wrench', namePh_seller: 'p. ex. Glenmore Bakery', namePh_both: 'p. ex. Prairie Wrench', namePh_kitchen: 'p. ex. Pho Dau Bo',
