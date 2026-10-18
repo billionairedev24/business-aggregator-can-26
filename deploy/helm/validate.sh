@@ -52,6 +52,13 @@ for cloud in aws gcp azure; do
   check "prod × $cloud, wildcard DNS-01 + custom domain" -f "$CHART/values-prod.yaml" -f "$CHART/values-$cloud.yaml" -f "test-values/identities-$cloud.yaml" -f test-values/edge-wildcard.yaml
 done
 check "staging × aws, Ingress + cert-manager" -f "$CHART/values-staging.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/edge-ingress.yaml --set edge.domainReconciler.enabled=false
+# The search read model on Meilisearch (the production dry run's hosted instance): the key reaches the api, the worker and
+# the search-indices Job.
+check "prod × aws, search on Meilisearch" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/search-meilisearch.yaml
+if helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml \
+    -f test-values/search-meilisearch.yaml --show-only templates/search-indices-job.yaml \
+    | grep -q 'secretKey: MEILISEARCH_API_KEY'; then echo "ok   search-indices Job maps MEILISEARCH_API_KEY"
+else echo "FAIL search-indices Job without MEILISEARCH_API_KEY"; failed=1; fi
 check "defaults" 
 # S-111: the Collector with any OTLP backend (Grafana Cloud) instead of the cloud's own exporters.
 check "prod × aws, Collector → OTLP backend" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/observability-otlp.yaml
