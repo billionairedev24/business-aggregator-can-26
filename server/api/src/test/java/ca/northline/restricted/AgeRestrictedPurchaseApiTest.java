@@ -178,7 +178,7 @@ class AgeRestrictedPurchaseApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.status.state").value("pending")));
         String url = JsonPath.read(started, "$.url");
         assertThat(fakeIdentity.finish(url.substring(url.lastIndexOf('/') + 1), outcome))
-                .contains("http://localhost:3000/cart?age=done");
+                .contains("http://localhost:3000/checkout?age=done");
     }
 
     String placeWine(String customer) throws Exception {
