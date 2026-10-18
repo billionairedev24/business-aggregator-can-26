@@ -6,7 +6,7 @@ resource "google_dns_managed_zone" "this" {
   dns_name      = "${var.zone_name}."
   description   = "${var.context.name} (Terraform)"
   visibility    = "public"
-  force_destroy = var.context.environment == "dev"
+  force_destroy = contains(["dev", "dryrun"], var.context.environment)
   labels        = var.context.tags
 
   dnssec_config {

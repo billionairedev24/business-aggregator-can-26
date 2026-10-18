@@ -1,4 +1,4 @@
-# GKE Standard: regional (staging/prod) or zonal (dev) cluster with private nodes, Workload Identity, Dataplane V2,
+# GKE Standard: regional (staging/prod) or zonal (dev, dryrun) cluster with private nodes, Workload Identity, Dataplane V2,
 # application-layer secrets encryption with Cloud KMS, one node pool per entry, and a Google service account per
 # workload identity bound to its Kubernetes service account.
 
@@ -8,8 +8,8 @@ data "google_project" "this" {
 
 locals {
   project = var.context.project_id
-  # dev: one zone to save cost; otherwise the whole region.
-  location      = var.context.environment == "dev" ? "${var.context.region}-a" : var.context.region
+  # dev and dryrun: one zone to save cost (context.zone, else the region's "-a" zone); otherwise the whole region.
+  location      = contains(["dev", "dryrun"], var.context.environment) ? coalesce(var.context.zone, "${var.context.region}-a") : var.context.region
   workload_pool = "${local.project}.svc.id.goog"
 }
 

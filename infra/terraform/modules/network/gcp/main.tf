@@ -39,7 +39,7 @@ resource "google_compute_subnetwork" "cluster" {
 
   log_config {
     aggregation_interval = "INTERVAL_10_MIN"
-    flow_sampling        = var.context.environment == "dev" ? 0.1 : 0.5
+    flow_sampling        = contains(["dev", "dryrun"], var.context.environment) ? 0.1 : 0.5
     metadata             = "INCLUDE_ALL_METADATA"
   }
 }
