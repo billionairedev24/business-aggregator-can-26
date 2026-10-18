@@ -1,0 +1,96 @@
+import type { ReactNode } from 'react';
+import { ArrowRight, type Icon } from '@phosphor-icons/react';
+import clsx from 'clsx';
+import './BackOffice.css';
+
+/*
+ * Back-office building blocks of the redesign (docs/design/redesign-spec.md § 1.3, AfroTransact BO:263–280, BO:811,
+ * PH:53). They live in the Studio until the consumer agent's @northline/ui work settles; each is shaped so it can move
+ * to @northline/ui as is (no Studio imports, semantic tokens only).
+ */
+
+export type Trend = 'up' | 'down' | 'flat';
+export interface KpiItem {
+  key: string;
+  label: ReactNode;
+  value: ReactNode;
+  /** The xs line under the value ("+12% vs Sep"); `trend` colours it green / red. */
+  delta?: ReactNode;
+  trend?: Trend;
+  /** Makes the card a button that opens the screen behind the figure (PH:55). */
+  onClick?: () => void;
+}
+
+/** KPI strip (BO:266): `repeat(auto-fill, minmax(190px, 1fr))`, gap 12; bordered `md` cards — label, 3xl value, delta. */
+export function KpiStrip({ items, label }: { items: readonly KpiItem[]; label: string }) {
+  return (
+    <ul className="bo-kpis" aria-label={label}>
+      {items.map(k => {
+        const body = <>
+          <span className="bo-kpi-label">{k.label}</span>
+          <span className="bo-kpi-value">{k.value}</span>
+          {k.delta ? <span className="bo-kpi-delta" data-trend={k.trend ?? 'flat'}>{k.delta}</span> : null}
+        </>;
+        return <li key={k.key}>{k.onClick ? <button type="button" className="bo-kpi" onClick={k.onClick}>{body}</button> : <div className="bo-kpi">{body}</div>}</li>;
+      })}
+    </ul>
+  );
+}
+
+/** A chart or list in a bordered card with its `md` title (DashCharts `Card`). */
+export function ChartCard({ title, id, actions, children, className }: { title: ReactNode; id: string; actions?: ReactNode; children: ReactNode; className?: string }) {
+  return (
+    <section className={clsx('bo-card', className)} aria-labelledby={id}>
+      <div className="bo-card-head"><h2 className="bo-card-title" id={id}>{title}</h2>{actions}</div>
+      {children}
+    </section>
+  );
+}
+
+export interface TodoItem { key: string; icon: Icon; text: ReactNode; meta?: ReactNode; onClick: () => void }
+/** A "To do" card (BO:273): bold title, then rows of icon · text · count → each opens its screen. */
+export function TodoCard({ title, id, items, empty }: { title: ReactNode; id: string; items: readonly TodoItem[]; empty: ReactNode }) {
+  return (
+    <section className="bo-card" aria-labelledby={id}>
+      <h2 className="bo-card-title" id={id}>{title}</h2>
+      {items.length === 0 ? <p className="bo-muted">{empty}</p> : (
+        <ul className="bo-todo">
+          {items.map(({ key, icon: I, text, meta, onClick }) => (
+            <li key={key}>
+              <button type="button" className="bo-todo-row" onClick={onClick}>
+                <I size={20} aria-hidden className="bo-todo-icon" />
+                <span className="bo-todo-text">{text}</span>
+                {meta ? <span className="bo-todo-meta">{meta}</span> : null}
+                <ArrowRight size={16} aria-hidden className="bo-todo-arrow" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** A titled block inside the right sheet (BO:827): `md` bold title, then its content. */
+export function SheetSection({ title, children }: { title: ReactNode; children: ReactNode }) {
+  return <section className="bo-sheet-section"><h3 className="bo-sheet-h3">{title}</h3>{children}</section>;
+}
+
+/** Facts as a two-column definition list (BO:830): `minmax(120px, 38%) | 1fr`, bordered, `sm` text. */
+export function FactList({ rows }: { rows: readonly (readonly [ReactNode, ReactNode] | null | false | undefined)[] }) {
+  return (
+    <dl className="bo-facts">
+      {rows.filter((r): r is readonly [ReactNode, ReactNode] => !!r).map(([k, v], i) => <div key={i} className="bo-fact"><dt>{k}</dt><dd>{v}</dd></div>)}
+    </dl>
+  );
+}
+
+/** The back-office page head (PH:41): H1 2xl + a muted sub line, actions on the right. */
+export function BoHeader({ title, sub, actions }: { title: ReactNode; sub?: ReactNode; actions?: ReactNode }) {
+  return (
+    <div className="bo-head">
+      <div className="bo-head-text"><h1 className="bo-title">{title}</h1>{sub ? <p className="bo-sub">{sub}</p> : null}</div>
+      {actions ? <div className="bo-head-actions">{actions}</div> : null}
+    </div>
+  );
+}
