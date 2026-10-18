@@ -39,7 +39,8 @@ public final class WorkerContainers {
 
     @SuppressWarnings("resource") // stopped by Testcontainers' reaper with the JVM
     public static final org.testcontainers.containers.GenericContainer<?> MEILI =
-            new org.testcontainers.containers.GenericContainer<>("getmeili/meilisearch:v1.28.0")
+            new org.testcontainers.containers.GenericContainer<>(java.util.Objects.requireNonNullElse(
+                            System.getenv("MEILISEARCH_TEST_IMAGE"), "getmeili/meilisearch:v1.28.0"))
                     .withExposedPorts(7700)
                     .withEnv("MEILI_MASTER_KEY", MEILI_KEY)
                     .withEnv("MEILI_NO_ANALYTICS", "true")

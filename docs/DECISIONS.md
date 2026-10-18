@@ -8472,5 +8472,14 @@ default and behaves exactly as before. Runbook: [search.md § 11](runbooks/searc
 - **Schema additions:** none (no migration).
 - **Not done:** Terraform for a Meilisearch instance or its secret; a Meilisearch health indicator (Elasticsearch's is
   turned off, readiness never used it); Meilisearch's own metrics in the console health.
-- **Never run against the real service:** a hosted Meilisearch (Layerbase) — its TLS, API keys and limits (payload
-  size, task queue) — and the chart's Jobs against it. Only `getmeili/meilisearch:v1.28.0` in Docker.
+- **GCP dry run (merged meanwhile, same variable names).** `values-dryrun.yaml` now runs the search-indices Job (it
+  creates the Meilisearch indexes; it was off while the Job only drove Elasticsearch). Every Meilisearch test also
+  passes against the in-cluster image the data chart pins (`getmeili/meilisearch:v1.15.2`, `MEILISEARCH_TEST_IMAGE`);
+  the features used (localized attributes, search-time `distinct`, `documents/fetch` filters, facet sort by count,
+  `swap-indexes`) are all there by 1.15.
+- **Throughput.** The worker waits for every write, so the reindex backfill writes one merchant at a time and waits
+  for Meilisearch each time (Elasticsearch's bulk returns when indexed); fine for the dry run's size, to measure before
+  a large catalogue.
+- **Never run against the real service:** a hosted Meilisearch (Layerbase) or the dry run's in-cluster pod — TLS, API
+  keys and limits (payload size, task queue) — and the chart's Jobs against them. Only `getmeili/meilisearch:v1.28.0`
+  and `v1.15.2` in Docker.

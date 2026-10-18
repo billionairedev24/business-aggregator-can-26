@@ -23,7 +23,9 @@ final class MeilisearchDocs {
     static final String MASTER_KEY = "test-master-key-obviously-fake-000";
 
     @SuppressWarnings("resource") // stopped by Testcontainers' reaper with the JVM
-    static final GenericContainer<?> MEILI = new GenericContainer<>("getmeili/meilisearch:v1.28.0")
+    static final GenericContainer<?> MEILI = new GenericContainer<>(java.util.Objects.requireNonNullElse(
+                    System.getenv("MEILISEARCH_TEST_IMAGE"),
+                    "getmeili/meilisearch:v1.28.0")) // another version: the env var
             .withExposedPorts(7700)
             .withEnv("MEILI_MASTER_KEY", MASTER_KEY)
             .withEnv("MEILI_NO_ANALYTICS", "true")

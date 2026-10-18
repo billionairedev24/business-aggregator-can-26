@@ -6,7 +6,10 @@ import org.testcontainers.containers.wait.strategy.Wait;
 /** One Meilisearch (the compose image, a master key) per test JVM, for the tests of the {@code meilisearch} provider. */
 final class MeilisearchTestContainer {
 
-    static final String IMAGE = "getmeili/meilisearch:v1.28.0";
+    /** The compose image; {@code MEILISEARCH_TEST_IMAGE} runs the tests against another version (a hosted one's). */
+    static final String IMAGE = java.util.Objects.requireNonNullElse(
+            System.getenv("MEILISEARCH_TEST_IMAGE"), "getmeili/meilisearch:v1.28.0");
+
     static final String MASTER_KEY = "test-master-key-obviously-fake-000";
 
     @SuppressWarnings("resource") // stopped by Testcontainers' reaper with the JVM

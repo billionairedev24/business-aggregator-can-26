@@ -219,10 +219,10 @@ check "prod × aws + search reindex Job (S-71)" -f "$CHART/values-prod.yaml" -f 
 # (every data service in the cluster), and the in-cluster data services chart (deploy/helm/northline-data).
 check "dryrun × gcp" -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml
 out=$(helm template northline "$CHART" --namespace northline-dryrun -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml)
-if grep -q 'SPRING_PROFILES_ACTIVE: "dev"' <<<"$out" && ! grep -q 'redis-ca' <<<"$out" && ! grep -q 'SearchIndicesCommand' <<<"$out" && ! grep -q 'otel-collector' <<<"$out" \
+if grep -q 'SPRING_PROFILES_ACTIVE: "dev"' <<<"$out" && ! grep -q 'redis-ca' <<<"$out" && grep -q 'SearchIndicesCommand' <<<"$out" && ! grep -q 'otel-collector' <<<"$out" \
     && grep -q 'secretKey: MEILISEARCH_API_KEY' <<<"$out" && grep -q 'KAFKA_REPLICATION_FACTOR: "1"' <<<"$out" \
     && ! grep -qE '^kind: Secret$' <<<"$out"; then
-  echo "ok   dryrun × gcp: dev profile, no Memorystore CA, no Elasticsearch Job, no Collector, Meilisearch key mapped, topics RF 1, no Secret"
+  echo "ok   dryrun × gcp: dev profile, no Memorystore CA, search-indices Job on Meilisearch, no Collector, Meilisearch key mapped, topics RF 1, no Secret"
 else echo "FAIL dryrun × gcp render"; failed=1; fi
 check "dryrun × gcp + Collector (flag)" -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml \
   --set observability.collector.enabled=true
