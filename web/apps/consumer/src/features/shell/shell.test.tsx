@@ -21,13 +21,23 @@ describe('consumer header', () => {
     await expectNoAxeViolations(document.body); // S-109
     expect(within(header).getByRole('link', { name: `${brand.name} — home` })).toHaveAttribute('href', '/');
     const nav = within(header).getByRole('navigation', { name: 'Main' });
-    expect(within(nav).getAllByRole('link').map(a => a.textContent)).toEqual(['Services', 'Shop', 'Food']);
-    expect(within(nav).getAllByRole('link').map(a => a.getAttribute('href'))).toEqual(['/services', '/shop', '/food']);
+    // redesign § 3.7: Food as its own vertical is hidden for the demo (VITE_NL_FULL_NAV brings it back)
+    expect(within(nav).getAllByRole('link').map(a => a.textContent)).toEqual(['Services', 'Shop']);
+    expect(within(nav).getAllByRole('link').map(a => a.getAttribute('href'))).toEqual(['/services', '/shop']);
     // redesign § 3.3: search is always in the header; FR/EN moved to the footer and the account menu
     expect(within(header).getByRole('search')).toBeInTheDocument();
     expect(within(header).queryByRole('button', { name: /language|Français/ })).toBeNull();
     expect(within(header).getByRole('button', { name: 'Account menu' })).toBeInTheDocument();
     expect(within(header).getByRole('link', { name: 'Cart, empty' })).toHaveAttribute('href', '/cart');
+  });
+
+  it('brings Food back into the department bar with the full navigation', async () => {
+    vi.stubEnv('VITE_NL_FULL_NAV', '1');
+    mockFetch(guest);
+    renderApp('/');
+    const nav = within(await screen.findByRole('banner')).getByRole('navigation', { name: 'Main' });
+    expect(within(nav).getAllByRole('link').map(a => a.getAttribute('href'))).toEqual(['/services', '/shop', '/food']);
+    vi.unstubAllEnvs();
   });
 
   it('never puts Orders in the top navigation', async () => {

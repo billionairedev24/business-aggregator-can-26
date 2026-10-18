@@ -13,7 +13,8 @@ import { fileURLToPath } from 'node:url';
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const roots = ['packages/ui/src', 'apps/consumer/src/features/shell',
   // redesign phase 1: the consumer demo path (§ 4)
-  'apps/consumer/src/features/home', 'apps/consumer/src/features/search',
+  'apps/consumer/src/features/home', 'apps/consumer/src/features/search', 'apps/consumer/src/features/product',
+  'apps/consumer/src/features/cart', 'apps/consumer/src/features/checkout',
   'apps/studio/src/features/shell', 'apps/console/src/features/shell', 'apps/studio/src/studio.css', 'apps/console/src/console.css'];
 const LEGACY = /var\(\s*--(?:color-(?:accent(?:-2)?(?:-\d{3})?|on-accent|highlight(?:-\d{3})?|on-highlight|process-yellow|bg|surface-2|divider|neutral-\d{3}|ink)|font-body|font-heading-weight)\s*[,)]/g;
 const skip = [/\.test\.tsx?$/, /(^|\/)test\//];

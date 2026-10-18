@@ -56,14 +56,14 @@ export const useShellT = defineMessages({
 export const SCREEN_NAMES: { en: Record<ScreenKey, string>; fr: Record<ScreenKey, string> } = {
   en: {
     home: 'Home', location: 'Where should we bring things?', search: 'Search', shop: 'Shop', category: 'Department',
-    product: 'Product', cart: 'Cart', confirmed: 'Order confirmed', food: 'Food', restaurant: 'Restaurant',
+    product: 'Product', cart: 'Cart', checkout: 'Secure checkout', checkoutComplete: 'Order placed', confirmed: 'Your order', food: 'Food', restaurant: 'Restaurant',
     foodCheckout: 'Checkout', foodTrack: 'Track order', services: 'Services', svcCategory: 'Service category',
     providers: 'Providers', provider: 'Provider', book: 'Book a service', booking: 'Your booking', quote: 'Quote', quoteRequest: 'Request quotes', quoteCompare: 'Compare quotes', orders: 'Orders & bookings',
     account: 'Account', problem: 'Report a problem', signIn: 'Sign in', register: 'Create account', sell: 'Sell or offer a service', help: 'Help',
   },
   fr: {
     home: 'Accueil', location: 'Où devons-nous livrer ?', search: 'Rechercher', shop: 'Boutique', category: 'Rayon',
-    product: 'Produit', cart: 'Panier', confirmed: 'Commande confirmée', food: 'Restaurants', restaurant: 'Restaurant',
+    product: 'Produit', cart: 'Panier', checkout: 'Paiement sécurisé', checkoutComplete: 'Commande passée', confirmed: 'Votre commande', food: 'Restaurants', restaurant: 'Restaurant',
     foodCheckout: 'Paiement', foodTrack: 'Suivre la commande', services: 'Services', svcCategory: 'Catégorie de service',
     providers: 'Prestataires', provider: 'Prestataire', book: 'Réserver un service', booking: 'Votre réservation', quote: 'Devis', quoteRequest: 'Demander des devis', quoteCompare: 'Comparer les devis', orders: 'Commandes et réservations',
     account: 'Compte', problem: 'Signaler un problème', signIn: 'Se connecter', register: 'Créer un compte', sell: 'Vendre ou offrir un service', help: 'Aide',

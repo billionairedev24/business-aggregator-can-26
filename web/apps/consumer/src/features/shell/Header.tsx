@@ -1,6 +1,6 @@
 import { useRouterState } from '@tanstack/react-router';
 import { SignIn, Translate, UserPlus } from '@phosphor-icons/react';
-import { AccountMenu, LocationPill, SiteHeader, Skeleton, useLocale } from '@northline/ui';
+import { AccountMenu, LocationPill, SiteHeader, Skeleton, fullNavEnabled, useLocale } from '@northline/ui';
 import { useCartCount } from '../cart/api';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { SiteSearch } from '../search/SiteSearch';
@@ -29,7 +29,8 @@ export function Header() {
   const searched = useRouterState({ select: st => (st.location.pathname === '/search' ? (st.location.search as { q?: unknown }).q : undefined) });
   const section = screen ? SCREENS[screen].section : undefined;
   const auth = !!(screen && SCREENS[screen].auth);
-  const links = (['services', 'shop', 'food'] as const).map(key => ({ key, label: t(key), href: `/${key}`, current: section === key }));
+  // redesign § 3.7: Food as its own vertical is hidden for the demo (its routes stay)
+  const links = (fullNavEnabled() ? ['services', 'shop', 'food'] as const : ['services', 'shop'] as const).map(key => ({ key, label: t(key), href: `/${key}`, current: section === key }));
   const toggleLocale = () => setLocale(locale === 'fr' ? 'en' : 'fr');
   const language = { key: 'language', label: t('langSwitch'), lang: locale === 'fr' ? 'en-CA' : 'fr-CA', icon: Translate, onSelect: toggleLocale };
 
