@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderConsole, staffApi, type Call } from '../../test/render';
+import { renderConsole, screenReady, staffApi, type Call } from '../../test/render';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const NOW = new Date('2026-09-08T18:00:00Z');
@@ -33,17 +33,25 @@ const user = () => userEvent.setup({ delay: null });
 describe('disputes & refunds (S-80, design 03 disputes)', () => {
   afterEach(() => vi.useRealTimers());
 
-  it('shows the design copy, the cases and both parties with the evidence', async () => {
+  it('shows the desk: KPIs, the cases table, and a case in the sheet with both parties and the evidence', async () => {
     vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
     api(['trust_safety']);
-    renderConsole('/disputes');
-    expect(await screen.findByRole('heading', { level: 1, name: '3 disputes for an agent · 61 refund requests in the seller window · 214 closed this week' })).toBeTruthy();
+    const { router } = renderConsole('/disputes');
+    expect((await screenReady()).textContent).toBe('Disputes & refunds');
     expect(screen.getByText(/Every customer refund request opens a case\. The seller has 24 h to accept or respond/)).toBeTruthy();
-    const list = screen.getByRole('list', { name: 'Cases' });
-    expect(within(list).getByText('DS-1188')).toBeTruthy();
-    expect(within(list).getByText('$160')).toBeTruthy();
-    expect(within(list).getByText('opened 2.0 d ago')).toBeTruthy();
-    expect(screen.getByRole('heading', { level: 2, name: 'DS-1188 · Pre-purchase inspection · missed leak' })).toBeTruthy();
+    const kpis = within(screen.getByRole('list', { name: 'The desk at a glance' }));
+    expect(kpis.getByText('For an agent').nextElementSibling?.textContent).toBe('3');
+    expect(kpis.getByText('In the seller’s 24 h').nextElementSibling?.textContent).toBe('61');
+    expect(kpis.getByText('Closed this week').nextElementSibling?.textContent).toBe('214');
+    const ds = screen.getByText('DS-1188').closest('tr, .nl-dt-card') as HTMLElement;
+    expect(within(ds).getByText('$160.00')).toBeTruthy();
+    expect(within(ds).getByText('opened 2.0 d ago')).toBeTruthy();
+    expect(within(ds).getByText('For an agent')).toBeTruthy();
+    expect(within(screen.getByText('DS-1190').closest('tr, .nl-dt-card') as HTMLElement).getByText('Waiting for a co-sign')).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull(); // nothing opens until a case is picked
+    await userEvent.setup({ delay: null, advanceTimers: () => {} }).click(within(ds).getByRole('button', { name: /Open/ }));
+    expect(router.state.location.search).toEqual({ case: 'dispute:D1' });
+    expect(await screen.findByRole('heading', { level: 2, name: 'DS-1188 · Pre-purchase inspection · missed leak' })).toBeTruthy();
     expect(screen.getByText('Amara Osei → Prairie Wrench · $160.00 in escrow · opened 2.0 d ago')).toBeTruthy();
     expect(await screen.findByText('Quality 91')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
@@ -57,8 +65,8 @@ describe('disputes & refunds (S-80, design 03 disputes)', () => {
 
   it('decides with the chosen outcome, amount and note, and the role header', async () => {
     const calls = api(['trust_safety']);
-    renderConsole('/disputes');
-    await screen.findByRole('heading', { level: 2 });
+    renderConsole('/disputes?case=dispute:D1');
+    await screen.findByRole('heading', { level: 2, name: /DS-1188/ });
     await user().click(screen.getByRole('button', { name: 'Goodwill credit (platform pays)' }));
     const amount = screen.getByRole('textbox', { name: 'Amount to the customer' });
     await user().clear(amount);
@@ -74,10 +82,10 @@ describe('disputes & refunds (S-80, design 03 disputes)', () => {
 
   it('is view only for a role without decide, and shows the api refusal', async () => {
     api(['support']);
-    renderConsole('/disputes');
-    await screen.findByRole('heading', { level: 2 });
+    renderConsole('/disputes?case=dispute:D1');
+    await screen.findByRole('heading', { level: 2, name: /DS-1188/ });
     expect((screen.getByRole('button', { name: 'Decide: Partial (50%)' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText('View only · Support')).toBeTruthy();
+    expect(screen.getAllByText('View only · Support').length).toBeGreaterThan(0);
   });
 
   it('a finance member co-signs a decision above $500', async () => {
@@ -110,8 +118,9 @@ describe('disputes & refunds (S-80, design 03 disputes)', () => {
 
   it('speaks French', async () => {
     api(['admin']);
-    renderConsole('/disputes', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: /^3 litiges pour un agent · 61 demandes de remboursement dans le délai du vendeur · 214 fermés cette semaine$/ })).toBeTruthy();
+    renderConsole('/disputes?case=dispute:D1', { locale: 'fr' });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Litiges et remboursements' })).toBeTruthy();
+    expect(await screen.findByText('Pour un agent', { selector: '.bo-kpi-label' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Libérer au vendeur' })).toBeTruthy();
   });
 });
