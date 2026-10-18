@@ -3,7 +3,8 @@
  * scale.json). Web components style with `var(--color-*)` from dist/tokens.css; these values are for code that needs
  * them as data: the product's name in copy (i18n `{brand}`), the Logo, page titles, the native apps' StyleSheets.
  */
-import theme from '../generated/theme.json';
+// the import attribute lets Node load this file natively too (the docs site's scripts strip types and run it)
+import theme from '../generated/theme.json' with { type: 'json' };
 
 export type Theme = typeof theme;
 export type SemanticColour = keyof Theme['color'];

@@ -38,11 +38,9 @@
 .nl-option:disabled { opacity: .5; cursor: not-allowed; }
 .nl-option-title { display: block; font-weight: var(--weight-bold); }
 .nl-option-desc { display: block; font-size: var(--text-xs); color: var(--color-text-muted); }
-.nl-chip { position: relative; font: inherit; font-size: var(--text-sm); font-weight: var(--weight-semibold); padding: 0 var(--space-3); min-height: var(--size-control-sm); min-width: var(--size-touch); justify-content: center; border-radius: var(--radius-pill); cursor: pointer; border: 1px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-text); display: inline-flex; align-items: center; gap: 6px; }
-.nl-chip::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: max(100%, var(--size-touch)); transform: translateY(-50%); }
+.nl-chip { position: relative; font: inherit; font-size: var(--text-sm); font-weight: var(--weight-semibold); padding: 0 var(--space-3); min-height: var(--size-touch); min-width: var(--size-touch); justify-content: center; border-radius: var(--radius-pill); cursor: pointer; border: 1px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-text); display: inline-flex; align-items: center; gap: 6px; }
 .nl-chip[aria-pressed='true'], .nl-chip[aria-selected='true'] { border-color: var(--color-action-primary); background: var(--color-action-primary); color: var(--color-action-primary-text); }
 .nl-chip:hover:not([aria-pressed='true']):not([aria-selected='true']) { background: var(--color-surface-hover); }
-/* rows of chips keep 12px between rows so the 44 px hit areas don't overlap */
 .nl-chips { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-2); }
 
 /* ── underline tabs (auth) ── */

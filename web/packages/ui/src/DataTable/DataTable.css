@@ -103,12 +103,12 @@
 .tag.nl-dt-tag-wrap { white-space: normal; max-width: 100%; } /* S-109: long French tags wrapped inside cards at 320 px */
 
 .nl-dt-row-acts { display: flex; gap: 2px; justify-content: flex-end; flex-wrap: wrap; }
-.nl-dt-act { min-height: var(--size-control-sm); min-width: var(--size-touch); padding: 0 var(--space-2); font-size: var(--text-sm); white-space: nowrap; overflow-wrap: normal; }
+.nl-dt-act { min-height: var(--size-touch); min-width: var(--size-touch); padding: 0 var(--space-2); font-size: var(--text-sm); white-space: nowrap; overflow-wrap: normal; }
 .nl-dt-act.is-labelled { padding: 4px 10px; }
 .nl-dt-act.is-danger { color: var(--color-danger); }
 .nl-dt-act.is-danger:hover { background: var(--color-danger-bg); color: var(--color-danger); }
 .nl-dt-row-acts.is-card { gap: 4px; }
-.nl-dt-row-acts.is-card .nl-dt-act { min-height: var(--size-control-sm); padding: 0 10px; }
+.nl-dt-row-acts.is-card .nl-dt-act { min-height: var(--size-touch); padding: 0 10px; }
 
 /* ── cards (< 600px) ── */
 .nl-dt-cardmode { display: flex; flex-direction: column; gap: 8px; }

@@ -13,7 +13,7 @@ body { text-wrap: pretty; }
 .nl-footer-cols { max-width: var(--page-max); margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--space-6) var(--space-8); }
 .nl-footer-head { font-family: var(--font-sans); font-size: var(--text-md); font-weight: var(--weight-bold); letter-spacing: 0; text-transform: none; color: var(--color-footer-text); margin: 0 0 var(--space-2); }
 .nl-footer-links { display: flex; flex-direction: column; align-items: flex-start; }
-.nl-footer a, .nl-footer-lang { display: inline-flex; align-items: center; min-height: var(--size-touch); color: var(--color-footer-muted); text-decoration: none; }
+.nl-footer a, .nl-footer-lang { display: inline-flex; align-items: center; min-height: var(--size-touch); min-width: var(--size-touch); color: var(--color-footer-muted); text-decoration: none; }
 .nl-footer a:hover, .nl-footer-lang:hover { color: var(--color-footer-text); text-decoration: underline; }
 .nl-footer :focus-visible { outline-color: var(--color-focus-on-dark); }
 .nl-footer-lang { font: inherit; background: none; border: 1px solid var(--color-footer-muted); border-radius: var(--radius-pill); padding: 0 var(--space-4); cursor: pointer; color: var(--color-footer-text); }

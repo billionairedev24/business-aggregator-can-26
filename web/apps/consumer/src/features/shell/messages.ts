@@ -11,7 +11,7 @@ export const useShellT = defineMessages({
     skip: 'Skip to content',
     privacy: 'Privacy', terms: 'Terms', helpLink: 'Help', langSwitch: 'Français',
     sell: 'Sell on {brand}', offer: 'Offer a service', kitchen: 'Run a kitchen',
-    footerShop: 'Shop and book', footerBusiness: 'For businesses', footerHelp: 'Help and policies', footerLanguage: 'Language',
+    footerBusiness: 'For businesses', footerHelp: 'Help and policies', footerLanguage: 'Language',
     // account menu
     activity: 'Activity', account: 'Account', preferences: 'Preferences',
     orders: 'Orders & bookings', favourites: 'Favourites', wallet: 'Wallet & points', profile: 'Profile',
@@ -35,7 +35,7 @@ export const useShellT = defineMessages({
     skip: 'Aller au contenu',
     privacy: 'Confidentialité', terms: 'Conditions', helpLink: 'Aide', langSwitch: 'English',
     sell: 'Vendre sur {brand}', offer: 'Offrir un service', kitchen: 'Gérer une cuisine',
-    footerShop: 'Acheter et réserver', footerBusiness: 'Pour les entreprises', footerHelp: 'Aide et politiques', footerLanguage: 'Langue',
+    footerBusiness: 'Pour les entreprises', footerHelp: 'Aide et politiques', footerLanguage: 'Langue',
     activity: 'Activité', account: 'Compte', preferences: 'Préférences',
     orders: 'Commandes et réservations', favourites: 'Favoris', wallet: 'Portefeuille et points', profile: 'Profil',
     addresses: 'Adresses et foyer', payments: 'Modes de paiement', security: 'Sécurité et connexion',
