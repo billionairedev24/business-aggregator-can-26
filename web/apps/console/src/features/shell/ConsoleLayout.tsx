@@ -10,7 +10,7 @@ import { useShellT, type ShellKey, type ShellT } from './messages';
 import { buildNav } from './navMenu';
 import { Brand } from './Brand';
 import { useActiveRole } from './roleView';
-import { SCREEN_PATH, screenFromPath, type ScreenKey } from './screens';
+import { navKey, SCREEN_PATH, screenFromPath, type ScreenKey } from './screens';
 import './shell.css';
 
 const RAIL_KEY = 'nl.console.rail';
@@ -59,12 +59,12 @@ export function ConsoleLayout({ children, denied }: { children: ReactNode; denie
         <span className="nl-console-region">{regionLine(regions, t)}</span>
       </>}
       headerEnd={<AccountMenu me={me} grant={grant} screen={screen} />}
-      pinned={pinned} groups={groups} currentKey={screen ?? ''}
+      pinned={pinned} groups={groups} currentKey={screen ? navKey(screen) : ''}
       onNavigate={i => nav({ to: i.href })}
       rail={rail} onRailChange={r => { setRail(r); try { localStorage.setItem(RAIL_KEY, r ? '1' : '0'); } catch { /* private mode */ } }}
     >
       {/* S-142: a screen that is loading or failed keeps its name as the page's h1 */}
-      <PageHeadingProvider value={allowed && screen ? t(screen as Parameters<typeof t>[0]) : undefined}>{allowed ? children : denied}</PageHeadingProvider>
+      <PageHeadingProvider value={allowed && screen ? t(navKey(screen) as Parameters<typeof t>[0]) : undefined}>{allowed ? children : denied}</PageHeadingProvider>
       {testingToolsEnabled() ? <PilotControl /> : null}
     </AppShell>
   );

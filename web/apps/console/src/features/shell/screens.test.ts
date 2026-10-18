@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { QueryClient } from '@tanstack/react-query';
 import { createRouter } from '@tanstack/react-router';
 import { routeTree } from '../../routeTree.gen';
-import { NAV_GROUPS, PINNED, SCREEN_PATH, SCREENS, screenFromPath } from './screens';
+import { NAV_GROUPS, navKey, PINNED, SCREEN_PATH, SCREENS, screenFromPath } from './screens';
 
 describe('console screens', () => {
   it('maps paths back to their screen, detail pages to their list', () => {
@@ -23,9 +23,10 @@ describe('console screens', () => {
     }
   });
 
-  it('puts every screen but profile and on-call in the sidebar once', () => {
+  it('puts every screen but profile, on-call and vetting (a tab of Applications) in the sidebar once', () => {
     const inNav = [...PINNED, ...NAV_GROUPS.flatMap(g => g.screens)];
     expect(new Set(inNav).size).toBe(inNav.length);
-    expect([...inNav, 'profile', 'oncall'].sort()).toEqual([...SCREENS].sort());
+    expect([...inNav, 'profile', 'oncall', 'vetting'].sort()).toEqual([...SCREENS].sort());
+    expect(navKey('vetting')).toBe('verify');
   });
 });

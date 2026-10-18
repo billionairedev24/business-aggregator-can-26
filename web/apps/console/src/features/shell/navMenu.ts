@@ -19,8 +19,11 @@ const GROUP_ICON: Record<NavGroupKey, Icon> = { operations: Briefcase, marketpla
 export const TESTING_SCREENS: readonly ScreenKey[] = ['pilot', 'uat', 'go_live', 'api'];
 
 export function buildNav(grant: RoleGrant | undefined, t: ShellT, testingTools = testingToolsEnabled()): { pinned: NavItem[]; groups: NavGroup[] } {
-  const item = (k: ScreenKey): NavItem => ({ key: k, label: t(k as Parameters<ShellT>[0]), icon: ICON[k] ?? Gauge, href: SCREEN_PATH[k] });
-  const visible = (keys: readonly ScreenKey[]) => keys.filter(k => opens(grant, k) && (testingTools || !TESTING_SCREENS.includes(k))).map(item);
+  // Applications (`verify`) also stands for listing vetting: shown when the role opens either, and opens the first it can
+  const href = (k: ScreenKey) => (k === 'verify' && !opens(grant, 'verify') ? SCREEN_PATH.vetting : SCREEN_PATH[k]);
+  const shows = (k: ScreenKey) => opens(grant, k) || (k === 'verify' && opens(grant, 'vetting'));
+  const item = (k: ScreenKey): NavItem => ({ key: k, label: t(k as Parameters<ShellT>[0]), icon: ICON[k] ?? Gauge, href: href(k) });
+  const visible = (keys: readonly ScreenKey[]) => keys.filter(k => shows(k) && (testingTools || !TESTING_SCREENS.includes(k))).map(item);
   return {
     pinned: visible(PINNED),
     // groups without a visible item are dropped by the shell (design: a head shows only above an item it may see)

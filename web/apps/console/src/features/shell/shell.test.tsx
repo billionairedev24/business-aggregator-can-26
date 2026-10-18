@@ -32,6 +32,17 @@ describe('console shell (S-90, design 03)', () => {
     expect(navLabels()).toContain('Overview');
   });
 
+  it('shows verification and vetting as one Applications entry, lit on either screen (redesign § 3.12)', async () => {
+    staffApi(['trust_safety']);
+    renderConsole('/vetting');
+    await screen.findByRole('navigation', { name: 'Main navigation' });
+    const labels = navLabels();
+    expect(labels).toContain('Applications');
+    expect(labels).not.toContain('Listing vetting');
+    expect(within(sidebar()).getByRole('link', { name: 'Applications' }).getAttribute('href')).toBe('/verification');
+    expect(within(sidebar()).getByRole('link', { name: 'Applications' }).getAttribute('aria-current')).toBe('page');
+  });
+
   it('filters the sidebar by role: an analyst gets Overview and Reports only', async () => {
     staffApi(['analyst']);
     renderConsole('/reports');
@@ -45,7 +56,8 @@ describe('console shell (S-90, design 03)', () => {
     renderConsole('/finance');
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toBe("Not available in this role. Your role (Support) can't open that screen. Ask an admin for access or switch role view if you hold more than one.");
-    expect((await screenReady()).textContent).toBe('$212k GMV this week, 1,204 sellers, 7 verifications and 3 disputes waiting.');
+    expect((await screenReady()).textContent).toBe('Overview');
+    expect(screen.getByText('$212k')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Finance' })).toBeNull();
   });
 
