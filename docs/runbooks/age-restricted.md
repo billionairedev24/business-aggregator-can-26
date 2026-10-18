@@ -116,7 +116,7 @@ UPDATE region.age_rules SET delivery_from = '10:00', delivery_until = '23:00' WH
   `metadata.northline_purpose=age`) on the platform account; `local` = a fake whose page picks the outcome
   (`/api/v1/dev/age-sessions/{id}`, local profile only). Staging and prod refuse `local`.
 - `GET /api/v1/me/age-verification` (the status) and `POST` `{returnTo: web | web_food | app}` → `{url, status}`. The
-  web returns to `CONSUMER_ORIGIN` + `/cart?age=done` (or `/food/checkout?age=done`), the app to
+  web returns to `CONSUMER_ORIGIN` + `/checkout?age=done` (or `/food/checkout?age=done`), the app to
   `AGE_VERIFICATION_APP_RETURN_URL`. The result arrives through the same Stripe webhook as owners' identity
   (`identity.verification_session.*`), or by reading the session on return. Five attempts, then support.
 - **Kept:** `restricted.age_verifications` — "verified over N, on date, by method" (`stripe_identity_document_selfie`
