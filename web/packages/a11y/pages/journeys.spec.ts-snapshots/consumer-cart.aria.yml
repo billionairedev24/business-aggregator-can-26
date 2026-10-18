@@ -1,0 +1,47 @@
+- main:
+  - heading "Shopping cart" [level=1]
+  - text: 4 items · 2 shops · one delivery
+  - region "Bridgeland Butcher":
+    - heading "Bridgeland Butcher" [level=2]
+    - list:
+      - listitem:
+        - link "Ribeye, AAA":
+          - /url: /products/p-I1
+        - text: /\d+ g In stock/
+        - group "Quantity of Ribeye, AAA":
+          - button "Remove Ribeye, AAA"
+          - button "One more Ribeye, AAA"
+        - button "Delete Ribeye, AAA"
+        - text: /\$\d+\.\d+/
+  - region "Glenmore Bakery":
+    - heading "Glenmore Bakery" [level=2]
+    - list:
+      - listitem:
+        - link "Country sourdough":
+          - /url: /products/p-I2
+        - text: /Sliced · \d+ g In stock/
+        - group "Quantity of Country sourdough":
+          - button "One less Country sourdough"
+          - button "One more Country sourdough"
+        - button "Delete Country sourdough"
+        - text: /\$\d+\.\d+/
+      - listitem:
+        - link "Baguette":
+          - /url: /products/p-I3
+        - text: Only 2 left
+        - group "Quantity of Baguette":
+          - button "Remove Baguette"
+          - button "One more Baguette"
+        - button "Delete Baguette"
+        - text: /\$\d+\.\d+/
+  - paragraph:
+    - text: "Subtotal (4 items):"
+    - strong: /\$\d+\.\d+/
+  - complementary "Order summary":
+    - paragraph:
+      - text: "Subtotal (4 items):"
+      - strong: /\$\d+\.\d+/
+    - paragraph: Delivery and tax are added at checkout.
+    - link "Proceed to checkout":
+      - /url: /checkout
+    - paragraph: Shops are paid after you confirm delivery; anything missing is refunded automatically. Secured by Stripe.

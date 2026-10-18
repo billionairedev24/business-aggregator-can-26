@@ -1,185 +1,174 @@
-import type { ReactNode } from 'react';
-import { Link, useRouterState } from '@tanstack/react-router';
-import { ForkKnife, Storefront, Wrench } from '@phosphor-icons/react';
-import { EmptyState, ErrorState, SiteLink, Skeleton, Tag, useFormatters, useLocale, type TagTone } from '@northline/ui';
-import { useAccountSummary } from '../account/api';
+import { useState, type ReactNode } from 'react';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import {
+  Baby, Basket, Bread, Broom, CalendarCheck, CaretLeft, CaretRight, Car, Carrot, Drop, Gift, GraduationCap, Hammer, HouseLine,
+  Knife, Martini, Pill, Scissors, Snowflake, Storefront, Truck, TShirt, Wrench, type Icon,
+} from '@phosphor-icons/react';
+import { EmptyState, ErrorState, SiteLink, Skeleton, useLocale } from '@northline/ui';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
-import { signInHref, useViewer } from '../session/api';
-import { SiteSearch } from '../search/SiteSearch';
-import { useShellT } from '../shell/messages';
-import { useHomeSummary, useUpcoming, type HomeSummary, type TrustedProvider } from './api';
-import { countOf, CUISINES, DEPARTMENTS, SERVICE_CATEGORIES, type ServiceTile, type Tile } from './catalog';
+import { marketOf, railQuery, type Place, type SearchPage } from '../search/api';
+import { ItemCard } from '../search/ItemCard';
+import { DEPARTMENTS, SERVICE_CATEGORIES, type Tile } from './catalog';
 import { useHomeT } from './messages';
 
 type T = ReturnType<typeof useHomeT>;
 
 /**
- * Home (design 06 `home`, S-46; redesign 2026-10-18 removed the time-of-day greeting, § 3.2 — the rest of this
- * screen is rebuilt in phase 1): the search-first hero ("What do you need in … today?", the search pill that
- * lands on /search?q=, Services / Shop / Food chips with the city's numbers), entry tiles for shop departments,
- * cuisines and service categories, the four promises, "Trusted near you" and "Your week". The server renders the
- * layout, names and links (the same for everyone); the numbers and week load in the browser once the
- * location and session are known.
+ * Home (redesign § 1.3 "Home", AT Shop:182–272; S-46 behaviour): a full-bleed hero carousel, a row of tiles overlapping
+ * it (services, shop departments, groceries — food is a department here, not its own vertical, § 3.7 — and jobs
+ * around the home), then rails of real listings — products and services — where the visitor is. The greeting, the
+ * "what do you need" question, the live counts, the promises, the tier tags and "Your week" are gone (§ 3.2). The
+ * server renders the hero and the tiles (the same for everyone); the rails load in the browser once the place is known.
  */
 export function HomeScreen() {
   const t = useHomeT();
-  const shell = useShellT();
-  const { user, loading: sessionLoading } = useViewer();
   const { location } = useDeliveryLocation();
-  const summary = useHomeSummary(location.city);
-  const place = location.label?.split(',')[0]?.trim();
-  const data = summary.data;
-  const empty = data && data.providers + data.shops + data.kitchensOpen === 0 && Object.keys(data.categories).length === 0;
+  const place: Place | null = location.status === 'locating' ? null
+    : { market: marketOf(location.province), lat: location.lat, lng: location.lng };
+  const { locale } = useLocale();
+  const products = useQuery({ ...railQuery('product', place ?? {}, locale), enabled: place !== null });
+  const services = useQuery({ ...railQuery('service', place ?? {}, locale), enabled: place !== null });
+  const city = location.label?.split(',')[0]?.trim() || location.city;
+  const empty = products.data?.items.length === 0 && services.data?.items.length === 0;
 
   return (
     <div className="nl-home">
-      <section className="nl-home-hero" aria-labelledby="home-hero-title">
-        <h1 id="home-hero-title" className="nl-home-title">{place ? t('heroQ', { place }) : t('heroQAnywhere')}</h1>
-        <div className="nl-home-search">
-          <SiteSearch variant="hero" placeholder={shell('search')} />
-        </div>
-        <nav className="nl-home-scopes" aria-label={t('scopes')}>
-          <Scope to="/services" icon={<Wrench size={18} aria-hidden />} label={t('scopeServices')} meta={data && t('pros', { count: data.providers })} loading={summary.isPending && !!location.city} />
-          <Scope to="/shop" icon={<Storefront size={18} aria-hidden />} label={t('scopeShop')} meta={data && t('shopsCount', { count: data.shops })} loading={summary.isPending && !!location.city} />
-          <Scope to="/food" icon={<ForkKnife size={18} aria-hidden />} label={t('scopeFood')} meta={data && t('openCount', { count: data.kitchensOpen })} loading={summary.isPending && !!location.city} />
-        </nav>
-      </section>
+      <Hero t={t} />
+      <div className="nl-page nl-home-body">
+        <ul className="nl-home-tiles" aria-label={t('tilesLabel')}>
+          <TileCard t={t} title={t('tileServices')} more={{ href: '/services' }} items={SERVICE_CATEGORIES.filter(s => ['mechanic', 'plumber', 'tutor', 'barber'].includes(s.key))} />
+          <TileCard t={t} title={t('tileShop')} more={{ href: '/shop' }} items={DEPARTMENTS.filter(d => ['clothing', 'pharmacy', 'hardware', 'gifts'].includes(d.key))} />
+          <TileCard t={t} title={t('tileGroceries')} more={{ href: '/shop/groceries' }} items={DEPARTMENTS.filter(d => ['groceries', 'bakery', 'butcher', 'produce'].includes(d.key))} />
+          <TileCard t={t} title={t('tileHome')} more={{ href: '/services' }} items={SERVICE_CATEGORIES.filter(s => ['cleaning', 'snow', 'movers', 'realestate'].includes(s.key))} />
+        </ul>
 
-      {summary.isError ? (
-        <div className="nl-home-section"><ErrorState message={t('loadError')} onRetry={() => void summary.refetch()} /></div>
-      ) : empty ? (
-        <div className="nl-home-section">
-          <EmptyState action={<Link to="/location" className="btn btn-primary">{t('changeLocation')}</Link>}>{t('emptyCity', { city: data.city })}</EmptyState>
-        </div>
-      ) : (
-        <>
-          <TileSection title={t('byDept')} all={{ to: '/shop', label: t('allShops') }}>
-            {DEPARTMENTS.map(tile => <TileLink key={tile.key} tile={tile} count={countOf(tile, data?.categories)} line={n => t('shops', { count: n })} />)}
-          </TileSection>
-          <TileSection title={t('orderFood')} all={{ to: '/food', label: t('allKitchens') }}>
-            {CUISINES.map(tile => <TileLink key={tile.key} tile={tile} count={countOf(tile, data?.cuisines)} line={n => t('openKitchens', { count: n })} />)}
-          </TileSection>
-          <TileSection title={t('bookSvc')} all={{ to: '/services', label: t('allCats') }}>
-            {SERVICE_CATEGORIES.map(tile => <TileLink key={tile.key} tile={tile} count={countOf(tile, data?.categories)} line={n => t('nearby', { count: n, kind: t(`kind_${(tile as ServiceTile).kind}`) })} />)}
-          </TileSection>
-        </>
-      )}
+        {empty ? (
+          <section className="nl-home-rail">
+            <EmptyState title={city ? t('emptyCity', { city }) : t('emptyAnywhere')} action={<SiteLink href="/location" className="btn btn-primary">{t('changeLocation')}</SiteLink>}>{t('emptyHint')}</EmptyState>
+          </section>
+        ) : (
+          <>
+            <Rail t={t} id="home-products" title={city ? t('productsNear', { city }) : t('productsAnywhere')} more={{ href: '/shop' }} query={products} loading={place === null} kind="product" />
+            <Rail t={t} id="home-services" title={city ? t('servicesNear', { city }) : t('servicesAnywhere')} more={{ href: '/services' }} query={services} loading={place === null} kind="service" />
+          </>
+        )}
 
-      <section className="nl-home-section nl-home-promises">
-        {(['t1', 't2', 't3', 't4'] as const).map(k => (
-          <div key={k}><h3>{t(k)}</h3><p>{t(`${k}b`)}</p></div>
-        ))}
-      </section>
-
-      <section className="nl-home-section nl-home-columns">
-        {!empty && !summary.isError && <Trusted t={t} summary={data} loading={!data} city={location.city} />}
-        <Week t={t} signedIn={!!user} loading={sessionLoading} />
-      </section>
+        <section className="nl-home-banner" aria-labelledby="home-sell">
+          <div>
+            <h2 id="home-sell" className="nl-home-banner-title">{t('sellTitle')}</h2>
+            <p className="nl-home-banner-text">{t('sellText')}</p>
+          </div>
+          <SiteLink href="/sell" className="btn btn-dark">{t('sellCta')}</SiteLink>
+        </section>
+      </div>
     </div>
   );
 }
 
-function Scope({ to, icon, label, meta, loading }: { to: '/services' | '/shop' | '/food'; icon: ReactNode; label: string; meta?: string; loading: boolean }) {
-  return (
-    <Link to={to} className="nl-home-scope">
-      {icon}{label}
-      {meta ? <span className="nl-home-scope-meta">{meta}</span> : loading ? <Skeleton width={48} height={12} radius={4} style={{ opacity: 0.4 }} /> : null}
-    </Link>
-  );
-}
+// ── hero carousel ────────────────────────────────────────────────────────────────────────────────────────────────
 
-function TileSection({ title, all, children }: { title: string; all: { to: '/shop' | '/food' | '/services'; label: string }; children: ReactNode }) {
+const SLIDES = [
+  { key: 'services', href: '/services', icon: CalendarCheck },
+  { key: 'shop', href: '/shop', icon: Storefront },
+  { key: 'quotes', href: '/services', icon: Hammer },
+] as const;
+
+/** A carousel the visitor moves (it never turns by itself, WCAG 2.2.2): arrows 44×88, 8px pill dots, one slide shown. */
+function Hero({ t }: { t: T }) {
+  const [i, setI] = useState(0);
+  const slide = SLIDES[i]!;
+  const go = (n: number) => setI((n + SLIDES.length) % SLIDES.length);
+  const Art = slide.icon;
   return (
-    <section className="nl-home-section">
-      <div className="nl-home-head"><h2>{title}</h2><Link to={all.to}>{all.label}</Link></div>
-      <div className="nl-home-tiles">{children}</div>
+    <section className="nl-home-hero" aria-roledescription={t('carousel')} aria-label={t('featured')}>
+      <div className="nl-home-hero-inner">
+        <button type="button" className="nl-home-hero-arrow nl-home-hero-prev" aria-label={t('prevSlide')} onClick={() => go(i - 1)}><CaretLeft size={28} aria-hidden /></button>
+        <div className="nl-home-slide" role="group" aria-roledescription={t('slide')} aria-label={t('slideOf', { n: i + 1, total: SLIDES.length })}>
+          <div className="nl-home-slide-text">
+            <span className="nl-home-kicker">{t(`kicker_${slide.key}`)}</span>
+            <h1 className="nl-home-title">{t(`title_${slide.key}`)}</h1>
+            <p className="nl-home-sub">{t(`sub_${slide.key}`)}</p>
+            <SiteLink href={slide.href} className="btn btn-accent btn-lg">{t(`cta_${slide.key}`)}</SiteLink>
+          </div>
+          <div className="nl-home-slide-art" aria-hidden><Art size={120} weight="fill" /></div>
+        </div>
+        <button type="button" className="nl-home-hero-arrow nl-home-hero-next" aria-label={t('nextSlide')} onClick={() => go(i + 1)}><CaretRight size={28} aria-hidden /></button>
+      </div>
+      <div className="nl-home-dots" role="group" aria-label={t('slides')}>
+        {SLIDES.map((s, n) => (
+          <button key={s.key} type="button" className="nl-home-dot" aria-label={t('slideOf', { n: n + 1, total: SLIDES.length })} aria-current={n === i ? 'true' : undefined} onClick={() => setI(n)}><span aria-hidden /></button>
+        ))}
+      </div>
     </section>
   );
 }
 
-function TileLink({ tile, count, line }: { tile: Tile; count: number | undefined; line: (n: number) => string }) {
+// ── tiles ────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+const ICONS: Record<string, Icon> = {
+  mechanic: Car, cleaning: Broom, bar: Martini, barber: Scissors, realestate: HouseLine, plumber: Drop, tutor: GraduationCap, movers: Truck, snow: Snowflake,
+  groceries: Basket, butcher: Knife, bakery: Bread, produce: Carrot, clothing: TShirt, pharmacy: Pill, hardware: Wrench, kids: Baby, gifts: Gift,
+};
+
+/** A white card with shadow-sm, an xl title, a 2×2 grid of pictures with xs captions and "See more" (AT Shop:200). */
+function TileCard({ t, title, items, more }: { t: T; title: string; items: readonly Tile[]; more: { href: string } }) {
   const { locale } = useLocale();
   return (
-    <SiteLink href={tile.href} className="nl-home-tile">
-      <span className="nl-home-tile-name">{locale === 'fr' ? tile.fr : tile.en}</span>
-      <span className="nl-home-tile-meta">{count === undefined ? <Skeleton width={70} height={12} radius={4} /> : line(count)}</span>
-    </SiteLink>
-  );
-}
-
-function Trusted({ t, summary, loading, city }: { t: T; summary?: HomeSummary; loading: boolean; city?: string }) {
-  return (
-    <div>
-      <h2 className="nl-home-h2">{t('trusted')}</h2>
-      {loading ? (
-        Array.from({ length: 3 }, (_, i) => <div key={i} className="nl-home-row"><Skeleton width={52} height={52} radius={12} /><Skeleton width="60%" height={14} /></div>)
-      ) : summary!.trusted.length === 0 ? (
-        <p className="nl-home-muted">{t('trustedEmpty', { city: city ?? summary!.city })}</p>
-      ) : (
-        <ul className="nl-home-list">
-          {summary!.trusted.map(p => <li key={p.merchantId}><ProviderRow t={t} p={p} /></li>)}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function ProviderRow({ t, p }: { t: T; p: TrustedProvider }) {
-  const body = (
-    <>
-      <span className="nl-home-initial" style={p.brandColor ? { background: p.brandColor } : undefined} aria-hidden>{p.name.charAt(0)}</span>
-      <span className="nl-home-row-main">
-        <span className="nl-home-row-title"><strong>{p.name}</strong><Tag tone="accent">{t(`tier_${p.tier}` as 'tier_master')}</Tag></span>
-        {p.category && <span className="nl-home-row-sub" lang="en">{p.category.name}</span>}
-      </span>
-      <span className="nl-home-row-end">
-        <strong>{p.reviews > 0 ? t('rating', { rating: p.rating.toFixed(1) }) : t('noReviews')}</strong>
-        {p.reviews > 0 && <span className="nl-home-row-sub">{t('reviews', { count: p.reviews })}</span>}
-      </span>
-    </>
-  );
-  return p.slug
-    ? <Link to="/providers/$slug" params={{ slug: p.slug }} className="nl-home-row nl-home-row-link">{body}</Link>
-    : <div className="nl-home-row">{body}</div>;
-}
-
-const TONE: Record<string, TagTone> = { accent: 'accent', neutral: 'neutral', 'accent-2': 'accent-2' };
-
-function Week({ t, signedIn, loading }: { t: T; signedIn: boolean; loading: boolean }) {
-  const href = useRouterState({ select: s => s.location.href });
-  const upcoming = useUpcoming(signedIn);
-  const account = useAccountSummary(signedIn);
-  const { money, number } = useFormatters();
-  const points = account.data?.points;
-  return (
-    <div>
-      <h2 className="nl-home-h2">{t('week')}</h2>
-      {loading || (signedIn && upcoming.isPending) ? (
-        Array.from({ length: 2 }, (_, i) => <div key={i} className="nl-home-row"><Skeleton width="70%" height={14} /></div>)
-      ) : !signedIn ? (
-        <EmptyState action={<SiteLink href={signInHref(href)} className="btn btn-secondary">{t('signIn')}</SiteLink>}>{t('weekSignIn')}</EmptyState>
-      ) : upcoming.isError ? (
-        <ErrorState message={t('loadError')} onRetry={() => void upcoming.refetch()} />
-      ) : upcoming.data!.length === 0 ? (
-        <EmptyState action={<Link to="/services" className="btn btn-secondary">{t('bookSomething')}</Link>}>{t('weekEmpty')}</EmptyState>
-      ) : (
-        <ul className="nl-home-list">
-          {upcoming.data!.map(u => (
-            <li key={u.id}>
-              <SiteLink href={u.href} className="nl-home-row nl-home-row-link">
-                <span className="nl-home-row-main"><strong>{u.title}</strong>{u.subtitle && <span className="nl-home-row-sub">{u.subtitle}</span>}</span>
-                <Tag tone={TONE[u.tone] ?? 'neutral'}>{u.state}</Tag>
+    <li className="nl-home-tile">
+      <h2 className="nl-home-tile-title">{title}</h2>
+      <ul className="nl-home-tile-grid">
+        {items.map(tile => {
+          const I = ICONS[tile.key] ?? Storefront;
+          return (
+            <li key={tile.key}>
+              <SiteLink href={tile.href} className="nl-home-tile-item">
+                <span className="nl-home-tile-pic" aria-hidden><I size={40} /></span>
+                <span className="nl-home-tile-cap">{locale === 'fr' ? tile.fr : tile.en}</span>
               </SiteLink>
             </li>
-          ))}
-        </ul>
-      )}
-      {points && (
-        <div className="nl-home-points">
-          <span><strong>{t('points', { points: number(points.balance) })}</strong> · {t('worth', { value: money(points.valueCents) })}</span>
-          <SiteLink href="/account?tab=wallet" className="btn btn-ghost">{t('wallet')}</SiteLink>
-        </div>
-      )}
+          );
+        })}
+      </ul>
+      <SiteLink href={more.href} className="nl-home-more" aria-label={t('seeMoreOf', { title })}>{t('seeMore')}</SiteLink>
+    </li>
+  );
+}
+
+// ── rails ────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+type RailQuery = UseQueryResult<SearchPage>;
+
+function Rail({ t, id, title, more, query, loading, kind }: { t: T; id: string; title: string; more: { href: string }; query: RailQuery; loading: boolean; kind: 'product' | 'service' }) {
+  const items = query.data?.items ?? [];
+  if (query.isSuccess && items.length === 0) return null;
+  return (
+    <section className="nl-home-rail" aria-labelledby={id}>
+      <div className="nl-home-rail-head">
+        <h2 id={id} className="nl-home-rail-title">{title}</h2>
+        <SiteLink href={more.href} className="nl-home-more" aria-label={t('seeMoreOf', { title })}>{t('seeMore')}</SiteLink>
+      </div>
+      {query.isError ? <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />
+        : loading || query.isPending ? <RailSkeleton kind={kind} label={t('loading')} />
+          : (
+            <ul className={kind === 'product' ? 'nl-card-grid nl-card-grid-rail' : 'nl-card-grid nl-card-grid-services'}>
+              {items.slice(0, kind === 'product' ? 12 : 6).map(item => <li key={item.id}><ItemCard item={item} variant={kind === 'product' ? 'rail' : 'grid'} level={3} /></li>)}
+            </ul>
+          )}
+    </section>
+  );
+}
+
+function RailSkeleton({ kind, label }: { kind: 'product' | 'service'; label: string }): ReactNode {
+  return (
+    <div aria-busy="true">
+      <span className="nl-sr-only" role="status">{label}</span>
+      <ul className={kind === 'product' ? 'nl-card-grid nl-card-grid-rail' : 'nl-card-grid nl-card-grid-services'} aria-hidden>
+        {Array.from({ length: kind === 'product' ? 6 : 3 }, (_, i) => (
+          <li key={i}>{kind === 'product'
+            ? <><Skeleton height="auto" style={{ aspectRatio: '1 / 1' }} radius="var(--radius-sm)" /><Skeleton width="80%" style={{ marginTop: 8 }} /><Skeleton width="40%" height={22} style={{ marginTop: 6 }} /></>
+            : <Skeleton height={128} radius="var(--radius-md)" />}</li>
+        ))}
+      </ul>
     </div>
   );
 }

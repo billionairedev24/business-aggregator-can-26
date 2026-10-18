@@ -159,7 +159,7 @@ describe('service category (design 06 svcCategory)', () => {
   });
 });
 
-describe('provider list (design 06 providers)', () => {
+describe('provider list (design 06 providers; redesign service cards, AT Shop:891)', () => {
   it('asks for the providers covering the device’s location and lists them most trusted first', async () => {
     const calls = mockFetch(api());
     renderApp('/services/mobile-mechanic/providers', { routes, geolocation: geo(51.0385, -114.072) });
@@ -167,9 +167,14 @@ describe('provider list (design 06 providers)', () => {
     expect(screen.getByText('Sorted by trust · tier, on-time rate, dispute rate and re-book rate')).toBeInTheDocument();
     const rows = screen.getAllByRole('link', { name: /Prairie Wrench|Bow River/ });
     expect(rows[0]).toHaveAttribute('href', '/providers/prairie-wrench');
-    expect(within(rows[0]!).getByText('Master')).toBeInTheDocument();
-    expect(within(rows[0]!).getByText('★ 4.9 (312) · 98% on time')).toBeInTheDocument();
-    expect(within(rows[0]!).getByText('from $79')).toBeInTheDocument();
+    expect(within(rows[0]!).queryByText('Master')).toBeNull(); // § 3.13: stars and the verified seal, not tier tags
+    expect(within(rows[0]!).getByText('Verified')).toBeInTheDocument();
+    expect(within(rows[0]!).getByRole('img', { name: '4.9 out of 5 stars' })).toBeInTheDocument();
+    expect(within(rows[0]!).getByText('98% on time')).toBeInTheDocument();
+    expect(within(rows[0]!).getByText('from')).toBeInTheDocument();
+    expect(within(rows[0]!).getByText('$79.00')).toBeInTheDocument();
+    expect(within(rows[0]!).getByRole('heading', { level: 2, name: 'Prairie Wrench' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
     expect(within(rows[0]!).getByText(/^(Today|Tomorrow) /)).toBeInTheDocument();
     expect(within(rows[1]!).getByText('No openings in the next 2 weeks')).toBeInTheDocument();
     const url = calls.find(c => c.url.startsWith('/api/v1/public/services/mobile-mechanic/providers'))!.url;
@@ -181,10 +186,11 @@ describe('provider list (design 06 providers)', () => {
     mockFetch(api());
     renderApp('/services/mobile-mechanic/providers', { routes, geolocation: geo(51.0385, -114.072) });
     await screen.findByText('Bow River Mechanics');
-    await user().click(screen.getByRole('checkbox', { name: 'Master tier' }));
+    await user().click(screen.getByRole('button', { name: 'Master tier' }));
     expect(screen.queryByText('Bow River Mechanics')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Mobile mechanics · 1 come to Beltline');
-    await user().click(screen.getByRole('checkbox', { name: 'Under $80' }));
+    await user().click(screen.getByRole('button', { name: 'Under $80' }));
+    expect(screen.getByRole('button', { name: 'Under $80' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('Prairie Wrench')).toBeInTheDocument();
     expect(applyFilters(list.items as ProviderCard[], new Set(['under80']))).toHaveLength(2);
     expect(applyFilters([card({ fromCents: 8900 })], new Set(['under80']))).toHaveLength(0);
@@ -230,9 +236,10 @@ describe('provider list (design 06 providers)', () => {
     mockFetch(api());
     renderApp('/services/mobile-mechanic/providers', { routes, locale: 'fr', geolocation: geo(51.0385, -114.072) });
     expect(await screen.findByRole('heading', { level: 1, name: 'Mécaniciens mobiles · 2 se déplacent à Beltline' })).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: 'Niveau Maître' })).toBeInTheDocument();
-    expect(screen.getByText('★ 4,9 (312) · 98 % à l’heure')).toBeInTheDocument();
-    expect(screen.getByText('à partir de 79 $')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Niveau Maître' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '4,9 sur 5 étoiles' })).toBeInTheDocument();
+    expect(screen.getByText('98 % à l’heure')).toBeInTheDocument();
+    expect(screen.getAllByText('à partir de')).toHaveLength(2);
   });
 });
 

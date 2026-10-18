@@ -55,33 +55,50 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-describe('search results (design 06 search)', () => {
-  it('shows the results with the design’s heading, filters, facets and cards', async () => {
+describe('search results (redesign § 1.3 results page)', () => {
+  it('shows products and services together, with the summary bar, the facets and the cards', async () => {
     const { calls } = open('/search?q=sourdough');
-    expect(await screen.findByRole('heading', { level: 1, name: '“sourdough” · 4 results' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: '4 results for “sourdough”' })).toBeInTheDocument();
     await expectNoAxeViolations(document.body); // S-109
     const filters = screen.getByRole('complementary', { name: 'Filters' });
-    for (const name of ['On tonight’s run', 'Under $10', 'Master sellers', 'Halal', 'Gluten-free']) {
-      expect(within(filters).getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false');
-    }
-    expect(within(filters).getByRole('heading', { name: 'Filter' })).toBeInTheDocument();
-    expect(within(filters).getByRole('button', { name: 'Shop · 2' })).toBeInTheDocument();
-    expect(within(filters).getByRole('button', { name: 'Everything' })).toHaveAttribute('aria-pressed', 'true');
-    expect(within(filters).getByText('Glenmore Bakery · 3')).toBeInTheDocument();
-    expect(within(filters).getByRole('heading', { name: 'Businesses' })).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Home › Search');
+    const type = within(filters).getByRole('region', { name: 'Type' });
+    expect(within(type).getByRole('radio', { name: 'Products and services' })).toBeChecked();
+    expect(within(type).getByRole('radio', { name: /Products 2/ })).not.toBeChecked();
+    expect(within(type).getByRole('radio', { name: /Services 1/ })).toBeInTheDocument();
+    // § 3.7: Food isn't its own type for the demo
+    expect(within(type).queryByRole('radio', { name: /Food/ })).toBeNull();
+    expect(within(filters).getByRole('checkbox', { name: /Bakery 2/ })).not.toBeChecked();
+    expect(within(filters).getByRole('region', { name: 'Distance' })).toHaveTextContent('Set your location to sort and filter by distance.');
+    expect(within(filters).getByRole('checkbox', { name: 'Open now' })).toBeInTheDocument();
+    expect(within(filters).getByRole('checkbox', { name: 'On tonight’s run' })).toBeInTheDocument();
+    expect(within(filters).getByRole('radio', { name: 'Under $10' })).toBeInTheDocument();
+    // "Sold by" / tiers are gone (§ 3.13)
+    expect(within(filters).queryByText('Glenmore Bakery · 3')).toBeNull();
+    expect(within(filters).queryByRole('checkbox', { name: /Master/ })).toBeNull();
     expect(screen.getByRole('combobox', { name: 'Sorted by' })).toHaveValue('relevance');
 
-    const sourdough = screen.getByRole('link', { name: /Country sourdough/ });
-    expect(sourdough).toHaveAttribute('href', '/products/O1?offer=O1');
-    expect(sourdough).toHaveTextContent('Country sourdough$7.50Glenmore Bakery · BakeryOn tonight’s run');
+    const results = screen.getByRole('list', { name: 'Results' });
+    const sourdough = within(results).getByRole('article', { name: 'Country sourdough' });
+    expect(within(sourdough).getByRole('link', { name: 'Country sourdough' })).toHaveAttribute('href', '/products/O1?offer=O1');
+    expect(within(sourdough).getByRole('heading', { level: 2 })).toHaveTextContent('Country sourdough');
+    expect(sourdough).toHaveTextContent('Glenmore Bakery · Bakery');
+    expect(sourdough).toHaveTextContent('$7.50');
+    expect(sourdough).toHaveTextContent('Get it tonight');
     expect(sourdough.querySelector('img')).toHaveAttribute('src', '/api/v1/public/catalogue/media/IMG1');
-    expect(screen.getByRole('link', { name: /Brake pads/ })).toHaveAttribute('href', '/providers/prairie-wrench');
-    expect(screen.getByRole('link', { name: /Brake pads/ })).toHaveTextContent('Brake padsQuotePrairie Wrench · Mobile mechanic · ★ 4.9 (120)Instant book');
-    expect(screen.getByRole('link', { name: /Pho tai/ })).toHaveAttribute('href', '/food/pho-dau-bo');
-    expect(screen.getByRole('link', { name: /Pho tai/ })).toHaveTextContent('Pho Dau Bo · Vietnamese · 1.2 km');
-    expect(screen.getByRole('link', { name: /Sidewalk Citizen/ })).toHaveTextContent('Sidewalk Citizenfrom $4.50Shop');
-    expect(screen.getByRole('link', { name: /Sidewalk Citizen/ })).toHaveAttribute('href', '/search?scope=shop&q=Sidewalk+Citizen');
+    expect(within(sourdough).getByRole('button', { name: 'Add to cart: Country sourdough' })).toBeEnabled();
+    const brakes = within(results).getByRole('link', { name: /Brake pads/ });
+    expect(brakes).toHaveAttribute('href', '/providers/prairie-wrench');
+    expect(brakes).toHaveTextContent('Mobile mechanic');
+    expect(brakes).toHaveTextContent('Prairie Wrench');
+    expect(brakes).toHaveTextContent('Quote');
+    expect(brakes).toHaveTextContent('Instant book');
+    expect(brakes).toHaveTextContent('Verified');
+    expect(within(brakes).getByRole('img', { name: '4.9 out of 5 stars' })).toBeInTheDocument();
+    expect(within(results).getByRole('article', { name: 'Pho tai' })).toHaveTextContent('Pho Dau Bo · Vietnamese · 1.2 km');
+    const shop = within(results).getByRole('link', { name: /Sidewalk Citizen/ });
+    expect(shop).toHaveTextContent('Shop');
+    expect(shop).toHaveTextContent('from');
+    expect(shop).toHaveAttribute('href', '/search?scope=shop&q=Sidewalk+Citizen');
 
     const q = searches(calls)[0]!;
     expect(q.get('q')).toBe('sourdough');
@@ -90,62 +107,76 @@ describe('search results (design 06 search)', () => {
     expect(q.get('size')).toBe('24');
   });
 
+  it('adds to the cart from a card, then shows the stepper', async () => {
+    let cart = { itemCount: 0, shopCount: 0, subtotalCents: 0, groups: [] as unknown[] };
+    const user = userEvent.setup({ delay: null });
+    api = c => {
+      if (c.url.startsWith('/api/v1/search?')) return { body: PAGE };
+      if (c.method === 'POST' && c.url === '/api/v1/cart/items') {
+        cart = { itemCount: 1, shopCount: 1, subtotalCents: 750, groups: [{ merchantId: 'm', shopName: 'Glenmore Bakery', items: [{ itemId: 'I1', merchantId: 'm', offerId: 'O1', variantId: null, productId: 'P1', name: 'Country sourdough', option: null, unit: null, imageUrl: null, unitCents: 750, qty: 1, lineCents: 750, stock: 5, available: true, handlingDays: 0 }] }] };
+        return { status: 201, body: {} };
+      }
+      if (c.url === '/api/v1/cart') return { body: cart };
+      return undefined;
+    };
+    const { calls } = open('/search?q=sourdough');
+    const card = await screen.findByRole('article', { name: 'Country sourdough' });
+    await user.click(within(card).getByRole('button', { name: 'Add to cart: Country sourdough' }));
+    expect(calls.find(c => c.method === 'POST' && c.url === '/api/v1/cart/items')?.body).toEqual({ offerId: 'O1', qty: 1 });
+    expect(await within(card).findByRole('group', { name: 'Quantity of Country sourdough' })).toHaveTextContent('1 in cart');
+    expect(await screen.findByRole('link', { name: 'Cart, 1 item' })).toBeInTheDocument();
+  });
+
   it('speaks French', async () => {
     open('/search?q=levain', 'fr');
-    expect(await screen.findByRole('heading', { level: 1, name: '« levain » · 4 résultats' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: '4 résultats pour « levain »' })).toBeInTheDocument();
     const filters = screen.getByRole('complementary', { name: 'Filtres' });
-    for (const name of ['Sur la tournée de ce soir', 'Moins de 10 $', 'Vendeurs Maîtres', 'Halal', 'Sans gluten']) {
-      expect(within(filters).getByRole('button', { name })).toBeInTheDocument();
-    }
-    expect(within(filters).getByRole('heading', { name: 'Filtrer' })).toBeInTheDocument();
+    expect(within(filters).getByRole('radio', { name: 'Produits et services' })).toBeChecked();
+    expect(within(filters).getByRole('radio', { name: /Moins de 10\s\$/ })).toBeInTheDocument();
+    expect(within(filters).getByRole('checkbox', { name: 'Sur la tournée de ce soir' })).toBeInTheDocument();
     expect(screen.getByText('Trié par')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Brake pads/ })).toHaveTextContent('Devis');
-    expect(screen.getByRole('navigation', { name: 'Fil d’Ariane' })).toHaveTextContent('Accueil › Recherche');
+    expect(screen.getByRole('button', { name: 'Ajouter au panier : Country sourdough' })).toBeInTheDocument();
   });
 
   it('filters, sorts and clears through the URL', async () => {
     const user = userEvent.setup({ delay: null });
     const { calls, router } = open('/search?q=bread');
     await screen.findByRole('heading', { level: 1, name: /4 results/ });
-    await user.click(screen.getByRole('button', { name: 'On tonight’s run' }));
+    await user.click(screen.getByRole('checkbox', { name: 'On tonight’s run' }));
     await waitFor(() => expect(router.state.location.search).toMatchObject({ q: 'bread', delivery: 'tonight' }));
-    await user.click(screen.getByRole('button', { name: 'Under $10' }));
-    await user.click(screen.getByRole('button', { name: 'Halal' }));
-    await user.click(screen.getByRole('button', { name: 'Gluten-free' }));
-    await user.click(screen.getByRole('button', { name: 'Bakery · 2' }));
+    await user.click(screen.getByRole('radio', { name: 'Under $10' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Open now' }));
+    await user.click(screen.getByRole('checkbox', { name: /Bakery 2/ }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Sorted by' }), 'price_asc');
     await waitFor(() => {
       const q = searches(calls).at(-1)!;
       expect(q.get('delivery')).toBe('tonight');
       expect(q.get('maxPrice')).toBe('999');
-      expect(q.get('dietary')).toBe('halal,gluten_free');
+      expect(q.get('openNow')).toBe('true');
       expect(q.get('category')).toBe('shop.groceries.bakery');
       expect(q.get('sort')).toBe('price_asc');
     });
-    expect(screen.getByRole('button', { name: 'On tonight’s run' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('checkbox', { name: 'On tonight’s run' })).toBeChecked();
     await user.click(screen.getByRole('button', { name: 'Clear all' }));
     await waitFor(() => expect(router.state.location.search).toEqual({ q: 'bread', sort: 'price_asc' }));
   });
 
-  it('narrows to a scope with its own filters', async () => {
+  it('narrows to one type with its own filters', async () => {
     const user = userEvent.setup({ delay: null });
-    const { calls, router } = open('/search?q=fix&scope=services');
-    expect(await screen.findByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Services › Search');
-    await user.click(screen.getByRole('button', { name: 'Instant book' }));
-    await user.click(screen.getByRole('button', { name: 'Available today' }));
-    await user.click(screen.getByRole('button', { name: 'Under $80' }));
+    const { calls, router } = open('/search?q=fix');
+    await screen.findByRole('heading', { level: 1, name: /4 results/ });
+    await user.click(screen.getByRole('radio', { name: /Services 1/ }));
+    await waitFor(() => expect(router.state.location.search).toEqual({ q: 'fix', scope: 'services' }));
+    await user.click(await screen.findByRole('checkbox', { name: 'Instant book' }));
+    await user.click(screen.getByRole('radio', { name: 'Under $100' }));
     await waitFor(() => {
       const q = searches(calls).at(-1)!;
       expect(q.get('kind')).toBe('service');
       expect(q.get('instantBook')).toBe('true');
-      expect(q.get('openNow')).toBe('true');
-      expect(q.get('maxPrice')).toBe('7999');
+      expect(q.get('maxPrice')).toBe('9999');
     });
-    expect(screen.getByRole('heading', { name: 'Providers' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Food' }));
-    await waitFor(() => expect(router.state.location.search).toEqual({ q: 'fix', scope: 'food' }));
-    await user.click(await screen.findByRole('button', { name: 'Nut-free' }));
-    await waitFor(() => expect(searches(calls).at(-1)!.get('allergenFree')).toBe('peanuts,tree_nuts'));
+    expect(screen.queryByRole('checkbox', { name: 'On tonight’s run' })).toBeNull();
   });
 
   it('adds the visitor’s province and coordinates, and offers distance', async () => {
@@ -153,7 +184,7 @@ describe('search results (design 06 search)', () => {
     const user = userEvent.setup({ delay: null });
     const { calls } = open('/search?q=pho');
     await waitFor(() => expect(searches(calls).some(q => q.get('market') === 'AB' && q.get('lat') === '50.10000' && q.get('lng') === '-110.20000')).toBe(true));
-    await user.click(await screen.findByRole('button', { name: 'Under 10 km' }));
+    await user.click(await screen.findByRole('radio', { name: 'Under 10 km' }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Sorted by' }), 'distance');
     await waitFor(() => {
       const q = searches(calls).at(-1)!;
@@ -169,10 +200,10 @@ describe('search results (design 06 search)', () => {
     const q = searches(calls).at(-1)!;
     expect(q.has('sort')).toBe(false);
     expect(q.has('radiusKm')).toBe(false);
-    expect(screen.queryByRole('heading', { name: 'Distance' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Under 10 km' })).toBeNull();
   });
 
-  it('pages with the API’s next token', async () => {
+  it('pages with the API’s next token until everything is seen', async () => {
     const user = userEvent.setup({ delay: null });
     api = c => {
       if (!c.url.startsWith('/api/v1/search?')) return undefined;
@@ -183,8 +214,8 @@ describe('search results (design 06 search)', () => {
     open('/search?q=bread');
     expect(await screen.findByText('Showing 4 of 5')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Show more results' }));
-    expect(await screen.findByRole('link', { name: /Seeded rye/ })).toBeInTheDocument();
-    expect(screen.getByText('Showing 5 of 5')).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'Seeded rye' })).toBeInTheDocument();
+    expect(screen.getByText('You’ve seen all 5')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Show more results' })).toBeNull();
   });
 
@@ -192,14 +223,16 @@ describe('search results (design 06 search)', () => {
     const user = userEvent.setup({ delay: null });
     api = c => (c.url.startsWith('/api/v1/search?') ? { body: { items: [], total: 0, facets: { ...FACETS, kinds: [], categories: [], merchants: [] }, next: null } } : undefined);
     const { router } = open('/search?q=zzz');
-    expect(await screen.findByText('Nothing matches “zzz” here yet.')).toBeInTheDocument();
+    expect(await screen.findByText('No results.')).toBeInTheDocument();
+    expect(screen.getByText('Nothing matches “zzz” here yet.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Browse services' })).toHaveAttribute('href', '/services');
     await router.navigate({ to: '/search', search: { q: 'zzz', delivery: 'tonight' } as never });
+    expect(await screen.findByText('Try clearing a filter, or search for something broader.')).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Clear filters' }));
     await waitFor(() => expect(router.state.location.search).toEqual({ q: 'zzz' }));
   });
 
-  it('shows errors in the page with Retry, rate limits and dead page links in their own words', async () => {
+  it('shows errors in the page with Retry', async () => {
     const user = userEvent.setup({ delay: null });
     let fail: Reply = { status: 503, body: { detail: 'down' } };
     api = c => (c.url.startsWith('/api/v1/search?') ? fail ?? { body: PAGE } : undefined);
@@ -207,7 +240,7 @@ describe('search results (design 06 search)', () => {
     expect(await screen.findByText('Search isn’t answering right now.')).toBeInTheDocument();
     fail = undefined;
     await user.click(screen.getByRole('button', { name: /Retry/ }));
-    expect(await screen.findByRole('heading', { level: 1, name: '“bread” · 4 results' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: '4 results for “bread”' })).toBeInTheDocument();
   });
 
   it('says so when rate limited', async () => {

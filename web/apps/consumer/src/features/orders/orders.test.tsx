@@ -59,22 +59,29 @@ afterEach(() => {
   photo = () => ({ status: 404, body: { code: 'not_found' } });
 });
 
-describe('Order confirmed and tracking (design 06 confirmed)', () => {
+describe('Order detail and tracking (redesign § 2.1)', () => {
   it('shows the confirmation, the timeline and the run', async () => {
     open();
     expect(await screen.findByRole('heading', { level: 1, name: /^Order placed\. Arriving tonight 6.9.p\.m\.$/ })).toBeInTheDocument();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('NL-48213 · $47.76 · 3 shops packing now. Live tracking starts when the courier leaves.')).toBeInTheDocument();
-    const steps = within(screen.getByRole('list')).getAllByRole('listitem').map(li => li.textContent);
+    const steps = within(screen.getAllByRole('list')[0]!).getAllByRole('listitem').map(li => li.textContent);
     expect(steps).toEqual([
       'Paid (done)',
       'Shops packing · 0 of 3 packed (now)',
       'Courier picks up · scan at each shop (next)',
       'Delivered · photo proof · you confirm, shops paid (next)',
     ]);
-    expect(screen.getByRole('figure', { name: 'Delivery map' })).toHaveTextContent(/Pooled run R-611 · leaves 6:00.p\.m\. · 6 households on this run/);
+    expect(screen.getByRole('region', { name: 'Delivery' })).toHaveTextContent(/Pooled run R-611 · leaves 6:00.p\.m\. · 6 households on this run/);
     expect(screen.getByRole('link', { name: 'View orders' })).toHaveAttribute('href', '/account/orders');
     expect(screen.getByRole('link', { name: 'Back to home' })).toHaveAttribute('href', '/');
+    // the head row, the shops and the payment summary (AT order detail)
+    expect(screen.getByText('Order #').nextSibling).toHaveTextContent('NL-48213');
+    const shops = screen.getByRole('region', { name: 'Shops in this order' });
+    expect(within(shops).getByText('Glenmore Bakery').parentElement).toHaveTextContent('Glenmore Bakery2 itemsPacking');
+    const pay = screen.getByRole('region', { name: 'Payment' });
+    expect(pay).toHaveTextContent('Items$42.50Delivery$2.99Tax$2.27Total$47.76');
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Your account › Orders & bookings › NL-48213');
   });
 
   it('updates live from the order’s event stream', async () => {
@@ -92,7 +99,7 @@ describe('Order confirmed and tracking (design 06 confirmed)', () => {
     order = () => ({ body: { ...ORDER, delivery: { kind: 'direct', runLabel: null, day: null, startsAt: null, endsAt: null, households: 0, etaAt: '2026-09-30T21:45:00Z' } } });
     open();
     expect(await screen.findByRole('heading', { level: 1, name: /^Order placed\. Arriving by about 3:45.p\.m\.$/ })).toBeInTheDocument();
-    expect(screen.getByRole('figure', { name: 'Delivery map' })).toHaveTextContent(/Direct courier · arriving by about 3:45.p\.m\./);
+    expect(screen.getByRole('region', { name: 'Delivery' })).toHaveTextContent(/Direct courier · arriving by about 3:45.p\.m\./);
   });
 
   it('is in French', async () => {

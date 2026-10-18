@@ -34,55 +34,72 @@ async function loadStripe(key: string): Promise<StripeJs> {
 /**
  * The Payment Element for the first PaymentIntent (the card is saved to the customer, `setup_future_usage`), then the
  * order's other PaymentIntents — one per order line and one for the delivery fee (S-11 escrow model) — confirmed with
- * the same PaymentMethod. Stripe shows 3-D Secure itself when a bank asks for it.
+ * the same PaymentMethod. Stripe shows 3-D Secure itself when a bank asks for it. The element mounts into `host`, which
+ * must stay in the page until `confirm` (the 3-step checkout hides it while the review step is open, never unmounts it).
+ * `check` validates what was typed without charging (the checkout's "Use this payment method"); `confirm` authorizes.
  */
-export function StripePayment({ started, busy, onPaid, onError }: { started: Started; busy: boolean; onPaid: () => void; onError: (message: string) => void }) {
+export function useStripePayment(started: Started | null, onError: (message: string) => void) {
   const t = useCartT();
-  const { money } = useFormatters();
   const host = useRef<HTMLDivElement>(null);
   const [stripe, setStripe] = useState<{ js: StripeJs; elements: StripeElements }>();
-  const [working, setWorking] = useState(false);
-  const pending = started.intents.filter(i => i.status !== 'authorized' && i.clientSecret);
+  const pending = started ? started.intents.filter(i => i.status !== 'authorized' && i.clientSecret) : [];
   const first = pending[0];
+  const key = started?.payment.provider === 'stripe' ? started.payment.publishableKey : null;
 
   useEffect(() => {
-    if (!first || !started.payment.publishableKey || !host.current) return;
+    if (!first || !key || !host.current) return;
     let element: StripeElement | undefined;
     let cancelled = false;
-    void loadStripe(started.payment.publishableKey).then(js => {
+    void loadStripe(key).then(js => {
       if (cancelled || !host.current) return;
       const elements = js.elements({ clientSecret: first.clientSecret!, locale: document.documentElement.lang.startsWith('fr') ? 'fr-CA' : 'en-CA' });
       element = elements.create('payment', { layout: 'tabs' });
       element.mount(host.current);
       setStripe({ js, elements });
     }).catch(() => onError(t('err_generic')));
-    return () => { cancelled = true; element?.destroy(); };
+    return () => { cancelled = true; element?.destroy(); setStripe(undefined); };
   }, [first?.clientSecret]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const confirm = async () => {
-    if (!stripe || !first) return;
-    setWorking(true);
-    try {
-      const submitted = await stripe.elements.submit();
-      if (submitted.error) { onError(t('err_card', { message: submitted.error.message ?? '' })); return; }
-      const lead = await stripe.js.confirmPayment({ elements: stripe.elements, redirect: 'if_required' });
-      if (lead.error) { onError(t('err_card', { message: lead.error.message ?? '' })); return; }
-      const pm = lead.paymentIntent?.payment_method;
-      const pmId = typeof pm === 'string' ? pm : pm?.id;
-      for (const intent of pending.slice(1)) {
-        if (!pmId) { onError(t('err_generic')); return; }
-        const r = await stripe.js.confirmCardPayment(intent.clientSecret!, { payment_method: pmId });
-        if (r.error) { onError(t('err_card', { message: r.error.message ?? '' })); return; }
-      }
-      onPaid();
-    } finally { setWorking(false); }
+  const check = async (): Promise<boolean> => {
+    if (!stripe) return false;
+    const submitted = await stripe.elements.submit();
+    if (submitted.error) { onError(t('err_card', { message: submitted.error.message ?? '' })); return false; }
+    return true;
   };
 
+  const confirm = async (): Promise<boolean> => {
+    if (!stripe || !first) return false;
+    if (!(await check())) return false;
+    const lead = await stripe.js.confirmPayment({ elements: stripe.elements, redirect: 'if_required' });
+    if (lead.error) { onError(t('err_card', { message: lead.error.message ?? '' })); return false; }
+    const pm = lead.paymentIntent?.payment_method;
+    const pmId = typeof pm === 'string' ? pm : pm?.id;
+    for (const intent of pending.slice(1)) {
+      if (!pmId) { onError(t('err_generic')); return false; }
+      const r = await stripe.js.confirmCardPayment(intent.clientSecret!, { payment_method: pmId });
+      if (r.error) { onError(t('err_card', { message: r.error.message ?? '' })); return false; }
+    }
+    return true;
+  };
+
+  return { host, ready: !!stripe, needed: !!first && !!key, check, confirm };
+}
+
+/** The Payment Element with its own Confirm button (the food checkout, which pays in one step). */
+export function StripePayment({ started, busy, onPaid, onError }: { started: Started; busy: boolean; onPaid: () => void; onError: (message: string) => void }) {
+  const t = useCartT();
+  const { money } = useFormatters();
+  const pay = useStripePayment(started, onError);
+  const [working, setWorking] = useState(false);
+  const confirm = async () => {
+    setWorking(true);
+    try { if (await pay.confirm()) onPaid(); } finally { setWorking(false); }
+  };
   return (
     <div className="cart-pay-box">
       <div className="cart-pay-head"><span className="cart-kicker">{t('stripeKicker')}</span><span className="cart-muted">{t('stripeNote')}</span></div>
-      <div ref={host} className="cart-stripe" data-testid="stripe-payment-element" />
-      <button type="button" className="btn btn-primary cart-pay" disabled={!stripe || working || busy} aria-busy={working || busy} onClick={() => void confirm()}>
+      <div ref={pay.host} className="cart-stripe" data-testid="stripe-payment-element" />
+      <button type="button" className="btn btn-primary cart-pay" disabled={!pay.ready || working || busy} aria-busy={working || busy} onClick={() => void confirm()}>
         {working || busy ? t('paying') : t('confirm', { total: money(started.totalCents) })}
       </button>
     </div>
@@ -104,7 +121,7 @@ export function FakePayment({ provider }: { provider: 'stripe' | 'fake' }) {
         <div className="cart-span-2"><dt>{t('cardNumber')}</dt><dd>4242 4242 4242 4242</dd></div>
         <div><dt>{t('expiry')}</dt><dd>12 / 30</dd></div>
         <div><dt>{t('cvc')}</dt><dd>123</dd></div>
-        <div className="cart-span-2"><dt>{t('country')}</dt><dd>Canada · T2R 0K3</dd></div>
+        <div className="cart-span-2"><dt>{t('country')}</dt><dd>Canada · A1A 1A1</dd></div>
       </dl>
     </div>
   );

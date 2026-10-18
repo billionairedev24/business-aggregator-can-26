@@ -2,34 +2,32 @@ import { useEffect, useMemo, useState } from 'react';
 import { useZone } from '../location/regions';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Minus, Plus } from '@phosphor-icons/react';
-import { Alert, EmptyState, SiteLink, Skeleton, Tag, swatchOf, useFormatters, useLocale } from '@northline/ui';
+import { Alert, EmptyState, Price, QuantityStepper, SiteLink, Skeleton, Stars, swatchOf, useFormatters, useLocale } from '@northline/ui';
 import { clock, runWhen, weekday, windowRange } from '../shop/format';
 import { useMarketFollowsLocation, withMarket } from '../shop/market';
-import { TIER_TONE } from '../shop/parts';
 import { productQuery, useAddToCart, type Offer, type ProductPage } from './api';
 import { useProductT } from './messages';
 
 /**
- * Product detail (S-50, design 06 `product`): gallery, name, the chosen shop (tier, rating), tags, price, description,
- * options (variants), quantity + Add to cart, the delivery panel with the cut-off, "Also from <shop>" — and, beyond the
- * design's single seller, every other shop of the market selling the same catalogue product ("Also sold by").
+ * Product detail (redesign § 1.3 "PDP", AT Shop:342–423; S-50 behaviour): thumbnails | the sticky image | the info
+ * column (title, "Visit the shop", stars, price, the variants, a facts grid, "About this item") | a 300px sticky buy box
+ * (price, the delivery promise with the cut-off, stock, quantity, Add to cart, Buy now, who sells it, returns, and the
+ * other shops of the market selling the same catalogue product). "Also from <shop>" follows.
  */
 export function ProductDetail({ productId, market: explicit, offerId }: { productId: string; market?: string; offerId?: string }) {
   const { locale } = useLocale();
   const t = useProductT();
   const { data } = useSuspenseQuery(productQuery(productId, explicit, locale));
-  const zone = useZone(data.market);
   useMarketFollowsLocation(explicit, data.market);
   const link = (path: string) => withMarket(path, explicit);
   const offer = data.offers.find(o => o.offerId === offerId) ?? data.offers[0];
 
   const crumbs = (
-    <nav aria-label={t('crumbs')} className="shop-crumbs">
+    <nav aria-label={t('crumbs')} className="product-crumbs">
       <ol>
         <li><SiteLink href={link('/shop')}>{t('shop')}</SiteLink></li>
         {data.departmentSlug ? <li><SiteLink href={link(`/shop/${data.departmentSlug}`)}>{data.departmentName}</SiteLink></li> : null}
-        <li aria-current="page">{offer?.shopName ?? data.name}</li>
+        <li aria-current="page">{data.name}</li>
       </ol>
     </nav>
   );
@@ -59,7 +57,7 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
   const t = useProductT();
   const { locale } = useLocale();
   const zone = useZone(data.market);
-  const { money, number } = useFormatters();
+  const { money } = useFormatters();
   const navigate = useNavigate();
   const add = useAddToCart();
   const firstInStock = offer.variants.find(v => v.stock > 0) ?? offer.variants[0];
@@ -73,7 +71,6 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
   const images = variant && variant.images.length ? variant.images : offer.images; // S-65: a variant's own photos
   useEffect(() => { setImage(0); }, [variantId]);
   const run = offer.runs[0];
-  const tier = t(`tier_${offer.tier as 'master'}`);
 
   const windowText = (r: Offer['runs'][number]) => t(`win_${runWhen(r, zone)}`, { range: windowRange(r.startsAt, r.endsAt, locale, zone), weekday: weekday(r.startsAt, locale, zone) });
   const delivery = useMemo(() => {
@@ -87,80 +84,90 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
     });
   }, [stock, run, offer, data.direct, locale, zone]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onAdd = () => add.mutate({ offerId: offer.offerId, variantId: variant?.variantId, qty }, { onSuccess: () => void navigate({ to: '/cart' }) });
+  const item = { offerId: offer.offerId, variantId: variant?.variantId, qty };
+  const onAdd = () => add.mutate(item, { onSuccess: () => void navigate({ to: '/cart' }) });
+  const onBuy = () => add.mutate(item, { onSuccess: () => void navigate({ to: '/checkout' }) });
   const others = data.offers.filter(o => o.offerId !== offer.offerId);
+  const shopHref = `/search?scope=shop&q=${encodeURIComponent(offer.shopName)}`;
+  const stockLine = stock <= 0 ? <span className="product-stock product-stock-out">{t('outOfStock')}</span>
+    : offer.lowStock || stock <= 3 ? <span className="product-stock product-stock-low">{t('lowStock', { count: stock })}</span>
+      : <span className="product-stock product-stock-in">{t('inStock')}</span>;
+  const returns = offer.returnsPolicy === 'standard_14' || offer.returnsPolicy === 'final_sale' ? t(`returns_${offer.returnsPolicy}`) : null;
 
   return (
     <div className="product-grid">
-      <div className="product-gallery" role="group" aria-label={t('gallery')}>
-        <div className="product-main halftone">{images[image] ? <img src={images[image]} alt={data.name} /> : null}</div>
-        <div className="product-thumbs">
-          {images.length > 1
-            ? images.slice(0, 4).map((src, i) => (
-              <button key={src} type="button" className="product-thumb halftone" aria-label={t('showImage', { n: i + 1 })} aria-pressed={i === image} onClick={() => setImage(i)}><img src={src} alt="" /></button>))
-            : [0, 1, 2].map(i => <span key={i} className={`product-thumb halftone product-thumb-${i}`} aria-hidden />)}
-        </div>
+      <div className="product-thumbs" role="group" aria-label={t('gallery')}>
+        {images.length > 1
+          ? images.slice(0, 6).map((src, i) => (
+            <button key={src} type="button" className="product-thumb" aria-label={t('showImage', { n: i + 1 })} aria-pressed={i === image} onClick={() => setImage(i)}><img src={src} alt="" /></button>))
+          : null}
+      </div>
+      <div className="product-media">
+        <div className="product-main">{images[image] ? <img src={images[image]} alt={data.name} /> : null}</div>
       </div>
 
       <div className="product-info">
         <h1 className="product-title">{data.name}</h1>
-        <div className="product-byline">
-          <SiteLink href={`/search?scope=shop&q=${encodeURIComponent(offer.shopName)}`}>{offer.shopName}</SiteLink>
-          {' · '}{t('meta', { tier })}
-          {offer.ratingCount > 0 ? <>{' · '}{t('rating', { average: number(offer.rating, { minimumFractionDigits: 1, maximumFractionDigits: 1 }), count: offer.ratingCount })}</> : null}
-        </div>
-        <div className="product-tags">
-          {run && stock > 0 ? <Tag>{t(`tag_${runWhen(run, zone)}`, { weekday: weekday(run.startsAt, locale, zone) })}</Tag> : null}
-          {stock <= 0 ? <Tag tone="neutral">{t('outOfStock')}</Tag> : offer.lowStock || stock <= 3 ? <Tag tone="accent-2">{t('lowStock', { count: stock })}</Tag> : null}
-          {offer.returnsPolicy === 'standard_14' || offer.returnsPolicy === 'final_sale' ? <Tag tone="neutral">{t(`returns_${offer.returnsPolicy}`)}</Tag> : null}
-        </div>
+        <SiteLink href={shopHref} className="product-store">{t('visitStore', { shop: offer.shopName })}</SiteLink>
+        {offer.ratingCount > 0 ? <Stars rating={offer.rating} reviewCount={offer.ratingCount} showValue /> : null}
+        <hr className="product-rule" />
         <div className="product-price">
-          <span className="product-price-value">{money(price)}</span>
-          {offer.compareAtCents && offer.compareAtCents > price ? <s className="product-was">{t('wasPrice', { price: money(offer.compareAtCents) })}</s> : null}
+          <Price cents={price} compareAtCents={offer.compareAtCents} size="xl" />
           <span className="product-price-note">{data.unit ? t('priceNote', { unit: data.unit }) : t('priceNoteNoUnit')}</span>
         </div>
-        {data.description ? <p className="product-desc">{data.description}</p> : null}
-        {data.bullets.length > 0 ? <ul className="product-bullets">{data.bullets.map(b => <li key={b}>{b}</li>)}</ul> : null}
+        {run && stock > 0 ? <span className="tag tag-brand product-run">{t(`tag_${runWhen(run, zone)}`, { weekday: weekday(run.startsAt, locale, zone) })}</span> : null}
 
         {offer.variants.length > 0 ? (
           <fieldset className="product-options">
             <legend>{t('options')}</legend>
-            <div className="product-option-list">
+            <div className="nl-chips">
               {offer.variants.map(v => (
-                <button key={v.variantId} type="button" className="shop-chip" aria-pressed={v.variantId === variantId} disabled={v.stock <= 0}
+                <button key={v.variantId} type="button" className="nl-chip product-variant" aria-pressed={v.variantId === variantId} disabled={v.stock <= 0}
                   onClick={() => setVariantId(v.variantId)}>{v.value}</button>
               ))}
             </div>
           </fieldset>
         ) : null}
 
-        <div className="product-buy">
-          <div className="product-qty" role="group" aria-label={t('qty')}>
-            <button type="button" aria-label={t('dec')} disabled={qty <= 1} onClick={() => setQty(q => Math.max(1, q - 1))}><Minus size={18} aria-hidden /></button>
-            <span aria-live="polite">{qty}</span>
-            <button type="button" aria-label={t('inc')} disabled={qty >= stock} onClick={() => setQty(q => Math.min(stock, q + 1))}><Plus size={18} aria-hidden /></button>
-          </div>
-          <button type="button" className="btn btn-primary product-add" disabled={stock <= 0 || add.isPending} aria-busy={add.isPending} onClick={onAdd}>
-            {add.isPending ? t('adding') : t('add', { qty, total: money(price * qty) })}
-          </button>
-        </div>
-        {add.isError ? <div className="product-alert"><Alert tone="error" role="alert">{t('addFailed')}</Alert></div> : null}
-
-        <div className="product-delivery"><strong>{t('deliveryLabel')}</strong> {delivery}</div>
-
-        {offer.more.length > 0 ? (
-          <section aria-labelledby="product-more">
-            <h2 id="product-more" className="product-h3">{t('alsoFrom', { shop: offer.shopName })}</h2>
-            <ul className="product-more">
-              {offer.more.map(m => <li key={m.productId}><SiteLink href={link(`/products/${m.productId}`)}>{t('moreItem', { name: m.name, price: money(m.priceCents) })}</SiteLink></li>)}
-            </ul>
+        <dl className="product-facts">
+          {data.brand ? <><dt>{t('fact_brand')}</dt><dd>{data.brand}</dd></> : null}
+          {data.unit ? <><dt>{t('fact_size')}</dt><dd>{data.unit}</dd></> : null}
+          {data.departmentName ? <><dt>{t('fact_department')}</dt><dd>{data.departmentName}</dd></> : null}
+          <dt>{t('fact_soldBy')}</dt><dd>{offer.shopName}</dd>
+          {returns ? <><dt>{t('fact_returns')}</dt><dd>{returns}</dd></> : null}
+        </dl>
+        {data.description || data.bullets.length > 0 ? (
+          <section aria-labelledby="product-about">
+            <h2 id="product-about" className="product-h2">{t('about')}</h2>
+            {data.description ? <p className="product-desc">{data.description}</p> : null}
+            {data.bullets.length > 0 ? <ul className="product-bullets">{data.bullets.map(b => <li key={b}>{b}</li>)}</ul> : null}
           </section>
         ) : null}
+      </div>
+
+      <aside className="product-buy" aria-label={t('buyBox')}>
+        <Price cents={price} size="lg" />
+        <p className="product-delivery">{delivery}</p>
+        {stockLine}
+        <div className="product-qty">
+          <span className="product-qty-label" aria-hidden>{t('qty')}</span>
+          <QuantityStepper value={qty} max={Math.max(1, Math.min(99, stock))} onChange={setQty} name={data.name} removable={false} />
+        </div>
+        <button type="button" className="btn btn-accent btn-block" disabled={stock <= 0 || add.isPending} aria-busy={add.isPending} onClick={onAdd}>
+          {add.isPending ? t('adding') : t('addToCart')}
+        </button>
+        <button type="button" className="btn btn-primary btn-block" disabled={stock <= 0 || add.isPending} onClick={onBuy}>{t('buyNow')}</button>
+        {add.isError ? <Alert tone="error" role="alert">{t('addFailed')}</Alert> : null}
+        <dl className="product-buy-facts">
+          <dt>{t('fact_soldBy')}</dt><dd><SiteLink href={shopHref}>{offer.shopName}</SiteLink></dd>
+          {returns ? <><dt>{t('fact_returns')}</dt><dd>{returns}</dd></> : null}
+          <dt>{t('fact_payment')}</dt><dd>{t('escrow')}</dd>
+        </dl>
 
         {others.length > 0 ? (
-          <section aria-labelledby="product-sellers">
+          <section aria-labelledby="product-sellers" className="product-sellers">
             <h2 id="product-sellers" className="product-h3">{t('sellers')}</h2>
-            <ul className="product-sellers">
+            <ul>
               {others.map(o => {
                 const r = o.runs[0];
                 const when = o.stock <= 0 ? t('outOfStock') : r ? t(`tag_${runWhen(r, zone)}`, { weekday: weekday(r.startsAt, locale, zone) }) : t('notOnRunShort');
@@ -169,17 +176,26 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
                     <span className={`product-seller-mark nl-swatch-${swatchOf(o.merchantId)}`} aria-hidden>{o.shopName.charAt(0).toUpperCase()}</span>
                     <span className="product-seller-body">
                       <strong>{o.shopName}</strong>
-                      <span className="product-seller-meta"><span className={`tag tag-${TIER_TONE[o.tier] ?? 'neutral'}`}>{t(`tier_${o.tier as 'master'}`)}</span> {when}</span>
+                      <span className="product-seller-meta">{when}</span>
+                      <span className="product-seller-price">{money(o.priceCents)}</span>
                     </span>
-                    <span className="product-seller-price">{money(o.priceCents)}</span>
-                    <SiteLink href={link(`/products/${data.productId}?offer=${o.offerId}`)} className="btn btn-secondary" aria-label={`${t('choose')} — ${o.shopName}`}>{t('choose')}</SiteLink>
+                    <SiteLink href={link(`/products/${data.productId}?offer=${o.offerId}`)} className="btn btn-secondary btn-sm" aria-label={`${t('choose')} — ${o.shopName}`}>{t('choose')}</SiteLink>
                   </li>
                 );
               })}
             </ul>
           </section>
         ) : null}
-      </div>
+      </aside>
+
+      {offer.more.length > 0 ? (
+        <section aria-labelledby="product-more" className="product-more-section">
+          <h2 id="product-more" className="product-h2">{t('alsoFrom', { shop: offer.shopName })}</h2>
+          <ul className="product-more">
+            {offer.more.map(m => <li key={m.productId}><SiteLink href={link(`/products/${m.productId}`)}>{t('moreItem', { name: m.name, price: money(m.priceCents) })}</SiteLink></li>)}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -191,12 +207,13 @@ export function ProductSkeleton() {
       <span className="nl-sr-only">{t('loading')}</span>
       <Skeleton width={260} height={12} />
       <div className="product-grid">
-        <div><Skeleton height={0} radius={12} style={{ aspectRatio: '1 / 1', height: 'auto' }} /></div>
-        <div>
-          <Skeleton width="70%" height={36} /><Skeleton width="50%" height={14} style={{ marginTop: 10 }} />
-          <Skeleton width={120} height={32} style={{ marginTop: 22 }} /><Skeleton height={60} style={{ marginTop: 16 }} />
-          <Skeleton width={260} height={46} style={{ marginTop: 24 }} /><Skeleton height={70} style={{ marginTop: 22 }} />
+        <div className="product-thumbs" />
+        <div className="product-media"><Skeleton height={0} radius={8} style={{ aspectRatio: '1 / 1', height: 'auto' }} /></div>
+        <div className="product-info">
+          <Skeleton width="70%" height={28} /><Skeleton width="40%" height={14} style={{ marginTop: 10 }} />
+          <Skeleton width={120} height={36} style={{ marginTop: 22 }} /><Skeleton height={80} style={{ marginTop: 16 }} />
         </div>
+        <Skeleton height={320} radius={8} />
       </div>
     </div>
   );

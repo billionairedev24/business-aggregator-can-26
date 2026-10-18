@@ -440,6 +440,16 @@ belong with their pages.
 
 Have demo seed data ready: listings with images, at least 2 service providers with open slots, one order in transit.
 
+*Phase 1 as built (2026-10-18, branch `feat/redesign-consumer`, consumer side):* `Price`, `Stars`, `QuantityStepper`,
+`ProductCard` and `ServiceCard` in `@northline/ui`; the home (hero carousel, overlapping tiles, product and service
+rails from the public search), search (summary bar, Type / Category / Distance / Availability / Price aside, one grid of
+product and service cards), the 4-column PDP, the cart without the payment, the new 3-step `/checkout` (address and
+time, payment, review; the same APIs) and `/checkout/complete`, the order detail with tracking, the booking detail,
+the slimmed account menu, the account card grid and the Orders | Bookings list; the provider list as service cards and
+the booking wizard's aside, day strip and slots. A second flag, `VITE_NL_FULL_NAV`, hides Food as a vertical and the
+account's Wallet & points, Dietary, Plus and Language. Not yet: sign-in / register in two columns, the provider page's
+layout, quotes, the Deliver-to dialog, demo seed images (`docs/DECISIONS.md` § "Redesign phase 1").
+
 **Phase 2: merchant demo path (days 3–5)**
 Register → onboarding wizard (no sidebar) → submitted gate → (approve in the console) → Dashboard (KPIs) → Listings table → New listing form (product, and the service/price variant) → Orders table and sheet (status update) → Appointments calendar → Availability.
 

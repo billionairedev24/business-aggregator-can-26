@@ -101,11 +101,11 @@ test.describe('consumer CSP: nonces, no unsafe-inline (S104-09)', () => {
     expect((await violations()).some(v => v.startsWith('script-src'))).toBe(true);
   });
 
-  test('the signed-in pages (account, orders, booking, cart with the local payment stand-in) load with zero violations', async ({ page }) => {
+  test('the signed-in pages (account, orders, booking, cart, checkout with the local payment stand-in) load with zero violations', async ({ page }) => {
     const violations = await watchViolations(page);
     await mockApi(page, 'consumer', { signedIn: true });
     await page.setViewportSize({ width: 1280, height: 900 });
-    for (const path of ['/account', '/account/orders', '/providers/prairie-wrench/book', '/cart']) {
+    for (const path of ['/account', '/account/orders', '/providers/prairie-wrench/book', '/cart', '/checkout']) {
       await open(page, 'consumer', path, 'en');
       expect(await violations(), path).toEqual([]);
     }
@@ -133,13 +133,16 @@ test.describe('consumer CSP: nonces, no unsafe-inline (S104-09)', () => {
       payment: stripe, intents: [{ paymentIntent: 'pi_csp_1', clientSecret: 'pi_csp_1_secret_fake', status: 'requires_payment_method', amountCents: 4504 }],
     } }));
     await page.setViewportSize({ width: 1280, height: 900 });
-    await open(page, 'consumer', '/cart', 'en');
-    await page.getByRole('button', { name: /^Pay / }).click();
+    // redesign phase 1: the 3-step checkout — address and time, then the payment opens Stripe's element, then Place
+    await open(page, 'consumer', '/checkout', 'en');
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await page.getByRole('button', { name: 'Continue to payment' }).click();
     const frame = page.getByTestId('stripe-payment-element').locator('iframe');
     await expect(frame).toHaveAttribute('src', 'https://js.stripe.com/fake-payment-element.html');
     await expect(page.frameLocator('[data-testid="stripe-payment-element"] iframe').getByText('Card number')).toBeVisible();
-    await page.getByRole('button', { name: /^Confirm/ }).click();
-    await page.waitForURL(/\/orders\/ORD1/);
+    await page.getByRole('button', { name: 'Use this payment method' }).click();
+    await page.getByRole('complementary', { name: 'Total' }).getByRole('button', { name: 'Place your order' }).click();
+    await page.waitForURL(/\/checkout\/complete\?order=ORD1/);
     expect(stripeRequests.some(u => u.endsWith('/v3'))).toBe(true);
     expect(await violations()).toEqual([]);
   });

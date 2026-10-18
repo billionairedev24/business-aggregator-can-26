@@ -1,97 +1,52 @@
-import { useEffect, useRef, useState } from 'react';
-import { MarketZone, useZone } from '../location/regions';
-import { useRegions } from '../location/regions';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
-import { Minus, Plus, Trash } from '@phosphor-icons/react';
-import { Alert, EmptyState, ErrorState, Field, RadioGroup, Select, SiteLink, Skeleton, TextInput, useFormatters, useLocale, type Locale } from '@northline/ui';
-import { newIdempotencyKey, ValidationError } from '@northline/client';
+import { useQuery } from '@tanstack/react-query';
+import { EmptyState, ErrorState, Price, QuantityStepper, SiteLink, Skeleton, useFormatters } from '@northline/ui';
 import { signInHref, useViewer } from '../session/api';
-import { useDeliveryLocation } from '../location/useDeliveryLocation';
-import { clock, runWhen, weekday, windowRange } from '../shop/format';
-import {
-  cartQuery, placeOrder, problemCode, quoteQuery, setupQuery, startCheckout, useChangeCartLine,
-  type AddressInput, type Cart, type CartLine, type CheckoutBody, type DeliveryOption, type Setup, type Started,
-} from './api';
-import { SERVER_FR, useCartT } from './messages';
-import { FakePayment, StripePayment } from './Payment';
-import { StepUpDialog } from './StepUpDialog';
-import { AgeCheck } from './AgeCheck';
-import { ageCleared, NO_AGE } from './age';
-import { PromoPoints, TipPicker, type TipChoice } from '../promotions/PromoPoints';
-import { usePromoT } from '../promotions/messages';
-import { useAgeT } from './ageMessages';
-
-type Substitution = CheckoutBody['substitution'];
-
-/** Server 422 messages in the page's language (orders.domain.CheckoutMessages are English). */
-export function localizeServer(message: string, locale: Locale): string {
-  if (locale !== 'fr') return message;
-  if (SERVER_FR[message]) return SERVER_FR[message]!;
-  const notServed = /^We don't deliver to (.+) yet\.$/.exec(message);
-  if (notServed) return `Nous ne livrons pas encore à ${notServed[1]}.`;
-  const elsewhere = /^(.+) doesn't deliver to (.+)\.$/.exec(message);
-  if (elsewhere) return `${elsewhere[1]} ne livre pas à ${elsewhere[2]}.`;
-  const restricted = /^Age-restricted items in your cart can't be delivered to (.+)\. Remove them to continue\.$/.exec(message);
-  if (restricted) return `Les articles soumis à un âge minimal de votre panier ne peuvent pas être livrés en ${restricted[1]}. Retirez-les pour continuer.`;
-  const left = /^Only (\d+) left\.$/.exec(message);
-  if (left) return `Plus que ${left[1]}.`;
-  return message;
-}
-
-/** Client checks with the server's messages (orders.domain.CheckoutMessages). */
-/** @param provinces the region model's province codes (any two-letter code until it has loaded; the server checks too) */
-export function addressErrors(a: AddressInput, provinces: readonly string[] = []): Record<string, string> {
-  const e: Record<string, string> = {};
-  if (a.addressId) return e;
-  if (!a.street?.trim() || a.street.trim().length > 120) e['address.street'] = 'Enter the street address.';
-  if (a.unit && a.unit.trim().length > 20) e['address.unit'] = 'Keep the unit under 20 characters.';
-  if (!a.city?.trim() || a.city.trim().length > 60) e['address.city'] = 'Enter the city.';
-  if (!a.province || !/^[A-Z]{2}$/.test(a.province) || (provinces.length > 0 && !provinces.includes(a.province))) e['address.province'] = "Choose a Canadian province or territory.";
-  if (!/^[A-Z]\d[A-Z] ?\d[A-Z]\d$/.test((a.postal ?? '').trim().toUpperCase().replace('-', ' '))) e['address.postal'] = 'Enter a Canadian postal code, like T2P 1B5.';
-  if (a.note && a.note.trim().length > 200) e['address.note'] = 'Keep delivery notes under 200 characters.';
-  return e;
-}
+import { cartQuery, useChangeCartLine, type Cart, type CartLine } from './api';
+import { useCartT } from './messages';
 
 /**
- * Cart and checkout (S-51, design 06 `cart`): the multi-shop cart grouped by shop with quantity steppers; signed in,
- * the delivery window, the address, what to do if something is out of stock, the payment (Stripe's Payment Element,
- * or the local stand-in) and the summary with the tax from the api. Guests see their cart and "Sign in to pay".
+ * The cart (redesign § 1.3 "Cart", AT Shop:425–500; S-51 behaviour): the lines grouped by shop — image, name, option,
+ * stock, a quantity stepper and Delete — with "Subtotal (N items)" under them, beside a 300px sticky aside with the
+ * subtotal and "Proceed to checkout". Payment left the cart (§ 3.8): the 3-step checkout is /checkout. Guests see their
+ * cart and sign in on the way to the checkout.
  */
 export function CartPage() {
   const t = useCartT();
-  const { user, loading: sessionLoading } = useViewer();
+  const { user, loading } = useViewer();
   const cart = useQuery(cartQuery);
-  const { location } = useDeliveryLocation();
-  const city = location.status === 'locating' ? undefined : location.city;
-  if (cart.isPending || sessionLoading) return <CartSkeleton />;
+  if (cart.isPending || loading) return <CartSkeleton />;
   // S-142: the loading and error states keep the page's h1
-  if (cart.isError) return <div className="nl-page cart-page"><h1 className="cart-title">{t('title')}</h1><ErrorState message={t('loadError')} onRetry={() => void cart.refetch()} /></div>;
+  if (cart.isError) return <div className="nl-page cart-page"><h1 className="cart-title">{t('cartTitle')}</h1><ErrorState message={t('loadError')} onRetry={() => void cart.refetch()} /></div>;
   if (cart.data.itemCount === 0) {
     return (
       <div className="nl-page cart-page">
-        <h1 className="cart-title">{t('title')}</h1>
-        <div className="cart-empty"><EmptyState action={<SiteLink href="/shop" className="btn btn-primary">{t('browse')}</SiteLink>}>{t('empty')}</EmptyState></div>
+        <h1 className="cart-title">{t('cartTitle')}</h1>
+        <div className="cart-empty">
+          <EmptyState title={t('empty')} action={<SiteLink href="/shop" className="btn btn-primary">{t('continueShopping')}</SiteLink>}>{t('emptyBody')}</EmptyState>
+        </div>
       </div>
     );
   }
-  // times on this page read in the visitor's market's zone (region model), else the platform zone
-  return <MarketZone city={city}>{user ? <Checkout cart={cart.data} /> : <GuestCart cart={cart.data} />}</MarketZone>;
-}
-
-function GuestCart({ cart }: { cart: Cart }) {
-  const t = useCartT();
-  const { money } = useFormatters();
+  const view = cart.data;
+  const blocked = view.groups.some(g => g.items.some(i => !i.available));
   return (
     <div className="nl-page cart-page">
       <div className="cart-grid">
-        <div>
-          <CartHead cart={cart} />
-          <CartGroups cart={cart} packBy={null} />
+        <div className="cart-main">
+          <div className="cart-head">
+            <h1 className="cart-title">{t('cartTitle')}</h1>
+            <span className="cart-sub">{t('sub', { items: view.itemCount, shops: view.shopCount })}</span>
+          </div>
+          <CartGroups cart={view} />
+          <p className="cart-subtotal">{t('subtotalItems', { count: view.itemCount })} <strong><Price cents={view.subtotalCents} size="sm" /></strong></p>
         </div>
-        <aside className="cart-summary" aria-label={t('total')}>
-          <div className="cart-sum-row"><span>{t('items')}</span><span>{money(cart.subtotalCents)}</span></div>
-          <SiteLink href={signInHref('/cart')} className="btn btn-primary cart-pay">{t('signInToPay')}</SiteLink>
+        <aside className="cart-summary" aria-label={t('summary')}>
+          <p className="cart-subtotal cart-subtotal-aside">{t('subtotalItems', { count: view.itemCount })} <strong><Price cents={view.subtotalCents} size="md" /></strong></p>
+          <p className="cart-note">{t('taxAtCheckout')}</p>
+          {blocked ? <p className="cart-note cart-note-warn" role="note">{t('fixLines')}</p> : null}
+          {user
+            ? <SiteLink href="/checkout" className="btn btn-primary btn-block cart-pay" aria-disabled={blocked || undefined} onClick={e => { if (blocked) e.preventDefault(); }}>{t('proceed')}</SiteLink>
+            : <SiteLink href={signInHref('/checkout')} className="btn btn-primary btn-block cart-pay">{t('signInToCheckout')}</SiteLink>}
           <p className="cart-note">{t('payNote')}</p>
         </aside>
       </div>
@@ -99,36 +54,22 @@ function GuestCart({ cart }: { cart: Cart }) {
   );
 }
 
-function CartHead({ cart }: { cart: Cart }) {
+/** The cart's lines by shop (the checkout's review step shows the same groups, read-only). */
+export function CartGroups({ cart, readOnly }: { cart: Cart; readOnly?: boolean }) {
   const t = useCartT();
-  return (
-    <>
-      <h1 className="cart-title">{t('title')}</h1>
-      <div className="cart-sub">{t('sub', { items: cart.itemCount, shops: cart.shopCount })}</div>
-    </>
-  );
-}
-
-function CartGroups({ cart, packBy }: { cart: Cart; packBy: string | null }) {
-  const t = useCartT();
-  const { locale } = useLocale();
-  const zone = useZone();
   return (
     <>
       {cart.groups.map(g => (
         <section key={g.merchantId || 'gone'} className="cart-group" aria-label={g.shopName || t('unavailableGroup')}>
-          <div className="cart-group-head">
-            <h2 className="cart-shop">{g.shopName || t('unavailableGroup')}</h2>
-            {packBy && g.shopName ? <span className="cart-group-note">{t('closesToRun', { time: clock(packBy, locale, zone) })}</span> : null}
-          </div>
-          <ul className="cart-lines">{g.items.map(item => <CartItem key={item.itemId} item={item} />)}</ul>
+          <h2 className="cart-shop">{g.shopName || t('unavailableGroup')}</h2>
+          <ul className="cart-lines">{g.items.map(item => <CartItem key={item.itemId} item={item} readOnly={readOnly} />)}</ul>
         </section>
       ))}
     </>
   );
 }
 
-function CartItem({ item }: { item: CartLine }) {
+function CartItem({ item, readOnly }: { item: CartLine; readOnly?: boolean }) {
   const t = useCartT();
   const { money } = useFormatters();
   const change = useChangeCartLine();
@@ -137,317 +78,23 @@ function CartItem({ item }: { item: CartLine }) {
   const problem = !item.available ? (item.stock > 0 && item.name ? t('notEnough', { count: item.stock }) : t('unavailable')) : null;
   return (
     <li className="cart-line">
-      <span className="cart-line-media halftone" aria-hidden>{item.imageUrl ? <img src={item.imageUrl} alt="" /> : null}</span>
+      <span className="cart-line-media" aria-hidden>{item.imageUrl ? <img src={item.imageUrl} alt="" /> : null}</span>
       <span className="cart-line-body">
         {item.productId ? <SiteLink href={`/products/${item.productId}`} className="cart-line-name">{name}</SiteLink> : <span className="cart-line-name">{name}</span>}
         {meta ? <span className="cart-line-meta">{meta}</span> : null}
-        {problem ? <span className="cart-line-problem" role="note">{problem}</span> : null}
-      </span>
-      <span className="cart-qty" role="group" aria-label={t('qty', { name })}>
-        <button type="button" aria-label={item.qty === 1 ? t('remove', { name }) : t('dec', { name })} disabled={change.isPending}
-          onClick={() => change.mutate({ itemId: item.itemId, qty: item.qty - 1 })}>{item.qty === 1 ? <Trash size={16} aria-hidden /> : <Minus size={16} aria-hidden />}</button>
-        <span aria-live="polite">{item.qty}</span>
-        <button type="button" aria-label={t('inc', { name })} disabled={change.isPending || !item.available || item.qty >= Math.min(99, item.stock)}
-          onClick={() => change.mutate({ itemId: item.itemId, qty: item.qty + 1 })}><Plus size={16} aria-hidden /></button>
+        {problem ? <span className="cart-line-problem" role="note">{problem}</span> : item.stock <= 3 ? <span className="cart-line-low">{t('onlyLeft', { count: item.stock })}</span> : <span className="cart-line-stock">{t('inStock')}</span>}
+        {readOnly ? <span className="cart-line-meta">{t('qtyValue', { qty: item.qty })}</span> : (
+          <span className="cart-line-actions">
+            <QuantityStepper value={item.qty} max={Math.min(99, Math.max(item.qty, item.stock))} name={name} busy={change.isPending}
+              onChange={qty => change.mutate({ itemId: item.itemId, qty })} />
+            <span className="cart-line-pipe" aria-hidden>|</span>
+            <button type="button" className="btn btn-link cart-line-delete" disabled={change.isPending} aria-label={t('deleteNamed', { name })}
+              onClick={() => change.mutate({ itemId: item.itemId, qty: 0 })}>{t('delete')}</button>
+          </span>
+        )}
       </span>
       <span className="cart-line-total">{money(item.lineCents)}</span>
     </li>
-  );
-}
-
-// ── signed in: checkout ──────────────────────────────────────────────────────────────────────────────────────────
-
-type Phase = { step: 'form' } | { step: 'stepUp'; mode: 'required' | 'enrol' } | { step: 'pay'; started: Started };
-
-function Checkout({ cart }: { cart: Cart }) {
-  const t = useCartT();
-  const { locale } = useLocale();
-  const zone = useZone();
-  const { money } = useFormatters();
-  const navigate = useNavigate();
-  const qc = useQueryClient();
-  const { location } = useDeliveryLocation();
-  // the visitor's market; none known = the api's fallback market (region configuration)
-  const market = location.status === 'locating' ? undefined : location.city ?? undefined;
-  const regions = useRegions();
-  const provinceCodes = regions?.provinces.map(p => p.code) ?? [];
-  const setup = useQuery(setupQuery(market, locale, true));
-
-  const [optionId, setOptionId] = useState<string>();
-  const [substitution, setSubstitution] = useState<Substitution>('similar');
-  const [addressId, setAddressId] = useState<string>();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<AddressInput>({ province: location.status !== 'locating' ? location.province : undefined });
-  // no province known yet: the configured default province once the region model answers
-  useEffect(() => { if (!draft.province && regions?.defaultProvince) setDraft(d => ({ ...d, province: d.province ?? regions.defaultProvince ?? undefined })); }, [draft.province, regions?.defaultProvince]);
-  const [touched, setTouched] = useState(false);
-  const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string>();
-  const [busy, setBusy] = useState(false);
-  const [phase, setPhase] = useState<Phase>({ step: 'form' });
-  const key = useRef<string>(newIdempotencyKey());
-  const tp = usePromoT();
-  const [promoCode, setPromoCode] = useState<string>();
-  const [usePoints, setUsePoints] = useState(false);
-  const [tip, setTip] = useState<TipChoice>({ kind: 'none', value: 0 });
-
-  const data = setup.data;
-  useEffect(() => {
-    if (!data) return;
-    setOptionId(id => id && data.options.some(o => o.id === id) ? id : data.options[0]?.id);
-    const saved = data.addresses.find(a => a.isDefault) ?? data.addresses[0];
-    setAddressId(id => id ?? saved?.id);
-    if (!saved) setEditing(true);
-    setDraft(d => (d.city ? d : { ...d, city: location.city ?? data.market }));
-  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const option = data?.options.find(o => o.id === optionId);
-  const address: AddressInput = !editing && addressId ? { addressId } : trimAddress(draft);
-  const clientErrors = addressErrors(address, provinceCodes);
-  const body: CheckoutBody = {
-    kind: option?.kind ?? '', windowId: option?.windowId ?? null, address, substitution,
-    ...(promoCode ? { promoCode } : {}), ...(usePoints ? { usePoints } : {}), ...(tip.kind !== 'none' ? { tip } : {}),
-  };
-  const complete = !!option && Object.keys(clientErrors).length === 0;
-  const quote = useQuery(quoteQuery(body, locale, complete));
-  const shownErrors = { ...(touched ? clientErrors : {}), ...serverErrors };
-  const packBy = option?.kind === 'pooled' ? option.packBy ?? null : null;
-  const total = quote.data?.totalCents;
-  const promoError = serverErrors.promoCode
-    ?? (quote.error instanceof ValidationError ? quote.error.byField().promoCode : undefined);
-  const age = quote.data?.age ?? setup.data?.age ?? NO_AGE;
-  const tAge = useAgeT();
-  const refreshAge = () => { void qc.invalidateQueries({ queryKey: ['checkout'] }); };
-
-  const fail = (e: unknown) => {
-    if (e instanceof ValidationError) {
-      setServerErrors(Object.fromEntries(Object.entries(e.byField()).map(([f, m]) => [f, localizeServer(m, locale)])));
-      setError(t('fixFields', { count: e.errors.length }));
-      return;
-    }
-    const code = problemCode(e);
-    if (code === 'age_verification_required' || code === 'age_under_minimum' || code === 'restricted_hours') {
-      setError(code === 'restricted_hours' ? t('err_restricted_hours') : code === 'age_under_minimum' ? tAge('underAge', { age: age.minimumAge }) : tAge('payBlocked'));
-      refreshAge();
-      return;
-    }
-    setError(code && ['out_of_stock', 'window_closed', 'cart_empty', 'checkout_expired', 'payment_not_authorized'].includes(code)
-      ? t(`err_${code as 'out_of_stock'}`) : t('err_generic'));
-    if (code === 'out_of_stock' || code === 'cart_empty' || code === 'window_closed') {
-      void qc.invalidateQueries({ queryKey: cartQuery.queryKey });
-      void qc.invalidateQueries({ queryKey: ['checkout'] });
-    }
-  };
-
-  const pay = async (proof?: string) => {
-    setTouched(true);
-    setError(undefined);
-    setServerErrors({});
-    if (!complete) { setError(t('fixFields', { count: Math.max(1, Object.keys(clientErrors).length) })); return; }
-    setBusy(true);
-    try {
-      const started = await startCheckout(body, key.current, locale, proof);
-      setPhase({ step: 'pay', started });
-    } catch (e) {
-      const code = problemCode(e);
-      if (code === 'step_up_required' || code === 'second_factor_required') setPhase({ step: 'stepUp', mode: code === 'step_up_required' ? 'required' : 'enrol' });
-      else { fail(e); key.current = newIdempotencyKey(); }
-    } finally { setBusy(false); }
-  };
-
-  const place = async (started: Started) => {
-    setBusy(true);
-    try {
-      const placed = await placeOrder(started.checkoutId, newIdempotencyKey());
-      key.current = newIdempotencyKey();
-      await qc.invalidateQueries({ queryKey: cartQuery.queryKey });
-      void qc.invalidateQueries({ queryKey: ['checkout'] });
-      await navigate({ to: '/orders/$orderId', params: { orderId: placed.orderId } });
-    } catch (e) {
-      fail(e);
-      key.current = newIdempotencyKey();
-      setPhase({ step: 'form' });
-    } finally { setBusy(false); }
-  };
-
-  if (setup.isPending) return <CartSkeleton />;
-  if (setup.isError || !data) return <div className="nl-page cart-page"><h1 className="cart-title">{t('title')}</h1><ErrorState message={t('loadError')} onRetry={() => void setup.refetch()} /></div>;
-  const view = data.cart.itemCount > 0 ? data.cart : cart;
-  const started = phase.step === 'pay' ? phase.started : null;
-
-  return (
-    <div className="nl-page cart-page">
-      <div className="cart-grid">
-        <div>
-          <CartHead cart={view} />
-          <CartGroups cart={view} packBy={packBy} />
-
-          <section className="cart-section" aria-labelledby="cart-window">
-            <h2 id="cart-window" className="cart-h2">{t('window')}</h2>
-            {data.options.length === 0 ? <p className="cart-muted">{t('noWindow')}</p> : (
-              <RadioGroup className="cart-options" aria-labelledby="cart-window">
-                {data.options.map(o => <WindowOption key={o.id} option={o} selected={o.id === optionId} onPick={() => setOptionId(o.id)} disabled={!!started} />)}
-              </RadioGroup>
-            )}
-          </section>
-
-          <section className="cart-section" aria-labelledby="cart-address">
-            <h2 id="cart-address" className="cart-h2">{t('deliverTo')}</h2>
-            {!editing && addressId ? (
-              <SavedAddress setup={data} addressId={addressId} onPick={setAddressId} onChange={() => setEditing(true)} disabled={!!started} />
-            ) : (
-              <AddressForm value={draft} provinces={provinceCodes} onChange={v => { setDraft(v); setServerErrors({}); }} errors={shownErrors} locale={locale}
-                onCancel={data.addresses.length > 0 ? () => setEditing(false) : undefined} disabled={!!started} />
-            )}
-            {serverErrors['address.city'] && !editing ? <p className="cart-field-error" role="alert">{serverErrors['address.city']}</p> : null}
-            {serverErrors.items ? <p className="cart-field-error" role="alert">{serverErrors.items}</p> : null}
-          </section>
-
-          <section className="cart-section" aria-labelledby="cart-subs">
-            <h2 id="cart-subs" className="cart-h2">{t('substitution')}</h2>
-            <RadioGroup className="cart-chips" aria-labelledby="cart-subs">
-              {(['similar', 'refund', 'ask'] as const).map(s => (
-                <button key={s} type="button" role="radio" aria-checked={substitution === s} className="shop-chip cart-chip" disabled={!!started} onClick={() => setSubstitution(s)}>{t(s)}</button>
-              ))}
-            </RadioGroup>
-          </section>
-
-          <AgeCheck age={age} onChanged={refreshAge} />
-
-          <section className="cart-section" aria-labelledby="cart-tip">
-            <h2 id="cart-tip" className="cart-h2">{tp('tipTitle')}</h2>
-            <TipPicker value={tip} onChange={setTip} disabled={!!started} />
-          </section>
-
-          <section className="cart-section" aria-labelledby="cart-promo">
-            <h2 id="cart-promo" className="cart-h2">{tp('promoTitle')}</h2>
-            <PromoPoints code={promoCode} onCode={c => { setPromoCode(c); setServerErrors(({ promoCode: _, ...rest }) => rest); }}
-              error={promoError} discountCents={quote.data?.discountCents} usePoints={usePoints} onUsePoints={setUsePoints}
-              pointsAvailable={quote.data?.pointsAvailable} pointsCents={quote.data?.pointsCents} disabled={!!started} />
-          </section>
-
-          <section className="cart-section" aria-labelledby="cart-payment">
-            <h2 id="cart-payment" className="cart-h2">{t('payment')}</h2>
-            {started && started.payment.provider === 'stripe' && started.intents.some(i => i.status !== 'authorized')
-              ? <StripePayment started={started} busy={busy} onPaid={() => void place(started)} onError={m => setError(m)} />
-              : <FakePayment provider={data.payment.provider} />}
-          </section>
-        </div>
-
-        <aside className="cart-summary" aria-label={t('total')}>
-          <div className="cart-sums">
-            <div className="cart-sum-row"><span>{t('items')}</span><span>{money(view.subtotalCents)}</span></div>
-            <div className="cart-sum-row"><span>{t('delivery')}</span><span>{option ? (option.feeCents === 0 ? t('free') : money(option.feeCents)) : '—'}</span></div>
-            {quote.data && quote.data.discountCents > 0 ? <div className="cart-sum-row"><span>{tp('discount', { code: quote.data.promoCode ?? '' })}</span><span>−{money(quote.data.discountCents)}</span></div> : null}
-            {quote.data
-              ? quote.data.taxes.map(tax => <div key={`${tax.type}${tax.percent}`} className="cart-sum-row"><span>{taxLabel(t, tax.type, tax.percent, locale)}</span><span>{money(tax.cents)}</span></div>)
-              : <div className="cart-sum-row"><span>{t('taxPending')}</span><span className="cart-muted">{quote.isFetching ? <Skeleton width={48} height={14} /> : t('taxLater')}</span></div>}
-            {quote.data && quote.data.tipCents > 0 ? <div className="cart-sum-row"><span>{tp('tip')}</span><span>{money(quote.data.tipCents)}</span></div> : null}
-            {quote.data && quote.data.pointsCents > 0 ? <div className="cart-sum-row"><span>{tp('pointsLine')}</span><span>−{money(quote.data.pointsCents)}</span></div> : null}
-            <div className="cart-sum-row cart-total"><span>{t('total')}</span><span>{total === undefined ? '—' : money(total)}</span></div>
-          </div>
-          {error ? <div className="cart-alert"><Alert tone="error" role="alert">{error}</Alert></div> : null}
-          {started && started.payment.provider !== 'stripe' ? (
-            <BankApproval total={money(started.totalCents)} busy={busy} onApprove={() => void place(started)} />
-          ) : started ? null : (
-            <>
-              <button type="button" className="btn btn-primary cart-pay" disabled={busy || view.itemCount === 0 || !ageCleared(age)} aria-busy={busy} onClick={() => void pay()}>
-                {busy ? t('paying') : t('pay', { total: total === undefined ? money(view.subtotalCents + (option?.feeCents ?? 0)) : money(total) })}
-              </button>
-              {data.stepUp !== 'none' ? <p className="cart-note">{t('stepUpNeeded')}</p> : null}
-              {!ageCleared(age) ? <p className="cart-note">{tAge('payBlocked')}</p> : null}
-            </>
-          )}
-          <p className="cart-note">{t('payNote')}</p>
-        </aside>
-      </div>
-      {phase.step === 'stepUp' ? (
-        <StepUpDialog mode={phase.mode} onClose={() => setPhase({ step: 'form' })}
-          onProof={proof => { setPhase({ step: 'form' }); void pay(proof); }} />
-      ) : null}
-    </div>
-  );
-}
-
-const trimAddress = (a: AddressInput): AddressInput => ({
-  street: a.street?.trim(), unit: a.unit?.trim() || undefined, city: a.city?.trim(), province: a.province,
-  postal: a.postal?.trim().toUpperCase(), note: a.note?.trim() || undefined,
-});
-
-function taxLabel(t: ReturnType<typeof useCartT>, type: string, percent: number, locale: Locale) {
-  const p = new Intl.NumberFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { maximumFractionDigits: 3 }).format(percent);
-  return ['gst', 'hst', 'pst', 'qst', 'rst'].includes(type) ? t(`tax_${type as 'gst'}`, { percent: p }) : `${type.toUpperCase()} ${p}%`;
-}
-
-function WindowOption({ option, selected, onPick, disabled }: { option: DeliveryOption; selected: boolean; onPick: () => void; disabled: boolean }) {
-  const t = useCartT();
-  const { locale } = useLocale();
-  const zone = useZone();
-  const { money } = useFormatters();
-  const name = option.kind === 'direct'
-    ? t('now', { eta: option.etaMinutes ?? 45 })
-    : t(`win_${runWhen({ day: option.day ?? 'later', startsAt: option.startsAt! }, zone)}`, { range: windowRange(option.startsAt!, option.endsAt!, locale, zone), weekday: weekday(option.startsAt!, locale, zone) });
-  const desc = option.kind === 'direct' ? t('direct') : option.households > 0 ? t('pooledWith', { count: option.households }) : t('pooled', { time: clock(option.orderBy!, locale, zone) });
-  return (
-    <button type="button" role="radio" aria-checked={selected} className="nl-option cart-option" onClick={onPick} disabled={disabled}>
-      <span className="cart-option-text"><span className="cart-option-name">{name}</span><span className="cart-option-desc">{desc}</span></span>
-      <span className="cart-option-price">{option.feeCents === 0 ? t('free') : money(option.feeCents)}</span>
-    </button>
-  );
-}
-
-function SavedAddress({ setup, addressId, onPick, onChange, disabled }: { setup: Setup; addressId: string; onPick: (id: string) => void; onChange: () => void; disabled: boolean }) {
-  const t = useCartT();
-  const current = setup.addresses.find(a => a.id === addressId) ?? setup.addresses[0]!;
-  return (
-    <div className="cart-address">
-      <div>
-        <div className="cart-address-line">{current.unit ? `${current.street}, ${current.unit}` : current.street}</div>
-        <div className="cart-muted">{[`${current.city} ${current.province} ${current.postal}`, current.note].filter(Boolean).join(' · ')}</div>
-        {setup.addresses.length > 1 ? (
-          <Field label={t('deliverTo')} className="cart-address-pick">
-            <Select value={current.id} disabled={disabled} onChange={e => onPick(e.target.value)} options={setup.addresses.map(a => ({ value: a.id, label: `${a.street}${a.unit ? `, ${a.unit}` : ''} · ${a.city}` }))} />
-          </Field>
-        ) : null}
-      </div>
-      <button type="button" className="btn btn-ghost" onClick={onChange} disabled={disabled}>{t('change')}</button>
-    </div>
-  );
-}
-
-function AddressForm({ value, provinces, onChange, errors, locale, onCancel, disabled }: {
-  provinces: readonly string[];
-  value: AddressInput; onChange: (v: AddressInput) => void; errors: Record<string, string>; locale: Locale; onCancel?: () => void; disabled: boolean;
-}) {
-  const t = useCartT();
-  const set = (k: keyof AddressInput) => (e: { target: { value: string } }) => onChange({ ...value, [k]: e.target.value });
-  const err = (f: string) => (errors[`address.${f}`] ? localizeServer(errors[`address.${f}`]!, locale) : undefined);
-  return (
-    <div className="cart-address-form">
-      <div className="cart-form-grid">
-        <Field label={t('street')} error={err('street')} className="cart-span-2"><TextInput value={value.street ?? ''} onChange={set('street')} autoComplete="address-line1" disabled={disabled} aria-invalid={!!err('street')} /></Field>
-        <Field label={t('unit')} error={err('unit')}><TextInput value={value.unit ?? ''} onChange={set('unit')} autoComplete="address-line2" disabled={disabled} aria-invalid={!!err('unit')} /></Field>
-        <Field label={t('city')} error={err('city')}><TextInput value={value.city ?? ''} onChange={set('city')} autoComplete="address-level2" disabled={disabled} aria-invalid={!!err('city')} /></Field>
-        <Field label={t('province')} error={err('province')}><Select value={value.province ?? ''} onChange={set('province')} options={[...provinces]} disabled={disabled} /></Field>
-        <Field label={t('postal')} error={err('postal')}><TextInput value={value.postal ?? ''} onChange={set('postal')} autoComplete="postal-code" disabled={disabled} aria-invalid={!!err('postal')} /></Field>
-        <Field label={t('note')} error={err('note')} className="cart-span-2"><TextInput value={value.note ?? ''} onChange={set('note')} placeholder={t('notePlaceholder')} disabled={disabled} aria-invalid={!!err('note')} /></Field>
-      </div>
-      {onCancel ? <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={disabled}>{t('cancel')}</button> : null}
-    </div>
-  );
-}
-
-/** The local stand-in's bank step (design 06 `pay3ds`): approve, then the order is placed. */
-function BankApproval({ total, busy, onApprove }: { total: string; busy: boolean; onApprove: () => void }) {
-  const t = useCartT();
-  const [code, setCode] = useState('482 913');
-  return (
-    <div className="cart-bank" role="group" aria-label={t('bankKicker')}>
-      <div className="cart-kicker">{t('bankKicker')}</div>
-      <div className="cart-bank-title">{t('bankTitle', { total })}</div>
-      <Field label={t('bankCode')}><TextInput value={code} onChange={e => setCode(e.target.value)} className="cart-bank-code" inputMode="numeric" /></Field>
-      <button type="button" className="btn btn-primary cart-pay" disabled={busy} aria-busy={busy} onClick={onApprove}>{t('approve')}</button>
-    </div>
   );
 }
 
@@ -458,13 +105,11 @@ export function CartSkeleton() {
       <span className="nl-sr-only">{t('loading')}</span>
       <div className="cart-grid">
         <div>
-          <h1 className="cart-title">{t('title')}</h1><Skeleton width={260} height={14} style={{ marginTop: 10 }} />
-          {Array.from({ length: 3 }, (_, i) => <Skeleton key={i} height={56} style={{ marginTop: 18 }} />)}
-          <Skeleton width={180} height={22} style={{ marginTop: 32 }} /><Skeleton height={60} style={{ marginTop: 10 }} />
+          <h1 className="cart-title">{t('cartTitle')}</h1><Skeleton width={260} height={14} style={{ marginTop: 10 }} />
+          {Array.from({ length: 3 }, (_, i) => <Skeleton key={i} height={110} style={{ marginTop: 18 }} />)}
         </div>
-        <Skeleton height={220} radius={12} />
+        <Skeleton height={200} radius={8} />
       </div>
     </div>
   );
 }
-

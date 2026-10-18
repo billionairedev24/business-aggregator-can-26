@@ -1,61 +1,31 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
+import { Faders } from '@phosphor-icons/react';
 import { ApiError, ValidationError } from '@northline/client';
-import { EmptyState, ErrorState, SiteLink, Skeleton, swatchOf, useFormatters, useLocale } from '@northline/ui';
+import { EmptyState, ErrorState, SiteLink, Skeleton, fullNavEnabled, useFormatters, useLocale } from '@northline/ui';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import {
-  apiQuery, FILTER_KEYS, imageUrl, itemHref, marketOf, RADII, SCOPES, searchQuery, SORTS,
-  type Facet, type Place, type Scope, type SearchItem, type SearchParams, type Sort,
+  apiQuery, FILTER_KEYS, marketOf, RADII, searchQuery, SORTS,
+  type Facet, type Place, type Scope, type SearchParams, type Sort,
 } from './api';
+import { ItemCard } from './ItemCard';
 import { useSearchT } from './messages';
 import { rememberSearch } from './recent';
 
 type T = ReturnType<typeof useSearchT>;
-type Key = Parameters<T>[0];
 const EXACT_UP_TO = 10_000;
-
-/** A filter of the list (design 06): its label and the URL parameters it sets. */
-interface FilterDef { key: Key; on: (p: SearchParams) => boolean; set: (p: SearchParams, on: boolean) => SearchParams }
-
-const has = (list: string | undefined, code: string) => (list ?? '').split(',').includes(code);
-const toggleIn = (list: string | undefined, codes: string[], on: boolean): string | undefined => {
-  const rest = (list ?? '').split(',').filter(c => c && !codes.includes(c));
-  const next = on ? [...rest, ...codes] : rest;
-  return next.length ? next.join(',') : undefined;
-};
-const dietary = (key: Key, code: string): FilterDef => ({ key, on: p => has(p.dietary, code), set: (p, on) => ({ ...p, dietary: toggleIn(p.dietary, [code], on) }) });
-const maxPrice = (key: Key, cents: number): FilterDef => ({ key, on: p => p.maxPrice === cents, set: (p, on) => ({ ...p, maxPrice: on ? cents : undefined }) });
-const tierMaster = (key: Key): FilterDef => ({ key, on: p => p.tier === 'master', set: (p, on) => ({ ...p, tier: on ? 'master' : undefined }) });
-const openNow = (key: Key): FilterDef => ({ key, on: p => !!p.openNow, set: (p, on) => ({ ...p, openNow: on ? true : undefined }) });
-
-/**
- * The filter list per scope: design 06 `search` (the shop's list, also what the header's search shows), the services
- * chips of `providers` and the food chips of `food`. "Organic" has no data in the index (S-44) and isn't offered;
- * distance has its own group.
- */
-const SHOP_FILTERS: FilterDef[] = [
-  { key: 'f_tonight', on: p => p.delivery === 'tonight', set: (p, on) => ({ ...p, delivery: on ? 'tonight' : undefined }) },
-  maxPrice('f_under10', 999), tierMaster('f_masterSellers'), dietary('f_halal', 'halal'), dietary('f_glutenFree', 'gluten_free'),
-];
-const FILTERS: Record<Scope, FilterDef[]> = {
-  all: SHOP_FILTERS,
-  shop: SHOP_FILTERS,
-  services: [
-    tierMaster('f_master'),
-    { key: 'f_instant', on: p => !!p.instantBook, set: (p, on) => ({ ...p, instantBook: on ? true : undefined }) },
-    openNow('f_today'), maxPrice('f_under80', 7999),
-  ],
-  food: [
-    openNow('f_open'), dietary('f_halal', 'halal'), dietary('f_vegan', 'vegan'),
-    { key: 'f_nutFree', on: p => has(p.allergenFree, 'peanuts') && has(p.allergenFree, 'tree_nuts'), set: (p, on) => ({ ...p, allergenFree: toggleIn(p.allergenFree, ['peanuts', 'tree_nuts'], on) }) },
-  ],
-};
-
+/** "Under $10 / $25 / $50 / $100" — the API's `maxPrice` in cents (inclusive). */
+const PRICES = [999, 2499, 4999, 9999] as const;
 const KIND_SCOPE: Record<string, Scope> = { service: 'services', product: 'shop', food: 'food' };
 
-/** Search results (design 06 `search`, S-48). The first page is server-rendered; the browser adds the visitor's place. */
+/**
+ * Search results (redesign § 1.3 "Results page", AT Shop:274; S-48 behaviour): a summary bar ("N results for q" and
+ * the sort), a 230px filter aside — Type (products and services together, or one of them), Category, Distance,
+ * Availability, Price, "Clear all" — and one grid of product and service cards, loaded page by page as the visitor
+ * scrolls. The first page is server-rendered; the browser adds the visitor's place.
+ */
 export function SearchResults({ params }: { params: SearchParams }) {
   const t = useSearchT();
   const { locale } = useLocale();
@@ -66,11 +36,12 @@ export function SearchResults({ params }: { params: SearchParams }) {
     : { market: marketOf(location.province), lat: location.lat, lng: location.lng };
   const located = place?.lat !== undefined && place.lng !== undefined;
   const results = useInfiniteQuery({ ...searchQuery(apiQuery(params, place, locale)), placeholderData: keepPreviousData });
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const asideId = useId();
 
   useEffect(() => { if (params.q?.trim()) rememberSearch(params.q); }, [params.q]);
 
   const go = (next: SearchParams) => void navigate({ to: '/search', search: next, resetScroll: false });
-  const filters = FILTERS[scope];
   const anyFilter = FILTER_KEYS.some(k => params[k] !== undefined);
   const clear = () => go({ q: params.q, scope: params.scope, sort: params.sort });
 
@@ -78,91 +49,87 @@ export function SearchResults({ params }: { params: SearchParams }) {
   const items = results.data?.pages.flatMap(p => p.items) ?? [];
   const facets = first?.facets;
   const total = first?.total ?? 0;
+  const scopes: Scope[] = fullNavEnabled() ? ['all', 'shop', 'services', 'food'] : ['all', 'shop', 'services'];
 
   return (
-    <div className="nl-results-page">
-      <aside className="nl-results-aside" aria-label={t('filters')}>
-        <Group label={t('show')}>
-          {SCOPES.map(s => {
-            const count = scope === 'all' && s !== 'all' ? facets?.kinds.find(k => KIND_SCOPE[k.value] === s)?.count : undefined;
-            const label = t(`scope_${s}`);
-            return <Check key={s} on={scope === s} radio onClick={() => go({ ...withoutScopeFilters(params), scope: s === 'all' ? undefined : s })}>
-              {count !== undefined ? t('scopeCount', { label, count }) : label}
-            </Check>;
-          })}
-        </Group>
-        <Group label={t('filter')}>
-          {filters.map(f => <Check key={f.key} on={f.on(params)} onClick={() => go(f.set(params, !f.on(params)))}>{t(f.key)}</Check>)}
-        </Group>
-        {located ? (
-          <Group label={t('distance')}>
-            <Check radio on={!params.radiusKm} onClick={() => go({ ...params, radiusKm: undefined })}>{t('anyDistance')}</Check>
-            {RADII.map(km => <Check key={km} radio on={params.radiusKm === km} onClick={() => go({ ...params, radiusKm: km })}>{t('underKm', { km })}</Check>)}
-          </Group>
-        ) : null}
-        <FacetGroup label={t('categories')} facets={facets?.categories} active={params.category}
-          onPick={value => go({ ...params, category: params.category === value ? undefined : value })} />
-        {facets?.merchants.length ? (
-          <Group label={t(`merchants_${scope}`)} plain>
-            {facets.merchants.slice(0, 5).map(m => <span key={m.value}>{t('merchantCount', { name: m.label ?? '', count: m.count })}</span>)}
-          </Group>
-        ) : null}
-        {anyFilter ? <button type="button" className="nl-results-clear" onClick={clear}>{t('clearAll')}</button> : null}
-      </aside>
-
-      <div className="nl-results-main" aria-busy={results.isFetching}>
-        <div className="nl-results-head">
-          <div>
-            <nav aria-label={t('crumbs')} className="nl-results-crumbs">
-              <Link to={scope === 'all' ? '/' : `/${scope}`}>{t(scope === 'all' ? 'crumbHome' : scope === 'services' ? 'crumbServices' : scope === 'shop' ? 'crumbShop' : 'crumbFood')}</Link>
-              {' › '}<span aria-current="page">{t('crumbSearch')}</span>
-            </nav>
-            <h1>{first ? heading(t, params.q, total) : <Skeleton width={280} height={36} />}</h1>
-          </div>
+    <div className="nl-page nl-results-page">
+      <div className="nl-results-bar">
+        <h1 className="nl-results-h1">{first ? <Heading t={t} q={params.q} total={total} /> : <Skeleton width={260} height={20} />}</h1>
+        <div className="nl-results-bar-end">
+          <button type="button" className="btn btn-secondary btn-sm nl-results-filters-toggle" aria-expanded={filtersOpen} aria-controls={asideId} onClick={() => setFiltersOpen(o => !o)}>
+            <Faders size={16} aria-hidden />{t('filters')}
+          </button>
           <SortControl t={t} value={params.sort ?? 'relevance'} located={located} onChange={sort => go({ ...params, sort: sort === 'relevance' ? undefined : sort })} />
         </div>
-        {!located && (params.sort === 'distance' || params.radiusKm) && location.status !== 'locating' ? (
-          <p className="nl-results-note">{t('needsLocation')} <SiteLink href="/location?next=/search">{t('setLocation')}</SiteLink></p>
-        ) : null}
+      </div>
 
-        {results.isError && !results.data ? (
-          <ErrorState message={errorText(t, results.error)} onRetry={() => void results.refetch()} />
-        ) : !first ? (
-          <ResultsSkeleton />
-        ) : items.length === 0 ? (
-          <EmptyState action={anyFilter
-            ? <button type="button" className="btn btn-primary" onClick={clear}>{t('emptyFiltered')}</button>
-            : <SiteLink href="/services" className="btn btn-primary">{t('emptyBrowse')}</SiteLink>}>
-            {params.q?.trim() ? t('empty', { q: params.q.trim() }) : t('emptyBlank')}
-          </EmptyState>
-        ) : (
-          <>
-            <ul className={clsx('nl-results-grid', results.isPlaceholderData && 'nl-results-stale')}>
-              {items.map(item => <li key={`${item.kind}-${item.id}`}><ResultCard item={item} t={t} /></li>)}
-            </ul>
-            {results.isFetchNextPageError ? <ErrorState message={errorText(t, results.error)} onRetry={() => void results.fetchNextPage()} /> : null}
-            <div className="nl-results-more">
-              <span>{t('shown', { shown: items.length, total: total >= EXACT_UP_TO ? `${EXACT_UP_TO}+` : total })}</span>
-              {results.hasNextPage ? (
-                <button type="button" className="btn btn-ghost" disabled={results.isFetchingNextPage} onClick={() => void results.fetchNextPage()}>
-                  {results.isFetchingNextPage ? t('loadingMore') : t('showMore')}
-                </button>
-              ) : null}
-            </div>
-          </>
-        )}
+      <div className="nl-results-layout">
+        <aside id={asideId} className={clsx('nl-results-aside', filtersOpen && 'is-open')} aria-label={t('filters')}>
+          <Group label={t('type')}>
+            {scopes.map(s => {
+              const count = scope === 'all' && s !== 'all' ? facets?.kinds.find(k => KIND_SCOPE[k.value] === s)?.count : undefined;
+              return (
+                <Option key={s} radio name="type" checked={scope === s} onChange={() => go({ ...withoutScopeFilters(params), scope: s === 'all' ? undefined : s })}
+                  label={t(`type_${s}`)} count={count} />
+              );
+            })}
+          </Group>
+          <FacetGroup t={t} facets={facets?.categories} active={params.category} onPick={value => go({ ...params, category: params.category === value ? undefined : value })} />
+          {located ? (
+            <Group label={t('distance')}>
+              <Option radio name="distance" checked={!params.radiusKm} onChange={() => go({ ...params, radiusKm: undefined })} label={t('anyDistance')} />
+              {RADII.map(km => <Option key={km} radio name="distance" checked={params.radiusKm === km} onChange={() => go({ ...params, radiusKm: km })} label={t('underKm', { km })} />)}
+            </Group>
+          ) : (
+            <Group label={t('distance')}>
+              <p className="nl-results-note">{t('needsLocation')} <SiteLink href="/location?next=/search">{t('setLocation')}</SiteLink></p>
+            </Group>
+          )}
+          <Group label={t('availability')}>
+            {scope !== 'shop' ? <Option checked={!!params.openNow} onChange={on => go({ ...params, openNow: on ? true : undefined })} label={t('f_open')} /> : null}
+            {scope === 'services' ? <Option checked={!!params.instantBook} onChange={on => go({ ...params, instantBook: on ? true : undefined })} label={t('f_instant')} /> : null}
+            {scope === 'shop' || scope === 'all' ? <Option checked={params.delivery === 'tonight'} onChange={on => go({ ...params, delivery: on ? 'tonight' : undefined })} label={t('f_tonight')} /> : null}
+          </Group>
+          <PriceGroup t={t} value={params.maxPrice} onPick={cents => go({ ...params, maxPrice: cents })} />
+          {anyFilter ? <button type="button" className="btn btn-link nl-results-clear" onClick={clear}>{t('clearAll')}</button> : null}
+        </aside>
+
+        <div className="nl-results-main" aria-busy={results.isFetching}>
+          {results.isError && !results.data ? (
+            <ErrorState message={errorText(t, results.error)} onRetry={() => void results.refetch()} />
+          ) : !first ? (
+            <ResultsSkeleton />
+          ) : items.length === 0 ? (
+            <EmptyState title={t('noResults')} action={anyFilter
+              ? <button type="button" className="btn btn-primary" onClick={clear}>{t('emptyFiltered')}</button>
+              : <SiteLink href="/services" className="btn btn-primary">{t('emptyBrowse')}</SiteLink>}>
+              {anyFilter ? t('emptyHint') : params.q?.trim() ? t('empty', { q: params.q.trim() }) : t('emptyBlank')}
+            </EmptyState>
+          ) : (
+            <>
+              <ul className={clsx('nl-card-grid', results.isPlaceholderData && 'nl-results-stale')} aria-label={t('resultsLabel')}>
+                {items.map(item => <li key={`${item.kind}-${item.id}`}><ItemCard item={item} level={2} /></li>)}
+              </ul>
+              {results.isFetchNextPageError ? <ErrorState message={errorText(t, results.error)} onRetry={() => void results.fetchNextPage()} /> : null}
+              <More t={t} shown={items.length} total={total} hasNext={!!results.hasNextPage} loading={results.isFetchingNextPage}
+                onMore={() => void results.fetchNextPage()} />
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-/** Changing the scope drops the filters that belong to another scope's list (category, price, tier…). */
+/** Changing the type drops the filters that belong to another type (category, price, availability…). */
 const withoutScopeFilters = (p: SearchParams): SearchParams => ({ q: p.q, sort: p.sort, radiusKm: p.radiusKm });
 
-function heading(t: T, q: string | undefined, total: number): string {
+function Heading({ t, q, total }: { t: T; q: string | undefined; total: number }) {
+  const { number } = useFormatters();
   const text = q?.trim();
-  if (total >= EXACT_UP_TO) return text ? t('headingMany', { q: text, count: EXACT_UP_TO }) : t('headingBlankMany', { count: EXACT_UP_TO });
-  return text ? t('heading', { q: text, count: total }) : t('headingBlank', { count: total });
+  const count = total >= EXACT_UP_TO ? `${number(EXACT_UP_TO)}+` : number(total);
+  if (!text) return <>{t('resultsBlank', { count: total, shown: count })}</>;
+  return <>{t('resultsFor', { count: total, shown: count })} <strong>{t('quoted', { q: text })}</strong></>;
 }
 
 function errorText(t: T, error: unknown): string {
@@ -171,30 +138,44 @@ function errorText(t: T, error: unknown): string {
   return t('error');
 }
 
-function Group({ label, children, plain }: { label: ReactNode; children: ReactNode; plain?: boolean }) {
+function Group({ label, children }: { label: ReactNode; children: ReactNode }) {
+  const id = useId();
   return (
-    <section className="nl-results-group">
-      <h2 className="nl-results-group-label">{label}</h2>
-      <div className={clsx('nl-results-group-items', plain && 'nl-results-group-plain')}>{children}</div>
+    <section className="nl-results-group" aria-labelledby={id}>
+      <h2 id={id} className="nl-results-group-label">{label}</h2>
+      <div className="nl-results-group-items">{children}</div>
     </section>
   );
 }
 
-/** design 06's filter row: a square box and the name (a toggle; `radio` = one of a group). */
-function Check({ on, onClick, children, radio }: { on: boolean; onClick: () => void; children: ReactNode; radio?: boolean }) {
+/** A filter row (AT: a checkbox or radio list with counted options). */
+function Option({ checked, onChange, label, count, radio, name }: { checked: boolean; onChange: (on: boolean) => void; label: string; count?: number; radio?: boolean; name?: string }) {
+  const { number } = useFormatters();
   return (
-    <button type="button" className={clsx('nl-check', on && 'nl-check-on', radio && 'nl-check-radio')} aria-pressed={on} onClick={onClick}>
-      <span className="nl-check-box" aria-hidden />{children}
-    </button>
+    <label className="nl-results-option">
+      <input type={radio ? 'radio' : 'checkbox'} name={name} checked={checked} onChange={e => onChange(radio ? true : e.target.checked)} />
+      <span className="nl-results-option-label">{label}</span>
+      {count !== undefined ? <span className="nl-results-option-count">{number(count)}</span> : null}
+    </label>
   );
 }
 
-function FacetGroup({ label, facets, active, onPick }: { label: string; facets: Facet[] | undefined; active?: string; onPick: (value: string) => void }) {
+function FacetGroup({ t, facets, active, onPick }: { t: T; facets: Facet[] | undefined; active?: string; onPick: (value: string) => void }) {
   const shown = (facets ?? []).filter(f => f.label).slice(0, 8);
   if (!shown.length) return null;
   return (
-    <Group label={label}>
-      {shown.map(f => <Check key={f.value} on={active === f.value} onClick={() => onPick(f.value)}>{`${f.label} · ${f.count}`}</Check>)}
+    <Group label={t('categories')}>
+      {shown.map(f => <Option key={f.value} checked={active === f.value} onChange={() => onPick(f.value)} label={f.label!} count={f.count} />)}
+    </Group>
+  );
+}
+
+function PriceGroup({ t, value, onPick }: { t: T; value: number | undefined; onPick: (cents: number | undefined) => void }) {
+  const { money } = useFormatters();
+  return (
+    <Group label={t('price')}>
+      <Option radio name="price" checked={value === undefined} onChange={() => onPick(undefined)} label={t('anyPrice')} />
+      {PRICES.map(c => <Option key={c} radio name="price" checked={value === c} onChange={() => onPick(c)} label={t('underPrice', { price: money(c + 1, { whole: true }) })} />)}
     </Group>
   );
 }
@@ -202,59 +183,45 @@ function FacetGroup({ label, facets, active, onPick }: { label: string; facets: 
 function SortControl({ t, value, located, onChange }: { t: T; value: Sort; located: boolean; onChange: (s: Sort) => void }) {
   return (
     <label className="nl-results-sort">
-      {t('sortedBy')}{' '}
-      <select value={value} onChange={e => onChange(e.target.value as Sort)}>
+      <span>{t('sortedBy')}</span>
+      <select className="input" value={value} onChange={e => onChange(e.target.value as Sort)}>
         {SORTS.filter(s => s !== 'distance' || located || value === 'distance').map(s => <option key={s} value={s}>{t(`sort_${s}`)}</option>)}
       </select>
     </label>
   );
 }
 
-/** One result (design 06 card): picture, name and price, "business · detail", one tag. */
-function ResultCard({ item, t }: { item: SearchItem; t: T }) {
-  const { money, number } = useFormatters();
-  const price = item.priceCents == null || item.pricingMode === 'quote' ? t('quote')
-    : item.kind === 'merchant' ? t('from', { price: money(item.priceCents) })
-    : item.pricingMode === 'hourly' ? t('hourly', { price: money(item.priceCents) })
-    : money(item.priceCents);
-  const business = item.kind === 'merchant' ? t(`type_${item.merchant.type}` as Key) : item.merchant.name;
-  const meta = [
-    business,
-    item.category?.name && item.kind !== 'merchant' ? item.category.name : null,
-    item.rating ? (item.reviewCount ? t('ratingCount', { rating: number(item.rating, { minimumFractionDigits: 1, maximumFractionDigits: 1 }), count: item.reviewCount }) : t('rating', { rating: number(item.rating, { maximumFractionDigits: 1 }) })) : null,
-    item.distanceKm != null ? t('km', { km: number(item.distanceKm, { maximumFractionDigits: 1 }) }) : null,
-  ].filter(Boolean).join(' · ');
-  const tag = tagOf(item, t);
-  const image = imageUrl(item.imageKey);
+/** The infinite list's end: a sentinel that loads the next page as it scrolls in, and the button for the same. */
+function More({ t, shown, total, hasNext, loading, onMore }: { t: T; shown: number; total: number; hasNext: boolean; loading: boolean; onMore: () => void }) {
+  const { number } = useFormatters();
+  const sentinel = useRef<HTMLDivElement>(null);
+  const more = useRef(onMore);
+  more.current = onMore;
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !hasNext || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) more.current(); }, { rootMargin: '600px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasNext, shown]);
   return (
-    <SiteLink href={itemHref(item)} className="nl-result">
-      <span className={clsx('nl-result-media halftone', !image && `nl-swatch-${swatchOf(item.merchant.id)}`)} aria-hidden>
-        {image ? <img src={image} alt="" loading="lazy" decoding="async" /> : null}
-      </span>
-      <span className="nl-result-row"><span className="nl-result-name">{item.name}</span><span className="nl-result-price">{price}</span></span>
-      <span className="nl-result-meta">{meta}</span>
-      {tag ? <span className="nl-result-tag"><span className={`tag tag-${tag.tone}`}>{tag.label}</span></span> : null}
-    </SiteLink>
+    <div ref={sentinel} className="nl-results-more" role="status">
+      {hasNext ? (
+        <>
+          <span>{t('shown', { shown: number(shown), total: total >= EXACT_UP_TO ? `${number(EXACT_UP_TO)}+` : number(total) })}</span>
+          <button type="button" className="btn btn-secondary" disabled={loading} onClick={onMore}>{loading ? t('loadingMore') : t('showMore')}</button>
+        </>
+      ) : <span>{t('seenAll', { count: shown })}</span>}
+    </div>
   );
 }
 
-function tagOf(item: SearchItem, t: T): { label: string; tone: 'accent' | 'accent-2' | 'neutral' } | null {
-  if (item.soldOut) return { label: t('tag_soldOut'), tone: 'neutral' };
-  if (item.onTonightsRun) return { label: t('tag_tonight'), tone: 'accent' };
-  if (item.kind === 'food' && item.openNow) return { label: t('tag_open'), tone: 'accent' };
-  if (item.kind === 'service' && item.instantBook) return { label: t('tag_instant'), tone: 'accent' };
-  const tier = item.trustTier ?? item.merchant.tier;
-  if (tier === 'master') return { label: t('tag_master'), tone: 'accent' };
-  if (tier === 'trusted') return { label: t('tag_trusted'), tone: 'neutral' };
-  return null;
-}
-
-/** Loading: the page's shape (heading, filter rows, a grid of cards). */
+/** Loading: a grid of card shapes. */
 export function ResultsSkeleton() {
   return (
-    <ul className="nl-results-grid" aria-hidden>
-      {Array.from({ length: 6 }, (_, i) => (
-        <li key={i}><Skeleton height="auto" style={{ aspectRatio: '1 / 1' }} radius="var(--radius-md)" /><Skeleton width="70%" style={{ marginTop: 10 }} /><Skeleton width="50%" style={{ marginTop: 6 }} /></li>
+    <ul className="nl-card-grid" aria-hidden>
+      {Array.from({ length: 8 }, (_, i) => (
+        <li key={i}><Skeleton height="auto" style={{ aspectRatio: '1 / 1' }} radius="var(--radius-sm)" /><Skeleton width="70%" style={{ marginTop: 10 }} /><Skeleton width="40%" height={24} style={{ marginTop: 6 }} /></li>
       ))}
     </ul>
   );
@@ -262,9 +229,12 @@ export function ResultsSkeleton() {
 
 export function SearchSkeleton() {
   return (
-    <div className="nl-results-page">
-      <aside className="nl-results-aside" aria-hidden>{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} width={140} height={18} style={{ margin: '10px 0' }} />)}</aside>
-      <div className="nl-results-main"><Skeleton width={280} height={36} /><ResultsSkeleton /></div>
+    <div className="nl-page nl-results-page">
+      <div className="nl-results-bar"><Skeleton width={260} height={20} /></div>
+      <div className="nl-results-layout">
+        <aside className="nl-results-aside" aria-hidden>{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} width={160} height={16} style={{ margin: '12px 0' }} />)}</aside>
+        <div className="nl-results-main"><ResultsSkeleton /></div>
+      </div>
     </div>
   );
 }
