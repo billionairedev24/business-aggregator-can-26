@@ -8331,6 +8331,9 @@ data only ([docs/runbooks/dryrun-gcp.md](runbooks/dryrun-gcp.md)). Owner directi
 
 > - Kubernetes on Google Cloud (GKE).
 > - Minimise egress/ingress: GKE in a single zone; region a variable.
+> - ≈ $250 for 3 weeks is too expensive: at most ≈ $100 of credit for 3 weeks, everything in one zone (Montréal by
+>   default). One zonal cluster, one node pool of 2 × e2-standard-4 Spot; no Cloud NAT, no Cloud SQL/Memorystore, no
+>   managed Kafka/Prometheus; one load balancer; observability lean or off by flag; scale to 0 when not demoing.
 
 Postgres, Valkey and Meilisearch were first to be hosted by **Layerbase** (a third-party managed database provider
 with flat monthly plans). **Layerbase considered: no PostGIS, Hetzner Ashburn → cross-provider egress; supported as
@@ -8341,10 +8344,15 @@ the data services live, so both work, per service.
 - **Environment `dryrun`** (`infra/terraform/envs/gcp/dryrun`, chart `global.environment: dryrun`): the GCP stack
   with `data_stores = null` and the new `data_services` variable. Region default **`northamerica-northeast1`**
   (Montréal), zone default `<region>-a` — the Canadian-regions rule holds; the root validates it like every other
-  root. Zonal GKE Standard, one pool of 2 × `e2-standard-4` (autoscaling 2–3) on Spot VMs by default
-  (`spot_nodes = false` before a demo), CMEK, Workload Identity, Cloud NAT, the same registry/buckets/secrets/KMS/DNS
-  modules. Not Autopilot: with the in-cluster data services the requests (≈ 2.5 vCPU, ≈ 9 GiB) would cost ≈ $110/month
-  on Autopilot against ≈ $66 for two Spot nodes (management fee the same, covered by the GKE free tier).
+  root. Zonal GKE Standard, one pool of 2 × `e2-standard-4` Spot (`node_count` 2–2, `spot_nodes`; demo day on
+  demand), 30 GB boot disks, CMEK, Workload Identity, the same registry/buckets/secrets/KMS/DNS modules. **No Cloud
+  NAT:** in `dryrun` the GCP network module creates no router/NAT, Private Service Access or PSC policy, and the
+  cluster module turns private nodes off (public nodes with ephemeral IPs; GKE's firewall rules unchanged) — other
+  environments keep private nodes behind NAT (resources got `count` + `moved` blocks). Consequence: no fixed egress
+  address for an external provider's allow-list. Not Autopilot: the requests (≈ 2.5 vCPU, ≈ 8 GiB) would cost
+  ≈ $110/month on Autopilot against ≈ $76 for two Spot nodes (management fee covered by the GKE free tier either way).
+- **Scale to 0 between demos:** `make dryrun-down` / `dryrun-up` / `dryrun-status` (`scripts/dryrun-nodes.sh`, gcloud:
+  autoscaling off and resize to 0, then back to Terraform's bounds).
 - **Each data service `in-cluster` (default) or `external`.** In the cluster (new chart `deploy/helm/northline-data`,
   every volume pinned to the zone): PostgreSQL 17 + PostGIS through **CloudNativePG** (operator chart 0.26 / 1.27,
   one instance, extensions created after initdb, daily base backup + WAL to the new GCS bucket
@@ -8362,17 +8370,23 @@ the data services live, so both work, per service.
   Stripe in test mode is required by the dry-run values. Emails logged (`EMAIL_PROVIDER=local`) until a SendGrid key
   exists. HTTPS and an ACME issuer are enforced for `dryrun` like staging/prod.
 - **Delivery:** plain Helm (no Argo CD for two to three weeks), add-ons installed with the Argo CD add-ons' values.
-- **Observability:** Google Cloud's own backends through the chart's one Collector (Cloud Trace, Cloud Logging,
-  Managed Service for Prometheus, as `values-gcp.yaml`) — ≈ $16/month of samples instead of ≈ 2 GiB of
-  Prometheus/Loki/Tempo/Grafana pods.
+- **Observability off by default** (`observability.collector.enabled: false`): pod logs reach Cloud Logging through
+  GKE anyway (free tier) and GKE system metrics are free. The flag `observability.collector.enabled=true` runs one
+  Collector: traces → Cloud Trace, logs → Cloud Logging, metrics only in its log — no Managed Service for Prometheus
+  samples, no in-cluster Prometheus/Loki/Tempo/Grafana (≈ 2 GiB).
+- **Small JVMs:** memory limits sized for two 16 GB nodes (the images give the heap 75 % of the limit);
+  `JAVA_TOOL_OPTIONS` adds serial GC, a 64 MB code cache, 512 KB stacks and C1 only (startup and memory over peak
+  throughput, fine for demo traffic).
 - **Demo data through the product**, never the dev seed (its personas' credentials are public; DevSeedGuard refuses
   it anyway). The first console admin by the documented SQL.
 - **Module contract:** `context` gains `zone` (optional) and `environment` accepts `dryrun`, identically for AWS,
   Google Cloud and Azure; GCP modules treat `dryrun` like `dev` (zonal cluster in `context.zone`, flow-log sampling,
   DNS zone `force_destroy`). The GCP stack's managed data-store modules got `count` (with `moved` blocks, so existing
   addresses stay valid) and its outputs use `one(…)`.
-- **Cost:** ≈ $130/month on Spot nodes (≈ $60 for 2 weeks, ≈ $89 for 3), ≈ $279/month on demand — the table in the
-  runbook; list prices from memory, to re-check in the calculator.
+- **Cost:** ≈ $0.14/h on Spot (≈ $73 for 3 weeks around the clock, ≈ $88 with 3 demo days on demand, ≈ $32 when
+  the nodes run only while demoing), ≈ $0.35/h on demand (≈ $179 for 3 weeks) — the table in the runbook; list prices
+  from memory, to re-check in the calculator.
+- **Even cheaper alternative, out of scope:** one VM with k3s, being researched; only mentioned in the runbook.
 - **Not done / never run:** nothing applied to a Google Cloud project; CloudNativePG, the PostGIS image's barman-cloud,
   the Kafka/Valkey/Meilisearch pods, Layerbase and the Meilisearch adapter never ran; no Argo CD environment for
   `dryrun`; AWS/Azure modules accept `dryrun` but no env root uses it there. A region outside Canada for the dry run

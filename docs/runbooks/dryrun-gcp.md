@@ -16,32 +16,42 @@ Other environments: [dev](dev.md), [staging](staging.md), [prod](prod.md) · [ov
 
 - [The shape](#the-shape)
 - [Cost estimate](#cost-estimate)
+- [Pay only while demoing](#pay-only-while-demoing)
 - [What you need](#what-you-need)
 - [Steps from an empty project](#steps-from-an-empty-project) (1–15)
 - [Running it day to day](#running-it-day-to-day)
 - [Teardown (stop billing)](#teardown-stop-billing)
+- [Cheaper still: one VM (being researched)](#cheaper-still-one-vm-being-researched)
 - [Open items](#open-items)
 
 ## The shape
 
+Lean on purpose (target: at most ≈ $100 of credit for three weeks):
+
 | piece | dry run | prod (for comparison) |
 |---|---|---|
-| Region / zone | `northamerica-northeast1` (Montréal), zone `northamerica-northeast1-a` — Terraform variables `region`, `zone` (Canadian regions only) | regional, multi-zone |
-| Kubernetes | GKE Standard, **zonal**, one node pool `general`: 2 × `e2-standard-4` (autoscaling 2–3), Spot VMs by default (`spot_nodes`), private nodes, Workload Identity, Dataplane V2 | regional, HA pools |
+| Region / zone | `northamerica-northeast1` (Montréal), zone `northamerica-northeast1-a` — Terraform variables `region`, `zone` (Canadian regions only); everything in that one zone | regional, multi-zone |
+| Kubernetes | GKE Standard, **one zonal cluster** (its management fee is covered by GKE's free tier), **one node pool** `general`: 2 × `e2-standard-4` **Spot** (`node_count`, `spot_nodes`), 30 GB pd-balanced boot disks, Workload Identity, Dataplane V2 | regional, HA pools |
+| Network | **no Cloud NAT**: the nodes are public (an ephemeral external IP each) and reach the internet (images, Let's Encrypt, Stripe) directly; no Private Service Access or PSC policy (no managed data stores) | private nodes behind Cloud NAT |
 | Spring profile | `dev` (`global.springProfiles`, chart environment `dryrun`): required variables checked, Kafka externalization on, no dev seed; local fakes where no third-party account exists (registries, calendar, POS, places, AI, SMS codes in the auth log, emails logged) | `prod` |
-| Replicas | 1 of everything, small requests (`values-dryrun.yaml`) | 2+ with HPAs |
-| PostgreSQL 17 + PostGIS | **in the cluster**: CloudNativePG, 1 instance, 10 GiB pd-balanced, daily base backup + WAL to the GCS bucket `northline-dryrun-pg-backups` (7 days) | Cloud SQL |
-| Valkey | **in the cluster**: 1 pod, append-only file on 1 GiB, password | Memorystore |
-| Search | **Meilisearch in the cluster**: 1 pod, 5 GiB volume, master key (`SEARCH_PROVIDER=meilisearch`) | Elastic Cloud |
-| Kafka | **in the cluster**: one KRaft node (broker + controller), PLAINTEXT, 10 GiB, replication factor 1; topics by the chart's Job | Managed Kafka |
+| Replicas and JVMs | 1 of everything; memory limits sized so two nodes hold it all with room (the images give the heap 75 % of the limit, `-XX:MaxRAMPercentage=75`; `JAVA_TOOL_OPTIONS` adds serial GC, a smaller code cache and thread stacks, C1 only) | 2+ with HPAs |
+| PostgreSQL 17 + PostGIS | **in the cluster**: CloudNativePG, 1 instance, 10 GB pd-balanced, daily base backup + WAL to the GCS bucket `northline-dryrun-pg-backups` (7 days) | Cloud SQL |
+| Valkey | **in the cluster**: 1 pod, append-only file on 1 GB, password | Memorystore |
+| Search | **Meilisearch in the cluster**: 1 pod, 5 GB, master key (`SEARCH_PROVIDER=meilisearch`) | Elastic Cloud |
+| Kafka | **in the cluster**: one KRaft node (broker + controller), PLAINTEXT, 10 GB, replication factor 1; topics by the chart's Job | Managed Kafka |
 | Each data service, alternatively | **external** (e.g. Layerbase): endpoint in `data_services`, credential in Secret Manager — [§ 5](#5-optional-external-data-services) | — |
 | Object storage, KMS, secrets, registry, DNS | as every environment: GCS `northline-dryrun-uploads` (CMEK), Cloud KMS keys `data`/`signing`/`tokens` (software), Secret Manager `northline-dryrun-*`, Artifact Registry `northline-dryrun`, Cloud DNS zone `demo.northline.ca` | same (HSM keys) |
-| Edge | Envoy Gateway behind one regional network load balancer, Let's Encrypt (HTTP-01) per host, external-dns | same |
-| Delivery | plain `helm upgrade --install` (no Argo CD: one fewer component for two to three weeks) | Argo CD |
-| Observability | **Google Cloud's own backends**: the chart's one OpenTelemetry Collector → Cloud Trace, Cloud Logging, Managed Service for Prometheus (`values-gcp.yaml`). No Prometheus/Loki/Tempo/Grafana pods: they would need about 2 GiB of memory (a third of a node) to save roughly $10–15 of metric samples | same |
+| Edge | **one** load balancer: Envoy Gateway (one proxy) behind a single regional network load balancer IP; Let's Encrypt certificates per host (cert-manager, HTTP-01); records by external-dns | same, 2 proxies |
+| Delivery | plain `helm upgrade --install` (no Argo CD: one fewer component for three weeks) | Argo CD |
+| Observability | **off by default**: pod logs reach Cloud Logging anyway (GKE, inside the free 50 GiB/month) and GKE's system metrics are free. Flag for a debugging session: `--set observability.collector.enabled=true` — one Collector, traces to Cloud Trace and logs to Cloud Logging (free tiers), metrics not exported. No Managed Service for Prometheus samples, no Prometheus/Loki/Tempo/Grafana pods | Collector → the cloud's backends |
 
 Every pod with a volume is pinned to the cluster's zone (`zone` in `deploy/helm/northline-data`); the disks are zonal,
 so a node replaced by Spot preemption comes back in the same zone and the pod re-attaches its disk.
+
+**Spot risk.** Google may reclaim a Spot node at any time (30 s notice), most often when the zone is short of
+capacity. Its pods restart on the other node, or wait for the replacement (≈ 2–5 minutes; Postgres, Kafka and
+Meilisearch wait for their disk). For a demo that must not blink: **demo day = on demand** — `spot_nodes = false` and
+`terraform apply` the evening before (the pool is re-created, ≈ 10 minutes), back to `true` afterwards.
 
 Hosts (`values-dryrun.yaml`): `https://demo.northline.ca` (consumer), `studio.`, `auth.`, `console.`, `pages.`,
 `api.` under `demo.northline.ca`. No documentation site, no merchant custom domains.
@@ -51,44 +61,57 @@ Hosts (`values-dryrun.yaml`): `https://demo.northline.ca` (consumer), `studio.`,
 | | requests |
 |---|---|
 | Spring apps (api 900 Mi, auth 640 Mi, bff ×3 400 Mi, worker 448 Mi) | ≈ 3.2 GiB |
-| web (studio, consumer, console), Collector | ≈ 0.4 GiB |
+| web (studio, consumer, console) | ≈ 0.1 GiB |
 | Postgres 1 GiB, Kafka 1 GiB, Meilisearch 512 Mi, Valkey 128 Mi | ≈ 2.6 GiB |
-| add-ons (External Secrets, cert-manager, Envoy Gateway + proxies, external-dns, CloudNativePG) | ≈ 1 GiB |
+| add-ons (External Secrets, cert-manager, Envoy Gateway + 1 proxy, external-dns, CloudNativePG) | ≈ 1 GiB |
 | GKE system pods | ≈ 1 GiB |
-| **total** | **≈ 8–9 GiB** of the ≈ 26 GiB two `e2-standard-4` nodes offer — either node can carry everything alone while the other is replaced |
+| **total** | **≈ 8 GiB** of the ≈ 26 GiB two `e2-standard-4` (16 GB each) offer — one node can carry everything while the other is replaced |
 
 ## Cost estimate
 
-Approximate list prices for `northamerica-northeast1` (USD, 730 h per month; Montréal is about 10 % above
-`us-central1`). They were **not re-checked online** for this estimate: confirm them in the
+Approximate list prices for `northamerica-northeast1` (USD; Montréal is about 10 % above `us-central1`). They were
+**not re-checked online** for this estimate: confirm them in the
 [pricing calculator](https://cloud.google.com/products/calculator) before applying. Spot prices move (up to once a
-month); the figure below is typical.
+month); the figure below is typical. Month = 730 h, 3 weeks = 504 h.
 
-| item | quantity | monthly | 2 weeks | 3 weeks |
-|---|---|---|---|---|
-| GKE cluster management fee ($0.10/h) | 1 zonal cluster | $73.00 − $74.40 free tier = **$0** | $0 | $0 |
-| Nodes, `e2-standard-4` **Spot** (≈ $0.045/h) | 2 | $66 | $31 | $46 |
-| *(instead) nodes, `e2-standard-4` on demand (≈ $0.147/h)* | *2* | *$215* | *$99* | *$149* |
-| Boot disks, pd-balanced (≈ $0.11/GB-month) | 2 × 50 GB | $11 | $5 | $8 |
-| Data volumes, pd-balanced | 10 + 10 + 5 + 1 GB | $3 | $1.50 | $2 |
-| Network load balancer forwarding rule ($0.025/h) + its IP | 1 | $22 | $10 | $15 |
-| Cloud NAT gateway (2 VMs) + static IP + data processing | 1 | $6 | $3 | $4 |
-| Managed Service for Prometheus (≈ 6 000 series every 60 s ≈ 260 M samples × $0.06/M) | — | $16 | $7 | $11 |
-| Cloud Logging (50 GiB/month free), Cloud Trace (2.5 M spans free) | demo traffic | $0 | $0 | $0 |
-| Internet egress (≈ $0.12/GB) | ≈ 20 GB | $2.50 | $1 | $2 |
-| Artifact Registry (0.5 GB free, then $0.10/GB), GCS uploads + Postgres backups | ≈ 5 GB + 5 GB | $1 | $0.50 | $1 |
-| Cloud KMS (3 keys), Secret Manager (≈ 20 versions), Cloud DNS (1 zone) | — | $2 | $1 | $1.50 |
-| **Total, Spot nodes** | | **≈ $130** | **≈ $60** | **≈ $89** |
-| **Total, on-demand nodes** | | **≈ $279** | **≈ $128** | **≈ $192** |
-| **Spot, switched to on demand for the demo week** (`spot_nodes = false`) | | | **≈ $94** (1 week Spot + 1 on demand) | **≈ $124** (2 weeks Spot + 1 on demand) |
+| item | per hour | per month | 3 weeks |
+|---|---|---|---|
+| GKE management fee, one zonal cluster ($0.10/h) | $0 (free tier: $74.40/month per billing account) | $0 | $0 |
+| **Always on** (also while the nodes are at 0): load balancer forwarding rule $0.025 + its IP $0.005 | $0.030 | $22 | $15 |
+| Data volumes, pd-balanced 26 GB (≈ $0.11/GB-month) | $0.004 | $3 | $2 |
+| Cloud DNS zone, KMS keys, Secret Manager versions, Artifact Registry (≈ 3 GB), GCS (uploads, backups) | $0.003 | $2 | $1.50 |
+| **Nodes, Spot**: 2 × (`e2-standard-4` ≈ $0.045 + 30 GB boot disk $0.0045 + Spot VM IP $0.0025) | $0.104 | $76 | $52 |
+| *Nodes, on demand: 2 × (≈ $0.147 + $0.0045 + IP $0.005)* | *$0.313* | *$228* | *$158* |
+| Internet egress (≈ $0.12/GB, ≈ 15 GB of demo traffic), Cloud Logging and Trace (free tiers) | — | $2 | $2 |
+| **Total, Spot, running all the time** | **$0.141** | **≈ $105** | **≈ $73** |
+| **Total, on demand, running all the time** | **$0.350** | **≈ $257** | **≈ $179** |
+| **Spot, with 3 demo days on demand** (72 h) | | | **≈ $88** |
+| **Spot, nodes up only while demoing/preparing** (≈ 60 h over 3 weeks, [below](#pay-only-while-demoing)), of which 3 demo days of 8 h on demand | | | **≈ $32** |
 
-All stay well under the $300 credit. Not in the table: an external provider's own plan (Layerbase bills flat monthly
-plans; Google's credit doesn't pay it) and the egress to it (below). Budget alert: [§ 1](#1-project-billing-budget).
+Within the ≈ $100 target in every Spot case. Not in the table: an external provider's own plan (Layerbase bills flat
+monthly plans; Google's credit doesn't pay it) and the egress to it (below). Budget alert:
+[§ 1](#1-project-billing-budget).
 
 **External data services cost egress.** Layerbase runs on Hetzner in Ashburn, Virginia: everything the cluster sends
 to it (queries, writes, cache traffic) is internet egress from Montréal (≈ $0.12/GB) and every round trip adds ≈ 20–25
 ms. A demo moves little data (≈ $1–5), but a page that makes 30 Valkey/Postgres calls gets ≈ 0.7 s slower. Keep
-Postgres in the cluster in any case (Layerbase's Postgres has no PostGIS).
+Postgres in the cluster in any case (Layerbase's Postgres has no PostGIS). Without Cloud NAT the cluster has no fixed
+egress address to allow-list at a provider.
+
+## Pay only while demoing
+
+The nodes are ≈ 75 % of the bill. Between demos, scale the pool to 0; volumes, data, the load balancer and DNS stay
+(≈ $0.04/h ≈ $0.90/day while down):
+
+```sh
+make dryrun-down     # autoscaling off, node pool general → 0 nodes
+make dryrun-up       # → 2 nodes (NODES=2), autoscaling back to Terraform's bounds; pods and data back in ≈ 5 minutes
+make dryrun-status   # machine type, Spot or not, autoscaling, running nodes
+```
+
+(`scripts/dryrun-nodes.sh` reads the cluster, zone and project from `terraform output kubernetes`.) Bring the nodes
+up an hour before a demo and run the smoke test ([§ 14](#14-smoke-test)); Let's Encrypt certificates and the
+Postgres data survive. A `terraform apply` while the pool is down puts it back to `node_count` (2).
 
 ## What you need
 
@@ -115,10 +138,10 @@ gcloud projects create "$PROJECT" --name "Northline dry run"
 gcloud billing accounts list                                   # the free-trial billing account id
 gcloud billing projects link "$PROJECT" --billing-account "$BILLING_ACCOUNT"
 gcloud config set project "$PROJECT"
-# Budget: e-mails the billing admins at 50 %, 90 % and 100 % of $250.
+# Budget: e-mails the billing admins at 50 %, 90 % and 100 % of $100.
 gcloud services enable billingbudgets.googleapis.com
 gcloud billing budgets create --billing-account "$BILLING_ACCOUNT" --display-name "northline-dryrun" \
-  --budget-amount 250USD --filter-projects "projects/$PROJECT" \
+  --budget-amount 100USD --filter-projects "projects/$PROJECT" \
   --threshold-rule percent=0.5 --threshold-rule percent=0.9 --threshold-rule percent=1.0
 ```
 
@@ -144,7 +167,7 @@ cp terraform.tfvars.example terraform.tfvars   # project_id, region, zone, admin
 terraform init && terraform apply
 ```
 
-It creates the VPC with Cloud NAT, the zonal cluster, the KMS keys, Artifact Registry, the uploads and Postgres backup
+It creates the VPC (no Cloud NAT: public nodes), the zonal cluster, the KMS keys, Artifact Registry, the uploads and Postgres backup
 buckets, the Cloud DNS zone, every Secret Manager secret (the in-cluster data services' credentials **generated**,
 the app secrets **empty**), and the workload identities (apps, External Secrets, cert-manager, external-dns, the
 Collector, the Postgres backups). About 15 minutes (the cluster). No Cloud SQL, Memorystore, Managed Kafka or Elastic
@@ -171,8 +194,9 @@ data_services = {
 }
 ```
 
-1. Create the database(s) at the provider (Layerbase: Valkey, Meilisearch). Allow-list the cluster's egress address:
-   `terraform output -json data_stores | jq -r '.data_services.egress_ips[]'`.
+1. Create the database(s) at the provider (Layerbase: Valkey, Meilisearch), TLS on and a strong password. There is
+   no fixed egress address to allow-list (no Cloud NAT; the nodes' ephemeral IPs change with every node), so the
+   provider must accept connections from anywhere — acceptable for fake data only.
 2. `terraform apply` again: the endpoints go into `configEnv`, the external service is left out of
    `northline-data`, and its credential secret is created **empty**.
 3. Put the credentials in (names: `terraform output -json data_stores | jq '.data_services.secrets_to_fill'`):
@@ -344,33 +368,39 @@ site (Meilisearch), a checkout with the test card, the console's overview. The e
 
 ### 15. Observability
 
-Google Cloud console › Logging (`resource.labels.namespace_name="northline-dryrun"`), Trace, and Monitoring ›
-Metrics explorer (PromQL, Managed Service for Prometheus). The repository's Grafana dashboards
-(`deploy/observability/grafana`) are not installed; Cloud Monitoring can import them, or run Grafana locally against
-the project's Prometheus endpoint ([observability.md](observability.md)).
+Logs: Google Cloud console › Logging (`resource.labels.namespace_name="northline-dryrun"`) — the pods' stdout, always
+on. Node and pod CPU/memory: Monitoring › Kubernetes (GKE system metrics, free). Traces only with the Collector flag
+(Cloud Trace). No application metrics or Grafana dashboards in the dry run; the full stack is
+[observability.md](observability.md).
 
 ## Running it day to day
 
-- **Before a demo:** `spot_nodes = false` in `terraform.tfvars`, `terraform apply` (the pool is re-created: about 10
-  minutes of restarts — do it the day before), smoke test. Back to `true` afterwards.
+- **Between demos:** `make dryrun-down`; before the next one `make dryrun-up` ([Pay only while demoing](#pay-only-while-demoing)).
+- **Demo day:** `spot_nodes = false` in `terraform.tfvars`, `terraform apply` the evening before (the pool is
+  re-created: about 10 minutes of restarts), smoke test; back to `true` afterwards.
 - **Upgrade:** new `IMAGE_TAG`, step 8, then the step 10 command.
 - **Postgres backups:** `kubectl -n northline-dryrun get backups.postgresql.cnpg.io`; restore = a new CloudNativePG
   Cluster bootstrapped `recovery` from the bucket. Not needed for fake data; it is there to rehearse prod's shape.
-- **Pause between demo days (optional):** `gcloud container clusters resize northline-dryrun --node-pool general --num-nodes 0 --location $ZONE`
-  only after setting `node_count = { min = 0, max = 3 }`; the load balancer, disks and NAT keep billing (≈ $1/day).
+- **Debugging session:** `--set observability.collector.enabled=true` on the step 10 command (traces in Cloud Trace).
 
 ## Teardown (stop billing)
 
 ```sh
 helm uninstall northline northline-data -n northline-dryrun     # releases the load balancer and the volumes' claims
 kubectl delete namespace northline-dryrun envoy-gateway-system  # the remaining LB Service and PVCs
-terraform -chdir=infra/terraform/envs/gcp/dryrun destroy        # cluster, NAT, buckets (force_destroy), DNS zone, secrets
+terraform -chdir=infra/terraform/envs/gcp/dryrun destroy        # cluster, buckets (force_destroy), DNS zone, secrets
 gcloud projects delete "$PROJECT"                               # everything left: disks, KMS key rings (they cannot be deleted)
 ```
 
 Remove the `demo` NS delegation from `northline.ca`. Check the billing report the next day: costs stop within hours;
 a deleted project is recoverable for 30 days. Cloud KMS key versions are scheduled for destruction (no charge once
 destroyed).
+
+## Cheaper still: one VM (being researched)
+
+A single Compute Engine VM running k3s (all of the above on one `e2-standard-4`, a static IP, no load balancer)
+would cost roughly half of the Spot cluster. It is **being researched and out of scope here**: no Terraform or charts
+for it yet, and it drops the GKE pieces this dry run rehearses (Workload Identity, the GKE load balancer, node pools).
 
 ## Open items
 

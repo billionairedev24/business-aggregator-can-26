@@ -23,7 +23,9 @@ A region outside Canada is rejected by variable validation in the env roots and 
 without the managed data stores: `data_stores = null` and `data_services` instead, where each of Postgres, Valkey,
 Meilisearch and Kafka is `in-cluster` (chart `deploy/helm/northline-data`; Terraform generates the credentials into
 Secret Manager and creates the Postgres backup bucket and identity) or `external` (endpoint in the variable, credential
-secret created empty). The cluster is zonal in `zone` (module context `zone`; null = `<region>-a`), like dev's.
+secret created empty). The cluster is zonal in `zone` (module context `zone`; null = `<region>-a`), like dev's, and
+to save the NAT its nodes are public: in `dryrun` the network module creates no Cloud NAT, Private Service Access or
+PSC policy.
 
 ## 1. Prerequisites
 
