@@ -153,7 +153,7 @@ describe('axe · shells and headers', () => {
           search={<SearchBar variant="header" value={q} onChange={setQ} onSubmit={noop} onPick={noop}
             suggestions={[{ id: 'g', label: 'Products', items: [{ id: 's1', text: 'sourdough', highlight: [{ start: 0, length: 4 }], meta: '$7.50' }] }]} />}
           links={[{ key: 'svc', label: 'Services', href: '/services' }, { key: 'shop', label: 'Shop', href: '/shop', current: true }]}
-          locale="en" onToggleLocale={noop} cart={{ count: 2, href: '/cart' }}
+          cart={{ count: 2, href: '/cart' }}
           account={<AccountMenu user={{ name: 'Amara Osei', initials: 'AO', detail: 'amara@example.test' }} headerAction={{ label: 'Add photo', href: '/account' }}
             sections={[{ heading: 'Orders', items: [{ key: 'o', label: 'Orders & bookings', icon: TagIcon, href: '/orders', value: '2' }] }, { items: [{ key: 'out', label: 'Sign out', icon: UserCircle, onSelect: noop }] }]} />} />
       );

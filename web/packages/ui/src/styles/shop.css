@@ -1,44 +1,55 @@
-/* Consumer Shop tiles (design 06 shop / category / search). Tokens only. */
-.nl-tile-grid { list-style: none; margin: 12px 0 0; padding: 0; display: grid; }
+/* Consumer tiles (ShopTiles) in AfroTransact's card language (Shop:313–332, ProductCard.module.css): a product card
+   (border, radius sm, white, the image padded on the sunken surface), a shop card and a department tile. Tokens only. */
+.nl-tile-grid { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; }
 .nl-tile-grid > li { min-width: 0; display: flex; }
 .nl-tile-grid > li > * { flex: 1; }
-.nl-tile-grid-130 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr)); gap: 10px; }
-.nl-tile-grid-200 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 20px; }
-.nl-tile-grid-240 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 14px; }
+.nl-tile-grid-130 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr)); gap: var(--space-3); }
+.nl-tile-grid-200 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: var(--space-5); }
+.nl-tile-grid-240 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: var(--space-3); }
 
-.nl-product-tile { display: flex; flex-direction: column; color: var(--color-text); text-decoration: none; border-radius: var(--radius-md); min-width: 0; }
-.nl-product-tile:hover { color: var(--color-text); }
-.nl-product-tile:hover .nl-product-tile-name { text-decoration: underline; text-underline-offset: 3px; }
-.nl-product-tile:focus-visible, .nl-shop-tile:focus-visible, .nl-dept-tile:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.nl-product-tile-media { display: block; aspect-ratio: 1 / 1; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--color-neutral-300), var(--color-neutral-500)); }
-.nl-product-tile-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.nl-product-tile-media .nl-tile-tag { position: absolute; left: 8px; top: 8px; z-index: 1; font-size: 10px; padding: 1px 7px; }
-.nl-product-tile-row { margin-top: 10px; display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
-.nl-product-tile-name { min-width: 0; overflow-wrap: anywhere; }
-.nl-product-tile-price { white-space: nowrap; }
-.nl-product-tile-meta { font-size: 13px; color: var(--color-neutral-700); overflow-wrap: anywhere; }
+/* product card: media padded 16 on the sunken surface (1:1), body 12 16 16, title base 500 → link colour on hover */
+.nl-product-tile { display: flex; flex-direction: column; color: var(--color-text); text-decoration: none; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden; min-width: 0; }
+.nl-product-tile:hover { color: var(--color-text); text-decoration: none; }
+.nl-product-tile:hover .nl-product-tile-name { color: var(--color-link); }
+.nl-product-tile:focus-visible, .nl-shop-tile:focus-visible, .nl-dept-tile:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.nl-product-tile-media { display: block; position: relative; aspect-ratio: 1 / 1; margin: 0; background: var(--color-surface-sunken); padding: var(--space-4); }
+.nl-product-tile-media img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.nl-product-tile-media:not(:has(img)) { background: linear-gradient(135deg, var(--color-placeholder-a), var(--color-placeholder-b)); }
+.nl-product-tile-media .nl-tile-tag { position: absolute; left: var(--space-2); top: var(--space-2); z-index: 1; }
+.nl-product-tile-row { padding: var(--space-3) var(--space-4) 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.nl-product-tile-name { min-width: 0; overflow-wrap: anywhere; font-size: var(--text-base); font-weight: var(--weight-medium); }
+.nl-product-tile-price { white-space: nowrap; font-size: var(--text-xl); font-weight: var(--weight-bold); color: var(--color-price); }
+.nl-product-tile-meta { padding: var(--space-1) var(--space-4) var(--space-4); font-size: var(--text-xs); color: var(--color-text-muted); overflow-wrap: anywhere; }
+@media (max-width: 599.98px) {
+  .nl-product-tile-media { padding: var(--space-2); }
+  .nl-product-tile-row { padding: var(--space-2) var(--space-3) 0; }
+  .nl-product-tile-meta { padding: var(--space-1) var(--space-3) var(--space-3); }
+  .nl-product-tile-name { font-size: var(--text-md); }
+}
 
-.nl-shop-tile { display: flex; gap: 12px; align-items: center; padding: 16px; min-height: 72px; background: var(--color-surface); border-radius: var(--radius-md); color: var(--color-text); text-decoration: none; min-width: 0; box-sizing: border-box; }
-.nl-shop-tile:hover { background: var(--color-accent-100); color: var(--color-text); }
-.nl-shop-tile-initial { gap: 14px; }
-.nl-shop-tile-mark { width: 52px; height: 52px; flex: none; border-radius: var(--radius-md); display: grid; place-items: center; font-weight: 600; font-size: 20px; color: var(--color-bg); }
+/* shop card: white, bordered, a mark and the name */
+.nl-shop-tile { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-4); min-height: 72px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text); text-decoration: none; min-width: 0; box-sizing: border-box; }
+.nl-shop-tile:hover { background: var(--color-surface-hover); color: var(--color-text); text-decoration: none; }
+.nl-shop-tile-initial { gap: var(--space-3); }
+.nl-shop-tile-mark { width: 52px; height: 52px; flex: none; border-radius: var(--radius-sm); display: grid; place-items: center; font-weight: var(--weight-bold); font-size: var(--text-xl); color: var(--color-text-inverse); }
 .nl-shop-tile-dot { width: 44px; height: 44px; flex: none; border-radius: 50%; }
 .nl-shop-tile-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.nl-shop-tile-title { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-weight: 600; }
-.nl-shop-tile-title .nl-tile-tag, .nl-shop-tile-run .nl-tile-tag, .nl-shop-tile-dot + .nl-shop-tile-body + .nl-tile-tag { font-size: 10px; padding: 1px 7px; }
+.nl-shop-tile-title { display: flex; gap: var(--space-2); align-items: baseline; flex-wrap: wrap; font-weight: var(--weight-bold); }
 .nl-shop-tile-dot + .nl-shop-tile-body + .nl-tile-tag { flex: none; }
-.nl-shop-tile-meta { font-size: 12px; color: var(--color-neutral-700); overflow-wrap: anywhere; }
-.nl-shop-tile-run { margin-top: 4px; }
+.nl-shop-tile-meta { font-size: var(--text-xs); color: var(--color-text-muted); overflow-wrap: anywhere; }
+.nl-shop-tile-run { margin-top: var(--space-1); }
 
-.nl-dept-tile { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; padding: 16px 12px; min-height: 88px; background: var(--color-surface); border-radius: var(--radius-md); color: var(--color-text); text-decoration: none; box-sizing: border-box; min-width: 0; }
-.nl-dept-tile:hover { background: var(--color-accent-100); color: var(--color-text); }
-.nl-dept-tile-name { font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
-.nl-dept-tile-count { font-size: 12px; color: var(--color-neutral-700); }
+/* department tile */
+.nl-dept-tile { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; padding: var(--space-4) var(--space-3); min-height: 88px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text); text-decoration: none; box-sizing: border-box; min-width: 0; }
+.nl-dept-tile:hover { background: var(--color-surface-hover); color: var(--color-text); text-decoration: none; }
+.nl-dept-tile-name { font-weight: var(--weight-bold); font-size: var(--text-base); overflow-wrap: anywhere; }
+.nl-dept-tile-count { font-size: var(--text-xs); color: var(--color-text-muted); }
 
-/* Six token swatches for shops without a logo. */
-.nl-swatch-1 { background: var(--color-accent); }
-.nl-swatch-2 { background: var(--color-accent-2); }
-.nl-swatch-3 { background: var(--color-accent-700); }
-.nl-swatch-4 { background: var(--color-neutral-700); }
-.nl-swatch-5 { background: var(--color-accent-2-700); }
+/* Six token swatches for shops without a logo: each is a colour the contrast gate holds to 4.5:1 against white, so the
+   white initial on it is readable too. */
+.nl-swatch-1 { background: var(--color-action-primary); }
+.nl-swatch-2 { background: var(--color-rating-text); }
+.nl-swatch-3 { background: var(--color-action-dark); }
+.nl-swatch-4 { background: var(--color-text-muted); }
+.nl-swatch-5 { background: var(--color-success); }
 .nl-swatch-6 { background: var(--color-text); }

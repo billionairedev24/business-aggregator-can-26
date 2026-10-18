@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { CaretDown, type Icon } from '@phosphor-icons/react';
+import { CaretDown, User, type Icon } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
 import { SiteLink } from './SiteLink';
 
-const useT = defineMessages({ en: { open: 'Account menu' }, fr: { open: 'Menu du compte' } });
+const useT = defineMessages({ en: { open: 'Account menu', guest: 'Welcome, guest' }, fr: { open: 'Menu du compte', guest: 'Bienvenue' } });
 
 export interface AccountMenuItem {
   key: string;
@@ -11,12 +11,15 @@ export interface AccountMenuItem {
   icon: Icon;
   /** Right-hand value ("3 active", "Visa ··4471"). */
   value?: string;
+  /** The label's language when it is in the other one (the "Français" / "English" switch, WCAG 3.1.2). */
+  lang?: string;
   href?: string;
   onSelect?: () => void;
 }
 export interface AccountMenuSection { heading?: string; items: readonly AccountMenuItem[] }
 export interface AccountMenuProps {
-  user: { name: string; initials: string; detail?: string };
+  /** The person signed in; absent for a guest (a grey avatar, "Welcome, guest", Sign in / Create account items). */
+  user?: { name: string; initials: string; detail?: string } | null;
   /** A button next to the name (the design's "Add photo"). */
   headerAction?: { label: string; href: string };
   /** Shown under the name (points and Plus status). */
@@ -25,9 +28,10 @@ export interface AccountMenuProps {
 }
 
 /**
- * The consumer header's account menu (design 06): avatar button → panel with the person, an optional card, grouped
- * items with a Phosphor duotone icon and a value. Orders & bookings belong here, never in the top navigation.
- * Arrow keys move between items, Escape closes and returns focus, clicking outside closes.
+ * The consumer header's avatar menu (AfroTransact Shop:60, redesign § 1.3): a 36px avatar (initials on the primary
+ * colour, or a grey user icon for a guest) → a 290px panel: the person (44px avatar, name, email) or "Welcome,
+ * guest", an optional card, grouped items (icon · label · value). Orders, bookings and returns live here only, never in
+ * the top navigation. Arrow keys move between items, Escape closes and returns focus, clicking outside closes.
  */
 export function AccountMenu({ user, headerAction, card, sections }: AccountMenuProps) {
   const t = useT();
@@ -56,16 +60,16 @@ export function AccountMenu({ user, headerAction, card, sections }: AccountMenuP
     <div className="nl-account" ref={wrap} onKeyDown={onKeyDown}>
       <button ref={button} type="button" className="nl-account-button" aria-label={t('open')} aria-haspopup="menu" aria-expanded={open}
         aria-controls={open ? id : undefined} onClick={() => setOpen(o => !o)}>
-        <span className="nl-account-avatar" aria-hidden>{user.initials}</span>
+        {user ? <span className="nl-account-avatar" aria-hidden>{user.initials}</span> : <span className="nl-account-avatar nl-account-guest" aria-hidden><User size={20} /></span>}
         <CaretDown size={13} aria-hidden />
       </button>
       {open && (
         <div id={id} role="menu" aria-label={t('open')} className="nl-account-panel">
           <div className="nl-account-head" role="none">
-            <span className="nl-account-avatar nl-account-avatar-lg" aria-hidden>{user.initials}</span>
+            {user ? <span className="nl-account-avatar nl-account-avatar-lg" aria-hidden>{user.initials}</span> : <span className="nl-account-avatar nl-account-avatar-lg nl-account-guest" aria-hidden><User size={24} /></span>}
             <span className="nl-account-who">
-              <span className="nl-account-name">{user.name}</span>
-              {user.detail && <span className="nl-account-detail">{user.detail}</span>}
+              <span className="nl-account-name">{user ? user.name : t('guest')}</span>
+              {user?.detail && <span className="nl-account-detail">{user.detail}</span>}
             </span>
             {headerAction && <SiteLink role="menuitem" href={headerAction.href} className="btn btn-ghost nl-account-photo" onClick={() => setOpen(false)}>{headerAction.label}</SiteLink>}
           </div>
@@ -76,7 +80,7 @@ export function AccountMenu({ user, headerAction, card, sections }: AccountMenuP
               {section.items.map(item => {
                 const body = (
                   <>
-                    <span className="nl-account-label"><item.icon weight="duotone" size={20} className="nl-account-icon" aria-hidden />{item.label}</span>
+                    <span className="nl-account-label"><item.icon size={20} className="nl-account-icon" aria-hidden /><span lang={item.lang}>{item.label}</span></span>
                     {item.value && <span className="nl-account-value">{item.value}</span>}
                   </>
                 );

@@ -2,7 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 import { Bank, Briefcase, CalendarCheck, ChartBar, ChartLineUp, ChatCircleText, Clock, GearSix, Lifebuoy, ShieldCheck, SquaresFour, Star, Storefront, Tag, UserCircle, Wallet, ArrowUUpLeft } from '@phosphor-icons/react';
 import { AppShell, type NavGroup, type NavItem } from './AppShell';
-import { PageHeader } from './Layout';
+import { Avatar, PageHeader } from './Layout';
+import { Logo } from './Logo';
 
 const item = (key: string, label: string, icon: NavItem['icon'], badge?: string): NavItem => ({ key, label, icon, badge, href: `#${key}` });
 const pinned = [item('dashboard', 'Dashboard', SquaresFour)];
@@ -21,9 +22,9 @@ type S = StoryObj<typeof meta>;
 function Demo({ rail }: { rail?: boolean }) {
   const [cur, setCur] = useState('appointments');
   return (
-    <AppShell rail={rail} brand={<span className="nav-brand">Northline <span style={{ fontWeight: 400, color: 'var(--color-neutral-700)' }}>Studio</span></span>}
-      headerStart={<><span style={{ fontSize: 14, color: 'var(--color-neutral-700)' }}>Prairie Wrench · Calgary</span><span className="tag tag-accent">Master tier</span></>}
-      headerEnd={<span style={{ fontSize: 13 }}>Ravi Sandhu</span>} pinned={pinned} groups={groups} currentKey={cur} onNavigate={i => setCur(i.key)}>
+    <AppShell rail={rail} brand={<Logo size={28} onDark product="Studio" />}
+      headerStart={<><span className="nl-topbar-meta"><strong>Prairie Wrench</strong> · Calgary</span><span className="tag tag-accent">Master tier</span></>}
+      headerEnd={<button type="button" className="nl-topbar-item"><Avatar initials="RS" size={32} /><span className="nl-topbar-item-text">Ravi Sandhu<span>Owner</span></span></button>} pinned={pinned} groups={groups} currentKey={cur} onNavigate={i => setCur(i.key)}>
       <PageHeader kicker="Operations" title={cur} />
     </AppShell>
   );

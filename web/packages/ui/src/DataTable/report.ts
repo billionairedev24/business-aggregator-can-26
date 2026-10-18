@@ -259,7 +259,7 @@ export interface PrintOptions {
   /** Extra line under the heading (e.g. active filters). */
   note?: string;
   lang: string;
-  /** Resolved base token values (`--color-text`, `--font-body`, …) from the host page. */
+  /** Resolved base token values (`--color-text`, `--font-sans`, …) from the host page. */
   cssVars?: Record<string, string>;
   /** Auto-open the print dialog when loaded. */
   autoPrint?: boolean;
@@ -278,8 +278,8 @@ export function toPrintHtml({ head, body }: ReportMatrix, o: PrintOptions): stri
   const trs = body.map((r) => `<tr>${r.map((c, i) => `<td${numericCol[i] ? ' class="n"' : ''}>${htmlEscape(c.text)}</td>`).join('')}</tr>`).join('');
   return `<!doctype html><html lang="${htmlEscape(o.lang)}"><head><meta charset="utf-8"><title>${htmlEscape(o.title)}</title><style>
 :root{${vars}}
-body{font:13px/1.45 var(--font-body,system-ui,sans-serif);color:var(--color-text,CanvasText);margin:32px}
-h1{font-family:var(--font-heading,Georgia,serif);font-weight:500;font-size:22px;margin:0 0 4px}
+body{font:13px/1.45 var(--font-sans,system-ui,sans-serif);color:var(--color-text,CanvasText);margin:32px}
+h1{font-family:var(--font-heading,system-ui,sans-serif);font-weight:700;font-size:22px;margin:0 0 4px}
 p{margin:0 0 16px;color:color-mix(in oklch,var(--color-text,CanvasText) 70%,transparent)}
 table{border-collapse:collapse;width:100%}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid color-mix(in oklch,var(--color-text,CanvasText) 14%,transparent);vertical-align:top}

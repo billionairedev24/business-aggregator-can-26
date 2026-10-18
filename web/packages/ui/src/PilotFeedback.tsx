@@ -36,7 +36,7 @@ export interface PilotFeedbackProps {
 
 const useT = defineMessages({
   en: {
-    open: 'Send feedback', title: 'Send feedback to the Northline team', lede: 'You’re in the pilot. Tell us what worked and what didn’t — the team reads every note.',
+    open: 'Send feedback', title: 'Send feedback to the {brand} team', lede: 'You’re in the pilot. Tell us what worked and what didn’t — the team reads every note.',
     category: 'What is it?', c_bug: 'Something’s broken', c_confusing: 'Something’s confusing', c_idea: 'An idea', c_praise: 'Something I liked',
     severity: 'How much did it get in your way?', s_blocker: 'I couldn’t finish what I was doing', s_major: 'I finished, but it was hard', s_minor: 'A small annoyance', s_cosmetic: 'Just how it looks',
     body: 'What happened?', bodyHint: 'What you did, what you expected, what you saw. Don’t include passwords, card numbers or codes.',
@@ -48,7 +48,7 @@ const useT = defineMessages({
     sent: 'Thank you — we got it as {reference}. You can follow it from this button.', close: 'Close', another: 'Send another',
   },
   fr: {
-    open: 'Envoyer un commentaire', title: 'Envoyer un commentaire à l’équipe Northline', lede: 'Vous faites partie du pilote. Dites-nous ce qui a marché et ce qui n’a pas marché — l’équipe lit chaque note.',
+    open: 'Envoyer un commentaire', title: 'Envoyer un commentaire à l’équipe {brand}', lede: 'Vous faites partie du pilote. Dites-nous ce qui a marché et ce qui n’a pas marché — l’équipe lit chaque note.',
     category: 'De quoi s’agit-il?', c_bug: 'Quelque chose est brisé', c_confusing: 'Quelque chose est déroutant', c_idea: 'Une idée', c_praise: 'Quelque chose que j’ai aimé',
     severity: 'À quel point cela vous a-t-il gêné?', s_blocker: 'Je n’ai pas pu terminer', s_major: 'J’ai terminé, mais difficilement', s_minor: 'Un petit irritant', s_cosmetic: 'Seulement l’apparence',
     body: 'Que s’est-il passé?', bodyHint: 'Ce que vous avez fait, ce que vous attendiez, ce que vous avez vu. N’incluez pas de mot de passe, de numéro de carte ni de code.',
@@ -163,7 +163,7 @@ export function PilotFeedback({ onSubmit, maxScreenshotBytes = SCREENSHOT_MAX_BY
   return (
     <>
       <button type="button" className={clsx('nl-feedback-open', placement === 'corner' && 'nl-feedback-corner', className)} onClick={() => setOpen(true)}>
-        <ChatCircleDots weight="duotone" aria-hidden /> {t('open')}
+        <ChatCircleDots aria-hidden /> {t('open')}
       </button>
       <Dialog open={open && !hidden} onClose={close} title={t('title')} width={560}
         actions={sent ? <>

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Receipt, SignOut } from '@phosphor-icons/react';
-import { expect, fn, userEvent, within } from 'storybook/test';
+import { Receipt, SignIn, SignOut, UserPlus } from '@phosphor-icons/react';
+import { expect, userEvent, within } from 'storybook/test';
 import { AccountMenu } from './AccountMenu';
 import { I18nProvider } from './i18n';
 import { LocationPill } from './LocationPill';
@@ -12,7 +12,9 @@ const links = [
   { key: 'shop', label: 'Shop', href: '/shop' },
   { key: 'food', label: 'Food', href: '/food' },
 ];
-const signedOut = <div className="nl-site-actions"><a className="btn btn-ghost" href="/sign-in">Sign in</a><a className="btn btn-primary" href="/register">Create account</a></div>;
+const signedOut = (
+  <AccountMenu sections={[{ items: [{ key: 'in', label: 'Sign in', icon: SignIn, href: '/sign-in' }, { key: 'up', label: 'Create account', icon: UserPlus, href: '/register' }] }]} />
+);
 const signedIn = (
   <AccountMenu user={{ name: 'Amara Osei', initials: 'AO', detail: 'amara@example.ca' }} sections={[
     { heading: 'Activity', items: [{ key: 'orders', label: 'Orders & bookings', icon: Receipt, value: '3 active', href: '/account/orders' }] },
@@ -26,8 +28,6 @@ const meta = {
   args: {
     location: <LocationPill status="detected" label="Calgary" href="/location" />,
     links,
-    locale: 'en',
-    onToggleLocale: fn(),
     cart: { count: 3, href: '/cart' },
     account: signedOut,
   },
@@ -36,22 +36,25 @@ const meta = {
 export default meta;
 type S = StoryObj<typeof meta>;
 
-/** Home: no search in the header. */
-export const SignedOutHome: S = {
-  play: async ({ canvasElement, args }) => {
+const search = <SearchBar variant="header" value="" onChange={() => {}} onSubmit={() => {}} placeholder="Search “sourdough”, “mobile mechanic”, “DJ”…" />;
+
+/** A guest: the grey avatar opens "Welcome, guest" with Sign in and Create account. */
+export const SignedOut: S = {
+  args: { search },
+  play: async ({ canvasElement }) => {
     const c = within(canvasElement);
     await expect(c.getByRole('navigation', { name: 'Main' })).not.toHaveTextContent(/Orders/);
     await expect(c.getByRole('link', { name: 'Cart, 3 items' })).toBeInTheDocument();
-    await userEvent.click(c.getByRole('button', { name: /Switch language/ }));
-    await expect(args.onToggleLocale).toHaveBeenCalled();
+    await userEvent.click(c.getByRole('button', { name: 'Account menu' }));
+    await expect(c.getByRole('menu')).toHaveTextContent('Welcome, guest');
   },
 };
-export const SignedInOffHome: S = {
-  args: { account: signedIn, search: <SearchBar variant="header" value="" onChange={() => {}} onSubmit={() => {}} placeholder="Search “sourdough”, “mobile mechanic”, “DJ”…" />, links: links.map(l => ({ ...l, current: l.key === 'shop' })) },
+export const SignedIn: S = {
+  args: { account: signedIn, search, links: links.map(l => ({ ...l, current: l.key === 'shop' })) },
 };
 export const EmptyCartLocating: S = { args: { cart: { count: 0, href: '/cart' }, location: <LocationPill status="locating" href="/location" /> } };
 export const French: S = {
-  args: { locale: 'fr', links: [{ key: 'services', label: 'Services', href: '/services' }, { key: 'shop', label: 'Boutique', href: '/shop' }, { key: 'food', label: 'Restaurants', href: '/food' }] },
+  args: { links: [{ key: 'services', label: 'Services', href: '/services' }, { key: 'shop', label: 'Boutique', href: '/shop' }, { key: 'food', label: 'Restaurants', href: '/food' }] },
   decorators: [Story => <I18nProvider initial="fr"><Story /></I18nProvider>],
 };
 /** 320 px: the header wraps onto more rows; nothing scrolls sideways. */

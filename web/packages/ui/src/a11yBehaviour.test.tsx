@@ -133,10 +133,10 @@ describe('language', () => {
     expect(document.documentElement.lang).toBe('fr-CA');
   });
 
-  it('the header language button is named from its visible text and marks the other language up', () => {
-    wrap(<SiteHeader location={null} links={[]} locale="en" onToggleLocale={() => {}} cart={{ count: 0, href: '/cart' }} account={null} />);
-    const button = screen.getByRole('button', { name: 'EN — Switch language: Français' });
-    expect(button.querySelector('[lang="fr-CA"]')?.textContent).toBe('Français');
+  it('the header has no language switch (redesign: it lives in the footer and the account menu)', () => {
+    wrap(<SiteHeader location={null} links={[]} cart={{ count: 0, href: '/cart' }} account={null} />);
+    expect(screen.queryByRole('button', { name: /language/i })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Northline — home' })).toHaveAttribute('href', '/');
   });
 });
 
