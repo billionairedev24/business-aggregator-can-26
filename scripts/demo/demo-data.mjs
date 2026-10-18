@@ -85,6 +85,26 @@ async function addresses() {
 const streetOf = a => a.street ?? a.line1 ?? [a.number, a.route].filter(Boolean).join(' ');
 const postalOf = a => a.postal ?? a.postalCode ?? a.postal_code;
 
+/** The authenticator QR code next to the state file (scan it into the presenter's authenticator app). */
+function saveQr(key, dataUri) {
+  const m = /^data:image\/png;base64,(.+)$/.exec(dataUri ?? '');
+  if (!m) return;
+  const dir = STATE_FILE.replace(/\.json$/, '') + '-qr';
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  writeFileSync(join(dir, `${key}.png`), Buffer.from(m[1], 'base64'), { mode: 0o600 });
+}
+
+/** Pictures for the listing the presenter adds live (each unique: vetting flags a reused image). */
+async function presenterPhotos() {
+  const dir = STATE_FILE.replace(/\.json$/, '') + '-photos';
+  if (existsSync(dir)) return dir;
+  mkdirSync(dir, { recursive: true });
+  for (const [i, title] of ['Autumn bouquet', 'Sunflower bunch', 'Potted fern', 'Gift card, $25', 'Holiday wreath', 'Succulent trio'].entries()) {
+    writeFileSync(join(dir, `${i + 1}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '')}.png`), Buffer.from(await listingPicture(title, 'Demo listing', ['#8E3B46', '#B8860B', '#2E7D32', '#1565C0', '#6D4C41', '#00897B'][i]).arrayBuffer()));
+  }
+  return dir;
+}
+
 // ── people ────────────────────────────────────────────────────────────────────────────────────────────────────────
 function phoneFor(key, suffix) {
   const override = env[`DEMO_PHONE_${key.toUpperCase()}`];
@@ -134,6 +154,7 @@ async function account(key, person, app, { open = true } = {}) {
     const created = await s.auth('POST', '/api/auth/register/totp/verify', { code: await freshTotp(totp.secret) });
     state.accounts[key] = { identifier: email, phone, name: `${person.firstName} ${person.lastName}`, role: person.role, userId: created.user.id, totpSecret: totp.secret, otpauthUri: totp.otpauthUri };
     save();
+    saveQr(key, totp.qrCode);
     try {
       const codes = await s.auth('POST', '/api/auth/backup-codes');
       state.accounts[key].backupCodes = codes.codes ?? codes.items ?? codes;
@@ -633,7 +654,7 @@ async function main() {
 
   if (RESET) {
     await reset(owner, await account('applicant', PLAN.owners.applicant, 'studio'));
-    if (env.DEMO_RESET_ALL === '1') { finish(started); return; }
+    if (env.DEMO_RESET_ALL === '1') { await finish(started); return; }
   }
 
   step('businesses');
@@ -673,7 +694,7 @@ async function main() {
   }
   step('check');
   await check(owner);
-  finish(started);
+  await finish(started);
 }
 
 /** Every planned listing live; what isn't is said (and why, when the Studio says). */
@@ -688,10 +709,12 @@ async function check(owner) {
   }
 }
 
-function finish(started) {
+async function finish(started) {
   step('done');
+  const photos = await presenterPhotos();
   log(`  ${Object.keys(state.merchants).length} businesses · ${Object.values(state.merchants).reduce((n, m) => n + Object.keys(m.listings ?? {}).length, 0)} listings · ${Object.keys(state.activity).length} orders/bookings — ${Math.round((Date.now() - started) / 1000)} s`);
-  log(`  accounts and their authenticator keys: ${STATE_FILE} (keep it; never commit or share it)`);
+  log(`  accounts and their authenticator keys: ${STATE_FILE} (keep it; never commit or share it); QR codes beside it (-qr/)`);
+  log(`  pictures for the listing you add live: ${photos}`);
   if (!QUIET) for (const [k, a] of Object.entries(state.accounts)) log(`    ${k.padEnd(10)} ${a.identifier}  — ${a.role ?? ''}`);
   if (todo.length) {
     log('\n  For a person to finish (then run this again):');
