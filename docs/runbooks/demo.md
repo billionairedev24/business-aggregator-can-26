@@ -27,7 +27,7 @@ site and the console do:
 
 | what | how |
 |---|---|
-| 11 businesses | a bakery, a grocer, a coffee roaster, a **wine shop (age-restricted)**, home cleaning, a barber, a caterer, tutoring, music lessons, a handyman, a photographer/DJ — each applied for in the Studio (business details, categories, every verification check), submitted, and **approved by staff in the console's verification queue** |
+| 11 businesses | a bakery, a grocer, a coffee roaster, a **wine shop (age-restricted)**, home cleaning, a barber, a caterer, tutoring, music lessons, a handyman, a photographer/DJ — each applied for in the Studio (business details, categories, every verification check), submitted, and **approved by staff in the console's verification queue** — by two people when the api asks for a four-eyes review (the reviewer recommends, a different approver decides; an api without the review step gets the approver's single decision) |
 | their public pages | logo (initials on the business's colour), tagline, brand colour, published |
 | 42 listings | 3–6 each: products with prices, stock, attributes and a picture; services with prices, durations and what's included; the wine shop's alcohol licence approved in the console's licence queue; whatever the automated vetting flags approved by trust & safety |
 | opening hours | each provider's week (weekdays 9–5, Thursday to 7, Saturday 10–3), bookable |
@@ -57,26 +57,28 @@ Once per environment, after [dryrun-gcp.md](dryrun-gcp.md) steps 1–14:
    northline-auth ([README § SMS and voice codes](README.md#sms-and-voice-codes-s-8)): put the auth token in Secret
    Manager (`sms-auth-token`) and add to the step 10 command
    `--set apps.auth.env.SMS_PROVIDER=twilio --set apps.auth.env.SMS_FROM=+1… --set apps.auth.env.SMS_ACCOUNT_ID=AC… --set apps.auth.secretEnv.SMS_AUTH_TOKEN=true`.
-   A Twilio **trial** account texts only verified numbers: verify the five demo phones (below) in the Twilio console.
+   A Twilio **trial** account texts only verified numbers: verify the six demo phones (below) in the Twilio console.
 2. **Stripe test mode** ([stripe.md](stripe.md)): Identity activated in test mode (Settings › Identity), the
    `identity.verification_session.*` events on the platform webhook endpoint (step 12). `values-dryrun.yaml` sets
    `IDENTITY_PROVIDER=stripe` and `AGE_VERIFICATION_PROVIDER=stripe`: the local fakes' outcome pages exist only under
    the `local` profile, so without Stripe no owner could finish onboarding and no customer could buy wine.
 3. **First console admin** (step 13.1) — register on the consumer site with **an authenticator app** as the second
-   factor and keep its key (the "can't scan?" text): the script signs in as this admin to approve the businesses
-   (`DEMO_STAFF_IDENTIFIER`, `DEMO_STAFF_TOTP_SECRET`). It is also the presenter's console account.
+   factor and keep its key (the "can't scan?" text): the script signs in as this admin — the **approver** — to decide
+   the applications (`DEMO_STAFF_IDENTIFIER`, `DEMO_STAFF_TOTP_SECRET`). The second console account, the **reviewer**,
+   is made by the script: registered like the other demo accounts, then invited by the admin with the trust & safety
+   role (Console › Team; an invite needs an existing account).
 4. **The market live.** Production migrations start the first market at `pilot` (V345), and a pilot market takes no
    orders. Console › **Provinces** (admin) → the market → stage `live` (the screen's checklist must be green;
    [regions.md](regions.md#from-the-console-s-84)). The script warns when the market isn't live.
-5. **Five phones that receive SMS** for the accounts the script creates (`DEMO_PHONE_OWNER`, `_APPLICANT`, `_CUSTOMER`,
-   `_CUSTOMER2`, `_CUSTOMER3`). The customer's should be the presenter's: the shopper signs in with a code to it.
+5. **Six phones that receive SMS** for the accounts the script creates (`DEMO_PHONE_OWNER`, `_APPLICANT`, `_REVIEWER`,
+   `_CUSTOMER`, `_CUSTOMER2`, `_CUSTOMER3`). The customer's should be the presenter's: the shopper signs in with a code to it.
 
 ## 3. Run it
 
 ```sh
 # the dry run (≈ 10 minutes the first time, plus the Stripe pages below)
 DEMO_STAFF_IDENTIFIER=admin@… DEMO_STAFF_TOTP_SECRET=… \
-DEMO_PHONE_OWNER=+1… DEMO_PHONE_APPLICANT=+1… DEMO_PHONE_CUSTOMER=+1… DEMO_PHONE_CUSTOMER2=+1… DEMO_PHONE_CUSTOMER3=+1… \
+DEMO_PHONE_OWNER=+1… DEMO_PHONE_APPLICANT=+1… DEMO_PHONE_REVIEWER=+1… DEMO_PHONE_CUSTOMER=+1… DEMO_PHONE_CUSTOMER2=+1… DEMO_PHONE_CUSTOMER3=+1… \
 DEMO_STRIPE_PUBLISHABLE_KEY=pk_test_… \
   make demo-data ENV=dryrun
 
@@ -106,7 +108,8 @@ From the state file (`.demo/dryrun.json`, `accounts`). The authenticator app hol
 | `applicant` (Riley Demo-Applicant) | Studio | email + authenticator code | an account with no business of its own: the live seller onboarding |
 | `customer` (Jordan Demo-Shopper) | consumer site | mobile + SMS code; the authenticator code at payment ("Confirm it's you") | the shopper: past orders, bookings, reviews |
 | `customer2`, `customer3` | consumer site | as above | background customers |
-| `staff` (the console admin) | console | email + authenticator code | approvals, vetting, licences |
+| `staff` (the console admin) | console | email + authenticator code | the **approver**: decides applications; vetting, licences |
+| `reviewer` (Casey Demo-Reviewer) | console | email + authenticator code | the **reviewer** (trust & safety): the first pair of eyes on an application when the four-eyes review is on — a different person from the approver |
 
 ## 5. The 15-minute script
 
@@ -120,7 +123,7 @@ Stripe test card: `4242 4242 4242 4242`, any future expiry, any CVC, any postal 
 | 1–5 | shopper | search **sourdough** → *Country sourdough loaf* (Hearth & Crumb Bakery) → **Add to cart** → cart → **Proceed to checkout** → step 1: the saved address, tonight's pooled window, "If something's out of stock" → **Continue** → step 2: the card (test card) → **Continue to payment** → "Confirm it's you": **Use authenticator code instead** → the code → step 3: review → **Place your order** → *Thank you — your order is placed* → **Track your order** | the 3-step checkout; payments behind a second factor; the money is **held** until the customer confirms delivery |
 | 5–8 | shopper | **Services** → Barber & hair → **Fade Room Barbers**: its reviews, prices, durations → **Book a visit** → *Classic haircut* → **Choose a slot** → a day, a time → **Continue to payment** → tick both policies → **Hold $… in escrow** (test card) → *Booked* | live calendar from the provider's hours; escrow released only after the job and the customer's sign-off; reviews only from verified bookings |
 | 8–10 | shopper | open **Cellar Door Wine & Spirits** (search **riesling**) → **Add to cart** → checkout: step 1 shows **Photo ID needed** → **Verify my age** → Stripe's test page (verified) → back at checkout, verified | the ID check happens once, we keep only "over the age"; the courier checks photo ID again at the door; the shop could list wine only after its licence was approved |
-| 10–13 | applicant → staff | Studio: account menu → **+ Add another business** (the first demo opens onboarding directly) → **Sell products** → store name, legal name, address, description → **Continue to categories** → a department (e.g. *Gifts & crafts*) → **Continue to verification** → identity (**Start with Stripe** → Stripe's test page), **Look up**, **Enter BN** `123456789 RT0001`, **Declare categories**, **Read & sign**, returns **Northline standard**, bank, second factor → **Submit for review** → the gate *We're checking your application* (**Why is my Studio locked?**) → console › **Verification**: search the name → **Approve** → back in the Studio, reload: the dashboard with **Get set up** | nobody sells before identity, registry, tax and bank checks pass and a person approves; the Studio unlocks on approval |
+| 10–13 | applicant → staff | Studio: account menu → **+ Add another business** (the first demo opens onboarding directly) → **Sell products** → store name, legal name, address, description → **Continue to categories** → a department (e.g. *Gifts & crafts*) → **Continue to verification** → identity (**Start with Stripe** → Stripe's test page), **Look up**, **Enter BN** `123456789 RT0001`, **Declare categories**, **Read & sign**, returns **Northline standard**, bank, second factor → **Submit for review** → the gate *We're checking your application* (**Why is my Studio locked?**) → console › **Verification**: search the name → **Approve** (with the four-eyes review: the **reviewer** recommends, then the **approver** decides — two console windows) → back in the Studio, reload: the dashboard with **Get set up** | nobody sells before identity, registry, tax and bank checks pass and a person approves; the Studio unlocks on approval |
 | 13–14 | applicant | **Add your first product** → title, brand, category, description → **Images**: a picture from `.demo/dryrun-photos/` → price and stock → compliance → **Submit for vetting** → *Approved · live*, or *In review · flagged* → console › **Listing vetting** → **Approve** | automated listing checks (images, words, categories); a person reviews what they flag |
 | 14–15 | owner | Studio (owner) → **Hearth & Crumb Bakery** → **Orders**: the shopper's order from minute 4 under *To pack* → **Mark packed**; then **Fade Room Barbers** → **Dashboard** (net this month, rating, the charts) | the seller sees the order at once; packed orders go out on the shop's pooled run |
 

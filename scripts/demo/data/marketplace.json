@@ -5,6 +5,9 @@
     "owner": { "firstName": "Morgan", "lastName": "Demo-Owner", "email": "owner@demo.northline.test", "phoneSuffix": "0101", "role": "owns every demo business" },
     "applicant": { "firstName": "Riley", "lastName": "Demo-Applicant", "email": "applicant@demo.northline.test", "phoneSuffix": "0102", "role": "an account with no business yet: the live seller-onboarding demo" }
   },
+  "staff": {
+    "reviewer": { "firstName": "Casey", "lastName": "Demo-Reviewer", "email": "reviewer@demo.northline.test", "phoneSuffix": "0103", "consoleRole": "trust_safety", "role": "console reviewer (the first pair of eyes on an application)" }
+  },
   "customers": [
     { "key": "customer", "firstName": "Jordan", "lastName": "Demo-Shopper", "email": "shopper@demo.northline.test", "phoneSuffix": "0111", "role": "the presenter's shopper (past orders, bookings, reviews)" },
     { "key": "customer2", "firstName": "Avery", "lastName": "Demo-Customer", "email": "avery@demo.northline.test", "phoneSuffix": "0112", "role": "background customer" },

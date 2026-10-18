@@ -199,7 +199,7 @@ async function staffSession() {
     // codes this script regenerated (local) win over the ones given: those are spent
     backupCodes: same && saved.backupCodes?.length ? saved.backupCodes : env.DEMO_STAFF_BACKUP_CODES?.split(',').map(c => c.trim()).filter(Boolean),
     usedBackupCodes: same ? saved.usedBackupCodes : [],
-    role: 'console staff (approves businesses, vets listings and licences)',
+    role: 'console approver (decides applications, vets listings and licences)',
   };
   state.accounts.staff = a;
   save();
@@ -221,7 +221,7 @@ async function myBusinesses(owner) {
   return r.items ?? r;
 }
 
-async function ensureMerchant(owner, staff, plan, index) {
+async function ensureMerchant(owner, staff, reviewer, plan, index) {
   const saved = state.merchants[plan.key];
   let id = saved?.id;
   if (!id) {
@@ -264,7 +264,7 @@ async function ensureMerchant(owner, staff, plan, index) {
     log(`  ${plan.name}: submitted for review`);
   }
   if (ob.status === 'pending') {
-    await approve(staff, id, plan.name);
+    await approve(staff, reviewer, id, plan.name);
     ob = await owner.get(`${m}/onboarding`);
   }
   if (ob.status !== 'active') {
@@ -317,26 +317,67 @@ async function identity(owner, id) {
 
 const file = (blob, name, extra = {}) => { const f = new FormData(); f.append('file', blob, name); for (const [k, v] of Object.entries(extra)) f.append(k, v); return f; };
 
-async function approve(staff, id, name) {
+/**
+ * Approval in the console. Four-eyes when the api has it (a reviewer recommends, a DIFFERENT approver decides): the
+ * demo reviewer posts the review, the staff account (approver) the decision. An api without the review step (404/405)
+ * gets the single-step decision from the approver, as before.
+ */
+async function approve(staff, reviewer, id, name) {
   const base = `/api/v1/console/verification/applications/${id}`;
-  let detail = await staff.get(base);
+  const detail = await staff.get(base);
   for (const r of (detail.registryReviews ?? detail.reviews ?? []).filter(x => (x.state ?? x.reviewState) === 'open')) {
     await staff.post(`/api/v1/console/registry-reviews/${r.id}/decision`, { decision: 'approve' });
   }
   for (const r of (detail.identityReviews ?? []).filter(x => (x.status ?? x.state) === 'review')) {
     await staff.post(`${base}/identity-reviews/${r.id}/decision`, { decision: 'approve' });
   }
+  const note = 'Demo business (fake data).';
+  let reviewed = false;
   try {
-    await staff.post(`${base}/decision`, { decision: 'approve', note: 'Demo business (fake data).' });
+    await (await reviewer()).post(`${base}/review`, { decision: 'approve', recommendation: 'approve', note });
+    reviewed = true;
   } catch (e) {
-    if (e instanceof HttpError && e.code === 'reviews_open') {
-      // the open registry reviews the detail didn't list by those names: the queue has them
-      const q = await staff.get(`/api/v1/console/registry-reviews?merchantId=${id}`).catch(() => ({ items: [] }));
-      for (const r of (q.items ?? []).filter(x => x.merchantId === id)) await staff.post(`/api/v1/console/registry-reviews/${r.id}/decision`, { decision: 'approve' });
-      await staff.post(`${base}/decision`, { decision: 'approve', note: 'Demo business (fake data).' });
-    } else throw e;
+    if (!(e instanceof HttpError) || ![404, 405].includes(e.status)) throw e; // no four-eyes step on this api yet
   }
-  log(`  ${name}: approved in the console`);
+  const decide = () => staff.post(`${base}/decision`, { decision: 'approve', note });
+  try {
+    await decide();
+  } catch (e) {
+    if (e instanceof HttpError && !reviewed && /review|four|same_person|second/i.test(e.code ?? '')) {
+      throw new Error(`${name}: the api wants a two-person review this script doesn't know how to post (${e.message}) — update approve() in scripts/demo/demo-data.mjs`);
+    }
+    if (!(e instanceof HttpError) || e.code !== 'reviews_open') throw e;
+    // the open registry reviews the detail didn't list by those names: the queue has them
+    const q = await staff.get(`/api/v1/console/registry-reviews?merchantId=${id}`).catch(() => ({ items: [] }));
+    for (const r of (q.items ?? []).filter(x => x.merchantId === id)) await staff.post(`/api/v1/console/registry-reviews/${r.id}/decision`, { decision: 'approve' });
+    await decide();
+  }
+  log(`  ${name}: ${reviewed ? `reviewed by ${state.accounts.reviewer.identifier}, approved by ${state.accounts.staff.identifier}` : 'approved'} in the console`);
+}
+
+/**
+ * The second console account (four-eyes review): a demo person registered like the others, then given the trust &
+ * safety role by the approver (Console › Team › Invite — the account must exist first).
+ */
+async function reviewerSession(staff) {
+  // registered on the consumer site: the console's BFF lets in staff only, which the account becomes below
+  await account('reviewer', PLAN.staff.reviewer, 'consumer', { open: false });
+  const a = state.accounts.reviewer;
+  if (!a.granted) {
+    const team = await staff.get('/api/v1/console/team');
+    const members = team.members ?? team.items ?? [];
+    const me = members.find(x => x.userId === a.userId || x.email === a.identifier);
+    if (!(me?.roles ?? []).includes(PLAN.staff.reviewer.consoleRole)) {
+      await staff.post('/api/v1/console/team/invite', { email: a.identifier, role: PLAN.staff.reviewer.consoleRole });
+      log(`  + reviewer: ${a.identifier} invited to the console as ${PLAN.staff.reviewer.consoleRole}`);
+    }
+    a.granted = true;
+    save();
+  }
+  const s = new AppSession(URLS.console, URLS.auth);
+  await signIn(s, a);
+  await s.openApp();
+  return s;
 }
 
 // ── storefront, licence, listings ─────────────────────────────────────────────────────────────────────────────────
@@ -650,6 +691,8 @@ async function main() {
   let staffSigned;
   const signedStaff = () => (staffSigned ??= staffSession());
   const staff = { get: async (...a) => (await signedStaff()).get(...a), post: async (...a) => (await signedStaff()).post(...a) };
+  let reviewerSigned;
+  const reviewer = () => (reviewerSigned ??= reviewerSession(staff));
   log(`  owner ${state.accounts.owner.identifier} · applicant ${state.accounts.applicant.identifier}`);
 
   if (RESET) {
@@ -660,7 +703,7 @@ async function main() {
   step('businesses');
   const plans = PLAN.merchants.filter(p => !ONLY || ONLY.includes(p.key));
   for (const [i, plan] of plans.entries()) {
-    const id = await ensureMerchant(owner, staff, plan, i);
+    const id = await ensureMerchant(owner, staff, reviewer, plan, i);
     if (!id) continue;
     await storefront(owner, id, plan);
     await licence(owner, staff, id, plan);

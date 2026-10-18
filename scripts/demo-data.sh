@@ -25,9 +25,10 @@
 #   DEMO_MARKET [the region model's configured market: GET /api/v1/geo/markets → fallback]  a market id or city
 #   DEMO_STUDIO_URL / DEMO_CONSUMER_URL / DEMO_CONSOLE_URL / DEMO_AUTH_URL  [local: localhost:3100/3000/3200/9000;
 #       dryrun: the urls of deploy/helm/northline/values-dryrun.yaml]
-#   DEMO_STAFF_IDENTIFIER + DEMO_STAFF_TOTP_SECRET (or DEMO_STAFF_BACKUP_CODES=a,b,…)  the console account that approves
+#   DEMO_STAFF_IDENTIFIER + DEMO_STAFF_TOTP_SECRET (or DEMO_STAFF_BACKUP_CODES=a,b,…)  the console admin that approves
+#       (the approver; the script registers the second console account, the reviewer, and invites it as trust & safety)
 #       [local: the dev seed's reviewer from web/e2e/data/local.json — local only; dryrun: required, the first admin]
-#   DEMO_PHONE_<KEY>  dryrun: a phone that receives SMS for each new account (OWNER, APPLICANT, CUSTOMER, CUSTOMER2,
+#   DEMO_PHONE_<KEY>  dryrun: a phone that receives SMS for each new account (OWNER, APPLICANT, REVIEWER, CUSTOMER, CUSTOMER2,
 #       CUSTOMER3); the code is asked for in the terminal, or printed by DEMO_SMS_CODE_CMD (gets the number as $1)
 #   DEMO_EMAIL_<KEY>  another email for an account (the plan's are @demo.northline.test)
 #   DEMO_STRIPE_PUBLISHABLE_KEY  dryrun: pk_test_… — the customers' past orders are paid with Stripe's test card
@@ -42,7 +43,7 @@ while [ $# -gt 0 ]; do
     --reset) reset=1; shift ;;
     --reset-all) reset=1; reset_all=1; shift ;;
     --only) only="${2:?--only needs merchant keys}"; shift 2 ;;
-    -h | --help) sed -n '2,37p' "$0"; exit 0 ;;
+    -h | --help) sed -n '2,35p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1 (see --help)" >&2; exit 2 ;;
   esac
 done
