@@ -182,7 +182,21 @@ public final class IndexLayout {
 
     /** {@code listings_<lang>_v<schema>_<yyyyMMddHHmmss>} (UTC) — a new concrete index of this layout. */
     public String newIndexName(SearchLanguage language, Instant at) {
+        return indexName(language, schema, at);
+    }
+
+    /** {@code listings_<lang>_v<schema>_<yyyyMMddHHmmss>} (UTC), the naming every engine's versioned indices share. */
+    public static String indexName(SearchLanguage language, int schema, Instant at) {
         return "%s_v%d_%s".formatted(language.alias(), schema, STAMP.format(at));
+    }
+
+    /** When a versioned index was created (the UTC second its name carries). */
+    public static Instant createdAt(String index) {
+        var m = INDEX_NAME.matcher(index);
+        if (!m.matches()) {
+            throw new IllegalArgumentException("Not a versioned listings index: " + index);
+        }
+        return STAMP.parse(m.group(3), Instant::from);
     }
 
     /** True for the names {@link #newIndexName} produces for {@code language} (any schema). */
