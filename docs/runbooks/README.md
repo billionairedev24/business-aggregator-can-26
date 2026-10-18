@@ -162,8 +162,10 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`, `REDIS_SSL` | ✓ | ✓ | ✓ | ✓ | no (6379, none, none, false) |
 | `KAFKA_BOOTSTRAP` | ✓ | ✓ | | ✓ | yes (auth since S-28: user.registered) |
 | `KAFKA_SECURITY_PROTOCOL`, `KAFKA_SASL_MECHANISM`, `KAFKA_SASL_JAAS_CONFIG` | ✓ | ✓ | | ✓ | no (PLAINTEXT) — set for managed Kafka |
-| `ES_URIS` | ✓ | | | ✓ | yes |
+| `ES_URIS` | ✓ | | | ✓ | yes, with `SEARCH_PROVIDER=elasticsearch` (the default) |
 | `ES_USERNAME`, `ES_PASSWORD` | ✓ | | | ✓ | no — set for Elastic Cloud |
+| `MEILISEARCH_URL`, `MEILISEARCH_API_KEY` | ✓ | | | ✓ | yes, with `SEARCH_PROVIDER=meilisearch` ([search.md § Meilisearch](search.md#11-meilisearch-provider-meilisearch)) |
+| `MEILISEARCH_TIMEOUT`, `MEILISEARCH_TASK_TIMEOUT` | ✓ | | | ✓ | no (`10s`; `60s`, worker only) |
 | `AUTH_ISSUER` | ✓ | ✓ | ✓ | | yes |
 | `AUTH_INTERNAL_URL` | | | ✓ | | no (= `AUTH_ISSUER`) |
 | `API_URL` | | | ✓ | | yes |
@@ -194,7 +196,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `WEBHOOK_REENCRYPT_EVERY` | ✓ | | | | no (`1h`: the job that re-encrypts stored webhook secrets with the current key) |
 | `WEBHOOKS_ALLOW_LOCAL` | | | | ✓ | no (`false`; `true` only locally — http://localhost endpoints; refused in the cloud) |
 | `IMPORT_IMAGES_ALLOW_LOCAL` | ✓ | | | | no (`false`; `true` only locally — bulk-import image URLs on http:// or loopback, never private or metadata addresses; refused in the cloud — S-72, [webhooks.md § SSRF rules](webhooks.md#ssrf-rules-platform-egresspolicy)) |
-| `SEARCH_PROVIDER` | ✓ | | | | no (`elasticsearch`; `local` = no index, the `local` profile's default, refused in staging/prod — [search.md § 7](search.md#7-the-search-api-s-44)) |
+| `SEARCH_PROVIDER` | ✓ | | | ✓ | no (`elasticsearch`; `meilisearch` = the same indexes on Meilisearch, the same value for both apps; `local` = no index, api only, the `local` profile's default, refused in staging/prod — [search.md § 7](search.md#7-the-search-api-s-44)) |
 | `SEARCH_CACHE_TTL`, `SEARCH_RATE_LIMIT` | ✓ | | | | no (`30s`, `120`/min per address) |
 | `SEARCH_RATE_LIMIT_EXEMPT` | ✓ | | | | no (empty; addresses or CIDR ranges the search rate limit never counts — load generators only, S-119 [load-testing.md](load-testing.md); refused under prod) |
 | `REGION_PROVINCES`, `REGION_DEFAULT_PROVINCE`, `REGION_CACHE_TTL` | ✓ | | | ✓ (`REGION_DEFAULT_PROVINCE`) | no (none extra — the live region rows are served, V131: Alberta; `AB`; `60s`) — S-134, [regions.md](regions.md); S-44's `SEARCH_MARKETS` / `SEARCH_DEFAULT_MARKET` are still read as their fallbacks |

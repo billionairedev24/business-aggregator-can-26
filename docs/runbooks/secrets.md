@@ -53,6 +53,7 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 | `REDIS_PASSWORD` | `redis-password` | api, auth, bff, worker | AWS / Azure (listed in `optionalKeys`); **none** on Google Cloud (Memorystore has no password) | generated (S-3) |
 | `KAFKA_SASL_JAAS_CONFIG` | `kafka-sasl-jaas-config` | api, auth (S-28), worker | with SASL (always in the cloud; `optionalKeys`) | generated (S-3) |
 | `ES_PASSWORD` | `es-password` | api, worker | with Elastic Cloud (`optionalKeys`) | generated (S-3) |
+| `MEILISEARCH_API_KEY` | `meilisearch-api-key` | api, worker | with `SEARCH_PROVIDER=meilisearch` (`apps.api/worker.secretEnv.MEILISEARCH_API_KEY: true`; with no Elasticsearch, drop `ES_PASSWORD` from `optionalKeys`) | operator: a key created in Meilisearch per app ([search.md § Meilisearch](search.md#11-meilisearch-provider-meilisearch)); the api and the worker may share one key with the worker's actions |
 | `TOTP_KEY` | `totp-key` | auth | yes | operator: `openssl rand -base64 32` |
 | `WEBHOOK_SECRET_KEY` | `webhook-secret-key` | api, worker (S-33) | yes | operator: `openssl rand -base64 32` |
 | `TOTP_PREVIOUS_KEYS` | `totp-previous-keys` | auth | no — only during a `TOTP_KEY` rotation (`externalSecrets.optionalKeys`) | operator: `v1=<old key>` ([key-rotation.md § 7](key-rotation.md#7-authenticator-secrets-key-totp_key)) |
@@ -199,6 +200,7 @@ kubectl -n northline-<env> rollout restart deploy/northline-<app>
 | `REDIS_PASSWORD` | ElastiCache: modify the AUTH token with `ROTATE` (old + new both valid), update the secret, force-sync, restart all four apps, then `SET` | none with `ROTATE`. Azure: regenerate the *secondary* key, switch the secret to it, restart, then regenerate the primary |
 | `KAFKA_SASL_JAAS_CONFIG` | MSK: add a second SCRAM user, switch, remove the old; Event Hubs: switch to the secondary connection string, regenerate the primary; Managed Kafka: new service-account key, switch, delete the old | none if the old credential is removed only after the restart |
 | `ES_PASSWORD` | reset in Elastic Cloud, update the secret, force-sync, restart api and worker | search/indexing fail between the reset and the restart |
+| `MEILISEARCH_API_KEY` | create a new key in Meilisearch (`POST /keys`, same actions and indexes), update the secret, force-sync, restart api and worker, then delete the old key (`DELETE /keys/<uid>`) | none: both keys are valid until the old one is deleted |
 | `STUDIO_BFF_SECRET` + `STUDIO_BFF_SECRET_HASH` | new secret and its bcrypt hash in the secrets manager, force-sync bff and auth, re-run the OAuth client sync (`helm upgrade` runs the Job again, or restart auth), restart the bff | sign-ins fail between the auth update and the bff restart (one secret per client, no overlap — [README § OAuth clients](README.md#oauth-clients-s-122)) |
 | `STRIPE_SECRET_KEY` | roll the key in the Stripe dashboard (Stripe keeps the old one valid for the period you choose), update, restart api | none within the overlap |
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | "Roll secret" on the endpoint (Stripe signs with both for up to 24 h), update, restart api | none within the overlap |

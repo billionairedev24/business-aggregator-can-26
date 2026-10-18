@@ -230,6 +230,7 @@ everything except `tools` (`make kafka-ui`, `make kibana`).
 | `cache` | Valkey 8 | `REDIS_HOST=localhost`, `REDIS_PORT=6379` (+ `LIVE_BUS=redis` to carry the Studio's live signals and couriers' positions over Valkey as in the cloud, S-68/S-88) | `local,valkey`, worker, non-`local` runs |
 | `events` | Kafka 4 (KRaft) + one-shot topic creation (`scripts/topics.sh` from `deploy/kafka/topics.yaml`, ~1 min the first time, seconds after) | `KAFKA_BOOTSTRAP=localhost:9092` | worker; api without `local` |
 | `search` | Elasticsearch 9 (security off) | `ES_URIS=http://localhost:9200` (+ `SEARCH_PROVIDER=elasticsearch` for the api under `local`) | worker; the api's search |
+| `search-meili` | Meilisearch v1.28 (master key `northline-local-meili-master-key`, `MEILISEARCH_MASTER_KEY` in `.env`); not in `all` | `SEARCH_PROVIDER=meilisearch`, `MEILISEARCH_URL=http://localhost:7700`, `MEILISEARCH_API_KEY=northline-local-meili-master-key` (api and worker) | worker and the api's search instead of Elasticsearch ([search.md § Meilisearch](search.md#11-meilisearch-provider-meilisearch)) |
 | `mail` | Mailpit — inbox at http://localhost:8025 | `SMTP_HOST=localhost`, `SMTP_PORT=1025` (the defaults) | api email (`EMAIL_PROVIDER=local`, S-13) |
 | `storage` | S3-compatible storage (RustFS) + bucket `northline-local`; console http://localhost:9101 | `STORAGE_ENDPOINT=http://localhost:9100`, `STORAGE_ACCESS_KEY=northline`, `STORAGE_SECRET_KEY=northline-dev-secret`, `STORAGE_PATH_STYLE=true` | api with `STORAGE_PROVIDER=s3` (S-10) |
 | `payments` | stripe-mock | `STRIPE_SECRET_KEY=sk_test_123`, `STRIPE_API_BASE=http://localhost:12111` (+ `TAX_PROVIDER=stripe` for Stripe Tax, S-21) | api payments + Stripe Connect (+ Stripe Tax) instead of the fakes |
@@ -340,6 +341,12 @@ Notes:
 - **Elasticsearch (S-42):** after `--profile search`, create the synonym sets and the indices the way the deploy Job
   does: `make search-indices` (= `cd server && ./gradlew :worker:searchIndices --args='apply'`) (`plan` / `verify` change nothing). Run it again
   after editing `deploy/search/synonyms-*.txt` — the change is live at once ([search.md](search.md)).
+- **Meilisearch instead (the `meilisearch` provider):** `make standins-up PROFILES=search-meili` (or
+  `docker compose --profile search-meili up -d`), set `SEARCH_PROVIDER=meilisearch`, `MEILISEARCH_URL=http://localhost:7700`
+  and `MEILISEARCH_API_KEY=northline-local-meili-master-key` in `server/.env` (both apps read them), then
+  `make search-indices` creates `listings_en` / `listings_fr` there. The worker then needs `PROFILES=db,events,search-meili`;
+  `make up-all` still starts Elasticsearch (`search`), which simply goes unused. Browse the indexes at
+  http://localhost:7700 (the master key) ([search.md § Meilisearch](search.md#11-meilisearch-provider-meilisearch)).
 - **Worker:** `make up SERVICES=worker PROFILES=db,events,search` (= `cd server && ./gradlew :worker:bootRun`, no profile) needs Postgres, Kafka (`events`) and
   Elasticsearch (`search`) with the indices created (`:worker:searchIndices`). The search indexer (S-43) then fills them from
   the events the api publishes (only when the api runs without `local`, which turns Kafka off) and, every minute, from
