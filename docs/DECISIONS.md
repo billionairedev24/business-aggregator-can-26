@@ -8483,3 +8483,86 @@ default and behaves exactly as before. Runbook: [search.md § 11](runbooks/searc
 - **Never run against the real service:** a hosted Meilisearch (Layerbase) or the dry run's in-cluster pod — TLS, API
   keys and limits (payload size, task queue) — and the chart's Jobs against them. Only `getmeili/meilisearch:v1.28.0`
   and `v1.15.2` in Docker.
+
+## 2026-10-18 — Redesign foundation: a new brand on AfroTransact's layouts (spec phase 0)
+
+**Owner direction (2026-10-18).** The product gets a new name (not chosen yet) and its own colours. The UI is rebuilt on
+AfroTransact's layouts and flows — not its colours, fonts or logo. The "Spruce & Honey" look and the design lock of
+2026-09-28 (CLAUDE.md § Design system, docs/SCREENS.md) are **retired**; `docs/design/redesign-spec.md` supersedes them
+(CLAUDE.md and SCREENS.md now point there). Every backend, validation, escrow, BFF, i18n and region rule still applies.
+The palette is not chosen among three directions — A "Lakeshore" (deep blue + sun, Manrope), B "Evergreen" (forest +
+ember, Fraunces headings + DM Sans), C "Dusk" (plum + mint, Plus Jakarta Sans) — so the palette is one file and A is the
+placeholder default.
+
+Branch `feat/redesign-foundation`: the spec's phase 0 (day 1). Decisions the spec or the owner didn't make:
+
+- **Brand files.** `web/packages/tokens/brand.json` (identity: name, short name, legal name, domain, support email,
+  wordmark; radii; `palette`) + `palettes/{lakeshore,evergreen,dusk}.json` (colours, fonts, the logo mark — the marks
+  of the owner's three palette boards) + `scale.json` (spacing, type, sizes, shadows, z-index, motion: not brand).
+  Switching direction is the one `palette` setting. `tokens.json` and `derived.css` are gone.
+- **Generated, committed.** The build resolves every colour ahead of time (OKLCH mixing, as the native kit did) into
+  `generated/theme.json` and the favicon, **committed** so the native apps, type checks and Docusaurus need no build
+  step; `node build.mjs --check` (the package's `test`) fails when they are stale. `dist/tokens.css` stays a build
+  output. The app favicons and the docs site's are copies the build writes.
+- **The contrast gate** runs on all three palettes at every build and in `pnpm -r test`: 57 pairs (text 4.5:1, control
+  outlines and focus 3:1). Brand-supplied colours are never adjusted (a failing `primaryText` stops the build);
+  derived tones (status text on its tint, the rating number, the header's muted text, the header underline) are
+  darkened or lightened until they pass. B's and C's accents failed 3:1 as the underline on their dark headers, so
+  the underline is a lightened accent there.
+- **Role mapping.** AfroTransact's gold *primary* (Add to cart, Search, stars, the header underline) is our **accent**;
+  its green *secondary* (Buy now, Place order, links, focus) is our **primary** — the owner's palettes name blue/forest/
+  plum "primary". Buttons: `primary`, `accent` (old `highlight`), `secondary` = neutral (white + hairline, its old
+  meaning kept), `dark`, `danger`, `ghost`, `link`; sizes 32/40/48.
+- **Chrome colour.** AfroTransact's black header became the palette's `headerBg` — its primary-hover tone (A
+  `#0E2A52`) — with the department bar in the primary and the footer in the header colour: the dark-chrome layout with
+  our colours, not AT's black.
+- **Canvas.** The owner's palettes give a `ground` (A `#F5F7FA`) under white cards; AT's own canvas is pure white. The
+  owner's palette is newer, so the page is `ground`; setting `ground` to `#FFFFFF` in the palette gives AT's white.
+- **Control outlines.** The palettes' `borderStrong` (A `#D5DCE6`, 1.4:1 on white) cannot outline an input (WCAG
+  1.4.11, S-109); `--color-border-control` is derived from it to 3:1 for inputs, checkboxes, radios and the switch track.
+- **Targets stay 44px** (S-143, the sweep fails under it). Buttons, chips, Data Table actions, inputs, the header
+  search, sidebar items (spec: 34px), department-bar items (36px) and header items are drawn 44px tall by default (the
+  spec's 40 / 32): a first sweep with 32/40px pills and 44px `::after` hit areas failed wherever a row wrapped or
+  neighbours sat closer than 12px (their hit areas overlap). `btn-sm` (32) and `btn-lg` (48) exist for layouts that
+  leave the room; `--size-control*` keep the spec's values.
+- **Deprecated aliases.** The old names (`--color-accent*`, `--color-highlight*`, `--color-accent-2*`,
+  `--color-neutral-*`, `--color-bg`, `--color-divider`, `--font-body`, `--font-heading-weight`…) point at the semantic
+  roles, so the screens later phases rebuild already wear the new brand. `pnpm lint:tokens` keeps them out of
+  `@northline/ui` and the three shells.
+- **Fonts** load from Google Fonts with the URL generated from the palette (the CSPs already allow it; `brandHtml()`
+  fills the SPAs' `index.html`). Self-hosted `@fontsource` (spec § 5) needs new packages: later. Headings use the
+  palette's display face when it has one (B), else the sans at 700.
+- **Name.** `brand.json` keeps the working name "Northline" until the owner picks one. Copy uses `{brand}` (and
+  `{brandShort}`), filled by `useT`/`messagesFor` in both languages — 356 strings changed by a codemod over the string
+  literals of the catalogues; code uses `brand.name` (titles, SEO, JSON-LD, the docs site's title, footer and Redoc
+  colour). The Studio's messages screen compares the api's support thread name with `${brand.name} support`. `pnpm
+  lint:brand` (TypeScript's parser over string literals, templates and JSX text; tests skipped; `brand-literal-ok`
+  exempts a line) runs in `make web-lint`. Not renamed: `@northline/*`, Java packages, bundle ids, infra domains,
+  backend copy and email templates, the tests' expected strings (they read `brand.name` where they were touched).
+- **Logo.** One `<Logo/>` in `@northline/ui`: the palette's mark with semantic colours + the wordmark as text in
+  `currentColor`, optionally a portal word ("Studio", "Console"). The Studio's and console's `Brand` render it.
+- **Consumer header.** Two bars as AT: logo · "Deliver to" · search on every page (home too, until phase 1 replaces
+  the home hero) · avatar menu · cart with the label / the department bar (Services, Shop, Food — Food stays until the
+  page-level thrash item 7). Guests get the same avatar menu ("Welcome, guest", Sign in, Create account, the language);
+  signed in, the menu's "Language / Langue & region" item became the FR/EN switch. The header's FR/EN button moved to
+  the footer and the account menu. Auth pages show the logo only. The header search got AT's accent search button;
+  the department select is not built (the search API has no scope parameter yet).
+- **Footer.** Dark, three link groups (help and policies, for businesses, language) and the company line.
+- **Back-office frame.** AT's breakpoints (phone < 768px, rail 768–1023px, sidebar ≥ 1024px). On phones the menu stays
+  the modal sheet (S-109's focus trap and its tests) rather than AT's inline disclosure. ≥ 1024px keeps the person's
+  collapse-to-rail choice.
+- **Removed from the shells** (thrash list items that live there): the home's time-of-day greeting, the guest banner
+  (component and the screens' `guestBanner` flag deleted), the pilot "Send feedback" control (consumer, Studio,
+  console), the console's Pilot, UAT, Go-live and API screens from the sidebar and On-call from the account menu.
+- **The nav flag** is the build variable `VITE_NL_TESTING_TOOLS` (`1` shows the tools; pilot/UAT environments set it).
+  "Hidden" is the UI only: the routes (`/pilot`, `/uat`, `/go-live`, `/on-call`, `/integrations`, the Studio's
+  `pilot.$token`) still answer a typed URL, and every endpoint stays. *Not added* to the runbooks' variable tables yet
+  because no environment sets it; a pilot environment that needs the feedback control must add it to its web build.
+- **Icons.** Phosphor regular everywhere, fill for the current sidebar item and saved favourites; duotone removed.
+- **Mobile.** `mobile-kit/theme` and both `app.config.ts` read `generated/theme.json`: the native apps are re-coloured
+  now; their fonts (Newsreader / Instrument Sans), icons, splash, names and bundle ids are unchanged until phase 4 and
+  the name. The release CLI's placeholder screenshots use the new colours.
+- **Not done in this phase:** the spec's phase-0 ProductCard / ServiceCard / Price / Stars components (the existing
+  product tiles are restyled; the new cards come with their pages in phase 1), the announcement bar, the mobile-kit
+  Logo, `@fontsource` fonts, the backend's `app.brand.*` + `/api/v1/config`, everything page-level of the thrash list.
+- **Schema additions:** none. No backend change.

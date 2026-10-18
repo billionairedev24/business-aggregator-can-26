@@ -34,7 +34,7 @@ Clients: consumer-bff, studio-bff, console-bff (confidential, PKCE), mobile-cons
 - **Redis 8** — BFF sessions, caches (evicted by events), rate limits, idempotency keys, slot holds (10 min TTL), order tracking pub/sub.
 
 ## Front end
-TanStack Start/Router/Query/Form/Table/Virtual; Storybook 9 with a11y + interaction tests; `@northline/tokens` generated from tokens.json. Theme = five base tokens; everything else derived.
+TanStack Start/Router/Query/Form/Table/Virtual; Storybook 9 with a11y + interaction tests; `@northline/tokens` generated from brand.json + its palette (redesign 2026-10-18): the brand's colours and fonts, everything else derived; a fixed scale.json for the rhythm; a WCAG AA contrast gate at build.
 
 ## Code standards (mandatory — PRs that break these are rejected)
 - **Java 25:** records for DTOs/commands/events/value objects; sealed interfaces + pattern-matching `switch`; record patterns; unnamed variables `_`; `var`; text blocks; `SequencedCollection`; `Stream.toList()` and gatherers; `ScopedValue` instead of `ThreadLocal`; virtual threads (no hand-rolled pools); flexible constructor bodies; module import declarations. No pre-Java-17 idioms.

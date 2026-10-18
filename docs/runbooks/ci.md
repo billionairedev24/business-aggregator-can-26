@@ -184,7 +184,11 @@ ci/e2e.sh run                      # results in e2e-out/ (report/index.html, tra
 ## The colour lint
 `web/scripts/check-hex-colors.mjs` fails on hex colour literals (`#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`) in
 `web/packages/ui/src` and `web/apps/*/src` (`.tsx`, `.ts`, `.css`; tests and test fixtures are skipped). Colours come
-from `packages/tokens/tokens.json` as `var(--color-*)`. Genuine exceptions — third-party brand artwork such as the
+from `packages/tokens/brand.json` and its palette as semantic `var(--color-*)` roles. `web/scripts/check-brand-literal.mjs`
+(`pnpm lint:brand`) fails on the product's literal name in UI strings (`{brand}` / `brand.name` instead) and
+`web/scripts/check-legacy-tokens.mjs` (`pnpm lint:tokens`) on the deprecated token names in `@northline/ui` and the
+app shells; `make web-lint` runs all three. The token package's own test (`node build.mjs --check`) is the contrast gate:
+every text pair of every palette at WCAG AA, and the committed `generated/` files up to date. Genuine exceptions — third-party brand artwork such as the
 Google logo, or merchant data such as brand-colour swatches — go in `web/scripts/hex-colors.allowlist` with a reason.
 `packages/tokens`, `public/` assets (favicon) and `.storybook/` are not scanned.
 

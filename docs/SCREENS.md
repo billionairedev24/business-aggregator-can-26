@@ -1,15 +1,20 @@
-# Screen inventory — LOCKED
+# Screen inventory
 
-Status: **Design locked 2026-09-28.** Visual system: Northline "Spruce & Honey" (`packages/tokens/tokens.json`, mirrored in `design/theme/northline.css`). The attached Broadsheet system is NOT used. Do not restyle; do not add screens not listed here without a DECISIONS.md entry.
+Status: **Redesign adopted 2026-10-18** (DECISIONS § "2026-10-18 — Redesign foundation"). The "Spruce & Honey" look of
+the 2026-09-28 lock is retired: every screen is rebuilt on AfroTransact's layouts and flows with our own brand —
+**`docs/design/redesign-spec.md`** says which AfroTransact screen each route looks like (§ 2), what to remove (§ 3) and
+the build order (§ 4). The brand is `web/packages/tokens/brand.json` + its palette. This inventory still lists every
+screen and state, and the `design/*.dc.html` references still define copy, states and behaviour; do not add screens
+not listed here (or in the spec's mapping) without a DECISIONS.md entry.
 
 Open each reference in a browser. "State key" = the view/screen value that shows it in the reference.
 
 ## Shared shells
 | Shell | Used by | Pattern |
 |---|---|---|
-| Consumer header | web consumer | brand · location pill (map-pin, auto-detect) · search (off-home) · Services/Shop/Food · FR/EN · cart · account menu (Orders & bookings, wallet, security) |
-| Studio shell | provider, seller, kitchen, onboarding | top bar (brand+"Studio", business, tier, account menu: profile, switch business, team, help, language, sign out) · sticky left sidebar with Phosphor duotone icons, section heads, badges |
-| Console shell | platform ops | top bar (brand+"Console", global search pill, account menu: profile, role switch, audit, on-call) · sticky sidebar filtered by role |
+| Consumer header | web consumer | AfroTransact two bars (spec § 1.3, Shop:27–76): logo · "Deliver to" (map-pin, auto-detect) · search (every page) · avatar menu (guest: "Welcome, guest", Sign in, Create account, language; signed in: Orders & bookings, account, language, sign out) · cart (count) / department bar: Services · Shop · Food. Footer (dark): help and policies, for businesses, language, company line. Auth pages: the logo alone |
+| Studio shell | provider, seller, kitchen, onboarding | AfroTransact back-office frame (BO:30–110): dark top bar (logo + "Studio", business · city, tier, assistant, account menu: profile, switch business, team, help, language, sign out) · white 264px sidebar with Phosphor regular icons (fill when current), group heads, badges |
+| Console shell | platform ops | the same frame: dark top bar (logo + "Console", global search, region line, account menu: profile, role switch, audit, language, sign out) · sidebar filtered by role; Pilot, UAT, Go-live, API and On-call only with `VITE_NL_TESTING_TOOLS` |
 | Mobile app | iOS/Android | 402×874 frame, bottom tabs, one live phone per journey |
 
 ## Consumer web — `design/06 Consumer Web.dc.html`
@@ -40,7 +45,7 @@ Steps: account → business (legal fields per `docs/spec/legal-details.schema.js
 overview · orders · disputes · delivery · sellers · seller_detail · verify · vetting · trust · taxonomy · support · regions · finance · reports · api · team · profile (security, sessions, audit, prefs) · oncall · denied (role gate)
 
 ## Courier app — addition (S-87; no design in `design/`, DECISIONS 2026-10-01 — S-87)
-`mobile/apps/courier`, iOS/Android (Expo). Northline tokens, Newsreader headings, Instrument Sans body, 48 dp targets; a
+`mobile/apps/courier`, iOS/Android (Expo). The brand's tokens (colours already follow the palette; fonts and layout are redesign phase 4), 48 dp targets; a
 stack (no bottom tabs: three levels). Copy en + fr-CA ours.
 sign-in (browser sign-in, language) · shift (status, start/end, next shift, the open run) · run (stops in order, next
 marked, unsent marked, location card) · stop (address, unit, note, order ref, maps, arrive / pick up / hand over; no
@@ -61,15 +66,14 @@ Every record list uses it (one `spec` prop: columns, rows, can, roleName, action
 - Generate report: rows = selected | filtered | all; format CSV | Excel | PDF/print; pick columns.
 - CRUD gated by role: `can = { create, update, delete, export }`. Create/edit dialog built from columns; delete requires confirm and is audit-logged; view-only roles see a "View only · role" tag and no mutating controls. Custom row/bulk actions declare `perm` and a `when` status guard.
 - Responsive: lowest-priority columns auto-hide to fit, then the table becomes a card list below ~600px. Never horizontal scroll.
-### App sidebar (Studio, Console)
-- Light panel (`--color-surface`) with a right border and soft shadow, full height, sticky under the top bar — distinct from the off-white content area.
-- Collapse-to-icon-rail toggle sits at the top of the sidebar (72px rail, tooltips).
-- Dashboard / Overview pinned first; then accordion groups — Studio: Operations · Catalogue · Finance · Account · Help (Kitchen for food); Console: Operations · Marketplace · Platform. One group open at a time; the group holding the current page opens by default; a dot marks it when collapsed.
-- < 900px: sidebar hidden; menu button in the top bar opens it as an off-canvas drawer; choosing an item closes it.
+### App sidebar (Studio, Console) — spec § 1.3 "Backoffice shell"
+- White surface with a right border, full height, sticky under the dark top bar; 264px.
+- ≥ 1024px: the full sidebar, with a collapse-to-rail toggle at the top (72px rail, tooltips; remembered). 768–1023px: the rail, expanding in place. < 768px: hidden; the menu button in the top bar opens it as a modal sheet; choosing an item closes it.
+- Dashboard / Overview pinned first; then collapsible groups (2xs uppercase heads) — Studio: Operations · Catalogue · Finance · Account · Help (Kitchen for food); Console: Operations · Marketplace · Platform. One group open at a time; the group holding the current page opens by default; a dot marks it when collapsed. The current item: brand tint, bold, its icon filled.
 - Console filters groups/items by role.
 
 ## Every screen must implement
 - No horizontal scroll at any width ≥ 320px: grids use `minmax(min(100%, N), 1fr)`, top bar wraps.
-- Loading (skeleton matching layout), empty (one line + primary action), error (rosehip `accent-2` inline, retry).
-- en/fr copy (`design/i18n-fr.js` is the reference glossary).
-- Focus ring `2px var(--color-accent)`, hit targets ≥ 44px, hover from accent-100.
+- Loading (skeleton matching layout), empty (inline, never an illustration: one bold line, one muted sentence, one primary action), error (`--color-danger` inline, retry).
+- en/fr copy (`design/i18n-fr.js` is the reference glossary); the product's name as `{brand}`.
+- Focus ring `2px var(--color-focus)` (on the dark chrome: the hover fill + the accent underline), hit targets ≥ 44px, hover `--color-surface-hover`.

@@ -47,8 +47,8 @@ mobile/                         a pnpm workspace of its own (not web/): Expo pin
                                 nonces, rotating refresh), api client, secure storage, theme from @northline/tokens, i18n
 ```
 
-`@northline/mobile-kit` links `web/packages/tokens` (its `tokens.json`): colours, radii, spacing and fonts come from
-the same file as the web, and the ramps are derived in OKLCH exactly as `derived.css` does. No colour literal is
+`@northline/mobile-kit` links `web/packages/tokens` (its `generated/theme.json`, resolved from `brand.json` and its
+palette by the web's token build): colours, radii and spacing come from the same brand as the web. No colour literal is
 allowed in the app (ESLint and a test).
 
 ## Run it
