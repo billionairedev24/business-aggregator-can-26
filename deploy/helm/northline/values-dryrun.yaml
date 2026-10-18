@@ -51,6 +51,10 @@ env:
   SPRING_DATA_REDIS_SSL_BUNDLE: null
   SPRING_SSL_BUNDLE_PEM_REDIS_TRUSTSTORE_CERTIFICATE: null
   LOGGING_LEVEL_CA_NORTHLINE: info
+  # Small JVMs: the images size the heap at 75 % of the memory limit (-XX:MaxRAMPercentage=75, server/build.gradle.kts),
+  # so the limits below are the heaps' budget; these trim the rest (serial GC on 1–2 cores, smaller code cache and
+  # thread stacks).
+  JAVA_TOOL_OPTIONS: "-XX:+UseSerialGC -XX:ReservedCodeCacheSize=64m -Xss512k -XX:TieredStopAtLevel=1"
 spring:
   extraVolumes: []
   extraVolumeMounts: []
@@ -125,15 +129,24 @@ apps:
   docs:
     enabled: false
 
-# Traces, metrics and logs to Google Cloud's own backends (values-gcp.yaml: Cloud Trace, Managed Service for
-# Prometheus, Cloud Logging) through one small Collector — no Prometheus/Loki/Tempo/Grafana pods to run.
+# Observability off by default: the pods' stdout still reaches Cloud Logging (GKE, within the free 50 GiB/month), and
+# GKE's system metrics are free. Flag for a debugging session: --set observability.collector.enabled=true — one small
+# Collector sending traces to Cloud Trace and logs to Cloud Logging (both inside their free tiers); metrics are only
+# summarised in its log (no Managed Service for Prometheus samples to pay for; values-gcp.yaml's exporter stays
+# defined but unused).
 observability:
   tracesSampleRatio: "1.0"
   collector:
-    enabled: true
+    enabled: false
     resources:
       requests: { cpu: 50m, memory: 192Mi }
       limits: { memory: 384Mi }
     memoryLimitMiB: 300
+    pipelines:
+      traces: [googlecloud]
+      metrics: [debug]
+      logs: [googlecloud]
+    exporters:
+      debug: { verbosity: basic }
 
 preStopSleepSeconds: 2
