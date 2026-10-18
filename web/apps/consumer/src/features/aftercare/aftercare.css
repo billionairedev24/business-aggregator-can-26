@@ -19,7 +19,7 @@
    a 320px column (details, cancellation policy, help). */
 .nl-bkd { padding-top: var(--space-4); }
 .nl-bkd-crumbs { font-size: var(--text-xs); color: var(--color-text-muted); }
-.nl-bkd-crumbs a { color: var(--color-link); display: inline-flex; align-items: center; min-height: var(--size-touch); }
+.nl-bkd-crumbs a { color: var(--color-link); display: inline-flex; align-items: center; justify-content: center; min-height: var(--size-touch); min-width: var(--size-touch); }
 .nl-bkd-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--space-5); align-items: start; margin-top: var(--space-2); }
 .nl-bkd-main, .nl-bkd-side { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 .nl-bkd-card { padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); min-width: 0; }
@@ -40,7 +40,7 @@
 .nl-bkd-facts > div { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-3); }
 .nl-bkd-facts dt { font-weight: var(--weight-bold); }
 .nl-bkd-facts dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
-.nl-bkd-facts a { color: var(--color-link); }
+.nl-bkd-facts a { color: var(--color-link); display: inline-block; padding-block: 15px; margin-block: -15px; }
 .nl-bkd-total { padding-top: var(--space-2); border-top: 1px solid var(--color-border); font-size: var(--text-base); }
 .nl-bkd-policy .nl-after-muted + .nl-after-muted { margin-top: var(--space-2); }
 .nl-bkd-link { display: flex; align-items: center; min-height: var(--size-touch); color: var(--color-link); font-size: var(--text-sm); }

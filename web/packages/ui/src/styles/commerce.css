@@ -49,8 +49,9 @@
 .nl-pcard-rail .nl-pcard-title { font-size: var(--text-md); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 @media (hover: hover) { .nl-pcard-title:hover { color: var(--color-link); text-decoration: none; } }
 .nl-pcard-title:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-xs); }
-/* touch: the title's tap area grows to 44px tall */
-@media (pointer: coarse) { .nl-pcard-title { position: relative; } .nl-pcard-title::after { content: ''; position: absolute; inset: -13px 0; } }
+/* S-143: the title's target grows to 44px tall (an invisible extender inside the card) */
+.nl-pcard-title { position: relative; display: inline-block; min-width: var(--size-touch); }
+.nl-pcard-title::after { content: ''; position: absolute; inset: -13px 0; }
 .nl-pcard-meta { font-size: var(--text-xs); color: var(--color-text-muted); overflow-wrap: anywhere; }
 .nl-pcard-price { margin-top: var(--space-1); }
 .nl-pcard-badges { display: flex; flex-wrap: wrap; gap: var(--space-1); }

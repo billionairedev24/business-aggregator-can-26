@@ -6,7 +6,7 @@
 .nl-results-h1 strong { font-weight: var(--weight-bold); color: var(--color-price); }
 .nl-results-bar-end { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .nl-results-sort { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text-muted); }
-.nl-results-sort .input { min-height: var(--size-control-sm); height: auto; width: auto; font-size: var(--text-sm); }
+.nl-results-sort .input { min-height: var(--size-touch); height: auto; width: auto; font-size: var(--text-sm); }
 .nl-results-filters-toggle { display: none; gap: var(--space-1); }
 
 .nl-results-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: var(--space-6); margin-top: var(--space-4); align-items: start; }
@@ -18,7 +18,8 @@
 .nl-results-group + .nl-results-group { margin-top: var(--space-5); }
 .nl-results-group-label { margin: 0 0 var(--space-1); font-size: var(--text-md); font-weight: var(--weight-bold); }
 .nl-results-group-items { display: flex; flex-direction: column; }
-.nl-results-option { display: flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); cursor: pointer; overflow-wrap: anywhere; }
+.nl-results-option { display: flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); cursor: pointer; overflow-wrap: anywhere; padding-inline-start: 13px; margin-inline-start: -13px; }
+/* S-143: the 18px box reaches 44px through its label (13px of it on each side of the box) */
 .nl-results-option input { width: 18px; height: 18px; margin: 0; flex: none; accent-color: var(--color-action-primary); cursor: pointer; }
 .nl-results-option input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .nl-results-option-label { flex: 1; min-width: 0; }

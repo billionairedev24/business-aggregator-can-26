@@ -2,7 +2,7 @@
    the timeline, the shops, beside a 320px column (delivery, payment, help). Semantic tokens only. */
 .order-page { padding-top: var(--space-4); }
 .order-crumbs { font-size: var(--text-xs); color: var(--color-text-muted); }
-.order-crumbs a { color: var(--color-link); display: inline-flex; align-items: center; min-height: var(--size-touch); }
+.order-crumbs a { color: var(--color-link); display: inline-flex; align-items: center; justify-content: center; min-height: var(--size-touch); min-width: var(--size-touch); }
 .order-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--space-5); align-items: start; margin-top: var(--space-2); }
 .order-main, .order-side { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 .order-head { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-8); margin: 0; padding: var(--space-3) var(--space-4); background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--text-sm); }
