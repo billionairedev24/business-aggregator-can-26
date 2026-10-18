@@ -65,8 +65,10 @@ resource "google_container_cluster" "this" {
     services_secondary_range_name = "services"
   }
 
+  # dryrun: public nodes (an ephemeral external IP each) instead of private nodes behind Cloud NAT — no NAT to pay for
+  # a demo; GKE's firewall rules still admit only the control plane and the load balancer's health checks.
   private_cluster_config {
-    enable_private_nodes    = true
+    enable_private_nodes    = var.context.environment != "dryrun"
     enable_private_endpoint = false
   }
 

@@ -159,7 +159,8 @@ output "data_stores" {
       endpoints = local.data_service_endpoints
       # Secrets the operator fills (external services); the in-cluster ones are generated.
       secrets_to_fill = [for var_name, secret in local.data_service_secrets : module.secrets.secret_refs[secret] if !contains(keys(local.generated_secrets), var_name)]
-      # Provider allow-lists (external services): the cluster reaches the internet through these Cloud NAT addresses.
+      # Provider allow-lists (external services): the Cloud NAT addresses. Empty in the dryrun: no NAT, the public
+      # nodes leave with their own ephemeral addresses (they change when a node is replaced).
       egress_ips = module.network.cloud.nat_public_ips
     }
   }

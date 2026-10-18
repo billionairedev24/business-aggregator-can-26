@@ -29,8 +29,9 @@ locals {
 }
 
 # dryrun — a short-lived demo environment on GKE with fake data only (docs/runbooks/dryrun-gcp.md, DECISIONS
-# 2026-10-18): one zone, one small node pool, no managed data stores — Postgres, Valkey, Meilisearch and Kafka run in
-# the cluster (deploy/helm/northline-data) or at an external provider (data_services), nothing protected from destroy.
+# 2026-10-18): one zone, one node pool of 2 Spot e2-standard-4 with public addresses (no Cloud NAT), no managed data
+# stores — Postgres, Valkey, Meilisearch and Kafka run in the cluster (deploy/helm/northline-data) or at an external
+# provider (data_services) — nothing protected from destroy.
 module "northline" {
   source = "../../../stacks/gcp"
 
@@ -48,7 +49,7 @@ module "northline" {
       machine_type = var.machine_type
       min_count    = var.node_count.min
       max_count    = var.node_count.max
-      disk_size_gb = 50
+      disk_size_gb = 30
       spot         = var.spot_nodes
     }
   }

@@ -38,16 +38,16 @@ variable "machine_type" {
 }
 
 variable "node_count" {
-  description = "Node pool autoscaling bounds. A free-trial billing account caps the project at 8 vCPUs (two e2-standard-4): upgrade the account (the credit stays) to scale to 3 or to let GKE surge-upgrade."
+  description = "Node pool autoscaling bounds. Two e2-standard-4 carry everything; a free-trial billing account caps the project at 8 vCPUs (exactly two), so max 3 needs an upgraded account (the credit stays). Between demos scale to 0 with `make dryrun-down` instead of changing this."
   type = object({
     min = number
     max = number
   })
-  default = { min = 2, max = 3 }
+  default = { min = 2, max = 2 }
 }
 
 variable "spot_nodes" {
-  description = "Spot VMs (about a third of the on-demand price; Google may reclaim a node at any time, the pods restart on the other one). Set false before a client demo for steady nodes (the pool is re-created)."
+  description = "Spot VMs (about a third of the on-demand price; Google may reclaim a node at any time with 30 s notice, its pods restart on the other node or when the node comes back). Demo day: false (on demand, the pool is re-created), back to true afterwards."
   type        = bool
   default     = true
 }

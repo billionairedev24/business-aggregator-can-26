@@ -69,6 +69,11 @@ run "in_cluster_by_default" {
   }
 
   assert {
+    condition     = length(output.network.cloud.nat_public_ips) == 0 && output.network.cloud.private_service_access == null && output.network.cloud.memorystore_psc_policy == null
+    error_message = "No Cloud NAT, Private Service Access or PSC policy in the dry run (public nodes, no managed stores)."
+  }
+
+  assert {
     condition     = output.data_values.zone == "northamerica-northeast1-a" && output.data_values.postgres.enabled && output.data_values.postgres.backup.enabled && output.data_values.kafka.enabled
     error_message = "data_values: every service in the cluster's zone, Postgres with its backup."
   }

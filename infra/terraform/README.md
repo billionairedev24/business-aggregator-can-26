@@ -28,8 +28,9 @@ infra/terraform/
 │                      search/elastic-cloud is the shared implementation
 ├── stacks/{aws,gcp,azure}                  composes the modules for one environment (identical for dev/staging/prod)
 ├── envs/{aws,gcp,azure}/{dev,staging,prod} root modules: providers, backend, sizes; `terraform apply` runs here
-├── envs/gcp/dryrun                         the GCP demo environment: zonal GKE, data services in the cluster or
-│                                           external instead of the managed stores (docs/runbooks/dryrun-gcp.md)
+├── envs/gcp/dryrun                         the GCP demo environment: zonal GKE with public nodes (no Cloud NAT), data
+│                                           services in the cluster or external instead of the managed stores
+│                                           (docs/runbooks/dryrun-gcp.md)
 │   └── tests/plan.tftest.hcl               offline plan with mocked providers + region guard
 ├── bootstrap/{aws,gcp,azure}               one-off roots that create the remote-state bucket
 └── scripts/
