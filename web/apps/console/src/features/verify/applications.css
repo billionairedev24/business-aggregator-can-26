@@ -1,0 +1,17 @@
+/* Applications (redesign § 2.3 → BO `apps` and the BO:811 sheet): the stage steps and the sheet's lists. Semantic tokens only. */
+.nl-ap-stages { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--space-2); }
+.nl-ap-stage { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--text-sm); min-width: 0; }
+.nl-ap-stage[data-state="current"] { border: 2px solid var(--color-action-primary); padding: calc(var(--space-3) - 1px); }
+.nl-ap-stage-n { flex: none; display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font-weight: var(--weight-bold); background: var(--color-badge-neutral-bg); color: var(--color-badge-neutral-text); }
+.nl-ap-stage[data-state="current"] .nl-ap-stage-n { background: var(--color-action-primary); color: var(--color-action-primary-text); }
+.nl-ap-stage[data-state="done"] .nl-ap-stage-n { background: var(--color-success-bg); color: var(--color-success); }
+.nl-ap-stage-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.nl-ap-stage-desc { color: var(--color-text-muted); font-size: var(--text-xs); }
+.nl-ap-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--text-sm); }
+.nl-ap-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-2) var(--space-3); min-width: 0; }
+.nl-ap-row + .nl-ap-row { border-top: 1px solid var(--color-border); }
+.nl-ap-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.nl-ap-note { display: block; color: var(--color-text-muted); font-size: var(--text-xs); }
+/* The queue tabs wrap rather than overflow at 360px (four tabs, French labels). */
+.bo-page > .nl-utabs { flex-wrap: wrap; }
+.bo-page > .nl-utabs .nl-utab { overflow-wrap: anywhere; }
