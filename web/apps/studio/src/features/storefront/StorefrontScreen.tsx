@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Dialog, EmptyState, ErrorState, Field, FormGrid, PageSkeleton, Select, Switch, TextInput, formatDate, useFormatters, useLocale } from '@northline/ui';
-import { BoHeader } from '../../components/BackOffice';
+import { Alert, Dialog, EmptyState, ErrorState, Field, FormGrid, PageSkeleton, Select, Switch, TextInput, formatDate, useFormatters, useLocale, BoHeader } from '@northline/ui';
 import { ApiError } from '../../lib/http';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';

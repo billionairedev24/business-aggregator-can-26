@@ -1,13 +1,12 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { DataTable, PageSkeleton, Skeleton, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
+import { DataTable, PageSkeleton, Skeleton, useFormatters, useLocale, type DataTableColumn, BoHeader, KpiStrip } from '@northline/ui';
 import { useMerchant, useMerchantId, useRole, type MerchantType } from '../shell/api';
 import { earningsQuery, ledgerQuery, type EarningsOverview, type LedgerLine } from './api';
 import { hoursUntil, pctFromBps, weekdayLong } from './format';
 import { useFinanceT, type FinanceKey, type FinanceT } from './messages';
 import { QueryState } from './QueryState';
 import { InsightCard } from '../assistant/InsightCard';
-import { BoHeader, KpiStrip } from '../../components/BackOffice';
 import './finance.css';
 
 const TIERS = ['master', 'trusted', 'registered'] as const;
