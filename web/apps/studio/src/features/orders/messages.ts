@@ -2,7 +2,9 @@ import { defineMessages } from '@northline/ui';
 
 export const useOrdersT = defineMessages({
   en: {
-    kicker: 'Orders · products',
+    title: 'Orders', kpis: 'Order figures', kpiToPack: 'To pack', kpiAwaiting: 'Awaiting pickup', kpiDelivered: 'Delivered today', kpiIssues: 'Issues', runDelta: 'next run {run}', issuesDelta: 'needs a reply',
+    secItems: 'Items', secCustomer: 'Customer', secDelivery: 'Delivery', placedOn: 'Placed {date}',
+    statusNote: 'You mark an order packed; the courier, the delivery and the customer move it on from there.',
     titleTonight: "Pack by {time} for tonight's run",
     titleToday: 'Pack by {time} for the next run',
     titleTomorrow: 'Pack by {time} tomorrow',
@@ -23,7 +25,9 @@ export const useOrdersT = defineMessages({
     role_owner: 'Owner', role_technician: 'Technician', role_bookkeeper: 'Bookkeeper', role_cook: 'Cook',
   },
   fr: {
-    kicker: 'Commandes · produits',
+    title: 'Commandes', kpis: 'Chiffres des commandes', kpiToPack: 'À emballer', kpiAwaiting: 'En attente de collecte', kpiDelivered: "Livrées aujourd'hui", kpiIssues: 'Problèmes', runDelta: 'prochaine tournée {run}', issuesDelta: 'réponse attendue',
+    secItems: 'Articles', secCustomer: 'Client', secDelivery: 'Livraison', placedOn: 'Passée le {date}',
+    statusNote: 'Vous marquez une commande comme emballée; le livreur, la livraison et le client la font avancer ensuite.',
     titleTonight: 'Emballez avant {time} pour la tournée de ce soir',
     titleToday: 'Emballez avant {time} pour la prochaine tournée',
     titleTomorrow: 'Emballez avant {time} demain',

@@ -1,7 +1,14 @@
-.nl-orders-chips { display: flex; gap: 6px; margin: 20px 0 14px; flex-wrap: wrap; }
-.nl-orders-foot { font-size: 13px; color: var(--color-neutral-700); margin-top: 16px; max-width: 60ch; }
-.nl-orders-detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 10px 16px; margin: 0; font-size: 14px; }
-.nl-orders-detail dt { color: var(--color-neutral-700); }
-.nl-orders-detail dd { margin: 0; overflow-wrap: break-word; }
-.nl-orders-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.nl-orders-lines li { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+/* Orders (redesign § 2.2: BO orders table + BO:811 right sheet). Semantic tokens only. */
+.nl-orders { display: flex; flex-direction: column; gap: var(--space-5); }
+.nl-orders > .bo-head { margin-bottom: 0; }
+.nl-orders-foot { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0; max-width: 72ch; }
+.nl-orders-status { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+.nl-orders-sub { font-size: var(--text-sm); color: var(--color-text-muted); }
+.nl-orders-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--text-sm); }
+.nl-orders-lines li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--space-3); align-items: baseline; padding: var(--space-2) var(--space-3); }
+.nl-orders-lines li + li { border-top: 1px solid var(--color-border); }
+.nl-orders-line-name { min-width: 0; overflow-wrap: anywhere; }
+.nl-orders-line-state { color: var(--color-text-muted); font-size: var(--text-xs); }
+.nl-orders-line-price { font-variant-numeric: tabular-nums; }
+.nl-orders-total { grid-template-columns: minmax(0, 1fr) auto !important; background: var(--color-surface-sunken); }
+.nl-orders-note { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); }
