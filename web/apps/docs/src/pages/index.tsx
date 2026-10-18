@@ -2,6 +2,7 @@ import Link from '@docusaurus/Link';
 import Translate, { translate } from '@docusaurus/Translate';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
+import { brand } from '@northline/tokens';
 
 /** Home: the guides, the API reference and, in the internal variant, the engineering documentation. */
 export default function Home() {
@@ -11,11 +12,11 @@ export default function Home() {
     <Layout title={translate({ id: 'home.title', message: 'Documentation' })}>
       <main className="nl-home">
         <h1>
-          <Translate id="home.heading">Northline documentation</Translate>
+          <Translate id="home.heading" values={{ brand: brand.name }}>{'{brand} documentation'}</Translate>
         </h1>
         <p className="nl-lead">
-          <Translate id="home.lead">
-            Guides and API references for integrations with the Northline marketplace.
+          <Translate id="home.lead" values={{ brand: brand.name }}>
+            {'Guides and API references for integrations with the {brand} marketplace.'}
           </Translate>
         </p>
         <div className="nl-cards">

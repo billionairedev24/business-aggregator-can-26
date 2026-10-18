@@ -3,6 +3,7 @@ import homeCss from '../features/home/home.css?url';
 import { HomeScreen } from '../features/home/HomeScreen';
 import { seo } from '../lib/seo';
 import { siteJsonLd } from '../lib/structuredData';
+import { brand } from '@northline/tokens';
 
 const DESCRIPTION = {
   en: 'Groceries and goods on a shared run, hot food in 30 minutes, verified providers for anything at home — every job paid into escrow, every seller vetted.',
@@ -14,7 +15,7 @@ export const Route = createFileRoute('/')({
   head: ({ match }) => {
     const { locale, config } = match.context;
     const tags = seo(match.context, {
-      title: locale === 'fr' ? 'Northline · Tous les commerçants de confiance, à un geste de votre porte' : 'Northline · Every trusted local, one tap from the door',
+      title: locale === 'fr' ? `${brand.name} · Tous les commerçants de confiance, à un geste de votre porte` : `${brand.name} · Every trusted local, one tap from the door`,
       description: DESCRIPTION[locale], path: '/', jsonLd: siteJsonLd(config.siteOrigin, config.legalEntity),
     });
     return { ...tags, links: [...tags.links, { rel: 'stylesheet', href: homeCss }] };

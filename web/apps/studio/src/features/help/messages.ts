@@ -32,7 +32,7 @@ export const useHelpT = defineMessages({
     next_reply: 'Reply by {when}', today: 'today {time}', tomorrow: 'tomorrow {time}', onDate: '{date}, {time}',
     sent: 'Case {code} opened.', sentBody: 'Topic: {topic}. {sla} We’ve attached your account context (portal, tier, last 5 events) so you don’t have to explain it.',
     conversation: '{code} · conversation', caseError: "We couldn't load this case.", resolvedNote: 'This case is resolved. Open a new case if you need more help.',
-    attach: 'Attach', replyTo: 'Reply in case {code}', you: 'You', northline: 'Northline support', sending: 'Sending…',
+    attach: 'Attach', replyTo: 'Reply in case {code}', you: 'You', northline: '{brand} support', sending: 'Sending…',
     // contact form
     topic: 'Topic', relatedTo: 'Related to', none: '— none —', whatsHappening: "What's happening?",
     whatsHappeningPlaceholder: 'Tell us what you expected and what happened. Screenshots help.',
@@ -83,7 +83,7 @@ export const useHelpT = defineMessages({
     next_reply: 'Réponse d’ici {when}', today: "aujourd'hui {time}", tomorrow: 'demain {time}', onDate: '{date}, {time}',
     sent: 'Dossier {code} ouvert.', sentBody: 'Sujet : {topic}. {sla} Nous avons joint le contexte de votre compte (portail, niveau, 5 derniers événements) pour que vous n’ayez pas à l’expliquer.',
     conversation: '{code} · conversation', caseError: 'Impossible de charger ce dossier.', resolvedNote: 'Ce dossier est résolu. Ouvrez-en un nouveau si vous avez encore besoin d’aide.',
-    attach: 'Joindre', replyTo: 'Répondre dans le dossier {code}', you: 'Vous', northline: 'Soutien Northline', sending: 'Envoi…',
+    attach: 'Joindre', replyTo: 'Répondre dans le dossier {code}', you: 'Vous', northline: 'Soutien {brand}', sending: 'Envoi…',
     topic: 'Sujet', relatedTo: 'Lié à', none: '— aucun —', whatsHappening: 'Que se passe-t-il?',
     whatsHappeningPlaceholder: 'Dites-nous ce à quoi vous vous attendiez et ce qui s’est passé. Les captures d’écran aident.',
     attachments: 'Pièces jointes', add: '+ ajouter', addLabel: 'Ajouter des pièces jointes', removeFile: 'Retirer {name}', uploading: 'Téléversement…',

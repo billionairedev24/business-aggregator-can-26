@@ -13,7 +13,9 @@
     "dev:consumer": "pnpm --filter @northline/consumer dev",
     "dev:console": "pnpm --filter @northline/console dev",
     "lint:colors": "node scripts/check-hex-colors.mjs",
-    "test-storybook": "pnpm --filter @northline/ui test-storybook"
+    "test-storybook": "pnpm --filter @northline/ui test-storybook",
+    "lint:brand": "node scripts/check-brand-literal.mjs",
+    "lint:tokens": "node scripts/check-legacy-tokens.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.0",

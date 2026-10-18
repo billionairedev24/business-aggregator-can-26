@@ -13,7 +13,7 @@ $(WEB_INSTALLED): $(ROOT)/web/pnpm-lock.yaml $(ROOT)/web/package.json
 web-install: $(WEB_INSTALLED) ## pnpm install (frozen lockfile); a no-op while node_modules is up to date
 
 .PHONY: web-check
-web-check: web-lint web-test i18n-check web-build-studio web-build-console ## What CI's web checks run: hex colours, typecheck, vitest, French coverage, Studio + console builds
+web-check: web-lint web-test i18n-check web-build-studio web-build-console ## What CI's web checks run: hex colours, brand literal, tokens, typecheck, vitest (with the token contrast gate), French coverage, Studio + console builds
 
 .PHONY: web-build
 web-build: $(WEB_INSTALLED) ## Build every web package that has a build script (tokens, studio, consumer, …)
@@ -40,8 +40,10 @@ web-typecheck: $(WEB_INSTALLED) ## tsc in every package
 	$(PNPM) -r typecheck
 
 .PHONY: web-lint
-web-lint: $(WEB_INSTALLED) ## No hex colours in components (lint:colors) + typecheck
+web-lint: $(WEB_INSTALLED) ## No hex colours in components (lint:colors), no literal brand name in UI strings (lint:brand), no deprecated tokens in rebuilt code (lint:tokens) + typecheck
 	$(PNPM) lint:colors
+	$(PNPM) lint:brand
+	$(PNPM) lint:tokens
 	$(PNPM) -r typecheck
 
 # Prettier formats only the web files you changed (against BASE, default origin/main, plus uncommitted ones): most of

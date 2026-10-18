@@ -7,6 +7,7 @@ import { ServiceCategorySkeleton } from '../../../features/services/ServiceCateg
 import { categoryName } from '../../../features/services/taxonomy';
 import { pageTitle } from '../../../features/shell/messages';
 import { seo } from '../../../lib/seo';
+import { brand } from '@northline/tokens';
 
 /**
  * Provider list (S-53): design 06 `providers`. The category is rendered on the server; the providers covering the
@@ -25,7 +26,7 @@ export const Route = createFileRoute('/services/$category/providers')({
     const locale = match.context.locale;
     const name = loaderData ? categoryName(loaderData.slug, loaderData.names, locale).text : undefined;
     const tags = seo(match.context, {
-      title: name ? `${name} · ${locale === 'fr' ? 'Prestataires' : 'Providers'} · Northline` : pageTitle(locale, 'providers'),
+      title: name ? `${name} · ${locale === 'fr' ? 'Prestataires' : 'Providers'} · ${brand.name}` : pageTitle(locale, 'providers'),
       path: `/services/${params.category}/providers`,
       description: name && (locale === 'fr'
         ? `${name} : comparez les prestataires vérifiés près de chez vous — niveau, ponctualité, avis.`

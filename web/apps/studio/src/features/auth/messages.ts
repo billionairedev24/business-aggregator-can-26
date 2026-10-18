@@ -11,7 +11,7 @@ const usePageT = defineMessages({
   en: {
     studio: 'Studio',
     signedOut: 'Signed out',
-    kicker: 'Northline Studio · for providers, sellers & kitchens',
+    kicker: '{brand} Studio · for providers, sellers & kitchens',
     heroTitle: 'Run your business from one place.',
     heroLede: 'Appointments, listings, menus, escrow payouts and your reputation — all behind a login built for businesses: a strong second factor, per-member roles, and every sensitive action logged.',
     point1Title: 'Roles for your team',
@@ -46,7 +46,7 @@ const usePageT = defineMessages({
     sendCode: 'Send verification code',
     sending: 'Sending…',
     orContinue: 'or continue with',
-    alreadyCustomer: 'Already a Northline customer? ',
+    alreadyCustomer: 'Already a {brand} customer? ',
     alreadyCustomerAfter: ' — your login works for a business too.',
     attention: '{count, plural, one {# thing needs attention.} other {# things need attention.}}',
     // validation (docs/spec/validation-rules.md § Registration)
@@ -80,7 +80,7 @@ const usePageT = defineMessages({
     identifier: 'Email or mobile',
     continue: 'Continue',
     passkey: 'Passkey',
-    newHere: 'New to Northline? ',
+    newHere: 'New to {brand}? ',
     createFirst: 'Create an account',
     newHereAfter: ' first — onboarding follows.',
     factorFor: 'Second factor required for {identifier}.',
@@ -108,12 +108,12 @@ const usePageT = defineMessages({
     // S-20: the rate-limit store is down; codes and second factors are paused (503 sign_in_unavailable)
     federationLink: 'Confirm it’s you with your passkey, authenticator app or a backup code to link your {provider} account.',
     federationRegister: 'You’re signed in with {provider}. Add your mobile number and a second factor to finish creating your account.',
-    federationRelay: 'Your email is Apple’s Hide My Email address: messages from Northline reach you through it.',
+    federationRelay: 'Your email is Apple’s Hide My Email address: messages from {brand} reach you through it.',
   },
   fr: {
     studio: 'Studio',
     signedOut: 'Déconnecté',
-    kicker: 'Northline Studio · pour prestataires, vendeurs et cuisines',
+    kicker: '{brand} Studio · pour prestataires, vendeurs et cuisines',
     heroTitle: 'Gérez votre entreprise depuis un seul endroit.',
     heroLede: 'Rendez-vous, annonces, menus, versements en fiducie et réputation — derrière une connexion conçue pour les entreprises : un deuxième facteur solide, des rôles par membre et chaque action sensible journalisée.',
     point1Title: 'Des rôles pour votre équipe',
@@ -147,7 +147,7 @@ const usePageT = defineMessages({
     sendCode: 'Envoyer le code de vérification',
     sending: 'Envoi…',
     orContinue: 'ou continuer avec',
-    alreadyCustomer: 'Déjà client Northline ? ',
+    alreadyCustomer: 'Déjà client {brand} ? ',
     alreadyCustomerAfter: ' — votre connexion fonctionne aussi pour une entreprise.',
     attention: '{count, plural, one {# élément à corriger.} other {# éléments à corriger.}}',
     codeLabel: 'Entrez le code à 6 chiffres envoyé au {phone}',
@@ -176,7 +176,7 @@ const usePageT = defineMessages({
     identifier: 'Courriel ou mobile',
     continue: 'Continuer',
     passkey: 'Clé d’accès',
-    newHere: 'Nouveau sur Northline ? ',
+    newHere: 'Nouveau sur {brand} ? ',
     createFirst: 'Créez un compte',
     newHereAfter: ' d’abord — l’inscription suit.',
     factorFor: 'Deuxième facteur requis pour {identifier}.',
@@ -201,7 +201,7 @@ const usePageT = defineMessages({
     footerRest: ' · les sessions expirent après 12 h d’inactivité · chaque connexion est journalisée.',
     federationLink: 'Confirmez que c’est vous avec votre clé d’accès, votre application d’authentification ou un code de secours pour lier votre compte {provider}.',
     federationRegister: 'Vous êtes connecté avec {provider}. Ajoutez votre numéro de mobile et un second facteur pour terminer la création de votre compte.',
-    federationRelay: 'Votre courriel est une adresse « Masquer mon adresse courriel » d’Apple : les messages de Northline vous parviennent par elle.',
+    federationRelay: 'Votre courriel est une adresse « Masquer mon adresse courriel » d’Apple : les messages de {brand} vous parviennent par elle.',
   },
 });
 

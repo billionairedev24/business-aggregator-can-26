@@ -8,7 +8,7 @@ export const useSettingsT = defineMessages({
 
     // Payment methods
     payTitle: 'Payment methods',
-    payLede: 'Stored with Stripe as tokens — Northline never sees card numbers. Escrow holds and Plus renew against your default.',
+    payLede: 'Stored with Stripe as tokens — {brand} never sees card numbers. Escrow holds and Plus renew against your default.',
     cardName: '{brand} ··{last4}', cardSub: 'Expires {exp}', cardSubAdded: 'Expires {exp} · added {added}',
     default: 'Default', makeDefault: 'Make default', remove: 'Remove', removeCard: 'Remove {card}', makeDefaultCard: 'Make {card} the default',
     addPm: 'Add payment method', addPmCancel: 'Cancel', addCard: 'Add card',
@@ -93,7 +93,7 @@ export const useSettingsT = defineMessages({
     act_granted: 'Given', act_withdrawn: 'Withdrawn',
     src_web_signup: 'Sign-up (web)', src_app_signup: 'Sign-up (app)', src_web_settings: 'Account settings (web)', src_app_settings: 'Account settings (app)',
     src_checkout: 'Checkout', src_studio: 'Studio', src_import: 'Imported with your earlier consent', src_unsubscribe_link: 'Unsubscribe link',
-    src_list_unsubscribe: 'Your mailbox’s unsubscribe button', src_sms_keyword: 'STOP reply', src_console: 'Northline support, at your request', src_erasure: 'Account deleted',
+    src_list_unsubscribe: 'Your mailbox’s unsubscribe button', src_sms_keyword: 'STOP reply', src_console: '{brand} support, at your request', src_erasure: 'Account deleted',
 
     // Language & region
     langTitle: 'Language / Langue & region', appLanguage: 'App language',
@@ -116,7 +116,7 @@ export const useSettingsT = defineMessages({
     v_allergies: 'Keep allergies under 200 characters.', v_notes: 'Keep notes for providers under 500 characters.',
 
     // Northline Plus
-    plusTitle: 'Northline Plus', plusLede: '{sub} The household is the unit — everyone at your address shares it.',
+    plusTitle: '{brand} Plus', plusLede: '{sub} The household is the unit — everyone at your address shares it.',
     plusSubOn: 'Free pooled delivery · 2× points · priority windows', plusSubOff: 'Free pooled delivery, 2× points, priority windows · $7.99/mo per household',
     planMonthly: 'Monthly · $7.99', planMonthlySub: 'per household · cancel any time', planAnnual: 'Annual · $69', planAnnualSub: 'per household · 2 months free',
     whatYouGet: 'What you get',
@@ -124,7 +124,7 @@ export const useSettingsT = defineMessages({
     perk3: 'Priority booking windows with Master-tier providers', perk4: 'Household sharing · up to 4 people', perk5: 'Cancel any time; refunds pro-rated',
     plusActive: 'Active since {since}.', plusRenews: 'Renews {date}.', plusTrialEnds: 'Free trial · ends {date}.',
     manageHousehold: 'Manage household', cancelPlus: 'Cancel Plus', startTrial: 'Start 30-day free trial', then: 'Then {price} · cancel any time',
-    priceMonthly: '$7.99/month', priceAnnual: '$69/year', cancelPlusTitle: 'Cancel Northline Plus?', cancelPlusBody: 'Your household keeps nothing extra after today. You can start again any time.',
+    priceMonthly: '$7.99/month', priceAnnual: '$69/year', cancelPlusTitle: 'Cancel {brand} Plus?', cancelPlusBody: 'Your household keeps nothing extra after today. You can start again any time.',
     trialNote: 'No card is charged during the trial.',
   },
   fr: {
@@ -132,7 +132,7 @@ export const useSettingsT = defineMessages({
     saveError: 'Impossible d’enregistrer. Réessayez.', saved: 'Enregistré.', cancel: 'Annuler', close: 'Fermer',
 
     payTitle: 'Modes de paiement',
-    payLede: 'Conservés chez Stripe sous forme de jetons — Northline ne voit jamais les numéros de carte. Les retenues en fiducie et Plus se renouvellent sur votre carte par défaut.',
+    payLede: 'Conservés chez Stripe sous forme de jetons — {brand} ne voit jamais les numéros de carte. Les retenues en fiducie et Plus se renouvellent sur votre carte par défaut.',
     cardName: '{brand} ··{last4}', cardSub: 'Expire {exp}', cardSubAdded: 'Expire {exp} · ajoutée {added}',
     default: 'Par défaut', makeDefault: 'Par défaut', remove: 'Retirer', removeCard: 'Retirer {card}', makeDefaultCard: 'Mettre {card} par défaut',
     addPm: 'Ajouter un mode de paiement', addPmCancel: 'Annuler', addCard: 'Ajouter une carte',
@@ -213,7 +213,7 @@ export const useSettingsT = defineMessages({
     act_granted: 'Donné', act_withdrawn: 'Retiré',
     src_web_signup: 'Inscription (Web)', src_app_signup: 'Inscription (appli)', src_web_settings: 'Paramètres du compte (Web)', src_app_settings: 'Paramètres du compte (appli)',
     src_checkout: 'Paiement', src_studio: 'Studio', src_import: 'Importé avec votre consentement antérieur', src_unsubscribe_link: 'Lien de désabonnement',
-    src_list_unsubscribe: 'Bouton de désabonnement de votre messagerie', src_sms_keyword: 'Réponse ARRET', src_console: 'Soutien Northline, à votre demande', src_erasure: 'Compte supprimé',
+    src_list_unsubscribe: 'Bouton de désabonnement de votre messagerie', src_sms_keyword: 'Réponse ARRET', src_console: 'Soutien {brand}, à votre demande', src_erasure: 'Compte supprimé',
 
     langTitle: 'Langue / Language et région', appLanguage: 'Langue de l’application',
     l_en: 'English', l_en_sub: 'Interface, receipts, notifications', l_fr: 'Français', l_fr_sub: 'Interface, reçus, notifications', l_fr_required: 'requis {places}',
@@ -233,7 +233,7 @@ export const useSettingsT = defineMessages({
     accessNotes: 'Notes pour les prestataires qui viennent chez vous', accessNotesPlaceholder: 'p. ex. frappez fort, chien d’assistance, sans parfum',
     v_allergies: 'Gardez les allergies sous 200 caractères.', v_notes: 'Gardez les notes sous 500 caractères.',
 
-    plusTitle: 'Northline Plus', plusLede: '{sub} Le foyer est l’unité — tout le monde à votre adresse en profite.',
+    plusTitle: '{brand} Plus', plusLede: '{sub} Le foyer est l’unité — tout le monde à votre adresse en profite.',
     plusSubOn: 'Livraison groupée gratuite · points ×2 · plages prioritaires', plusSubOff: 'Livraison groupée gratuite, points ×2, plages prioritaires · 7,99 $/mois par foyer',
     planMonthly: 'Mensuel · 7,99 $', planMonthlySub: 'par foyer · annulable en tout temps', planAnnual: 'Annuel · 69 $', planAnnualSub: 'par foyer · 2 mois gratuits',
     whatYouGet: 'Ce que vous obtenez',
@@ -241,7 +241,7 @@ export const useSettingsT = defineMessages({
     perk3: 'Plages de réservation prioritaires avec les prestataires de niveau Maître', perk4: 'Partage au foyer · jusqu’à 4 personnes', perk5: 'Annulable en tout temps; remboursement au prorata',
     plusActive: 'Actif depuis le {since}.', plusRenews: 'Renouvellement le {date}.', plusTrialEnds: 'Essai gratuit · se termine le {date}.',
     manageHousehold: 'Gérer le foyer', cancelPlus: 'Annuler Plus', startTrial: 'Commencer l’essai gratuit de 30 jours', then: 'Ensuite {price} · annulable en tout temps',
-    priceMonthly: '7,99 $/mois', priceAnnual: '69 $/an', cancelPlusTitle: 'Annuler Northline Plus?', cancelPlusBody: 'Votre foyer perd les avantages dès aujourd’hui. Vous pouvez recommencer en tout temps.',
+    priceMonthly: '7,99 $/mois', priceAnnual: '69 $/an', cancelPlusTitle: 'Annuler {brand} Plus?', cancelPlusBody: 'Votre foyer perd les avantages dès aujourd’hui. Vous pouvez recommencer en tout temps.',
     trialNote: 'Aucune carte n’est débitée pendant l’essai.',
   },
 });

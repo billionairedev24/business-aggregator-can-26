@@ -1,3 +1,4 @@
+import { brand } from '@northline/tokens';
 /**
  * schema.org JSON-LD for the public pages (S-63): a provider page is a `LocalBusiness` offering `Service`s with its
  * `AggregateRating`; a product is a `Product` with an `Offer` (one shop) or an `AggregateOffer` (several); a kitchen
@@ -149,9 +150,9 @@ export function restaurantJsonLd(r: RestaurantData): object {
 export function siteJsonLd(origin: string, legalEntity: string): object[] {
   const base = origin.replace(/\/$/, '');
   return [
-    { '@type': 'Organization', '@id': `${base}/#organization`, name: 'Northline', legalName: legalEntity, url: `${base}/` },
+    { '@type': 'Organization', '@id': `${base}/#organization`, name: brand.name, legalName: legalEntity, url: `${base}/` },
     {
-      '@type': 'WebSite', '@id': `${base}/#website`, name: 'Northline', url: `${base}/`, inLanguage: ['en-CA', 'fr-CA'],
+      '@type': 'WebSite', '@id': `${base}/#website`, name: brand.name, url: `${base}/`, inLanguage: ['en-CA', 'fr-CA'],
       potentialAction: { '@type': 'SearchAction', target: { '@type': 'EntryPoint', urlTemplate: `${base}/search?q={search_term_string}` }, 'query-input': 'required name=search_term_string' },
     },
   ];

@@ -7,9 +7,9 @@ import { defineMessages, messagesFor, type Locale } from '@northline/ui';
  */
 const SEARCH = {
   en: {
-    title: '“{q}” · Search · Northline',
-    titleBlank: 'Search · Northline',
-    description: 'Services, shops and kitchens near you on Northline.',
+    title: '“{q}” · Search · {brand}',
+    titleBlank: 'Search · {brand}',
+    description: 'Services, shops and kitchens near you on {brand}.',
     crumbs: 'Breadcrumb',
     crumbHome: 'Home', crumbServices: 'Services', crumbShop: 'Shop', crumbFood: 'Food', crumbSearch: 'Search',
     heading: '“{q}” · {count, plural, one {# result} other {# results}}',
@@ -68,9 +68,9 @@ const SEARCH = {
     s_service: 'Service', s_shop: 'Shop', s_food: 'Food', s_category: 'Category',
   },
   fr: {
-    title: '« {q} » · Recherche · Northline',
-    titleBlank: 'Recherche · Northline',
-    description: 'Services, commerces et cuisines près de chez vous sur Northline.',
+    title: '« {q} » · Recherche · {brand}',
+    titleBlank: 'Recherche · {brand}',
+    description: 'Services, commerces et cuisines près de chez vous sur {brand}.',
     crumbs: 'Fil d’Ariane',
     crumbHome: 'Accueil', crumbServices: 'Services', crumbShop: 'Boutique', crumbFood: 'Restaurants', crumbSearch: 'Recherche',
     heading: '« {q} » · {count, plural, one {# résultat} other {# résultats}}',

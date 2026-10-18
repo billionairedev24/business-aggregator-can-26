@@ -1,7 +1,7 @@
 {
   "home.title": { "message": "Documentation" },
-  "home.heading": { "message": "Documentation Northline" },
-  "home.lead": { "message": "Guides et références d’API pour intégrer la place de marché Northline." },
+  "home.heading": { "message": "Documentation {brand}" },
+  "home.lead": { "message": "Guides et références d’API pour intégrer la place de marché {brand}." },
   "home.guides": { "message": "Guides" },
   "home.guides.text": { "message": "Commencer, s’authentifier, recevoir les webhooks." },
   "home.api": { "message": "Référence de l’API" },

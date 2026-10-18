@@ -42,7 +42,7 @@ export const useFinanceT = defineMessages({
     rr_line: '{code} · {requester} · {amount}', rr_asked: 'Asked by {who} · {age} ago',
     rr_own: 'You asked for this one; someone else decides.',
     rr_none: 'No refund request is waiting.', rr_error: "Refund requests couldn't load. Try again.",
-    decisionNote: 'Note (optional)', approve: 'Approve', decline: 'Decline', staff: 'Northline staff',
+    decisionNote: 'Note (optional)', approve: 'Approve', decline: 'Decline', staff: '{brand} staff',
   },
   fr: {
     kicker: 'Finances',
@@ -84,7 +84,7 @@ export const useFinanceT = defineMessages({
     rr_line: '{code} · {requester} · {amount}', rr_asked: 'Demandé par {who} · il y a {age}',
     rr_own: 'Vous avez fait cette demande; une autre personne décide.',
     rr_none: 'Aucune demande de remboursement en attente.', rr_error: 'Les demandes de remboursement n’ont pas pu être chargées. Réessayez.',
-    decisionNote: 'Note (facultative)', approve: 'Approuver', decline: 'Refuser', staff: 'Personnel de Northline',
+    decisionNote: 'Note (facultative)', approve: 'Approuver', decline: 'Refuser', staff: 'Personnel de {brand}',
   },
 });
 export type FinanceT = ReturnType<typeof useFinanceT>;

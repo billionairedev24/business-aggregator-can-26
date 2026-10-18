@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { brand } from '@northline/tokens';
 import { Alert, UnderlineTabs } from '@northline/ui';
 import type { RegisterValues } from '@northline/auth-kit';
 import { appAuthorizationUrl, bffLoginUrl } from '../../lib/auth-server';
@@ -50,7 +51,7 @@ export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeI
 
   return (
     <div className="nl-auth-page">
-      <nav className="nav nl-auth-nav" aria-label="Northline Studio">
+      <nav className="nav nl-auth-nav" aria-label={`${brand.name} Studio`}>
         <Brand label={t('studio')} />
         <span className="nl-auth-signedout">{t('signedOut')}</span>
       </nav>

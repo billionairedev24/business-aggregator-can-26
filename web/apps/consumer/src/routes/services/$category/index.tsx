@@ -6,6 +6,7 @@ import { ServiceCategory, ServiceCategorySkeleton } from '../../../features/serv
 import { categoryName } from '../../../features/services/taxonomy';
 import { pageTitle } from '../../../features/shell/messages';
 import { seo } from '../../../lib/seo';
+import { brand } from '@northline/tokens';
 
 /** Service category (S-53): design 06 `svcCategory` (visit / home / event / appointment / consult); server-rendered. */
 export const Route = createFileRoute('/services/$category/')({
@@ -21,7 +22,7 @@ export const Route = createFileRoute('/services/$category/')({
     const locale = match.context.locale;
     const name = loaderData ? categoryName(loaderData.slug, loaderData.names, locale).text : undefined;
     const tags = seo(match.context, {
-      title: name ? `${name} · Northline` : pageTitle(locale, 'svcCategory'),
+      title: name ? `${name} · ${brand.name}` : pageTitle(locale, 'svcCategory'),
       path: `/services/${params.category}`,
       description: name && (locale === 'fr'
         ? `${name} : prestataires vérifiés, prix typiques, paiement en fiducie.`

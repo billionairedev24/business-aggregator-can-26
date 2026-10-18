@@ -25,7 +25,7 @@ const OPEN = ['awaiting_verification', 'verified', 'in_progress'];
 
 const useT = defineMessages({
   en: {
-    title: 'Your personal data', lede: 'Ask for a copy of what Northline holds about you, or to delete your account. We answer within the time {privacyLaw} sets. Your business’s own records stay with the business.',
+    title: 'Your personal data', lede: 'Ask for a copy of what {brand} holds about you, or to delete your account. We answer within the time {privacyLaw} sets. Your business’s own records stay with the business.',
     download: 'Download my data', delete: 'Delete my account…', confirmTitle: 'Confirm it’s you',
     downloadIntro: 'Confirm with your passkey to ask for a copy of your data.', deleteIntro: 'Your account closes and your personal information is erased, except what the law makes us keep. If you are a business’s only owner, ownership must move first. You can cancel until the deletion starts.',
     confirm: 'Confirm', error: 'That didn’t work. Try again.', loadError: 'We couldn’t load your requests.',
@@ -34,7 +34,7 @@ const useT = defineMessages({
     scheduled: 'Deletion on {date}', cancel: 'Cancel deletion', closed: '{reference} · {state}',
   },
   fr: {
-    title: 'Vos renseignements personnels', lede: 'Demandez une copie de ce que Northline détient à votre sujet, ou la suppression de votre compte. Nous répondons dans le délai que fixe {privacyLaw}. Les dossiers de votre entreprise restent à l’entreprise.',
+    title: 'Vos renseignements personnels', lede: 'Demandez une copie de ce que {brand} détient à votre sujet, ou la suppression de votre compte. Nous répondons dans le délai que fixe {privacyLaw}. Les dossiers de votre entreprise restent à l’entreprise.',
     download: 'Télécharger mes données', delete: 'Supprimer mon compte…', confirmTitle: 'Confirmez votre identité',
     downloadIntro: 'Confirmez avec votre clé d’accès pour demander une copie de vos données.', deleteIntro: 'Votre compte est fermé et vos renseignements personnels sont effacés, sauf ce que la loi nous oblige à garder. Si vous êtes le seul propriétaire d’une entreprise, la propriété doit d’abord être transférée. Vous pouvez annuler jusqu’au début de la suppression.',
     confirm: 'Confirmer', error: 'Ça n’a pas fonctionné. Réessayez.', loadError: 'Nous n’avons pas pu charger vos demandes.',
