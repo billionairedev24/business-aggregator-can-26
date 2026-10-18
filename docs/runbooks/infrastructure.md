@@ -14,10 +14,18 @@ Pick **one** cloud per environment; everything stays in a Canadian region:
 | cloud | regions (validated) | env roots |
 |---|---|---|
 | AWS | `ca-central-1` (Montréal, default), `ca-west-1` (Calgary, opt-in region) | `infra/terraform/envs/aws/{dev,staging,prod}` |
-| Google Cloud | `northamerica-northeast1` (Montréal, default), `northamerica-northeast2` (Toronto) | `infra/terraform/envs/gcp/{dev,staging,prod}` |
+| Google Cloud | `northamerica-northeast1` (Montréal, default), `northamerica-northeast2` (Toronto) | `infra/terraform/envs/gcp/{dev,staging,prod}`; `envs/gcp/dryrun` — the demo environment ([dryrun-gcp.md](dryrun-gcp.md)) |
 | Azure | `canadacentral` (Toronto, default), `canadaeast` (Québec City) | `infra/terraform/envs/azure/{dev,staging,prod}` |
 
 A region outside Canada is rejected by variable validation in the env roots and in every module.
+
+**The GCP dry run** (`envs/gcp/dryrun`, environment `dryrun`, [dryrun-gcp.md](dryrun-gcp.md)) uses the same stack
+without the managed data stores: `data_stores = null` and `data_services` instead, where each of Postgres, Valkey,
+Meilisearch and Kafka is `in-cluster` (chart `deploy/helm/northline-data`; Terraform generates the credentials into
+Secret Manager and creates the Postgres backup bucket and identity) or `external` (endpoint in the variable, credential
+secret created empty). The cluster is zonal in `zone` (module context `zone`; null = `<region>-a`), like dev's, and
+to save the NAT its nodes are public: in `dryrun` the network module creates no Cloud NAT, Private Service Access or
+PSC policy.
 
 ## 1. Prerequisites
 

@@ -1,0 +1,78 @@
+{{- /* Meilisearch: one pod, its database on a zonal volume, production mode with the master key (MEILISEARCH_API_KEY). */ -}}
+{{- with .Values.meilisearch }}
+{{- if .enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: northline-meilisearch
+  labels:
+    {{- include "data.labels" (dict "root" $ "name" "meilisearch") | nindent 4 }}
+spec:
+  selector:
+    {{- include "data.selectorLabels" (dict "root" $ "name" "meilisearch") | nindent 4 }}
+  ports:
+    - { name: http, port: 7700, targetPort: http }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: northline-meilisearch
+  labels:
+    {{- include "data.labels" (dict "root" $ "name" "meilisearch") | nindent 4 }}
+spec:
+  serviceName: northline-meilisearch
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "data.selectorLabels" (dict "root" $ "name" "meilisearch") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "data.labels" (dict "root" $ "name" "meilisearch") | nindent 8 }}
+    spec:
+      {{- include "data.nodeSelector" $ | nindent 6 }}
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: meilisearch
+          image: "{{ .image.repository }}:{{ .image.tag }}"
+          env:
+            - { name: MEILI_ENV, value: production }
+            - { name: MEILI_HTTP_ADDR, value: "0.0.0.0:7700" }
+            - { name: MEILI_DB_PATH, value: /meili_data/data.ms }
+            - { name: MEILI_DUMP_DIR, value: /meili_data/dumps }
+            - { name: MEILI_SNAPSHOT_DIR, value: /meili_data/snapshots }
+            - { name: MEILI_NO_ANALYTICS, value: "true" }
+            - name: MEILI_MASTER_KEY
+              valueFrom: { secretKeyRef: { name: northline-meilisearch, key: MEILISEARCH_API_KEY } }
+          ports: [{ name: http, containerPort: 7700 }]
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 20
+          resources:
+            {{- toYaml .resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - { name: data, mountPath: /meili_data }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 256Mi }
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: {{ $.Values.storageClassName }}
+        resources: { requests: { storage: {{ .storage.size }} } }
+{{- end }}
+{{- end }}

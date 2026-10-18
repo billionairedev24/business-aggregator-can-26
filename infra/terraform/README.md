@@ -28,6 +28,9 @@ infra/terraform/
 │                      search/elastic-cloud is the shared implementation
 ├── stacks/{aws,gcp,azure}                  composes the modules for one environment (identical for dev/staging/prod)
 ├── envs/{aws,gcp,azure}/{dev,staging,prod} root modules: providers, backend, sizes; `terraform apply` runs here
+├── envs/gcp/dryrun                         the GCP demo environment: zonal GKE with public nodes (no Cloud NAT), data
+│                                           services in the cluster or external instead of the managed stores
+│                                           (docs/runbooks/dryrun-gcp.md)
 │   └── tests/plan.tftest.hcl               offline plan with mocked providers + region guard
 ├── bootstrap/{aws,gcp,azure}               one-off roots that create the remote-state bucket
 └── scripts/
@@ -49,11 +52,12 @@ Shared input of every module:
 ```hcl
 context = {
   name                = "northline-dev"   # resource prefix
-  environment         = "dev"             # dev | staging | prod
+  environment         = "dev"             # dev | staging | prod | dryrun (envs/gcp/dryrun)
   region              = "ca-central-1"    # validated: Canadian regions of that cloud only
   tags                = { app = "northline", env = "dev", owner = "platform", "data-residency" = "ca", "managed-by" = "terraform" }
   project_id          = "…"               # Google Cloud only
   resource_group_name = "…"               # Azure only
+  zone                = "…"               # optional: the one zone of zonal resources (Google Cloud dev/dryrun cluster)
 }
 ```
 

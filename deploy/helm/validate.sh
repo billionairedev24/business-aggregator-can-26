@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Offline checks of the Northline chart (S-14): helm lint + helm template | kubeconform -strict for every
+# Offline checks of the Northline chart (S-14) and of the dry run's data services chart (northline-data): helm lint + helm template | kubeconform -strict for every
 # environment × cloud, the kind values, the Gateway API and edge (S-17) variants. No cluster needed. CI runs this
 # (.github/workflows/deploy.yml, ci/gitlab/deploy.yml); locally: deploy/helm/validate.sh
 #
@@ -214,6 +214,52 @@ if helm template northline "$CHART" -f "$CHART/values-prod.yaml" --set searchRei
   echo "FAIL a run id that isn't a DNS label accepted"; failed=1
 else echo "ok   search reindex run id must be a DNS label"; fi
 check "prod × aws + search reindex Job (S-71)" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml --set searchReindex.runId=2026-10-01 --set searchReindex.keepOld=true
+
+# GCP dry run (docs/runbooks/dryrun-gcp.md): the northline chart on values-gcp + values-dryrun with Terraform's values
+# (every data service in the cluster), and the in-cluster data services chart (deploy/helm/northline-data).
+check "dryrun × gcp" -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml
+out=$(helm template northline "$CHART" --namespace northline-dryrun -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml)
+if grep -q 'SPRING_PROFILES_ACTIVE: "dev"' <<<"$out" && ! grep -q 'redis-ca' <<<"$out" && ! grep -q 'SearchIndicesCommand' <<<"$out" && ! grep -q 'otel-collector' <<<"$out" \
+    && grep -q 'secretKey: MEILISEARCH_API_KEY' <<<"$out" && grep -q 'KAFKA_REPLICATION_FACTOR: "1"' <<<"$out" \
+    && ! grep -qE '^kind: Secret$' <<<"$out"; then
+  echo "ok   dryrun × gcp: dev profile, no Memorystore CA, no Elasticsearch Job, no Collector, Meilisearch key mapped, topics RF 1, no Secret"
+else echo "FAIL dryrun × gcp render"; failed=1; fi
+check "dryrun × gcp + Collector (flag)" -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml \
+  --set observability.collector.enabled=true
+refuse "dryrun without a Spring profile" -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml --set global.springProfiles=
+refuse "dryrun over http" -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml --set urls.auth=http://auth.example
+
+DATA=northline-data
+check_data() {
+  local label=$1; shift
+  if ! helm lint --quiet --strict "$DATA" "$@" >/tmp/helm-lint.$$ 2>&1; then
+    echo "FAIL lint     $label"; cat /tmp/helm-lint.$$; failed=1; return
+  fi
+  if ! helm template northline-data "$DATA" --namespace northline-dryrun --kube-version "$KUBE_VERSION" "$@" \
+      | kubeconform -strict -summary -kubernetes-version "$KUBE_VERSION" "${schema_args[@]}" >/tmp/kubeconform.$$ 2>&1; then
+    echo "FAIL template $label"; cat /tmp/kubeconform.$$; failed=1; return
+  fi
+  echo "ok   $label  ($(tail -1 /tmp/kubeconform.$$))"
+}
+check_data "northline-data: every service in the cluster" -f test-values/data-dryrun.yaml
+check_data "northline-data: Postgres only (Valkey, Meilisearch, Kafka external)" -f test-values/data-dryrun.yaml \
+  --set valkey.enabled=false --set meilisearch.enabled=false --set kafka.enabled=false
+data_out=$(helm template northline-data "$DATA" --namespace northline-dryrun -f test-values/data-dryrun.yaml)
+pinned=$(grep -c 'topology.kubernetes.io/zone: "northamerica-northeast1-a"' <<<"$data_out")
+if [[ $pinned -eq 4 ]] && grep -q 'destinationPath: gs://northline-dryrun-pg-backups' <<<"$data_out" \
+    && grep -q 'CREATE EXTENSION IF NOT EXISTS postgis;' <<<"$data_out" && ! grep -qE '^kind: Secret$' <<<"$data_out"; then
+  echo "ok   northline-data: 4 services pinned to the zone, Postgres backups to GCS, PostGIS created, no Secret"
+else echo "FAIL northline-data render (zone-pinned: $pinned)"; failed=1; fi
+if helm template northline-data "$DATA" --set zone=northamerica-northeast1-a --set externalSecrets.gcp.projectID=p \
+    --set-json 'externalSecrets.remoteKeys={"DB_PASSWORD":"a","REDIS_PASSWORD":"b","MEILISEARCH_API_KEY":"c"}' >/dev/null 2>&1; then
+  echo "FAIL northline-data accepted Postgres backups without a bucket"; failed=1
+else echo "ok   northline-data refuses Postgres backups without a bucket"; fi
+if helm template northline-data "$DATA" -f test-values/data-dryrun.yaml --set zone= >/dev/null 2>&1; then
+  echo "FAIL northline-data accepted no zone"; failed=1
+else echo "ok   northline-data refuses to render without the zone"; fi
+if helm template northline-data "$DATA" -f test-values/data-dryrun.yaml --set postgres.instances=2 >/dev/null 2>&1; then
+  echo "FAIL northline-data accepted 2 Postgres instances"; failed=1
+else echo "ok   northline-data: one Postgres instance only"; fi
 
 rm -f /tmp/helm-lint.$$ /tmp/kubeconform.$$
 exit $failed

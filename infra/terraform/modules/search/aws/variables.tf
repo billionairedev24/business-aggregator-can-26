@@ -1,5 +1,5 @@
 variable "context" {
-  description = "Shared naming, placement and tags (module contract, infra/terraform/README.md). name = resource prefix such as northline-dev; project_id is Google Cloud only, resource_group_name Azure only."
+  description = "Shared naming, placement and tags (module contract, infra/terraform/README.md). name = resource prefix such as northline-dev; project_id is Google Cloud only, resource_group_name Azure only; zone = the one zone of zonal resources (Google Cloud: the dev and dryrun clusters; null = <region>-a)."
   type = object({
     name                = string
     environment         = string
@@ -7,6 +7,7 @@ variable "context" {
     tags                = map(string)
     project_id          = optional(string)
     resource_group_name = optional(string)
+    zone                = optional(string)
   })
 
   validation {
@@ -15,8 +16,8 @@ variable "context" {
   }
 
   validation {
-    condition     = contains(["dev", "staging", "prod"], var.context.environment)
-    error_message = "environment must be dev, staging or prod."
+    condition     = contains(["dev", "staging", "prod", "dryrun"], var.context.environment)
+    error_message = "environment must be dev, staging, prod or dryrun."
   }
 }
 
