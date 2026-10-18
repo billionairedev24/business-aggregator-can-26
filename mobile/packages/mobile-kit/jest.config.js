@@ -6,6 +6,6 @@ module.exports = {
   // pnpm keeps packages under node_modules/.pnpm/<id>/node_modules/<name>; ESM packages (Expo, React Native, noble)
   // are transformed wherever they sit.
   transformIgnorePatterns: [
-    'node_modules/(?!(\\.pnpm|(jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|expo-.*|@noble/.*))',
+    'node_modules/(?!(\\.pnpm|(jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|expo-.*|@expo-google-fonts/.*|react-native-svg|@noble/.*))',
   ],
 };
