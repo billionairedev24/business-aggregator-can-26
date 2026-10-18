@@ -1,12 +1,6 @@
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
-import { defineMessages } from './i18n';
 import './Chat.css';
-
-const useT = defineMessages({
-  en: { stars: '{n} out of 5 stars' },
-  fr: { stars: '{n} étoiles sur 5' },
-});
 
 export interface ChatLogProps { children: ReactNode; label: string; className?: string }
 /** A conversation: a polite live region so new messages are announced. Bubbles stack with the design's 12px gap. */
@@ -38,9 +32,3 @@ export function ChatBubble({ side, sender, meta, footer, pending, failed, childr
   );
 }
 
-/** Read-only star rating: "★★★★☆" in rosehip, announced as "4 out of 5 stars". */
-export function Stars({ rating, className }: { rating: number; className?: string }) {
-  const t = useT();
-  const n = Math.max(0, Math.min(5, Math.round(rating)));
-  return <span className={clsx('nl-stars', className)} role="img" aria-label={t('stars', { n })}>{'★'.repeat(n)}{'☆'.repeat(5 - n)}</span>;
-}

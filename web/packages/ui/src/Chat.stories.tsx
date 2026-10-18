@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ChatBubble, ChatLog, Stars } from './Chat';
+import { ChatBubble, ChatLog } from './Chat';
+import { Stars } from './Commerce';
 
 const meta = { title: 'Core/Chat', parameters: { layout: 'padded' } } satisfies Meta;
 export default meta;
