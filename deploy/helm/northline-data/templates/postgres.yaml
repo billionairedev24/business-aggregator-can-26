@@ -1,0 +1,75 @@
+{{- /*
+PostgreSQL 17 + PostGIS through CloudNativePG: one instance on a zonal pd-balanced volume, TLS on (sslmode=require in
+DB_URL), the database and its owner from initdb, the extensions created once as the superuser. Backups: base backup
+daily + continuous WAL archiving to the GCS bucket Terraform created, as the backup identity (GKE Workload Identity on
+the ServiceAccount CloudNativePG creates for the cluster).
+*/ -}}
+{{- with .Values.postgres }}
+{{- if .enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "data.labels" (dict "root" $ "name" "pg") | nindent 4 }}
+spec:
+  instances: {{ .instances }}
+  imageName: {{ .imageName }}
+  enableSuperuserAccess: false
+  inheritedMetadata:
+    labels:
+      app.kubernetes.io/part-of: northline-data
+  postgresql:
+    parameters:
+      {{- toYaml .parameters | nindent 6 }}
+  bootstrap:
+    initdb:
+      database: {{ .database }}
+      owner: {{ .owner }}
+      secret:
+        name: {{ .name }}-app
+      postInitApplicationSQL:
+        {{- range .extensions }}
+        - CREATE EXTENSION IF NOT EXISTS {{ . }};
+        {{- end }}
+  storage:
+    size: {{ .storage.size }}
+    storageClass: {{ $.Values.storageClassName }}
+  resources:
+    {{- toYaml .resources | nindent 4 }}
+  affinity:
+    nodeSelector:
+      topology.kubernetes.io/zone: {{ required "zone" $.Values.zone | quote }}
+  {{- if .backup.enabled }}
+  serviceAccountTemplate:
+    metadata:
+      annotations:
+        {{- toYaml .backup.serviceAccountAnnotations | nindent 8 }}
+  backup:
+    retentionPolicy: {{ .backup.retentionPolicy | quote }}
+    barmanObjectStore:
+      destinationPath: gs://{{ .backup.bucket }}
+      googleCredentials:
+        gkeEnvironment: true
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
+  {{- end }}
+{{- if .backup.enabled }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ .name }}-daily
+  labels:
+    {{- include "data.labels" (dict "root" $ "name" "pg") | nindent 4 }}
+spec:
+  schedule: {{ .backup.schedule | quote }}
+  backupOwnerReference: self
+  immediate: true
+  cluster:
+    name: {{ .name }}
+{{- end }}
+{{- end }}
+{{- end }}

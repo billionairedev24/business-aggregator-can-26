@@ -49,10 +49,11 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 
 | variable | remote name | apps | required | value from |
 |---|---|---|---|---|
-| `DB_PASSWORD` | `db-app-password` | api, auth, worker | yes | generated (S-3) |
-| `REDIS_PASSWORD` | `redis-password` | api, auth, bff, worker | AWS / Azure (listed in `optionalKeys`); **none** on Google Cloud (Memorystore has no password) | generated (S-3) |
+| `DB_PASSWORD` | `db-app-password` | api, auth, worker | yes | generated (S-3; dry run: generated for the in-cluster Postgres, operator for an external one) |
+| `REDIS_PASSWORD` | `redis-password` | api, auth, bff, worker | AWS / Azure (listed in `optionalKeys`); **none** on Google Cloud (Memorystore has no password), except the GCP dry run (`optionalKeys` in `values-dryrun.yaml`) | generated (S-3; dry run: generated for the in-cluster Valkey, operator for an external one) |
 | `KAFKA_SASL_JAAS_CONFIG` | `kafka-sasl-jaas-config` | api, auth (S-28), worker | with SASL (always in the cloud; `optionalKeys`) | generated (S-3) |
 | `ES_PASSWORD` | `es-password` | api, worker | with Elastic Cloud (`optionalKeys`) | generated (S-3) |
+| `MEILISEARCH_API_KEY` | `meilisearch-api-key` | api, worker | GCP dry run only (search provider `meilisearch`; `values-dryrun.yaml`) | dry run: generated (in-cluster Meilisearch, its master key) or operator (external provider) — [dryrun-gcp.md](dryrun-gcp.md) |
 | `TOTP_KEY` | `totp-key` | auth | yes | operator: `openssl rand -base64 32` |
 | `WEBHOOK_SECRET_KEY` | `webhook-secret-key` | api, worker (S-33) | yes | operator: `openssl rand -base64 32` |
 | `TOTP_PREVIOUS_KEYS` | `totp-previous-keys` | auth | no — only during a `TOTP_KEY` rotation (`externalSecrets.optionalKeys`) | operator: `v1=<old key>` ([key-rotation.md § 7](key-rotation.md#7-authenticator-secrets-key-totp_key)) |

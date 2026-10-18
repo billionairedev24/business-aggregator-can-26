@@ -131,3 +131,12 @@ run "edge" {
     error_message = "gitops_addon_values must hold the identity of every platform add-on (S-6, S-17)."
   }
 }
+
+run "private_nodes_behind_nat" {
+  command = plan
+
+  assert {
+    condition     = length(output.network.cloud.nat_public_ips) == 1
+    error_message = "dev keeps its private nodes behind one Cloud NAT address (only the dryrun drops the NAT)."
+  }
+}

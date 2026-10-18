@@ -1,0 +1,14 @@
+# Stand-in for `terraform output -json data_values` (infra/terraform/envs/gcp/dryrun) in the offline checks.
+zone: northamerica-northeast1-a
+postgres:
+  backup:
+    bucket: northline-dryrun-pg-backups
+    serviceAccountAnnotations:
+      iam.gke.io/gcp-service-account: dryrun-postgres-backup@northline-dryrun.iam.gserviceaccount.com
+externalSecrets:
+  gcp:
+    projectID: northline-dryrun
+  remoteKeys:
+    DB_PASSWORD: northline-dryrun-db-app-password
+    REDIS_PASSWORD: northline-dryrun-redis-password
+    MEILISEARCH_API_KEY: northline-dryrun-meilisearch-api-key

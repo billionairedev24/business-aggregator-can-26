@@ -21,11 +21,12 @@ locals {
     name        = local.name
     environment = var.environment
     region      = var.region
+    zone        = var.zone
     tags        = local.tags
   }
 
   # Kubernetes service accounts that get a cloud identity (Helm charts, S-14, use these names).
-  workload_identities = {
+  workload_identities = merge({
     api              = { namespace = local.namespace, service_account = "northline-api" }
     auth             = { namespace = local.namespace, service_account = "northline-auth" }
     bff              = { namespace = local.namespace, service_account = "northline-bff" }
@@ -37,7 +38,7 @@ locals {
     # S-111: the OpenTelemetry Collector (chart: observability.collector) writes traces, metrics and logs to the
     # cloud's own backend with this identity (docs/runbooks/observability.md).
     otel-collector = { namespace = local.namespace, service_account = "northline-otel-collector" }
-  }
+  }, local.data_service_identities)
 
   # Application secrets created empty; an operator sets the values (docs/runbooks/<env>.md § Environment variables).
   app_secrets = {
@@ -227,7 +228,7 @@ module "storage" {
   name_suffix   = var.bucket_name_suffix
   kms_key       = { id = module.kms.key_ids["data"] }
   writers       = { api = module.kubernetes.workload_identities["api"].principal }
-  force_destroy = var.environment == "dev"
+  force_destroy = contains(["dev", "dryrun"], var.environment)
   replica       = local.storage_replica
   depends_on    = [module.kms, module.kms_backup]
 }
@@ -235,7 +236,7 @@ module "storage" {
 module "secrets" {
   source              = "../../modules/secrets/gcp"
   context             = local.context
-  secret_names        = values(local.app_secrets)
+  secret_names        = concat(values(local.app_secrets), values(local.data_service_secrets))
   readers             = { external-secrets = module.kubernetes.workload_identities["external-secrets"].principal }
   kms_key             = { id = module.kms.key_ids["data"] }
   deletion_protection = var.deletion_protection
@@ -279,8 +280,30 @@ locals {
 }
 
 # ---- managed data stores (S-3) ------------------------------------------------------------------------------------
+# One instance each unless the environment uses data_services instead (dryrun, data-services.tf). The moved blocks
+# keep the addresses of state written before the count existed.
+moved {
+  from = module.postgres
+  to   = module.postgres[0]
+}
+
+moved {
+  from = module.cache
+  to   = module.cache[0]
+}
+
+moved {
+  from = module.kafka
+  to   = module.kafka[0]
+}
+
+moved {
+  from = module.search
+  to   = module.search[0]
+}
 
 module "postgres" {
+  count                 = local.managed_data_stores ? 1 : 0
   source                = "../../modules/postgres/gcp"
   context               = local.context
   network_id            = module.network.network_id
@@ -298,6 +321,7 @@ module "postgres" {
 }
 
 module "cache" {
+  count               = local.managed_data_stores ? 1 : 0
   source              = "../../modules/cache/gcp"
   context             = local.context
   network_id          = module.network.network_id
@@ -312,6 +336,7 @@ module "cache" {
 }
 
 module "kafka" {
+  count               = local.managed_data_stores ? 1 : 0
   source              = "../../modules/kafka/gcp"
   context             = local.context
   network_id          = module.network.network_id
@@ -328,6 +353,7 @@ module "kafka" {
 
 # Elastic Cloud, reachable only from the cluster's NAT egress IPs.
 module "search" {
+  count               = local.managed_data_stores ? 1 : 0
   source              = "../../modules/search/gcp"
   context             = local.context
   network_id          = module.network.network_id

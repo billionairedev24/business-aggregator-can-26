@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars (git-ignored) and fill in — docs/runbooks/dryrun-gcp.md.
+project_id = "northline-dryrun-<suffix>"
+region     = "northamerica-northeast1"
+zone       = "northamerica-northeast1-a"
+owner      = "platform"
+admin_principals  = []  # e.g. ["user:you@northline.ca"]
+api_allowed_cidrs = []  # e.g. ["203.0.113.7/32"] — your IP (curl -s ifconfig.me)
+spot_nodes        = true  # false the day before a client demo
+# dns_zone_name   = "demo.northline.ca"
+
+# Every data service runs in the cluster by default. An external provider instead (e.g. Layerbase — no PostGIS, so
+# never for postgres), endpoint here, credential afterwards in Secret Manager (terraform output data_stores):
+# data_services = {
+#   cache  = { mode = "external", host = "<valkey host>", port = 6380, ssl = true, username = "default" }
+#   search = { mode = "external", url = "https://<meilisearch host>" }
+# }

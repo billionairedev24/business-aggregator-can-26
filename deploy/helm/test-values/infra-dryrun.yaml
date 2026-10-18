@@ -1,0 +1,35 @@
+# Shape of `terraform output -json helm_values` of infra/terraform/envs/gcp/dryrun with every data service in the
+# cluster (dummy values; deploy/helm/validate.sh only).
+workloadIdentities:
+  api: { service_account_annotations: { iam.gke.io/gcp-service-account: "dryrun-api@northline-dryrun.iam.gserviceaccount.com" }, pod_labels: {} }
+  auth: { service_account_annotations: { iam.gke.io/gcp-service-account: "dryrun-auth@northline-dryrun.iam.gserviceaccount.com" }, pod_labels: {} }
+  bff: { service_account_annotations: { iam.gke.io/gcp-service-account: "dryrun-bff@northline-dryrun.iam.gserviceaccount.com" }, pod_labels: {} }
+  worker: { service_account_annotations: { iam.gke.io/gcp-service-account: "dryrun-worker@northline-dryrun.iam.gserviceaccount.com" }, pod_labels: {} }
+configEnv:
+  DB_URL: jdbc:postgresql://northline-pg-rw.northline-dryrun.svc.cluster.local:5432/northline?sslmode=require
+  DB_USER: northline_app
+  REDIS_HOST: northline-valkey.northline-dryrun.svc.cluster.local
+  REDIS_PORT: "6379"
+  REDIS_SSL: "false"
+  REDIS_USERNAME: ""
+  KAFKA_BOOTSTRAP: northline-kafka.northline-dryrun.svc.cluster.local:9092
+  KAFKA_SECURITY_PROTOCOL: PLAINTEXT
+  KAFKA_SASL_MECHANISM: ""
+  SEARCH_PROVIDER: meilisearch
+  MEILISEARCH_URL: http://northline-meilisearch.northline-dryrun.svc.cluster.local:7700
+  KMS_PROVIDER: gcp
+  STORAGE_PROVIDER: gcs
+  STORAGE_BUCKET: northline-dryrun-uploads
+externalSecrets:
+  enabled: true
+  provider: gcp
+  gcp: { projectID: northline-dryrun }
+  remoteKeys:
+    DB_PASSWORD: northline-dryrun-db-app-password
+    REDIS_PASSWORD: northline-dryrun-redis-password
+    MEILISEARCH_API_KEY: northline-dryrun-meilisearch-api-key
+    TOTP_KEY: northline-dryrun-totp-key
+edge:
+  certManager:
+    issuer:
+      dns01: { cloudDNS: { project: northline-dryrun, hostedZoneName: northline-dryrun } }

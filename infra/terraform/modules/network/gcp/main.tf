@@ -1,14 +1,16 @@
 # Google Cloud network: custom-mode VPC with a regional cluster subnet (secondary ranges "pods" and "services" for
 # GKE) and a data subnet, Cloud NAT for private nodes, Private Service Access (Cloud SQL private IP) and a
 # Private Service Connect policy for Memorystore. Subnets are regional, so zone_count only matters on AWS.
+# dryrun (docs/runbooks/dryrun-gcp.md): no managed data stores and public nodes, so no NAT, no PSA, no PSC policy.
 
 locals {
-  project       = var.context.project_id
-  cluster_cidr  = cidrsubnet(var.cidr, 4, 0)   # /20 nodes
-  data_cidr     = cidrsubnet(var.cidr, 8, 210) # /24 PSC endpoints (Memorystore, Managed Kafka)
-  pods_cidr     = "10.100.0.0/14"
-  services_cidr = "10.104.0.0/20"
-  psa_prefix    = 20 # Private Service Access range for Cloud SQL
+  managed_egress = var.context.environment != "dryrun"
+  project        = var.context.project_id
+  cluster_cidr   = cidrsubnet(var.cidr, 4, 0)   # /20 nodes
+  data_cidr      = cidrsubnet(var.cidr, 8, 210) # /24 PSC endpoints (Memorystore, Managed Kafka)
+  pods_cidr      = "10.100.0.0/14"
+  services_cidr  = "10.104.0.0/20"
+  psa_prefix     = 20 # Private Service Access range for Cloud SQL
 }
 
 resource "google_compute_network" "this" {
@@ -39,7 +41,7 @@ resource "google_compute_subnetwork" "cluster" {
 
   log_config {
     aggregation_interval = "INTERVAL_10_MIN"
-    flow_sampling        = var.context.environment == "dev" ? 0.1 : 0.5
+    flow_sampling        = contains(["dev", "dryrun"], var.context.environment) ? 0.1 : 0.5
     metadata             = "INCLUDE_ALL_METADATA"
   }
 }
@@ -60,6 +62,7 @@ resource "google_compute_subnetwork" "data" {
 }
 
 resource "google_compute_router" "this" {
+  count   = local.managed_egress ? 1 : 0
   project = local.project
   name    = var.context.name
   region  = var.context.region
@@ -67,7 +70,7 @@ resource "google_compute_router" "this" {
 }
 
 resource "google_compute_address" "nat" {
-  count   = var.high_availability_nat ? 2 : 1
+  count   = local.managed_egress ? (var.high_availability_nat ? 2 : 1) : 0
   project = local.project
   name    = "${var.context.name}-nat-${count.index}"
   region  = var.context.region
@@ -75,9 +78,10 @@ resource "google_compute_address" "nat" {
 }
 
 resource "google_compute_router_nat" "this" {
+  count                              = local.managed_egress ? 1 : 0
   project                            = local.project
   name                               = var.context.name
-  router                             = google_compute_router.this.name
+  router                             = google_compute_router.this[0].name
   region                             = var.context.region
   nat_ip_allocate_option             = "MANUAL_ONLY"
   nat_ips                            = google_compute_address.nat[*].self_link
@@ -89,8 +93,35 @@ resource "google_compute_router_nat" "this" {
   }
 }
 
+# One instance each outside dryrun; the moved blocks keep the addresses of state written before the count existed.
+moved {
+  from = google_compute_router.this
+  to   = google_compute_router.this[0]
+}
+
+moved {
+  from = google_compute_router_nat.this
+  to   = google_compute_router_nat.this[0]
+}
+
+moved {
+  from = google_compute_global_address.private_service_access
+  to   = google_compute_global_address.private_service_access[0]
+}
+
+moved {
+  from = google_service_networking_connection.this
+  to   = google_service_networking_connection.this[0]
+}
+
+moved {
+  from = google_network_connectivity_service_connection_policy.memorystore
+  to   = google_network_connectivity_service_connection_policy.memorystore[0]
+}
+
 # Private Service Access: Cloud SQL gets a private IP inside this VPC (no public IP).
 resource "google_compute_global_address" "private_service_access" {
+  count         = local.managed_egress ? 1 : 0
   project       = local.project
   name          = "${var.context.name}-psa"
   purpose       = "VPC_PEERING"
@@ -101,13 +132,15 @@ resource "google_compute_global_address" "private_service_access" {
 }
 
 resource "google_service_networking_connection" "this" {
+  count                   = local.managed_egress ? 1 : 0
   network                 = google_compute_network.this.id
   service                 = "servicenetworking.googleapis.com"
-  reserved_peering_ranges = [google_compute_global_address.private_service_access.name]
+  reserved_peering_ranges = [google_compute_global_address.private_service_access[0].name]
 }
 
 # Private Service Connect: Memorystore for Valkey creates its endpoints in the data subnet.
 resource "google_network_connectivity_service_connection_policy" "memorystore" {
+  count         = local.managed_egress ? 1 : 0
   project       = local.project
   name          = "${var.context.name}-memorystore"
   location      = var.context.region

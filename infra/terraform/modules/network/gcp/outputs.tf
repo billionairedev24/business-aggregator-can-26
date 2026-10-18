@@ -27,12 +27,12 @@ output "cloud" {
   description = "Google Cloud-only details."
   value = {
     network_self_link      = google_compute_network.this.self_link
-    private_service_access = google_service_networking_connection.this.id
-    psa_range              = "${google_compute_global_address.private_service_access.address}/${local.psa_prefix}"
+    private_service_access = one(google_service_networking_connection.this[*].id)
+    psa_range              = local.managed_egress ? "${google_compute_global_address.private_service_access[0].address}/${local.psa_prefix}" : null
     pods_range_name        = "pods"
     services_range_name    = "services"
     pods_cidr              = local.pods_cidr
     nat_public_ips         = google_compute_address.nat[*].address
-    memorystore_psc_policy = google_network_connectivity_service_connection_policy.memorystore.id
+    memorystore_psc_policy = one(google_network_connectivity_service_connection_policy.memorystore[*].id)
   }
 }

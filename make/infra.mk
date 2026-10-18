@@ -25,3 +25,17 @@ tf-validate: ## fmt check, module contract, init -backend=false + validate, terr
 .PHONY: tf-lint
 tf-lint: ## tflint with the terraform, aws, google and azurerm rulesets
 	cd $(ROOT)/infra/terraform && tflint --init --config "$$PWD/.tflint.hcl" && tflint --recursive --config "$$PWD/.tflint.hcl" --format compact
+
+##@ GCP dry run (docs/runbooks/dryrun-gcp.md)
+
+.PHONY: dryrun-down
+dryrun-down: ## Scale the dry run's node pool to 0 between demos (the credit then pays only disks, LB, DNS)
+	$(ROOT)/scripts/dryrun-nodes.sh down
+
+.PHONY: dryrun-up
+dryrun-up: ## Bring the dry run's nodes back (NODES=2) — pods and data come back with them, ≈ 5 minutes
+	$(ROOT)/scripts/dryrun-nodes.sh up $(or $(NODES),2)
+
+.PHONY: dryrun-status
+dryrun-status: ## The dry run's node pool: machine type, Spot, autoscaling, running nodes
+	$(ROOT)/scripts/dryrun-nodes.sh status

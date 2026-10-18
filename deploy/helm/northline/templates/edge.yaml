@@ -26,8 +26,8 @@ response headers are filters on the routes (templates/ingress.yaml).
 {{- if and (eq $iss.solver "dns01") (eq $iss.type "acme") (not $iss.dns01) }}
 {{- fail "edge.certManager.issuer.solver=dns01 needs edge.certManager.issuer.dns01 (terraform output helm_values: edge.certManager.issuer.dns01)" }}
 {{- end }}
-{{- if and (has .Values.global.environment (list "staging" "prod")) (ne $iss.type "acme") }}
-{{- fail "edge.certManager.issuer.type must be acme in staging and prod" }}
+{{- if and (has .Values.global.environment (list "staging" "prod" "dryrun")) (ne $iss.type "acme") }}
+{{- fail "edge.certManager.issuer.type must be acme in staging, prod and dryrun" }}
 {{- end }}
 {{- $issuerKind := default "Issuer" $iss.kind }}
 {{- if $useGateway }}
