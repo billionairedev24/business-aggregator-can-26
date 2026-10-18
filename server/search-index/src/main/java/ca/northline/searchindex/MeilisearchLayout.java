@@ -25,6 +25,11 @@ import tools.jackson.databind.node.ObjectNode;
  * <p>Synonyms: Meilisearch takes a map {@code word → [synonyms]} per index (no synonym sets): a Solr rule
  * {@code a, b, c} becomes {@code a → [b, c]}, {@code b → [a, c]}, {@code c → [a, b]}; {@code a, b => c} becomes
  * {@code a → [c]}, {@code b → [c]} (one way). A term in several rules gets all of their synonyms.
+ *
+ * <p>Stop words: a word of a multi-word synonym ({@code au} in {@code pain au levain}, {@code d} in
+ * {@code pneus d'hiver}) is left out of the stop words. Meilisearch never matches a synonym whose words it drops from
+ * the query (Elasticsearch applies the synonyms before its stop filter); the cost is that such a word must be in a
+ * listing for a query that contains it to match it.
  */
 public final class MeilisearchLayout {
 
@@ -66,11 +71,13 @@ public final class MeilisearchLayout {
         var settings = new EnumMap<SearchLanguage, ObjectNode>(SearchLanguage.class);
         for (var language : SearchLanguage.values()) {
             var rendered = base.deepCopy();
+            var rules = IndexLayout.parseSynonyms(files.apply("synonyms-" + language.code() + ".txt"));
+            var inPhrases = phraseWords(rules);
             var stopWords = rendered.putArray("stopWords");
-            words(files.apply("stopwords-" + language.code() + ".txt")).forEach(stopWords::add);
-            rendered.set(
-                    "synonyms",
-                    synonyms(IndexLayout.parseSynonyms(files.apply("synonyms-" + language.code() + ".txt"))));
+            words(files.apply("stopwords-" + language.code() + ".txt")).stream()
+                    .filter(w -> !inPhrases.contains(w))
+                    .forEach(stopWords::add);
+            rendered.set("synonyms", synonyms(rules));
             var locales = root.path("locales").path(language.code());
             if (!locales.isArray() || locales.isEmpty()) {
                 throw new IllegalStateException("meilisearch.json: locales." + language.code() + " is missing");
@@ -138,6 +145,24 @@ public final class MeilisearchLayout {
             var t = term.strip().toLowerCase(Locale.ROOT);
             if (!t.isEmpty() && !out.contains(t)) {
                 out.add(t);
+            }
+        }
+        return out;
+    }
+
+    /** The words of the multi-word terms of the rules, split where Meilisearch splits them (spaces, apostrophes …). */
+    static java.util.Set<String> phraseWords(List<String> rules) {
+        var out = new TreeSet<String>();
+        for (var rule : rules) {
+            for (var term : rule.replace("=>", ",").split(",")) {
+                var words = term.strip().toLowerCase(Locale.ROOT).split("[^\\p{L}\\p{N}]+");
+                if (words.length > 1) {
+                    for (var word : words) {
+                        if (!word.isEmpty()) {
+                            out.add(word);
+                        }
+                    }
+                }
             }
         }
         return out;

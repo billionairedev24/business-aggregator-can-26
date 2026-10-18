@@ -24,8 +24,8 @@ class MeilisearchLayoutTest {
         assertThat(fr.path("localizedAttributes").get(0).path("locales").get(0).asString())
                 .isEqualTo("fra");
         assertThat(en.path("stopWords").valueStream().map(n -> n.asString()))
-                .contains("the", "and")
-                .doesNotContain("le");
+                .contains("the", "with")
+                .doesNotContain("le", "and"); // "and" is a word of "fries and gravy"
         assertThat(fr.path("stopWords").valueStream().map(n -> n.asString())).contains("le", "du", "l", "qu");
         assertThat(en.path("synonyms").path("sourdough").valueStream().map(n -> n.asString()))
                 .containsExactly("levain", "pain au levain");
@@ -42,6 +42,18 @@ class MeilisearchLayoutTest {
         assertThat(map.path("tyre").valueStream().map(n -> n.asString())).containsExactly("pneu", "tire");
         assertThat(map.path("ac").valueStream().map(n -> n.asString())).containsExactly("air conditioning");
         assertThat(map.has("air conditioning")).isFalse(); // one way
+    }
+
+    @Test
+    void wordsOfMultiWordSynonyms_areNotStopWords() {
+        assertThat(MeilisearchLayout.phraseWords(List.of("sourdough, pain au levain", "winter tires, pneus d'hiver")))
+                .containsExactlyInAnyOrder("pain", "au", "levain", "winter", "tires", "pneus", "d", "hiver");
+        var fr = layout.settings(SearchLanguage.FR)
+                .path("stopWords")
+                .valueStream()
+                .map(n -> n.asString())
+                .toList();
+        assertThat(fr).doesNotContain("au", "d").contains("le", "les");
     }
 
     @Test

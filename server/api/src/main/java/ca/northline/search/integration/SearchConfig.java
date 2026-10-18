@@ -5,6 +5,7 @@ import ca.northline.search.application.SearchCache;
 import ca.northline.search.application.SearchIndex;
 import ca.northline.search.application.SearchRateLimit;
 import ca.northline.search.application.SearchSettings;
+import ca.northline.searchindex.MeilisearchClient;
 import ca.northline.shared.WebhookRateLimiter;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import java.time.Clock;
@@ -22,7 +23,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Wiring of the search API (S-44): the index behind {@code northline.search.provider} ({@code elasticsearch} |
- * {@code local}; {@code local} refused under staging and prod), the hot-query cache (Redis outside local/test), the
+ * {@code meilisearch} | {@code local}; {@code local} refused under staging and prod), the hot-query cache (Redis outside local/test), the
  * per-address rate limit.
  */
 @Slf4j
@@ -46,17 +47,23 @@ class SearchConfig {
                 log.info("Search: Elasticsearch (listings_en / listings_fr)");
                 yield new ElasticsearchSearchIndex(es.getObject(), json);
             }
+            case "meilisearch" -> {
+                var connection = properties.meilisearch();
+                log.info("Search: Meilisearch at {} (listings_en / listings_fr)", connection.url());
+                yield new MeilisearchSearchIndex(MeilisearchClient.create(connection), json);
+            }
             case "local" -> {
                 if (Arrays.stream(environment.getActiveProfiles()).anyMatch(Set.of("staging", "prod")::contains)) {
                     throw new IllegalStateException(
-                            "SEARCH_PROVIDER=local is refused under staging and prod: set elasticsearch");
+                            "SEARCH_PROVIDER=local is refused under staging and prod: set elasticsearch or meilisearch");
                 }
                 log.info("Search: local (no index — every search is empty; docs/runbooks/search.md)");
                 yield new LocalSearchIndex();
             }
             default ->
                 throw new IllegalStateException(
-                        "northline.search.provider must be elasticsearch or local, not " + properties.provider());
+                        "northline.search.provider must be elasticsearch, meilisearch or local, not "
+                                + properties.provider());
         };
     }
 

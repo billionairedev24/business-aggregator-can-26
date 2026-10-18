@@ -81,7 +81,7 @@ public final class ElasticsearchSearchIndex implements SearchIndex {
                 if (doc == null) {
                     continue;
                 }
-                hits.add(hit(doc, query, now));
+                hits.add(SearchHits.hit(doc, query, now));
                 lastSort = hit.sort();
             }
             var total = response.hits().total() == null
@@ -448,25 +448,6 @@ public final class ElasticsearchSearchIndex implements SearchIndex {
     }
 
     // ── the response ────────────────────────────────────────────────────────────────────────────────────────────
-
-    static Hit hit(ListingDocument doc, SearchQuery q, SearchMoment now) {
-        var near = q.near();
-        var location = doc.location();
-        Double distance = near == null || location == null
-                ? null
-                : Math.round(near.kmTo(location.lat(), location.lon()) * 10) / 10.0;
-        var soldOut = now.today().equals(doc.soldOutOn());
-        var paused = doc.pausedUntil() != null && doc.pausedUntil().isAfter(now.instant());
-        var open = !soldOut
-                && !paused
-                && doc.openHours().stream().anyMatch(r -> r.gte() <= now.minuteOfWeek() && now.minuteOfWeek() < r.lt());
-        var cutoff = doc.deliveryCutoffMinute();
-        var tonight = doc.fulfilment().contains("pooled")
-                && cutoff != null
-                && now.minuteOfDay() < cutoff
-                && Boolean.TRUE.equals(doc.inStock());
-        return new Hit(doc, distance, open, soldOut, tonight);
-    }
 
     private Facets facets(Map<String, Aggregate> aggs) {
         if (aggs.isEmpty()) {

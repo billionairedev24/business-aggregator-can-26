@@ -204,10 +204,23 @@ northline:
   # city-level part are kept this long per instance (keyed by market, language), dropped at once when a business's
   # visibility or a kitchen's state changes on this instance. 0s turns the cache off.
   public-pages.cache-ttl: ${PUBLIC_PAGES_CACHE_TTL:30s}
-  # Search API (S-44, docs/runbooks/search.md): elasticsearch (listings_en / listings_fr, filled by the worker) | local
-  # (no index: every search is empty; the `local` profile's default, refused under staging/prod).
+  # Search API (S-44, docs/runbooks/search.md): elasticsearch (listings_en / listings_fr, filled by the worker) |
+  # meilisearch (the same indexes on Meilisearch, e.g. hosted; § Meilisearch) | local (no index: every search is empty;
+  # the `local` profile's default, refused under staging/prod). Set the worker's SEARCH_PROVIDER to the same engine.
   search:
     provider: ${SEARCH_PROVIDER:elasticsearch}
+    meilisearch:
+      url: ${MEILISEARCH_URL:http://localhost:7700}  # https://… for a hosted instance (TLS from the URL)
+      api-key: ${MEILISEARCH_API_KEY:}              # a search key is enough for the api; blank = no key (local)
+      timeout: ${MEILISEARCH_TIMEOUT:10s}
+    # Variables the deployed profiles require (northline.required-env.search) per provider.
+    required-env:
+      elasticsearch: ES_URIS
+      meilisearch: MEILISEARCH_URL, MEILISEARCH_API_KEY
+      local: ""
+    # Elasticsearch's health indicator only when Elasticsearch is the engine (management.health.elasticsearch.enabled).
+    elasticsearch-health:
+      elasticsearch: true
     # The markets search serves, their time zones and the default market are the region model's (northline.region).
     cache-ttl: ${SEARCH_CACHE_TTL:30s}              # identical searches answered from Redis/Valkey for this long
     rate-limit: ${SEARCH_RATE_LIMIT:120}            # requests per minute and client address (anonymous included)
