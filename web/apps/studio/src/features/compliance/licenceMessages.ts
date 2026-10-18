@@ -4,7 +4,7 @@ import { defineMessages } from '@northline/ui';
 export const useLicenceT = defineMessages({
   en: {
     title: 'Age-restricted sales',
-    lede: 'To list alcohol, tobacco and vape, or cannabis accessories, upload your licence for them in your province. Northline reviews it; those listings stay hidden until it’s approved and are hidden again if it expires. Customers verify their age once, and couriers check photo ID at the door.',
+    lede: 'To list alcohol, tobacco and vape, or cannabis accessories, upload your licence for them in your province. {brand} reviews it; those listings stay hidden until it’s approved and are hidden again if it expires. Customers verify their age once, and couriers check photo ID at the door.',
     none: 'No licence on file. Your age-restricted listings stay hidden until one is approved.',
     row: '{cls} · {number} · expires {expires}',
     licensed: 'You can sell: {classes}.',
@@ -22,7 +22,7 @@ export const useLicenceT = defineMessages({
   },
   fr: {
     title: 'Ventes soumises à un âge minimal',
-    lede: 'Pour publier de l’alcool, du tabac et des produits de vapotage, ou des accessoires de cannabis, téléversez votre permis pour ces produits dans votre province. Northline l’examine; ces annonces restent masquées jusqu’à son approbation et sont masquées de nouveau s’il expire. Les clients vérifient leur âge une fois, et les livreurs vérifient la pièce d’identité avec photo à la porte.',
+    lede: 'Pour publier de l’alcool, du tabac et des produits de vapotage, ou des accessoires de cannabis, téléversez votre permis pour ces produits dans votre province. {brand} l’examine; ces annonces restent masquées jusqu’à son approbation et sont masquées de nouveau s’il expire. Les clients vérifient leur âge une fois, et les livreurs vérifient la pièce d’identité avec photo à la porte.',
     none: 'Aucun permis au dossier. Vos annonces soumises à un âge minimal restent masquées jusqu’à l’approbation d’un permis.',
     row: '{cls} · {number} · expire le {expires}',
     licensed: 'Vous pouvez vendre : {classes}.',

@@ -85,9 +85,9 @@ switch (command) {
     break;
   }
   case 'placeholders': {
-    const tokens = JSON.parse(readFileSync(join(MOBILE, '../web/packages/tokens/tokens.json'), 'utf8')).base;
-    // Spruce top band, paper body, honey foot: obviously not a real screenshot.
-    const bands = [{ until: 0.12, color: rgb(tokens.accent) }, { until: 0.94, color: rgb(tokens.bg) }, { until: 1, color: rgb(tokens.highlight) }];
+    const colour = JSON.parse(readFileSync(join(MOBILE, '../web/packages/tokens/generated/theme.json'), 'utf8')).color;
+    // The brand's header band, the page, an accent foot: obviously not a real screenshot.
+    const bands = [{ until: 0.12, color: rgb(colour['header-bg']) }, { until: 0.94, color: rgb(colour.canvas) }, { until: 1, color: rgb(colour['action-accent']) }];
     const only = option(args, '--app');
     for (const [name, app] of Object.entries(APPS)) {
       if (only && only !== name) continue;

@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { CaretDown } from '@phosphor-icons/react';
-import { AppShell, Avatar, Menu, PageHeadingProvider, useLocale, type MenuEntry } from '@northline/ui';
+import { AppShell, Avatar, Logo, Menu, PageHeadingProvider, testingToolsEnabled, useLocale, type MenuEntry } from '@northline/ui';
 import { useSession, useSignOut } from '../../lib/session';
 import { businessesQuery, navBadgesQuery, type MerchantSummary } from './api';
 import { useShellT } from './messages';
@@ -21,9 +21,13 @@ export const tierTag = (m: Pick<MerchantSummary, 'tier' | 'status'>): { cls: str
   : m.tier === 'trusted' ? { cls: 'tag-accent', key: 'tier_trusted' }
   : { cls: 'tag-neutral', key: 'tier_registered' };
 
-export const Brand = ({ label }: { label: string }) => <span className="nav-brand">Northline <span style={{ fontWeight: 400, color: 'var(--color-neutral-700)' }}>{label}</span></span>;
+/** The brand's logo with the portal's name ("Studio"), on the dark header (redesign § 1.3, BO:30: logo 28px + portal title). */
+export const Brand = ({ label }: { label: string }) => <Logo size={28} onDark product={label} />;
 
-/** Studio chrome: top bar (brand, business · city, tier, account menu) + portal-aware sidebar. */
+/**
+ * Studio chrome (redesign § 1.3, AfroTransact BO:30–110): the dark top bar (logo + "Studio", business · city, tier, the
+ * assistant, the account menu) + the portal-aware sidebar. The pilot's "Send feedback" only with the testing tools on.
+ */
 export function StudioLayout({ merchant, children }: { merchant: MerchantSummary; children: ReactNode }) {
   const t = useShellT();
   const nav = useNavigate();
@@ -39,14 +43,14 @@ export function StudioLayout({ merchant, children }: { merchant: MerchantSummary
     <AppShell
       brand={<Brand label={t('studio')} />}
       headerStart={<>
-        <span style={{ fontSize: 14, color: 'var(--color-neutral-700)' }}>{merchant.displayName}{merchant.city ? ` · ${merchant.city}` : ''}</span>
+        <span className="nl-topbar-meta"><strong>{merchant.displayName}</strong>{merchant.city ? ` · ${merchant.city}` : ''}</span>
         <span className={`tag ${tier.cls}`}>{t(tier.key)}</span>
       </>}
       headerEnd={<><AssistantButton merchantId={merchant.id} /><AccountMenu merchant={merchant} badges={badges} /></>}
       pinned={pinned} groups={groups} currentKey={current}
       onNavigate={i => nav({ to: i.href })}
       rail={rail} onRailChange={r => { setRail(r); try { localStorage.setItem(RAIL_KEY, r ? '1' : '0'); } catch { /* private mode */ } }}
-    ><PageHeadingProvider value={heading}>{children}</PageHeadingProvider><PilotControl merchantId={merchant.id} /></AppShell>
+    ><PageHeadingProvider value={heading}>{children}</PageHeadingProvider>{testingToolsEnabled() ? <PilotControl merchantId={merchant.id} /> : null}</AppShell>
   );
 }
 
@@ -75,10 +79,10 @@ function AccountMenu({ merchant, badges }: { merchant: MerchantSummary; badges: 
   ];
   return (
     <Menu label={t('accountMenu')} width={280} items={items} trigger={({ props }) => (
-      <button type="button" aria-label={t('accountMenu')} {...props} style={{ display: 'flex', alignItems: 'center', gap: 8, border: 0, background: 'transparent', font: 'inherit', cursor: 'pointer', color: 'var(--color-text)', padding: 4, minHeight: 44 }}>
-        <Avatar initials={user?.initials ?? '··'} />
-        <span style={{ fontSize: 13, textAlign: 'left', lineHeight: 1.2 }}>{user ? `${user.firstName} ${user.lastName}` : ''}<span style={{ display: 'block', fontSize: 11, color: 'var(--color-neutral-700)' }}>{t(roleKey)} · {merchant.displayName}</span></span>
-        <CaretDown size={13} color="var(--color-neutral-700)" />
+      <button type="button" aria-label={t('accountMenu')} {...props} className="nl-topbar-item">
+        <Avatar initials={user?.initials ?? '··'} size={32} />
+        <span className="nl-topbar-item-text">{user ? `${user.firstName} ${user.lastName}` : ''}<span>{t(roleKey)} · {merchant.displayName}</span></span>
+        <CaretDown size={13} aria-hidden />
       </button>
     )} />
   );

@@ -92,7 +92,7 @@ export const ChartsStory: S = {
   name: 'Charts',
   render: () => (
     <div style={{ display: 'grid', gap: 32, maxWidth: 560 }}>
-      <StackedBarChart title="Net earnings, 12 weeks" series={[{ key: 's', label: 'Services', color: 'var(--color-accent)' }, { key: 'p', label: 'Parts', color: 'var(--color-accent-2-400)' }]} data={[[820, 210], [960, 180], [1100, 260], [880, 140], [1240, 310], [1180, 220], [1320, 280], [1050, 190], [1410, 330], [1290, 240], [1520, 360], [1460, 300]].map((d, i) => ({ label: `W${i + 1}`, values: { s: d[0]!, p: d[1]! } }))} />
+      <StackedBarChart title="Net earnings, 12 weeks" series={[{ key: 's', label: 'Services', color: 'var(--color-action-primary)' }, { key: 'p', label: 'Parts', color: 'var(--danger-400)' }]} data={[[820, 210], [960, 180], [1100, 260], [880, 140], [1240, 310], [1180, 220], [1320, 280], [1050, 190], [1410, 330], [1290, 240], [1520, 360], [1460, 300]].map((d, i) => ({ label: `W${i + 1}`, values: { s: d[0]!, p: d[1]! } }))} />
       <LineChart title="Weekly gross" legend={{ current: 'This period', previous: 'Previous period' }} current={[3200, 3600, 3100, 3900, 4200, 3800, 4600, 4400, 4900, 5100, 4700, 5400, 5600]} previous={[2600, 2900, 2800, 3000, 3300, 3100, 3500, 3600, 3400, 3900, 3800, 4000, 4100]} />
       <BarList items={[{ label: 'Brake inspection', value: 2759 }, { label: 'Oil & filter', value: 2212 }]} format={n => `$${n.toLocaleString('en-CA')}`} />
     </div>

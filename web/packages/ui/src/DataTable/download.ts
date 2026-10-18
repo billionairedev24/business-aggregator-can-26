@@ -22,7 +22,7 @@ export function openPrintWindow(html: string): boolean {
   return !!w;
 }
 
-const THEME_VARS = ['--color-text', '--color-bg', '--color-accent', '--font-body', '--font-heading'];
+const THEME_VARS = ['--color-text', '--color-canvas', '--color-action-primary', '--font-sans', '--font-heading'];
 
 /** Resolved base tokens from the host element, so the print document matches the active theme. */
 export function readThemeVars(el: Element | null): Record<string, string> {

@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router';
+import { brand } from '@northline/tokens';
 import { ErrorState, PageSkeleton, PageState } from '@northline/ui';
 import { ConsoleLayout, DeniedBanner } from '../features/shell/ConsoleLayout';
 import { loadStaff, requireSession } from '../features/shell/guards';
@@ -10,10 +11,10 @@ export const Route = createFileRoute('/_console')({
   codeSplitGroupings: [['component'], ['pendingComponent'], ['errorComponent'], ['notFoundComponent']],
   beforeLoad: ({ context, location }) => requireSession(context.queryClient, location.href),
   loader: ({ context }) => loadStaff(context.queryClient),
-  pendingComponent: function ConsolePending() { const t = useShellT(); return <PageState title={`Northline ${t('console')}`}><PageSkeleton /></PageState>; },
+  pendingComponent: function ConsolePending() { const t = useShellT(); return <PageState title={`${brand.name} ${t('console')}`}><PageSkeleton /></PageState>; },
   errorComponent: function ConsoleError({ reset }) {
     const t = useShellT();
-    return <PageState title={`Northline ${t('console')}`}><ErrorState message={t('loadError')} onRetry={reset} /></PageState>;
+    return <PageState title={`${brand.name} ${t('console')}`}><ErrorState message={t('loadError')} onRetry={reset} /></PageState>;
   },
   component: () => <ConsoleLayout denied={<><DeniedBanner /><Overview /></>}><Outlet /></ConsoleLayout>,
 });

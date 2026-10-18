@@ -153,7 +153,7 @@ export const helpCaseColumns: DataTableColumn<HelpCase>[] = [
 
 export interface TaxRow { id: string; name: string; amt: number; note: string }
 export const taxRows: TaxRow[] = [
-  { id: 'ab', name: 'Alberta · GST 5%', amt: 189240, note: 'Remitted by Northline' },
+  { id: 'ab', name: 'Alberta · GST 5%', amt: 189240, note: 'Remitted by the platform' },
   { id: 'bc', name: 'BC pilot · GST 5% + PST 7%', amt: 0, note: 'Not selling in BC' },
   { id: 'fee', name: 'Platform fee GST (on your 9%)', amt: 6140, note: 'Charged on invoice' },
 ];

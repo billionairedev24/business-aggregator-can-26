@@ -1,4 +1,5 @@
 import type { Locale } from '@northline/ui';
+import { brand } from '@northline/tokens';
 
 /**
  * Per-route SEO tags (S-63): title, description, canonical, hreflang en/fr, Open Graph and JSON-LD, for a route's
@@ -54,7 +55,7 @@ export function seo(context: SeoContext, input: SeoInput): { meta: Meta[]; links
     { title: input.title },
     ...(description ? [{ name: 'description', content: description }] : []),
     ...(input.noindex ? [{ name: 'robots', content: 'noindex' }] : []),
-    { property: 'og:site_name', content: 'Northline' },
+    { property: 'og:site_name', content: brand.name },
     { property: 'og:type', content: input.type ?? 'website' },
     { property: 'og:title', content: input.title },
     ...(description ? [{ property: 'og:description', content: description }] : []),

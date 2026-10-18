@@ -7,6 +7,7 @@ import { productText } from '../../features/product/messages';
 import { ProductDetail, ProductSkeleton } from '../../features/product/ProductDetail';
 import { seo } from '../../lib/seo';
 import { productJsonLd } from '../../lib/structuredData';
+import { brand } from '@northline/tokens';
 
 /** Product detail (S-50): offers, variants, stock, delivery cut-off. Server-rendered for SEO; 404 when unpublished. */
 export const Route = createFileRoute('/products/$productId')({
@@ -29,7 +30,7 @@ export const Route = createFileRoute('/products/$productId')({
   head: ({ match, loaderData, params }) => {
     const t = productText(match.context.locale);
     const css = [{ rel: 'stylesheet', href: shopCss }, { rel: 'stylesheet', href: productCss }];
-    if (!loaderData) return { meta: [{ title: 'Northline' }], links: css };
+    if (!loaderData) return { meta: [{ title: brand.name }], links: css };
     const shop = loaderData.offers[0]?.shopName;
     const path = `/products/${params.productId}`;
     const query = { market: match.search.market };

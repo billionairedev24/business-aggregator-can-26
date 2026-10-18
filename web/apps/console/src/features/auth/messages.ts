@@ -4,7 +4,7 @@ import { defineMessages } from '@northline/ui';
 export const useSignInT = defineMessages({
   en: {
     signedOut: 'Signed out',
-    kicker: 'Northline Console · internal',
+    kicker: '{brand} Console · internal',
     heroTitle: 'Operations, trust and money — with an audit trail.',
     heroLede: 'The Console runs verification, disputes, delivery and finance for the whole marketplace. Access is least-privilege: agents see requester context, finance sees ledgers, only admins flip provinces.',
     point1Title: 'SSO + passkey', point1Body: 'Okta/Google SSO, then a device-bound passkey. No shared logins.',
@@ -29,13 +29,13 @@ export const useSignInT = defineMessages({
     footerTrouble: 'Trouble signing in? ',
     footerRecover: 'Recover with a backup code',
     footerRest: ' · sessions expire after 12 h idle · every sign-in is logged.',
-    err_staff_only: 'This is for Northline staff only.',
+    err_staff_only: 'This is for {brand} staff only.',
     err_mfa_required: 'Sign in with your second factor to do this.',
     err_signin: "Signing in didn't work. Try again.",
   },
   fr: {
     signedOut: 'Déconnecté',
-    kicker: 'Console Northline · interne',
+    kicker: 'Console {brand} · interne',
     heroTitle: 'Opérations, confiance et argent — avec une piste d’audit.',
     heroLede: 'La Console gère la vérification, les litiges, la livraison et les finances de tout le marché. L’accès suit le moindre privilège : les agents voient le contexte du demandeur, les finances voient les registres, seuls les administrateurs activent des provinces.',
     point1Title: 'SSO + clé d’accès', point1Body: 'SSO Okta/Google, puis une clé d’accès liée à l’appareil. Aucun compte partagé.',
@@ -60,7 +60,7 @@ export const useSignInT = defineMessages({
     footerTrouble: 'Problème de connexion ? ',
     footerRecover: 'Récupérer avec un code de secours',
     footerRest: ' · les sessions expirent après 12 h d’inactivité · chaque connexion est journalisée.',
-    err_staff_only: 'Réservé au personnel de Northline.',
+    err_staff_only: 'Réservé au personnel de {brand}.',
     err_mfa_required: 'Connectez-vous avec votre deuxième facteur pour faire ceci.',
     err_signin: 'La connexion n’a pas fonctionné. Réessayez.',
   },

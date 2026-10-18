@@ -48,6 +48,7 @@ export function Dialog({ open, onClose, title, children, actions, width, role = 
     </div>, document.body);
 }
 
+/** The right sheet (AfroTransact BO:811): min(680px, 100%) wide by default, a padded head, the body in a column. */
 export interface DrawerProps { open: boolean; onClose: () => void; title: ReactNode; children?: ReactNode; footer?: ReactNode; side?: 'right' | 'left'; width?: number }
 export function Drawer({ open, onClose, title, children, footer, side = 'right', width }: DrawerProps) {
   const { ref, onKeyDown } = useModal(open, onClose);
@@ -57,7 +58,7 @@ export function Drawer({ open, onClose, title, children, footer, side = 'right',
   return createPortal(<>
     <div className="nl-drawer-backdrop" onClick={onClose} />
     <div ref={ref} role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1} className="nl-drawer" data-side={side} style={width ? { ['--nl-drawer-w' as string]: `${width}px` } : undefined} onKeyDown={onKeyDown}>
-      <div className="nl-drawer-head"><h2 id={id} style={{ fontSize: 22, margin: 0 }}>{title}</h2><button type="button" className="btn btn-ghost btn-icon" onClick={onClose} aria-label={t('close')}><X size={18} /></button></div>
+      <div className="nl-drawer-head"><h2 id={id} className="nl-drawer-title">{title}</h2><button type="button" className="btn btn-ghost btn-icon" onClick={onClose} aria-label={t('close')}><X size={18} /></button></div>
       <div className="nl-drawer-body">{children}</div>
       {footer ? <div className="nl-drawer-foot">{footer}</div> : null}
     </div>

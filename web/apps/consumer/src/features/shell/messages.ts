@@ -1,4 +1,5 @@
 import { defineMessages } from '@northline/ui';
+import { brand } from '@northline/tokens';
 import type { ScreenKey } from './screens';
 
 /** Shell copy — design 06 (`t` in the prototype's logic) and design/i18n-fr.js for French. */
@@ -7,16 +8,16 @@ export const useShellT = defineMessages({
     services: 'Services', shop: 'Shop', food: 'Food',
     search: 'Search “sourdough”, “mobile mechanic”, “DJ”…',
     signIn: 'Sign in', createAccount: 'Create account',
-    guestNote: "You're browsing as a guest. Sign in to pay, book, track orders and earn points — your cart is kept.",
     skip: 'Skip to content',
     privacy: 'Privacy', terms: 'Terms', helpLink: 'Help', langSwitch: 'Français',
-    sell: 'Sell on Northline', offer: 'Offer a service', kitchen: 'Run a kitchen',
+    sell: 'Sell on {brand}', offer: 'Offer a service', kitchen: 'Run a kitchen',
+    footerBusiness: 'For businesses', footerHelp: 'Help and policies', footerLanguage: 'Language',
     // account menu
     activity: 'Activity', account: 'Account', preferences: 'Preferences',
     orders: 'Orders & bookings', favourites: 'Favourites', wallet: 'Wallet & points', profile: 'Profile',
     addresses: 'Addresses & household', payments: 'Payment methods', security: 'Security & sign-in',
     notifications: 'Notifications', language: 'Language / Langue & region', dietary: 'Dietary & accessibility',
-    plus: 'Northline Plus', help: 'Help & cases', sellOrOffer: 'Sell or offer a service', signOut: 'Sign out',
+    plus: '{brand} Plus', help: 'Help & cases', sellOrOffer: 'Sell or offer a service', signOut: 'Sign out',
     addPhoto: 'Add photo', reliability: '{email} · reliability {score}',
     active: '{count} active', open: '{count} open', points: '{count} pts', plusActive: 'Active', plusTry: 'Try free',
     plusTag: 'Plus · 2× points', standardTag: 'Standard', members: '{count} · {members} members',
@@ -31,15 +32,15 @@ export const useShellT = defineMessages({
     services: 'Services', shop: 'Boutique', food: 'Restaurants',
     search: 'Rechercher « pain au levain », « mécanicien mobile », « DJ »…',
     signIn: 'Se connecter', createAccount: 'Créer un compte',
-    guestNote: "Vous naviguez en tant qu'invité. Connectez-vous pour payer, réserver, suivre vos commandes et gagner des points — votre panier est conservé.",
     skip: 'Aller au contenu',
     privacy: 'Confidentialité', terms: 'Conditions', helpLink: 'Aide', langSwitch: 'English',
-    sell: 'Vendre sur Northline', offer: 'Offrir un service', kitchen: 'Gérer une cuisine',
+    sell: 'Vendre sur {brand}', offer: 'Offrir un service', kitchen: 'Gérer une cuisine',
+    footerBusiness: 'Pour les entreprises', footerHelp: 'Aide et politiques', footerLanguage: 'Langue',
     activity: 'Activité', account: 'Compte', preferences: 'Préférences',
     orders: 'Commandes et réservations', favourites: 'Favoris', wallet: 'Portefeuille et points', profile: 'Profil',
     addresses: 'Adresses et foyer', payments: 'Modes de paiement', security: 'Sécurité et connexion',
     notifications: 'Notifications', language: 'Langue / Language et région', dietary: 'Alimentation et accessibilité',
-    plus: 'Northline Plus', help: 'Aide et dossiers', sellOrOffer: 'Vendre ou offrir un service', signOut: 'Se déconnecter',
+    plus: '{brand} Plus', help: 'Aide et dossiers', sellOrOffer: 'Vendre ou offrir un service', signOut: 'Se déconnecter',
     addPhoto: 'Ajouter une photo', reliability: '{email} · fiabilité {score}',
     active: '{count} active(s)', open: '{count} ouvert(s)', points: '{count} pts', plusActive: 'Actif', plusTry: 'Essayer gratuitement',
     plusTag: 'Plus · points ×2', standardTag: 'Standard', members: '{count} · {members} membres',
@@ -70,5 +71,5 @@ export const SCREEN_NAMES: { en: Record<ScreenKey, string>; fr: Record<ScreenKey
 };
 export const useScreenT = defineMessages(SCREEN_NAMES);
 
-/** `<title>` of a screen: "Cart · Northline" (routes' `head`). */
-export const pageTitle = (locale: 'en' | 'fr', screen: ScreenKey) => `${SCREEN_NAMES[locale][screen]} · Northline`;
+/** `<title>` of a screen: "Cart · <brand>" (routes' `head`). */
+export const pageTitle = (locale: 'en' | 'fr', screen: ScreenKey) => `${SCREEN_NAMES[locale][screen]} · ${brand.name}`;

@@ -2,12 +2,22 @@
   "name": "@northline/tokens",
   "version": "0.1.0",
   "type": "module",
+  "description": "The brand (brand.json + palettes/*.json) and the fixed rhythm (scale.json): dist/tokens.css for the web, generated/theme.json for TypeScript and the native apps, the contrast gate.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "exports": {
+    ".": "./src/index.ts",
     "./tokens.css": "./dist/tokens.css",
-    "./tokens.json": "./tokens.json",
-    ".": "./dist/tokens.js"
+    "./palettes.css": "./dist/palettes.css",
+    "./theme.json": "./generated/theme.json",
+    "./brand.json": "./brand.json",
+    "./vite": {
+      "types": "./vite.d.mts",
+      "default": "./vite.mjs"
+    }
   },
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "test": "node build.mjs --check"
   }
 }

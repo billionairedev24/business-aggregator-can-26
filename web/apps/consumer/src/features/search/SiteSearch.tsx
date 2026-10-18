@@ -12,12 +12,12 @@ const DEBOUNCE_MS = 150;
 const RECENT_SHOWN = 2;
 
 const ICONS: Record<Suggestion['type'] | 'recent', ReactNode> = {
-  product: <Basket weight="duotone" size={16} />,
-  service: <Wrench weight="duotone" size={16} />,
-  food: <ForkKnife weight="duotone" size={16} />,
-  merchant: <Storefront weight="duotone" size={16} />,
-  category: <MagnifyingGlass weight="duotone" size={16} />,
-  recent: <ClockCounterClockwise weight="duotone" size={16} />,
+  product: <Basket size={16} />,
+  service: <Wrench size={16} />,
+  food: <ForkKnife size={16} />,
+  merchant: <Storefront size={16} />,
+  category: <MagnifyingGlass size={16} />,
+  recent: <ClockCounterClockwise size={16} />,
 };
 
 /** The typed text's first case-insensitive occurrence (for recent searches; the API highlights its own). */

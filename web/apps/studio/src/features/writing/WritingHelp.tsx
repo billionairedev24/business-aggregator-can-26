@@ -29,7 +29,7 @@ export function ListingCopyButton({ merchantId, facts, onUse, disabled }: { merc
   const d = draft.data;
   return <>
     <Button type="button" variant="secondary" disabled={disabled || draft.isPending} onClick={() => draft.mutate(facts, { onSuccess: () => setOpen(true) })}>
-      <Sparkle size={16} weight="duotone" aria-hidden /> {draft.isPending ? t('drafting') : t('draftCopy')}
+      <Sparkle size={16} aria-hidden /> {draft.isPending ? t('drafting') : t('draftCopy')}
     </Button>
     {draft.isError ? <div role="alert" className="nl-error">{failure(draft.error)}</div> : null}
     <Dialog open={open && !!d} onClose={() => setOpen(false)} title={t('copyTitle')} width={720}
@@ -62,7 +62,7 @@ export function QuoteLineSuggestions({ merchantId, requestId, onAdd }: { merchan
   const s = suggest.data;
   return <div className="nl-writing-lines">
     <Button type="button" variant="ghost" disabled={suggest.isPending} onClick={() => suggest.mutate(requestId, { onSuccess: r => onAdd(r.lines) })}>
-      <Sparkle size={16} weight="duotone" aria-hidden /> {suggest.isPending ? t('suggesting') : t('suggestLines')}
+      <Sparkle size={16} aria-hidden /> {suggest.isPending ? t('suggesting') : t('suggestLines')}
     </Button>
     {s ? <div className="nl-writing-note" role="status">
       {t('linesAdded', { count: s.lines.length })}
@@ -89,7 +89,7 @@ export function ReplySuggestions({ merchantId, threadId, onPick }: { merchantId:
       </div>
     ) : (
       <Button type="button" variant="ghost" disabled={suggest.isPending} onClick={() => suggest.mutate(threadId)}>
-        <Sparkle size={16} weight="duotone" aria-hidden /> {suggest.isPending ? t('suggesting') : t('suggestReplies')}
+        <Sparkle size={16} aria-hidden /> {suggest.isPending ? t('suggesting') : t('suggestReplies')}
       </Button>
     )}
     {suggest.isError ? <div role="alert" className="nl-error">{failure(suggest.error)}</div> : null}
@@ -109,9 +109,9 @@ export function ReviewSummaryDraftPanel({ merchantId }: { merchantId: string }) 
   return (
     <Panel as="section" className="nl-writing-summary" aria-label={t('summaryTitle')}>
       {!d ? <Button type="button" variant="secondary" disabled={draft.isPending} onClick={() => draft.mutate()}>
-        <Sparkle size={16} weight="duotone" aria-hidden /> {draft.isPending ? t('summarizing') : t('summarize')}
+        <Sparkle size={16} aria-hidden /> {draft.isPending ? t('summarizing') : t('summarize')}
       </Button> : <>
-        <h2 className="nl-writing-summary-title"><Sparkle size={16} weight="duotone" aria-hidden /> {t('summaryTitle')}</h2>
+        <h2 className="nl-writing-summary-title"><Sparkle size={16} aria-hidden /> {t('summaryTitle')}</h2>
         <p className="nl-writing-note">{t('summaryNote', { count: d.reviews })}</p>
         {([['en', d.en, t('english')], ['fr', d.fr, t('french')]] as const).map(([lang, v, label]) => (
           <div key={lang} className="nl-writing-version" lang={lang === 'fr' ? 'fr-CA' : 'en-CA'}>

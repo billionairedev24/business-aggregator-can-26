@@ -12,6 +12,10 @@ import { Composer } from './Composer';
 import { useMessagesT } from './messages';
 import { useAgo } from './time';
 import './messages.css';
+import { brand } from '@northline/tokens';
+
+/** The api's name of the platform's support thread (its brand name + " support"), shown under the localized label. */
+const SUPPORT_NAME = `${brand.name} support`;
 
 const CAN_SEND = new Set(['owner', 'technician', 'cook', 'manager', 'staff']);
 const REF_SCREEN: Record<string, ScreenKey> = { booking: 'appointments', quote: 'appointments', order: 'orders', dispute: 'refunds' };
@@ -44,7 +48,7 @@ export function MessagesScreen({ threadId, onSelect }: { threadId?: string; onSe
             {threads.map(th => (
               <button key={th.id} type="button" className="nl-msg-item" aria-current={th.id === selectedId ? 'true' : undefined} data-unread={th.unread || undefined} onClick={() => onSelect(th.id)}>
                 <span className="nl-msg-item-head">
-                  <strong>{th.kind === 'support' && th.counterpartName === 'Northline support' ? t('northline') : th.counterpartName}{th.unread ? <span className="nl-msg-dot" aria-label={t('unread')} role="img" /> : null}</strong>
+                  <strong>{th.kind === 'support' && th.counterpartName === SUPPORT_NAME ? t('northline') : th.counterpartName}{th.unread ? <span className="nl-msg-dot" aria-label={t('unread')} role="img" /> : null}</strong>
                   <span className="nl-msg-when">{ago(th.lastMessageAt)}</span>
                 </span>
                 <span className="nl-msg-last">{th.lastMessage === '' ? t('attachmentOnly') : th.lastMessage ?? ''}</span>
@@ -72,7 +76,7 @@ function ThreadPane({ merchantId, summary, canSend, role }: { merchantId: string
   // Opening a thread with unread customer messages marks it read for the team (once per open).
   useEffect(() => { if (summary.unread) markRead.mutate(summary.id); }, [summary.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const name = summary.kind === 'support' && summary.counterpartName === 'Northline support' ? t('northline') : summary.counterpartName;
+  const name = summary.kind === 'support' && summary.counterpartName === SUPPORT_NAME ? t('northline') : summary.counterpartName;
   const title = summary.subject ? t('title', { name, subject: summary.subject }) : name;
   const refScreen = summary.refType ? REF_SCREEN[summary.refType] : undefined;
   const refHref = refScreen ? screenHref(merchantId, refScreen) : undefined;

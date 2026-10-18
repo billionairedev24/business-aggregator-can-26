@@ -10,7 +10,7 @@ type S = StoryObj<typeof meta>;
 const Live = ({ variant, onSubmit }: { variant: 'hero' | 'header'; onSubmit: (q: string) => void }) => {
   const [v, set] = useState('');
   return (
-    <div style={{ background: variant === 'hero' ? 'var(--color-accent)' : 'transparent', padding: 32, borderRadius: 'var(--radius-lg)' }}>
+    <div style={{ background: variant === 'hero' ? 'var(--color-action-primary)' : 'transparent', padding: 32, borderRadius: 'var(--radius-lg)' }}>
       <SearchBar value={v} onChange={set} onSubmit={onSubmit} variant={variant} placeholder="Search “sourdough”, “mobile mechanic”, “DJ”…" />
     </div>
   );
@@ -36,7 +36,7 @@ const SUGGESTIONS = [
 const Predicting = ({ variant, onPick, onSubmit }: { variant: 'hero' | 'header'; onPick: (id: string) => void; onSubmit: (q: string) => void }) => {
   const [v, set] = useState('');
   return (
-    <div style={{ background: variant === 'hero' ? 'var(--color-accent)' : 'transparent', padding: 32, minHeight: 320, borderRadius: 'var(--radius-lg)' }}>
+    <div style={{ background: variant === 'hero' ? 'var(--color-action-primary)' : 'transparent', padding: 32, minHeight: 320, borderRadius: 'var(--radius-lg)' }}>
       <SearchBar value={v} onChange={set} onSubmit={onSubmit} variant={variant} suggestions={SUGGESTIONS} onPick={s => onPick(s.id)} />
     </div>
   );

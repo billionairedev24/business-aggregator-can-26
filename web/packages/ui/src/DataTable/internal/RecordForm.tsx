@@ -181,7 +181,7 @@ export function RecordForm({ fields, initial, submitLabel, t, onCancel, onSubmit
       </div>
       {submitError && (
         <div className="nl-dt-inline-error" role="alert">
-          <WarningCircle size={16} weight="duotone" aria-hidden="true" />
+          <WarningCircle size={16} aria-hidden="true" />
           {submitError}
         </div>
       )}

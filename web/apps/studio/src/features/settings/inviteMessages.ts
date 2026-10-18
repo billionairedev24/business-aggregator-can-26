@@ -3,7 +3,7 @@ import { defineMessages } from '@northline/ui';
 /** Team invitation accept page (not drawn in the design; copy recorded in docs/DECISIONS.md). */
 export const useInviteT = defineMessages({
   en: {
-    kicker: 'Team invitation', title: 'Join {business} on Northline', lede: 'You’ve been invited as {role}. You keep your own sign-in; the owner can change your role or remove you at any time.',
+    kicker: 'Team invitation', title: 'Join {business} on {brand}', lede: 'You’ve been invited as {role}. You keep your own sign-in; the owner can change your role or remove you at any time.',
     role_owner: 'an owner', role_technician: 'a technician', role_bookkeeper: 'a bookkeeper', role_cook: 'a cook',
     join: 'Join {business}', joining: 'Joining…', switchAccount: 'Not you? Sign out',
     notForYou: 'This invitation was sent to a different email or mobile than {who}. Sign in with the invited account to accept it.',
@@ -13,7 +13,7 @@ export const useInviteT = defineMessages({
     invalidTitle: 'Invitation not found', invalid: 'This invitation link isn’t valid. Check the link or ask the owner for a new one.', loadError: 'We couldn’t load the invitation.',
   },
   fr: {
-    kicker: 'Invitation d’équipe', title: 'Rejoindre {business} sur Northline', lede: 'Vous êtes invité comme {role}. Vous gardez votre propre connexion; le propriétaire peut changer votre rôle ou vous retirer en tout temps.',
+    kicker: 'Invitation d’équipe', title: 'Rejoindre {business} sur {brand}', lede: 'Vous êtes invité comme {role}. Vous gardez votre propre connexion; le propriétaire peut changer votre rôle ou vous retirer en tout temps.',
     role_owner: 'propriétaire', role_technician: 'technicien', role_bookkeeper: 'comptable', role_cook: 'cuisinier',
     join: 'Rejoindre {business}', joining: 'Ajout…', switchAccount: 'Pas vous? Se déconnecter',
     notForYou: 'Cette invitation a été envoyée à un autre courriel ou mobile que {who}. Connectez-vous avec le compte invité pour l’accepter.',

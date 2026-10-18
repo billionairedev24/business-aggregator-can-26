@@ -21,9 +21,9 @@ const usePageT = defineMessages({
     signIn: 'Sign in',
     continue: 'Continue',
     passkeySignIn: 'Sign in with a passkey',
-    newHere: 'New to Northline?',
+    newHere: 'New to {brand}?',
     // create account
-    kickerRegister: 'Join Northline · {province}',
+    kickerRegister: 'Join {brand} · {province}',
     heroRegister: 'One account for groceries, hot food and every trusted local.',
     heroSubRegister: 'No passwords. Your phone and a passkey are your login; your address decides what you see. Data stays in Canada.',
     pointRegister1: 'Paid into escrow', pointRegister1Body: 'Providers and shops are paid only after you confirm — or 48 hours pass with no dispute.',
@@ -70,7 +70,7 @@ const usePageT = defineMessages({
     // federation (S-18)
     federationLink: 'Enter the code we sent to your mobile to link your {provider} account.',
     federationRegister: 'You’re signed in with {provider}. Add your mobile number to finish creating your account.',
-    federationRelay: 'Your email is Apple’s Hide My Email address: messages from Northline reach you through it.',
+    federationRelay: 'Your email is Apple’s Hide My Email address: messages from {brand} reach you through it.',
     signInFailed: "Signing in didn't finish. Try again.",
   },
   fr: {
@@ -85,8 +85,8 @@ const usePageT = defineMessages({
     signIn: 'Se connecter',
     continue: 'Continuer',
     passkeySignIn: "Se connecter avec une clé d'accès",
-    newHere: 'Nouveau sur Northline ?',
-    kickerRegister: 'Rejoindre Northline · {province}',
+    newHere: 'Nouveau sur {brand} ?',
+    kickerRegister: 'Rejoindre {brand} · {province}',
     heroRegister: "Un seul compte pour l'épicerie, les repas chauds et tous les commerçants de confiance.",
     heroSubRegister: "Pas de mot de passe. Votre téléphone et une clé d'accès suffisent; votre adresse détermine ce que vous voyez. Vos données restent au Canada.",
     pointRegister1: 'Payé en fiducie', pointRegister1Body: "Les prestataires et les commerces ne sont payés qu'après votre confirmation — ou après 48 heures sans litige.",
@@ -127,7 +127,7 @@ const usePageT = defineMessages({
     setAddress: 'Saisir mon adresse',
     federationLink: 'Entrez le code envoyé à votre mobile pour lier votre compte {provider}.',
     federationRegister: 'Vous êtes connecté avec {provider}. Ajoutez votre numéro de mobile pour terminer la création de votre compte.',
-    federationRelay: 'Votre courriel est une adresse « Masquer mon adresse courriel » d’Apple : les messages de Northline vous parviennent par elle.',
+    federationRelay: 'Votre courriel est une adresse « Masquer mon adresse courriel » d’Apple : les messages de {brand} vous parviennent par elle.',
     signInFailed: "La connexion n'a pas abouti. Réessayez.",
   },
 });

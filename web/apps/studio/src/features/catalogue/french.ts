@@ -29,7 +29,7 @@ export function useSaveFrench(m: string, id: string) {
 export const useFrenchT = defineMessages({
   en: {
     title: 'French name and description',
-    hint: 'Shown to customers who read Northline in French.',
+    hint: 'Shown to customers who read {brand} in French.',
     warn: 'Listings {provinceIn} need a French name and description.',
     require: 'Listings {provinceIn} need a French name and description before they can go live.',
     name: 'Name in French',
@@ -43,7 +43,7 @@ export const useFrenchT = defineMessages({
   },
   fr: {
     title: 'Nom et description en français',
-    hint: 'Affichés aux clients qui consultent Northline en français.',
+    hint: 'Affichés aux clients qui consultent {brand} en français.',
     warn: 'Les annonces {provinceIn} doivent avoir un nom et une description en français.',
     require: 'Les annonces {provinceIn} doivent avoir un nom et une description en français avant d’être mises en ligne.',
     name: 'Nom en français',

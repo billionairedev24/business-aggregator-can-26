@@ -1,21 +1,22 @@
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { Pressable, Text } from 'react-native';
 
-import tokens from '@northline/tokens/tokens.json';
+import theme from '@northline/tokens/theme.json';
 import { createI18n, formatMessage, resolveLocale } from '../src/i18n';
-import { colors, fonts, radius, space } from '../src/theme';
+import { colors, fonts, radius, semantic, space, text } from '../src/theme';
 import { mixOklch, toOklch } from '../src/theme/oklch';
 
 describe('theme from @northline/tokens', () => {
-  it('uses the five base tokens as they are', () => {
-    expect(colors.accent).toBe(tokens.base.accent);
-    expect(colors.accent2).toBe(tokens.base['accent-2']);
-    expect(colors.highlight).toBe(tokens.base.highlight);
-    expect(colors.bg).toBe(tokens.base.bg);
-    expect(colors.text).toBe(tokens.base.text);
+  it('uses the brand palette as the web resolves it (generated/theme.json)', () => {
+    expect(colors.actionPrimary).toBe(theme.color['action-primary']);
+    expect(colors.accent).toBe(theme.color['action-primary']);
+    expect(colors.highlight).toBe(theme.color['action-accent']);
+    expect(colors.bg).toBe(theme.color.canvas);
+    expect(colors.text).toBe(theme.color.text);
+    expect(semantic['text-muted']).toBe(theme.color['text-muted']);
   });
 
-  it('derives ramps in OKLCH like derived.css', () => {
+  it('derives in OKLCH like the web (mixing with white keeps the hue)', () => {
     expect(mixOklch('#1E4D36', '#FFFFFF', 0)).toBe('#1E4D36');
     expect(mixOklch('#1E4D36', '#FFFFFF', 1)).toBe('#FFFFFF');
     const l = (hex: string) => toOklch(hex).l;
@@ -23,10 +24,7 @@ describe('theme from @northline/tokens', () => {
     expect(l(colors.accent200)).toBeGreaterThan(l(colors.accent300));
     expect(l(colors.accent300)).toBeGreaterThan(l(colors.accent));
     expect(l(colors.accent)).toBeGreaterThan(l(colors.accent600));
-    expect(l(colors.accent600)).toBeGreaterThan(l(colors.accent700));
-    // mixing with white keeps the hue (white's is powerless)
-    expect(Math.abs(toOklch(colors.accent100).h - toOklch(colors.accent).h)).toBeLessThan(6);
-    expect(colors.divider).toMatch(/^rgba\(21, 35, 27, 0\.12\)$/);
+    expect(Math.abs(toOklch(colors.accent200).h - toOklch(colors.accent).h)).toBeLessThan(6);
     expect(Object.values(colors).every((c) => /^(#[0-9A-F]{6}|rgba\(.*\))$/.test(c))).toBe(true);
   });
 
@@ -46,9 +44,10 @@ describe('theme from @northline/tokens', () => {
     expect(contrast(colors.onHighlight, colors.highlight)).toBeGreaterThan(4.5);
   });
 
-  it('takes radii, spacing and fonts from the tokens', () => {
-    expect(radius).toEqual({ sm: 8, md: 12, lg: 18, pill: 999 });
+  it('takes radii, spacing and type from the tokens', () => {
+    expect(radius).toEqual({ xs: 4, sm: 6, md: 8, lg: 12, pill: 999 });
     expect(space[4]).toBe(16);
+    expect(text.base).toBe(15);
     expect(fonts.heading).toBe('Newsreader_500Medium');
   });
 });

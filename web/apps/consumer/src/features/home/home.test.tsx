@@ -44,7 +44,8 @@ describe('home', () => {
     const calls = mockFetch(api());
     renderApp('/', { routes: home });
     expect(await screen.findByRole('heading', { level: 1, name: 'What do you need in Beltline today?' })).toBeInTheDocument();
-    expect(await screen.findByText(/^Good (morning|afternoon|evening) · Beltline, Calgary$/)).toBeInTheDocument();
+    // redesign § 3.2: no time-of-day greeting
+    expect(screen.queryByText(/^Good (morning|afternoon|evening)/)).toBeNull();
     await expectNoAxeViolations(document.body); // S-109
     const scopes = screen.getByRole('navigation', { name: 'Services, Shop and Food' });
     await waitFor(() => expect(within(scopes).getByRole('link', { name: /Services/ })).toHaveTextContent('Services412 pros'));
@@ -86,19 +87,19 @@ describe('home', () => {
     mockFetch(api());
     const user = userEvent.setup({ delay: null });
     const { router } = renderApp('/', { routes: home });
-    await user.type(await screen.findByRole('combobox', { name: 'Search' }), 'sourdough');
-    await user.click(screen.getByRole('button', { name: 'Search' }));
+    const main = await screen.findByRole('main');
+    await user.type(await within(main).findByRole('combobox', { name: 'Search' }), 'sourdough');
+    await user.click(within(main).getByRole('button', { name: 'Search' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/search'));
     expect(router.state.location.search).toEqual({ q: 'sourdough' });
   });
 
-  it('greets a signed-in person by name and shows their week and points', async () => {
+  it('shows a signed-in person their week and points', async () => {
     mockFetch(api({
       user: AMARA, points: true,
       upcoming: { items: [{ id: 'o1', title: 'Grocery run · 3 shops', subtitle: 'Tonight 6–9 pm · pooled', state: 'Packing', tone: 'accent', href: '/orders/o1' }] },
     }));
     renderApp('/', { routes: home });
-    expect(await screen.findByText(/^Good (morning|afternoon|evening), Amara · Beltline, Calgary$/)).toBeInTheDocument();
     const row = await screen.findByRole('link', { name: /Grocery run/ });
     expect(row).toHaveAttribute('href', '/orders/o1');
     expect(row).toHaveTextContent('Packing');
@@ -146,7 +147,6 @@ describe('home', () => {
     mockFetch(api());
     renderApp('/', { routes: home, locale: 'fr' });
     expect(await screen.findByRole('heading', { level: 1, name: 'De quoi avez-vous besoin à Beltline ?' })).toBeInTheDocument();
-    expect(await screen.findByText(/^(Bonjour|Bon après-midi|Bonsoir) · Beltline, Calgary$/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Magasiner par rayon' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('link', { name: /Boulangerie/ })).toHaveTextContent('7 commerces'));
     expect(screen.getByRole('link', { name: /Vietnamien/ })).toHaveTextContent('4 ouvertes');

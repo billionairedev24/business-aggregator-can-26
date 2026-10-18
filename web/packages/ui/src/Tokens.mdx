@@ -4,11 +4,23 @@ import { Meta, ColorPalette, ColorItem } from '@storybook/addon-docs/blocks';
 
 # Tokens
 
-Change a value in `packages/tokens/tokens.json` → `pnpm --filter @northline/tokens build`. Every ramp below is derived.
+The brand is one file: `packages/tokens/brand.json` (name, identity, radii and which palette — A `lakeshore`, B `evergreen`,
+C `dusk` in `packages/tokens/palettes/`). Change it → `pnpm --filter @northline/tokens build`; the build fails when a
+text pair drops below WCAG AA. The toolbar's paintbrush previews the other palettes. Components use the semantic roles
+below, never a ramp step or a colour.
 
 <ColorPalette>
-  <ColorItem title="Spruce · accent" colors={{ 100: 'var(--color-accent-100)', 300: 'var(--color-accent-300)', base: 'var(--color-accent)', 700: 'var(--color-accent-700)', 900: 'var(--color-accent-900)' }} />
-  <ColorItem title="Honey · highlight" colors={{ 100: 'var(--color-highlight-100)', base: 'var(--color-highlight)', on: 'var(--color-on-highlight)' }} />
-  <ColorItem title="Rosehip · accent-2" colors={{ 100: 'var(--color-accent-2-100)', base: 'var(--color-accent-2)', 700: 'var(--color-accent-2-700)' }} />
-  <ColorItem title="Neutral" colors={{ bg: 'var(--color-bg)', 200: 'var(--color-neutral-200)', 500: 'var(--color-neutral-500)', 700: 'var(--color-neutral-700)', text: 'var(--color-text)' }} />
+  <ColorItem title="Primary ramp" colors={{ 50: 'var(--primary-50)', 200: 'var(--primary-200)', 500: 'var(--primary-500)', 700: 'var(--primary-700)', 900: 'var(--primary-900)' }} />
+  <ColorItem title="Accent ramp" colors={{ 50: 'var(--accent-50)', 200: 'var(--accent-200)', 500: 'var(--accent-500)', 700: 'var(--accent-700)', 900: 'var(--accent-900)' }} />
+  <ColorItem title="Neutral ramp" colors={{ 50: 'var(--neutral-50)', 200: 'var(--neutral-200)', 500: 'var(--neutral-500)', 800: 'var(--neutral-800)', 1000: 'var(--neutral-1000)' }} />
+  <ColorItem title="Surfaces" colors={{ canvas: 'var(--color-canvas)', surface: 'var(--color-surface)', muted: 'var(--color-surface-muted)', brand: 'var(--color-surface-brand)', accent: 'var(--color-surface-accent)' }} />
+  <ColorItem title="Text & borders" colors={{ text: 'var(--color-text)', muted: 'var(--color-text-muted)', subtle: 'var(--color-text-subtle)', border: 'var(--color-border)', control: 'var(--color-border-control)' }} />
+  <ColorItem title="Chrome" colors={{ header: 'var(--color-header-bg)', subheader: 'var(--color-subheader-bg)', indicator: 'var(--color-header-indicator)', footer: 'var(--color-footer-bg)' }} />
+  <ColorItem title="Actions" colors={{ primary: 'var(--color-action-primary)', 'primary hover': 'var(--color-action-primary-hover)', accent: 'var(--color-action-accent)', dark: 'var(--color-action-dark)', danger: 'var(--color-action-danger)' }} />
+  <ColorItem title="Status" colors={{ success: 'var(--color-success)', warning: 'var(--color-warning)', danger: 'var(--color-danger)', info: 'var(--color-info)', rating: 'var(--color-rating)' }} />
 </ColorPalette>
+
+Spacing `--space-0…16` (4px base), type `--text-2xs…5xl` (body 15px), controls `--size-control-sm/-/lg` (32/40/48,
+drawn; every target still ≥ 44px), radii `--radius-xs/sm/md/lg/pill`, shadows `--shadow-sm/md/lg/focus`, z-index
+`--z-dropdown…toast` and motion `--duration-fast/--duration/--ease` come from `packages/tokens/scale.json` — fixed, not
+brand.

@@ -25,24 +25,32 @@ export interface AppShellProps {
   onRailChange?: (rail: boolean) => void;
 }
 
-const NARROW = '(max-width: 899.98px)';
-function useNarrow() {
-  const [narrow, set] = useState(() => typeof window !== 'undefined' && window.matchMedia(NARROW).matches);
-  useEffect(() => { const m = window.matchMedia(NARROW); const on = () => set(m.matches); on(); m.addEventListener('change', on); return () => m.removeEventListener('change', on); }, []);
-  return narrow;
+/** AfroTransact's back-office breakpoints: phones < 768px (a sheet), tablets 768–1023px (the icon rail), desktops ≥ 1024px. */
+const NARROW = '(max-width: 767.98px)';
+const MEDIUM = '(max-width: 1023.98px)';
+function useMedia(query: string) {
+  const [hit, set] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
+  useEffect(() => { const m = window.matchMedia(query); const on = () => set(m.matches); on(); m.addEventListener('change', on); return () => m.removeEventListener('change', on); }, [query]);
+  return hit;
 }
 
 /**
- * Studio / Console shell. Sticky top bar; light sidebar (surface + border + soft shadow) with Dashboard pinned first
- * and accordion groups (one open at a time, the group holding the current page opens by default, a dot marks it when
- * collapsed); collapse-to-rail toggle at the top; below 900px the sidebar becomes an off-canvas drawer.
+ * Studio / Console shell — AfroTransact's back-office frame (redesign § 1.3): a dark sticky header (logo, portal title,
+ * workspace, account), a white 264px sidebar with Dashboard pinned first and collapsible groups (one open at a time,
+ * the group holding the current page opens by default, a dot marks it when collapsed). 768–1023px: a 72px icon rail
+ * that expands in place; ≥ 1024px the full sidebar, which the person may collapse to the rail (remembered); < 768px the
+ * navigation is a modal sheet under the header's menu button.
  */
 export function AppShell({ brand, headerStart, headerEnd, pinned, groups, currentKey, onNavigate, children, rail: railProp, onRailChange }: AppShellProps) {
   const t = useT();
-  const narrow = useNarrow();
+  const narrow = useMedia(NARROW);
+  const medium = useMedia(MEDIUM) && !narrow;
   const [railState, setRailState] = useState(false);
-  const rail = railProp ?? railState;
-  const setRail = (r: boolean) => { setRailState(r); onRailChange?.(r); };
+  // tablets start on the rail and expand it for the moment; desktops keep the person's choice
+  const [mediumOpen, setMediumOpen] = useState(false);
+  useEffect(() => { if (!medium) setMediumOpen(false); }, [medium]);
+  const rail = medium ? !mediumOpen : (railProp ?? railState);
+  const setRail = (r: boolean) => { if (medium) { setMediumOpen(!r); return; } setRailState(r); onRailChange?.(r); };
   const [drawer, setDrawer] = useState(false);
   const activeGroup = groups.find(g => g.items.some(i => i.key === currentKey))?.label;
   const [openGroup, setOpenGroup] = useState<string | null | undefined>(undefined);
@@ -56,24 +64,24 @@ export function AppShell({ brand, headerStart, headerEnd, pinned, groups, curren
   // S-109: the off-canvas menu is modal — focus moves in, Tab stays in, Escape or close returns focus to the menu button
   const sheet = useFocusTrap<HTMLDivElement>(narrow && drawer);
 
-  const go = (i: NavItem) => { setDrawer(false); onNavigate(i); };
+  const go = (i: NavItem) => { setDrawer(false); setMediumOpen(false); onNavigate(i); };
   const itemEl = (i: NavItem, mode: 'full' | 'rail') => {
     const on = i.key === currentKey;
     const onClick = (e: React.MouseEvent) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); go(i); };
     const I = i.icon;
     return mode === 'rail'
-      ? <a key={i.key} href={i.href} onClick={onClick} className="nl-rail-item" aria-current={on ? 'page' : undefined} title={i.label} aria-label={i.label}><I size={20} weight="duotone" /></a>
-      : <a key={i.key} href={i.href} onClick={onClick} className="nl-side-item" aria-current={on ? 'page' : undefined}><I size={18} weight="duotone" className="nl-side-icon" /><span className="nl-side-label">{i.label}</span>{i.badge ? <span className="nl-side-badge">{i.badge}</span> : null}</a>;
+      ? <a key={i.key} href={i.href} onClick={onClick} className="nl-rail-item" aria-current={on ? 'page' : undefined} title={i.label} aria-label={i.label}><I size={20} weight={on ? 'fill' : 'regular'} /></a>
+      : <a key={i.key} href={i.href} onClick={onClick} className="nl-side-item" aria-current={on ? 'page' : undefined}><I size={18} weight={on ? 'fill' : 'regular'} className="nl-side-icon" /><span className="nl-side-label">{i.label}</span>{i.badge ? <span className="nl-side-badge">{i.badge}</span> : null}</a>;
   };
   const fullNav = (
     <div className="nl-side-scroll">
       {pinned.map(i => itemEl(i, 'full'))}
       {groups.filter(g => g.items.length).map(g => {
-        const isOpen = g.label === open, G = g.icon;
+        const isOpen = g.label === open;
         return (
           <div key={g.label} className="nl-side-group">
             <button type="button" className="nl-side-head" data-active={g.label === activeGroup} aria-expanded={isOpen} onClick={() => setOpenGroup(isOpen ? null : g.label)}>
-              <G size={18} weight="duotone" className="nl-side-head-icon" /><span style={{ flex: 1 }}>{g.label}</span>
+              <span style={{ flex: 1 }}>{g.label}</span>
               {g.label === activeGroup && !isOpen ? <span className="nl-side-dot" title={t('here')} /> : null}
               {isOpen ? <CaretUp size={13} /> : <CaretDown size={13} />}
             </button>
@@ -88,21 +96,21 @@ export function AppShell({ brand, headerStart, headerEnd, pinned, groups, curren
     <div className="nl-shell">
       <SkipLink />
       <header ref={headerRef} className="nav nl-topbar">
-        {narrow ? <button type="button" className="btn btn-secondary btn-icon nl-topbar-menu" aria-label={t('open')} onClick={() => setDrawer(true)}><List size={20} weight="duotone" /></button> : null}
-        {brand}
+        {narrow ? <button type="button" className="nl-topbar-menu" aria-label={t('open')} aria-expanded={drawer} onClick={() => setDrawer(true)}><List size={22} /></button> : null}
+        <span className="nl-topbar-brand">{brand}</span>
         {headerStart}
         {headerEnd ? <div className="nl-topbar-end">{headerEnd}</div> : null}
       </header>
       <div className="nl-shell-body">
         {!narrow && !rail && (
           <nav aria-label={t('nav')} className="nl-side" style={{ top, height: `calc(100vh - ${top}px)` }}>
-            <div className="nl-side-top"><span className="nl-side-caption">{t('menu')}</span><button type="button" className="nl-side-toggle" aria-label={t('collapse')} title={t('collapse')} onClick={() => setRail(true)}><SidebarSimple size={20} weight="duotone" /></button></div>
+            <div className="nl-side-top"><span className="nl-side-caption">{t('menu')}</span><button type="button" className="nl-side-toggle" aria-label={t('collapse')} title={t('collapse')} onClick={() => setRail(true)}><SidebarSimple size={20} /></button></div>
             {fullNav}
           </nav>
         )}
         {!narrow && rail && (
           <nav aria-label={t('nav')} className="nl-side nl-rail" style={{ top, height: `calc(100vh - ${top}px)` }}>
-            <div className="nl-rail-top"><button type="button" className="nl-side-toggle" aria-label={t('expand')} title={t('expand')} onClick={() => setRail(false)}><SidebarSimple size={20} weight="duotone" /></button></div>
+            <div className="nl-rail-top"><button type="button" className="nl-side-toggle" aria-label={t('expand')} title={t('expand')} onClick={() => setRail(false)}><SidebarSimple size={20} /></button></div>
             <div className="nl-rail-scroll">
               {pinned.map(i => itemEl(i, 'rail'))}
               {groups.filter(g => g.items.length).map(g => <div key={g.label} className="nl-rail-group"><span className="nl-rail-sep" />{g.items.map(i => itemEl(i, 'rail'))}</div>)}
@@ -113,7 +121,7 @@ export function AppShell({ brand, headerStart, headerEnd, pinned, groups, curren
           <div className="nl-drawer-backdrop" onClick={() => setDrawer(false)} />
           <div ref={sheet.ref} role="dialog" aria-modal="true" aria-label={t('nav')} tabIndex={-1} className="nl-side-drawer"
             onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setDrawer(false); } else sheet.onKeyDown(e); }}>
-            <div className="nl-side-top">{brand}<button type="button" className="nl-side-toggle" aria-label={t('close')} onClick={() => setDrawer(false)} data-autofocus><X size={18} /></button></div>
+            <div className="nl-side-top"><span className="nl-topbar-brand">{brand}</span><button type="button" className="nl-side-toggle" aria-label={t('close')} onClick={() => setDrawer(false)} data-autofocus><X size={18} /></button></div>
             <nav aria-label={t('nav')} className="nl-side-drawer-nav">{fullNav}</nav>
           </div>
         </>}

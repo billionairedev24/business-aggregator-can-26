@@ -18,7 +18,7 @@ export function FavouriteButton({ merchantId, className }: { merchantId: string;
   return (
     <button type="button" className={className ?? 'btn btn-ghost'} aria-pressed={on} aria-label={t(on ? 'unfavourite' : 'favourite')}
       disabled={change.isPending} onClick={() => change.mutate({ merchantId, on: !on })}>
-      <Heart size={20} weight={on ? 'fill' : 'duotone'} aria-hidden />
+      <Heart size={20} weight={on ? 'fill' : 'regular'} aria-hidden />
     </button>
   );
 }

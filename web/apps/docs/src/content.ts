@@ -10,6 +10,8 @@
  * The repository's docs/ are rendered in place (the docs plugin's `path`); nothing is copied but the specs, which
  * scripts/sync.mjs puts in static/openapi so Scalar and the download links can fetch them.
  */
+import { brand } from '@northline/tokens';
+
 export type Variant = 'public' | 'internal';
 export type Locale = 'en' | 'fr';
 
@@ -49,8 +51,8 @@ export const SPECS: readonly ApiSpec[] = [
     audience: 'public',
     title: { en: 'Webhooks', fr: 'Webhooks' },
     summary: {
-      en: 'The signed events Northline sends to your endpoints, with every payload schema.',
-      fr: 'Les événements signés que Northline envoie à vos points de terminaison, avec le schéma de chaque contenu.',
+      en: `The signed events ${brand.name} sends to your endpoints, with every payload schema.`,
+      fr: `Les événements signés que ${brand.name} envoie à vos points de terminaison, avec le schéma de chaque contenu.`,
     },
   },
   {
@@ -89,7 +91,7 @@ export const SPECS: readonly ApiSpec[] = [
     service: 'auth',
     audience: 'internal',
     title: { en: 'Sign-in JSON API', fr: 'API JSON de connexion' },
-    summary: { en: 'The first-party sign-in, registration and security pages.', fr: 'Les pages de connexion, d’inscription et de sécurité de Northline.' },
+    summary: { en: 'The first-party sign-in, registration and security pages.', fr: `Les pages de connexion, d’inscription et de sécurité de ${brand.name}.` },
   },
   {
     id: 'bff-internal',

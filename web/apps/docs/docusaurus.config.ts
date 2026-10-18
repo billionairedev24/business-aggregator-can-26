@@ -4,6 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 import type { PluginOptions as SearchOptions } from '@easyops-cn/docusaurus-search-local';
 import { themes as prismThemes } from 'prism-react-renderer';
 import { REPO_DOCS_EXCLUDE, REPO_DOCS_INCLUDE, redocRoute, scalarRoute, specsFor, variantFrom } from './src/content';
+import { brand, theme } from '@northline/tokens';
 
 /*
  * Northline documentation site (S-126; docs/runbooks/docs-site.md).
@@ -21,11 +22,12 @@ const specDir = resolve(repoDocs, 'api/openapi');
 const baseUrl = process.env.DOCS_BASE_URL ?? '/';
 const specs = specsFor(variant);
 
-// Spruce & Honey (web/packages/tokens/tokens.json) for Redoc; the site itself uses the token CSS (src/css/custom.css).
-const spruce = '#1E4D36';
+// The brand's primary colour (web/packages/tokens: brand.json + its palette) for Redoc; the site itself uses the token
+// CSS (src/css/custom.css).
+const primary = theme.color['action-primary'];
 
 const config: Config = {
-  title: 'Northline',
+  title: brand.name,
   tagline: internal ? 'Engineering documentation' : 'Developer documentation',
   favicon: 'img/favicon.svg',
   url: process.env.DOCS_URL ?? 'http://localhost:3300',
@@ -60,7 +62,7 @@ const config: Config = {
       'redocusaurus',
       {
         specs: specs.map((spec) => ({ id: spec.id, spec: resolve(specDir, `${spec.id}.yaml`), route: redocRoute(spec) })),
-        theme: { primaryColor: spruce, options: { requiredPropsFirst: true, expandResponses: '200,201' } },
+        theme: { primaryColor: primary, options: { requiredPropsFirst: true, expandResponses: '200,201' } },
       },
     ],
   ],
@@ -123,8 +125,8 @@ const config: Config = {
   themeConfig: {
     colorMode: { respectPrefersColorScheme: true },
     navbar: {
-      title: 'Northline',
-      logo: { alt: 'Northline', src: 'img/favicon.svg' },
+      title: brand.name,
+      logo: { alt: brand.name, src: 'img/favicon.svg' },
       items: [
         { to: '/guides/', label: 'Guides', position: 'left' },
         { to: '/api/', label: 'API reference', position: 'left' },
@@ -140,7 +142,7 @@ const config: Config = {
     },
     footer: {
       style: 'light',
-      copyright: `© ${new Date().getFullYear()} Northline · ${internal ? 'internal — do not share' : 'northline.ca'}`,
+      copyright: `© ${new Date().getFullYear()} ${brand.name} · ${internal ? 'internal — do not share' : brand.domain}`,
     },
     prism: { theme: prismThemes.github, darkTheme: prismThemes.dracula },
   } satisfies Preset.ThemeConfig,

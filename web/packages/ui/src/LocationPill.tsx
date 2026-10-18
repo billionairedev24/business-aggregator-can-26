@@ -22,7 +22,7 @@ const useT = defineMessages({
 
 export interface LocationPillProps { status: LocationStatus; label?: string; href: string }
 
-/** The location pill: map-pin, a kicker and the place; opens the Location screen. */
+/** The header's "Deliver to" button (Shop:33): map-pin, an xs muted kicker over the place in bold; opens the Location screen. */
 export function LocationPill({ status, label, href }: LocationPillProps) {
   const t = useT();
   const kicker = status === 'detected' ? t('detected') : t('deliverTo');
@@ -30,7 +30,7 @@ export function LocationPill({ status, label, href }: LocationPillProps) {
   const title = status === 'detected' ? t('titleDetected') : status === 'denied' ? t('titleDenied') : t('titleOther');
   return (
     <SiteLink href={href} className="nl-location" title={title} aria-label={`${kicker} ${place}, ${title}`} aria-busy={status === 'locating' || undefined}>
-      <MapPin weight="duotone" size={22} className="nl-location-pin" aria-hidden />
+      <MapPin size={20} className="nl-location-pin" aria-hidden />
       <span className="nl-location-text" aria-hidden>
         <span className="nl-location-kicker">{kicker}</span>
         <span className="nl-location-place">{place}</span>

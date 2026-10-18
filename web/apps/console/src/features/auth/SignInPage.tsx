@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { brand } from '@northline/tokens';
 import { Alert, Button, Field, OptionCard, RadioGroup, StepBars, TextInput, codeValue } from '@northline/ui';
 import {
   authApi, backupCodeSchema, codeSchema, fieldErrors, firstIssue, flowError, getPasskey, isRestart, PasskeyError, passkeysSupported,
@@ -94,7 +95,7 @@ export function SignInPage({ next, error, navigate = url => window.location.assi
 
   return (
     <div className="nl-auth-page">
-      <nav className="nav nl-auth-nav" aria-label="Northline Console">
+      <nav className="nav nl-auth-nav" aria-label={`${brand.name} Console`}>
         <Brand label={shell('console')} />
         <span className="nl-auth-signedout">{t('signedOut')}</span>
       </nav>

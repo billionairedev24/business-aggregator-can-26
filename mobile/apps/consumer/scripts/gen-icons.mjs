@@ -1,15 +1,15 @@
-// Draws the consumer app's icon, Android adaptive foreground and splash mark from the Northline base tokens
-// (web/packages/tokens/tokens.json): a honey disc with a spruce location pin ("one tap from the door") on spruce.
+// Draws the consumer app's icon, Android adaptive foreground and splash mark from the brand's resolved theme
+// (web/packages/tokens/generated/theme.json — brand.json and its palette; not re-run for the placeholder palette, redesign 2026-10-18): a honey disc with a spruce location pin ("one tap from the door") on spruce.
 // A placeholder until design supplies the store icon (DECISIONS S-97), drawn like the courier app's.
 // node scripts/gen-icons.mjs — writes assets/{icon,adaptive-icon,splash-icon}.png. No image library needed.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { zlibSync } from 'fflate';
 
-const tokens = JSON.parse(readFileSync(new URL('../../../../web/packages/tokens/tokens.json', import.meta.url), 'utf8'));
+const colour = JSON.parse(readFileSync(new URL('../../../../web/packages/tokens/generated/theme.json', import.meta.url), 'utf8')).color;
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-const SPRUCE = hex(tokens.base.accent);
-const HONEY = hex(tokens.base.highlight);
-const PAPER = hex(tokens.base.bg);
+const SPRUCE = hex(colour['action-primary']);
+const HONEY = hex(colour['action-accent']);
+const PAPER = hex(colour.canvas);
 
 const crcTable = Array.from({ length: 256 }, (_, n) => {
   let c = n;

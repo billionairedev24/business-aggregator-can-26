@@ -19,8 +19,8 @@ export function AssistantButton({ merchantId }: { merchantId: string }) {
   const [open, setOpen] = useState(false);
   if (!status.data?.available) return null;
   return <>
-    <button type="button" className="btn btn-ghost nl-assistant-open" onClick={() => setOpen(true)} aria-haspopup="dialog">
-      <Sparkle size={18} weight="duotone" aria-hidden />{t('open')}
+    <button type="button" className="nl-topbar-item nl-assistant-open" onClick={() => setOpen(true)} aria-haspopup="dialog">
+      <Sparkle size={18} aria-hidden />{t('open')}
     </button>
     <AssistantDrawer merchantId={merchantId} open={open} onClose={() => setOpen(false)} fake={status.data.provider === 'fake'} />
   </>;

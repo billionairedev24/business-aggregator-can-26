@@ -7,6 +7,7 @@ import { categoryName } from '../../../features/services/taxonomy';
 import { pageTitle } from '../../../features/shell/messages';
 import { seo } from '../../../lib/seo';
 import { providerJsonLd } from '../../../lib/structuredData';
+import { brand } from '@northline/tokens';
 
 /**
  * Public provider page (S-54): design 06 `provider`, from the storefront API. Server-rendered and SEO-ready (title,
@@ -32,7 +33,7 @@ export const Route = createFileRoute('/providers/$slug/')({
     if (!loaderData) return { meta: [{ title: pageTitle(locale, 'provider') }] };
     const { page, facts } = loaderData;
     const category = facts.category ? categoryName(facts.category.slug, facts.category.names, locale).text : null;
-    const title = [facts.name, category, facts.city].filter(Boolean).join(' · ') + ' · Northline';
+    const title = [facts.name, category, facts.city].filter(Boolean).join(' · ') + ` · ${brand.name}`;
     const description = page.business.about ?? page.tagline ?? title;
     const origin = page.customDomain ? `https://${page.customDomain}` : match.context.config.siteOrigin;
     const path = page.customDomain ? '/' : `/providers/${page.slug}`;

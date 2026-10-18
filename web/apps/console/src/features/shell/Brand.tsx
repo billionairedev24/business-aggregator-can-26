@@ -1,2 +1,4 @@
-/** "Northline Console" (design 03 `nav-brand`). */
-export const Brand = ({ label }: { label: string }) => <span className="nav-brand">Northline <span style={{ fontWeight: 400, color: 'var(--color-neutral-700)' }}>{label}</span></span>;
+import { Logo } from '@northline/ui';
+
+/** The brand's logo with the portal's name ("Console") on the dark header (redesign § 1.3, BO:30). */
+export const Brand = ({ label }: { label: string }) => <Logo size={28} onDark product={label} />;

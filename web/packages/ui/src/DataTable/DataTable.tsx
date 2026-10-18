@@ -359,7 +359,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
     <div ref={boxRef} className={clsx('nl-dt', props.className)}>
       <div className="nl-dt-toolbar">
         <label className="nl-dt-search">
-          <MagnifyingGlass size={17} weight="duotone" aria-hidden="true" />
+          <MagnifyingGlass size={17} aria-hidden="true" />
           <input
             className="input"
             type="search"
@@ -381,7 +381,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
           aria-controls={`${uid}-filters`}
           onClick={() => setPanel((p) => (p === 'filters' ? null : 'filters'))}
         >
-          <Funnel size={17} weight="duotone" aria-hidden="true" />
+          <Funnel size={17} aria-hidden="true" />
           {t('filters')}
           {chips.length > 0 && (
             <span className="tag tag-accent nl-dt-count">
@@ -398,18 +398,18 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
           aria-controls={`${uid}-cols`}
           onClick={() => setPanel((p) => (p === 'cols' ? null : 'cols'))}
         >
-          <Columns size={17} weight="duotone" aria-hidden="true" />
+          <Columns size={17} aria-hidden="true" />
           {t('columns')}
         </button>
         {canExport && (
           <button type="button" className="btn btn-secondary" onClick={() => openReport(selCount ? 'selected' : 'filtered')} disabled={!showBody || !hasData}>
-            <FileArrowDown size={17} weight="duotone" aria-hidden="true" />
+            <FileArrowDown size={17} aria-hidden="true" />
             {t('report')}
           </button>
         )}
         {readOnly && (
           <span className="tag tag-neutral nl-dt-viewonly" title={t('viewOnlyTitle')}>
-            <LockSimple size={13} weight="duotone" aria-hidden="true" />
+            <LockSimple size={13} aria-hidden="true" />
             {t('viewOnly', { role: roleName })}
           </span>
         )}
@@ -532,7 +532,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
           <span className="nl-dt-spacer" />
           {canExport && (
             <button type="button" className="btn btn-highlight nl-dt-bulk-btn" onClick={() => openReport('selected')}>
-              <FileArrowDown size={16} weight="duotone" aria-hidden="true" />
+              <FileArrowDown size={16} aria-hidden="true" />
               {t('generateReport')}
             </button>
           )}
@@ -542,14 +542,14 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
               const I = a.icon ?? Lightning;
               return (
                 <button key={a.id} type="button" className="btn nl-dt-bulk-btn nl-dt-bulk-soft" disabled={pendingAction === a.id} aria-busy={pendingAction === a.id || undefined} onClick={() => void runAction(a, selRows)}>
-                  <I size={16} weight="duotone" aria-hidden="true" />
+                  <I size={16} aria-hidden="true" />
                   {pendingAction === a.id ? t('working') : a.label}
                 </button>
               );
             })}
           {canDelete && (
             <button type="button" className="btn nl-dt-bulk-btn nl-dt-bulk-danger" onClick={() => setDialog({ mode: 'delete', ids: selRows.map(getRowId) })}>
-              <Trash size={16} weight="duotone" aria-hidden="true" />
+              <Trash size={16} aria-hidden="true" />
               {t('delete')}
             </button>
           )}
@@ -564,7 +564,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
 
         {!loading && error && (
           <div className="nl-dt-error" role="alert">
-            <WarningCircle size={20} weight="duotone" aria-hidden="true" />
+            <WarningCircle size={20} aria-hidden="true" />
             <span className="nl-dt-error-text">
               {t('loadError', { plural })}
               {errMessage(error) && <span className="nl-dt-error-detail"> {errMessage(error)}</span>}
@@ -703,7 +703,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
 
         {showBody && filtered.length === 0 && (
           <div className="nl-dt-empty">
-            <MagnifyingGlassMinus size={32} weight="duotone" aria-hidden="true" />
+            <MagnifyingGlassMinus size={32} aria-hidden="true" />
             <p>{hasData ? t('emptyFiltered', { plural }) : (props.emptyText ?? t('emptyNone', { plural }))}</p>
             {hasData ? (
               <button type="button" className="btn btn-secondary" onClick={clearAll}>
@@ -764,7 +764,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
           <div className="dialog-actions nl-dt-dialog-actions">
             {canDelete && (
               <button type="button" className="btn btn-ghost nl-dt-danger-ghost" onClick={() => setDialog({ mode: 'delete', ids: [dialog.id] })}>
-                <Trash weight="duotone" aria-hidden="true" />
+                <Trash aria-hidden="true" />
                 {t('delete')}
               </button>
             )}
@@ -773,7 +773,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
             </button>
             {canUpdate && (
               <button type="button" className="btn btn-primary" onClick={() => openEdit(dRow)}>
-                <PencilSimple weight="duotone" aria-hidden="true" />
+                <PencilSimple aria-hidden="true" />
                 {t('edit')}
               </button>
             )}
@@ -865,7 +865,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
       <div className="nl-dt-toast-region" role="status" aria-live="polite">
         {toast && (
           <div key={toast.n} className={clsx('nl-dt-toast', toast.tone === 'error' && 'is-error')}>
-            {toast.tone === 'error' ? <WarningCircle size={18} weight="duotone" aria-hidden="true" /> : <CheckCircle size={18} weight="duotone" aria-hidden="true" />}
+            {toast.tone === 'error' ? <WarningCircle size={18} aria-hidden="true" /> : <CheckCircle size={18} aria-hidden="true" />}
             {toast.text}
           </div>
         )}
@@ -904,7 +904,7 @@ function RowActions({ acts, name, card }: { acts: RowAct[]; name: string; card?:
               a.run();
             }}
           >
-            <I size={card ? 17 : 18} weight="duotone" aria-hidden="true" />
+            <I size={card ? 17 : 18} aria-hidden="true" />
             {labelled && (
               <>
                 {a.label}
@@ -987,7 +987,7 @@ function DeleteDialog({ t, title, text, onClose, onConfirm }: { t: DataTableT; t
       <p className="dialog-body">{text}</p>
       {err && (
         <div className="nl-dt-inline-error" role="alert">
-          <WarningCircle size={16} weight="duotone" aria-hidden="true" />
+          <WarningCircle size={16} aria-hidden="true" />
           {err}
         </div>
       )}
@@ -1011,7 +1011,7 @@ function DeleteDialog({ t, title, text, onClose, onConfirm }: { t: DataTableT; t
             }
           }}
         >
-          <Trash weight="duotone" aria-hidden="true" />
+          <Trash aria-hidden="true" />
           {busy ? t('deleting') : t('delete')}
         </button>
       </div>
@@ -1046,9 +1046,9 @@ function ReportDialog<T>({
   const nCols = cols.filter((c) => dialog.cols[c.key]).length;
   const nRows = counts[dialog.scope];
   const formats: { value: ReportFormat; label: ReactNode }[] = [
-    { value: 'csv', label: <><FileCsv size={15} weight="duotone" aria-hidden="true" />{t('formatCsv')}</> },
-    { value: 'xlsx', label: <><MicrosoftExcelLogo size={15} weight="duotone" aria-hidden="true" />{t('formatXlsx')}</> },
-    { value: 'pdf', label: <><FilePdf size={15} weight="duotone" aria-hidden="true" />{t('formatPdf')}</> },
+    { value: 'csv', label: <><FileCsv size={15} aria-hidden="true" />{t('formatCsv')}</> },
+    { value: 'xlsx', label: <><MicrosoftExcelLogo size={15} aria-hidden="true" />{t('formatXlsx')}</> },
+    { value: 'pdf', label: <><FilePdf size={15} aria-hidden="true" />{t('formatPdf')}</> },
   ];
   return (
     <DataTableDialog title={title} onClose={onClose} wide>
@@ -1092,7 +1092,7 @@ function ReportDialog<T>({
           {t('cancel')}
         </button>
         <button type="button" className="btn btn-primary" disabled={!nRows || !nCols} onClick={onGenerate}>
-          <FileArrowDown weight="duotone" aria-hidden="true" />
+          <FileArrowDown aria-hidden="true" />
           {t('generateReport')}
         </button>
       </div>

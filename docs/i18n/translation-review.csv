@@ -178,7 +178,7 @@ web/apps/consumer/src/features/auth/messages.ts#termsEnglishChosen,You asked for
 web/apps/consumer/src/features/auth/messages.ts#termsFrench,Back to French,Revenir au français,needs translator review
 web/apps/consumer/src/features/auth/messages.ts#termsFrenchPending,The Terms and Privacy Policy are only available in English for now; the French version is coming.,Les conditions et la politique de confidentialité ne sont offertes qu’en anglais pour le moment; la version française s’en vient.,needs translator review
 web/apps/studio/src/features/catalogue/french.ts#title,French name and description,Nom et description en français,needs translator review
-web/apps/studio/src/features/catalogue/french.ts#hint,Shown to customers who read Northline in French.,Affichés aux clients qui consultent Northline en français.,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#hint,Shown to customers who read {brand} in French.,Affichés aux clients qui consultent {brand} en français.,needs translator review
 web/apps/studio/src/features/catalogue/french.ts#warn,Listings {provinceIn} need a French name and description.,Les annonces {provinceIn} doivent avoir un nom et une description en français.,needs translator review
 web/apps/studio/src/features/catalogue/french.ts#require,Listings {provinceIn} need a French name and description before they can go live.,Les annonces {provinceIn} doivent avoir un nom et une description en français avant d’être mises en ligne.,needs translator review
 web/apps/studio/src/features/catalogue/french.ts#name,Name in French,Nom en français,needs translator review
@@ -209,7 +209,7 @@ web/apps/studio/src/features/finance/messages.ts#kpiEscrow_seller,"net in escrow
 web/apps/studio/src/features/finance/messages.ts#kpiEscrow_both,"net in escrow · {count, plural, one {# job or order} other {# jobs & orders}}","net en fiducie · {count, plural, one {# travail ou commande} other {# travaux et commandes}}",needs translator review
 web/apps/studio/src/features/appointments/messages.ts#escrowOnHold,{money} on hold (case open),{money} bloqués (dossier ouvert),needs translator review
 web/apps/studio/src/features/appointments/messages.ts#escrowRefunded,{money} refunded,{money} remboursés,needs translator review
-web/apps/studio/src/features/appointments/messages.ts#escrowBreakdown,Incl. {tax} GST/HST · {net} to you after the tax and Northline’s {fee} fee,Dont {tax} de TPS/TVH · {net} pour vous après la taxe et les frais Northline de {fee},needs translator review
+web/apps/studio/src/features/appointments/messages.ts#escrowBreakdown,Incl. {tax} GST/HST · {net} to you after the tax and {brand}’s {fee} fee,Dont {tax} de TPS/TVH · {net} pour vous après la taxe et les frais {brand} de {fee},needs translator review
 web/apps/studio/src/features/dashboard/messages.ts#escrow,{money} held (incl. GST/HST),{money} retenus (TPS/TVH incl.),needs translator review
 NotFound:age session,No age session with id %s,Aucune session de vérification d’âge avec l’identifiant %s,needs translator review
 NotFound:licence,No licence with id %s,Aucun permis avec l’identifiant %s,needs translator review

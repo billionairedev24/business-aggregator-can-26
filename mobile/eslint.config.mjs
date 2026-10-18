@@ -20,7 +20,7 @@ export default tseslint.config(
         'error',
         {
           selector: 'Literal[value=/^#[0-9a-fA-F]{3,8}$/]',
-          message: 'No colour literals: use colors from @northline/mobile-kit (tokens.json is the only place colours are defined).',
+          message: 'No colour literals: use colors from @northline/mobile-kit (web/packages/tokens brand.json + palettes are the only place colours are defined).',
         },
       ],
     },

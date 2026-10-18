@@ -3,8 +3,6 @@ import { defineMessages } from '@northline/ui';
 /** Home copy — design 06 `home` (`t.*`, `heroQ`, `heroScopes` and their `T(en, fr)` pairs). */
 export const useHomeT = defineMessages({
   en: {
-    morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening',
-    greetingNamed: '{greeting}, {name} · {place}', greetingGuest: '{greeting} · {place}',
     heroQ: 'What do you need in {place} today?', heroQAnywhere: 'What do you need today?',
     scopes: 'Services, Shop and Food',
     scopeServices: 'Services', scopeShop: 'Shop', scopeFood: 'Food',
@@ -26,12 +24,10 @@ export const useHomeT = defineMessages({
     week: 'Your week', weekEmpty: 'Nothing booked or on its way this week.', weekSignIn: 'Sign in to see your orders, bookings and quotes here.',
     bookSomething: 'Book a service', signIn: 'Sign in',
     points: '{points} pts', worth: 'worth {value}', wallet: 'Wallet',
-    emptyCity: 'Northline isn’t in {city} yet.', changeLocation: 'Choose another location',
+    emptyCity: '{brand} isn’t in {city} yet.', changeLocation: 'Choose another location',
     loadError: 'We couldn’t load what’s near you.', retry: 'Retry',
   },
   fr: {
-    morning: 'Bonjour', afternoon: 'Bon après-midi', evening: 'Bonsoir',
-    greetingNamed: '{greeting} {name} · {place}', greetingGuest: '{greeting} · {place}',
     heroQ: 'De quoi avez-vous besoin à {place} ?', heroQAnywhere: 'De quoi avez-vous besoin aujourd’hui ?',
     scopes: 'Services, boutiques et repas',
     scopeServices: 'Services', scopeShop: 'Boutiques', scopeFood: 'Repas',
@@ -53,7 +49,7 @@ export const useHomeT = defineMessages({
     week: 'Votre semaine', weekEmpty: 'Rien de réservé ni en route cette semaine.', weekSignIn: 'Connectez-vous pour voir ici vos commandes, réservations et devis.',
     bookSomething: 'Réserver un service', signIn: 'Se connecter',
     points: '{points} pts', worth: 'vaut {value}', wallet: 'Portefeuille',
-    emptyCity: 'Northline n’est pas encore offert à {city}.', changeLocation: 'Choisir un autre lieu',
+    emptyCity: '{brand} n’est pas encore offert à {city}.', changeLocation: 'Choisir un autre lieu',
     loadError: 'Impossible de charger ce qui est près de chez vous.', retry: 'Réessayer',
   },
 });

@@ -26,7 +26,7 @@ function DataTableAlt({ caption, head, rows }: { caption: string; head: readonly
 export interface BarSeries { key: string; label: string; color: string }
 export interface StackedBarChartProps { series: readonly BarSeries[]; data: readonly { label: string; values: Record<string, number> }[]; height?: number; title: string; format?: (n: number) => string }
 
-/** Stacked weekly bars (Dashboard "Net earnings · 12 weeks"). Colours are token expressions, e.g. var(--color-accent). */
+/** Stacked weekly bars (Dashboard "Net earnings · 12 weeks"). Colours are token expressions, e.g. var(--color-action-primary). */
 export function StackedBarChart({ series, data, height = 180, title, format = String }: StackedBarChartProps) {
   const t = useT();
   const W = 480, plotH = height - 20, n = Math.max(data.length, 1), slot = (W - 12) / n, bw = Math.min(26, slot * 0.7);
@@ -66,12 +66,12 @@ export function LineChart({ current, previous, labels, height = 200, title, lege
   const grid = [0.25, 0.5, 0.75, 1].map(f => `M20 ${py(max * f / 1.1).toFixed(1)} H${W - 20}`).join(' ');
   return (
     <figure style={{ margin: 0 }}>
-      {legend ? <Legend items={[{ label: legend.current, color: 'var(--color-accent)' }, ...(legend.previous ? [{ label: legend.previous, color: 'var(--color-neutral-500)', dashed: true }] : [])]} /> : null}
+      {legend ? <Legend items={[{ label: legend.current, color: 'var(--color-action-primary)' }, ...(legend.previous ? [{ label: legend.previous, color: 'var(--color-border-control)', dashed: true }] : [])]} /> : null}
       <svg viewBox={`0 0 ${W} ${height}`} className="nl-chart" role="img" aria-label={title}>
-        <path d={grid} stroke="var(--color-neutral-200)" strokeWidth={1} fill="none" />
-        {previous ? <path d={path(previous)} stroke="var(--color-neutral-500)" strokeWidth={1.5} strokeDasharray="4 4" fill="none" /> : null}
-        <path d={path(current)} stroke="var(--color-accent)" strokeWidth={2.5} fill="none" />
-        {current.map((v, i) => <circle key={i} cx={px(i)} cy={py(v)} r={3} fill="var(--color-accent)"><title>{`${labels?.[i] ?? i + 1}: ${format(v)}`}</title></circle>)}
+        <path d={grid} stroke="var(--neutral-100)" strokeWidth={1} fill="none" />
+        {previous ? <path d={path(previous)} stroke="var(--color-border-control)" strokeWidth={1.5} strokeDasharray="4 4" fill="none" /> : null}
+        <path d={path(current)} stroke="var(--color-action-primary)" strokeWidth={2.5} fill="none" />
+        {current.map((v, i) => <circle key={i} cx={px(i)} cy={py(v)} r={3} fill="var(--color-action-primary)"><title>{`${labels?.[i] ?? i + 1}: ${format(v)}`}</title></circle>)}
         {labels?.map((l, i) => (i % Math.ceil(labels.length / 7) === 0 ? <text key={l + i} x={px(i)} y={height - 4} fontSize={10} textAnchor="middle">{l}</text> : null))}
       </svg>
       {dataTable && <DataTableAlt caption={title}

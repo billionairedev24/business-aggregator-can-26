@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { createRootRouteWithContext, HeadContent, Outlet, Scripts, useRouter } from '@tanstack/react-router';
-import { I18nProvider, SiteLinkProvider } from '@northline/ui';
+import { I18nProvider, SiteLinkProvider, brand } from '@northline/ui';
+import { fontHref } from '@northline/tokens';
 import { configureAuthOrigin } from '@northline/auth-kit';
 import tokensCss from '@northline/tokens/tokens.css?url';
 import uiCss from '@northline/ui/styles.css?url';
@@ -14,7 +15,8 @@ import { RouterSiteLink } from '../lib/SiteLinkAdapter';
 import { regionsQuery } from '../features/location/regions';
 import type { RouterContext } from '../router';
 
-const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Instrument+Sans:wght@400;500;600;700&display=swap';
+// The brand palette's web fonts (web/packages/tokens: brand.json → palettes/*.json); the CSP allows Google Fonts.
+const FONTS = fontHref;
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: () => ({ locale: requestLocale(), config: publicConfig() }),
@@ -24,7 +26,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   // prefetchQuery never throws: without the api the page still renders (in the platform zone, on both sides).
   loader: ({ context }) => context.queryClient.prefetchQuery(regionsQuery(context.locale)),
   head: () => ({
-    meta: [{ charSet: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1' }, { title: 'Northline' }],
+    meta: [{ charSet: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1' }, { title: brand.name }],
     links: [
       { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },

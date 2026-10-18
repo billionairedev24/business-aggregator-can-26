@@ -1,7 +1,7 @@
 /* Signed-out page — design 02 lines 17–96. Token values only. */
 .nl-auth-page { min-height: 100vh; display: flex; flex-direction: column; font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); }
-.nl-auth-nav { padding: 12px clamp(16px, 4vw, 48px); flex-wrap: wrap; row-gap: 8px; }
-.nl-auth-signedout { margin-left: auto; font-size: 13px; color: var(--color-neutral-700); }
+.nl-auth-nav { min-height: 56px; padding: var(--space-2) var(--page-gutter); flex-wrap: wrap; row-gap: var(--space-2); }
+.nl-auth-signedout { margin-left: auto; font-size: var(--text-sm); color: var(--color-header-muted); }
 
 .nl-auth-main {
   max-width: 1200px; width: 100%; margin: 0 auto; padding: 44px clamp(20px, 4vw, 48px) 80px; box-sizing: border-box;

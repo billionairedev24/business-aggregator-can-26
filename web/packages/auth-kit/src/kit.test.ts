@@ -3,10 +3,13 @@ import { ApiError, ValidationError } from '@northline/client';
 import { federationUrl } from './api';
 import { configureAuthOrigin } from './config';
 import { fieldErrors, flowError, rateLimitedFor } from './errors';
+import { messagesFor, brand } from '@northline/ui';
 import { KIT_MESSAGES, type AuthKitKey } from './messages';
 import { appAuthorizationUrl, bffLoginUrl, safeNext } from './next';
 
-const t = (key: AuthKitKey, values?: Record<string, unknown>) => KIT_MESSAGES.en[key].replace('{time}', String(values?.time ?? ''));
+// the kit's messages through the real formatter (`{brand}` from brand.json, ICU for the rest)
+const en = messagesFor(KIT_MESSAGES, 'en');
+const t = (key: AuthKitKey, values?: Record<string, unknown>) => en(key, values as Record<string, string>);
 const fr = (key: AuthKitKey) => KIT_MESSAGES.fr[key];
 
 describe('auth-kit', () => {
@@ -20,7 +23,7 @@ describe('auth-kit', () => {
     expect(rateLimitedFor(new ApiError(429, 'x', { code: 'rate_limited' }))).toBe(60);
     expect(flowError(new ApiError(409, 'x'), t)).toBe('That took too long. Start again.');
     expect(flowError(new ApiError(503, 'x', { code: 'code_not_sent' }), t, 'voice')).toBe("We couldn't call this number. Try again in a moment, or resend the code by text.");
-    expect(flowError(new TypeError('fetch failed'), t)).toBe("We couldn't reach Northline. Check your connection and try again.");
+    expect(flowError(new TypeError('fetch failed'), t)).toBe(`We couldn't reach ${brand.name}. Check your connection and try again.`);
   });
 
   it('keeps next local (S-20) and hands off to the BFF', () => {

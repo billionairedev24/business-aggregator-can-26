@@ -56,7 +56,7 @@ export function Highlighted({ text, ranges = [] }: { text: string; ranges?: read
   return <>{parts}</>;
 }
 
-/** Search field (role=search). Enter or the button submits; with `suggestions` it predicts as you type. */
+/** Search field (role=search). Enter or the button submits; with `suggestions` it predicts as you type. The header variant is AfroTransact's search bar: one rounded control, the field and an accent search button. */
 export function SearchBar({ value, onChange, onSubmit, variant = 'hero', placeholder, label, suggestions, onPick }: SearchBarProps) {
   const t = useT();
   const id = useId();
@@ -93,7 +93,7 @@ export function SearchBar({ value, onChange, onSubmit, variant = 'hero', placeho
   return (
     <form role="search" className={clsx('nl-search', `nl-search-${variant}`)}
       onSubmit={e => { e.preventDefault(); setDismissed(true); onSubmit(value.trim()); }}>
-      <MagnifyingGlass weight="duotone" size={variant === 'hero' ? 22 : 18} className="nl-search-icon" aria-hidden />
+      {variant === 'hero' ? <MagnifyingGlass size={22} className="nl-search-icon" aria-hidden /> : null}
       <label htmlFor={id} className="nl-sr-only">{label ?? t('label')}</label>
       <input id={id} type="search" className={clsx(variant === 'header' && 'input', 'nl-search-input')} value={value} placeholder={placeholder}
         enterKeyHint="search" autoComplete="off"
@@ -105,7 +105,10 @@ export function SearchBar({ value, onChange, onSubmit, variant = 'hero', placeho
         onFocus={() => { setFocused(true); setDismissed(false); }}
         onBlur={() => { setFocused(false); setActive(-1); }}
         onKeyDown={onKeyDown} />
-      {variant === 'hero' && <button type="submit" className="btn btn-highlight nl-search-button">{t('button')}</button>}
+      {variant === 'hero'
+        ? <button type="submit" className="btn btn-accent nl-search-button">{t('button')}</button>
+        // the header's search: one control — the field, then a 48px accent button with the magnifier (Shop:36)
+        : <button type="submit" className="nl-search-submit" aria-label={t('button')}><MagnifyingGlass size={22} aria-hidden /></button>}
       {combobox && (
         <div className="nl-suggest" hidden={!open}>
           <ul id={listId} role="listbox" aria-label={t('suggestions')}>

@@ -172,7 +172,7 @@ describe('Cart and checkout (design 06 cart)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Checkout' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in to pay' })).toHaveAttribute('href', '/sign-in?next=%2Fcart');
     expect(screen.queryByRole('radiogroup', { name: 'Delivery window' })).not.toBeInTheDocument();
-    expect(screen.getByText(/You're browsing as a guest/)).toBeInTheDocument();
+    expect(screen.queryByText(/You're browsing as a guest/)).toBeNull(); // redesign § 3.4: no guest banner
   });
 
   it('has an empty state', async () => {

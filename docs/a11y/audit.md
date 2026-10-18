@@ -21,8 +21,8 @@ journeys and Testing Library checks of names, roles and states — and a [manual
    consumer 19 in 17, console 22 in 21. Rules: WCAG 2.0–2.2 A/AA tags; `color-contrast`, `target-size` and `region`
    are left to the levels below (jsdom has no layout).
 3. **Token contrast, computed** (`packages/ui/src/contrast.test.ts`): the colour pairs the components use, resolved
-   from `tokens.json` + `derived.css` (the `color-mix(in oklch)` ramps, same maths as the native kit), 4.5:1 for text
-   and 3:1 for borders of controls, focus rings and icons.
+   by the token build's own code for **every palette** in `packages/tokens/palettes/` (redesign 2026-10-18; the build
+   fails on the same pairs), 4.5:1 for text and 3:1 for borders of controls, focus rings and icons.
 4. **Page level, automated** (`make a11y`; a manual CI job): Playwright 1.56 + `@axe-core/playwright` against the
    **built** apps (`vite preview` for the Studio and console, the Node server for the consumer site). No backend: a
    mock api answers with what the apps' own vitest suites answer (recorded by `pnpm --filter @northline/a11y record`

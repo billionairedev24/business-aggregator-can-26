@@ -1,0 +1,66 @@
+{
+  "$comment": "Direction C (owner, 2026-10-18): plum + mint, Plus Jakarta Sans. Brand-specific colours only; every other shade is derived by build.mjs.",
+  "name": "Dusk",
+  "direction": "C",
+  "color": {
+    "primary": "#4A2C7F",
+    "primaryHover": "#331C5C",
+    "primaryText": "#FFFFFF",
+    "accent": "#0F7B67",
+    "accentText": "#FFFFFF",
+    "accentTint": "#D9F2EA",
+    "accentInk": "#0B5E4F",
+    "ground": "#FBFAFD",
+    "surface": "#FFFFFF",
+    "border": "#E8E4EF",
+    "borderStrong": "#DDD6EA",
+    "ink": "#17131F",
+    "textMuted": "#5E5670",
+    "textSubtle": "#5E5670",
+    "headerBg": "#331C5C",
+    "markHighlight": "#5CD0B3"
+  },
+  "font": {
+    "sans": {
+      "family": "Plus Jakarta Sans",
+      "weights": [
+        400,
+        500,
+        600,
+        700,
+        800
+      ]
+    },
+    "display": null
+  },
+  "mark": {
+    "viewBox": "0 0 30 30",
+    "shapes": [
+      {
+        "el": "rect",
+        "width": 30,
+        "height": 30,
+        "rx": 8,
+        "fill": "action-primary"
+      },
+      {
+        "el": "rect",
+        "x": 7,
+        "y": 7,
+        "width": 9,
+        "height": 9,
+        "rx": 2.5,
+        "fill": "action-primary-text"
+      },
+      {
+        "el": "rect",
+        "x": 14,
+        "y": 14,
+        "width": 9,
+        "height": 9,
+        "rx": 2.5,
+        "fill": "mark-highlight"
+      }
+    ]
+  }
+}

@@ -5,6 +5,7 @@ import bookingCss from '../../../features/booking/booking.css?url';
 import { BookingSkeleton, BookingWizard, type Step } from '../../../features/booking/BookingWizard';
 import { providerQuery, storefrontQuery } from '../../../features/provider/api';
 import { pageTitle } from '../../../features/shell/messages';
+import { brand } from '@northline/tokens';
 
 /** `?step=` is the wizard step (back/forward work), `?service=` preselects a service, `?booking=` the confirmed one. */
 export const BookParams = z.object({
@@ -33,7 +34,7 @@ export const Route = createFileRoute('/providers/$slug/book')({
   },
   head: ({ match, loaderData }) => ({
     meta: [
-      { title: loaderData ? `${pageTitle(match.context.locale, 'book')} · ${loaderData.name} · Northline` : pageTitle(match.context.locale, 'book') },
+      { title: loaderData ? `${pageTitle(match.context.locale, 'book')} · ${loaderData.name} · ${brand.name}` : pageTitle(match.context.locale, 'book') },
       { name: 'robots', content: 'noindex' },
     ],
     links: [{ rel: 'stylesheet', href: bookingCss }],

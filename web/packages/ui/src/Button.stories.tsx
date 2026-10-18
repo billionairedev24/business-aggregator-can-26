@@ -1,10 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Button } from './Button';
-const meta = { title: 'Core/Button', component: Button, args: { children: 'Book now' }, argTypes: { variant: { control: 'inline-radio', options: ['primary', 'highlight', 'secondary', 'ghost'] } } } satisfies Meta<typeof Button>;
+const meta = { title: 'Core/Button', component: Button, args: { children: 'Book now' }, argTypes: { variant: { control: 'inline-radio', options: ['primary', 'accent', 'secondary', 'dark', 'danger', 'ghost', 'link'] }, size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] } } } satisfies Meta<typeof Button>;
 export default meta;
 type S = StoryObj<typeof meta>;
 export const Primary: S = {};
-export const Highlight: S = { args: { variant: 'highlight', children: 'Search' } };
+export const Accent: S = { args: { variant: 'accent', children: 'Add to cart' } };
 export const Secondary: S = { args: { variant: 'secondary', children: 'Get a quote' } };
+export const Dark: S = { args: { variant: 'dark', children: 'Continue' } };
+export const Danger: S = { args: { variant: 'danger', children: 'Cancel booking' } };
 export const Ghost: S = { args: { variant: 'ghost', children: 'See all' } };
+export const Link: S = { args: { variant: 'link', children: 'Change' } };
+export const Sizes: S = { render: () => <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}><Button size="sm">Small · 32</Button><Button>Default · 40</Button><Button size="lg">Large · 48</Button></div> };
 export const Disabled: S = { args: { disabled: true } };

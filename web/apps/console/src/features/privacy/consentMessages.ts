@@ -4,7 +4,7 @@ import { defineMessages } from '@northline/ui';
 export const useConsentT = defineMessages({
   en: {
     title: 'Consent to marketing (CASL)',
-    lede: 'Proof of consent to Northline’s marketing messages: who agreed to what, when, where and to which wording, and every withdrawal. Search by account id, email or phone — records are kept three years after a withdrawal, even after an account is deleted.',
+    lede: 'Proof of consent to {brand}’s marketing messages: who agreed to what, when, where and to which wording, and every withdrawal. Search by account id, email or phone — records are kept three years after a withdrawal, even after an account is deleted.',
     query: 'Account id, email or phone', search: 'Search', empty: 'No consent records for this person.', loadError: 'The consent records couldn’t load. Try again.',
     colWhen: 'When', colAccount: 'Account', colWhat: 'What', colAction: 'Consent', colWhere: 'Where', colWording: 'Wording', colNetwork: 'Network',
     cat_marketing_email: 'Marketing email', cat_marketing_sms: 'Marketing texts', cat_marketing_push: 'Promotional push',
@@ -16,7 +16,7 @@ export const useConsentT = defineMessages({
   },
   fr: {
     title: 'Consentement à la publicité (LCAP)',
-    lede: 'La preuve du consentement aux messages publicitaires de Northline : qui a accepté quoi, quand, où et selon quel texte, et chaque retrait. Cherchez par identifiant de compte, courriel ou téléphone — les registres sont gardés trois ans après un retrait, même après la suppression d’un compte.',
+    lede: 'La preuve du consentement aux messages publicitaires de {brand} : qui a accepté quoi, quand, où et selon quel texte, et chaque retrait. Cherchez par identifiant de compte, courriel ou téléphone — les registres sont gardés trois ans après un retrait, même après la suppression d’un compte.',
     query: 'Identifiant de compte, courriel ou téléphone', search: 'Chercher', empty: 'Aucun registre de consentement pour cette personne.', loadError: 'Les registres de consentement n’ont pas pu se charger. Réessayez.',
     colWhen: 'Quand', colAccount: 'Compte', colWhat: 'Quoi', colAction: 'Consentement', colWhere: 'Où', colWording: 'Texte', colNetwork: 'Réseau',
     cat_marketing_email: 'Courriels publicitaires', cat_marketing_sms: 'Textos publicitaires', cat_marketing_push: 'Notifications promotionnelles',

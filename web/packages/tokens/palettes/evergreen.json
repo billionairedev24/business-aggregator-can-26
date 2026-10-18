@@ -1,0 +1,34 @@
+{
+  "$comment": "Direction B (owner, 2026-10-18): forest + ember, Fraunces headings with DM Sans. Brand-specific colours only; every other shade is derived by build.mjs.",
+  "name": "Evergreen",
+  "direction": "B",
+  "color": {
+    "primary": "#1F5E4A",
+    "primaryHover": "#164536",
+    "primaryText": "#FFFFFF",
+    "accent": "#C4531C",
+    "accentText": "#FFFFFF",
+    "accentTint": "#F8E6DA",
+    "accentInk": "#8A3612",
+    "ground": "#FAF8F4",
+    "surface": "#FFFFFF",
+    "border": "#E7E2D9",
+    "borderStrong": "#DCD5C8",
+    "ink": "#1C1B19",
+    "textMuted": "#57534E",
+    "textSubtle": "#57534E",
+    "headerBg": "#164536"
+  },
+  "font": {
+    "sans": { "family": "DM Sans", "weights": [400, 500, 600, 700] },
+    "display": { "family": "Fraunces", "weights": [600, 700], "fallback": "Georgia, 'Times New Roman', serif" }
+  },
+  "mark": {
+    "viewBox": "0 0 30 30",
+    "shapes": [
+      { "el": "rect", "width": 30, "height": 30, "rx": 15, "fill": "action-primary" },
+      { "el": "path", "d": "M15 6l6 10h-4l4 7H9l4-7H9z", "fill": "action-primary-text" },
+      { "el": "circle", "cx": 23, "cy": 8, "r": 3, "fill": "action-accent" }
+    ]
+  }
+}

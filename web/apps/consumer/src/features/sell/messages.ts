@@ -7,9 +7,9 @@ import { defineMessages, messagesFor, type Locale } from '@northline/ui';
  */
 const SELL = {
   en: {
-    title: 'Sell or offer a service · Northline',
-    description: 'Offer a service, sell products or run a kitchen on Northline — your customer account carries over.',
-    heading: 'Sell or offer a service on Northline',
+    title: 'Sell or offer a service · {brand}',
+    description: 'Offer a service, sell products or run a kitchen on {brand} — your customer account carries over.',
+    heading: 'Sell or offer a service on {brand}',
     lede: 'Your customer account carries over — same login, same passkey. You’ll add business details, pass verification, and get a Studio.',
     providerTitle: 'Offer a service',
     providerBody: 'Mechanic, cleaner, bartender, realtor… appointments, quotes, escrow payouts. Take rate 15% → 9% at Master.',
@@ -28,7 +28,7 @@ const SELL = {
     loggedInAs: 'Logged in as',
     carryOver: '— your verified phone, passkey and address carry into the business account.',
     startFresh: 'Not a customer yet? Start fresh.',
-    guestAsk: 'Already shop on Northline?',
+    guestAsk: 'Already shop on {brand}?',
     signIn: 'Sign in',
     guestCarry: 'first — your verified phone, passkey and address carry into the business account.',
     footnote: 'Verification: Stripe KYC, business registry, licence for regulated trades, insurance. Median 1.4 days.',
@@ -36,9 +36,9 @@ const SELL = {
     opensStudio: '(opens the Studio)',
   },
   fr: {
-    title: 'Vendre ou offrir un service · Northline',
-    description: 'Offrez un service, vendez des produits ou gérez une cuisine sur Northline — votre compte client vous suit.',
-    heading: 'Vendre ou offrir un service sur Northline',
+    title: 'Vendre ou offrir un service · {brand}',
+    description: 'Offrez un service, vendez des produits ou gérez une cuisine sur {brand} — votre compte client vous suit.',
+    heading: 'Vendre ou offrir un service sur {brand}',
     lede: 'Votre compte client vous suit — même connexion, même clé d’accès. Vous ajouterez les renseignements de l’entreprise, passerez la vérification et obtiendrez un Studio.',
     providerTitle: 'Offrir un service',
     providerBody: 'Mécanicien, entretien ménager, barman, courtier immobilier… rendez-vous, devis, versements en fiducie. Commission de 15 % → 9 % au niveau Maître.',
@@ -57,7 +57,7 @@ const SELL = {
     loggedInAs: 'Connecté en tant que',
     carryOver: '— votre téléphone vérifié, votre clé d’accès et votre adresse sont repris dans le compte d’entreprise.',
     startFresh: 'Pas encore client ? Repartez de zéro.',
-    guestAsk: 'Vous magasinez déjà sur Northline ?',
+    guestAsk: 'Vous magasinez déjà sur {brand} ?',
     signIn: 'Connectez-vous',
     guestCarry: 'd’abord — votre téléphone vérifié, votre clé d’accès et votre adresse sont repris dans le compte d’entreprise.',
     footnote: 'Vérification : KYC Stripe, registre des entreprises, permis pour les métiers réglementés, assurance. Délai médian : 1,4 jour.',

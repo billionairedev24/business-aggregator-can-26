@@ -1,5 +1,6 @@
 import { IntlMessageFormat } from 'intl-messageformat';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { brand } from '@northline/tokens';
 
 export type Locale = 'en' | 'fr';
 export const LOCALES: readonly Locale[] = ['en', 'fr'];
@@ -73,9 +74,16 @@ export function MessageValues({ values, children }: { values: Values; children: 
 /** The ambient values in effect (for code that formats outside `defineMessages`). */
 export const useMessageValues = (): Values => useContext(ValuesContext) ?? {};
 
+/*
+ * The product's name (redesign 2026-10-18): copy never spells it — messages say `{brand}` and get brand.json's name
+ * (the same in both languages), so renaming the product is one edit. The lint `pnpm lint:brand` keeps the literal out.
+ */
+const BRAND_VALUES: Values = { brand: brand.name, brandShort: brand.shortName };
+
 const cache = new Map<string, IntlMessageFormat>();
 function format(message: string, locale: Locale, values?: Values): string {
   if (!message.includes('{')) return message;
+  values = { ...BRAND_VALUES, ...values };
   const id = `${locale}\u0000${message}`;
   let f = cache.get(id);
   if (!f) { f = new IntlMessageFormat(message, INTL_LOCALE[locale]); cache.set(id, f); }

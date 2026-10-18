@@ -14,7 +14,7 @@ server/auth       Spring Authorization Server (OIDC, passkeys, TOTP, OTP registr
 server/bff        Gateway MVC + OAuth2 client (studio-bff; consumer-bff = the `consumer` profile, S-45) — browser holds only a session cookie
 server/worker     Kafka consumers
 db/migrations     Flyway. V001–V017 are the design baseline. New migrations use the version range assigned to the workstream (below).
-web/packages/tokens   the only place colours/fonts/radii live
+web/packages/tokens   the only place colours/fonts/radii and the product's name live (brand.json + palettes/, scale.json; redesign 2026-10-18)
 web/packages/ui       reusable components + Storybook stories (+ i18n runtime)
 web/apps/studio       TanStack Router SPA for the Studio
 mobile/packages/mobile-kit  native apps' shared plumbing: DPoP OAuth (PKCE), api client, secure storage, theme from web/packages/tokens, i18n (S-87)
@@ -24,7 +24,7 @@ mobile/apps/courier   the courier app, Expo + React Native + expo-router (S-87; 
 ## Frontend conventions (web/)
 - Stack: React 19, TypeScript strict, TanStack Router (file routes via `@tanstack/router-plugin`), Query, Form, Table, Virtual, zod 4.
 - Styling: plain CSS co-located with the component (`Foo.tsx` + `Foo.css`, class prefix `nl-`), values only from `var(--*)` tokens. Inline `style` only for genuinely dynamic values. No hex/rgb literals in components (third-party brand marks such as the Google logo SVG excepted).
-- Icons: `@phosphor-icons/react`, `weight="duotone"` in navigation, matching the design's `ph-duotone` usage.
+- Icons: `@phosphor-icons/react`, the regular weight, `weight="fill"` for the active or selected state (redesign 2026-10-18; duotone is retired).
 - i18n: `defineMessages({ en: {...}, fr: {...} })` from `@northline/ui` (ICU MessageFormat via `intl-messageformat`). Every user-visible string goes through it — en and fr together, fr-CA from `design/i18n-fr.js` wording where it exists. Money/dates: `formatMoney(cents)`, `formatDate()` from `@northline/ui` (the merchant's or market's time zone, else the configured platform zone — S-134; never a zone in code).
 - Generic, reusable pieces (inputs, dialogs, tables, charts, shells) go in `packages/ui` with a story that covers every state and passes the a11y addon. Screen-specific composition stays in the app under `src/features/<feature>/`.
 - App structure: `src/features/<feature>/{api.ts, messages.ts, *.tsx}`; routes in `src/routes/` (thin: loader + component from the feature). `api.ts` exposes zod schemas, `queryOptions` factories and mutation hooks; the HTTP client is `src/lib/http.ts`.
@@ -80,7 +80,7 @@ See `docs/BACKEND_CONVENTIONS.md` (written by the backend foundation) — layeri
   Each currently renders `ScreenPending`; a workstream replaces the route's component with its feature screen. The `/b/$merchantId` layout loads the merchant, renders the shell and redirects away from screens the portal doesn't have (`features/shell/nav.ts` → `screensFor`).
 - In a screen: `useMerchantId()`, `useMerchant()` (type provider|seller|kitchen|both, tier, status, role), `useRole()` from `features/shell/api.ts`; `http()` from `lib/http.ts` (CSRF header, 422 → `ValidationError` with `byField()`); `visibleError`, `serverFieldErrors`, `attentionCount` from `lib/forms.ts`.
 - UI kit (`@northline/ui`): `Field`/`TextInput`/`TextArea`/`Select`/`FormGrid`, `Checkbox`, `Switch`, `OptionCard`, `Chip`, `ChipTabs`, `Segmented`, `UnderlineTabs`, `StepBars`, `Dialog`, `Drawer`, `Menu`, `Panel`, `PageHeader`, `Kpi`/`KpiRow`, `Alert`, `LinkRow`, `Meter`, `Avatar`, `Skeleton`/`PageSkeleton`, `EmptyState`, `ErrorState`, `StackedBarChart`, `LineChart`, `BarList`, `Legend`, `AppShell`, `DataTable`, `defineMessages`, `useFormatters`, `formatMoney`, `formatDate`.
-- The studio sets `--color-surface: var(--color-bg)` globally: panels are the page's off-white outlined by a 1px `--color-divider` border (design decision of 2026-09-29).
+- Panels and cards are white (`--color-surface`) with a 1px `--color-border` hairline on the page's canvas (redesign 2026-10-18; the 2026-09-29 "panels share the off-white" override is gone).
 
 ## Contracts between workstreams
 - **Session (BFF):** `GET /bff/session` → `200 { user: { id, firstName, lastName, email, phone, initials, locale, memberSince }, acr }` or `401`; `POST /bff/logout` → `204`. CSRF: cookie `XSRF-TOKEN` (`__Host-XSRF-TOKEN` in the cloud, S-20), header `X-XSRF-TOKEN` (the only place the BFF accepts the token) — use `http()` / `xsrfToken()` from `src/lib/http.ts`.

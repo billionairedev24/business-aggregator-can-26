@@ -1,37 +1,37 @@
-/* Northline "Spruce & Honey" for the documentation site: Infima's variables mapped onto the design tokens
-   (@northline/tokens, generated from web/packages/tokens/tokens.json — the only place colours are defined). */
+/* The brand for the documentation site: Infima's variables mapped onto the semantic tokens (@northline/tokens,
+   generated from web/packages/tokens/brand.json and its palette — the only place colours are defined). */
 @import '@northline/tokens/tokens.css';
 
 :root {
-  --ifm-color-primary: var(--color-accent);
-  --ifm-color-primary-dark: color-mix(in oklch, var(--color-accent) 90%, black);
-  --ifm-color-primary-darker: color-mix(in oklch, var(--color-accent) 85%, black);
-  --ifm-color-primary-darkest: color-mix(in oklch, var(--color-accent) 70%, black);
-  --ifm-color-primary-light: color-mix(in oklch, var(--color-accent) 90%, white);
-  --ifm-color-primary-lighter: color-mix(in oklch, var(--color-accent) 85%, white);
-  --ifm-color-primary-lightest: color-mix(in oklch, var(--color-accent) 70%, white);
-  --ifm-color-warning: var(--color-highlight);
-  --ifm-color-danger: var(--color-accent-2);
-  --ifm-background-color: var(--color-bg);
+  --ifm-color-primary: var(--color-action-primary);
+  --ifm-color-primary-dark: color-mix(in oklch, var(--color-action-primary) 90%, black);
+  --ifm-color-primary-darker: color-mix(in oklch, var(--color-action-primary) 85%, black);
+  --ifm-color-primary-darkest: color-mix(in oklch, var(--color-action-primary) 70%, black);
+  --ifm-color-primary-light: color-mix(in oklch, var(--color-action-primary) 90%, white);
+  --ifm-color-primary-lighter: color-mix(in oklch, var(--color-action-primary) 85%, white);
+  --ifm-color-primary-lightest: color-mix(in oklch, var(--color-action-primary) 70%, white);
+  --ifm-color-warning: var(--color-action-accent);
+  --ifm-color-danger: var(--color-danger);
+  --ifm-background-color: var(--color-canvas);
   --ifm-font-color-base: var(--color-text);
-  --ifm-font-family-base: var(--font-body);
+  --ifm-font-family-base: var(--font-sans);
   --ifm-heading-font-family: var(--font-heading);
-  --ifm-heading-font-weight: var(--font-heading-weight, 500);
+  --ifm-heading-font-weight: 700;
   --ifm-global-radius: var(--radius-sm);
   --ifm-code-font-size: 92%;
-  --docusaurus-highlighted-code-line-bg: color-mix(in oklch, var(--color-highlight) 25%, transparent);
+  --docusaurus-highlighted-code-line-bg: color-mix(in oklch, var(--color-action-accent) 25%, transparent);
 }
 
 [data-theme='dark'] {
-  --ifm-color-primary: color-mix(in oklch, var(--color-accent) 45%, white);
-  --ifm-color-primary-dark: color-mix(in oklch, var(--color-accent) 55%, white);
-  --ifm-color-primary-darker: color-mix(in oklch, var(--color-accent) 60%, white);
-  --ifm-color-primary-darkest: color-mix(in oklch, var(--color-accent) 70%, white);
-  --ifm-color-primary-light: color-mix(in oklch, var(--color-accent) 35%, white);
-  --ifm-color-primary-lighter: color-mix(in oklch, var(--color-accent) 30%, white);
-  --ifm-color-primary-lightest: color-mix(in oklch, var(--color-accent) 20%, white);
+  --ifm-color-primary: color-mix(in oklch, var(--color-action-primary) 45%, white);
+  --ifm-color-primary-dark: color-mix(in oklch, var(--color-action-primary) 55%, white);
+  --ifm-color-primary-darker: color-mix(in oklch, var(--color-action-primary) 60%, white);
+  --ifm-color-primary-darkest: color-mix(in oklch, var(--color-action-primary) 70%, white);
+  --ifm-color-primary-light: color-mix(in oklch, var(--color-action-primary) 35%, white);
+  --ifm-color-primary-lighter: color-mix(in oklch, var(--color-action-primary) 30%, white);
+  --ifm-color-primary-lightest: color-mix(in oklch, var(--color-action-primary) 20%, white);
   --ifm-background-color: color-mix(in oklch, var(--color-text) 92%, black);
-  --ifm-font-color-base: var(--color-bg);
+  --ifm-font-color-base: var(--color-canvas);
 }
 
 .navbar {
@@ -58,7 +58,7 @@
   padding: 20px;
   border: 1px solid color-mix(in oklch, var(--color-text) 14%, transparent);
   border-radius: var(--radius-md);
-  background: color-mix(in oklch, var(--color-bg) 60%, white);
+  background: color-mix(in oklch, var(--color-canvas) 60%, white);
   color: inherit;
 }
 [data-theme='dark'] .nl-card {
@@ -89,13 +89,13 @@ a.nl-card:focus-visible {
   margin: 8px 0 0;
   padding: 2px 10px;
   border-radius: var(--radius-pill);
-  background: color-mix(in oklch, var(--color-highlight) 30%, transparent);
+  background: color-mix(in oklch, var(--color-action-accent) 30%, transparent);
   font-size: 0.85rem;
 }
 .nl-swagger {
   margin-top: 40px;
 }
 :focus-visible {
-  outline: 2px solid var(--color-highlight);
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }

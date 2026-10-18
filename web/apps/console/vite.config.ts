@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, type Plugin, type ProxyOptions } from 'vite';
 import react from '@vitejs/plugin-react';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
+import { brandHtml } from '@northline/tokens/vite';
 
 /**
  * Local "dev auth" (as the Studio's): with NL_DEV_USER set (a seeded staff member's identity.users id) /api goes
@@ -40,7 +41,7 @@ export default defineConfig(({ mode }) => {
       // exceeded. Tests import the whole route tree up front instead; builds keep their code splitting.
       target: 'react', autoCodeSplitting: !process.env.VITEST,
       codeSplittingOptions: { defaultBehavior: [['loader', 'component'], ['pendingComponent'], ['errorComponent'], ['notFoundComponent']] },
-    }), react(), devAuth(env)],
+    }), react(), devAuth(env), brandHtml()],
     server: { port: 3200, proxy },
     test: {
       environment: 'jsdom', globals: true, setupFiles: ['./src/test/setup.ts'], css: false,

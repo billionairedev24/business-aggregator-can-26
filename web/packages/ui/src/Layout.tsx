@@ -9,7 +9,7 @@ export const Panel = ({ children, tight, className, style, as: As = 'div', ...re
   <As className={clsx('nl-panel', tight && 'nl-panel-tight', className)} style={style} {...rest}>{children}</As>;
 
 export interface PageHeaderProps { kicker?: ReactNode; title: ReactNode; lede?: ReactNode; actions?: ReactNode }
-/** Kicker (uppercase, 13px) + serif h1 + optional actions — the header of every Studio screen. */
+/** Kicker (xs uppercase) + H1 (3xl bold) + optional lede and actions — the header of every back-office screen. */
 export function PageHeader({ kicker, title, lede, actions }: PageHeaderProps) {
   return (
     <div className="nl-page-head">
@@ -87,7 +87,7 @@ export function Meter({ label, value, display, floor = 0 }: { label: ReactNode; 
 }
 
 export const Avatar = ({ initials, size = 34, tone = 'accent' }: { initials: string; size?: number; tone?: 'accent' | 'dark' }) =>
-  <span className="nl-avatar" aria-hidden style={{ width: size, height: size, fontSize: Math.round(size * 0.38), background: tone === 'dark' ? 'var(--color-accent-700)' : undefined }}>{initials}</span>;
+  <span className="nl-avatar" aria-hidden style={{ width: size, height: size, fontSize: Math.round(size * 0.38), background: tone === 'dark' ? 'var(--color-action-dark)' : undefined }}>{initials}</span>;
 
 export const Skeleton = ({ width = '100%', height = 14, radius, style }: { width?: number | string; height?: number | string; radius?: number | string; style?: CSSProperties }) =>
   <span className="nl-skel" aria-hidden style={{ display: 'block', width, height, borderRadius: radius, ...style }} />;
@@ -106,8 +106,9 @@ export function PageSkeleton({ kpis = 4, rows = 5 }: { kpis?: number; rows?: num
   );
 }
 
-export function EmptyState({ children, action }: { children: ReactNode; action?: ReactNode }) {
-  return <div className="nl-empty"><span>{children}</span>{action}</div>;
+/** Inline, never an illustration (redesign § 1.3): one bold line (`title`), one muted sentence, one primary action. */
+export function EmptyState({ title, children, action }: { title?: ReactNode; children?: ReactNode; action?: ReactNode }) {
+  return <div className="nl-empty">{title ? <strong className="nl-empty-title">{title}</strong> : null}{children ? <span>{children}</span> : null}{action}</div>;
 }
 
 export function ErrorState({ message, onRetry }: { message: ReactNode; onRetry?: () => void }) {
@@ -116,7 +117,7 @@ export function ErrorState({ message, onRetry }: { message: ReactNode; onRetry?:
     <>
       <FallbackHeading />
       <div className="nl-errorstate" role="alert">
-        <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}><WarningCircle size={18} weight="duotone" aria-hidden />{message}</span>
+        <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}><WarningCircle size={18} aria-hidden />{message}</span>
         {onRetry ? <button type="button" className="btn btn-secondary" onClick={onRetry}>{t('retry')}</button> : null}
       </div>
     </>
