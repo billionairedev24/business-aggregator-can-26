@@ -8717,3 +8717,66 @@ and can move to `@northline/ui` as they are (no Studio imports, semantic tokens 
   and the Studio's auth, onboarding, dashboard, catalogue, orders, appointments, availability, finance and storefront
   features.
 - **Schema additions:** none. No backend change.
+
+## 2026-10-18 — Redesign phase 3: the console basics (spec § 4)
+
+Branch `feat/redesign-console`. The staff console screens of the demo path rebuilt on the AT back-office layouts
+(`docs/design/redesign-spec.md` § 2.3, BO:263 dashboard, BO `apps` / `orgs` / `orders` / `disputes` + the BO:811
+sheet); UI only — no backend, schema or api change.
+
+- **Back-office blocks in `@northline/ui`.** The Studio's `components/BackOffice.tsx` moved as is to
+  `packages/ui/src/BackOffice.tsx` (+ `styles/backoffice.css`, in `@northline/ui/styles.css`): `BoHeader`,
+  `KpiStrip`, `ChartCard`, `TodoCard`, `SheetSection`, `FactList`, plus a `.bo-page` column. The Studio imports them
+  from `@northline/ui` (behaviour unchanged); they have a Storybook story and an axe test in both languages. One
+  addition: a `TodoItem` without `onClick` renders a static row (the count without the way in) — the console shows
+  every queue but opens only the screens the active role opens.
+- **Page heads.** Every rebuilt console screen's h1 is the screen's name (Overview, Applications, Sellers & providers,
+  Orders & bookings, Disputes & refunds) with the figures as the sub line and the province / market filters on the
+  right; the generated headline sentences ("$212k GMV this week, 1,204 sellers …", "2 applications · median …") left
+  the h1 (as the Studio's dashboard headline did in phase 2). Kickers are gone. The h1 shows while a screen loads.
+- **Overview** (BO:263): KPI strip of the last 7 days (GMV with the change vs last week in green/red, net revenue and
+  take, orders + bookings and the goods share, on-time and dispute rate against their targets, the average delivery
+  fee — volume, on-time and disputes open their screens), GMV · 12 weeks in a chart card (goods = primary, services =
+  accent; the "goods in cyan, services in magenta" line is gone with its colour words), the "To do" card (applications
+  to review, flagged listings, disputes, stuck runs, trust flags, sellers below a floor — each with its SLA line),
+  "Live now" as facts, and system health as tiles. Same `GET /api/v1/console/overview`.
+- **Applications (thrash item 12).** Verification and listing vetting are one sidebar entry, "Applications"
+  (`verify`'s nav label; fr "Demandes"), lit on both `/verification` and `/vetting` (`navKey`), shown when the role
+  opens either. The screen's tabs are Businesses (`/verification`) · Listings · Licences · Age checks (`/vetting`,
+  `?view=`), each shown when the role opens its screen; both routes, their search params and every endpoint stay.
+  The vetting views' titles became h2 under the shared head; their tables are unchanged (restyle: later).
+- **Two-person review: not built.** The api records one decision per application (`approve` / `request_info`, role
+  `verify`) — there is no reviewer → approver step or four-eyes rule as in AT's `apps` module. The UI shows the
+  application's two **status stages** from what the api has: *1 · Review* while a check waits for an agent (an identity
+  mismatch or registry lookup, check state `review`), *2 · Decision* once none does; a KPI strip counts both, plus info
+  requested and approved. One person may settle the reviews and decide. A real second approver needs an api change
+  (a decision state, the second person, the audit) — later.
+- **The application sheet** (BO:811, 680px, `?application=`): the stages, every field the application row carries
+  (business and legal name, type, structure, categories, location, submitted, risk, decision), the checks, owners'
+  identity reviews and registry lookups with their approve / reject (as before), the history; Approve / Request info
+  in the sheet's footer, "View only · {role}" without the action. The structure codes are named in both languages;
+  `corp_ab` reads "Provincial corporation" (no province name in code). The request-info dialog is unchanged. The old
+  lede ("Approved sellers start at Registered; a welcome call fast-tracks Trusted") and "Approved · Registered" went
+  with the tier promises (thrash item 13).
+- **Sellers & providers** (BO `orgs`): the table as before under the page head; a row opens the right sheet
+  (`?seller=`, `GET /api/v1/console/sellers/{id}`): at a glance (type and region, tier, status, rating, quality /
+  on-time / disputes with "below the floor", 90-day GMV), flags, verification on file, the last three trail entries,
+  "Open the full page" and Suspend / Reinstate. The full page (`/sellers/$sellerId`) keeps every oversight action,
+  now as the page head, a KPI strip against the floors and four cards (oversight, signals, timeline, verification).
+  The tier column stays: in the console a tier is an operational fact staff change, not a decorative tag.
+- **Orders & bookings** (BO `orders`): a KPI strip of the four views (each card opens its view), the chips and the
+  reference search, the table, and the sheet with the status tag, "Needs attention" (the row's issue), the order facts,
+  the delivery and the pickups.
+- **Disputes & refunds** (BO `disputes`): the side list + panel became the table (case and subject, customer →
+  seller, amount, opened, state: for an agent / waiting for a co-sign / decided) under a KPI strip; a row opens the
+  case in the sheet (`?case=kind:id`, as before) with both sides, the evidence and the decision or co-sign. Nothing
+  opens until a case is picked (the first case used to open by itself).
+- **Thrash items in the console.** Already hidden in phase 0: Pilot, UAT, Go-live, API, On-call (`VITE_NL_TESTING_TOOLS`).
+  Done here: verification + vetting merged. *Not done:* Provinces → Markets (spec phase 5: the region/zone look),
+  the console sign-in in two columns.
+- **i18n / a11y.** Every new string in en and fr-CA. One h1 per screen (also while loading and on errors, S-142);
+  the KPI strips are named lists; sheet actions and to-do rows are 44px; the stage list marks `aria-current="step"`.
+  360px: the sheet is `min(680px, 100%)`, facts stack under 420px, every grid is `minmax(min(100%, …), 1fr)`.
+- **Tokens.** `pnpm lint:tokens` now covers the console's overview, verify, vetting, sellers, orders and disputes
+  features (the Studio's `components` root went with the move to `@northline/ui`).
+- **Schema additions:** none. No backend change.
