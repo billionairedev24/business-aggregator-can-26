@@ -2,11 +2,15 @@
 {{- if and .Values.secrets.create (ne .Values.global.environment "local") }}
 {{- fail "secrets.create renders secrets from Helm values and is allowed only with global.environment=local (kind). Create the Secret outside the chart, or use External Secrets (S-6)." }}
 {{- end }}
-{{- if not (has .Values.global.environment (list "local" "dev" "staging" "prod")) }}
-{{- fail (printf "global.environment must be local, dev, staging or prod (got %q)" .Values.global.environment) }}
+{{- if not (has .Values.global.environment (list "local" "dev" "staging" "prod" "dryrun")) }}
+{{- fail (printf "global.environment must be local, dev, staging, prod or dryrun (got %q)" .Values.global.environment) }}
 {{- end }}
-{{- if and (has .Values.global.environment (list "staging" "prod")) (not (hasPrefix "https://" .Values.urls.auth)) }}
-{{- fail "urls.* must be https:// in staging and prod" }}
+{{- /* dryrun (the GCP demo, docs/runbooks/dryrun-gcp.md) has no Spring profile of its own: it names one. */ -}}
+{{- if and (eq .Values.global.environment "dryrun") (not (has .Values.global.springProfiles (list "dev" "staging" "prod"))) }}
+{{- fail "global.environment=dryrun needs global.springProfiles: dev, staging or prod (values-dryrun.yaml: dev)" }}
+{{- end }}
+{{- if and (has .Values.global.environment (list "staging" "prod" "dryrun")) (not (hasPrefix "https://" .Values.urls.auth)) }}
+{{- fail "urls.* must be https:// in staging, prod and dryrun" }}
 {{- end }}
 {{- if and .Values.apps.api.docsRoutes (eq .Values.global.environment "prod") }}
 {{- fail "apps.api.docsRoutes exposes the API documentation and is not allowed in prod (S-125: prod publishes no spec; the docs site carries the public ones)" }}

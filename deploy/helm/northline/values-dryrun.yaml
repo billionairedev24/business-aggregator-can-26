@@ -1,0 +1,139 @@
+# dryrun — the short-lived demo environment on Google Cloud (docs/runbooks/dryrun-gcp.md, DECISIONS 2026-10-18): fake
+# data only, one zonal GKE cluster, one replica of everything, small requests. Layer after the Google Cloud overlay
+# and before Terraform's values:
+#
+#   helm upgrade --install northline deploy/helm/northline -n northline-dryrun \
+#     -f deploy/helm/northline/values-gcp.yaml -f deploy/helm/northline/values-dryrun.yaml \
+#     -f northline-dryrun-values.json \          # terraform output -json helm_values (infra/terraform/envs/gcp/dryrun)
+#     --set global.image.registry=$REGISTRY --set global.image.tag=$IMAGE_TAG --wait --timeout 20m
+#
+# Data services (Terraform data_services): Postgres + PostGIS, Valkey, Meilisearch and Kafka in the cluster (chart
+# deploy/helm/northline-data, installed first) or at an external provider; either way their endpoints come in
+# configEnv and their credentials from Secret Manager (externalSecrets.remoteKeys from Terraform).
+global:
+  environment: dryrun
+  # No profile of its own: `dev` — the cloud shape (required variables, Kafka externalization, Secure cookies, no dev
+  # seed) with the local fakes allowed where no third-party account exists yet (registries, calendar, POS, places,
+  # AI, SMS codes in the auth log). Stripe runs in test mode (keys below). `staging` once those accounts exist.
+  springProfiles: dev
+
+# Hosts in the dry run's zone (Terraform dns_zone_name, delegated from northline.ca — the runbook's DNS step).
+urls:
+  auth: https://auth.demo.northline.ca
+  api: https://api.demo.northline.ca
+  studio: https://studio.demo.northline.ca
+  consumer: https://demo.northline.ca
+  console: https://console.demo.northline.ca
+  pages: https://pages.demo.northline.ca
+  docs: ""                        # no documentation site in the demo
+  docsInternal: ""
+  webauthnRpId: demo.northline.ca
+
+# S-17 edge: the chart's Gateway (Envoy Gateway, one proxy), a Let's Encrypt certificate per host over HTTP-01, records
+# by external-dns. Merchants' own domains are not part of the demo.
+gateway:
+  enabled: true
+edge:
+  enabled: true
+  domainReconciler:
+    enabled: false
+
+# S-20: only the Envoy Gateway proxies reach the public apps.
+networkPolicy:
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+
+# values-gcp.yaml trusts the Memorystore CA; the dry run's Valkey is in the cluster (no TLS) or external with a
+# publicly trusted certificate — no CA bundle.
+env:
+  SPRING_DATA_REDIS_SSL_BUNDLE: null
+  SPRING_SSL_BUNDLE_PEM_REDIS_TRUSTSTORE_CERTIFICATE: null
+  LOGGING_LEVEL_CA_NORTHLINE: info
+spring:
+  extraVolumes: []
+  extraVolumeMounts: []
+
+externalSecrets:
+  # Mapped although optional for the apps: Valkey has a password here (generated for the in-cluster one), Kafka in the
+  # cluster has no SASL and Meilisearch replaces Elasticsearch. An external Kafka with SASL: add KAFKA_SASL_JAAS_CONFIG.
+  optionalKeys: [REDIS_PASSWORD]
+  # Meilisearch search provider (SEARCH_PROVIDER=meilisearch, MEILISEARCH_URL from Terraform configEnv).
+  secretNames:
+    MEILISEARCH_API_KEY: meilisearch-api-key
+
+# Migrations and Kafka topics before every release, as everywhere; one broker = replication factor 1.
+kafkaTopics:
+  replicationFactor: "1"
+  minInsyncReplicas: "1"
+# The S-42 Job drives Elasticsearch (synonym sets, aliases); the Meilisearch adapter keeps its own index settings.
+searchIndices:
+  enabled: false
+
+mobileApps:
+  iosBundleIds: [ ca.northline.app.preview, ca.northline.courier.preview ]
+  androidPackages: [ ca.northline.app.preview, ca.northline.courier.preview ]
+
+apps:
+  api:
+    docsRoutes: true            # S-125: Swagger UI and the specs on the api host (demo of the API)
+    env:
+      # Emails are logged (no SMTP listener) until an email provider exists: EMAIL_PROVIDER=sendgrid + EMAIL_API_KEY
+      # (add it to externalSecrets.optionalKeys), docs/runbooks/email.md.
+      EMAIL_PROVIDER: local
+      EMAIL_FROM: "Northline demo <no-reply@demo.northline.ca>"
+      DB_POOL_SIZE: "8"
+    resources:
+      requests: { cpu: 200m, memory: 900Mi }
+      limits: { memory: 900Mi }
+    secretEnv:
+      STRIPE_SECRET_KEY: true       # Stripe TEST mode keys (sk_test_…, pk_test_…) — docs/runbooks/stripe.md
+      STRIPE_PUBLISHABLE_KEY: true
+      STRIPE_WEBHOOK_SECRET: true
+      STRIPE_CONNECT_WEBHOOK_SECRET: true
+      MEILISEARCH_API_KEY: true
+  auth:
+    env:
+      OAUTH_CLIENTS_SYNC_ON_STARTUP: "true"
+      DB_POOL_SIZE: "5"
+    resources:
+      requests: { cpu: 100m, memory: 640Mi }
+      limits: { memory: 640Mi }
+  bff:
+    resources:
+      requests: { cpu: 50m, memory: 400Mi }
+      limits: { memory: 400Mi }
+  consumer-bff:
+    resources:
+      requests: { cpu: 50m, memory: 400Mi }
+      limits: { memory: 400Mi }
+  console-bff:
+    resources:
+      requests: { cpu: 50m, memory: 400Mi }
+      limits: { memory: 400Mi }
+  worker:
+    env:
+      EMAIL_PROVIDER: local
+      EMAIL_FROM: "Northline demo <no-reply@demo.northline.ca>"
+      DB_POOL_SIZE: "5"
+    resources:
+      requests: { cpu: 50m, memory: 448Mi }
+      limits: { memory: 448Mi }
+    secretEnv:
+      MEILISEARCH_API_KEY: true
+  docs:
+    enabled: false
+
+# Traces, metrics and logs to Google Cloud's own backends (values-gcp.yaml: Cloud Trace, Managed Service for
+# Prometheus, Cloud Logging) through one small Collector — no Prometheus/Loki/Tempo/Grafana pods to run.
+observability:
+  tracesSampleRatio: "1.0"
+  collector:
+    enabled: true
+    resources:
+      requests: { cpu: 50m, memory: 192Mi }
+      limits: { memory: 384Mi }
+    memoryLimitMiB: 300
+
+preStopSleepSeconds: 2

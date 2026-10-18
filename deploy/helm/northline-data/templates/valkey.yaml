@@ -1,0 +1,70 @@
+{{- /* Valkey: one pod, append-only file on a small zonal volume, password from REDIS_PASSWORD, no TLS (in-namespace). */ -}}
+{{- with .Values.valkey }}
+{{- if .enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: northline-valkey
+  labels:
+    {{- include "data.labels" (dict "root" $ "name" "valkey") | nindent 4 }}
+spec:
+  selector:
+    {{- include "data.selectorLabels" (dict "root" $ "name" "valkey") | nindent 4 }}
+  ports:
+    - { name: redis, port: 6379, targetPort: redis }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: northline-valkey
+  labels:
+    {{- include "data.labels" (dict "root" $ "name" "valkey") | nindent 4 }}
+spec:
+  serviceName: northline-valkey
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "data.selectorLabels" (dict "root" $ "name" "valkey") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "data.labels" (dict "root" $ "name" "valkey") | nindent 8 }}
+    spec:
+      {{- include "data.nodeSelector" $ | nindent 6 }}
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+        - name: valkey
+          image: "{{ .image.repository }}:{{ .image.tag }}"
+          args: ["valkey-server", "--dir", "/data", "--appendonly", "yes", "--save", "",
+                 "--maxmemory", {{ .maxmemory | quote }}, "--maxmemory-policy", "volatile-lru",
+                 "--requirepass", "$(REDIS_PASSWORD)"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom: { secretKeyRef: { name: northline-valkey, key: REDIS_PASSWORD } }
+          ports: [{ name: redis, containerPort: 6379 }]
+          readinessProbe:
+            exec: { command: ["sh", "-c", "valkey-cli --no-auth-warning -a \"$REDIS_PASSWORD\" ping | grep -q PONG"] }
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: redis }
+            periodSeconds: 20
+          resources:
+            {{- toYaml .resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+            readOnlyRootFilesystem: true
+          volumeMounts: [{ name: data, mountPath: /data }]
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: {{ $.Values.storageClassName }}
+        resources: { requests: { storage: {{ .storage.size }} } }
+{{- end }}
+{{- end }}

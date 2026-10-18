@@ -9,7 +9,8 @@
 # Terraform binds to cloud identities (infra/terraform/README.md § Workload identities). One release per namespace.
 
 global:
-  # dev | staging | prod | local. Selects the Spring profile unless global.springProfiles is set.
+  # dev | staging | prod | local | dryrun (the GCP demo; names its Spring profile in springProfiles). Selects the
+  # Spring profile unless global.springProfiles is set.
   environment: dev
   # SPRING_PROFILES_ACTIVE for api, auth, bff, worker. Empty = global.environment.
   springProfiles: ""
