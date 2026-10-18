@@ -77,7 +77,7 @@ describe('consumer header', () => {
     renderApp('/cart');
     await userEvent.click(within(await screen.findByRole('contentinfo')).getByRole('button', { name: 'Français' }));
     const nav = screen.getByRole('navigation', { name: 'Principale' });
-    expect(within(nav).getAllByRole('link').map(a => a.textContent)).toEqual(['Services', 'Boutique', 'Restaurants']);
+    expect(within(nav).getAllByRole('link').map(a => a.textContent)).toEqual(['Services', 'Boutique']);
     expect(within(screen.getByRole('contentinfo')).getByRole('button', { name: 'English' })).toHaveAttribute('lang', 'en-CA');
     await userEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Menu du compte' }));
     expect(screen.getByRole('menuitem', { name: 'Se connecter' })).toBeInTheDocument();
@@ -129,7 +129,7 @@ describe('guests', () => {
 });
 
 describe('the account menu', () => {
-  it('lists Orders & bookings first, with the design’s values when the api has them', async () => {
+  it('lists Orders and Bookings first, with the values when the api has them — no Wallet, Dietary or Plus (§ 3.6)', async () => {
     mockFetch(signedIn(c => c.url === '/api/v1/me/account-summary' ? { body: {
       reliability: 4.9, points: { balance: 12480, valueCents: 12480 }, plus: false, activeOrders: 3, favourites: 4, openCases: 1,
       paymentMethod: { brand: 'Visa', last4: '4471' }, addresses: { count: 2, members: 2 }, signIn: 'passkey', quietHours: { from: '10 pm', to: '7 am' },
@@ -141,22 +141,36 @@ describe('the account menu', () => {
     await within(menu).findByText('amara@example.ca · reliability 4.9');
     const items = within(menu).getAllByRole('menuitem');
     expect(items.map(i => i.textContent)).toEqual([
-      'Add photo', 'Orders & bookings3 active', 'Favourites4', 'Wallet & points12,480 pts',
-      'ProfileAmara Osei', 'Addresses & household2 · 2 members', 'Payment methodsVisa ··4471', 'Security & sign-inPasskey',
-      'NotificationsQuiet 10 pm–7 am', 'FrançaisEnglish · AB', 'Dietary & accessibilityHalal, step-free', `${brand.name} PlusTry free`,
+      'Add photo', 'Orders3 active', 'Bookings', 'Saved4',
+      'Your account', 'ProfileAmara Osei', 'Addresses2 · 2 members', 'Payment methodsVisa ··4471', 'Login & securityPasskey',
+      'NotificationsQuiet 10 pm–7 am', 'FrançaisEnglish · AB',
       'Help & cases1 open', 'Sell or offer a service', 'Sign out',
     ]);
-    expect(within(menu).getByRole('menuitem', { name: /Orders & bookings/ })).toHaveAttribute('href', '/account/orders');
-    expect(within(menu).getByText('12,480 pts', { selector: 'strong' })).toBeInTheDocument();
-    expect(within(menu).getByText('Standard')).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: /^Orders/ })).toHaveAttribute('href', '/account/orders');
+    expect(within(menu).getByRole('menuitem', { name: 'Bookings' })).toHaveAttribute('href', '/account/orders?tab=bookings');
+    expect(within(menu).getByRole('menuitem', { name: 'Your account' })).toHaveAttribute('href', '/account');
+    expect(within(menu).queryByText('12,480 pts')).toBeNull(); // the points card waits for the wallet (later)
+  });
+
+  it('brings Wallet, Dietary and Plus back with the full navigation', async () => {
+    vi.stubEnv('VITE_NL_FULL_NAV', '1');
+    mockFetch(signedIn(c => c.url === '/api/v1/me/account-summary' ? { body: { points: { balance: 12480, valueCents: 12480 }, plus: false } } : undefined));
+    renderApp('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }));
+    const menu = screen.getByRole('menu', { name: 'Account menu' });
+    expect(await within(menu).findByText('12,480 pts', { selector: 'strong' })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: /Wallet & points/ })).toHaveAttribute('href', '/account?tab=wallet');
+    expect(within(menu).getByRole('menuitem', { name: /Dietary & accessibility/ })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: new RegExp(`${brand.name} Plus`) })).toBeInTheDocument();
+    vi.unstubAllEnvs();
   });
 
   it('works without the summary (values hidden)', async () => {
     mockFetch(signedIn());
     renderApp('/');
     await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }));
-    const orders = await screen.findByRole('menuitem', { name: /Orders & bookings/ });
-    expect(orders).toHaveTextContent(/^Orders & bookings$/);
+    const orders = await screen.findByRole('menuitem', { name: /^Orders/ });
+    expect(orders).toHaveTextContent(/^Orders$/);
   });
 
   it('gives a screen reader the landmarks, names and states of the header (S-148)', async () => {
@@ -186,7 +200,7 @@ describe('the account menu', () => {
     mockFetch(signedIn());
     const { router } = renderApp('/');
     await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }));
-    await userEvent.click(screen.getByRole('menuitem', { name: /Orders & bookings/ }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /^Orders/ }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/account/orders'));
     expect(screen.queryByRole('menu')).toBeNull();
     expect(await screen.findByRole('heading', { name: 'Orders & bookings' })).toBeInTheDocument();

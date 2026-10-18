@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderApp, type Call } from '../../test/render';
@@ -135,10 +135,12 @@ describe('Payment methods (design 06 payments)', () => {
     expect(await screen.findByText('No saved cards yet. Add one to pay faster at checkout.')).toBeInTheDocument();
   });
 
-  it('the wallet lists the cards too', async () => {
+  it('the wallet lists the cards too (behind the full navigation, § 3.6)', async () => {
+    vi.stubEnv('VITE_NL_FULL_NAV', '1');
     open('wallet');
     expect(await screen.findByText('Visa ··4471')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add card' })).toBeInTheDocument();
+    vi.unstubAllEnvs();
   });
 });
 
@@ -286,7 +288,10 @@ describe('Notifications (design 06 notifications)', () => {
   });
 });
 
-describe('Language & region, Dietary & accessibility, Plus', () => {
+describe('Language & region, Dietary & accessibility, Plus (behind the full navigation, § 3.6)', () => {
+  beforeEach(() => { vi.stubEnv('VITE_NL_FULL_NAV', '1'); });
+  afterEach(() => { vi.unstubAllEnvs(); });
+
   it('switching to Français saves it and changes the page', async () => {
     open('language');
     await userEvent.click(await screen.findByRole('button', { name: /requis au Québec/ }));

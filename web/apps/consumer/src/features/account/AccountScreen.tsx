@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import clsx from 'clsx';
 import { Link, useSearch } from '@tanstack/react-router';
-import { EmptyState, SiteLink, Skeleton } from '@northline/ui';
+import { Bell, CalendarCheck, CreditCard, Heart, Lifebuoy, MapPinLine, Package, ShieldCheck, Storefront, User } from '@phosphor-icons/react';
+import { EmptyState, SiteLink, Skeleton, fullNavEnabled } from '@northline/ui';
 import { signInHref, useViewer } from '../session/api';
 import { useAccountT } from './messages';
-import { ACCOUNT_TABS, isAccountTab, tabHref, type AccountTab } from './tabs';
+import { isAccountTab, tabHref, type AccountTab } from './tabs';
 import { AddressesTab } from './AddressesTab';
 import { DietaryTab } from './DietaryTab';
 import { FavouritesTab } from './FavouritesTab';
@@ -34,23 +34,31 @@ const TABS: Partial<Record<AccountTab, () => ReactNode>> = {
   help: () => <HelpTab />,
 };
 
+/** The account's sections hidden for the demo (redesign § 3.6): Wallet & points, Dietary, Plus and Language. */
+export const LATER_TABS: readonly AccountTab[] = ['wallet', 'dietary', 'plus', 'language'];
+const visible = (tab: AccountTab) => fullNavEnabled() || !LATER_TABS.includes(tab);
+
 /**
- * The account area (design 06 `account`): the tabs on the left (a wrapping row on phones), the chosen tab on the right.
- * `?tab=` picks it (the account menu's links); unknown or missing → Wallet & points. Personal: loaded in the browser.
+ * The account (redesign § 2.1, AT Shop:596 AccountHome): `/account` is "Your Account" — a card grid (Orders, Bookings,
+ * Addresses, Payments, Login & security, Notifications, Saved, Profile, Help, Sell) — and `?tab=` opens one section
+ * under a "Your account ›" crumb (the account menu's links). The eleven-tab rail that opened on Wallet & points is gone
+ * (§ 3.6); the sections hidden for the demo open the card grid unless `VITE_NL_FULL_NAV` is set. Personal: loaded in
+ * the browser.
  */
 export function AccountScreen() {
   const t = useAccountT();
   const search = useSearch({ strict: false }) as { tab?: unknown };
-  const tab: AccountTab = isAccountTab(search.tab) ? search.tab : 'wallet';
+  const tab: AccountTab | null = isAccountTab(search.tab) && visible(search.tab) ? search.tab : null;
   const { user, loading } = useViewer();
   if (loading) return <AccountSkeleton />;
   if (!user) {
     return (
       <div className="nl-page nl-acct">
-        <EmptyState action={<SiteLink href={signInHref(tabHref(tab))} className="btn btn-primary">{t('signInAction')}</SiteLink>}>{t('signIn')}</EmptyState>
+        <EmptyState action={<SiteLink href={signInHref(tab ? tabHref(tab) : '/account')} className="btn btn-primary">{t('signInAction')}</SiteLink>}>{t('signIn')}</EmptyState>
       </div>
     );
   }
+  if (!tab) return <AccountHome />;
   return (
     <AccountLayout tab={tab}>
       {TABS[tab]?.() ?? <TabPending tab={tab} />}
@@ -58,21 +66,51 @@ export function AccountScreen() {
   );
 }
 
+const CARDS = [
+  { key: 'orders', href: '/account/orders', icon: Package },
+  { key: 'bookings', href: '/account/orders?tab=bookings', icon: CalendarCheck },
+  { key: 'addresses', href: tabHref('addresses'), icon: MapPinLine },
+  { key: 'payments', href: tabHref('payments'), icon: CreditCard },
+  { key: 'security', href: tabHref('security'), icon: ShieldCheck },
+  { key: 'notifications', href: tabHref('notifications'), icon: Bell },
+  { key: 'favourites', href: tabHref('favourites'), icon: Heart },
+  { key: 'profile', href: tabHref('profile'), icon: User },
+  { key: 'help', href: tabHref('help'), icon: Lifebuoy },
+  { key: 'sell', href: '/sell', icon: Storefront },
+] as const;
+
+/** "Your Account" (AT Shop:596): max-width 1100, a card grid minmax(300px,1fr) — a 48px icon circle, title, one line. */
+function AccountHome() {
+  const t = useAccountT();
+  return (
+    <div className="nl-page nl-acct nl-acct-home">
+      <h1 className="nl-acct-h1">{t('homeTitle')}</h1>
+      <ul className="nl-acct-cards" aria-label={t('homeLabel')}>
+        {CARDS.map(c => (
+          <li key={c.key}>
+            <SiteLink href={c.href} className="nl-acct-card">
+              <span className="nl-acct-card-icon" aria-hidden><c.icon size={24} /></span>
+              <span className="nl-acct-card-text">
+                <span className="nl-acct-card-title">{t(`card_${c.key}`)}</span>
+                <span className="nl-acct-card-desc">{t(`card_${c.key}_desc`)}</span>
+              </span>
+            </SiteLink>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** One section of the account under the "Your account ›" crumb (the section's own h1 follows). */
 export function AccountLayout({ tab, children }: { tab: AccountTab; children: ReactNode }) {
   const t = useAccountT();
   return (
     <div className="nl-page nl-acct">
-      <div className="nl-acct-grid">
-        <nav className="nl-acct-tabs" aria-label={t('tabsLabel')}>
-          {ACCOUNT_TABS.map(k => (
-            <Link key={k} to="/account" search={{ tab: k } as never} className={clsx('nl-acct-tab', k === tab && 'is-current')} aria-current={k === tab ? 'page' : undefined}>
-              {t(`tab_${k}`)}
-            </Link>
-          ))}
-          <SiteLink href="/sell" className="nl-acct-tab">{t('tab_sell')}</SiteLink>
-        </nav>
-        <section className="nl-acct-body" aria-labelledby="acct-title">{children}</section>
-      </div>
+      <nav aria-label={t('crumbs')} className="nl-acct-crumbs">
+        <Link to="/account">{t('crumbAccount')}</Link> › <span aria-current="page">{t(`tab_${tab}`)}</span>
+      </nav>
+      <section className="nl-acct-body" aria-labelledby="acct-title">{children}</section>
     </div>
   );
 }
@@ -93,8 +131,8 @@ export function AccountSkeleton() {
     <div className="nl-page nl-acct" aria-busy="true">
       <span className="nl-sr-only">{t('loading')}</span>
       <div className="nl-acct-grid">
-        <div className="nl-acct-tabs">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} height={36} />)}</div>
-        <div><Skeleton width="50%" height={40} /><Skeleton width="70%" height={16} style={{ marginTop: 14 }} /><Skeleton height={120} style={{ marginTop: 18 }} /></div>
+        <Skeleton width="40%" height={40} />
+        <div className="nl-acct-cards">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} height={96} radius={8} />)}</div>
       </div>
     </div>
   );

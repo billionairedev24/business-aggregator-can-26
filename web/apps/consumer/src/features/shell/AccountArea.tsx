@@ -1,5 +1,5 @@
-import { Bell, CreditCard, Heart, Leaf, Lifebuoy, MapPinLine, Receipt, ShieldCheck, SignOut, Star, Storefront, Translate, User, Wallet } from '@phosphor-icons/react';
-import { AccountMenu, formatMoney, formatNumber, useLocale, type AccountMenuSection } from '@northline/ui';
+import { Bell, CalendarCheck, CreditCard, Heart, Leaf, Lifebuoy, MapPinLine, Receipt, ShieldCheck, SignOut, Star, Storefront, Translate, User, UserCircle, Wallet } from '@phosphor-icons/react';
+import { AccountMenu, formatMoney, formatNumber, fullNavEnabled, useLocale, type AccountMenuSection } from '@northline/ui';
 import { useAccountSummary, type AccountSummary } from '../account/api';
 import type { SessionUser } from '../session/api';
 import { useShellT } from './messages';
@@ -7,6 +7,8 @@ import { useShellT } from './messages';
 /** Where each menu item goes (routes of S-58 / S-59 / S-61; docs/CONSUMER_WEB_PLAN.md § Routes). */
 export const ACCOUNT_LINKS = {
   orders: '/account/orders',
+  bookings: '/account/orders?tab=bookings',
+  account: '/account',
   favourites: '/account?tab=favourites',
   wallet: '/account?tab=wallet',
   profile: '/account?tab=profile',
@@ -28,17 +30,19 @@ export function AccountArea({ user, onSignOut, onToggleLocale }: { user: Session
   const { data: s } = useAccountSummary(true);
   const name = `${user.firstName} ${user.lastName}`.trim() || user.email || '';
   const v = values(s ?? null, t, locale, name);
-  const item = (key: keyof typeof ACCOUNT_LINKS, icon: typeof Receipt, value?: string) => ({ key, label: t(key === 'sell' ? 'sellOrOffer' : key), icon, value, href: ACCOUNT_LINKS[key] });
+  const item = (key: keyof typeof ACCOUNT_LINKS, icon: typeof Receipt, value?: string) => ({ key, label: t(key === 'sell' ? 'sellOrOffer' : key === 'account' ? 'yourAccount' : key), icon, value, href: ACCOUNT_LINKS[key] });
+  // redesign § 3.6: Wallet & points, Dietary and Plus are hidden for the demo (VITE_NL_FULL_NAV brings them back)
+  const full = fullNavEnabled();
   const sections: AccountMenuSection[] = [
-    { heading: t('activity'), items: [item('orders', Receipt, v.orders), item('favourites', Heart, v.favourites), item('wallet', Wallet, v.wallet)] },
-    { heading: t('account'), items: [item('profile', User, name), item('addresses', MapPinLine, v.addresses), item('payments', CreditCard, v.payments), item('security', ShieldCheck, v.security)] },
+    { heading: t('activity'), items: [item('orders', Receipt, v.orders), item('bookings', CalendarCheck), item('favourites', Heart, v.favourites), ...(full ? [item('wallet', Wallet, v.wallet)] : [])] },
+    { heading: t('account'), items: [item('account', UserCircle), item('profile', User, name), item('addresses', MapPinLine, v.addresses), item('payments', CreditCard, v.payments), item('security', ShieldCheck, v.security)] },
     // redesign § 3.3: the FR/EN switch lives here and in the footer (it left the header)
-    { heading: t('preferences'), items: [item('notifications', Bell, v.quiet), { key: 'language', label: t('langSwitch'), lang: locale === 'fr' ? 'en-CA' : 'fr-CA', icon: Translate, value: v.language, onSelect: onToggleLocale }, item('dietary', Leaf, v.dietary), item('plus', Star, v.plus)] },
+    { heading: t('preferences'), items: [item('notifications', Bell, v.quiet), { key: 'language', label: t('langSwitch'), lang: locale === 'fr' ? 'en-CA' : 'fr-CA', icon: Translate, value: v.language, onSelect: onToggleLocale }, ...(full ? [item('dietary', Leaf, v.dietary), item('plus', Star, v.plus)] : [])] },
     { heading: '', items: [item('help', Lifebuoy, v.help), item('sell', Storefront), { key: 'signOut', label: t('signOut'), icon: SignOut, onSelect: onSignOut }] },
   ];
   const email = user.email ?? '';
   const detail = s?.reliability != null && email ? t('reliability', { email, score: formatNumber(s.reliability, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }) : email || undefined;
-  const card = s?.points ? (
+  const card = full && s?.points ? (
     <>
       <span><strong>{t('points', { count: formatNumber(s.points.balance, locale) })}</strong> · {formatMoney(s.points.valueCents, locale)}</span>
       {s.plus != null && <span className="tag tag-highlight">{t(s.plus ? 'plusTag' : 'standardTag')}</span>}
