@@ -21,9 +21,11 @@ describe('orders & bookings (S-81, design 03)', () => {
   it('shows the week, what needs attention and the design’s chips', async () => {
     const calls = staffApi(['dispatch'], c => (c.url.includes('/api/v1/console/orders') ? { body: monitor() } : undefined));
     renderConsole('/orders');
-    expect(await screen.findByRole('heading', { level: 1, name: '6,812 this week · 14 need attention' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Orders & bookings' })).toBeTruthy();
+    expect(await screen.findByText('6,812 this week · 14 need attention')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByText('Orders & bookings', { selector: '.nl-or-kicker' })).toBeTruthy();
+    const kpis = within(screen.getByRole('list', { name: 'Right now' }));
+    for (const [label, n] of [['Needs attention', '14'], ['Live', '431'], ['Escrow > 48 h', '6'], ['Late', '9']]) expect(kpis.getByRole('button', { name: `${label} ${n}` })).toBeTruthy();
     for (const chip of ['Needs attention · 14', 'Live · 431', 'Escrow > 48 h · 6', 'Late · 9', 'All']) expect(screen.getByRole('button', { name: chip })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Needs attention · 14' }).getAttribute('aria-pressed')).toBe('true');
     const table = document.querySelector('.nl-dt') as HTMLElement;
@@ -69,12 +71,25 @@ describe('orders & bookings (S-81, design 03)', () => {
     expect(within(drawer).getByText('Sam T.')).toBeTruthy();
     expect(within(drawer).getByText('late')).toBeTruthy();
     expect(within(drawer).getByText('Bridgeland Butcher')).toBeTruthy();
+    expect(within(drawer).getByText('Courier run has a stop more than 10 min overdue')).toBeTruthy(); // the sheet's "Needs attention"
+    expect(within(drawer).getByText('Customer → seller').nextElementSibling?.textContent).toBe('R. Diaz → A, B, C');
+  });
+
+  it('opens a view from its KPI card', async () => {
+    const calls = staffApi(['dispatch'], c => (c.url.includes('/api/v1/console/orders') ? { body: monitor() } : undefined));
+    const user = userEvent.setup({ delay: null });
+    const { router } = renderConsole('/orders');
+    await screenReady();
+    await user.click(within(screen.getByRole('list', { name: 'Right now' })).getByRole('button', { name: /^Escrow > 48 h/ }));
+    await waitFor(() => expect(calls.some(c => c.url.includes('/api/v1/console/orders?view=escrow'))).toBe(true));
+    expect(router.state.location.search).toMatchObject({ view: 'escrow' });
   });
 
   it('shows an empty list, an error with retry, and French', async () => {
     staffApi(['dispatch'], c => (c.url.includes('/api/v1/console/orders') ? { body: monitor([]) } : undefined));
     const first = renderConsole('/orders', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: /6\s812 cette semaine · 14 à traiter/ })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Commandes et réservations' })).toBeTruthy();
+    expect(await screen.findByText(/6\s812 cette semaine · 14 à traiter/)).toBeTruthy();
     expect(screen.getByText('Rien pour l’instant.')).toBeTruthy();
     first.unmount();
     staffApi(['dispatch'], c => (c.url.includes('/api/v1/console/orders') ? { status: 500, body: { detail: 'boom' } } : undefined));

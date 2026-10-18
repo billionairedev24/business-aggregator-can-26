@@ -5,8 +5,7 @@ import { CheckCircle, XCircle } from '@phosphor-icons/react';
 import { Button, Checkbox, DataTable, Dialog, ErrorState, Field, formatMoney, formatNumber, PageSkeleton, TextArea, useLocale, type DataTableAction, type DataTableColumn, type DataTableTone, type Locale } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
-import { PlaceFilters, type PlaceFilter } from '../shell/PlaceFilters';
-import { SCREEN_PATH } from '../shell/screens';
+import type { PlaceFilter } from '../shell/PlaceFilters';
 import { REJECT_REASONS, useDecideVetting, vettingQuery, type Item, type RejectReason } from './api';
 import { useVettingT, type VettingKey, type VettingT } from './messages';
 import '../shell/queues.css';
@@ -58,10 +57,9 @@ export function ListingVetting() {
   const [rejecting, setRejecting] = useState<Item | null>(null);
   const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
 
-  const header = <div className="nl-q-top"><span className="nl-q-kicker">{t('kicker')}</span><PlaceFilters to={SCREEN_PATH.vetting} filter={filter} /></div>;
   if (query.isPending) return <PageSkeleton kpis={0} rows={6} />;
   if (query.isError && !query.data) {
-    return <div>{header}{query.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />}</div>;
+    return <div>{query.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />}</div>;
   }
   const data = query.data!;
   const status = (i: Item) => (i.state === 'pending' ? t('pending') : i.state === 'approved' ? t('approved') : i.state === 'rejected' ? t('rejected') : i.state);
@@ -98,8 +96,7 @@ export function ListingVetting() {
   };
   return (
     <div>
-      {header}
-      <h1 className="nl-q-title">{t('title', { auto: formatNumber(data.autoApproved, locale), n: data.flagged })}</h1>
+      <h2 className="nl-q-h2">{t('title', { auto: formatNumber(data.autoApproved, locale), n: data.flagged })}</h2>
       <p className="nl-q-lede">{t('lede')}</p>
       {notice ? <p role={notice.tone === 'error' ? 'alert' : 'status'} className={notice.tone === 'error' ? 'nl-q-error' : 'nl-q-note'}>{notice.text}</p> : null}
       <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}

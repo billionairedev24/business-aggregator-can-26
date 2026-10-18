@@ -43,6 +43,7 @@ Steps (redesign § 3.10, 2026-10-18): account → business (legal fields per `do
 
 ## Platform console — `design/03 Platform Console.dc.html` (`role` prop)
 overview · orders · disputes · delivery · sellers · seller_detail · verify · vetting · trust · taxonomy · support · regions · finance · reports · api · team · profile (security, sessions, audit, prefs) · oncall · denied (role gate)
+Redesign phase 3 (2026-10-18): verify + vetting are one sidebar entry, **Applications** (Businesses · Listings · Licences · Age checks tabs; spec § 3.12); overview, applications, sellers, orders and disputes use the back-office page head, KPI strip and the 680px right sheet (spec § 2.3).
 
 ## Courier app — addition (S-87; no design in `design/`, DECISIONS 2026-10-01 — S-87)
 `mobile/apps/courier`, iOS/Android (Expo). The brand's tokens (colours already follow the palette; fonts and layout are redesign phase 4), 48 dp targets; a

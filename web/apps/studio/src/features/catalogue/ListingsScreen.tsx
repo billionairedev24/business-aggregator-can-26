@@ -2,13 +2,12 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Eye, EyeSlash } from '@phosphor-icons/react';
-import { Button, DataTable, useFormatters, type DataTableAction, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { Button, DataTable, useFormatters, type DataTableAction, type DataTableColumn, type DataTableTone, BoHeader } from '@northline/ui';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';
 import { listingsQuery, useListingActions, type ListingItem } from './api';
 import { useCatalogueT } from './messages';
 import { fees, minutesSince, permissions, portalOf, vetState } from './model';
-import { BoHeader } from '../../components/BackOffice';
 import './catalogue.css';
 import { InsightCard } from '../assistant/InsightCard';
 

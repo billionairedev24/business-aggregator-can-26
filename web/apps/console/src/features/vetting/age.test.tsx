@@ -34,7 +34,7 @@ describe('Listing vetting › Licences (2026-10-04)', () => {
   it('lists licences waiting for review and approves one with the role header', async () => {
     const calls = api(['trust_safety']);
     renderConsole('/vetting?view=licences');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Licences for age-restricted sales · 2 waiting' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Licences for age-restricted sales · 2 waiting' })).toBeTruthy();
     await expectNoAxeViolations(document.body);
     expect(screen.getByRole('tab', { name: 'Licences' }).getAttribute('aria-selected')).toBe('true');
     expect(within(row('RLS-778812')).getByText('Alcohol')).toBeTruthy();
@@ -62,7 +62,7 @@ describe('Listing vetting › Licences (2026-10-04)', () => {
   it('is in French', async () => {
     api(['trust_safety']);
     renderConsole('/vetting?view=licences', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Permis pour les ventes soumises à un âge minimal · 2 en attente' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Permis pour les ventes soumises à un âge minimal · 2 en attente' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Vérifications d’âge' })).toBeTruthy();
   });
 });
@@ -71,7 +71,7 @@ describe('Listing vetting › Age checks (2026-10-04)', () => {
   it('reports verifications, handoffs and refusals by reason, and the region model’s ages', async () => {
     api(['trust_safety']);
     renderConsole('/vetting?view=age');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Age checks · last 30 days' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Age checks · last 30 days' })).toBeTruthy();
     await expectNoAxeViolations(document.body);
     expect(screen.getByText('Customers verified')).toBeTruthy();
     expect(screen.getByText('41')).toBeTruthy();
@@ -85,7 +85,7 @@ describe('Listing vetting › Age checks (2026-10-04)', () => {
   it('is in French', async () => {
     api(['admin']);
     renderConsole('/vetting?view=age', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Vérifications d’âge · 30 derniers jours' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Vérifications d’âge · 30 derniers jours' })).toBeTruthy();
     expect(screen.getByText('Personne ayant l’âge requis · 1')).toBeTruthy();
   });
 });

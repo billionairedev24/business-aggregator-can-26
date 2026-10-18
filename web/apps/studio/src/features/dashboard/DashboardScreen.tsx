@@ -1,11 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowUUpLeft, ChatCircleText, FileText, Package, ShieldWarning, Storefront, Tag, Warning } from '@phosphor-icons/react';
-import { ErrorState, LineChart, PageSkeleton, StackedBarChart, useFormatters, useLocale, type Locale, timeZone } from '@northline/ui';
+import { ErrorState, LineChart, PageSkeleton, StackedBarChart, useFormatters, useLocale, type Locale, timeZone, ChartCard, KpiStrip, TodoCard, BoHeader, type KpiItem, type TodoItem } from '@northline/ui';
 import { useMerchant, useMerchantId, type MerchantType } from '../shell/api';
 import { screenHref, type ScreenKey } from '../shell/nav';
 import { clock, clockWithPeriod } from '../../lib/time';
-import { ChartCard, KpiStrip, TodoCard, BoHeader, type KpiItem, type TodoItem } from '../../components/BackOffice';
 import { listingsQuery } from '../catalogue/api';
 import { storefrontQuery } from '../storefront/api';
 import { dashboardQuery, type Dashboard } from './api';

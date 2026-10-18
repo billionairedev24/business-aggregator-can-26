@@ -30,9 +30,10 @@ describe('listing vetting (S-92, design 03 vetting)', () => {
   it('shows the design copy, each rule tripped and its evidence', async () => {
     api(['trust_safety']);
     renderConsole('/vetting');
-    expect(await screen.findByRole('heading', { level: 1, name: '2,318 listings auto-approved this week · 4 flagged for a human' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 2, name: '2,318 listings auto-approved this week · 4 flagged for a human' })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByText('Listing vetting', { selector: '.nl-q-kicker' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Applications' })).toBeTruthy(); // redesign § 3.12: a tab of Applications
+    expect(screen.getByRole('tab', { name: 'Listings' }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByText(/Rules: banned categories, price ±60% from category median/)).toBeTruthy();
     expect(within(row('Full brake job')).getByText('Price −73% vs median')).toBeTruthy();
     expect(within(row('Full brake job')).getByText('Median $180')).toBeTruthy();
@@ -105,7 +106,7 @@ describe('listing vetting (S-92, design 03 vetting)', () => {
   it('speaks French', async () => {
     api(['admin']);
     renderConsole('/vetting', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: /^2\s318 annonces approuvées automatiquement cette semaine · 4 signalées pour un humain$/ })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 2, name: /^2\s318 annonces approuvées automatiquement cette semaine · 4 signalées pour un humain$/ })).toBeTruthy();
     expect(within(row('Sourdough')).getByText('Approuvée')).toBeTruthy();
     expect(within(row('Full brake job')).getByText('Prix −73 % par rapport à la médiane')).toBeTruthy();
   });
