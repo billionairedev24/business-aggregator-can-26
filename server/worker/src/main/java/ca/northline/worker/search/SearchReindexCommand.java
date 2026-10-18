@@ -1,7 +1,5 @@
 package ca.northline.worker.search;
 
-import ca.northline.searchindex.IndexLayout;
-import ca.northline.searchindex.ListingIndices;
 import ca.northline.searchindex.SearchLanguage;
 import ca.northline.worker.events.EnvelopeParser;
 import ca.northline.worker.events.EventSchemas;
@@ -25,6 +23,7 @@ import org.springframework.boot.Banner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.elasticsearch.autoconfigure.ElasticsearchClientAutoConfiguration;
 import org.springframework.boot.elasticsearch.autoconfigure.ElasticsearchRestClientAutoConfiguration;
 import org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration;
@@ -51,7 +50,8 @@ import tools.jackson.databind.json.JsonMapper;
  * java -cp @/app/jib-classpath-file ca.northline.worker.search.SearchReindexCommand [--keep-old] [--batch=200]
  * </pre>
  *
- * It uses the worker's database, Kafka and Elasticsearch settings ({@code DB_*}, {@code KAFKA_*}, {@code ES_*}). Exit
+ * It uses the worker's database, Kafka and search settings ({@code DB_*}, {@code KAFKA_*}, {@code SEARCH_PROVIDER} and
+ * {@code ES_*} or {@code MEILISEARCH_*}). Exit
  * codes: 0 done, 1 failed (before the swap nothing changed for searches), 2 another reindex is running.
  */
 @Slf4j
@@ -114,7 +114,8 @@ public final class SearchReindexCommand {
                 .run(args)) {
             var json = context.getBean(JsonMapper.class);
             var jdbc = context.getBean(JdbcClient.class);
-            var es = context.getBean(ElasticsearchClient.class);
+            var engine = new SearchEngine(
+                    context.getBean(SearchProperties.class), () -> context.getBean(ElasticsearchClient.class));
             var clock = Clock.systemUTC();
             var consumerProps =
                     new HashMap<>(context.getBean(KafkaProperties.class).buildConsumerProperties());
@@ -124,15 +125,14 @@ public final class SearchReindexCommand {
                     new KafkaConsumer<>(consumerProps, new StringDeserializer(), new ByteArrayDeserializer())) {
                 var source = new DocumentSource(jdbc);
                 var projection = new SearchProjection(
-                        jdbc, source, new DocumentBuilder(new CategoryTree(jdbc, clock), json), es);
+                        jdbc, source, new DocumentBuilder(new CategoryTree(jdbc, clock), json), engine.writer());
                 var reindex = new SearchReindex(
                         context.getBean(DataSource.class),
                         jdbc,
                         context.getBean(TransactionOperations.class),
                         source,
                         projection,
-                        new ListingIndices(es),
-                        IndexLayout.fromClasspath(),
+                        engine.admin(),
                         kafka,
                         new EnvelopeParser(json, EventSchemas.fromClasspath(json)),
                         SearchIndexer.topics(TopicCatalogue.fromClasspath()),
@@ -151,7 +151,7 @@ public final class SearchReindexCommand {
                 .findFirst();
     }
 
-    /** Kafka, the database, Elasticsearch and JSON only: no listeners, web server or Valkey. */
+    /** Kafka, the database, the search engine and JSON only: no listeners, web server or Valkey. */
     @ImportAutoConfiguration({
         JacksonAutoConfiguration.class,
         KafkaAutoConfiguration.class,
@@ -163,5 +163,6 @@ public final class SearchReindexCommand {
         ElasticsearchRestClientAutoConfiguration.class,
         ElasticsearchClientAutoConfiguration.class
     })
+    @EnableConfigurationProperties(SearchProperties.class)
     static class CommandContext {}
 }

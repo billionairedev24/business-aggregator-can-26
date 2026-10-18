@@ -26,6 +26,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-kafka")
     testImplementation("org.testcontainers:testcontainers-elasticsearch") // S-42: the search indices on Elasticsearch 9
+    // Meilisearch (provider meilisearch): a GenericContainer of getmeili/meilisearch, from testcontainers core
     testImplementation(testFixtures(project(":platform"))) // S-111: OtlpReceiver
     testImplementation(libs.wiremock) // S-33: partner endpoints (signature, retries, auto-disable)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -59,20 +60,22 @@ tasks.register<JavaExec>("kafkaTopics") {
     mainClass.set("ca.northline.worker.topics.TopicsCommand")
 }
 
-// ./gradlew :worker:searchIndices --args='plan|verify|apply' — ES_* from the environment or server/.env
-// (docs/runbooks/search.md). S-42: synonym sets + the listings_en / listings_fr aliases and their versioned indices.
+// ./gradlew :worker:searchIndices --args='plan|verify|apply' — SEARCH_PROVIDER and ES_* or MEILISEARCH_* from the
+// environment or server/.env (docs/runbooks/search.md). S-42: synonym sets + the listings_en / listings_fr aliases and
+// their versioned indices; on Meilisearch the two indexes and their settings (§ Meilisearch).
 tasks.register<JavaExec>("searchIndices") {
     group = "northline"
-    description = "plan | verify | apply the Elasticsearch listings indices and synonym sets of deploy/search"
+    description = "plan | verify | apply the listings indices and synonyms of deploy/search (Elasticsearch or Meilisearch)"
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("ca.northline.worker.search.SearchIndicesCommand")
 }
 
-// ./gradlew :worker:searchReindex [--args='--keep-old'] — DB_*, KAFKA_*, ES_* from the environment or server/.env
-// (docs/runbooks/search.md § Reindex). S-71: new indices from Postgres, Kafka catch-up, alias swap, old ones deleted.
+// ./gradlew :worker:searchReindex [--args='--keep-old'] — DB_*, KAFKA_*, SEARCH_PROVIDER, ES_* or MEILISEARCH_* from the
+// environment or server/.env (docs/runbooks/search.md § Reindex). S-71: new indices from Postgres, Kafka catch-up, alias
+// swap (Meilisearch: index swap), old ones deleted.
 tasks.register<JavaExec>("searchReindex") {
     group = "northline"
-    description = "rebuild listings_en / listings_fr from Postgres and swap the aliases (safe while live)"
+    description = "rebuild listings_en / listings_fr from Postgres and swap them in (safe while live)"
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("ca.northline.worker.search.SearchReindexCommand")
 }

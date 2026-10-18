@@ -1,0 +1,13 @@
+# The search read model on a hosted Meilisearch instead of Elasticsearch (docs/runbooks/search.md § Meilisearch):
+# SEARCH_PROVIDER and MEILISEARCH_URL in configEnv (api, worker, the search-indices Job), the API key from the secrets
+# manager (secret meilisearch-api-key).
+configEnv:
+  SEARCH_PROVIDER: meilisearch
+  MEILISEARCH_URL: https://meilisearch.example.test
+apps:
+  api:
+    secretEnv:
+      MEILISEARCH_API_KEY: true
+  worker:
+    secretEnv:
+      MEILISEARCH_API_KEY: true

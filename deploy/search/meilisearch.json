@@ -1,0 +1,20 @@
+{
+  "$comment": "The listings indices on Meilisearch (provider `meilisearch`): the index settings of listings_en / listings_fr, rendered by ca.northline.searchindex.MeilisearchLayout with stopwords-<lang>.txt, synonyms-<lang>.txt (the same files as Elasticsearch) and the language's locale. Documents are ListingDocument plus the fields MeilisearchDocuments derives (_geo, openSlots, pausedUntilEpoch, priceBucket, categoryFacet, merchantFacet, suggestWeight, categorySuggest, hasLocation). Every setting here is applied in place by the bootstrap Job (Meilisearch re-indexes by itself); a change to the derived fields needs a reindex and a 'schema' bump. What Meilisearch does differently from Elasticsearch: docs/DECISIONS.md (Meilisearch search provider) and docs/runbooks/search.md § Meilisearch.",
+  "schema": 1,
+  "primaryKey": "id",
+  "locales": { "en": ["eng"], "fr": ["fra"] },
+  "settings": {
+    "searchableAttributes": ["name", "merchantName", "categoryNames", "keywords", "description"],
+    "filterableAttributes": [
+      "market", "kind", "vetting", "status", "merchantStatus", "merchantId", "categoryId", "categoryPath",
+      "priceCents", "rating", "trustTier", "instantBook", "openSlots", "pausedUntilEpoch", "soldOutOn",
+      "fulfilment", "inStock", "deliveryCutoffMinute", "dietary", "allergens", "_geo", "hasLocation",
+      "priceBucket", "categoryFacet", "merchantFacet", "categorySuggest"
+    ],
+    "sortableAttributes": ["priceCents", "rating", "reviewCount", "trustRank", "id", "_geo", "suggestWeight"],
+    "rankingRules": ["sort", "words", "typo", "proximity", "attribute", "exactness", "trustRank:desc", "rating:desc"],
+    "typoTolerance": { "enabled": true, "minWordSizeForTypos": { "oneTypo": 5, "twoTypos": 9 } },
+    "faceting": { "maxValuesPerFacet": 100, "sortFacetValuesBy": { "*": "count" } },
+    "pagination": { "maxTotalHits": 10000 }
+  }
+}

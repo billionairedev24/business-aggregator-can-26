@@ -1,7 +1,6 @@
 package ca.northline.worker.search;
 
-import ca.northline.searchindex.IndexLayout;
-import ca.northline.searchindex.ListingIndices;
+import ca.northline.searchindex.IndexAdmin;
 import ca.northline.searchindex.SearchLanguage;
 import ca.northline.worker.events.EnvelopeParser;
 import ca.northline.worker.events.PoisonEventException;
@@ -10,10 +9,7 @@ import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -35,16 +31,19 @@ import org.springframework.transaction.support.TransactionOperations;
  * <ol>
  *   <li>take the reindex lock (a Postgres session advisory lock: one run at a time) and note the end of every topic
  *       the {@code search-indexer} consumes;
- *   <li>create the next versioned index per language beside the live one (no refresh, no replica while loading);
+ *   <li>create the next versioned index per language beside the live one (Elasticsearch: no refresh, no replica while
+ *       loading);
  *   <li><b>backfill</b>: every merchant, page by page, through the same {@link SearchProjection} as the live indexer
  *       (same documents, same per-merchant lock and versions);
  *   <li><b>catch up</b> from Kafka: the events published since step 1, applied to the new indices, until a pass finds
  *       nothing new;
- *   <li>restore refresh and replicas, wait for the indices, then <b>swap</b> both aliases in one atomic request —
- *       searches never see a missing or half-built index;
+ *   <li>make them ready to serve (Elasticsearch: refresh and replicas back; Meilisearch: every task applied), then
+ *       <b>swap</b> both languages in one atomic request — Elasticsearch moves the aliases, Meilisearch swaps the
+ *       contents of {@code listings_<lang>} and the new index — searches never see a missing or half-built index;
  *   <li>catch up once more (events the live indexer wrote to the old index while the swap happened) and refresh the
  *       merchants whose rows changed since step 1 without an event (what the reconcile sweep wrote to the old index);
- *   <li>delete the old indices (unless kept).
+ *   <li>delete what holds the previous documents now (unless kept): the old indices on Elasticsearch, the new
+ *       names on Meilisearch ({@link IndexAdmin#swap}).
  * </ol>
  *
  * Anything failing before the swap deletes the new indices and leaves the live ones untouched. Writes are idempotent
@@ -54,11 +53,7 @@ import org.springframework.transaction.support.TransactionOperations;
 public final class SearchReindex {
 
     static final String LOCK = "search-reindex";
-    private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    static final Duration HEALTH_TIMEOUT = Duration.ofMinutes(2);
     static final Duration SWEEP_OVERLAP = Duration.ofMinutes(2);
-    static final Map<String, String> LOADING = Map.of(
-            "index.refresh_interval", "-1", "index.auto_expand_replicas", "false", "index.number_of_replicas", "0");
 
     /** Where a run is, for the log and for tests that act between phases. */
     public enum Phase {
@@ -97,8 +92,7 @@ public final class SearchReindex {
     private final TransactionOperations transactions;
     private final DocumentSource source;
     private final SearchProjection projection;
-    private final ListingIndices indices;
-    private final IndexLayout layout;
+    private final IndexAdmin indices;
     private final Consumer<String, byte[]> kafka;
     private final EnvelopeParser parser;
     private final List<String> topics;
@@ -112,8 +106,7 @@ public final class SearchReindex {
             TransactionOperations transactions,
             DocumentSource source,
             SearchProjection projection,
-            ListingIndices indices,
-            IndexLayout layout,
+            IndexAdmin indices,
             Consumer<String, byte[]> kafka,
             EnvelopeParser parser,
             List<String> topics,
@@ -125,7 +118,6 @@ public final class SearchReindex {
         this.source = source;
         this.projection = projection;
         this.indices = indices;
-        this.layout = layout;
         this.kafka = kafka;
         this.parser = parser;
         this.topics = List.copyOf(topics);
@@ -157,10 +149,10 @@ public final class SearchReindex {
         var positions = endOffsets();
         var previous = new EnumMap<SearchLanguage, List<String>>(SearchLanguage.class);
         for (var language : SearchLanguage.values()) {
-            previous.put(language, indices.aliased(language));
+            previous.put(language, indices.live(language));
         }
         listener.on(Phase.LOCKED, Map.of());
-        var created = createIndices(previous);
+        var created = createIndices();
         var targets = new SearchProjection.Targets(created);
         listener.on(Phase.INDICES_CREATED, created);
         int merchants;
@@ -180,9 +172,7 @@ public final class SearchReindex {
             log.info("Search reindex: {} event(s) caught up from Kafka", events);
             listener.on(Phase.CAUGHT_UP, created);
             for (var language : SearchLanguage.values()) {
-                var index = Objects.requireNonNull(created.get(language));
-                indices.putSettings(index, served(language));
-                indices.refreshAndWait(index, HEALTH_TIMEOUT);
+                indices.readyToServe(Objects.requireNonNull(created.get(language)));
             }
         } catch (RuntimeException e) {
             log.error(
@@ -197,23 +187,23 @@ public final class SearchReindex {
             });
             throw e;
         }
-        indices.swap(created);
-        log.info("Search reindex: aliases now point at {}", created.values());
+        var retired = indices.swap(created);
+        log.info("Search reindex: {} now serve(s) searches", created.values());
         listener.on(Phase.SWAPPED, created);
         events += catchUp(positions, targets);
         var swept = sweep(startedAt.minus(SWEEP_OVERLAP), targets, options.batch());
         var deleted = false;
         if (!options.keepOld()) {
-            previous.values().stream().flatMap(List::stream).forEach(indices::delete);
+            retired.values().stream().flatMap(List::stream).forEach(indices::delete);
             deleted = true;
         }
         var result = new Result(Map.copyOf(previous), Map.copyOf(created), merchants, events, swept, deleted);
         log.info(
-                "Search reindex done: {} merchants, {} events, {} changed merchants re-read; previous {} {}",
+                "Search reindex done: {} merchants, {} events, {} changed merchants re-read; previous documents in {} {}",
                 merchants,
                 events,
                 swept,
-                previous.values(),
+                retired.values(),
                 deleted ? "deleted" : "kept");
         listener.on(Phase.FINISHED, created);
         return result;
@@ -242,73 +232,36 @@ public final class SearchReindex {
 
     /**
      * Rollback after a reindex run with {@code --keep-old} (S-115): points each alias back at the newest index older
-     * than the one it serves now — both languages in one atomic request — then re-reads the merchants whose rows
-     * changed since the newer index was created (what the old index missed while it was not live). The newer indices
-     * are left in place for a look; delete them by hand.
+     * than the one it serves now (Meilisearch: swaps the newest kept index's documents back into
+     * {@code listings_<lang>}) — both languages in one atomic request — then re-reads the merchants whose rows
+     * changed since the newer index was created (what the old index missed while it was not live). The newer
+     * documents are left in place for a look (Meilisearch: under the kept index's name now); delete them by hand.
      *
-     * @return the indices the aliases point at now
+     * @return the indices whose documents serve searches now
      */
     public Map<SearchLanguage, String> rollback(int batch) {
         var to = new EnumMap<SearchLanguage, String>(SearchLanguage.class);
-        var currents = new ArrayList<String>();
+        var since = new ArrayList<Instant>();
         for (var language : SearchLanguage.values()) {
-            var current = indices.current(language)
-                    .orElseThrow(() -> new IllegalStateException(
-                            "The alias " + language.alias() + " doesn't point at exactly one index; fix it by hand"));
-            var previous = indices.all(language).stream()
-                    .filter(name -> stamp(name).compareTo(stamp(current)) < 0)
-                    .max(Comparator.comparing(SearchReindex::stamp))
-                    .orElseThrow(() -> new IllegalStateException("No older " + language.alias()
-                            + " index to go back to: the reindex didn't keep it (run it with --keep-old next time)"
-                            + " — run a full reindex instead"));
-            to.put(language, previous);
-            currents.add(current);
+            var rollback = indices.rollback(language);
+            to.put(language, rollback.to());
+            since.add(rollback.since());
         }
-        var newerCreated = currents.stream()
-                .map(SearchReindex::createdAt)
-                .min(Comparator.naturalOrder())
-                .orElseThrow();
+        var newerCreated = since.stream().min(Comparator.naturalOrder()).orElseThrow();
         indices.swap(to);
-        log.info("Search rollback: aliases now point at {}", to.values());
+        log.info("Search rollback: searches served from {} again", to.values());
         var swept = sweep(newerCreated.minus(SWEEP_OVERLAP), SearchProjection.Targets.LIVE, batch);
         log.info("Search rollback: {} changed merchant(s) re-read since {}", swept, newerCreated);
         return Map.copyOf(to);
     }
 
-    /** {@code yyyyMMddHHmmss} (UTC) at the end of a versioned index name. */
-    private static String stamp(String index) {
-        return index.substring(index.lastIndexOf('_') + 1);
-    }
-
-    private static Instant createdAt(String index) {
-        return LocalDateTime.parse(stamp(index), STAMP).toInstant(ZoneOffset.UTC);
-    }
-
-    private Map<SearchLanguage, String> createIndices(Map<SearchLanguage, List<String>> previous) {
+    private Map<SearchLanguage, String> createIndices() {
         var created = new EnumMap<SearchLanguage, String>(SearchLanguage.class);
         var at = clock.instant();
         for (var language : SearchLanguage.values()) {
-            var name = layout.newIndexName(language, at);
-            var taken = new ArrayList<>(indices.all(language));
-            taken.addAll(Objects.requireNonNull(previous.get(language)));
-            var bump = at;
-            while (taken.contains(name)) {
-                bump = bump.plusSeconds(1);
-                name = layout.newIndexName(language, bump);
-            }
-            indices.create(name, layout.definition(language), LOADING, false);
-            created.put(language, name);
+            created.put(language, indices.createForLoading(language, at));
         }
         return Map.copyOf(created);
-    }
-
-    /** The settings the layout serves with (what {@link #LOADING} turned off). */
-    private Map<String, String> served(SearchLanguage language) {
-        var settings = layout.definition(language).settings();
-        return Map.of(
-                "index.refresh_interval", settings.path("refresh_interval").asString("1s"),
-                "index.auto_expand_replicas",
-                        settings.path("auto_expand_replicas").asString("0-1"));
     }
 
     private int backfill(SearchProjection.Targets targets, int batch) {

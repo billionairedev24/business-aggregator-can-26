@@ -64,6 +64,9 @@ mobileApps:
 # loaded by api, auth, bff and worker. Pass them as a values file:
 #   terraform output -json config_env | jq '{configEnv: .}' > infra-values.json
 # or leave empty and point existingInfraConfigMap at a ConfigMap you manage.
+# Search on Meilisearch instead of Elasticsearch (e.g. a hosted instance; docs/runbooks/search.md § Meilisearch): add
+# SEARCH_PROVIDER: meilisearch and MEILISEARCH_URL: https://… here, the key as the secret MEILISEARCH_API_KEY
+# (apps.api / apps.worker secretEnv: true). The api and the worker read the same SEARCH_PROVIDER.
 configEnv: {}
 existingInfraConfigMap: ""
 
@@ -212,6 +215,7 @@ externalSecrets:
     REDIS_PASSWORD: redis-password
     KAFKA_SASL_JAAS_CONFIG: kafka-sasl-jaas-config
     ES_PASSWORD: es-password
+    MEILISEARCH_API_KEY: meilisearch-api-key          # SEARCH_PROVIDER=meilisearch (api: search key; worker: write + index)
     TOTP_KEY: totp-key
     WEBHOOK_SECRET_KEY: webhook-secret-key
     TOTP_PREVIOUS_KEYS: totp-previous-keys                          # only during a TOTP_KEY rotation (key-rotation.md § 7)
@@ -418,11 +422,12 @@ kafkaTopics:
 # S-42 (docs/runbooks/search.md): before every install/upgrade, the worker image makes Elasticsearch match deploy/search
 # — synonym sets, the aliases listings_en / listings_fr and their versioned indices, new fields in place. Idempotent,
 # never deletes; a change that needs a reindex is reported (REINDEX REQUIRED) and left to the reindex Job (S-71).
+# With SEARCH_PROVIDER=meilisearch it creates listings_en / listings_fr on Meilisearch and applies their settings.
 # apply = do it, plan = report only, verify = report and fail the release on anything missing or drifted.
 searchIndices:
   enabled: true
   command: apply
-  backoffLimit: 2                 # Elasticsearch briefly unreachable
+  backoffLimit: 2                 # the search engine briefly unreachable
   activeDeadlineSeconds: 600
   ttlSecondsAfterFinished: 604800
   resources:
@@ -492,6 +497,7 @@ apps:
       REDIS_PASSWORD: false
       KAFKA_SASL_JAAS_CONFIG: false
       ES_PASSWORD: false
+      MEILISEARCH_API_KEY: false    # SEARCH_PROVIDER=meilisearch: set true (required then; a search-only key is enough)
       STRIPE_SECRET_KEY: false
       STRIPE_PUBLISHABLE_KEY: false
       STRIPE_WEBHOOK_SECRET: false          # S-12: required under staging/prod
@@ -697,6 +703,7 @@ apps:
       REDIS_PASSWORD: false
       KAFKA_SASL_JAAS_CONFIG: false
       ES_PASSWORD: false
+      MEILISEARCH_API_KEY: false    # SEARCH_PROVIDER=meilisearch: set true (a key that writes documents, manages indexes)
       # S-27 notifications consumer: the payout.failed email (same settings as the api) and SMS (same as auth).
       EMAIL_UNSUBSCRIBE_KEY: false  # required under staging/prod (values-staging/prod.yaml); the api's key
       EMAIL_API_KEY: false          # sendgrid, or azure with an access key

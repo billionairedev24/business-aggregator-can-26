@@ -52,6 +52,13 @@ for cloud in aws gcp azure; do
   check "prod × $cloud, wildcard DNS-01 + custom domain" -f "$CHART/values-prod.yaml" -f "$CHART/values-$cloud.yaml" -f "test-values/identities-$cloud.yaml" -f test-values/edge-wildcard.yaml
 done
 check "staging × aws, Ingress + cert-manager" -f "$CHART/values-staging.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/edge-ingress.yaml --set edge.domainReconciler.enabled=false
+# The search read model on Meilisearch (the production dry run's hosted instance): the key reaches the api, the worker and
+# the search-indices Job.
+check "prod × aws, search on Meilisearch" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/search-meilisearch.yaml
+if helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml \
+    -f test-values/search-meilisearch.yaml --show-only templates/search-indices-job.yaml \
+    | grep -q 'secretKey: MEILISEARCH_API_KEY'; then echo "ok   search-indices Job maps MEILISEARCH_API_KEY"
+else echo "FAIL search-indices Job without MEILISEARCH_API_KEY"; failed=1; fi
 check "defaults" 
 # S-111: the Collector with any OTLP backend (Grafana Cloud) instead of the cloud's own exporters.
 check "prod × aws, Collector → OTLP backend" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/observability-otlp.yaml
@@ -212,10 +219,10 @@ check "prod × aws + search reindex Job (S-71)" -f "$CHART/values-prod.yaml" -f 
 # (every data service in the cluster), and the in-cluster data services chart (deploy/helm/northline-data).
 check "dryrun × gcp" -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml
 out=$(helm template northline "$CHART" --namespace northline-dryrun -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml)
-if grep -q 'SPRING_PROFILES_ACTIVE: "dev"' <<<"$out" && ! grep -q 'redis-ca' <<<"$out" && ! grep -q 'SearchIndicesCommand' <<<"$out" && ! grep -q 'otel-collector' <<<"$out" \
+if grep -q 'SPRING_PROFILES_ACTIVE: "dev"' <<<"$out" && ! grep -q 'redis-ca' <<<"$out" && grep -q 'SearchIndicesCommand' <<<"$out" && ! grep -q 'otel-collector' <<<"$out" \
     && grep -q 'secretKey: MEILISEARCH_API_KEY' <<<"$out" && grep -q 'KAFKA_REPLICATION_FACTOR: "1"' <<<"$out" \
     && ! grep -qE '^kind: Secret$' <<<"$out"; then
-  echo "ok   dryrun × gcp: dev profile, no Memorystore CA, no Elasticsearch Job, no Collector, Meilisearch key mapped, topics RF 1, no Secret"
+  echo "ok   dryrun × gcp: dev profile, no Memorystore CA, search-indices Job on Meilisearch, no Collector, Meilisearch key mapped, topics RF 1, no Secret"
 else echo "FAIL dryrun × gcp render"; failed=1; fi
 check "dryrun × gcp + Collector (flag)" -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml \
   --set observability.collector.enabled=true

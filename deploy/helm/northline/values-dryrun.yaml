@@ -63,7 +63,8 @@ externalSecrets:
   # Mapped although optional for the apps: Valkey has a password here (generated for the in-cluster one), Kafka in the
   # cluster has no SASL and Meilisearch replaces Elasticsearch. An external Kafka with SASL: add KAFKA_SASL_JAAS_CONFIG.
   optionalKeys: [REDIS_PASSWORD]
-  # Meilisearch search provider (SEARCH_PROVIDER=meilisearch, MEILISEARCH_URL from Terraform configEnv).
+  # Meilisearch search provider (SEARCH_PROVIDER=meilisearch, MEILISEARCH_URL from Terraform configEnv); the key's
+  # remote name (the chart's default, kept here for Terraform's remoteKeys).
   secretNames:
     MEILISEARCH_API_KEY: meilisearch-api-key
 
@@ -71,9 +72,10 @@ externalSecrets:
 kafkaTopics:
   replicationFactor: "1"
   minInsyncReplicas: "1"
-# The S-42 Job drives Elasticsearch (synonym sets, aliases); the Meilisearch adapter keeps its own index settings.
+# The S-42 Job on Meilisearch (SEARCH_PROVIDER from configEnv): creates listings_en / listings_fr with their settings
+# before the apps start, and applies a changed layout in place (docs/runbooks/search.md § 11).
 searchIndices:
-  enabled: false
+  enabled: true
 
 mobileApps:
   iosBundleIds: [ ca.northline.app.preview, ca.northline.courier.preview ]

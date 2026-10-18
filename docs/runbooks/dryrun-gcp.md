@@ -7,8 +7,8 @@ Owner decision and alternatives considered: [DECISIONS.md § 2026-10-18](../DECI
 > **Status (2026-10-18): never applied.** The Terraform root (`infra/terraform/envs/gcp/dryrun`) passes `terraform
 > validate` and an offline plan against mocked providers; both Helm charts render and validate offline
 > (`deploy/helm/validate.sh`). Nothing here has run against a real Google Cloud project, CloudNativePG, Layerbase or
-> Let's Encrypt yet. The search provider `meilisearch` is wired here (variables, secret, Service) but its adapter
-> lands separately (`northline.search.provider=meilisearch`).
+> Let's Encrypt yet. Search runs on Meilisearch (`SEARCH_PROVIDER=meilisearch`, [search.md § 11](search.md#11-meilisearch-provider-meilisearch)):
+> the search-indices Job creates its indexes, the worker fills them as businesses are onboarded.
 
 Other environments: [dev](dev.md), [staging](staging.md), [prod](prod.md) · [overview](README.md)
 
@@ -359,7 +359,7 @@ curl -s https://auth.demo.northline.ca/.well-known/openid-configuration | jq -r 
 for h in studio console; do curl -s -o /dev/null -w "%{http_code} $h\n" "https://$h.demo.northline.ca"; done
 curl -s -o /dev/null -w "%{http_code} consumer\n" https://demo.northline.ca
 kubectl -n northline-dryrun exec deploy/northline-api -- wget -qO- localhost:8080/actuator/health/readiness
-kubectl -n northline-dryrun get jobs                                      # migrate, kafka-topics, oauth-clients Complete
+kubectl -n northline-dryrun get jobs                                      # migrate, kafka-topics, search-indices, oauth-clients Complete
 ```
 
 Then by hand: sign in to the Studio (passkey or password + code), open each Studio section, search on the consumer
@@ -407,9 +407,12 @@ for it yet, and it drops the GKE pieces this dry run rehearses (Workload Identit
 - **Data-service placement is the owner's call** (DECISIONS 2026-10-18): in the cluster (default here) or external.
   Layerbase was considered: no PostGIS (so never for Postgres), and it runs on Hetzner in Ashburn — every query
   crosses providers (egress, ≈ 20–25 ms per round trip). It is supported per service as `external`.
-- **Meilisearch adapter:** `SEARCH_PROVIDER`, `MEILISEARCH_URL`, `MEILISEARCH_API_KEY` follow the variables the search
-  provider work announced; if its names or its required-variable list differ, adjust Terraform's `config_env` and
-  `values-dryrun.yaml`. The Elasticsearch-only `searchIndices` Job is off here.
+- **Meilisearch adapter:** in place ([search.md § 11](search.md#11-meilisearch-provider-meilisearch)) with the variables
+  above; the `searchIndices` Job creates `listings_en` / `listings_fr` on Meilisearch. Tested against the in-cluster
+  image (`getmeili/meilisearch:v1.15.2`) and v1.28.0, never against the cluster itself or Layerbase. The apps use the
+  in-cluster master key as `MEILISEARCH_API_KEY`; with an external provider, give the worker a key limited to
+  `listings_*` (search.md § 11.2). If the database is ever restored or the provider changed, run the full reindex
+  (`searchReindex.runId`).
 - **Images:** the PostGIS image must carry barman-cloud for the backups (CloudNativePG's PostGIS images; check the tag
   `ghcr.io/cloudnative-pg/postgis:17-3.5` before the first apply). Versions pinned in `deploy/helm/northline-data/values.yaml`.
 - Never applied to a real project; prices in the table are list prices to re-check.

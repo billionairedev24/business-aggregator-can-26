@@ -1,5 +1,6 @@
-# Elasticsearch — listings_en / listings_fr indices and synonym sets from deploy/search (S-42), the full reindex
-# (S-71). ES_* (and DB_*/KAFKA_* for the reindex) from the environment or server/.env. docs/runbooks/search.md.
+# Search — listings_en / listings_fr indices and synonym sets from deploy/search (S-42), the full reindex (S-71), on
+# the engine of SEARCH_PROVIDER: Elasticsearch (ES_*) or Meilisearch (MEILISEARCH_*), plus DB_*/KAFKA_* for the
+# reindex, from the environment or server/.env. docs/runbooks/search.md (§ 11 for Meilisearch).
 
 ##@ Search
 

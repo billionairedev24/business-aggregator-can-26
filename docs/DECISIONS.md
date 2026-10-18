@@ -8391,3 +8391,95 @@ the data services live, so both work, per service.
   the Kafka/Valkey/Meilisearch pods, Layerbase and the Meilisearch adapter never ran; no Argo CD environment for
   `dryrun`; AWS/Azure modules accept `dryrun` but no env root uses it there. A region outside Canada for the dry run
   (to sit next to an external provider) would need a new owner decision.
+
+## 2026-10-18 — Meilisearch search provider (production dry run on a hosted Meilisearch)
+
+The production dry run uses a hosted Meilisearch (Layerbase) instead of Elasticsearch. `SEARCH_PROVIDER=meilisearch`
+(api **and** worker, the same value) puts the S-42/S-43/S-44/S-71/S-115 read model there; `elasticsearch` stays the
+default and behaves exactly as before. Runbook: [search.md § 11](runbooks/search.md#11-meilisearch-provider-meilisearch).
+
+- **Port and adapters.** The api's `SearchIndex` port gets `MeilisearchSearchIndex`; the worker's projection writes
+  through a new `ListingWriter` port (`ElasticsearchListingWriter` = the previous code, moved; `MeilisearchListingWriter`);
+  the reindex runs on a new `IndexAdmin` port in `search-index` (`ElasticsearchIndexAdmin` over aliases,
+  `MeilisearchIndexAdmin` over `swap-indexes`); the search-indices Job runs `MeilisearchBootstrap`, which reports with
+  the Elasticsearch bootstrap's findings. `local` stays the api's no-index adapter for `local`/`test`.
+- **No SDK.** Meilisearch's REST API through Spring's `RestClient` on the JDK HTTP client (`MeilisearchClient`, ~250
+  lines): the official Java SDK brings OkHttp and Gson and wraps the same calls. Bodies are Jackson 3 trees; the
+  module's own mapper writes and reads the documents so the api and the worker agree.
+- **Configuration.** `MEILISEARCH_URL` (TLS from an `https` URL, the JVM trust store), `MEILISEARCH_API_KEY` (Bearer;
+  blank = none, local only), `MEILISEARCH_TIMEOUT` (10 s), `MEILISEARCH_TASK_TIMEOUT` (60 s, worker). The deployed
+  profiles require `MEILISEARCH_URL` and `MEILISEARCH_API_KEY` instead of `ES_URIS` when the provider is
+  `meilisearch` (a nested placeholder in `northline.required-env.search`), and turn Elasticsearch's health indicator off
+  then. Helm: secret `meilisearch-api-key`, `apps.api/worker.secretEnv.MEILISEARCH_API_KEY` (false by default); the
+  search-indices Job now also carries `SEARCH_PROVIDER`, `MEILISEARCH_*` and the key. Terraform is unchanged: it
+  provisions Elastic Cloud only; the Meilisearch instance, its keys and the secret are the operator's.
+- **Layout.** `deploy/search/meilisearch.json` (settings, locales `eng`/`fra`) + `stopwords-<lang>.txt` (Lucene's
+  English set, the French Snowball set + the elided articles); the **same synonym files** as Elasticsearch, converted
+  (`a, b, c` → each term maps to the others; `a => b` one way). Meilisearch applies every setting in place (it
+  re-indexes by itself), so its bootstrap never reports `REINDEX REQUIRED`; a change to the derived document fields
+  needs the reindex and a `schema` bump. Settings are compared as sets where Meilisearch sorts them, in Unicode NFC
+  (it hands `à` back decomposed).
+- **What Meilisearch can't do, and the approximation:**
+  - *Scoring.* Elasticsearch multiplies the text score by (tier 1.5/1.2/1.0 + log rating + Gauss nearness). Meilisearch
+    has bucketed ranking rules and no function score. Rules: `sort, words, typo, proximity, attribute, exactness,
+    trustRank:desc, rating:desc`. Its `attribute` rule also weighs the word's **position** in the attribute (no
+    `attributeRank`/`wordPosition` split in v1.28), so "Sourdough rye" ranks above "Country sourdough" before the trust
+    tier is looked at; same-position matches go by tier, then rating. `MeilisearchSearchApiTest` asserts that order.
+  - *Nearness.* No decay function: relevance **with a location sorts nearest first** (`_geoPoint` in `sort`, which comes
+    first), then text, tier, rating; results without a location come last. Without a location: text, tier, rating.
+  - *Explicit sorts* (price, rating, distance) are strict like Elasticsearch's because `sort` is the first rule; ties by
+    `id`. Missing prices/ratings sort last both ways (Meilisearch's behaviour for missing fields).
+  - *Stemming* doesn't exist: typo tolerance (1 typo from 5 letters, 2 from 9) covers most plurals.
+  - *Stop words inside multi-word synonyms* (`au` in `pain au levain`, `and` in `fries and gravy`) break the synonym
+    on Meilisearch, so such words are not stop words there (Elasticsearch applies synonyms before its stop filter).
+  - *Open now.* No `integer_range` fields: the worker indexes `openSlots`, the quarter hours of the week the weekly
+    hours cover **entirely**; the filter is `openSlots = now / 15`. Hours on quarter-hour boundaries are exact; a
+    listing opening at 9:10 matches the filter from 9:15 and stops at the last whole quarter hour before closing. The
+    card's `openNow` flag is still computed exactly from `openHours`. Pauses are filtered on `pausedUntilEpoch`
+    (seconds), "sold out today" on the date string.
+  - *Pages.* No `search_after`: the page token (`<sort>.<base64 [offset]>`, same shape as before) carries the next
+    offset. Exact totals in page mode (`hitsPerPage`/`page`) when the offset is a multiple of the page size, else the
+    estimate; at most `maxTotalHits` = 10 000 results are reachable (Elasticsearch counts 10 000 but pages further).
+    Offsets shift if documents change between pages (search_after doesn't).
+  - *Facets.* `facetDistribution` instead of terms/range aggregations: labels travel in the value (`categoryFacet`,
+    `merchantFacet` = `<id>␟<name>`, split by the api; one id with two names counts once); the price ranges are a
+    `priceBucket` field written by the worker, all five returned in order (zero included) like the range aggregation.
+    Top 20/4/3 by count, ties by value.
+  - *Suggestions.* No completion suggester: one multi-search with a prefix search on `name` (heaviest `suggestWeight`
+    first, kinds filtered in the query, duplicates by text skipped) and one on `categoryNames` of documents that
+    suggest their category (`distinct: categoryId`), the deepest category name a word of which starts with what was
+    typed. Typo tolerance can add near matches the completion suggester wouldn't.
+  - *Versions.* No external versioning: every refresh of a merchant enqueues its tasks and **waits** for them under the
+    merchant's advisory lock; Meilisearch applies an index's tasks in enqueue order, so the later refresh (newer rows)
+    always lands last. `stale` is always 0. A write that timed out waiting may be applied later; the retry enqueues
+    after it and wins.
+  - *Aliases.* None: the live index is `listings_<lang>` itself. A reindex loads `listings_<lang>_v<schema>_<stamp>`
+    and swaps the two (documents and settings, both languages in one task); the versioned name then holds the previous
+    documents (deleted, or kept by `--keep-old`). After `--rollback` the kept name holds the newer documents; a second
+    rollback before deleting it would swap forward again (Elasticsearch refuses it).
+  - *Refresh.* Writes are awaited, so "find the merchant's documents" (S-137) needs no refresh; `documents/fetch` with a
+    `merchantId` filter replaces the term search.
+  - *Request-cost assertion.* `SearchApiTest`'s "one bounded Elasticsearch request" reads Elasticsearch's shard stats;
+    Meilisearch has no per-index search counter, so `MeilisearchSearchApiTest` doesn't repeat it (the code makes one
+    `/search` per search, one `/multi-search` per suggestion request).
+- **Local and tests.** Compose profile `search-meili` (`getmeili/meilisearch:v1.28.0`, master key
+  `northline-local-meili-master-key`, not in `all`); `make standins-*` know the profile. Tests run the real image under
+  Testcontainers (it pulled here, so no WireMock stand-in): `MeilisearchBootstrapTest`, `MeilisearchIndexAdminTest`,
+  `MeilisearchLayoutTest`, `MeilisearchDocumentsTest` (search-index); `MeilisearchSearchApiTest` (api, the same
+  documents as `SearchApiTest`, moved to `SearchDocs.listings()`); `MeilisearchIndexerTest`, `MeilisearchReindexTest`,
+  `SearchIndicesCommandTest` (worker). The worker's Meilisearch context keeps its Kafka listeners off (the ES context
+  shares the `search-indexer` group) and hands records to the consumer directly, as `PushEndToEndTest` does.
+- **Schema additions:** none (no migration).
+- **Not done:** Terraform for a Meilisearch instance or its secret; a Meilisearch health indicator (Elasticsearch's is
+  turned off, readiness never used it); Meilisearch's own metrics in the console health.
+- **GCP dry run (merged meanwhile, same variable names).** `values-dryrun.yaml` now runs the search-indices Job (it
+  creates the Meilisearch indexes; it was off while the Job only drove Elasticsearch). Every Meilisearch test also
+  passes against the in-cluster image the data chart pins (`getmeili/meilisearch:v1.15.2`, `MEILISEARCH_TEST_IMAGE`);
+  the features used (localized attributes, search-time `distinct`, `documents/fetch` filters, facet sort by count,
+  `swap-indexes`) are all there by 1.15.
+- **Throughput.** The worker waits for every write, so the reindex backfill writes one merchant at a time and waits
+  for Meilisearch each time (Elasticsearch's bulk returns when indexed); fine for the dry run's size, to measure before
+  a large catalogue.
+- **Never run against the real service:** a hosted Meilisearch (Layerbase) or the dry run's in-cluster pod — TLS, API
+  keys and limits (payload size, task queue) — and the chart's Jobs against them. Only `getmeili/meilisearch:v1.28.0`
+  and `v1.15.2` in Docker.

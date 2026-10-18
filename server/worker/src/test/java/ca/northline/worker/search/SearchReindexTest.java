@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import ca.northline.searchindex.ElasticsearchIndexAdmin;
 import ca.northline.searchindex.IndexLayout;
 import ca.northline.searchindex.ListingDocument;
 import ca.northline.searchindex.ListingIndices;
@@ -96,8 +97,7 @@ class SearchReindexTest extends WorkerIntegrationTest {
                 transactions,
                 source,
                 projection,
-                new ListingIndices(es),
-                IndexLayout.fromClasspath(),
+                new ElasticsearchIndexAdmin(new ListingIndices(es), IndexLayout.fromClasspath()),
                 kafka,
                 parser,
                 SearchIndexer.topics(ca.northline.worker.topics.TopicCatalogue.fromClasspath()),

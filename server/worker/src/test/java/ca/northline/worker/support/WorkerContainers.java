@@ -34,8 +34,23 @@ public final class WorkerContainers {
     /** Elasticsearch 9 (the compose image, security off), started only by the tests that need it ({@link #elastic}). */
     public static final ElasticsearchContainer ELASTIC = newElastic();
 
+    /** Meilisearch (the compose image, a master key) for the {@code meilisearch} provider's tests ({@link #meilisearch}). */
+    public static final String MEILI_KEY = "test-master-key-obviously-fake-000";
+
+    @SuppressWarnings("resource") // stopped by Testcontainers' reaper with the JVM
+    public static final org.testcontainers.containers.GenericContainer<?> MEILI =
+            new org.testcontainers.containers.GenericContainer<>(java.util.Objects.requireNonNullElse(
+                            System.getenv("MEILISEARCH_TEST_IMAGE"), "getmeili/meilisearch:v1.28.0"))
+                    .withExposedPorts(7700)
+                    .withEnv("MEILI_MASTER_KEY", MEILI_KEY)
+                    .withEnv("MEILI_NO_ANALYTICS", "true")
+                    .waitingFor(org.testcontainers.containers.wait.strategy.Wait.forHttp("/health")
+                            .forStatusCode(200))
+                    .withStartupTimeout(java.time.Duration.ofMinutes(2));
+
     private static boolean started;
     private static boolean indicesCreated;
+    private static boolean meiliIndexes;
 
     private WorkerContainers() {}
 
@@ -91,6 +106,29 @@ public final class WorkerContainers {
             indicesCreated = true;
         }
         return uri;
+    }
+
+    /** Starts Meilisearch once per test JVM with the listings indexes created (the deploy step); returns its URL. */
+    public static synchronized String meilisearch() {
+        if (!MEILI.isRunning()) {
+            MEILI.start();
+        }
+        var url = "http://" + MEILI.getHost() + ":" + MEILI.getMappedPort(7700);
+        if (!meiliIndexes) {
+            new ca.northline.searchindex.MeilisearchBootstrap(
+                            meilisearchClient(), ca.northline.searchindex.MeilisearchLayout.fromClasspath())
+                    .reconcile(ca.northline.searchindex.IndexBootstrap.Mode.APPLY);
+            meiliIndexes = true;
+        }
+        return url;
+    }
+
+    public static ca.northline.searchindex.MeilisearchClient meilisearchClient() {
+        if (!MEILI.isRunning()) {
+            MEILI.start();
+        }
+        return ca.northline.searchindex.MeilisearchClient.create(ca.northline.searchindex.MeilisearchConnection.of(
+                "http://" + MEILI.getHost() + ":" + MEILI.getMappedPort(7700), MEILI_KEY));
     }
 
     /** The real catalogue plus the test consumers' topic and groups. */

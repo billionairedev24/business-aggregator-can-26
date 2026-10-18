@@ -123,7 +123,7 @@ restart: ## Restart SERVICES
 .PHONY: status
 status: ## What runs, on which port, whether it answers, the useful URLs; then the stand-ins
 	@$(STACK) status
-	@$(COMPOSE) --profile all --profile tools --profile observability ps 2>/dev/null || true
+	@$(COMPOSE) --profile all --profile search-meili --profile tools --profile observability ps 2>/dev/null || true
 
 .PHONY: logs
 logs: ## Follow the app logs (.run/logs; SERVICES=api for one); make standins-logs for the containers
@@ -133,7 +133,7 @@ logs: ## Follow the app logs (.run/logs; SERVICES=api for one); make standins-lo
 ONESHOT_JOBS := kafka-topics|storage-bucket
 
 .PHONY: standins-up
-standins-up: ## Only the compose stand-ins (PROFILES=db,cache,events,search,mail,storage,payments or all), healthy
+standins-up: ## Only the compose stand-ins (PROFILES=db,cache,events,search,search-meili,mail,storage,payments or all), healthy
 	@if [ "$(PROFILES)" = none ]; then echo "PROFILES=none: no stand-ins (your own Postgres per server/.env)"; \
 	else cd $(ROOT) && all=$$(docker compose $(compose_profiles) config --services) && \
 	  docker compose $(compose_profiles) up -d --wait $$(printf '%s\n' $$all | grep -vxE '$(ONESHOT_JOBS)') && \
@@ -142,11 +142,11 @@ standins-up: ## Only the compose stand-ins (PROFILES=db,cache,events,search,mail
 
 .PHONY: standins-down
 standins-down: ## Stop the compose stand-ins, every profile (VOLUMES=1 also deletes their data)
-	$(COMPOSE) --profile all --profile tools --profile observability down $(if $(VOLUMES),-v)
+	$(COMPOSE) --profile all --profile search-meili --profile tools --profile observability down $(if $(VOLUMES),-v)
 
 .PHONY: standins-logs
 standins-logs: ## Follow the stand-ins' logs (SERVICE=postgres|kafka|… for one)
-	$(COMPOSE) --profile all --profile tools --profile observability logs -f --tail=100 $(SERVICE)
+	$(COMPOSE) --profile all --profile search-meili --profile tools --profile observability logs -f --tail=100 $(SERVICE)
 
 .PHONY: smoke
 smoke: ## Health of every app port, whoever started it (api, auth, bffs, worker, studio, consumer)

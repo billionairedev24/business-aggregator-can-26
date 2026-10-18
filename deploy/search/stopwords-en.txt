@@ -1,0 +1,35 @@
+# Stop words of listings_en on Meilisearch (provider `meilisearch`): Lucene's English set, the `_english_` stop
+# filter of analysis-en.json, so both engines ignore the same words. One word per line; # comments.
+a
+an
+and
+are
+as
+at
+be
+but
+by
+for
+if
+in
+into
+is
+it
+no
+not
+of
+on
+or
+such
+that
+the
+their
+then
+there
+these
+they
+this
+to
+was
+will
+with

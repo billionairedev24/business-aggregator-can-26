@@ -81,6 +81,20 @@ services:
       interval: 10s
       retries: 30
 
+  meilisearch:                                # --profile search-meili  (SEARCH_PROVIDER=meilisearch; the key: local only)
+    profiles: [search-meili]
+    image: getmeili/meilisearch:v1.28.0
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY:-northline-local-meili-master-key}
+      MEILI_NO_ANALYTICS: "true"
+    ports: ["${MEILISEARCH_PORT:-7700}:7700"]
+    volumes: [meili:/meili_data]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:7700/health >/dev/null"]
+      interval: 5s
+      retries: 30
+
   mailpit:                                    # --profile mail  (SMTP :1025, web UI :8025; also the local alerts' inbox)
     profiles: [mail, all, observability]
     image: axllent/mailpit:v1.29
@@ -202,4 +216,4 @@ services:
     tmpfs: ["/var/lib/grafana:mode=1777"]   # the image's user (not root) writes here
     ports: ["${GRAFANA_PORT:-3300}:3000"]   # 3000 is the consumer web app's
 
-volumes: { pg: {}, es: {}, objects: {} }
+volumes: { pg: {}, es: {}, meili: {}, objects: {} }

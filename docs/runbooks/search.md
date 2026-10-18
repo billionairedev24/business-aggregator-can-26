@@ -1,7 +1,8 @@
 # Search (Elasticsearch read model)
 
 Elasticsearch 9 holds the **search read model** only: PostgreSQL stays the source of truth, and everything in the
-indices can be rebuilt from it. This runbook covers the indices and their synonyms (S-42), the indexer that fills them (S-43) and
+indices can be rebuilt from it. **Meilisearch** can hold the same read model instead (`SEARCH_PROVIDER=meilisearch`,
+e.g. a hosted instance for the production dry run): § 11. This runbook covers the indices and their synonyms (S-42), the indexer that fills them (S-43) and
 the search API that reads them (S-44), and how to rebuild everything (S-71).
 
 | story | what | where |
@@ -186,6 +187,7 @@ The api reads the aliases (never writes them) through the port `SearchIndex`:
 | `SEARCH_PROVIDER` | where | behaviour |
 |---|---|---|
 | `elasticsearch` | default; dev, staging, prod | `listings_en` / `listings_fr` on `ES_URIS` |
+| `meilisearch` | an environment whose search runs on Meilisearch (§ 11) | the indexes `listings_en` / `listings_fr` on `MEILISEARCH_URL`; the worker must use the same provider |
 | `local` | the `local` and `test` profiles' default | no index: every search is empty (the rules still apply); refused under staging and prod |
 
 To search locally: `docker compose --profile search up -d`, `./gradlew :worker:searchIndices --args='apply'`, fill the
@@ -367,5 +369,132 @@ within minutes once the partial reindex has run.
 | a published listing isn't found | the merchant is not `active`, has no province, the listing isn't `approved` + `live`, or (merchant documents) the page isn't published; check `DEAD-LETTERED consumer=search-indexer` in the worker log |
 | an edit shows up only after a minute | expected: edits without an event arrive with the reconcile sweep (§ 6) |
 | no distance on a merchant's results | no row in `merchants.locations` (§ 6) |
-| every search is empty | the api runs with `SEARCH_PROVIDER=local` (the `local` profile's default), or the indices are empty (run the indexer / reindex) |
+| every search is empty | the api runs with `SEARCH_PROVIDER=local` (the `local` profile's default), or the indices are empty (run the indexer / reindex), or the api and the worker use different `SEARCH_PROVIDER`s |
 | `429 rate_limited` from the consumer web | its requests arrive without the browser's address in `X-Forwarded-For` (the SSR server's own address counts them all): forward it, or raise `SEARCH_RATE_LIMIT` (§ 7) |
+| Meilisearch: `invalid_api_key` / `missing_authorization_header` | `MEILISEARCH_API_KEY` is wrong, or lacks an action on `listings_*` (§ 11.2) |
+| Meilisearch: `task_timeout` in the worker log | Meilisearch is still busy (a settings change re-indexes everything, a full reindex) or overloaded; the event is retried. Raise `MEILISEARCH_TASK_TIMEOUT` if it lasts |
+| Meilisearch: `index_not_found` | the search-indices Job hasn't run against this instance (`apply`) |
+
+## 11. Meilisearch (provider `meilisearch`)
+
+The same read model on Meilisearch instead of Elasticsearch, for an environment that runs on a hosted Meilisearch (the
+production dry run's, on Layerbase). Postgres stays the source of truth; the indexer, the reconcile sweep, the reindex,
+the search-indices Job and the search API work the same way, through the engine's adapter. Elasticsearch is untouched:
+`SEARCH_PROVIDER=elasticsearch` (the default) behaves exactly as before.
+
+**Not exercised against a hosted Meilisearch yet.** Everything below has run against `getmeili/meilisearch:v1.28.0`
+(Testcontainers, the compose `search-meili` profile) only.
+
+### 11.1 Layout (versioned code)
+
+| file | what |
+|---|---|
+| `deploy/search/meilisearch.json` | `schema`, primary key, the locale of each language (`eng`, `fra`), the index settings: searchable attributes (name, merchant name, category names, keywords, description — that order is the attribute ranking), filterable and sortable attributes, ranking rules, typo tolerance, faceting, `pagination.maxTotalHits` 10 000 |
+| `deploy/search/stopwords-en.txt`, `stopwords-fr.txt` | the stop words (Lucene's English set, the French Snowball set + elided articles), as `_english_` / `_french_` on Elasticsearch |
+| `deploy/search/synonyms-<lang>.txt` | **the same files** as Elasticsearch, turned into Meilisearch's synonym map (`a, b, c` → each term gets the others; `a => b` one way) |
+
+`MeilisearchLayout` renders one settings object per language. A word of a multi-word synonym (`au` in
+`pain au levain`) is left out of the stop words: Meilisearch never matches a synonym whose words it drops from the query.
+
+**Names.** Readers and writers use `listings_en` / `listings_fr` — on Meilisearch these are the indexes themselves
+(there are no aliases). A reindex builds `listings_<lang>_v<schema>_<stamp>` beside them and **swaps** (§ 11.4).
+
+**Documents** are the Elasticsearch documents (§ 1) plus fields Meilisearch needs to filter, sort and count the same
+things: `_geo` `{lat, lng}` and `hasLocation`; `openSlots` (the quarter hours of the week the weekly hours cover entirely);
+`pausedUntilEpoch`; `priceBucket` (the price facet's range); `categoryFacet` / `merchantFacet` (`<id>␟<name>`, so a facet
+value carries its label); `suggestWeight`, `categorySuggest`. `MeilisearchDocuments` derives them; the api drops them
+when it reads a hit back.
+
+### 11.2 Set up an instance (once per environment)
+
+1. Get the instance URL (`https://…`; TLS is the URL's) and its **master key** from the provider. Keep the master key
+   out of the cluster: it only creates the apps' keys.
+2. Create one key per app, limited to the listings indexes (no expiry, or a calendar reminder before it expires):
+
+   ```sh
+   curl -s -X POST "$MEILISEARCH_URL/keys" -H "Authorization: Bearer $MASTER_KEY" -H 'Content-Type: application/json' \
+     -d '{"name":"northline-worker","actions":["search","documents.*","indexes.*","settings.*","tasks.get","stats.get"],"indexes":["listings_*"],"expiresAt":null}'
+   curl -s -X POST "$MEILISEARCH_URL/keys" -H "Authorization: Bearer $MASTER_KEY" -H 'Content-Type: application/json' \
+     -d '{"name":"northline-api","actions":["search"],"indexes":["listings_*"],"expiresAt":null}'
+   ```
+
+   The worker's key also runs the search-indices Job and the reindex (`indexes.*` covers create, delete and swap). One
+   secret holds one key; the api and the worker may share the worker's key if the secrets manager holds only one.
+3. Store the key as `meilisearch-api-key` in the environment's secrets manager ([secrets.md](secrets.md)).
+4. Values of the environment (Argo CD env values or the operator's values file):
+
+   ```yaml
+   configEnv:
+     SEARCH_PROVIDER: meilisearch        # api, worker and the search-indices Job
+     MEILISEARCH_URL: https://<instance>
+   apps:
+     api:    { secretEnv: { MEILISEARCH_API_KEY: true } }
+     worker: { secretEnv: { MEILISEARCH_API_KEY: true } }
+   externalSecrets:
+     optionalKeys: [REDIS_PASSWORD, KAFKA_SASL_JAAS_CONFIG]   # no ES_PASSWORD when there is no Elasticsearch
+   ```
+
+   The deployed profiles then require `MEILISEARCH_URL` and `MEILISEARCH_API_KEY` instead of `ES_URIS`, and turn
+   Elasticsearch's health indicator off.
+5. Deploy: the search-indices Job (§ 2) creates `listings_en` / `listings_fr` with their settings. Then fill them with a
+   full reindex (§ 9, `searchReindex.runId`) — the live indexer only writes what changes from now on.
+
+### 11.3 The deploy step on Meilisearch
+
+Same Job, same commands (`apply`, `plan`, `verify`), same log lines:
+
+| finding | Meilisearch |
+|---|---|
+| `MISSING` / `CREATED listings_<lang>` | the index doesn't exist / was created with every setting |
+| `CHANGED` / `UPDATED listings-synonyms-<lang>` | the synonyms setting differs from the file / was replaced (counted as `term → synonym` pairs) |
+| `CHANGED` / `UPDATED listings_<lang> → listings_<lang> (<settings>)` | other settings differ / were applied in place |
+
+Meilisearch re-indexes by itself after a settings change (minutes for a large index; searches keep working), so the
+Job never reports `REINDEX REQUIRED` there. A change to the **documents** — a field `MeilisearchDocuments` derives —
+needs the full reindex and a `schema` bump in `meilisearch.json`.
+
+### 11.4 Reindex, partial reindex and rollback on Meilisearch
+
+The same commands and chart Job as § 9; what differs is the swap:
+
+1. `listings_<lang>_v<schema>_<stamp>` is created with the layout's settings and loaded (backfill, catch-up) while
+   `listings_<lang>` keeps serving;
+2. `POST /swap-indexes` exchanges the two indexes' documents **and settings**, both languages in one task;
+3. the versioned name now holds the **previous** documents: deleted at the end, or kept with `--keep-old`.
+
+`--rollback` swaps the newest kept index back in and re-reads what changed since it was built. Afterwards the kept name
+holds the *newer* documents — delete it (`DELETE /indexes/<name>`) once you are sure; a second `--rollback` before that
+would swap forward again. `--partial` writes into `listings_<lang>` as on Elasticsearch.
+
+**Check:**
+
+```sh
+curl -s -H "Authorization: Bearer $MEILISEARCH_API_KEY" "$MEILISEARCH_URL/indexes?limit=50"            # listings_* and their updatedAt
+curl -s -H "Authorization: Bearer $MEILISEARCH_API_KEY" "$MEILISEARCH_URL/indexes/listings_en/stats"   # numberOfDocuments (the two languages hold the same)
+curl -s -H "Authorization: Bearer $MEILISEARCH_API_KEY" "$MEILISEARCH_URL/indexes/listings_en/documents/<id>"
+curl -s -H "Authorization: Bearer $MEILISEARCH_API_KEY" "$MEILISEARCH_URL/tasks?statuses=failed&limit=10"   # what went wrong
+```
+
+### 11.5 What Meilisearch does differently
+
+The search API answers the same requests with the same shapes; the full list of approximations and their reasons is
+in [DECISIONS.md](../DECISIONS.md) (Meilisearch search provider). In short:
+
+| Elasticsearch | Meilisearch |
+|---|---|
+| relevance = text score × (trust tier + rating + nearness) | ranking rules in order: text match (words, typos, proximity, attribute and the word's position in it, exactness), then trust tier, then rating; with a location, **nearest first** among all matches |
+| an explicit sort (price, rating, distance) is strict | strict as well (`sort` is the first ranking rule) |
+| stemming (`plumbers` = `plumber`) | none; typo tolerance (one typo from 5 letters, two from 9) covers most plurals |
+| open now from `integer_range` hours, to the minute | quarter-hour slots covered entirely: a listing that opens at 9:10 shows as open from 9:15 (the card's `openNow` is still exact) |
+| `search_after` pages, unbounded | offset pages, as deep as `maxTotalHits` (10 000 results) |
+| external versions refuse an older snapshot | the worker waits for each write; refreshes of a merchant are ordered by its lock and Meilisearch's task order |
+| completion suggester (prefix of an input) | a prefix search on the name, heaviest first; typo tolerance may add near matches |
+
+### Exercised (Meilisearch)
+
+| date | what was run | outcome |
+|---|---|---|
+| 2026-10-18 | `MeilisearchBootstrapTest`, `MeilisearchIndexAdminTest`, `MeilisearchSearchApiTest`, `MeilisearchIndexerTest`, `MeilisearchReindexTest` (incl. the S-115 drill through `SearchReindexCommand`), `SearchIndicesCommandTest` — Testcontainers `getmeili/meilisearch:v1.28.0`, Kafka 4, PostGIS | **passed** |
+| 2026-10-18 | compose `search-meili` + `./gradlew :worker:searchIndices --args='apply'` then `verify` | **passed**: both indexes created, then in sync |
+| 2026-10-18 | the same tests with `MEILISEARCH_TEST_IMAGE=getmeili/meilisearch:v1.15.2` (the GCP dry run's in-cluster image, [dryrun-gcp.md](dryrun-gcp.md)) | **passed** |
+| — | **not exercised:** a hosted Meilisearch (Layerbase), its TLS and API keys; the chart's Jobs against it | |
