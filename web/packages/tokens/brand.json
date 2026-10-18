@@ -1,0 +1,13 @@
+{
+  "$comment": "The brand, in one file (redesign 2026-10-18, docs/design/redesign-spec.md § 5): the product's name and identity, which palette it wears and its corner radii. `palette` picks palettes/<name>.json (A lakeshore · B evergreen · C dusk); changing it is the one setting that re-colours and re-fonts the web apps and the native apps. Run `pnpm --filter @northline/tokens build` after a change: it regenerates generated/ and fails when a text pair drops below WCAG AA. The name is the working name until the owner chooses one; package scopes (@northline/*), bundle ids, Java packages and infra domains are not read from here (renamed in one sweep later).",
+  "identity": {
+    "name": "Northline",
+    "shortName": "Northline",
+    "legalName": "Northline Marketplace Inc.",
+    "domain": "northline.ca",
+    "supportEmail": "support@northline.ca",
+    "wordmark": "Northline"
+  },
+  "palette": "lakeshore",
+  "radius": { "xs": 4, "sm": 6, "md": 8, "lg": 12, "pill": 999 }
+}
