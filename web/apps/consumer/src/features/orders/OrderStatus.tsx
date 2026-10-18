@@ -10,9 +10,10 @@ import { CourierStatus } from '../tracking/CourierStatus';
 import { CourierTip, ReviewPanel } from '../aftercare/Aftercare';
 
 /**
- * Order confirmed and tracking (S-52, design 06 `confirmed`): the check mark, "Order placed. Arriving tonight 6–9
- * pm.", the reference, total and shops, the four-step timeline and the run panel — kept live by the order's event
- * stream. Only for the customer who placed it.
+ * Order detail and tracking (S-52; redesign § 2.1, AT Shop:688 / OrderDetailView): the head row (placed, total, shops,
+ * order number), the status card ("Order placed. Arriving tonight 6–9 pm.", the four-step timeline, the courier live,
+ * the proof and "Got everything"), the shops, and a side column with the delivery run, the payment summary and help —
+ * kept live by the order's event stream. Only for the customer who placed it.
  */
 export function OrderStatus({ orderId }: { orderId: string }) {
   const t = useOrderT();
@@ -65,41 +66,63 @@ function OrderView({ order }: { order: OrderTracking }) {
   const confirm = useConfirmDelivery(order.orderId);
   const paysOn = order.paysShopsAt ? new Intl.DateTimeFormat(locale, { weekday: 'long', month: 'long', day: 'numeric', timeZone: zone }).format(new Date(order.paysShopsAt)) : null;
 
+  const placedOn = new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'long', day: 'numeric', year: 'numeric', timeZone: zone }).format(new Date(order.placedAt));
+  const runNote = d.kind === 'pooled' && d.startsAt
+    ? <>{d.runLabel ? t('run', { label: d.runLabel, time: clock(d.startsAt, locale, zone) }) : t('runNoLabel', { time: clock(d.startsAt, locale, zone) })}{d.households > 1 ? ` · ${t('households', { count: d.households })}` : ''}</>
+    : d.etaAt ? t('direct', { time: clock(d.etaAt, locale, zone) }) : null;
+
   return (
     <div className="nl-page order-page">
+      <nav aria-label={t('crumbs')} className="order-crumbs">
+        <SiteLink href="/account">{t('crumbAccount')}</SiteLink> › <SiteLink href="/account/orders">{t('crumbOrders')}</SiteLink> › <span aria-current="page">{ref}</span>
+      </nav>
       <div className="order-grid">
-        <div>
-          <svg width="64" height="64" viewBox="0 0 72 72" aria-hidden className="order-check">
-            <circle cx="36" cy="36" r="34" className="order-check-ring" />
-            <path d="M22 37 L32 47 L51 27" className="order-check-mark" />
-          </svg>
-          <h1 className="order-title">{title}</h1>
-          <p className="order-sub">{sub}</p>
-          {!done ? (
-            <ol className="order-steps" aria-live="polite">
-              {order.steps.map(s => (
-                <li key={s.key} className={`order-step order-step-${s.state}`}>
-                  <span className="order-dot" aria-hidden />
-                  <span>{s.key === 'packing' ? t('step_packing', { packed, shops }) : t(`step_${s.key}`)}<span className="nl-sr-only"> ({t(`stepState_${s.state}`)})</span></span>
+        <div className="order-main">
+          <dl className="order-head">
+            <div><dt>{t('headPlaced')}</dt><dd>{placedOn}</dd></div>
+            <div><dt>{t('headTotal')}</dt><dd>{total}</dd></div>
+            <div><dt>{t('headShops')}</dt><dd>{shops}</dd></div>
+            <div className="order-head-ref"><dt>{t('headRef')}</dt><dd>{ref}</dd></div>
+          </dl>
+          <section className="order-card order-status" aria-labelledby="order-title">
+            <h1 id="order-title" className="order-title">{title}</h1>
+            <p className="order-sub">{sub}</p>
+            {!done ? (
+              <ol className="order-steps" aria-live="polite">
+                {order.steps.map(s => (
+                  <li key={s.key} className={`order-step order-step-${s.state}`}>
+                    <span className="order-dot" aria-hidden />
+                    <span className="order-step-label">{s.key === 'packing' ? t('step_packing', { packed, shops }) : t(`step_${s.key}`)}<span className="nl-sr-only"> ({t(`stepState_${s.state}`)})</span></span>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+            <CourierStatus courier={order.courier} />
+            {order.deliveryProof ? <p className="order-note">{t(`proof_${order.deliveryProof}`)}</p> : null}
+            <DoorPhoto orderId={order.orderId} enabled={order.deliveryProof === 'photo'} />
+            {order.confirmedAt ? <p className="order-note">{t('confirmed')}</p> : paysOn ? <p className="order-note">{t('paysShops', { date: paysOn })}</p> : null}
+            {confirm.isError ? <p className="order-error" role="alert">{t('confirmError')}</p> : null}
+            <div className="order-actions">
+              {order.canConfirm
+                ? <button type="button" className="btn btn-primary" disabled={confirm.isPending} onClick={() => confirm.mutate()}>{confirm.isPending ? t('confirming') : t('confirm')}</button>
+                : null}
+              {order.state === 'delivered'
+                ? <SiteLink href={`/account/problem/order/${encodeURIComponent(order.orderId)}`} className="btn btn-secondary">{t('somethingWrong')}</SiteLink>
+                : null}
+            </div>
+          </section>
+          <section className="order-card" aria-labelledby="order-shops">
+            <h2 id="order-shops" className="order-h2">{t('shopsTitle')}</h2>
+            <ul className="order-shops">
+              {order.shops.map(s => (
+                <li key={s.merchantId} className="order-shop">
+                  <span className="order-shop-name">{s.name}</span>
+                  <span className="order-shop-meta">{t('shopItems', { count: s.items })}</span>
+                  {!done ? <span className={`tag ${s.packed ? 'tag-success' : 'tag-neutral'}`}>{s.packed ? t('shopPacked') : t('shopPacking')}</span> : null}
                 </li>
               ))}
-            </ol>
-          ) : null}
-          <CourierStatus courier={order.courier} />
-          {order.deliveryProof ? <p className="order-note">{t(`proof_${order.deliveryProof}`)}</p> : null}
-          <DoorPhoto orderId={order.orderId} enabled={order.deliveryProof === 'photo'} />
-          {order.confirmedAt ? <p className="order-note">{t('confirmed')}</p> : paysOn ? <p className="order-note">{t('paysShops', { date: paysOn })}</p> : null}
-          {confirm.isError ? <p className="order-error" role="alert">{t('confirmError')}</p> : null}
-          <div className="order-actions">
-            {order.canConfirm
-              ? <button type="button" className="btn btn-primary" disabled={confirm.isPending} onClick={() => confirm.mutate()}>{confirm.isPending ? t('confirming') : t('confirm')}</button>
-              : null}
-            <SiteLink href="/account/orders" className={order.canConfirm ? 'btn btn-secondary' : 'btn btn-primary'}>{t('viewOrders')}</SiteLink>
-            {order.state === 'delivered'
-              ? <SiteLink href={`/account/problem/order/${encodeURIComponent(order.orderId)}`} className="btn btn-secondary">{t('somethingWrong')}</SiteLink>
-              : null}
-            <SiteLink href="/" className="btn btn-ghost">{t('backHome')}</SiteLink>
-          </div>
+            </ul>
+          </section>
           {order.state === 'delivered' || order.state === 'confirmed' ? (
             <>
               <CourierTip orderId={order.orderId} />
@@ -107,22 +130,27 @@ function OrderView({ order }: { order: OrderTracking }) {
             </>
           ) : null}
         </div>
-        <figure className="order-map halftone" aria-label={t('map')}>
-          <svg viewBox="0 0 400 300" aria-hidden className="order-map-svg">
-            <path d="M40 260 L120 260 L120 180 L250 180 L250 100 L330 100" className="order-route" />
-            <circle cx="40" cy="260" r="8" className="order-stop" />
-            <circle cx="120" cy="180" r="8" className="order-stop" />
-            <circle cx="330" cy="100" r="9" className="order-home" />
-            {order.courier?.state === 'picked_up'
-              ? <circle cx={order.courier.stopsBefore > 0 ? 250 : 300} cy={order.courier.stopsBefore > 0 ? 140 : 100} r="11" className="order-courier" />
-              : null}
-          </svg>
-          <figcaption className="order-map-note">
-            {d.kind === 'pooled' && d.startsAt
-              ? <>{d.runLabel ? t('run', { label: d.runLabel, time: clock(d.startsAt, locale, zone) }) : t('runNoLabel', { time: clock(d.startsAt, locale, zone) })}{d.households > 1 ? ` · ${t('households', { count: d.households })}` : ''}</>
-              : d.etaAt ? t('direct', { time: clock(d.etaAt, locale, zone) }) : null}
-          </figcaption>
-        </figure>
+        <aside className="order-side" aria-label={t('summary')}>
+          <section className="order-card" aria-labelledby="order-delivery">
+            <h2 id="order-delivery" className="order-h2">{t('deliveryTitle')}</h2>
+            {runNote ? <p className="order-run">{runNote}</p> : <p className="order-run">{t('whenSoon')}</p>}
+          </section>
+          <section className="order-card" aria-labelledby="order-pay">
+            <h2 id="order-pay" className="order-h2">{t('paymentTitle')}</h2>
+            <dl className="order-totals">
+              <div><dt>{t('items')}</dt><dd>{money(order.subtotalCents)}</dd></div>
+              <div><dt>{t('delivery')}</dt><dd>{money(order.deliveryFeeCents)}</dd></div>
+              <div><dt>{t('tax')}</dt><dd>{money(order.taxCents)}</dd></div>
+              <div className="order-total"><dt>{t('total')}</dt><dd>{total}</dd></div>
+            </dl>
+          </section>
+          <section className="order-card" aria-labelledby="order-help">
+            <h2 id="order-help" className="order-h2">{t('helpTitle')}</h2>
+            <SiteLink href="/account/orders" className="order-link">{t('viewOrders')}</SiteLink>
+            <SiteLink href="/help" className="order-link">{t('helpLink')}</SiteLink>
+            <SiteLink href="/" className="order-link">{t('backHome')}</SiteLink>
+          </section>
+        </aside>
       </div>
     </div>
   );
@@ -140,7 +168,7 @@ export function OrderSkeleton() {
           <Skeleton width="60%" height={14} style={{ marginTop: 10 }} />
           {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} width="70%" height={20} style={{ marginTop: 12 }} />)}
         </div>
-        <Skeleton height={0} radius={12} style={{ aspectRatio: '4 / 3', height: 'auto' }} />
+        <Skeleton height={240} radius={8} />
       </div>
     </div>
   );

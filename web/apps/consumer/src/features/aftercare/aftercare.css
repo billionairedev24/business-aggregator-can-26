@@ -1,16 +1,48 @@
 /* mobile gaps part 2: reviews, the courier's tip after the delivery and the visit's ETA */
-.nl-after { margin-top: 24px; padding: 16px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); display: grid; gap: 10px; }
-.nl-after-h2 { font-family: var(--font-heading); font-size: 20px; margin: 0; }
-.nl-after-muted { margin: 0; color: var(--color-neutral-700); font-size: 14px; }
+.nl-after { margin-top: 24px; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-md); display: grid; gap: 10px; }
+.nl-after-h2 { font-size: var(--text-lg); font-weight: var(--weight-bold); margin: 0; }
+.nl-after-muted { margin: 0; color: var(--color-text-muted); font-size: 14px; }
 .nl-after-stars { margin: 0; font-size: 20px; color: var(--color-text); }
-.nl-after-quote { margin: 0; padding-left: 12px; border-left: 3px solid var(--color-divider); }
+.nl-after-quote { margin: 0; padding-left: 12px; border-left: 3px solid var(--color-border); }
 .nl-after-reply { margin: 0; font-style: italic; }
 .nl-after-form { display: grid; gap: 12px; }
 .nl-after-starpick { display: flex; gap: 4px; }
-.nl-after-star { min-width: 44px; min-height: 44px; font-size: 24px; background: none; border: 1px solid var(--color-divider); border-radius: var(--radius-md); color: var(--color-text); cursor: pointer; }
-.nl-after-star[aria-checked='true'] { border-color: var(--color-accent); }
+.nl-after-star { min-width: 44px; min-height: 44px; font-size: 24px; background: none; border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text); cursor: pointer; }
+.nl-after-star[aria-checked='true'] { border-color: var(--color-action-primary); }
 .nl-after-tags { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .nl-after-tags legend { margin-bottom: 6px; font-weight: 600; }
 .nl-after-tags .nl-chip { min-height: 44px; }
 .nl-after-eta { margin: 0; font-size: 18px; font-weight: 600; }
-.nl-after-title { font-family: var(--font-heading); font-size: 28px; margin: 0 0 6px; }
+.nl-after-title { font-size: var(--text-2xl); font-weight: var(--weight-bold); margin: 0 0 var(--space-1); }
+
+/* Booking detail (redesign § 2.1, AT Shop:898 expanded, MA:515): the state card with the booked → done line, beside
+   a 320px column (details, cancellation policy, help). */
+.nl-bkd { padding-top: var(--space-4); }
+.nl-bkd-crumbs { font-size: var(--text-xs); color: var(--color-text-muted); }
+.nl-bkd-crumbs a { color: var(--color-link); display: inline-flex; align-items: center; min-height: var(--size-touch); }
+.nl-bkd-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--space-5); align-items: start; margin-top: var(--space-2); }
+.nl-bkd-main, .nl-bkd-side { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.nl-bkd-card { padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); min-width: 0; }
+.nl-bkd-card > .nl-after { margin-top: var(--space-4); }
+.nl-bkd-kicker { display: block; font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); margin-bottom: var(--space-1); }
+.nl-bkd-h2 { margin: 0 0 var(--space-3); font-size: var(--text-lg); font-weight: var(--weight-bold); display: flex; align-items: center; gap: var(--space-2); }
+.nl-bkd-state { margin: var(--space-3) 0 0; font-size: var(--text-lg); font-weight: var(--weight-bold); }
+.nl-bkd-state-live, .nl-bkd-state-done { color: var(--color-success); }
+.nl-bkd-state-stopped { color: var(--color-danger); }
+.nl-bkd-steps { list-style: none; margin: var(--space-4) 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); font-size: var(--text-sm); }
+.nl-bkd-step { display: flex; flex-direction: column; gap: var(--space-2); }
+.nl-bkd-dot { width: 20px; height: 20px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--color-border-control); background: var(--color-surface); }
+.nl-bkd-step-done .nl-bkd-dot { background: var(--color-success); border-color: var(--color-success); }
+.nl-bkd-step-current .nl-bkd-dot { border-color: var(--color-success); box-shadow: 0 0 0 4px var(--color-success-bg); }
+.nl-bkd-step-current { font-weight: var(--weight-bold); }
+.nl-bkd-step-todo { color: var(--color-text-muted); }
+.nl-bkd-facts { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-sm); }
+.nl-bkd-facts > div { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-3); }
+.nl-bkd-facts dt { font-weight: var(--weight-bold); }
+.nl-bkd-facts dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.nl-bkd-facts a { color: var(--color-link); }
+.nl-bkd-total { padding-top: var(--space-2); border-top: 1px solid var(--color-border); font-size: var(--text-base); }
+.nl-bkd-policy .nl-after-muted + .nl-after-muted { margin-top: var(--space-2); }
+.nl-bkd-link { display: flex; align-items: center; min-height: var(--size-touch); color: var(--color-link); font-size: var(--text-sm); }
+@media (max-width: 899.98px) { .nl-bkd-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 479.98px) { .nl-bkd-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
