@@ -41,26 +41,31 @@ describe('verification queue (S-79, design 03 verify)', () => {
   const user = () => userEvent.setup({ delay: null });
   const setNow = () => vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
 
-  it('shows the design copy, the applications with their checks, region, risk, waiting and decision', async () => {
+  it('shows Applications: the stages, the applications with their checks, region, risk, waiting and stage', async () => {
     setNow();
     api(['trust_safety']);
     renderConsole('/verification');
-    expect(await screen.findByRole('heading', { level: 1, name: '2 applications · median 1.4 days · SLA 2' })).toBeTruthy();
+    expect((await screenReady()).textContent).toBe('Applications');
+    expect(screen.getByText('2 waiting · median decision 1.4 days · SLA 2 days')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByText('Seller verification')).toBeTruthy();
-    expect(screen.getByText(/Automated checks run first \(KYC, registry, insurance OCR, sanctions\)\. Humans decide the rest\./)).toBeTruthy();
+    expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Businesses', 'Listings', 'Licences', 'Age checks']);
+    const kpis = within(screen.getByRole('list', { name: 'Applications by stage' }));
+    expect(kpis.getByText('Stage 1 · Review').nextElementSibling?.textContent).toBe('1');
+    expect(kpis.getByText('Stage 2 · Decision').nextElementSibling?.textContent).toBe('1');
+    expect(kpis.getByText('Approved').nextElementSibling?.textContent).toBe('1');
     const quick = screen.getByText('QuickFix Auto').closest('tr, .nl-dt-card') as HTMLElement;
     expect(within(quick).getByText('KYC ✓ · AMVIC ✗')).toBeTruthy();
     expect(within(quick).getByText('High · no licence')).toBeTruthy();
     expect(within(quick).getByText('3.0 d')).toBeTruthy();
-    expect(within(quick).getByText('Pending')).toBeTruthy();
+    expect(within(quick).getByText('1 · Review')).toBeTruthy();
     const sable = screen.getByText('Sable & Soda Bar Co.').closest('tr, .nl-dt-card') as HTMLElement;
     expect(within(sable).getByText('KYC ✓ · Registry ✓ · Insurance ○')).toBeTruthy();
     expect(within(sable).getByText('4 h')).toBeTruthy();
     expect(within(sable).getByText('Alberta')).toBeTruthy();
+    expect(within(sable).getByText('2 · Decision')).toBeTruthy();
     const fraser = screen.getByText('Fraser Electric').closest('tr, .nl-dt-card') as HTMLElement;
     expect(within(fraser).getByText('BC pilot')).toBeTruthy();
-    expect(within(fraser).getByText('Approved · Registered')).toBeTruthy();
+    expect(within(fraser).getByText('Approved')).toBeTruthy();
     expect(within(fraser).queryByRole('button', { name: /Approve/ })).toBeNull();
   });
 
@@ -103,10 +108,18 @@ describe('verification queue (S-79, design 03 verify)', () => {
     expect(screen.getByText('Request sent to QuickFix Auto.')).toBeTruthy();
   });
 
-  it('opens an application with its identity and registry reviews, decided by the agent', async () => {
+  it('opens an application in the sheet: stages, every submitted field, identity and registry reviews, decided by the agent', async () => {
     const calls = api(['admin']);
     renderConsole('/verification?application=M2');
-    const panel = (await screen.findByRole('heading', { level: 2, name: 'QuickFix Auto · QuickFix Auto Inc.' })).closest('section') as HTMLElement;
+    const panel = await screen.findByRole('dialog', { name: 'QuickFix Auto' });
+    await within(panel).findByText('Name differs from the application');
+    const current = within(panel).getByRole('list', { name: 'Review stages' }).querySelector('[aria-current="step"]');
+    expect(current?.textContent).toContain('Review');
+    const facts: [string, string][] = [['Legal name', 'QuickFix Auto Inc.'], ['Structure', 'Provincial corporation'], ['Categories', 'Mobile mechanic'], ['Location', 'Calgary, Alberta'], ['Risk', 'High · no licence']];
+    for (const [k, v] of facts) {
+      expect(within(panel).getByText(k).nextElementSibling?.textContent, k).toBe(v);
+    }
+    expect(within(panel).getByRole('button', { name: 'Request info' })).toBeTruthy();
     expect(within(panel).getByText('Name differs from the application')).toBeTruthy();
     expect(within(panel).getByText('AMVIC 44812 · manual')).toBeTruthy();
     const owner = within(panel).getByText(/Lee Cardinal · Owner/).closest('li') as HTMLElement;
@@ -115,6 +128,16 @@ describe('verification queue (S-79, design 03 verify)', () => {
     const registry = within(panel).getByText('AMVIC 44812 · manual').closest('li') as HTMLElement;
     await user().click(within(registry).getByRole('button', { name: 'Reject' }));
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/registry-reviews/RC1/decision') && (c.body as { decision: string }).decision === 'reject')).toBe(true));
+    await user().click(within(panel).getAllByRole('button', { name: 'Approve' }).at(-1)!); // the sheet's footer
+    await waitFor(() => expect(calls.some(c => c.url.endsWith('/applications/M2/decision') && (c.body as { decision: string }).decision === 'approve')).toBe(true));
+  });
+
+  it('shows the sheet view only to a role without the verify action', async () => {
+    api(['admin'], c => (c.url.endsWith('/api/v1/console/me') ? { body: { userId: 'U1', roles: [{ role: 'admin', screens: ['overview', 'verify', 'vetting'], actions: [] }] } } : undefined));
+    renderConsole('/verification?application=M2');
+    const panel = await screen.findByRole('dialog', { name: 'QuickFix Auto' });
+    expect(await within(panel).findByText('View only · Admin')).toBeTruthy();
+    expect(within(panel).queryByRole('button', { name: 'Approve' })).toBeNull();
   });
 
   it('filters by province from the region model', async () => {
@@ -135,8 +158,9 @@ describe('verification queue (S-79, design 03 verify)', () => {
   it('speaks French', async () => {
     api(['admin']);
     renderConsole('/verification', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: '2 demandes · médiane 1,4 jours · délai 2' })).toBeTruthy();
-    expect(screen.getByText('Vérification des vendeurs')).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Demandes' })).toBeTruthy();
+    expect(await screen.findByText('2 en attente · décision médiane 1,4 jours · délai 2 jours')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Entreprises' })).toBeTruthy();
     expect(screen.getAllByText('Élevé · sans permis').length).toBeGreaterThan(0);
   });
 });

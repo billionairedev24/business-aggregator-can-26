@@ -1,12 +1,11 @@
 import type { ReactNode } from 'react';
 import { ArrowRight, type Icon } from '@phosphor-icons/react';
 import clsx from 'clsx';
-import './BackOffice.css';
 
 /*
  * Back-office building blocks of the redesign (docs/design/redesign-spec.md § 1.3, AfroTransact BO:263–280, BO:811,
- * PH:53). They live in the Studio until the consumer agent's @northline/ui work settles; each is shaped so it can move
- * to @northline/ui as is (no Studio imports, semantic tokens only).
+ * PH:53), shared by the Studio and the console: the page head, the KPI strip, chart and to-do cards, and the right
+ * sheet's sections and facts. Styles in styles/backoffice.css (semantic tokens only).
  */
 
 export type Trend = 'up' | 'down' | 'flat';
@@ -47,7 +46,8 @@ export function ChartCard({ title, id, actions, children, className }: { title: 
   );
 }
 
-export interface TodoItem { key: string; icon: Icon; text: ReactNode; meta?: ReactNode; onClick: () => void }
+/** One to-do row; without `onClick` (a screen the viewer can't open) it shows the count without the way in. */
+export interface TodoItem { key: string; icon: Icon; text: ReactNode; meta?: ReactNode; onClick?: () => void }
 /** A "To do" card (BO:273): bold title, then rows of icon · text · count → each opens its screen. */
 export function TodoCard({ title, id, items, empty }: { title: ReactNode; id: string; items: readonly TodoItem[]; empty: ReactNode }) {
   return (
@@ -55,16 +55,20 @@ export function TodoCard({ title, id, items, empty }: { title: ReactNode; id: st
       <h2 className="bo-card-title" id={id}>{title}</h2>
       {items.length === 0 ? <p className="bo-muted">{empty}</p> : (
         <ul className="bo-todo">
-          {items.map(({ key, icon: I, text, meta, onClick }) => (
-            <li key={key}>
-              <button type="button" className="bo-todo-row" onClick={onClick}>
-                <I size={20} aria-hidden className="bo-todo-icon" />
-                <span className="bo-todo-text">{text}</span>
-                {meta ? <span className="bo-todo-meta">{meta}</span> : null}
-                <ArrowRight size={16} aria-hidden className="bo-todo-arrow" />
-              </button>
-            </li>
-          ))}
+          {items.map(({ key, icon: I, text, meta, onClick }) => {
+            const body = <>
+              <I size={20} aria-hidden className="bo-todo-icon" />
+              <span className="bo-todo-text">{text}</span>
+              {meta ? <span className="bo-todo-meta">{meta}</span> : null}
+            </>;
+            return (
+              <li key={key}>
+                {onClick
+                  ? <button type="button" className="bo-todo-row" onClick={onClick}>{body}<ArrowRight size={16} aria-hidden className="bo-todo-arrow" /></button>
+                  : <div className="bo-todo-row" data-static="">{body}</div>}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

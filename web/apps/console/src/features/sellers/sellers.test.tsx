@@ -46,7 +46,8 @@ describe('sellers & providers (S-82, design 03)', () => {
   it('lists every business with tier, quality, GMV, disputes, flags and status', async () => {
     api(['trust_safety']);
     renderConsole('/sellers');
-    expect(await screen.findByRole('heading', { level: 1, name: '1,204 active · 41 at risk' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sellers & providers' })).toBeTruthy();
+    expect(await screen.findByText('1,204 active · 41 at risk')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     const bow = card('Bow River Mechanics');
     expect(within(bow).getByText('Services · AB')).toBeTruthy();
@@ -95,16 +96,40 @@ describe('sellers & providers (S-82, design 03)', () => {
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/sellers?q=bow&province=AB'))).toBe(true));
   });
 
+  it('opens a business in the right sheet from the list, with its figures, flags, checks and the full page', async () => {
+    const calls = api(['trust_safety']);
+    const user = userEvent.setup({ delay: null });
+    const { router } = renderConsole('/sellers');
+    await screenReady();
+    await user.click(within(card('Bow River Mechanics')).getByRole('button', { name: /Open/ }));
+    const sheet = await screen.findByRole('dialog', { name: 'Bow River Mechanics' });
+    expect(router.state.location.search).toEqual({ seller: 'm2' });
+    expect(await within(sheet).findByText('4.7 · 88 reviews')).toBeTruthy();
+    expect(within(sheet).getByText('Quality').nextElementSibling?.textContent).toBe('78 · Below the floor');
+    expect(within(sheet).getByText('On time').nextElementSibling?.textContent).toBe('93%');
+    expect(within(sheet).getByText('Insurance 21 d')).toBeTruthy();
+    expect(within(sheet).getByText('AMVIC 51022')).toBeTruthy();
+    expect(within(sheet).getByText('Registered → Trusted by Priya Natarajan · “Quality 84 for 4 weeks”')).toBeTruthy();
+    expect(within(sheet).getByRole('link', { name: 'Open the full page' }).getAttribute('href')).toBe('/sellers/m2');
+    await user.click(within(sheet).getByRole('button', { name: 'Suspend' }));
+    expect(await screen.findByRole('dialog', { name: 'Suspend · Bow River Mechanics' })).toBeTruthy();
+    expect(calls.some(c => c.url.endsWith('/api/v1/console/sellers/m2'))).toBe(true);
+  });
+
   it('shows the seller detail: KPIs against floors, signals, timeline and verifications', async () => {
     api(['admin']);
     renderConsole('/sellers/m2');
     expect(await screen.findByRole('heading', { level: 1, name: 'Bow River Mechanics' })).toBeTruthy();
     expect(screen.getByText('Services · Mobile mechanic · Calgary · joined Mar 2026 · Stripe acct_1K…')).toBeTruthy();
-    expect(screen.getByText('rating · 88 reviews').previousElementSibling?.textContent).toBe('4.7');
-    expect(screen.getByText('quality · Trusted floor 80').previousElementSibling?.textContent).toBe('78');
-    expect(screen.getByText('on time · floor 92').previousElementSibling?.textContent).toBe('93%');
-    expect(screen.getByText('disputes · floor 1.5').previousElementSibling?.textContent).toBe('2.4%');
-    expect(screen.getByText('90-day GMV').previousElementSibling?.textContent).toBe('$18.2k');
+    const kpi = (label: string) => screen.getByText(label).parentElement!;
+    expect(kpi('rating · 88 reviews').querySelector('.bo-kpi-value')?.textContent).toBe('4.7');
+    expect(kpi('quality · Trusted floor 80').querySelector('.bo-kpi-value')?.textContent).toBe('78');
+    expect(kpi('quality · Trusted floor 80').querySelector('.bo-kpi-delta')?.textContent).toBe('Below the floor');
+    expect(kpi('on time · floor 92').querySelector('.bo-kpi-value')?.textContent).toBe('93%');
+    expect(kpi('on time · floor 92').querySelector('.bo-kpi-delta')).toBeNull();
+    expect(kpi('disputes · floor 1.5').querySelector('.bo-kpi-value')?.textContent).toBe('2.4%');
+    expect(kpi('disputes · floor 1.5').querySelector('.bo-kpi-delta')?.getAttribute('data-trend')).toBe('down');
+    expect(kpi('90-day GMV').querySelector('.bo-kpi-value')?.textContent).toBe('$18.2k');
     expect(screen.getByText('On-time arrival')).toBeTruthy();
     expect(screen.getByText('Completion photos')).toBeTruthy();
     expect(screen.getByText('Registered → Trusted by Priya Natarajan · “Quality 84 for 4 weeks”')).toBeTruthy();
@@ -201,7 +226,8 @@ describe('sellers & providers (S-82, design 03)', () => {
   it('speaks French', async () => {
     api(['admin']);
     renderConsole('/sellers', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: /1\s204 actifs · 41 à risque/ })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Vendeurs et fournisseurs' })).toBeTruthy();
+    expect(await screen.findByText(/1\s204 actifs · 41 à risque/)).toBeTruthy();
     expect(within(card('Prairie Wrench')).getByText('Mécanicien mobile')).toBeTruthy();
   });
 });

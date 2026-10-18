@@ -7,40 +7,48 @@ import { compactMoney } from './Overview';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 describe('console overview (S-91, design 03)', () => {
-  it('shows the day, the headline, the KPIs, GMV, health, the work queue and live now', async () => {
+  it('shows the page head, the KPI strip, GMV, the to-do queues, live now and health (BO:263)', async () => {
     staffApi(['admin'], c => (c.url.includes('/api/v1/console/overview') ? { body: overview() } : undefined));
-    renderConsole('/');
-    expect(await screen.findByRole('heading', { level: 1, name: '$212k GMV this week, 1,204 sellers, 7 verifications and 3 disputes waiting.' })).toBeTruthy();
+    const user = userEvent.setup({ delay: null });
+    const { router } = renderConsole('/');
+    expect((await screenReady()).textContent).toBe('Overview');
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Tuesday 8 September · live')).toBeTruthy();
-    const kpis: [string, string][] = [['$212k', 'GMV · week · +9% w/w'], ['$24.1k', 'net revenue · 11.4% blended take'], ['6,812', 'orders + bookings · 61% goods'],
-      ['96.8%', 'on-time · target 95'], ['0.9%', 'dispute rate · target < 1.2'], ['$2.71', 'avg delivery fee paid']];
-    for (const [value, label] of kpis) {
-      expect(screen.getByText(label).previousElementSibling?.textContent, label).toBe(value);
+    const kpis = within(screen.getByRole('list', { name: 'The last 7 days' }));
+    const card = (label: string) => kpis.getByText(label).parentElement as HTMLElement;
+    const expected: [string, string, string?][] = [['GMV · week', '$212k', '+9% vs last week'], ['Net revenue', '$24.1k', '11.4% blended take'], ['Orders + bookings', '6,812', '61% goods'],
+      ['On-time', '96.8%', 'target 95%'], ['Dispute rate', '0.9%', 'target under 1.2%'], ['Avg delivery fee paid', '$2.71']];
+    for (const [label, value, delta] of expected) {
+      expect(card(label).querySelector('.bo-kpi-value')?.textContent, label).toBe(value);
+      if (delta) expect(card(label).querySelector('.bo-kpi-delta')?.textContent, label).toBe(delta);
     }
+    expect(card('GMV · week').querySelector('.bo-kpi-delta')?.getAttribute('data-trend')).toBe('up');
     expect(screen.getByRole('img', { name: 'GMV · 12 weeks' })).toBeTruthy();
-    expect(screen.getByText('Goods in cyan, services in magenta')).toBeTruthy();
     expect(screen.getByText('184 ms')).toBeTruthy();
     expect(screen.getByText('27k conns')).toBeTruthy();
     expect(screen.getByText('1 offline')).toBeTruthy();
     expect(within(screen.getByText('Kafka lag').closest('.nl-ov-tile') as HTMLElement).getByText('—')).toBeTruthy();
-    const verify = screen.getByRole('link', { name: /7 seller verifications/ });
-    expect(verify.getAttribute('href')).toBe('/verification');
-    expect(verify.textContent).toContain('oldest 3.0 d · SLA 2 d');
-    expect(screen.getByRole('link', { name: /5 flagged listings/ }).textContent).toContain('SLA 4 h · oldest 2 h');
-    expect(screen.getByRole('link', { name: /1 stuck delivery run/ }).textContent).toContain('12 min');
-    expect(screen.getByRole('link', { name: /5 trust & safety flags/ }).textContent).toContain('includes off-platform payment');
+    const todo = within(screen.getByRole('region', { name: 'To do' }));
+    const applications = todo.getByRole('button', { name: /applications to review/ });
+    expect(applications.textContent).toContain('oldest 3.0 d · SLA 2 d');
+    expect(applications.textContent).toContain('7');
+    expect(todo.getByRole('button', { name: /flagged listings/ }).textContent).toContain('SLA 4 h · oldest 2 h');
+    expect(todo.getByRole('button', { name: /stuck delivery run/ }).textContent).toContain('12 min');
+    expect(todo.getByRole('button', { name: /trust & safety flags/ }).textContent).toContain('includes off-platform payment');
     expect(screen.getByText('27 / 41')).toBeTruthy();
     expect(screen.getByText('Orders in tonight’s Calgary pool')).toBeTruthy();
     expect(screen.getByText('312 · closes 5:19 p.m.')).toBeTruthy();
     expect(screen.getByText('$418,220')).toBeTruthy();
+    await user.click(applications);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/verification'));
   });
 
-  it('lists every work item but links only the screens the role opens', async () => {
+  it('lists every work item but opens only the screens the role opens', async () => {
     staffApi(['analyst'], c => (c.url.includes('/api/v1/console/overview') ? { body: overview() } : undefined));
     renderConsole('/');
-    expect(await screen.findByText('seller verifications')).toBeTruthy();
-    expect(screen.queryByRole('link', { name: /seller verifications/ })).toBeNull();
+    expect(await screen.findByText('applications to review')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /applications to review/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Dispute rate/ })).toBeNull();
   });
 
   it('filters by province and market from the region model', async () => {
@@ -64,7 +72,8 @@ describe('console overview (S-91, design 03)', () => {
       : undefined));
     renderConsole('/');
     expect(await screen.findByText('GMV · week')).toBeTruthy();
-    expect(screen.getByText('on-time · target 95').previousElementSibling?.textContent).toBe('—');
+    expect(screen.getByText('On-time').nextElementSibling?.textContent).toBe('—');
+    expect(screen.queryByText(/vs last week/)).toBeNull();
     expect(screen.queryByText(/pool/)).toBeNull();
   });
 

@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
-import { DataTable, Drawer, ErrorState, Segmented, Skeleton, useLocale, type DataTableColumn, type Locale } from '@northline/ui';
+import { DataTable, Drawer, ErrorState, Segmented, Skeleton, useLocale, type DataTableColumn, type Locale, BoHeader } from '@northline/ui';
 import { useMerchantId } from '../shell/api';
 import { useSession } from '../../lib/session';
 import { timeOffQuery } from '../availability/api';
 import { addDays, clock, localDate, localInstant, minuteOfDay, mondayOf, today } from '../../lib/time';
-import { BoHeader } from '../../components/BackOffice';
 import { calendarCellsQuery, jobsQuery, type CalendarCells, type Job } from './api';
 import { JobPanel } from './JobPanel';
 import { useAppointmentsT } from './messages';

@@ -27,9 +27,13 @@ export type NavGroupKey = 'operations' | 'marketplace' | 'platform';
 export const PINNED: readonly ScreenKey[] = ['overview'];
 export const NAV_GROUPS: readonly { key: NavGroupKey; screens: readonly ScreenKey[] }[] = [
   { key: 'operations', screens: ['orders', 'disputes', 'delivery'] },
-  { key: 'marketplace', screens: ['sellers', 'verify', 'pilot', 'vetting', 'trust', 'taxonomy', 'support'] },
+  // redesign § 3.12: verification and vetting are one "Applications" entry (`verify`); vetting is its Listings tab
+  { key: 'marketplace', screens: ['sellers', 'verify', 'pilot', 'trust', 'taxonomy', 'support'] },
   { key: 'platform', screens: ['regions', 'go_live', 'finance', 'reports', 'privacy', 'uat', 'api', 'team'] },
 ];
+
+/** The sidebar entry a screen lights up: listing vetting is a tab of Applications (`verify`), redesign § 2.3. */
+export const navKey = (screen: ScreenKey): ScreenKey => (screen === 'vetting' ? 'verify' : screen);
 
 /** The screen a pathname shows (`/sellers/123` → sellers), or undefined for a path outside the console's screens. */
 export function screenFromPath(pathname: string): ScreenKey | undefined {

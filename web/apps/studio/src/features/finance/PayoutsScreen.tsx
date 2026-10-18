@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Chip, DataTable, Field, OptionCard, PageSkeleton, RadioGroup, Select, Skeleton, TextInput, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
+import { Button, Chip, DataTable, Field, OptionCard, PageSkeleton, RadioGroup, Select, Skeleton, TextInput, useFormatters, useLocale, type DataTableColumn, BoHeader } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { attentionCount } from '../../lib/forms';
 import { useMerchantId, useRole } from '../shell/api';
@@ -12,7 +12,6 @@ import { dateTime, dayDate, timeOf, toCents, toDollars } from './format';
 import { useFinanceT, type FinanceKey } from './messages';
 import { QueryState } from './QueryState';
 import { StepUpPanel } from './StepUpPanel';
-import { BoHeader } from '../../components/BackOffice';
 import './finance.css';
 
 type Panel = null | 'instant' | 'schedule' | 'bank';
