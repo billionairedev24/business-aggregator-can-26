@@ -2,23 +2,25 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Eye, EyeSlash } from '@phosphor-icons/react';
-import { Button, DataTable, PageHeader, useFormatters, type DataTableAction, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { Button, DataTable, useFormatters, type DataTableAction, type DataTableColumn, type DataTableTone } from '@northline/ui';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';
 import { listingsQuery, useListingActions, type ListingItem } from './api';
 import { useCatalogueT } from './messages';
-import { minutesSince, permissions, portalOf, vetState } from './model';
+import { fees, minutesSince, permissions, portalOf, vetState } from './model';
+import { BoHeader } from '../../components/BackOffice';
 import './catalogue.css';
 import { InsightCard } from '../assistant/InsightCard';
 
 interface Row {
-  id: string; name: string; sku: string; type: string; price: number | null; quote: boolean; stock: number | null; sales: number;
+  id: string; name: string; sku: string; meta: string; type: string; price: number | null; net: number | null; quote: boolean; stock: number | null; sales: number;
   vet: string; vetTone: DataTableTone; live: string; liveCode: 'live' | 'hidden' | 'draft';
 }
 
 /**
- * /b/$merchantId/listings — design: products (portal-aware). Sellers see products ("Products & variants"), providers
- * services ("Services & prices"), both see everything with a Type column. Inline Publish / Hide, role-gated CRUD.
+ * /b/$merchantId/listings — the generic back-office table (redesign § 2.2, BO:756; providers PH:139 "Services &
+ * prices"). Sellers see products ("Products & variants"), providers services with their duration and what they get
+ * after {brand}'s fee, both see everything with a Type column. Inline Publish / Hide, role-gated CRUD.
  */
 export function ListingsScreen() {
   const t = useCatalogueT();
@@ -40,20 +42,21 @@ export function ListingsScreen() {
       const state = vetState(l);
       const liveCode = l.vetting === 'draft' ? 'draft' : l.status;
       return {
-        id: l.id, name: l.name, sku: l.sku ?? '', type: l.kind === 'service' ? t('typeService') : t('typeProduct'),
+        id: l.id, name: l.name, sku: l.sku ?? '', meta: l.kind === 'service' ? l.meta : l.sku ?? '', net: l.kind === 'service' && l.priceCents != null && l.pricingMode !== 'quote' ? fees(l.priceCents, null, merchant.tier).net : null, type: l.kind === 'service' ? t('typeService') : t('typeProduct'),
         price: l.priceCents ?? null, quote: l.pricingMode === 'quote', stock: l.stock ?? null, sales: l.sales30d,
         vet: state === 'pending' ? t('vetPending', { min: minutesSince(l.submittedAt) }) : state === 'review' ? t('vetReview') : state === 'approved' ? t('vetApproved') : state === 'rejected' ? t('vetRejected') : t('vetDraft'),
-        vetTone: state === 'approved' ? 'tag-accent' : state === 'draft' ? 'tag-neutral' : 'tag-accent-2',
+        vetTone: state === 'approved' ? 'tag-accent' : state === 'draft' ? 'tag-neutral' : state === 'rejected' ? 'tag-accent-2' : 'tag-highlight',
         live: labels[liveCode], liveCode,
       };
-    }), [q.data, portal, t]); // eslint-disable-line react-hooks/exhaustive-deps
+    }), [q.data, portal, t, merchant.tier]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const columns: DataTableColumn<Row>[] = [
-    { key: 'name', label: t(`col_${portal}`), sub: 'sku', subLabel: t('sku'), primary: true },
+    { key: 'name', label: t(`col_${portal}`), sub: portal === 'seller' ? 'sku' : 'meta', subLabel: portal === 'seller' ? t('sku') : t('colDetails'), primary: true },
     ...(portal === 'both' ? [{ key: 'type', label: t('colType'), type: 'tag', options: [t('typeService'), t('typeProduct')], tones: { [t('typeService')]: 'tag-neutral', [t('typeProduct')]: 'tag-neutral' } } as DataTableColumn<Row>] : []),
     { key: 'price', label: t('colPrice'), type: 'money', format: (v, r) => (r.quote ? t('quote') : typeof v === 'number' ? money(v) : '—') },
-    { key: 'stock', label: t('colStock'), type: 'num' },
-    { key: 'sales', label: t('colSales'), type: 'num', editable: false },
+    ...(portal !== 'seller' ? [{ key: 'net', label: t('colNet'), type: 'money', editable: false, format: (v: unknown) => (typeof v === 'number' ? money(v) : '—') } as DataTableColumn<Row>] : []),
+    ...(portal !== 'provider' ? [{ key: 'stock', label: t('colStock'), type: 'num' } as DataTableColumn<Row>] : []),
+    { key: 'sales', label: t(portal === 'provider' ? 'colBookings' : 'colSales'), type: 'num', editable: false },
     { key: 'vet', label: t('colVetting'), type: 'tag', editable: false },
     { key: 'live', label: t('colStatus'), type: 'tag', options: [labels.live, labels.hidden, labels.draft], tones: { [labels.live]: 'tag-accent', [labels.hidden]: 'tag-neutral', [labels.draft]: 'tag-neutral' } },
   ];
@@ -63,11 +66,10 @@ export function ListingsScreen() {
     { id: 'hide', label: t('hide'), icon: EyeSlash, perm: 'update', inline: true, when: { key: 'live', in: [labels.live] } },
   ];
   const open = (r: Row) => void navigate({ to: '/b/$merchantId/listings/$listingId', params: { merchantId, listingId: r.id } });
-  const kicker = t(`kicker_${portal}`);
 
   return (
     <>
-      <PageHeader kicker={kicker} title={t(`title_${portal}`)}
+      <BoHeader title={t(`title_${portal}`)} sub={t(`sub_${portal}`)}
         actions={<Button variant="secondary" onClick={() => void navigate({ to: '/b/$merchantId/listings/bulk', params: { merchantId } })}>{t(`bulk_${portal}`)}</Button>} />
       <DataTable<Row>
         entity={t(`entity_${portal}`)} plural={t(`plural_${portal}`)} columns={columns} rows={rows}

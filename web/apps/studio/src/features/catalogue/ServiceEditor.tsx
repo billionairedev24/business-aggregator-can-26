@@ -86,6 +86,8 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
       <div style={{ marginBottom: 16 }}><AttentionSummary errors={fm.visible} t={t} /></div>
       <div className="nl-cat-editor">
         <fieldset className="nl-cat-main" disabled={!perms.update}>
+          <section className="nl-cat-card" aria-labelledby="svc-details">
+          <h2 className="nl-cat-card-title" id="svc-details">{t('secDetails')}</h2>
           {typePicker}
           <Field label={t('serviceName')} error={err('name')}>
             <TextInput placeholder={t('serviceNamePlaceholder')} value={form.name} maxLength={120} onChange={e => update({ name: e.target.value })} onBlur={() => touch('name')} />
@@ -94,6 +96,9 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
             <CategoryPicker categories={categories} value={form.categoryId} rootLabel={t('rootService')} disabled={categoriesQ.isPending} invalid={!!err('categoryId')}
               onChange={id => { update({ categoryId: id }); touch('categoryId'); }} />
           </Field>
+          </section>
+          <section className="nl-cat-card" aria-labelledby="svc-pricing">
+          <h2 className="nl-cat-card-title" id="svc-pricing">{t('secPricingSchedule')}</h2>
           <FormGrid min={220}>
             <div className="nl-field" role="group" aria-labelledby="pricing-label">
               <span className="nl-label" id="pricing-label">{t('pricing')}</span>
@@ -115,6 +120,10 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
               <Select value={String(form.bufferMin)} options={BUFFERS.map(b => ({ value: String(b), label: t(`buf_${b}`) }))} onChange={e => update({ bufferMin: Number(e.target.value) })} />
             </Field>
           </FormGrid>
+          <Checkbox checked={form.instantBook} onChange={v => update({ instantBook: v })} label={t('instantBook')} />
+          </section>
+          <section className="nl-cat-card" aria-labelledby="svc-included">
+          <h2 className="nl-cat-card-title" id="svc-included">{t('secIncluded')}</h2>
           <Field label={t('included')} error={err('included')}>
             <TextArea rows={3} placeholder={t('includedPlaceholder')} value={form.included} onChange={e => update({ included: e.target.value })} onBlur={() => touch('included')} />
           </Field>
@@ -122,10 +131,10 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
             facts={{ kind: 'service', name: form.name, categoryId: form.categoryId, included: form.included, durationMin: form.durationMin }}
             onUse={c => update({ name: c.title, included: [c.description, ...c.bullets.map(b => `• ${b}`)].join('\n') }, ['name', 'included'])} />
           <FrenchTextPanel merchantId={merchantId} listingId={saved?.id} disabled={!perms.update} />
-          <Checkbox checked={form.instantBook} onChange={v => update({ instantBook: v })} label={t('instantBook')} />
           <Field label={t('skuLabel')} hint={t('skuHint')} error={err('sku')}>
             <TextInput value={form.sku} maxLength={60} style={{ maxWidth: 240 }} onChange={e => update({ sku: e.target.value })} onBlur={() => touch('sku')} />
           </Field>
+          </section>
         </fieldset>
         <Side>
           <CompletenessPanel t={t} percent={completeness.percent} items={sections} />

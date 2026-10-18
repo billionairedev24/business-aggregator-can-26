@@ -118,7 +118,8 @@ export function ProductEditor({ detail, portal, typePicker, type = 'product' }: 
       <RevetNotice detail={saved} kind="product" />
       <div style={{ marginBottom: 16 }}><AttentionSummary errors={fm.visible} t={t} /></div>
       <div className="nl-cat-editor">
-        <fieldset className="nl-cat-main" disabled={!perms.update} id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+        <fieldset className="nl-cat-main nl-cat-card" disabled={!perms.update} id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+          <h2 className="nl-cat-card-title">{tabName[tab]}</h2>
           {tab === 'identity' && <>
             {typePicker}
             {!isBundle && <Field label={t('identifier')} error={err('gtin')}>
