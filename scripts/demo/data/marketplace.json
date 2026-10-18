@@ -1,0 +1,164 @@
+{
+  "$comment": "The demo marketplace scripts/demo-data.sh builds through the product (docs/runbooks/demo.md). Every business, person and listing is FAKE. No place names here (region-neutral rule): {city} and {province} are filled from the market the run targets. Prices in cents (CAD), durations in minutes. Keys are stable: re-runs find what an earlier run made by them.",
+  "tag": "[demo]",
+  "owners": {
+    "owner": { "firstName": "Morgan", "lastName": "Demo-Owner", "email": "owner@demo.northline.test", "phoneSuffix": "0101", "role": "owns every demo business" },
+    "applicant": { "firstName": "Riley", "lastName": "Demo-Applicant", "email": "applicant@demo.northline.test", "phoneSuffix": "0102", "role": "an account with no business yet: the live seller-onboarding demo" }
+  },
+  "customers": [
+    { "key": "customer", "firstName": "Jordan", "lastName": "Demo-Shopper", "email": "shopper@demo.northline.test", "phoneSuffix": "0111", "role": "the presenter's shopper (past orders, bookings, reviews)" },
+    { "key": "customer2", "firstName": "Avery", "lastName": "Demo-Customer", "email": "avery@demo.northline.test", "phoneSuffix": "0112", "role": "background customer" },
+    { "key": "customer3", "firstName": "Sam", "lastName": "Demo-Customer", "email": "sam@demo.northline.test", "phoneSuffix": "0113", "role": "background customer" }
+  ],
+  "merchants": [
+    {
+      "key": "bakery", "type": "seller", "name": "Hearth & Crumb Bakery", "colour": "#A0522D",
+      "categories": ["shop.food-and-grocery.bakery"],
+      "tagline": "Naturally leavened bread, baked before sunrise",
+      "about": "A neighbourhood bakery in {city}: long-fermented sourdough, butter pastries and seasonal pies, baked every morning in small batches.",
+      "listings": [
+        { "key": "sourdough", "kind": "product", "title": "Country sourdough loaf", "category": "shop.food-and-grocery.bakery", "priceCents": 900, "stock": 30, "description": "A 900 g round of naturally leavened sourdough with a crackling crust and an open, tangy crumb. Fermented for 36 hours.", "bullets": ["900 g loaf", "Baked this morning", "Flour, water, salt, starter"] },
+        { "key": "croissants", "kind": "product", "title": "Butter croissants, 4-pack", "category": "shop.food-and-grocery.bakery", "priceCents": 1200, "stock": 24, "description": "Four all-butter croissants, laminated over three days for 27 flaky layers.", "bullets": ["4 croissants", "Cultured butter"] },
+        { "key": "cinnamon", "kind": "product", "title": "Cinnamon buns, box of 6", "category": "shop.food-and-grocery.bakery", "priceCents": 1800, "stock": 18, "description": "Soft brioche buns rolled with brown sugar and cinnamon, finished with a cream-cheese glaze.", "bullets": ["6 buns", "Glaze on the side"] },
+        { "key": "baguette", "kind": "product", "title": "Classic baguette", "category": "shop.food-and-grocery.bakery", "priceCents": 450, "stock": 40, "description": "A thin-crusted French baguette, baked twice a day.", "bullets": ["About 300 g"] },
+        { "key": "pie", "kind": "product", "title": "Apple crumble pie", "category": "shop.food-and-grocery.bakery", "priceCents": 2400, "stock": 8, "description": "A 9-inch pie of tart apples under an oat and brown-butter crumble. Serves 8.", "bullets": ["9-inch", "Serves 8"] }
+      ]
+    },
+    {
+      "key": "grocer", "type": "seller", "name": "Green Basket Grocer", "colour": "#2E7D32",
+      "categories": ["shop.food-and-grocery.produce", "shop.food-and-grocery.groceries", "shop.food-and-grocery.dairy-and-eggs"],
+      "tagline": "Fresh produce and pantry staples, delivered today",
+      "about": "An independent grocer stocking seasonal produce from nearby farms, everyday pantry staples and free-range eggs for {city}.",
+      "listings": [
+        { "key": "eggs", "kind": "product", "title": "Free-range eggs, dozen", "attributes": {"volume": "dozen", "storage": "Refrigerated"}, "category": "shop.food-and-grocery.dairy-and-eggs", "priceCents": 749, "stock": 60, "description": "Twelve large brown eggs from free-range hens.", "bullets": ["12 large eggs", "Grade A"] },
+        { "key": "apples", "kind": "product", "title": "Honeycrisp apples, 1 kg bag", "attributes": {"volume": "1 kg", "origin": "Canada"}, "category": "shop.food-and-grocery.produce", "priceCents": 699, "stock": 45, "description": "Crisp, juicy Honeycrisp apples — about seven per bag.", "bullets": ["1 kg", "About 7 apples"] },
+        { "key": "greens", "kind": "product", "title": "Organic salad greens, 250 g", "attributes": {"volume": "250 g", "origin": "Canada"}, "category": "shop.food-and-grocery.produce", "priceCents": 549, "stock": 35, "description": "A washed mix of baby spinach, arugula and red leaf lettuce.", "bullets": ["250 g clamshell", "Washed and ready"] },
+        { "key": "rice", "kind": "product", "title": "Basmati rice, 1 kg", "attributes": {"volume": "1 kg", "storage": "Shelf"}, "category": "shop.food-and-grocery.groceries", "priceCents": 649, "stock": 25, "description": "Long-grain aged basmati rice.", "bullets": ["1 kg bag"] },
+        { "key": "honey", "kind": "product", "title": "Wildflower honey, 500 g", "attributes": {"volume": "500 g", "storage": "Shelf"}, "category": "shop.food-and-grocery.groceries", "priceCents": 1299, "stock": 20, "description": "Raw, unpasteurized wildflower honey in a glass jar.", "bullets": ["500 g jar", "Raw"] },
+        { "key": "oatmilk", "kind": "product", "title": "Oat milk, barista edition 1 L", "attributes": {"volume": "1 L", "storage": "Refrigerated"}, "category": "shop.food-and-grocery.dairy-and-eggs", "priceCents": 499, "stock": 50, "description": "Creamy oat milk that foams like dairy.", "bullets": ["1 L carton"] }
+      ]
+    },
+    {
+      "key": "coffee", "type": "seller", "name": "Daily Grind Coffee Roasters", "colour": "#5D4037",
+      "categories": ["shop.food-and-grocery.coffee-and-tea"],
+      "tagline": "Small-batch coffee, roasted this week",
+      "about": "A micro-roaster in {city} roasting single-origin beans and house blends every Tuesday and Friday.",
+      "listings": [
+        { "key": "house", "kind": "product", "title": "House blend whole bean, 340 g", "attributes": {"volume": "340 g", "form": "Whole bean"}, "category": "shop.food-and-grocery.coffee-and-tea", "priceCents": 1795, "stock": 40, "description": "Our medium roast: milk chocolate, toasted almond and a little citrus.", "bullets": ["340 g", "Medium roast"] },
+        { "key": "espresso", "kind": "product", "title": "Espresso blend, 340 g", "attributes": {"volume": "340 g", "form": "Whole bean"}, "category": "shop.food-and-grocery.coffee-and-tea", "priceCents": 1895, "stock": 30, "description": "A darker blend built for espresso: cocoa, molasses, a long finish.", "bullets": ["340 g", "Dark roast"] },
+        { "key": "decaf", "kind": "product", "title": "Swiss water decaf, 340 g", "attributes": {"volume": "340 g", "form": "Whole bean"}, "category": "shop.food-and-grocery.coffee-and-tea", "priceCents": 1895, "stock": 15, "description": "Chemical-free decaffeinated beans with a caramel sweetness.", "bullets": ["340 g", "99.9% caffeine-free"] },
+        { "key": "tea", "kind": "product", "title": "Earl Grey loose-leaf tea, 250 g", "attributes": {"volume": "250 g", "form": "Loose leaf"}, "category": "shop.food-and-grocery.coffee-and-tea", "priceCents": 1950, "stock": 25, "description": "Black tea with natural bergamot oil and cornflower petals.", "bullets": ["250 g tin"] }
+      ]
+    },
+    {
+      "key": "wine", "type": "seller", "name": "Cellar Door Wine & Spirits", "colour": "#7B1F3A",
+      "categories": ["shop.restricted.alcohol"], "ageRestricted": "alcohol",
+      "tagline": "Wine, craft beer and cider — ID checked at the door",
+      "about": "A licensed wine shop with a curated cellar, local craft beer and cider. Age-restricted: customers verify their age once and the courier checks photo ID at handoff.",
+      "listings": [
+        { "key": "red", "kind": "product", "title": "Cabernet Sauvignon red wine, 750 mL", "category": "shop.restricted.alcohol", "priceCents": 2299, "stock": 24, "description": "A full-bodied red with black currant and cedar. 13.5% alc./vol.", "bullets": ["750 mL", "13.5% alc./vol."] },
+        { "key": "white", "kind": "product", "title": "Riesling white wine, 750 mL", "category": "shop.restricted.alcohol", "priceCents": 1899, "stock": 24, "description": "An off-dry Riesling with lime and green apple. 11% alc./vol.", "bullets": ["750 mL", "11% alc./vol."] },
+        { "key": "beer", "kind": "product", "title": "Craft pale ale, 6 × 355 mL", "category": "shop.restricted.alcohol", "priceCents": 1649, "stock": 30, "description": "A hazy pale ale from an independent brewery. 5.2% alc./vol.", "bullets": ["6 cans", "5.2% alc./vol."] },
+        { "key": "cider", "kind": "product", "title": "Dry apple cider, 4 × 473 mL", "category": "shop.restricted.alcohol", "priceCents": 1399, "stock": 20, "description": "Crisp dry cider pressed from heritage apples. 6% alc./vol.", "bullets": ["4 cans", "6% alc./vol."] }
+      ]
+    },
+    {
+      "key": "cleaning", "type": "provider", "name": "Sparkle & Shine Home Cleaning", "colour": "#0277BD",
+      "categories": ["service.cleaning-and-property.house-cleaning", "service.cleaning-and-property.move-in-move-out-clean"],
+      "tagline": "Insured, background-checked cleaners — book in 60 seconds",
+      "about": "A team of insured, background-checked cleaners serving homes across {city}. Supplies included; eco-friendly products on request.",
+      "listings": [
+        { "key": "standard", "kind": "service", "title": "Standard home clean", "category": "service.cleaning-and-property.house-cleaning", "priceCents": 13900, "durationMin": 120, "bufferMin": 30, "included": "Kitchen counters and appliances outside, bathrooms, dusting, vacuum and mop all floors" },
+        { "key": "deep", "kind": "service", "title": "Deep clean", "category": "service.cleaning-and-property.house-cleaning", "priceCents": 26900, "durationMin": 240, "bufferMin": 30, "included": "Everything in the standard clean plus inside the oven and fridge, baseboards, cabinet fronts and interior windows" },
+        { "key": "moveout", "kind": "service", "title": "Move-out clean", "category": "service.cleaning-and-property.move-in-move-out-clean", "priceCents": 32900, "durationMin": 300, "bufferMin": 30, "included": "Empty-home top-to-bottom clean to landlord standard, inside every cupboard and appliance" }
+      ]
+    },
+    {
+      "key": "barber", "type": "provider", "name": "Fade Room Barbers", "colour": "#37474F",
+      "categories": ["service.personal-care-and-wellness.barber-and-hair"],
+      "tagline": "Classic cuts and hot-towel shaves",
+      "about": "A walk-in-friendly barbershop: skin fades, scissor cuts, beard sculpting and hot-towel shaves.",
+      "listings": [
+        { "key": "cut", "kind": "service", "title": "Classic haircut", "category": "service.personal-care-and-wellness.barber-and-hair", "priceCents": 3500, "durationMin": 30, "bufferMin": 0, "included": "Consultation, cut, wash and style" },
+        { "key": "fade", "kind": "service", "title": "Skin fade", "category": "service.personal-care-and-wellness.barber-and-hair", "priceCents": 4000, "durationMin": 45, "bufferMin": 0, "included": "Fade with foil shaver finish, wash and style" },
+        { "key": "beard", "kind": "service", "title": "Beard trim and line-up", "category": "service.personal-care-and-wellness.barber-and-hair", "priceCents": 2500, "durationMin": 20, "bufferMin": 0, "included": "Shape, line-up and beard oil" },
+        { "key": "shave", "kind": "service", "title": "Hot-towel shave", "category": "service.personal-care-and-wellness.barber-and-hair", "priceCents": 4500, "durationMin": 45, "bufferMin": 0, "included": "Pre-shave oil, hot towels, straight-razor shave, cold towel and balm" }
+      ]
+    },
+    {
+      "key": "catering", "type": "provider", "name": "Saffron Table Catering", "colour": "#E65100",
+      "categories": ["service.events-and-hospitality.catering-server-staff"],
+      "tagline": "Buffets and canapés for 10 to 200 guests",
+      "about": "Full-service catering for office lunches, birthdays and weddings, with servers and setup included.",
+      "listings": [
+        { "key": "lunch", "kind": "service", "title": "Office lunch buffet (up to 20 guests)", "category": "service.events-and-hospitality.catering-server-staff", "priceCents": 42000, "durationMin": 120, "bufferMin": 60, "included": "Two mains, two salads, rice, bread, dessert tray, setup and cleanup" },
+        { "key": "canapes", "kind": "service", "title": "Canapé reception (up to 40 guests)", "category": "service.events-and-hospitality.catering-server-staff", "priceCents": 68000, "durationMin": 180, "bufferMin": 60, "included": "Six passed canapés, two servers for three hours" },
+        { "key": "server", "kind": "service", "title": "Event server, hourly", "category": "service.events-and-hospitality.catering-server-staff", "priceCents": 3800, "pricingMode": "hourly", "durationMin": 240, "bufferMin": 30, "included": "A uniformed server; minimum four hours" }
+      ]
+    },
+    {
+      "key": "tutoring", "type": "provider", "name": "Bright Minds Tutoring", "colour": "#6A1B9A",
+      "categories": ["service.education-and-coaching.tutor-k-12"],
+      "tagline": "Certified teachers, grades 1 to 12",
+      "about": "One-to-one tutoring at home or online with certified teachers. Math, reading, science and exam preparation.",
+      "listings": [
+        { "key": "math", "kind": "service", "title": "Math tutoring, 60 minutes", "category": "service.education-and-coaching.tutor-k-12", "priceCents": 6500, "durationMin": 60, "bufferMin": 15, "included": "A lesson plan matched to the curriculum and a short progress note" },
+        { "key": "reading", "kind": "service", "title": "Reading and writing, 60 minutes", "category": "service.education-and-coaching.tutor-k-12", "priceCents": 6000, "durationMin": 60, "bufferMin": 15, "included": "Phonics, comprehension or essay coaching" },
+        { "key": "exam", "kind": "service", "title": "Exam prep session, 90 minutes", "category": "service.education-and-coaching.tutor-k-12", "priceCents": 9500, "durationMin": 90, "bufferMin": 15, "included": "Practice questions, timing strategy and a study plan" }
+      ]
+    },
+    {
+      "key": "music", "type": "provider", "name": "Keys & Strings Music Studio", "colour": "#AD1457",
+      "categories": ["service.education-and-coaching.music-lessons"],
+      "tagline": "Piano, guitar and voice for every age",
+      "about": "Private music lessons from conservatory-trained teachers, beginners welcome.",
+      "listings": [
+        { "key": "piano30", "kind": "service", "title": "Piano lesson, 30 minutes", "category": "service.education-and-coaching.music-lessons", "priceCents": 3800, "durationMin": 30, "bufferMin": 0, "included": "Technique, repertoire and practice plan" },
+        { "key": "piano60", "kind": "service", "title": "Piano lesson, 60 minutes", "category": "service.education-and-coaching.music-lessons", "priceCents": 7000, "durationMin": 60, "bufferMin": 0, "included": "Technique, theory, repertoire and exam preparation" },
+        { "key": "guitar", "kind": "service", "title": "Guitar lesson, 45 minutes", "category": "service.education-and-coaching.music-lessons", "priceCents": 5200, "durationMin": 45, "bufferMin": 0, "included": "Acoustic or electric, chords to solos" }
+      ]
+    },
+    {
+      "key": "handyman", "type": "provider", "name": "Fix-It Pro Handyman", "colour": "#F57F17",
+      "categories": ["service.home-trades.handyman"],
+      "tagline": "Small jobs done right, upfront prices",
+      "about": "Licensed and insured handyman for the jobs on your list: mounting, assembly, repairs and touch-ups.",
+      "listings": [
+        { "key": "tv", "kind": "service", "title": "TV wall mounting", "category": "service.home-trades.handyman", "priceCents": 14900, "durationMin": 90, "bufferMin": 30, "included": "Mount on drywall over studs, cable tidy, level and test (bracket supplied by you)" },
+        { "key": "assembly", "kind": "service", "title": "Furniture assembly, up to 3 items", "category": "service.home-trades.handyman", "priceCents": 12900, "durationMin": 120, "bufferMin": 30, "included": "Assembly, anchoring to the wall and packaging removed" },
+        { "key": "drywall", "kind": "service", "title": "Drywall patch and paint", "category": "service.home-trades.handyman", "priceCents": 17500, "durationMin": 120, "bufferMin": 30, "included": "Up to three patches, sanded, primed and painted to match" },
+        { "key": "hourly", "kind": "service", "title": "Handyman by the hour", "category": "service.home-trades.handyman", "priceCents": 8500, "pricingMode": "hourly", "durationMin": 60, "bufferMin": 30, "included": "Any small job on your list; materials extra" }
+      ]
+    },
+    {
+      "key": "events", "type": "provider", "name": "Golden Hour Photo & Events", "colour": "#C62828",
+      "categories": ["service.events-and-hospitality.photographer", "service.events-and-hospitality.dj"],
+      "tagline": "Photography and DJ sets for the moments that matter",
+      "about": "Portrait and event photography plus DJ sets for parties, from a team of two.",
+      "listings": [
+        { "key": "portrait", "kind": "service", "title": "Portrait session, 60 minutes", "category": "service.events-and-hospitality.photographer", "priceCents": 22500, "durationMin": 60, "bufferMin": 30, "included": "One location, 25 edited photos in an online gallery" },
+        { "key": "coverage", "kind": "service", "title": "Event photography, 3 hours", "category": "service.events-and-hospitality.photographer", "priceCents": 65000, "durationMin": 180, "bufferMin": 60, "included": "Candids and group shots, 150 edited photos within a week" },
+        { "key": "dj", "kind": "service", "title": "Party DJ, 4 hours", "category": "service.events-and-hospitality.dj", "priceCents": 80000, "durationMin": 240, "bufferMin": 60, "included": "Sound system, lights, a playlist consultation and MC announcements" }
+      ]
+    }
+  ],
+  "activity": {
+    "$comment": "Orders and bookings the customers place so dashboards, order lists and reviews have data. buy = product listings (merchantKey.listingKey × qty); book = services; review = after a completed booking.",
+    "orders": [
+      { "customer": "customer", "items": [["bakery.sourdough", 1], ["bakery.croissants", 1]], "pack": true },
+      { "customer": "customer2", "items": [["grocer.eggs", 2], ["grocer.apples", 1], ["grocer.honey", 1]], "pack": true },
+      { "customer": "customer3", "items": [["coffee.house", 1], ["coffee.tea", 1]], "pack": true },
+      { "customer": "customer2", "items": [["bakery.cinnamon", 1]] },
+      { "customer": "customer3", "items": [["grocer.rice", 1], ["grocer.greens", 2]] },
+      { "customer": "customer", "items": [["coffee.espresso", 2]] }
+    ],
+    "bookings": [
+      { "customer": "customer", "service": "cleaning.standard", "daysAhead": 1, "complete": true, "review": { "rating": 5, "text": "Spotless kitchen and bathrooms, and they were right on time. Booking again next month." } },
+      { "customer": "customer2", "service": "barber.fade", "daysAhead": 1, "complete": true, "review": { "rating": 5, "text": "Best fade I've had in years. Quick, friendly and easy to book." } },
+      { "customer": "customer3", "service": "tutoring.math", "daysAhead": 2, "complete": true, "review": { "rating": 4, "text": "Patient tutor, my daughter finally gets fractions. Wish there were more evening slots." } },
+      { "customer": "customer2", "service": "handyman.tv", "daysAhead": 2, "complete": true, "review": { "rating": 5, "text": "Mounted and levelled in under an hour, cables hidden. Very tidy work." } },
+      { "customer": "customer3", "service": "music.piano30", "daysAhead": 3, "complete": false },
+      { "customer": "customer", "service": "barber.cut", "daysAhead": 4, "complete": false }
+    ]
+  }
+}
