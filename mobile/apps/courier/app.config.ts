@@ -81,12 +81,16 @@ export const NATIVE = {
   ios: { deploymentTarget: '16.4' },
 } as const;
 
-/** Brand colours for the native splash and icon background: the base tokens, read from @northline/tokens. */
+/**
+ * Brand colours for the native splash and icon background: the brand's primary and page colours, from the theme the
+ * web's token build resolves (web/packages/tokens/generated/theme.json — brand.json and its palette). The app's name,
+ * slug, scheme and bundle ids stay as they are until the product's name is chosen (a new bundle id is a new store app).
+ */
 function baseTokens(): { accent: string; bg: string } {
-  const json = JSON.parse(readFileSync(join(__dirname, '../../../web/packages/tokens/tokens.json'), 'utf8')) as {
-    base: { accent: string; bg: string };
+  const json = JSON.parse(readFileSync(join(__dirname, '../../../web/packages/tokens/generated/theme.json'), 'utf8')) as {
+    color: { 'action-primary': string; canvas: string };
   };
-  return json.base;
+  return { accent: json.color['action-primary'], bg: json.color.canvas };
 }
 
 export function resolveVariant(env: Env): Variant {
