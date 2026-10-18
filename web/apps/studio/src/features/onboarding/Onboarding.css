@@ -24,7 +24,7 @@
 /* phones: the rail is one wrapping row of numbered steps; only the current one shows its name (no sideways scroll) */
 @media (max-width: 859.98px) {
   .nl-ob-steps { flex-direction: row; flex-wrap: wrap; gap: var(--space-1); }
-  .nl-ob-step { width: auto; }
+  .nl-ob-step { width: auto; min-width: var(--size-touch); justify-content: center; }
   .nl-ob-step-sub { display: none !important; }
   .nl-ob-step:not([aria-current='step']) .nl-ob-step-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }

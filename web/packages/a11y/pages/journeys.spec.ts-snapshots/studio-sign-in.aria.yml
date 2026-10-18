@@ -1,5 +1,5 @@
 - main:
-  - text: Northline Studio · for providers, sellers & kitchens
+  - text: Northline Studio Signed out Northline Studio · for providers, sellers & kitchens
   - heading "Run your business from one place." [level=1]
   - paragraph: "Appointments, listings, menus, escrow payouts and your reputation — all behind a login built for businesses: a strong second factor, per-member roles, and every sensitive action logged."
   - list:
@@ -12,7 +12,7 @@
     - listitem:
       - strong: One login, both sides
       - text: Your customer account works here too — just add a second factor.
-  - text: /Bilingual support 7 am – \d+ pm MT · Master tier gets a named account manager\./
+  - text: Bilingual support every day · Master tier gets a named account manager.
   - region "Sign in":
     - tablist "Sign in or create an account":
       - tab "Sign in" [selected]
