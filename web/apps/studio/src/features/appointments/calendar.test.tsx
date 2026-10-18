@@ -45,6 +45,18 @@ describe('Appointments calendar cells (S-74)', () => {
     expect(calls.some(c => c.url.includes(`/calendar-cells?from=${monday}&days=7`))).toBe(true);
   });
 
+  it('opens a booking in the right sheet (PH:240), and closes it', async () => {
+    serve({ openSlots: [], quoteHolds: [] });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<AppointmentsScreen />);
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Calendar');
+    await user.click(await screen.findByRole('button', { name: /Brake inspection/ }));
+    const sheet = screen.getByRole('dialog', { name: 'Booking' });
+    expect(sheet).toBeTruthy();
+    await user.click(within(sheet).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('asks for one day in the day view, and the calendar still shows when the cells fail', async () => {
     const calls = mockFetch({
       'GET /api/v1/merchants/m1/jobs?': () => ({ items: [job] }),
