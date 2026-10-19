@@ -7,6 +7,10 @@ import { inflateSync } from 'node:zlib';
 import { CookieJar } from './lib/http.mjs';
 import { listingPicture, logoPicture, demoPdf } from './lib/images.mjs';
 import { totpAt } from './lib/totp.mjs';
+import { libraryPhoto } from './lib/photos.mjs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const plan = JSON.parse(readFileSync(new URL('./data/marketplace.json', import.meta.url), 'utf8'));
 
@@ -85,4 +89,26 @@ test('pictures: 1000 × 1000 PNGs on white, different per item; logos 512 px; a 
   const logo = Buffer.from(await logoPicture('Fade Room Barbers', '#37474F').arrayBuffer());
   assert.equal(logo.readUInt32BE(16), 512);
   assert.match(await demoPdf('licence').text(), /^%PDF-1\.4[\s\S]*%%EOF\n$/);
+});
+
+test('real photos: every business and listing has a photo slot of the slot list, uploaded only once the library has it', () => {
+  const slots = new Set(JSON.parse(readFileSync(new URL('../../web/packages/media/generated/slots.json', import.meta.url), 'utf8')).slots.map(s => s.slot));
+  for (const m of plan.merchants) {
+    assert.equal(m.photo, `demo/merchant/${m.key}`);
+    assert.ok(slots.has(m.photo), m.photo);
+    for (const l of m.listings) assert.ok(slots.has(l.photo) && l.photo === `demo/listing/${m.key}.${l.key}`, `${m.key}.${l.key}`);
+  }
+  const root = mkdtempSync(join(tmpdir(), 'demo-photos-'));
+  mkdirSync(join(root, 'source/demo/listing'), { recursive: true });
+  writeFileSync(join(root, 'source/demo/listing/bakery.sourdough.jpg'), Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+  writeFileSync(join(root, 'photos.json'), JSON.stringify({ photos: {
+    'demo/listing/bakery.sourdough': { file: 'source/demo/listing/bakery.sourdough.jpg', hash: '0123456789' },
+    'demo/listing/bakery.pie': { file: 'source/demo/listing/bakery.pie.jpg' }, // not processed: drawn instead
+  } }));
+  const photo = libraryPhoto('demo/listing/bakery.sourdough', root);
+  assert.equal(photo.type, 'image/jpeg');
+  assert.equal(photo.name, 'bakery.sourdough.jpg');
+  assert.equal(photo.bytes.length, 4);
+  assert.equal(libraryPhoto('demo/listing/bakery.pie', root), null);
+  assert.equal(libraryPhoto('demo/listing/bakery.baguette', root), null);
 });
