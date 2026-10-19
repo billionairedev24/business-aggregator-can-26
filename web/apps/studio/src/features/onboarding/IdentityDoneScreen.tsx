@@ -1,6 +1,6 @@
 import { CheckCircle } from '@phosphor-icons/react';
 import { defineMessages } from '@northline/ui';
-import './Onboarding.css';
+import { Standalone } from '../shell/Standalone';
 
 const useT = defineMessages({
   en: {
@@ -19,11 +19,10 @@ const useT = defineMessages({
 export function IdentityDoneScreen() {
   const t = useT();
   return (
-    <main className="nl-id-done">
-      <CheckCircle size={40} aria-hidden className="nl-id-done-icon" />
-      <h1 className="nl-ob-title">{t('title')}</h1>
+    <Standalone icon={<CheckCircle size={30} weight="fill" />}>
+      <h1>{t('title')}</h1>
       <p>{t('body')}</p>
-      <p className="nl-ob-note">{t('privacy')}</p>
-    </main>
+      <p className="nl-muted nl-small">{t('privacy')}</p>
+    </Standalone>
   );
 }

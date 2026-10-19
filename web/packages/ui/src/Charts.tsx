@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { defineMessages } from './i18n';
 
 const useT = defineMessages({
@@ -23,16 +23,38 @@ function DataTableAlt({ caption, head, rows }: { caption: string; head: readonly
   );
 }
 
+/**
+ * The SVG is drawn at the width it is shown at (measured), so its labels stay 11px on a phone and on a wide desktop
+ * card alike — a fixed viewBox scaled them to 6px in a phone column. 480 until measured (and in tests).
+ */
+function useChartWidth() {
+  const ref = useRef<HTMLElement>(null);
+  const [w, setW] = useState(480);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const on = () => { const x = Math.round(el.getBoundingClientRect().width); if (x > 0) setW(Math.max(240, x)); };
+    on();
+    const ro = new ResizeObserver(on);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, w] as const;
+}
+/** Every k-th label so that each has about 56px. */
+const labelStep = (n: number, width: number) => Math.max(1, Math.ceil(n / Math.max(2, Math.floor(width / 56))));
+
 export interface BarSeries { key: string; label: string; color: string }
 export interface StackedBarChartProps { series: readonly BarSeries[]; data: readonly { label: string; values: Record<string, number> }[]; height?: number; title: string; format?: (n: number) => string }
 
 /** Stacked weekly bars (Dashboard "Net earnings · 12 weeks"). Colours are token expressions, e.g. var(--color-action-primary). */
 export function StackedBarChart({ series, data, height = 180, title, format = String }: StackedBarChartProps) {
   const t = useT();
-  const W = 480, plotH = height - 20, n = Math.max(data.length, 1), slot = (W - 12) / n, bw = Math.min(26, slot * 0.7);
+  const [ref, W] = useChartWidth();
+  const plotH = height - 20, n = Math.max(data.length, 1), slot = (W - 12) / n, bw = Math.min(32, slot * 0.62), step = labelStep(n, W);
   const max = Math.max(1, ...data.map(d => series.reduce((s, x) => s + (d.values[x.key] ?? 0), 0)));
   return (
-    <figure style={{ margin: 0 }}>
+    <figure style={{ margin: 0 }} ref={ref}>
       <Legend items={series.map(s => ({ label: s.label, color: s.color }))} />
       <svg viewBox={`0 0 ${W} ${height}`} className="nl-chart" role="img" aria-label={title}>
         {data.map((d, i) => {
@@ -42,7 +64,7 @@ export function StackedBarChart({ series, data, height = 180, title, format = St
             <g key={d.label}>
               <title>{`${d.label}: ${series.map(s => `${s.label} ${format(d.values[s.key] ?? 0)}`).join(', ')}`}</title>
               {series.map(s => { const h = ((d.values[s.key] ?? 0) / max) * (plotH - 8); y -= h; return <rect key={s.key} x={x} y={y} width={bw} height={h} fill={s.color} rx={2} />; })}
-              <text x={x + bw / 2} y={height - 4} fontSize={10} textAnchor="middle">{d.label}</text>
+              {i % step === 0 ? <text x={x + bw / 2} y={height - 4} fontSize={11} textAnchor="middle">{d.label}</text> : null}
             </g>
           );
         })}
@@ -58,21 +80,22 @@ export interface LineChartProps { current: readonly number[]; previous?: readonl
 /** Period-over-period line (Reports "Weekly gross"): solid accent line with dots, dotted neutral previous period, light grid. */
 export function LineChart({ current, previous, labels, height = 200, title, legend, format = String, dataTable = true }: LineChartProps) {
   const t = useT();
-  const W = 480, n = Math.max(current.length, previous?.length ?? 0, 2);
+  const [ref, W] = useChartWidth();
+  const n = Math.max(current.length, previous?.length ?? 0, 2);
   const max = Math.max(1, ...current, ...(previous ?? [])) * 1.1;
   const px = (i: number) => 20 + i * ((W - 40) / (n - 1));
   const py = (v: number) => height - 20 - (v / max) * (height - 40);
   const path = (arr: readonly number[]) => arr.map((v, i) => `${i ? 'L' : 'M'}${px(i).toFixed(1)} ${py(v).toFixed(1)}`).join(' ');
   const grid = [0.25, 0.5, 0.75, 1].map(f => `M20 ${py(max * f / 1.1).toFixed(1)} H${W - 20}`).join(' ');
   return (
-    <figure style={{ margin: 0 }}>
+    <figure style={{ margin: 0 }} ref={ref}>
       {legend ? <Legend items={[{ label: legend.current, color: 'var(--color-action-primary)' }, ...(legend.previous ? [{ label: legend.previous, color: 'var(--color-border-control)', dashed: true }] : [])]} /> : null}
       <svg viewBox={`0 0 ${W} ${height}`} className="nl-chart" role="img" aria-label={title}>
         <path d={grid} stroke="var(--neutral-100)" strokeWidth={1} fill="none" />
         {previous ? <path d={path(previous)} stroke="var(--color-border-control)" strokeWidth={1.5} strokeDasharray="4 4" fill="none" /> : null}
         <path d={path(current)} stroke="var(--color-action-primary)" strokeWidth={2.5} fill="none" />
         {current.map((v, i) => <circle key={i} cx={px(i)} cy={py(v)} r={3} fill="var(--color-action-primary)"><title>{`${labels?.[i] ?? i + 1}: ${format(v)}`}</title></circle>)}
-        {labels?.map((l, i) => (i % Math.ceil(labels.length / 7) === 0 ? <text key={l + i} x={px(i)} y={height - 4} fontSize={10} textAnchor="middle">{l}</text> : null))}
+        {labels?.map((l, i) => (i % labelStep(labels.length, W) === 0 ? <text key={l + i} x={px(i)} y={height - 4} fontSize={11} textAnchor="middle">{l}</text> : null))}
       </svg>
       {dataTable && <DataTableAlt caption={title}
         head={[t('point'), legend?.current ?? t('current'), ...(previous ? [legend?.previous ?? t('previous')] : [])]}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, UnderlineTabs } from '@northline/ui';
+import { Alert, Logo, UnderlineTabs } from '@northline/ui';
 import type { RegisterValues } from '@northline/auth-kit';
 import { appAuthorizationUrl, bffLoginUrl } from '../../lib/auth-server';
 import { Brand } from '../shell/StudioLayout';
@@ -51,6 +51,7 @@ export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeI
 
   return (
     <div className="nl-auth-page">
+      <div className="nl-auth-mobile-brand"><Logo size={30} product={t('studio')} /></div>
       <main className="nl-auth-main" id="main">
         <div className="nl-auth-intro">
           <div className="nl-auth-brand"><Brand label={t('studio')} /><span className="nl-auth-signedout">{t('signedOut')}</span></div>

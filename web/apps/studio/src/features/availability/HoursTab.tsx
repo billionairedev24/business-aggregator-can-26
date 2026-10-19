@@ -1,3 +1,4 @@
+import { X } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Chip, ErrorState, Select, Skeleton, Switch, TextInput, useLocale } from '@northline/ui';
@@ -107,7 +108,7 @@ export function HoursTab({ onState }: { onState: (s: SaveState) => void }) {
                             <span className="nl-muted">–</span>
                             <Select aria-label={`${t(`day_${day}`)} ${t('until')}`} className="nl-av-time" value={r[1]} disabled={!canEdit} aria-invalid={err ? true : undefined} options={withValue(r[1]).map(o => ({ value: o, label: hhmmLabel(o, locale) }))} onChange={e => setRange(day, i, 1, e.target.value)} />
                             <span className="nl-small nl-muted">{t('slots', { n: slotCount(r, duration, interval) })}</span>
-                            {canEdit ? <button type="button" className="nl-av-x" aria-label={t('removeRange', { from: r[0], to: r[1] })} onClick={() => setDays({ ...days, [day]: days[day].filter((_, j) => j !== i) })}>×</button> : null}
+                            {canEdit ? <button type="button" className="nl-av-x" aria-label={t('removeRange', { from: r[0], to: r[1] })} onClick={() => setDays({ ...days, [day]: days[day].filter((_, j) => j !== i) })}><X size={16} aria-hidden /></button> : null}
                           </div>
                           {err ? <div role="alert" className="nl-error">{err}</div> : null}
                         </div>

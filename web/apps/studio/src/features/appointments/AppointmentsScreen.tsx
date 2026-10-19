@@ -97,7 +97,7 @@ function JobButton({ j, t, locale, selected, onSelect, firstHour }: { j: Job; t:
   const me = useSession().data?.user.id;
   return (
     <button type="button" className="nl-appt-job" data-state={j.state} data-dim={DONE.has(j.state)} aria-pressed={selected} style={place(j.startsAt, durationOf(j), firstHour)} onClick={() => onSelect(j.id)}>
-      <strong>{clock(j.startsAt, locale)}</strong> {j.memberName && j.memberUserId && j.memberUserId !== me ? t('jobWithMember', { title: j.title, member: j.memberName }) : j.title}<span className="nl-appt-job-who">{j.customerName ?? ''}</span>
+      <span className="nl-appt-job-line"><strong>{clock(j.startsAt, locale)}</strong> {j.memberName && j.memberUserId && j.memberUserId !== me ? t('jobWithMember', { title: j.title, member: j.memberName }) : j.title}</span><span className="nl-appt-job-who">{j.customerName ?? ''}</span>
     </button>
   );
 }

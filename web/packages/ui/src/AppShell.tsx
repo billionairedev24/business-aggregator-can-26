@@ -102,13 +102,13 @@ export function AppShell({ brand, headerStart, headerEnd, pinned, groups, curren
         {headerEnd ? <div className="nl-topbar-end">{headerEnd}</div> : null}
       </header>
       <div className="nl-shell-body">
-        {!narrow && !rail && (
+        {!narrow && !rail && (<div className="nl-side-col">
           <nav aria-label={t('nav')} className="nl-side" style={{ top, height: `calc(100vh - ${top}px)` }}>
             <div className="nl-side-top"><span className="nl-side-caption">{t('menu')}</span><button type="button" className="nl-side-toggle" aria-label={t('collapse')} title={t('collapse')} onClick={() => setRail(true)}><SidebarSimple size={20} /></button></div>
             {fullNav}
           </nav>
-        )}
-        {!narrow && rail && (
+        </div>)}
+        {!narrow && rail && (<div className="nl-side-col nl-rail-col">
           <nav aria-label={t('nav')} className="nl-side nl-rail" style={{ top, height: `calc(100vh - ${top}px)` }}>
             <div className="nl-rail-top"><button type="button" className="nl-side-toggle" aria-label={t('expand')} title={t('expand')} onClick={() => setRail(false)}><SidebarSimple size={20} /></button></div>
             <div className="nl-rail-scroll">
@@ -116,7 +116,7 @@ export function AppShell({ brand, headerStart, headerEnd, pinned, groups, curren
               {groups.filter(g => g.items.length).map(g => <div key={g.label} className="nl-rail-group"><span className="nl-rail-sep" />{g.items.map(i => itemEl(i, 'rail'))}</div>)}
             </div>
           </nav>
-        )}
+        </div>)}
         {narrow && drawer && <>
           <div className="nl-drawer-backdrop" onClick={() => setDrawer(false)} />
           <div ref={sheet.ref} role="dialog" aria-modal="true" aria-label={t('nav')} tabIndex={-1} className="nl-side-drawer"

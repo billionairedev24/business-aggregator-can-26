@@ -39,7 +39,8 @@ describe('ReviewsScreen', () => {
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Praise tags: On time 88% · Clear explanation 81% · Fair price 76%')).toBeTruthy();
     expect(screen.getByText('5 stars: 279')).toBeTruthy();
-    expect(screen.getByText(/Dana K\. · verified alternator/)).toBeTruthy();
+    expect(screen.getByText('Dana K.')).toBeTruthy();
+    expect(screen.getByText(/verified alternator/)).toBeTruthy();
     expect(screen.getByText('3 d')).toBeTruthy();
     expect(screen.getByText('1 w')).toBeTruthy();
     expect(screen.getByText('You replied: “Thanks Dana — see you for the pads in spring.”')).toBeTruthy();

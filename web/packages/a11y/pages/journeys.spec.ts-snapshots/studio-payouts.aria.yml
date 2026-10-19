@@ -7,11 +7,9 @@
       - listitem: /Available now \$\d+\.\d+ Scheduled Sun Oct 4 → TD ··\d+ · free/
       - listitem: Next payout Sun Oct 4 weekly schedule
     - strong: /TD Canada Trust · ··\d+ · Prairie Wrench Mobile Mechanics Ltd\./
+    - button "Change"
     - button "Change schedule"
     - button "Instant payout · 1% fee"
-    - heading "Bank account" [level=2]
-    - text: /TD Canada Trust · ··\d+ · Prairie Wrench Mobile Mechanics Ltd\./
-    - button "Change"
   - region "Payout history":
     - heading "Payout history" [level=2]
     - searchbox "Search table"
@@ -24,6 +22,7 @@
     - group "Sort":
       - button "Date"
       - button "Amount"
+      - button "Jobs"
       - button "Status"
     - list "Payouts":
       - listitem:

@@ -10,8 +10,37 @@
 .bo-page { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
 .bo-page > .bo-head { margin-bottom: 0; }
 
-.bo-kpis { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: var(--space-3); }
+.bo-kpis-wrap { container-type: inline-size; min-width: 0; }
+/* the columns follow the count (BackOffice.tsx KpiStrip): never one card alone on a row */
+.bo-kpis { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
 .bo-kpis > li { min-width: 0; display: flex; }
+.bo-kpis[data-count='1'] { grid-template-columns: minmax(0, 1fr); }
+.bo-kpis > li:last-child:nth-child(odd) { grid-column: 1 / -1; }
+@container (min-width: 560px) {
+  .bo-kpis[data-count='3'], .bo-kpis[data-count='6'] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .bo-kpis[data-count='5'] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .bo-kpis[data-count='5'] > li { grid-column: span 2; }
+  .bo-kpis[data-count='5'] > li:nth-child(n + 4) { grid-column: span 3; }
+  .bo-kpis[data-count='3'] > li:last-child, .bo-kpis[data-count='6'] > li:last-child { grid-column: auto; }
+}
+@container (min-width: 720px) {
+  .bo-kpis[data-count='4'], .bo-kpis[data-count='8'] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .bo-kpis[data-count='7'] { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .bo-kpis[data-count='7'] > li { grid-column: span 3; }
+  .bo-kpis[data-count='7'] > li:nth-child(n + 5) { grid-column: span 4; }
+}
+@container (min-width: 880px) {
+  .bo-kpis[data-count='5'] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .bo-kpis[data-count='5'] > li, .bo-kpis[data-count='5'] > li:nth-child(n + 4) { grid-column: auto; }
+}
+@container (min-width: 1020px) {
+  .bo-kpis[data-count='6'] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@container (max-width: 479.98px) {
+  .bo-kpis { gap: var(--space-2); }
+  .bo-kpis .bo-kpi { padding: var(--space-3) var(--space-4); }
+  .bo-kpis .bo-kpi-value { font-size: var(--text-2xl); }
+}
 .bo-kpi { flex: 1; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); min-width: 0; text-align: left; font: inherit; color: inherit; }
 button.bo-kpi { cursor: pointer; }
 button.bo-kpi:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-sm); }

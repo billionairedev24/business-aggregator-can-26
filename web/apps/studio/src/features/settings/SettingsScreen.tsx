@@ -17,7 +17,7 @@ export function SettingsScreen({ tab, onTab }: { tab: SettingsTab; onTab: (tab: 
       <div className="nl-set-tabs">
         <ChipTabs<SettingsTab> aria-label={t('tabs')} value={tab} onChange={onTab} options={SETTINGS_TABS.map(v => ({ value: v, label: t(`tab_${v}`) }))} />
       </div>
-      <div role="tabpanel" aria-label={t(`tab_${tab}`)}>
+      <div role="tabpanel" className="bo-card nl-set-panel" aria-label={t(`tab_${tab}`)}>
         {tab === 'business' && <BusinessTab />}
         {tab === 'team' && <TeamTab />}
         {tab === 'security' && <SecurityTab />}

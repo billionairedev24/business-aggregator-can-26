@@ -52,13 +52,15 @@ function Overview({ o }: { o: EarningsOverview }) {
         { key: 'take', value: pctOf(o.takeRateBps), label: t('kpiTakeRate', { tier: t(`tier_${o.tier}`), others }) },
         { key: 'hold', value: f.money(o.onHoldCents), label: onHold },
       ]} />
-      <h2 className="fin-h2">{t('moneyInMotion')}</h2>
-      <ol className="fin-steps" aria-label={t('moneyInMotion')}>
-        <Step k={t('step1')} v={t('step1b')} />
-        <Step k={t(`step2_${type}` as FinanceKey)} v={t(`step2b_${type}` as FinanceKey)} />
-        <Step k={t(`step3_${type}` as FinanceKey)} v={t('step3b')} current />
-        <Step k={t(`step4_${o.frequency}` as FinanceKey)} v={t('step4b')} />
-      </ol>
+      <section className="bo-card" aria-labelledby="fin-motion">
+        <h2 className="bo-card-title" id="fin-motion">{t('moneyInMotion')}</h2>
+        <ol className="fin-steps" aria-label={t('moneyInMotion')}>
+          <Step k={t('step1')} v={t('step1b')} />
+          <Step k={t(`step2_${type}` as FinanceKey)} v={t(`step2b_${type}` as FinanceKey)} />
+          <Step k={t(`step3_${type}` as FinanceKey)} v={t('step3b')} current />
+          <Step k={t(`step4_${o.frequency}` as FinanceKey)} v={t('step4b')} />
+        </ol>
+      </section>
     </>
   );
 }
@@ -103,11 +105,13 @@ function Ledger() {
   ];
   if (ledger.isPending) return <Skeleton height={300} />;
   return (
+    <section className="bo-card" aria-labelledby="fin-ledger"><h2 className="bo-card-title" id="fin-ledger">{t('ledgerTitle')}</h2>
     <DataTable<LedgerRow>
       entity={t('ledgerEntity')} plural={t('ledgerPlural')} columns={columns} rows={rows}
       rowTones={r => ({ state: r.tone })} can={{ create: false, update: false, delete: false, export: true }}
       roleName={t(`role_${role}` as FinanceKey)} emptyText={t('ledgerEmpty')} reportName="earnings-ledger"
       error={ledger.isError ? t('loadError') : null} onRetry={() => void ledger.refetch()}
     />
+    </section>
   );
 }

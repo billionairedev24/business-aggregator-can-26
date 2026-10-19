@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { ForkKnife, Package, Storefront, Wrench, type Icon } from '@phosphor-icons/react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Avatar, Checkbox, Field, FormGrid, OptionCard, RadioGroup, Select, TextInput, useLocale, platformTimeZone } from '@northline/ui';
 import { useSession, useSignOut } from '../../lib/session';
@@ -77,7 +78,7 @@ export function AccountStep({ type, onboarding, isNew, pilot, onTypeChange, onDo
         <RadioGroup aria-labelledby={ids.picker} className="nl-ob-types">
           <span id={ids.picker} className="nl-sr-only">{t('pickerLabel')}</span>
           {PICKER_TYPES.map(k => (
-            <OptionCard key={k} role="radio" aria-checked={type === k} selected={type === k} title={t(`pick_${k}`)} description={t(`pickDesc_${k}`)} onClick={() => { onTypeChange(k); setPicking(false); }} />
+            <OptionCard key={k} role="radio" aria-checked={type === k} selected={type === k} title={<><TypeIcon type={k} />{t(`pick_${k}`)}</>} description={t(`pickDesc_${k}`)} onClick={() => { onTypeChange(k); setPicking(false); }} />
           ))}
         </RadioGroup>
       )}
@@ -87,8 +88,9 @@ export function AccountStep({ type, onboarding, isNew, pilot, onTypeChange, onDo
       <div className="nl-ob-user">
         <Avatar initials={user?.initials ?? '··'} size={44} tone="dark" />
         <span className="nl-ob-user-text">
-          <strong>{user ? `${user.firstName} ${user.lastName}` : '—'}</strong>{contact ? ` · ${contact} · ${t('verifiedContact')}` : ''}
-          <br /><span className="nl-small nl-muted">{isNew ? t('createdNow') : since ? t('customerSince', { date: since }) : ''}</span>
+          <strong className="nl-ob-user-name">{user ? `${user.firstName} ${user.lastName}` : '—'}</strong>
+          {contact ? <span className="nl-ob-user-line">{contact} · {t('verifiedContact')}</span> : null}
+          <span className="nl-ob-user-line nl-muted">{isNew ? t('createdNow') : since ? t('customerSince', { date: since }) : ''}</span>
         </span>
         <button type="button" className="btn btn-ghost" onClick={() => void signOut()}>{t('notYou')}</button>
       </div>
@@ -121,4 +123,11 @@ export function AccountStep({ type, onboarding, isNew, pilot, onTypeChange, onDo
       </div>
     </>
   );
+}
+
+const TYPE_ICONS: Record<string, Icon> = { seller: Package, provider: Wrench, both: Storefront, kitchen: ForkKnife };
+/** The business type's picture on its card (decorative: the card's title names it). */
+function TypeIcon({ type }: { type: string }) {
+  const I = TYPE_ICONS[type] ?? Storefront;
+  return <span className="nl-ob-type-icon" aria-hidden><I size={22} /></span>;
 }
