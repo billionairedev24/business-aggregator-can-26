@@ -23,7 +23,9 @@ export const API = 'https://api.openverse.org/v1/images/';
 export const PREFERRED = ['stocksnap', 'rawpixel', 'wikimedia', 'flickr'];
 /** Words that mark a drawing, not a photo, in a result's title or tags. */
 const NOT_A_PHOTO = /\b(clip ?art|illustration|vector|drawing|cartoon|icon|logo|diagram|render(ing)?|3d|painting|sketch|poster|map)\b/i;
-export const MIN_WIDTH = 1600;
+/** Smallest acceptable width: tiles and cards are cut at up to 960 px, the wide slots at up to 1440 px. */
+export const MIN_WIDTH = 1000;
+export const MIN_WIDTH_WIDE = 1400;
 /** Slots shown wide (heroes, banners, empty pages): landscape only. */
 const WIDE = /^(hero|banner|empty)\//;
 /** Licences we accept (web/packages/media/src/core.mjs SITES.openverse): no NC, no ND. */
@@ -39,11 +41,27 @@ export function licenceName(code, version) {
   return `CC ${code.toUpperCase()} ${version ?? '4.0'}`;
 }
 
+/** Fetcher version: slots a run of an older version found empty are searched again. */
+export const VERSION = 2;
+
+/**
+ * The searches tried for a slot, in order: its own words, then a shorter form (its first two words), then the words of
+ * the slot it falls back to (a category's group, a group's landing banner) — duplicates dropped.
+ */
+export function queriesFor(s, slots) {
+  const out = [s.query];
+  const words = String(s.query).trim().split(/\s+/);
+  if (words.length > 2) out.push(words.slice(0, 2).join(' '));
+  const parent = s.fallback ? slots.find(x => x.slot === s.fallback) : null;
+  if (parent?.query) out.push(parent.query);
+  return out.filter((q, i) => q && out.indexOf(q) === i);
+}
+
 /** The results worth downloading for a slot, best first. */
 export function rank(results, slot) {
   const wide = WIDE.test(slot);
   return results
-    .filter(r => ACCEPTED.has(r.license) && (r.width ?? 0) >= MIN_WIDTH && (!wide || (r.width ?? 0) > (r.height ?? 0)))
+    .filter(r => ACCEPTED.has(r.license) && (r.width ?? 0) >= (wide ? MIN_WIDTH_WIDE : MIN_WIDTH) && (!wide || (r.width ?? 0) > (r.height ?? 0)))
     .filter(r => (r.category == null || r.category === 'photograph') && !NOT_A_PHOTO.test(`${r.title ?? ''} ${(r.tags ?? []).map(t => t.name ?? t).join(' ')}`))
     .filter(r => !r.filetype || /^(jpe?g|png|webp)$/i.test(r.filetype))
     .map(r => ({ r, p: PREFERRED.indexOf(r.source ?? r.provider) }))
@@ -52,7 +70,9 @@ export function rank(results, slot) {
 }
 
 export function searchUrl(query, slot, commercial) {
-  const q = new URLSearchParams({ q: query, page_size: '20', mature: 'false', category: 'photograph', size: 'large', filter_dead: 'true' });
+  // No category/size filters at the API: most photographs carry neither tag, so those filters found nothing for many
+  // slots (owner's first run). rank() drops drawings and small images instead.
+  const q = new URLSearchParams({ q: query, page_size: '40', mature: 'false', filter_dead: 'true' });
   if (commercial) q.set('license_type', 'commercial'); else q.set('license', 'cc0,pdm');
   if (WIDE.test(slot)) q.set('aspect_ratio', 'wide');
   return `${API}?${q}`;
@@ -91,19 +111,25 @@ export async function run({
   }
 
   // searched before: skipped; one that found nothing is searched again when --commercial widens the licences
-  const searched = s => state.slots[s.slot]?.status === 'done' || (state.slots[s.slot]?.status === 'empty' && (!commercial || state.slots[s.slot].commercial));
+  const searched = s => {
+    const prev = state.slots[s.slot];
+    if (prev?.status === 'done') return true;
+    return prev?.status === 'empty' && (prev.version ?? 1) >= VERSION && (!commercial || prev.commercial);
+  };
   const todo = slots.filter(s => !photos[s.slot] && !searched(s)).slice(0, limit);
   let filled = 0, empty = 0, stopped = null;
   for (const s of todo) {
     try {
       let found = [];
-      for (const mode of commercial ? [false, true] : [false]) {
-        const res = await call(searchUrl(s.query, s.slot, mode));
-        await sleep(delayMs);
-        if (!res.ok) { log(`  ! ${s.slot}: search answered ${res.status}`); break; }
-        const body = await res.json();
-        found = [...found, ...rank(body.results ?? [], s.slot).filter(r => !found.some(f => f.id === r.id))];
-        if (found.length >= per) break;
+      search: for (const mode of commercial ? [false, true] : [false]) {
+        for (const query of queriesFor(s, slots)) {
+          const res = await call(searchUrl(query, s.slot, mode));
+          await sleep(delayMs);
+          if (!res.ok) { log(`  ! ${s.slot}: search answered ${res.status}`); break search; }
+          const body = await res.json();
+          found = [...found, ...rank(body.results ?? [], s.slot).filter(r => !found.some(f => f.id === r.id))];
+          if (found.length >= per) break search;
+        }
       }
       const dir = join(outDir, s.slot);
       rmSync(dir, { recursive: true, force: true });
@@ -128,7 +154,7 @@ export async function run({
           width: r.width ?? null, height: r.height ?? null,
         });
       }
-      state.slots[s.slot] = { query: s.query, status: candidates.length ? 'done' : 'empty', commercial, fetched: new Date().toISOString().slice(0, 10), candidates };
+      state.slots[s.slot] = { query: s.query, status: candidates.length ? 'done' : 'empty', commercial, version: VERSION, fetched: new Date().toISOString().slice(0, 10), candidates };
       save();
       if (candidates.length) filled++; else empty++;
       log(`  ${candidates.length ? '✓' : '·'} ${s.slot} (${candidates.length}) — "${s.query}"`);
