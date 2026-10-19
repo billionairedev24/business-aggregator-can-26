@@ -14,6 +14,16 @@ public interface BookingCalendar {
     List<Busy> busy(String merchantId, @Nullable String memberUserId, Instant from, Instant to);
 
     /**
+     * When a person is booked at <em>other</em> businesses in [from, to): times only — never which business, job or
+     * customer. One person can take jobs for several businesses, and booking refuses time they already promised anywhere
+     * ({@code slot_taken}), so the slots of each business must leave it out too. Every booking but a cancelled one
+     * counts, as for that refusal.
+     */
+    List<Commitment> elsewhere(String memberUserId, String merchantId, Instant from, Instant to);
+
+    record Commitment(Instant startsAt, Instant endsAt) {}
+
+    /**
      * One member's jobs overlapping [from, to) with what the member's own calendar shows (S-32 write-back): the
      * display snapshot (service title, address line), the reference and the customer's id (the caller looks up the
      * first name). Nothing else about the customer.

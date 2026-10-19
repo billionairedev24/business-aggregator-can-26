@@ -135,6 +135,75 @@ class BookingCheckoutApiTest extends IntegrationTest {
         }
 
         @Test
+        void thePersonsJobAtAnotherBusinessTakesTheSlot_withoutSayingWhere() throws Exception {
+            // the provider's owner also takes jobs for another business, and is booked there tomorrow at 10:00
+            var other = fx.provider("Elsewhere Auto Glass", "trusted", List.of("Beltline"));
+            jdbc.sql("insert into merchants.merchant_members (merchant_id, user_id, role, bookable, mfa_ok)"
+                            + " values (?, ?, 'technician', true, true)")
+                    .params(other.merchantId(), provider.owner())
+                    .update();
+            var at = tomorrowAt(10);
+            var job = ca.northline.shared.Ids.next();
+            jdbc.sql("""
+                            insert into booking.bookings (id, ref, customer_id, merchant_id, member_user_id, type, state,
+                                   starts_at, ends_at, title, price_cents)
+                            values (?, 'BK-ELSEWHERE', ?, ?, ?, 'visit', 'confirmed', ?, ?, 'Windshield chip repair', 12900)
+                            """)
+                    .params(
+                            job,
+                            data.user("Other Customer"),
+                            other.merchantId(),
+                            provider.owner(),
+                            java.sql.Timestamp.from(at),
+                            java.sql.Timestamp.from(at.plus(Duration.ofMinutes(60))))
+                    .update();
+            var date = LocalDate.now(ZoneId.of("America/Edmonton")).plusDays(1);
+
+            var body = mvc.perform(get("/api/v1/public/providers/{slug}/slots", provider.slug())
+                            .param("serviceId", service)
+                            .param("from", date.toString())
+                            .param("days", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.days[0].slots[?(@.startsAt == '%s')].free".formatted(at))
+                            .value(false))
+                    .andExpect(jsonPath("$.days[0].slots[?(@.startsAt == '%s')].free"
+                                    .formatted(at.minus(Duration.ofMinutes(30))))
+                            .value(false))
+                    .andExpect(jsonPath("$.days[0].slots[?(@.startsAt == '%s')].free".formatted(tomorrowAt(13)))
+                            .value(true))
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            // privacy: nothing about the other business, its job or its customer
+            assertThat(body)
+                    .doesNotContain(other.merchantId())
+                    .doesNotContain(other.slug())
+                    .doesNotContain("Elsewhere")
+                    .doesNotContain("BK-ELSEWHERE")
+                    .doesNotContain(job);
+
+            // what the calendar shows agrees with the hold (and so with the confirmation): the time is taken
+            mvc.perform(post("/api/v1/me/bookings/holds")
+                            .with(TestJwt.customer(customer))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(JSON.writeValueAsString(
+                                    Map.of("slug", provider.slug(), "serviceId", service, "startsAt", at.toString()))))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("slot_taken"))
+                    .andExpect(jsonPath("$.detail").value("That time was just taken. Pick another slot."));
+            // a cancelled job elsewhere frees it again
+            jdbc.sql("update booking.bookings set state = 'cancelled' where id = ?")
+                    .params(job)
+                    .update();
+            mvc.perform(get("/api/v1/public/providers/{slug}/slots", provider.slug())
+                            .param("serviceId", service)
+                            .param("from", date.toString())
+                            .param("days", "1"))
+                    .andExpect(jsonPath("$.days[0].slots[?(@.startsAt == '%s')].free".formatted(at))
+                            .value(true));
+        }
+
+        @Test
         void theCustomersOwnHoldStaysFreeForThem() throws Exception {
             var at = tomorrowAt(11);
             hold(customer, at);
