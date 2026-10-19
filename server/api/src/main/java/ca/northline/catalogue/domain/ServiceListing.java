@@ -56,7 +56,8 @@ public final class ServiceListing implements Listing {
                 details.bufferMin(),
                 details.included(),
                 details.instantBook(),
-                details.sku());
+                details.sku(),
+                details.imageIds());
         state.touched(at);
         return revetIfMaterial(MaterialField.between(before, details), actorId, at);
     }

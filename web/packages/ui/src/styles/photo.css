@@ -1,0 +1,5 @@
+/* Photo (Photo.tsx): a stock photo filling its box, on its placeholder colour (from photos.json) while it loads. */
+.nl-photo { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; background-color: var(--nl-photo-bg, var(--color-surface-sunken)); }
+.nl-photo-ratio { height: auto; aspect-ratio: var(--nl-photo-ratio, 4 / 3); }
+.nl-photo > picture, .nl-photo img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.nl-photo img { object-fit: cover; }

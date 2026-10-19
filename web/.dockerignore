@@ -8,3 +8,6 @@
 **/.env.*
 **/test-results
 **/playwright-report
+# make photos-fetch candidates (never in an image) and built photo variants (the image builds its own)
+packages/media/candidates
+apps/consumer/public/photos

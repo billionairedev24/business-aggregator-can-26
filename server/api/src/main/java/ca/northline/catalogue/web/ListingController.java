@@ -73,7 +73,8 @@ class ListingController {
                 throw RuleViolation.of("kind", "format", "Use service or product.");
             }
         }
-        return new ListResponse<>(mapper.toItems(browseListings.list(merchantId, k, limit, locale), locale));
+        return new ListResponse<>(
+                mapper.toItems(browseListings.list(merchantId, k, limit, locale), locale, merchantId));
     }
 
     @GetMapping("/listings/{listingId}")
@@ -109,7 +110,7 @@ class ListingController {
     ServiceResponse createService(
             @PathVariable String merchantId, @Valid @RequestBody ServiceRequest body, CurrentMember member) {
         var command = new EditService.Command(merchantId, null, body.toDetails(), member.userId());
-        return mapper.toResponse(editService.create(command));
+        return mapper.toResponse(editService.create(command), merchantId);
     }
 
     @PutMapping("/services/{listingId}")
@@ -120,7 +121,7 @@ class ListingController {
             @Valid @RequestBody ServiceRequest body,
             CurrentMember member) {
         var command = new EditService.Command(merchantId, listingId, body.toDetails(), member.userId());
-        return mapper.toResponse(editService.update(command));
+        return mapper.toResponse(editService.update(command), merchantId);
     }
 
     /**

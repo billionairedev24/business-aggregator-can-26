@@ -13,6 +13,7 @@ import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { AppSession, HttpError, request, CookieJar } from './lib/http.mjs';
 import { demoPdf, listingPicture, logoPicture } from './lib/images.mjs';
+import { libraryPhoto, logoFromPhoto, photoBlob } from './lib/photos.mjs';
 import { freshTotp } from './lib/totp.mjs';
 
 const env = process.env;
@@ -398,7 +399,11 @@ async function storefront(owner, id, plan) {
   let s = await owner.get(`${m}/storefront`).catch(e => (e instanceof HttpError && e.status === 404 ? null : Promise.reject(e)));
   if (!s) s = await owner.post(`${m}/storefront`);
   if (!s.logo) {
-    const doc = await owner.call('POST', `${m}/onboarding/documents`, { multipart: file(logoPicture(plan.name, plan.colour), 'logo.png', { purpose: 'logo' }) });
+    // the business's photo from the photo library (its `photo` slot), else a drawn logo
+    const photo = libraryPhoto(plan.photo);
+    const png = photo ? await logoFromPhoto(photo) : null;
+    const logo = png ? file(photoBlob(png), png.name, { purpose: 'logo' }) : file(logoPicture(plan.name, plan.colour), 'logo.png', { purpose: 'logo' });
+    const doc = await owner.call('POST', `${m}/onboarding/documents`, { multipart: logo });
     s = await owner.patch(`${m}/storefront`, { logoDocumentId: doc.id });
   }
   await owner.patch(`${m}/storefront`, { tagline: fill(plan.tagline), brandColor: plan.colour, ctaLabel: plan.type === 'provider' ? 'book' : 'shop' })
@@ -438,8 +443,11 @@ async function listings(owner, id, plan) {
     const editable = !found || ['draft', 'rejected', 'changes_requested'].includes(found.vetting);
     if (editable) {
       let body;
+      // the listing's photo from the photo library (its `photo` slot), through the product's own upload
+      const photo = libraryPhoto(l.photo);
       if (l.kind === 'product') {
-        const image = await owner.call('POST', `${m}/media`, { multipart: file(listingPicture(l.title, plan.name, plan.colour), `${l.key}.png`) });
+        const picture = photo ? file(photoBlob(photo), photo.name) : file(listingPicture(l.title, plan.name, plan.colour), `${l.key}.png`);
+        const image = await owner.call('POST', `${m}/media`, { multipart: picture });
         body = {
           title: l.title, brand: plan.name, categoryId: l.category, attributes: l.attributes ?? {}, priceCents: l.priceCents, stock: l.stock, sku,
           description: fill(l.description), bullets: l.bullets ?? [], imageIds: [image.id], identifierType: 'none',
@@ -447,9 +455,12 @@ async function listings(owner, id, plan) {
           returnsPolicy: PERISHABLE.test(l.category) ? 'final_sale' : 'standard_14', lowStockAt: 3,
         };
       } else {
+        // a service shows its photo when the library has one; none is drawn (the category's photo stands in)
+        const image = photo ? await owner.call('POST', `${m}/media`, { multipart: file(photoBlob(photo), photo.name) }) : null;
         body = {
           name: l.title, categoryId: l.category, pricingMode: l.pricingMode ?? 'fixed', priceCents: l.priceCents,
           durationMin: l.durationMin, bufferMin: l.bufferMin ?? 0, included: l.included, instantBook: true, sku,
+          imageIds: image ? [image.id] : [],
         };
       }
       const path = `${m}/${l.kind === 'product' ? 'products' : 'services'}`;

@@ -309,6 +309,8 @@ components:
           type: string
         id:
           type: string
+        imageUrl:
+          type: string
         kind:
           type: string
           enum:
@@ -640,6 +642,10 @@ components:
             format: int32
           id:
             type: string
+          images:
+            type: array
+            items:
+              $ref: "#/components/schemas/MediaResponse"
           included:
             type: string
           instantBook:

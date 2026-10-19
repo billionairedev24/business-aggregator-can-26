@@ -9558,3 +9558,73 @@ The consumer and courier apps (mobile/apps/consumer, mobile/apps/courier, mobile
   security, wallet, notification settings) only got the shared primitives' new look, not their own layouts.
 
 Schema additions: none. Config additions: none. No new environment variables. New make target: `mobile-shots`.
+
+## 2026-10-19 — Real photos: the photo library and merchants' photos (feat/real-photos-pipeline)
+
+The owner: "I am sick of icons on the webpage. Use real pictures, because in production we will have to use real
+pictures." Built so that photos can be dropped in and are used everywhere; no photo is in the repository yet (the photo
+hosts are blocked here; none was generated or invented). Runbook: [photos.md](runbooks/photos.md).
+
+- **Two sources, one order.** A card shows the merchant's own photo first (product images, and new: a service's photos
+  of the work), then the stock photo of its slot (its category's), then the drawing of before. Pages without a merchant
+  (home hero, banners, empty pages) use slots only.
+- **The photo library** is a new package, `web/packages/media` (`@northline/media`): `photos.json` (one entry per slot
+  that has a photo: file, alt en/fr, focal point, site, photographer, source page, licence, date; `make photos` adds
+  width, height, content hash and the placeholder colour), `source/` (JPEG, about 2000 px, ≤ 2.5 MB: no Git LFS) and the
+  generated slot list. **Slots** are named `group/name`: `hero/*`, `banner/*`, `empty/*`, `sell/*` (fixed, in
+  `slots.config.json`), `category/<catalogue id>` for every group and leaf of `db/seed/categories.json` (departments are
+  the shop leaves, looked up by slug), `cuisine/<code>` (the onboarding's codes + meal kits), and `demo/merchant/<key>`,
+  `demo/listing/<business>.<listing>` (the demo plan's `photo` field). 270 slots today. Each slot has a **fallback**
+  (leaf → group → the landing's banner; demo listing → its category; a few fixed ones → a related one), so one photo per
+  group already fills every category of it. The list is generated (`slots.mjs`, checked by the package's tests) so a new
+  category in the seed gets a slot automatically.
+- **Variants**: sharp (npm, `0.34.5`, a dev dependency of the package) cuts square, 4:3 and 16:9 crops around the focal
+  point at 320/640/960/1440 px (never upscaled) in AVIF, WebP and JPEG, content-hashed file names. They are **not
+  committed**: every consumer build (prebuild, the Dockerfile) builds them into `public/photos/`, and the server serves
+  `/photos/` with the same immutable cache as `/assets/`. `NL_PHOTOS_BASE_URL` (optional) points the pages at a CDN.
+  Variant URLs are computed from `photos.json` at run time (hash and size in the entry), so no generated index is
+  committed besides the slot list and the apps' list.
+- **Components**: `@northline/ui` `Photo` (`picture` + `srcset`/`sizes`, lazy unless `priority`, focal point as
+  `object-position`, the placeholder colour behind it; no fade-in, so a server-rendered page never hides a photo whose
+  load event fired before hydration). The consumer site's `Scene` = `Photo` with the old `Art` as its fallback; every
+  `Art` of the consumer site became a `Scene` with a slot except the kitchen menu's dish thumbnails and the cart and
+  checkout lines (no category in their APIs; dish photos have no public URL yet — S-44), which keep the drawing as
+  their only fallback after the merchant's image. The apps: mobile-kit `Photo`/`Scene` with every width of the crop as
+  `Image` sources (React Native picks by size), JPEG only (every platform decodes it), loaded from the consumer site's
+  `/photos/` or `EXPO_PUBLIC_PHOTOS_BASE_URL` — **no photo is bundled in the apps** (expo-image and bundled assets were
+  the alternative; a CDN keeps the binaries small and a new photo needs no release). The apps' list
+  (`library.generated.ts`) is generated from the web package by `gen-photos.mjs` (no dependencies; `make photos` runs
+  it; the kit's tests check it).
+- **Decorative icons removed** from the header's nav row (Services/Shop/Food, Help) and from the home collage's badge;
+  functional icons (search, cart, account, close, chevrons, the "All" menu) stay, and so do the menu sheet's.
+- **Credits**: `/credits` on the consumer site (footer link, en/fr), generated from `photos.json`; it credits every
+  photo even where the licence doesn't ask.
+- **Licences accepted** (`core.mjs` `SITES`, enforced by the tests): Pexels License, Unsplash License (no compiling a
+  competing collection: the library is pages' pictures only), and Openverse finds under CC0 1.0 / PDM 1.0, with
+  `COMMERCIAL=1` also CC BY / CC BY-SA (with the deed URL and source; never NC or ND, since our crops are derivatives).
+- **Getting photos (owner-approved scope addition)**: the download runs on the owner's Mac. `make photos-fetch`
+  (`scripts/photos/fetch.mjs`, Node 22, no dependencies) asks the Openverse API anonymously per slot (its query from
+  the slot list; photographs, ≥ 1600 px, landscape for heroes/banners/empty pages, stock sources first, drawings
+  skipped by metadata), pauses 1.5 s between calls, honours `Retry-After`, stops after repeated 429s and resumes on the
+  next run; the top three per slot go to `web/packages/media/candidates/` (git-ignored, shrunk to 2048 px with macOS
+  `sips` or sharp) with `candidates.json`. `make photos-push` commits them on `photos/candidates-<date>` from
+  `origin/develop` and pushes (refuses a dirty tree). `make photos-pick` promotes a candidate into `source/` and
+  `photos.json` with its attribution. The candidates never reach a bundle or image (`.gitignore`, `.dockerignore`).
+  Tested against a fake Openverse only — **never run against the real API**.
+- **Merchants' photos from the API (schema: V380, `catalogue.services.own_images text[]`, additive, with a partial GIN
+  index for the public-visibility check)**: the service editor saves `imageIds` (the business's own uploads through
+  `POST /media`, at most 9, the product rules' messages — no new message); changing them re-vets an approved service
+  (`MaterialField.IMAGES`, as for products); an approved service's photos are public (`MediaAdapter.approved`), go into
+  search documents (`imageKey`, worker), `GET /public/providers/{slug}` (`services[].imageUrl`) and the category's
+  provider cards (`imageUrl`: the most booked service with one). `GET /listings` returns `imageUrl` for every row
+  (joined in `ListingQueriesAdapter`; the Studio's media URL). Shop cards return `imageUrl` (the shop's best-selling
+  approved image) and product cards `categoryId` (for the category photo). `PUT /services/{id}` replaces the photos
+  like every other field (absent = none), as the product editor's `imageIds` do. The bulk services template has no
+  photo column: a re-import keeps the editor's photos.
+- **Not done**: server-side variants of merchants' uploads (the public media URL serves the original; the storage port
+  has no resizing and a signed CDN URL per image wasn't needed while the api serves them with a cache header); a cover
+  photo for a business (no upload exists — a shop's card uses its best seller's photo, a provider's page its services';
+  the demo uploads a business's photo as its PNG logo); cart line categories; dish photos' public URL.
+- **Demo data**: `scripts/demo/data/marketplace.json` gives each business and listing a `photo` slot; `make demo-data`
+  uploads the library's photo through the product when the slot has one (products, services, logos), else draws as
+  before (services: none).

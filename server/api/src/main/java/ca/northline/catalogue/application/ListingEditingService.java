@@ -335,6 +335,11 @@ class ListingEditingService implements EditProduct, EditService, ViewListing, Qu
     private ServiceDetails checked(String merchantId, @Nullable String listingId, ServiceDetails details) {
         var problems = new ArrayList<>(details.validate(profile(details.categoryId())));
         skuProblem(merchantId, details.sku(), listingId).ifPresent(problems::add);
+        var photos = media.findAll(details.imageIds()); // the business's own uploads only
+        if (photos.size() != details.imageIds().size()
+                || photos.stream().anyMatch(m -> !merchantId.equals(m.merchantId()))) {
+            problems.add(new Violation("imageIds", "unknown", IMAGE_UNKNOWN));
+        }
         if (!problems.isEmpty()) {
             throw new RuleViolation(problems);
         }
@@ -345,7 +350,11 @@ class ListingEditingService implements EditProduct, EditService, ViewListing, Qu
 
     ServiceView serviceView(ServiceListing s) {
         var category = profile(s.categoryId());
-        return new ServiceView(s, category, s.completeness(category));
+        return new ServiceView(
+                s,
+                category,
+                s.completeness(category),
+                media.findAll(s.getDetails().imageIds()));
     }
 
     // ── shared ─────────────────────────────────────────────────────────────────────────────────────────────────────

@@ -37,7 +37,7 @@ interface ListingWebMapper {
     default ListingDetail toDetail(ListingView view, @Context String merchantId) {
         return switch (view) {
             case ProductView p -> toResponse(p, merchantId);
-            case ServiceView s -> toResponse(s);
+            case ServiceView s -> toResponse(s, merchantId);
         };
     }
 
@@ -91,7 +91,8 @@ interface ListingWebMapper {
     @Mapping(target = "submittedAt", source = "listing.state.submittedAt")
     @Mapping(target = "updatedAt", source = "listing.state.updatedAt")
     @Mapping(target = ".", source = "listing.details")
-    ServiceResponse toResponse(ServiceView view);
+    @Mapping(target = "images", source = "images")
+    ServiceResponse toResponse(ServiceView view, @Context String merchantId);
 
     default CompletenessResponse completeness(Completeness c) {
         return new CompletenessResponse(
@@ -104,21 +105,24 @@ interface ListingWebMapper {
     }
 
     default MediaResponse media(MediaAsset m, @Context String merchantId) {
-        return new MediaResponse(
-                m.id(),
-                "/api/v1/merchants/%s/media/%s".formatted(merchantId, m.id()),
-                m.width(),
-                m.height(),
-                m.onWhite());
+        return new MediaResponse(m.id(), mediaUrl(merchantId, m.id()), m.width(), m.height(), m.onWhite());
     }
 
     List<MediaResponse> media(List<MediaAsset> media, @Context String merchantId);
 
     @Mapping(target = "meta", expression = "java(meta(summary, locale))")
     @Mapping(target = "vettingFlags", source = "flags")
-    ListingItem toItem(ListingSummary summary, @Context Locale locale);
+    @Mapping(
+            target = "imageUrl",
+            expression = "java(summary.imageId() == null ? null : mediaUrl(merchantId, summary.imageId()))")
+    ListingItem toItem(ListingSummary summary, @Context Locale locale, @Context String merchantId);
 
-    List<ListingItem> toItems(List<ListingSummary> summaries, @Context Locale locale);
+    List<ListingItem> toItems(List<ListingSummary> summaries, @Context Locale locale, @Context String merchantId);
+
+    /** The Studio's URL of a business's image (its own uploads, vetted or not; S-123). */
+    default String mediaUrl(String merchantId, String mediaId) {
+        return "/api/v1/merchants/%s/media/%s".formatted(merchantId, mediaId);
+    }
 
     /**
      * Second line under the name: services "60 min · instant book" (or "on request"), products the category.

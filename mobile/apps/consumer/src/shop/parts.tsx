@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { Art, Icon, MIN_TARGET, colors, fonts, radius, semantic, space, type IconName } from '@northline/mobile-kit';
+import { Icon, MIN_TARGET, colors, fonts, radius, semantic, space, type IconName, Scene } from '@northline/mobile-kit';
 
 import { config } from '../config';
 import { useI18n, type MessageKey } from '../i18n';
@@ -28,6 +28,7 @@ export function Thumb({
   height,
   label,
   subject,
+  slot,
   icon: _icon,
   style,
 }: {
@@ -37,6 +38,8 @@ export function Thumb({
   label?: string;
   /** What the picture shows when there is no photo (a name or slug). */
   subject?: string;
+  /** The photo library's slot shown when there is no photo (a category's), before the drawing of `subject`. */
+  slot?: string | null;
   /** @deprecated the no-photo picture is drawn from `subject` now. */
   icon?: IconName;
   style?: StyleProp<ViewStyle>;
@@ -46,7 +49,7 @@ export function Thumb({
   if (src) return <Image source={{ uri: src }} style={box as never} accessibilityLabel={label} accessibilityRole="image" />;
   return (
     <View style={box} accessible={!!label} accessibilityLabel={label} accessibilityRole={label ? 'image' : undefined} testID="no-photo">
-      <Art subject={subject ?? label ?? 'shop'} style={StyleSheet.absoluteFill} />
+      <Scene slot={[slot]} subject={subject ?? label ?? 'shop'} crop="square" style={StyleSheet.absoluteFill} />
     </View>
   );
 }
@@ -192,7 +195,7 @@ export function Strip({ children, edge, testID }: { children: ReactNode; edge?: 
  * name (two lines at most) and a muted line under it ("22 pros", "Coming soon"). `width` sets a rail's tile; without
  * it the tile fills its column (grids).
  */
-export function Tile({ label, sub, subject, imageUrl, onPress, width, testID }: { label: string; sub?: string; subject: string; imageUrl?: string | null; onPress: () => void; width?: number; testID?: string }) {
+export function Tile({ label, sub, slot, subject, imageUrl, onPress, width, testID }: { label: string; sub?: string; slot?: string | null; subject: string; imageUrl?: string | null; onPress: () => void; width?: number; testID?: string }) {
   const w = width ?? undefined;
   return (
     <Pressable
@@ -203,7 +206,7 @@ export function Tile({ label, sub, subject, imageUrl, onPress, width, testID }: 
       testID={testID}
     >
       <View style={[styles.tilePic, { aspectRatio: 4 / 3 }]}>
-        {photoUri(imageUrl) ? <Image source={{ uri: photoUri(imageUrl)! }} style={StyleSheet.absoluteFill} /> : <Art subject={subject} style={StyleSheet.absoluteFill} />}
+        {photoUri(imageUrl) ? <Image source={{ uri: photoUri(imageUrl)! }} style={StyleSheet.absoluteFill} /> : <Scene slot={[slot]} subject={subject} style={StyleSheet.absoluteFill} />}
       </View>
       <Text style={styles.tileName} numberOfLines={2}>
         {label}

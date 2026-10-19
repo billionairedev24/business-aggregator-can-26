@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { Art, Logo, radius, space } from '@northline/mobile-kit';
+import { Logo, radius, space, Scene } from '@northline/mobile-kit';
 
 import { geoApi } from '../api/geo';
 import { useAuth } from '../auth/AuthProvider';
@@ -48,10 +48,10 @@ export function Welcome() {
       <View style={styles.top}>
         <Logo size={30} />
         <View style={styles.collage}>
-          <Art subject="mobile-mechanic" style={styles.main} />
+          <Scene slot="hero/home-main" subject="mobile-mechanic" style={styles.main} />
           <View style={styles.side}>
-            <Art subject="bakery" style={styles.small} />
-            <Art subject="cocktail-bar" style={styles.small} />
+            <Scene slot="hero/home-side-a" subject="bakery" crop="square" style={styles.small} />
+            <Scene slot="hero/home-side-b" subject="cocktail-bar" crop="square" style={styles.small} />
           </View>
         </View>
         <Body tone="kicker">{province ? t('welcome.kicker', { province }) : t('app.name')}</Body>

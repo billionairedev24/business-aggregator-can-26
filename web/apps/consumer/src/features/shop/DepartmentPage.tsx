@@ -1,7 +1,8 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useZone } from '../location/regions';
 import { EmptyState, SiteLink, TileGrid, useLocale } from '@northline/ui';
-import { Art } from '../art/Art';
+import { departmentSlot } from '@northline/media';
+import { Scene } from '../art/Scene';
 import { Crumbs } from '../pages/Crumbs';
 import { departmentQuery } from './api';
 import { runWhen, weekday } from './format';
@@ -34,7 +35,7 @@ export function DepartmentPage({ slug, market: explicit }: { slug: string; marke
           <h1 className="nl-band-title">{data.name}</h1>
           <div className="nl-band-lede">{data.served ? sub : data.market}</div>
         </div>
-        <span className="nl-band-pic" aria-hidden><Art subject={data.slug} fit="contain" /></span>
+        <span className="nl-band-pic" aria-hidden><Scene slot={[departmentSlot(data.slug), 'banner/shop']} subject={data.slug} fit="contain" sizes="(min-width: 960px) 45vw, 100vw" priority /></span>
       </header>
       {data.siblings.length > 1 ? (
         <nav aria-label={t('departments', { group: data.groupName })} className="shop-chips">

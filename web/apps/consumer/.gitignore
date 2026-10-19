@@ -1,0 +1,2 @@
+# make photos: the photo variants (web/packages/media/scripts/build.mjs), rebuilt from the library by every build
+public/photos/

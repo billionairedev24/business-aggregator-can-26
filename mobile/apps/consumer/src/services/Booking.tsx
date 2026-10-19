@@ -3,7 +3,7 @@ import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Art, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
+import { colors, fonts, radius, semantic, space, Scene } from '@northline/mobile-kit';
 
 import { aftercare, ReviewPanel } from '../aftercare/Review';
 import type { Booking } from '../api/services';
@@ -88,7 +88,7 @@ export function Booked({ id }: { id: string }) {
     >
       {(b) => (
         <View style={styles.stack}>
-          <Art subject={b.title} draw={{ main: 'CalendarCheck', side: 'Handshake' }} fit="contain" style={styles.cover} />
+          <Scene slot="banner/booking" subject={b.title} draw={{ main: 'CalendarCheck', side: 'Handshake' }} fit="contain" style={styles.cover} />
           <Title>{t('services.booked.title', { name: who(b), when: when(b, day, time) })}</Title>
           <Body tone="muted">
             {b.heldCents > 0 ? t('services.booked.held', { ref: b.ref, total: money(b.heldCents, locale) }) : t('services.booked.free', { ref: b.ref })}
@@ -184,7 +184,7 @@ export function Eta({ id }: { id: string }) {
         ];
         return (
           <View style={styles.stack}>
-            <Art subject={b.title} fit="contain" style={styles.cover} />
+            <Scene slot="banner/booking" subject={b.title} fit="contain" style={styles.cover} />
             <View style={styles.head}>
               <View style={styles.flex}>
                 <Title>{headline}</Title>

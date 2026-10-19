@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { Art, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
+import { colors, fonts, radius, semantic, space, Scene, slugSlot } from '@northline/mobile-kit';
 
 import { nameIn, type Landing, type ServiceItem } from '../api/services';
 import { useI18n } from '../i18n';
@@ -67,13 +67,13 @@ function Groups({ data, text, setText }: { data: Landing; text: string; setText:
   const popular = [...data.groups.flatMap((g) => g.items)].filter((i) => i.providers > 0).sort((a, b) => b.providers - a.providers).slice(0, 6);
   const sub = (i: ServiceItem) => (i.providers > 0 ? t('lt.home.pros', { n: i.providers }) : t('lt.home.soon'));
   const tile = (i: ServiceItem, testID?: string) => (
-    <Tile key={i.slug} label={nameIn(i.names, locale)} sub={sub(i)} subject={i.slug} width={148} onPress={() => router.push(`/services/${i.slug}`)} testID={testID} />
+    <Tile key={i.slug} label={nameIn(i.names, locale)} sub={sub(i)} slot={slugSlot('service', i.slug)} subject={i.slug} width={148} onPress={() => router.push(`/services/${i.slug}`)} testID={testID} />
   );
   return (
     <>
       <View style={styles.pad}>
         <View style={styles.band}>
-          <Art subject="services" fit="contain" style={styles.bandArt} />
+          <Scene slot="banner/services" subject="services" fit="contain" style={styles.bandArt} />
           <View style={styles.bandText}>
             <Text style={styles.kicker}>{t('lt.browse.live', { n: data.liveCategories })}</Text>
             <Text accessibilityRole="header" style={styles.bandTitle}>

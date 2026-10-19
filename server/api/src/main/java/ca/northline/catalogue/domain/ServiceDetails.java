@@ -9,7 +9,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * What the service editor edits: name, category, pricing (fixed / quote / hourly), price incl. travel, duration,
- * buffer after, what's included, instant book. {@code priceCents} is null for quote-priced services.
+ * buffer after, what's included, instant book, and photos of the work ({@code imageIds}: {@code catalogue.media} ids
+ * the business uploaded, main first; optional). {@code priceCents} is null for quote-priced services.
  */
 public record ServiceDetails(
         String name,
@@ -20,9 +21,11 @@ public record ServiceDetails(
         int bufferMin,
         @Nullable String included,
         boolean instantBook,
-        @Nullable String sku) {
+        @Nullable String sku,
+        List<String> imageIds) {
 
     public ServiceDetails {
+        imageIds = List.copyOf(imageIds);
         name = name.strip();
         included = included == null || included.isBlank() ? null : included.strip();
         sku = sku == null || sku.isBlank() ? null : sku.strip();
@@ -33,7 +36,16 @@ public record ServiceDetails(
 
     public ServiceDetails withSku(String generated) {
         return new ServiceDetails(
-                name, categoryId, pricingMode, priceCents, durationMin, bufferMin, included, instantBook, generated);
+                name,
+                categoryId,
+                pricingMode,
+                priceCents,
+                durationMin,
+                bufferMin,
+                included,
+                instantBook,
+                generated,
+                imageIds);
     }
 
     /** Rules checked on every save (draft included) beyond the request shape. */
@@ -41,6 +53,9 @@ public record ServiceDetails(
         var out = new ArrayList<Violation>();
         if (name.isEmpty()) {
             out.add(new Violation("name", "required", NAME_REQUIRED));
+        }
+        if (imageIds.size() > IMAGES_MAX) {
+            out.add(new Violation("imageIds", "length", IMAGES_TOO_MANY));
         }
         if (pricingMode != PricingMode.QUOTE && (priceCents == null || priceCents <= 0)) {
             out.add(new Violation(

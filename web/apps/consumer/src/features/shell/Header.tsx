@@ -1,5 +1,5 @@
 import { useRouterState } from '@tanstack/react-router';
-import { CookingPot, Lifebuoy, ShoppingBag, SignIn, Storefront, Translate, UserPlus, Wrench } from '@phosphor-icons/react';
+import { Lifebuoy, SignIn, Storefront, Translate, UserPlus } from '@phosphor-icons/react';
 import { AccountMenu, LocationPill, SiteHeader, SiteLink, Skeleton, fullNavEnabled, useLocale } from '@northline/ui';
 import { useCartCount } from '../cart/api';
 import { CUISINES, DEPARTMENTS, SERVICE_CATEGORIES, type Tile } from '../home/catalog';
@@ -38,15 +38,15 @@ export function Header() {
   const auth = !!(screen && SCREENS[screen].auth);
   // redesign § 3.7: Food as its own vertical is hidden for the demo (its routes stay)
   const full = fullNavEnabled();
-  const icons = { services: <Wrench size={20} aria-hidden />, shop: <ShoppingBag size={20} aria-hidden />, food: <CookingPot size={20} aria-hidden /> };
   const here = (to: string) => pathname === to || pathname.startsWith(`${to}/`);
   const link = (tile: Tile) => ({ key: tile.key, label: locale === 'fr' ? tile.fr : tile.en, href: tile.href, current: !tile.href.includes('?') && here(tile.href) });
   const pick = (all: readonly Tile[], keys: readonly string[]) => keys.map(k => all.find(x => x.key === k)).filter((x): x is Tile => !!x).map(link);
   const shortcuts = [...pick(SERVICE_CATEGORIES, SERVICE_SHORTCUTS), ...pick(DEPARTMENTS, SHOP_SHORTCUTS)];
   // one current item in the row: the category's shortcut when it has one, else its section
   const inShortcut = shortcuts.some(l => l.current);
+  // the nav row is words only (owner 2026-10-19: photos, not decorative icons); the sheet keeps its icons
   const links = (full ? ['services', 'shop', 'food'] as const : ['services', 'shop'] as const)
-    .map(key => ({ key, label: t(key), href: `/${key}`, current: section === key && !inShortcut, icon: icons[key] }));
+    .map(key => ({ key, label: t(key), href: `/${key}`, current: section === key && !inShortcut }));
   const menu = [
     { key: 'services', heading: t('services'), href: '/services', links: SERVICE_CATEGORIES.map(link) },
     { key: 'shop', heading: t('shop'), href: '/shop', links: DEPARTMENTS.map(link) },
@@ -74,7 +74,7 @@ export function Header() {
       search={auth ? undefined : <SiteSearch variant="header" placeholder={t('search')} initial={typeof searched === 'string' ? searched : ''} />}
       links={auth ? [] : links}
       shortcuts={auth ? [] : shortcuts}
-      end={auth ? [] : [{ key: 'help', label: t('helpLink'), href: '/help', current: pathname === '/help', icon: <Lifebuoy size={20} aria-hidden /> }]}
+      end={auth ? [] : [{ key: 'help', label: t('helpLink'), href: '/help', current: pathname === '/help' }]}
       menu={auth ? [] : menu}
       menuExtra={auth ? undefined : (
         <>

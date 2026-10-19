@@ -34,7 +34,7 @@ class ListingQueriesAdapter implements ListingQueries {
                                  s.sales_30d, s.vetting, s.status, s.vetting_flags, s.revet_reasons, s.submitted_at, s.category_id,
                                  coalesce(c.name_i18n ->> :lang, c.name_i18n ->> 'en') as category_name, s.pricing_mode,
                                  s.duration_min, coalesce(s.instant_book, false) as instant_book, s.created_at, s.updated_at,
-                                 false as bundle
+                                 false as bundle, s.own_images[1] as image_id
                             from catalogue.services s
                             left join catalogue.categories c on c.id = s.category_id
                            where s.merchant_id = :m
@@ -44,7 +44,9 @@ class ListingQueriesAdapter implements ListingQueries {
                                  o.sales_30d, o.vetting, o.status,
                                  o.vetting_flags, o.revet_reasons, o.submitted_at, cp.category_id,
                                  coalesce(c.name_i18n ->> :lang, c.name_i18n ->> 'en'), null, null, false, o.created_at,
-                                 o.updated_at, o.listing_type = 'bundle'
+                                 o.updated_at, o.listing_type = 'bundle',
+                                 coalesce(case when o.image_source = 'shared' then cp.image_set[1] end,
+                                          o.own_images[1], cp.image_set[1])
                             from catalogue.offers o
                             join catalogue.catalog_products cp on cp.id = o.product_id
                             left join catalogue.categories c on c.id = cp.category_id
@@ -77,7 +79,8 @@ class ListingQueriesAdapter implements ListingQueries {
                         intOrNull(rs, "duration_min"),
                         rs.getBoolean("instant_book"),
                         requiredInstant(rs, "updated_at"),
-                        rs.getBoolean("bundle")))
+                        rs.getBoolean("bundle"),
+                        rs.getString("image_id")))
                 .list();
     }
 

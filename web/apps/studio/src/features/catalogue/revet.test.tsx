@@ -22,7 +22,7 @@ const base = `/api/v1/merchants/${M}`;
 const service = (over: Partial<ServiceDetail>): ServiceDetail => ({
   id: 's1', kind: 'service', vetting: 'approved', status: 'live', vettingFlags: [], revetReasons: [], submittedAt: '2026-09-30T15:58:00Z',
   updatedAt: '2026-09-30T16:00:00Z', completeness: { percent: 100, done: 4, total: 4, missing: [] },
-  name: 'Brake inspection', categoryId: null, pricingMode: 'fixed', priceCents: 8900, durationMin: 60, bufferMin: 20,
+  name: 'Brake inspection', categoryId: null, pricingMode: 'fixed', priceCents: 8900, durationMin: 60, bufferMin: 20, images: [],
   included: 'Pads and rotors', instantBook: true, sku: 'SVC-BI', ...over,
 });
 

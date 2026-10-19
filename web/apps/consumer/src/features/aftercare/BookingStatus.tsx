@@ -6,7 +6,7 @@ import { bookingQuery } from '../booking/api';
 import { signInHref, useViewer } from '../session/api';
 import { ReviewPanel, VisitEta } from './Aftercare';
 import { Crumbs } from '../pages/Crumbs';
-import { Art } from '../art/Art';
+import { Scene } from '../art/Scene';
 import { useAftercareT } from './messages';
 
 /**
@@ -37,7 +37,7 @@ export function BookingStatus({ bookingId }: { bookingId: string }) {
       <div className="nl-bkd-grid">
         <div className="nl-bkd-main">
           <section className="nl-bkd-card" aria-labelledby="bkd-title">
-            <span className="nl-bkd-pic" aria-hidden><Art subject={b.title} fit="contain" /></span>
+            <span className="nl-bkd-pic" aria-hidden><Scene slot="banner/booking" subject={b.title} fit="contain" sizes="(min-width: 960px) 640px, 100vw" /></span>
             <span className="nl-bkd-kicker">{t('bookingRef', { ref: b.ref })}</span>
             <h1 id="bkd-title" className="nl-after-title">{b.title}</h1>
             <p className="nl-after-muted">{b.providerName} · {date(b.startsAt, 'dateTime')}</p>

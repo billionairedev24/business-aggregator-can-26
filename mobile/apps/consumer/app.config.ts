@@ -13,6 +13,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  *   EXPO_PUBLIC_AUTH_ISSUER   https://auth.<zone>
  *   EXPO_PUBLIC_SITE_ORIGIN   https://<zone> — the consumer web: legal pages, the claimed https redirect and App Links
  *   EXPO_PUBLIC_FIXTURES      1 = the in-app fixture backend (web smoke test, demos); refused for production
+ *   EXPO_PUBLIC_PHOTOS_BASE_URL  optional: the stock photos' CDN (docs/runbooks/photos.md); unset = EXPO_PUBLIC_SITE_ORIGIN/photos
  *   EAS_PROJECT_ID, EAS_OWNER the Expo project (from `eas init`)
  *   GOOGLE_SERVICES_JSON      path of the environment's google-services.json (FCM); an EAS file variable, never committed
  *   NL_IOS_BUILD_NUMBER, NL_ANDROID_VERSION_CODE  only for local builds (EAS keeps them remotely)

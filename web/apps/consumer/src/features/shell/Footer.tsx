@@ -22,6 +22,7 @@ export function Footer() {
             <SiteLink href="/help">{t('helpLink')}</SiteLink>
             <SiteLink href="/legal/privacy.html" hrefLang="en-CA">{t('privacy')}</SiteLink>
             <SiteLink href="/legal/terms.html" hrefLang="en-CA">{t('terms')}</SiteLink>
+            <SiteLink href="/credits">{t('photoCredits')}</SiteLink>
           </div>
         </div>
         <div className="nl-footer-col">

@@ -52,6 +52,16 @@ public sealed interface ListingView {
             int stock,
             int available) {}
 
-    record ServiceView(ServiceListing listing, @Nullable CategoryProfile category, Completeness completeness)
-            implements ListingView {}
+    /** @param images the service's photos (its own uploads, main first) */
+    record ServiceView(
+            ServiceListing listing,
+            @Nullable CategoryProfile category,
+            Completeness completeness,
+            List<MediaAsset> images)
+            implements ListingView {
+
+        public ServiceView {
+            images = List.copyOf(images);
+        }
+    }
 }

@@ -40,7 +40,7 @@ export const ListingItem = z.object({
   vetting: Vetting, status: ListingStatus, vettingFlags: z.array(z.string()).default([]), revetReasons: z.array(MaterialField).default([]),
   submittedAt: z.string().nullish(), categoryId: z.string().nullish(), pricingMode: PricingMode.nullish(), updatedAt: z.string(),
   bundle: z.boolean().default(false),
-  /** The listing's first photo, for the table's thumbnail (not sent by the api yet: the thumbnail shows the initial). */
+  /** The listing's main photo (the business's own media URL), for the table's thumbnail; none → the initial. */
   imageUrl: z.string().nullish(),
 });
 export type ListingItem = z.infer<typeof ListingItem>;
@@ -80,6 +80,8 @@ export const ServiceDetail = z.object({
   ...lifecycle, kind: z.literal('service'),
   name: z.string(), categoryId: z.string().nullish(), pricingMode: PricingMode, priceCents: z.number().nullish(), durationMin: z.number(), bufferMin: z.number(),
   included: z.string().nullish(), instantBook: z.boolean(), sku: z.string().nullish(),
+  /** photos of the work, main first (real photos, 2026-10-19) */
+  images: z.array(Media).default([]),
 });
 export type ServiceDetail = z.infer<typeof ServiceDetail>;
 export const ListingDetail = z.discriminatedUnion('kind', [ProductDetail, ServiceDetail]);
@@ -150,7 +152,7 @@ export type ProductPayload = Omit<ProductDetail, 'id' | 'kind' | 'vetting' | 'st
   variants: (Omit<Variant, 'images'> & { imageIds: string[] })[];
   bundleItems: { offerId: string; variantId: string | null; qty: number }[];
 };
-export type ServicePayload = Pick<ServiceDetail, 'name' | 'pricingMode' | 'durationMin' | 'bufferMin' | 'instantBook'> & { categoryId: string | null; priceCents: number | null; included: string | null; sku: string | null };
+export type ServicePayload = Pick<ServiceDetail, 'name' | 'pricingMode' | 'durationMin' | 'bufferMin' | 'instantBook'> & { categoryId: string | null; priceCents: number | null; included: string | null; sku: string | null; imageIds: string[] };
 
 function useInvalidateListings(m: string) {
   const qc = useQueryClient();

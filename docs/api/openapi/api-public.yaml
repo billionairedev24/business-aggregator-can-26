@@ -10044,6 +10044,8 @@ components:
       properties:
         age:
           $ref: "#/components/schemas/Age"
+        categoryId:
+          type: string
         imageUrl:
           type: string
         merchantId:
@@ -10172,6 +10174,8 @@ components:
           type: integer
           format: int64
           description: Cents of Canadian dollars (CAD).
+        imageUrl:
+          type: string
         instantBook:
           type: boolean
         merchantId:
@@ -11092,6 +11096,8 @@ components:
           format: int32
         id:
           type: string
+        imageUrl:
+          type: string
         included:
           type: string
         instantBook:
@@ -11148,6 +11154,8 @@ components:
         departmentName:
           type: string
         departmentSlug:
+          type: string
+        imageUrl:
           type: string
         merchantId:
           type: string

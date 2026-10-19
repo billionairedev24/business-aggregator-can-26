@@ -6,7 +6,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { LOCALES, colors, fontAssets, type Locale } from '@northline/mobile-kit';
+import { LOCALES, colors, fontAssets, type Locale, configurePhotoBase } from '@northline/mobile-kit';
 
 import { AccountFlowProvider } from '../src/auth/AccountFlow';
 import { AuthProvider, useAuth } from '../src/auth/AuthProvider';
@@ -19,6 +19,9 @@ import { config } from '../src/config';
 import { seedOrder } from '../src/fixtures/shop';
 import { services } from '../src/services';
 import { Loading } from '../src/ui/states';
+
+// real photos: the stock photos' variants come from the consumer web's /photos/ or a CDN (docs/runbooks/photos.md)
+configurePhotoBase(config.photosBaseUrl);
 
 
 /**

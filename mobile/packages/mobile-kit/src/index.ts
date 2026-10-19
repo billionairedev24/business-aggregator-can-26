@@ -59,6 +59,9 @@ export { Logo, LogoMark } from './ui/Logo';
 export { ICON_PATHS, Icon, type IconName } from './ui/Icon';
 // light direction: the illustrated scenes that stand in for photographs
 export { Art, TONES, subjectFor, toneFor, type ArtProps, type Subject, type Tone } from './ui/Art';
+// real photos (2026-10-19): the photo library's stock photos, the drawing only while a slot has none
+export { Photo, Scene, type PhotoProps } from './ui/Photo';
+export { categorySlot, configurePhotoBase, cuisineSlot, photoBase, photoFor, slugSlot, type Crop, type ResolvedPhoto } from './photos/library';
 export { PushHooks, setPushRegistrar, type PushRegistrar } from './push/hooks';
 // mobile gaps part 1: photos from the apps (pilot feedback screenshots, problem-report photos) and pilot feedback
 export {

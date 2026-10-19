@@ -183,7 +183,13 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
                 offered.stream().anyMatch(Offer::instantBook),
                 next,
                 zones,
-                region.zone(region.province(p.province())).getId());
+                region.zone(region.province(p.province())).getId(),
+                // the provider's own photo: its most booked service in the category that has one
+                offered.stream()
+                        .map(Offer::imageUrl)
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        .orElse(null));
     }
 
     /** The shortest job a provider offers: its card's "next free" is for that length. */

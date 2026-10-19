@@ -7,7 +7,9 @@ import { restaurantQuery, type Combo, type Dish, type Restaurant } from './api';
 import { subtotalOf, useFoodCart, type FoodCart } from './foodCart';
 import { CUISINE_NAMES, containsLabel, TAGS, useFoodT } from './messages';
 import { Crumbs } from '../pages/Crumbs';
+import { cuisineSlot } from '@northline/media';
 import { Art } from '../art/Art';
+import { Scene } from '../art/Scene';
 import { choiceNames, defaults, deltaOf, pickProblems, toggle, visibleGroups } from './modifiers';
 
 type T = ReturnType<typeof useFoodT>;
@@ -45,7 +47,7 @@ export function RestaurantScreen({ slug }: { slug: string }) {
   return (
     <div className="nl-rest">
       <Crumbs label={t('breadcrumb')} items={[{ label: t('home'), href: '/' }, { label: t('title'), href: '/food' }, ...(cuisine ? [{ label: cuisine, href: '/food' }] : []), { label: k.name }]} />
-      <span className="nl-rest-cover" aria-hidden><Art subject={k.cuisines[0] ?? 'food'} fit="contain" /></span>
+      <span className="nl-rest-cover" aria-hidden><Scene slot={[cuisineSlot(k.cuisines[0]), 'banner/food']} subject={k.cuisines[0] ?? 'food'} fit="contain" sizes="(min-width: 1200px) 1140px, 100vw" priority /></span>
       <header className="nl-rest-banner">
         <div>
           <h1>{k.name}</h1>

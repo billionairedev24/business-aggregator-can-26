@@ -1,4 +1,6 @@
 import { ProductTile, ShopTile, Skeleton, useFormatters, useLocale, type TagTone } from '@northline/ui';
+import { categorySlot } from '@northline/media';
+import { Scene } from '../art/Scene';
 import { useZone } from '../location/regions';
 import type { ProductCard, Run, ShopCard } from './api';
 import { clock, runWhen, weekday } from './format';
@@ -49,6 +51,7 @@ export function ProductCardTile({ product, withMarket }: { product: ProductCard;
   const meta = age ? <>{shops}<span className="nl-age-chip">{age}</span></> : shops;
   return (
     <ProductTile href={withMarket(`/products/${product.productId}`)} name={product.name} imageUrl={product.imageUrl}
+      fallback={<Scene slot={[categorySlot(product.categoryId)]} subject={product.name} crop="square" sizes="(min-width: 960px) 220px, 45vw" />}
       price={product.sellers > 1 ? t('from', { price }) : price} meta={meta} />
   );
 }
@@ -59,9 +62,11 @@ export function ShopCardTile({ shop, next, look, href }: { shop: ShopCard; next:
   const runTag = useRunTag();
   const orderBy = useOrderByTag();
   const products = t('productsCount', { count: shop.products });
+  // the shop's own photo, else its letter (a department photo would repeat on every shop of the department)
+  const imageUrl = shop.imageUrl ?? null;
   return look === 'dot'
-    ? <ShopTile look="dot" id={shop.merchantId} href={href} name={shop.name} meta={t('shopDept', { department: shop.departmentName, products })} tag={orderBy(shop.run, next)} />
-    : <ShopTile id={shop.merchantId} href={href} name={shop.name} meta={products} tier={{ label: tier(shop.tier), tone: TIER_TONE[shop.tier] ?? 'neutral' }} tag={runTag(shop.run, next)} />;
+    ? <ShopTile look="dot" id={shop.merchantId} href={href} name={shop.name} imageUrl={imageUrl} meta={t('shopDept', { department: shop.departmentName, products })} tag={orderBy(shop.run, next)} />
+    : <ShopTile id={shop.merchantId} href={href} name={shop.name} imageUrl={imageUrl} meta={products} tier={{ label: tier(shop.tier), tone: TIER_TONE[shop.tier] ?? 'neutral' }} tag={runTag(shop.run, next)} />;
 }
 
 /** Skeleton of a Shop page while it loads (kicker, title, a tile grid, a product grid). */

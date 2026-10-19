@@ -1,0 +1,52 @@
+{
+  "$comment": "The photo slots that don't come from data (docs/runbooks/photos.md). scripts/slots.mjs adds one slot per catalogue group and leaf (db/seed/categories.json), per cuisine below, and per demo business and listing (scripts/demo/data/marketplace.json `photo`). `hint` is what to search for on Pexels or Unsplash; `use` is where the picture shows; `fallback` is the slot shown while this one has no photo. No place names (region-neutral rule).",
+  "fixed": [
+    { "slot": "hero/home-main", "use": "home page collage, the large picture", "hint": "mobile mechanic working on a car in a driveway", "fallback": "category/service.automotive.mobile-mechanic" },
+    { "slot": "hero/home-side-a", "use": "home page collage, top small picture", "hint": "fresh bread loaves on a bakery counter", "fallback": "category/shop.food-and-grocery.bakery" },
+    { "slot": "hero/home-side-b", "use": "home page collage, bottom small picture", "hint": "bright tidy living room being cleaned", "fallback": "category/service.cleaning-and-property.house-cleaning" },
+    { "slot": "hero/sign-in", "use": "sign-in page picture", "hint": "hands handing over house keys at a front door" },
+    { "slot": "hero/register", "use": "create-account page picture", "hint": "smiling small business owner behind the counter" },
+    { "slot": "hero/courier", "use": "courier app: sign-in, today and pickup", "hint": "courier carrying a parcel to a front door" },
+    { "slot": "banner/services", "use": "Services landing banner; the last fallback of every service category", "hint": "tradesperson at work in a home kitchen" },
+    { "slot": "banner/shop", "use": "Shop landing banner; the last fallback of every department", "hint": "groceries in a paper bag on a kitchen table" },
+    { "slot": "banner/food", "use": "Food landing banner; the last fallback of every cuisine", "hint": "table of shared dishes from a local restaurant" },
+    { "slot": "banner/sell", "use": "Sell page and the home page's sellers' banner", "hint": "owner opening the door of a small independent shop" },
+    { "slot": "banner/help", "use": "Help page banner", "hint": "friendly support person with a headset at a desk" },
+    { "slot": "banner/order-complete", "use": "checkout complete; mobile order confirmation", "hint": "courier handing a shopping bag to a customer at the door" },
+    { "slot": "banner/booking", "use": "booking confirmation (web and app)", "hint": "service provider greeting a customer at a front door", "fallback": "banner/services" },
+    { "slot": "sell/provider", "use": "Sell page card: offer a service", "hint": "electrician installing a light fixture", "fallback": "banner/services" },
+    { "slot": "sell/seller", "use": "Sell page card: sell goods", "hint": "shop owner arranging products on a shelf", "fallback": "banner/shop" },
+    { "slot": "sell/kitchen", "use": "Sell page card: run a kitchen", "hint": "cook plating food in a small restaurant kitchen", "fallback": "banner/food" },
+    { "slot": "empty/not-found", "use": "page not found (404)", "hint": "empty country road under a wide sky" },
+    { "slot": "empty/error", "use": "something went wrong page", "hint": "rain drops on a window pane" },
+    { "slot": "empty/generic", "use": "empty lists in the apps", "hint": "empty wicker basket on a wooden table" },
+    { "slot": "empty/search", "use": "no search results", "hint": "street of small independent shops", "fallback": "empty/generic" },
+    { "slot": "empty/cart", "use": "empty cart", "hint": "empty shopping basket", "fallback": "empty/generic" },
+    { "slot": "empty/signed-out", "use": "screens that need an account (apps)", "hint": "hand holding a set of keys", "fallback": "hero/sign-in" },
+    { "slot": "empty/proof-photo", "use": "courier app: take the delivery photo", "hint": "parcel left on a front doorstep", "fallback": "hero/courier" }
+  ],
+  "cuisines": {
+    "$comment": "The onboarding's cuisine codes (Studio businessFields.ts) and the home page's meal kits.",
+    "codes": [
+      { "code": "vietnamese", "hint": "bowl of pho with herbs" },
+      { "code": "pizza", "hint": "wood-fired pizza on a board" },
+      { "code": "indian", "hint": "Indian curry dishes with naan" },
+      { "code": "ramen", "hint": "bowl of ramen with egg" },
+      { "code": "canadian", "hint": "poutine and burger at a diner" },
+      { "code": "ethiopian", "hint": "injera platter with stews" },
+      { "code": "italian", "hint": "fresh pasta dish" },
+      { "code": "mexican", "hint": "tacos on a plate" },
+      { "code": "middle_eastern", "hint": "mezze platter with hummus" },
+      { "code": "dessert", "hint": "pastries and cakes in a display" },
+      { "code": "meal_kits", "hint": "meal prep containers with fresh food" },
+      { "code": "other", "hint": "restaurant dishes on a table" }
+    ]
+  },
+  "categoryHints": {
+    "$comment": "What to search for when a category's name alone is a poor query (optional; the name is used otherwise).",
+    "service.automotive.detailing": "car detailing polishing",
+    "service.home-trades.eavestrough": "gutter cleaning on a roof",
+    "service.cleaning-and-property.move-in-move-out-clean": "cleaning an empty apartment",
+    "shop.restricted.alcohol": "wine bottles on a shelf"
+  }
+}

@@ -25,4 +25,5 @@ export * from './FileButton';
 export * from './Chat';
 export * from './ShopTiles';
 export * from './Commerce';
+export * from './Photo';
 export * from './PilotFeedback';

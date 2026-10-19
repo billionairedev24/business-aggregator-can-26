@@ -11,7 +11,8 @@
 #            headers, pre-compressed assets; NL_AUTH_ORIGIN is read at container start (/config.js), so one image
 #            serves every environment.
 # consumer = TanStack Start SSR (dist/server fetch handler + dist/client assets) on Node 22 distroless (uid 65532,
-#            port 3000) through apps/consumer/server/node-server.mjs.
+#            port 3000) through apps/consumer/server/node-server.mjs. The stock photos' variants (make photos,
+#            docs/runbooks/photos.md) are built from web/packages/media into dist/client/photos.
 # docs, docs-internal = the Docusaurus site (S-126) as static files on nginx-unprivileged (port 8080): docs is the
 #            public variant (guides, public/partner/webhook/OAuth references), docs-internal everything (docs/ of the
 #            repository, every spec). The repository's docs/ comes in as the named build context `repo-docs`.
@@ -65,6 +66,7 @@ FROM deps AS consumer-build
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store --mount=type=secret,id=extra_ca,required=false \
     if [ -s /run/secrets/extra_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/extra_ca; fi \
  && pnpm --filter @northline/tokens build \
+ && pnpm --filter @northline/media build \
  && pnpm --filter @northline/consumer build \
  && pnpm --filter @northline/consumer deploy --prod --legacy /out \
  && cp -r apps/consumer/dist /out/dist \

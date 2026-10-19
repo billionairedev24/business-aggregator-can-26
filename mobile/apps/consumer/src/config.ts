@@ -22,6 +22,8 @@ export const config = {
   /** The in-app sign-in's redirect: the claimed https link on the consumer site (src/auth/handoff.ts). */
   httpsRedirectUri: `${siteOrigin}/app/oauth2redirect`,
   scopes: ['openid', 'profile', 'orders', 'bookings', 'offline_access'],
+  /** The stock photos' variants (docs/runbooks/photos.md): a CDN, else the consumer web's /photos/. */
+  photosBaseUrl: strip(process.env.EXPO_PUBLIC_PHOTOS_BASE_URL ?? `${siteOrigin}/photos`),
 } as const;
 
 /** The verbatim legal pages (design 09/10, S-63; English only, as on the web), opened outside the app. */

@@ -9,7 +9,8 @@ import { nextAvailable, percent, price } from './format';
 import { useServicesT } from './messages';
 import { categoryName, familyOf, nouns } from './taxonomy';
 import { Crumbs } from '../pages/Crumbs';
-import { Art } from '../art/Art';
+import { categorySlot } from '@northline/media';
+import { Scene } from '../art/Scene';
 
 export type ProviderFilter = 'master' | 'instant' | 'today' | 'under80';
 export const FILTERS: readonly ProviderFilter[] = ['master', 'instant', 'today', 'under80'];
@@ -79,7 +80,7 @@ export function ProviderList({ slug }: { slug: string }) {
                 : <ul className="nl-svc-rows">{shown.map(p => <li key={p.merchantId}><ProviderRow provider={p} locale={locale} kind={name} /></li>)}</ul>}
         </div>
         <aside className="nl-svc-list-aside" aria-labelledby="svc-list-aside">
-          <span className="nl-svc-list-pic" aria-hidden><Art subject={category.slug} fit="contain" /></span>
+          <span className="nl-svc-list-pic" aria-hidden><Scene slot={categorySlot(category.id) ?? 'banner/services'} subject={category.slug} fit="contain" sizes="(min-width: 960px) 320px, 100vw" /></span>
           <div className="nl-svc-list-aside-body">
             <h2 id="svc-list-aside" className="nl-svc-aside-title" lang={name.lang}>{name.text}</h2>
             <p className="nl-svc-aside-hint">{category.quoteable ? t('asideHint') : t('asideHintAbout')}</p>
@@ -106,7 +107,7 @@ function ProviderRow({ provider: p, locale, kind }: { provider: ProviderCard; lo
   const quote = p.pricingMode === 'quote' || p.fromCents == null;
   return (
     <ServiceCard href={`/providers/${p.slug}`} name={p.name} kind={<span lang={kind.lang}>{kind.text}</span>}
-      mark={<BrandMark name={p.name} color={p.brandColor} size={96} />}
+      imageUrl={p.imageUrl} mark={<BrandMark name={p.name} color={p.brandColor} size={96} />}
       rating={p.reviewCount > 0 ? p.rating : null} reviewCount={p.reviewCount}
       place={p.onTimePct !== null && p.onTimePct !== undefined ? t('onTime', { pct: percent(p.onTimePct, locale) }) : undefined}
       note={nextAvailable(t, locale, p.nextAvailable, new Date(), zone)}

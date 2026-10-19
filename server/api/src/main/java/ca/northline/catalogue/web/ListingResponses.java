@@ -26,7 +26,7 @@ final class ListingResponses {
 
     /**
      * {@code GET /listings} row (contract: id, kind, name, sku, meta, priceCents, stock, sales30d, vetting, status;
-     * the rest is additive).
+     * the rest is additive). {@code imageUrl}: the main image, as the Studio reads it (the business's own media URL).
      */
     record ListingItem(
             String id,
@@ -45,7 +45,8 @@ final class ListingResponses {
             @Nullable String categoryId,
             @Nullable PricingMode pricingMode,
             Instant updatedAt,
-            boolean bundle) {}
+            boolean bundle,
+            @Nullable String imageUrl) {}
 
     /** The editor's view of one listing — {@link ProductResponse} or {@link ServiceResponse}, told apart by kind. */
     sealed interface ListingDetail permits ProductResponse, ServiceResponse {}
@@ -150,6 +151,7 @@ final class ListingResponses {
             @Nullable String included,
             boolean instantBook,
             @Nullable String sku,
+            List<MediaResponse> images,
             CompletenessResponse completeness)
             implements ListingDetail {}
 
