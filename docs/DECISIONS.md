@@ -9052,3 +9052,84 @@ Not done / left as they are:
 - `ProductPageApiTest`'s 404 cases (unpublished, banned, unknown, draft offer) asked without a market and got 422 on
   main too: since V345 no market is live, so there is no fallback market. They now pass the test's market; the
   fallback itself is unchanged.
+
+## 2026-10-19 — OVHcloud targets for the dry run: `ovh-vps` and `ovh-mks` (feat/ovh-target)
+
+Owner direction: be able to deploy the dry run to **either** Google Cloud (the GCP dry run of 2026-10-18) **or**
+OVHcloud, everything in one Canadian location — Beauharnois (BHS) — to avoid egress. Two OVHcloud shapes, selectable;
+runbook [docs/runbooks/ovh.md](runbooks/ovh.md), comparison [README § Google vs OVH](runbooks/README.md#google-vs-ovh).
+Prices are from the hosting research (§ 5, search-engine excerpts) and **unverified**.
+
+- **Targets.** `gcp-dryrun` (unchanged), `ovh-vps` (one 8 vCore / 24 GB VPS in Beauharnois with k3s, ≈ $25–30/month)
+  and `ovh-mks` (free Managed Kubernetes control plane in `BHS5`, 2 × `b3-16`, Managed PostgreSQL 17 Essential,
+  ≈ $150–215/month). One entry point: `make deploy TARGET=gcp-dryrun|ovh-vps|ovh-mks` (`scripts/deploy-target.sh`;
+  for `gcp-dryrun` it runs dryrun-gcp.md steps 9–10). All three share `values-dryrun.yaml` (environment `dryrun`,
+  Spring profile `dev`, hosts under `demo.northline.ca`, small JVMs, Stripe test mode); the OVHcloud overlays
+  `values-ovh-vps.yaml` / `values-ovh-mks.yaml` replace `values-gcp.yaml`. Only one target owns the hosts at a time;
+  switching is the DNS records.
+- **Terraform** with the official `ovh/ovh` provider (`~> 2.22`): `stacks/ovh` (not a module under `modules/`:
+  OVHcloud is outside the three-cloud module contract) holds Object Storage — buckets with default encryption (SSE-OMK)
+  and one S3 user per writer limited to its bucket by an S3 policy (uploads: the api; Postgres backups: CloudNativePG)
+  — and `config_env`/`data_values` with the GCP dry run's names. `envs/ovh/vps` and `envs/ovh/mks` are the roots.
+  **Region restricted to `BHS5`** (the Canadian region whose services the research found; Toronto is one map entry once
+  confirmed). Provider endpoint `ovh-ca` (an OVHcloud Canada account) by default.
+- **The VPS is ordered in the console.** Provider 2.22 has `ovh_vps` (ordering through the order workflow), but it
+  needs the current range's plan code in Beauharnois and a default payment method, and an apply commits a month's
+  payment — not checkable here. Terraform reads the ordered VPS (`vps_service_name`) and puts the **OVHcloud Network
+  Firewall** in front of its IPv4: TCP replies, SSH from `admin_cidrs` (≤ 3), 80, 443, DNS/NTP replies, ICMP, deny the
+  rest. `scripts/ovh/bootstrap-k3s.sh` (bash 3.2, over SSH, no Ansible/cloud-init) adds the same rules with `ufw`
+  ("routed" allowed for k3s), installs k3s (channel v1.33, **Traefik off**, secrets encryption, local-path volumes) and
+  Helm, writes the kubeconfig for an **SSH tunnel** (the k3s API is never exposed), then deploys.
+- **`ovh-mks`:** private network (vRack, `10.60.0.0/24`) with a gateway `s` (the load balancer's public IP goes
+  through it; nodes keep their public interface for egress, no routing via the gateway), cluster on the free plan with
+  `api_allowed_cidrs` as IP restrictions, node pool hourly (`monthly_billed` optional), Managed PostgreSQL 17 on the
+  private network reachable only from the subnet. `data_services.postgres.mode` gains **`managed`** (default here) next
+  to `in-cluster` / `external`; Valkey, Meilisearch, Kafka in-cluster or external with the GCP semantics. PostgreSQL 18
+  is refused (OVHcloud doesn't enable PostGIS on it). **Extensions:** no Terraform resource exists for them;
+  `scripts/ovh/deploy.sh` creates `postgis`, `citext`, `pgcrypto` and grants the app user `CREATE` on the database,
+  once, as `avnadmin` (Terraform resets its password into the state) from a short-lived `postgres:17-alpine` pod.
+- **Edge:** the same Envoy Gateway as Google Cloud (not Traefik/ingress-nginx: the chart's edge — HTTPS listeners,
+  HSTS, redirects, certificates per host — is built and validated on it). New EnvoyProxy manifests:
+  `manifests/ovh-vps` (one proxy, k3s ServiceLB on the VPS's 80/443) and `manifests/ovh-mks` (two proxies, preferred on
+  different nodes, OVHcloud load balancer), both `externalTrafficPolicy: Local`. cert-manager HTTP-01. **No
+  external-dns**: two A records by hand (apex + wildcard).
+- **Secrets without a secrets manager:** `externalSecrets.enabled: false`; the apps read one plain Secret
+  `northline-secrets`. `scripts/ovh/secrets.sh` keeps them in one git-ignored local file per target
+  (`.ovh/<target>.env`, mode 600; `init` generates every generated key, bcrypt hashes included, and leaves the
+  third-party ones empty) and writes the Secrets — app, `northline-pg-app`, `northline-valkey`, `northline-meilisearch`,
+  `northline-pg-backup-s3`, `northline-registry` — adding Terraform's S3 keys and the managed database password from
+  the state. No External Secrets provider for an OVHcloud secrets service could be verified here;
+  kept simple and documented.
+- **Keys:** no key service the apps support → `KMS_PROVIDER=local`. northline-auth keeps its JWK set in a file
+  (`SIGNING_KEYS_DIR`) on a 1 Gi volume the data chart owns (`authSigningKeys`, kept on uninstall); the api seals with
+  `KMS_LOCAL_KEY`. Allowed under `dev` only — **staging/prod on OVHcloud need an OVHcloud KMS adapter** (not built).
+- **Object storage:** the existing S3 adapter with the endpoint override (`STORAGE_PROVIDER=s3`,
+  `STORAGE_ENDPOINT=https://s3.bhs.io.cloud.ovh.net`, `STORAGE_REGION=bhs`, path-style, no `STORAGE_ENCRYPTION_KEY`),
+  static keys as `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` (now mapped for the api in the OVHcloud values). No
+  application code changed.
+- **Chart changes.** northline: `apps.<app>.strategy` (auth uses `Recreate`: one pod owns the key file on a
+  ReadWriteOnce volume — ≈ 30–60 s of sign-in downtime per auth upgrade); OVHcloud values (plain Secret, registry pull
+  Secret, S3 and KMS keys mapped, the key volume, two replicas of the stateless apps on `ovh-mks`, Collector pipelines
+  `debug`). northline-data 0.2.0: `externalSecrets.provider: none`, `pinToZone` (false on OVHcloud), Postgres backups
+  `provider: gcs | s3` (barman `endpointURL` + a keys Secret), the auth key PVC, and **`postgres.recovery`** (bootstrap
+  from the backups, optionally to a point in time, archiving into a new `backup.serverName`; refused otherwise) —
+  usable on Google Cloud too. `scripts/ovh/deploy.sh` layers `.ovh/<target>-data.yaml` for lasting overrides.
+- **Between demos:** `make ovh-down/ovh-up/ovh-status TARGET=…` (`scripts/ovh/scale.sh`): apps to 0 with their replica
+  counts kept in an annotation. On `ovh-vps` that saves nothing (monthly billing) — it only takes the sites offline.
+  On `ovh-mks` it also applies `node_count=0` through Terraform (asks first). Other targets: `ovh-bootstrap`,
+  `ovh-tunnel`, `ovh-secrets-init`, `ovh-secrets`.
+- **Demo data:** `make demo-data ENV=ovh-vps|ovh-mks` (URLs from the overlay if it sets `urls`, else
+  `values-dryrun.yaml`; own state file); `ENV=gcp-dryrun` is an alias of `dryrun`.
+- **Images:** any registry; documented GHCR (pull Secret from the secrets file) or OVHcloud Managed Private Registry
+  (not in Terraform: optional, plan and region pricing unverified).
+- **Validation (offline):** the `ovh/ovh` provider was not reachable through the registry here; v2.22.0 was built from
+  its source (Go module proxy) into a private filesystem mirror. Both roots pass `terraform validate`, `tflint` and
+  `terraform test` against a mocked provider (11 runs: region guard, firewall rules, managed/in-cluster/external
+  Postgres, Business = 2 nodes, PG 18 refused, scale to 0). `deploy/helm/validate.sh` renders both overlays and the data
+  chart variants (+ restore) through kubeconform; `deploy/argocd/validate.sh` covers the new EnvoyProxy manifests;
+  scripts parse with bash 3.2 and `secrets.sh`/`deploy.sh` ran against stubbed kubectl/helm/terraform.
+- **Never run against the real service:** everything OVHcloud — the API and Terraform apply, the VPS, the Network
+  Firewall, k3s bootstrap, MKS, the load balancer with `Local`, Managed PostgreSQL (extensions as `avnadmin`, private
+  network), Object Storage over S3 (the api and barman), Let's Encrypt on these hosts. Unverified facts are listed in
+  ovh.md § Open items (prices, VPS stock/range in BHS, S3 endpoint, DB region name `BHS`, a node pool at 0, the gateway
+  requirement). Schema additions: none. No app variables added.

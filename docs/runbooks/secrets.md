@@ -220,6 +220,19 @@ kubectl -n northline-<env> rollout restart deploy/northline-<app>
 Rehearsed on kind: the `STUDIO_BFF_SECRET` row end to end (new value → ESO refresh → OAuth client sync
 `studio-bff: update secret` → bff restart → the token endpoint accepts the new secret and answers 401 to the old one).
 
+## OVHcloud targets: plain Secrets from a local file
+
+OVHcloud ([ovh.md](ovh.md)) has no secrets manager External Secrets could read, so there `externalSecrets.enabled` is
+false and every app reads one plain Secret, `northline-secrets` (`secrets.existingSecret`), key by key — only the keys
+in its `secretEnv`. `scripts/ovh/secrets.sh` writes it, and the data services' Secrets (`northline-pg-app`,
+`northline-valkey`, `northline-meilisearch`, `northline-pg-backup-s3`) and the registry pull Secret, from the
+operator's git-ignored file `.ovh/<target>.env` plus Terraform's S3 and Managed PostgreSQL credentials (never printed):
+`make ovh-secrets-init TARGET=…` once (generates every key this page lists as generated, leaves Stripe/Twilio empty),
+fill in the third-party keys, `make ovh-secrets TARGET=…`. OVHcloud-only keys in `northline-secrets`:
+`STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` (the uploads bucket's S3 user) and `KMS_LOCAL_KEY` (no key service: the
+api seals with this key, allowed under `dev` only). Rotation: edit the file, `make ovh-secrets`, then
+`kubectl -n northline-dryrun rollout restart deploy`.
+
 ## Local development and kind
 
 - **Local (Gradle, Vite):** `server/.env` (git-ignored, from `server/.env.example`) — no secrets manager.

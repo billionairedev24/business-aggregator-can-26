@@ -14,6 +14,7 @@ say where a step is still manual or missing.
 | [staging.md](staging.md) | pre-production: prod shape, Stripe test mode |
 | [prod.md](prod.md) | production (Calgary launch) |
 | [dryrun-gcp.md](dryrun-gcp.md) | the GCP dry run: a short-lived demo environment on one zonal GKE cluster (fake data only, a $300 free-trial credit) — Postgres + PostGIS, Valkey, Meilisearch and Kafka in the cluster or at an external provider, cost estimate, step by step from an empty project to teardown |
+| [ovh.md](ovh.md) | the dry run on OVHcloud, everything in Beauharnois (BHS): `ovh-vps` (one VPS with k3s, ≈ $25–30/month) or `ovh-mks` (Managed Kubernetes + Managed PostgreSQL, ≈ $150–215/month) — account and API credentials, ordering, step by step for both, secrets from a local file, demo data, backups and restore, cost, teardown; [Google vs OVH](#google-vs-ovh) compares them with the GCP dry run |
 | [demo.md](demo.md) | the client demo on the dry run: `make demo-data` (a demo marketplace made through the product — businesses approved by staff, listings with pictures, customers with orders, bookings and reviews), the accounts, the 15-minute script, reset between demos, what to avoid, the pre-demo checklist |
 | [backups-dr.md](backups-dr.md) | backups, point-in-time restore and disaster recovery: RPO/RTO per data store and cloud, copies in the other Canadian region, restore scripts, the masked prod → staging refresh, verification, the local drill and the quarterly drill schedule (S-114) |
 | [infrastructure.md](infrastructure.md) | Terraform on AWS / Google Cloud / Azure: accounts, state bucket, plan/apply, outputs → variables, cost, teardown (S-2/S-3) |
@@ -681,3 +682,31 @@ per-provider service mapping is in each cloud runbook ("Managed services"); the 
 `infra/terraform/envs/<aws|gcp|azure>/<env>` ([infrastructure.md](infrastructure.md)). Canadian regions only:
 AWS `ca-central-1` (Montréal) / `ca-west-1` (Calgary), Google Cloud `northamerica-northeast1` (Montréal) /
 `northamerica-northeast2` (Toronto), Azure `canadacentral` (Toronto) / `canadaeast` (Québec City).
+
+## Google vs OVH
+
+Three ways to run the dry run (fake data, the `dev` profile, the same two charts and `values-dryrun.yaml`); one
+command deploys any of them, `make deploy TARGET=gcp-dryrun|ovh-vps|ovh-mks`. Runbooks:
+[dryrun-gcp.md](dryrun-gcp.md) and [ovh.md](ovh.md). Prices are list prices **not verified** online — check them in
+each provider's calculator or console before ordering.
+
+| | `gcp-dryrun` (Google Cloud) | `ovh-vps` (OVHcloud) | `ovh-mks` (OVHcloud) |
+|---|---|---|---|
+| Where | Montréal `northamerica-northeast1`, one zone | Beauharnois (BHS), one VPS | Beauharnois, Public Cloud BHS5 |
+| Compute | zonal GKE, 2 × `e2-standard-4` Spot | one VPS 8 vCore / 24 GB / 200 GB NVMe, k3s | free MKS control plane, 2 × `b3-16` |
+| Postgres + PostGIS | CloudNativePG in the cluster (or external) | CloudNativePG on the VPS | Managed PostgreSQL 17 Essential (or in the cluster) |
+| Valkey, Meilisearch, Kafka | in the cluster (or external) | on the VPS | in the cluster |
+| Object storage | Cloud Storage (CMEK) | Object Storage BHS (S3 API) | Object Storage BHS (S3 API) |
+| Secrets | Secret Manager + External Secrets | plain Secrets from `.ovh/ovh-vps.env` | plain Secrets from `.ovh/ovh-mks.env` |
+| Keys (signing, sealing) | Cloud KMS | local (a key file, `KMS_LOCAL_KEY`): `dev` only | local, as `ovh-vps` |
+| Edge | Envoy Gateway behind a regional network LB, external-dns | Envoy Gateway on the VPS's ports 80/443, DNS by hand | Envoy Gateway behind an OVHcloud LB, DNS by hand |
+| Billing | per second; $300 trial credit | **per month** (the box costs the month whatever runs) | per hour (nodes, LB, gateway), monthly DB |
+| Cost (unverified) | ≈ $105/month Spot around the clock, ≈ $32 for 3 weeks up only while demoing | **≈ $25–30/month**, cash | **≈ $150–215/month** (+ LB and gateway) |
+| Between demos | `make dryrun-down` (nodes → 0, saves ≈ 75 %) | `make ovh-down` (apps → 0, saves nothing) | `make ovh-down TARGET=ovh-mks` (nodes → 0) |
+| Egress | ≈ $0.12/GB to the internet | unmetered | free outside APAC (unverified) |
+| Failure | a Spot node can be reclaimed (30 s) | one box: its failure is an outage until restored | a node can fail; single-zone region |
+| Rehearses prod's shape | closest (Workload Identity, KMS, managed LB) | least (no cloud identities, no KMS) | middle (managed K8s and Postgres) |
+
+**Pick:** `ovh-vps` for the cheapest demo with nothing to scale; `gcp-dryrun` while the free-trial credit lasts and
+to rehearse the production cloud; `ovh-mks` for a longer-lived, credible shape in one Canadian location. Staging and
+prod on OVHcloud need an OVHcloud KMS adapter first (staging/prod refuse `KMS_PROVIDER=local`) — DECISIONS 2026-10-19.
