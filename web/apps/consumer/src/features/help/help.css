@@ -1,9 +1,9 @@
-/* Help (S-145): one readable column; links get 44 px targets (docs/SCREENS.md). */
-.nl-help { padding-top: 32px; max-width: 70ch; }
-.nl-help h1 { font-size: 36px; margin: 0; letter-spacing: -0.02em; }
-.nl-help-lede { font-size: 14px; color: var(--color-neutral-700); margin: 6px 0 22px; }
-.nl-help section { margin-top: 22px; }
-.nl-help h2 { font-size: 22px; margin: 0 0 6px; }
-.nl-help p { font-size: 15px; margin: 0 0 8px; line-height: 1.5; }
-.nl-help-links { display: flex; flex-wrap: wrap; gap: 4px 20px; }
-.nl-help-links a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; overflow-wrap: anywhere; }
+/* Help (S-145; light & photo-first, phase B): a band, then the answers as cards (two a row); links get 44 px targets. */
+.nl-help { min-width: 0; }
+.nl-help-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--space-4); margin-top: var(--space-8); }
+.nl-help-grid > section { padding: var(--space-6); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); min-width: 0; }
+.nl-help h2 { font-size: var(--text-xl); margin: 0 0 var(--space-2); }
+.nl-help p { font-size: var(--text-md); margin: 0 0 var(--space-2); line-height: var(--leading-normal); color: var(--color-text-muted); }
+.nl-help-links { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); margin-top: var(--space-2) !important; }
+.nl-help-links a { display: inline-flex; align-items: center; min-height: var(--size-touch); min-width: var(--size-touch); overflow-wrap: anywhere; font-weight: var(--weight-semibold); }
+@media (max-width: 599.98px) { .nl-help-grid { margin-top: var(--space-5); } .nl-help-grid > section { padding: var(--space-5); } }

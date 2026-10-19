@@ -149,6 +149,7 @@ const RULES: readonly [RegExp, Subject][] = [
   [/ice-cream|gelato/, S(IceCream, Cake)],
   [/indian|curry|ethiopian|african|stew/, S(CookingPot, ForkKnife)],
   [/burger|canadian|diner|grill/, S(Hamburger, ForkKnife)],
+  [/lunch|combo|soup|roll|banh|sandwich|rice|dumpling|taco|wrap|salad|(^|[^a-z])side($|[^a-z])|dish/, S(BowlFood, ForkKnife)],
   [/meal|prep/, S(Package, Leaf)],
   [/food|kitchen|restaurant|cuisine|chef|cater/, S(BowlFood, ForkKnife)],
   // the two halves of the market, and anything else at home

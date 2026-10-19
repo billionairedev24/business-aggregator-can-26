@@ -31,7 +31,10 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'quote', path: '/quotes/q1', signedIn: true },
     { name: 'quote-request', path: '/quotes/requests/r1', signedIn: true },
     { name: 'account', path: '/account', signedIn: true },
+    ...(['addresses', 'payments', 'security', 'notifications', 'favourites', 'profile', 'help'] as const)
+      .map(tab => ({ name: `account-${tab}`, path: `/account?tab=${tab}`, signedIn: true })),
     { name: 'account-orders', path: '/account/orders', signedIn: true },
+    { name: 'account-bookings', path: '/account/orders?tab=bookings', signedIn: true },
     { name: 'account-problem', path: '/account/problem/order/O1', signedIn: true },
     { name: 'food', path: '/food' },
     { name: 'food-kitchen', path: '/food/pho-lucky' },

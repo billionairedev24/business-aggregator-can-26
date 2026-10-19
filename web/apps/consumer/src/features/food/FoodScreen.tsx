@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { Chip, EmptyState, ErrorState, Segmented, SiteLink, Skeleton, Tag, useFormatters, useLocale } from '@northline/ui';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { useKitchens, type Card } from './api';
+import { Art } from '../art/Art';
 import { CUISINE_NAMES, TAGS, useFoodT } from './messages';
 
 type T = ReturnType<typeof useFoodT>;
@@ -125,7 +126,8 @@ function KitchenCard({ t, k, pickup, cuisineName }: { t: T; k: Card; pickup: boo
   ].filter(Boolean).join(' · ');
   const body = (
     <>
-      <div className="nl-food-tile halftone" style={k.brandColor ? { background: `linear-gradient(135deg, ${k.brandColor}, var(--color-neutral-600))` } : undefined}>
+      <div className="nl-food-tile">
+        <Art subject={k.cuisines[0] ?? 'food'} />
         <span className="tag nl-food-eta">{eta}</span>
         {!k.open && <span className="tag tag-neutral nl-food-opens">{k.paused ? t('paused') : k.opensAt ? t('opens', { time: date(k.opensAt, 'time') }) : t('closedNow')}</span>}
       </div>

@@ -6,6 +6,8 @@ import { useStorefrontVisit } from '../../lib/visits';
 import { restaurantQuery, type Combo, type Dish, type Restaurant } from './api';
 import { subtotalOf, useFoodCart, type FoodCart } from './foodCart';
 import { CUISINE_NAMES, containsLabel, TAGS, useFoodT } from './messages';
+import { Crumbs } from '../pages/Crumbs';
+import { Art } from '../art/Art';
 import { choiceNames, defaults, deltaOf, pickProblems, toggle, visibleGroups } from './modifiers';
 
 type T = ReturnType<typeof useFoodT>;
@@ -42,18 +44,17 @@ export function RestaurantScreen({ slug }: { slug: string }) {
 
   return (
     <div className="nl-rest">
-      <nav className="nl-rest-crumbs" aria-label={t('breadcrumb')}>
-        <Link to="/">{t('home')}</Link> › <Link to="/food">{t('title')}</Link>{cuisine ? <> › <span>{cuisine}</span></> : null} › <span aria-current="page">{k.name}</span>
-      </nav>
-      <header className="nl-rest-banner" style={k.brandColor ? { background: k.brandColor } : undefined}>
+      <Crumbs label={t('breadcrumb')} items={[{ label: t('home'), href: '/' }, { label: t('title'), href: '/food' }, ...(cuisine ? [{ label: cuisine, href: '/food' }] : []), { label: k.name }]} />
+      <span className="nl-rest-cover" aria-hidden><Art subject={k.cuisines[0] ?? 'food'} fit="contain" /></span>
+      <header className="nl-rest-banner">
         <div>
           <h1>{k.name}</h1>
           <p>{[cuisine, data.address, k.reviews > 0 ? t('rating', { rating: k.rating.toFixed(1), count: k.reviews }) : null].filter(Boolean).join(' · ')}</p>
         </div>
         <div className="nl-rest-badges">
-          <span className="tag">{t('etaRange', { from: k.etaFromMin, to: k.etaToMin })} · {money(k.deliveryFeeCents)}</span>
-          {data.ahsVerified && <span className="tag">{t('ahs')}</span>}
-          <span className="tag">{t('minOrder', { amount: money(data.minOrderCents, { whole: true }) })}</span>
+          <span className="tag tag-neutral">{t('etaRange', { from: k.etaFromMin, to: k.etaToMin })} · {money(k.deliveryFeeCents)}</span>
+          {data.ahsVerified && <span className="tag tag-success">{t('ahs')}</span>}
+          <span className="tag tag-neutral">{t('minOrder', { amount: money(data.minOrderCents, { whole: true }) })}</span>
         </div>
       </header>
       {!k.open && (
@@ -125,7 +126,7 @@ function DishRow({ t, d, open, disabled, onToggle, onAdd }: { t: T; d: Dish; ope
         {open && <DishEditor t={t} d={d} onAdd={onAdd} onCancel={onToggle} />}
       </div>
       <button type="button" className="nl-rest-plus" aria-expanded={open} aria-label={t('add', { name: d.name })}
-        disabled={disabled || !d.availableNow} onClick={onToggle}><span aria-hidden>+</span></button>
+        disabled={disabled || !d.availableNow} onClick={onToggle}><Art subject={d.name} /><span aria-hidden>+</span></button>
     </div>
   );
 }
@@ -218,7 +219,7 @@ function ComboRow({ t, c, data, open, disabled, onToggle, onAdd }: {
           </div>
         )}
       </div>
-      <button type="button" className="nl-rest-plus" aria-expanded={open} aria-label={t('add', { name: c.name })} disabled={disabled} onClick={onToggle}><span aria-hidden>+</span></button>
+      <button type="button" className="nl-rest-plus" aria-expanded={open} aria-label={t('add', { name: c.name })} disabled={disabled} onClick={onToggle}><Art subject={c.name} /><span aria-hidden>+</span></button>
     </div>
   );
 }

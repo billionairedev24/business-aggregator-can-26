@@ -1,6 +1,8 @@
 import { SiteLink } from '@northline/ui';
 import { useSiteConfig } from '../../lib/config';
 import { signInHref, useViewer } from '../session/api';
+import { Art } from '../art/Art';
+import { ChatCircleDots, Lifebuoy } from '@phosphor-icons/react';
 import { useHelpT } from './messages';
 
 const CASES = '/account?tab=help';
@@ -17,8 +19,14 @@ export function HelpScreen() {
   const signedIn = !!user;
   return (
     <div className="nl-page nl-help">
-      <h1>{t('heading')}</h1>
-      <p className="nl-help-lede">{t('lede')}</p>
+      <header className="nl-band">
+        <div className="nl-band-copy">
+          <h1 className="nl-band-title">{t('heading')}</h1>
+          <p className="nl-band-lede">{t('lede')}</p>
+        </div>
+        <span className="nl-band-pic" aria-hidden><Art subject="help" tone="mint" draw={{ main: Lifebuoy, side: ChatCircleDots }} fit="contain" /></span>
+      </header>
+      <div className="nl-help-grid">
       <section aria-labelledby="help-problem">
         <h2 id="help-problem">{t('problemTitle')}</h2>
         <p>{signedIn ? t('problemSignedIn') : t('problemGuest')}</p>
@@ -53,6 +61,7 @@ export function HelpScreen() {
         <p>{t('businessBody')}</p>
         <p className="nl-help-links"><SiteLink href="/sell">{t('business')}</SiteLink></p>
       </section>
+      </div>
     </div>
   );
 }
