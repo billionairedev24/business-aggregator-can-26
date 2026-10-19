@@ -77,9 +77,10 @@ command_of() { # command_of <service> <services being started>
     studio)
       if dev_auth bff "$2"; then echo "cd '$ROOT/web' && NL_DEV_USER=$DEV_USER VITE_NL_DEV_STEP_UP=1 pnpm --filter @northline/studio dev"
       else echo "cd '$ROOT/web' && pnpm --filter @northline/studio dev"; fi ;;
-    consumer)
-      if dev_auth bff-consumer "$2"; then echo "cd '$ROOT/web' && NL_DEV_USER=$CONSUMER_DEV_USER NL_BFF_URL=http://localhost:8080 pnpm --filter @northline/consumer dev"
-      else echo "cd '$ROOT/web' && pnpm --filter @northline/consumer dev"; fi ;;
+    consumer) # NL_DEV_HOST=0.0.0.0: reachable from a phone on the Wi-Fi (make mobile-dev, docs/runbooks/mobile-local.md)
+      local lan=""; [ -n "${NL_DEV_HOST:-}" ] && lan="NL_DEV_HOST=$NL_DEV_HOST "
+      if dev_auth bff-consumer "$2"; then echo "cd '$ROOT/web' && ${lan}NL_DEV_USER=$CONSUMER_DEV_USER NL_BFF_URL=http://localhost:8080 pnpm --filter @northline/consumer dev"
+      else echo "cd '$ROOT/web' && ${lan}pnpm --filter @northline/consumer dev"; fi ;;
     console)
       if dev_auth bff-console "$2"; then echo "cd '$ROOT/web' && NL_DEV_USER=$CONSOLE_DEV_USER pnpm --filter @northline/console dev"
       else echo "cd '$ROOT/web' && pnpm --filter @northline/console dev"; fi ;;
