@@ -3,39 +3,56 @@ import { defineMessages } from './i18n';
 import { SiteLink } from './SiteLink';
 
 /**
- * Where the consumer header thinks the person is (design 06, the pill after the brand):
- * locating (browser geolocation pending) · detected (device or IP) · fallback (nothing found: the default market) ·
- * saved (chosen on the Location screen) · denied (geolocation refused and nothing else known).
+ * Where the consumer header thinks the person is, and how it knows (consumer location, 2026-10-19):
+ * saved (chosen in the location dialog) · address (the signed-in person's default address) · detected (the device,
+ * when they asked for it, or the CDN's city) · fallback (the configured fallback market) · locating (before the browser
+ * has read its sources) · denied (nothing known: asks to set a place).
  */
-export type LocationStatus = 'locating' | 'detected' | 'fallback' | 'saved' | 'denied';
+export type LocationStatus = 'locating' | 'detected' | 'address' | 'fallback' | 'saved' | 'denied';
 
 const useT = defineMessages({
   en: {
-    detected: 'Detected · deliver to', deliverTo: 'Deliver to', locating: 'Locating…', setLocation: 'Set location',
-    titleDetected: 'Detected from your device · tap to change', titleDenied: 'Location access declined · set it manually', titleOther: 'Delivery location',
+    deliverTo: 'Deliver to', near: 'Near', locating: 'Finding your area…', setLocation: 'Set your location',
+    change: '{kicker} {place}. Change location',
   },
   fr: {
-    detected: 'Détecté · livrer à', deliverTo: 'Livrer à', locating: 'Localisation…', setLocation: 'Choisir un lieu',
-    titleDetected: 'Détecté par votre appareil · touchez pour modifier', titleDenied: 'Accès refusé · choisissez manuellement', titleOther: 'Lieu de livraison',
+    deliverTo: 'Livrer à', near: 'Près de', locating: 'Recherche de votre secteur…', setLocation: 'Indiquez votre adresse',
+    change: '{kicker} {place}. Changer d’adresse',
   },
 });
 
-export interface LocationPillProps { status: LocationStatus; label?: string; href: string }
+export interface LocationPillProps {
+  status: LocationStatus;
+  label?: string;
+  /** "Deliver to" (default: shopping) or "Near" (services and providers). */
+  kicker?: 'deliverTo' | 'near';
+  /** Opens the location dialog. */
+  onOpen?: () => void;
+  /** Without script (or without `onOpen`): a link to the location page. */
+  href?: string;
+}
 
-/** The header's "Deliver to" button (Shop:33): map-pin, an xs muted kicker over the place in bold; opens the Location screen. */
-export function LocationPill({ status, label, href }: LocationPillProps) {
+/**
+ * The header's location control: a pin, a small "Deliver to" / "Near" over the place in bold — the place is shown at
+ * every width, ellipsed when long, never the pin alone. A button that opens the location dialog (`onOpen`), else a
+ * link (`href`).
+ */
+export function LocationPill({ status, label, kicker = 'deliverTo', onOpen, href = '/location' }: LocationPillProps) {
   const t = useT();
-  const kicker = status === 'detected' ? t('detected') : t('deliverTo');
+  const top = t(kicker);
   const place = status === 'locating' ? t('locating') : status === 'denied' || !label ? t('setLocation') : label;
-  const title = status === 'detected' ? t('titleDetected') : status === 'denied' ? t('titleDenied') : t('titleOther');
-  return (
-    <SiteLink href={href} className="nl-location" title={title} aria-label={`${kicker} ${place}, ${title}`} aria-busy={status === 'locating' || undefined}>
-      <MapPin size={20} className="nl-location-pin" aria-hidden />
+  const body = (
+    <>
+      <MapPin size={20} weight="fill" className="nl-location-pin" aria-hidden />
       <span className="nl-location-text" aria-hidden>
-        <span className="nl-location-kicker">{kicker}</span>
+        <span className="nl-location-kicker">{top}</span>
         <span className="nl-location-place">{place}</span>
       </span>
-      <CaretDown size={13} className="nl-location-caret" aria-hidden />
-    </SiteLink>
+      <CaretDown size={14} className="nl-location-caret" aria-hidden />
+    </>
   );
+  const name = t('change', { kicker: top, place });
+  return onOpen
+    ? <button type="button" className="nl-location" aria-label={name} aria-haspopup="dialog" aria-busy={status === 'locating' || undefined} onClick={onOpen}>{body}</button>
+    : <SiteLink href={href} className="nl-location" aria-label={name} aria-busy={status === 'locating' || undefined}>{body}</SiteLink>;
 }

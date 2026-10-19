@@ -33,15 +33,26 @@ function useModal(open: boolean, onClose: () => void) {
   return { ref, onKeyDown };
 }
 
-export interface DialogProps { open: boolean; onClose: () => void; title: ReactNode; children?: ReactNode; actions?: ReactNode; width?: number; role?: 'dialog' | 'alertdialog' }
-export function Dialog({ open, onClose, title, children, actions, width, role = 'dialog' }: DialogProps) {
+export interface DialogProps {
+  open: boolean; onClose: () => void; title: ReactNode; children?: ReactNode; actions?: ReactNode; width?: number; role?: 'dialog' | 'alertdialog';
+  /** A close (×) button in the corner. */
+  dismissible?: boolean;
+  /** Below 600px the dialog is a bottom sheet (full width, rounded on top). */
+  sheetOnPhone?: boolean;
+  className?: string;
+}
+export function Dialog({ open, onClose, title, children, actions, width, role = 'dialog', dismissible, sheetOnPhone, className }: DialogProps) {
   const { ref, onKeyDown } = useModal(open, onClose);
+  const t = useT();
   const id = useId();
   if (!open || typeof document === 'undefined') return null;
   return createPortal(
     <div className="nl-backdrop" onMouseDown={e => e.target === e.currentTarget && onClose()}>
-      <div ref={ref} role={role} aria-modal="true" aria-labelledby={id} tabIndex={-1} className="nl-dialog" style={width ? { ['--nl-dialog-w' as string]: `${width}px` } : undefined} onKeyDown={onKeyDown}>
+      <div ref={ref} role={role} aria-modal="true" aria-labelledby={id} tabIndex={-1}
+        className={['nl-dialog', dismissible && 'nl-dialog-dismissible', sheetOnPhone && 'nl-dialog-sheet', className].filter(Boolean).join(' ')}
+        style={width ? { ['--nl-dialog-w' as string]: `${width}px` } : undefined} onKeyDown={onKeyDown}>
         <h2 id={id} className="nl-dialog-title">{title}</h2>
+        {dismissible ? <button type="button" className="btn btn-ghost btn-icon nl-dialog-close" onClick={onClose} aria-label={t('close')}><X size={20} /></button> : null}
         <div>{children}</div>
         {actions ? <div className="nl-dialog-actions">{actions}</div> : null}
       </div>

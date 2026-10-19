@@ -1,66 +1,83 @@
-/* Consumer site header (AfroTransact Shop:27–76, storefront Header.module.css): SiteHeader, LocationPill, SearchBar,
-   AccountMenu. Two bars on the dark chrome; every item ≥ 44px (S-143). Semantic tokens only. */
-.nl-site-header { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--color-header-bg); color: var(--color-header-text); padding-top: env(safe-area-inset-top, 0px); }
-.nl-site-bar { position: relative; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--page-gutter); flex-wrap: nowrap; min-width: 0; }
+/* Consumer site header (light direction, 2026-10-19): SiteHeader, LocationPill, SearchBar, AccountMenu. One white bar
+   with a hairline under it; the sections as quiet tabs; every item ≥ 44px (S-143). Semantic tokens only. */
+.nl-site-header { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--color-header-bg); color: var(--color-header-text); padding-top: env(safe-area-inset-top, 0px); border-bottom: 1px solid var(--color-header-border); box-shadow: var(--shadow-sm); }
+.nl-site-bar { position: relative; display: flex; align-items: center; gap: var(--space-3); max-width: var(--page-max); margin: 0 auto; padding: var(--space-3) var(--page-gutter); min-width: 0; box-sizing: border-box; }
 .nl-site-spacer { flex: 1; }
-.nl-site-search { flex: 1 1 auto; min-width: 260px; }
+.nl-site-search { flex: 1 1 auto; min-width: 0; max-width: 720px; margin-inline: auto; }
+.nl-site-location { flex: 0 1 auto; min-width: 0; display: flex; }
+.nl-site-account { flex: none; display: flex; }
 
-/* every header item: a 1px transparent border that turns white on hover, radius xs; keyboard focus = hover fill + underline */
+/* header items: no frame at rest, a soft fill on hover, the focus ring in the primary colour */
 .nl-site-item, .nl-location, .nl-account-button {
-  flex: none; display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--size-touch); min-width: var(--size-touch);
-  padding: var(--space-1) var(--space-2); border: 1px solid transparent; border-radius: var(--radius-xs); background: none;
+  flex: none; display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); min-width: var(--size-touch);
+  padding: var(--space-1) var(--space-2); border: 0; border-radius: var(--radius-md); background: none;
   color: var(--color-header-text); font: inherit; text-decoration: none; cursor: pointer; white-space: nowrap;
 }
-.nl-site-item:hover, .nl-location:hover, .nl-account-button:hover { border-color: var(--color-header-ring); color: var(--color-header-text); text-decoration: none; }
-.nl-site-item:focus-visible, .nl-location:focus-visible, .nl-account-button:focus-visible { outline: none; background: var(--color-header-hover-bg); box-shadow: inset 0 -2px 0 var(--color-focus-on-dark); }
+.nl-site-item:hover, .nl-location:hover, .nl-account-button:hover { background: var(--color-header-hover-bg); color: var(--color-header-text); text-decoration: none; }
+.nl-site-header :focus-visible { outline: 2px solid var(--color-header-focus); outline-offset: 2px; }
 .nl-site-brand { padding-inline: var(--space-1); }
+.nl-site-brand .nl-logo-word { font-family: var(--font-heading); font-weight: var(--weight-bold); letter-spacing: -0.01em; }
+.nl-site-menu { display: none; }
 
-/* cart: a 30px icon, a red pill count with a 2px ring in the header colour, the bold label */
-.nl-site-cart { align-items: flex-end; gap: var(--space-1); }
-.nl-site-cart-icon { position: relative; display: flex; padding: 6px 8px 0 0; }
-.nl-site-cart-count { position: absolute; top: -2px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: var(--radius-pill); background: var(--color-cart-badge); color: var(--color-cart-badge-text); border: 2px solid var(--color-header-bg); font-size: var(--text-2xs); font-weight: var(--weight-bold); line-height: 16px; text-align: center; }
-.nl-site-cart-label { font-size: var(--text-md); font-weight: var(--weight-bold); padding-bottom: 2px; }
+/* cart: the icon, a count in the accent colour, the bold label */
+.nl-site-cart { gap: var(--space-1); }
+.nl-site-cart-icon { position: relative; display: flex; }
+.nl-site-cart-count { position: absolute; top: -6px; right: -9px; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: var(--radius-pill); background: var(--color-cart-badge); color: var(--color-cart-badge-text); border: 2px solid var(--color-header-bg); font-size: var(--text-2xs); font-weight: var(--weight-bold); line-height: 16px; text-align: center; }
+.nl-site-cart-label { font-size: var(--text-md); font-weight: var(--weight-bold); margin-left: var(--space-1); }
 
-/* bar 2: the department bar — one row, scrolls sideways (no visible scrollbar) */
+/* the sections: quiet tabs under the bar, the current one underlined in the primary colour */
 .nl-site-subnav { background: var(--color-subheader-bg); }
-.nl-site-nav { display: flex; align-items: center; gap: var(--space-1); margin: 0; padding: 0 var(--page-gutter); list-style: none; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; white-space: nowrap; font-size: var(--text-md); }
+.nl-site-nav { display: flex; align-items: center; gap: var(--space-5); max-width: var(--page-max); margin: 0 auto; padding: 0 var(--page-gutter); box-sizing: border-box; list-style: none; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; white-space: nowrap; font-size: var(--text-md); }
 .nl-site-nav > * { flex: none; }
-.nl-site-link { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--size-touch); padding: var(--space-1) var(--space-3); border-radius: var(--radius-xs); color: var(--color-subheader-text); font-weight: var(--weight-semibold); text-decoration: none; }
-.nl-site-link:hover { background: var(--color-subheader-hover-bg); color: var(--color-subheader-text); text-decoration: none; }
-.nl-site-link:focus-visible { outline: none; background: var(--color-subheader-hover-bg); box-shadow: inset 0 -2px 0 var(--color-header-indicator); }
-.nl-site-link[aria-current='page'] { box-shadow: inset 0 -3px 0 var(--color-header-indicator); font-weight: var(--weight-bold); }
+.nl-site-link { position: relative; display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); padding: 0 var(--space-1); color: var(--color-subheader-text); font-weight: var(--weight-semibold); text-decoration: none; }
+.nl-site-link:hover { color: var(--color-link); text-decoration: none; }
+.nl-site-link::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: transparent; }
+.nl-site-link:hover::after { background: var(--color-header-border); }
+.nl-site-link[aria-current='page'] { color: var(--color-header-indicator); font-weight: var(--weight-bold); }
+.nl-site-link[aria-current='page']::after { background: var(--color-header-indicator); }
 
-/* ≤ 1100px: the "Deliver to" text hides, the pin stays */
-@media (max-width: 1100px) {
-  .nl-site-bar .nl-location-text { display: none; }
-}
-/* < 900px: the search takes its own full-width row; the cart label hides */
+/* the phone menu sheet */
+.nl-site-menu-nav { display: flex; flex-direction: column; gap: var(--space-1); }
+.nl-site-menu-link { display: flex; align-items: center; gap: var(--space-3); min-height: 52px; padding: 0 var(--space-3); border-radius: var(--radius-md); color: var(--color-text); font-size: var(--text-lg); font-weight: var(--weight-semibold); text-decoration: none; }
+.nl-site-menu-link:hover { background: var(--color-surface-hover); color: var(--color-text); text-decoration: none; }
+.nl-site-menu-link[aria-current='page'] { background: var(--color-nav-active-bg); color: var(--color-nav-active-text); }
+.nl-site-menu-extra { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+.nl-site-menu-extra a, .nl-site-menu-extra button { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); padding: 0 var(--space-3); color: var(--color-link); font: inherit; font-weight: var(--weight-semibold); background: none; border: 0; cursor: pointer; border-radius: var(--radius-md); }
+
+/* < 900px: the menu button appears, the sections move into it, the search takes its own full-width row */
 @media (max-width: 899.98px) {
-  .nl-site-bar { flex-wrap: wrap; row-gap: var(--space-1); padding-block: var(--space-1) var(--space-2); }
-  .nl-site-search { order: 10; flex-basis: 100%; min-width: 0; }
-  .nl-site-bar > .nl-location { margin-right: auto; }
+  .nl-site-bar { flex-wrap: wrap; row-gap: var(--space-2); gap: var(--space-1) var(--space-2); padding-block: var(--space-2) var(--space-3); }
+  .nl-site-menu { display: inline-flex; margin-left: calc(-1 * var(--space-2)); }
+  .nl-site-subnav { display: none; }
+  .nl-site-location { flex: 1 1 0; }
+  .nl-site-search { order: 10; flex-basis: 100%; max-width: none; }
   .nl-site-cart-label { display: none; }
 }
-@media (max-width: 420px) {
+@media (max-width: 479.98px) {
   .nl-site-brand .nl-logo-word { display: none; }
 }
 
-/* "Deliver to" (LocationPill) */
-.nl-location-pin { color: var(--color-header-text); flex: none; }
-.nl-location-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1; min-width: 0; }
+/* the location control: a pin, "Deliver to" over the place in bold; the place ellipsed, never hidden */
+.nl-location { min-width: 0; max-width: 260px; text-align: left; }
+.nl-location-pin { color: var(--color-action-primary); flex: none; }
+.nl-location-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; min-width: 0; }
 .nl-location-kicker { font-size: var(--text-xs); color: var(--color-header-muted); }
-.nl-location-place { font-size: var(--text-md); font-weight: var(--weight-bold); max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+.nl-location-place { font-size: var(--text-md); font-weight: var(--weight-bold); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nl-location-caret { color: var(--color-header-muted); flex: none; }
+@media (max-width: 899.98px) { .nl-location { max-width: 100%; } }
 
-/* search: header = one control (field + 48px accent button), radius sm; hero = the page's pill */
+/* search: header = a pill field with a round primary button inside; hero = the page's larger pill */
 .nl-search { position: relative; display: flex; align-items: center; }
-.nl-search-header { height: var(--size-touch); border-radius: var(--radius-sm); background: var(--color-surface); }
-.nl-search-header:focus-within { box-shadow: 0 0 0 3px var(--color-focus-on-dark); }
-.nl-search-header .nl-search-input { flex: 1; min-width: 0; height: 100%; min-height: 0; border: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); padding: 0 var(--space-3); font-size: var(--text-base); background: transparent; box-shadow: none; }
+.nl-search-header { height: 48px; border-radius: var(--radius-pill); background: var(--color-surface); border: 1px solid var(--color-header-ring); box-shadow: var(--shadow-sm); padding: 0 4px 0 0; }
+.nl-search-header:hover { border-color: var(--color-text-muted); }
+.nl-search-header:focus-within { border-color: var(--color-focus); box-shadow: var(--shadow-focus); }
+.nl-search-header .nl-search-input { flex: 1; min-width: 0; height: 100%; min-height: 0; border: 0; border-radius: var(--radius-pill) 0 0 var(--radius-pill); padding: 0 var(--space-3) 0 var(--space-5); font-size: var(--text-base); background: transparent; box-shadow: none; color: var(--color-text); }
+.nl-search-header .nl-search-input::placeholder { color: var(--color-text-subtle); opacity: 1; }
 .nl-search-header .nl-search-input:focus, .nl-search-header .nl-search-input:focus-visible { box-shadow: none; outline: none; }
-.nl-search-submit { flex: none; width: 48px; height: 100%; border: 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--color-action-accent); color: var(--color-action-accent-text); cursor: pointer; display: grid; place-items: center; }
-.nl-search-submit:hover { background: var(--color-action-accent-hover); }
-.nl-search-submit:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -4px; }
+.nl-search-submit { position: relative; flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--color-action-primary); color: var(--color-action-primary-text); cursor: pointer; display: grid; place-items: center; }
+.nl-search-submit::after { content: ''; position: absolute; inset: -2px; }
+.nl-search-submit:hover { background: var(--color-action-primary-hover); }
+.nl-search-submit:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .nl-search-icon { color: var(--color-text-muted); pointer-events: none; }
 .nl-search-hero { gap: var(--space-2); background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); padding: 6px; color: var(--color-text); flex-wrap: wrap; }
 .nl-search-hero .nl-search-icon { margin-left: var(--space-3); }
@@ -89,8 +106,8 @@
 .nl-account { position: static; flex: none; }
 .nl-account-button { gap: var(--space-1); }
 .nl-account-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--color-action-primary); color: var(--color-action-primary-text); display: grid; place-items: center; font-weight: var(--weight-bold); font-size: var(--text-md); flex: none; overflow: hidden; }
-.nl-site-header .nl-account-avatar { box-shadow: 0 0 0 2px var(--color-header-ring); }
-.nl-account-guest { background: var(--color-badge-neutral-bg); color: var(--color-text-muted); }
+.nl-site-header .nl-account-avatar { box-shadow: none; }
+.nl-account-guest { background: var(--color-surface); color: var(--color-text); box-shadow: inset 0 0 0 1px var(--color-header-ring) !important; }
 .nl-account-avatar-lg { width: 44px; height: 44px; font-size: var(--text-lg); box-shadow: none !important; }
 .nl-account-panel { position: absolute; right: var(--page-gutter); top: 100%; margin-top: 2px; z-index: var(--z-dropdown); width: min(290px, calc(100vw - 24px)); max-height: calc(100vh - 96px); overflow-y: auto; background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); box-shadow: var(--shadow-lg); border-radius: var(--radius-md); padding: var(--space-4) 0 var(--space-2); white-space: normal; }
 .nl-account-head { display: flex; gap: var(--space-3); align-items: center; padding: 0 var(--space-4) var(--space-3); border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-1); }
