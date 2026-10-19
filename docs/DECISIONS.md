@@ -8781,6 +8781,49 @@ sheet); UI only — no backend, schema or api change.
   features (the Studio's `components` root went with the move to `@northline/ui`).
 - **Schema additions:** none. No backend change.
 
+## 2026-10-18 — Demo data through the product (`make demo-data`)
+
+Branch `feat/demo-data`. A believable demo marketplace for the client demos on the dry run, made through the product
+(the dev seed stays local: its credentials are public) — [docs/runbooks/demo.md](runbooks/demo.md).
+
+- **Through the BFFs, not the api.** `scripts/demo/demo-data.mjs` (Node 22, no dependencies) signs people up and in at
+  northline-auth's JSON API, completes the BFF's authorization-code login without a browser (a cookie jar per person
+  and app, redirects followed by hand) and calls each app's `/api` with the session cookie and the CSRF header — the
+  same calls the Studio, consumer site and console make. No `X-Dev-User`, no SQL. Locally the only extras are the local
+  fakes' pages and outboxes (SMS codes, the fake Stripe Identity and age pages), which the e2e suite uses too.
+- **Credentials:** the product has no passwords, so "random strong credentials" are the **authenticator-app keys**
+  northline-auth generates at sign-up (plus backup codes), written only to a git-ignored state file (`.demo/<env>.json`,
+  mode 600) with each key's QR code; never printed, and with `CI=true` not even the identifiers.
+- **Accounts:** one owner owns every demo business (fewer phones on the dry run: each account needs a phone that
+  receives SMS), an applicant with no business (the live onboarding), three customers, and two console accounts for
+  the four-eyes review: the operator's admin decides (approver), a demo reviewer (trust & safety) is registered and
+  invited by the admin. The approval posts the review first (`POST …/verification/applications/{id}/review`) and falls
+  back to the single decision on 404/405, so it works before and after the four-eyes change (the review path is a
+  guess until that change lands). Consequence of one owner: the owner is the only bookable person of all seven
+  providers, so their jobs may overlap across businesses (the script tries the next slot on `slot_taken`).
+- **Idempotency and tags:** listings carry SKU `DEMO-<business>-<listing>`; businesses are found by the state file or
+  their name; activity is recorded once in the state file. `--reset` hides listings outside the plan in demo
+  businesses and every listing of the applicant's businesses, and puts the plan's prices, stock and visibility back;
+  `--reset-all` hides every demo listing. Nothing is deleted (orders, bookings and approved applications can't be).
+- **Places:** the market is the region model's configured default (`GET /api/v1/geo/markets` → `fallback`) or
+  `DEMO_MARKET`; addresses come from the product's address search in that market; the plan has `{city}` placeholders
+  and a test fails on a place name in it.
+- **Pictures** are generated at run time (PNG 1000 × 1000 on white, the item's name in a 5 × 7 pixel font): nothing
+  downloaded or stored in the repository.
+- **Dry-run configuration:** `values-dryrun.yaml` sets `IDENTITY_PROVIDER=stripe` and `AGE_VERIFICATION_PROVIDER=stripe`
+  (test mode) — with the `local` fakes their outcome pages exist only under the `local` profile, so on the dry run no
+  owner could finish onboarding and no customer could buy an age-restricted item.
+- **Found: the dry run can't register anyone yet.** Under `dev` the local SMS stand-in withholds codes (S-112, no
+  escape hatch on purpose); dryrun-gcp.md and dev.md said they were in the auth log (corrected). The dry run needs
+  Twilio for northline-auth before the first admin or any demo account can sign up (demo.md § 2).
+- **Fix:** the age check's web return URL is `/checkout?age=done` (it was `/cart?age=done`; the age step moved to the
+  checkout in redesign phase 1, so customers came back to the cart).
+- **Not done / never run:** the dry-run path (Twilio codes, Stripe Identity and Connect hosted test pages, confirming
+  PaymentIntents with `pm_card_visa` and the publishable key, the four-eyes review endpoint) has never run against a
+  deployed environment or real Stripe; it was run end to end only locally (e2e stack + Meilisearch + a reindex).
+  History is dated today (the product can't backdate). Goods orders end at "packed" (delivery needs a courier).
+  Schema additions: none.
+
 ## 2026-10-18 — Two-person review of merchant applications (four-eyes)
 
 Owner request: one staff member could review and decide an application alone (S-79 records one decision). Now a
@@ -8836,9 +8879,10 @@ and redesign phase 3 (the Applications screen's "1 · Review" / "2 · Decision" 
   the reason. en + fr-CA; axe in the vitest suite on the sheet and the review dialog; the a11y sweep's console grants
   carry `approve` and its ARIA snapshot shows Review/Decide.
 - **Scripts.** `scripts/pilot/dry-run.mjs` approves with two people (Priya reviews, Marc decides).
-  `scripts/demo/demo-data.mjs` (PR #180, not on main when this was written) already posts
-  `POST …/review {recommendation: 'approve', note}` by its demo reviewer (`trust_safety`) and the decision by the staff
-  account — the path and body match this api (its extra `decision` field is ignored).
+  `scripts/demo/demo-data.mjs` (#180) posts `POST …/review {recommendation: 'approve', note}` as its demo reviewer
+  (`trust_safety`) and the decision as the staff account. Changed here: "reviews_open" now arrives at the review step
+  (cleared, then reviewed again), identity mismatches are read from the detail's `owners` (the api has no
+  `identityReviews`), and a 403 `same_person` stops with "the reviewer and the approver are the same console account".
 - **Schema V370** (range V370–V379, above main's V364): `merchants.application_reviews` (recommendation CHECK, check
   keys, note ≤ 500, reviewer, role, submitted/reviewed times, `decision_id` → `application_decisions`), partial index of
   open rounds; `application_decisions.review_id`. Additive only.

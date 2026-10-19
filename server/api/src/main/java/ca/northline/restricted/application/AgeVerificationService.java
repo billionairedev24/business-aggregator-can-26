@@ -53,7 +53,7 @@ class AgeVerificationService implements AgeVerifications, StartAgeCheck, ReadAge
     @Override
     public Started start(String userId, String returnTo) {
         var returnUrl = switch (returnTo) {
-            case "web" -> properties.webReturnUrl("/cart?age=done");
+            case "web" -> properties.webReturnUrl("/checkout?age=done");
             case "web_food" -> properties.webReturnUrl("/food/checkout?age=done");
             case "app" -> properties.appReturnUrl();
             default -> throw RuleViolation.of("returnTo", "required", AgeMessages.RETURN_URL);
