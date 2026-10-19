@@ -5,8 +5,8 @@ import { defineMessages } from '@northline/ui';
 export const useRetentionT = defineMessages({
   en: {
     tabs: 'Privacy', tabRequests: 'Requests', tabRetention: 'Retention',
-    kicker: 'Retention schedule',
-    title: '{n, plural, one {# category} other {# categories}} · {overdue} overdue',
+    heading: 'Retention schedule',
+    summary: '{n, plural, one {# category} other {# categories}} · {overdue} overdue',
     lede: 'How long we keep each kind of data, as the Privacy Policy states, and what the nightly jobs did: rows deleted or pseudonymised, rows a legal hold keeps, the next run. Every run is in the audit log.',
     nextRun: 'Next nightly run {date}', noSchedule: 'Nightly runs are off: only runs from here happen.', dryRunOnly: 'Nightly runs only count (dry-run mode).',
     dryRunAll: 'Dry run everything', runAll: 'Run everything now', exportCsv: 'Export CSV',
@@ -32,8 +32,8 @@ export const useRetentionT = defineMessages({
   },
   fr: {
     tabs: 'Renseignements personnels', tabRequests: 'Demandes', tabRetention: 'Conservation',
-    kicker: 'Calendrier de conservation',
-    title: '{n, plural, one {# catégorie} other {# catégories}} · {overdue} en retard',
+    heading: 'Calendrier de conservation',
+    summary: '{n, plural, one {# catégorie} other {# catégories}} · {overdue} en retard',
     lede: 'Combien de temps nous gardons chaque type de données, comme le dit la Politique de confidentialité, et ce qu’ont fait les tâches de nuit : lignes supprimées ou pseudonymisées, lignes gardées par un blocage légal, prochaine exécution. Chaque exécution est journalisée.',
     nextRun: 'Prochaine exécution de nuit : {date}', noSchedule: 'Les exécutions de nuit sont désactivées : seules celles lancées d’ici ont lieu.', dryRunOnly: 'Les exécutions de nuit ne font que compter (mode essai).',
     dryRunAll: 'Tout essayer', runAll: 'Tout exécuter maintenant', exportCsv: 'Exporter en CSV',

@@ -1,25 +1,34 @@
-/* Team, roles & audit (S-96, design 03 lines 440–449) and the shared audit log. Token values only. */
-.nl-tm-kicker { display: block; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700); margin-bottom: 10px; }
-.nl-tm-title { font-size: clamp(30px, 3.5vw, 44px); margin: 0 0 24px; letter-spacing: -0.02em; }
-.nl-tm-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 36px clamp(28px, 4vw, 64px); }
-.nl-tm-h2 { font-size: 22px; margin: 0 0 10px; }
-.nl-tm-gap { margin-top: 28px; }
-.nl-tm-sub { font-size: 13px; color: var(--color-neutral-700); margin: 0 0 10px; }
-.nl-tm-error { color: var(--color-accent-2-700); font-size: 13px; }
-.nl-tm-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
-.nl-tm-actions .input { min-height: 40px; width: auto; }
-.nl-tm-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 0 12px; }
-.nl-tm-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
-.nl-tm-entry { display: flex; gap: 12px; }
-.nl-tm-entry time { color: var(--color-neutral-700); flex: 0 0 auto; min-width: 96px; }
-.nl-tm-entry code { font-size: 13px; }
-.nl-tm-tags { display: flex; gap: 8px; flex-wrap: wrap; }
-.nl-tm-x { border: 0; background: transparent; cursor: pointer; margin-left: 6px; font: inherit; color: inherit; min-width: 24px; min-height: 24px; }
-.nl-oc-shift { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 8px 0; border-bottom: 1px solid var(--color-neutral-200); }
-.nl-oc-shift > .nl-tm-sub { margin: 0; min-width: 200px; }
-.nl-pf-who { display: flex; gap: 14px; align-items: center; margin-bottom: 20px; }
-.nl-pf-initials { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--color-accent-100); color: var(--color-accent-700); font-weight: 600; }
-.nl-pf-panel { margin-top: 20px; max-width: 720px; }
-.nl-pf-rows > li { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; }
-.nl-pf-rows .nl-tm-actions { margin-top: 0; }
-.nl-pf-danger { color: var(--color-accent-2-700); }
+/* Team, roles & audit (S-96), the shared audit log, My profile, On-call, API keys (light direction). Semantic tokens only. */
+.nl-tm-sub { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0; }
+.nl-tm-error { color: var(--color-danger); font-size: var(--text-sm); margin: 0; }
+.nl-tm-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.nl-tm-actions .input { min-height: var(--size-touch); width: auto; }
+.nl-tm-audit { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.nl-tm-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); background: var(--color-surface-sunken); border-radius: var(--radius-md); }
+.nl-tm-filters .nl-field { margin: 0; }
+/* the log: time | who (role under) | action code | target — one row each, a card per entry on phones */
+.nl-tm-log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; font-size: var(--text-sm); border: 1px solid var(--color-border-card); border-radius: var(--radius-md); overflow: hidden; }
+.nl-tm-entry { display: grid; grid-template-columns: minmax(140px, 0.9fr) minmax(140px, 1fr) minmax(240px, 1.6fr) minmax(0, 1.8fr); gap: var(--space-1) var(--space-4); align-items: center; padding: var(--space-3) var(--space-4); min-height: var(--size-touch); box-sizing: border-box; }
+.nl-tm-entry + .nl-tm-entry { border-top: 1px solid var(--color-border); }
+.nl-tm-entry:nth-child(even) { background: var(--color-surface-sunken); }
+.nl-tm-entry time { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.nl-tm-who { display: flex; flex-direction: column; min-width: 0; }
+.nl-tm-who .nl-tm-sub { font-size: var(--text-xs); }
+.nl-tm-action { font-size: var(--text-xs); overflow-wrap: break-word; max-width: 100%; box-sizing: border-box; justify-self: start; padding: 2px var(--space-2); border-radius: var(--radius-xs); background: var(--color-badge-neutral-bg); color: var(--color-badge-neutral-text); }
+.nl-tm-target { color: var(--color-text-muted); min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 759.98px) {
+  .nl-tm-entry { grid-template-columns: minmax(0, 1fr) auto; }
+  .nl-tm-entry time { grid-column: 1 / -1; font-size: var(--text-xs); }
+  .nl-tm-target { grid-column: 1 / -1; }
+}
+.nl-tm-tags { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.nl-tm-x { border: 0; background: transparent; cursor: pointer; margin-left: var(--space-1); font: inherit; color: inherit; min-width: var(--size-touch); min-height: var(--size-touch); margin-block: -12px; }
+/* My profile */
+.nl-pf-page { max-width: 960px; }
+.nl-pf-who { flex-direction: row; align-items: center; gap: var(--space-4); }
+.nl-pf-name { font-size: var(--text-lg); }
+.nl-pf-h2 { margin-bottom: var(--space-2); }
+.nl-pf-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; font-size: var(--text-sm); }
+.nl-pf-rows > li { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-3); min-height: 52px; padding: var(--space-2) 0; border-top: 1px solid var(--color-border); }
+.nl-pf-rows > li:first-child { border-top: 0; }
+.nl-pf-danger { color: var(--color-danger); }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { Button, Chip, DataTable, Dialog, ErrorState, Field, formatMoney, formatNumber, PageSkeleton, Select, Tag, TextArea, TextInput, useLocale, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { BoHeader, Button, Chip, DataTable, Dialog, ErrorState, Field, formatMoney, formatNumber, KpiStrip, PageSkeleton, Select, Tag, TextArea, TextInput, useLocale, type DataTableColumn, type DataTableTone } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { meQuery } from '../shell/api';
 import { useAge } from '../shell/age';
@@ -38,27 +38,27 @@ export function SupportDesk() {
   const { locale } = useLocale();
   const [managing, setManaging] = useState(false);
   const go = (next: Partial<SupportSearch>) => void navigate({ to: SCREEN_PATH.support, search: { ...search, ...next } as never });
-  const header = (
-    <div className="nl-q-top">
-      <span className="nl-q-kicker">{t('kicker')}</span>
+  const header = (sub?: string) => (
+    <BoHeader title={t('heading')} sub={sub} actions={<>
       <PlaceFilters to={SCREEN_PATH.support} filter={place} extra={chip === 'all' ? {} : { filter: chip }} />
-    </div>
+      {can('macros') ? <Button variant="secondary" onClick={() => setManaging(true)}>{t('manageMacros')}</Button> : null}
+    </>} />
   );
-  if (query.isPending) return <PageSkeleton kpis={6} rows={6} />;
+  if (query.isPending) return <div className="bo-page">{header()}<PageSkeleton kpis={6} rows={6} /></div>;
   if (query.isError && !query.data) {
-    return <div>{header}{query.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />}</div>;
+    return <div className="bo-page">{header()}{query.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />}</div>;
   }
   const data = query.data!;
   const k = data.kpis;
   const pct = (v: number | null | undefined) => (v == null ? t('none') : formatNumber(v, locale, { style: 'percent', maximumFractionDigits: 0 }));
   const median = k.medianFirstReplyMinutes == null ? null : t('minutes', { n: Math.round(k.medianFirstReplyMinutes) });
-  const kpis: [string, string][] = [
-    [String(k.open), t('k_open', { urgent: k.urgent })],
-    [median ?? t('none'), t('k_reply')],
-    [String(k.slaAtRisk), t('k_risk')],
-    [pct(k.resolvedWithoutEscalation), t('k_unescalated')],
-    [k.csat == null ? t('none') : formatNumber(k.csat, locale, { maximumFractionDigits: 1 }), t('k_csat')],
-    [pct(k.frenchShare), t('k_french')],
+  const kpis: [string, string, string][] = [
+    ['open', String(k.open), t('k_open', { urgent: k.urgent })],
+    ['reply', median ?? t('none'), t('k_reply')],
+    ['risk', String(k.slaAtRisk), t('k_risk')],
+    ['unescalated', pct(k.resolvedWithoutEscalation), t('k_unescalated')],
+    ['csat', k.csat == null ? t('none') : formatNumber(k.csat, locale, { maximumFractionDigits: 1 }), t('k_csat')],
+    ['french', pct(k.frenchShare), t('k_french')],
   ];
   const rows: Row[] = data.items.map(i => ({
     id: i.id, code: i.code, agent: i.agentName ?? t('unassigned'), who: i.requesterName, subj: i.subject,
@@ -77,12 +77,9 @@ export function SupportDesk() {
   ];
   const selectedId = data.items.some(i => i.id === search.ticket) ? search.ticket : data.items[0]?.id;
   return (
-    <div>
-      {header}
-      <h1 className="nl-q-title">{median == null ? t('titleNoMedian', { open: k.open, urgent: k.urgent }) : t('title', { open: k.open, urgent: k.urgent, median })}</h1>
-      <div className="nl-sd-kpis">
-        {kpis.map(([v, l]) => <div key={l}><div className="nl-sd-kpi">{v}</div><div className="nl-q-note">{l}</div></div>)}
-      </div>
+    <div className="bo-page">
+      {header(median == null ? t('summaryNoMedian', { open: k.open, urgent: k.urgent }) : t('summary', { open: k.open, urgent: k.urgent, median }))}
+      <KpiStrip label={t('kpis')} items={kpis.map(([key, value, label]) => ({ key, value, label }))} />
       <div className="nl-q-chips nl-sd-chips" role="group" aria-label={t('filtersLabel')}>
         {FILTERS.map(f => (
           <Chip key={f} selected={chip === f} onClick={() => go({ filter: f === 'all' ? undefined : f, ticket: undefined })}>
@@ -90,15 +87,14 @@ export function SupportDesk() {
           </Chip>
         ))}
       </div>
-      <div className="nl-sd-cols">
+      <div className="nl-cols-wrap"><div className="nl-cols" data-split="wide">
         <div className="nl-sd-table">
           <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
             can={{ create: false, update: false, delete: false }} roleName={roleName}
             emptyText={t('empty')} openLabel={t('open')} onOpen={r => go({ ticket: r.id })} />
-          {can('macros') ? <div className="nl-q-gap"><Button variant="secondary" onClick={() => setManaging(true)}>{t('manageMacros')}</Button></div> : null}
         </div>
-        {selectedId ? <TicketPanel key={selectedId} id={selectedId} /> : <aside className="nl-sd-aside"><p className="nl-q-note">{t('pick')}</p></aside>}
-      </div>
+        {selectedId ? <TicketPanel key={selectedId} id={selectedId} /> : <aside className="bo-card nl-sd-aside"><p className="bo-muted">{t('pick')}</p></aside>}
+      </div></div>
       {managing ? <MacrosDialog onClose={() => setManaging(false)} /> : null}
     </div>
   );
@@ -123,8 +119,8 @@ function TicketPanel({ id }: { id: string }) {
   const [asking, setAsking] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [decisionNote, setDecisionNote] = useState('');
-  if (detail.isPending) return <aside className="nl-sd-aside"><PageSkeleton kpis={0} rows={3} /></aside>;
-  if (detail.isError) return <aside className="nl-sd-aside"><ErrorState message={t('loadError')} onRetry={() => void detail.refetch()} /></aside>;
+  if (detail.isPending) return <aside className="bo-card nl-sd-aside"><PageSkeleton kpis={0} rows={3} /></aside>;
+  if (detail.isError) return <aside className="bo-card nl-sd-aside"><ErrorState message={t('loadError')} onRetry={() => void detail.refetch()} /></aside>;
   const d: Detail = detail.data;
   const tk = d.ticket;
   const ctx = d.context;
@@ -151,7 +147,7 @@ function TicketPanel({ id }: { id: string }) {
     onSuccess: () => { setBody(''); setMacroKey(undefined); setNotice(t(resolve ? 'resolvedToast' : 'sent')); },
   });
   return (
-    <aside className="nl-sd-aside" aria-labelledby="nl-sd-who">
+    <aside className="bo-card nl-sd-aside" aria-labelledby="nl-sd-who">
       <div className="nl-sd-label">{t('contextTitle')}</div>
       <h2 id="nl-sd-who" className="nl-sd-who">{tk.requesterName}{str(ctx.tier) ? ` · ${str(ctx.tier)}` : ''}</h2>
       <div className="nl-sd-ctx">{contextLine}</div>

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { BarList, ErrorState, formatNumber, LineChart, PageSkeleton, Segmented, useFormatters, useLocale, type Locale } from '@northline/ui';
+import { BarList, BoHeader, ChartCard, ErrorState, formatNumber, LineChart, PageSkeleton, Segmented, useFormatters, useLocale, type Locale } from '@northline/ui';
 import { useRegions } from '../shell/api';
 import { useRegionName } from '../shell/PlaceFilters';
 import { reportQuery, type Report } from './api';
@@ -27,8 +27,8 @@ export function Reports() {
   const t = useReportsT();
   const { province } = useSearch({ strict: false }) as { province?: string };
   const query = useQuery(reportQuery(province));
-  if (query.isPending) return <PageSkeleton kpis={0} rows={8} />;
-  if (query.isError) return <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />;
+  if (query.isPending) return <div className="bo-page"><BoHeader title={t('heading')} /><PageSkeleton kpis={0} rows={8} /></div>;
+  if (query.isError) return <div className="bo-page"><BoHeader title={t('heading')} /><ErrorState message={t('loadError')} onRetry={() => void query.refetch()} /></div>;
   return <ReportView data={query.data} province={province} />;
 }
 
@@ -42,20 +42,14 @@ function ReportView({ data, province }: { data: Report; province?: string }) {
   const options = [...provinces.map(p => ({ value: p.code, label: p.name })), { value: '', label: t('all') }];
   const firstCount = data.funnel.find(f => f.recorded && f.count != null)?.count ?? 0;
   return (
-    <div>
-      <div className="nl-rp-head">
-        <div>
-          <span className="nl-rp-kicker">{t('kicker')}</span>
-          <h1 className="nl-rp-title">{t('title')}</h1>
-        </div>
-        <Segmented name="report-region" aria-label={t('region')} options={options} value={province ?? ''}
-          onChange={v => void navigate({ to: '/reports', search: { province: v || undefined } as never })} />
-      </div>
-      <div className="nl-rp-cols">
-        <div>
-          <h2 className="nl-rp-h2">{t('wacTitle')}</h2>
-          <div className="nl-rp-sub">{t('wacSub')}</div>
-          <LineChart title={t('wacTitle')} current={data.weeks.map(w => w.customers ?? 0)} previous={data.weeks.map(w => w.previous ?? 0)}
+    <div className="bo-page">
+      <BoHeader title={t('heading')} sub={t('summary')}
+        actions={<Segmented name="report-region" aria-label={t('region')} options={options} value={province ?? ''}
+          onChange={v => void navigate({ to: '/reports', search: { province: v || undefined } as never })} />} />
+      <div className="nl-cols-wrap"><div className="nl-cols">
+        <ChartCard id="rp-wac" title={t('wacTitle')}>
+          <p className="bo-muted">{t('wacSub')}</p>
+          <LineChart title={t('wacTitle')} current={data.weeks.map(w => w.customers ?? null)} previous={data.weeks.map(w => w.previous ?? null)}
             labels={data.weeks.map(w => dayLabel(w.week, locale))} legend={{ current: t('thisPeriod'), previous: t('previous') }} dataTable={false} />
           <details className="nl-rp-table">
             <summary>{t('asTable')}</summary>
@@ -64,7 +58,9 @@ function ReportView({ data, province }: { data: Report; province?: string }) {
               <tbody>{data.weeks.map(w => <tr key={w.week}><td>{dayLabel(w.week, locale)}</td><td>{count(w.customers, locale, t)}</td><td>{count(w.previous, locale, t)}</td></tr>)}</tbody>
             </table>
           </details>
-          <h2 className="nl-rp-h2 nl-rp-gap">{t('funnelTitle')}</h2>
+        </ChartCard>
+        <ChartCard id="rp-funnel" title={t('funnelTitle')}>
+          <div>
           {data.funnel.map(f => (
             <div key={f.step} className="nl-meter nl-rp-step">
               <span className="nl-meter-label">{t(`step_${f.step}` as ReportsKey)}</span>
@@ -72,11 +68,11 @@ function ReportView({ data, province }: { data: Report; province?: string }) {
               <span className="nl-meter-value">{count(f.count, locale, t, f.recorded)}</span>
             </div>
           ))}
-          <p className="nl-rp-sub">{t('funnelNote')}</p>
-        </div>
-        <div>
-          <h2 className="nl-rp-h2">{t('cohortsTitle')}</h2>
-          <table className="table nl-rp-cohorts">
+          </div>
+          <p className="bo-muted">{t('funnelNote')}</p>
+        </ChartCard>
+        <ChartCard id="rp-cohorts" title={t('cohortsTitle')}>
+          <div className="nl-scroll"><table className="table nl-rp-cohorts">
             <thead><tr><th>{t('c_month')}</th><th>{t('c_customers')}</th><th>{t('c_m1')}</th><th>{t('c_m2')}</th><th>{t('c_m3')}</th></tr></thead>
             <tbody>
               {data.cohorts.map(c => (
@@ -90,21 +86,25 @@ function ReportView({ data, province }: { data: Report; province?: string }) {
                 </tr>
               ))}
             </tbody>
-          </table>
-          <h2 className="nl-rp-h2 nl-rp-gap">{t('topTitle')}</h2>
+          </table></div>
+        </ChartCard>
+        <div className="nl-col">
+        <ChartCard id="rp-top" title={t('topTitle')}>
           {data.topCategories.length ? (
             <BarList items={data.topCategories.map(c => ({ label: c.names[locale] ?? c.names.en ?? c.categoryId, value: c.salesCents }))}
               format={v => fmt.money(v, { whole: true })} />
-          ) : <p className="nl-rp-sub">{t('noTop')}</p>}
-          <h2 className="nl-rp-h2 nl-rp-gap">{t('gapsTitle')}</h2>
+          ) : <p className="bo-muted">{t('noTop')}</p>}
+        </ChartCard>
+        <ChartCard id="rp-gaps" title={t('gapsTitle')}>
           {data.waitlist.length ? (
             <div className="nl-rp-gaps">
               {data.waitlist.map(w => <div key={w.province}><span>{t('waitlist', { province: regionName(w.province) })}</span><strong>{count(w.people, locale, t)}</strong></div>)}
             </div>
-          ) : <p className="nl-rp-sub">{t('noGaps')}</p>}
+          ) : <p className="bo-muted">{t('noGaps')}</p>}
+        </ChartCard>
         </div>
-      </div>
-      <p className="nl-rp-sub nl-rp-gap">{t('privacyNote')}</p>
+      </div></div>
+      <p className="bo-muted">{t('privacyNote')}</p>
     </div>
   );
 }

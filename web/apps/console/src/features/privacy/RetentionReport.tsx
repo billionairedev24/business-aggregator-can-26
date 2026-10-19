@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, DataTable, Dialog, Drawer, ErrorState, PageSkeleton, Tag, useFormatters, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { BoHeader, Button, DataTable, Dialog, Drawer, ErrorState, PageSkeleton, Tag, useFormatters, type DataTableColumn, type DataTableTone } from '@northline/ui';
 import { useGrant } from '../shell/grant';
 import { EXPORT_URL, periodParts, reportQuery, useRun, type Category, type RunView } from './retentionApi';
 import { useRetentionT, type RetentionKey, type RetentionT } from './retentionMessages';
 import '../shell/queues.css';
+import './privacy.css';
 
 interface Row { id: string; name: string; code: string; period: string; action: string; lastRun: string; rows: string; held: string; next: string; state: string; c: Category }
 
@@ -30,7 +31,7 @@ export function usePeriod(t: RetentionT) {
  * last run, rows changed, rows a legal hold keeps and the next run; the detail with the policy's words, the legal basis
  * and the holds; dry runs and runs (the `privacy` grant: privacy officer, support lead, admin) and the CSV export.
  */
-export function RetentionReport() {
+export function RetentionReport({ tabs }: { tabs?: ReactNode }) {
   const t = useRetentionT();
   const { date } = useFormatters();
   const period = usePeriod(t);
@@ -47,8 +48,8 @@ export function RetentionReport() {
   const start = (dryRun: boolean, category?: string) =>
     run.mutate({ dryRun, category }, { onSuccess: runs => { done(runs, dryRun); setConfirming(undefined); } });
 
-  if (report.isPending) return <PageSkeleton kpis={0} rows={8} />;
-  if (report.isError) return <ErrorState message={t('loadError')} onRetry={() => void report.refetch()} />;
+  if (report.isPending) return <div className="bo-page"><BoHeader title={t('heading')} />{tabs}<PageSkeleton kpis={0} rows={8} /></div>;
+  if (report.isError) return <div className="bo-page"><BoHeader title={t('heading')} />{tabs}<ErrorState message={t('loadError')} onRetry={() => void report.refetch()} /></div>;
   const r = report.data;
   const rows: Row[] = r.categories.map(c => {
     const state = stateOf(c);
@@ -79,38 +80,39 @@ export function RetentionReport() {
   const overdue = r.categories.filter(c => c.overdue).length;
   const selected = r.categories.find(c => c.code === open);
   return (
-    <div>
-      <span className="nl-q-kicker">{t('kicker')}</span>
-      <h1 className="nl-q-title">{t('title', { n: r.categories.length, overdue })}</h1>
-      <p className="nl-q-lede">{t('lede')}</p>
-      <p className="nl-q-note">{r.nextRunAt ? t('nextRun', { date: date(r.nextRunAt, 'dateTime') }) : t('noSchedule')}{r.dryRunOnly ? ` ${t('dryRunOnly')}` : ''}</p>
-      <div className="nl-q-actions">
+    <div className="bo-page">
+      <BoHeader title={t('heading')} sub={t('lede')} actions={<>
         {can('privacy') ? <>
           <Button type="button" variant="secondary" disabled={run.isPending} onClick={() => start(true)}>{t('dryRunAll')}</Button>
           <Button type="button" variant="ghost" disabled={run.isPending} onClick={() => setConfirming({})}>{t('runAll')}</Button>
         </> : null}
         <a className="btn btn-secondary" href={EXPORT_URL} download>{t('exportCsv')}</a>
+      </>} />
+      {tabs}
+      <div className="nl-pv-bar">
+        <h2 className="bo-card-title">{t('summary', { n: r.categories.length, overdue })}</h2>
+        <p className="bo-muted">{r.nextRunAt ? t('nextRun', { date: date(r.nextRunAt, 'dateTime') }) : t('noSchedule')}{r.dryRunOnly ? ` ${t('dryRunOnly')}` : ''}</p>
       </div>
       {notice && !selected ? <p role="status" className="nl-q-note">{notice}</p> : null}
       {run.error ? <p role="alert" className="nl-q-error">{run.error.message}</p> : null}
       <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
         can={{ create: false, update: false, delete: false, export: false }} roleName={roleName} emptyText={t('empty')} pageSize={25}
         onOpen={row => setOpen(row.id)} />
-      <div className="nl-q-cols nl-q-gap">
-        <section className="nl-q-panel">
-          <h2 className="nl-q-h2">{t('lawsTitle')}</h2>
-          <ul className="nl-q-list">
+      <div className="nl-cols-wrap"><div className="nl-cols">
+        <section className="bo-card">
+          <h2 className="bo-card-title">{t('lawsTitle')}</h2>
+          <ul className="nl-rows">
             {r.laws.map(l => <li key={l.code}><strong>{l.name}</strong> · {t('lawDays', { days: l.decisionRetentionDays })}</li>)}
           </ul>
         </section>
-        <section className="nl-q-panel">
-          <h2 className="nl-q-h2">{t('otherTitle')}</h2>
-          <p className="nl-q-note">{t('otherLede')}</p>
-          <ul className="nl-q-list">
+        <section className="bo-card">
+          <h2 className="bo-card-title">{t('otherTitle')}</h2>
+          <p className="bo-muted">{t('otherLede')}</p>
+          <ul className="nl-rows">
             {r.operational.map(o => <li key={o.code}><strong>{o.name}</strong> · {period(o.period)} · {o.where}{o.setting !== '—' ? ` · ${t('setting')}: ${o.setting}` : ''}</li>)}
           </ul>
         </section>
-      </div>
+      </div></div>
       {selected ? <CategoryDrawer c={selected} t={t} canRun={can('privacy')} busy={run.isPending} onClose={() => setOpen(undefined)}
         onRun={dryRun => (dryRun ? start(true, selected.code) : setConfirming({ category: selected.code }))} notice={notice} /> : null}
       {confirming ? (

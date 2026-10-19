@@ -11,12 +11,9 @@ export function PrivacyScreen() {
   const search = useSearch({ strict: false }) as { view?: 'requests' | 'retention' };
   const navigate = useNavigate();
   const view = search.view ?? 'requests';
-  return (
-    <div>
-      <UnderlineTabs aria-label={t('tabs')} value={view}
-        options={[{ value: 'requests', label: t('tabRequests') }, { value: 'retention', label: t('tabRetention') }]}
-        onChange={v => void navigate({ to: SCREEN_PATH.privacy, search: v === 'retention' ? { view: 'retention' } : {} })} />
-      {view === 'retention' ? <RetentionReport /> : <PrivacyQueue />}
-    </div>
-  );
+  // the screen's head comes first, then these tabs (each view draws its own head: its name and its counts)
+  const tabs = <UnderlineTabs aria-label={t('tabs')} value={view}
+    options={[{ value: 'requests', label: t('tabRequests') }, { value: 'retention', label: t('tabRetention') }]}
+    onChange={v => void navigate({ to: SCREEN_PATH.privacy, search: v === 'retention' ? { view: 'retention' } : {} })} />;
+  return view === 'retention' ? <RetentionReport tabs={tabs} /> : <PrivacyQueue tabs={tabs} />;
 }

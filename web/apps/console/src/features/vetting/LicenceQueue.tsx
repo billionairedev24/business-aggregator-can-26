@@ -63,10 +63,14 @@ export function LicenceQueue({ filter }: { filter: PlaceFilter }) {
   };
   const elsewhere = items.filter(i => i.businessProvince && i.businessProvince !== i.licence.province && i.licence.status === 'pending');
   return (
-    <div>
-      <h2 className="nl-q-h2">{t('licTitle', { n: status === 'pending' ? items.length : '…' })}</h2>
-      <p className="nl-q-lede">{t('licLede')}</p>
-      <Segmented name="licence-status" aria-label={t('filter')} value={status} onChange={v => setStatus(v)} options={FILTERS.map(f => ({ value: f, label: t(`f_${f}`) }))} />
+    <div className="bo-stack">
+      <div className="nl-q-introbar">
+        <div className="nl-q-intro">
+          <h2 className="nl-q-h2">{t('licTitle', { n: status === 'pending' ? items.length : '…' })}</h2>
+          <p className="nl-q-lede">{t('licLede')}</p>
+        </div>
+        <Segmented name="licence-status" aria-label={t('filter')} value={status} onChange={v => setStatus(v)} options={FILTERS.map(f => ({ value: f, label: t(`f_${f}`) }))} />
+      </div>
       {elsewhere.map(i => <p key={i.licence.id} className="nl-q-note">{i.businessName}: {t('otherProvince', { licence: i.licence.province, business: i.businessProvince ?? '' })}</p>)}
       {notice ? <p role={notice.tone === 'error' ? 'alert' : 'status'} className={notice.tone === 'error' ? 'nl-q-error' : 'nl-q-note'}>{notice.text}</p> : null}
       <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}

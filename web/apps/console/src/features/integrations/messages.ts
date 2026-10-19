@@ -3,8 +3,8 @@ import { defineMessages } from '@northline/ui';
 /** API & webhooks (S-96, design 03 lines 383–399). en = the design's copy; fr-CA after design/i18n-fr.js. */
 export const useIntegrationsT = defineMessages({
   en: {
-    kicker: 'Headless API & webhooks',
-    title: "Every screen you've seen runs on this API.",
+    heading: 'Headless API & webhooks',
+    summary: "Every screen you've seen runs on this API.",
     lede: 'REST (OpenAPI 3.1) for everything and HMAC-signed webhooks. Keys are scoped per seller; each has a rate limit.',
     keysTitle: 'Partner keys', issue: 'Issue key', revoke: 'Revoke',
     entity: 'API client', plural: 'API clients', c_owner: 'Owner', c_scopes: 'Scopes', c_used: 'Last used', c_status: 'Status',
@@ -16,8 +16,8 @@ export const useIntegrationsT = defineMessages({
     loadError: "The keys couldn't load. Try again.",
   },
   fr: {
-    kicker: 'API sans interface et webhooks',
-    title: 'Chaque écran que vous avez vu repose sur cette API.',
+    heading: 'API sans interface et webhooks',
+    summary: 'Chaque écran que vous avez vu repose sur cette API.',
     lede: 'REST (OpenAPI 3.1) pour tout et des webhooks signés HMAC. Les clés sont limitées par vendeur; chacune a une limite de débit.',
     keysTitle: 'Clés partenaires', issue: 'Émettre une clé', revoke: 'Révoquer',
     entity: 'client API', plural: 'clients API', c_owner: 'Titulaire', c_scopes: 'Portées', c_used: 'Dernière utilisation', c_status: 'Statut',

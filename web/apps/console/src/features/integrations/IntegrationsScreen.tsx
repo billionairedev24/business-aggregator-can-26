@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Checkbox, DataTable, Dialog, ErrorState, Field, PageSkeleton, TextInput, useFormatters, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { BoHeader, Button, ChartCard, Checkbox, DataTable, Dialog, ErrorState, Field, PageSkeleton, TextInput, useFormatters, type DataTableColumn, type DataTableTone } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { keysQuery, SCOPES, useIssueKey, useRevokeKey, type Key } from './api';
@@ -36,19 +36,15 @@ function KeysView({ keys }: { keys: Key[] }) {
     { key: 'owner', label: t('c_owner'), primary: true }, { key: 'scopes', label: t('c_scopes') }, { key: 'used', label: t('c_used') }, { key: 'status', label: t('c_status'), type: 'tag' },
   ];
   return (
-    <div>
-      <span className="nl-tm-kicker">{t('kicker')}</span>
-      <h1 className="nl-tm-title">{t('title')}</h1>
-      <p className="nl-tm-sub">{t('lede')}</p>
-      <h2 className="nl-tm-h2 nl-tm-gap">{t('keysTitle')}</h2>
+    <div className="bo-page">
+      <BoHeader title={t('heading')} sub={`${t('summary')} ${t('lede')}`}
+        actions={<><Button disabled={!allowed} onClick={() => setIssuing(true)}>{t('issue')}</Button>{!allowed ? <span className="bo-muted">{t('cannot')}</span> : null}</>} />
+      <ChartCard id="in-keys" title={t('keysTitle')}>
       <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={10} roleName={roleName}
         rowTones={r => ({ status: (r.src.revokedAt ? 'tag-neutral' : 'tag-accent') as DataTableTone })} can={{ create: false, update: allowed, delete: false }}
         actions={[{ id: 'revoke', label: t('revoke'), perm: 'update', inline: true, bulk: false, when: { key: 'status', in: [t('active')] } }]}
         onAction={(action, picked) => { if (action.id === 'revoke' && picked[0]) setRevoking(picked[0].src); return false; }} />
-      <div className="nl-tm-actions">
-        <Button variant="secondary" disabled={!allowed} onClick={() => setIssuing(true)}>{t('issue')}</Button>
-        {!allowed ? <span className="nl-tm-sub">{t('cannot')}</span> : null}
-      </div>
+      </ChartCard>
       {issuing ? <IssueDialog onClose={() => setIssuing(false)} /> : null}
       {revoking ? <RevokeDialog keyRow={revoking} onClose={() => setRevoking(null)} /> : null}
     </div>

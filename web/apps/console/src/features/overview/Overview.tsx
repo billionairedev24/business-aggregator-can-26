@@ -93,14 +93,14 @@ function OverviewView({ data }: { data: OverviewData }) {
   return (
     <>
       <KpiStrip label={t('kpis')} items={kpis} />
-      <div className="bo-grid">
-        <ChartCard id="ov-gmv" title={t('gmvTitle')}>
-          <StackedBarChart title={t('gmvTitle')} format={c => compactMoney(c, locale)}
+      <div className="nl-ov-wrap"><div className="nl-ov-grid">
+        <ChartCard id="ov-gmv" title={t('gmvTitle')} className="nl-ov-gmv">
+          <StackedBarChart title={t('gmvTitle')} height={260} format={c => compactMoney(c, locale)}
             series={[{ key: 'goods', label: t('goods'), color: 'var(--color-action-primary)' }, { key: 'services', label: t('services'), color: 'var(--color-action-accent)' }]}
             data={data.weeks.map((w, i) => ({ label: t('week', { n: i + 1 }), values: { goods: w.goodsCents, services: w.servicesCents } }))} />
         </ChartCard>
         <WorkQueue data={data} />
-        <ChartCard id="ov-live" title={t('liveTitle')}>
+        <ChartCard id="ov-live" title={t('liveTitle')} className="nl-ov-live">
           <FactList rows={[
             [t('couriers'), `${formatNumber(data.live.couriersOnRuns, locale)} / ${formatNumber(data.live.couriersActive, locale)}`],
             [t('providers'), formatNumber(data.live.providersOnJobs, locale)],
@@ -109,7 +109,7 @@ function OverviewView({ data }: { data: OverviewData }) {
             [t('escrow'), formatMoney(data.live.escrowHeldCents, locale, { whole: true })],
           ]} />
         </ChartCard>
-        <ChartCard id="ov-health" title={t('healthTitle')}>
+        <ChartCard id="ov-health" title={t('healthTitle')} className="nl-ov-hc">
           <ul className="nl-ov-health">
             {data.health.map(h => (
               <li key={h.key} className="nl-ov-tile">
@@ -119,7 +119,7 @@ function OverviewView({ data }: { data: OverviewData }) {
             ))}
           </ul>
         </ChartCard>
-      </div>
+      </div></div>
     </>
   );
 }
@@ -163,5 +163,5 @@ function WorkQueue({ data }: { data: OverviewData }) {
     key: r.screen, icon: r.icon, meta: formatNumber(r.n, locale), onClick: go(r.screen),
     text: <>{t(r.what, { n: r.n })}{r.note ? <span className="bo-todo-sub">{r.note}</span> : null}</>,
   }));
-  return <TodoCard id="ov-todo" title={t('queueTitle')} items={items} empty="" />;
+  return <div className="nl-ov-todo"><TodoCard id="ov-todo" title={t('queueTitle')} items={items} empty="" /></div>;
 }

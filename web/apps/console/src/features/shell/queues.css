@@ -1,25 +1,29 @@
-/* Console screens built on design 03's screen frame (kicker, h1, lede) — shared by the review queues. Token values only. */
-.nl-q-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
-.nl-q-kicker { display: block; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-muted); }
-.nl-q-filters { display: flex; gap: 8px; flex-wrap: wrap; }
-.nl-q-filters .input { min-height: 40px; width: auto; max-width: 100%; }
-.nl-q-title { font-size: clamp(30px, 3.5vw, 44px); margin: 0 0 8px; letter-spacing: -0.02em; }
-.nl-q-lede { max-width: 62ch; color: var(--color-text-muted); margin: 0 0 20px; }
-.nl-q-h2 { font-size: 22px; margin: 0 0 10px; }
-.nl-q-gap { margin-top: 28px; }
-.nl-q-note { color: var(--color-text-muted); font-size: 13px; }
-.nl-q-error { color: var(--color-danger); font-size: 14px; }
-.nl-q-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 36px clamp(28px, 4vw, 64px); }
-.nl-q-panel { padding: 16px 18px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
-.nl-q-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
-.nl-q-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+/* Console screens that predate the light direction's head (pilot, UAT, go-live) and the queues' shared pieces, on the
+   light direction's scale (2026-10-19): the h1 is the back office's title size, a section's h2 the card title's.
+   Semantic tokens only. */
+.nl-q-top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-2); }
+.nl-q-kicker { display: block; font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
+.nl-q-title { margin: 0 0 var(--space-2); font-size: var(--text-3xl); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); line-height: var(--leading-tight); overflow-wrap: anywhere; }
+.nl-q-lede { max-width: 72ch; color: var(--color-text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-4); }
+.nl-q-h2 { margin: 0 0 var(--space-2); font-family: var(--font-heading); font-size: var(--text-xl); font-weight: var(--weight-semibold); }
+/* a queue's own title + lede above its table (Applications › Listings, Licences, Age checks) */
+.nl-q-intro { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.nl-q-intro > .nl-q-h2, .nl-q-intro > .nl-q-lede { margin: 0; }
+.nl-q-introbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--space-3); }
+.nl-q-introbar > .nl-q-intro { flex: 1 1 360px; }
+.nl-q-gap { margin-top: var(--space-6); }
+.nl-q-note { color: var(--color-text-muted); font-size: var(--text-sm); }
+.nl-q-error { color: var(--color-danger); font-size: var(--text-sm); }
+.nl-q-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: var(--space-4); align-items: start; }
+.nl-q-panel { padding: var(--space-5); background: var(--color-surface); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); min-width: 0; }
+.nl-q-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-sm); }
+.nl-q-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border); }
 .nl-q-row:last-child { border-bottom: 0; }
-.nl-q-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.nl-q-actions .btn { min-height: 44px; }
+.nl-q-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.nl-q-actions .btn { min-height: var(--size-touch); }
 .nl-q-checks { display: flex; flex-wrap: wrap; gap: 6px; }
-.nl-q-field { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: 14px; }
+.nl-q-field { display: flex; flex-direction: column; gap: 6px; margin-top: var(--space-3); font-size: var(--text-sm); }
 .nl-q-field textarea { min-height: 70px; }
 .nl-q-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-/* S-108: a second section on a queue screen (the privacy screen's consent records) */
-.nl-q-section { margin-top: 40px; border-top: 1px solid var(--color-border); padding-top: 20px; }
-.nl-q-tablewrap { overflow-x: auto; margin-top: 12px; }
+.nl-q-section { margin-top: var(--space-10); border-top: 1px solid var(--color-border); padding-top: var(--space-5); }
+.nl-q-tablewrap { overflow-x: auto; margin-top: var(--space-3); }
