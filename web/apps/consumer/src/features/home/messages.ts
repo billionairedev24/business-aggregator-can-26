@@ -10,7 +10,7 @@ export const useHomeT = defineMessages({
   en: {
     heroTitle: 'Everything local, from people you can trust',
     heroSub: 'Book verified pros, shop neighbourhood stores and get it all delivered together — you pay only when it’s done.',
-    heroSearch: 'Try “brake pads”, “sourdough” or “house cleaning”',
+    heroSearch: 'Try “brake pads”, “sourdough” or “house cleaning”', heroSearchLabel: 'Search shops, products and services',
     near: 'Near {place}', noPlace: 'Choose where you are to see what’s close', changePlace: 'Change', setPlace: 'Set your location',
     popular: 'Popular', badge: 'Every pro and shop verified',
     tileServices: 'Book a service', tileShop: 'Shop local', allServices: 'All services', allDepartments: 'All departments',
@@ -25,7 +25,7 @@ export const useHomeT = defineMessages({
   fr: {
     heroTitle: 'Tout le local, par des gens de confiance',
     heroSub: 'Réservez des pros vérifiés, magasinez dans les commerces du quartier et recevez tout en une seule livraison — vous payez seulement une fois le travail terminé.',
-    heroSearch: 'Essayez « plaquettes de frein », « pain au levain » ou « ménage »',
+    heroSearch: 'Essayez « plaquettes de frein », « pain au levain » ou « ménage »', heroSearchLabel: 'Chercher des commerces, des produits et des services',
     near: 'Près de {place}', noPlace: 'Indiquez où vous êtes pour voir ce qui est proche', changePlace: 'Changer', setPlace: 'Choisir votre emplacement',
     popular: 'Populaire', badge: 'Chaque pro et commerce vérifié',
     tileServices: 'Réserver un service', tileShop: 'Acheter local', allServices: 'Tous les services', allDepartments: 'Tous les rayons',

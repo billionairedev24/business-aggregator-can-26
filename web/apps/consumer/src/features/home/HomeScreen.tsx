@@ -45,7 +45,7 @@ export function HomeScreen() {
         <div className="nl-home-hero-copy">
           <h1 id="home-title" className="nl-home-title">{t('heroTitle')}</h1>
           <p className="nl-home-sub">{t('heroSub')}</p>
-          <div className="nl-home-search"><SiteSearch variant="hero" placeholder={t('heroSearch')} /></div>
+          <div className="nl-home-search"><SiteSearch variant="hero" placeholder={t('heroSearch')} label={t('heroSearchLabel')} /></div>
           <p className="nl-home-where">
             <MapPin size={20} weight="fill" aria-hidden />
             {location.status === 'locating' ? <Skeleton width={160} height={20} />

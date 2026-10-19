@@ -81,7 +81,8 @@
 .nl-crumbs li { display: inline-flex; align-items: center; gap: var(--space-1); }
 .nl-crumbs-sep { color: var(--color-text-subtle); }
 .nl-crumbs [aria-current='page'] { color: var(--color-text); }
-.nl-crumbs a { display: inline-flex; align-items: center; min-height: 32px; color: var(--color-link); }
+/* S-143: 44 px targets (the line grows, the text stays sm) */
+.nl-crumbs a { display: inline-flex; align-items: center; justify-content: center; min-height: var(--size-touch); min-width: var(--size-touch); color: var(--color-link); }
 
 /* ── a phone's sticky action bar (product, booking, checkout): the main action within thumb reach ── */
 .nl-stickybar { display: none; }
