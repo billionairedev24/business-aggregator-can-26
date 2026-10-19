@@ -19,6 +19,9 @@ const roots = ['packages/ui/src', 'apps/consumer/src/features/shell',
   'apps/consumer/src/features/services', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking',
   // the light foundation (2026-10-19): the location dialog
   'apps/consumer/src/features/location',
+  // phase B (the consumer pages): the illustrated scenes and the shared page parts
+  'apps/consumer/src/features/art', 'apps/consumer/src/features/pages',
+  ...['shop', 'quotes', 'food', 'help', 'sell', 'auth', 'promotions'].map(f => `apps/consumer/src/features/${f}`),
   'apps/studio/src/features/shell', 'apps/console/src/features/shell', 'apps/studio/src/studio.css', 'apps/console/src/console.css',
   // every Studio screen (the Studio pages redesign, 2026-10-19)
   'apps/studio/src/features',

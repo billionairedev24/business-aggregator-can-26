@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link, useSearch } from '@tanstack/react-router';
+import { useSearch } from '@tanstack/react-router';
 import { Bell, CalendarCheck, CreditCard, Heart, Lifebuoy, MapPinLine, Package, ShieldCheck, Storefront, User } from '@phosphor-icons/react';
 import { EmptyState, SiteLink, Skeleton, fullNavEnabled } from '@northline/ui';
 import { signInHref, useViewer } from '../session/api';
@@ -15,6 +15,7 @@ import { CardList, PaymentsTab } from './PaymentsTab';
 import { PlusTab } from './PlusTab';
 import { ProfileTab } from './ProfileTab';
 import { SecurityTab } from './SecurityTab';
+import { Crumbs } from '../pages/Crumbs';
 import { WalletTab } from './WalletTab';
 
 /** Which story builds a tab that isn't here yet. */
@@ -107,11 +108,30 @@ export function AccountLayout({ tab, children }: { tab: AccountTab; children: Re
   const t = useAccountT();
   return (
     <div className="nl-page nl-acct">
-      <nav aria-label={t('crumbs')} className="nl-acct-crumbs">
-        <Link to="/account">{t('crumbAccount')}</Link> › <span aria-current="page">{t(`tab_${tab}`)}</span>
-      </nav>
-      <section className="nl-acct-body" aria-labelledby="acct-title">{children}</section>
+      <Crumbs label={t('crumbs')} items={[{ label: t('crumbAccount'), href: '/account' }, { label: t(`tab_${tab}`) }]} />
+      <div className="nl-acct-split">
+        <AccountSide current={tab} />
+        <section className="nl-acct-body" aria-labelledby="acct-title">{children}</section>
+      </div>
     </div>
+  );
+}
+
+/** The account's sections beside a section (wide screens): the same list as the card grid, the current one marked. */
+export function AccountSide({ current }: { current?: string }) {
+  const t = useAccountT();
+  return (
+    <nav aria-label={t('homeLabel')} className="nl-acct-side">
+      <ul>
+        {CARDS.filter(c => c.key !== 'sell').map(c => (
+          <li key={c.key}>
+            <SiteLink href={c.href} className="nl-acct-side-item" aria-current={c.key === current ? 'page' : undefined}>
+              <c.icon size={20} weight={c.key === current ? 'fill' : 'regular'} aria-hidden />{t(`card_${c.key}`)}
+            </SiteLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
 

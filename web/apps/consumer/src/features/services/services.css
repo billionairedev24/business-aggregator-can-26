@@ -1,52 +1,66 @@
-/* Services landing, service category, provider list — design 06 `services`, `svcCategory`, `providers`. Tokens only. */
+/* Services landing, service category, provider list (light & photo-first, phase B). The landing is bands and rails
+   (features/pages); the category a band, typical prices, steps and a sticky way in; the list cards beside a picture. */
 .nl-svc { min-width: 0; }
-.nl-svc-title { font-size: var(--text-3xl); font-weight: var(--weight-bold); margin: 0; letter-spacing: var(--tracking-tight); }
-.nl-svc-sub { font-size: 14px; color: var(--color-text-muted); margin: 4px 0 0; }
-.nl-svc-muted { font-size: 14px; color: var(--color-text-muted); margin: 0; }
-.nl-svc-kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 10px; }
+.nl-svc-muted { font-size: var(--text-md); color: var(--color-text-muted); margin: 0; }
 
-/* landing */
-.nl-svc-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 28px 48px; margin-top: 28px; }
-.nl-svc-group-title { font-size: 22px; margin: 0 0 4px; }
-.nl-svc-group-kind { font-size: 12px; color: var(--color-text-muted); margin-bottom: 10px; }
-.nl-svc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.nl-svc-groups .nl-svc-chips { margin-top: 10px; }
-.nl-svc-chip { display: inline-flex; align-items: center; font-size: var(--text-sm); font-weight: var(--weight-semibold); padding: 0 var(--space-3); min-height: var(--size-touch); box-sizing: border-box; border-radius: var(--radius-pill); border: 1px solid var(--color-border); color: var(--color-text); text-decoration: none; }
-.nl-svc-chip:hover { background: var(--color-surface-brand); color: var(--color-text); }
-.nl-svc-chip:focus-visible, .nl-svc-job:focus-visible, .nl-svc-row:focus-visible { outline: 2px solid var(--color-action-primary); outline-offset: 2px; }
-
-/* category */
-.nl-svc-crumbs { padding-top: 0; font-size: 13px; color: var(--color-text-muted); }
-.nl-svc-crumbs a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; }
-.nl-svc-split { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(min(100%, 280px), 1fr); gap: 28px 64px; margin-top: 10px; align-items: start; }
-@media (max-width: 859px) { .nl-svc-split { grid-template-columns: minmax(0, 1fr); } }
+/* ── category ── */
+.nl-svc .nl-band { margin-top: var(--space-4); }
+.nl-svc-tags { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.nl-svc-tags .tag { white-space: normal; font-size: var(--text-sm); padding: var(--space-1) var(--space-3); }
+.nl-svc-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: var(--space-8) var(--space-12); margin-top: var(--space-10); align-items: start; }
 .nl-svc-main { min-width: 0; }
-.nl-svc-cat-title { font-size: var(--text-4xl); font-weight: var(--weight-bold); margin: 0; letter-spacing: var(--tracking-tight); }
-.nl-svc-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-.nl-svc-tags .tag { white-space: normal; }
-.nl-svc-blurb { font-size: 16px; line-height: 1.55; margin: 16px 0 0; max-width: 60ch; }
-.nl-svc-h2 { font-size: 22px; margin: 28px 0 10px; }
-.nl-svc-jobs { display: flex; flex-direction: column; max-width: 640px; margin: 0; padding: 0; list-style: none; }
-.nl-svc-job { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; min-height: 44px; color: var(--color-text); text-decoration: none; border-bottom: 1px solid var(--color-border); }
-.nl-svc-job:hover { color: var(--color-text); background: var(--color-surface-brand); }
-.nl-svc-job-desc { display: block; font-size: 13px; color: var(--color-text-muted); }
-.nl-svc-job-price { font-weight: 600; white-space: nowrap; }
-.nl-svc-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 10px; max-width: 720px; margin: 0; padding: 0; list-style: none; }
-.nl-svc-step { padding: var(--space-3); border: 1px solid var(--color-border); background: var(--color-surface); border-radius: var(--radius-md); font-size: var(--text-sm); }
-.nl-svc-step-n { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); }
-.nl-svc-step-name { font-weight: 600; margin-top: 4px; }
-.nl-svc-step-desc { color: var(--color-text-muted); margin-top: 2px; }
-.nl-svc-aside { position: sticky; top: calc(var(--nl-header-h, var(--size-header)) + var(--space-4)); padding: var(--space-5); border: 1px solid var(--color-border); background: var(--color-surface); border-radius: var(--radius-md); min-width: 0; }
-.nl-svc-aside-title { font-size: 22px; margin: 0 0 6px; }
-.nl-svc-aside-hint { font-size: 14px; color: var(--color-text-muted); margin: 0 0 14px; }
-.nl-svc-cta { width: 100%; min-height: 48px; font-size: 16px; box-sizing: border-box; }
-.nl-svc-cta2 { width: 100%; min-height: 44px; margin-top: 8px; box-sizing: border-box; text-align: center; }
-.nl-svc-aside-note { font-size: 12px; color: var(--color-text-muted); margin-top: 12px; line-height: 1.5; }
+.nl-svc-h2 { font-size: var(--text-2xl); margin: 0 0 var(--space-4); letter-spacing: var(--tracking-tight); }
+.nl-svc-main .nl-svc-h2 + * + .nl-svc-h2, .nl-svc-main .nl-svc-jobs + .nl-svc-h2, .nl-svc-main .nl-svc-muted + .nl-svc-h2 { margin-top: var(--space-10); }
+.nl-svc-jobs { margin: 0; padding: 0; list-style: none; border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); overflow: hidden; background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.nl-svc-jobs > li + li { border-top: 1px solid var(--color-border); }
+.nl-svc-job { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); padding: var(--space-4) var(--space-5); min-height: var(--size-touch); color: var(--color-text); text-decoration: none; }
+.nl-svc-job:hover { color: var(--color-text); background: var(--color-surface-hover); text-decoration: none; }
+.nl-svc-job strong { font-weight: var(--weight-semibold); }
+.nl-svc-job-desc { display: block; font-size: var(--text-sm); color: var(--color-text-muted); margin-top: 2px; }
+.nl-svc-job-price { font-weight: var(--weight-bold); font-size: var(--text-lg); white-space: nowrap; }
+.nl-svc-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.nl-svc-step { padding: var(--space-4); background: var(--color-surface-sunken); border-radius: var(--radius-lg); font-size: var(--text-sm); display: flex; flex-direction: column; gap: var(--space-1); }
+.nl-svc-step-n { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--color-action-primary); color: var(--color-action-primary-text); font-weight: var(--weight-bold); font-size: var(--text-sm); margin-bottom: var(--space-2); }
+.nl-svc-step-name { font-weight: var(--weight-bold); font-size: var(--text-md); }
+.nl-svc-step-desc { color: var(--color-text-muted); }
+.nl-svc-aside { position: sticky; top: calc(var(--nl-header-h, var(--size-header)) + var(--space-4)); padding: var(--space-6); border: 1px solid var(--color-border-card); background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); min-width: 0; }
+.nl-svc-aside-title { font-size: var(--text-2xl); margin: 0 0 var(--space-2); }
+.nl-svc-aside-hint { font-size: var(--text-md); color: var(--color-text-muted); margin: 0 0 var(--space-4); }
+.nl-svc-cta { width: 100%; }
+.nl-svc-cta2 { width: 100%; margin-top: var(--space-2); text-align: center; white-space: normal; }
+.nl-svc-aside-note { font-size: var(--text-sm); color: var(--color-text-muted); margin-top: var(--space-4); line-height: var(--leading-normal); }
+@media (max-width: 899.98px) {
+  .nl-svc-split { grid-template-columns: minmax(0, 1fr); margin-top: var(--space-6); }
+  /* on phones the way in comes right after the band */
+  .nl-svc-aside { position: static; order: -1; box-shadow: var(--shadow-sm); padding: var(--space-5); }
+}
+@media (max-width: 599.98px) {
+  .nl-svc-job { padding: var(--space-3) var(--space-4); }
+  .nl-svc-h2 { font-size: var(--text-xl); }
+  .nl-svc-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
-/* provider list (AT Shop:891): kind chips above a list of service cards */
-.nl-svc-providers { max-width: 960px; }
-.nl-svc-filter-chips { margin: var(--space-4) 0 var(--space-3); }
-.nl-svc-list-title { font-size: var(--text-3xl); font-weight: var(--weight-bold); margin: 0; letter-spacing: var(--tracking-tight); }
+/* ── provider list: cards on the left, the category's picture and the quote way in on the right ── */
+.nl-svc-list-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: var(--space-8) var(--space-10); margin-top: var(--space-4); align-items: start; }
+.nl-svc-list-main { min-width: 0; }
+.nl-svc-list-title { font-size: var(--text-3xl); margin: 0; letter-spacing: var(--tracking-tight); }
 .nl-svc-sortnote { font-size: var(--text-sm); margin-top: var(--space-1); }
+.nl-svc-filter-chips { margin: var(--space-4) 0 var(--space-5); }
 .nl-svc-rows { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-3); }
-.nl-svc-row-skel { cursor: default; }
+.nl-svc-row-skel { cursor: default; margin-bottom: var(--space-3); }
+.nl-svc-list-aside { position: sticky; top: calc(var(--nl-header-h, var(--size-header)) + var(--space-4)); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); overflow: hidden; background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.nl-svc-list-pic { position: relative; display: block; aspect-ratio: 16 / 10; }
+.nl-svc-list-aside-body { padding: var(--space-5); }
+.nl-svc-list-aside .nl-svc-aside-title { font-size: var(--text-xl); }
+@media (max-width: 899.98px) {
+  .nl-svc-list-split { grid-template-columns: minmax(0, 1fr); }
+  .nl-svc-list-aside { position: static; display: grid; grid-template-columns: 120px minmax(0, 1fr); }
+  .nl-svc-list-pic { aspect-ratio: auto; min-height: 100%; }
+  .nl-svc-list-aside-body { padding: var(--space-4); }
+}
+@media (max-width: 599.98px) {
+  .nl-svc-list-title { font-size: var(--text-2xl); }
+  .nl-svc-filter-chips { flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(-1 * var(--page-gutter)); padding-inline: var(--page-gutter); }
+  .nl-svc-filter-chips .nl-chip { flex: none; }
+  .nl-svc-list-aside { grid-template-columns: 96px minmax(0, 1fr); }
+}

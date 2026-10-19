@@ -37,7 +37,7 @@ function useDebounced(value: string): string {
  * listings, businesses and categories for the visitor's province, then "Your recent" searches of this browser.
  * Enter searches (`/search?q=`); a suggestion opens its page. Everything here runs in the browser.
  */
-export function SiteSearch({ variant, placeholder, initial = '' }: { variant: 'hero' | 'header'; placeholder?: string; initial?: string }) {
+export function SiteSearch({ variant, placeholder, initial = '', label }: { variant: 'hero' | 'header'; placeholder?: string; initial?: string; label?: string }) {
   const t = useSearchT();
   const { locale } = useLocale();
   const { money } = useFormatters();
@@ -100,7 +100,7 @@ export function SiteSearch({ variant, placeholder, initial = '' }: { variant: 'h
   };
 
   return (
-    <SearchBar variant={variant} value={query} onChange={setQuery} placeholder={placeholder}
+    <SearchBar variant={variant} value={query} onChange={setQuery} placeholder={placeholder} label={label}
       suggestions={groups} onPick={pick} onSubmit={search} />
   );
 }

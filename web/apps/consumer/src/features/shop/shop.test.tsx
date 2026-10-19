@@ -138,7 +138,7 @@ describe('Shop landing (design 06 shop)', () => {
     api = () => ({ body: { market: 'Red Deer', served: false, run: null, shopCount: 0, departments: [], shops: [], popular: [] } });
     open('/shop?market=Red%20Deer');
     expect(await screen.findByText('Northline Shop doesn’t deliver to Red Deer yet.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Change location' })).toHaveAttribute('href', '/location');
+    expect(screen.getByRole('button', { name: 'Change location' })).toBeInTheDocument(); // the location dialog, in place
     expect(screen.getByRole('heading', { level: 1, name: 'Shop local, delivered together' })).toBeInTheDocument();
   });
 

@@ -26,7 +26,7 @@ const PRODUCT = {
     gallery: 'Photos', showImage: 'Show photo {n}',
     title: '{name} · {shop} · {brand}', titleNoShop: '{name} · {brand}', loading: 'Loading the product…',
     // redesign § 1.3 PDP
-    visitStore: 'Visit the {shop} store', inStock: 'In stock', addToCart: 'Add to cart', buyNow: 'Buy now', buyBox: 'Buy',
+    visitStore: 'Visit the {shop} store', inStock: 'In stock', addToCart: 'Add to cart', addWithPrice: 'Add to cart · {price}', buyNow: 'Buy now', buyBox: 'Buy',
     fact_brand: 'Brand', fact_size: 'Size', fact_department: 'Department', fact_soldBy: 'Sold by', fact_returns: 'Returns', fact_payment: 'Payment',
     escrow: 'Held until you confirm delivery', about: 'About this item',
     tier_master: 'Master', tier_trusted: 'Trusted', tier_registered: 'Registered',
@@ -58,7 +58,7 @@ const PRODUCT = {
     backToShop: 'Retour à la Boutique', changeLocation: 'Changer de lieu',
     gallery: 'Photos', showImage: 'Afficher la photo {n}',
     title: '{name} · {shop} · {brand}', titleNoShop: '{name} · {brand}', loading: 'Chargement du produit…',
-    visitStore: 'Visiter la boutique {shop}', inStock: 'En stock', addToCart: 'Ajouter au panier', buyNow: 'Acheter maintenant', buyBox: 'Acheter',
+    visitStore: 'Visiter la boutique {shop}', inStock: 'En stock', addToCart: 'Ajouter au panier', addWithPrice: 'Ajouter au panier · {price}', buyNow: 'Acheter maintenant', buyBox: 'Acheter',
     fact_brand: 'Marque', fact_size: 'Format', fact_department: 'Rayon', fact_soldBy: 'Vendu par', fact_returns: 'Retours', fact_payment: 'Paiement',
     escrow: 'Retenu jusqu’à votre confirmation de livraison', about: 'À propos de cet article',
     tier_master: 'Maître', tier_trusted: 'Fiable', tier_registered: 'Inscrit',

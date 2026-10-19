@@ -3,6 +3,8 @@ import { Link } from '@tanstack/react-router';
 import { Chip, EmptyState, ErrorState, Segmented, SiteLink, Skeleton, Tag, useFormatters, useLocale } from '@northline/ui';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { useKitchens, type Card } from './api';
+import { Art } from '../art/Art';
+import { PlaceButton } from '../pages/PlaceButton';
 import { CUISINE_NAMES, TAGS, useFoodT } from './messages';
 
 type T = ReturnType<typeof useFoodT>;
@@ -61,19 +63,20 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
   const toggleFilter = (f: Filter) => setFilters(s => { const n = new Set(s); if (n.has(f)) n.delete(f); else n.add(f); return n; });
 
   return (
-    <div className="nl-food">
-      <div className="nl-food-top">
-        <div>
-          <h1 className="nl-food-title">{t('title')}</h1>
-          <p className="nl-food-sub" aria-live="polite">
+    <div className="nl-page nl-food">
+      <div className="nl-band nl-food-top">
+        <div className="nl-band-copy">
+          <h1 className="nl-band-title">{t('title')}</h1>
+          <p className="nl-band-lede" aria-live="polite">
             {kitchens.data ? t(pickup ? 'subPickup' : 'sub', { count: open.length, area, eta: t('etaRange', { from: etaFrom, to: etaTo }) }) : <Skeleton width={320} height={14} />}
           </p>
-        </div>
-        <div className="nl-food-actions">
+          <div className="nl-band-actions nl-food-actions">
           <Segmented name="food-mode" aria-label={t('modeLabel')} value={mode} onChange={changeMode}
             options={[{ value: 'delivery', label: t('deliver') }, { value: 'pickup', label: t('pickup') }]} />
           <button type="button" className="btn btn-secondary" aria-pressed={sched} onClick={() => setSched(s => !s)}>{sched ? t('now') : t('schedule')}</button>
+          </div>
         </div>
+        <span className="nl-band-pic" aria-hidden><Art subject="vietnamese" tone="clay" fit="contain" /></span>
       </div>
       {sched && <p className="nl-food-panel">{t('scheduleNote')}</p>}
 
@@ -90,7 +93,7 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
       ) : !kitchens.data ? (
         <div className="nl-food-grid" aria-busy="true">{Array.from({ length: 6 }, (_, i) => <div key={i}><Skeleton height={160} radius={12} /><Skeleton width="60%" height={16} style={{ marginTop: 10 }} /></div>)}</div>
       ) : reachable.length === 0 ? (
-        <div className="nl-food-block"><EmptyState action={<Link to="/location" className="btn btn-primary">{t('changeLocation')}</Link>}>{t('empty', { area })}</EmptyState></div>
+        <div className="nl-food-block"><EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('empty', { area })}</EmptyState></div>
       ) : (
         <>
           <h2 className="nl-food-heading">
@@ -125,7 +128,8 @@ function KitchenCard({ t, k, pickup, cuisineName }: { t: T; k: Card; pickup: boo
   ].filter(Boolean).join(' · ');
   const body = (
     <>
-      <div className="nl-food-tile halftone" style={k.brandColor ? { background: `linear-gradient(135deg, ${k.brandColor}, var(--color-neutral-600))` } : undefined}>
+      <div className="nl-food-tile">
+        <Art subject={k.cuisines[0] ?? 'food'} />
         <span className="tag nl-food-eta">{eta}</span>
         {!k.open && <span className="tag tag-neutral nl-food-opens">{k.paused ? t('paused') : k.opensAt ? t('opens', { time: date(k.opensAt, 'time') }) : t('closedNow')}</span>}
       </div>

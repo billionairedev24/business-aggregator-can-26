@@ -5,6 +5,8 @@ import { isNotFound } from '@northline/client';
 import { bookingQuery } from '../booking/api';
 import { signInHref, useViewer } from '../session/api';
 import { ReviewPanel, VisitEta } from './Aftercare';
+import { Crumbs } from '../pages/Crumbs';
+import { Art } from '../art/Art';
 import { useAftercareT } from './messages';
 
 /**
@@ -31,12 +33,11 @@ export function BookingStatus({ bookingId }: { bookingId: string }) {
   const at = STEPS.indexOf(STEP_OF[state] ?? 'booked');
   return (
     <div className="nl-page nl-bkd">
-      <nav aria-label={t('crumbs')} className="nl-bkd-crumbs">
-        <SiteLink href="/account">{t('crumbAccount')}</SiteLink> › <SiteLink href="/account/orders?tab=bookings">{t('crumbBookings')}</SiteLink> › <span aria-current="page">{b.ref}</span>
-      </nav>
+      <Crumbs label={t('crumbs')} items={[{ label: t('crumbAccount'), href: '/account' }, { label: t('crumbBookings'), href: '/account/orders?tab=bookings' }, { label: b.ref }]} />
       <div className="nl-bkd-grid">
         <div className="nl-bkd-main">
           <section className="nl-bkd-card" aria-labelledby="bkd-title">
+            <span className="nl-bkd-pic" aria-hidden><Art subject={b.title} fit="contain" /></span>
             <span className="nl-bkd-kicker">{t('bookingRef', { ref: b.ref })}</span>
             <h1 id="bkd-title" className="nl-after-title">{b.title}</h1>
             <p className="nl-after-muted">{b.providerName} · {date(b.startsAt, 'dateTime')}</p>

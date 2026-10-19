@@ -50,10 +50,44 @@ async function shoot(page: Page, app: App, r: ShotRoute) {
       window.scrollTo(0, 0);
     });
     await page.waitForTimeout(400);
+    // a page wider than the screen (a sideways scroll on a phone): name what sticks out (_overflow.txt)
+    const wide = await page.evaluate(overflowing);
+    if (wide.length) appendFileSync(`${OUT}${app}/_overflow.txt`, `${r.name}-${s.suffix}: ${wide.join(' · ')}\n`);
     await page.screenshot({ path: `${OUT}${app}/${r.name}-${s.suffix}.png`, fullPage: !r.click, animations: 'disabled' });
   }
   // what the mock api had no answer for (the browser's requests): a page that looks empty usually needs one of these
   if (missing.length) appendFileSync(`${OUT}${app}/_missing-api.txt`, `${r.name}: ${[...new Set(missing)].join(', ')}\n`);
+}
+
+/**
+ * The elements that reach past the right edge of the screen without a clipping or scrolling box around them — what
+ * makes a page scroll sideways (html clips it, but the content is cut off). In the browser; at most eight, as
+ * `tag.class (right edge px)`.
+ */
+function overflowing(): string[] {
+  const vw = document.documentElement.clientWidth;
+  // clipped by a box with overflow — but an absolutely positioned element only by its containing block and above
+  const escapes = (pos: string) => pos === 'absolute' || pos === 'fixed';
+  const clipped = (el: Element) => {
+    let abs = escapes(getComputedStyle(el).position);
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      const cs = getComputedStyle(p);
+      if (abs && cs.position === 'static') continue;
+      if (cs.overflowX !== 'visible') return true;
+      if (abs) abs = escapes(cs.position);
+    }
+    return false;
+  };
+  const out: string[] = [];
+  for (const el of Array.from(document.body.querySelectorAll('*'))) {
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.right <= vw + 1 || clipped(el)) continue;
+    const parent = el.parentElement;
+    if (parent && parent.getBoundingClientRect().right > vw + 1 && !clipped(parent)) continue; // report the outermost only
+    out.push(`${el.tagName.toLowerCase()}${el.classList.length ? '.' + Array.from(el.classList).join('.') : ''} (${Math.round(r.right)}px)`);
+    if (out.length >= 8) break;
+  }
+  return out;
 }
 
 /** One test per route of `app` (each app's project runs its own spec file: consumer|studio|console.spec.ts). */

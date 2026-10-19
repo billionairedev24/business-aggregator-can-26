@@ -53,7 +53,7 @@ function Track({ t, o }: { t: T; o: Tracking }) {
   return (
     <div className="nl-track">
       <div>
-        <span className="tag tag-accent-2">{t(`st_${o.stage}`)}</span>
+        <span className="tag tag-success">{t(`st_${o.stage}`)}</span>
         <h1>{title}</h1>
         <p className="nl-fco-muted">{t('summary', { ref: o.ref, kitchen: o.kitchen, total: money(o.totalCents), arriving })}</p>
         <ol className="nl-track-steps">
@@ -76,10 +76,10 @@ function Track({ t, o }: { t: T; o: Tracking }) {
       </div>
       <div className="nl-track-map halftone" aria-hidden>
         <svg viewBox="0 0 400 300">
-          <path d="M70 90 L200 90 L200 200 L330 200" fill="none" stroke="var(--color-accent-2)" strokeWidth="4" strokeDasharray="8 6" />
-          <circle cx="70" cy="90" r="9" fill="var(--color-neutral-700)" />
-          <circle cx={cx} cy={cy} r="11" fill="var(--color-accent-2)" />
-          <circle cx="330" cy="200" r="9" fill="var(--color-bg)" stroke="var(--color-text)" strokeWidth="3" />
+          <path d="M70 90 L200 90 L200 200 L330 200" fill="none" stroke="var(--color-action-primary)" strokeWidth="4" strokeDasharray="8 6" />
+          <circle cx="70" cy="90" r="9" fill="var(--color-text-muted)" />
+          <circle cx={cx} cy={cy} r="11" fill="var(--color-action-accent)" />
+          <circle cx="330" cy="200" r="9" fill="var(--color-surface)" stroke="var(--color-text)" strokeWidth="3" />
         </svg>
         <div className="nl-track-caption">{pickup ? o.kitchen : t('courier')}</div>
       </div>

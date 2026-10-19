@@ -12,6 +12,7 @@ import { placeOf } from '../services/ProviderList';
 import { categoryName } from '../services/taxonomy';
 import { requestQuotes, type QuoteAsk } from './api';
 import { useQuotesT } from './messages';
+import { Crumbs } from '../pages/Crumbs';
 
 export type RequestStep = 'job' | 'where' | 'who';
 export const REQUEST_STEPS: readonly RequestStep[] = ['job', 'where', 'who'];
@@ -103,14 +104,12 @@ export function QuoteRequest({ slug, step, preselect, onStep, onSent }: {
 
   return (
     <div className="nl-page nl-qt">
-      <nav aria-label={t('breadcrumb')} className="nl-qt-crumbs">
-        <Link to="/services">{t('crumbServices')}</Link> › <Link to="/services/$category" params={{ category: slug }} lang={name.lang}>{name.text}</Link> › <span aria-current="page">{t('crumbRequest')}</span>
-      </nav>
+      <Crumbs label={t('breadcrumb')} items={[{ label: t('crumbServices'), href: '/services' }, { label: name.text, href: `/services/${slug}`, lang: name.lang }, { label: t('crumbRequest') }]} />
       <ol className="nl-qt-steps" aria-label={t('steps')}>
         {REQUEST_STEPS.map((s, i) => (
           <li key={s}>
             <button type="button" className="nl-qt-step" data-state={i < idx ? 'done' : i === idx ? 'current' : 'todo'} aria-current={i === idx ? 'step' : undefined} disabled={i > idx} onClick={() => onStep(s)}>
-              <span className="nl-qt-step-n" aria-hidden>{i + 1}</span>{t(`step_${s}`)}
+              <span className="nl-qt-step-n" aria-hidden>{i + 1}</span><span className="nl-qt-step-label">{t(`step_${s}`)}</span>
             </button>
           </li>
         ))}

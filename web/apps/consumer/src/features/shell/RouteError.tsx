@@ -1,6 +1,8 @@
 import { useQueryErrorResetBoundary } from '@tanstack/react-query';
 import { useRouter, type ErrorComponentProps } from '@tanstack/react-router';
-import { ErrorState, PageHeader } from '@northline/ui';
+import { CloudRain, Wrench } from '@phosphor-icons/react';
+import { ErrorState } from '@northline/ui';
+import { Art } from '../art/Art';
 import { useShellT } from './messages';
 
 /**
@@ -13,8 +15,9 @@ export function RouteError({ error }: ErrorComponentProps) {
   const queries = useQueryErrorResetBoundary();
   const message = error instanceof Error && error.message ? error.message : t('errorTitle');
   return (
-    <div className="nl-page">
-      <PageHeader title={t('errorTitle')} />
+    <div className="nl-page nl-lost">
+      <span className="nl-lost-pic" aria-hidden><Art subject="error" tone="stone" draw={{ main: CloudRain, side: Wrench }} fit="contain" /></span>
+      <h1 className="nl-lost-title">{t('errorTitle')}</h1>
       <ErrorState message={message} onRetry={() => { queries.reset(); void router.invalidate(); }} />
     </div>
   );

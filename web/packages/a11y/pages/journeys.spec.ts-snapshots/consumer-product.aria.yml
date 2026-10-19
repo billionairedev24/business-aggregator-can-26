@@ -5,10 +5,9 @@
         - link "Shop":
           - /url: /shop
       - listitem:
-        - text: ›
         - link "Bakery":
           - /url: /shop/bakery
-      - listitem: › Country sourdough
+      - listitem: Country sourdough
   - group "Photos"
   - heading "Country sourdough" [level=1]
   - link "Visit the Glenmore Bakery store":
