@@ -36,6 +36,10 @@
   .nl-home-sub { font-size: var(--text-md); }
   .nl-home-collage { height: 210px; gap: var(--space-3); }
   .nl-home-badge { left: var(--space-3); bottom: var(--space-3); font-size: var(--text-xs); }
+  /* the popular entries: one sideways row */
+  .nl-home-quick { flex-wrap: nowrap; width: calc(100% + 2 * var(--page-gutter)); margin-inline: calc(-1 * var(--page-gutter)); padding-inline: var(--page-gutter); overflow-x: auto; }
+  .nl-home-quick ul { flex-wrap: nowrap; }
+  .nl-home-quick li { flex: none; }
 }
 
 /* ── tiles: six a row; a sideways row on phones ── */

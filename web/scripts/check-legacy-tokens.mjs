@@ -21,6 +21,7 @@ const roots = ['packages/ui/src', 'apps/consumer/src/features/shell',
   'apps/consumer/src/features/location',
   // phase B (the consumer pages): the illustrated scenes and the shared page parts
   'apps/consumer/src/features/art', 'apps/consumer/src/features/pages',
+  ...['shop', 'quotes', 'food', 'help', 'sell', 'auth', 'promotions'].map(f => `apps/consumer/src/features/${f}`),
   'apps/studio/src/features/shell', 'apps/console/src/features/shell', 'apps/studio/src/studio.css', 'apps/console/src/console.css',
   // redesign phase 2 (the merchant demo path): the Studio screens rebuilt on the AT layouts
   ...['auth', 'onboarding', 'dashboard', 'catalogue', 'orders', 'appointments', 'availability', 'finance', 'storefront'].map(f => `apps/studio/src/features/${f}`),

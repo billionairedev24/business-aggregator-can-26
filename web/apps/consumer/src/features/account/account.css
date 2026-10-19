@@ -142,7 +142,7 @@
 .nl-plus-perks { font-size: 15px; display: flex; flex-direction: column; gap: 6px; color: var(--color-text-muted); padding-left: 18px; margin: 0; }
 
 /* Something's wrong & Help & cases (S-60) */
-.nl-problem { max-width: 720px; }
+.nl-problem { max-width: 720px; padding-top: var(--space-6); }
 .nl-problem-kicker { font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); padding: 0; }
 .nl-problem-set { border: 0; padding: 0; margin: 18px 0 0; }
 .nl-problem-items { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }

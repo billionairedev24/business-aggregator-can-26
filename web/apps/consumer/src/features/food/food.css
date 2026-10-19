@@ -1,6 +1,6 @@
 /* Food (design 06 `food`, `restaurant`, `foodCheckout`, `foodTrack`). Tokens only. */
-.nl-food { padding-top: var(--space-8); }
-.nl-food-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.nl-food { min-width: 0; }
+.nl-food-actions .seg { background: var(--color-surface); }
 .nl-food-title { font-size: var(--text-4xl); margin: 0; letter-spacing: var(--tracking-tight); }
 .nl-food-sub { font-size: var(--text-md); color: var(--color-text-muted); margin: var(--space-1) 0 0; }
 .nl-food-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -51,7 +51,7 @@
 .nl-rest-muted { font-size: 13px; color: var(--color-text-muted); margin: 6px 0 0; }
 .nl-rest-plus { width: 104px; height: 104px; border-radius: var(--radius-lg); border: 0; cursor: pointer; background: var(--color-surface-sunken); position: relative; overflow: hidden; padding: 0; }
 .nl-rest-plus > .nl-art { position: absolute; inset: 0; }
-.nl-rest-plus > span[aria-hidden] { position: absolute; right: var(--space-2); bottom: var(--space-2); width: 32px; height: 32px; border-radius: 50%; background: var(--color-surface); display: grid; place-items: center; font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--color-action-primary); box-shadow: var(--shadow-md); }
+.nl-rest-plus-sign { position: absolute; right: var(--space-2); bottom: var(--space-2); width: 32px; height: 32px; border-radius: 50%; background: var(--color-surface); display: grid; place-items: center; font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--color-action-primary); box-shadow: var(--shadow-md); }
 .nl-rest-plus:disabled { cursor: not-allowed; opacity: .5; }
 .nl-rest-plus:focus-visible { outline: 2px solid var(--color-action-primary); outline-offset: 2px; }
 .nl-rest-editor { margin-top: var(--space-3); padding: var(--space-4); background: var(--color-surface-sunken); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: var(--space-3); }
@@ -100,9 +100,9 @@
 .nl-track-steps li { display: flex; gap: 12px; align-items: center; }
 .nl-track-steps li[data-done] { color: var(--color-text); }
 .nl-track-dot { width: 20px; height: 20px; border-radius: 50%; flex: none; box-sizing: border-box; border: 2px solid var(--color-border-strong); }
-.nl-track-steps li[data-done] .nl-track-dot { border: 0; background: var(--color-action-primary); }
+.nl-track-steps li[data-done] .nl-track-dot { border: 0; background: var(--color-success); }
 .nl-track-actions { display: flex; gap: 10px; margin-top: 24px; }
-.nl-track-map { aspect-ratio: 4 / 3; position: relative; border-radius: var(--radius-lg); background-color: var(--color-surface-sunken); background-image: linear-gradient(var(--color-border-strong) 1px, transparent 1px), linear-gradient(90deg, var(--color-border-strong) 1px, transparent 1px); background-size: 44px 44px; }
+.nl-track-map { aspect-ratio: 4 / 3; position: relative; border-radius: var(--radius-lg); background-color: var(--color-surface-sunken); background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 44px 44px; box-shadow: inset 0 0 0 1px var(--color-border-card); overflow: hidden; }
 .nl-track-map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .nl-track-caption { position: absolute; left: 16px; bottom: 16px; background: var(--color-surface); padding: 8px 12px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-size: 13px; }
 /* S-143: breadcrumb links get a 44 px target without moving the line */
@@ -116,7 +116,6 @@
 .nl-tip-chips .nl-chip { min-height: 44px; }
 
 @media (max-width: 599.98px) {
-  .nl-food { padding-top: var(--space-5); }
   .nl-food-title, .nl-rest-banner h1, .nl-track h1 { font-size: var(--text-3xl); }
   .nl-food-chips { flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(-1 * var(--page-gutter)); padding-inline: var(--page-gutter); }
   .nl-food-chips .nl-chip { flex: none; }
@@ -125,3 +124,5 @@
   .nl-rest-dish { grid-template-columns: minmax(0, 1fr) 88px; }
   .nl-rest-plus { width: 88px; height: 88px; }
 }
+/* a dish's picture is small: the main pictogram only, the "+" in the corner */
+.nl-rest-plus .nl-art-badge, .nl-rest-plus .nl-art-side { display: none; }

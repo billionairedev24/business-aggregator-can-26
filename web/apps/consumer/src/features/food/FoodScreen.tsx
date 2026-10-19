@@ -62,19 +62,20 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
   const toggleFilter = (f: Filter) => setFilters(s => { const n = new Set(s); if (n.has(f)) n.delete(f); else n.add(f); return n; });
 
   return (
-    <div className="nl-food">
-      <div className="nl-food-top">
-        <div>
-          <h1 className="nl-food-title">{t('title')}</h1>
-          <p className="nl-food-sub" aria-live="polite">
+    <div className="nl-page nl-food">
+      <div className="nl-band nl-food-top">
+        <div className="nl-band-copy">
+          <h1 className="nl-band-title">{t('title')}</h1>
+          <p className="nl-band-lede" aria-live="polite">
             {kitchens.data ? t(pickup ? 'subPickup' : 'sub', { count: open.length, area, eta: t('etaRange', { from: etaFrom, to: etaTo }) }) : <Skeleton width={320} height={14} />}
           </p>
-        </div>
-        <div className="nl-food-actions">
+          <div className="nl-band-actions nl-food-actions">
           <Segmented name="food-mode" aria-label={t('modeLabel')} value={mode} onChange={changeMode}
             options={[{ value: 'delivery', label: t('deliver') }, { value: 'pickup', label: t('pickup') }]} />
           <button type="button" className="btn btn-secondary" aria-pressed={sched} onClick={() => setSched(s => !s)}>{sched ? t('now') : t('schedule')}</button>
+          </div>
         </div>
+        <span className="nl-band-pic" aria-hidden><Art subject="vietnamese" tone="clay" fit="contain" /></span>
       </div>
       {sched && <p className="nl-food-panel">{t('scheduleNote')}</p>}
 
