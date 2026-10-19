@@ -56,6 +56,24 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('Product detail (redesign § 1.3 PDP)', () => {
+  it('says an age-restricted product needs a photo-ID check, with the province\'s age (demo rehearsal), en and fr', async () => {
+    api = c => (c.url.startsWith('/api/v1/public/shop/products/P1') ? { body: { ...PRODUCT, name: 'Craft lager 6-pack', age: { ageClass: 'alcohol', minimumAge: 19 } } } : undefined);
+    const { unmount } = open('/products/P1');
+    const buy = await screen.findByRole('complementary', { name: 'Buy' });
+    expect(within(buy).getByText('Photo ID needed')).toBeInTheDocument();
+    expect(within(buy).getByText(/You must be 19 or older to buy this where it’s delivered\. You verify your age once with a government photo ID at checkout/)).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
+    unmount();
+    open('/products/P1', 'fr');
+    expect(await screen.findByText(/Vous devez avoir 19 ans ou plus pour acheter ce produit/)).toBeInTheDocument();
+  });
+
+  it('says nothing about ID for a product that is not age-restricted', async () => {
+    open('/products/P1');
+    await screen.findByRole('complementary', { name: 'Buy' });
+    expect(screen.queryByText('Photo ID needed')).toBeNull();
+  });
+
   it('shows the product, the shop, options, price and the delivery cut-off', async () => {
     open('/products/P1');
     expect(await screen.findByRole('heading', { level: 1, name: 'Country sourdough' })).toBeInTheDocument();

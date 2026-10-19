@@ -149,6 +149,11 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
         <Price cents={price} size="lg" />
         <p className="product-delivery">{delivery}</p>
         {stockLine}
+        {data.age ? (
+          <Alert tone="info" title={t('ageTitle')}>
+            {data.age.minimumAge ? t('ageBody', { age: data.age.minimumAge }) : t('ageBodyNoAge')}
+          </Alert>
+        ) : null}
         <div className="product-qty">
           <span className="product-qty-label" aria-hidden>{t('qty')}</span>
           <QuantityStepper value={qty} max={Math.max(1, Math.min(99, stock))} onChange={setQty} name={data.name} removable={false} />

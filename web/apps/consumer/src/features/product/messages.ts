@@ -30,6 +30,10 @@ const PRODUCT = {
     fact_brand: 'Brand', fact_size: 'Size', fact_department: 'Department', fact_soldBy: 'Sold by', fact_returns: 'Returns', fact_payment: 'Payment',
     escrow: 'Held until you confirm delivery', about: 'About this item',
     tier_master: 'Master', tier_trusted: 'Trusted', tier_registered: 'Registered',
+    // an age-restricted product (demo rehearsal 2026-10-19: nothing said so until checkout); the age is the province's
+    ageTitle: 'Photo ID needed',
+    ageBody: 'You must be {age} or older to buy this where it’s delivered. You verify your age once with a government photo ID at checkout, and the courier checks ID at the door.',
+    ageBodyNoAge: 'You must be of legal age to buy this where it’s delivered. You verify your age once with a government photo ID at checkout, and the courier checks ID at the door.',
   },
   fr: {
     crumbs: 'Fil d’Ariane', shop: 'Boutique',
@@ -58,6 +62,9 @@ const PRODUCT = {
     fact_brand: 'Marque', fact_size: 'Format', fact_department: 'Rayon', fact_soldBy: 'Vendu par', fact_returns: 'Retours', fact_payment: 'Paiement',
     escrow: 'Retenu jusqu’à votre confirmation de livraison', about: 'À propos de cet article',
     tier_master: 'Maître', tier_trusted: 'Fiable', tier_registered: 'Inscrit',
+    ageTitle: 'Pièce d’identité avec photo requise',
+    ageBody: 'Vous devez avoir {age} ans ou plus pour acheter ce produit là où il est livré. Vous vérifiez votre âge une seule fois avec une pièce d’identité gouvernementale avec photo au paiement, et le livreur vérifie la pièce à la porte.',
+    ageBodyNoAge: 'Vous devez avoir l’âge légal pour acheter ce produit là où il est livré. Vous vérifiez votre âge une seule fois avec une pièce d’identité gouvernementale avec photo au paiement, et le livreur vérifie la pièce à la porte.',
   },
 };
 

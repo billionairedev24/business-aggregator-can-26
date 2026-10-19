@@ -41,9 +41,12 @@ export function ProductCardTile({ product, withMarket }: { product: ProductCard;
   const t = useShopT();
   const { money } = useFormatters();
   const price = money(product.priceCents);
-  const meta = product.sellers > 1
+  const shops = product.sellers > 1
     ? t('productMetaMany', { shop: product.shopName, others: product.sellers - 1 })
     : product.unit ? t('productMeta', { shop: product.shopName, unit: product.unit }) : product.shopName;
+  // an age-restricted product says so on its card, before the checkout's ID check
+  const age = product.age ? (product.age.minimumAge ? t('ageCard', { age: product.age.minimumAge }) : t('ageCardNoAge')) : null;
+  const meta = age ? <>{shops}<span className="nl-age-chip">{age}</span></> : shops;
   return (
     <ProductTile href={withMarket(`/products/${product.productId}`)} name={product.name} imageUrl={product.imageUrl}
       price={product.sellers > 1 ? t('from', { price }) : price} meta={meta} />

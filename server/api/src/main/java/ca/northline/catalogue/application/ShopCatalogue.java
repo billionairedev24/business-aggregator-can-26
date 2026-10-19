@@ -115,6 +115,7 @@ public interface ShopCatalogue {
     /**
      * @param imageId the offer's main image candidate (own or the catalogue record's) — the caller checks it's approved
      * @param handlingDays as in {@link ShopStats}, for this offer
+     * @param ageClass the category's age-restriction class code, or null
      */
     record ProductRow(
             String productId,
@@ -125,5 +126,6 @@ public interface ShopCatalogue {
             long priceCents,
             @Nullable String imageId,
             @Nullable Integer handlingDays,
-            int sellers) {}
+            int sellers,
+            @Nullable String ageClass) {}
 }

@@ -34,6 +34,8 @@ const SHOP = {
     shopDept: '{department} · {products}',
     productMeta: '{shop} · {unit}',
     productMetaMany: '{shop} + {others, plural, one {# more shop} other {# more shops}}',
+    // an age-restricted product's card (demo rehearsal 2026-10-19)
+    ageCard: '{age}+ · photo ID checked', ageCardNoAge: 'Legal age · photo ID checked',
     from: 'from {price}',
     // department
     crumbs: 'Breadcrumb',
@@ -93,6 +95,7 @@ const SHOP = {
     shopDept: '{department} · {products}',
     productMeta: '{shop} · {unit}',
     productMetaMany: '{shop} + {others, plural, one {# autre commerce} other {# autres commerces}}',
+    ageCard: '{age} ans et plus · pièce d’identité vérifiée', ageCardNoAge: 'Âge légal · pièce d’identité vérifiée',
     from: 'dès {price}',
     crumbs: 'Fil d’Ariane',
     home: 'Accueil',

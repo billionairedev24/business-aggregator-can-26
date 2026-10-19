@@ -7810,6 +7810,14 @@ components:
         members:
           type: integer
           format: int32
+    Age:
+      type: object
+      properties:
+        ageClass:
+          type: string
+        minimumAge:
+          type: integer
+          format: int32
     Attachment:
       type: object
       properties:
@@ -10034,6 +10042,8 @@ components:
     ProductCard:
       type: object
       properties:
+        age:
+          $ref: "#/components/schemas/Age"
         imageUrl:
           type: string
         merchantId:
@@ -10060,6 +10070,8 @@ components:
     ProductPage:
       type: object
       properties:
+        age:
+          $ref: "#/components/schemas/Age"
         brand:
           type: string
         bullets:

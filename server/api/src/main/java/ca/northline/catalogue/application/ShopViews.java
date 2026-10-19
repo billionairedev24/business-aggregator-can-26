@@ -75,6 +75,7 @@ public final class ShopViews {
      * @param unit the product's size / volume attribute ("900 g", "dozen"), when it has one
      * @param imageUrl an approved image, or null
      * @param sellers how many shops of the market sell it
+     * @param age set when the product is age-restricted (the card says so before checkout)
      */
     public record ProductCard(
             String productId,
@@ -86,7 +87,16 @@ public final class ShopViews {
             long priceCents,
             @Nullable String imageUrl,
             int sellers,
-            @Nullable Run run) {}
+            @Nullable Run run,
+            @Nullable Age age) {}
+
+    /**
+     * An age-restricted product (demo rehearsal 2026-10-19: the page said nothing about the ID check until checkout).
+     *
+     * @param ageClass {@code alcohol} | {@code tobacco} | {@code cannabis}
+     * @param minimumAge the age the market's province asks for the class (region data), or null when unknown there
+     */
+    public record Age(String ageClass, @Nullable Integer minimumAge) {}
 
     /**
      * A pooled run as the Shop shows it.
@@ -111,6 +121,7 @@ public final class ShopViews {
      * best first — in stock, then the earliest run it makes, then price.
      *
      * @param unit the record's size / volume attribute ("900 g")
+     * @param age set when the product is age-restricted: buying it needs a photo-ID check
      */
     public record ProductPage(
             String productId,
@@ -124,7 +135,8 @@ public final class ShopViews {
             String market,
             boolean served,
             List<Offer> offers,
-            @Nullable Direct direct) {
+            @Nullable Direct direct,
+            @Nullable Age age) {
 
         public ProductPage {
             bullets = List.copyOf(bullets);

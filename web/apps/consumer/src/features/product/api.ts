@@ -3,7 +3,7 @@ import { marketParams } from '../shop/api';
 import { z } from 'zod';
 import { http } from '@northline/client';
 import type { Locale } from '@northline/ui';
-import { Run } from '../shop/api';
+import { AgeNotice, Run } from '../shop/api';
 import { cartQuery } from '../cart/api';
 
 /**
@@ -28,6 +28,7 @@ export const ProductPage = z.object({
   productId: z.string(), name: z.string(), brand: z.string().nullish(), description: z.string().nullish(), bullets: z.array(z.string()),
   unit: z.string().nullish(), departmentSlug: z.string(), departmentName: z.string(), market: z.string(), served: z.boolean(),
   offers: z.array(Offer), direct: z.object({ etaMinutes: z.number().int(), feeCents: z.number().int() }).nullish(),
+  age: AgeNotice.nullish(),
 });
 export type ProductPage = z.infer<typeof ProductPage>;
 

@@ -93,6 +93,18 @@ describe('Shop landing (design 06 shop)', () => {
     expect(within(popular).getByRole('link', { name: 'Search everything' })).toHaveAttribute('href', '/search?scope=shop');
   });
 
+  it('marks an age-restricted product on its card before checkout (demo rehearsal), en and fr', async () => {
+    const lager = product('P3', 'Craft lager 6-pack', 1599, { shopName: 'Bow Valley Market', unit: '6 × 355 ml', age: { ageClass: 'alcohol', minimumAge: 18 } });
+    api = c => (url(c).pathname === '/api/v1/public/shop' ? { body: { ...LANDING, popular: [...LANDING.popular, lager] } } : undefined);
+    const first = open('/shop');
+    const popular = await screen.findByRole('region', { name: 'Popular tonight' });
+    expect(within(popular).getByRole('link', { name: /Craft lager 6-pack.*Bow Valley Market · 6 × 355 ml\s*18\+ · photo ID checked/ })).toBeInTheDocument();
+    expect(within(popular).getByRole('link', { name: /Country sourdough/ })).not.toHaveTextContent('photo ID');
+    first.unmount();
+    open('/shop', 'fr');
+    expect(await screen.findByRole('link', { name: /Craft lager 6-pack.*18 ans et plus · pièce d’identité vérifiée/ })).toBeInTheDocument();
+  });
+
   it('is in French', async () => {
     open('/shop', 'fr');
     expect(await screen.findByRole('heading', { level: 1, name: 'La tournée groupée de ce soir part à 18 h 00' })).toBeInTheDocument();

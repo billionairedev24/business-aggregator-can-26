@@ -163,6 +163,47 @@ class ProductPageApiTest extends IntegrationTest {
         mvc.perform(get("/api/v1/public/shop/products/{id}", Ids.next())).andExpect(status().isNotFound());
     }
 
+    /**
+     * Demo rehearsal 2026-10-19: the page of an age-restricted product said nothing about the ID check until checkout.
+     * The page and its card carry the class and the age the market's province asks (region data, V340).
+     */
+    @Test
+    void anAgeRestrictedProductSaysSo_withTheAgeOfTheMarketsProvince() throws Exception {
+        var tag = Ids.next().substring(18);
+        var cellar = shopFixtures.shop("Edmonton", "Cellar " + tag, "master");
+        var wine = shopFixtures.listing(cellar, "shop.restricted.alcohol", "Pinot noir " + tag, 2800, 6);
+        var minimum = jdbc.sql("""
+                        select a.minimum_age from region.age_rules a
+                          join region.regions m on m.kind = 'market' and m.city = 'Edmonton' and m.province = a.province
+                         where a.age_class = 'alcohol'
+                        """).query(Integer.class).single();
+        mvc.perform(get("/api/v1/public/shop/products/{id}", wine.productId()).param("market", "Edmonton"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.age.ageClass").value("alcohol"))
+                .andExpect(jsonPath("$.age.minimumAge").value(minimum));
+        // the card says so too (the shop's landing page lists it)
+        var landing = json(mvc.perform(get("/api/v1/public/shop").param("market", "Edmonton")));
+        landing.path("popular").forEach(card -> {
+            if (card.path("productId").asString().equals(wine.productId())) {
+                assertThat(card.path("age").path("ageClass").asString()).isEqualTo("alcohol");
+                assertThat(card.path("age").path("minimumAge").asInt()).isEqualTo(minimum);
+            } else if (card.path("productId").asString().contains(tag)) {
+                assertThat(card.path("age").isMissingNode() || card.path("age").isNull())
+                        .isTrue();
+            }
+        });
+        // a market the region model doesn't know: the class without an age ("legal age")
+        var elsewhere = shopFixtures.shop(MARKET, "Cellar two " + tag, "master");
+        shopFixtures.offer(elsewhere, wine.productId(), "Pinot noir", 2900, 3, "approved", "live", "same_day", 0);
+        mvc.perform(get("/api/v1/public/shop/products/{id}", wine.productId()).param("market", MARKET))
+                .andExpect(jsonPath("$.age.ageClass").value("alcohol"))
+                .andExpect(jsonPath("$.age.minimumAge").doesNotExist());
+        // and nothing on a product that isn't age-restricted
+        var loaf = shopFixtures.listing(cellar, BAKERY, "Loaf " + tag, 500, 5);
+        mvc.perform(get("/api/v1/public/shop/products/{id}", loaf.productId()).param("market", "Edmonton"))
+                .andExpect(jsonPath("$.age").doesNotExist());
+    }
+
     static JsonNode json(org.springframework.test.web.servlet.ResultActions result) throws Exception {
         return JSON.readTree(result.andReturn().getResponse().getContentAsString());
     }
