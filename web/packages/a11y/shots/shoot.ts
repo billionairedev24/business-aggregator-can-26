@@ -15,11 +15,14 @@ const OUT = new URL('../../../../ui-shots/', import.meta.url).pathname;
 const SIZES = [{ suffix: 'd', width: 1440, height: 900 }, { suffix: 'm', width: 390, height: 844 }] as const;
 
 async function photos(page: Page) {
-  // the generated photos, and the catalogue's media (`/api/v1/public/catalogue/media/{id}`, what listings point at)
+  // the generated photos, the catalogue's media (`/api/v1/public/catalogue/media/{id}`, what listings point at) and
+  // the kitchen's menu-item photos (`/api/v1/merchants/{id}/menu-items/{item}/photo`)
   const MEDIA = '/api/v1/public/catalogue/media/';
-  await page.route(url => url.pathname.startsWith(PHOTO_PREFIX) || url.pathname.startsWith(MEDIA), route => {
+  const MENU_PHOTO = /^\/api\/v1\/merchants\/[^/]+\/menu-items\/([^/]+)\/photo$/;
+  await page.route(url => url.pathname.startsWith(PHOTO_PREFIX) || url.pathname.startsWith(MEDIA) || MENU_PHOTO.test(url.pathname), route => {
     const path = new URL(route.request().url()).pathname;
-    const seed = decodeURIComponent(path.startsWith(MEDIA) ? path.slice(MEDIA.length) : path.slice(PHOTO_PREFIX.length)).replace(/\.svg$/, '');
+    const item = MENU_PHOTO.exec(path)?.[1];
+    const seed = item ? `bowl-${item}` : decodeURIComponent(path.startsWith(MEDIA) ? path.slice(MEDIA.length) : path.slice(PHOTO_PREFIX.length)).replace(/\.svg$/, '');
     return route.fulfill({ status: 200, contentType: 'image/svg+xml', body: photo(seed) });
   });
 }
@@ -35,6 +38,11 @@ async function shoot(page: Page, app: App, r: ShotRoute) {
     const url = app === 'consumer' ? `${r.path}${r.path.includes('?') ? '&' : '?'}lang=en` : r.path;
     await page.goto(url, { waitUntil: 'networkidle' }).catch(() => undefined);
     await page.locator(r.ready ?? 'h1').first().waitFor({ state: 'visible', timeout: 8_000 }).catch(() => undefined);
+    if (r.click) {
+      await page.locator(r.click).first().click({ timeout: 8_000 }).catch(() => undefined);
+      await page.waitForLoadState('networkidle').catch(() => undefined);
+      await page.waitForTimeout(500);
+    }
     // fonts and lazy images: scroll through once so loading="lazy" pictures are in the shot
     await page.evaluate(async () => {
       await document.fonts?.ready;
@@ -45,7 +53,7 @@ async function shoot(page: Page, app: App, r: ShotRoute) {
     // a page wider than the screen (a sideways scroll on a phone): name what sticks out (_overflow.txt)
     const wide = await page.evaluate(overflowing);
     if (wide.length) appendFileSync(`${OUT}${app}/_overflow.txt`, `${r.name}-${s.suffix}: ${wide.join(' · ')}\n`);
-    await page.screenshot({ path: `${OUT}${app}/${r.name}-${s.suffix}.png`, fullPage: true, animations: 'disabled' });
+    await page.screenshot({ path: `${OUT}${app}/${r.name}-${s.suffix}.png`, fullPage: !r.click, animations: 'disabled' });
   }
   // what the mock api had no answer for (the browser's requests): a page that looks empty usually needs one of these
   if (missing.length) appendFileSync(`${OUT}${app}/_missing-api.txt`, `${r.name}: ${[...new Set(missing)].join(', ')}\n`);

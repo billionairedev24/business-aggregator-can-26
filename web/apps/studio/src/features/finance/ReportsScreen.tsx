@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { BarList, EmptyState, LineChart, PageSkeleton, Segmented, useFormatters, useLocale } from '@northline/ui';
+import { BarList, EmptyState, KpiStrip, LineChart, PageSkeleton, Segmented, useFormatters, useLocale } from '@northline/ui';
 import { useMerchant, useMerchantId } from '../shell/api';
 import { downloads, reportQuery, type Period, type Report } from './api';
 import { pct, pctFromBps, signedPct } from './format';
@@ -20,7 +20,7 @@ export function ReportsScreen() {
   const report = useQuery({ ...reportQuery(merchantId, period), placeholderData: keepPreviousData });
   const year = new Date().getFullYear();
   return (
-    <>
+    <div className="fin-page">
       <div className="fin-head">
         <div>
           <span className="nl-kicker">{t('reportsKicker')}</span>
@@ -36,7 +36,7 @@ export function ReportsScreen() {
       <QueryState query={report} skeleton={<PageSkeleton kpis={5} rows={4} />}>
         {r => <ReportBody r={r} />}
       </QueryState>
-    </>
+    </div>
   );
 }
 
@@ -52,30 +52,33 @@ function ReportBody({ r }: { r: Report }) {
   if (r.count === 0) return <EmptyState>{t('reportEmpty')}</EmptyState>;
   return (
     <>
-      <div className="fin-kpis">
-        <Kpi value={f.money(r.grossCents, { whole: true })} label={r.grossChangePct == null ? t('kpiGross') : t('kpiGrossChange', { change: signedPct(r.grossChangePct, locale) })} />
-        <Kpi value={f.number(r.count)} label={t(countKey)} />
-        <Kpi value={f.money(r.averageTicketCents)} label={t('kpiAverage')} />
-        <Kpi value={r.repeatCustomerPct == null ? '—' : pct(r.repeatCustomerPct, locale)} label={t('kpiRepeat')} />
-        <Kpi value={pctFromBps(r.refundRateBps, locale)} label={r.benchmarkRefundRateBps == null ? t('kpiRefund') : t('kpiRefundBenchmark', { avg: pctFromBps(r.benchmarkRefundRateBps, locale) })} />
-      </div>
-      <div className="fin-cols">
-        <section aria-labelledby="fin-gross">
-          <h2 id="fin-gross" className="fin-h2" style={{ marginBottom: 4 }}>{t(GROSS[r.granularity])}</h2>
-          <div className="fin-muted" style={{ marginBottom: 10 }}>{t('chartLegend')}</div>
+      <KpiStrip label={t(TITLE[r.period])} items={[
+        { key: 'gross', value: f.money(r.grossCents, { whole: true }), label: t('kpiGross'), delta: r.grossChangePct == null ? undefined : t('kpiVsPrevious', { change: signedPct(r.grossChangePct, locale) }), trend: r.grossChangePct == null ? undefined : r.grossChangePct > 0 ? 'up' : r.grossChangePct < 0 ? 'down' : 'flat' },
+        { key: 'count', value: f.number(r.count), label: t(countKey) },
+        { key: 'avg', value: f.money(r.averageTicketCents), label: t('kpiAverage') },
+        { key: 'repeat', value: r.repeatCustomerPct == null ? '—' : pct(r.repeatCustomerPct, locale), label: t('kpiRepeat') },
+        { key: 'refund', value: pctFromBps(r.refundRateBps, locale), label: t('kpiRefund'), delta: r.benchmarkRefundRateBps == null ? undefined : t('kpiCategoryAvg', { avg: pctFromBps(r.benchmarkRefundRateBps, locale) }) },
+      ]} />
+      <div className="fin-report">
+        <section className="bo-card" aria-labelledby="fin-gross">
+          <div><h2 id="fin-gross" className="bo-card-title">{t(GROSS[r.granularity])}</h2>
+            <div className="bo-muted">{t('chartLegend')}</div></div>
           <LineChart title={t(GROSS[r.granularity])} current={r.series.map(p => p.currentCents / 100)} previous={r.series.map(p => p.previousCents / 100)} labels={labels} format={v => f.money(v * 100, { whole: true })} />
         </section>
-        <section>
-          <h2 className="fin-h2">{t('byListing')}</h2>
-          <BarList items={r.byListing.map(l => ({ label: l.name ?? t('everythingElse'), value: l.grossCents }))} format={c => f.money(c, { whole: true })} />
-          <h2 className="fin-h2" style={{ marginTop: 28 }}>{t('sourcesTitle')}</h2>
-          <div className="fin-sources">
-            {r.sources.map(s => <div key={s.source}><span>{t(`src_${s.source}`)}</span><strong>{pct(s.pct, locale)}</strong></div>)}
-          </div>
-        </section>
+        <div className="fin-report-side">
+          <section className="bo-card" aria-labelledby="fin-by-listing">
+            <h2 className="bo-card-title" id="fin-by-listing">{t('byListing')}</h2>
+            <BarList items={r.byListing.map(l => ({ label: l.name ?? t('everythingElse'), value: l.grossCents }))} format={c => f.money(c, { whole: true })} />
+          </section>
+          <section className="bo-card" aria-labelledby="fin-sources">
+            <h2 className="bo-card-title" id="fin-sources">{t('sourcesTitle')}</h2>
+            <div className="fin-sources">
+              {r.sources.map(s => <div key={s.source}><span>{t(`src_${s.source}`)}</span><strong>{pct(s.pct, locale)}</strong></div>)}
+            </div>
+          </section>
+        </div>
       </div>
     </>
   );
 }
 
-const Kpi = ({ value, label }: { value: string; label: string }) => <div><div className="fin-kpi-value">{value}</div><div className="fin-kpi-label">{label}</div></div>;

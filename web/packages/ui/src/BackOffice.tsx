@@ -20,10 +20,14 @@ export interface KpiItem {
   onClick?: () => void;
 }
 
-/** KPI strip (BO:266): `repeat(auto-fill, minmax(190px, 1fr))`, gap 12; bordered `md` cards — label, 3xl value, delta. */
+/**
+ * KPI strip (BO:266): bordered cards — label, 3xl value, delta. The columns follow the number of cards and the width
+ * the strip has (a container query), so a row never ends with one card alone: 6 → 6 / 3+3 / 2+2+2, 5 → 5 / 3+2 (wider) /
+ * 2+2+1 (the last full width), 4 → 4 / 2+2, 3 → 3 / 2+1. Phones get two compact columns.
+ */
 export function KpiStrip({ items, label }: { items: readonly KpiItem[]; label: string }) {
   return (
-    <ul className="bo-kpis" aria-label={label}>
+    <div className="bo-kpis-wrap"><ul className="bo-kpis" aria-label={label} data-count={Math.min(items.length, 8)}>
       {items.map(k => {
         const body = <>
           <span className="bo-kpi-label">{k.label}</span>
@@ -32,7 +36,7 @@ export function KpiStrip({ items, label }: { items: readonly KpiItem[]; label: s
         </>;
         return <li key={k.key}>{k.onClick ? <button type="button" className="bo-kpi" onClick={k.onClick}>{body}</button> : <div className="bo-kpi">{body}</div>}</li>;
       })}
-    </ul>
+    </ul></div>
   );
 }
 

@@ -12,7 +12,7 @@ import './catalogue.css';
 import { InsightCard } from '../assistant/InsightCard';
 
 interface Row {
-  id: string; name: string; sku: string; meta: string; type: string; price: number | null; net: number | null; quote: boolean; stock: number | null; sales: number;
+  id: string; name: string; image: string; sku: string; meta: string; type: string; price: number | null; net: number | null; quote: boolean; stock: number | null; sales: number;
   vet: string; vetTone: DataTableTone; live: string; liveCode: 'live' | 'hidden' | 'draft';
 }
 
@@ -41,7 +41,7 @@ export function ListingsScreen() {
       const state = vetState(l);
       const liveCode = l.vetting === 'draft' ? 'draft' : l.status;
       return {
-        id: l.id, name: l.name, sku: l.sku ?? '', meta: l.kind === 'service' ? l.meta : l.sku ?? '', net: l.kind === 'service' && l.priceCents != null && l.pricingMode !== 'quote' ? fees(l.priceCents, null, merchant.tier).net : null, type: l.kind === 'service' ? t('typeService') : t('typeProduct'),
+        id: l.id, name: l.name, image: l.imageUrl ?? '', sku: l.sku ?? '', meta: l.kind === 'service' ? l.meta : l.sku ?? '', net: l.kind === 'service' && l.priceCents != null && l.pricingMode !== 'quote' ? fees(l.priceCents, null, merchant.tier).net : null, type: l.kind === 'service' ? t('typeService') : t('typeProduct'),
         price: l.priceCents ?? null, quote: l.pricingMode === 'quote', stock: l.stock ?? null, sales: l.sales30d,
         vet: state === 'pending' ? t('vetPending', { min: minutesSince(l.submittedAt) }) : state === 'review' ? t('vetReview') : state === 'approved' ? t('vetApproved') : state === 'rejected' ? t('vetRejected') : t('vetDraft'),
         vetTone: state === 'approved' ? 'tag-accent' : state === 'draft' ? 'tag-neutral' : state === 'rejected' ? 'tag-accent-2' : 'tag-highlight',
@@ -50,7 +50,7 @@ export function ListingsScreen() {
     }), [q.data, portal, t, merchant.tier]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const columns: DataTableColumn<Row>[] = [
-    { key: 'name', label: t(`col_${portal}`), sub: portal === 'seller' ? 'sku' : 'meta', subLabel: portal === 'seller' ? t('sku') : t('colDetails'), primary: true },
+    { key: 'name', label: t(`col_${portal}`), thumb: 'image', sub: portal === 'seller' ? 'sku' : 'meta', subLabel: portal === 'seller' ? t('sku') : t('colDetails'), primary: true },
     ...(portal === 'both' ? [{ key: 'type', label: t('colType'), type: 'tag', options: [t('typeService'), t('typeProduct')], tones: { [t('typeService')]: 'tag-neutral', [t('typeProduct')]: 'tag-neutral' } } as DataTableColumn<Row>] : []),
     { key: 'price', label: t('colPrice'), type: 'money', format: (v, r) => (r.quote ? t('quote') : typeof v === 'number' ? money(v) : '—') },
     ...(portal !== 'seller' ? [{ key: 'net', label: t('colNet'), type: 'money', editable: false, format: (v: unknown) => (typeof v === 'number' ? money(v) : '—') } as DataTableColumn<Row>] : []),

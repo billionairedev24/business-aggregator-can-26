@@ -40,18 +40,20 @@ export function ComplianceView({ data }: { data: Compliance }) {
       <PageHeader kicker={t('kicker')} title={headline(data, t)} lede={kitchen ? t('ledeKitchen') : t('lede')} />
       {!owner && <p className="nl-small nl-muted nl-cmp-viewonly">{t('ownerOnly')}</p>}
       <div className="nl-cmp-grid">
-        <div>
-          <StripeSection data={data} owner={owner} />
-          <PaymentSettings data={data} />
-          <h2 className="nl-cmp-h2 nl-cmp-gap">{t('taxTitle')}</h2>
-          <TaxTable rows={data.tax} period={data.taxPeriod} takeRateBps={data.business.takeRateBps ?? null} />
+        <div className="nl-cmp-col">
+          <div className="bo-card"><StripeSection data={data} owner={owner} /></div>
+          <div className="bo-card"><PaymentSettings data={data} /></div>
         </div>
-        <div>
-          <Documents data={data} owner={owner} />
-          {data.business.type !== 'provider' ? <RestrictedLicences owner={owner} /> : null}
-          <ObligationsSection data={data} owner={owner} />
+        <div className="nl-cmp-col">
+          <div className="bo-card"><Documents data={data} owner={owner} /></div>
+          {data.business.type !== 'provider' ? <div className="bo-card"><RestrictedLicences owner={owner} /></div> : null}
+          <div className="bo-card"><ObligationsSection data={data} owner={owner} /></div>
         </div>
       </div>
+      <section className="bo-card nl-cmp-tax" aria-labelledby="cmp-tax">
+        <h2 className="nl-cmp-h2" id="cmp-tax">{t('taxTitle')}</h2>
+        <TaxTable rows={data.tax} period={data.taxPeriod} takeRateBps={data.business.takeRateBps ?? null} />
+      </section>
     </div>
   );
 }

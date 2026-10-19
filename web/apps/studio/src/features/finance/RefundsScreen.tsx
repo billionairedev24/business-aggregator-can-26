@@ -34,21 +34,19 @@ function Body({ c }: { c: CasesOverview }) {
   const tier = useMerchant()?.tier ?? 'registered';
   return (
     <>
-      <h1 className="nl-page-title" style={{ margin: '0 0 8px' }}>{t('refundsTitle', { disputes: c.openDisputes, refunds: c.refundsLast30Days })}</h1>
-      <p className="nl-lede" style={{ maxWidth: '60ch', color: 'var(--color-text-muted)', margin: '0 0 24px' }}>{t('refundsLede')}</p>
-      <div className="fin-cols">
-        <div>
-          {c.open.length ? c.open.map(x => (x.type === 'dispute' ? <DisputeCase key={x.id} d={x} /> : <RefundCase key={x.id} r={x} />))
-            : <EmptyState>{t('noOpenCases')}</EmptyState>}
-        </div>
-        <div>
-          <h2 className="fin-h2">{t('history')}</h2>
-          <History rows={c.history} />
-          <p className="fin-muted" style={{ marginTop: 14 }}>
-            {t('disputeRate', { rate: pctFromBps(c.disputeRateBps, locale), tier: t(`tier_${tier}` as FinanceKey), floor: pctFromBps(c.disputeRateFloorBps, locale) })}
-          </p>
-        </div>
+      <h1 className="nl-page-title">{t('refundsTitle', { disputes: c.openDisputes, refunds: c.refundsLast30Days })}</h1>
+      <p className="fin-lede">{t('refundsLede')}</p>
+      <div className="fin-cases">
+        {c.open.length ? c.open.map(x => <div key={x.id} className="bo-card">{x.type === 'dispute' ? <DisputeCase d={x} /> : <RefundCase r={x} />}</div>)
+          : <EmptyState>{t('noOpenCases')}</EmptyState>}
       </div>
+      <section className="bo-card fin-history" aria-labelledby="fin-cases-history">
+        <h2 className="bo-card-title" id="fin-cases-history">{t('history')}</h2>
+        <History rows={c.history} />
+        <p className="fin-muted">
+          {t('disputeRate', { rate: pctFromBps(c.disputeRateBps, locale), tier: t(`tier_${tier}` as FinanceKey), floor: pctFromBps(c.disputeRateFloorBps, locale) })}
+        </p>
+      </section>
     </>
   );
 }

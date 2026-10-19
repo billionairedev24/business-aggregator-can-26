@@ -18,9 +18,9 @@ export function QuoteRequests() {
   const [composing, setComposing] = useState<{ id: string; revising?: Quote } | null>(null);
   const open = (q.data ?? []).filter(r => !r.quote || r.quote.state === 'draft').length;
   return (
-    <section aria-labelledby="appt-requests">
-      <h2 id="appt-requests" className="nl-h2 nl-appt-h2">{t('requestsTitle', { n: open })}</h2>
-      <p className="nl-small nl-muted nl-appt-note">{t('requestsNote')}</p>
+    <section aria-labelledby="appt-requests" className="bo-card nl-appt-requests">
+      <div><h2 id="appt-requests" className="bo-card-title">{t('requestsTitle', { n: open })}</h2>
+        <p className="bo-muted nl-appt-note">{t('requestsNote')}</p></div>
       {q.isPending ? <div aria-busy="true"><Skeleton height={80} style={{ marginBottom: 12 }} /><Skeleton height={80} /></div>
         : q.isError ? <ErrorState message={t('loadRequestsError')} onRetry={() => void q.refetch()} />
         : q.data.length === 0 ? <p className="nl-muted">{t('noRequests')}</p>
@@ -45,7 +45,7 @@ function RequestCard({ request: r, composing, onCompose, onClose }: { request: Q
   const who = [r.customerName, r.reliability != null ? t('reliability', { score: r.reliability.toFixed(1) }) : null, r.area].filter(Boolean).join(' · ');
   return (
     <article className="nl-appt-request" aria-label={r.title}>
-      <div><strong>{r.title}</strong> · <span className="nl-muted">{who}</span></div>
+      <div className="nl-appt-request-head"><strong>{r.title}</strong><span className="nl-muted nl-small">{who}</span></div>
       {r.body ? <div className="nl-appt-body">“{r.body}”</div> : null}
       {composing ? (
         <QuoteComposer request={r} revising={composing.revising} onDone={onClose} onCancel={onClose} />

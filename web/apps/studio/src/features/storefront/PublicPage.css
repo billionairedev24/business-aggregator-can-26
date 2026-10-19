@@ -2,16 +2,16 @@
 .nl-pp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(min(100%, 340px), 380px); gap: var(--space-5); align-items: start; }
 @media (max-width: 1023.98px) { .nl-pp { grid-template-columns: minmax(0, 1fr); } }
 .nl-pp-main { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
-.nl-pp-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); min-width: 0; }
+.nl-pp-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-6); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); min-width: 0; }
 @media (max-width: 599.98px) { .nl-pp-card { padding: var(--space-4); } }
-.nl-pp-h2 { margin: 0; font-size: var(--text-xl); font-weight: var(--weight-bold); }
+.nl-pp-h2 { margin: 0; font-size: var(--text-xl); font-weight: var(--weight-semibold); }
 .nl-pp-about { margin: 0; font-size: var(--text-md); line-height: var(--leading-relaxed); }
 .nl-pp-parts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
 .nl-pp-part { display: flex; gap: var(--space-3); align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3); min-height: 52px; }
 .nl-pp-part + .nl-pp-part { border-top: 1px solid var(--color-border); }
 .nl-pp-part-text { display: flex; flex-direction: column; min-width: 0; font-size: var(--text-md); }
 .nl-pp-part-text span { font-size: var(--text-xs); color: var(--color-text-muted); }
-.nl-pp-preview { position: sticky; top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.nl-pp-preview { position: sticky; top: calc(var(--size-header) + var(--space-4)); display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
 @media (max-width: 1023.98px) { .nl-pp-preview { position: static; } }
 .nl-pp-caption { font-size: var(--text-2xs); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
 .nl-pp-live { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--size-touch); font-weight: var(--weight-semibold); color: var(--color-link); align-self: flex-start; }

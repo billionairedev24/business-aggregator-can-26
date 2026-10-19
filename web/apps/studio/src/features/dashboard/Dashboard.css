@@ -1,10 +1,22 @@
-/* Dashboard (redesign § 3.9; AfroTransact BO:263–280). Semantic tokens only. */
+/* Dashboard (redesign § 3.9; AfroTransact BO:263–280; light direction 2026-10-19). Semantic tokens only.
+   Order: head · KPI strip · today's work + what needs the owner · the figures over time. */
 .nl-dash { display: flex; flex-direction: column; gap: var(--space-5); }
 .nl-dash > .bo-head { margin-bottom: 0; }
+.nl-dash-now { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--space-4); align-items: stretch; }
+.nl-dash-side { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.nl-dash-side > .bo-card:first-child { flex: 1; }
+.nl-dash-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: stretch; }
+@media (max-width: 1099.98px) { .nl-dash-now, .nl-dash-charts { grid-template-columns: minmax(0, 1fr); } }
 .nl-dash-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.nl-dash-row { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-2) 0; font-size: var(--text-md); }
+.nl-dash-row { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; padding: var(--space-3) 0; font-size: var(--text-md); }
 .nl-dash-row + .nl-dash-row { border-top: 1px solid var(--color-border); }
-.nl-dash-time { width: 64px; flex: none; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
-.nl-dash-what { flex: 1; min-width: 0; overflow-wrap: break-word; }
-.nl-dash-who { display: block; font-size: var(--text-sm); color: var(--color-text-muted); }
+.nl-dash-time { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nl-dash-what { min-width: 0; overflow-wrap: break-word; }
+.nl-dash-who { display: block; margin-top: 2px; font-size: var(--text-sm); color: var(--color-text-muted); }
 .nl-dash-tag { align-self: center; }
+@media (max-width: 479.98px) {
+  .nl-dash-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .nl-dash-time { grid-column: 1 / -1; font-size: var(--text-sm); color: var(--color-text-muted); }
+}
+.nl-dash-link { text-decoration: none; display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--size-touch); padding: 0 var(--space-2); margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0; border: 0; border-radius: var(--radius-sm); background: none; font: inherit; font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-link); cursor: pointer; }
+.nl-dash-link:hover { background: var(--color-surface-hover); text-decoration: underline; }

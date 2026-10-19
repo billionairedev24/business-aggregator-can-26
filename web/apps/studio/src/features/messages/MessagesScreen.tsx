@@ -36,7 +36,7 @@ export function MessagesScreen({ threadId, onSelect }: { threadId?: string; onSe
 
   return (
     <>
-      <span className="nl-kicker">{t('kicker')}</span>
+      <span className="nl-kicker nl-msg-kicker">{t('kicker')}</span>
       {!selectedId ? <h1 className="nl-sr-only">{t('kicker')}</h1> : null}
       {list.isPending ? <ListSkeleton /> : list.isError ? (
         <ErrorState message={t('loadError')} onRetry={() => void list.refetch()} />
@@ -47,11 +47,14 @@ export function MessagesScreen({ threadId, onSelect }: { threadId?: string; onSe
           <nav className="nl-msg-list" aria-label={t('conversations')}>
             {threads.map(th => (
               <button key={th.id} type="button" className="nl-msg-item" aria-current={th.id === selectedId ? 'true' : undefined} data-unread={th.unread || undefined} onClick={() => onSelect(th.id)}>
-                <span className="nl-msg-item-head">
-                  <strong>{th.kind === 'support' && th.counterpartName === SUPPORT_NAME ? t('northline') : th.counterpartName}{th.unread ? <span className="nl-msg-dot" aria-label={t('unread')} role="img" /> : null}</strong>
-                  <span className="nl-msg-when">{ago(th.lastMessageAt)}</span>
+                <span className="nl-msg-avatar" data-support={th.kind === 'support' || undefined} aria-hidden>{initials(th.kind === 'support' && th.counterpartName === SUPPORT_NAME ? t('northline') : th.counterpartName)}</span>
+                <span className="nl-msg-item-text">
+                  <span className="nl-msg-item-head">
+                    <strong>{th.kind === 'support' && th.counterpartName === SUPPORT_NAME ? t('northline') : th.counterpartName}{th.unread ? <span className="nl-msg-dot" aria-label={t('unread')} role="img" /> : null}</strong>
+                    <span className="nl-msg-when">{ago(th.lastMessageAt)}</span>
+                  </span>
+                  <span className="nl-msg-last">{th.lastMessage === '' ? t('attachmentOnly') : th.lastMessage ?? ''}</span>
                 </span>
-                <span className="nl-msg-last">{th.lastMessage === '' ? t('attachmentOnly') : th.lastMessage ?? ''}</span>
               </button>
             ))}
           </nav>
@@ -84,14 +87,16 @@ function ThreadPane({ merchantId, summary, canSend, role }: { merchantId: string
 
   return (
     <section className="nl-msg-thread" aria-labelledby="nl-msg-title">
-      <h1 id="nl-msg-title" className="nl-msg-title">{title}</h1>
-      <div className="nl-msg-note">{t('masked')}</div>
-      {summary.refCode && summary.refType ? (
-        <div className="nl-msg-ref">
-          <span className="tag tag-neutral">{t(`ref_${summary.refType}` as 'ref_booking', { code: summary.refCode })}</span>
-          {refHref ? <a href={refHref} onClick={e => { e.preventDefault(); void navigate({ to: refHref }); }}>{t(`open_${summary.refType}` as 'open_booking')} →</a> : null}
-        </div>
-      ) : null}
+      <div className="nl-msg-thread-head">
+        <h1 id="nl-msg-title" className="nl-msg-title">{title}</h1>
+        <div className="nl-msg-note">{t('masked')}</div>
+        {summary.refCode && summary.refType ? (
+          <div className="nl-msg-ref">
+            <span className="tag tag-neutral">{t(`ref_${summary.refType}` as 'ref_booking', { code: summary.refCode })}</span>
+            {refHref ? <a href={refHref} onClick={e => { e.preventDefault(); void navigate({ to: refHref }); }}>{t(`open_${summary.refType}` as 'open_booking')} →</a> : null}
+          </div>
+        ) : null}
+      </div>
       <div className="nl-msg-body">
         {q.isPending ? (
           <div aria-busy="true"><span className="nl-sr-only">{t('loading')}</span><Skeleton height={48} width="60%" /><Skeleton height={48} width="50%" style={{ marginTop: 12, marginLeft: 'auto' }} /></div>
@@ -127,6 +132,9 @@ function ThreadPane({ merchantId, summary, canSend, role }: { merchantId: string
     </section>
   );
 }
+
+/** "Amara Osei" → "AO" (the list's round avatar; decorative). */
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w.charAt(0).toUpperCase()).join('');
 
 function ListSkeleton() {
   return (

@@ -203,7 +203,9 @@ make ui-shots UI_SHOTS_SKIP_BUILD=1 UI_SHOTS_GREP=home   # reuse the last build,
 ```
 
 The pictures land in `ui-shots/<app>/<route>-d.png` (desktop) and `<route>-m.png` (phone) at the repository root
-(git-ignored). The route list is `web/packages/a11y/shots/routes.ts` — a new route goes there too.
+(git-ignored). The route list is `web/packages/a11y/shots/routes.ts` — a new route goes there too. A route with `click`
+(a Playwright selector) presses it once the page is ready and photographs the window, for a state behind a click: a
+detail sheet, an editor step.
 
 No backend is needed: the apps run as built (`vite preview` for the Studio and the console, the consumer's own Node
 server) on ports 4641–4644, answered by the accessibility sweep's mock api (`web/packages/a11y/fixtures`, recorded from

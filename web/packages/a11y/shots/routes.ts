@@ -1,10 +1,11 @@
 /**
  * Every route of the three web apps that `make ui-shots` photographs (docs/LOCAL_DEVELOPMENT.md § "Look at the UI").
  * `name` is the file name under ui-shots/<app>/ (`-d` desktop 1440×900, `-m` phone 390×844); `signedIn` picks the
- * mock session; `ready` is what to wait for before the shot (default: the page's h1, or 8 s without one).
+ * mock session; `ready` is what to wait for before the shot (default: the page's h1, or 8 s without one); `click` is
+ * pressed once the page is ready (a Playwright selector: open a detail sheet or an editor step), then the shot is taken (the window only: a sheet is fixed to it).
  * A new route goes here too: shots.spec.ts photographs whatever this lists.
  */
-export interface ShotRoute { name: string; path: string; signedIn?: boolean; ready?: string }
+export interface ShotRoute { name: string; path: string; signedIn?: boolean; ready?: string; click?: string }
 
 const PROVIDER = '01J9ZD3V00000000000000PWM1', SELLER = '01J9ZD3V00000000000000PWP1', KITCHEN = '01J9ZD3V00000000000000PDB1';
 
@@ -51,19 +52,25 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'sign-in', path: '/sign-in', signedIn: false },
     { name: 'register', path: '/register', signedIn: false },
     { name: 'onboarding', path: '/onboarding', signedIn: true },
-    { name: 'onboarding-business', path: '/onboarding/business?m=01J9ZD3V00000000000000ONB1&type=provider', signedIn: true },
+    { name: 'onboarding-business', path: '/onboarding/business?m=01J9ZD3V00000000000000NB01&type=provider', signedIn: true },
+    { name: 'onboarding-verification', path: '/onboarding/verification?m=01J9ZD3V00000000000000GATE&type=provider', signedIn: true },
+    { name: 'onboarding-gate', path: '/onboarding/review?m=01J9ZD3V00000000000000GATE&type=provider', signedIn: true },
     { name: 'identity-done', path: '/identity/done', signedIn: true },
     { name: 'invite', path: '/invite/tok', signedIn: true },
     { name: 'dashboard', path: `/b/${PROVIDER}` },
     { name: 'dashboard-seller', path: `/b/${SELLER}` },
     { name: 'appointments', path: `/b/${PROVIDER}/appointments` },
+    { name: 'appointments-job', path: `/b/${PROVIDER}/appointments`, click: '.nl-appt-job[aria-pressed]' },
     { name: 'availability', path: `/b/${PROVIDER}/availability` },
     { name: 'listings', path: `/b/${SELLER}/listings` },
     { name: 'listings-services', path: `/b/${PROVIDER}/listings` },
     { name: 'listing-new', path: `/b/${SELLER}/listings/new` },
     { name: 'listing-editor', path: `/b/${SELLER}/listings/p1` },
+    { name: 'listing-editor-images', path: `/b/${SELLER}/listings/p1`, click: '#tab-images' },
+    { name: 'service-new', path: `/b/${PROVIDER}/listings/new` },
     { name: 'listings-bulk', path: `/b/${SELLER}/listings/bulk` },
     { name: 'orders', path: `/b/${SELLER}/orders` },
+    { name: 'orders-detail', path: `/b/${SELLER}/orders`, click: '.is-clickable' },
     { name: 'messages', path: `/b/${PROVIDER}/messages` },
     { name: 'page', path: `/b/${PROVIDER}/page` },
     { name: 'earnings', path: `/b/${PROVIDER}/earnings` },
@@ -73,11 +80,14 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'reviews', path: `/b/${PROVIDER}/reviews` },
     { name: 'compliance', path: `/b/${PROVIDER}/compliance` },
     { name: 'settings', path: `/b/${PROVIDER}/settings` },
+    { name: 'settings-team', path: `/b/${PROVIDER}/settings?tab=team` },
+    { name: 'settings-security', path: `/b/${PROVIDER}/settings?tab=security` },
     { name: 'help', path: `/b/${PROVIDER}/help` },
     { name: 'kitchen-live', path: `/b/${KITCHEN}/kitchen/live` },
     { name: 'kitchen-menu', path: `/b/${KITCHEN}/kitchen/menu` },
     { name: 'kitchen-combos', path: `/b/${KITCHEN}/kitchen/combos` },
     { name: 'kitchen-hours', path: `/b/${KITCHEN}/kitchen/hours` },
+    { name: 'not-found', path: '/no-such-page' },
   ],
   console: [
     { name: 'sign-in', path: '/sign-in', signedIn: false },

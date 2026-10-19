@@ -40,6 +40,8 @@ export const ListingItem = z.object({
   vetting: Vetting, status: ListingStatus, vettingFlags: z.array(z.string()).default([]), revetReasons: z.array(MaterialField).default([]),
   submittedAt: z.string().nullish(), categoryId: z.string().nullish(), pricingMode: PricingMode.nullish(), updatedAt: z.string(),
   bundle: z.boolean().default(false),
+  /** The listing's first photo, for the table's thumbnail (not sent by the api yet: the thumbnail shows the initial). */
+  imageUrl: z.string().nullish(),
 });
 export type ListingItem = z.infer<typeof ListingItem>;
 

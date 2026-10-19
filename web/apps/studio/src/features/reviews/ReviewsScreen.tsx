@@ -41,7 +41,7 @@ export function ReviewsScreen() {
       <PageHeader kicker={t('kicker')} title={title} />
       {s.count === 0 ? <EmptyState>{t('empty')}</EmptyState> : (
         <div className="nl-rev-grid">
-          <div>
+          <div className="bo-card nl-rev-summary">
             <Distribution summary={s} />
             <p className="nl-rev-note">{t('twoWay')}</p>
             {!canRespond ? <p className="nl-rev-note">{t('viewOnly', { role: shellT(`role_${role}` as 'role_owner') })}</p> : null}
@@ -91,7 +91,8 @@ function ReviewItem({ merchantId, review, canRespond }: { merchantId: string; re
   return (
     <li className="nl-rev-item">
       <div className="nl-rev-head">
-        <span><Stars rating={review.rating} /> · {who} · {review.jobLabel ? t('verified', { job: review.jobLabel }) : t('verifiedNoJob')}</span>
+        <span className="nl-rev-avatar" aria-hidden>{who.trim().charAt(0).toUpperCase()}</span>
+        <span className="nl-rev-who"><strong>{who}</strong><span className="nl-rev-meta"><Stars rating={review.rating} /> · {review.jobLabel ? t('verified', { job: review.jobLabel }) : t('verifiedNoJob')}</span></span>
         <span className="nl-rev-when"><time dateTime={review.createdAt}>{ago(review.createdAt)}</time></span>
       </div>
       {review.text ? <p className="nl-rev-text">{review.text}</p> : null}

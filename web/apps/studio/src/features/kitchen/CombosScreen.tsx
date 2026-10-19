@@ -67,7 +67,8 @@ export function CombosScreen() {
           <div className="nl-k-note"><strong>{t('rulesBox')}</strong> {t('rulesText')}</div>
         </section>
         <section aria-labelledby="k-combos">
-          <div className="nl-k-subhead"><h2 id="k-combos">{t('combosTitle2')}</h2>{canEdit ? <button type="button" className="btn btn-secondary nl-k-small-btn" onClick={() => setComboDialog({})}>{t('newCombo')}</button> : null}</div>
+          {/* one "New combo": the table's own create button */}
+          <div className="nl-k-subhead"><h2 id="k-combos">{t('combosTitle2')}</h2></div>
           <DataTable<ComboRow>
             entity={t('combo')} plural={t('combosPlural')} roleName={t(`role_${role}` as 'role_owner')}
             columns={columns} rows={rows} rowTones={r => ({ state: TONE[r.status] })}

@@ -23,8 +23,8 @@ const roots = ['packages/ui/src', 'apps/consumer/src/features/shell',
   'apps/consumer/src/features/art', 'apps/consumer/src/features/pages',
   ...['shop', 'quotes', 'food', 'help', 'sell', 'auth', 'promotions'].map(f => `apps/consumer/src/features/${f}`),
   'apps/studio/src/features/shell', 'apps/console/src/features/shell', 'apps/studio/src/studio.css', 'apps/console/src/console.css',
-  // redesign phase 2 (the merchant demo path): the Studio screens rebuilt on the AT layouts
-  ...['auth', 'onboarding', 'dashboard', 'catalogue', 'orders', 'appointments', 'availability', 'finance', 'storefront'].map(f => `apps/studio/src/features/${f}`),
+  // every Studio screen (the Studio pages redesign, 2026-10-19)
+  'apps/studio/src/features',
   // redesign phase 3 (the console basics): overview, applications (verification + vetting), sellers, orders, disputes
   ...['overview', 'verify', 'vetting', 'sellers', 'orders', 'disputes'].map(f => `apps/console/src/features/${f}`)];
 const LEGACY = /var\(\s*--(?:color-(?:accent(?:-2)?(?:-\d{3})?|on-accent|highlight(?:-\d{3})?|on-highlight|process-yellow|bg|surface-2|divider|neutral-\d{3}|ink)|font-body|font-heading-weight)\s*[,)]/g;
