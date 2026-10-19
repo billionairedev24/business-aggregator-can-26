@@ -31,6 +31,11 @@ export default tseslint.config(
     rules: { 'no-restricted-syntax': 'off' },
   },
   {
+    // a stock photo's loading colour is data of the photo library (web/packages/media/photos.json), not the brand's
+    files: ['packages/mobile-kit/src/photos/library.generated.ts'],
+    rules: { 'no-restricted-syntax': 'off' },
+  },
+  {
     files: ['**/jest.setup.ts'],
     rules: { '@typescript-eslint/consistent-type-imports': 'off' },
   },

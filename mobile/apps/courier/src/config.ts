@@ -10,6 +10,8 @@ export const config = {
   clientId: 'courier-app',
   redirectUri: 'ca.northline.courier:/oauth2redirect',
   scopes: ['openid', 'courier', 'deliveries'],
+  /** The stock photos' variants (docs/runbooks/photos.md): a CDN or the consumer web's /photos/. */
+  photosBaseUrl: (process.env.EXPO_PUBLIC_PHOTOS_BASE_URL ?? 'http://localhost:3000/photos').replace(/\/+$/, ''),
 } as const;
 
 /** Location pings while a run is open: every 4 s (S-88: customers see moves ≤ 5 s apart; the server allows one per 2 s). */

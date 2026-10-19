@@ -6,3 +6,4 @@
 packages/auth-kit/src/marks.tsx  # Google "G" logo: Google's brand colours, must not be themed (S-62: shared by the Studio and the consumer site)
 apps/studio/src/features/storefront/sections.ts  # merchant brand-colour swatches are merchant data, not theme tokens (DECISIONS.md)
 packages/ui/src/BrandMark.stories.tsx  # sample merchant brand colours (merchant data from the page builder, not theme tokens — S-53)
+packages/ui/src/Photo.fixtures.ts  # a stock photo's loading colour is data of the photo library (photos.json), not a theme token

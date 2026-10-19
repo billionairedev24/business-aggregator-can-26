@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { Art, Icon, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
+import { Icon, colors, fonts, radius, semantic, space, Scene, slugSlot } from '@northline/mobile-kit';
 
 import { nameIn, type ProviderCard } from '../api/services';
 import { useI18n } from '../i18n';
@@ -73,7 +73,7 @@ export function Providers({ slug }: { slug: string }) {
       testID="providers"
       refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} accessibilityLabel={t('common.retry')} />}
     >
-      <Art subject={slug} fit="contain" style={styles.cover} />
+      <Scene slot={[slugSlot('service', slug), 'banner/services']} subject={slug} fit="contain" style={styles.cover} />
       <Strip testID="provider-filters">
         <View style={styles.chips} accessibilityLabel={t('services.providers.filters')}>
           {FILTERS.map((f) => (

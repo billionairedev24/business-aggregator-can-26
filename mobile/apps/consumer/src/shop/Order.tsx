@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { Art, Icon, colors, fonts, radius, semantic, shadow, space } from '@northline/mobile-kit';
+import { Icon, colors, fonts, radius, semantic, shadow, space, Scene } from '@northline/mobile-kit';
 
 import { CourierTip } from '../aftercare/CourierTip';
 import { ReviewPanel } from '../aftercare/Review';
@@ -115,7 +115,7 @@ export function Confirmed() {
     >
       {(o) => (
         <View style={styles.gap}>
-          <Art subject="courier" draw={{ main: 'ShoppingBag', side: 'Truck' }} fit="contain" style={styles.confirmArt} />
+          <Scene slot="banner/order-complete" subject="courier" draw={{ main: 'ShoppingBag', side: 'Truck' }} fit="contain" style={styles.confirmArt} />
           <View style={styles.placed} accessibilityRole="alert">
             <Icon name="check-circle" filled size={22} color={semantic.success} />
             <Text style={[styles.body, styles.strong, styles.flex]}>{t('rd.order.placed')}</Text>
@@ -312,7 +312,7 @@ function Proof({ orderId, kind, caption }: { orderId: string; kind: string | nul
   }
   return (
     <View style={styles.proof} testID="proof-placeholder">
-      <Art subject="courier" draw={{ main: 'Package', side: kind === 'pin' ? 'Key' : 'ShieldCheck' }} fit="contain" style={styles.proofArt} />
+      <Scene slot="empty/proof-photo" subject="courier" draw={{ main: 'Package', side: kind === 'pin' ? 'Key' : 'ShieldCheck' }} fit="contain" style={styles.proofArt} />
       <Text style={styles.proofText}>{caption}</Text>
     </View>
   );

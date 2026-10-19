@@ -7,7 +7,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { LOCALES, colors, fontAssets, type Locale } from '@northline/mobile-kit';
+import { LOCALES, colors, fontAssets, type Locale, configurePhotoBase } from '@northline/mobile-kit';
 
 import { AuthProvider, useAuth } from '../src/auth';
 import { Loading } from '../src/components/ui';
@@ -16,6 +16,9 @@ import { defineLocationTask } from '../src/location/tracker';
 import { setUpPush } from '../src/push/install';
 import { config } from '../src/config';
 import { services } from '../src/services';
+
+// real photos: the stock photos' variants come from the consumer web's /photos/ or a CDN (docs/runbooks/photos.md)
+configurePhotoBase(config.photosBaseUrl);
 
 // The background location task must exist before anything else runs (also when the OS starts the app for it).
 defineLocationTask();

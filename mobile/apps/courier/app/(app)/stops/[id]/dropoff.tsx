@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Image, Linking, StyleSheet, TextInput, View } from 'react-native';
 
-import { Art, MIN_TARGET, colors, fonts, radius, randomId, space, semantic } from '@northline/mobile-kit';
+import { MIN_TARGET, colors, fonts, radius, randomId, space, semantic, Scene } from '@northline/mobile-kit';
 
 import { REFUSE_REASONS, type IdCheckAnswer, type ProofKind, type RefuseReason } from '../../../../src/api/courier';
 import { SignaturePad } from '../../../../src/components/SignaturePad';
@@ -193,7 +193,7 @@ export default function DropoffScreen() {
             </Banner>
           ) : (
             <>
-              <Art subject="photo" draw={{ main: 'Camera', side: 'House' }} tone="sage" fit="contain" style={styles.cameraArt} />
+              <Scene slot="empty/proof-photo" subject="photo" draw={{ main: 'Camera', side: 'House' }} tone="sage" fit="contain" style={styles.cameraArt} />
               <Button tone="secondary" label={t('dropoff.allowCamera')} onPress={() => void requestPermission()} testID="allow-camera" />
             </>
           )}

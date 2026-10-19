@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Switch, View, StyleSheet } from 'react-native';
 
-import { Art, colors, radius, space } from '@northline/mobile-kit';
+import { colors, radius, space, Scene } from '@northline/mobile-kit';
 
 import { Banner, Body, Button, Card, Heading, Screen } from '../../../../src/components/ui';
 import { useRun } from '../../../../src/hooks';
@@ -49,7 +49,7 @@ export default function PickupScreen() {
       onBack={back}
       footer={<Button label={t('pickup.confirm')} large icon="package" disabled={!sealed} onPress={() => void confirm()} testID="confirm-pickup" />}
     >
-      <Art subject={stopName(stop)} fit="contain" style={styles.art} />
+      <Scene slot="hero/courier" subject={stopName(stop)} fit="contain" style={styles.art} />
       <Heading>{stopName(stop)}</Heading>
       {stop.orderRef ? <Body muted>{t('stop.order', { ref: stop.orderRef })}</Body> : null}
       {!stop.packed ? <Banner tone="warn">{t('pickup.waitPacked')}</Banner> : null}

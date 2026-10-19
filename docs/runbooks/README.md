@@ -295,7 +295,9 @@ the site. Both optional, set by the chart. S-61: `NL_STUDIO_ORIGIN` (= `urls.stu
 `http://localhost:3100`) — `/sell` links into the Studio's onboarding there (signed in: the Studio BFF's
 `/bff/login?next=/onboarding?type=…` hand-off; a guest: `/onboarding?type=…`, which signs in on the Studio). S-145:
 `NL_SUPPORT_EMAIL` (optional, no default) — the support mailbox the Help page (`/help`, in every page's footer) names;
-unset, Help sends people to Help & cases only.
+unset, Help sends people to Help & cases only. Real photos (2026-10-19): `NL_PHOTOS_BASE_URL` (optional, no default)
+— where the stock photos' variants are served (a CDN); unset, the site's own `/photos/`, built into the image by
+`make photos` (photos.md).
 
 ## Consumer BFF (S-45)
 

@@ -6,18 +6,21 @@ MEDIA := $(ROOT)/web/packages/media
 ##@ Photos (web/packages/media; docs/runbooks/photos.md)
 
 .PHONY: photos
-photos: $(WEB_INSTALLED) ## Build the photo variants (AVIF/WebP/JPEG crops, 320–1440 px) into the consumer site's /photos/ and fill photos.json's size, hash and colour
+photos: $(WEB_INSTALLED) ## Build the photo variants (AVIF/WebP/JPEG crops, 320–1440 px) into the consumer site's /photos/, fill photos.json's size, hash and colour, refresh the apps' list
 	$(PNPM) --filter @northline/media slots
 	$(PNPM) --filter @northline/media build
+	node $(ROOT)/mobile/packages/mobile-kit/scripts/gen-photos.mjs
 
 .PHONY: photos-slots
 photos-slots: ## Regenerate the slot list (catalogue seed, cuisines, demo data) and print every slot without a photo
 	node $(MEDIA)/scripts/slots.mjs --missing
+	@node $(ROOT)/mobile/packages/mobile-kit/scripts/gen-photos.mjs
 
 .PHONY: photos-check
 photos-check: ## Fail when the slot list or photos.json is out of date, or an entry lacks its licence, source or alt text
 	node $(MEDIA)/scripts/slots.mjs --check
 	node $(MEDIA)/scripts/build.mjs --check
+	node $(ROOT)/mobile/packages/mobile-kit/scripts/gen-photos.mjs --check
 
 .PHONY: photos-fetch
 photos-fetch: ## Openverse candidates (CC0/PDM; COMMERCIAL=1 adds CC BY/BY-SA) for every slot without a photo — Node 22 only; resumable
