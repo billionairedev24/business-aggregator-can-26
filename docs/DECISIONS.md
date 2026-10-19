@@ -8780,3 +8780,65 @@ sheet); UI only — no backend, schema or api change.
 - **Tokens.** `pnpm lint:tokens` now covers the console's overview, verify, vetting, sellers, orders and disputes
   features (the Studio's `components` root went with the move to `@northline/ui`).
 - **Schema additions:** none. No backend change.
+
+## 2026-10-19 — Demo rehearsal fixes (fix/demo-path-bugs)
+
+Thirteen bugs from the demo rehearsal, each with a test. Decisions the spec didn't make:
+
+- **Times of a booking** read in the business's zone: the calendar's `timeZone` (already served, now read by the
+  web) is kept with the chosen slot in the wizard's draft; the payment step, the summary and the confirmation use it,
+  the confirmation the booking's own `timeZone`, else the provider's market zone (region model). Never the browser's,
+  never the platform zone by accident. `useFormatters().date(v, style, zone)` takes the zone.
+- **Weeks start where the locale starts them** (`firstDayOfWeek`, CLDR `weekInfo`: Sunday for en-CA and fr-CA, with
+  that as the fallback for engines without it). The booking schedule's current week starts today (the api never
+  serves past days) and its title names the days it shows; the Studio calendar's week holds today, and an empty Sunday
+  is shown when it is today. Shared helpers in `@northline/ui` (`weekStartOf`, `addDays`, `isoWeekday`, `formatDay`,
+  `zonedInstant`, `formatZonedHours`); the Studio's `lib/time` re-exports them.
+- **One full stop after a value that ends with one** ("p.m.") is a rule of the message formatter, not a copy edit:
+  every message with `{time}.` / `{when}.` is fixed at once (booking, orders, tracking, aftercare, auth-kit…).
+- **What happens next** depends on who travels: appointments (the customer goes to the provider) say the address,
+  "running late?" and "after your visit"; every other type keeps the provider-comes-to-you lines (photo and vehicle,
+  live ETA, access code). "Extra parts" became "anything beyond what you booked".
+- **Sticky columns** sit under the header as drawn: `useStickyOffset` publishes `--nl-header-h` (the header's
+  measured height; it wraps to more rows on narrow screens), with the new scale token `--size-header` (104px) until it
+  is measured. Checkout, cart, PDP, services and the booking aside use it instead of a fixed 104px.
+- **Checkout after Place:** the quote query is switched off once the order is placed, the checkout queries are
+  cancelled, the page leaves, and only then the cart is refetched and the checkout cache dropped.
+- **Region-neutral copy:** support and maintenance hours are kept in the platform zone (07:00–23:00 and Sundays
+  02:00–04:00, as the server's SupportSla) and shown with that zone's short name ("7:00 a.m. – 11:00 p.m. MDT");
+  the privacy law in the sign-in panel is the visitor's own province's (saved or detected place), never the default
+  province's or the fallback market's — unknown reads "PIPEDA and provincial privacy law"; "ca-central-1" became
+  "servers in Canada"; phone placeholders are "+1 …". One province's bodies are named by what they are: "food permit",
+  "health authority", "liquor licence", "health inspection", "responsible-service training", "trade and safety
+  regulators". The kitchen-visit slot list (onboarding) used a fixed UTC offset; it now takes 10:00 and 14:00 in the
+  business's zone. The region lint (`regionLiterals.test.ts`) now also fails on AHS, AGLC, AMVIC, RECA, ProServe, MT /
+  MDT / MST, "(403)" and "ca-central-1", with three allowed places (registry codes the server sends, compared in code;
+  the French map of the taxonomy seed's notes).
+- **Age-restricted products** say so before checkout: `ProductPage.age` and `ProductCard.age` (`ageClass`,
+  `minimumAge` of the market's province from `region.age_rules`; null where the market isn't in the region model) —
+  a "Photo ID needed" notice in the PDP's buy box and "`{age}+` · photo ID checked" on the card.
+- **Studio:** "verified reviews / orders" are ICU plurals (the count passed as a number). The "Second factor"
+  onboarding row follows the owners' accounts (`SecondFactorCheck`): verified when an owner has a passkey or an
+  authenticator app (`identity.users.mfa_primary` passkey | totp; a text-message code doesn't count), checked when the
+  onboarding is read and before submitting. `ViewOnboarding.view` is now a writing transaction for that.
+- **Footer:** "Run a kitchen" shows only with `VITE_NL_FULL_NAV` (as Food does). The /sell page keeps its kitchen card.
+- **Produce "Grown in":** V371 replaces the option list with `["@provinces", "Canada", "Imported"]`; the catalogue
+  expands `@provinces` to every province and territory of the region model, by English name (stored values are
+  English; "Alberta" on an existing listing is still valid).
+- **Availability across businesses:** `BookingCalendar.elsewhere(member, merchant, from, to)` returns the times only
+  of the person's bookings at other businesses (any state but cancelled, as the booking's own `slot_taken` check),
+  and the member's day (`DaySchedule`) counts them as busy — the public slots, holds, "next available" and the Studio
+  preview agree with the confirmation. Nothing about the other business, job or customer leaves the booking module.
+
+Schema additions: V371 (data only: one attribute template's options). API additions: `age` on the Shop's product
+page and product cards; the booking calendar's `timeZone` is now read by the web (it was served already).
+
+Not done / left as they are:
+- `db/seed/categories.json` (taxonomy group notes and regulators: AMVIC, AHS, AGLC, RECA, "AB Tobacco Act",
+  "AB Environment pesticide licence") is a seed file that can't be edited; making it region-neutral needs a migration
+  of `catalogue.categories.regulated_registry` / notes or per-province registries in the region model. The Studio's
+  French map of those notes (CategoryPicker) and two comparisons of registry codes (`AMVIC`, `AGLC`) follow the data.
+- Server-side codes keep their names (`CheckKind.AHS_PERMIT`, checklist keys `ahs_permit`, `aglc`): they are API values.
+- Mobile (redesign in progress elsewhere): on main only `mobile/apps/consumer/src/fixtures/account.ts` (a test fixture
+  with "PIPA") and the store-text lint's own list name a place; nothing to change there.
+- The /sell page still offers "Run a kitchen" with Food hidden (only the footer was asked for).
