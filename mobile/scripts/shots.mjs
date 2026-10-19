@@ -137,7 +137,7 @@ async function consumer() {
     await go('/sign-in');
     await tap('browser-sign-in');
     await settle(1200);
-    if (page.url().endsWith('/location')) {
+    if (page.url().includes('/location')) {
       await vis('field-street').fill('1204 Exa');
       await page.getByRole('button', { name: '1204 Example Ave, Sampleville, XA' }).filter({ visible: true }).first().click();
       await settle();

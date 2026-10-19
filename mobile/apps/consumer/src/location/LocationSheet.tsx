@@ -98,7 +98,8 @@ export function LocationSheet() {
   const live = useMemo(() => provinces.flatMap((p) => p.markets.filter((m) => m.stage === 'live').map((m) => ({ m, p }))), [provinces]);
 
   const close = () => {
-    const to = typeof next === 'string' && next.startsWith('/') && !next.startsWith('//') ? next : null;
+    // the sign-up / sign-in address step goes on to Home (what is under the sheet there is the sign-in flow)
+    const to = typeof next === 'string' && next.startsWith('/') && !next.startsWith('//') ? next : askAddress ? '/home' : null;
     if (to) router.replace(to as never);
     else if (router.canGoBack()) router.back();
     else router.replace('/home');

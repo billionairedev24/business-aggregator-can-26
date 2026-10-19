@@ -239,6 +239,13 @@ describe('A5 the location sheet (the web\'s location dialog)', () => {
     });
   });
 
+  it('as the sign-up’s address step (A5): asks design 01’s question and goes on to Home once a place is chosen', async () => {
+    const { view } = await start({ signedIn: true, url: '/location?step=address' });
+    expect(await screen.findByRole('header', { name: 'Where should we bring things?' })).toBeTruthy();
+    fireEvent.press(await screen.findByRole('button', { name: 'Sampleville, Sample Province' }));
+    await waitFor(() => expect(view.getPathname()).toBe('/home'));
+  });
+
   it('chooses a live market in one tap', async () => {
     const { store } = await start({ welcomed: true, url: '/location' });
     fireEvent.press(await screen.findByRole('button', { name: 'Exampleton, Sample Province' }));
