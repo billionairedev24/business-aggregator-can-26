@@ -319,6 +319,7 @@ cmd_status() {
   row "OTLP (Collector)" "http://localhost:$OTEL_HTTP_PORT" "tcp:localhost:$OTEL_HTTP_PORT" "gRPC :$OTEL_GRPC_PORT"
   say ""
   say "${c_dim}make status · make logs SERVICES=api · make obs-fire-test-alert · make down (stops apps and stand-ins; never your own services)${c_off}"
+  say "${c_dim}The mobile apps on your phone: make mobile-dev APP=consumer (or APP=courier) — docs/runbooks/mobile-local.md${c_off}"
 }
 
 cmd="${1:-status}"

@@ -3,7 +3,9 @@ import { Pressable, Text } from 'react-native';
 
 import theme from '@northline/tokens/theme.json';
 import { createI18n, formatMessage, resolveLocale } from '../src/i18n';
-import { colors, fonts, radius, semantic, space, text } from '../src/theme';
+import { MIN_TARGET, brand, colors, fontAssets, fonts, radius, semantic, space, text } from '../src/theme';
+import { ICON_PATHS, Icon } from '../src/ui/Icon';
+import { Logo } from '../src/ui/Logo';
 import { mixOklch, toOklch } from '../src/theme/oklch';
 
 describe('theme from @northline/tokens', () => {
@@ -48,7 +50,40 @@ describe('theme from @northline/tokens', () => {
     expect(radius).toEqual({ xs: 4, sm: 6, md: 8, lg: 12, pill: 999 });
     expect(space[4]).toBe(16);
     expect(text.base).toBe(15);
-    expect(fonts.heading).toBe('Newsreader_500Medium');
+  });
+
+  it('uses the palette\'s font families, one family name per weight (generated from theme.json)', () => {
+    const sans = /^\s*"([^"]+)"/.exec(theme.font.sans)?.[1]?.replace(/\s+/g, '');
+    expect(fonts.regular).toBe(`${sans}_400Regular`);
+    expect(fonts.body).toBe(fonts.regular);
+    expect(fonts.bodyStrong).toBe(fonts.semibold);
+    expect(Object.keys(fontAssets).sort()).toEqual([...new Set(Object.values(fonts))].sort());
+  });
+
+  it('keeps every touch target at the redesign\'s 44 pt', () => {
+    expect(MIN_TARGET).toBe(44);
+  });
+});
+
+describe('brand drawing', () => {
+  it('draws the logo as one image named after the brand, with the palette\'s wordmark', () => {
+    render(<Logo portal="Courier" />);
+    const logo = screen.getByRole('image');
+    expect(logo.props.accessibilityLabel).toBe(`${brand.name} Courier`);
+    expect(screen.getByText(theme.logo.wordmark)).toBeTruthy();
+  });
+
+  it('draws regular and fill icons from Phosphor\'s path data, hidden from screen readers', () => {
+    render(
+      <>
+        <Icon name="house" />
+        <Icon name="house" filled />
+      </>,
+    );
+    expect(screen.queryByTestId('icon-house')).toBeNull(); // hidden from assistive technology
+    expect(screen.getByTestId('icon-house', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByTestId('icon-house-fill', { includeHiddenElements: true }).props.accessible).toBe(false);
+    expect(ICON_PATHS.house.regular[0]).not.toBe(ICON_PATHS.house.fill[0]);
   });
 });
 

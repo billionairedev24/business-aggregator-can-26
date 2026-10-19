@@ -44,3 +44,16 @@ export function mapsUrl(stop: Stop, os: string): string | null {
   const query = encodeURIComponent(q);
   return os === 'ios' ? `maps:?q=${query}` : os === 'android' ? `geo:0,0?q=${query}` : null;
 }
+
+/**
+ * Turn-by-turn hand-off (redesign § 2.5, DR:150 "Navigate"): Apple Maps with driving directions to the stop on iPhone,
+ * the system's maps chooser (Google Maps, Waze…) with the place on Android — the courier's own navigation app drives,
+ * Northline doesn't draw a map.
+ */
+export function navigationUrl(stop: Stop, os: string): string | null {
+  if (os !== 'ios') return mapsUrl(stop, os);
+  const lat = stop.kind !== 'dropoff' ? stop.place?.lat : stop.dropoff?.lat;
+  const lng = stop.kind !== 'dropoff' ? stop.place?.lng : stop.dropoff?.lng;
+  const q = lat != null && lng != null ? `${lat},${lng}` : stopAddress(stop);
+  return q ? `maps:?daddr=${encodeURIComponent(q)}&dirflg=d` : null;
+}

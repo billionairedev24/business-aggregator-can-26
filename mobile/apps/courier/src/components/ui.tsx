@@ -11,19 +11,46 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
+import { Icon, MIN_TARGET, colors, fonts, radius, semantic, space, type IconName } from '@northline/mobile-kit';
+
+import { useI18n } from '../i18n';
 
 /**
- * The courier app's few building blocks, in Northline's tokens (colours, radii, spacing and fonts come from
- * @northline/mobile-kit, never literals). Large type and 48 dp targets: couriers use the app outdoors, often one-handed.
+ * The courier app's building blocks on the redesign's driver layouts (AfroTransact's driver app, our brand:
+ * docs/design/redesign-spec.md § 2.5): a dark top bar with the screen's title (and a round Back on a sub-screen),
+ * pill buttons, white cards with a hairline, a sticky bottom action bar. Colours, radii, spacing and fonts come from
+ * @northline/mobile-kit (brand.json's palette), never literals. Large type and ≥ 44 pt targets (52 pt for the main
+ * action): couriers use the app outdoors, often one-handed.
  */
 
-export function Screen({ children, scroll = true, testID }: { children: ReactNode; scroll?: boolean; testID?: string }) {
+export function Screen({
+  children,
+  scroll = true,
+  title,
+  back,
+  onBack,
+  action,
+  footer,
+  testID,
+}: {
+  children: ReactNode;
+  scroll?: boolean;
+  /** The top bar's title; none = no bar (the tab screens and sign-in draw their own top). */
+  title?: string;
+  /** A round Back button in the bar (sub-screens). */
+  back?: boolean;
+  onBack?: () => void;
+  action?: ReactNode;
+  /** The sticky bottom action bar (the screen's main action). */
+  footer?: ReactNode;
+  testID?: string;
+}) {
   const body = <View style={styles.screenBody}>{children}</View>;
   return (
-    <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']} testID={testID}>
+    <SafeAreaView style={styles.screen} edges={title !== undefined ? ['left', 'right'] : ['top', 'left', 'right']} testID={testID}>
+      {title !== undefined ? <TopBar title={title} back={back} onBack={onBack} action={action} /> : null}
       {scroll ? (
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           {body}
@@ -31,7 +58,44 @@ export function Screen({ children, scroll = true, testID }: { children: ReactNod
       ) : (
         body
       )}
+      {footer ? <BottomBar>{footer}</BottomBar> : null}
     </SafeAreaView>
+  );
+}
+
+/** The driver app's dark top bar: the round Back button on a sub-screen, the title (20 / 700), one action on the right. */
+export function TopBar({ title, back, onBack, action }: { title: string; back?: boolean; onBack?: () => void; action?: ReactNode }) {
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[styles.bar, { paddingTop: insets.top + space[2] }]}>
+      {back ? (
+        <Pressable accessibilityRole="button" accessibilityLabel={t('common.back')} onPress={onBack} hitSlop={4} style={styles.round} testID="header-back">
+          <Icon name="caret-left" size={20} color={colors.headerText} />
+        </Pressable>
+      ) : null}
+      <Text accessibilityRole="header" numberOfLines={2} maxFontSizeMultiplier={1.4} style={styles.barTitle}>
+        {title}
+      </Text>
+      {action}
+    </View>
+  );
+}
+
+/** The sticky bottom action bar (52 pt main action above the home indicator). */
+export function BottomBar({ children }: { children: ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return <View style={[styles.bottom, { paddingBottom: Math.max(insets.bottom, space[3]) }]}>{children}</View>;
+}
+
+/** An icon in a tinted circle (the route's stop markers, the shift's phases). */
+export function IconBadge({ name, tone = 'brand', size = 40 }: { name: IconName; tone?: 'brand' | 'done' | 'muted' | 'dark'; size?: number }) {
+  const bg = tone === 'done' ? semantic['success-bg'] : tone === 'muted' ? semantic['surface-muted'] : tone === 'dark' ? colors.headerBg : semantic['surface-brand'];
+  const fg = tone === 'done' ? semantic.success : tone === 'muted' ? colors.textMuted : tone === 'dark' ? semantic['action-accent'] : colors.actionPrimary;
+  return (
+    <View style={[styles.iconBadge, { width: size, height: size, borderRadius: size / 2, backgroundColor: bg }]}>
+      <Icon name={name} size={Math.round(size * 0.5)} color={fg} />
+    </View>
   );
 }
 
@@ -47,7 +111,7 @@ export function Body({ children, muted, strong, style }: { children: ReactNode; 
   return <Text style={[styles.body, muted && styles.muted, strong && styles.strong, style]}>{children}</Text>;
 }
 
-type Tone = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Tone = 'primary' | 'accent' | 'secondary' | 'ghost' | 'danger';
 
 export function Button({
   label,
@@ -56,6 +120,8 @@ export function Button({
   disabled,
   busy,
   hint,
+  icon,
+  large,
   testID,
 }: {
   label: string;
@@ -64,9 +130,13 @@ export function Button({
   disabled?: boolean;
   busy?: boolean;
   hint?: string;
+  icon?: IconName;
+  /** The screen's main action (52 pt). */
+  large?: boolean;
   testID?: string;
 }) {
   const off = disabled || busy;
+  const fg = buttonText[tone];
   return (
     <Pressable
       accessibilityRole="button"
@@ -76,10 +146,10 @@ export function Button({
       disabled={off}
       onPress={onPress}
       testID={testID}
-      style={({ pressed }) => [styles.button, buttonTone[tone], pressed && pressedTone[tone], off && styles.disabled]}
+      style={({ pressed }) => [styles.button, large && styles.buttonLarge, buttonTone[tone], pressed && pressedTone[tone], off && styles.disabled]}
     >
-      {busy ? <ActivityIndicator color={tone === 'primary' ? colors.onAccent : colors.accent} /> : null}
-      <Text style={[styles.buttonText, tone === 'primary' ? styles.onAccent : tone === 'danger' ? styles.dangerText : styles.accentText]}>{label}</Text>
+      {busy ? <ActivityIndicator color={fg} /> : icon ? <Icon name={icon} size={20} color={fg} /> : null}
+      <Text style={[styles.buttonText, large && styles.buttonTextLarge, { color: fg }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -135,7 +205,7 @@ export function Segmented<T extends string>({ options, value, onChange, label }:
             onPress={() => onChange(o.value)}
             style={[styles.segment, selected && styles.segmentOn]}
           >
-            <Text style={[styles.buttonText, selected ? styles.onAccent : styles.accentText]}>{o.label}</Text>
+            <Text style={[styles.buttonText, selected ? styles.onAccent : styles.segmentText]}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -154,7 +224,7 @@ export function Check({ label, on, onPress, role = 'checkbox', testID }: { label
       testID={testID}
       style={({ pressed }) => [styles.check, (on || pressed) && styles.checkOn]}
     >
-      <View style={[styles.box, role === 'radio' && styles.round, on && styles.boxOn]}>{on ? <Text style={[styles.tick, styles.onAccent]}>✓</Text> : null}</View>
+      <View style={[styles.box, role === 'radio' && styles.roundBox, on && styles.boxOn]}>{on ? <Icon name="check" size={16} color={colors.actionPrimaryText} /> : null}</View>
       <Text style={styles.body}>{label}</Text>
     </Pressable>
   );
@@ -171,76 +241,90 @@ export function Gap({ size = 4 }: { size?: keyof typeof space }) {
 export function Loading({ label }: { label: string }) {
   return (
     <View style={styles.loading} accessibilityLabel={label} accessibilityRole="progressbar">
-      <ActivityIndicator color={colors.accent} size="large" />
+      <ActivityIndicator color={colors.actionPrimary} size="large" />
     </View>
   );
 }
 
 const buttonTone: Record<Tone, ViewStyle> = {
-  primary: { backgroundColor: colors.accent },
-  secondary: { backgroundColor: colors.surface, borderColor: colors.neutral300, borderWidth: 1 },
+  primary: { backgroundColor: semantic['action-primary'] },
+  accent: { backgroundColor: semantic['action-accent'] },
+  secondary: { backgroundColor: semantic['action-neutral'], borderColor: semantic['action-neutral-border'], borderWidth: 1 },
   ghost: { backgroundColor: 'transparent' },
-  danger: { backgroundColor: colors.surface, borderColor: colors.accent2, borderWidth: 1 },
+  danger: { backgroundColor: colors.surface, borderColor: colors.borderControl, borderWidth: 1 },
 };
 const pressedTone: Record<Tone, ViewStyle> = {
-  primary: { backgroundColor: colors.accent700 },
-  secondary: { backgroundColor: colors.accent100 },
-  ghost: { backgroundColor: colors.accent100 },
-  danger: { backgroundColor: colors.accent2_100 },
+  primary: { backgroundColor: semantic['action-primary-press'] },
+  accent: { backgroundColor: semantic['action-accent-hover'] },
+  secondary: { backgroundColor: semantic['action-neutral-hover'] },
+  ghost: { backgroundColor: semantic['surface-hover'] },
+  danger: { backgroundColor: semantic['danger-bg'] },
+};
+const buttonText: Record<Tone, string> = {
+  primary: semantic['action-primary-text'],
+  accent: semantic['action-accent-text'],
+  secondary: semantic['action-neutral-text'],
+  ghost: semantic.link,
+  danger: semantic.danger,
 };
 const chipTone: Record<ChipTone, ViewStyle> = {
-  neutral: { backgroundColor: colors.neutral200 },
-  accent: { backgroundColor: colors.accent },
-  done: { backgroundColor: colors.accent100 },
-  warn: { backgroundColor: colors.highlight100 },
+  neutral: { backgroundColor: semantic['badge-neutral-bg'] },
+  accent: { backgroundColor: semantic['action-primary'] },
+  done: { backgroundColor: semantic['success-bg'] },
+  warn: { backgroundColor: semantic['warning-bg'] },
 };
 const bannerTone: Record<BannerTone, ViewStyle> = {
-  info: { backgroundColor: colors.accent100, borderColor: colors.accent200 },
-  warn: { backgroundColor: colors.highlight100, borderColor: colors.highlight300 },
-  error: { backgroundColor: colors.accent2_100, borderColor: colors.accent2 },
+  info: { backgroundColor: semantic['info-bg'] },
+  warn: { backgroundColor: semantic['warning-bg'] },
+  error: { backgroundColor: semantic['danger-bg'] },
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+  screen: { flex: 1, backgroundColor: colors.surface },
   scroll: { flexGrow: 1 },
   screenBody: { flex: 1, padding: space[4], gap: space[3] },
-  h1: { fontFamily: fonts.heading, fontSize: 28, lineHeight: 34, color: colors.text },
-  h2: { fontFamily: fonts.bodyStrong, fontSize: 17, lineHeight: 24, color: colors.text },
-  body: { fontFamily: fonts.body, fontSize: 16, lineHeight: 23, color: colors.text, flexShrink: 1 },
-  muted: { color: colors.neutral700 },
-  strong: { fontFamily: fonts.bodyStrong },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[4], paddingBottom: space[3], backgroundColor: colors.headerBg },
+  barTitle: { flex: 1, fontFamily: fonts.bold, fontSize: 20, lineHeight: 25, color: colors.headerText },
+  round: { width: MIN_TARGET, height: MIN_TARGET, borderRadius: MIN_TARGET / 2, backgroundColor: semantic['header-hover-bg'], alignItems: 'center', justifyContent: 'center' },
+  bottom: { gap: space[2], paddingTop: 10, paddingHorizontal: space[4], borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, backgroundColor: colors.surface },
+  iconBadge: { alignItems: 'center', justifyContent: 'center' },
+  h1: { fontFamily: fonts.black, fontSize: 28, lineHeight: 33, color: colors.text },
+  h2: { fontFamily: fonts.bold, fontSize: 17, lineHeight: 23, color: colors.text },
+  body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, color: colors.text, flexShrink: 1 },
+  muted: { color: colors.textMuted },
+  strong: { fontFamily: fonts.bold },
   button: {
     minHeight: MIN_TARGET,
     minWidth: MIN_TARGET,
-    paddingHorizontal: space[4],
-    paddingVertical: space[3],
-    borderRadius: radius.md,
+    paddingHorizontal: space[5],
+    paddingVertical: space[2],
+    borderRadius: radius.pill,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: space[2],
   },
-  buttonText: { fontFamily: fonts.bodyStrong, fontSize: 16 },
-  onAccent: { color: colors.onAccent },
-  accentText: { color: colors.accent },
-  dangerText: { color: colors.accent2_700 },
-  errorText: { color: colors.accent2_700 },
+  buttonLarge: { minHeight: 52 },
+  buttonText: { fontFamily: fonts.bold, fontSize: 16 },
+  buttonTextLarge: { fontSize: 17 },
+  onAccent: { color: colors.actionPrimaryText },
+  segmentText: { color: colors.text },
+  errorText: { color: colors.danger },
   disabled: { opacity: 0.45 },
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.divider, padding: space[4], gap: space[2] },
-  cardHighlight: { borderColor: colors.accent, borderWidth: 2 },
-  cardPressed: { backgroundColor: colors.accent100 },
+  card: { minHeight: MIN_TARGET, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: space[4], gap: space[2] },
+  cardHighlight: { borderColor: colors.actionPrimary, borderWidth: 2 },
+  cardPressed: { backgroundColor: semantic['surface-hover'] },
   chip: { alignSelf: 'flex-start', borderRadius: radius.pill, paddingHorizontal: space[3], paddingVertical: space[1] },
-  chipText: { fontFamily: fonts.bodyStrong, fontSize: 13, color: colors.text },
-  banner: { borderRadius: radius.md, borderWidth: 1, padding: space[3], gap: space[2] },
-  segmented: { flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: space[1], gap: space[1] },
-  segment: { flex: 1, minHeight: MIN_TARGET, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
-  segmentOn: { backgroundColor: colors.accent },
+  chipText: { fontFamily: fonts.bold, fontSize: 13, color: colors.text },
+  banner: { borderRadius: radius.md, padding: space[3], gap: space[2] },
+  segmented: { flexDirection: 'row', backgroundColor: semantic['surface-muted'], borderRadius: radius.pill, padding: space[1], gap: space[1] },
+  segment: { flex: 1, minHeight: MIN_TARGET, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  segmentOn: { backgroundColor: colors.actionPrimary },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], flexWrap: 'wrap' },
-  check: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET, paddingHorizontal: space[3], paddingVertical: space[2], borderRadius: radius.md, borderWidth: 1, borderColor: colors.neutral300, backgroundColor: colors.surface },
-  checkOn: { borderColor: colors.accent, backgroundColor: colors.accent100 },
-  box: { width: 24, height: 24, borderRadius: radius.sm, borderWidth: 2, borderColor: colors.neutral500, alignItems: 'center', justifyContent: 'center' },
-  round: { borderRadius: radius.pill },
-  boxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  tick: { fontFamily: fonts.bodyStrong, fontSize: 16 },
+  check: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 52, paddingHorizontal: space[3], paddingVertical: space[2], borderRadius: radius.md, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
+  checkOn: { borderColor: colors.actionPrimary, backgroundColor: semantic['surface-brand'] },
+  box: { width: 24, height: 24, borderRadius: radius.xs, borderWidth: 2, borderColor: colors.borderControl, alignItems: 'center', justifyContent: 'center' },
+  roundBox: { borderRadius: radius.pill },
+  boxOn: { backgroundColor: colors.actionPrimary, borderColor: colors.actionPrimary },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space[8] },
 });

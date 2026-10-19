@@ -1,7 +1,3 @@
-// one file per weight (the packages' roots would bundle every weight and italic)
-import { InstrumentSans_400Regular } from '@expo-google-fonts/instrument-sans/400Regular';
-import { InstrumentSans_600SemiBold } from '@expo-google-fonts/instrument-sans/600SemiBold';
-import { Newsreader_500Medium } from '@expo-google-fonts/newsreader/500Medium';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack, router } from 'expo-router';
@@ -9,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { LOCALES, colors, type Locale } from '@northline/mobile-kit';
+import { LOCALES, colors, fontAssets, type Locale } from '@northline/mobile-kit';
 
 import { AccountFlowProvider } from '../src/auth/AccountFlow';
 import { AuthProvider, useAuth } from '../src/auth/AuthProvider';
@@ -68,7 +64,7 @@ function Routes() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({ Newsreader_500Medium, InstrumentSans_400Regular, InstrumentSans_600SemiBold });
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
   const ready = fontsLoaded || !!fontError;
   return (
     <SafeAreaProvider>

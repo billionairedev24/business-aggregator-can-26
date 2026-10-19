@@ -8,7 +8,7 @@ import { start } from './support';
 /**
  * S-109 (cheap wins for the app): on the key screens of every journey, each control a finger can press has a role and
  * a name for VoiceOver/TalkBack, and a touch target of at least 44 pt (iOS HIG; WCAG 2.5.8 asks 24) — its own height or
- * its hitSlop. The kit's primitives aim for 48 (MIN_TARGET); screens' own controls are checked here too.
+ * its hitSlop. The kit's primitives use 44 (MIN_TARGET, the redesign's touch size); screens' own controls are checked here too.
  */
 jest.mock('@stripe/stripe-react-native', () => ({
   initStripe: jest.fn(async () => undefined),
@@ -91,30 +91,31 @@ const SCREENS: { name: string; url: string; signedIn?: boolean; ready: RegExp }[
   { name: 'book · service', url: '/book/prairie-wrench/service', signedIn: true, ready: /./ },
   { name: 'book · time', url: '/book/prairie-wrench/time', signedIn: true, ready: /./ },
   { name: 'orders', url: '/orders', signedIn: true, ready: /./ },
+  { name: 'track', url: '/orders/NL-48213/track', signedIn: true, ready: /./ },
   { name: 'account', url: '/account', signedIn: true, ready: /./ },
   { name: 'security', url: '/security', signedIn: true, ready: /./ },
   { name: 'wallet', url: '/wallet', signedIn: true, ready: /./ },
 ];
 
 describe('roles, names and 44 pt touch targets on the key screens (S-109)', () => {
-  it('names the home screen\'s address kicker without its ▾ and gives it a 48 pt touch area', async () => {
+  it('names the home screen\'s "Deliver to" line without a glyph and gives it a 44 pt touch area', async () => {
     await start({ signedIn: true, welcomed: true, url: '/home' });
     const place = await screen.findByTestId('home-place');
     expect(place.props.accessibilityLabel).toMatch(/^Delivery address: [^▾]+$/);
-    expect(targetHeight(place)).toBeGreaterThanOrEqual(48);
+    expect(targetHeight(place)).toBeGreaterThanOrEqual(44);
   });
 
   it.each([
-    ['en', 'Sort: relevance', 'Sort: price, low to high', 'relevance ▾'],
-    ['fr-CA', 'Tri : pertinence', 'Tri : prix croissant', 'pertinence ▾'],
-  ])('names the search sort without its ▾ (%s, S-147)', async (tag, first, next, shown) => {
+    ['en', 'Sort: relevance', 'Sort: price, low to high', 'relevance'],
+    ['fr-CA', 'Tri : pertinence', 'Tri : prix croissant', 'pertinence'],
+  ])('names the search sort without a glyph (%s, S-147; the caret is a hidden icon)', async (tag, first, next, shown) => {
     if (tag !== 'en') (jest.requireMock('expo-localization') as { getLocales: jest.Mock }).getLocales.mockReturnValueOnce([{ languageTag: tag }]);
     await start({ welcomed: true, url: '/search', store: { 'nl.location': JSON.stringify({ label: '1204 Example Ave, Sampleville', city: 'Sampleville', province: 'XA', marketId: 'mkt-sampleville' }) } });
     fireEvent.changeText(await screen.findByTestId('search-input'), 'sour');
-    expect(await screen.findByText(/^1 (result|résultat)/)).toBeTruthy();
+    expect(await screen.findByText(/^2 (results|résultats)/)).toBeTruthy();
     const sort = () => pressables(screen.root).find((n: ReactTestInstance) => n.props.testID === 'search-sort')!;
     expect(sort().props.accessibilityLabel).toBe(first);
-    expect(screen.getByText(shown)).toBeTruthy(); // the glyph stays on screen, out of the name
+    expect(screen.getByText(shown)).toBeTruthy();
     fireEvent.press(sort());
     await waitFor(() => expect(sort().props.accessibilityLabel).toBe(next));
   });
@@ -124,5 +125,5 @@ describe('roles, names and 44 pt touch targets on the key screens (S-109)', () =
     await waitFor(() => expect(screen.queryByTestId('loading')).toBeNull(), { timeout: 8000 });
     expect(pressables(screen.root).length).toBeGreaterThan(0); // the walk sees the controls
     expect(audit(name)).toEqual([]);
-  });
+  }, 20_000);
 });

@@ -1,7 +1,3 @@
-// one file per weight (the packages' roots would bundle every weight and italic)
-import { InstrumentSans_400Regular } from '@expo-google-fonts/instrument-sans/400Regular';
-import { InstrumentSans_600SemiBold } from '@expo-google-fonts/instrument-sans/600SemiBold';
-import { Newsreader_500Medium } from '@expo-google-fonts/newsreader/500Medium';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
@@ -10,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { LOCALES, colors, type Locale } from '@northline/mobile-kit';
+import { LOCALES, colors, fontAssets, type Locale } from '@northline/mobile-kit';
 
 import { AuthProvider, useAuth } from '../src/auth';
 import { Loading } from '../src/components/ui';
@@ -67,7 +63,7 @@ function Routes() {
   return (
     <>
       <PushSetup />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }}>
       <Stack.Protected guard={status === 'signedIn'}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
@@ -81,7 +77,7 @@ function Routes() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({ Newsreader_500Medium, InstrumentSans_400Regular, InstrumentSans_600SemiBold });
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
   const ready = fontsLoaded || !!fontError;
   return (
     <SafeAreaProvider>

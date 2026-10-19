@@ -155,7 +155,7 @@ describe('D1 Orders & bookings', () => {
   it('is in French', async () => {
     french();
     await signedIn('/orders');
-    expect(await screen.findByText('Commandes et réservations')).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'Activité' })).toBeTruthy();
     expect(await screen.findByText('Tournée d’épicerie · 3 commerces')).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'En cours · 4' })).toBeTruthy();
     expect(screen.getByText('64,20 $')).toBeTruthy();
@@ -275,19 +275,35 @@ describe('D2 Quote received', () => {
 });
 
 describe('D3 Profile (You)', () => {
-  it('shows who you are, the wallet and every row with its value; rows open their screens', async () => {
+  it('shows who you are, your latest orders and every row with its value; rows open their screens (MA:296)', async () => {
     const { view } = await signedIn('/account');
-    expect(await screen.findByText('Ada Example')).toBeTruthy();
+    expect(await screen.findByText('Hi, Ada')).toBeTruthy();
     expect(screen.getByText(/^Reliability 4\.9 · member since May 2026/)).toBeTruthy();
-    expect(await screen.findByText('1,240 pts · $12.40')).toBeTruthy();
-    expect(screen.getByText('Standard')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Payment methods, Visa ··4471' })).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Your orders' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Payment methods, Visa ··4471' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Security & sign-in, Authenticator + SMS' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Notifications, Quiet 10 p.m.–7 a.m.' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Favourite providers, 0' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Saved, 0' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Refunds & help, 1 case' })).toBeTruthy();
-    fireEvent.press(screen.getByTestId('you-wallet'));
-    await waitFor(() => expect(view.getPathname()).toBe('/wallet'));
+    // thrash item 6: Wallet & points and the dietary preferences only with the full navigation
+    expect(screen.queryByTestId('you-wallet')).toBeNull();
+    expect(screen.queryByTestId('row-preferences')).toBeNull();
+    fireEvent.press(screen.getByTestId('you-orders-all'));
+    await waitFor(() => expect(view.getPathname()).toBe('/orders'));
+  });
+
+  it('with EXPO_PUBLIC_FULL_NAV=1 shows the wallet and the dietary preferences again', async () => {
+    process.env.EXPO_PUBLIC_FULL_NAV = '1';
+    try {
+      const { view } = await signedIn('/account');
+      expect(await screen.findByText('1,240 pts · $12.40')).toBeTruthy();
+      expect(screen.getByText('Standard')).toBeTruthy();
+      expect(screen.getByTestId('row-preferences')).toBeTruthy();
+      fireEvent.press(screen.getByTestId('you-wallet'));
+      await waitFor(() => expect(view.getPathname()).toBe('/wallet'));
+    } finally {
+      delete process.env.EXPO_PUBLIC_FULL_NAV;
+    }
   });
 
   it('opens Become a seller on the website', async () => {
@@ -310,13 +326,13 @@ describe('D3 Profile (You)', () => {
     expect(await screen.findByText('Northline is having trouble right now. Try again in a moment.', {}, { timeout: 8000 })).toBeTruthy();
     fail = false;
     fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText('1,240 pts · $12.40')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Payment methods, Visa ··4471' })).toBeTruthy();
   }, 15000);
 
   it('loading: skeletons until the profile arrives', async () => {
     await signedIn('/account');
-    expect(screen.queryByText('Ada Example')).toBeNull();
-    expect(await screen.findByText('Ada Example')).toBeTruthy();
+    expect(screen.queryByText('Hi, Ada')).toBeNull();
+    expect(await screen.findByText('Hi, Ada')).toBeTruthy();
   });
 });
 
@@ -685,7 +701,7 @@ describe('Favourites', () => {
 
   it('a heart on a provider’s profile (Journey C) shows on You and in the list at once, not a minute later', async () => {
     await signedIn('/account');
-    expect(await screen.findByRole('button', { name: 'Favourite providers, 0' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Saved, 0' })).toBeTruthy();
     act(() => router.push('/account/favourites'));
     expect(await screen.findByText('No favourites yet. Tap the heart on a provider to keep them here.')).toBeTruthy();
     act(() => router.push('/providers/prairie-wrench'));
@@ -695,7 +711,7 @@ describe('Favourites', () => {
     act(() => router.back());
     expect(await screen.findByTestId('fav-remove-m-prairie')).toBeTruthy();
     act(() => router.back());
-    expect(await screen.findByRole('button', { name: 'Favourite providers, 1' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Saved, 1' })).toBeTruthy();
   });
 
   it('empty, loading, error and Try again', async () => {

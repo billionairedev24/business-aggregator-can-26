@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { MIN_TARGET, colors, fonts, space } from '@northline/mobile-kit';
+import { Icon, MIN_TARGET, colors, fonts, radius, semantic, space, type IconName } from '@northline/mobile-kit';
 
 import { type } from '../ui/primitives';
 
 /**
- * Journey D's small pieces, drawn as design 01 draws the account: a settings row (name left, value and › right, 48 dp,
- * the whole row the target), a labelled on/off switch, a section heading (the design's h3 16px).
+ * Journey D's small pieces on the redesign's account layout (MA:296): a settings row (icon, name, value and a caret,
+ * 52 pt, the whole row the target) inside a bordered group, a labelled on/off switch, a section heading (16 / 700).
  */
 
-export function SettingsRow({ name, value, onPress, hint, testID }: { name: string; value?: string | null; onPress: () => void; hint?: string; testID?: string }) {
+export function SettingsRow({ name, value, onPress, hint, icon, tone, testID }: { name: string; value?: string | null; onPress: () => void; hint?: string; icon?: IconName; tone?: 'danger'; testID?: string }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -20,9 +20,29 @@ export function SettingsRow({ name, value, onPress, hint, testID }: { name: stri
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
       testID={testID}
     >
-      <Text style={[type.body, styles.name]}>{name}</Text>
-      <Text style={type.small}>{value ? `${value} ›` : '›'}</Text>
+      {icon ? <Icon name={icon} size={22} color={tone === 'danger' ? colors.danger : colors.text} /> : null}
+      <Text style={[type.body, styles.name, tone === 'danger' && styles.danger]}>{name}</Text>
+      {value ? (
+        <Text style={[type.small, styles.value]} numberOfLines={1}>
+          {value}
+        </Text>
+      ) : null}
+      <Icon name="caret-right" size={16} color={colors.textMuted} />
     </Pressable>
+  );
+}
+
+/** MA:301 — a group of settings rows: the 12 pt uppercase label, then the rows in one bordered, rounded box. */
+export function SettingsGroup({ title, children, testID }: { title?: string; children: ReactNode; testID?: string }) {
+  return (
+    <View style={styles.group} testID={testID}>
+      {title ? (
+        <Text accessibilityRole="header" style={type.kicker}>
+          {title}
+        </Text>
+      ) : null}
+      <View style={styles.box}>{children}</View>
+    </View>
   );
 }
 
@@ -73,8 +93,12 @@ export const accountStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[3], minHeight: MIN_TARGET, paddingVertical: 4 },
-  pressed: { backgroundColor: colors.accent100 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: Math.max(MIN_TARGET, 52), paddingVertical: 4, paddingHorizontal: 14 },
+  pressed: { backgroundColor: semantic['surface-hover'] },
   name: { flex: 1, minWidth: 0 },
-  heading: { fontFamily: fonts.bodyStrong, fontSize: 16, lineHeight: 22, color: colors.text, marginTop: space[4] },
+  value: { maxWidth: '45%' },
+  danger: { color: colors.danger },
+  group: { gap: 6 },
+  box: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, overflow: 'hidden' },
+  heading: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 22, color: colors.text, marginTop: space[4] },
 });

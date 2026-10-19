@@ -1,13 +1,13 @@
 /** Shared copy: app name, tabs, states. Ours where design 01 has none (states, stubs); the design's words otherwise. */
 export const common = {
-  'app.name': 'Northline',
+  'app.name': '{brand}',
   'common.back': 'Back',
   'common.retry': 'Try again',
   'common.loading': 'Loading…',
-  'common.offline': "You're offline. Northline will catch up when you're back online.",
-  'common.network': "We couldn't reach Northline. Check your connection and try again.",
+  'common.offline': "You're offline. {brand} will catch up when you're back online.",
+  'common.network': "We couldn't reach {brand}. Check your connection and try again.",
   'common.error': 'Something went wrong. Try again.',
-  'common.serverError': 'Northline is having trouble right now. Try again in a moment.',
+  'common.serverError': '{brand} is having trouble right now. Try again in a moment.',
   'common.tooMany': 'Too many attempts. Wait a moment and try again.',
   'common.signedOut': 'Your sign-in ended. Sign in again to continue.',
   'common.signIn': 'Sign in',
@@ -16,10 +16,10 @@ export const common = {
 
   'tab.label': 'Main sections',
   'tab.home': 'Home',
-  'tab.services': 'Services',
+  'tab.services': 'Browse',
   'tab.cart': 'Cart',
-  'tab.orders': 'Orders',
-  'tab.account': 'You',
+  'tab.orders': 'Activity',
+  'tab.account': 'Account',
   'tab.cartCount': '{n, plural, one {# item} other {# items}} in your cart',
 
   'browserSignIn.cancelled': 'Sign-in was cancelled.',

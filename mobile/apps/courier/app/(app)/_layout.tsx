@@ -1,14 +1,13 @@
 import { Stack } from 'expo-router';
 
-import { ApiError, colors, fonts } from '@northline/mobile-kit';
+import { ApiError, colors } from '@northline/mobile-kit';
 
 import { useAuth } from '../../src/auth';
 import { TrackingContext } from '../../src/components/tracking';
-import { Banner, Button, Heading, Screen } from '../../src/components/ui';
+import { Banner, Button, Screen } from '../../src/components/ui';
 import { useFrenchFirst, useMe, useOnline, useRun } from '../../src/hooks';
 import { useI18n } from '../../src/i18n';
 import { useRunTracking } from '../../src/location/useRunTracking';
-import { FeedbackButton } from '../../src/pilot/Feedback';
 
 /** Signed in: the courier's screens, location sharing that follows the run, the outbox woken by connectivity. */
 export default function AppLayout() {
@@ -22,8 +21,7 @@ export default function AppLayout() {
 
   if (me.error instanceof ApiError && me.error.status === 403) {
     return (
-      <Screen>
-        <Heading>{t('app.name')}</Heading>
+      <Screen title={t('app.name')}>
         <Banner tone="warn">{t('signIn.notCourier')}</Banner>
         <Button label={t('account.signOut')} tone="secondary" onPress={() => void signOut()} />
       </Screen>
@@ -32,25 +30,13 @@ export default function AppLayout() {
 
   return (
     <TrackingContext.Provider value={{ ...tracking, online }}>
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.bg },
-          headerTintColor: colors.accent,
-          headerTitleStyle: { fontFamily: fonts.heading, color: colors.text },
-          headerShadowVisible: false,
-          contentStyle: { backgroundColor: colors.bg },
-          headerBackTitle: t('common.back'),
-          // S-121 for pilot couriers (mobile gaps part 1): "Feedback" on every screen; nothing for other couriers
-          headerRight: () => <FeedbackButton />,
-        }}
-      >
-        <Stack.Screen name="index" options={{ title: t('shift.title') }} />
-        <Stack.Screen name="run" options={{ title: t('run.titleNoLabel') }} />
-        <Stack.Screen name="stops/[id]/index" options={{ title: '' }} />
-        <Stack.Screen name="stops/[id]/pickup" options={{ title: t('pickup.title') }} />
-        <Stack.Screen name="stops/[id]/dropoff" options={{ title: t('dropoff.title') }} />
-        <Stack.Screen name="account" options={{ title: t('account.title') }} />
-        <Stack.Screen name="feedback" options={{ title: t('pilot.title') }} />
+      {/* every screen draws the driver app's own top bar (src/components/ui.tsx); the tabs are Today · Route · Profile */}
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="stops/[id]/index" />
+        <Stack.Screen name="stops/[id]/pickup" />
+        <Stack.Screen name="stops/[id]/dropoff" />
+        <Stack.Screen name="feedback" />
       </Stack>
     </TrackingContext.Provider>
   );

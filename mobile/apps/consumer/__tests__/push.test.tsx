@@ -99,7 +99,7 @@ describe('push in the consumer app (mobile gaps part 1, expo-notifications mocke
 
   it('removes this phone at sign-out, before the tokens are revoked', async () => {
     const { server } = await start({ signedIn: true, url: '/account' });
-    expect(await screen.findByText('Ada Example')).toBeTruthy();
+    expect(await screen.findByText('Hi, Ada')).toBeTruthy();
     await waitFor(() => expect(server.shop.devices.size).toBe(1));
     fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
     await waitFor(() => expect(server.shop.devices.size).toBe(0));

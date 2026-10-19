@@ -1,6 +1,7 @@
 import type { FixtureArea, FixtureContext, FixtureRequest } from './context';
 import { MARKETS, PROVINCES } from './geo';
 import { applyCode, pointsFor, promoError } from './promotions';
+import { PROVIDERS } from './services';
 
 /**
  * Journey B's api (S-99) on the fixture backend: the Shop's public pages, search, the cart (guest-keyed and merged at
@@ -320,7 +321,8 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
       const max = q.get('maxPrice') ? Number(q.get('maxPrice')) : Infinity;
       const size = Number(q.get('size') ?? 24);
       const from = Number(q.get('after') ?? 0);
-      let hits = PRODUCTS.filter(
+      const kind = q.get('kind');
+      let hits = (kind === 'service' ? [] : PRODUCTS).filter(
         (p) =>
           (!text || p.name.toLowerCase().includes(text)) &&
           (q.get('delivery') !== 'tonight' || p.tonight) &&
@@ -330,19 +332,30 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
       );
       if (q.get('sort') === 'price_asc') hits = [...hits].sort((a, b) => a.priceCents - b.priceCents);
       if (q.get('sort') === 'price_desc') hits = [...hits].sort((a, b) => b.priceCents - a.priceCents);
-      const page = hits.slice(from, from + size);
-      return ctx.answer(200, {
-        items: page.map((p) => {
-          const s = shopOf(p.merchantId);
-          return {
-            id: p.offerId, kind: 'product', name: p.name, description: null, merchant: { id: s.merchantId, name: s.name, type: 'seller', slug: null, tier: s.tier },
-            category: { id: `shop.food-and-grocery.${s.departmentSlug}`, name: s.departmentName }, priceCents: p.priceCents, rating: 4.8, trustTier: s.tier,
-            soldOut: false, onTonightsRun: p.tonight, imageKey: null,
-          };
-        }),
-        total: hits.length,
-        next: from + size < hits.length ? String(from + size) : null,
+      const products = hits.map((p) => {
+        const s = shopOf(p.merchantId);
+        return {
+          id: p.offerId, kind: 'product', name: p.name, description: null, merchant: { id: s.merchantId, name: s.name, type: 'seller', slug: null, tier: s.tier },
+          category: { id: `shop.food-and-grocery.${s.departmentSlug}`, name: s.departmentName }, priceCents: p.priceCents, rating: 4.8, trustTier: s.tier,
+          soldOut: false, onTonightsRun: p.tonight, imageKey: null,
+        };
       });
+      // redesign: services come back with products unless one kind is asked for (no delivery filter on a service)
+      const services =
+        kind === 'product' || q.get('delivery') === 'tonight'
+          ? []
+          : PROVIDERS.flatMap((pr) =>
+              pr.services
+                .filter((v) => (!text || v.name.toLowerCase().includes(text) || pr.name.toLowerCase().includes(text)) && (v.priceCents ?? 0) <= max)
+                .map((v) => ({
+                  id: `${pr.merchantId}.${v.id}`, kind: 'service', name: v.name, description: v.included ?? null, merchant: { id: pr.merchantId, name: pr.name, type: 'provider', slug: pr.slug, tier: pr.tier },
+                  category: { id: `service.${v.categorySlug ?? ''}`, name: pr.category?.names.en ?? null }, priceCents: v.priceCents ?? null, rating: pr.rating || null, trustTier: pr.tier,
+                  soldOut: null, onTonightsRun: null, imageKey: null,
+                })),
+            );
+      const all = [...products, ...services];
+      const page = all.slice(from, from + size);
+      return ctx.answer(200, { items: page, total: all.length, next: from + size < all.length ? String(from + size) : null });
     }
 
     // ── the cart ─────────────────────────────────────────────────────────────────────────────────────────────────

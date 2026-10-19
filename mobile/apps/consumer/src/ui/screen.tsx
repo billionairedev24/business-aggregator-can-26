@@ -1,22 +1,28 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, type RefreshControlProps } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MIN_TARGET, colors, fonts, space } from '@northline/mobile-kit';
+import { Icon, MIN_TARGET, colors, fonts, semantic, space } from '@northline/mobile-kit';
 
 import { useI18n } from '../i18n';
 import { OfflineBanner } from './states';
 
+/** The side padding of every screen (MA: 16). */
+export const GUTTER = space[4];
+
 /**
- * A screen of design 01: the sub-screen header ("← Back" + centred title) when `title` is given, otherwise the
- * design's empty top band; 24 dp side padding; content that scrolls; an offline banner while the phone has no
- * connection. `footer` stays at the bottom (the design's `margin-top:auto` actions) and rises with the keyboard.
+ * A screen on the redesign's mobile layout (MA, docs/design/redesign-spec.md § 1.3 Mobile): the shared sub-page header
+ * (a 44 pt round "Back" button and the title, MA:177) when `title` is given, otherwise a thin top band (a tab draws its
+ * own top); 16 pt side padding; content that scrolls; an offline banner while the phone has no connection. `footer` is
+ * the sticky bottom action bar (MA:529): it stays above the home indicator and rises with the keyboard. `action` puts
+ * one more round button on the right of the header.
  */
 export function Screen({
   title,
   back = true,
   onBack,
+  action,
   children,
   footer,
   scroll = true,
@@ -24,11 +30,12 @@ export function Screen({
   refreshControl,
   testID,
 }: {
-  /** The header's title (design `titles[screen]`); no title = no header. */
+  /** The header's title; no title = no header. */
   title?: string;
-  /** Show "← Back" (default when there is a title). */
+  /** Show the Back button (default when there is a title). */
   back?: boolean;
   onBack?: () => void;
+  action?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
   scroll?: boolean;
@@ -39,56 +46,80 @@ export function Screen({
   const body = <View style={[styles.body, padded && styles.padded]}>{children}</View>;
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']} testID={testID}>
-      {title !== undefined ? <Header title={title} back={back} onBack={onBack} /> : <View style={styles.band} />}
+      {title !== undefined ? <Header title={title} back={back} onBack={onBack} action={action} /> : <View style={styles.band} />}
       <OfflineBanner />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {scroll ? (
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
             {body}
-            {footer ? <View style={[styles.footer, padded && styles.padded]}>{footer}</View> : null}
           </ScrollView>
         ) : (
-          <>
-            {body}
-            {footer ? <View style={[styles.footer, padded && styles.padded]}>{footer}</View> : null}
-          </>
+          body
         )}
+        {footer ? <BottomBar>{footer}</BottomBar> : <SafeBottom />}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-/** The design's sub-screen header: "← Back" on the left (accent-700), the title centred. */
-export function Header({ title, back = true, onBack }: { title: string; back?: boolean; onBack?: () => void }) {
+/** MA:529 — the sticky bottom action bar: a hairline on top, white, the home indicator's room below. */
+export function BottomBar({ children, row }: { children: ReactNode; row?: boolean }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[styles.bar, row && styles.barRow, { paddingBottom: Math.max(insets.bottom, space[3]) }]} testID="bottom-bar">
+      {children}
+    </View>
+  );
+}
+
+function SafeBottom() {
+  const insets = useSafeAreaInsets();
+  return <View style={{ height: insets.bottom }} />;
+}
+
+/** A 44 pt round icon button (MA's header buttons: Back, Share, Save, the bell). */
+export function RoundButton({ icon, label, onPress, hint, filled, testID }: { icon: Parameters<typeof Icon>[0]['name']; label: string; onPress: () => void; hint?: string; filled?: boolean; testID?: string }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={hint}
+      onPress={onPress}
+      hitSlop={4}
+      style={({ pressed }) => [styles.round, pressed && styles.roundPressed]}
+      testID={testID}
+    >
+      <Icon name={icon} size={20} filled={filled} />
+    </Pressable>
+  );
+}
+
+/** The shared sub-page header (MA:177): the round Back button, the title (22 / 700), an optional action on the right. */
+export function Header({ title, back = true, onBack, action }: { title: string; back?: boolean; onBack?: () => void; action?: ReactNode }) {
   const { t } = useI18n();
   const goBack = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/home')));
   return (
     <View style={styles.header}>
-      {back ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={t('common.back')} onPress={goBack} hitSlop={8} style={styles.back} testID="header-back">
-          <Text style={styles.backText}>← {t('common.back')}</Text>
-        </Pressable>
-      ) : (
-        <View style={styles.back} />
-      )}
-      <Text accessibilityRole="header" numberOfLines={1} style={styles.headerTitle}>
+      {back ? <RoundButton icon="caret-left" label={t('common.back')} onPress={goBack} testID="header-back" /> : null}
+      <Text accessibilityRole="header" numberOfLines={2} maxFontSizeMultiplier={1.4} style={styles.headerTitle}>
         {title}
       </Text>
-      <View style={styles.back} />
+      {action}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
+  screen: { flex: 1, backgroundColor: colors.surface },
   flex: { flex: 1 },
-  band: { height: space[3] },
+  band: { height: space[2] },
   scroll: { flexGrow: 1 },
-  body: { flexGrow: 1, gap: space[3], paddingTop: space[4] },
-  padded: { paddingHorizontal: 24 },
-  footer: { gap: 10, paddingTop: space[4], paddingBottom: space[8] },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space[4], minHeight: MIN_TARGET, gap: 6 },
-  back: { minWidth: 72, minHeight: MIN_TARGET, justifyContent: 'center' },
-  backText: { fontFamily: fonts.body, fontSize: 15, color: colors.accent700 },
-  headerTitle: { flex: 1, textAlign: 'center', fontFamily: fonts.bodyStrong, fontSize: 16, color: colors.text },
+  body: { flexGrow: 1, gap: space[4], paddingTop: space[2], paddingBottom: space[6] },
+  padded: { paddingHorizontal: GUTTER },
+  bar: { gap: space[2], paddingTop: 10, paddingHorizontal: GUTTER, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, backgroundColor: colors.surface },
+  barRow: { flexDirection: 'row', alignItems: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: GUTTER, paddingTop: space[2], paddingBottom: space[3], minHeight: MIN_TARGET + space[4] },
+  headerTitle: { flex: 1, fontFamily: fonts.bold, fontSize: 22, lineHeight: 27, color: colors.text },
+  round: { width: MIN_TARGET, height: MIN_TARGET, borderRadius: MIN_TARGET / 2, backgroundColor: semantic['surface-muted'], alignItems: 'center', justifyContent: 'center' },
+  roundPressed: { backgroundColor: semantic['surface-hover'] },
 });

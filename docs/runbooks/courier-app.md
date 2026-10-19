@@ -65,22 +65,15 @@ The in-app fixture backend (`src/fixtures/server.ts`) answers like northline-aut
 succeeds at once, the shift is on, run R-701 has two pickups and two drop-offs, the PIN is `4821`, pings faster than
 2 s get 429. Camera, background location and secure storage are phone-only (the web build says so).
 
-**On a phone or simulator, against your laptop's servers:**
-
-1. Start the stack with real sign-in: `make up SERVICES="auth api bff-consumer consumer"` (the courier signs in on the
-   consumer site's page, `CONSUMER_ORIGIN/sign-in`).
-2. Make yourself a courier (console API, staff persona Priya; or SQL on a disposable database):
-   `POST /api/v1/console/fulfilment/couriers {userId, market, vehicle}` then
-   `POST /api/v1/console/fulfilment/couriers/{id}/shifts {startsAt, endsAt}` ([fulfilment.md](fulfilment.md#console-api-s-81s-orders-monitor-and-delivery-ops-map)).
-3. A development build is needed (Expo Go cannot run the background location task): on a Mac
-   `cd mobile/apps/courier && npx expo run:ios`, with the Android SDK `npx expo run:android`, or an EAS
-   `development` / `development-device` build ([EAS builds](#eas-builds)).
-4. Point it at your laptop by IP (a phone can't reach `localhost`):
-   ```
-   EXPO_PUBLIC_API_URL=http://192.168.1.20:8080/api/v1 EXPO_PUBLIC_AUTH_ISSUER=http://192.168.1.20:9000 make courier-start
-   ```
-   northline-auth's `AUTH_ISSUER` must then be the same `http://192.168.1.20:9000`, and `CONSUMER_ORIGIN` reachable
-   from the phone. Cleartext http is allowed only in the development variant.
+**On a phone or simulator, against your laptop's servers:** `make up-all`, build the development app once
+(`make mobile-dev-build APP=courier TARGET=ios`; Expo Go can't run the background location task or receive the
+sign-in redirect), then `make mobile-dev APP=courier` — the API addresses on your Mac's LAN IP, the consumer site's
+sign-in page reachable from the phone, the `local` profile's auth server accepting that address. Sign in as the
+seeded courier Priya Nair (`priya.nair@example.com`, the code from `.run/logs/auth.log`). Step by step:
+[mobile-local.md](mobile-local.md). To make another person a courier (console API, staff persona Priya Natarajan):
+`POST /api/v1/console/fulfilment/couriers {userId, market, vehicle}` then
+`POST /api/v1/console/fulfilment/couriers/{id}/shifts {startsAt, endsAt}` ([fulfilment.md](fulfilment.md#console-api-s-81s-orders-monitor-and-delivery-ops-map)).
+Cleartext http is allowed only in the development variant.
 
 ## Checks
 

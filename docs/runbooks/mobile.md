@@ -52,20 +52,13 @@ make mobile-consumer-web     # EXPO_PUBLIC_FIXTURES=1 expo start --web; press w;
 The in-app fixture backend (`src/fixtures/`) answers like northline-auth and the api, with made-up places (Sample
 Province, Sampleville). Sign-in succeeds at once; secure storage is in memory (a reload signs you out).
 
-**On a phone or simulator, against your laptop's servers:**
-
-1. The stack with real sign-in: `make up SERVICES="auth api bff-consumer consumer"` (the consumer site serves the
-   sign-in page for passkeys, Google and Apple, and the `/app/oauth2redirect` page).
-2. A development build (Expo Go can't load the app's native config): on a Mac `cd mobile/apps/consumer && npx expo
-   run:ios`, with the Android SDK `npx expo run:android`, or an EAS `development` / `development-device` build.
-3. Point it at your laptop by IP (a phone can't reach `localhost`):
-   ```
-   EXPO_PUBLIC_API_URL=http://192.168.1.20:8080/api/v1 EXPO_PUBLIC_AUTH_ISSUER=http://192.168.1.20:9000 \
-   EXPO_PUBLIC_SITE_ORIGIN=http://192.168.1.20:3000 make mobile-consumer-start
-   ```
-   northline-auth's `AUTH_ISSUER` must be the same `http://192.168.1.20:9000` and its `CONSUMER_ORIGIN`
-   `http://192.168.1.20:3000` (the registered redirect `${CONSUMER_ORIGIN}/app/oauth2redirect` must equal the app's).
-   Cleartext http is allowed only in the development variant.
+**On a phone or simulator, against your laptop's servers:** `make up-all`, build the development app once
+(`make mobile-dev-build APP=consumer TARGET=ios`), then `make mobile-dev APP=consumer` every day — Metro with
+`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_AUTH_ISSUER` and `EXPO_PUBLIC_SITE_ORIGIN` on your Mac's LAN address (or
+`localhost` / `10.0.2.2` for the Simulator / emulator), and the `local` profile's auth server accepts that address for
+the sign-in. Step by step: [mobile-local.md](mobile-local.md). Expo Go runs the app only partly (no push, no
+system-browser sign-in); the development build is the supported path. Cleartext http is allowed only in the
+development variant.
 
 ## Environments
 
@@ -176,6 +169,11 @@ testing the browser sign-in, or Android may ask which app opens it. The marketin
 (`APP_VERSION`, S-103); `NL_IOS_BUILD_NUMBER` / `NL_ANDROID_VERSION_CODE` only for local builds (EAS keeps build
 numbers remotely, `appVersionSource: remote`). `GOOGLE_SERVICES_JSON` (an EAS file variable) gives Android its
 Firebase config for push.
+
+**Redesign flags** (build variables, as the web's `VITE_NL_FULL_NAV` / `VITE_NL_TESTING_TOOLS`; spec § 3):
+`EXPO_PUBLIC_FULL_NAV=1` shows Account's Wallet & points and dietary preferences again; `EXPO_PUBLIC_TESTING_TOOLS=1`
+shows the pilot's Feedback button to pilot customers (both apps). Unset, the demo navigation hides them; their screens
+and every endpoint stay. A pilot environment that needs the Feedback button sets the second one in its EAS profile.
 
 ## EAS builds
 
