@@ -47,7 +47,7 @@ function ProductItemCard({ item, href, image, km, variant, level }: { item: Sear
   const eta = item.onTonightsRun ? <>{t('getIt')} <strong>{t('tonight')}</strong></>
     : item.kind === 'food' && item.openNow ? <strong>{t('tag_open')}</strong> : undefined;
   return (
-    <ProductCard href={href} name={item.name} imageUrl={image} variant={variant} level={level}
+    <ProductCard href={href} name={item.name} imageUrl={image} fallback={<Art subject={`${item.name} ${item.category?.id ?? ''}`} />} variant={variant} level={level}
       priceCents={item.priceCents ?? null} priceText={item.priceCents == null ? t('quote') : undefined}
       meta={[item.merchant.name, item.category?.name, km].filter(Boolean).join(' · ')}
       rating={item.rating} reviewCount={item.reviewCount} eta={eta} soldOut={!!item.soldOut}

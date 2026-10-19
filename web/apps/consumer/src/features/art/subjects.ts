@@ -121,8 +121,8 @@ const RULES: readonly [RegExp, Subject][] = [
   [/baby|nanny|childcare|family|babysit/, S(Baby, Heart)],
   // shop departments and products
   [/grocer|supermarket|market/, S(Basket, Carrot)],
-  [/butcher|meat|deli/, S(Cow, Knife)],
-  [/bak|bread|pastr|cake|dessert|sweet/, S(Bread, Cookie)],
+  [/butcher|meat|deli|ribeye|steak|beef|pork|chicken|sausage/, S(Cow, Knife)],
+  [/bak|bread|pastr|cake|dessert|sweet|rye|baguette|loaf|croissant|bagel|\bbuns?\b/, S(Bread, Cookie)],
   [/produce|fruit|veg|farm/, S(Carrot, Orange)],
   [/dairy|egg|cheese/, S(Egg, Cheese)],
   [/frozen/, S(Snowflake, IceCream)],

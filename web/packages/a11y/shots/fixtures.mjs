@@ -111,6 +111,13 @@ export const SHOTS = {
   consumer: [
     (m, p) => (live(m, p, '/api/v1/search') ? { body: search(p) } : undefined),
     (m, p) => (live(m, p, '/api/v1/public/services') ? { body: SERVICES_LANDING } : undefined),
+    // the cart: one line with its photo, the others on the designed fallback
+    (m, p) => {
+      if (!live(m, p, '/api/v1/cart')) return undefined;
+      const b = structuredClone(body('GET /api/v1/cart'));
+      for (const g of b.groups) for (const i of g.items) if (i.name === 'Country sourdough') i.imageUrl = media('bread-sourdough');
+      return { body: b };
+    },
     // a provider's published page with its sections, an about text, real-sounding reviews and FAQ
     (m, p) => (m === 'POST' && /^\/api\/v1\/public\/storefronts\/[^/]+\/visits/.test(p) ? { status: 204, body: null } : undefined),
     (m, p) => (live(m, p, '/api/v1/storefronts/prairie-wrench') ? { body: {

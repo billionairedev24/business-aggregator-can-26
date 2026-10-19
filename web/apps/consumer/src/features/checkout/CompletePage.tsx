@@ -9,6 +9,7 @@ import { useOrder } from '../orders/api';
 import { clock, runWhen, weekday, windowRange } from '../shop/format';
 import { useOrderT } from '../orders/messages';
 import { useCheckoutT } from './messages';
+import { Art } from '../art/Art';
 
 /**
  * Order placed (redesign § 2.1 `checkout/complete`, AT CheckoutComplete): the check, "Thank you — your order is
@@ -36,6 +37,7 @@ export function CompletePage({ orderId, refCode }: { orderId?: string; refCode?:
   return (
     <div className="nl-page co-done">
       <section className="co-done-card" aria-labelledby="co-done-title">
+        <span className="co-done-pic" aria-hidden><Art subject="courier" tone="mint" fit="contain" /></span>
         <CheckCircle size={56} weight="fill" className="co-done-icon" aria-hidden />
         <h1 id="co-done-title" className="co-title">{t('doneTitle')}</h1>
         <p className="co-done-sub">{order.data ? t('doneSub', { ref, total: money(order.data.totalCents) }) : t('doneSubNoTotal', { ref })}</p>
