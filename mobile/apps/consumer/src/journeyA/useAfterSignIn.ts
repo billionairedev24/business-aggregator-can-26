@@ -11,6 +11,6 @@ export function useAfterSignIn() {
   const { location } = useDeliveryLocation();
   return useCallback(() => {
     if (location.status === 'saved' || location.status === 'address') return router.replace('/home');
-    void defaultAddress().then((a) => router.replace(a ? '/home' : '/location'));
+    void defaultAddress().then((a) => router.replace(a ? '/home' : '/location?step=address'));
   }, [location.status]);
 }

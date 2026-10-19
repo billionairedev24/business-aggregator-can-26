@@ -7,6 +7,8 @@ module.exports = {
   preset: 'jest-expo',
   setupFiles: ['<rootDir>/jest.setup.ts'],
   testMatch: ['**/__tests__/**/*.test.[jt]s?(x)'],
+  // screens draw illustrated scenes (react-native-svg) now: a cold first render of a test file takes a few seconds
+  testTimeout: 15_000,
   testPathIgnorePatterns: ['/node_modules/', '/e2e/', '/dist-'],
   transformIgnorePatterns: [
     'node_modules/(?!(\\.pnpm|(jest-)?react-native|@react-native(-community)?|@react-native-async-storage|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|expo-.*|react-navigation|@react-navigation/.*|react-native-svg|standard-navigation|@noble/.*|@tanstack/.*))',

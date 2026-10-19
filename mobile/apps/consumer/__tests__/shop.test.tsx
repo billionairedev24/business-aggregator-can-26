@@ -67,7 +67,7 @@ async function withOrder(orderState: Parameters<typeof seedOrder>[2], url: strin
 }
 
 describe('B1 Home', () => {
-  it('shows where you deliver, the search pill, the run as the hero, the departments, the services and the popular rail — to a guest (MA:180)', async () => {
+  it('shows where you deliver, the search pill, the hero, the services and departments as illustrated tiles, the run and the popular rail — to a guest', async () => {
     const { server, view } = await start({ welcomed: true, store: saved() });
     expect(await screen.findByRole('button', { name: 'Delivery address: 1204 Example Ave, Sampleville' })).toBeTruthy();
     expect(screen.getByText('Deliver to', { exact: false })).toBeTruthy();
@@ -75,6 +75,9 @@ describe('B1 Home', () => {
     expect(await screen.findByText("Tonight's pooled run")).toBeTruthy();
     expect(screen.getByText(/^Leaves at 6:00 p\.m\.$/)).toBeTruthy();
     expect(screen.getByText(/^Delivery \$2\.99 · order by 5:19 p\.m\. · 5 neighbours$/)).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Everything local, from people you can trust' })).toBeTruthy();
+    expect(screen.getByText('Every pro and shop verified')).toBeTruthy();
+    expect(screen.getAllByTestId('art', { includeHiddenElements: true }).length).toBeGreaterThan(6); // no photos in the fixtures: every tile is a drawn scene
     for (const circle of ['Bakery', 'Butcher', 'Produce', 'Mechanic', 'Cleaning', 'Events & bar', 'Realtor']) expect(screen.getByRole('button', { name: circle })).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Popular near you' })).toBeTruthy();
     expect(server.calls.find((c) => c.path === '/public/shop')).toMatchObject({ signed: false });
@@ -86,7 +89,7 @@ describe('B1 Home', () => {
     await waitFor(() => expect(view.getPathname()).toBe('/search'));
   });
 
-  it('signed in: the initials open the account, and the order under way is the dark banner', async () => {
+  it('signed in: the initials open the account, and the order under way is the card on top', async () => {
     const { view } = await withOrder('picked_up', '/home');
     expect(await screen.findByText('AE')).toBeTruthy();
     fireEvent.press(await screen.findByTestId('home-active'));
@@ -211,7 +214,8 @@ describe('B3 Product and B4 Cart', () => {
   it('shows the product as the design does and adds it — a guest, by the guest id — then opens the cart with its badge', async () => {
     const { server, view, services } = await start({ welcomed: true, store: saved(), url: '/product/p-sourdough' });
     expect(await screen.findByText('Country sourdough')).toBeTruthy();
-    expect(screen.getByRole('header', { name: 'Maple Lane Bakery' })).toBeTruthy(); // the header: the shop
+    expect(screen.getByRole('header', { name: 'Country sourdough' })).toBeTruthy(); // photo first: the name is the page's header
+    expect(screen.getAllByText('Maple Lane Bakery').length).toBeGreaterThan(0); // the shop, above it
     expect(screen.getByLabelText('4.8 out of 5 stars, 211 reviews')).toBeTruthy();
     expect(screen.getByText('Sold by Maple Lane Bakery')).toBeTruthy();
     expect(screen.queryByText(/Master tier/)).toBeNull(); // thrash item 13
@@ -243,7 +247,7 @@ describe('B3 Product and B4 Cart', () => {
     expect(await screen.findByText('3 items · 2 shops · one delivery')).toBeTruthy();
     expect(screen.getByText('Riverside Butcher')).toBeTruthy();
     expect(screen.getByText('$37.00')).toBeTruthy();
-    expect(screen.getByText('from $2.99')).toBeTruthy();
+    expect(await screen.findByText('from $2.99')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Checkout · $41.25' })).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'One more Kale & chard mix' }));
     expect(await screen.findByRole('button', { name: 'Checkout · $45.50' })).toBeTruthy();

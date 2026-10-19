@@ -54,7 +54,9 @@ function stripStatus(l: DeliveryLocation): SavedLocation {
 export function LocationSheet() {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
-  const { next } = useLocalSearchParams<{ next?: string }>();
+  const { next, step } = useLocalSearchParams<{ next?: string; step?: string }>();
+  // after a sign-up or sign-in with no address yet: Journey A's question (design 01 A5) heads the sheet
+  const askAddress = step === 'address';
   const { location, save } = useDeliveryLocation();
   const { status } = useAuth();
   const geo = geoApi(services().api);
@@ -182,13 +184,14 @@ export function LocationSheet() {
 
   return (
     <View style={styles.root} testID="location">
-      <Pressable accessibilityRole="button" accessibilityLabel={t('lt.loc.close')} onPress={close} style={styles.scrim} testID="location-scrim" />
+      {/* tapping outside closes it too; screen readers use the Close button (one name, not two) */}
+      <Pressable accessible={false} importantForAccessibility="no" onPress={close} style={styles.scrim} testID="location-scrim" />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrap} pointerEvents="box-none">
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, space[4]) }]} accessibilityViewIsModal>
           <View style={styles.grabber} />
           <View style={styles.head}>
             <Text accessibilityRole="header" style={styles.title}>
-              {t('lt.loc.title')}
+              {askAddress ? t('location.title') : t('lt.loc.title')}
             </Text>
             <RoundButton icon="x" label={t('lt.loc.close')} onPress={close} testID="location-close" />
           </View>
