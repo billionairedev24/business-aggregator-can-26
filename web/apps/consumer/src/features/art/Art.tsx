@@ -9,6 +9,11 @@ export interface ArtProps {
   tone?: Tone;
   /** Override the drawn subject (e.g. the 404's compass). */
   draw?: Subject;
+  /**
+   * cover (default): the scene fills the box and is cropped at the sides — tiles, cards, collages. contain: the subject
+   * keeps its size by the box's height and the backdrop runs on to the sides — wide banners and covers.
+   */
+  fit?: 'cover' | 'contain';
   className?: string;
 }
 
@@ -19,10 +24,33 @@ export interface ArtProps {
  * banner, a card) and stays centred; colours come from the tokens only. Decorative (aria-hidden): the text beside it
  * names the thing.
  */
-export function Art({ subject, tone, draw, className }: ArtProps) {
+export function Art({ subject, tone, draw, fit = 'cover', className }: ArtProps) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const { main: Main, side: Side } = draw ?? subjectFor(subject);
   const t = tone ?? toneFor(subject);
+  const scene = (
+    <>
+      <ellipse className="nl-art-shadow" cx="196" cy="222" rx="86" ry="11" />
+      <circle className="nl-art-dot nl-art-dot-a" cx="92" cy="78" r="7" />
+      <circle className="nl-art-dot nl-art-dot-b" cx="318" cy="62" r="5" />
+      <circle className="nl-art-dot nl-art-dot-c" cx="334" cy="168" r="9" />
+      <Main className="nl-art-main" weight="fill" x={128} y={64} width={144} height={144} />
+      {Side ? (
+        <g>
+          <circle className="nl-art-badge" cx="262" cy="180" r="34" />
+          <Side className="nl-art-side" weight="fill" x={239} y={157} width={46} height={46} />
+        </g>
+      ) : null}
+    </>
+  );
+  if (fit === 'contain') {
+    // the backdrop (sky, glow, ground at 74%) in CSS; the scene scaled to the box's height, centred
+    return (
+      <span className={clsx('nl-art', 'nl-art-contain', className)} data-tone={t} aria-hidden>
+        <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet" focusable="false">{scene}</svg>
+      </span>
+    );
+  }
   return (
     <span className={clsx('nl-art', className)} data-tone={t} aria-hidden>
       <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" focusable="false">
@@ -37,17 +65,7 @@ export function Art({ subject, tone, draw, className }: ArtProps) {
         <rect width="400" height="300" fill={`url(#${id}-sky)`} />
         <circle cx="200" cy="128" r="112" fill={`url(#${id}-glow)`} />
         <path className="nl-art-ground" d="M-20 222 Q200 196 420 222 V320 H-20Z" />
-        <ellipse className="nl-art-shadow" cx="196" cy="222" rx="86" ry="11" />
-        <circle className="nl-art-dot nl-art-dot-a" cx="92" cy="78" r="7" />
-        <circle className="nl-art-dot nl-art-dot-b" cx="318" cy="62" r="5" />
-        <circle className="nl-art-dot nl-art-dot-c" cx="334" cy="168" r="9" />
-        <Main className="nl-art-main" weight="fill" x={128} y={64} width={144} height={144} />
-        {Side ? (
-          <g>
-            <circle className="nl-art-badge" cx="262" cy="180" r="34" />
-            <Side className="nl-art-side" weight="fill" x={239} y={157} width={46} height={46} />
-          </g>
-        ) : null}
+        {scene}
       </svg>
     </span>
   );

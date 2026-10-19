@@ -1,50 +1,83 @@
-/* Public provider page — design 06 `provider` (template lines 553–580). Tokens only; the hero's background is the
-   business's brand colour (merchant data, inline). */
+/* Public provider page (light & photo-first, phase B; design 06 `provider` behaviour): a cover picture with the
+   business's mark over its edge, the name and the verified tier; trust figures as cards, credentials, the sections
+   the business published; the booking card on the right (sticky), first on phones. Tokens only — the mark's ring is
+   the business's brand colour (merchant data, inline). */
 .nl-prov { min-width: 0; }
-.nl-prov-announce { margin-bottom: 12px; }
-.nl-prov-hero { margin-top: 24px; padding: 36px clamp(20px, 4vw, 48px); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; color: var(--color-action-primary-text); }
-.nl-prov-id { display: flex; gap: 20px; align-items: center; min-width: 0; }
-.nl-prov-mark { width: 72px; height: 72px; border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); display: grid; place-items: center; font-weight: 600; font-size: 30px; flex: none; overflow: hidden; }
+.nl-prov-announce { margin-top: var(--space-4); }
+
+/* ── hero: cover, mark, name ── */
+.nl-prov-hero { margin-top: var(--space-4); }
+.nl-prov-cover { position: relative; display: block; height: 240px; border-radius: var(--radius-lg); overflow: hidden; }
+.nl-prov-head { display: flex; align-items: flex-end; gap: var(--space-5); flex-wrap: wrap; padding: 0 var(--space-6); margin-top: -48px; position: relative; }
+.nl-prov-mark { width: 112px; height: 112px; border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-action-primary); display: grid; place-items: center; font-family: var(--font-heading); font-weight: var(--weight-bold); font-size: var(--text-4xl); flex: none; overflow: hidden; border: 4px solid var(--color-surface); box-shadow: var(--shadow-md); outline: 1px solid var(--color-border-card); }
 .nl-prov-mark img { width: 100%; height: 100%; object-fit: cover; }
-.nl-prov-idtext { min-width: 0; }
-.nl-prov-name { font-size: clamp(30px, 5vw, 40px); margin: 0; letter-spacing: -0.02em; color: var(--color-action-primary-text); overflow-wrap: anywhere; }
-.nl-prov-tagline { font-size: 15px; opacity: .88; }
-.nl-prov-tier { background: var(--color-surface); color: var(--color-text); }
-.nl-prov-tierbox { display: inline-flex; align-items: center; gap: 6px; }
-.nl-prov-fav { min-width: 44px; min-height: 44px; background: var(--color-surface); color: var(--color-danger); border-radius: var(--radius-pill); }
-.nl-prov-split { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(min(100%, 320px), 1fr); gap: 28px 64px; margin-top: 28px; align-items: start; }
-@media (max-width: 859px) { .nl-prov-split { grid-template-columns: minmax(0, 1fr); } }
+.nl-prov-idtext { min-width: 0; flex: 1; padding-bottom: var(--space-1); }
+.nl-prov-name { font-size: var(--text-4xl); margin: 0; letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
+.nl-prov-tagline { font-size: var(--text-md); color: var(--color-text-muted); margin-top: var(--space-1); }
+.nl-prov-tierbox { display: inline-flex; align-items: center; gap: var(--space-2); padding-bottom: var(--space-2); }
+.nl-prov-tier { font-size: var(--text-sm); padding: var(--space-1) var(--space-3); }
+.nl-prov-fav { color: var(--color-danger); }
+
+/* ── body: main | the booking card ── */
+.nl-prov-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: var(--space-8) var(--space-12); margin-top: var(--space-8); align-items: start; }
 .nl-prov-main { min-width: 0; }
-.nl-prov-figures { display: flex; gap: 16px 32px; font-size: 13px; flex-wrap: wrap; margin: 0; }
-.nl-prov-figures > div { display: flex; flex-direction: column-reverse; }
-.nl-prov-figures dt { color: var(--color-text-muted); }
+.nl-prov-figures { margin: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.nl-prov-figures > div { display: flex; flex-direction: column-reverse; gap: 2px; }
+.nl-prov-figures dt { color: var(--color-text-muted); font-size: var(--text-sm); }
 .nl-prov-figures dd { margin: 0; }
-.nl-prov-fig { font-size: 26px; font-weight: 600; }
-.nl-prov-creds { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 16px; }
-.nl-prov-about { line-height: 1.55; margin: 18px 0 0; max-width: 60ch; }
-.nl-prov-section { margin-top: 28px; }
-.nl-prov-h2 { font-size: 22px; margin: 0 0 8px; }
-.nl-prov-text { margin: 0 0 8px; line-height: 1.5; max-width: 60ch; }
-.nl-prov-zones { display: flex; gap: 6px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
-.nl-prov-reviews { margin: 0; padding: 0; list-style: none; }
-.nl-prov-review { margin: 0 0 16px; max-width: 60ch; }
-.nl-prov-quote { font-style: italic; margin: 0 0 4px; line-height: 1.5; }
-.nl-prov-who { font-size: 12px; color: var(--color-text-muted); }
-.nl-prov-reply { font-size: 13px; margin: 6px 0 0; padding-left: 12px; border-left: 2px solid var(--color-border); }
-.nl-prov-faq { border-bottom: 1px solid var(--color-border); padding: 10px 0; max-width: 60ch; }
-.nl-prov-faq summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
-.nl-prov-faq summary:focus-visible { outline: 2px solid var(--color-action-primary); outline-offset: 2px; }
-.nl-prov-faq p { margin: 6px 0 0; line-height: 1.5; }
-.nl-prov-cta { padding: 20px; background: var(--color-surface); border-radius: var(--radius-md); min-width: 0; }
-@media (min-width: 860px) { .nl-prov-cta { position: sticky; top: 20px; } }
-.nl-prov-cta-title { font-size: 22px; margin: 0 0 6px; }
-.nl-prov-cta-hint { font-size: 14px; color: var(--color-text-muted); margin: 0 0 14px; }
-.nl-prov-menu { display: flex; flex-direction: column; gap: 6px; font-size: 14px; margin: 0; padding: 0; list-style: none; }
-.nl-prov-menu-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; }
-.nl-prov-menu-dur { display: block; font-size: 12px; color: var(--color-text-muted); }
-.nl-prov-book { width: 100%; min-height: 48px; font-size: 16px; margin-top: 14px; box-sizing: border-box; }
-.nl-prov-quote-btn { width: 100%; min-height: 44px; margin-top: 8px; box-sizing: border-box; }
-.nl-prov-foot { font-size: 12px; color: var(--color-text-muted); margin-top: 10px; line-height: 1.5; }
-.nl-prov .nl-errorstate { margin: 8px 0; }
-/* WCAG 1.4.12 (the sweep fails on it since S-141/S-143): a long tag (the points offer) wraps instead of scrolling the page sideways with user text spacing */
-.nl-prov-creds .tag { white-space: normal; max-width: 100%; overflow-wrap: anywhere; }
+.nl-prov-fig { font-size: var(--text-3xl); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight); line-height: var(--leading-tight); }
+.nl-prov-creds { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-4); }
+.nl-prov-creds .tag { white-space: normal; max-width: 100%; overflow-wrap: anywhere; font-size: var(--text-sm); padding: var(--space-1) var(--space-3); }
+.nl-prov-about { font-size: var(--text-lg); line-height: var(--leading-normal); margin: var(--space-6) 0 0; max-width: 62ch; }
+.nl-prov-section { margin-top: var(--space-10); }
+.nl-prov-h2 { font-size: var(--text-2xl); margin: 0 0 var(--space-4); letter-spacing: var(--tracking-tight); }
+.nl-prov-text { margin: 0 0 var(--space-3); line-height: var(--leading-normal); max-width: 62ch; }
+.nl-prov-zones { display: flex; gap: var(--space-2); flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
+.nl-prov-zones .tag { font-size: var(--text-sm); padding: var(--space-1) var(--space-3); }
+
+/* reviews: cards, two a row */
+.nl-prov-reviews { margin: 0 0 var(--space-4); padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: var(--space-3); }
+.nl-prov-reviews > li { display: flex; }
+.nl-prov-review { flex: 1; margin: 0; padding: var(--space-4) var(--space-5); background: var(--color-surface-sunken); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: var(--space-2); }
+.nl-prov-review-stars { display: inline-flex; gap: 2px; color: var(--color-rating); }
+.nl-prov-quote { margin: 0; line-height: var(--leading-normal); font-size: var(--text-md); }
+.nl-prov-who { font-size: var(--text-sm); color: var(--color-text-muted); }
+.nl-prov-reply { font-size: var(--text-sm); margin: var(--space-1) 0 0; padding-left: var(--space-3); border-left: 2px solid var(--color-border-strong); color: var(--color-text-muted); }
+.nl-prov-reply strong { color: var(--color-text); }
+
+/* FAQ */
+.nl-prov-faq { border-top: 1px solid var(--color-border); max-width: 70ch; }
+.nl-prov-faq:last-child { border-bottom: 1px solid var(--color-border); }
+.nl-prov-faq summary { cursor: pointer; font-weight: var(--weight-semibold); min-height: var(--size-touch); display: flex; align-items: center; padding: var(--space-2) 0; }
+.nl-prov-faq summary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.nl-prov-faq p { margin: 0 0 var(--space-3); line-height: var(--leading-normal); color: var(--color-text-muted); }
+
+/* the booking card */
+.nl-prov-cta { padding: var(--space-6); background: var(--color-surface); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); min-width: 0; position: sticky; top: calc(var(--nl-header-h, var(--size-header)) + var(--space-4)); }
+.nl-prov-cta-title { font-size: var(--text-2xl); margin: 0 0 var(--space-1); }
+.nl-prov-cta-hint { font-size: var(--text-md); color: var(--color-text-muted); margin: 0 0 var(--space-4); }
+.nl-prov-menu { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--color-border); }
+.nl-prov-menu-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border); font-size: var(--text-md); }
+.nl-prov-menu-row strong { font-size: var(--text-md); white-space: nowrap; }
+.nl-prov-menu-dur { display: block; font-size: var(--text-sm); color: var(--color-text-muted); }
+.nl-prov-book { width: 100%; margin-top: var(--space-5); }
+.nl-prov-quote-btn { width: 100%; margin-top: var(--space-2); white-space: normal; text-align: center; }
+.nl-prov-foot { font-size: var(--text-sm); color: var(--color-text-muted); margin-top: var(--space-4); line-height: var(--leading-normal); }
+.nl-prov .nl-errorstate { margin: var(--space-2) 0; }
+
+@media (max-width: 899.98px) {
+  .nl-prov-split { grid-template-columns: minmax(0, 1fr); }
+  .nl-prov-cta { position: static; order: -1; box-shadow: var(--shadow-sm); padding: var(--space-5); }
+  .nl-prov-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 599.98px) {
+  .nl-prov-cover { height: 150px; }
+  .nl-prov-head { padding: 0 var(--space-3); gap: var(--space-3); margin-top: -40px; }
+  .nl-prov-mark { width: 84px; height: 84px; font-size: var(--text-3xl); }
+  .nl-prov-idtext { flex-basis: 100%; }
+  .nl-prov-name { font-size: var(--text-3xl); }
+  .nl-prov-tierbox { padding-bottom: 0; }
+  .nl-prov-fig { font-size: var(--text-2xl); }
+  .nl-prov-about { font-size: var(--text-md); }
+  .nl-prov-h2 { font-size: var(--text-xl); }
+}

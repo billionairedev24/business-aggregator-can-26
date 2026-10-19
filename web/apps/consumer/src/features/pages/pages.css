@@ -75,9 +75,12 @@
 }
 
 /* ── breadcrumbs: one muted line, the links in the link colour ── */
+.nl-crumbs-nav { padding-top: var(--space-1); }
+.nl-crumbs-nav + * { margin-top: var(--space-3); }
 .nl-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-1); margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); color: var(--color-text-muted); }
 .nl-crumbs li { display: inline-flex; align-items: center; gap: var(--space-1); }
-.nl-crumbs li + li::before { content: '/'; color: var(--color-border-strong); }
+.nl-crumbs-sep { color: var(--color-text-subtle); }
+.nl-crumbs [aria-current='page'] { color: var(--color-text); }
 .nl-crumbs a { display: inline-flex; align-items: center; min-height: 32px; color: var(--color-link); }
 
 /* ── a phone's sticky action bar (product, booking, checkout): the main action within thumb reach ── */

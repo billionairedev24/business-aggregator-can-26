@@ -11,6 +11,7 @@ import { NotFound } from '../shell/NotFound';
 import { percent, rating } from '../services/format';
 import { acceptQuote, confirmAcceptance, declineQuote, quoteQuery, type Acceptance, type QuotePage as Page, type Visit } from './api';
 import { useQuotesT } from './messages';
+import { Crumbs } from '../pages/Crumbs';
 
 /** design 06 `quote`: one provider's itemized quote — every line, scope, exclusions, warranty, deposit, validity. */
 export function QuotePage({ quoteId }: { quoteId: string }) {
@@ -30,16 +31,14 @@ function QuoteView({ page }: { page: Page }) {
   const { money, date } = useFormatters();
   const { quote: q, provider: p } = page;
   const state = q.expired ? 'expired' : q.state;
-  const tone = state === 'accepted' ? 'tag-accent' : state === 'sent' || state === 'viewed' ? 'tag-accent-2' : 'tag-neutral';
+  const tone = state === 'accepted' ? 'tag-success' : state === 'sent' || state === 'viewed' ? 'tag-highlight' : 'tag-neutral';
   const pct = (bps: number) => percent(bps / 100, locale);
   const balance = q.totalCents - q.depositCents;
   const hours = q.durationMin ? `${(q.durationMin / 60).toLocaleString(locale === 'fr' ? 'fr-CA' : 'en-CA', { maximumFractionDigits: 1 })} h` : '';
   const meta = [t(tierKey(p.tier)), p.reviewCount > 0 ? `★ ${rating(p.rating, locale)} (${p.reviewCount})` : null, p.onTimePct != null ? t('trust', { onTime: percent(p.onTimePct, locale), disputes: percent(p.disputePct ?? 0, locale) }) : null].filter(Boolean).join(' · ');
   return (
     <div className="nl-page nl-qt">
-      <nav aria-label={t('breadcrumb')} className="nl-qt-crumbs">
-        <Link to="/quotes/requests/$requestId" params={{ requestId: q.requestId }}>{t('crumbRequest')}</Link> › <span aria-current="page">{t('crumbQuote', { ref: q.ref })}</span>
-      </nav>
+      <Crumbs label={t('breadcrumb')} items={[{ label: t('crumbRequest'), href: `/quotes/requests/${q.requestId}` }, { label: t('crumbQuote', { ref: q.ref }) }]} />
       <div className="nl-qt-split">
         <div className="nl-qt-main">
           <div className="nl-qt-status">

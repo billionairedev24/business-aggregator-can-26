@@ -16,6 +16,7 @@ import { usePromoT } from '../promotions/messages';
 import { homeHours, toRequest, useDraft, VALUES, type Draft } from './draft';
 import { useBookingT } from './messages';
 import { StripeCard } from './StripeCard';
+import { Crumbs } from '../pages/Crumbs';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 
 export type Step = 'details' | 'location' | 'schedule' | 'pay' | 'done';
@@ -103,16 +104,14 @@ export function BookingWizard({ slug, step, serviceId, bookingId, onStep }: {
 
   return (
     <div className="nl-page nl-bk">
-      <nav aria-label={t('breadcrumb')} className="nl-bk-crumbs">
-        <Link to="/services">{t('crumbServices')}</Link> › <Link to="/providers/$slug" params={{ slug }}>{facts.name}</Link> › <span aria-current="page">{t('crumbBook')}</span>
-      </nav>
+      <Crumbs label={t('breadcrumb')} items={[{ label: t('crumbServices'), href: '/services' }, { label: facts.name, href: `/providers/${slug}` }, { label: t('crumbBook') }]} />
       <div className="nl-bk-split">
         <div className="nl-bk-main">
           <ol className="nl-bk-steps" aria-label={t('steps')}>
             {steps.filter(s => s !== 'done').map((s, i) => (
               <li key={s}>
                 <button type="button" className="nl-bk-step" data-state={i < idx ? 'done' : i === idx ? 'current' : 'todo'} aria-current={i === idx ? 'step' : undefined} disabled={i > idx} onClick={() => onStep(s)}>
-                  <span className="nl-bk-step-n" aria-hidden>{i + 1}</span>{t(`step_${s}`)}
+                  <span className="nl-bk-step-n" aria-hidden>{i + 1}</span><span className="nl-bk-step-label">{t(`step_${s}`)}</span>
                 </button>
               </li>
             ))}

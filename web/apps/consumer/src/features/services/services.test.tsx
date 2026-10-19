@@ -85,21 +85,23 @@ describe('services landing (design 06 services)', () => {
     renderApp('/services', { routes });
     expect(await screen.findByRole('heading', { level: 1, name: 'Services' })).toBeInTheDocument();
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByText('4 categories live in Alberta · every provider verified, every job paid into escrow')).toBeInTheDocument();
+    expect(screen.getByText('4 categories live')).toBeInTheDocument(); // region-neutral (phase B): no province named
+    expect(screen.queryByText(/Alberta/)).toBeNull();
     expect(screen.getByRole('heading', { level: 2, name: 'Automotive' })).toBeInTheDocument();
     expect(screen.getByText('Mobile visits · fixed prices · licence checked')).toBeInTheDocument();
     expect(screen.getByText('Free consultation · licensed professionals · written agreement')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Mobile mechanic' })).toHaveAttribute('href', '/services/mobile-mechanic');
+    expect(screen.getByRole('link', { name: 'Mobile mechanic 1 pro' })).toHaveAttribute('href', '/services/mobile-mechanic');
+    expect(screen.getByRole('link', { name: 'Detailing Coming soon' })).toHaveAttribute('href', '/services/detailing');
     expect(calls.some(c => c.url === '/api/v1/public/services?lang=en')).toBe(true);
   });
 
   it('reads in French, category names included', async () => {
     const calls = mockFetch(api());
     renderApp('/services', { routes, locale: 'fr' });
-    expect(await screen.findByText('4 catégories actives en Alberta · chaque prestataire vérifié, chaque travail payé en fiducie')).toBeInTheDocument();
+    expect(await screen.findByText('4 catégories actives')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Automobile' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Mécanicien mobile' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Courtier immobilier' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Mécanicien mobile 1 pro' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Courtier immobilier Bientôt' })).toBeInTheDocument();
     expect(calls.some(c => c.url === '/api/v1/public/services?lang=fr')).toBe(true);
   });
 

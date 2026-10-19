@@ -12,6 +12,8 @@ import { FavouriteButton } from '../account/FavouriteButton';
 import { useStorefrontVisit } from '../../lib/visits';
 import { moreReviewsQuery, providerQuery, rewardQuery, storefrontQuery, type ProviderFacts, type PublicReview, type Storefront } from './api';
 import { useProviderT } from './messages';
+import { Art } from '../art/Art';
+import { SealCheck, Star } from '@phosphor-icons/react';
 
 /** Sections the provider page renders in the page's order (hero first, the CTA card beside them). */
 const MAIN: readonly string[] = ['about', 'reviews', 'area', 'faq', 'policies'];
@@ -54,18 +56,19 @@ function Hero({ page, facts, locale }: { page: Storefront; facts: ProviderFacts;
   const tagline = [page.tagline ?? [category, facts.city].filter(Boolean).join(' · '), t('since', { year })].filter(Boolean).join(' · ');
   const tier = dyn(s, `tier_${facts.tier}`, facts.tier);
   return (
-    <header className="nl-prov-hero" style={{ background: page.brandColor }}>
-      <div className="nl-prov-id">
-        <span className="nl-prov-mark" aria-hidden>{page.logoUrl ? <img src={page.logoUrl} alt="" /> : facts.name.trim().charAt(0).toUpperCase()}</span>
+    <header className="nl-prov-hero">
+      <span className="nl-prov-cover" aria-hidden><Art subject={facts.category?.slug ?? facts.kind} fit="contain" /></span>
+      <div className="nl-prov-head">
+        <span className="nl-prov-mark" aria-hidden style={{ borderColor: page.brandColor }}>{page.logoUrl ? <img src={page.logoUrl} alt="" /> : facts.name.trim().charAt(0).toUpperCase()}</span>
         <div className="nl-prov-idtext">
           <h1 className="nl-prov-name">{facts.name}</h1>
           <div className="nl-prov-tagline">{tagline}</div>
         </div>
+        <span className="nl-prov-tierbox">
+          <span className="tag tag-success nl-prov-tier"><SealCheck size={16} weight="fill" aria-hidden />{t('tierVerified', { tier })}</span>
+          <FavouriteButton merchantId={facts.merchantId} className="btn btn-secondary btn-icon nl-prov-fav" />
+        </span>
       </div>
-      <span className="nl-prov-tierbox">
-        <span className="tag nl-prov-tier">{t('tierVerified', { tier })}</span>
-        <FavouriteButton merchantId={facts.merchantId} className="btn btn-ghost nl-prov-fav" />
-      </span>
     </header>
   );
 }
@@ -74,7 +77,7 @@ function Figures({ facts, locale }: { facts: ProviderFacts; locale: Locale }) {
   const t = useProviderT();
   const pct = (v: number | null | undefined) => (v === null || v === undefined ? t('noFigure') : percent(v, locale));
   return (
-    <dl className="nl-prov-figures">
+    <dl className="nl-prov-figures nl-kpis">
       <div><dt>{facts.reviewCount > 0 ? t('verifiedReviews', { count: facts.reviewCount }) : t('newOnNorthline')}</dt><dd className="nl-prov-fig">{facts.reviewCount > 0 ? rating(facts.rating, locale) : '—'}</dd></div>
       <div><dt>{t('onTime')}</dt><dd className="nl-prov-fig">{pct(facts.onTimePct)}</dd></div>
       <div><dt>{t('disputes')}</dt><dd className="nl-prov-fig">{pct(facts.disputePct)}</dd></div>
@@ -173,7 +176,9 @@ function Review({ review: r, name }: { review: PublicReview; name: string }) {
   const { locale } = useLocale();
   return (
     <figure className="nl-prov-review">
-      <span className="nl-sr-only">{t('stars', { count: r.rating })}</span>
+      <span className="nl-prov-review-stars" role="img" aria-label={t('stars', { count: r.rating })}>
+        {Array.from({ length: 5 }, (_, i) => <Star key={i} size={16} weight={i < r.rating ? 'fill' : 'regular'} aria-hidden />)}
+      </span>
       {r.text ? <blockquote className="nl-prov-quote">“{r.text}”</blockquote> : null}
       <figcaption className="nl-prov-who">{t('reviewWho', { who: r.author ?? t('reviewAnonymous'), ref: r.refType, when: ago(r.createdAt, locale) })}</figcaption>
       {r.reply ? <p className="nl-prov-reply"><strong>{t('reply', { name })}</strong> {r.reply}</p> : null}

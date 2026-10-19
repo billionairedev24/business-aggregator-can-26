@@ -19,3 +19,11 @@
 .nl-art-main { color: var(--nl-art-ink); }
 .nl-art-badge { fill: var(--color-surface); stroke: var(--nl-art-200); stroke-width: 2; }
 .nl-art-side { color: var(--nl-art-pop); }
+/* contain: the backdrop drawn here so it runs on past the scene on wide banners (ground line at 74%, as in the SVG) */
+.nl-art-contain {
+  background:
+    radial-gradient(ellipse 34% 62% at 50% 42%, color-mix(in srgb, var(--color-surface) 92%, transparent) 0, transparent 100%),
+    radial-gradient(circle at 12% 30%, var(--nl-art-100) 0 6px, transparent 7px),
+    radial-gradient(circle at 88% 64%, var(--color-surface) 0 8px, transparent 9px),
+    linear-gradient(to bottom, var(--nl-art-50) 0, var(--nl-art-100) 74%, color-mix(in srgb, var(--nl-art-200) 70%, var(--nl-art-100)) 74%);
+}

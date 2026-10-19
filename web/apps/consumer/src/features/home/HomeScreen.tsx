@@ -93,7 +93,7 @@ export function HomeScreen() {
           <p className="nl-home-sell-text">{t('sellText')}</p>
           <SiteLink href="/sell" className="btn btn-primary btn-lg">{t('sellCta')}</SiteLink>
         </div>
-        <span className="nl-home-sell-pic" aria-hidden><Art subject="storefront" tone="sage" /></span>
+        <span className="nl-home-sell-pic" aria-hidden><Art subject="storefront" tone="sage" fit="contain" /></span>
       </section>
     </div>
   );

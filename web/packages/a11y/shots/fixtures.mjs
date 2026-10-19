@@ -73,6 +73,19 @@ const SHOPS = [
 const DEPARTMENTS = [['bakery', 'Bakery', 2], ['pantry', 'Pantry', 1], ['coffee', 'Coffee', 1], ['produce', 'Produce', 1], ['gifts', 'Gifts', 1], ['butcher', 'Butcher', 1]]
   .map(([slug, name, shops]) => ({ slug, name, shops }));
 
+// the whole service taxonomy (db/seed/categories.json), so the Services landing shows every group as it will live
+const seed = JSON.parse(readFileSync(new URL('../../../../db/seed/categories.json', import.meta.url), 'utf8'));
+const slug = name => name.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const GROUP_KIND = { automotive: 'visit', 'home-trades': 'visit', 'cleaning-and-property': 'home', 'events-and-hospitality': 'event', 'personal-care-and-wellness': 'appointment', pets: 'home', 'education-and-coaching': 'home', professional: 'consult', 'tech-and-digital': 'visit', 'childcare-and-family': 'home' };
+const SERVICES_LANDING = (() => {
+  const groups = seed.service.map(g => {
+    const key = slug(g.group);
+    return { id: `service.${key}`, key, names: { en: g.group }, note: g.note || null, items: g.items.map(([name], i) => ({ slug: slug(name), names: { en: name }, kind: GROUP_KIND[key] ?? 'visit', providers: (name.length * 7 + i * 3) % 23 > 5 ? (name.length * 7 + i * 3) % 23 : 0 })) };
+  });
+  const items = groups.flatMap(g => g.items);
+  return { liveCategories: items.filter(i => i.providers > 0).length, providers: items.reduce((n, i) => n + i.providers, 0), provinces: ['AB'], groups };
+})();
+
 const body = key => recorded.exact[key]?.body;
 const live = (m, p, prefix) => m === 'GET' && p.split('?')[0] === prefix;
 
@@ -97,6 +110,28 @@ const DASHBOARD = {
 export const SHOTS = {
   consumer: [
     (m, p) => (live(m, p, '/api/v1/search') ? { body: search(p) } : undefined),
+    (m, p) => (live(m, p, '/api/v1/public/services') ? { body: SERVICES_LANDING } : undefined),
+    // a provider's published page with its sections, an about text, real-sounding reviews and FAQ
+    (m, p) => (m === 'POST' && /^\/api\/v1\/public\/storefronts\/[^/]+\/visits/.test(p) ? { status: 204, body: null } : undefined),
+    (m, p) => (live(m, p, '/api/v1/storefronts/prairie-wrench') ? { body: {
+      ...body('GET /api/v1/storefronts/prairie-wrench'),
+      sections: ['hero', 'about', 'services', 'reviews', 'faq', 'area', 'cta'].map(kind => ({ kind, settings: kind === 'faq' ? { pairs: [
+        { q: 'Do you work in parkades?', a: 'Yes — up to 2.1 m clearance. Tell us the level and stall when you book.' },
+        { q: 'Can I supply my own parts?', a: 'We fit your parts at the labour price; the warranty then covers our work only.' },
+        { q: 'What if the job needs more than the quote?', a: 'We stop and ask. Extra parts or time always need your approval in the app.' },
+      ] } : {} })),
+      business: { ...body('GET /api/v1/storefronts/prairie-wrench').business, about: 'Red Seal technicians who bring the shop to your driveway. Brakes, batteries, diagnostics and seasonal tire swaps — fixed prices for common jobs, written reports with photos, parts at cost.' },
+    } } : undefined),
+    (m, p) => {
+      if (!live(m, p, '/api/v1/public/providers/prairie-wrench')) return undefined;
+      const b = structuredClone(body('GET /api/v1/public/providers/prairie-wrench?lang=en'));
+      const texts = ['Showed up on time, explained everything and the price matched the quote to the cent.', 'Did my brakes in the parkade at work. Photos of the old pads in the report — great touch.', 'Fast diagnosis on a battery light. Honest about what could wait.'];
+      b.reviews.items = b.reviews.items.map((r, i) => ({ ...r, text: texts[i] ?? r.text, author: ['Amara O.', 'Dev P.', 'Jordan K.'][i] ?? r.author }));
+      b.services = [...b.services, { id: 's3', name: 'Battery test & replacement', included: null, pricingMode: 'fixed', priceCents: 14900, durationMin: 45, instantBook: true, categorySlug: 'battery-boost-and-replacement', kind: 'visit' },
+        { id: 's4', name: 'Seasonal tire swap', included: null, pricingMode: 'fixed', priceCents: 9900, durationMin: 60, instantBook: true, categorySlug: 'tire-change-and-storage', kind: 'visit' }];
+      b.nextAvailable = '2026-10-21T16:00:00Z';
+      return { body: b };
+    },
     // a fallback market (the region configuration's), so the location control names a place for a first visit
     (m, p) => (live(m, p, '/api/v1/geo/markets') ? { body: {
       fallback: { id: 'mkt-calgary', city: 'Calgary', province: 'AB', stage: 'live', lat: 51.0447, lng: -114.0719 },
