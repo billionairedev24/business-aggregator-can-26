@@ -138,6 +138,15 @@ describe('language', () => {
     expect(screen.queryByRole('button', { name: /language/i })).toBeNull();
     expect(screen.getByRole('link', { name: 'Northline — home' })).toHaveAttribute('href', '/');
   });
+
+  it('publishes its drawn height for sticky columns (demo rehearsal: the checkout summary slid under the two bars)', () => {
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ height: 152.4 } as DOMRect);
+    const { unmount } = wrap(<SiteHeader location={null} links={[{ key: 'shop', label: 'Shop', href: '/shop' }]} account={null} />);
+    expect(document.documentElement.style.getPropertyValue('--nl-header-h')).toBe('152px');
+    rect.mockRestore();
+    unmount();
+    expect(document.documentElement.style.getPropertyValue('--nl-header-h')).toBe('');
+  });
 });
 
 describe('tabs', () => {

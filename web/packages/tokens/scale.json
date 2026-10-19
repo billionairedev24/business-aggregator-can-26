@@ -11,7 +11,7 @@
   "weight": { "regular": 400, "medium": 500, "semibold": 600, "bold": 700, "black": 800 },
   "leading": { "tight": 1.2, "normal": 1.45, "relaxed": 1.6 },
   "tracking": { "tight": "-0.015em", "caps": "0.06em" },
-  "size": { "control-sm": 32, "control": 40, "control-lg": 48, "touch": 44, "header-mark": 32, "sidebar": 264, "rail": 72, "sheet": 680 },
+  "size": { "control-sm": 32, "control": 40, "control-lg": 48, "touch": 44, "header-mark": 32, "header": 104, "sidebar": 264, "rail": 72, "sheet": 680 },
   "page": { "max": 1500, "gutter": "clamp(12px, 2.4vw, 32px)" },
   "shadow": {
     "sm": [{ "y": 1, "blur": 2, "alpha": 0.08 }],

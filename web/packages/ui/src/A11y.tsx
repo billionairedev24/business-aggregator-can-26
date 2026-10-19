@@ -29,12 +29,15 @@ export function useStickyOffset<E extends HTMLElement>(ref: RefObject<E | null>,
       const h = Math.round(el.getBoundingClientRect().height);
       listener.current?.(h);
       document.documentElement.style.setProperty('--nl-sticky-top', `${h + 8}px`);
+      // what sticky columns sit under (the checkout summary, the PDP buy box…): the header as drawn, which wraps to
+      // more rows on narrow screens; `--size-header` (scale.json) until it is measured
+      document.documentElement.style.setProperty('--nl-header-h', `${h}px`);
     };
     publish();
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(publish);
     ro.observe(el);
-    return () => { ro.disconnect(); document.documentElement.style.removeProperty('--nl-sticky-top'); };
+    return () => { ro.disconnect(); document.documentElement.style.removeProperty('--nl-sticky-top'); document.documentElement.style.removeProperty('--nl-header-h'); };
   }, [ref]);
 }
 
