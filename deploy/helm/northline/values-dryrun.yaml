@@ -90,6 +90,11 @@ apps:
       EMAIL_PROVIDER: local
       EMAIL_FROM: "Northline demo <no-reply@demo.northline.ca>"
       DB_POOL_SIZE: "8"
+      # Stripe Identity in test mode for owners' identity and customers' age checks: the local fakes' outcome pages
+      # exist only under the `local` profile, so with `local` here no owner could finish onboarding and no one could
+      # buy an age-restricted item (docs/runbooks/demo.md). Test mode's hosted page lets you pick the outcome.
+      IDENTITY_PROVIDER: stripe
+      AGE_VERIFICATION_PROVIDER: stripe
     resources:
       requests: { cpu: 200m, memory: 900Mi }
       limits: { memory: 900Mi }

@@ -64,7 +64,7 @@ export function LicenceQueue({ filter }: { filter: PlaceFilter }) {
   const elsewhere = items.filter(i => i.businessProvince && i.businessProvince !== i.licence.province && i.licence.status === 'pending');
   return (
     <div>
-      <h1 className="nl-q-title">{t('licTitle', { n: status === 'pending' ? items.length : '…' })}</h1>
+      <h2 className="nl-q-h2">{t('licTitle', { n: status === 'pending' ? items.length : '…' })}</h2>
       <p className="nl-q-lede">{t('licLede')}</p>
       <Segmented name="licence-status" aria-label={t('filter')} value={status} onChange={v => setStatus(v)} options={FILTERS.map(f => ({ value: f, label: t(`f_${f}`) }))} />
       {elsewhere.map(i => <p key={i.licence.id} className="nl-q-note">{i.businessName}: {t('otherProvince', { licence: i.licence.province, business: i.businessProvince ?? '' })}</p>)}

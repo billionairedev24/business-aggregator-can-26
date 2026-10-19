@@ -136,6 +136,7 @@ grep 'Verification code' .run/logs/auth.log | tail -1
 |---|---|---|
 | Amara Osei (customer) | `amara.osei@example.com` · `+1 403 555 0201` | browsing, the cart, her orders and bookings (Activity), Account. She has no second factor, so **paying** asks her to add one |
 | Jas Gill (has an authenticator) | `jas.gill@example.com`, then the authenticator key `NORTHLINEJASDEVTOTPSECRET2345672` (add it to any authenticator app, or `oathtool --totp -b NORTHLINEJASDEVTOTPSECRET2345672`) | paying: a sign-in with a second factor needs no step-up |
+| the demo accounts | after `make demo-data`: the customer (Jordan Demo-Shopper) and the others in [demo.md](demo.md), their authenticator keys in the script's state file | the client demo's data — shops with photos, past orders, bookings — on the phone |
 | a new account | Sign up in the app: your name, a fake email, a mobile number; the code from the log; choose "Authenticator app" and scan the key with your phone's authenticator | the whole journey as a new customer |
 
 "Sign in with a passkey", Google and Apple open the system browser on the consumer site: passkeys only work on

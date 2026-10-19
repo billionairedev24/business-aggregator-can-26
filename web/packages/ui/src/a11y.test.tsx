@@ -10,7 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { Bank, Briefcase, ChartLineUp, House, Tag as TagIcon, UserCircle } from '@phosphor-icons/react';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 import {
-  AccountMenu, Alert, AppShell, Avatar, BarList, BrandMark, Button, ChatBubble, ChatLog, Checkbox, Chip, ChipTabs, DataTable, DepartmentTile,
+  AccountMenu, Alert, AppShell, Avatar, BarList, BoHeader, ChartCard, FactList, KpiStrip, SheetSection, TodoCard, BrandMark, Button, ChatBubble, ChatLog, Checkbox, Chip, ChipTabs, DataTable, DepartmentTile,
   Dialog, Drawer, EmptyState, ErrorState, Field, FileButton, FormGrid, GroupedMultiSelect, I18nProvider, Input, Kpi, KpiRow, Legend, LineChart,
   LinkRow, LocationPill, Menu, Meter, OptionCard, PageHeader, PageSkeleton, Panel, Price, ProductCard, ProductTile, QuantityStepper, ServiceCard, SearchBar, Segmented, Select, ShopTile, SiteHeader,
   Skeleton, StackedBarChart, Stars, StepBars, Switch, Tag, TextArea, TextInput, TileGrid, UnderlineTabs, type Locale, type NavGroup,
@@ -74,6 +74,18 @@ describe.each(['en', 'fr'] as const)('axe · primitives (%s)', locale => {
       <LineChart title="Weekly gross" current={[3, 5, 4]} previous={[2, 4, 4]} labels={['Mon', 'Tue', 'Wed']} legend={{ current: 'This period', previous: 'Previous' }} />
       <Legend items={[{ label: 'Goods', color: 'var(--color-accent)' }]} />
       <BarList items={[{ label: 'Brake job', value: 1200 }, { label: 'Oil change', value: 400 }]} />
+    </>, locale);
+    await expectNoAxeViolations(container);
+  });
+
+  it('back-office blocks: page head, KPI strip, chart and to-do cards, sheet facts', async () => {
+    const { container } = page(<>
+      <BoHeader title="Overview" sub="Live" actions={<Button variant="secondary">Export</Button>} />
+      <KpiStrip label="This week" items={[{ key: 'a', label: 'GMV', value: '$212k', delta: '+9%', trend: 'up' }, { key: 'b', label: 'Disputes', value: '0.9%', onClick: noop }]} />
+      <ChartCard id="t-chart" title="GMV"><BarList items={[{ label: 'Goods', value: 3 }]} /></ChartCard>
+      <TodoCard id="t-todo" title="To do" empty="Nothing" items={[{ key: 'a', icon: House, text: 'Applications', meta: '7', onClick: noop }]} />
+      <TodoCard id="t-none" title="Needs you" empty="Nothing waits." items={[]} />
+      <SheetSection title="Business"><FactList rows={[['Type', 'Provider'], null, ['City', 'Somewhere']]} /></SheetSection>
     </>, locale);
     await expectNoAxeViolations(container);
   });

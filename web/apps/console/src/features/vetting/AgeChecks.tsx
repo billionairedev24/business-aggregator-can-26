@@ -20,7 +20,7 @@ export function AgeChecks({ province }: { province?: string }) {
   const reasonText = (code: string) => { const k = `r_${code}` as AgeVetKey; const s = t(k); return s === k ? t('r_other') : s; };
   return (
     <div>
-      <h1 className="nl-q-title">{t('ageTitle')}</h1>
+      <h2 className="nl-q-h2">{t('ageTitle')}</h2>
       <p className="nl-q-lede">{t('ageLede')}</p>
       <KpiRow>
         <Kpi value={formatNumber(sum(r.verifications, 'verified'), locale)} label={t('k_verified')} />

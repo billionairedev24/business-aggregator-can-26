@@ -3,8 +3,10 @@ import { defineMessages } from '@northline/ui';
 /** Orders & bookings (S-81, design 03 lines 248–254). en = the design's copy; fr-CA after design/i18n-fr.js. */
 export const useOrdersT = defineMessages({
   en: {
-    kicker: 'Orders & bookings',
-    title: '{week} this week · {attention} need attention',
+    title: 'Orders & bookings',
+    sub: '{week} this week · {attention} need attention',
+    kpis: 'Right now', k_attention: 'Needs attention', k_live: 'Live', k_escrow: 'Escrow > 48 h', k_late: 'Late',
+    secOrder: 'Order', secIssue: 'Needs attention',
     v_attention: 'Needs attention · {n}', v_live: 'Live · {n}', v_escrow: 'Escrow > 48 h · {n}', v_late: 'Late · {n}', v_all: 'All',
     views: 'Show',
     search: 'Search a reference (NL-48…, BK-77…)',
@@ -39,8 +41,10 @@ export const useOrdersT = defineMessages({
     proof_photo: 'Photo', proof_signature: 'Signature', proof_pin: 'PIN',
   },
   fr: {
-    kicker: 'Commandes et réservations',
-    title: '{week} cette semaine · {attention} à traiter',
+    title: 'Commandes et réservations',
+    sub: '{week} cette semaine · {attention} à traiter',
+    kpis: 'En ce moment', k_attention: 'À traiter', k_live: 'En cours', k_escrow: 'Fiducie > 48 h', k_late: 'En retard',
+    secOrder: 'Commande', secIssue: 'À traiter',
     v_attention: 'À traiter · {n}', v_live: 'En cours · {n}', v_escrow: 'Fiducie > 48 h · {n}', v_late: 'En retard · {n}', v_all: 'Tout',
     views: 'Afficher',
     search: 'Chercher une référence (NL-48…, BK-77…)',

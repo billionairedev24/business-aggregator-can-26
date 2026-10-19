@@ -460,11 +460,19 @@ moved to the Studio, linked from the dashboard's "Get set up" card); the dashboa
 cards (no headline sentence, no coaching); the listings table with providers' "Services & prices" columns and the
 editors' Catalog step strip and cards; orders with KPIs and the 680px sheet; the PH:62 calendar time grid with the
 booking sheet; availability as PH:117 rows and cards; the PH:171 public-page form in place of the block builder;
-earnings (PH:230) and payouts (BO:472). UI only; the back-office blocks are in `web/apps/studio/src/components` until
-they move to `@northline/ui`.
+earnings (PH:230) and payouts (BO:472). UI only; the back-office blocks moved to `@northline/ui` in phase 3.
 
 **Phase 3: staff console basics (day 5)**
 Overview KPIs → Applications (two-stage review and sheet with every submitted field) → Sellers & providers → Orders → Disputes. All on the generic DataTable and Sheet.
+
+*Phase 3 as built (2026-10-18, branch `feat/redesign-console`; `docs/DECISIONS.md` § "Redesign phase 3"):* the
+Studio's back-office blocks (page head, KPI strip, chart and to-do cards, sheet sections and facts) in `@northline/ui`,
+used by the Studio and the console; the overview's KPI strip, GMV chart, "To do" queues, live now and health;
+Applications = verification and listing vetting under one sidebar entry and one head with Businesses / Listings /
+Licences / Age checks tabs, the two status stages (Review while an agent check is open, then Decision) and the 680px
+sheet with every submitted field; sellers, orders and disputes as tables whose rows open the sheet (sellers keep their
+full page). UI only: the two-person reviewer → approver flow is **not** built — the api records one decision by one
+person (later, with an api change). Not yet: Provinces → Markets, the console sign-in in two columns.
 
 **Demo rehearsal (day 6).** Walk the script end to end: customer books a service, buys a product, pays, tracks; a merchant signs up and gets approved, adds a listing, fulfils an order; staff approve the application. Fix only what the walkthrough shows.
 

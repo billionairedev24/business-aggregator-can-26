@@ -8718,6 +8718,112 @@ and can move to `@northline/ui` as they are (no Studio imports, semantic tokens 
   features.
 - **Schema additions:** none. No backend change.
 
+## 2026-10-18 — Redesign phase 3: the console basics (spec § 4)
+
+Branch `feat/redesign-console`. The staff console screens of the demo path rebuilt on the AT back-office layouts
+(`docs/design/redesign-spec.md` § 2.3, BO:263 dashboard, BO `apps` / `orgs` / `orders` / `disputes` + the BO:811
+sheet); UI only — no backend, schema or api change.
+
+- **Back-office blocks in `@northline/ui`.** The Studio's `components/BackOffice.tsx` moved as is to
+  `packages/ui/src/BackOffice.tsx` (+ `styles/backoffice.css`, in `@northline/ui/styles.css`): `BoHeader`,
+  `KpiStrip`, `ChartCard`, `TodoCard`, `SheetSection`, `FactList`, plus a `.bo-page` column. The Studio imports them
+  from `@northline/ui` (behaviour unchanged); they have a Storybook story and an axe test in both languages. One
+  addition: a `TodoItem` without `onClick` renders a static row (the count without the way in) — the console shows
+  every queue but opens only the screens the active role opens.
+- **Page heads.** Every rebuilt console screen's h1 is the screen's name (Overview, Applications, Sellers & providers,
+  Orders & bookings, Disputes & refunds) with the figures as the sub line and the province / market filters on the
+  right; the generated headline sentences ("$212k GMV this week, 1,204 sellers …", "2 applications · median …") left
+  the h1 (as the Studio's dashboard headline did in phase 2). Kickers are gone. The h1 shows while a screen loads.
+- **Overview** (BO:263): KPI strip of the last 7 days (GMV with the change vs last week in green/red, net revenue and
+  take, orders + bookings and the goods share, on-time and dispute rate against their targets, the average delivery
+  fee — volume, on-time and disputes open their screens), GMV · 12 weeks in a chart card (goods = primary, services =
+  accent; the "goods in cyan, services in magenta" line is gone with its colour words), the "To do" card (applications
+  to review, flagged listings, disputes, stuck runs, trust flags, sellers below a floor — each with its SLA line),
+  "Live now" as facts, and system health as tiles. Same `GET /api/v1/console/overview`.
+- **Applications (thrash item 12).** Verification and listing vetting are one sidebar entry, "Applications"
+  (`verify`'s nav label; fr "Demandes"), lit on both `/verification` and `/vetting` (`navKey`), shown when the role
+  opens either. The screen's tabs are Businesses (`/verification`) · Listings · Licences · Age checks (`/vetting`,
+  `?view=`), each shown when the role opens its screen; both routes, their search params and every endpoint stay.
+  The vetting views' titles became h2 under the shared head; their tables are unchanged (restyle: later).
+- **Two-person review: not built.** The api records one decision per application (`approve` / `request_info`, role
+  `verify`) — there is no reviewer → approver step or four-eyes rule as in AT's `apps` module. The UI shows the
+  application's two **status stages** from what the api has: *1 · Review* while a check waits for an agent (an identity
+  mismatch or registry lookup, check state `review`), *2 · Decision* once none does; a KPI strip counts both, plus info
+  requested and approved. One person may settle the reviews and decide. A real second approver needs an api change
+  (a decision state, the second person, the audit) — later.
+- **The application sheet** (BO:811, 680px, `?application=`): the stages, every field the application row carries
+  (business and legal name, type, structure, categories, location, submitted, risk, decision), the checks, owners'
+  identity reviews and registry lookups with their approve / reject (as before), the history; Approve / Request info
+  in the sheet's footer, "View only · {role}" without the action. The structure codes are named in both languages;
+  `corp_ab` reads "Provincial corporation" (no province name in code). The request-info dialog is unchanged. The old
+  lede ("Approved sellers start at Registered; a welcome call fast-tracks Trusted") and "Approved · Registered" went
+  with the tier promises (thrash item 13).
+- **Sellers & providers** (BO `orgs`): the table as before under the page head; a row opens the right sheet
+  (`?seller=`, `GET /api/v1/console/sellers/{id}`): at a glance (type and region, tier, status, rating, quality /
+  on-time / disputes with "below the floor", 90-day GMV), flags, verification on file, the last three trail entries,
+  "Open the full page" and Suspend / Reinstate. The full page (`/sellers/$sellerId`) keeps every oversight action,
+  now as the page head, a KPI strip against the floors and four cards (oversight, signals, timeline, verification).
+  The tier column stays: in the console a tier is an operational fact staff change, not a decorative tag.
+- **Orders & bookings** (BO `orders`): a KPI strip of the four views (each card opens its view), the chips and the
+  reference search, the table, and the sheet with the status tag, "Needs attention" (the row's issue), the order facts,
+  the delivery and the pickups.
+- **Disputes & refunds** (BO `disputes`): the side list + panel became the table (case and subject, customer →
+  seller, amount, opened, state: for an agent / waiting for a co-sign / decided) under a KPI strip; a row opens the
+  case in the sheet (`?case=kind:id`, as before) with both sides, the evidence and the decision or co-sign. Nothing
+  opens until a case is picked (the first case used to open by itself).
+- **Thrash items in the console.** Already hidden in phase 0: Pilot, UAT, Go-live, API, On-call (`VITE_NL_TESTING_TOOLS`).
+  Done here: verification + vetting merged. *Not done:* Provinces → Markets (spec phase 5: the region/zone look),
+  the console sign-in in two columns.
+- **i18n / a11y.** Every new string in en and fr-CA. One h1 per screen (also while loading and on errors, S-142);
+  the KPI strips are named lists; sheet actions and to-do rows are 44px; the stage list marks `aria-current="step"`.
+  360px: the sheet is `min(680px, 100%)`, facts stack under 420px, every grid is `minmax(min(100%, …), 1fr)`.
+- **Tokens.** `pnpm lint:tokens` now covers the console's overview, verify, vetting, sellers, orders and disputes
+  features (the Studio's `components` root went with the move to `@northline/ui`).
+- **Schema additions:** none. No backend change.
+
+## 2026-10-18 — Demo data through the product (`make demo-data`)
+
+Branch `feat/demo-data`. A believable demo marketplace for the client demos on the dry run, made through the product
+(the dev seed stays local: its credentials are public) — [docs/runbooks/demo.md](runbooks/demo.md).
+
+- **Through the BFFs, not the api.** `scripts/demo/demo-data.mjs` (Node 22, no dependencies) signs people up and in at
+  northline-auth's JSON API, completes the BFF's authorization-code login without a browser (a cookie jar per person
+  and app, redirects followed by hand) and calls each app's `/api` with the session cookie and the CSRF header — the
+  same calls the Studio, consumer site and console make. No `X-Dev-User`, no SQL. Locally the only extras are the local
+  fakes' pages and outboxes (SMS codes, the fake Stripe Identity and age pages), which the e2e suite uses too.
+- **Credentials:** the product has no passwords, so "random strong credentials" are the **authenticator-app keys**
+  northline-auth generates at sign-up (plus backup codes), written only to a git-ignored state file (`.demo/<env>.json`,
+  mode 600) with each key's QR code; never printed, and with `CI=true` not even the identifiers.
+- **Accounts:** one owner owns every demo business (fewer phones on the dry run: each account needs a phone that
+  receives SMS), an applicant with no business (the live onboarding), three customers, and two console accounts for
+  the four-eyes review: the operator's admin decides (approver), a demo reviewer (trust & safety) is registered and
+  invited by the admin. The approval posts the review first (`POST …/verification/applications/{id}/review`) and falls
+  back to the single decision on 404/405, so it works before and after the four-eyes change (the review path is a
+  guess until that change lands). Consequence of one owner: the owner is the only bookable person of all seven
+  providers, so their jobs may overlap across businesses (the script tries the next slot on `slot_taken`).
+- **Idempotency and tags:** listings carry SKU `DEMO-<business>-<listing>`; businesses are found by the state file or
+  their name; activity is recorded once in the state file. `--reset` hides listings outside the plan in demo
+  businesses and every listing of the applicant's businesses, and puts the plan's prices, stock and visibility back;
+  `--reset-all` hides every demo listing. Nothing is deleted (orders, bookings and approved applications can't be).
+- **Places:** the market is the region model's configured default (`GET /api/v1/geo/markets` → `fallback`) or
+  `DEMO_MARKET`; addresses come from the product's address search in that market; the plan has `{city}` placeholders
+  and a test fails on a place name in it.
+- **Pictures** are generated at run time (PNG 1000 × 1000 on white, the item's name in a 5 × 7 pixel font): nothing
+  downloaded or stored in the repository.
+- **Dry-run configuration:** `values-dryrun.yaml` sets `IDENTITY_PROVIDER=stripe` and `AGE_VERIFICATION_PROVIDER=stripe`
+  (test mode) — with the `local` fakes their outcome pages exist only under the `local` profile, so on the dry run no
+  owner could finish onboarding and no customer could buy an age-restricted item.
+- **Found: the dry run can't register anyone yet.** Under `dev` the local SMS stand-in withholds codes (S-112, no
+  escape hatch on purpose); dryrun-gcp.md and dev.md said they were in the auth log (corrected). The dry run needs
+  Twilio for northline-auth before the first admin or any demo account can sign up (demo.md § 2).
+- **Fix:** the age check's web return URL is `/checkout?age=done` (it was `/cart?age=done`; the age step moved to the
+  checkout in redesign phase 1, so customers came back to the cart).
+- **Not done / never run:** the dry-run path (Twilio codes, Stripe Identity and Connect hosted test pages, confirming
+  PaymentIntents with `pm_card_visa` and the publishable key, the four-eyes review endpoint) has never run against a
+  deployed environment or real Stripe; it was run end to end only locally (e2e stack + Meilisearch + a reindex).
+  History is dated today (the product can't backdate). Goods orders end at "packed" (delivery needs a courier).
+  Schema additions: none.
+
 ## 2026-10-19 — Redesign phase 4: the native apps on the AT mobile layouts, and running them on a phone against a Mac
 
 Branch `feat/redesign-mobile` (spec § 2.4, § 2.5, § 4 phase 4 — brought forward: the owner wants to test the apps on

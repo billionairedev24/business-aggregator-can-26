@@ -17,6 +17,7 @@ export * from './Choice';
 export * from './Overlay';
 export * from './Layout';
 export * from './Charts';
+export * from './BackOffice';
 export * from './AppShell';
 export * from './DataTable';
 export * from './GroupedMultiSelect';

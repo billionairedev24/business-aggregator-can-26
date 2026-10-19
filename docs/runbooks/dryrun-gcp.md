@@ -33,7 +33,7 @@ Lean on purpose (target: at most ≈ $100 of credit for three weeks):
 | Region / zone | `northamerica-northeast1` (Montréal), zone `northamerica-northeast1-a` — Terraform variables `region`, `zone` (Canadian regions only); everything in that one zone | regional, multi-zone |
 | Kubernetes | GKE Standard, **one zonal cluster** (its management fee is covered by GKE's free tier), **one node pool** `general`: 2 × `e2-standard-4` **Spot** (`node_count`, `spot_nodes`), 30 GB pd-balanced boot disks, Workload Identity, Dataplane V2 | regional, HA pools |
 | Network | **no Cloud NAT**: the nodes are public (an ephemeral external IP each) and reach the internet (images, Let's Encrypt, Stripe) directly; no Private Service Access or PSC policy (no managed data stores) | private nodes behind Cloud NAT |
-| Spring profile | `dev` (`global.springProfiles`, chart environment `dryrun`): required variables checked, Kafka externalization on, no dev seed; local fakes where no third-party account exists (registries, calendar, POS, places, AI, SMS codes in the auth log, emails logged) | `prod` |
+| Spring profile | `dev` (`global.springProfiles`, chart environment `dryrun`): required variables checked, Kafka externalization on, no dev seed; local fakes where no third-party account exists (registries, calendar, POS, places, AI, emails logged); SMS codes are **withheld** under `dev` (S-112), so sign-ups need Twilio ([demo.md § 2](demo.md#2-before-the-first-run-on-the-dry-run)) | `prod` |
 | Replicas and JVMs | 1 of everything; memory limits sized so two nodes hold it all with room (the images give the heap 75 % of the limit, `-XX:MaxRAMPercentage=75`; `JAVA_TOOL_OPTIONS` adds serial GC, a smaller code cache and thread stacks, C1 only) | 2+ with HPAs |
 | PostgreSQL 17 + PostGIS | **in the cluster**: CloudNativePG, 1 instance, 10 GB pd-balanced, daily base backup + WAL to the GCS bucket `northline-dryrun-pg-backups` (7 days) | Cloud SQL |
 | Valkey | **in the cluster**: 1 pod, append-only file on 1 GB, password | Memorystore |
@@ -336,21 +336,22 @@ deployed database — DbTool and the api refuse it (`DevSeedGuard`, [deploy.md �
 and on a public URL its known credentials would be anyone's. Demo data is made through the product, with obviously
 fake people and businesses:
 
-1. **First console admin.** Register on `https://demo.northline.ca`, set up a second factor, then once, from a pod in
+1. **First console admin.** Register on `https://demo.northline.ca` with an **authenticator app** as the second factor
+   (keep its key: `make demo-data` signs in with it), then once, from a pod in
    the cluster (`kubectl -n northline-dryrun exec -it northline-pg-1 -- psql -d northline`):
    `INSERT INTO identity.platform_roles (user_id, role) VALUES ('USER_ID', 'staff'), ('USER_ID', 'admin');`
    (the user id from `select id from identity.users where email = '…'`). More staff from the console's Team screen.
-2. **Market.** In the console, open the market the demo uses for onboarding (pilot), as in
-   [pilot-onboarding.md](pilot-onboarding.md).
-3. **Businesses.** In the Studio, onboard two or three fake businesses (a provider, a shop, a kitchen) with the demo
-   storyline's listings, menus and photos; business registries use their fixtures, Stripe Connect onboarding uses
-   Stripe's test data (identity and bank: Stripe's documented test values).
-4. **Customers.** Register one or two fake customers; book a service, buy an item, order food with the test card
-   `4242 4242 4242 4242`.
+2. **Market.** The demo market must be `live` to take orders (production migrations start it at `pilot`, V345):
+   console › Provinces ([regions.md](regions.md#from-the-console-s-84)), as in [demo.md § 2](demo.md#2-before-the-first-run-on-the-dry-run).
+3. **Businesses and customers: `make demo-data ENV=dryrun`** ([demo.md](demo.md)) — 11 fake businesses onboarded in
+   the Studio and approved in the console, their pages, listings and pictures, three customers with orders, bookings
+   and reviews, all through the product; business registries use their fixtures, Stripe's hosted test pages
+   (owner identity, Connect onboarding: Stripe's documented test values) are listed for a person to open. The demo
+   storyline, the accounts and the reset between demos are in [demo.md](demo.md).
 
-Phone codes appear in the auth log (`kubectl -n northline-dryrun logs deploy/northline-auth | grep -i code`) and
-emails in the api/worker logs, until Twilio / SendGrid are configured. Keep the demo storyline (who, what, which
-order) in the demo script, not in this repository.
+Phone codes: under `dev` the local SMS stand-in **withholds** them (S-112 — never in a log), so registering anyone,
+the first admin included, needs Twilio configured for northline-auth ([demo.md § 2](demo.md#2-before-the-first-run-on-the-dry-run)).
+Emails appear in the api/worker logs until SendGrid is configured.
 
 ### 14. Smoke test
 

@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Package } from '@phosphor-icons/react';
-import { Alert, DataTable, Drawer, ErrorState, PageSkeleton, formatDate, useFormatters, useLocale, type DataTableAction, type DataTableColumn, type DataTableTone, type Locale, timeZone } from '@northline/ui';
+import { Alert, DataTable, Drawer, ErrorState, PageSkeleton, formatDate, useFormatters, useLocale, type DataTableAction, type DataTableColumn, type DataTableTone, type Locale, timeZone, BoHeader, FactList, KpiStrip, SheetSection } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { addDays, clockWithPeriod, localDate, today } from '../../lib/time';
 import { ordersQuery, usePackOrder, type Order, type OrderBoard } from './api';
 import { useOrdersT } from './messages';
-import { BoHeader, FactList, KpiStrip, SheetSection } from '../../components/BackOffice';
 import './Orders.css';
 
 type T = ReturnType<typeof useOrdersT>;

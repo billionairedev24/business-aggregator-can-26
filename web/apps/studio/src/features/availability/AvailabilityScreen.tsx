@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChipTabs, formatDate, useLocale } from '@northline/ui';
-import { BoHeader } from '../../components/BackOffice';
+import { ChipTabs, formatDate, useLocale, BoHeader } from '@northline/ui';
 import { useMerchantId } from '../shell/api';
 import { hoursQuery, rulesQuery } from './api';
 import { HoursTab } from './HoursTab';
