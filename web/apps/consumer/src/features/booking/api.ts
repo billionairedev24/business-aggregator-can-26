@@ -13,7 +13,8 @@ import { http } from '@northline/client';
 export const Slot = z.object({ startsAt: z.string(), free: z.boolean() });
 export const CalendarDay = z.object({ date: z.string(), closed: z.string().nullish(), free: z.number().int(), slots: z.array(Slot) });
 export type CalendarDay = z.infer<typeof CalendarDay>;
-export const Calendar = z.object({ serviceId: z.string(), durationMin: z.number().int(), days: z.array(CalendarDay) });
+/** `timeZone`: the business's (region model) — the days and times are read in it. */
+export const Calendar = z.object({ serviceId: z.string(), durationMin: z.number().int(), days: z.array(CalendarDay), timeZone: z.string().optional() });
 export type Calendar = z.infer<typeof Calendar>;
 
 export const Hold = z.object({ holdId: z.string(), bookingId: z.string(), startsAt: z.string(), endsAt: z.string(), expiresAt: z.string() });

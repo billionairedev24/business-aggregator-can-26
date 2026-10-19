@@ -23,6 +23,8 @@ export interface Draft {
   contactPref: number;
   day?: string;
   startsAt?: string;
+  /** The business's time zone, from its calendar: every time of the booking is shown in it. */
+  timeZone?: string;
   flexibility?: number;
   agreePolicies: boolean;
   agreeTerms: boolean;
