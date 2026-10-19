@@ -3,8 +3,8 @@ import { defineMessages } from '@northline/ui';
 /** Team, roles & audit (S-96, design 03 lines 440–449). en = the design's copy; fr-CA after design/i18n-fr.js. */
 export const useTeamT = defineMessages({
   en: {
-    kicker: 'Team, roles & audit',
-    title: 'Who can do what, and who did what',
+    heading: 'Team, roles & audit',
+    summary: 'Who can do what, and who did what',
     rolesTitle: 'Roles', invite: 'Invite',
     roleEntity: 'role', rolePlural: 'roles', c_role: 'Role', c_people: 'People', c_can: 'Can', c_needs: 'Needs',
     allScreens: 'Everything', needs: 'Second factor at sign-in',
@@ -23,8 +23,8 @@ export const useTeamT = defineMessages({
     loadError: "The team couldn't load. Try again.",
   },
   fr: {
-    kicker: 'Équipe, rôles et audit',
-    title: 'Qui peut faire quoi, et qui a fait quoi',
+    heading: 'Équipe, rôles et audit',
+    summary: 'Qui peut faire quoi, et qui a fait quoi',
     rolesTitle: 'Rôles', invite: 'Inviter',
     roleEntity: 'rôle', rolePlural: 'rôles', c_role: 'Rôle', c_people: 'Personnes', c_can: 'Peut', c_needs: 'Exige',
     allScreens: 'Tout', needs: 'Deuxième facteur à la connexion',

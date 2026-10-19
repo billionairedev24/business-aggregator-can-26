@@ -95,9 +95,11 @@ export function ListingVetting() {
     return false;
   };
   return (
-    <div>
-      <h2 className="nl-q-h2">{t('title', { auto: formatNumber(data.autoApproved, locale), n: data.flagged })}</h2>
-      <p className="nl-q-lede">{t('lede')}</p>
+    <div className="bo-stack">
+      <div className="nl-q-intro">
+        <h2 className="nl-q-h2">{t('title', { auto: formatNumber(data.autoApproved, locale), n: data.flagged })}</h2>
+        <p className="nl-q-lede">{t('lede')}</p>
+      </div>
       {notice ? <p role={notice.tone === 'error' ? 'alert' : 'status'} className={notice.tone === 'error' ? 'nl-q-error' : 'nl-q-note'}>{notice.text}</p> : null}
       <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
         can={{ create: false, update: can('vet'), delete: false }} roleName={roleName} actions={actions} onAction={onAction} emptyText={t('empty')} />

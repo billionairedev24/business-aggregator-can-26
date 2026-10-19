@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { brand } from '@northline/tokens';
-import { Alert, Button, Field, OptionCard, RadioGroup, StepBars, TextInput, codeValue } from '@northline/ui';
+import { Alert, Button, Field, Logo, OptionCard, RadioGroup, StepBars, TextInput, codeValue } from '@northline/ui';
 import {
   authApi, backupCodeSchema, codeSchema, fieldErrors, firstIssue, flowError, getPasskey, isRestart, PasskeyError, passkeysSupported,
   RateLimitNotice, useAuthKitT, useRateLimit, type AuthKitKey, type AuthSession,
@@ -95,12 +94,10 @@ export function SignInPage({ next, error, navigate = url => window.location.assi
 
   return (
     <div className="nl-auth-page">
-      <nav className="nav nl-auth-nav" aria-label={`${brand.name} Console`}>
-        <Brand label={shell('console')} />
-        <span className="nl-auth-signedout">{t('signedOut')}</span>
-      </nav>
-      <main className="nl-auth-main">
+      <div className="nl-auth-mobile-brand"><Logo size={30} product={shell('console')} /></div>
+      <main className="nl-auth-main" id="main">
         <div className="nl-auth-intro">
+          <div className="nl-auth-brand"><Brand label={shell('console')} /><span className="nl-auth-signedout">{t('signedOut')}</span></div>
           <div className="nl-auth-kicker">{t('kicker')}</div>
           <h1 className="nl-auth-hero">{t('heroTitle')}</h1>
           <p className="nl-auth-lede">{t('heroLede')}</p>

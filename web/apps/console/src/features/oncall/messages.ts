@@ -3,8 +3,8 @@ import { defineMessages } from '@northline/ui';
 /** On-call & escalations (S-96, design 03 lines 451–455). en = the design's copy; fr-CA after design/i18n-fr.js. */
 export const useOncallT = defineMessages({
   en: {
-    kicker: 'On-call & escalations',
-    title: "Who's on, how to reach them, and what's burning",
+    heading: 'On-call & escalations',
+    summary: "Who's on, how to reach them, and what's burning",
     rotaTitle: 'Rota · today', onCall: 'on call', you: '{name} (you)', when: '{from} → {to}',
     swap: 'Swap a shift', addShift: 'Add shift', remove: 'Remove',
     noShifts: 'No shift planned for the next week.',
@@ -20,8 +20,8 @@ export const useOncallT = defineMessages({
     loadError: "The rota couldn't load. Try again.",
   },
   fr: {
-    kicker: 'Garde et escalades',
-    title: 'Qui est de garde, comment le joindre, et ce qui brûle',
+    heading: 'Garde et escalades',
+    summary: 'Qui est de garde, comment le joindre, et ce qui brûle',
     rotaTitle: 'Horaire · aujourd’hui', onCall: 'de garde', you: '{name} (vous)', when: '{from} → {to}',
     swap: 'Échanger un quart', addShift: 'Ajouter un quart', remove: 'Retirer',
     noShifts: 'Aucun quart prévu pour la semaine qui vient.',

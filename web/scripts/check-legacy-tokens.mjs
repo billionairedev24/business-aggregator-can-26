@@ -25,8 +25,8 @@ const roots = ['packages/ui/src', 'apps/consumer/src/features/shell',
   'apps/studio/src/features/shell', 'apps/console/src/features/shell', 'apps/studio/src/studio.css', 'apps/console/src/console.css',
   // every Studio screen (the Studio pages redesign, 2026-10-19)
   'apps/studio/src/features',
-  // redesign phase 3 (the console basics): overview, applications (verification + vetting), sellers, orders, disputes
-  ...['overview', 'verify', 'vetting', 'sellers', 'orders', 'disputes'].map(f => `apps/console/src/features/${f}`)];
+  // every console screen (the console pages redesign, 2026-10-19)
+  'apps/console/src/features'];
 const LEGACY = /var\(\s*--(?:color-(?:accent(?:-2)?(?:-\d{3})?|on-accent|highlight(?:-\d{3})?|on-highlight|process-yellow|bg|surface-2|divider|neutral-\d{3}|ink)|font-body|font-heading-weight)\s*[,)]/g;
 const skip = [/\.test\.tsx?$/, /(^|\/)test\//];
 

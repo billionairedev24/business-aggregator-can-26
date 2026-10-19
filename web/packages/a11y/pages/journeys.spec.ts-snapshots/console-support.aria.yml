@@ -1,5 +1,6 @@
 - main:
-  - text: Support desk · agents
+  - heading "Support desk" [level=1]
+  - paragraph: /\d+ open · 3 urgent · median first reply \d+ min/
   - combobox "Province":
     - option "All provinces" [selected]
     - option "Alberta"
@@ -8,8 +9,14 @@
   - combobox "Market":
     - option "All markets" [selected]
     - option "Calgary"
-  - heading /\d+ open · 3 urgent · median first reply \d+ min/ [level=1]
-  - text: /\d+ open · 3 urgent \d+ min median first reply · SLA 1 h Master \/ 4 h 2 SLA at risk \d+% resolved without escalation · \d+ d 4\.7 CSAT · \d+ d \d+% in French/
+  - button "Manage macros"
+  - list "The queue today":
+    - listitem: /Open · 3 urgent \d+/
+    - listitem: /Median first reply · SLA 1 h Master \/ 4 h \d+ min/
+    - listitem: SLA at risk 2
+    - listitem: /Resolved without escalation · \d+ d \d+%/
+    - listitem: /CSAT · \d+ d 4\.7/
+    - listitem: /In French \d+%/
   - group "Filter cases":
     - button /All · \d+/ [pressed]
     - button "Urgent · 3"
@@ -27,7 +34,7 @@
   - text: View only · Admin
   - table "Tickets":
     - rowgroup:
-      - row "Select all rows Ticket Requester Priority Age Status Actions":
+      - row "Select all rows Ticket Requester Priority Age Actions":
         - columnheader "Select all rows":
           - checkbox "Select all rows"
         - columnheader "Ticket":
@@ -38,31 +45,28 @@
           - button "Priority"
         - columnheader "Age":
           - button "Age"
-        - columnheader "Status":
-          - button "Status"
         - columnheader "Actions"
     - rowgroup:
-      - row /Select HD-\d+ HD-\d+ Unassigned Prairie Wrench WCB letter uploaded — restore instant book\? High \d+\.\d+ d New Open case · HD-\d+/:
+      - row /Select HD-\d+ HD-\d+ Unassigned Prairie Wrench WCB letter uploaded — restore instant book\? High \d+\.\d+ d Open case · HD-\d+/:
         - cell /Select HD-\d+/:
           - checkbox /Select HD-\d+/
         - cell /HD-\d+ Unassigned/
         - cell "Prairie Wrench WCB letter uploaded — restore instant book?"
         - cell "High"
         - cell /\d+\.\d+ d/
-        - cell "New"
         - cell /Open case · HD-\d+/:
           - button /Open case · HD-\d+/
-      - row /Select HD-\d+ HD-\d+ Dev K\. R\. Diaz Order NL-\d+ arrived late Urgent \d+\.\d+ d In progress Open case · HD-\d+/:
+      - row /Select HD-\d+ HD-\d+ Dev K\. R\. Diaz Order NL-\d+ arrived late Urgent \d+\.\d+ d Open case · HD-\d+/:
         - cell /Select HD-\d+/:
           - checkbox /Select HD-\d+/
         - cell /HD-\d+ Dev K\./
         - cell /R\. Diaz Order NL-\d+ arrived late/
         - cell "Urgent"
         - cell /\d+\.\d+ d/
-        - cell "In progress"
         - cell /Open case · HD-\d+/:
           - button /Open case · HD-\d+/
   - navigation "Pagination · Tickets":
+    - text: 1–2 of 2 tickets · Status hidden to fit · open a row to see all
     - group "Rows per page":
       - button "5"
       - button /\d+/ [pressed]
@@ -72,7 +76,6 @@
     - button "Next page" [disabled]
   - status
   - status
-  - button "Manage macros"
   - complementary "Prairie Wrench · master":
     - text: Requester context · auto-attached
     - heading "Prairie Wrench · master" [level=2]

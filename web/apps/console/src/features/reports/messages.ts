@@ -3,8 +3,8 @@ import { defineMessages } from '@northline/ui';
 /** Reports & analytics (S-95, design 03 lines 325–345). en = the design's copy; fr-CA after design/i18n-fr.js. */
 export const useReportsT = defineMessages({
   en: {
-    kicker: 'Reports & analytics',
-    title: 'Marketplace health · 90 days',
+    heading: 'Reports & analytics',
+    summary: 'Marketplace health · 90 days',
     all: 'All', region: 'Region',
     wacTitle: 'Weekly active customers', wacSub: 'Solid: this period · dotted: previous', thisPeriod: 'This period', previous: 'Previous',
     funnelTitle: 'Funnel · shop',
@@ -21,8 +21,8 @@ export const useReportsT = defineMessages({
     asTable: 'Show as table', week: 'Week of', loadError: "Reports couldn't load. Try again.",
   },
   fr: {
-    kicker: 'Rapports et analytique',
-    title: 'Santé du marché · 90 jours',
+    heading: 'Rapports et analytique',
+    summary: 'Santé du marché · 90 jours',
     all: 'Toutes', region: 'Région',
     wacTitle: 'Clients actifs par semaine', wacSub: 'Plein : cette période · pointillé : précédente', thisPeriod: 'Cette période', previous: 'Précédente',
     funnelTitle: 'Entonnoir · boutique',

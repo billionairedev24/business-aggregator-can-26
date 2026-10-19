@@ -41,14 +41,14 @@ describe('trust & safety (S-93, design 03 trust)', () => {
   it('shows the design copy, tier rules and consequences from the rules, and the open flags', async () => {
     api(['trust_safety']);
     renderConsole('/trust');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Rules that keep sellers honest, and the levers to tune them' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Trust & safety' })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('20+ jobs · quality ≥ 80 · on-time ≥ 92% · disputes ≤ 1.5%')).toBeTruthy();
     expect(screen.getByText('Instant book, 12% take, badge')).toBeTruthy();
     expect(screen.getByText('9% take, first placement, weekly payouts, priority support')).toBeTruthy();
     expect(screen.getByText('Verified · 0–19 jobs')).toBeTruthy();
-    expect(screen.getByText('· Rating floor 4.2 (90-day) → removed from search, coaching checklist, 30 days to recover')).toBeTruthy();
-    expect(screen.getByText('· 3 no-shows in 30 days → instant book off')).toBeTruthy();
+    expect(screen.getByText('Rating floor 4.2 (90-day) → removed from search, coaching checklist, 30 days to recover')).toBeTruthy();
+    expect(screen.getByText('3 no-shows in 30 days → instant book off')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Open flags · 2' })).toBeTruthy();
     const f1 = screen.getByText('Kensington Garage on Wheels').closest('li') as HTMLElement;
     expect(within(f1).getByText(/Off-platform payment mention/)).toBeTruthy();
@@ -122,7 +122,7 @@ describe('trust & safety (S-93, design 03 trust)', () => {
   it('speaks French', async () => {
     api(['admin']);
     renderConsole('/trust', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Les règles qui gardent les vendeurs honnêtes, et les leviers pour les ajuster' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Avertir' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Confiance et sécurité' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Avertir' })).toBeTruthy();
   });
 });

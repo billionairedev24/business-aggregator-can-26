@@ -1,0 +1,5 @@
+/* Privacy (S-105, S-107, S-108; light direction: head, tabs, the list's title row, the table, cards). Semantic tokens only. */
+.nl-pv-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2) var(--space-4); }
+.nl-pv-bar > .bo-muted { flex-basis: 100%; }
+.nl-pv-search { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: flex-end; }
+.nl-pv-search > .nl-field { flex: 1 1 260px; max-width: 420px; margin: 0; }

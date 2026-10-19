@@ -47,12 +47,13 @@ describe('finance (S-85, design 03)', () => {
   it('shows escrow, payouts, revenue, the mix, take by tier, the daily reconciliation and tax', async () => {
     api(['finance']);
     renderConsole('/finance');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Escrow, payouts and reconciliation' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Finance' })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByText('escrow held · 3,104 items').previousElementSibling?.textContent).toBe('$418,220');
-    expect(screen.getByText('payouts in flight · 1,140 sellers').previousElementSibling?.textContent).toBe('$186,400');
-    expect(screen.getByText('net revenue · week').previousElementSibling?.textContent).toBe('$24,100');
-    expect(screen.getByText('Stripe ↔ ledger variance · Sep 7').previousElementSibling?.textContent).toBe('$0.00');
+    expect(screen.getByText('Escrow held · 3,104 items').nextElementSibling?.textContent).toBe('$418,220');
+    expect(screen.getByText('Payouts in flight · 1,140 sellers').nextElementSibling?.textContent).toBe('$186,400');
+    expect(screen.getByText('Net revenue · week').nextElementSibling?.textContent).toBe('$24,100');
+    expect(screen.getByText('Stripe ↔ ledger variance').nextElementSibling?.textContent).toBe('$0.00');
+    expect(screen.getByText('matched · Sep 7')).toBeTruthy();
     expect(screen.getByText('Take rate on GMV')).toBeTruthy();
     expect(screen.getByText('Provider-funded rewards (pass-through)')).toBeTruthy();
     expect(within(card('Master')).getByText('9%')).toBeTruthy();
@@ -136,7 +137,7 @@ describe('finance (S-85, design 03)', () => {
     first.unmount();
     api(['finance']);
     renderConsole('/finance', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Fiducie, versements et rapprochement' })).toBeTruthy();
-    expect(screen.getByText('Commission sur la VMB')).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Finances' })).toBeTruthy();
+    expect(await screen.findByText('Commission sur la VMB')).toBeTruthy();
   });
 });

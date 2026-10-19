@@ -39,7 +39,8 @@ describe('team, roles & audit (S-96, design 03)', () => {
     const calls = api(['finance']);
     const user = userEvent.setup({ delay: null });
     renderConsole('/team');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Who can do what, and who did what' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Team, roles & audit' })).toBeTruthy();
+    await screen.findAllByText('Marc Leblanc');
     const finance = screen.getAllByText('Finance').map(e => e.closest('tr, .nl-dt-card')).find(Boolean) as HTMLElement;
     expect(within(finance).getByText('2')).toBeTruthy();
     expect(await screen.findByText('payments.reconciliation_exported')).toBeTruthy();
@@ -92,6 +93,6 @@ describe('team, roles & audit (S-96, design 03)', () => {
     first.unmount();
     api(['admin']);
     renderConsole('/team', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Qui peut faire quoi, et qui a fait quoi' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Équipe, rôles et audit' })).toBeTruthy();
   });
 });

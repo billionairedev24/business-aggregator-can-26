@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { Button, DataTable, Dialog, Drawer, ErrorState, Field, PageSkeleton, Segmented, Select, Tag, TextArea, TextInput, useFormatters, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { BoHeader, Button, DataTable, Dialog, Drawer, ErrorState, Field, PageSkeleton, Segmented, Select, Tag, TextArea, TextInput, useFormatters, type DataTableColumn, type DataTableTone } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { SCREEN_PATH } from '../shell/screens';
@@ -9,6 +9,7 @@ import { ConsentLookup } from './ConsentLookup';
 import { DECISIONS, detailQuery, EXTENSIONS, queueQuery, TYPES, useAct, useRecord, type Detail, type Item } from './api';
 import { usePrivacyT, type PrivacyKey, type PrivacyT } from './messages';
 import '../shell/queues.css';
+import './privacy.css';
 
 interface Row { id: string; reference: string; type: string; person: string; law: string; received: string; due: string; state: string; item: Item }
 
@@ -20,7 +21,7 @@ const FIELDS = ['phone', 'receiptName', 'reviewName', 'legalName'] as const;
  * `privacy` grant (privacy officer, support lead, admin): verify the person, extend once, refuse, start an erasure now,
  * apply corrections, retry failed steps, record a request made by email or mail.
  */
-export function PrivacyQueue() {
+export function PrivacyQueue({ tabs }: { tabs?: ReactNode }) {
   const t = usePrivacyT();
   const { date } = useFormatters();
   const search = useSearch({ strict: false }) as { state?: 'open' | 'closed'; request?: string };
@@ -32,8 +33,8 @@ export function PrivacyQueue() {
   const go = (next: { state?: 'open' | 'closed'; request?: string }) =>
     void navigate({ to: SCREEN_PATH.privacy, search: { state: next.state ?? state, request: next.request } });
 
-  if (queue.isPending) return <PageSkeleton kpis={0} rows={6} />;
-  if (queue.isError) return <ErrorState message={t('loadError')} onRetry={() => void queue.refetch()} />;
+  if (queue.isPending) return <div className="bo-page"><BoHeader title={t('heading')} />{tabs}<PageSkeleton kpis={0} rows={6} /></div>;
+  if (queue.isError) return <div className="bo-page"><BoHeader title={t('heading')} />{tabs}<ErrorState message={t('loadError')} onRetry={() => void queue.refetch()} /></div>;
   const rows: Row[] = queue.data.map(i => ({
     id: i.id, reference: i.reference, type: t(`t_${i.type}`), person: i.subjectName || t('noName'), law: i.law,
     received: date(i.receivedAt), due: i.overdue ? `${date(i.dueAt)} · ${t('overdue')}` : date(i.dueAt),
@@ -52,15 +53,15 @@ export function PrivacyQueue() {
   });
   const overdue = queue.data.filter(i => i.overdue).length;
   return (
-    <div>
-      <div className="nl-q-top">
-        <span className="nl-q-kicker">{t('kicker')}</span>
-        <Segmented name="privacy-state" aria-label={t('kicker')} value={state}
+    <div className="bo-page">
+      <BoHeader title={t('heading')} sub={t('lede')}
+        actions={can('privacy') ? <Button type="button" onClick={() => setRecording(true)}>{t('record')}</Button> : undefined} />
+      {tabs}
+      <div className="nl-pv-bar">
+        <h2 className="bo-card-title">{state === 'open' ? t('summary', { open: queue.data.length, overdue }) : t('closedTitle')}</h2>
+        <Segmented name="privacy-state" aria-label={t('heading')} value={state}
           options={[{ value: 'open', label: t('open') }, { value: 'closed', label: t('closed') }]} onChange={v => go({ state: v })} />
       </div>
-      <h1 className="nl-q-title">{state === 'open' ? t('title', { open: queue.data.length, overdue }) : t('closedTitle')}</h1>
-      <p className="nl-q-lede">{t('lede')}</p>
-      {can('privacy') ? <div className="nl-q-actions"><Button type="button" variant="secondary" onClick={() => setRecording(true)}>{t('record')}</Button></div> : null}
       <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
         can={{ create: false, update: false, delete: false }} roleName={roleName} emptyText={t('empty')} onOpen={r => go({ request: r.id })} />
       {search.request ? <RequestDrawer id={search.request} canAct={can('privacy')} t={t} onClose={() => go({ request: undefined })} /> : null}

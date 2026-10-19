@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearch } from '@tanstack/react-router';
-import { Button, DataTable, Dialog, ErrorState, Field, formatNumber, PageSkeleton, TextArea, TextInput, useLocale, type DataTableColumn } from '@northline/ui';
+import { BoHeader, Button, ChartCard, DataTable, Dialog, ErrorState, Field, formatNumber, PageSkeleton, TextArea, TextInput, useLocale, type DataTableColumn } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { PlaceFilters, type PlaceFilter } from '../shell/PlaceFilters';
@@ -9,6 +9,7 @@ import { SCREEN_PATH } from '../shell/screens';
 import { flagsQuery, impactOf, rulesQuery, useFlagAction, useFlagDecision, useSaveRule, type Flag, type Impact, type Rule } from './api';
 import { useTrustT, type TrustKey } from './messages';
 import '../shell/queues.css';
+import './trust.css';
 
 type Values = Record<string, unknown>;
 const num = (v: Values | undefined, k: string) => Number(v?.[k] ?? 0);
@@ -38,37 +39,35 @@ export function TrustSafety() {
   const rules = useQuery(rulesQuery);
   const flags = useQuery(flagsQuery(filter));
   const { can, roleName } = useGrant();
-  const header = <div className="nl-q-top"><span className="nl-q-kicker">{t('kicker')}</span><PlaceFilters to={SCREEN_PATH.trust} filter={filter} /></div>;
-  if (rules.isPending || flags.isPending) return <PageSkeleton kpis={0} rows={6} />;
+  const head = <BoHeader title={t('title')} sub={t('lede')} actions={<PlaceFilters to={SCREEN_PATH.trust} filter={filter} />} />;
+  if (rules.isPending || flags.isPending) return <div className="bo-page">{head}<PageSkeleton kpis={0} rows={6} /></div>;
   if (rules.isError || (flags.isError && !flags.data)) {
-    return <div>{header}{flags.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => { void rules.refetch(); void flags.refetch(); }} />}</div>;
+    return <div className="bo-page">{head}{flags.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => { void rules.refetch(); void flags.refetch(); }} />}</div>;
   }
   const byKey = Object.fromEntries(rules.data!.items.map(r => [r.key, r])) as Record<string, Rule>;
   const v = (k: string) => byKey[k]?.value;
   return (
-    <div>
-      {header}
-      <h1 className="nl-q-title">{t('title')}</h1>
-      <p className="nl-q-lede">{t('lede')}</p>
-      <div className="nl-q-cols">
-        <div>
-          <h2 className="nl-q-h2">{t('tierRules')}</h2>
-          <TierRules byKey={byKey} canEdit={can('decide')} roleName={roleName} />
-          <h2 className="nl-q-h2 nl-q-gap">{t('consequences')}</h2>
-          <div className="nl-q-list">
-            <div>{t('c_floor', { rating: num(v('rating_floor'), 'rating'), days: num(v('rating_floor'), 'days'), recover: num(v('rating_floor'), 'recoverDays') })}</div>
-            <div>{t('c_noShows', { count: num(v('provider_no_shows'), 'count'), days: num(v('provider_no_shows'), 'days') })}</div>
-            <div>{t('c_photo', { hours: num(v('missing_photo_delay'), 'hours') })}</div>
-            <div>{t('c_offPlatform')}</div>
-            <div>{t('c_customer', { count: num(v('customer_no_shows'), 'count') })}</div>
-          </div>
-          <Keywords byKey={byKey} canEdit={can('decide')} />
-        </div>
-        <div>
-          <Flags flags={flags.data!.items} canDecide={can('decide')} />
+    <div className="bo-page">
+      {head}
+      <div className="nl-cols-wrap"><div className="nl-cols" data-split="wide">
+        <Flags flags={flags.data!.items} canDecide={can('decide')} />
+        <div className="nl-col">
           <RatingFloor rule={byKey.rating_floor} filter={filter} canEdit={can('decide')} />
+          <ChartCard id="ts-consequences" title={t('consequences')}>
+            <ul className="nl-rows">
+              <li>{t('c_floor', { rating: num(v('rating_floor'), 'rating'), days: num(v('rating_floor'), 'days'), recover: num(v('rating_floor'), 'recoverDays') })}</li>
+              <li>{t('c_noShows', { count: num(v('provider_no_shows'), 'count'), days: num(v('provider_no_shows'), 'days') })}</li>
+              <li>{t('c_photo', { hours: num(v('missing_photo_delay'), 'hours') })}</li>
+              <li>{t('c_offPlatform')}</li>
+              <li>{t('c_customer', { count: num(v('customer_no_shows'), 'count') })}</li>
+            </ul>
+          </ChartCard>
         </div>
-      </div>
+      </div></div>
+      <ChartCard id="ts-tiers" title={t('tierRules')}>
+        <TierRules byKey={byKey} canEdit={can('decide')} roleName={roleName} />
+      </ChartCard>
+      <Keywords byKey={byKey} canEdit={can('decide')} />
     </div>
   );
 }
@@ -120,11 +119,12 @@ function RuleDialog({ rule, title, onClose }: { rule: Rule; title: string; onClo
 function Keywords({ byKey, canEdit }: { byKey: Record<string, Rule>; canEdit: boolean }) {
   const t = useTrustT();
   return (
-    <>
-      <h2 className="nl-q-h2 nl-q-gap">{t('keywordsTitle')}</h2>
-      <WordList rule={byKey.off_platform_phrases} field="phrases" label={t('offPlatformLabel')} canEdit={canEdit} />
-      <WordList rule={byKey.restricted_keywords} field="words" label={t('restrictedLabel')} canEdit={canEdit} />
-    </>
+    <ChartCard id="ts-keywords" title={t('keywordsTitle')}>
+      <div className="nl-cols-wrap"><div className="nl-cols">
+        <WordList rule={byKey.off_platform_phrases} field="phrases" label={t('offPlatformLabel')} canEdit={canEdit} />
+        <WordList rule={byKey.restricted_keywords} field="words" label={t('restrictedLabel')} canEdit={canEdit} />
+      </div></div>
+    </ChartCard>
   );
 }
 
@@ -158,18 +158,17 @@ function Flags({ flags, canDecide }: { flags: Flag[]; canDecide: boolean }) {
   const who = (f: Flag) => f.businessName ?? (f.targetType === 'customer' ? t('customer') : f.targetType === 'courier' ? t('courier') : f.targetType);
   const what = (f: Flag) => { const k = `w_${f.rule}` as TrustKey; const s = t(k); return s === k ? t('w_other') : s; };
   return (
-    <>
-      <h2 className="nl-q-h2">{t('openFlags', { n: open.length })}</h2>
-      {flags.length === 0 ? <p className="nl-q-note">{t('noFlags')}</p> : null}
-      <ul className="nl-q-list">
+    <ChartCard id="ts-flags" title={t('openFlags', { n: open.length })}>
+      {flags.length === 0 ? <p className="bo-muted">{t('noFlags')}</p> : null}
+      <ul className="nl-rows">
         {flags.map(f => {
           const action = actionFor(f);
           const label = t(`a_${action}` as TrustKey);
           return (
-            <li key={f.id} className="nl-q-row">
-              <span><strong>{who(f)}</strong> · {what(f)}<br /><span className="nl-q-note">{f.explanation}</span></span>
+            <li key={f.id}>
+              <span className="nl-row-main"><span><strong>{who(f)}</strong> · {what(f)}</span><span className="nl-row-sub">{f.explanation}</span></span>
               {f.state === 'open' ? (canDecide ? (
-                <span className="nl-q-actions">
+                <span className="nl-row-actions">
                   <Button variant="secondary" onClick={() => (action === 'actioned' ? decide.mutate({ id: f.id, decision: 'actioned' }) : act.mutate({ id: f.id, action }))}>{label}</Button>
                   <Button variant="ghost" onClick={() => decide.mutate({ id: f.id, decision: 'dismissed' })}>{t('dismiss')}</Button>
                 </span>
@@ -179,7 +178,7 @@ function Flags({ flags, canDecide }: { flags: Flag[]; canDecide: boolean }) {
         })}
       </ul>
       {refusal ? <p role="alert" className="nl-q-error">{refusal.message}</p> : null}
-    </>
+    </ChartCard>
   );
 }
 
@@ -197,16 +196,15 @@ function RatingFloor({ rule, filter, canEdit }: { rule: Rule | undefined; filter
   };
   const share = (i: Impact) => formatNumber(i.total ? i.affected / i.total : 0, locale, { style: 'percent', maximumFractionDigits: 1 });
   return (
-    <>
-      <h2 className="nl-q-h2 nl-q-gap">{t('floorTitle')}</h2>
-      <div className="nl-q-actions">
+    <ChartCard id="ts-floor" title={t('floorTitle')}>
+      <div className="nl-ts-floor">
         <Field label={t('floorLabel')}><TextInput inputMode="decimal" value={rating} onChange={e => setRating(e.target.value)} /></Field>
         <Button variant="secondary" onClick={() => void simulate()}>{t('simulate')}</Button>
         {canEdit && rule ? <Button disabled={save.isPending} onClick={() => save.mutate({ key: 'rating_floor', value: { ...rule.value, rating: value } })}>{t('saveFloor')}</Button> : null}
       </div>
       {impact ? <p role="status" className="nl-q-note">{t('impact', { rating: formatNumber(impact.rating, locale), affected: formatNumber(impact.affected, locale), share: share(impact) })}</p> : null}
       {error || save.error ? <p role="alert" className="nl-q-error">{error ?? (save.error as Error).message}</p> : null}
-    </>
+    </ChartCard>
   );
 }
 

@@ -21,7 +21,7 @@ describe('API & webhooks (S-96, design 03)', () => {
     });
     const user = userEvent.setup({ delay: null });
     renderConsole('/integrations');
-    expect(await screen.findByRole('heading', { level: 1, name: "Every screen you've seen runs on this API." })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Headless API & webhooks' })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     const row = screen.getByText('Prairie Wrench · embed').closest('tr, .nl-dt-card') as HTMLElement;
     expect(within(row).getByText('storefront:read booking:write')).toBeTruthy();
