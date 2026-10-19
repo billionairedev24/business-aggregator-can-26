@@ -57,6 +57,7 @@ export const redesign: { [k in keyof typeof en]: string } = {
   'rd.order.minutes': 'à {n, plural, one {# min} other {# min}}',
   'rd.order.pinNote': 'Donnez ce code à la porte',
 
+  'rd.provider.verified': 'Pro vérifié',
   'rd.account.hi': 'Bonjour, {name}',
   'rd.account.yourOrders': 'Vos commandes',
   'rd.account.noOrders': 'Rien pour l’instant — vos commandes et réservations s’afficheront ici.',

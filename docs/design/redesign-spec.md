@@ -472,6 +472,14 @@ Overview KPIs → Applications (two-stage review and sheet with every submitted 
 - Mobile consumer reskin per section 2.4: tab bar, Home, Browse, PDP, Cart, Checkout, Tracking, Booking.
 - Courier reskin per section 2.5.
 
+*Phase 4 as built (2026-10-19, branch `feat/redesign-mobile`; `docs/DECISIONS.md` § "Redesign phase 4"):* the palette's
+fonts, logo and Phosphor icons in `mobile-kit`; the consumer tabs Home · Browse · Activity · Cart · Account, Home,
+Browse, search with products and services together, product, cart, the checkout's three numbered steps, tracking,
+the provider header and Account on the MA layouts; the courier tabs Today · Route · Profile with the DR home, route,
+stop (Navigate hands off to the maps app), pickup and proof of delivery; `make mobile-dev` and the `local` profile's
+LAN sign-in for testing on a phone (`docs/runbooks/mobile-local.md`). Not yet: the booking wizard and the account
+sub-pages' layouts (phase 5), app icons and splash from the mark.
+
 **Phase 5**
 - Account sub-pages (addresses, payments, security, notifications) and returns/cases.
 - Quotes (request form, quote page, compare).

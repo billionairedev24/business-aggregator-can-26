@@ -175,7 +175,10 @@ the dev server. Location: the header asks for the browser's position once per vi
 overrides it); `localStorage['nl.location']` holds an address chosen on the Location screen. Language: the FR/EN
 toggle writes the `nl.locale` cookie, so the server renders the next page in French. The redesign's demo navigation
 hides Food as its own vertical and the account's Wallet & points, Dietary, Plus and Language (§ 3.6–3.7):
-`VITE_NL_FULL_NAV=1` in `.env` brings them back (their routes answer a typed URL either way).
+`VITE_NL_FULL_NAV=1` in `.env` brings them back (their routes answer a typed URL either way). `NL_DEV_HOST=0.0.0.0`
+(optional, in `.env` or the environment) makes the dev server listen on your network, so the native apps on a phone
+reach its sign-in page and `/app/oauth2redirect` ([mobile-local.md](mobile-local.md); `make mobile-dev` sets it when
+it needs it); unset, it listens on this machine only.
 
 Shop (S-49…): the dev seed `db/seed-dev/V113__consumer_shop.sql` adds design 06's Calgary shops (Glenmore Bakery,
 Bridgeland Butcher, Sunnyside Greens, Prairie Pantry, …) with approved, live products — run `seedCategories` too so
@@ -430,6 +433,10 @@ With real sign-in everywhere (the BFFs run): Studio `ravi.sandhu@example.com`, c
 your own services; `make status` and `make logs SERVICES=api` work as usual. `SERVICES="api auth bff studio"` starts
 fewer apps. Storybook and the docs site are left out (the docs dev server and the bundled Grafana both use :3300; run
 `make docs-dev` with `GRAFANA_PORT` moved or your own Grafana).
+
+**The mobile apps on your phone:** with the stack up, `make mobile-dev APP=consumer` (or `APP=courier`) starts Metro
+with the apps pointed at your Mac's LAN address; a phone on the same Wi-Fi, the iOS Simulator or an Android emulator
+signs in against it — [mobile-local.md](mobile-local.md), step by step.
 
 **Then:** `make obs-fire-test-alert` trips an alert on purpose and follows it from Prometheus to an email in Mailpit
 ([observability.md § Local alerting](observability.md#local-alerting)).

@@ -59,6 +59,7 @@ export const redesign = {
   'rd.order.minutes': '{n, plural, one {# min} other {# min}} away',
   'rd.order.pinNote': 'Share this code at the door',
 
+  'rd.provider.verified': 'Verified pro',
   'rd.account.hi': 'Hi, {name}',
   'rd.account.yourOrders': 'Your orders',
   'rd.account.noOrders': 'Nothing yet — your orders and bookings show here.',

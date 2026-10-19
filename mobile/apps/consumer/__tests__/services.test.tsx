@@ -201,7 +201,8 @@ describe('C2 Providers', () => {
 describe('C3 Provider profile', () => {
   it('shows the verified figures, credentials, prices and reviews; more reviews on request', async () => {
     const { server } = await start({ welcomed: true, url: '/providers/prairie-wrench' });
-    expect(await screen.findByText('Master tier · verified')).toBeTruthy();
+    expect(await screen.findByText('Verified pro')).toBeTruthy(); // the seal, not a tier tag (thrash item 13)
+    expect(screen.queryByText('Master tier · verified')).toBeNull();
     expect(screen.getAllByText('Prairie Wrench').length).toBeGreaterThan(0);
     expect(screen.getByText('Mobile mechanic · Sampleville · since 2019')).toBeTruthy();
     expect(screen.getByText('4.9')).toBeTruthy();
