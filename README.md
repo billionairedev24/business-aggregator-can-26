@@ -66,7 +66,7 @@ is a thin wrapper around them.
 
 ## Studio without auth (fastest way to click through)
 ```
-make up             # = the default SERVICES="api studio"; PROFILES=none with your own Postgres
+make up             # = the default SERVICES="auth api bff studio" (real sign-in); PROFILES=none with your own Postgres
 ```
 It runs `:api:flywayMigrate -Pdb.devSeed=true`, `:api:seedCategories`, `:api:bootRun --args='--spring.profiles.active=local'`
 (api :8080, accepts X-Dev-User) and the Studio dev server with `NL_DEV_USER=01J9ZD3V00000000000000RAV1

@@ -6,7 +6,7 @@
 #   make status / logs  what runs and where / follow the app logs;  make down stops the apps and the stand-ins
 #   make all            everything CI checks (server build with tests, web checks)
 #
-# SERVICES picks the apps (default "api studio": the Studio with dev auth, Postgres only):
+# SERVICES picks the apps (default "auth api bff studio": the Studio with real sign-in, Postgres only):
 #   make up SERVICES="auth api bff studio"          real sign-in through northline-auth and the studio-bff
 #   make up SERVICES="auth api bff-consumer consumer"   the consumer web through its BFF
 #   make up SERVICES=all PROFILES=all               every app and every stand-in (Kafka, Elasticsearch, …)
@@ -26,7 +26,7 @@ ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 MAKEFLAGS += --no-print-directory
 
 STACK := $(ROOT)/scripts/stack.sh
-SERVICES ?= api studio
+SERVICES ?= auth api bff studio
 # Compose profiles for up/down; empty = COMPOSE_PROFILES in .env (db). PROFILES=none starts no stand-in (your own Postgres).
 PROFILES ?=
 # Spring profile the apps run with (`local` = Postgres only, dev auth, dev seed).
@@ -204,9 +204,9 @@ help: ## This list, and the common variables
 	@echo
 	@echo 'Apps: api auth bff bff-consumer worker studio consumer storybook docs — e.g. make up SERVICES="auth api bff studio"'
 
-##> SERVICES  apps for up/run/down/restart/logs (default "api studio"; all = every app)
+##> SERVICES  apps for up/run/down/restart/logs (default "auth api bff studio"; all = every app)
 ##> PROFILES  compose stand-ins for up, e.g. db,cache,events or all; none = your own Postgres (default: .env)
-##> DEV_AUTH  studio/consumer: auto (dev auth unless their BFF runs), 1 or 0
+##> DEV_AUTH  studio/consumer/console: 0 = real sign-in (default); 1 = a fixed dev persona, for tests only
 ##> SPRING_PROFILE  Spring profile(s) of the apps (default local)
 ##> SKIP_DB  1 = make up doesn't migrate or seed
 ##> OBS  1 = make up/run also start the observability stack and the apps export to it (S-111)
