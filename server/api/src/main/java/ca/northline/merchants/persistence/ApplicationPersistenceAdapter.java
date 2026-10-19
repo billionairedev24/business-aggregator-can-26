@@ -5,6 +5,7 @@ import ca.northline.merchants.application.ApplicationRepository;
 import ca.northline.merchants.domain.BusinessProfile;
 import ca.northline.merchants.domain.BusinessStructure;
 import ca.northline.merchants.domain.CategoryRoot;
+import ca.northline.merchants.domain.LegacyLegalDetails;
 import ca.northline.merchants.domain.MerchantApplication;
 import ca.northline.merchants.domain.MerchantStatus;
 import ca.northline.merchants.domain.MerchantTier;
@@ -81,9 +82,9 @@ class ApplicationPersistenceAdapter implements ApplicationRepository {
                 .takeRateBps(rs.getInt("take_rate_bps"))
                 .displayName(rs.getString("display_name"))
                 .legalName(rs.getString("legal_name"))
-                .structure(CodedEnums.fromCode(rs.getString("structure"), BusinessStructure.class))
+                .structure(BusinessStructure.ofNullable(rs.getString("structure")))
                 .gstNumber(rs.getString("gst_number"))
-                .legalDetails(json.map(rs.getString("legal_details")))
+                .legalDetails(LegacyLegalDetails.upgrade(json.map(rs.getString("legal_details"))))
                 .principals(principals(id))
                 .categories(categories(id))
                 .profile(json.read(rs.getString("profile"), BusinessProfile.class, BusinessProfile.EMPTY))

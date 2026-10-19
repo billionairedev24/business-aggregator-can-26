@@ -4,6 +4,7 @@ import ca.northline.merchants.application.BusinessRegistry;
 import ca.northline.merchants.domain.RegistryCheck.Answer;
 import ca.northline.merchants.domain.RegistryQuery;
 import ca.northline.merchants.domain.RegistrySource;
+import org.jspecify.annotations.Nullable;
 
 /**
  * {@code northline.registries.<source>.provider=manual}: no API account for this source — every lookup goes to a
@@ -12,9 +13,16 @@ import ca.northline.merchants.domain.RegistrySource;
 class ManualRegistry implements BusinessRegistry {
 
     private final RegistrySource source;
+    private final @Nullable String how;
 
     ManualRegistry(RegistrySource source) {
+        this(source, null);
+    }
+
+    /** @param how what the agent does, shown with the review (a province's registry-agent search); null = nothing */
+    ManualRegistry(RegistrySource source, @Nullable String how) {
         this.source = source;
+        this.how = how;
     }
 
     @Override
@@ -24,6 +32,6 @@ class ManualRegistry implements BusinessRegistry {
 
     @Override
     public Answer lookup(RegistryQuery query) {
-        return new Answer.Manual(source == RegistrySource.ALBERTA_CORPORATE_REGISTRY ? "registry-agent search" : null);
+        return new Answer.Manual(how);
     }
 }

@@ -30,10 +30,10 @@ public record BusinessDetails(
         return legalDetails.get("business_number") instanceof String bn ? bn : null;
     }
 
-    /** Registry reference: provincial corporate access #, corporation #, registration #. */
+    /** Registry reference: the provincial registry #, corporation #, registration #. */
     public @Nullable String registryRef() {
         for (var key : List.of(
-                "alberta_corporate_access_number",
+                LegalKeys.PROVINCIAL_REGISTRY_NUMBER,
                 "corporations_canada_number",
                 "home_registration_number",
                 "partnership_registration",

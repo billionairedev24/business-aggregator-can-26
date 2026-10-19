@@ -85,7 +85,7 @@ class MerchantTriggersTest extends IntegrationTest {
 
     @Test
     void principalsOwnAtMost100Percent() {
-        var id = merchant("provider", "corp_ab");
+        var id = merchant("provider", "corp_prov");
         principal(id, "director", 60);
         assertThatThrownBy(() -> principal(id, "shareholder", 41)).hasMessageContaining("exceeds 100");
         principal(id, "shareholder", 40);
