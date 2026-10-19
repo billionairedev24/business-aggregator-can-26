@@ -3,33 +3,30 @@ package ca.northline.email;
 import java.util.Map;
 
 /**
- * Northline "Spruce &amp; Honey" for email clients. Email clients ignore stylesheets, CSS variables and
- * {@code color-mix()}, so this template layer is the one place outside {@code web/packages/tokens/tokens.json} that
- * holds colour literals (the web's no-hex rule covers components; docs/DECISIONS.md § S-13). The five base colours are
- * copied from tokens.json (a test keeps them equal); the few derived ones are sRGB approximations of the tokens'
- * {@code color-mix(in oklch, …)} ramps. Templates use {@link #styles()} only.
+ * The brand for email clients. Email clients ignore stylesheets, CSS variables and {@code color-mix()}, so this
+ * template layer is the one place outside {@code web/packages/tokens} that holds colour literals (the web's no-hex rule
+ * covers components; docs/DECISIONS.md § S-13). Every colour is a copy of the palette that
+ * {@code web/packages/tokens/brand.json} selects ({@code palettes/<name>.json}); a test keeps them equal, so switching
+ * the palette fails the build until these follow (redesign, docs/design/redesign-spec.md § 5). Templates use
+ * {@link #styles()} only.
  */
 public final class EmailBrand {
 
-    // Base tokens (tokens.json base.*).
-    public static final String ACCENT = "#1E4D36";
-    public static final String ACCENT_2 = "#B4533A";
-    public static final String HIGHLIGHT = "#D9A441";
-    public static final String BG = "#F7F4EE";
-    public static final String TEXT = "#15231B";
+    // palette color.* (brand.json "palette": lakeshore).
+    public static final String ACCENT = "#17407A"; // primary
+    public static final String ACCENT_2 = "#6B4A0B"; // accentInk
+    public static final String HIGHLIGHT = "#F2B33D"; // accent
+    public static final String BG = "#F5F7FA"; // ground
+    public static final String TEXT = "#111827"; // ink
+    public static final String SURFACE = "#FFFFFF"; // surface
+    public static final String DIVIDER = "#E3E8EF"; // border
+    public static final String MUTED = "#4B5563"; // textMuted
+    public static final String HIGHLIGHT_100 = "#FDF3DC"; // accentTint
+    public static final String ON_ACCENT = "#FFFFFF"; // primaryText
 
-    // Derived (derived.css), approximated: surface = bg + 70 % white, divider = text 12 % over surface,
-    // muted = neutral-600 (text 56 % over bg), highlight-100 = highlight 18 % over white, on-accent = white.
-    public static final String SURFACE = "#FDFCFA";
-    public static final String DIVIDER = "#E1E2DF";
-    public static final String MUTED = "#787F78";
-    public static final String HIGHLIGHT_100 = "#F8EFDD";
-    public static final String ON_ACCENT = "#FFFFFF";
-
-    // tokens.json font.* with email-safe fallbacks (web fonts load in few clients).
-    public static final String FONT_HEADING = "Newsreader, Georgia, 'Times New Roman', serif";
-    public static final String FONT_BODY =
-            "'Instrument Sans', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+    // palette font.sans with email-safe fallbacks (web fonts load in few clients); no display face in this palette.
+    public static final String FONT_BODY = "Manrope, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+    public static final String FONT_HEADING = FONT_BODY;
 
     private static final Map<String, String> STYLES = Map.ofEntries(
             Map.entry("body", "margin:0;padding:0;background:" + BG + ";color:" + TEXT + ";font-family:" + FONT_BODY),
