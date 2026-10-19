@@ -12,21 +12,21 @@ import java.util.Map;
  */
 public final class EmailBrand {
 
-    // palette color.* (brand.json "palette": lakeshore).
-    public static final String ACCENT = "#17407A"; // primary
-    public static final String ACCENT_2 = "#6B4A0B"; // accentInk
-    public static final String HIGHLIGHT = "#F2B33D"; // accent
-    public static final String BG = "#F5F7FA"; // ground
-    public static final String TEXT = "#111827"; // ink
+    // palette color.* (brand.json "palette": evergreen).
+    public static final String ACCENT = "#1F5E4A"; // primary
+    public static final String ACCENT_2 = "#8A3612"; // accentInk
+    public static final String HIGHLIGHT = "#C4531C"; // accent
+    public static final String BG = "#FAF8F4"; // ground
+    public static final String TEXT = "#1C1B19"; // ink
     public static final String SURFACE = "#FFFFFF"; // surface
-    public static final String DIVIDER = "#E3E8EF"; // border
-    public static final String MUTED = "#4B5563"; // textMuted
-    public static final String HIGHLIGHT_100 = "#FDF3DC"; // accentTint
+    public static final String DIVIDER = "#E7E2D9"; // border
+    public static final String MUTED = "#57534E"; // textMuted
+    public static final String HIGHLIGHT_100 = "#F8E6DA"; // accentTint
     public static final String ON_ACCENT = "#FFFFFF"; // primaryText
 
-    // palette font.sans with email-safe fallbacks (web fonts load in few clients); no display face in this palette.
-    public static final String FONT_BODY = "Manrope, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-    public static final String FONT_HEADING = FONT_BODY;
+    // palette font.sans and font.display with email-safe fallbacks (web fonts load in few clients).
+    public static final String FONT_BODY = "'DM Sans', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+    public static final String FONT_HEADING = "Fraunces, Georgia, 'Times New Roman', serif";
 
     private static final Map<String, String> STYLES = Map.ofEntries(
             Map.entry("body", "margin:0;padding:0;background:" + BG + ";color:" + TEXT + ";font-family:" + FONT_BODY),
