@@ -153,6 +153,32 @@ class ProductListingApiTest extends CatalogueApiTest {
                             .with(TestJwt.member(biz.userId())))
                     .andExpect(status().isUnprocessableContent());
         }
+
+        /** V371: "Grown in" lists the region model's provinces and territories, never one of them by name in data. */
+        @Test
+        void produceOriginOffersEveryProvinceFromTheRegionModel() throws Exception {
+            var biz = seller(MerchantRole.OWNER);
+            var body = mvc.perform(get("/api/v1/merchants/{m}/catalogue/categories?root=shop", biz.merchantId())
+                            .with(TestJwt.member(biz.userId())))
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            java.util.List<java.util.List<String>> found = com.jayway.jsonpath.JsonPath.read(
+                    body,
+                    "$.items[?(@.id == 'shop.food-and-grocery.produce')].attributes[?(@.key == 'origin')].options");
+            var options = found.getFirst();
+            var provinces = jdbc.sql("select name_i18n ->> 'en' from region.regions where kind = 'province'")
+                    .query(String.class)
+                    .list();
+            assertThat(provinces).hasSizeGreaterThan(1);
+            assertThat(options)
+                    .containsAll(provinces)
+                    .contains("Canada", "Imported")
+                    .doesNotContain("@provinces")
+                    .doesNotHaveDuplicates()
+                    .hasSize(provinces.size() + 2);
+        }
     }
 
     @Nested
