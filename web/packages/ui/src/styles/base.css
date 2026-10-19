@@ -6,6 +6,10 @@
 body { margin: 0; background: var(--color-canvas); color: var(--color-text); font-family: var(--font-sans); font-size: var(--text-base); line-height: var(--leading-normal); -webkit-font-smoothing: antialiased; }
 /* No horizontal page scroll (clip, not hidden: hidden would make <body> a scroll container and break sticky headers). */
 html, body { overflow-x: clip; }
+/* No rubber-band bounce of the whole page with a mouse or trackpad (owner, 2026-10-19: "overscrolling" — the sticky
+   header and the footer dragged past the window's edge). Touch screens keep theirs (pull to refresh); scrolling rows,
+   sheets and menus contain their own overscroll so it never moves the page. */
+@media (pointer: fine) { html { overscroll-behavior-y: none; } }
 /* No visible scrollbars (owner rule, AfroTransact chat1:857): regions still scroll by wheel, touch and keyboard. */
 * { scrollbar-width: none; }
 *::-webkit-scrollbar { display: none; width: 0; height: 0; }

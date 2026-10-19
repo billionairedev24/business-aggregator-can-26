@@ -5,7 +5,6 @@ import { EmptyState, ErrorState, SiteLink, Skeleton, useLocale } from '@northlin
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { marketOf, railQuery, type Place, type SearchPage } from '../search/api';
 import { ItemCard } from '../search/ItemCard';
-import { SiteSearch } from '../search/SiteSearch';
 import { Art } from '../art/Art';
 import { RailSection, RailTrack } from '../pages/Rail';
 import { Tile } from '../pages/Tile';
@@ -19,8 +18,9 @@ const SHOP_TILES = ['groceries', 'bakery', 'butcher', 'produce', 'pharmacy', 'gi
 const QUICK = ['mechanic', 'cleaning', 'bakery', 'groceries'];
 
 /**
- * Home (light & photo-first, phase B; redesign § 1.3 behaviour): a hero that leads with the search and the place —
- * the field, "Near {place} · Change" (the location dialog) and a few popular entries — beside an illustrated collage;
+ * Home (light & photo-first, phase B; redesign § 1.3 behaviour): a hero that leads with the place — the headline,
+ * two ways in (Services, Shop), "Near {place} · Change" (the location dialog) and a few popular entries — beside an illustrated collage (no search
+ * field of its own: the header's is the page's one search, owner 2026-10-19);
  * then illustrated tiles for services and the shop's departments; then sideways rails of real listings, products and
  * services, where the visitor is; then the sellers' banner. No carousel, no arrows over content. The greeting, the
  * "what do you need" question, live counts, promises, tier tags and "Your week" stay gone (§ 3.2). The server renders
@@ -45,7 +45,10 @@ export function HomeScreen() {
         <div className="nl-home-hero-copy">
           <h1 id="home-title" className="nl-home-title">{t('heroTitle')}</h1>
           <p className="nl-home-sub">{t('heroSub')}</p>
-          <div className="nl-home-search"><SiteSearch variant="hero" placeholder={t('heroSearch')} label={t('heroSearchLabel')} /></div>
+          <div className="nl-home-cta">
+            <SiteLink href="/services" className="btn btn-primary btn-lg">{t('ctaServices')}</SiteLink>
+            <SiteLink href="/shop" className="btn btn-neutral btn-lg">{t('ctaShop')}</SiteLink>
+          </div>
           <p className="nl-home-where">
             <MapPin size={20} weight="fill" aria-hidden />
             {location.status === 'locating' ? <Skeleton width={160} height={20} />
