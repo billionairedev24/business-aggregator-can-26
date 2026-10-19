@@ -1,12 +1,17 @@
 /* Stripe & compliance — design 02 lines 921–964. Tokens only. */
-.nl-cmp { min-width: 0; }
-.nl-cmp-viewonly { margin: -12px 0 20px; }
-.nl-cmp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 36px clamp(28px, 4vw, 64px); }
+.nl-cmp { min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.nl-cmp > .nl-page-header { margin-bottom: var(--space-1); }
+.nl-cmp-viewonly { margin: 0; }
+.nl-cmp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--space-4); align-items: start; }
+.nl-cmp-col { display: flex; flex-direction: column; gap: var(--space-4); }
+.nl-cmp .bo-card { gap: 0; }
+.nl-cmp .bo-card .nl-cmp-gap { margin-top: 0; }
 .nl-cmp-grid > div { min-width: 0; }
-.nl-cmp-h2 { font-size: 22px; margin: 0 0 4px; }
+.nl-cmp-h2 { font-family: var(--font-heading); font-size: var(--text-xl); font-weight: var(--weight-semibold); margin: 0 0 var(--space-1); }
 .nl-cmp-gap { margin-top: 28px; margin-bottom: 8px; }
-.nl-cmp-meta { font-size: 13px; color: var(--color-neutral-700); margin-bottom: 12px; overflow-wrap: anywhere; }
+.nl-cmp-meta { font-size: 13px; color: var(--color-text-muted); margin-bottom: 12px; overflow-wrap: anywhere; }
 .nl-cmp-rows, .nl-cmp-docs, .nl-cmp-obligations { list-style: none; margin: 0; padding: 0; }
+.nl-cmp-row + .nl-cmp-row, .nl-cmp-doc + .nl-cmp-doc, .nl-cmp-dl > div + div { border-top: 1px solid var(--color-border); }
 .nl-cmp-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; min-height: 44px; font-size: 14px; }
 .nl-cmp-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .nl-cmp-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
@@ -16,14 +21,15 @@
 .nl-cmp-dl dd { margin: 0; text-align: right; min-width: 0; overflow-wrap: anywhere; }
 .nl-cmp-doc { display: grid; grid-template-columns: minmax(0, 1fr) fit-content(60%); gap: 12px; align-items: center; padding: 10px 0; font-size: 14px; }
 .nl-cmp-doc > span:first-child { min-width: 0; overflow-wrap: anywhere; }
-.nl-cmp-note { display: block; font-size: 12px; color: var(--color-neutral-700); }
-.nl-cmp-warn { display: block; font-size: 12px; color: var(--color-accent-2-700); margin-top: 2px; }
+.nl-cmp-note { display: block; font-size: 12px; color: var(--color-text-muted); }
+.nl-cmp-warn { display: block; font-size: 12px; color: var(--color-warning); margin-top: 2px; }
 .nl-cmp-doc-side { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .nl-cmp-doc-side .tag { white-space: normal; text-align: right; }
 .nl-cmp-upload.btn { min-height: 34px; padding: 4px 10px; position: relative; }
 .nl-cmp-upload.btn::after { content: ''; position: absolute; inset: -5px 0; }
-.nl-cmp-obligations { display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--color-neutral-800); }
-.nl-cmp-obligations li::before { content: '· '; }
+.nl-cmp-obligations { display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--color-text); }
+.nl-cmp-obligations li { position: relative; padding-left: var(--space-4); line-height: var(--leading-relaxed); }
+.nl-cmp-obligations li::before { content: ''; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--color-action-primary); }
 .nl-cmp-versions { margin-top: 14px; }
 .nl-cmp .nl-alert { margin-bottom: 12px; }
 @media (max-width: 420px) {

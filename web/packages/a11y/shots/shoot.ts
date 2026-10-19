@@ -15,11 +15,14 @@ const OUT = new URL('../../../../ui-shots/', import.meta.url).pathname;
 const SIZES = [{ suffix: 'd', width: 1440, height: 900 }, { suffix: 'm', width: 390, height: 844 }] as const;
 
 async function photos(page: Page) {
-  // the generated photos, and the catalogue's media (`/api/v1/public/catalogue/media/{id}`, what listings point at)
+  // the generated photos, the catalogue's media (`/api/v1/public/catalogue/media/{id}`, what listings point at) and
+  // the kitchen's menu-item photos (`/api/v1/merchants/{id}/menu-items/{item}/photo`)
   const MEDIA = '/api/v1/public/catalogue/media/';
-  await page.route(url => url.pathname.startsWith(PHOTO_PREFIX) || url.pathname.startsWith(MEDIA), route => {
+  const MENU_PHOTO = /^\/api\/v1\/merchants\/[^/]+\/menu-items\/([^/]+)\/photo$/;
+  await page.route(url => url.pathname.startsWith(PHOTO_PREFIX) || url.pathname.startsWith(MEDIA) || MENU_PHOTO.test(url.pathname), route => {
     const path = new URL(route.request().url()).pathname;
-    const seed = decodeURIComponent(path.startsWith(MEDIA) ? path.slice(MEDIA.length) : path.slice(PHOTO_PREFIX.length)).replace(/\.svg$/, '');
+    const item = MENU_PHOTO.exec(path)?.[1];
+    const seed = item ? `bowl-${item}` : decodeURIComponent(path.startsWith(MEDIA) ? path.slice(MEDIA.length) : path.slice(PHOTO_PREFIX.length)).replace(/\.svg$/, '');
     return route.fulfill({ status: 200, contentType: 'image/svg+xml', body: photo(seed) });
   });
 }

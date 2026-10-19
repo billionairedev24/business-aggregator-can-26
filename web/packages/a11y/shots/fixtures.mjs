@@ -292,6 +292,45 @@ function report() {
   return b;
 }
 
+/** Reviews of the last weeks. */
+function reviews() {
+  const b = rec('GET /api/v1/merchants/:id/reviews');
+  const [r1, r2, r3] = b.items;
+  b.items = [
+    { ...r1, id: 'r0', authorName: 'Priya K.', jobLabel: 'winter tire swap', text: 'Booked at 8, done in my driveway by 10. Torqued and re-checked the wheels after 50 km like he said he would.', createdAt: ago(60 * 20), reply: null },
+    { ...r1, createdAt: ago(60 * 24 * 3) }, { ...r2, createdAt: ago(60 * 24 * 6) }, { ...r3, createdAt: ago(60 * 24 * 11) },
+  ];
+  return b;
+}
+
+/** The mechanic's public page, approved and not yet published. */
+function storefront() {
+  const b = rec('GET /api/v1/merchants/:id/storefront');
+  return { ...b, merchantId: PROVIDER_ID, slug: 'prairie-wrench', url: 'northline.ca/prairie-wrench', tagline: 'Mobile mechanic · comes to your driveway',
+    business: { ...b.business, displayName: 'Prairie Wrench', tier: 'trusted', status: 'active', about: 'Licensed mobile mechanic since 2019 — brakes, batteries, tires and pre-purchase checks at your home or work. Fixed prices, photos of every job.' } };
+}
+
+/** The kitchen's dinner menu: mains, sides and drinks with photos. */
+const KITCHEN_ID = '01J9ZD3V00000000000000PDB1';
+function menu() {
+  const b = rec('GET /api/v1/merchants/:id/menus/:id');
+  const [base] = b.sections[0].items;
+  const item = (id, sectionId, name, description, priceCents, over = {}) => ({ ...base, id, sectionId, name, description, priceCents, hasPhoto: true, soldOut: false, allergens: [], dietary: [], ...over });
+  b.sections = [
+    { id: 's1', name: 'Pho', sort: 0, items: [
+      item('i1', 's1', 'Pho dac biet', 'Rare beef, brisket, tendon and beef balls in a 12-hour broth', 1700, { dietary: ['gluten_free'] }),
+      item('i3', 's1', 'Pho ga', 'Poached chicken, ginger and scallion', 1550, { dietary: ['gluten_free'] }),
+      item('i4', 's1', 'Pho chay', 'Tofu, mushrooms and greens in a vegetable broth', 1450, { dietary: ['vegan', 'gluten_free'] }),
+    ] },
+    { id: 's2', name: 'Rolls & sides', sort: 1, items: [
+      item('i5', 's2', 'Fresh spring rolls ×2', 'Shrimp, herbs and vermicelli, peanut sauce', 750, { allergens: ['peanuts', 'shellfish'] }),
+      item('i6', 's2', 'Crispy imperial rolls ×3', 'Pork and taro, nuoc cham', 800, { soldOut: true }),
+    ] },
+    { id: 's3', name: 'Drinks', sort: 2, items: [item('i2', 's3', 'Fresh lime soda', 'Salted or sweet', 500, { modifierGroups: [] }), item('i7', 's3', 'Vietnamese iced coffee', 'Condensed milk', 600, { allergens: ['milk'], modifierGroups: [] })] },
+  ];
+  return b;
+}
+
 /** The wiper blades in the editor: a filled-in draft with three photos. */
 function productDetail() {
   const b = rec('GET /api/v1/merchants/:id/listings/:id');
@@ -373,6 +412,9 @@ export const SHOTS = {
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/payouts/overview`) ? { body: payoutOverview() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/payouts`) ? { body: payoutHistory() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/reports`) ? { body: report() } : undefined),
+    (m, p) => (m === 'GET' && p.startsWith(`/api/v1/merchants/${PROVIDER_ID}/reviews?`) ? { body: reviews() } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/storefront`) ? { body: storefront() } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${KITCHEN_ID}/menus/mn1`) ? { body: menu() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/quote-requests`) ? { body: quoteRequests() } : undefined),
     (m, p) => { const id = /^\/api\/v1\/merchants\/([^/]+)\/onboarding$/.exec(p)?.[1]; return m === 'GET' && APPLICATIONS[id] ? { body: APPLICATIONS[id] } : undefined; },
     (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/dashboard$/.test(p) ? { body: p.includes('PWP1') ? SELLER_DASHBOARD : DASHBOARD } : undefined),

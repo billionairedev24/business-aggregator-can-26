@@ -77,6 +77,8 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'reviews', path: `/b/${PROVIDER}/reviews` },
     { name: 'compliance', path: `/b/${PROVIDER}/compliance` },
     { name: 'settings', path: `/b/${PROVIDER}/settings` },
+    { name: 'settings-team', path: `/b/${PROVIDER}/settings?tab=team` },
+    { name: 'settings-security', path: `/b/${PROVIDER}/settings?tab=security` },
     { name: 'help', path: `/b/${PROVIDER}/help` },
     { name: 'kitchen-live', path: `/b/${KITCHEN}/kitchen/live` },
     { name: 'kitchen-menu', path: `/b/${KITCHEN}/kitchen/menu` },
