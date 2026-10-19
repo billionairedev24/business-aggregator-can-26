@@ -1,0 +1,29 @@
+# OVHcloud Managed Kubernetes (docs/runbooks/ovh.md): two proxies on different nodes behind one public OVHcloud load
+# balancer (Octavia, created by the cluster for the LoadBalancer Service; its public IP through the subnet's gateway).
+# externalTrafficPolicy Local keeps the clients' addresses and sends traffic only to nodes running a proxy.
+# Applied by scripts/ovh/deploy.sh, not by Argo CD.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: northline
+  namespace: envoy-gateway-system
+spec:
+  mergeGateways: true
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+        pod:
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    topologyKey: kubernetes.io/hostname
+                    labelSelector:
+                      matchLabels:
+                        app.kubernetes.io/name: envoy
+      envoyService:
+        type: LoadBalancer
+        externalTrafficPolicy: Local

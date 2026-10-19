@@ -21,7 +21,7 @@ Other environments: [dev](dev.md), [staging](staging.md), [prod](prod.md) · [ov
 - [Steps from an empty project](#steps-from-an-empty-project) (1–15)
 - [Running it day to day](#running-it-day-to-day)
 - [Teardown (stop billing)](#teardown-stop-billing)
-- [Cheaper still: one VM (being researched)](#cheaper-still-one-vm-being-researched)
+- [Cheaper still: one VM](#cheaper-still-one-vm)
 - [Open items](#open-items)
 
 ## The shape
@@ -397,11 +397,12 @@ Remove the `demo` NS delegation from `northline.ca`. Check the billing report th
 a deleted project is recoverable for 30 days. Cloud KMS key versions are scheduled for destruction (no charge once
 destroyed).
 
-## Cheaper still: one VM (being researched)
+## Cheaper still: one VM
 
-A single Compute Engine VM running k3s (all of the above on one `e2-standard-4`, a static IP, no load balancer)
-would cost roughly half of the Spot cluster. It is **being researched and out of scope here**: no Terraform or charts
-for it yet, and it drops the GKE pieces this dry run rehearses (Workload Identity, the GKE load balancer, node pools).
+The one-box shape now exists on OVHcloud instead of Compute Engine: **`ovh-vps`**, one OVHcloud VPS (8 vCore / 24 GB)
+in Beauharnois running k3s with everything on it, ≈ $25–30 for the month (unverified) — [ovh.md](ovh.md). The same
+charts and dry-run values; `make deploy TARGET=ovh-vps`. Comparison: [README § Google vs OVH](README.md#google-vs-ovh).
+`make deploy TARGET=gcp-dryrun` runs steps 9–10 of this page.
 
 ## Open items
 

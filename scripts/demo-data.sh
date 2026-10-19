@@ -6,7 +6,8 @@
 # sign-in, the Studio's, consumer site's and console's BFFs) — never the dev seed, whose credentials are public.
 #
 #   make demo-data ENV=local             against the stack on this machine (make up-all, or ci/e2e.sh up)
-#   make demo-data ENV=dryrun            against the GCP dry run (docs/runbooks/dryrun-gcp.md)
+#   make demo-data ENV=dryrun            against the GCP dry run (docs/runbooks/dryrun-gcp.md; also ENV=gcp-dryrun)
+#   make demo-data ENV=ovh-vps|ovh-mks   against an OVHcloud target (docs/runbooks/ovh.md) — its own state file
 #   make demo-data ENV=… RESET=1         after a demo: hide what the live demo added (listings outside the plan, the
 #                                        applicant's business's listings) and put the plan's prices and stock back
 #   make demo-data ENV=… RESET=all       hide every demo listing (the marketplace looks empty); a plain run restores it
@@ -24,14 +25,15 @@
 # Environment (defaults in brackets):
 #   DEMO_MARKET [the region model's configured market: GET /api/v1/geo/markets → fallback]  a market id or city
 #   DEMO_STUDIO_URL / DEMO_CONSUMER_URL / DEMO_CONSOLE_URL / DEMO_AUTH_URL  [local: localhost:3100/3000/3200/9000;
-#       dryrun: the urls of deploy/helm/northline/values-dryrun.yaml]
+#       dryrun: the urls of deploy/helm/northline/values-dryrun.yaml; ovh-*: values-ovh-*.yaml's urls if it sets
+#       them, else values-dryrun.yaml's]
 #   DEMO_STAFF_IDENTIFIER + DEMO_STAFF_TOTP_SECRET (or DEMO_STAFF_BACKUP_CODES=a,b,…)  the console admin that approves
 #       (the approver; the script registers the second console account, the reviewer, and invites it as trust & safety)
-#       [local: the dev seed's reviewer from web/e2e/data/local.json — local only; dryrun: required, the first admin]
-#   DEMO_PHONE_<KEY>  dryrun: a phone that receives SMS for each new account (OWNER, APPLICANT, REVIEWER, CUSTOMER, CUSTOMER2,
+#       [local: the dev seed's reviewer from web/e2e/data/local.json — local only; deployed: required, the first admin]
+#   DEMO_PHONE_<KEY>  deployed: a phone that receives SMS for each new account (OWNER, APPLICANT, REVIEWER, CUSTOMER, CUSTOMER2,
 #       CUSTOMER3); the code is asked for in the terminal, or printed by DEMO_SMS_CODE_CMD (gets the number as $1)
 #   DEMO_EMAIL_<KEY>  another email for an account (the plan's are @demo.northline.test)
-#   DEMO_STRIPE_PUBLISHABLE_KEY  dryrun: pk_test_… — the customers' past orders are paid with Stripe's test card
+#   DEMO_STRIPE_PUBLISHABLE_KEY  deployed: pk_test_… — the customers' past orders are paid with Stripe's test card
 #   DEMO_AREA_CODE [555]  local phone numbers: +1 <area> 555 01xx (fictional)
 set -euo pipefail
 
@@ -39,21 +41,25 @@ repo="$(cd "$(dirname "$0")/.." && pwd)"
 env_name=local reset= reset_all= only=
 while [ $# -gt 0 ]; do
   case "$1" in
-    --env) env_name="${2:?--env needs local or dryrun}"; shift 2 ;;
+    --env) env_name="${2:?--env needs local, dryrun, ovh-vps or ovh-mks}"; shift 2 ;;
     --reset) reset=1; shift ;;
     --reset-all) reset=1; reset_all=1; shift ;;
     --only) only="${2:?--only needs merchant keys}"; shift 2 ;;
-    -h | --help) sed -n '2,35p' "$0"; exit 0 ;;
+    -h | --help) sed -n '2,37p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1 (see --help)" >&2; exit 2 ;;
   esac
 done
 
 command -v node >/dev/null || { echo "Node 22 is needed (node not found)" >&2; exit 1; }
 
-# A URL from values-dryrun.yaml's `urls:` block (two-space keys under it).
+# A URL from a values file's `urls:` block (two-space keys under it): the target's overlay first (OVHcloud), then
+# values-dryrun.yaml — the hosts every dry-run target shares unless its overlay changes them.
 values_url() {
-  awk -v key="$1" '/^urls:/ { on = 1; next } on && /^[^ #]/ { on = 0 } on && $1 == key ":" { print $2; exit }' \
-    "$repo/deploy/helm/northline/values-dryrun.yaml"
+  local f url=
+  for f in ${overlay:+"$repo/deploy/helm/northline/$overlay"} "$repo/deploy/helm/northline/values-dryrun.yaml"; do
+    url=$(awk -v key="$1" '/^urls:/ { on = 1; next } on && /^[^ #]/ { on = 0 } on && $1 == key ":" { print $2; exit }' "$f")
+    if [ -n "$url" ]; then echo "$url"; return; fi
+  done
 }
 
 case "$env_name" in
@@ -69,15 +75,20 @@ case "$env_name" in
       export DEMO_STAFF_IDENTIFIER DEMO_STAFF_BACKUP_CODES
     fi
     ;;
-  dryrun)
+  gcp-dryrun | dryrun | ovh-vps | ovh-mks)
+    overlay=
+    case "$env_name" in
+      (gcp-dryrun) env_name=dryrun ;;                       # one state file for the GCP dry run, as before
+      (ovh-vps | ovh-mks) overlay="values-$env_name.yaml" ;;
+    esac
     : "${DEMO_STUDIO_URL:=$(values_url studio)}" "${DEMO_CONSUMER_URL:=$(values_url consumer)}"
     : "${DEMO_CONSOLE_URL:=$(values_url console)}" "${DEMO_AUTH_URL:=$(values_url auth)}"
-    [ -n "${DEMO_STAFF_IDENTIFIER:-}" ] || { echo "DEMO_STAFF_IDENTIFIER and DEMO_STAFF_TOTP_SECRET are needed: the dry run's console admin (docs/runbooks/demo.md § Before the first run)" >&2; exit 2; }
+    [ -n "${DEMO_STAFF_IDENTIFIER:-}" ] || { echo "DEMO_STAFF_IDENTIFIER and DEMO_STAFF_TOTP_SECRET are needed: the $env_name console admin (docs/runbooks/demo.md § Before the first run)" >&2; exit 2; }
     case "${DEMO_STRIPE_PUBLISHABLE_KEY:-}" in
       pk_live_*) echo "DEMO_STRIPE_PUBLISHABLE_KEY is a live key: the demo pays with test cards only (pk_test_…)" >&2; exit 2 ;;
     esac
     ;;
-  *) echo "ENV=$env_name: only local or dryrun (demo data never goes to dev, staging or prod)" >&2; exit 2 ;;
+  *) echo "ENV=$env_name: only local, dryrun (gcp-dryrun), ovh-vps or ovh-mks (demo data never goes to dev, staging or prod)" >&2; exit 2 ;;
 esac
 
 export DEMO_ENV="$env_name" DEMO_STUDIO_URL DEMO_CONSUMER_URL DEMO_CONSOLE_URL DEMO_AUTH_URL

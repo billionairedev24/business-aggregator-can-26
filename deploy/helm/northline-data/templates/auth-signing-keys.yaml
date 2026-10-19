@@ -1,0 +1,21 @@
+{{- /*
+northline-auth's token signing keys with KMS_PROVIDER=local (OVHcloud): a small volume for the JWK set file
+(SIGNING_KEYS_DIR), mounted by the northline chart (values-ovh-*.yaml). Kept when the release is uninstalled: the keys
+sign the sessions in flight, and a new key would sign every user out.
+*/ -}}
+{{- with .Values.authSigningKeys }}
+{{- if .enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "data.labels" (dict "root" $ "name" "auth-signing-keys") | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: {{ $.Values.storageClassName }}
+  resources: { requests: { storage: {{ .size }} } }
+{{- end }}
+{{- end }}

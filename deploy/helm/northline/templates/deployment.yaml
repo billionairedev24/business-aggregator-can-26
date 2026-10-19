@@ -14,11 +14,17 @@ spec:
   replicas: {{ $app.replicas }}
   {{- end }}
   revisionHistoryLimit: 5
+  {{- /* apps.<app>.strategy overrides, e.g. Recreate for northline-auth with its signing keys on a ReadWriteOnce volume
+         (KMS_PROVIDER=local on OVHcloud: two pods must never share the key file). */}}
   strategy:
+    {{- if $app.strategy }}
+    {{- toYaml $app.strategy | nindent 4 }}
+    {{- else }}
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
+    {{- end }}
   selector:
     matchLabels:
       {{- include "northline.selectorLabels" $labels | nindent 6 }}

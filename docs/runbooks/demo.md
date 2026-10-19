@@ -1,7 +1,8 @@
 # Client demo
 
-A 15-minute demo of the marketplace for prospective clients, on the GCP dry run ([dryrun-gcp.md](dryrun-gcp.md)) or
-rehearsed on a laptop. The demo marketplace — businesses, listings, customers, their orders, bookings and reviews — is
+A 15-minute demo of the marketplace for prospective clients, on the GCP dry run ([dryrun-gcp.md](dryrun-gcp.md)), on
+OVHcloud ([ovh.md](ovh.md): `ENV=ovh-vps` or `ENV=ovh-mks` wherever this page says `ENV=dryrun`) or rehearsed on a
+laptop. The demo marketplace — businesses, listings, customers, their orders, bookings and reviews — is
 made **through the product** by `make demo-data`, never from the dev seed: the seed's personas have published
 credentials and `DevSeedGuard` refuses it outside a local database (DECISIONS 2026-10-18, GCP dry run). Every person
 and business in it is fake.
@@ -50,7 +51,8 @@ site and the console do:
 
 ## 2. Before the first run on the dry run
 
-Once per environment, after [dryrun-gcp.md](dryrun-gcp.md) steps 1–14:
+Once per environment, after [dryrun-gcp.md](dryrun-gcp.md) steps 1–14 (OVHcloud: [ovh.md](ovh.md) up to its smoke
+test; Twilio and Stripe go into `.ovh/<target>.env` instead of Secret Manager, [ovh.md § Secrets](ovh.md#secrets)):
 
 1. **SMS codes — blocker.** Every sign-up verifies a phone by SMS, and under the `dev` profile the local SMS stand-in
    **withholds** the code (S-112: no code reaches a shipped log; there is deliberately no switch). Configure Twilio for
@@ -87,8 +89,10 @@ make demo-data ENV=dryrun ONLY=wine,barber  # only these businesses (keys in mar
 ```
 
 The terminal asks for each new account's SMS code (or `DEMO_SMS_CODE_CMD`, a command that prints the code for the
-number in `$1`). The URLs come from `values-dryrun.yaml` (`DEMO_*_URL` override them). `ENV` other than `local` and
-`dryrun` is refused.
+number in `$1`). The URLs come from `values-dryrun.yaml` — for `ENV=ovh-vps` / `ovh-mks` from `values-ovh-*.yaml` if it
+sets `urls`, else the same file (`DEMO_*_URL` override them). Each target has its own state file (`.demo/<env>.json`;
+`ENV=gcp-dryrun` is `dryrun`). Any other `ENV` than `local`, `dryrun`, `gcp-dryrun`, `ovh-vps` and `ovh-mks` is
+refused.
 
 **Steps only a person can do** are listed at the end and the exit code is 3 until none are left: on the dry run,
 Stripe's hosted test pages — each business's **owner identity** (pick the verified outcome) and, if the Studio asks,

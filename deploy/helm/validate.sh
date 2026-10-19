@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Offline checks of the Northline chart (S-14) and of the dry run's data services chart (northline-data): helm lint + helm template | kubeconform -strict for every
-# environment × cloud, the kind values, the Gateway API and edge (S-17) variants. No cluster needed. CI runs this
+# environment × cloud (and the dry run on Google Cloud and OVHcloud), the kind values, the Gateway API and edge (S-17) variants. No cluster needed. CI runs this
 # (.github/workflows/deploy.yml, ci/gitlab/deploy.yml); locally: deploy/helm/validate.sh
 #
 # Needs helm (3.14+) and kubeconform (0.6+). KUBE_VERSION is the Kubernetes version the schemas are checked
@@ -229,6 +229,29 @@ check "dryrun × gcp + Collector (flag)" -f "$CHART/values-gcp.yaml" -f "$CHART/
 refuse "dryrun without a Spring profile" -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml --set global.springProfiles=
 refuse "dryrun over http" -f "$CHART/values-gcp.yaml" -f "$CHART/values-dryrun.yaml" -f test-values/infra-dryrun.yaml --set urls.auth=http://auth.example
 
+# OVHcloud (docs/runbooks/ovh.md): the same dry-run values with the OVHcloud overlays instead of values-gcp.yaml —
+# one plain Secret (no External Secrets), local signing keys on the data chart's volume (auth: Recreate), S3 keys for
+# OVHcloud Object Storage.
+for t in vps mks; do
+  check "dryrun × ovh-$t" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-$t.yaml" -f "test-values/infra-ovh-$t.yaml"
+  out=$(helm template northline "$CHART" --namespace northline-dryrun -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-$t.yaml" -f "test-values/infra-ovh-$t.yaml")
+  auth=$(awk '/^kind: Deployment$/{d=1} d && /^  name: northline-auth$/{a=1} a && /^---/{exit} a' <<<"$out")
+  if grep -q 'SPRING_PROFILES_ACTIVE: "dev"' <<<"$out" && ! grep -qE '^kind: (ExternalSecret|SecretStore|Secret)$' <<<"$out" \
+      && grep -q 'name: northline-secrets' <<<"$out" && ! grep -q 'northline-.*-secrets$' <<<"$out" \
+      && grep -q 'key: STORAGE_ACCESS_KEY' <<<"$out" && grep -q 'key: KMS_LOCAL_KEY' <<<"$out" \
+      && grep -q 'STORAGE_ENDPOINT: "https://s3.bhs.io.cloud.ovh.net"' <<<"$out" && grep -q 'KMS_PROVIDER: "local"' <<<"$out" \
+      && grep -q 'type: Recreate' <<<"$auth" && grep -q 'claimName: northline-auth-signing-keys' <<<"$auth" \
+      && grep -q -- '- name: northline-registry' <<<"$out" && ! grep -q 'googlecloud' <<<"$out" && ! grep -q 'redis-ca' <<<"$out"; then
+    echo "ok   dryrun × ovh-$t: dev profile, one plain Secret (no External Secrets), S3 keys and local KMS key mapped, auth Recreate on its key volume"
+  else echo "FAIL dryrun × ovh-$t render"; failed=1; fi
+  check "dryrun × ovh-$t + Collector (flag)" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-$t.yaml" -f "test-values/infra-ovh-$t.yaml" \
+    --set observability.collector.enabled=true
+done
+if [[ $(helm template northline "$CHART" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-mks.yaml" -f test-values/infra-ovh-mks.yaml \
+    | awk '/^kind: Deployment$/{d=1} d && /^  name: northline-api$/{a=1} a && /^  replicas:/{print $2; exit}') == 2 ]]; then
+  echo "ok   dryrun × ovh-mks: two replicas of the stateless apps"
+else echo "FAIL dryrun × ovh-mks: api not at two replicas"; failed=1; fi
+
 DATA=northline-data
 check_data() {
   local label=$1; shift
@@ -260,6 +283,36 @@ else echo "ok   northline-data refuses to render without the zone"; fi
 if helm template northline-data "$DATA" -f test-values/data-dryrun.yaml --set postgres.instances=2 >/dev/null 2>&1; then
   echo "FAIL northline-data accepted 2 Postgres instances"; failed=1
 else echo "ok   northline-data: one Postgres instance only"; fi
+
+# OVHcloud: no zone pinning, credentials from Secrets the script writes (no SecretStore/ExternalSecret), Postgres
+# backups to Object Storage over S3, the auth signing-key volume; ovh-mks with Managed PostgreSQL has no Cluster.
+check_data "northline-data: ovh-vps (everything on the VPS, S3 backups)" -f test-values/data-ovh-vps.yaml
+check_data "northline-data: ovh-mks (Managed PostgreSQL)" -f test-values/data-ovh-mks.yaml
+data_out=$(helm template northline-data "$DATA" --namespace northline-dryrun -f test-values/data-ovh-vps.yaml)
+if ! grep -q 'topology.kubernetes.io/zone' <<<"$data_out" && ! grep -qE '^kind: (ExternalSecret|SecretStore|Secret)$' <<<"$data_out" \
+    && grep -q 'destinationPath: s3://northline-ovh-vps-pg-backups/' <<<"$data_out" && grep -q 'endpointURL: https://s3.bhs.io.cloud.ovh.net' <<<"$data_out" \
+    && grep -q 'name: northline-pg-backup-s3, key: ACCESS_KEY_ID' <<<"$data_out" && ! grep -q 'serviceAccountTemplate' <<<"$data_out" \
+    && grep -q '^kind: PersistentVolumeClaim$' <<<"$data_out" && grep -q '^  name: northline-auth-signing-keys$' <<<"$data_out" && grep -q 'storageClassName: local-path' <<<"$data_out"; then
+  echo "ok   northline-data ovh-vps: no zone pinning, no External Secrets, S3 backups with the script's keys, auth key volume"
+else echo "FAIL northline-data ovh-vps render"; failed=1; fi
+if helm template northline-data "$DATA" --namespace northline-dryrun -f test-values/data-ovh-mks.yaml | grep -qE '^kind: (Cluster|ScheduledBackup)$'; then
+  echo "FAIL northline-data ovh-mks renders a Postgres cluster next to Managed PostgreSQL"; failed=1
+else echo "ok   northline-data ovh-mks: no in-cluster Postgres"; fi
+if helm template northline-data "$DATA" -f test-values/data-ovh-vps.yaml --set externalSecrets.provider=aws >/dev/null 2>&1; then
+  echo "FAIL northline-data accepted an unknown secrets provider"; failed=1
+else echo "ok   northline-data: secrets provider gcp or none only"; fi
+if helm template northline-data "$DATA" -f test-values/data-ovh-vps.yaml --set postgres.backup.provider=azure >/dev/null 2>&1; then
+  echo "FAIL northline-data accepted an unknown backup provider"; failed=1
+else echo "ok   northline-data: Postgres backups to gcs or s3 only"; fi
+# Restore: a new cluster bootstrapped from the backups, archiving into a new folder of the bucket.
+check_data "northline-data: restore from the S3 backups (recovery)" -f test-values/data-ovh-vps.yaml --set postgres.recovery.enabled=true \
+  --set postgres.backup.serverName=northline-pg-2 --set postgres.recovery.targetTime=2026-10-20T14:00:00Z
+if helm template northline-data "$DATA" -f test-values/data-ovh-vps.yaml --set postgres.recovery.enabled=true >/dev/null 2>&1; then
+  echo "FAIL northline-data accepted a restore archiving into the folder it restores from"; failed=1
+else echo "ok   northline-data: a restored cluster archives into a new folder"; fi
+if helm template northline-data "$DATA" -f test-values/data-ovh-vps.yaml --set postgres.backup.s3.endpointURL= >/dev/null 2>&1; then
+  echo "FAIL northline-data accepted S3 backups without an endpoint"; failed=1
+else echo "ok   northline-data refuses S3 backups without an endpoint"; fi
 
 rm -f /tmp/helm-lint.$$ /tmp/kubeconform.$$
 exit $failed

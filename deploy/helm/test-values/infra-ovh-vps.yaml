@@ -1,0 +1,21 @@
+# Shape of `terraform output -json helm_values` of infra/terraform/envs/ovh/vps (every data service on the VPS; dummy
+# values; deploy/helm/validate.sh only).
+configEnv:
+  STORAGE_PROVIDER: s3
+  STORAGE_BUCKET: northline-ovh-vps-uploads
+  STORAGE_REGION: bhs
+  STORAGE_ENDPOINT: https://s3.bhs.io.cloud.ovh.net
+  STORAGE_PATH_STYLE: "true"
+  STORAGE_ENCRYPTION_KEY: ""
+  KMS_PROVIDER: local
+  DB_URL: jdbc:postgresql://northline-pg-rw.northline-dryrun.svc.cluster.local:5432/northline?sslmode=require
+  DB_USER: northline_app
+  REDIS_HOST: northline-valkey.northline-dryrun.svc.cluster.local
+  REDIS_PORT: "6379"
+  REDIS_SSL: "false"
+  REDIS_USERNAME: ""
+  KAFKA_BOOTSTRAP: northline-kafka.northline-dryrun.svc.cluster.local:9092
+  KAFKA_SECURITY_PROTOCOL: PLAINTEXT
+  KAFKA_SASL_MECHANISM: ""
+  SEARCH_PROVIDER: meilisearch
+  MEILISEARCH_URL: http://northline-meilisearch.northline-dryrun.svc.cluster.local:7700

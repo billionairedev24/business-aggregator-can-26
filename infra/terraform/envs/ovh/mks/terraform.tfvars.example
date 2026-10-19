@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars (git-ignored) and fill in — docs/runbooks/ovh.md § ovh-mks.
+service_name      = "0123456789abcdef0123456789abcdef" # Public Cloud project id
+region            = "BHS5"
+api_allowed_cidrs = [] # e.g. ["203.0.113.7/32"] — your IP (curl -s ifconfig.me)
+node_flavor       = "b3-16"
+node_count        = 2
+# monthly_billed  = false   # true only for a cluster that stays up all month
+# ovh_endpoint    = "ovh-ca"
+# bucket_name_suffix = "-a1b2"
+
+# Postgres: OVHcloud Managed PostgreSQL 17 (default) — or in the cluster:
+# data_services = { postgres = { mode = "in-cluster" } }
+# managed_postgres = { plan = "business", flavor = "db1-4" }   # 2-node HA when real users arrive

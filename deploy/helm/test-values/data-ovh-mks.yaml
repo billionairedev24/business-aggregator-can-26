@@ -1,0 +1,12 @@
+# Stand-in for `terraform output -json data_values` of infra/terraform/envs/ovh/mks (Managed PostgreSQL) in the
+# offline checks.
+pinToZone: false
+storageClassName: csi-cinder-high-speed
+postgres:
+  enabled: false
+  backup: { enabled: false, provider: s3, bucket: "", retentionPolicy: 7d, s3: { endpointURL: "", credentialsSecret: northline-pg-backup-s3 } }
+valkey: { enabled: true }
+meilisearch: { enabled: true }
+kafka: { enabled: true }
+externalSecrets: { provider: none }
+authSigningKeys: { enabled: true }

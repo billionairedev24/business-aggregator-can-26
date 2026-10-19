@@ -1,8 +1,10 @@
 {{- /*
 PostgreSQL 17 + PostGIS through CloudNativePG: one instance on a zonal pd-balanced volume, TLS on (sslmode=require in
 DB_URL), the database and its owner from initdb, the extensions created once as the superuser. Backups: base backup
-daily + continuous WAL archiving to the GCS bucket Terraform created, as the backup identity (GKE Workload Identity on
-the ServiceAccount CloudNativePG creates for the cluster).
+daily + continuous WAL archiving to the bucket Terraform created — GCS as the backup identity (GKE Workload Identity on
+the ServiceAccount CloudNativePG creates for the cluster), or an S3-compatible store (OVHcloud Object Storage) with
+static keys from a Secret. postgres.recovery.enabled bootstraps from those backups instead of initdb (restore,
+docs/runbooks/ovh.md § Backups and restore); the new cluster then archives under backup.serverName.
 */ -}}
 {{- with .Values.postgres }}
 {{- if .enabled }}
@@ -23,6 +25,18 @@ spec:
     parameters:
       {{- toYaml .parameters | nindent 6 }}
   bootstrap:
+    {{- if .recovery.enabled }}
+    recovery:
+      source: backup
+      database: {{ .database }}
+      owner: {{ .owner }}
+      secret:
+        name: {{ .name }}-app
+      {{- with .recovery.targetTime }}
+      recoveryTarget:
+        targetTime: {{ . | quote }}
+      {{- end }}
+    {{- else }}
     initdb:
       database: {{ .database }}
       owner: {{ .owner }}
@@ -32,25 +46,38 @@ spec:
         {{- range .extensions }}
         - CREATE EXTENSION IF NOT EXISTS {{ . }};
         {{- end }}
+    {{- end }}
+  {{- if .recovery.enabled }}
+  externalClusters:
+    - name: backup
+      barmanObjectStore:
+        serverName: {{ default .name .recovery.sourceServerName }}
+        {{- include "data.pgStore" $ | nindent 8 }}
+  {{- end }}
   storage:
     size: {{ .storage.size }}
     storageClass: {{ $.Values.storageClassName }}
   resources:
     {{- toYaml .resources | nindent 4 }}
+  {{- if $.Values.pinToZone }}
   affinity:
     nodeSelector:
       topology.kubernetes.io/zone: {{ required "zone" $.Values.zone | quote }}
+  {{- end }}
   {{- if .backup.enabled }}
+  {{- if eq .backup.provider "gcs" }}
   serviceAccountTemplate:
     metadata:
       annotations:
         {{- toYaml .backup.serviceAccountAnnotations | nindent 8 }}
+  {{- end }}
   backup:
     retentionPolicy: {{ .backup.retentionPolicy | quote }}
     barmanObjectStore:
-      destinationPath: gs://{{ .backup.bucket }}
-      googleCredentials:
-        gkeEnvironment: true
+      {{- with .backup.serverName }}
+      serverName: {{ . }}
+      {{- end }}
+      {{- include "data.pgStore" $ | nindent 6 }}
       wal:
         compression: gzip
       data:

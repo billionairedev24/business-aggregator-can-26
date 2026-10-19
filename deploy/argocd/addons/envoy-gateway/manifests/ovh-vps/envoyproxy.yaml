@@ -1,0 +1,18 @@
+# OVHcloud VPS with k3s (docs/runbooks/ovh.md): one proxy; its LoadBalancer Service is served by k3s's ServiceLB, which
+# binds the VPS's own ports 80 and 443 (no cloud load balancer). externalTrafficPolicy Local keeps the clients'
+# addresses (rate limits, audit). Applied by scripts/ovh/deploy.sh, not by Argo CD.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: northline
+  namespace: envoy-gateway-system
+spec:
+  mergeGateways: true
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 1
+      envoyService:
+        type: LoadBalancer
+        externalTrafficPolicy: Local

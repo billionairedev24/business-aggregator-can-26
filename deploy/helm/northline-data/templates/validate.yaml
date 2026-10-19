@@ -1,6 +1,9 @@
 {{- /* Refusals evaluated at render time. */ -}}
-{{- if not (has .Values.externalSecrets.provider (list "gcp")) }}
-{{- fail (printf "externalSecrets.provider must be gcp (got %q)" .Values.externalSecrets.provider) }}
+{{- if not (has .Values.externalSecrets.provider (list "gcp" "none")) }}
+{{- fail (printf "externalSecrets.provider must be gcp or none (got %q)" .Values.externalSecrets.provider) }}
+{{- end }}
+{{- if and .Values.postgres.enabled .Values.postgres.backup.enabled (not (has .Values.postgres.backup.provider (list "gcs" "s3"))) }}
+{{- fail (printf "postgres.backup.provider must be gcs or s3 (got %q)" .Values.postgres.backup.provider) }}
 {{- end }}
 {{- with .Values.postgres }}
 {{- if and .enabled (ne (int .instances) 1) }}
@@ -12,4 +15,12 @@
 {{- end }}
 {{- if and .Values.kafka.enabled (ne (len .Values.kafka.clusterId) 22) }}
 {{- fail "kafka.clusterId must be a 22-character base64 id (kafka-storage.sh random-uuid)" }}
+{{- end }}
+{{- with .Values.postgres }}
+{{- if and .enabled .recovery.enabled (not .backup.enabled) }}
+{{- fail "postgres.recovery needs the backup store (postgres.backup.enabled with its bucket)" }}
+{{- end }}
+{{- if and .enabled .recovery.enabled (eq (default .name .backup.serverName) (default .name .recovery.sourceServerName)) }}
+{{- fail "postgres.recovery: set postgres.backup.serverName to a new folder (e.g. northline-pg-2) — the restored cluster may not archive into the folder it restores from" }}
+{{- end }}
 {{- end }}

@@ -215,12 +215,13 @@ help: ## This list, and the common variables
 ##> PROJECT TESTS  server-build/server-test: one Gradle project (api, auth, bff, worker), a test filter
 ##> DB_URL DB_USER DB_PASSWORD  database for db-* and the apps (default: server/.env, then localhost:5432/northline)
 ##> GRADLE_FLAGS  Gradle flags (default --max-workers=2)
-##> CLOUD  tf-validate: all, aws, gcp or azure; dr-restore-*: the cloud of the environment
+##> CLOUD  tf-validate: all, aws, gcp, azure or ovh; dr-restore-*: the cloud of the environment
 ##> DR_ENV TIME DRY_RUN  dr-restore-*: environment (default prod), restore time, DRY_RUN=1 prints the commands (S-114)
 ##> REGISTRY IMAGE_TAG PUSH  images-*: registry path, tag, PUSH=1 pushes
 ##> E2E_ARGS ENV  e2e: playwright arguments (e.g. --grep @smoke); e2e-target: the environment (dev, staging)
 ##> ENV MARKET RECORD  go-live-check: environment, region market id, 1 = record the repository's results on the checklist (S-118)
-##> ENV RESET ONLY  demo-data: local or dryrun; RESET=1 (live-demo leftovers) or all (every demo listing); ONLY=merchant keys (docs/runbooks/demo.md)
+##> ENV RESET ONLY  demo-data: local, dryrun (GCP), ovh-vps or ovh-mks; RESET=1 (live-demo leftovers) or all (every demo listing); ONLY=merchant keys (docs/runbooks/demo.md)
+##> TARGET HOST  deploy: gcp-dryrun, ovh-vps or ovh-mks; ovh-*: ovh-vps (default) or ovh-mks; ovh-bootstrap: user@ip of the VPS
 ##> STRICT  i18n-check: 1 = known gaps (legal texts, French awaiting a translator) fail too — before a French-first launch
 
 include $(ROOT)/make/server.mk

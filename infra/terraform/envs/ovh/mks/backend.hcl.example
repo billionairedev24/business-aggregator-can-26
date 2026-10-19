@@ -1,0 +1,12 @@
+# OVHcloud Object Storage as an S3 backend (create the bucket once in the console, Object Storage › Create, region BHS;
+# its S3 user's keys in AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY when running terraform). No native locking: one
+# operator at a time, or use_lockfile = true (Terraform 1.10+).
+bucket                      = "northline-tfstate-<suffix>"
+key                         = "ovh/mks/terraform.tfstate"
+region                      = "bhs"
+endpoints                   = { s3 = "https://s3.bhs.io.cloud.ovh.net" }
+skip_credentials_validation = true
+skip_region_validation      = true
+skip_requesting_account_id  = true
+skip_s3_checksum            = true
+use_path_style              = true
