@@ -3,6 +3,7 @@ package ca.northline.merchants.application;
 import ca.northline.merchants.application.ManageApplication.AdvanceOnboarding;
 import ca.northline.merchants.application.ManageApplication.ApproveApplication;
 import ca.northline.merchants.application.ManageApplication.SubmitApplication;
+import ca.northline.merchants.application.ManageApplication.ViewLegalForms;
 import ca.northline.merchants.application.ManageApplication.ViewOnboarding;
 import ca.northline.merchants.domain.BusinessDetails;
 import ca.northline.merchants.domain.BusinessStructure;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,6 +59,7 @@ class OnboardingService
                 UpdateAccount,
                 SaveBusiness,
                 ViewOnboarding,
+                ViewLegalForms,
                 AdvanceOnboarding,
                 SubmitApplication,
                 ApproveApplication {
@@ -183,8 +186,9 @@ class OnboardingService
             problems.add(new Violation(GstNumber.FIELD, "required", GstNumber.REQUIRED));
         }
 
-        var legal = legalSchema.normalize(command.structure(), command.legalDetails());
-        var legalProblems = legalSchema.validate(command.structure(), legal);
+        var form = legalSchema.form(command.structure(), provinceOf(application));
+        var legal = legalSchema.normalize(form, command.legalDetails());
+        var legalProblems = legalSchema.validate(form, legal);
         problems.addAll(legalProblems);
         checkLegalDocuments(command.merchantId(), command.structure(), legal, legalProblems, problems);
 
@@ -358,6 +362,17 @@ class OnboardingService
         return owner.isEmpty()
                 ? List.of()
                 : List.of(new Principal(owner, PrincipalRole.OWNER, BigDecimal.valueOf(100)));
+    }
+
+    private static @Nullable String provinceOf(MerchantApplication application) {
+        var province = application.getProvince();
+        return province == null ? null : province.code();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LegalForm> legalForms(String merchantId) {
+        return legalSchema.forms(provinceOf(load(merchantId)));
     }
 
     private void checkLegalDocuments(

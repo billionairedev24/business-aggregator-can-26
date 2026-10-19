@@ -74,7 +74,7 @@ export function StackedBarChart({ series, data, height = 180, title, format = St
   );
 }
 
-export interface LineChartProps { current: readonly number[]; previous?: readonly number[]; labels?: readonly string[]; height?: number; title: string; legend?: { current: string; previous?: string }; format?: (n: number) => string;
+export interface LineChartProps { current: readonly (number | null)[]; previous?: readonly (number | null)[]; labels?: readonly string[]; height?: number; title: string; legend?: { current: string; previous?: string }; format?: (n: number) => string;
   /** false when the screen shows the numbers as a table of its own (the console's reports): no hidden copy then. */
   dataTable?: boolean }
 /** Period-over-period line (Reports "Weekly gross"): solid accent line with dots, dotted neutral previous period, light grid. */
@@ -82,10 +82,12 @@ export function LineChart({ current, previous, labels, height = 200, title, lege
   const t = useT();
   const [ref, W] = useChartWidth();
   const n = Math.max(current.length, previous?.length ?? 0, 2);
-  const max = Math.max(1, ...current, ...(previous ?? [])) * 1.1;
+  const known = (arr: readonly (number | null)[]) => arr.filter((v): v is number => v != null);
+  const max = Math.max(1, ...known(current), ...known(previous ?? [])) * 1.1;
   const px = (i: number) => 20 + i * ((W - 40) / (n - 1));
   const py = (v: number) => height - 20 - (v / max) * (height - 40);
-  const path = (arr: readonly number[]) => arr.map((v, i) => `${i ? 'L' : 'M'}${px(i).toFixed(1)} ${py(v).toFixed(1)}`).join(' ');
+  // a missing value (withheld, not recorded) breaks the line instead of dropping it to zero
+  const path = (arr: readonly (number | null)[]) => arr.map((v, i) => (v == null ? '' : `${i && arr[i - 1] != null ? 'L' : 'M'}${px(i).toFixed(1)} ${py(v).toFixed(1)}`)).filter(Boolean).join(' ');
   const grid = [0.25, 0.5, 0.75, 1].map(f => `M20 ${py(max * f / 1.1).toFixed(1)} H${W - 20}`).join(' ');
   return (
     <figure style={{ margin: 0 }} ref={ref}>
@@ -94,12 +96,12 @@ export function LineChart({ current, previous, labels, height = 200, title, lege
         <path d={grid} stroke="var(--neutral-100)" strokeWidth={1} fill="none" />
         {previous ? <path d={path(previous)} stroke="var(--color-border-control)" strokeWidth={1.5} strokeDasharray="4 4" fill="none" /> : null}
         <path d={path(current)} stroke="var(--color-action-primary)" strokeWidth={2.5} fill="none" />
-        {current.map((v, i) => <circle key={i} cx={px(i)} cy={py(v)} r={3} fill="var(--color-action-primary)"><title>{`${labels?.[i] ?? i + 1}: ${format(v)}`}</title></circle>)}
+        {current.map((v, i) => (v == null ? null : <circle key={i} cx={px(i)} cy={py(v)} r={3} fill="var(--color-action-primary)"><title>{`${labels?.[i] ?? i + 1}: ${format(v)}`}</title></circle>))}
         {labels?.map((l, i) => (i % labelStep(labels.length, W) === 0 ? <text key={l + i} x={px(i)} y={height - 4} fontSize={11} textAnchor="middle">{l}</text> : null))}
       </svg>
       {dataTable && <DataTableAlt caption={title}
         head={[t('point'), legend?.current ?? t('current'), ...(previous ? [legend?.previous ?? t('previous')] : [])]}
-        rows={Array.from({ length: Math.max(current.length, previous?.length ?? 0) }, (_, i) => [labels?.[i] ?? String(i + 1), current[i] === undefined ? '' : format(current[i]!), ...(previous ? [previous[i] === undefined ? '' : format(previous[i]!)] : [])])} />}
+        rows={Array.from({ length: Math.max(current.length, previous?.length ?? 0) }, (_, i) => [labels?.[i] ?? String(i + 1), current[i] == null ? '' : format(current[i]!), ...(previous ? [previous[i] == null ? '' : format(previous[i]!)] : [])])} />}
     </figure>
   );
 }

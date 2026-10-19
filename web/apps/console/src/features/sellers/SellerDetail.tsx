@@ -107,16 +107,8 @@ function DetailView({ data }: { data: Detail }) {
           value: data.disputes.value == null ? t('none') : `${fmt1(data.disputes.value, locale)}%`, ...low(below(data.disputes, true)) },
         { key: 'gmv', label: t('k_gmv'), value: compactMoney(s.gmv90Cents, locale) },
       ]} />
-      <div className="bo-grid">
-        <ChartCard id="sl-oversight" title={t('oversightTitle')}>
-          <RadioGroup className="nl-sl-options" aria-label={t('oversightTitle')}>
-            {actions.map(a => <OptionCard key={a.id} role="radio" aria-checked={pick === a.id} selected={pick === a.id} title={t(a.name)} description={t(a.desc)} onClick={() => { setPick(a.id); setApplied(false); }} />)}
-          </RadioGroup>
-          <div className="nl-sl-apply">
-            <Button disabled={!chosen.allowed || applied} onClick={() => setDialog(chosen.id)}>{applied ? t('applied') : t('apply', { action: t(chosen.name) })}</Button>
-            <span className="nl-sl-note">{!chosen.allowed ? t('cannot') : applied ? t('noteApplied') : t('noteNow')}</span>
-          </div>
-        </ChartCard>
+      <div className="nl-cols-wrap"><div className="nl-cols" data-split="wide">
+        <div className="nl-col">
         <ChartCard id="sl-signals" title={t('signalsTitle')}>
           {data.signals.length ? data.signals.map(sg => (
             <div key={sg.key} className="nl-sl-signal">
@@ -126,15 +118,25 @@ function DetailView({ data }: { data: Detail }) {
             </div>
           )) : <p className="bo-muted">{t('noSignals')}</p>}
         </ChartCard>
+        <ChartCard id="sl-checks" title={t('checksTitle')}>
+          {data.checks.length ? <div className="nl-sl-tags">{data.checks.map(c => { const tag = checkTag(c, data.asOf, t); return <Tag key={c.id} tone={tag.tone}>{tag.text}</Tag>; })}</div> : <p className="bo-muted">{t('noChecksOnFile')}</p>}
+        </ChartCard>
         <ChartCard id="sl-timeline" title={t('timelineTitle')}>
           <ol className="nl-sl-timeline">
             {timeline.map(e => <li key={e.key}><span>{fmt.date(e.at)}</span><span>{e.text}</span></li>)}
           </ol>
         </ChartCard>
-        <ChartCard id="sl-checks" title={t('checksTitle')}>
-          {data.checks.length ? <div className="nl-sl-tags">{data.checks.map(c => { const tag = checkTag(c, data.asOf, t); return <Tag key={c.id} tone={tag.tone}>{tag.text}</Tag>; })}</div> : <p className="bo-muted">{t('noChecksOnFile')}</p>}
+        </div>
+        <ChartCard id="sl-oversight" title={t('oversightTitle')} className="nl-sl-oversight">
+          <RadioGroup className="nl-sl-options" aria-label={t('oversightTitle')}>
+            {actions.map(a => <OptionCard key={a.id} role="radio" aria-checked={pick === a.id} selected={pick === a.id} title={t(a.name)} description={t(a.desc)} onClick={() => { setPick(a.id); setApplied(false); }} />)}
+          </RadioGroup>
+          <div className="nl-sl-apply">
+            <Button disabled={!chosen.allowed || applied} onClick={() => setDialog(chosen.id)}>{applied ? t('applied') : t('apply', { action: t(chosen.name) })}</Button>
+            <span className="nl-sl-note">{!chosen.allowed ? t('cannot') : applied ? t('noteApplied') : t('noteNow')}</span>
+          </div>
         </ChartCard>
-      </div>
+      </div></div>
       {dialog ? <OversightDialog seller={s} action={dialog} checks={data.checks} onClose={() => setDialog(null)} onDone={() => setApplied(true)} /> : null}
     </div>
   );

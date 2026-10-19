@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { Button, DataTable, Dialog, EmptyState, ErrorState, Field, formatNumber, PageSkeleton, Select, TextArea, useFormatters, useLocale, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { BoHeader, Button, ChartCard, DataTable, Dialog, EmptyState, ErrorState, Field, formatNumber, PageSkeleton, Select, TextArea, useFormatters, useLocale, type DataTableColumn, type DataTableTone } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useRegions, type Regions } from '../shell/api';
 import { useGrant } from '../shell/grant';
@@ -37,22 +37,22 @@ export function DeliveryOps() {
   const runs = useQuery({ ...runsQuery(city), enabled: !!market });
   const couriers = useQuery({ ...couriersQuery(city), enabled: !!market });
   const map = useQuery({ ...mapQuery(market?.id ?? ''), enabled: !!market });
-  if (regions.isPending) return <PageSkeleton kpis={0} rows={6} />;
+  if (regions.isPending) return <div className="bo-page"><BoHeader title={t('heading')} /><PageSkeleton kpis={0} rows={6} /></div>;
   const open = (regions.data?.markets ?? []).filter(m => m.status !== 'off');
   const picker = open.length ? (
     <Select aria-label={t('market')} value={market?.id ?? ''} options={open.map(m => ({ value: m.id, label: m.city }))}
       onChange={e => void navigate({ to: SCREEN_PATH.delivery, search: { market: e.target.value } as never })} />
   ) : null;
-  const top = <div className="nl-dl-top"><span className="nl-dl-kicker">{market ? t('kicker', { city }) : t('kickerNone')}</span>{picker}</div>;
-  if (!market) return <div>{top}<EmptyState>{t('noMarkets')}</EmptyState></div>;
-  if (runs.isPending || couriers.isPending || map.isPending) return <div>{top}<PageSkeleton kpis={0} rows={6} /></div>;
+  const head = (sub?: string) => <BoHeader kicker={market ? city : undefined} title={t('heading')} sub={sub} actions={picker} />;
+  if (!market) return <div className="bo-page">{head()}<EmptyState>{t('noMarkets')}</EmptyState></div>;
+  if (runs.isPending || couriers.isPending || map.isPending) return <div className="bo-page">{head()}<PageSkeleton kpis={0} rows={6} /></div>;
   if (runs.isError || couriers.isError || map.isError) {
-    return <div>{top}<ErrorState message={t('loadError')} onRetry={() => { void runs.refetch(); void couriers.refetch(); void map.refetch(); }} /></div>;
+    return <div className="bo-page">{head()}<ErrorState message={t('loadError')} onRetry={() => { void runs.refetch(); void couriers.refetch(); void map.refetch(); }} /></div>;
   }
-  return <OpsView top={top} runs={runs.data} couriers={couriers.data} map={map.data} />;
+  return <OpsView head={head} runs={runs.data} couriers={couriers.data} map={map.data} />;
 }
 
-function OpsView({ top, runs, couriers, map }: { top: React.ReactNode; runs: Run[]; couriers: Courier[]; map: DeliveryMap }) {
+function OpsView({ head, runs, couriers, map }: { head: (sub: string) => React.ReactNode; runs: Run[]; couriers: Courier[]; map: DeliveryMap }) {
   const t = useDeliveryT();
   const { locale } = useLocale();
   const active = runs.filter(r => r.state !== 'done');
@@ -63,25 +63,21 @@ function OpsView({ top, runs, couriers, map }: { top: React.ReactNode; runs: Run
   const quiet = onShift.filter(c => !c.position).length;
   const { grant } = useGrant();
   return (
-    <div>
-      {top}
-      <h1 className="nl-dl-title">{t('title', { couriers: onRuns, runs: active.length, onTime, stuck: formatNumber(late, locale) })}</h1>
-      <div className="nl-dl-cols">
-        <div>
+    <div className="bo-page">
+      {head(t('summary', { couriers: onRuns, runs: active.length, onTime, stuck: formatNumber(late, locale) }))}
+      <ChartCard id="dl-runs" title={t('runsTitle')}><RunsTable runs={runs} couriers={couriers} /></ChartCard>
+      <div className="nl-cols-wrap"><div className="nl-cols" data-split="aside">
+        <ChartCard id="dl-map" title={t('mapCard')}>
           <OpsMap map={map} couriers={couriers} runs={runs} />
-          {quiet ? <p className="nl-dl-note">{t('noPosition', { n: quiet })}</p> : null}
-        </div>
-        <div>
-          <h2 className="nl-dl-h2">{t('runsTitle')}</h2>
-          <RunsTable runs={runs} couriers={couriers} />
-          <h2 className="nl-dl-h2 nl-dl-gap">{t('couriersTitle')}</h2>
-          <CouriersTable couriers={couriers} runs={runs} />
-          <h2 className="nl-dl-h2 nl-dl-gap">{t('zonesTitle')}</h2>
-          <ZonesTable map={map} />
-          <p className="nl-dl-note">{t('zonesNote')}</p>
-          {grant?.screens.includes('regions') ? <div className="nl-dl-actions"><Link to={SCREEN_PATH.regions} className="btn btn-secondary">{t('editZones')}</Link></div> : null}
-        </div>
-      </div>
+          {quiet ? <p className="bo-muted">{t('noPosition', { n: quiet })}</p> : null}
+        </ChartCard>
+        <ChartCard id="dl-couriers" title={t('couriersTitle')}><CouriersTable couriers={couriers} runs={runs} /></ChartCard>
+      </div></div>
+      <ChartCard id="dl-zones" title={t('zonesTitle')}
+        actions={grant?.screens.includes('regions') ? <Link to={SCREEN_PATH.regions} className="btn btn-secondary">{t('editZones')}</Link> : undefined}>
+        <ZonesTable map={map} />
+        <p className="bo-muted">{t('zonesNote')}</p>
+      </ChartCard>
     </div>
   );
 }

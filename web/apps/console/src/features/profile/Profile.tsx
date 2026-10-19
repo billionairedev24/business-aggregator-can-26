@@ -5,7 +5,7 @@ import {
   addPasskey, createPasskey, passkeyOptions, PasskeyError, removePasskey, revokeOtherSessions, revokeSession, securityChangeError, securityKey,
   securityQuery, type Security,
 } from '@northline/auth-kit';
-import { Button, ErrorState, PageSkeleton, Segmented, Tag, UnderlineTabs, useFormatters, useLocale } from '@northline/ui';
+import { Avatar, BoHeader, Button, ErrorState, PageSkeleton, Segmented, Tag, UnderlineTabs, useFormatters, useLocale } from '@northline/ui';
 import { useSession } from '../../lib/session';
 import { useGrant } from '../shell/grant';
 import { meQuery } from '../shell/api';
@@ -34,20 +34,20 @@ export function Profile() {
   const user = session?.user;
   const roles = (me?.roles ?? []).map(r => shell(`role_${r.role}` as ShellKey)).join(', ');
   return (
-    <div>
-      <h1 className="nl-tm-title">{t('title')}</h1>
+    <div className="bo-page nl-pf-page">
+      <BoHeader title={t('title')} />
       {user ? (
-        <div className="nl-pf-who">
-          <span className="nl-pf-initials" aria-hidden>{user.initials}</span>
-          <div>
-            <strong>{`${user.firstName} ${user.lastName}`}</strong>
-            <div className="nl-tm-sub">{t('meta', { email: user.email ?? '—', roles: roles || '—', view: roleName ?? '—' })}</div>
+        <div className="bo-card nl-pf-who">
+          <Avatar initials={user.initials} size={56} />
+          <div className="nl-row-main">
+            <strong className="nl-pf-name">{`${user.firstName} ${user.lastName}`}</strong>
+            <span className="nl-tm-sub">{t('meta', { email: user.email ?? '—', roles: roles || '—', view: roleName ?? '—' })}</span>
           </div>
         </div>
       ) : null}
       <UnderlineTabs aria-label={t('tabs')} value={current} options={TABS.map(v => ({ value: v, label: t(`tab_${v}` as ProfileKey) }))}
         onChange={v => void navigate({ to: '/profile', search: { tab: v === 'security' ? undefined : v } as never })} />
-      <div className="nl-pf-panel">
+      <div className="bo-card nl-pf-panel">
         {current === 'audit' ? <AuditLog mine /> : current === 'prefs' ? <Prefs /> : <SecurityPanel tab={current} sid={session?.sid ?? null} />}
       </div>
     </div>
@@ -89,7 +89,7 @@ function Factors({ security, sid }: { security: Security; sid: string | null }) 
   const { run, busy, message } = useChange();
   return (
     <>
-      <ul className="nl-tm-log nl-pf-rows">
+      <ul className="nl-pf-rows">
         {security.passkeys.map((p, i) => (
           <li key={p.id}>
             <span>{t('passkey', { label: p.label })}</span>
@@ -125,7 +125,7 @@ function Sessions({ security, sid }: { security: Security; sid: string | null })
   const { run, busy, message } = useChange();
   return (
     <>
-      <ul className="nl-tm-log nl-pf-rows">
+      <ul className="nl-pf-rows">
         {security.sessions.map(s => (
           <li key={s.id}>
             <span><strong>{s.device ?? t('unknown')}</strong><span className="nl-tm-sub"> · {s.city ?? '—'} · {s.current ? t('now') : fmt.date(s.lastSeenAt ?? s.signedInAt, 'dateTime')}</span></span>
@@ -144,7 +144,7 @@ function Prefs() {
   const { locale, setLocale } = useLocale();
   return (
     <div>
-      <h2 className="nl-tm-h2">{t('language')}</h2>
+      <h2 className="bo-card-title nl-pf-h2">{t('language')}</h2>
       <Segmented name="console-language" aria-label={t('language')} value={locale}
         options={[{ value: 'en', label: t('english') }, { value: 'fr', label: t('french') }]} onChange={v => setLocale(v)} />
     </div>

@@ -19,8 +19,8 @@ Flow: form → OTP (6 digits, resend 45 s, voice fallback) → second factor (pa
 |---|---|---|
 | display_name | required, 2–80 | Enter the name customers will see. / At least 2 characters. |
 | legal_name | required | Enter the registered legal name. |
-| structure | one of sole, partnership, corp_ab, corp_fed, corp_ex, coop, nonprofit | — |
-| legal_details | must validate against `legal-details.schema.json` branch for `structure` | per-field "required" |
+| structure | one of sole, partnership, corp_prov, corp_fed, corp_ex, coop, nonprofit (`corp_ab`, the code before 2026-10-19, is read as corp_prov) | — |
+| legal_details | must validate against the `legal-details.schema.json` branch for `structure` **merged with the business's province's row in `region.legal_forms`** (V372): the province may make a field required, optional or conditional (`required_when`) and give it a format (`pattern`) with its own message (`pattern_message`, en + fr; the French is also in validation-messages.fr-CA.tsv). Served as `GET /api/v1/merchants/{id}/onboarding/legal-forms`; the Studio validates with the same definition | per-field "required"; a province's format: its message (e.g. AB "Corporate access number is 9 or 10 digits.", QC "The NEQ is 10 digits."); federal formats: "Business number is 9 digits (e.g. 123456789).", "Corporation number is 7 digits.", "Format is 9 digits + RR0001 (e.g. 123456789 RR0001)." |
 | gst_number | optional for sole/partnership; required otherwise; `^\d{9}\s?RT\s?\d{4}$` | Format is 9 digits + RT0001 (e.g. 123456789 RT0001). / Required for corporations, co-ops and non-profits. |
 | principals | per `x-principals` in schema: min count, roles, KYC for ≥ 25 %, Σ pct ≤ 100 | — |
 | categories | ≥ 1; ≤ limit(type): provider 10, seller 5, both 10, kitchen 3; regulated leaves create `verifications` rows | Pick at least one service. / Maximum N. |

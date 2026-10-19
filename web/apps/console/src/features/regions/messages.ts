@@ -3,8 +3,9 @@ import { defineMessages } from '@northline/ui';
 /** Province switchboard (S-84, design 03 lines 144–193). en = the design's copy; fr-CA after design/i18n-fr.js. */
 export const useRegionsT = defineMessages({
   en: {
-    kicker: 'Province switchboard',
-    title: 'Turning on a province is a record, not a release.',
+    heading: 'Province switchboard',
+    provincesTitle: 'Provinces',
+    summary: 'Turning on a province is a record, not a release.',
     lede: 'Each row is a Region: tax profile, languages, markets, delivery zones, courier model. Changes reach every server within a minute; nothing deploys.',
     st_off: 'Off', st_waitlist: 'Waitlist', st_pilot: 'Pilot', st_live: 'Live',
     sd_off: 'hidden everywhere', sd_waitlist: 'collect emails, show ETA', sd_pilot: 'invited customers only', sd_live: 'open to all',
@@ -43,8 +44,9 @@ export const useRegionsT = defineMessages({
     loadError: "The switchboard couldn't load. Try again.",
   },
   fr: {
-    kicker: 'Tableau des provinces',
-    title: 'Ouvrir une province est une inscription, pas une mise en production.',
+    heading: 'Tableau des provinces',
+    provincesTitle: 'Provinces',
+    summary: 'Ouvrir une province est une inscription, pas une mise en production.',
     lede: 'Chaque ligne est une région : profil fiscal, langues, marchés, zones de livraison, modèle de livraison. Les changements atteignent chaque serveur en moins d’une minute; rien n’est déployé.',
     st_off: 'Fermée', st_waitlist: 'Liste d’attente', st_pilot: 'Pilote', st_live: 'En service',
     sd_off: 'masquée partout', sd_waitlist: 'recueillir des courriels, afficher l’échéance', sd_pilot: 'clients invités seulement', sd_live: 'ouverte à tous',

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, DataTable, Dialog, ErrorState, Field, PageSkeleton, Select, TextInput, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
+import { BoHeader, Button, ChartCard, DataTable, Dialog, ErrorState, Field, PageSkeleton, Select, TextInput, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useRegions } from '../shell/api';
 import { useGrant } from '../shell/grant';
@@ -21,8 +21,8 @@ interface Row { id: string; name: string; root: string; reg: string; live: strin
 export function TaxonomyScreen() {
   const t = useTaxonomyT();
   const query = useQuery(taxonomyQuery);
-  if (query.isPending) return <PageSkeleton kpis={0} rows={8} />;
-  if (query.isError) return <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />;
+  if (query.isPending) return <div className="bo-page"><BoHeader title={t('heading')} /><PageSkeleton kpis={0} rows={8} /></div>;
+  if (query.isError) return <div className="bo-page"><BoHeader title={t('heading')} /><ErrorState message={t('loadError')} onRetry={() => void query.refetch()} /></div>;
   return <TaxonomyView data={query.data} />;
 }
 
@@ -51,30 +51,23 @@ function TaxonomyView({ data }: { data: Screen }) {
   ];
   const canEdit = can('vet');
   return (
-    <div>
-      <span className="nl-tx-kicker">{t('kicker')}</span>
-      <h1 className="nl-tx-title">{t('title', { services: data.serviceCategories, departments: data.shopDepartments })}</h1>
+    <div className="bo-page">
+      <BoHeader title={t('heading')} sub={t('summary', { services: data.serviceCategories, departments: data.shopDepartments })}
+        actions={<><Button disabled={!canEdit} onClick={() => setDialog({ mode: 'create' })}>{t('addCategory')}</Button>
+          {!canEdit ? <span className="bo-muted">{t('cannot')}</span> : null}</>} />
       <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={10} roleName={roleName}
         can={{ create: false, update: false, delete: false }} openLabel={t('edit')} onOpen={canEdit ? r => setDialog({ mode: 'edit', category: r.src }) : undefined} reportName="taxonomy" />
-      <div className="nl-tx-actions">
-        <Button disabled={!canEdit} onClick={() => setDialog({ mode: 'create' })}>{t('addCategory')}</Button>
-        {!canEdit ? <span className="nl-tx-sub">{t('cannot')}</span> : null}
-      </div>
-      <div className="nl-tx-cols">
-        <div>
-          <h2 className="nl-tx-h2">{t('suggestionsTitle')}</h2>
-          <p className="nl-tx-sub">{t('suggestionsSub')}</p>
+      <div className="nl-cols-wrap"><div className="nl-cols">
+        <ChartCard id="tx-suggestions" title={t('suggestionsTitle')}>
+          <p className="bo-muted">{t('suggestionsSub')}</p>
           <Suggestions data={data} canEdit={canEdit} />
-          <h2 className="nl-tx-h2 nl-tx-gap">{t('limitsTitle')}</h2>
-          <p className="nl-tx-sub">{t('limitsSub')}</p>
-          {data.limits.map(l => <LimitRow key={l.merchantType} limit={l} canEdit={canEdit} />)}
-        </div>
-        <div>
-          <h2 className="nl-tx-h2">{t('regulatorsTitle')}</h2>
-          <p className="nl-tx-sub">{t('regulatorsSub')}</p>
-          <Regulators regulators={data.regulators} canEdit={canEdit} />
-        </div>
-      </div>
+        </ChartCard>
+        <ChartCard id="tx-limits" title={t('limitsTitle')}>
+          <p className="bo-muted">{t('limitsSub')}</p>
+          <div className="nl-tx-limits">{data.limits.map(l => <LimitRow key={l.merchantType} limit={l} canEdit={canEdit} />)}</div>
+        </ChartCard>
+      </div></div>
+      <Regulators regulators={data.regulators} canEdit={canEdit} />
       {dialog ? <CategoryDialog data={data} category={dialog.mode === 'edit' ? dialog.category : undefined} onClose={() => setDialog(null)} /> : null}
     </div>
   );
@@ -85,19 +78,19 @@ function Suggestions({ data, canEdit }: { data: Screen; canEdit: boolean }) {
   const [approving, setApproving] = useState<Suggestion | null>(null);
   const [merging, setMerging] = useState<Suggestion | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  if (!data.suggestions.length) return <p className="nl-tx-sub">{notice ?? t('noSuggestions')}</p>;
+  if (!data.suggestions.length) return <p className="bo-muted">{notice ?? t('noSuggestions')}</p>;
   return (
     <>
       {notice ? <p role="status" className="nl-tx-sub">{notice}</p> : null}
-      <ul className="nl-tx-list">
+      <ul className="nl-rows">
         {data.suggestions.map(s => (
-          <li key={s.id} className="nl-tx-item">
-            <div>
+          <li key={s.id}>
+            <span className="nl-row-main">
               <strong>{s.name}</strong>
-              <div className="nl-tx-sub">{t('held', { n: s.businesses.length, names: s.businesses.slice(0, 3).map(b => b.name).join(', ') })}</div>
-            </div>
+              <span className="nl-row-sub">{t('held', { n: s.businesses.length, names: s.businesses.slice(0, 3).map(b => b.name).join(', ') })}</span>
+            </span>
             {canEdit ? (
-              <div className="nl-tx-actions">
+              <div className="nl-row-actions">
                 <Button variant="secondary" onClick={() => setApproving(s)}>{t('approve')}</Button>
                 <Button variant="ghost" onClick={() => setMerging(s)}>{t('merge')}</Button>
               </div>
@@ -168,14 +161,13 @@ function Regulators({ regulators, canEdit }: { regulators: readonly Regulator[];
     { key: 'website', label: t('r_website') }, { key: 'categories', label: t('r_categories'), type: 'num' },
   ];
   return (
-    <>
+    <ChartCard id="tx-regulators" title={t('regulatorsTitle')}
+      actions={<Button variant="secondary" disabled={!canEdit} onClick={() => setEditing('new')}>{t('addRegulator')}</Button>}>
+      <p className="bo-muted">{t('regulatorsSub')}</p>
       <DataTable<RegRow> entity={t('regEntity')} plural={t('regPlural')} columns={columns} rows={rows} pageSize={5} roleName={roleName} emptyText={t('noRegulators')}
         can={{ create: false, update: false, delete: false }} openLabel={t('edit')} onOpen={canEdit ? r => setEditing(r.src) : undefined} />
-      <div className="nl-tx-actions">
-        <Button variant="secondary" disabled={!canEdit} onClick={() => setEditing('new')}>{t('addRegulator')}</Button>
-      </div>
       {editing ? <RegulatorDialog regulator={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} /> : null}
-    </>
+    </ChartCard>
   );
 }
 

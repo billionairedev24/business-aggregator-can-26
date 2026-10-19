@@ -38,9 +38,10 @@ describe('delivery ops (S-81, design 03)', () => {
   it('shows the market’s couriers, runs, the map and zone pricing', async () => {
     const calls = api(['dispatch']);
     renderConsole('/delivery');
-    expect(await screen.findByRole('heading', { level: 1, name: '3 couriers on 3 runs · 66.7% on time · 1 stuck' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Delivery operations' })).toBeTruthy();
+    expect(await screen.findByText('3 couriers on 3 runs · 66.7% on time · 1 stuck')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByText('Delivery operations · Calgary')).toBeTruthy();
+    expect(screen.getByText('Calgary', { selector: '.bo-kicker' })).toBeTruthy();
     expect(calls.some(c => c.url.endsWith('/api/v1/console/fulfilment/runs?market=Calgary'))).toBe(true);
     expect(calls.some(c => c.url.endsWith('/api/v1/console/delivery/map?market=calgary'))).toBe(true);
     const map = screen.getByRole('img', { name: 'Couriers and zones in Calgary' });

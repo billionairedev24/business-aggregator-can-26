@@ -3,6 +3,7 @@
 .bo-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-5); }
 .bo-head-text { flex: 1 1 260px; min-width: 0; }
 .bo-title { margin: 0; font-size: var(--text-3xl); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
+.bo-kicker { margin: 0 0 var(--space-1); font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
 .bo-sub { margin: var(--space-1) 0 0; font-size: var(--text-sm); color: var(--color-text-muted); max-width: 72ch; }
 .bo-head-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Dialog, ErrorState, Field, PageSkeleton, Select, Tag, TextInput, useFormatters } from '@northline/ui';
+import { BoHeader, Button, ChartCard, Dialog, ErrorState, Field, PageSkeleton, Select, Tag, TextInput, useFormatters } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { meQuery } from '../shell/api';
 import { useGrant } from '../shell/grant';
@@ -19,8 +19,8 @@ const errorOf = (e: unknown) => (e instanceof ValidationError ? Object.values(e.
 export function OnCall() {
   const t = useOncallT();
   const query = useQuery(rotaQuery);
-  if (query.isPending) return <PageSkeleton kpis={0} rows={5} />;
-  if (query.isError) return <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />;
+  if (query.isPending) return <div className="bo-page"><BoHeader title={t('heading')} /><PageSkeleton kpis={0} rows={5} /></div>;
+  if (query.isError) return <div className="bo-page"><BoHeader title={t('heading')} /><ErrorState message={t('loadError')} onRetry={() => void query.refetch()} /></div>;
   return <RotaView rota={query.data} />;
 }
 
@@ -36,38 +36,37 @@ function RotaView({ rota }: { rota: Rota }) {
   const mine = rota.shifts.filter(s => s.userId === me || admin);
   const onNow = new Set(rota.now.map(s => s.id));
   return (
-    <div>
-      <span className="nl-tm-kicker">{t('kicker')}</span>
-      <h1 className="nl-tm-title">{t('title')}</h1>
-      <div className="nl-tm-cols">
-        <div>
-          <h2 className="nl-tm-h2">{t('rotaTitle')}</h2>
+    <div className="bo-page">
+      <BoHeader title={t('heading')} sub={t('summary')} actions={<>
+        <Button variant="secondary" disabled={!mine.length} onClick={() => setSwapping(mine[0] ?? null)}>{t('swap')}</Button>
+        {admin ? <Button onClick={() => setAdding(true)}>{t('addShift')}</Button> : null}</>} />
+      <div className="nl-cols-wrap"><div className="nl-cols">
+        <ChartCard id="oc-rota" title={t('rotaTitle')}>
           {rota.shifts.length ? (
-            <ul className="nl-tm-log">
+            <ul className="nl-rows">
               {rota.shifts.map(s => (
-                <li key={s.id} className="nl-oc-shift">
-                  <span className="nl-tm-sub">{t('when', { from: fmt.date(s.startsAt, 'dateTime'), to: fmt.date(s.endsAt, 'dateTime') })}</span>
-                  <span><strong>{s.userId === me ? t('you', { name: s.name }) : s.name}</strong> · {s.duty}</span>
-                  {onNow.has(s.id) ? <Tag tone="accent">{t('onCall')}</Tag> : null}
-                  {admin ? <Button variant="ghost" disabled={remove.isPending} onClick={() => remove.mutate(s.id)}>{t('remove')}</Button> : null}
+                <li key={s.id}>
+                  <span className="nl-row-main">
+                    <span><strong>{s.userId === me ? t('you', { name: s.name }) : s.name}</strong> · {s.duty}</span>
+                    <span className="nl-row-sub">{t('when', { from: fmt.date(s.startsAt, 'dateTime'), to: fmt.date(s.endsAt, 'dateTime') })}</span>
+                  </span>
+                  <span className="nl-row-actions">
+                    {onNow.has(s.id) ? <Tag tone="accent">{t('onCall')}</Tag> : null}
+                    {admin ? <Button variant="ghost" disabled={remove.isPending} onClick={() => remove.mutate(s.id)}>{t('remove')}</Button> : null}
+                  </span>
                 </li>
               ))}
             </ul>
-          ) : <p className="nl-tm-sub">{t('noShifts')}</p>}
-          <div className="nl-tm-actions">
-            <Button variant="secondary" disabled={!mine.length} onClick={() => setSwapping(mine[0] ?? null)}>{t('swap')}</Button>
-            {admin ? <Button variant="secondary" onClick={() => setAdding(true)}>{t('addShift')}</Button> : null}
-          </div>
+          ) : <p className="bo-muted">{t('noShifts')}</p>}
           {errorOf(remove.error) ? <p role="alert" className="nl-tm-error">{errorOf(remove.error)}</p> : null}
-        </div>
-        <div>
-          <h2 className="nl-tm-h2">{t('escalationTitle')}</h2>
-          <table className="table">
-            <tbody>{PATHS.map(n => <tr key={n}><td>{t(`e${n}` as Parameters<OncallT>[0])}</td><td>{t(`p${n}` as Parameters<OncallT>[0])}</td></tr>)}</tbody>
-          </table>
-          <p className="nl-tm-sub nl-tm-gap">{t('targets')}</p>
-        </div>
-      </div>
+        </ChartCard>
+        <ChartCard id="oc-paths" title={t('escalationTitle')}>
+          <ul className="nl-rows">
+            {PATHS.map(n => <li key={n}><span className="nl-row-main"><strong>{t(`e${n}` as Parameters<OncallT>[0])}</strong><span className="nl-row-sub">{t(`p${n}` as Parameters<OncallT>[0])}</span></span></li>)}
+          </ul>
+          <p className="bo-muted">{t('targets')}</p>
+        </ChartCard>
+      </div></div>
       {swapping ? <SwapDialog rota={rota} shifts={mine} first={swapping} onClose={() => setSwapping(null)} /> : null}
       {adding ? <AddDialog rota={rota} onClose={() => setAdding(false)} /> : null}
     </div>

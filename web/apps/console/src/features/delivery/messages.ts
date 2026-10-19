@@ -3,10 +3,10 @@ import { defineMessages } from '@northline/ui';
 /** Delivery ops (S-81, design 03 lines 277–295). en = the design's copy; fr-CA after design/i18n-fr.js. */
 export const useDeliveryT = defineMessages({
   en: {
-    kicker: 'Delivery operations · {city}',
-    kickerNone: 'Delivery operations',
+    heading: 'Delivery operations',
     market: 'Market',
-    title: '{couriers, plural, one {# courier} other {# couriers}} on {runs, plural, one {# run} other {# runs}} · {onTime} on time · {stuck} stuck',
+    mapCard: 'Live map',
+    summary: '{couriers, plural, one {# courier} other {# couriers}} on {runs, plural, one {# run} other {# runs}} · {onTime} on time · {stuck} stuck',
     noMarkets: 'No delivery market is open yet. Markets are opened on the Provinces screen.',
     mapTitle: 'Couriers and zones in {city}',
     legendMoving: 'moving', legendStuck: 'stuck > 10 min',
@@ -36,10 +36,10 @@ export const useDeliveryT = defineMessages({
     loadError: "Delivery operations couldn't load. Try again.",
   },
   fr: {
-    kicker: 'Opérations de livraison · {city}',
-    kickerNone: 'Opérations de livraison',
+    heading: 'Opérations de livraison',
     market: 'Marché',
-    title: '{couriers, plural, one {# livreur} other {# livreurs}} sur {runs, plural, one {# tournée} other {# tournées}} · {onTime} à l’heure · {stuck} bloquée(s)',
+    mapCard: 'Carte en direct',
+    summary: '{couriers, plural, one {# livreur} other {# livreurs}} sur {runs, plural, one {# tournée} other {# tournées}} · {onTime} à l’heure · {stuck} bloquée(s)',
     noMarkets: 'Aucun marché de livraison n’est encore ouvert. Les marchés s’ouvrent à l’écran Provinces.',
     mapTitle: 'Livreurs et zones à {city}',
     legendMoving: 'en mouvement', legendStuck: 'bloqué > 10 min',

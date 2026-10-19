@@ -33,13 +33,14 @@ export function PromoCodes() {
   const { can } = useGrant();
   const [creating, setCreating] = useState(false);
   return (
-    <section aria-labelledby="promo-title" className="nl-fi-promos">
-      <h2 id="promo-title" className="nl-fi-h2">{t('title')}</h2>
-      <div className="nl-fi-sub">{t('sub')}</div>
+    <section aria-labelledby="promo-title" className="bo-card nl-fi-promos">
+      <div className="bo-card-head"><h2 id="promo-title" className="bo-card-title">{t('title')}</h2>
+        {can('promotions') && !creating ? <Button variant="secondary" onClick={() => setCreating(true)}>{t('new')}</Button> : null}</div>
+      <p className="bo-muted">{t('sub')}</p>
       {q.isPending ? <Skeleton height={80} /> : q.isError && isNotFound(q.error) ? <p className="nl-fi-sub">{t('none')}</p> : q.isError ? <ErrorState message={t('error')} onRetry={() => void q.refetch()} />
         : q.data.length === 0 ? <p className="nl-fi-sub">{t('none')}</p>
           : <ul className="nl-fi-refunds">{q.data.map(c => <CodeRow key={c.id} code={c} canChange={can('promotions')} />)}</ul>}
-      {can('promotions') ? (creating ? <NewCode onDone={() => setCreating(false)} /> : <Button variant="secondary" onClick={() => setCreating(true)}>{t('new')}</Button>) : null}
+      {can('promotions') && creating ? <NewCode onDone={() => setCreating(false)} /> : null}
     </section>
   );
 }

@@ -2,10 +2,11 @@
  * Every route of the three web apps that `make ui-shots` photographs (docs/LOCAL_DEVELOPMENT.md § "Look at the UI").
  * `name` is the file name under ui-shots/<app>/ (`-d` desktop 1440×900, `-m` phone 390×844); `signedIn` picks the
  * mock session; `ready` is what to wait for before the shot (default: the page's h1, or 8 s without one); `click` is
- * pressed once the page is ready (a Playwright selector: open a detail sheet or an editor step), then the shot is taken (the window only: a sheet is fixed to it).
+ * pressed once the page is ready (a Playwright selector: open a detail sheet or an editor step), then the shot is taken (the window only: a sheet is fixed to it);
+ * `sheet` photographs the window only for a sheet the address opens (`?application=`).
  * A new route goes here too: shots.spec.ts photographs whatever this lists.
  */
-export interface ShotRoute { name: string; path: string; signedIn?: boolean; ready?: string; click?: string }
+export interface ShotRoute { name: string; path: string; signedIn?: boolean; ready?: string; click?: string; sheet?: boolean }
 
 const PROVIDER = '01J9ZD3V00000000000000PWM1', SELLER = '01J9ZD3V00000000000000PWP1', KITCHEN = '01J9ZD3V00000000000000PDB1';
 
@@ -53,6 +54,11 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'register', path: '/register', signedIn: false },
     { name: 'onboarding', path: '/onboarding', signedIn: true },
     { name: 'onboarding-business', path: '/onboarding/business?m=01J9ZD3V00000000000000NB01&type=provider', signedIn: true },
+    // the legal details as four provinces serve them (region data; shots/fixtures.mjs ONB_PROVINCES)
+    { name: 'onboarding-business-ab', path: '/onboarding/business?m=01J9ZD3V00000000000000NB02&type=provider', signedIn: true, ready: '.nl-ob-legal-head' },
+    { name: 'onboarding-business-on', path: '/onboarding/business?m=01J9ZD3V00000000000000NB03&type=provider', signedIn: true, ready: '.nl-ob-legal-head' },
+    { name: 'onboarding-business-bc', path: '/onboarding/business?m=01J9ZD3V00000000000000NB04&type=provider', signedIn: true, ready: '.nl-ob-legal-head' },
+    { name: 'onboarding-business-qc', path: '/onboarding/business?m=01J9ZD3V00000000000000NB05&type=provider', signedIn: true, ready: '.nl-ob-legal-head' },
     { name: 'onboarding-verification', path: '/onboarding/verification?m=01J9ZD3V00000000000000GATE&type=provider', signedIn: true },
     { name: 'onboarding-gate', path: '/onboarding/review?m=01J9ZD3V00000000000000GATE&type=provider', signedIn: true },
     { name: 'identity-done', path: '/identity/done', signedIn: true },
@@ -93,11 +99,20 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'sign-in', path: '/sign-in', signedIn: false },
     { name: 'overview', path: '/' },
     { name: 'verification', path: '/verification' },
+    // the two-person review: stage 1 (Review) and stage 2 (Decide) sheets
+    { name: 'verification-review', path: '/verification?application=M2', ready: '[role="dialog"]', sheet: true },
+    { name: 'verification-decide', path: '/verification?application=M1', ready: '[role="dialog"]', sheet: true },
     { name: 'vetting', path: '/vetting' },
+    { name: 'vetting-licences', path: '/vetting?view=licences' },
+    { name: 'vetting-age', path: '/vetting?view=age' },
     { name: 'sellers', path: '/sellers' },
+    { name: 'sellers-sheet', path: '/sellers?seller=m2', ready: '[role="dialog"]', sheet: true },
     { name: 'seller', path: '/sellers/m2' },
     { name: 'orders', path: '/orders' },
+    { name: 'orders-sheet', path: '/orders', click: 'tbody tr td:nth-child(3), .nl-dt-card' },
     { name: 'disputes', path: '/disputes' },
+    { name: 'disputes-sheet', path: '/disputes?case=dispute:D1', ready: '[role="dialog"]', sheet: true },
+    { name: 'disputes-empty', path: '/disputes?province=QC' },
     { name: 'trust', path: '/trust' },
     { name: 'catalogue', path: '/catalogue' },
     { name: 'delivery', path: '/delivery' },
@@ -108,7 +123,11 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'reports', path: '/reports' },
     { name: 'integrations', path: '/integrations' },
     { name: 'privacy', path: '/privacy' },
+    { name: 'privacy-retention', path: '/privacy?view=retention' },
     { name: 'profile', path: '/profile' },
+    { name: 'profile-audit', path: '/profile?tab=audit' },
+    { name: 'reports-error', path: '/reports?province=QC', ready: '.nl-errorstate' },
+    { name: 'not-found', path: '/no-such-screen' },
     { name: 'pilot', path: '/pilot' },
     { name: 'uat', path: '/uat' },
     { name: 'go-live', path: '/go-live' },

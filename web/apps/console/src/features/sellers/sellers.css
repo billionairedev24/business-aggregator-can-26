@@ -18,3 +18,7 @@
 .nl-sl-timeline li > span:first-child { color: var(--color-text-muted); width: 70px; flex: none; }
 .nl-sl-timeline li > span:last-child { min-width: 0; overflow-wrap: anywhere; }
 .nl-sl-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.nl-sl-oversight { position: sticky; top: calc(var(--size-touch) + var(--space-8)); }
+@media (max-width: 899.98px) { .nl-sl-oversight { position: static; } }
+.nl-sl-timeline li { padding-top: var(--space-2); border-top: 1px solid var(--color-border); }
+.nl-sl-timeline li:first-child { padding-top: 0; border-top: 0; }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, DataTable, Dialog, ErrorState, Field, PageSkeleton, Select, Tag, TextInput, type DataTableColumn } from '@northline/ui';
+import { BoHeader, Button, ChartCard, DataTable, Dialog, ErrorState, Field, PageSkeleton, Select, Tag, TextInput, type DataTableColumn } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { useShellT, type ShellKey } from '../shell/messages';
@@ -19,8 +19,8 @@ const errorOf = (e: unknown) => (e instanceof ValidationError ? Object.values(e.
 export function TeamScreen() {
   const t = useTeamT();
   const query = useQuery(teamQuery);
-  if (query.isPending) return <PageSkeleton kpis={0} rows={6} />;
-  if (query.isError) return <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />;
+  if (query.isPending) return <div className="bo-page"><BoHeader title={t('heading')} /><PageSkeleton kpis={0} rows={6} /></div>;
+  if (query.isError) return <div className="bo-page"><BoHeader title={t('heading')} /><ErrorState message={t('loadError')} onRetry={() => void query.refetch()} /></div>;
   return <TeamView team={query.data} />;
 }
 
@@ -50,27 +50,20 @@ function TeamView({ team }: { team: Team }) {
     { key: 'name', label: t('c_name'), primary: true }, { key: 'email', label: t('c_email') }, { key: 'roles', label: t('c_roles') },
   ];
   return (
-    <div>
-      <span className="nl-tm-kicker">{t('kicker')}</span>
-      <h1 className="nl-tm-title">{t('title')}</h1>
-      <div className="nl-tm-cols">
-        <div>
-          <h2 className="nl-tm-h2">{t('rolesTitle')}</h2>
-          <DataTable<RoleRowView> entity={t('roleEntity')} plural={t('rolePlural')} columns={roleColumns} rows={roleRows} pageSize={10} roleName={roleName}
-            can={{ create: false, update: false, delete: false }} />
-          <div className="nl-tm-actions">
-            <Button variant="secondary" disabled={!admin} onClick={() => setInviting(true)}>{t('invite')}</Button>
-            {!admin ? <span className="nl-tm-sub">{t('cannot')}</span> : null}
-          </div>
-          <h2 className="nl-tm-h2 nl-tm-gap">{t('peopleTitle')}</h2>
-          <DataTable<PersonRow> entity={t('personEntity')} plural={t('personPlural')} columns={peopleColumns} rows={people} pageSize={10} roleName={roleName}
-            can={{ create: false, update: false, delete: false }} openLabel={t('manage')} onOpen={admin ? r => setManaging(r.src) : undefined} />
-        </div>
-        <div>
-          <h2 className="nl-tm-h2">{t('auditTitle')}</h2>
-          <AuditLog staff={team.members} />
-        </div>
-      </div>
+    <div className="bo-page">
+      <BoHeader title={t('heading')} sub={t('summary')}
+        actions={<><Button disabled={!admin} onClick={() => setInviting(true)}>{t('invite')}</Button>{!admin ? <span className="bo-muted">{t('cannot')}</span> : null}</>} />
+      <ChartCard id="tm-roles" title={t('rolesTitle')}>
+        <DataTable<RoleRowView> entity={t('roleEntity')} plural={t('rolePlural')} columns={roleColumns} rows={roleRows} pageSize={10} roleName={roleName}
+          can={{ create: false, update: false, delete: false }} />
+      </ChartCard>
+      <ChartCard id="tm-people" title={t('peopleTitle')}>
+        <DataTable<PersonRow> entity={t('personEntity')} plural={t('personPlural')} columns={peopleColumns} rows={people} pageSize={10} roleName={roleName}
+          can={{ create: false, update: false, delete: false }} openLabel={t('manage')} onOpen={admin ? r => setManaging(r.src) : undefined} />
+      </ChartCard>
+      <ChartCard id="tm-audit" title={t('auditTitle')}>
+        <AuditLog staff={team.members} />
+      </ChartCard>
       {inviting ? <InviteDialog onClose={() => setInviting(false)} /> : null}
       {managing ? <ManageDialog member={team.members.find(m => m.id === managing.id) ?? managing} onClose={() => setManaging(null)} /> : null}
     </div>
