@@ -32,7 +32,9 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 /**
  * S-79: the console's verification queue — submitted applications with their automated checks, the manual reviews
  * behind them, approve / request info with their side effects (status, checklist, decision row, audit log, events,
- * owners' email), and the role gates (admin and trust &amp; safety open it; deciding needs {@code verify}).
+ * owners' email), and the role gates (admin and trust &amp; safety open it; reviewing needs {@code verify}, deciding
+ * {@code approve}). Two-person review (four-eyes, on in the test profile): {@code reviewer} recommends, {@code agent}
+ * decides; {@link FourEyesReviewApiTest} covers the rule itself.
  */
 @RecordApplicationEvents
 class VerificationQueueApiTest extends IntegrationTest {
@@ -56,6 +58,7 @@ class VerificationQueueApiTest extends IntegrationTest {
     String owner;
     String ownerEmail;
     String agent;
+    String reviewer;
 
     @BeforeEach
     void setUp() {
@@ -70,6 +73,7 @@ class VerificationQueueApiTest extends IntegrationTest {
                 .params(ownerEmail, owner)
                 .update();
         agent = data.user("Dev Kaur");
+        reviewer = data.user("Lena Park");
     }
 
     /** A submitted sole-proprietor bakery: every check passes automatically or waits for a human. */
@@ -99,6 +103,16 @@ class VerificationQueueApiTest extends IntegrationTest {
 
     ResultActions decide(String id, String body, StaffRole role) throws Exception {
         return mvc.perform(json(post(QUEUE + "/{id}/decision", id), body).with(TestJwt.staff(agent, role)));
+    }
+
+    /** Stage 1 by {@link #reviewer}. */
+    ResultActions review(String id, String body) throws Exception {
+        return mvc.perform(
+                json(post(QUEUE + "/{id}/review", id), body).with(TestJwt.staff(reviewer, StaffRole.TRUST_SAFETY)));
+    }
+
+    void reviewed(String id, String recommendation) throws Exception {
+        review(id, "{\"recommendation\":\"%s\"}".formatted(recommendation)).andExpect(status().isOk());
     }
 
     List<Map<String, Object>> audit(String merchantId) {
@@ -146,6 +160,7 @@ class VerificationQueueApiTest extends IntegrationTest {
     @Test
     void approve_activatesTheBusiness_logsIt_andEmailsTheOwner() throws Exception {
         var id = submittedBakery("Bow Crumb");
+        reviewed(id, "approve");
 
         decide(id, "{\"decision\":\"approve\",\"note\":\"Welcome aboard\"}", StaffRole.TRUST_SAFETY)
                 .andExpect(status().isOk())
@@ -153,11 +168,15 @@ class VerificationQueueApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.application.decision").value("approved"))
                 .andExpect(jsonPath("$.decisions[0].decision").value("approved"))
                 .andExpect(jsonPath("$.decisions[0].decidedBy").value(agent))
+                .andExpect(jsonPath("$.application.stage").doesNotExist())
                 .andExpect(jsonPath(
                         "$.application.checks[*].state",
                         org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("passed"))));
 
-        assertThat(audit(id)).singleElement().satisfies(a -> {
+        assertThat(audit(id))
+                .extracting(a -> a.get("action"))
+                .containsExactly("verification.application_reviewed", "verification.application_approved");
+        assertThat(audit(id).getLast()).satisfies(a -> {
             assertThat(a)
                     .containsEntry("action", "verification.application_approved")
                     .containsEntry("actor_id", agent)
@@ -194,6 +213,7 @@ class VerificationQueueApiTest extends IntegrationTest {
     void requestInfo_sendsTheApplicationBack_withTheChecksToRedo() throws Exception {
         var id = submittedBakery("Kensington Crumb");
         var redo = "returns_policy";
+        reviewed(id, "approve");
 
         decide(id, "{\"decision\":\"request_info\",\"note\":\"Fix it\"}", StaffRole.ADMIN)
                 .andExpect(status().isUnprocessableContent())
@@ -212,7 +232,7 @@ class VerificationQueueApiTest extends IntegrationTest {
         decide(id, "{\"decision\":\"approve\",\"note\":\"%s\"}".formatted("x".repeat(501)), StaffRole.ADMIN)
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("At most 500 characters."));
-        assertThat(audit(id)).isEmpty();
+        assertThat(audit(id)).extracting(a -> a.get("action")).containsExactly("verification.application_reviewed");
 
         decide(
                         id,
@@ -230,8 +250,7 @@ class VerificationQueueApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.step").value("verification"))
                 .andExpect(jsonPath("$.checklist[?(@.key == '%s')].status".formatted(redo))
                         .value("rejected"));
-        assertThat(audit(id))
-                .singleElement()
+        assertThat(audit(id).getLast())
                 .satisfies(a -> assertThat(a)
                         .containsEntry("action", "verification.info_requested")
                         .containsEntry("role", "trust_safety"));
@@ -250,7 +269,9 @@ class VerificationQueueApiTest extends IntegrationTest {
         flow.submit(id, owner).andExpect(status().isOk());
         mvc.perform(get(QUEUE).with(TestJwt.staff(agent, StaffRole.ADMIN)))
                 .andExpect(jsonPath("$.items[?(@.merchantId == '%s')].status".formatted(id))
-                        .value("pending"));
+                        .value("pending"))
+                .andExpect(jsonPath("$.items[?(@.merchantId == '%s')].stage".formatted(id))
+                        .value("review"));
     }
 
     @Test
@@ -268,7 +289,7 @@ class VerificationQueueApiTest extends IntegrationTest {
         List<String> open = JsonPath.read(detail, "$.registryReviews[?(@.reviewState == 'open')].id");
         assertThat(open).isNotEmpty();
 
-        decide(id, "{\"decision\":\"approve\"}", StaffRole.ADMIN)
+        review(id, "{\"recommendation\":\"approve\"}")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("reviews_open"));
 
@@ -281,6 +302,7 @@ class VerificationQueueApiTest extends IntegrationTest {
         }
         assertThat(audit(id)).extracting(a -> a.get("action")).containsOnly("verification.registry_approved");
 
+        reviewed(id, "approve");
         decide(id, "{\"decision\":\"approve\"}", StaffRole.ADMIN)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.application.status").value("active"));
@@ -304,7 +326,7 @@ class VerificationQueueApiTest extends IntegrationTest {
                 .getResponse()
                 .getContentAsString();
         String checkId = JsonPath.read(detail, "$.owners[0].checkId");
-        decide(id, "{\"decision\":\"approve\"}", StaffRole.ADMIN)
+        review(id, "{\"recommendation\":\"approve\"}")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("reviews_open"));
 
@@ -326,6 +348,7 @@ class VerificationQueueApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.code").value("review_closed"));
         assertThat(audit(id)).extracting(a -> a.get("action")).containsExactly("verification.identity_approved");
 
+        reviewed(id, "approve");
         decide(id, "{\"decision\":\"approve\"}", StaffRole.ADMIN).andExpect(status().isOk());
     }
 
@@ -339,6 +362,10 @@ class VerificationQueueApiTest extends IntegrationTest {
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("insufficient_role"));
             decide(id, approve, role).andExpect(status().isForbidden());
+            mvc.perform(json(post(QUEUE + "/{id}/review", id), "{\"recommendation\":\"approve\"}")
+                            .with(TestJwt.staff(reviewer, role)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("insufficient_role"));
             mvc.perform(get(QUEUE + "/{id}", id).with(TestJwt.staff(agent, role)))
                     .andExpect(status().isForbidden());
         }

@@ -1,7 +1,9 @@
 package ca.northline.merchants.application;
 
 import ca.northline.developer.api.AuditTrail;
+import ca.northline.identity.api.StaffDirectory;
 import ca.northline.merchants.api.ApplicationDecided;
+import ca.northline.merchants.api.ApplicationReviewed;
 import ca.northline.merchants.application.ManageApplication.ApproveApplication;
 import ca.northline.merchants.application.RegistryReviews.ReviewView;
 import ca.northline.merchants.application.VerificationQueue.ApplicationDetail;
@@ -15,9 +17,14 @@ import ca.northline.merchants.application.VerificationQueue.DecisionRow;
 import ca.northline.merchants.application.VerificationQueue.ListApplications;
 import ca.northline.merchants.application.VerificationQueue.OwnerReview;
 import ca.northline.merchants.application.VerificationQueue.Queue;
+import ca.northline.merchants.application.VerificationQueue.Recommendation;
+import ca.northline.merchants.application.VerificationQueue.ReviewApplication;
+import ca.northline.merchants.application.VerificationQueue.ReviewRow;
 import ca.northline.merchants.application.VerificationQueue.Risk;
+import ca.northline.merchants.application.VerificationQueue.Stage;
 import ca.northline.merchants.application.VerificationQueue.ViewApplication;
 import ca.northline.merchants.application.VerificationQueueStore.Application;
+import ca.northline.merchants.application.VerificationQueueStore.Review;
 import ca.northline.merchants.domain.CheckKind;
 import ca.northline.merchants.domain.CheckType;
 import ca.northline.merchants.domain.IdentityCheckStatus;
@@ -34,6 +41,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -47,12 +55,14 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * The console's verification queue (S-79): reads applications with their checks, and records the agent's decisions —
  * each in one transaction with its audit entry ({@code developer.audit_log}) and the {@link ApplicationDecided} event
- * that emails the owners after commit.
+ * that emails the owners after commit. Two-person review (2026-10-18): a reviewer's recommendation first ({@link
+ * ReviewApplication}), then the decision by someone who didn't review the open round ({@link FourEyesPolicy}).
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class VerificationQueueService implements ListApplications, ViewApplication, DecideApplication, DecideIdentityReview {
+class VerificationQueueService
+        implements ListApplications, ViewApplication, ReviewApplication, DecideApplication, DecideIdentityReview {
 
     static final int LIMIT = 200;
     static final Duration MEDIAN_WINDOW = Duration.ofDays(30);
@@ -67,6 +77,8 @@ class VerificationQueueService implements ListApplications, ViewApplication, Dec
     private final Taxonomy taxonomy;
     private final AuditTrail audit;
     private final ApplicationEventPublisher events;
+    private final FourEyesPolicy fourEyes;
+    private final StaffDirectory staff;
     private final Clock clock;
 
     @Override
@@ -76,7 +88,7 @@ class VerificationQueueService implements ListApplications, ViewApplication, Dec
         var pending = rows.stream()
                 .filter(r -> MerchantStatus.PENDING.code().equals(r.status()))
                 .count();
-        return new Queue(rows, pending, store.medianDecisionHours(scope, now.minus(MEDIAN_WINDOW)));
+        return new Queue(rows, pending, store.medianDecisionHours(scope, now.minus(MEDIAN_WINDOW)), fourEyes.enabled());
     }
 
     @Override
@@ -110,18 +122,82 @@ class VerificationQueueService implements ListApplications, ViewApplication, Dec
                             c == null ? null : c.getReviewedAt());
                 })
                 .toList();
-        return new ApplicationDetail(row, people, reviews, store.decisions(merchantId));
+        var names = new java.util.HashMap<String, String>();
+        var history =
+                store.reviews(merchantId).stream().map(r -> reviewRow(r, names)).toList();
+        return new ApplicationDetail(row, people, reviews, history, store.decisions(merchantId), fourEyes.enabled());
+    }
+
+    @Override
+    @Transactional
+    public ApplicationDetail review(ReviewApplication.Command command, String lang) {
+        var application = pending(command.merchantId());
+        var checklist = verifications.listFor(command.merchantId());
+        var note = blankToNull(command.note());
+        List<String> keys = switch (command.recommendation()) {
+            case APPROVE -> {
+                if (hasOpenReviews(command.merchantId(), checklist)) {
+                    throw new Conflict("reviews_open", "Decide the open registry and identity reviews first.");
+                }
+                yield List.of();
+            }
+            case REJECT -> {
+                if (note == null) {
+                    throw RuleViolation.of("note", "required", VerificationQueue.REJECT_REASON_REQUIRED);
+                }
+                yield List.of();
+            }
+            case REQUEST_INFO -> {
+                var redo = List.copyOf(checkKeys(command.checkKeys(), checklist));
+                if (note == null) {
+                    throw RuleViolation.of("note", "required", VerificationQueue.NOTE_REQUIRED);
+                }
+                yield redo;
+            }
+        };
+        var now = clock.instant();
+        var review = new Review(
+                Ids.next(),
+                command.merchantId(),
+                command.recommendation(),
+                keys,
+                note,
+                command.reviewerId(),
+                now,
+                null);
+        store.insertReview(review, command.role(), application.getSubmittedAt());
+        var after = new LinkedHashMap<String, Object>();
+        after.put("stage", Stage.DECISION.code());
+        after.put("reviewId", review.id());
+        after.put("recommendation", review.recommendation().code());
+        after.put("checks", keys);
+        if (note != null) {
+            after.put("note", note);
+        }
+        audit.record(AuditTrail.Entry.of(
+                        command.merchantId(),
+                        command.reviewerId(),
+                        command.role(),
+                        "verification.application_reviewed",
+                        "merchant",
+                        command.merchantId())
+                .withChange(Map.of("status", MerchantStatus.PENDING.code()), after));
+        events.publishEvent(new ApplicationReviewed(
+                Ids.next(),
+                now,
+                command.merchantId(),
+                command.reviewerId(),
+                review.id(),
+                review.recommendation().code()));
+        return view(command.merchantId(), lang);
     }
 
     @Override
     @Transactional
     public ApplicationDetail decide(DecideApplication.Command command, String lang) {
-        var application = applications
-                .findById(command.merchantId())
-                .orElseThrow(() -> new NotFound("application", command.merchantId()));
-        if (application.getStatus() != MerchantStatus.PENDING) {
-            throw new Conflict("not_pending", "This application isn't waiting for a decision.");
-        }
+        var application = pending(command.merchantId());
+        var current = fourEyes.admit(store.reviews(command.merchantId()), command.agentId());
+        var reviewId = current == null ? null : current.id();
         var now = clock.instant();
         var submittedAt = application.getSubmittedAt();
         var checklist = verifications.listFor(command.merchantId());
@@ -130,9 +206,20 @@ class VerificationQueueService implements ListApplications, ViewApplication, Dec
             if (hasOpenReviews(command.merchantId(), checklist)) {
                 throw new Conflict("reviews_open", "Decide the open registry and identity reviews first.");
             }
+            if (current != null
+                    && current.recommendation() != Recommendation.APPROVE
+                    && blankToNull(command.note()) == null) {
+                throw RuleViolation.of("note", "required", VerificationQueue.OVERRIDE_REASON_REQUIRED);
+            }
             approve.approve(command.merchantId(), command.agentId());
             decision = new DecisionRow(
-                    Ids.next(), Decision.APPROVED, List.of(), blankToNull(command.note()), command.agentId(), now);
+                    Ids.next(),
+                    Decision.APPROVED,
+                    List.of(),
+                    blankToNull(command.note()),
+                    command.agentId(),
+                    now,
+                    reviewId);
             audit.record(AuditTrail.Entry.of(
                             command.merchantId(),
                             command.agentId(),
@@ -142,9 +229,12 @@ class VerificationQueueService implements ListApplications, ViewApplication, Dec
                             command.merchantId())
                     .withChange(
                             Map.of("status", MerchantStatus.PENDING.code()),
-                            Map.of("status", MerchantStatus.ACTIVE.code(), "tier", tier(application))));
+                            decisionAfter(
+                                    Map.of("status", MerchantStatus.ACTIVE.code(), "tier", tier(application)),
+                                    current,
+                                    blankToNull(command.note()))));
         } else {
-            var keys = checkKeys(command, checklist);
+            var keys = checkKeys(command.checkKeys(), checklist);
             var note = blankToNull(command.note());
             if (note == null) {
                 throw RuleViolation.of("note", "required", VerificationQueue.NOTE_REQUIRED);
@@ -161,7 +251,7 @@ class VerificationQueueService implements ListApplications, ViewApplication, Dec
                 }
             }
             decision = new DecisionRow(
-                    Ids.next(), Decision.INFO_REQUESTED, List.copyOf(keys), note, command.agentId(), now);
+                    Ids.next(), Decision.INFO_REQUESTED, List.copyOf(keys), note, command.agentId(), now, reviewId);
             audit.record(AuditTrail.Entry.of(
                             command.merchantId(),
                             command.agentId(),
@@ -171,9 +261,14 @@ class VerificationQueueService implements ListApplications, ViewApplication, Dec
                             command.merchantId())
                     .withChange(
                             Map.of("status", MerchantStatus.PENDING.code()),
-                            Map.of("status", MerchantStatus.APPLICANT.code(), "checks", List.copyOf(keys))));
+                            decisionAfter(
+                                    Map.of("status", MerchantStatus.APPLICANT.code(), "checks", List.copyOf(keys)),
+                                    current,
+                                    note)));
         }
         store.insert(command.merchantId(), decision, command.role(), submittedAt);
+        // the round is over: a re-submitted application starts again at stage 1
+        store.closeRound(command.merchantId(), decision.id());
         events.publishEvent(new ApplicationDecided(
                 Ids.next(),
                 now,
@@ -181,7 +276,8 @@ class VerificationQueueService implements ListApplications, ViewApplication, Dec
                 command.agentId(),
                 decision.decision().code(),
                 decision.checkKeys(),
-                decision.note()));
+                decision.note(),
+                current == null ? null : current.reviewedBy()));
         return view(command.merchantId(), lang);
     }
 
@@ -211,6 +307,8 @@ class VerificationQueueService implements ListApplications, ViewApplication, Dec
         var ids = found.stream().map(Application::merchantId).toList();
         var inReview = store.verificationsInReview(ids);
         var identityReview = store.identityInReview(ids);
+        var current = store.currentReviews(ids);
+        var names = new java.util.HashMap<String, String>();
         var leaves = taxonomy.leaves(
                 found.stream().flatMap(a -> a.categoryIds().stream()).distinct().toList());
         return found.stream()
@@ -218,6 +316,7 @@ class VerificationQueueService implements ListApplications, ViewApplication, Dec
                     var checks = verifications.listFor(a.merchantId()).stream()
                             .map(v -> check(v, inReview, identityReview.contains(a.merchantId())))
                             .toList();
+                    var pending = MerchantStatus.PENDING.code().equals(a.status());
                     var categories = a.categoryIds().stream()
                             .map(id -> leaves.containsKey(id) ? leaves.get(id).name(lang) : id)
                             .toList();
@@ -235,7 +334,11 @@ class VerificationQueueService implements ListApplications, ViewApplication, Dec
                             checks,
                             risk(checks),
                             a.decision(),
-                            a.decidedAt());
+                            a.decidedAt(),
+                            pending ? (current.containsKey(a.merchantId()) ? Stage.DECISION : Stage.REVIEW) : null,
+                            pending && current.containsKey(a.merchantId())
+                                    ? reviewRow(current.get(a.merchantId()), names)
+                                    : null);
                 })
                 .toList();
     }
@@ -276,13 +379,51 @@ class VerificationQueueService implements ListApplications, ViewApplication, Dec
                 || !store.identityInReview(List.of(merchantId)).isEmpty();
     }
 
-    private static Collection<String> checkKeys(DecideApplication.Command command, List<Verification> checklist) {
-        if (command.checkKeys().isEmpty()) {
+    private MerchantApplication pending(String merchantId) {
+        var application = applications.findById(merchantId).orElseThrow(() -> new NotFound("application", merchantId));
+        if (application.getStatus() != MerchantStatus.PENDING) {
+            throw new Conflict("not_pending", "This application isn't waiting for a decision.");
+        }
+        return application;
+    }
+
+    /** The decision's audit snapshot: what changed, plus the review it followed and the approver's note. */
+    private static Map<String, Object> decisionAfter(
+            Map<String, ?> change, @Nullable Review review, @Nullable String note) {
+        var after = new LinkedHashMap<String, Object>(change);
+        if (review != null) {
+            after.put("reviewId", review.id());
+            after.put("reviewedBy", review.reviewedBy());
+            after.put("recommendation", review.recommendation().code());
+        }
+        if (note != null) {
+            after.put("note", note);
+        }
+        return after;
+    }
+
+    private ReviewRow reviewRow(Review r, Map<String, String> names) {
+        var name = names.computeIfAbsent(
+                r.reviewedBy(),
+                id -> staff.member(id).map(StaffDirectory.Member::name).orElse(id));
+        return new ReviewRow(
+                r.id(),
+                r.recommendation(),
+                r.checkKeys(),
+                r.note(),
+                r.reviewedBy(),
+                name,
+                r.reviewedAt(),
+                r.decisionId());
+    }
+
+    private static Collection<String> checkKeys(List<String> requested, List<Verification> checklist) {
+        if (requested.isEmpty()) {
             throw RuleViolation.of("checkKeys", "required", VerificationQueue.CHECKS_REQUIRED);
         }
         var known = checklist.stream().map(Verification::getKey).toList();
         var keys = new LinkedHashSet<String>();
-        for (var key : command.checkKeys()) {
+        for (var key : requested) {
             if (!known.contains(key)) {
                 throw RuleViolation.of("checkKeys", "option", VerificationQueue.UNKNOWN_CHECK);
             }

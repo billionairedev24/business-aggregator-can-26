@@ -223,6 +223,11 @@ Without the bff and auth: `NL_DEV_USER=01J9ZD3V00000000000000PNA1` in `web/apps/
 `/api` then goes to the api with `X-Dev-User`, whose token carries the person's `identity.platform_roles`. The account
 menu's "Switch role view" narrows the console to one held role (`X-Console-Role`, audit-logged).
 
+Applications need two people (two-person review, [README § Staff roles](README.md#staff-roles-two-person-review)):
+review as Priya, then decide as Marc Bélanger (`NL_DEV_USER=01J9ZD3V00000000000000MRC1`, admin, `db/seed-dev/V334`) —
+or set `ONBOARDING_FOUR_EYES_ENABLED=false` in `server/.env` to decide alone. The Studio's "Demo the approval" (local
+only) still approves in one step.
+
 ## 6. Optional stand-ins
 
 Start any of them with `make up PROFILES=<name>,…` (or `make standins-up PROFILES=…` without the apps; = `docker

@@ -23,6 +23,7 @@ update merchants.registry_checks
        record_name = case when record_name is null then null else 'Masked name' end,
        query_number = '000000000', review_note = null;
 update merchants.application_decisions set note = null where note is not null;
+update merchants.application_reviews set note = null where note is not null;
 update merchants.documents set file_name = 'document-' || lower(right(id, 6));
 update merchants.verifications set reference = 'masked-' || lower(right(id, 6)) where reference is not null;
 update merchants.storefronts

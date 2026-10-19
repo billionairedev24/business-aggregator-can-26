@@ -28,5 +28,10 @@ public enum ConsoleAction implements CodedEnum {
     /** S-118: record a manual go-live gate (pass, fail, not applicable) with its evidence. */
     ATTEST,
     /** Mobile gaps part 2: make promo codes and switch them on and off (finance, admins). */
-    PROMOTIONS
+    PROMOTIONS,
+    /**
+     * Two-person review (2026-10-18): decide a merchant application someone else reviewed (stage 2). Stage 1, the
+     * review, is {@link #VERIFY}.
+     */
+    APPROVE
 }

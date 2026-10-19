@@ -325,31 +325,43 @@ const file = (blob, name, extra = {}) => { const f = new FormData(); f.append('f
 async function approve(staff, reviewer, id, name) {
   const base = `/api/v1/console/verification/applications/${id}`;
   const detail = await staff.get(base);
-  for (const r of (detail.registryReviews ?? detail.reviews ?? []).filter(x => (x.state ?? x.reviewState) === 'open')) {
+  for (const r of (detail.registryReviews ?? []).filter(x => (x.state ?? x.reviewState) === 'open')) {
     await staff.post(`/api/v1/console/registry-reviews/${r.id}/decision`, { decision: 'approve' });
   }
-  for (const r of (detail.identityReviews ?? []).filter(x => (x.status ?? x.state) === 'review')) {
-    await staff.post(`${base}/identity-reviews/${r.id}/decision`, { decision: 'approve' });
+  // identity mismatches: the api lists them as owners in status `review` (their Stripe check id)
+  for (const o of (detail.owners ?? []).filter(x => x.status === 'review' && x.checkId)) {
+    await staff.post(`${base}/identity-reviews/${o.checkId}/decision`, { decision: 'approve' });
   }
+  // open registry reviews the detail didn't list by those names: the queue has them
+  const settleRegistry = async () => {
+    const q = await staff.get(`/api/v1/console/registry-reviews?merchantId=${id}`).catch(() => ({ items: [] }));
+    for (const r of (q.items ?? []).filter(x => x.merchantId === id)) await staff.post(`/api/v1/console/registry-reviews/${r.id}/decision`, { decision: 'approve' });
+  };
   const note = 'Demo business (fake data).';
+  // Stage 1 (two-person review): the demo reviewer recommends; an older api without the step answers 404/405
+  const review = async () => (await reviewer()).post(`${base}/review`, { recommendation: 'approve', note });
   let reviewed = false;
   try {
-    await (await reviewer()).post(`${base}/review`, { decision: 'approve', recommendation: 'approve', note });
+    await review();
     reviewed = true;
   } catch (e) {
-    if (!(e instanceof HttpError) || ![404, 405].includes(e.status)) throw e; // no four-eyes step on this api yet
+    if (!(e instanceof HttpError)) throw e;
+    if (e.code === 'reviews_open') { await settleRegistry(); await review(); reviewed = true; }
+    else if (![404, 405].includes(e.status)) throw e; // no four-eyes step on this api yet
   }
+  // Stage 2: the staff account decides (never the reviewer: 403 same_person)
   const decide = () => staff.post(`${base}/decision`, { decision: 'approve', note });
   try {
     await decide();
   } catch (e) {
-    if (e instanceof HttpError && !reviewed && /review|four|same_person|second/i.test(e.code ?? '')) {
+    if (e instanceof HttpError && /same_person/.test(e.code ?? '')) {
+      throw new Error(`${name}: the reviewer and the approver are the same console account (${e.message}) — DEMO_STAFF_* must not be the demo reviewer`);
+    }
+    if (e instanceof HttpError && !reviewed && /review|four|second/i.test(e.code ?? '')) {
       throw new Error(`${name}: the api wants a two-person review this script doesn't know how to post (${e.message}) — update approve() in scripts/demo/demo-data.mjs`);
     }
     if (!(e instanceof HttpError) || e.code !== 'reviews_open') throw e;
-    // the open registry reviews the detail didn't list by those names: the queue has them
-    const q = await staff.get(`/api/v1/console/registry-reviews?merchantId=${id}`).catch(() => ({ items: [] }));
-    for (const r of (q.items ?? []).filter(x => x.merchantId === id)) await staff.post(`/api/v1/console/registry-reviews/${r.id}/decision`, { decision: 'approve' });
+    await settleRegistry();
     await decide();
   }
   log(`  ${name}: ${reviewed ? `reviewed by ${state.accounts.reviewer.identifier}, approved by ${state.accounts.staff.identifier}` : 'approved'} in the console`);

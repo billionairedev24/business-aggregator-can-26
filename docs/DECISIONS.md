@@ -8824,6 +8824,72 @@ Branch `feat/demo-data`. A believable demo marketplace for the client demos on t
   History is dated today (the product can't backdate). Goods orders end at "packed" (delivery needs a courier).
   Schema additions: none.
 
+## 2026-10-18 — Two-person review of merchant applications (four-eyes)
+
+Owner request: one staff member could review and decide an application alone (S-79 records one decision). Now a
+reviewer recommends and a **different** staff member decides. Builds on S-79 (verification queue), S-90 (staff roles)
+and redesign phase 3 (the Applications screen's "1 · Review" / "2 · Decision" stages and the 680px sheet).
+
+- **Two stages on the server.** Stage 1 `POST /api/v1/console/verification/applications/{id}/review`
+  `{recommendation: approve|reject|request_info, checkKeys?, note?}`; stage 2 is the existing `POST …/decision`
+  (`approve | request_info`, unchanged body). The application's `stage` (`review` | `decision`, null when not pending)
+  and current `review` come from the api; the redesign's client-side derivation ("a check waits for an agent") is only
+  the fallback for an older api.
+- **Rounds.** Reviews of an application belong to its open round until a decision closes it
+  (`application_reviews.decision_id`). The newest open review is the current one; a later review replaces it as current
+  (a reviewer may change their mind, or another reviewer may look again). **Everyone who reviewed the open round is
+  excluded from deciding it** — a second review doesn't let the first reviewer decide. Request info closes the round,
+  sends the application back (S-79 behaviour) and **the next submission starts at stage 1** with no review.
+- **Errors.** Deciding before a review: 409 `review_required` ("Review this application first: another person then
+  decides it."). The reviewer deciding: **403 `same_person`** ("You reviewed this application, so someone else has to
+  decide it." — a new `StaffAccessDenied.Reason`, rendered by the existing 403 handler; the go-live switch's
+  `same_person` is a 409, this one is an authorization refusal as the owner asked). Review 422s: "Choose approve,
+  reject or request info.", "Say why you recommend rejecting it." (reject needs a note), request info needs checks and
+  a note (S-79's messages); recommending approve while a registry/identity review is open is S-79's 409 `reviews_open`;
+  a decided application is 409 `not_pending`. Approving against a reject or request-info recommendation needs the
+  approver's note: 422 "Say why you approve against the review." All in the fr-CA catalogue.
+- **Roles (S-90 model).** Review = the existing `verify` action; decide = a new **`approve`** action. Both are held by
+  `admin` and `trust_safety` (who already decided alone), so nobody loses a power; the split is what lets the rule be
+  stated and later narrowed (e.g. decide = admins only) in `StaffRole` alone. Identity and registry reviews stay
+  `verify` (stage-1 work).
+- **"Reject" is a recommendation, not an outcome.** The approver's outcomes stay approve / request info: declining a
+  business for good is still not built (S-79; suspension is S-82). A reject recommendation tells the approver to send it
+  back or to override with a reason.
+- **The reviewer's note is internal** (for the approver, never emailed); the approver's note is the one emailed to the
+  owners (S-79). The console's request-info dialog is prefilled with the reviewer's checks and note; the approver edits
+  and sends it.
+- **Configuration:** `northline.onboarding.four-eyes.enabled` (`ONBOARDING_FOUR_EYES_ENABLED`), **default `true` in
+  every profile, `local` included** — the local seed already has two console staff (Priya Natarajan, every role;
+  Marc Bélanger, admin, V334), so development sees the real flow. `false` lets one person decide without a review (a
+  single-staff demo); the api logs a warning at start and **refuses to start with `false` under `prod`**
+  (`FourEyesPolicy`). The Studio's local-only "Demo the approval" keeps approving in one step (dev endpoint).
+- **Audit (existing `developer.audit_log`, in the same transaction):** `verification.application_reviewed` (actor = the
+  reviewer, role, after = stage, reviewId, recommendation, checks, note); the decision's existing entries
+  (`application_approved`, `info_requested`) now also carry reviewId, reviewedBy, recommendation and the approver's
+  note. Notes are staff free text about the business; the DR mask scrubs `note` keys (S-114) and the new column.
+- **Events:** new in-process `merchants.api.ApplicationReviewed` (eventId, occurredAt, merchant id, reviewer id,
+  review id, recommendation — ids and codes, no note, no names); `ApplicationDecided` gains `reviewerId`. Neither is
+  externalized (as S-79's `ApplicationDecided`), so no topic or JSON schema; nothing listens to `ApplicationReviewed`
+  yet (no owner notification at stage 1).
+- **Console.** The table's inline action is "Review" in stage 1 (`verify`) and "Decide" in stage 2 (`approve`); both
+  open the sheet. The sheet shows a Review section (reviewer's name from `identity.api.StaffDirectory`,
+  recommendation, time, checks, note), the review in the History, and its footer: "Review" (dialog: recommendation
+  radio cards, checks for request info, note) or Approve / Request info — **disabled for the person who reviewed the
+  round, with the reason in text next to them (`aria-describedby`)**. Approving against the review opens a dialog for
+  the reason. en + fr-CA; axe in the vitest suite on the sheet and the review dialog; the a11y sweep's console grants
+  carry `approve` and its ARIA snapshot shows Review/Decide.
+- **Scripts.** `scripts/pilot/dry-run.mjs` approves with two people (Priya reviews, Marc decides).
+  `scripts/demo/demo-data.mjs` (#180) posts `POST …/review {recommendation: 'approve', note}` as its demo reviewer
+  (`trust_safety`) and the decision as the staff account. Changed here: "reviews_open" now arrives at the review step
+  (cleared, then reviewed again), identity mismatches are read from the detail's `owners` (the api has no
+  `identityReviews`), and a 403 `same_person` stops with "the reviewer and the approver are the same console account".
+- **Schema V370** (range V370–V379, above main's V364): `merchants.application_reviews` (recommendation CHECK, check
+  keys, note ≤ 500, reviewer, role, submitted/reviewed times, `decision_id` → `application_decisions`), partial index of
+  open rounds; `application_decisions.review_id`. Additive only.
+- **Not done:** assigning applications to a reviewer; notifying anyone when a review is waiting for a decision; a
+  permanent decline outcome; the a11y page sweep of an open sheet (an open Drawer reports its scrollable body without
+  keyboard access and the backdrop's table targets — the shared Drawer's, from redesign phase 3, not this change).
+
 ## 2026-10-19 — Redesign phase 4: the native apps on the AT mobile layouts, and running them on a phone against a Mac
 
 Branch `feat/redesign-mobile` (spec § 2.4, § 2.5, § 4 phase 4 — brought forward: the owner wants to test the apps on

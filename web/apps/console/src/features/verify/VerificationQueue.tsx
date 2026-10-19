@@ -1,17 +1,21 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { CheckCircle, Question } from '@phosphor-icons/react';
+import { Gavel, MagnifyingGlass } from '@phosphor-icons/react';
 import {
-  Button, Checkbox, DataTable, Dialog, Drawer, ErrorState, FactList, Field, formatDate, formatNumber, KpiStrip, PageSkeleton, SheetSection, Tag, TextArea, useLocale,
+  Button, Checkbox, DataTable, Dialog, Drawer, ErrorState, FactList, Field, formatDate, formatNumber, KpiStrip, OptionCard, PageSkeleton, RadioGroup, SheetSection, Tag, TextArea, useLocale,
   type DataTableAction, type DataTableColumn, type DataTableTone,
 } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useAge } from '../shell/age';
+import { meQuery } from '../shell/api';
 import { useGrant } from '../shell/grant';
 import { useRegionName, type PlaceFilter } from '../shell/PlaceFilters';
 import { SCREEN_PATH } from '../shell/screens';
-import { detailQuery, queueQuery, useDecideApplication, useDecideIdentity, useDecideRegistry, type Application, type Check, type Detail } from './api';
+import {
+  detailQuery, queueQuery, useDecideApplication, useDecideIdentity, useDecideRegistry, useReviewApplication,
+  type Application, type Check, type Detail, type Recommendation,
+} from './api';
 import { ApplicationsHead } from './ApplicationsHead';
 import { useVerifyT, type VerifyKey, type VerifyT } from './messages';
 import '../shell/queues.css';
@@ -36,11 +40,22 @@ const MARK: Record<Check['state'], string> = { passed: '✓', review: '✗', fai
 
 export type Stage = 'review' | 'decision';
 /**
- * The two status stages of an application (redesign § 2.6 "two-person review"; one reviewer here, DECISIONS "Redesign
- * phase 3"): Review while an automated check waits for an agent (an identity mismatch, a registry lookup), Decision
- * once nothing does. The api records one decision (approve / request info), by one person.
+ * The two status stages of an application (redesign § 2.6 "two-person review", DECISIONS 2026-10-18): stage 1, Review —
+ * a reviewer settles the manual checks and recommends; stage 2, Decision — another staff member approves or requests
+ * info. The api says which (`stage`); an older api without it falls back to "an automated check waits for an agent".
  */
-export const stageOf = (a: Pick<Application, 'checks'>): Stage => (a.checks.some(c => c.state === 'review') ? 'review' : 'decision');
+export const stageOf = (a: Pick<Application, 'checks' | 'stage'>): Stage =>
+  a.stage ?? (a.checks.some(c => c.state === 'review') ? 'review' : 'decision');
+const REC_KEY: Record<Recommendation, VerifyKey> = { approve: 'rec_approve', reject: 'rec_reject', request_info: 'rec_request_info' };
+
+/** Who may do what on one application: the active role's grant, and whether the signed-in person reviewed this round. */
+function useHands(d?: Detail) {
+  const { can } = useGrant();
+  const me = useQuery(meQuery).data?.userId;
+  const fourEyes = d?.fourEyes ?? true;
+  const reviewedByMe = fourEyes && !!me && (d?.reviews ?? []).some(r => !r.decisionId && r.reviewedBy === me);
+  return { canReview: can('verify'), canApprove: can('approve'), fourEyes, reviewedByMe };
+}
 
 const statusText = (a: Application, t: VerifyT) =>
   a.status === 'pending' ? t('pending') : a.decision === 'approved' ? t('approved') : a.decision === 'info_requested' ? t('infoRequested') : a.status;
@@ -62,8 +77,7 @@ export function VerificationQueue() {
   const { can, roleName } = useGrant();
   const regionName = useRegionName();
   const age = useAge();
-  const decide = useDecideApplication();
-  const [asking, setAsking] = useState<Application | null>(null);
+  const [asking, setAsking] = useState<{ app: Application; keys?: string[]; note?: string } | null>(null);
   const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
   const select = (id: string | undefined) => void navigate({ to: SCREEN_PATH.verify, search: { ...filter, application: id } as never });
 
@@ -95,24 +109,15 @@ export function VerificationQueue() {
     { key: 'wait', label: t('colWaiting'), editable: false },
     { key: 'stage', label: t('colStage'), type: 'tag', editable: false },
   ];
-  const open = [t('stage_review'), t('stage_decision')];
+  // Stage 1 "Review" and stage 2 "Decide" open the application's sheet, where the checks, the review and the reasons are
+  const fourEyes = data.fourEyes;
   const actions: DataTableAction<Row>[] = [
-    { id: 'approve', label: t('approve'), icon: CheckCircle, perm: 'update', inline: true, bulk: false, when: { key: 'stage', in: open } },
-    { id: 'info', label: t('requestInfo'), icon: Question, perm: 'update', inline: true, bulk: false, when: { key: 'stage', in: open } },
+    ...(can('verify') ? [{ id: 'review', label: t('review'), icon: MagnifyingGlass, perm: 'update', inline: true, bulk: false, when: { key: 'stage', in: [t('stage_review')] } } as const] : []),
+    ...(can('approve') ? [{ id: 'decide', label: t('decide'), icon: Gavel, perm: 'update', inline: true, bulk: false,
+      when: { key: 'stage', in: fourEyes ? [t('stage_decision')] : [t('stage_review'), t('stage_decision')] } } as const] : []),
   ];
-  const approve = async (app: Application) => {
-    setNotice(null);
-    try {
-      await decide.mutateAsync({ id: app.merchantId, decision: 'approve' });
-      setNotice({ tone: 'ok', text: t('approvedToast', { business: app.businessName }) });
-    } catch (e) {
-      setNotice({ tone: 'error', text: e instanceof ApiError ? e.message : String(e) });
-    }
-  };
-  const onAction = async (a: DataTableAction<Row>, hit: Row[]) => {
-    const app = hit[0]!.app;
-    if (a.id === 'info') setAsking(app);
-    else await approve(app);
+  const onAction = async (_: DataTableAction<Row>, hit: Row[]) => {
+    select(hit[0]!.app.merchantId);
     return false;
   };
   const pending = data.items.filter(a => a.status === 'pending');
@@ -133,11 +138,12 @@ export function VerificationQueue() {
       ]} />
       {notice ? <p role={notice.tone === 'error' ? 'alert' : 'status'} className={notice.tone === 'error' ? 'nl-q-error' : 'nl-q-note'}>{notice.text}</p> : null}
       <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
-        can={{ create: false, update: can('verify'), delete: false }} roleName={roleName} actions={actions} onAction={onAction}
+        can={{ create: false, update: can('verify') || can('approve'), delete: false }} roleName={roleName} actions={actions} onAction={onAction}
         emptyText={t('empty')} openLabel={t('open')} onOpen={r => select(r.id)} />
-      {search.application ? <ApplicationSheet id={search.application} canDecide={can('verify')} roleName={roleName} onClose={() => select(undefined)}
-        onAsk={setAsking} onApprove={approve} /> : null}
-      {asking ? <RequestInfoDialog app={asking} onClose={() => setAsking(null)} onSent={() => { setNotice({ tone: 'ok', text: t('infoToast', { business: asking.businessName }) }); setAsking(null); }} /> : null}
+      {search.application ? <ApplicationSheet id={search.application} roleName={roleName} onClose={() => select(undefined)}
+        onAsk={setAsking} onDone={text => setNotice({ tone: 'ok', text })} /> : null}
+      {asking ? <RequestInfoDialog app={asking.app} keys={asking.keys} note={asking.note} onClose={() => setAsking(null)}
+        onSent={() => { setNotice({ tone: 'ok', text: t('infoToast', { business: asking.app.businessName }) }); setAsking(null); }} /> : null}
     </div>
   );
 }
@@ -164,30 +170,89 @@ function Stages({ stage }: { stage: Stage | 'done' }) {
   );
 }
 
-/** One application in the right sheet (BO:811): the stages, every submitted field, checks, owners, registry, history. */
-function ApplicationSheet({ id, canDecide, roleName, onClose, onAsk, onApprove }: {
-  id: string; canDecide: boolean; roleName: string; onClose: () => void; onAsk: (a: Application) => void; onApprove: (a: Application) => Promise<void>;
+/**
+ * One application in the right sheet (BO:811): the stages, every submitted field, the review, checks, owners, registry
+ * and history. The footer is the stage's action: "Review" (stage 1, `verify`) or Approve / Request info (stage 2,
+ * `approve`) — disabled, with the reason beside it, for the person who reviewed this round (the api refuses it too).
+ */
+function ApplicationSheet({ id, roleName, onClose, onAsk, onDone }: {
+  id: string; roleName: string; onClose: () => void;
+  onAsk: (v: { app: Application; keys?: string[]; note?: string }) => void; onDone: (text: string) => void;
 }) {
   const t = useVerifyT();
   const decide = useDecideApplication();
   const query = useQuery(detailQuery(id));
-  const a = query.data?.application;
+  const d = query.data;
+  const a = d?.application;
+  const { canReview, canApprove, fourEyes, reviewedByMe } = useHands(d);
+  const [dialog, setDialog] = useState<'review' | 'override' | null>(null);
+  const [error, setError] = useState<string>();
+  const stage = a ? stageOf(a) : 'review';
+  const current = a?.review ?? null;
+  const approve = async (app: Application) => {
+    setError(undefined);
+    if (current && current.recommendation !== 'approve') { setDialog('override'); return; }
+    try {
+      await decide.mutateAsync({ id: app.merchantId, decision: 'approve' });
+      onDone(t('approvedToast', { business: app.businessName }));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    }
+  };
+  const showReview = !!a && canReview && stage === 'review';
+  const showDecide = !!a && canApprove && (stage === 'decision' || !fourEyes);
   const footer = a?.status === 'pending' ? (
-    canDecide ? <div className="nl-q-actions">
-      <Button disabled={decide.isPending} onClick={() => void onApprove(a)}>{t('approve')}</Button>
-      <Button variant="secondary" onClick={() => onAsk(a)}>{t('requestInfo')}</Button>
-    </div> : <span className="nl-q-note">{t('viewOnly', { role: roleName })}</span>
+    showReview || showDecide ? (
+      <div className="nl-ap-footer">
+        <div className="nl-q-actions">
+          {showReview ? <Button onClick={() => setDialog('review')}>{t('review')}</Button> : null}
+          {showDecide ? <>
+            <Button variant={showReview ? 'secondary' : 'primary'} disabled={decide.isPending || reviewedByMe} aria-describedby={reviewedByMe ? 'nl-ap-same' : undefined}
+              onClick={() => void approve(a)}>{t('approve')}</Button>
+            <Button variant="secondary" disabled={reviewedByMe} aria-describedby={reviewedByMe ? 'nl-ap-same' : undefined}
+              onClick={() => onAsk({ app: a, keys: current?.recommendation === 'request_info' ? current.checkKeys : undefined, note: current?.recommendation === 'request_info' ? current.note ?? undefined : undefined })}>{t('requestInfo')}</Button>
+          </> : null}
+        </div>
+        {reviewedByMe && showDecide ? <p id="nl-ap-same" className="nl-q-note">{t('sameReviewer')}</p> : null}
+        {error ? <p role="alert" className="nl-q-error">{error}</p> : null}
+      </div>
+    ) : <span className="nl-q-note">{stage === 'review' && canApprove ? t('waitingReview') : t('viewOnly', { role: roleName })}</span>
   ) : undefined;
   return (
     <Drawer open onClose={onClose} title={a ? a.businessName : t('entity')} footer={footer}>
       {query.isPending ? <div aria-busy="true" className="nl-q-note">…</div>
         : query.isError ? <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />
-          : <ApplicationBody d={query.data} canDecide={canDecide} />}
+          : <ApplicationBody d={query.data} canSettle={canReview} />}
+      {dialog === 'review' && a ? <ReviewDialog app={a} onClose={() => setDialog(null)}
+        onSent={() => { setDialog(null); onDone(t('reviewedToast', { business: a.businessName })); }} /> : null}
+      {dialog === 'override' && a ? <OverrideDialog app={a} onClose={() => setDialog(null)}
+        onSent={() => { setDialog(null); onDone(t('approvedToast', { business: a.businessName })); }} /> : null}
     </Drawer>
   );
 }
 
-function ApplicationBody({ d, canDecide }: { d: Detail; canDecide: boolean }) {
+/** The current review (stage 2) or "not reviewed yet" (stage 1): who, what they recommend, when, the checks and note. */
+function ReviewSection({ d }: { d: Detail }) {
+  const t = useVerifyT();
+  const { locale } = useLocale();
+  const r = d.application.review;
+  if (d.application.status !== 'pending') return null;
+  return (
+    <SheetSection title={t('reviewTitle')}>
+      {!r ? <p className="bo-muted">{t('notReviewed')}</p> : (
+        <FactList rows={[
+          [t('f_reviewer'), r.reviewerName],
+          [t('f_recommendation'), <Tag key="rec" tone={r.recommendation === 'approve' ? 'success' : 'warning'}>{t(REC_KEY[r.recommendation])}</Tag>],
+          [t('f_reviewed'), formatDate(r.reviewedAt, locale, 'dateTime')],
+          r.checkKeys.length ? [t('f_redo'), r.checkKeys.map(k => checkLabel({ key: k, registry: null }, t)).join(', ')] : null,
+          r.note ? [t('f_reviewNote'), r.note] : null,
+        ]} />
+      )}
+    </SheetSection>
+  );
+}
+
+function ApplicationBody({ d, canSettle: canDecide }: { d: Detail; canSettle: boolean }) {
   const t = useVerifyT();
   const { locale } = useLocale();
   const regionName = useRegionName();
@@ -203,6 +268,7 @@ function ApplicationBody({ d, canDecide }: { d: Detail; canDecide: boolean }) {
     <>
       <Stages stage={a.status === 'pending' ? stageOf(a) : 'done'} />
       {error ? <p role="alert" className="nl-q-error">{error}</p> : null}
+      <ReviewSection d={d} />
       <SheetSection title={t('secBusiness')}>
         <FactList rows={[
           [t('f_business'), a.businessName], [t('f_legal'), a.legalName],
@@ -259,12 +325,15 @@ function ApplicationBody({ d, canDecide }: { d: Detail; canDecide: boolean }) {
           </ul>
         )}
       </SheetSection>
-      {d.decisions.length ? (
+      {d.decisions.length || d.reviews.length ? (
         <SheetSection title={t('historyTitle')}>
           <ul className="nl-ap-list">
-            {d.decisions.map(h => (
-              <li key={h.id} className="nl-ap-row"><span>{t(h.decision === 'approved' ? 'h_approved' : 'h_info_requested', { date: formatDate(h.decidedAt, locale, 'date') })}
-                {h.checkKeys.length ? ` · ${h.checkKeys.map(k => checkLabel({ key: k, registry: null }, t)).join(', ')}` : ''}{h.note ? ` · ${h.note}` : ''}</span></li>
+            {[
+              ...d.decisions.map(h => ({ at: h.decidedAt, id: h.id, text: t(h.decision === 'approved' ? 'h_approved' : 'h_info_requested', { date: formatDate(h.decidedAt, locale, 'date') }), keys: h.checkKeys, note: h.note })),
+              ...d.reviews.map(r => ({ at: r.reviewedAt, id: r.id, text: t('h_reviewed', { name: r.reviewerName, recommendation: t(REC_KEY[r.recommendation]), date: formatDate(r.reviewedAt, locale, 'date') }), keys: r.checkKeys, note: r.note })),
+            ].sort((x, y) => y.at.localeCompare(x.at)).map(h => (
+              <li key={h.id} className="nl-ap-row"><span>{h.text}
+                {h.keys.length ? ` · ${h.keys.map(k => checkLabel({ key: k, registry: null }, t)).join(', ')}` : ''}{h.note ? ` · ${h.note}` : ''}</span></li>
             ))}
           </ul>
         </SheetSection>
@@ -274,11 +343,14 @@ function ApplicationBody({ d, canDecide }: { d: Detail; canDecide: boolean }) {
 }
 
 /** "Request info": the checks to redo (not passed ones preselected) and the note emailed to the owners. */
-function RequestInfoDialog({ app, onClose, onSent }: { app: Application; onClose: () => void; onSent: () => void }) {
+function RequestInfoDialog({ app, keys: reviewed, note: reviewNote, onClose, onSent }: {
+  app: Application; keys?: string[]; note?: string; onClose: () => void; onSent: () => void;
+}) {
   const t = useVerifyT();
   const decide = useDecideApplication();
-  const [keys, setKeys] = useState<string[]>(() => app.checks.filter(c => c.state !== 'passed').map(c => c.key));
-  const [note, setNote] = useState('');
+  // the reviewer's request (two-person review), else every check that didn't pass
+  const [keys, setKeys] = useState<string[]>(() => reviewed?.length ? reviewed : app.checks.filter(c => c.state !== 'passed').map(c => c.key));
+  const [note, setNote] = useState(reviewNote ?? '');
   const fieldErrors = decide.error instanceof ValidationError ? decide.error.byField() : {};
   const other = decide.error && !(decide.error instanceof ValidationError) ? (decide.error as Error).message : undefined;
   const send = () => decide.mutate({ id: app.merchantId, decision: 'request_info', checkKeys: keys, note }, { onSuccess: onSent });
@@ -294,6 +366,72 @@ function RequestInfoDialog({ app, onClose, onSent }: { app: Application; onClose
         {fieldErrors.checkKeys ? <span id="nl-info-keys-err" className="nl-q-error" role="alert">{fieldErrors.checkKeys}</span> : null}
       </fieldset>
       <Field label={t('infoNote')} hint={t('infoNoteHint')} error={fieldErrors.note}>
+        <TextArea value={note} maxLength={500} onChange={e => setNote(e.target.value)} />
+      </Field>
+      {other ? <p role="alert" className="nl-q-error">{other}</p> : null}
+    </Dialog>
+  );
+}
+
+/**
+ * Stage 1 (two-person review): the reviewer's recommendation — approve, reject or request info (with the checks to
+ * redo) — and a note for the approver (required to reject or request info; internal, never emailed).
+ */
+function ReviewDialog({ app, onClose, onSent }: { app: Application; onClose: () => void; onSent: () => void }) {
+  const t = useVerifyT();
+  const review = useReviewApplication();
+  const [rec, setRec] = useState<Recommendation>('approve');
+  const [keys, setKeys] = useState<string[]>(() => app.checks.filter(c => c.state !== 'passed').map(c => c.key));
+  const [note, setNote] = useState('');
+  const fieldErrors = review.error instanceof ValidationError ? review.error.byField() : {};
+  const other = review.error && !(review.error instanceof ValidationError) ? (review.error as Error).message : undefined;
+  const send = () => review.mutate({ id: app.merchantId, recommendation: rec, checkKeys: rec === 'request_info' ? keys : undefined, note: note.trim() || undefined }, { onSuccess: onSent });
+  const options: Recommendation[] = ['approve', 'reject', 'request_info'];
+  return (
+    <Dialog open onClose={onClose} title={t('reviewDialogTitle', { business: app.businessName })}
+      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={review.isPending} onClick={send}>{t('reviewSend')}</Button></>}>
+      <p className="nl-q-note">{t('reviewLede')}</p>
+      <fieldset className="nl-q-field" aria-describedby={fieldErrors.recommendation ? 'nl-rev-rec-err' : undefined}>
+        <legend>{t('f_recommendation')}</legend>
+        <RadioGroup className="nl-ap-recs" aria-label={t('f_recommendation')}>
+          {options.map(o => (
+            <OptionCard key={o} role="radio" aria-checked={rec === o} selected={rec === o} title={t(REC_KEY[o])} description={t(`${REC_KEY[o]}Desc` as VerifyKey)} onClick={() => setRec(o)} />
+          ))}
+        </RadioGroup>
+        {fieldErrors.recommendation ? <span id="nl-rev-rec-err" className="nl-q-error" role="alert">{fieldErrors.recommendation}</span> : null}
+      </fieldset>
+      {rec === 'request_info' ? (
+        <fieldset className="nl-q-field" aria-describedby={fieldErrors.checkKeys ? 'nl-rev-keys-err' : undefined}>
+          <legend>{t('infoChecks')}</legend>
+          {app.checks.map(c => (
+            <Checkbox key={c.key} label={checkLabel(c, t)} checked={keys.includes(c.key)}
+              onChange={on => setKeys(k => (on ? [...k, c.key] : k.filter(x => x !== c.key)))} />
+          ))}
+          {fieldErrors.checkKeys ? <span id="nl-rev-keys-err" className="nl-q-error" role="alert">{fieldErrors.checkKeys}</span> : null}
+        </fieldset>
+      ) : null}
+      <Field label={t('reviewNoteLabel')} hint={t('reviewNoteHint')} error={fieldErrors.note}>
+        <TextArea value={note} maxLength={500} onChange={e => setNote(e.target.value)} />
+      </Field>
+      {other ? <p role="alert" className="nl-q-error">{other}</p> : null}
+    </Dialog>
+  );
+}
+
+/** Stage 2, approving against the review (it recommended reject or request info): the approver says why. */
+function OverrideDialog({ app, onClose, onSent }: { app: Application; onClose: () => void; onSent: () => void }) {
+  const t = useVerifyT();
+  const decide = useDecideApplication();
+  const [note, setNote] = useState('');
+  const fieldErrors = decide.error instanceof ValidationError ? decide.error.byField() : {};
+  const other = decide.error && !(decide.error instanceof ValidationError) ? (decide.error as Error).message : undefined;
+  const rec = app.review?.recommendation ?? 'reject';
+  return (
+    <Dialog open onClose={onClose} title={t('overrideTitle', { business: app.businessName })}
+      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+        <Button disabled={decide.isPending} onClick={() => decide.mutate({ id: app.merchantId, decision: 'approve', note }, { onSuccess: onSent })}>{t('approve')}</Button></>}>
+      <p className="nl-q-note">{t('overrideLede', { name: app.review?.reviewerName ?? '', recommendation: t(REC_KEY[rec]) })}</p>
+      <Field label={t('overrideNote')} hint={t('overrideNoteHint')} error={fieldErrors.note}>
         <TextArea value={note} maxLength={500} onChange={e => setNote(e.target.value)} />
       </Field>
       {other ? <p role="alert" className="nl-q-error">{other}</p> : null}

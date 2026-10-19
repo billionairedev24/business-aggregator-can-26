@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderConsole, staffApi, type Call, screenReady } from '../../test/render';
+import { renderConsole, staffApi, type Call, screenReady, SESSION } from '../../test/render';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const NOW = new Date('2026-09-08T18:00:00Z');
@@ -11,25 +11,34 @@ const SABLE = {
   merchantId: 'M1', businessName: 'Sable & Soda Bar Co.', legalName: 'Sable and Soda Ltd.', type: 'provider', structure: 'corp_ab',
   categories: ['Events & bar'], province: 'AB', city: 'Calgary', status: 'pending', submittedAt: '2026-09-08T14:00:00Z',
   checks: [check('kyc', 'passed'), check('registry', 'passed', null, 'registry'), check('insurance', 'waiting', null, 'insurance')], risk: 'low', decision: null, decidedAt: null,
+  stage: 'decision' as string | null,
+  review: { id: 'R1', recommendation: 'approve', checkKeys: [] as string[], note: 'Insurance certificate matches.', reviewedBy: 'U2', reviewerName: 'Lena Park', reviewedAt: '2026-09-08T16:00:00Z', decisionId: null } as Record<string, unknown> | null,
 };
 const QUICKFIX = {
   ...SABLE, merchantId: 'M2', businessName: 'QuickFix Auto', legalName: 'QuickFix Auto Inc.', categories: ['Mobile mechanic'], submittedAt: '2026-09-05T18:00:00Z',
-  checks: [check('kyc', 'passed'), check('licence:AMVIC', 'review', 'AMVIC', 'licence')], risk: 'high',
+  checks: [check('kyc', 'passed'), check('licence:AMVIC', 'review', 'AMVIC', 'licence')], risk: 'high', stage: 'review', review: null,
 };
-const FRASER = { ...SABLE, merchantId: 'M3', businessName: 'Fraser Electric', province: 'BC', city: null, status: 'active', decision: 'approved', decidedAt: '2026-09-08T10:00:00Z' };
-const QUEUE = { items: [QUICKFIX, SABLE, FRASER], pending: 2, medianDecisionHours: 33.6 };
+const FRASER = { ...SABLE, merchantId: 'M3', businessName: 'Fraser Electric', province: 'BC', city: null, status: 'active', decision: 'approved', decidedAt: '2026-09-08T10:00:00Z', stage: null, review: null };
+const QUEUE = { items: [QUICKFIX, SABLE, FRASER], pending: 2, medianDecisionHours: 33.6, fourEyes: true };
 const DETAIL = {
   application: QUICKFIX,
   owners: [{ checkId: 'OC1', principalName: 'Lee Cardinal', role: 'owner', ownershipPct: 100, status: 'review', nameMatch: 'mismatch', dobMatch: 'unavailable', lastError: null, attempts: 1, reviewNote: null, reviewedAt: null }],
   registryReviews: [{ id: 'RC1', checkKey: 'licence:AMVIC', source: 'manual', registry: 'AMVIC', queryNumber: '44812', expectedName: 'QuickFix Auto', outcome: 'manual', reasons: [], recordName: null, recordStatus: null, reviewState: 'open', reviewNote: null }],
-  decisions: [],
+  reviews: [], decisions: [], fourEyes: true,
+};
+/** Sable at stage 2: reviewed by `review.reviewedBy` with `review.recommendation`. */
+const sableDetail = (review: Record<string, unknown> = {}) => {
+  const r = { ...SABLE.review, ...review };
+  return { application: { ...SABLE, review: r }, owners: [], registryReviews: [], reviews: [r], decisions: [], fourEyes: true };
 };
 
-function api(roles: Parameters<typeof staffApi>[0], extra?: (c: Call) => { status?: number; body?: unknown } | undefined) {
+function api(roles: Parameters<typeof staffApi>[0], extra?: (c: Call) => { status?: number; body?: unknown } | undefined, sable = sableDetail()) {
   return staffApi(roles, c => {
     const hit = extra?.(c);
     if (hit) return hit;
     if (c.method === 'GET' && c.url.includes('/api/v1/console/verification/applications/M2')) return { body: DETAIL };
+    if (c.method === 'GET' && c.url.includes('/api/v1/console/verification/applications/M1')) return { body: sable };
+    if (c.method === 'POST' && c.url.includes('/review')) return { body: DETAIL };
     if (c.method === 'GET' && c.url.includes('/api/v1/console/verification/applications')) return { body: QUEUE };
     if (c.method === 'POST' && c.url.includes('/decision')) return { body: DETAIL };
     return undefined;
@@ -66,15 +75,27 @@ describe('verification queue (S-79, design 03 verify)', () => {
     const fraser = screen.getByText('Fraser Electric').closest('tr, .nl-dt-card') as HTMLElement;
     expect(within(fraser).getByText('BC pilot')).toBeTruthy();
     expect(within(fraser).getByText('Approved')).toBeTruthy();
-    expect(within(fraser).queryByRole('button', { name: /Approve/ })).toBeNull();
+    expect(within(fraser).queryByRole('button', { name: /Approve|Review|Decide/ })).toBeNull();
+    // stage 1 offers "Review", stage 2 "Decide" (two-person review)
+    expect(within(quick).getByRole('button', { name: /Review/ })).toBeTruthy();
+    expect(within(quick).queryByRole('button', { name: /Decide/ })).toBeNull();
+    expect(within(sable).getByRole('button', { name: /Decide/ })).toBeTruthy();
+    expect(within(sable).queryByRole('button', { name: /Review/ })).toBeNull();
   });
 
-  it('approves inline with the role view header, and shows the api refusal inline', async () => {
+  it('stage 2: "Decide" opens the sheet with the reviewer and recommendation; approving sends the role view header', async () => {
     let refuse = false;
     const calls = api(['trust_safety'], c => (c.method === 'POST' && refuse ? { status: 409, body: { code: 'reviews_open', detail: 'Decide the open registry and identity reviews first.' } } : undefined));
     renderConsole('/verification');
     const sable = (await screen.findByText('Sable & Soda Bar Co.')).closest('tr, .nl-dt-card') as HTMLElement;
-    await user().click(within(sable).getByRole('button', { name: /Approve/ }));
+    await user().click(within(sable).getByRole('button', { name: /Decide/ }));
+    const panel = await screen.findByRole('dialog', { name: 'Sable & Soda Bar Co.' });
+    expect((await within(panel).findByText('Reviewer')).nextElementSibling?.textContent).toBe('Lena Park');
+    expect(within(panel).getByText('Recommendation').nextElementSibling?.textContent).toBe('Approve');
+    expect(within(panel).getByText('Note for the approver').nextElementSibling?.textContent).toBe('Insurance certificate matches.');
+    expect(within(panel).getByRole('list', { name: 'Review stages' }).querySelector('[aria-current="step"]')?.textContent).toContain('Decision');
+    await expectNoAxeViolations(document.body);
+    await user().click(within(panel).getByRole('button', { name: 'Approve' }));
     await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/api/v1/console/verification/applications/M1/decision'))).toBe(true));
     const post = calls.find(c => c.method === 'POST')!;
     expect(post.body).toEqual({ decision: 'approve' });
@@ -82,30 +103,105 @@ describe('verification queue (S-79, design 03 verify)', () => {
     expect(await screen.findByText('Sable & Soda Bar Co. approved.')).toBeTruthy();
 
     refuse = true;
-    const quick = screen.getByText('QuickFix Auto').closest('tr, .nl-dt-card') as HTMLElement;
-    await user().click(within(quick).getByRole('button', { name: /Approve/ }));
-    expect((await screen.findByRole('alert')).textContent).toBe('Decide the open registry and identity reviews first.');
+    await user().click(within(panel).getByRole('button', { name: 'Approve' }));
+    expect((await within(panel).findByRole('alert')).textContent).toBe('Decide the open registry and identity reviews first.');
   });
 
-  it('requests info with the checks to redo and a note, showing the api messages', async () => {
+  it('disables Approve and Request info, with the reason, for the person who reviewed it', async () => {
+    const calls = api(['admin'], undefined, sableDetail({ reviewedBy: SESSION.user.id, reviewerName: 'Priya Natarajan' }));
+    renderConsole('/verification?application=M1');
+    const panel = await screen.findByRole('dialog', { name: 'Sable & Soda Bar Co.' });
+    const approve = await within(panel).findByRole('button', { name: 'Approve' }) as HTMLButtonElement;
+    const info = within(panel).getByRole('button', { name: 'Request info' }) as HTMLButtonElement;
+    expect(approve.disabled).toBe(true);
+    expect(info.disabled).toBe(true);
+    const reason = within(panel).getByText('You reviewed this application, so someone else has to decide it.');
+    expect(approve.getAttribute('aria-describedby')).toBe(reason.id);
+    expect(info.getAttribute('aria-describedby')).toBe(reason.id);
+    await expectNoAxeViolations(document.body);
+    await user().click(approve);
+    expect(calls.some(c => c.method === 'POST')).toBe(false);
+  });
+
+  it('approving against a reject recommendation asks why, and sends the note', async () => {
     let first = true;
     const calls = api(['admin'], c => {
-      if (c.method === 'POST' && first) { first = false; return { status: 422, body: { errors: [{ field: 'note', rule: 'required', message: 'Tell the business what to fix.' }] } }; }
+      if (c.method === 'POST' && first) { first = false; return { status: 422, body: { errors: [{ field: 'note', rule: 'required', message: 'Say why you approve against the review.' }] } }; }
+      return undefined;
+    }, sableDetail({ recommendation: 'reject', note: 'Address is a parking lot.' }));
+    renderConsole('/verification?application=M1');
+    const panel = await screen.findByRole('dialog', { name: 'Sable & Soda Bar Co.' });
+    await user().click(await within(panel).findByRole('button', { name: 'Approve' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Approve Sable & Soda Bar Co. against the review' });
+    expect(within(dialog).getByText('Lena Park recommended “Reject”. Say why you approve anyway.')).toBeTruthy();
+    await user().click(within(dialog).getByRole('button', { name: 'Approve' }));
+    expect(await within(dialog).findByText('Say why you approve against the review.')).toBeTruthy();
+    await user().type(within(dialog).getByRole('textbox', { name: 'Why you approve' }), 'Called them: a market stall.');
+    await user().click(within(dialog).getByRole('button', { name: 'Approve' }));
+    await waitFor(() => expect(calls.filter(c => c.method === 'POST').at(-1)!.body).toEqual({ decision: 'approve', note: 'Called them: a market stall.' }));
+  });
+
+  it('stage 1: reviews with a recommendation and a note for the approver, showing the api messages', async () => {
+    let first = true;
+    const calls = api(['trust_safety'], c => {
+      if (c.method === 'POST' && first) { first = false; return { status: 422, body: { errors: [{ field: 'note', rule: 'required', message: 'Say why you recommend rejecting it.' }] } }; }
       return undefined;
     });
     renderConsole('/verification');
     const quick = (await screen.findByText('QuickFix Auto')).closest('tr, .nl-dt-card') as HTMLElement;
-    await user().click(within(quick).getByRole('button', { name: /Request info/ }));
-    const dialog = await screen.findByRole('dialog', { name: 'Request info from QuickFix Auto' });
+    await user().click(within(quick).getByRole('button', { name: /Review/ }));
+    const panel = await screen.findByRole('dialog', { name: 'QuickFix Auto' });
+    expect(await within(panel).findByText('Not reviewed yet. A reviewer recommends; someone else then decides.')).toBeTruthy();
+    expect(within(panel).queryByRole('button', { name: 'Request info' })).toBeNull(); // stage 2's, not offered yet
+    await user().click(within(panel).getByRole('button', { name: 'Review' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Review QuickFix Auto' });
+    await expectNoAxeViolations(document.body);
+    const radios = within(within(dialog).getByRole('radiogroup', { name: 'Recommendation' })).getAllByRole('radio');
+    expect(radios.map(r => r.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
+    await user().click(within(dialog).getByRole('radio', { name: /Reject/ }));
+    await user().click(within(dialog).getByRole('button', { name: 'Send review' }));
+    expect(await within(dialog).findByText('Say why you recommend rejecting it.')).toBeTruthy();
+    await user().type(within(dialog).getByRole('textbox', { name: 'Note for the approver' }), 'Licence number belongs to another shop.');
+    await user().click(within(dialog).getByRole('button', { name: 'Send review' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Review QuickFix Auto' })).toBeNull());
+    const post = calls.filter(c => c.method === 'POST').at(-1)!;
+    expect(post.url).toMatch(/\/applications\/M2\/review$/);
+    expect(post.body).toEqual({ recommendation: 'reject', note: 'Licence number belongs to another shop.' });
+    expect(await screen.findByText('QuickFix Auto reviewed. It now waits for someone else’s decision.')).toBeTruthy();
+  });
+
+  it('stage 1: recommending request info sends the checks to redo', async () => {
+    const calls = api(['trust_safety']);
+    renderConsole('/verification?application=M2');
+    const panel = await screen.findByRole('dialog', { name: 'QuickFix Auto' });
+    await user().click(await within(panel).findByRole('button', { name: 'Review' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Review QuickFix Auto' });
+    await user().click(within(dialog).getByRole('radio', { name: /Request info/ }));
     expect((within(dialog).getByRole('checkbox', { name: 'AMVIC' }) as HTMLInputElement).checked).toBe(true);
+    await user().type(within(dialog).getByRole('textbox', { name: 'Note for the approver' }), 'Licence missing.');
+    await user().click(within(dialog).getByRole('button', { name: 'Send review' }));
+    await waitFor(() => expect(calls.filter(c => c.method === 'POST').at(-1)?.body).toEqual({ recommendation: 'request_info', checkKeys: ['licence:AMVIC'], note: 'Licence missing.' }));
+  });
+
+  it('stage 2: requests info prefilled with the reviewer’s checks and note, showing the api messages', async () => {
+    let first = true;
+    const calls = api(['admin'], c => {
+      if (c.method === 'POST' && first) { first = false; return { status: 422, body: { errors: [{ field: 'note', rule: 'required', message: 'Tell the business what to fix.' }] } }; }
+      return undefined;
+    }, sableDetail({ recommendation: 'request_info', checkKeys: ['insurance'], note: '' }));
+    renderConsole('/verification?application=M1');
+    const panel = await screen.findByRole('dialog', { name: 'Sable & Soda Bar Co.' });
+    await user().click(await within(panel).findByRole('button', { name: 'Request info' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Request info from Sable & Soda Bar Co.' });
+    expect((within(dialog).getByRole('checkbox', { name: 'Insurance' }) as HTMLInputElement).checked).toBe(true);
     expect((within(dialog).getByRole('checkbox', { name: 'KYC' }) as HTMLInputElement).checked).toBe(false);
     await user().click(within(dialog).getByRole('button', { name: 'Send request' }));
     expect(await within(dialog).findByText('Tell the business what to fix.')).toBeTruthy();
-    await user().type(within(dialog).getByRole('textbox', { name: 'Note to the business' }), 'Upload your AMVIC licence.');
+    await user().type(within(dialog).getByRole('textbox', { name: 'Note to the business' }), 'Upload your insurance certificate.');
     await user().click(within(dialog).getByRole('button', { name: 'Send request' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(calls.filter(c => c.method === 'POST').at(-1)!.body).toEqual({ decision: 'request_info', checkKeys: ['licence:AMVIC'], note: 'Upload your AMVIC licence.' });
-    expect(screen.getByText('Request sent to QuickFix Auto.')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Request info/ })).toBeNull());
+    expect(calls.filter(c => c.method === 'POST').at(-1)!.body).toEqual({ decision: 'request_info', checkKeys: ['insurance'], note: 'Upload your insurance certificate.' });
+    expect(await screen.findByText(/^Request sent to Sable & Soda Bar Co\./)).toBeTruthy();
   });
 
   it('opens an application in the sheet: stages, every submitted field, identity and registry reviews, decided by the agent', async () => {
@@ -119,7 +215,7 @@ describe('verification queue (S-79, design 03 verify)', () => {
     for (const [k, v] of facts) {
       expect(within(panel).getByText(k).nextElementSibling?.textContent, k).toBe(v);
     }
-    expect(within(panel).getByRole('button', { name: 'Request info' })).toBeTruthy();
+    expect(within(panel).getByRole('button', { name: 'Review' })).toBeTruthy();
     expect(within(panel).getByText('Name differs from the application')).toBeTruthy();
     expect(within(panel).getByText('AMVIC 44812 · manual')).toBeTruthy();
     const owner = within(panel).getByText(/Lee Cardinal · Owner/).closest('li') as HTMLElement;
@@ -128,8 +224,7 @@ describe('verification queue (S-79, design 03 verify)', () => {
     const registry = within(panel).getByText('AMVIC 44812 · manual').closest('li') as HTMLElement;
     await user().click(within(registry).getByRole('button', { name: 'Reject' }));
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/registry-reviews/RC1/decision') && (c.body as { decision: string }).decision === 'reject')).toBe(true));
-    await user().click(within(panel).getAllByRole('button', { name: 'Approve' }).at(-1)!); // the sheet's footer
-    await waitFor(() => expect(calls.some(c => c.url.endsWith('/applications/M2/decision') && (c.body as { decision: string }).decision === 'approve')).toBe(true));
+    expect(calls.some(c => c.url.endsWith('/applications/M2/decision'))).toBe(false);
   });
 
   it('shows the sheet view only to a role without the verify action', async () => {
@@ -138,6 +233,7 @@ describe('verification queue (S-79, design 03 verify)', () => {
     const panel = await screen.findByRole('dialog', { name: 'QuickFix Auto' });
     expect(await within(panel).findByText('View only · Admin')).toBeTruthy();
     expect(within(panel).queryByRole('button', { name: 'Approve' })).toBeNull();
+    expect(within(panel).queryByRole('button', { name: 'Review' })).toBeNull();
   });
 
   it('filters by province from the region model', async () => {
@@ -162,5 +258,7 @@ describe('verification queue (S-79, design 03 verify)', () => {
     expect(await screen.findByText('2 en attente · décision médiane 1,4 jours · délai 2 jours')).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Entreprises' })).toBeTruthy();
     expect(screen.getAllByText('Élevé · sans permis').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /Examiner/ }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /Trancher/ }).length).toBeGreaterThan(0);
   });
 });

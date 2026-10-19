@@ -10,6 +10,17 @@ export const Check = z.object({
 });
 export type Check = z.infer<typeof Check>;
 const Decision = z.enum(['approved', 'info_requested']);
+export const Recommendation = z.enum(['approve', 'reject', 'request_info']);
+export type Recommendation = z.infer<typeof Recommendation>;
+/**
+ * A stage-1 review (two-person review, 2026-10-18; api `VerificationQueue.ReviewRow`): the reviewer's recommendation
+ * and internal note; `decisionId` is set once a decision closed its round.
+ */
+export const Review = z.object({
+  id: z.string(), recommendation: Recommendation, checkKeys: z.array(z.string()), note: z.string().nullish(),
+  reviewedBy: z.string(), reviewerName: z.string(), reviewedAt: z.string(), decisionId: z.string().nullish(),
+});
+export type Review = z.infer<typeof Review>;
 
 /** One application (api `VerificationQueue.ApplicationRow`). */
 export const Application = z.object({
@@ -17,11 +28,15 @@ export const Application = z.object({
   categories: z.array(z.string()), province: z.string().nullish(), city: z.string().nullish(), status: z.string(),
   submittedAt: z.string().nullish(), checks: z.array(Check), risk: z.enum(['low', 'medium', 'high']),
   decision: Decision.nullish(), decidedAt: z.string().nullish(),
+  /** While pending: `review` (stage 1, nobody has recommended yet) or `decision` (stage 2); the api's, not derived. */
+  stage: z.enum(['review', 'decision']).nullish(),
+  /** The current review of the open round. */
+  review: Review.nullish(),
 });
 export type Application = z.infer<typeof Application>;
 
 /** `GET /api/v1/console/verification/applications` (S-79). */
-export const Queue = z.object({ items: z.array(Application), pending: z.number(), medianDecisionHours: z.number().nullish() });
+export const Queue = z.object({ items: z.array(Application), pending: z.number(), medianDecisionHours: z.number().nullish(), fourEyes: z.boolean().default(true) });
 export type Queue = z.infer<typeof Queue>;
 
 export const OwnerReview = z.object({
@@ -37,8 +52,12 @@ export const RegistryReview = z.object({
   recordStatus: z.string().nullish(), reviewState: z.string().nullish(), reviewNote: z.string().nullish(),
 });
 export type RegistryReview = z.infer<typeof RegistryReview>;
-export const DecisionRow = z.object({ id: z.string(), decision: Decision, checkKeys: z.array(z.string()), note: z.string().nullish(), decidedBy: z.string(), decidedAt: z.string() });
-export const Detail = z.object({ application: Application, owners: z.array(OwnerReview), registryReviews: z.array(RegistryReview), decisions: z.array(DecisionRow) });
+export const DecisionRow = z.object({ id: z.string(), decision: Decision, checkKeys: z.array(z.string()), note: z.string().nullish(), decidedBy: z.string(), decidedAt: z.string(), reviewId: z.string().nullish() });
+/** `fourEyes`: a decision needs another person's review first (`northline.onboarding.four-eyes.enabled`). */
+export const Detail = z.object({
+  application: Application, owners: z.array(OwnerReview), registryReviews: z.array(RegistryReview), reviews: z.array(Review).default([]),
+  decisions: z.array(DecisionRow), fourEyes: z.boolean().default(true),
+});
 export type Detail = z.infer<typeof Detail>;
 
 const BASE = '/api/v1/console/verification/applications';
@@ -71,6 +90,10 @@ function useDecision<V>(post: (v: V) => Promise<Detail | unknown>) {
 
 export const useDecideApplication = () => useDecision((v: { id: string; decision: 'approve' | 'request_info'; checkKeys?: string[]; note?: string }) =>
   http(`${BASE}/${encodeURIComponent(v.id)}/decision`, { method: 'POST', body: { decision: v.decision, checkKeys: v.checkKeys, note: v.note } }, Detail));
+
+/** Stage 1 (two-person review): `POST …/{id}/review` — the recommendation, the checks to redo, a note for the approver. */
+export const useReviewApplication = () => useDecision((v: { id: string; recommendation: Recommendation; checkKeys?: string[]; note?: string }) =>
+  http(`${BASE}/${encodeURIComponent(v.id)}/review`, { method: 'POST', body: { recommendation: v.recommendation, checkKeys: v.checkKeys, note: v.note } }, Detail));
 
 export const useDecideIdentity = () => useDecision((v: { id: string; checkId: string; decision: 'approve' | 'reject'; note?: string }) =>
   http(`${BASE}/${encodeURIComponent(v.id)}/identity-reviews/${encodeURIComponent(v.checkId)}/decision`, { method: 'POST', body: { decision: v.decision, note: v.note } }, Detail));

@@ -234,6 +234,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `CONSOLE_HEALTH_PROMETHEUS_TOKEN` | ✓ | | | | no — secret, when the metrics store needs a bearer token |
 | `ONCALL_EXPORT_TOKEN` | ✓ | | | | no — secret; empty = the on-call rota export (`GET /api/v1/ops/oncall[.ics]`) answers 404 (S-113, [alerting.md](alerting.md#the-on-call-rota)) |
 | `GO_LIVE_MIN_PILOT_BUSINESSES`, `GO_LIVE_RECORD_MAX_AGE`, `GO_LIVE_REQUEST_TTL`, `GO_LIVE_PROMETHEUS_URL` | ✓ | | | | no (`10`, `P14D`, `PT24H`; the URL defaults to `CONSOLE_HEALTH_PROMETHEUS_URL`, empty = the alert gates are recorded by hand — S-118, [go-live.md § Configuration](go-live.md#configuration)) |
+| `ONBOARDING_FOUR_EYES_ENABLED` | ✓ | | | | no (`true`: an application needs a reviewer and a different approver; `false` = one staff member may decide alone — a single-staff demo; refused under `prod` — [§ Staff roles](#staff-roles-two-person-review)) |
 | `GO_LIVE_PROMETHEUS_TOKEN` | ✓ | | | | no — secret; defaults to `CONSOLE_HEALTH_PROMETHEUS_TOKEN` |
 | `LIVE_PROBE_INTERVAL` | ✓ | | | | no (`30s`: each api replica's live bus probe behind the KDS freshness SLO, S-113) |
 | `CONSOLE_MAP_TILES`, `CONSOLE_MAP_ATTRIBUTION` | ✓ | | | | no (empty = the console's delivery ops map draws the zones on its own grid; an `https://…/{z}/{x}/{y}.png` XYZ tile template + the provider's credit — S-81, [§ Console map](#console-map-s-81)) |
@@ -358,6 +359,27 @@ INSERT INTO identity.platform_roles (user_id, role) VALUES ('<user id>', 'staff'
   value, auth) in the secrets manager — Terraform creates both empty ([secrets.md](secrets.md)). Rotate like the
   Studio's (below), with the `CONSOLE_` variables.
 - **Health:** `/actuator/health/{liveness,readiness}` on 8083; dashboard `northline-console-bff` (S-111).
+
+## Staff roles: two-person review
+
+Merchant applications are decided by two people (four-eyes, 2026-10-18; DECISIONS "Two-person review"):
+
+| stage | who (console role → action) | what | the api |
+|---|---|---|---|
+| 1 · Review | `trust_safety`, `admin` (`verify`) | settles the identity and registry reviews, then recommends **approve**, **reject** or **request info** (with the checks to redo) and a note for the approver (internal; required to reject or request info) | `POST /api/v1/console/verification/applications/{id}/review` |
+| 2 · Decision | `trust_safety`, `admin` (`approve`) — **not a reviewer of this round** | approves, or requests info (the application goes back to the owner; the next submission starts again at stage 1). Approving against a reject / request-info recommendation needs a note | `POST …/{id}/decision` — 409 `review_required` before a review, 403 `same_person` for anyone who reviewed the round |
+
+- Everyone who reviewed the open round is excluded from deciding it (a second reviewer doesn't let the first one
+  decide). A decision closes the round.
+- **An environment therefore needs at least two staff members** with these roles. Grant them on the console's Team
+  screen. The local dev seed has two: Priya Natarajan (`…PNA1`, every role) and Marc Bélanger (`…MRC1`, admin, V334).
+- Narrowing who decides (for example admins only) is a one-line change in `shared.security.StaffRole` (the `approve`
+  action), not configuration.
+- `ONBOARDING_FOUR_EYES_ENABLED=false` lets one person decide without a review — only for a demo with a single staff
+  account. The api logs a warning at start, and **refuses to start with it under `prod`**.
+- Audit log (`developer.audit_log`, Console › Team › Audit log): `verification.application_reviewed` (reviewer, role,
+  recommendation, checks, note), then `verification.application_approved` / `verification.info_requested` (approver,
+  role, the review it followed, the reviewer, the approver's note).
 
 ## Console map (S-81)
 
