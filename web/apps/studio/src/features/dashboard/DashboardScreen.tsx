@@ -95,7 +95,7 @@ function kpis(d: Dashboard, kind: DashboardKind, t: T, f: Fmt, locale: Locale, g
   });
   items.push({
     key: 'rating', label: t('ratingKpi'), value: r.rating != null ? f.number(r.rating, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—',
-    delta: r.rating == null ? t('noRating') : t(kind === 'seller' ? 'ratingOrders' : 'ratingReviews', { count: f.number(r.reviews) }),
+    delta: r.rating == null ? t('noRating') : t(kind === 'seller' ? 'ratingOrders' : 'ratingReviews', { count: r.reviews }),
   });
   items.push(kind === 'seller'
     ? { key: 'refunds', label: t('refundKpi'), value: r.refundRateBps != null ? f.number(r.refundRateBps / 10000, { style: 'percent', maximumFractionDigits: 1 }) : '—', onClick: go('refunds') }
