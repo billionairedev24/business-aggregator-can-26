@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
-import { Minus, Plus, SealCheck, Trash } from '@phosphor-icons/react';
+import { Minus, Package, Plus, SealCheck, Trash, Wrench, type Icon } from '@phosphor-icons/react';
 import { defineMessages, formatMoney, formatNumber, langTag, useLocale, type Locale } from './i18n';
 import { SiteLink } from './SiteLink';
 import type { TagTone } from './Tag';
@@ -166,6 +166,23 @@ export function QuantityStepper({ value, max, onChange, name, busy, inCart, remo
   );
 }
 
+// ── MediaFallback ───────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * What a card shows where its photo would be when it has none — never a blank box: the name's first letter in the
+ * display face on the linen ground, a quiet icon of the kind of thing (a parcel for goods, a wrench for services).
+ * Decorative (the card's title names it).
+ */
+export function MediaFallback({ name, icon: I = Package, className }: { name: string; icon?: Icon; className?: string }) {
+  const initial = name.trim().charAt(0).toUpperCase() || '·';
+  return (
+    <span className={clsx('nl-media-fallback', className)} aria-hidden>
+      <span className="nl-media-fallback-initial">{initial}</span>
+      <I size={22} className="nl-media-fallback-icon" />
+    </span>
+  );
+}
+
 // ── ProductCard ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 export interface CardBadge { label: ReactNode; tone?: TagTone }
@@ -216,7 +233,7 @@ export function ProductCard(p: ProductCardProps) {
   return (
     <article className={clsx('nl-pcard', `nl-pcard-${variant}`, p.className)} aria-label={p.name}>
       <SiteLink href={p.href} className="nl-pcard-media" tabIndex={-1} aria-hidden="true">
-        <span className="nl-pcard-img">{p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" decoding="async" /> : null}</span>
+        <span className="nl-pcard-img">{p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" decoding="async" /> : <MediaFallback name={p.name} />}</span>
       </SiteLink>
       <div className="nl-pcard-body">
         <H className="nl-pcard-heading"><SiteLink href={p.href} className="nl-pcard-title">{p.name}</SiteLink></H>
@@ -281,14 +298,13 @@ export function ServiceCard(p: ServiceCardProps) {
   const t = useT();
   // a heading can't sit inside a button: the pressable choice names itself with a span
   const H = p.onSelect ? 'span' : `h${p.level ?? 3}` as 'h3';
-  const initial = p.name.trim().charAt(0).toUpperCase() || '·';
   const price = p.priceCents != null
     ? <Price cents={p.priceCents} size="md" prefix={p.fromPrice === false ? undefined : t('from')} suffix={p.priceSuffix} />
     : p.priceText ? <span className="nl-card-price-text">{p.priceText}</span> : null;
   const body = (
     <>
       <span className="nl-scard-thumb" aria-hidden>
-        {p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" decoding="async" /> : p.mark ?? <span className="nl-scard-initial">{initial}</span>}
+        {p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" decoding="async" /> : p.mark ?? <MediaFallback name={p.name} icon={Wrench} />}
       </span>
       <span className="nl-scard-body">
         {p.kind ? <span className="nl-scard-kind">{p.kind}</span> : null}

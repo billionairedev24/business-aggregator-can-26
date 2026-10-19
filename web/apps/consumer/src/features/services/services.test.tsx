@@ -160,7 +160,9 @@ describe('service category (design 06 svcCategory)', () => {
 });
 
 describe('provider list (design 06 providers; redesign service cards, AT Shop:891)', () => {
-  it('asks for the providers covering the device’s location and lists them most trusted first', async () => {
+  it('asks for the providers covering the chosen location and lists them most trusted first', async () => {
+    // the place chosen with "Use my current location" (2026-10-19: the page never asks the browser on its own)
+    localStorage.setItem('nl.location', JSON.stringify({ label: 'Beltline, Calgary', city: 'Calgary', province: 'AB', lat: 51.0385, lng: -114.072 }));
     const calls = mockFetch(api());
     renderApp('/services/mobile-mechanic/providers', { routes, geolocation: geo(51.0385, -114.072) });
     expect(await screen.findByRole('heading', { level: 1, name: 'Mobile mechanics · 2 come to Beltline' })).toBeInTheDocument();

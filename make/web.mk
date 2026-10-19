@@ -74,6 +74,14 @@ a11y: $(WEB_INSTALLED) ## Accessibility page sweep (S-109): builds Studio, conso
 	$(PNPM) --filter @northline/consumer build
 	$(PNPM) --filter @northline/a11y a11y
 
+UI_SHOTS_ALL := consumer,studio,console
+.PHONY: ui-shots
+ui-shots: $(WEB_INSTALLED) ## Full-page screenshots of every consumer, Studio and console route at 1440×900 and 390×844 into ui-shots/ (no backend; UI_SHOTS_APPS=consumer,studio · UI_SHOTS_SKIP_BUILD=1 · UI_SHOTS_GREP=route)
+	@cd $(ROOT)/web && apps="$(or $(UI_SHOTS_APPS),$(UI_SHOTS_ALL))"; \
+	if [ -z "$(UI_SHOTS_SKIP_BUILD)" ]; then for a in $$(echo $$apps | tr ',' ' '); do pnpm --filter @northline/$$a build || exit 1; done; fi; \
+	export UI_SHOTS_APPS=$$apps; pnpm --filter @northline/a11y shots $(if $(UI_SHOTS_GREP),--grep "$(UI_SHOTS_GREP)")
+	@echo "ui-shots: $(ROOT)/ui-shots/<app>/<route>-<d|m>.png (d 1440×900, m 390×844); unanswered api requests in ui-shots/<app>/_missing-api.txt"
+
 .PHONY: csp-check
 csp-check: $(WEB_INSTALLED) ## S104-09: the consumer site's CSP in Chromium — a fresh nonce per page, none of its inline scripts without it, zero violations (checkout with a Stripe.js stand-in)
 	$(PNPM) --filter @northline/consumer build

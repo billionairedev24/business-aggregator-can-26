@@ -20,7 +20,8 @@ const WCAG = /^wcag2/;
 export async function mockApi(page: Page, app: App, { signedIn }: { signedIn?: boolean } = {}): Promise<string[]> {
   if (signedIn !== undefined) {
     setSignedIn(app, signedIn);
-    if (app === 'consumer') await fetch(`http://127.0.0.1:4603/__mock/state?signedIn=${signedIn}`, { method: 'POST' });
+    // the mock api behind the consumer's server-side rendering (4603; `make ui-shots` runs its own on 4643)
+    if (app === 'consumer') await fetch(`${process.env.NL_A11Y_MOCK_URL ?? 'http://127.0.0.1:4603'}/__mock/state?signedIn=${signedIn}`, { method: 'POST' });
   }
   const answer = responder(app) as (m: string, u: string) => { status: number; body: unknown; missing?: boolean };
   const missing: string[] = [];

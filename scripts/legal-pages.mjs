@@ -7,7 +7,7 @@
 //
 // S-63: one copy in web/packages/legal/pages, served at /legal/ by the Studio and the consumer app (its Vite plugin);
 // web/packages/legal's test checks the committed files are this script's output.
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -15,7 +15,13 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outs = [process.argv[2] ?? join(root, 'web/packages/legal/pages')];
 for (const out of outs) {
   mkdirSync(out, { recursive: true });
-  copyFileSync(join(root, 'design/theme/northline.css'), join(out, 'northline.css'));
+  // The design's stylesheet imports Google Fonts; the sites load nothing from Google and their CSPs allow fonts from
+  // 'self' only (2026-10-19), so the import is replaced and the pages use the stacks' fallbacks.
+  const css = readFileSync(join(root, 'design/theme/northline.css'), 'utf8').replace(
+    /^@import url\('https:\/\/fonts\.googleapis\.com[^\n]*\n/m,
+    "/* No web-font import (2026-10-19): the site loads nothing from Google Fonts and its CSP allows fonts from 'self'\n   only; these pages use the stacks' fallbacks (Georgia, the system sans). */\n",
+  );
+  writeFileSync(join(out, 'northline.css'), css);
 }
 
 const pages = [

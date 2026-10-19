@@ -2,7 +2,7 @@
    console. Semantic tokens only. */
 .bo-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-5); }
 .bo-head-text { flex: 1 1 260px; min-width: 0; }
-.bo-title { margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
+.bo-title { margin: 0; font-size: var(--text-3xl); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); overflow-wrap: anywhere; }
 .bo-sub { margin: var(--space-1) 0 0; font-size: var(--text-sm); color: var(--color-text-muted); max-width: 72ch; }
 .bo-head-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
 
@@ -12,7 +12,7 @@
 
 .bo-kpis { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: var(--space-3); }
 .bo-kpis > li { min-width: 0; display: flex; }
-.bo-kpi { flex: 1; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); min-width: 0; text-align: left; font: inherit; color: inherit; }
+.bo-kpi { flex: 1; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); min-width: 0; text-align: left; font: inherit; color: inherit; }
 button.bo-kpi { cursor: pointer; }
 button.bo-kpi:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-sm); }
 .bo-kpi-label { font-size: var(--text-xs); color: var(--color-text-muted); }
@@ -23,9 +23,9 @@ button.bo-kpi:hover { border-color: var(--color-border-strong); box-shadow: var(
 
 .bo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: var(--space-4); align-items: start; }
 .bo-stack { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
-.bo-card { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); background: var(--color-surface); display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.bo-card { border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: var(--space-5); background: var(--color-surface); display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
 .bo-card-head { display: flex; align-items: center; gap: var(--space-2); justify-content: space-between; flex-wrap: wrap; }
-.bo-card-title { margin: 0; font-size: var(--text-md); font-weight: var(--weight-bold); }
+.bo-card-title { margin: 0; font-family: var(--font-heading); font-size: var(--text-lg); font-weight: var(--weight-semibold); }
 .bo-muted { margin: 0; font-size: var(--text-sm); color: var(--color-text-muted); }
 
 .bo-todo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }

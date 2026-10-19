@@ -12,6 +12,18 @@ the placeholder default), **B "Evergreen"** (forest `#1F5E4A` + ember `#C4531C`,
 "Dusk"** (plum `#4A2C7F` + mint `#0F7B67`, Plus Jakarta Sans). Switching is one setting: `palette` in
 `web/packages/tokens/brand.json`.
 
+**Update 2026-10-19 — the light direction (owner).** The owner chose **light & photo-first** and palette **B Evergreen**.
+It replaces this spec's dark chrome wherever the two disagree: one **white** header bar (logo · location control ·
+search · account · cart) with Services / Shop / Food as quiet tabs under it, not a dark department bar; white pages
+with linen (`surface-sunken`) bands and a linen footer; cards, tiles and panels with a visible edge
+(`--color-border-card`, 3:1 against the page — WCAG 1.4.11), radius 12 and a soft shadow; photos first on every card,
+with a designed fallback (the initial in the display face on linen) instead of a blank box; Fraunces headings, DM Sans
+text; the back office with a white top bar and a linen sidebar whose current item is a white pill with a primary bar.
+`brand.json` `chrome: "dark"` brings AT's dark chrome back. The location is a dialog (§ 2.1 `location`): saved choice →
+the signed-in default address → the CDN's city → the fallback market, and the browser's position only when the person
+asks for it. Phase A of this (tokens, fonts, `@northline/ui`, the three shells, location) is in DECISIONS
+§ "2026-10-19 — Light foundation"; the pages follow in phase B.
+
 Paths used below:
 - **AT** = the AfroTransact reference, repository `billionairedev24/diaspora-commerce` (read-only; not part of this
   repository); **AT/design** = its `design/` folder of `.dc.html` prototypes.
@@ -533,10 +545,10 @@ Food re-introduced as vendor menus, provider public-page design, announcement an
   pointed at the semantic roles) so screens not yet rebuilt wear the new brand meanwhile.
 - `dist/palettes.css` — every palette scoped under `[data-palette]` (Storybook's palette switch).
 - `generated/theme.json` (committed) — the resolved theme: brand identity, every semantic colour and ramp, fonts and
-  their Google Fonts URL, the scale, CSS and React Native shadows, the logo. TypeScript imports it through
-  `@northline/tokens` (`brand`, `theme`, `fontHref`); the native apps' `mobile-kit/theme` and `app.config.ts` read it.
+  their `@fontsource` packages, the scale, CSS and React Native shadows, the logo. TypeScript imports it through
+  `@northline/tokens` (`brand`, `theme`); the native apps' `mobile-kit/theme` and `app.config.ts` read it.
 - `generated/favicon.svg` (committed) — the mark, copied into the web apps' `public/` and the docs site.
-- `vite.mjs` — `brandHtml()` fills `%BRAND_NAME%` / `%BRAND_FONTS%` in the SPAs' `index.html`.
+- `vite.mjs` — `brandHtml()` fills `%BRAND_NAME%` in the SPAs' `index.html`.
 
 **One `<Logo/>`** in `@northline/ui`: the palette's mark (colours as semantic tokens) plus the wordmark text in
 `currentColor`, with an optional portal word ("Studio", "Console"). Nothing else draws the name as markup. (A
@@ -552,8 +564,11 @@ web-lint`) fails on the literal current name in the string literals, template st
 and app names (`app.config.ts`; a new bundle id is a new store app), the infra domains, and the backend's own copy
 (email templates, `messages*.properties`, `application*.yml`) — renamed in one sweep later.
 
-**Not done yet (later phases).** Self-hosted `@fontsource` fonts (the apps load the palette's Google Fonts, which the
-CSPs already allow); the backend's `app.brand.*` served through `/api/v1/config`; the native apps' fonts, icons and
+**Fonts (2026-10-19):** self-hosted — the build copies the palette's latin + latin-ext woff2 files from `@fontsource/*`
+into `dist/fonts/` and declares them at the top of `tokens.css`; nothing loads from Google and the CSPs allow fonts from
+`'self'` only. The native apps bundle the same families through `@expo-google-fonts/*` (`mobile-kit` `pnpm brand`).
+
+**Not done yet (later phases).** The backend's `app.brand.*` served through `/api/v1/config`; the native apps' fonts, icons and
 splash from the palette's mark; the announcement bar; the header search's department select.
 
 **Merchant themes stay layer 3.** The `--store-primary`, `--store-on-primary`, `--store-accent` and `--store-ink` defaults point at the platform semantic tokens, and a merchant's vetted brand colour overrides them only inside their provider or store page. NL's `BrandMark` and the 4.5:1 page-builder check already do this.

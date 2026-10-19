@@ -38,7 +38,9 @@ describe('the contrast gate', () => {
     expect(theme.brand.palette).toBe(brand.palette);
     expect(theme.brand.name).toBe(brand.identity.name);
     expect(theme.color['action-primary']).toBe(p.color.primary);
-    expect(theme.color.canvas).toBe(p.color.ground);
+    // light chrome (brand.json, 2026-10-19): white pages, the palette's ground for sunken areas; dark: the ground
+    expect(theme.color.canvas).toBe((brand as { chrome?: string }).chrome === 'dark' ? p.color.ground : p.color.surface);
+    expect(theme.color['surface-sunken']).toBe(p.color.ground);
     expect(theme.color.text).toBe(p.color.ink);
   });
 });

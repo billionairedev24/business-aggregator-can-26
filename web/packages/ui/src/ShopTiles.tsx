@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
+import { Storefront } from '@phosphor-icons/react';
+import { MediaFallback } from './Commerce';
 import { SiteLink } from './SiteLink';
 import type { TagTone } from './Tag';
 
@@ -35,8 +37,8 @@ export interface ProductTileProps {
 export function ProductTile({ href, name, price, meta, imageUrl, tag }: ProductTileProps) {
   return (
     <SiteLink href={href} className="nl-product-tile">
-      <span className="nl-product-tile-media halftone" aria-hidden>
-        {imageUrl ? <img src={imageUrl} alt="" loading="lazy" decoding="async" /> : null}
+      <span className="nl-product-tile-media" aria-hidden>
+        {imageUrl ? <img src={imageUrl} alt="" loading="lazy" decoding="async" /> : <MediaFallback name={name} />}
         {tag ? <TagLabel tag={tag} /> : null}
       </span>
       <span className="nl-product-tile-row"><span className="nl-product-tile-name">{name}</span><span className="nl-product-tile-price">{price}</span></span>
@@ -61,17 +63,18 @@ export interface ShopTileProps {
 
 export function ShopTile({ href, name, id, meta, tier, tag, look = 'initial' }: ShopTileProps) {
   const swatch = `nl-swatch-${swatchOf(id)}`;
+  // one layout for both looks: the mark | the name (two lines at most), its meta, then the tier and delivery tags
+  // under it — the tags never take the name's width (2026-10-19: names wrapped one letter a line next to them)
   return (
     <SiteLink href={href} className={clsx('nl-shop-tile', `nl-shop-tile-${look}`)}>
-      {look === 'initial'
-        ? <span className={clsx('nl-shop-tile-mark', swatch)} aria-hidden>{name.trim().charAt(0).toUpperCase()}</span>
-        : <span className={clsx('nl-shop-tile-dot halftone', swatch)} aria-hidden />}
-      <span className="nl-shop-tile-body">
-        <span className="nl-shop-tile-title"><strong>{name}</strong>{look === 'initial' ? <TagLabel tag={tier} /> : null}</span>
-        {meta ? <span className="nl-shop-tile-meta">{meta}</span> : null}
-        {look === 'initial' && tag ? <span className="nl-shop-tile-run"><TagLabel tag={tag} /></span> : null}
+      <span className={clsx('nl-shop-tile-mark', look === 'dot' && 'nl-shop-tile-round', swatch)} aria-hidden>
+        {name.trim().charAt(0).toUpperCase() || <Storefront size={22} />}
       </span>
-      {look === 'dot' ? <TagLabel tag={tag} /> : null}
+      <span className="nl-shop-tile-body">
+        <span className="nl-shop-tile-title">{name}</span>
+        {meta ? <span className="nl-shop-tile-meta">{meta}</span> : null}
+        {tier || tag ? <span className="nl-shop-tile-tags"><TagLabel tag={tier} /><TagLabel tag={tag} /></span> : null}
+      </span>
     </SiteLink>
   );
 }

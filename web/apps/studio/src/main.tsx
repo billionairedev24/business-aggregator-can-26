@@ -12,14 +12,6 @@ import { isUnauthorized, setRequestLocale } from './lib/http';
 import { initialLocale, LOCALE_KEY } from './lib/locale';
 import './lib/auth-server'; // configures northline-auth's origin for @northline/auth-kit
 
-// S-69: the web fonts are preloaded by index.html without blocking the first paint; apply them now.
-const fonts = document.getElementById('nl-fonts') as HTMLLinkElement | null;
-if (fonts) {
-  const sheet = document.createElement('link');
-  sheet.rel = 'stylesheet';
-  sheet.href = fonts.href;
-  document.head.append(sheet);
-}
 
 // The platform zone until the region model answers (GET /api/v1/geo/regions → platformTimeZone; S-134).
 configurePlatformTimeZone(import.meta.env.VITE_NL_PLATFORM_TIME_ZONE);

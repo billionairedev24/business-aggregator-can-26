@@ -12,7 +12,7 @@
 .co-step-todo > section { background: var(--color-surface-muted); }
 .co-step-todo .co-step-title { color: var(--color-text-muted); }
 .co-step-head { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; }
-.co-num { width: 28px; height: 28px; flex: none; border-radius: var(--radius-pill); display: grid; place-items: center; background: var(--color-header-bg); color: var(--color-header-text); font-size: var(--text-sm); font-weight: var(--weight-bold); }
+.co-num { width: 28px; height: 28px; flex: none; border-radius: var(--radius-pill); display: grid; place-items: center; background: var(--color-action-primary); color: var(--color-action-primary-text); font-size: var(--text-sm); font-weight: var(--weight-bold); }
 .co-step-todo .co-num { background: var(--color-border-strong); color: var(--color-text); }
 .co-step-title { flex: 1; min-width: 0; margin: 0; font-size: var(--text-xl); font-weight: var(--weight-bold); }
 .co-step-title:focus { outline: none; }

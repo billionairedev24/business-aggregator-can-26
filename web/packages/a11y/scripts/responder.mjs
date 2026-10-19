@@ -4,13 +4,15 @@
 import { readFileSync } from 'node:fs';
 import { pathOf, pattern } from './reduce.mjs';
 import { OVERRIDES } from './overrides.mjs';
+import { SHOTS } from '../shots/fixtures.mjs';
 
 const fixturesDir = new URL('../fixtures/', import.meta.url);
 
 /** `(method, url) → { status, body }` for `app`; unknown requests answer 404 and are reported by the sweep. */
 export function responder(app) {
   const fixtures = JSON.parse(readFileSync(new URL(`${app}.json`, fixturesDir), 'utf8'));
-  const overrides = OVERRIDES[app] ?? [];
+  // `make ui-shots` (NL_MOCK_SHOTS=1): demo-like data first — listings with photos, shops, orders, a dashboard
+  const overrides = [...(process.env.NL_MOCK_SHOTS ? SHOTS[app] ?? [] : []), ...(OVERRIDES[app] ?? [])];
   return (method, url) => {
     const path = pathOf(url);
     for (const o of overrides) {

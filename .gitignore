@@ -19,3 +19,5 @@ pilot-dry-run/
 .ovh/
 go-live-rehearsal/
 __pycache__/
+# make ui-shots: full-page screenshots of every route (docs/LOCAL_DEVELOPMENT.md)
+ui-shots/

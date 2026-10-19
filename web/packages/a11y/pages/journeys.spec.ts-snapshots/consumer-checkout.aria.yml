@@ -14,10 +14,10 @@
         - region "Delivery window":
           - heading "Delivery window" [level=3]
           - radiogroup "Delivery window":
-            - radio /Today \d+–3 a[\d,.]+[bkmBKM]+\. Pooled with 5 neighbours \$\d+\.\d+/ [checked]:
-              - strong: /Today \d+–3 a[\d,.]+[bkmBKM]+\./
-            - radio /Tomorrow 2–5 p[\d,.]+[bkmBKM]+\. Pooled run · order by 1:\d+ p[\d,.]+[bkmBKM]+\. \$\d+\.\d+/:
-              - strong: /Tomorrow 2–5 p[\d,.]+[bkmBKM]+\./
+            - radio /Tonight 6–9 p[\d,.]+[bkmBKM]+\. Pooled with 5 neighbours \$\d+\.\d+/ [checked]:
+              - strong: /Tonight 6–9 p[\d,.]+[bkmBKM]+\./
+            - radio /Tomorrow 8–\d+ a[\d,.]+[bkmBKM]+\. Pooled run · order by 7:\d+ a[\d,.]+[bkmBKM]+\. \$\d+\.\d+/:
+              - strong: /Tomorrow 8–\d+ a[\d,.]+[bkmBKM]+\./
             - radio /Now · \d+ min Direct courier \$\d+\.\d+/:
               - strong: /Now · \d+ min/
         - region "If something’s out of stock":

@@ -1,34 +1,35 @@
-/* Location (design 06 `location`). Tokens only. */
-.nl-location { max-width: 560px; padding-top: 40px; }
-.nl-location-title { font-size: clamp(32px, 5vw, 40px); margin: 0 0 8px; letter-spacing: -0.02em; }
-.nl-location-lede { color: var(--color-neutral-700); margin: 0 0 22px; }
-.nl-location-provinces { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 8px; }
-.nl-location-province { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; font: inherit; padding: 12px 14px; min-height: 44px; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text); border: 1px solid var(--color-divider); background: transparent; }
-.nl-location-province[aria-pressed="true"] { border-color: var(--color-accent); background: var(--color-accent-100); }
-.nl-location-province:hover:not(:disabled) { background: var(--color-accent-100); }
-.nl-location-province:disabled { opacity: .45; cursor: not-allowed; }
-.nl-location-province:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.nl-location-province-note { display: block; font-size: 12px; opacity: .75; }
-.nl-location-address { margin-top: 18px; position: relative; }
-.nl-location-suggest { position: absolute; left: 0; right: 0; top: 100%; z-index: 20; background: var(--color-bg); box-shadow: var(--shadow-lg); border-radius: var(--radius-md); padding: 6px 0; }
-.nl-location-suggest ul { list-style: none; margin: 0; padding: 0; }
-.nl-location-option { display: flex; gap: 10px; align-items: center; font-size: 14px; padding: 8px 14px; min-height: 44px; box-sizing: border-box; cursor: pointer; }
-.nl-location-option[aria-selected="true"], .nl-location-option:hover { background: var(--color-accent-100); }
-.nl-location-option-icon { color: var(--color-neutral-600); }
-.nl-location-option-sub { display: block; font-size: 12px; color: var(--color-neutral-700); }
-.nl-location-suggest-note { font-size: 13px; color: var(--color-neutral-700); padding: 8px 14px; margin: 0; }
-.nl-location-suggest-error { font-size: 13px; color: var(--color-accent-2-700); padding: 8px 14px; margin: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.nl-location-suggest-foot { font-size: 11px; color: var(--color-neutral-700); padding: 6px 14px 2px; margin: 0; display: flex; justify-content: flex-end; }
-.nl-location-parts { margin: 8px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); gap: 8px; font-size: 12px; color: var(--color-neutral-700); }
-.nl-location-parts dt { margin: 0; }
-.nl-location-parts dd { margin: 0; color: var(--color-text); font-weight: 600; overflow-wrap: anywhere; }
-.nl-location-unit { margin-top: 12px; }
-.nl-location-tags { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-.nl-location-info { font-size: 12px; color: var(--color-neutral-700); margin: 8px 0 0; }
-.nl-location-muted { font-size: 13px; color: var(--color-neutral-700); margin: 8px 0 0; }
-.nl-location-save { margin-top: 22px; min-height: 44px; }
-.nl-location-waitlist { margin-top: 22px; padding: 16px; background: var(--color-surface); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 10px; }
-.nl-location-waitlist h2 { font-size: 20px; margin: 0; }
-.nl-location-waitlist p { margin: 0; font-size: 14px; }
-.nl-location-waitlist-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.nl-location-waitlist .btn { min-height: 44px; }
+/* The location dialog (LocationChooser; a bottom sheet on phones). Semantic tokens only. */
+.nl-loc { display: flex; flex-direction: column; gap: var(--space-5); }
+.nl-loc-current { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0; padding: var(--space-3) var(--space-4); background: var(--color-surface-sunken); border-radius: var(--radius-md); font-size: var(--text-md); color: var(--color-text); }
+.nl-loc-current svg { flex: none; margin-top: 2px; color: var(--color-action-primary); }
+.nl-loc-here { display: flex; flex-direction: column; gap: var(--space-3); align-items: stretch; }
+.nl-loc-here .btn { justify-content: center; min-height: var(--size-control-lg); }
+.nl-loc-search { position: relative; }
+.nl-loc-search .input { padding-left: 40px; min-height: var(--size-control-lg); border-radius: var(--radius-pill); }
+.nl-loc-search-icon { position: absolute; left: 14px; top: 41px; z-index: 1; color: var(--color-text-muted); pointer-events: none; }
+.nl-loc-suggest { position: absolute; left: 0; right: 0; top: calc(100% - 10px); z-index: var(--z-dropdown); background: var(--color-surface); border: 1px solid var(--color-border); box-shadow: var(--shadow-lg); border-radius: var(--radius-md); padding: var(--space-1) 0; }
+.nl-loc-suggest ul { list-style: none; margin: 0; padding: 0; }
+.nl-loc-option { display: flex; gap: var(--space-3); align-items: center; font-size: var(--text-md); padding: var(--space-2) var(--space-4); min-height: var(--size-touch); cursor: pointer; }
+.nl-loc-option[aria-selected='true'], .nl-loc-option:hover { background: var(--color-surface-hover); }
+.nl-loc-option-icon { flex: none; color: var(--color-text-muted); }
+.nl-loc-option-sub { display: block; font-size: var(--text-xs); color: var(--color-text-muted); }
+.nl-loc-note { font-size: var(--text-sm); color: var(--color-text-muted); padding: var(--space-2) var(--space-4); margin: 0; }
+.nl-loc-error { font-size: var(--text-sm); color: var(--color-danger); padding: var(--space-2) var(--space-4); margin: 0; display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.nl-loc-foot { font-size: var(--text-2xs); color: var(--color-text-muted); padding: var(--space-1) var(--space-4); margin: 0; text-align: right; }
+.nl-loc-section { display: flex; flex-direction: column; gap: var(--space-2); }
+.nl-loc-h3 { margin: 0; font-family: var(--font-sans); font-size: var(--text-sm); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
+.nl-loc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.nl-loc-row { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 56px; padding: var(--space-2) var(--space-4); border: 1px solid var(--color-border-card); border-radius: var(--radius-md); background: var(--color-surface); font: inherit; text-align: left; color: var(--color-text); cursor: pointer; }
+.nl-loc-row:hover { background: var(--color-surface-hover); }
+.nl-loc-row-icon { flex: none; color: var(--color-action-primary); }
+.nl-loc-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.nl-loc-row-main { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.nl-loc-row-sub { font-size: var(--text-sm); color: var(--color-text-muted); }
+.nl-loc-row-go { flex: none; color: var(--color-text-muted); }
+.nl-loc-markets { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.nl-loc-market { gap: var(--space-2); }
+.nl-loc-market svg { color: var(--color-action-primary); }
+.nl-loc-market-prov { font-weight: var(--weight-regular); color: var(--color-text-muted); }
+.nl-loc-waitlist { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border-card); border-radius: var(--radius-md); }
+.nl-loc-waitlist p { margin: 0; font-size: var(--text-md); }
+.nl-loc-waitlist-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }

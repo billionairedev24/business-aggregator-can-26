@@ -179,8 +179,8 @@ describe('Department page (design 06 category)', () => {
     expect(within(chips).getByRole('link', { name: 'Butcher' })).toHaveAttribute('href', '/shop/butcher');
 
     const shops = screen.getByRole('region', { name: 'Shops · Bakery' });
-    expect(within(shops).getByRole('link', { name: /Glenmore Bakery\s*Master.*5 products.*On tonight’s run/ })).toHaveAttribute('href', '/search?scope=shop&q=Glenmore%20Bakery');
-    expect(within(shops).getByRole('link', { name: /Sidewalk Citizen\s*Trusted.*Tomorrow/ })).toBeInTheDocument();
+    expect(within(shops).getByRole('link', { name: /Glenmore Bakery.*5 products.*Master.*On tonight’s run/ })).toHaveAttribute('href', '/search?scope=shop&q=Glenmore%20Bakery');
+    expect(within(shops).getByRole('link', { name: /Sidewalk Citizen.*Trusted.*Tomorrow/ })).toBeInTheDocument();
 
     const products = screen.getByRole('region', { name: 'Popular in Bakery' });
     expect(within(products).getByText('Sorted by')).toBeInTheDocument();
@@ -194,7 +194,7 @@ describe('Department page (design 06 category)', () => {
     expect(screen.getByText('2 commerces à Calgary · 1 sur la tournée de ce soir · 46 produits')).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Fil d’Ariane' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Commerces · Boulangerie' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Glenmore Bakery\s*Maître.*Sur la tournée de ce soir/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Glenmore Bakery.*Maître.*Sur la tournée de ce soir/ })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Populaire dans Boulangerie' })).toBeInTheDocument();
   });
 

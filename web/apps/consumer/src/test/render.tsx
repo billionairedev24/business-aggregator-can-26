@@ -38,12 +38,14 @@ export function mockFetch(handler: Handler) {
  */
 export function renderApp(path: string, { locale = 'en' as Locale, geolocation = null as Geolocation | null, routes: screens = {} as Partial<Record<ScreenKey, () => ReactNode>> } = {}) {
   configureAuthOrigin('http://auth.test');
+  // the browser's geolocation, read only when the person presses "Use my current location" (never on load)
+  Object.defineProperty(window.navigator, 'geolocation', { value: geolocation ?? undefined, configurable: true });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   const root = createRootRoute({
     component: () => (
       <I18nProvider initial={locale} onChange={persistLocale}>
         <SiteLinkProvider value={RouterSiteLink}>
-          <ConsumerLayout geolocation={geolocation}><Outlet /></ConsumerLayout>
+          <ConsumerLayout><Outlet /></ConsumerLayout>
         </SiteLinkProvider>
       </I18nProvider>
     ),
