@@ -160,7 +160,8 @@ class LegalFormsApiTest extends IntegrationTest {
                 row.fields().values().stream()
                         .map(LegalForms.FieldRule::patternMessage)
                         .filter(java.util.Objects::nonNull)
-                        .forEach(m -> assertThat(french.french(m.en(), ca.northline.platform.MessageCatalogue.Arguments.AS_IS))
+                        .forEach(m -> assertThat(
+                                        french.french(m.en(), ca.northline.platform.MessageCatalogue.Arguments.AS_IS))
                                 .as("docs/spec/validation-messages.fr-CA.tsv: " + m.en())
                                 .contains(m.fr()));
             }
