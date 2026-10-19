@@ -26,6 +26,9 @@ export interface DataTableColumn<T> {
   type?: DataTableColumnType;
   /** A secondary field shown under the value (e.g. SKU under the name). Searched, editable and exported with the column. */
   sub?: RowKey<T>;
+  /** A picture's URL shown before the value, in the table and on the phone card (a product's photo). An empty value
+   * shows the value's initial on linen instead. Not searched or exported. */
+  thumb?: RowKey<T>;
   /** Label for `sub` in forms and reports. Default "<label> · detail". */
   subLabel?: string;
   /** Default: `facet` for tag columns, `range` for num/money, off otherwise. */

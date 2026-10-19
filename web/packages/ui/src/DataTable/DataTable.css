@@ -84,7 +84,7 @@
 .nl-dt-body { display: flex; flex-direction: column; min-width: 0; }
 .nl-dt-table { table-layout: auto; }
 .nl-dt-table th { vertical-align: middle; }
-.nl-dt-table td { vertical-align: middle; overflow-wrap: break-word; }
+table.nl-dt-table td { vertical-align: middle; overflow-wrap: break-word; } /* over base.css `.table td` (top) */
 .nl-dt-table .is-num { text-align: right; font-feature-settings: "tnum" 1; white-space: nowrap; }
 .nl-dt-table .nl-dt-check-cell { width: 40px; padding: 0 0 0 var(--space-1); vertical-align: middle; }
 .nl-dt-table .nl-dt-check-cell .nl-dt-check { width: 40px; }
@@ -108,16 +108,16 @@
 .nl-dt-act.is-danger { color: var(--color-danger); }
 .nl-dt-act.is-danger:hover { background: var(--color-danger-bg); color: var(--color-danger); }
 .nl-dt-row-acts.is-card { gap: 4px; }
-.nl-dt-row-acts.is-card .nl-dt-act { min-height: var(--size-touch); padding: 0 10px; }
+.nl-dt-row-acts.is-card .nl-dt-act { min-height: var(--size-touch); padding: 0 var(--space-2); }
 
 /* ── cards (< 600px) ── */
 .nl-dt-cardmode { display: flex; flex-direction: column; gap: 8px; }
 .nl-dt-cardbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--color-text-muted); }
 .nl-dt-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.nl-dt-card { display: flex; flex-direction: column; gap: 10px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-surface); border: 1px solid var(--color-border); }
+.nl-dt-card { display: flex; flex-direction: column; gap: 10px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface); border: 1px solid var(--color-border-card); box-shadow: var(--shadow-sm); }
 .nl-dt-card.is-selected { background: var(--color-surface-brand); box-shadow: inset 0 0 0 1.5px var(--color-action-primary); }
 .nl-dt-card.is-clickable { cursor: pointer; }
-.nl-dt-card-head { display: flex; gap: 8px; align-items: flex-start; }
+.nl-dt-card-head { display: flex; gap: var(--space-3); align-items: flex-start; }
 .nl-dt-card-check { margin: -6px 0 0 -8px; }
 .nl-dt-card-title { flex: 1; min-width: 0; }
 .nl-dt-card-name { font-weight: var(--weight-bold); font-size: var(--text-base); overflow-wrap: anywhere; }
@@ -127,7 +127,7 @@
 .nl-dt-card-field dd { margin: 0; }
 .nl-dt-field-value { font-size: 14px; overflow-wrap: anywhere; }
 .nl-dt-card-acts { border-top: 1px solid var(--color-border); padding-top: 6px; }
-.nl-dt-card-acts .nl-dt-row-acts { justify-content: flex-end; }
+.nl-dt-card-acts .nl-dt-row-acts { justify-content: flex-end; flex-wrap: wrap; column-gap: 0; }
 
 /* ── states ── */
 .nl-dt-empty { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-8) var(--space-5); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); text-align: center; font-size: var(--text-sm); color: var(--color-text-muted); }
@@ -192,3 +192,10 @@
 /* Inline row actions (e.g. "Mark packed" / « Marquer comme emballée ») wrap instead of widening the table — the
    layout budget in model.ts reserves 170 px for them. */
 .nl-dt-table .nl-dt-actions-cell .nl-dt-act.is-labelled { max-width: 150px; white-space: normal; text-align: left; line-height: 1.2; }
+
+/* the `thumb` option: a photo before the row's name (table) or its title (phone card) */
+.nl-dt-media { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.nl-dt-media-text { display: flex; flex-direction: column; min-width: 0; }
+.nl-dt-thumb { flex: none; width: 44px; height: 44px; border-radius: var(--radius-sm); object-fit: cover; background: var(--color-surface-sunken); border: 1px solid var(--color-border); box-sizing: border-box; }
+.nl-dt-thumb-lg { width: 56px; height: 56px; }
+.nl-dt-thumb-empty { display: grid; place-items: center; font-family: var(--font-heading); font-weight: var(--weight-semibold); font-size: var(--text-lg); color: var(--color-text-muted); }

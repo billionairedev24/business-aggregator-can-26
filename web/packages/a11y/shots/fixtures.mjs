@@ -5,6 +5,9 @@
 import { readFileSync } from 'node:fs';
 
 const recorded = JSON.parse(readFileSync(new URL('../fixtures/consumer.json', import.meta.url), 'utf8'));
+const studioRecorded = JSON.parse(readFileSync(new URL('../fixtures/studio.json', import.meta.url), 'utf8'));
+/** A recorded Studio answer by its pattern (`GET /api/v1/merchants/:id/orders`), copied so an override can change it. */
+const rec = key => structuredClone(studioRecorded.pattern[key]?.body ?? studioRecorded.exact[key]?.body);
 const media = seed => `/api/v1/public/catalogue/media/${seed}`;
 const RUN = { windowId: 'W1', label: 'R-611', day: 'today', startsAt: '2026-10-20T00:00:00Z', endsAt: '2026-10-20T03:00:00Z', orderBy: '2026-10-19T23:20:00Z', feeCents: 299, households: 5 };
 const TOMORROW = { ...RUN, windowId: 'W2', day: 'tomorrow', startsAt: '2026-10-20T14:00:00Z', endsAt: '2026-10-20T17:00:00Z', orderBy: '2026-10-20T13:05:00Z', households: 0 };
@@ -109,6 +112,122 @@ const SELLER_DASHBOARD = {
   cases: [{ kind: 'refund', customerName: 'A. Osei', subject: 'Wrong size wiper blade' }],
 };
 
+// ── the calendar: a week of jobs relative to the week asked for (`from`, the zone's midnight), so the shots stay full
+// whatever day they run. [hour, minute, minutes, title, state, customer, area, cents, member]
+const WEEK = {
+  1: [[9, 0, 90, 'Brake pads and rotors', 'confirmed', 'Amara O.', 'Beltline', 18900, 'Ravi'], [13, 30, 45, 'Oil change', 'confirmed', 'Dev P.', 'Mission', 8900, 'Ravi'], [15, 0, 60, 'Battery test and replacement', 'requested', 'Lena W.', 'Kensington', 21400, 'Jas']],
+  2: [[10, 0, 90, 'Pre-purchase inspection', 'confirmed', 'Sam R.', 'Bridgeland', 16000, 'Ravi'], [14, 0, 60, 'Winter tire swap', 'confirmed', 'Priya K.', 'Altadore', 9900, 'Jas']],
+  3: [[8, 30, 60, 'Brake inspection', 'confirmed', 'A. Osei', 'Inglewood', 8900, 'Ravi'], [11, 0, 120, 'Alternator replacement', 'requested', 'M. Tran', 'Inglewood', 41200, 'Ravi']],
+  4: [[9, 0, 45, 'Oil change', 'confirmed', 'K. Nguyen', 'Sunnyside', 8900, 'Jas'], [13, 0, 60, 'Check engine light diagnostic', 'confirmed', 'D. Kowalski', 'Hillhurst', 12000, 'Ravi']],
+  5: [[10, 0, 90, 'Brake pads and rotors', 'confirmed', 'J. Martin', 'Ramsay', 18900, 'Ravi']],
+  6: [[9, 30, 60, 'Winter tire swap', 'confirmed', 'S. Bouchard', 'Tuxedo', 9900, 'Jas']],
+};
+const DAY = 86400000;
+const PROVIDER_ID = '01J9ZD3V00000000000000PWM1';
+const seenJobs = new Map();
+const jobId = (d, i) => `J${d.toISOString().slice(5, 10).replace('-', '')}${i}`;
+function weekJobs(path) {
+  const q = new URL(path, 'http://x').searchParams;
+  const from = Date.parse(q.get('from') ?? ''), to = Date.parse(q.get('to') ?? '');
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return [];
+  const out = [];
+  for (let t = from; t < to; t += DAY) {
+    const day = new Date(t + DAY / 4); // the local calendar day (from is the zone's midnight in UTC)
+    (WEEK[day.getUTCDay()] ?? []).forEach(([h, m, min, title, state, customerName, area, priceCents, memberName], i) => {
+      const start = from + Math.round((t - from) / DAY) * DAY + (h * 60 + m) * 60000;
+      out.push({ id: jobId(day, i), ref: `BK-${7700 + day.getUTCDate() * 3 + i}`, title, startsAt: new Date(start).toISOString(), endsAt: new Date(start + min * 60000).toISOString(), state,
+        memberUserId: memberName === 'Ravi' ? '01J9ZD3V00000000000000RAV1' : '01J9ZD3V00000000000000JAS1', memberName, customerName, area, priceCents });
+    });
+  }
+  out.forEach(j => seenJobs.set(j.id, j));
+  return out;
+}
+/** The detail sheet of a job the calendar listed. */
+function jobDetail(id) {
+  const j = seenJobs.get(id);
+  if (!j) return undefined;
+  const tax = Math.round(j.priceCents * 0.05), fee = Math.round(j.priceCents * 0.12);
+  return {
+    ...j, customer: { name: j.customerName, reliability: 4.8, pastJobs: 3 }, addressLine: `${j.area} · street parking`, access: 'Gate code shared in the app', vehicle: '2016 Honda Civic · silver',
+    customerNote: 'Grinding noise from the front left when braking.', escrow: 'held',
+    escrowMoney: { state: 'held', heldCents: j.priceCents + tax, taxCents: tax, feeCents: fee, netCents: j.priceCents - fee },
+    timeline: [{ type: 'booked', at: '2026-10-12T17:20:00Z', actorName: j.customerName, note: null, mediaId: null }, { type: 'confirmed', at: '2026-10-12T17:21:00Z', actorName: j.memberName, note: null, mediaId: null }],
+    approvals: [],
+  };
+}
+function weekCells(path) {
+  const q = new URL(path, 'http://x').searchParams;
+  const first = Date.parse(`${q.get('from')}T12:00:00Z`), days = Number(q.get('days') ?? 7);
+  if (!Number.isFinite(first)) return { openSlots: [], quoteHolds: [] };
+  // the zone's offset is unknown here: place the cells at the jobs' local hours via the same UTC-6 a Prairie week uses
+  const at = (dayIndex, h, m = 0) => new Date(first - 12 * 3600000 + dayIndex * DAY + (h + 6) * 3600000 + m * 60000).toISOString();
+  const openSlots = [], quoteHolds = [];
+  for (let i = 0; i < days; i++) {
+    const wd = new Date(first + i * DAY).getUTCDay();
+    if (wd === 4) openSlots.push({ startsAt: at(i, 15) }, { startsAt: at(i, 16) });
+    if (wd === 5) openSlots.push({ startsAt: at(i, 14) });
+    if (wd === 3) quoteHolds.push({ quoteId: 'q1', requestId: 'r1', ref: 'QT-3104', customerName: 'M. Tran', startsAt: at(i, 15), durationMin: 120 });
+  }
+  return { openSlots, quoteHolds };
+}
+
+function quoteRequests() {
+  const [r1] = rec('GET /api/v1/merchants/:id/quote-requests').items;
+  const soon = new Date(Date.now() + 5 * 3600000).toISOString();
+  return { items: [
+    { ...r1, respondBy: soon },
+    { ...r1, id: 'r2', ref: 'QT-3109', title: 'Squeal when braking, 2019 RAV4', customerName: 'J. Martin', reliability: 4.9, area: 'Ramsay', body: 'Started this week, worse in the morning.', quote: null, respondBy: soon },
+    { ...r1, id: 'r3', ref: 'QT-3098', title: 'Timing belt, 2012 Outback', customerName: 'S. Bouchard', reliability: 4.6, area: 'Tuxedo', body: 'Due at 160,000 km.', quote: { ...r1.quote, id: 'q3', requestId: 'r3', ref: 'QT-3098', state: 'viewed', totalCents: 68250, sentAt: '2026-10-17T18:00:00Z' } },
+  ] };
+}
+
+// ── availability: a working week, a day of start times (some taken by jobs and their buffer)
+function availabilityHours() {
+  const b = rec('GET /api/v1/merchants/:id/availability/hours');
+  const week = { mon: [['08:00', '17:00']], tue: [['08:00', '17:00']], wed: [['08:00', '12:00'], ['13:00', '17:00']], thu: [['08:00', '17:00']], fri: [['08:00', '16:00']], sat: [['09:00', '14:00']], sun: [] };
+  b.members[0].days = week;
+  b.lastSavedAt = new Date(Date.now() - 3 * DAY).toISOString();
+  return b;
+}
+const previewSlots = () => {
+  const taken = new Set(['09:00', '09:30', '10:00', '10:30', '13:30', '14:00']);
+  const slots = [];
+  for (let m = 8 * 60; m <= 16 * 60; m += 30) { const hhmm = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; slots.push({ start: hhmm, free: !taken.has(hhmm) }); }
+  return { slots, jobs: 2, busyBlocks: 0, intervalMin: 30, bufferMin: 20 };
+};
+
+// ── listings: the parts shop's products and the mechanic's services, with photos
+const SELLER_ID = '01J9ZD3V00000000000000PWP1';
+const listing = (id, kind, name, over) => ({ id, kind, name, sku: null, meta: '', priceCents: null, stock: null, sales30d: 0, vetting: 'approved', status: 'live', vettingFlags: [], revetReasons: [],
+  submittedAt: null, categoryId: null, pricingMode: kind === 'service' ? 'fixed' : null, updatedAt: '2026-10-14T15:00:00Z', bundle: false, imageUrl: null, ...over });
+const PRODUCTS_SOLD = [
+  listing('p1', 'product', 'Wiper blades, 22 in. pair', { sku: 'WB-22', priceCents: 1900, stock: 9, sales30d: 31, imageUrl: media('tool-wiper') }),
+  listing('p2', 'product', 'Washer fluid, −40 °C, 4 L', { sku: 'WF-40', priceCents: 600, stock: 4, sales30d: 58, imageUrl: media('bottle-washer') }),
+  listing('p3', 'product', 'Brake pads (front, ceramic)', { sku: 'BP-FC-118', priceCents: 6400, stock: 2, sales30d: 12, imageUrl: media('box-brakepads') }),
+  listing('p4', 'product', 'Cabin air filter', { sku: 'CAF-2031', priceCents: 2450, stock: 16, sales30d: 9, imageUrl: media('box-filter') }),
+  listing('p5', 'product', 'Synthetic oil 5W-30, 5 L', { sku: 'OIL-530', priceCents: 4299, stock: 11, sales30d: 22, imageUrl: media('bottle-oil') }),
+  listing('p6', 'product', 'LED headlight bulbs H11', { sku: 'LED-H11', priceCents: 5900, stock: 0, sales30d: 4, status: 'hidden', imageUrl: media('box-bulbs') }),
+  listing('p7', 'product', 'Winter emergency kit', { sku: 'KIT-W1', priceCents: 7900, stock: 6, sales30d: 0, vetting: 'pending', status: 'hidden', submittedAt: new Date(Date.now() - 40 * 60000).toISOString(), imageUrl: media('box-kit') }),
+  listing('b9', 'product', 'Brake job bundle', { sku: 'BUN-BR', priceCents: 8900, stock: 2, sales30d: 3, bundle: true }),
+];
+const SERVICES_SOLD = [
+  listing('s1', 'service', 'Brake pads and rotors', { meta: '90 min · at your place', priceCents: 18900, sales30d: 14, imageUrl: media('tool-brakes') }),
+  listing('s2', 'service', 'Brake inspection', { meta: '45 min · at your place', priceCents: 8900, sales30d: 21, imageUrl: media('tool-inspect') }),
+  listing('s3', 'service', 'Oil change, synthetic', { meta: '45 min · at your place', priceCents: 8900, sales30d: 26, imageUrl: media('tool-oil') }),
+  listing('s4', 'service', 'Winter tire swap', { meta: '60 min · at your place', priceCents: 9900, sales30d: 17, imageUrl: media('tool-tires') }),
+  listing('s5', 'service', 'Pre-purchase inspection', { meta: '90 min · at the seller’s', priceCents: 16000, sales30d: 6, imageUrl: media('tool-prepurchase') }),
+  listing('s6', 'service', 'Alternator replacement', { meta: 'Quoted after diagnosis', pricingMode: 'quote', sales30d: 3, vetting: 'draft', status: 'hidden' }),
+];
+
+/** The wiper blades in the editor: a filled-in draft with three photos. */
+function productDetail() {
+  const b = rec('GET /api/v1/merchants/:id/listings/:id');
+  const img = (id, seed) => ({ id, url: media(seed), width: 1200, height: 1200, onWhite: true });
+  return { ...b, title: 'Wiper blades, 22 in. pair', brand: 'Bosch', mpn: 'ICON-22A', sku: 'WB-22', description: 'Beam blades that stay flexible to −40 °C. Fits most sedans and small SUVs; hook adapter included.',
+    bullets: ['Winter-rated rubber', 'Fits 9×3 and 9×4 hooks', 'Sold as a pair'], images: [img('m1', 'tool-wiper'), img('m2', 'tool-wiper-pack'), img('m3', 'tool-wiper-fit')],
+    completeness: { percent: 83, done: 5, total: 6, missing: [] } };
+}
+
 /** An application at the business step (a valid ULID: the wizard drops an `m` that is not one) and one in review (the gate). */
 const ONB = '01J9ZD3V00000000000000NB01', GATE = '01J9ZD3V00000000000000GATE';
 const chk = (id, key, checkType, action, status, registry = null) => ({ id, key, checkType, action, registry, status, reference: null, document: null, expiresOn: null, updatedAt: '2026-10-17T16:00:00Z' });
@@ -157,6 +276,22 @@ export const SHOTS = {
     } } : undefined),
   ],
   studio: [
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/jobs`) ? { body: { items: weekJobs(p) } } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/calendar-cells`) ? { body: weekCells(p) } : undefined),
+    (m, p) => { const id = new RegExp(`^/api/v1/merchants/${PROVIDER_ID}/jobs/([^/?]+)$`).exec(p)?.[1]; const d = m === 'GET' && id ? jobDetail(id) : undefined; return d ? { body: d } : undefined; },
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/availability/hours`) ? { body: availabilityHours() } : undefined),
+    (m, p) => (m === 'POST' && p.split('?')[0] === `/api/v1/merchants/${PROVIDER_ID}/availability/preview` ? { body: previewSlots() } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/availability/services`) ? { body: { items: [{ id: 's1', name: 'Brake inspection', durationMin: 45 }, { id: 's2', name: 'Brake pads and rotors', durationMin: 90 }, { id: 's3', name: 'Oil change', durationMin: 45 }] } } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${SELLER_ID}/listings/p1`) ? { body: productDetail() } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${SELLER_ID}/listings/p1/french`) ? { body: { rule: 'warn', title: 'Balais d’essuie-glace, 22 po, paire', description: null, missing: true } } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${SELLER_ID}/listings/imports`) ? { body: { items: [
+      { id: 'b3', fileName: 'winter-stock-oct.xlsx', template: 'auto_parts', rowCount: 64, createCount: 12, updateCount: 52, errorCount: 0, errors: [], status: 'imported', createdAt: '2026-10-16T15:00:00Z', importedAt: '2026-10-16T15:02:00Z' },
+      { id: 'b2', fileName: 'price-update.csv', template: 'auto_parts', rowCount: 118, createCount: 0, updateCount: 118, errorCount: 0, errors: [], status: 'imported', createdAt: '2026-10-02T15:00:00Z', importedAt: '2026-10-02T15:01:00Z' },
+      { id: 'b1', fileName: 'wipers-sept.xlsx', template: 'auto_parts', rowCount: 256, createCount: 212, updateCount: 38, errorCount: 1, errors: [], status: 'imported', createdAt: '2026-09-29T15:00:00Z', importedAt: '2026-09-29T15:04:00Z' },
+    ] } } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${SELLER_ID}/listings`) ? { body: { items: PRODUCTS_SOLD } } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/listings`) ? { body: { items: SERVICES_SOLD } } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/quote-requests`) ? { body: quoteRequests() } : undefined),
     (m, p) => { const id = /^\/api\/v1\/merchants\/([^/]+)\/onboarding$/.exec(p)?.[1]; return m === 'GET' && APPLICATIONS[id] ? { body: APPLICATIONS[id] } : undefined; },
     (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/dashboard$/.test(p) ? { body: p.includes('PWP1') ? SELLER_DASHBOARD : DASHBOARD } : undefined),
     // the live stream (EventSource) has nothing to say in a screenshot

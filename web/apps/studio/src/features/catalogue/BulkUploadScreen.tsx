@@ -69,9 +69,9 @@ export function BulkUploadScreen({ returned, onReturnSeen }: { returned?: Commer
     <>
       <span className="nl-kicker">{t('bulkKicker', { section: t(`kicker_${portal}`) })}</span>
       <h1 className="nl-page-title" style={{ marginBottom: 8 }}>{t('bulkTitle')}</h1>
-      <p className="nl-lede" style={{ margin: '0 0 24px' }}>{t('bulkLede')}</p>
-      <div className="nl-cat-editor">
-        <div className="nl-cat-main">
+      <p className="nl-lede nl-bulk-lede">{t('bulkLede')}</p>
+      <div className="nl-bulk">
+        <section className="bo-card nl-bulk-steps" aria-label={t('bulkTitle')}>
           <Field label={t('step1')}>
             <div className="nl-cat-row">
               <Select style={{ maxWidth: 300 }} value={template} options={templates.map(v => ({ value: v, label: t(`tpl_${v}`) }))} onChange={e => setTemplate(e.target.value as ImportTemplate)} />
@@ -88,13 +88,14 @@ export function BulkUploadScreen({ returned, onReturnSeen }: { returned?: Commer
             {!can.create && <span className="nl-hint">{t('viewOnly', { role: shellT(`role_${role}` as Parameters<typeof shellT>[0]) })}</span>}
             {problem && <div role="alert" className="nl-error">{problem}</div>}
           </div>
-          <CommerceIntegrations canManage={can.manage} canSync={can.update} returned={returned} onReturnSeen={onReturnSeen} />
-        </div>
-        <div>
+        </section>
+        <div className="bo-card nl-bulk-connect"><CommerceIntegrations canManage={can.manage} canSync={can.update} returned={returned} onReturnSeen={onReturnSeen} /></div>
+      </div>
+      <div className="nl-bulk-results">
           {done && <div style={{ marginBottom: 16 }}><Alert tone="info" role="status">{t('imported', { created: done.createCount, updated: done.updateCount })}</Alert></div>}
           {batch ? (
-            <section aria-label={t('validation', { file: batch.fileName })}>
-              <h3 className="nl-cat-h3">{t('validation', { file: batch.fileName })}</h3>
+            <section className="bo-card" aria-label={t('validation', { file: batch.fileName })}>
+              <h2 className="bo-card-title">{t('validation', { file: batch.fileName })}</h2>
               <div className="nl-cat-stats">
                 <div className="nl-cat-stat" data-tone="ok"><div className="nl-cat-stat-n">{batch.createCount}</div>{t('validCreate')}</div>
                 <div className="nl-cat-stat"><div className="nl-cat-stat-n">{batch.updateCount}</div>{t('updates')}</div>
@@ -114,14 +115,13 @@ export function BulkUploadScreen({ returned, onReturnSeen }: { returned?: Commer
               </div>
             </section>
           ) : (
-            <section aria-label={t('recentUploads')}>
-              <h3 className="nl-cat-h3">{t('recentUploads')}</h3>
+            <section className="bo-card" aria-label={t('recentUploads')}>
+              <h2 className="bo-card-title">{t('recentUploads')}</h2>
               <DataTable<HistoryRow> entity={t('entityImport')} plural={t('pluralImport')} columns={historyColumns} rows={historyRows} rowTones={r => ({ result: r.tone })}
                 can={{ create: false, update: false, delete: false, export: true }}
                 loading={history.isPending} error={history.isError ? t('importsError') : null} onRetry={() => void history.refetch()} emptyText={t('noUploads')} />
             </section>
           )}
-        </div>
       </div>
     </>
   );

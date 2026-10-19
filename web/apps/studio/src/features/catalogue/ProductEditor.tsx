@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, X } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, ImageSquare, X } from '@phosphor-icons/react';
 import { Alert, Button, Checkbox, Chip, Field, FormGrid, OptionCard, Select, TextArea, TextInput, useFormatters, useLocale } from '@northline/ui';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { tierTag } from '../shell/StudioLayout';
@@ -195,7 +195,7 @@ export function ProductEditor({ detail, portal, typePicker, type = 'product' }: 
             </FormGrid>
             {isBundle && form.bundle.length > 0 && <BundlePrice separateCents={bundle.separateCents} priceCents={parseMoney(form.price)} />}
             <Field label={t('skuLabel')} hint={t('skuHint')} error={err('sku')}><TextInput value={form.sku} maxLength={60} onChange={e => update({ sku: e.target.value })} onBlur={() => touch('sku')} style={{ maxWidth: 240 }} /></Field>
-            <div className="field"><span className="nl-label">{t('tax')}</span><div style={{ fontSize: 14 }}>{t('taxAuto')} <strong>GST 5%</strong> · {t('taxBody')}</div></div>
+            <div className="field"><span className="nl-label">{t('tax')}</span><div style={{ fontSize: 14 }}>{t('taxAuto')} <strong>{t('taxKind')}</strong> · {t('taxBody')}</div></div>
             <div className="nl-field" role="group" aria-labelledby="ful-label">
               <span className="nl-label" id="ful-label">{t('fulfilment')}</span>
               <div className="nl-cat-options">
@@ -391,7 +391,7 @@ function ImagesTab({ form, update, link, error }: { form: ProductForm; update: U
           <li key={`${tile.own ? 'o' : 's'}-${tile.media.id}`} className="nl-cat-image" draggable={tile.own}
             onDragStart={() => tile.own && setDrag(tile.index)} onDragOver={(e: DragEvent) => { if (tile.own) e.preventDefault(); }}
             onDrop={() => { if (tile.own && drag !== null) move(drag, tile.index); setDrag(null); }}>
-            <CatalogueThumb media={tile.media} label={t('imageAlt', { n: pos + 1 })} />
+            <CatalogueThumb media={tile.media} size={140} label={t('imageAlt', { n: pos + 1 })} />
             {pos === 0 && <span className="tag tag-accent nl-cat-main-tag">{t('main')}</span>}
             {tile.own && <div className="nl-cat-image-tools">
               <button type="button" aria-label={t('moveLeft', { n: pos + 1 })} disabled={tile.index === 0} onClick={() => move(tile.index, tile.index - 1)}><ArrowLeft size={14} /></button>
@@ -401,9 +401,13 @@ function ImagesTab({ form, update, link, error }: { form: ProductForm; update: U
           </li>
         ))}
         {form.images.length < limit && (
-          <li>
-            <button type="button" className="nl-cat-add-image" onClick={() => input.current?.click()} disabled={upload.isPending}>
-              {upload.isPending ? t('uploading') : <>{t('addImage')}<br />{t('addImageHint')}</>}
+          <li className={tiles.length ? undefined : 'nl-cat-image-first'}>
+            {/* a drop zone too: photos dragged from the desktop land here */}
+            <button type="button" className="nl-cat-add-image" data-empty={!tiles.length || undefined} onClick={() => input.current?.click()} disabled={upload.isPending}
+              onDragOver={(e: DragEvent) => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }}
+              onDrop={(e: DragEvent) => { if (!e.dataTransfer.files.length) return; e.preventDefault(); void onFiles(e.dataTransfer.files); }}>
+              <ImageSquare size={tiles.length ? 24 : 32} aria-hidden />
+              {upload.isPending ? <span>{t('uploading')}</span> : <><span className="nl-cat-add-image-label">{tiles.length ? t('addImage') : t('addFirstImage')}</span><span className="nl-cat-add-image-hint">{t('addImageHint')}</span></>}
             </button>
             <input ref={input} type="file" accept="image/jpeg,image/png" multiple hidden aria-label={t('addImage')} data-testid="image-input" onChange={e => void onFiles(e.target.files)} />
           </li>

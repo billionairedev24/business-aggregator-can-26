@@ -325,12 +325,13 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
     if (c.type === 'tag' && !isBlank(v)) return <span className={clsx('tag', toneOf(c, r), where === 'field' && 'nl-dt-tag-wrap')}>{cellText(c, r, locale)}</span>;
     const sub = subText(c, r);
     if (where === 'field') return <div className="nl-dt-field-value">{sub ? `${cellText(c, r, locale)} · ${sub}` : cellText(c, r, locale)}</div>;
-    return (
+    const body = (
       <>
         <span className={clsx(c.primary && 'nl-dt-strong')}>{cellText(c, r, locale)}</span>
         {sub && <span className="nl-dt-sub">{sub}</span>}
       </>
     );
+    return c.thumb ? <span className="nl-dt-media"><Thumb src={valueOf(r, c.thumb)} name={cellText(c, r, locale)} /><span className="nl-dt-media-text">{body}</span></span> : body;
   };
 
   const range = filtered.length
@@ -675,6 +676,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
                   >
                     <div className="nl-dt-card-head">
                       <DataTableCheckbox className="nl-dt-card-check" checked={on} onChange={(v) => setSel([id], v)} label={t('selectRow', { name })} />
+                      {primary?.thumb ? <Thumb src={valueOf(r, primary.thumb)} name={name} card /> : null}
                       <div className="nl-dt-card-title">
                         <div className="nl-dt-card-name">{name}</div>
                         {pSub && <div className="nl-dt-sub">{pSub}</div>}
@@ -1098,4 +1100,11 @@ function ReportDialog<T>({
       </div>
     </DataTableDialog>
   );
+}
+
+/** A row's picture (the `thumb` column option): the photo, or its initial on linen when there is none. Decorative. */
+function Thumb({ src, name, card }: { src: unknown; name: string; card?: boolean }) {
+  return typeof src === 'string' && src
+    ? <img className={clsx('nl-dt-thumb', card && 'nl-dt-thumb-lg')} src={src} alt="" loading="lazy" />
+    : <span className={clsx('nl-dt-thumb nl-dt-thumb-empty', card && 'nl-dt-thumb-lg')} aria-hidden="true">{name.trim().charAt(0).toUpperCase()}</span>;
 }

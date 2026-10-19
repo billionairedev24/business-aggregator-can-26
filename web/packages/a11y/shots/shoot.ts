@@ -35,6 +35,11 @@ async function shoot(page: Page, app: App, r: ShotRoute) {
     const url = app === 'consumer' ? `${r.path}${r.path.includes('?') ? '&' : '?'}lang=en` : r.path;
     await page.goto(url, { waitUntil: 'networkidle' }).catch(() => undefined);
     await page.locator(r.ready ?? 'h1').first().waitFor({ state: 'visible', timeout: 8_000 }).catch(() => undefined);
+    if (r.click) {
+      await page.locator(r.click).first().click({ timeout: 8_000 }).catch(() => undefined);
+      await page.waitForLoadState('networkidle').catch(() => undefined);
+      await page.waitForTimeout(500);
+    }
     // fonts and lazy images: scroll through once so loading="lazy" pictures are in the shot
     await page.evaluate(async () => {
       await document.fonts?.ready;
@@ -42,7 +47,7 @@ async function shoot(page: Page, app: App, r: ShotRoute) {
       window.scrollTo(0, 0);
     });
     await page.waitForTimeout(400);
-    await page.screenshot({ path: `${OUT}${app}/${r.name}-${s.suffix}.png`, fullPage: true, animations: 'disabled' });
+    await page.screenshot({ path: `${OUT}${app}/${r.name}-${s.suffix}.png`, fullPage: !r.click, animations: 'disabled' });
   }
   // what the mock api had no answer for (the browser's requests): a page that looks empty usually needs one of these
   if (missing.length) appendFileSync(`${OUT}${app}/_missing-api.txt`, `${r.name}: ${[...new Set(missing)].join(', ')}\n`);
