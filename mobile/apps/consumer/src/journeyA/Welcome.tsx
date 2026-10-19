@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { space } from '@northline/mobile-kit';
+import { Art, Logo, radius, space } from '@northline/mobile-kit';
 
 import { geoApi } from '../api/geo';
 import { useAuth } from '../auth/AuthProvider';
@@ -13,7 +13,7 @@ import { Body, Button, Title } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 
 /**
- * A1 Welcome: the value proposition in one breath; Create account, Sign in, or Browse first (browsing needs no account,
+ * A1 Welcome (light & photo-first): the brand, an illustrated collage, then the value proposition in one breath; Create account, Sign in, or Browse first (browsing needs no account,
  * paying does). The kicker names the province from the region model — the person's, else the platform's default —
  * never a fixed one.
  */
@@ -46,10 +46,16 @@ export function Welcome() {
       }
     >
       <View style={styles.top}>
-        <Body tone="kicker">{province ? t('welcome.kicker', { province }) : t('app.name')}</Body>
-        <View style={styles.hero}>
-          <Title hero>{t('welcome.hero')}</Title>
+        <Logo size={30} />
+        <View style={styles.collage}>
+          <Art subject="mobile-mechanic" style={styles.main} />
+          <View style={styles.side}>
+            <Art subject="bakery" style={styles.small} />
+            <Art subject="cocktail-bar" style={styles.small} />
+          </View>
         </View>
+        <Body tone="kicker">{province ? t('welcome.kicker', { province }) : t('app.name')}</Body>
+        <Title hero>{t('welcome.hero')}</Title>
         <Body tone="lead">{t('welcome.lede')}</Body>
       </View>
     </Screen>
@@ -57,6 +63,9 @@ export function Welcome() {
 }
 
 const styles = StyleSheet.create({
-  top: { paddingTop: space[6], gap: space[4] },
-  hero: { paddingTop: space[2] },
+  top: { paddingTop: space[2], gap: space[3] },
+  collage: { flexDirection: 'row', gap: space[2], height: 220, marginVertical: space[2] },
+  main: { flex: 1.3, borderRadius: radius.lg },
+  side: { flex: 1, gap: space[2] },
+  small: { flex: 1, borderRadius: radius.lg },
 });

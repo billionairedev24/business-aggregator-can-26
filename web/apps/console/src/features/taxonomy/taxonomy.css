@@ -1,18 +1,11 @@
-/* Catalogue taxonomy (S-94, design 03 lines 376–381). Token values only. */
-.nl-tx-kicker { display: block; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700); margin-bottom: 10px; }
-.nl-tx-title { font-size: clamp(30px, 3.5vw, 44px); margin: 0 0 20px; letter-spacing: -0.02em; }
-.nl-tx-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
-.nl-tx-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 36px clamp(28px, 4vw, 64px); margin-top: 36px; }
-.nl-tx-h2 { font-size: 22px; margin: 0 0 6px; }
-.nl-tx-gap { margin-top: 28px; }
-.nl-tx-sub { font-size: 13px; color: var(--color-neutral-700); margin: 0 0 12px; }
-.nl-tx-error { color: var(--color-accent-2-700); font-size: 13px; }
-.nl-tx-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.nl-tx-item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding: 12px 0; border-bottom: 1px solid var(--color-neutral-200); }
-.nl-tx-item .nl-tx-sub { margin: 2px 0 0; }
-.nl-tx-item .nl-tx-actions { margin-top: 0; }
-.nl-tx-limit { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; margin-bottom: 10px; }
-.nl-tx-limit .input { width: 96px; min-height: 40px; }
+/* Catalogue taxonomy (S-94; light direction: head, the categories table, suggestions | limits, regulators). Semantic tokens only. */
+.nl-tx-error { color: var(--color-danger); font-size: var(--text-sm); }
+.nl-tx-limits { display: flex; flex-direction: column; }
+.nl-tx-limit { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: flex-end; margin: 0; padding: var(--space-3) 0; border-top: 1px solid var(--color-border); }
+.nl-tx-limit:first-child { border-top: 0; padding-top: 0; }
+.nl-tx-limit > .nl-field { flex: 0 1 260px; margin: 0; }
+.nl-tx-limit .input { min-height: var(--size-touch); }
+.nl-tx-sub { font-size: var(--text-xs); color: var(--color-text-muted); margin: 0; }
 .nl-tx-wide { flex-basis: 100%; }
-.nl-tx-rules { border: 0; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 0 16px; }
-.nl-tx-rules legend { font-weight: 600; margin-bottom: 8px; padding: 0; }
+.nl-tx-rules { border: 0; margin: var(--space-4) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 0 var(--space-4); }
+.nl-tx-rules legend { font-weight: var(--weight-semibold); margin-bottom: var(--space-2); padding: 0; }

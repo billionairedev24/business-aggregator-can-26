@@ -27,7 +27,7 @@ describe('reports & analytics (S-95, design 03)', () => {
   it('shows weekly active customers, the funnel, cohorts, top categories and waitlist demand', async () => {
     staffApi(['analyst'], c => (c.url.includes('/api/v1/console/reports') ? { body: REPORT } : undefined));
     renderConsole('/reports');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Marketplace health · 90 days' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Reports & analytics' })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByRole('img', { name: 'Weekly active customers' })).toBeTruthy();
     expect(screen.getByText('Solid: this period · dotted: previous')).toBeTruthy();
@@ -62,7 +62,7 @@ describe('reports & analytics (S-95, design 03)', () => {
     first.unmount();
     staffApi(['analyst'], c => (c.url.includes('/api/v1/console/reports') ? { body: REPORT } : undefined));
     renderConsole('/reports', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Santé du marché · 90 jours' })).toBeTruthy();
-    expect(screen.getByText('Épicerie')).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Rapports et analytique' })).toBeTruthy();
+    expect(await screen.findByText('Épicerie')).toBeTruthy();
   });
 });

@@ -67,7 +67,9 @@ function Entry({ entry: e }: { entry: AuditRow }) {
   return (
     <li className="nl-tm-entry">
       <time dateTime={e.at}>{fmt.date(e.at, 'dateTime')}</time>
-      <span><strong>{who}</strong>{role ? ` (${role})` : ''} · <code>{e.action}</code>{target ? <span className="nl-tm-sub"> · {target}</span> : null}</span>
+      <span className="nl-tm-who"><strong>{who}</strong>{role ? <span className="nl-tm-sub">{role}</span> : null}</span>
+      <code className="nl-tm-action">{e.action}</code>
+      <span className="nl-tm-target">{target || '—'}</span>
     </li>
   );
 }

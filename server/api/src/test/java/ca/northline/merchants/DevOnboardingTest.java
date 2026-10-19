@@ -77,7 +77,7 @@ class DevOnboardingTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("active"))
                 .andExpect(jsonPath("$.step").value("done"))
-                .andExpect(jsonPath("$.business.structure").value("corp_ab"))
+                .andExpect(jsonPath("$.business.structure").value("corp_prov"))
                 .andExpect(jsonPath("$.business.principals", hasSize(2)))
                 .andExpect(jsonPath(
                         "$.checklist[*].key",

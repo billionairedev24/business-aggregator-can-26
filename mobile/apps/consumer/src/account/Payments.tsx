@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { space } from '@northline/mobile-kit';
+import { colors, radius, semantic, space } from '@northline/mobile-kit';
 
 import type { Card } from '../api/account';
 import { useAuth } from '../auth/AuthProvider';
@@ -82,7 +82,7 @@ export function Payments() {
         query={cards}
         skeleton={<LoadingList rows={2} height={56} />}
         isEmpty={(c) => c.items.length === 0}
-        empty={<EmptyState message={t('account.payments.empty')} />}
+        empty={<EmptyState draw={{ main: 'Receipt', side: 'ShieldCheck' }} message={t('account.payments.empty')} />}
       >
         {(c) => (
           <View accessibilityRole="list">
@@ -118,7 +118,7 @@ function CardRow({ card, busy, onDefault, onRemove }: { card: Card; busy: boolea
 
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
-  card: { paddingVertical: space[2], gap: 4 },
+  card: { padding: space[4], gap: 4, borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'], backgroundColor: colors.surface },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
 });

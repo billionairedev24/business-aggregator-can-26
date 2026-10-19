@@ -6,6 +6,7 @@ import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 import { setPushRegistrar } from '@northline/mobile-kit';
 
 import { FIXTURE_CODE, FIXTURE_TOTP } from '../src/fixtures/auth';
+import { defaultAddress } from '../src/location/DeliveryLocation';
 import { setServices } from '../src/services';
 import { start } from './support';
 
@@ -209,20 +210,21 @@ describe('signing in to an existing account', () => {
   });
 });
 
-describe('A5 Province & address', () => {
-  it('lists the provinces with their stage, picks an address and saves it with its market, zone and note', async () => {
+describe('A5 the location sheet (the web\'s location dialog)', () => {
+  it('says what is shown, lists the live markets, picks an address and saves it with its market, zone and note', async () => {
     const { view, store } = await start({ welcomed: true, url: '/location?next=/cart' });
-    expect(await screen.findByText('Live · Sampleville, Exampleton')).toBeTruthy();
-    expect(screen.getByText('Pilot · invite only')).toBeTruthy();
-    expect(screen.getByTestId('province-XC').props.accessibilityState).toMatchObject({ disabled: true });
-    expect(screen.getByTestId('province-XD').props.accessibilityState).toMatchObject({ disabled: true });
+    expect(await screen.findByRole('header', { name: 'Choose your location' })).toBeTruthy();
+    expect(await screen.findByText('Showing Sampleville until you choose your location.')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Sampleville, Sample Province' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Exampleton, Sample Province' })).toBeTruthy();
+    expect(screen.queryByText(/Waitlist Province/)).toBeNull(); // only live markets are offered
     fireEvent.changeText(screen.getByTestId('field-street'), '1204 Exa');
     fireEvent.press(await screen.findByRole('button', { name: '1204 Example Ave, Sampleville, XA' }));
     expect(await screen.findByText('Zone · Old Town')).toBeTruthy();
     expect(screen.getByText('3 pooled runs / day')).toBeTruthy();
     expect(screen.getByText('Sales tax 5%')).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('field-unit'), 'Apt 804 · buzz 0804');
-    fireEvent.press(screen.getByRole('button', { name: 'Save and continue' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Deliver here' }));
     await waitFor(() => expect(view.getPathname()).toBe('/cart'));
     expect(JSON.parse(store.data.get('nl.location')!)).toMatchObject({
       label: '1204 Example Ave, Sampleville',
@@ -237,14 +239,26 @@ describe('A5 Province & address', () => {
     });
   });
 
-  it('asks to choose from the list, and offers the waitlist outside a live market', async () => {
+  it('as the sign-up’s address step (A5): asks design 01’s question and goes on to Home once a place is chosen', async () => {
+    const { view } = await start({ signedIn: true, url: '/location?step=address' });
+    expect(await screen.findByRole('header', { name: 'Where should we bring things?' })).toBeTruthy();
+    fireEvent.press(await screen.findByRole('button', { name: 'Sampleville, Sample Province' }));
+    await waitFor(() => expect(view.getPathname()).toBe('/home'));
+  });
+
+  it('chooses a live market in one tap', async () => {
+    const { store } = await start({ welcomed: true, url: '/location' });
+    fireEvent.press(await screen.findByRole('button', { name: 'Exampleton, Sample Province' }));
+    await waitFor(() => expect(store.data.get('nl.location')).toBeTruthy());
+    expect(JSON.parse(store.data.get('nl.location')!)).toMatchObject({ label: 'Exampleton', city: 'Exampleton' });
+  });
+
+  it('offers the waitlist outside a live market', async () => {
     const { server } = await start({ welcomed: true, url: '/location' });
-    fireEvent.changeText(await screen.findByTestId('field-street'), 'somewhere');
-    fireEvent.press(screen.getByRole('button', { name: 'Save and continue' }));
-    expect(await screen.findByText('Choose your address from the list.')).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId('field-street'), '77 Harb');
+    fireEvent.changeText(await screen.findByTestId('field-street'), '77 Harb');
     fireEvent.press(await screen.findByRole('button', { name: '77 Harbour Road, Faraway, XC' }));
     expect(await screen.findByText('Northline isn’t in Waitlist Province yet.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Deliver here' })).toBeNull();
     fireEvent.press(screen.getByRole('button', { name: 'Join the waitlist' }));
     expect(await screen.findByText('Email is required.')).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('field-waitlist-email'), 'grace@example.com');
@@ -253,32 +267,56 @@ describe('A5 Province & address', () => {
     expect(server.geo.waitlist).toEqual([{ regionId: 'XC', email: 'grace@example.com' }]);
   });
 
-  it('“Use my location”: asks for the permission, names the place through the api, and saves it', async () => {
+  it('“Use my current location”: asks for the permission on the press, names the place through the api, and saves it', async () => {
     const { store, view } = await start({ welcomed: true, url: '/location' });
-    fireEvent.press(await screen.findByRole('button', { name: 'Use my location' }));
-    await waitFor(() => expect(screen.getByTestId('field-street').props.value).toBe('1204 Example Ave, Sampleville'));
+    expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+    fireEvent.press(await screen.findByRole('button', { name: 'Use my current location' }));
+    expect(await screen.findByText('1204 Example Ave, Sampleville')).toBeTruthy();
     expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Zone · Old Town')).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'Save and continue' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Deliver here' }));
     await waitFor(() => expect(view.getPathname()).toBe('/home'));
     expect(JSON.parse(store.data.get('nl.location')!)).toMatchObject({ label: '1204 Example Ave, Sampleville', city: 'Sampleville', marketId: 'mkt-sampleville', zone: 'Old Town' });
   });
 
-  it('falls back to the api’s market when location is refused, and points to Settings when it can’t ask again', async () => {
+  it('keeps the fallback market when location is refused, and points to Settings when it can’t ask again', async () => {
     (Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValueOnce({ status: 'denied', granted: false, canAskAgain: false });
     await start({ welcomed: true, url: '/location' });
-    expect(await screen.findByText('Showing Sampleville for now. Set your address to see what delivers to you.')).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'Use my location' }));
-    expect(await screen.findByText('Location is off for Northline. Type your address, or allow location in Settings.')).toBeTruthy();
+    expect(await screen.findByText('Showing Sampleville until you choose your location.')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Use my current location' }));
+    expect(await screen.findByText('Location is off for Northline. Search for your address or postal code instead, or allow location in Settings.')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Open Settings' }));
     expect(Linking.openSettings).toHaveBeenCalled();
   });
 
-  it('never asks for location outside this screen (an undecided permission stays undecided)', async () => {
+  it('signed in: lists the account’s addresses and chooses one', async () => {
+    const { server, services, store } = await start({ signedIn: true, url: '/location' });
+    server.shop.addresses.push({ id: 'ad-1', street: '12 Sample Street', city: 'Sampleville', province: 'XA', postal: 'A1A 1A1', isDefault: true });
+    await act(async () => {
+      await services.queryClient.invalidateQueries();
+    });
+    fireEvent.press(await screen.findByRole('button', { name: '12 Sample Street, Sampleville, default' }));
+    await waitFor(() => expect(store.data.get('nl.location')).toBeTruthy());
+    expect(JSON.parse(store.data.get('nl.location')!)).toMatchObject({ label: '12 Sample Street, Sampleville', street: '12 Sample Street', postalCode: 'A1A 1A1' });
+  });
+
+  it('the sources, in order: a saved place, else the account’s default address, else the fallback market', async () => {
+    const { server } = await start({ signedIn: true, url: '/home' });
+    await screen.findByTestId('home');
+    expect(await defaultAddress()).toBeNull(); // no address on the account yet → the fallback market stands
+    expect(screen.getByRole('button', { name: 'Delivery address: Sampleville' })).toBeTruthy();
+    expect(screen.getByText('Near')).toBeTruthy();
+    server.shop.addresses.push({ id: 'ad-2', street: '9 Other Way', city: 'Sampleville', province: 'XA', postal: 'A1A 1A1', isDefault: false });
+    server.shop.addresses.push({ id: 'ad-1', street: '12 Sample Street', city: 'Sampleville', province: 'XA', postal: 'A1A 1A1', isDefault: true });
+    expect(await defaultAddress()).toMatchObject({ status: 'address', label: '12 Sample Street, Sampleville', street: '12 Sample Street' });
+  });
+
+  it('never asks for location outside the sheet (an undecided permission stays undecided)', async () => {
     await start({ welcomed: true });
     await screen.findByTestId('home');
     expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
     expect(Location.getCurrentPositionAsync).not.toHaveBeenCalled();
+    expect(Location.getForegroundPermissionsAsync).not.toHaveBeenCalled();
   });
 });
 

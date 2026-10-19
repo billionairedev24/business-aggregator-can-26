@@ -34,7 +34,7 @@ describe('privacy requests (S-105)', () => {
   it('lists open requests with their law and deadline, overdue marked', async () => {
     api(['privacy']);
     renderConsole('/privacy');
-    expect(await screen.findByRole('heading', { level: 1, name: '2 open requests · 1 overdue' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Privacy requests' })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getAllByText('Dana Kowalski').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Erased account').length).toBeGreaterThan(0);
@@ -83,8 +83,8 @@ describe('privacy requests (S-105)', () => {
   it('speaks French', async () => {
     api(['privacy']);
     renderConsole('/privacy', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: '2 demandes ouvertes · 1 en retard' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Consigner une demande' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Demandes sur les renseignements personnels' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Consigner une demande' })).toBeTruthy();
   });
 
   it('S-108: finds the proof of consent by contact and withdraws for the person', async () => {

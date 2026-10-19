@@ -12,23 +12,27 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { MIN_TARGET, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
+import { MIN_TARGET, colors, fonts, radius, semantic, shadow, space } from '@northline/mobile-kit';
 
 /**
- * The consumer app's building blocks on the redesign's mobile language (docs/design/redesign-spec.md § 1.3 Mobile,
- * AfroTransact's customer app with our brand): pill buttons (44 / 48 / 52 pt), one sans family with 700/800 headings,
- * 48 pt inputs, pill tags, 2 px selectable cards. Colours, radii, spacing and fonts come from @northline/mobile-kit
- * (brand.json's palette), never literals; every control is ≥ 44 pt (MIN_TARGET). Text sizes scale with the person's
- * Dynamic Type / font size setting (React Native's default), capped where a layout would break.
+ * The consumer app's building blocks on the light, photo-first direction (owner 2026-10-19, palette Evergreen; the
+ * consumer web's look): white surfaces, the palette's display face (Fraunces) for titles and sections at 600 and its
+ * sans (DM Sans) for everything else, pill buttons (44 / 52 pt) in the brand colour, 48 pt inputs, soft cards with a
+ * visible edge (`border-card`, 3:1) and a small shadow, linen (`surface-sunken`) for sunken panels. Colours, radii,
+ * spacing and fonts come from @northline/mobile-kit (brand.json's palette), never literals; every control is ≥ 44 pt
+ * (MIN_TARGET). Text sizes scale with the person's Dynamic Type / font size setting (React Native's default), capped
+ * only where a one-line label would break its bar.
  */
 
 export const type = StyleSheet.create({
-  /** Welcome's hero. */
-  hero: { fontFamily: fonts.black, fontSize: 38, lineHeight: 40, letterSpacing: -0.6, color: colors.text },
-  /** A screen's title (MA: "Cart", 28 / 800). */
-  title: { fontFamily: fonts.black, fontSize: 28, lineHeight: 32, letterSpacing: -0.4, color: colors.text },
-  /** A section (MA: 18 / 700). */
-  section: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 23, color: colors.text },
+  /** Welcome's and Home's hero (the display face). */
+  hero: { fontFamily: fonts.display, fontSize: 36, lineHeight: 41, letterSpacing: -0.5, color: colors.text },
+  /** A screen's title (the display face, 28). */
+  title: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34, letterSpacing: -0.3, color: colors.text },
+  /** A section (the display face, 20). */
+  section: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26, color: colors.text },
+  /** A card's or row's title (the sans, 16 / 600). */
+  item: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 21, color: colors.text },
   body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.text },
   lead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, color: colors.textMuted },
   muted: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.textMuted },
@@ -56,8 +60,58 @@ export function Section({ children }: { children: ReactNode }) {
   );
 }
 
-export function Body({ children, tone = 'body', style }: { children: ReactNode; tone?: 'body' | 'lead' | 'muted' | 'small' | 'kicker'; style?: StyleProp<TextStyle> }) {
-  return <Text style={[type[tone], style]}>{children}</Text>;
+export function Body({ children, tone = 'body', style, lines }: { children: ReactNode; tone?: 'body' | 'lead' | 'muted' | 'small' | 'kicker' | 'item'; style?: StyleProp<TextStyle>; lines?: number }) {
+  return (
+    <Text style={[type[tone], style]} numberOfLines={lines}>
+      {children}
+    </Text>
+  );
+}
+
+/**
+ * A soft card (light direction): white, radius 12, the 3:1 edge and a small shadow; `sunken` = a linen panel without
+ * the edge (info boxes, the parts of a page that recede). With `onPress` it is one button named by `label`.
+ */
+export function Card({
+  children,
+  onPress,
+  label,
+  hint,
+  sunken,
+  flush,
+  style,
+  testID,
+}: {
+  children: ReactNode;
+  onPress?: () => void;
+  label?: string;
+  hint?: string;
+  sunken?: boolean;
+  /** No inner padding (a card that opens on a picture). */
+  flush?: boolean;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}) {
+  const look = [styles.card, sunken && styles.cardSunken, flush && styles.cardFlush, style];
+  if (!onPress) {
+    return (
+      <View style={look} testID={testID}>
+        {children}
+      </View>
+    );
+  }
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={hint}
+      onPress={onPress}
+      testID={testID}
+      style={({ pressed }) => [...look, pressed && styles.cardPressed]}
+    >
+      {children}
+    </Pressable>
+  );
 }
 
 /** A text link standing on its own ("Edit", "Call me instead"): a 48 dp target around the words. */
@@ -70,8 +124,9 @@ export function Link({ label, onPress, hint, testID }: { label: string; onPress:
 }
 
 /**
- * primary = the brand's primary (Place order, Continue); accent = AT's gold role (Add to cart); secondary = white with
- * a hairline; dark = the header colour; ghost = text only; danger = red text on white (Sign out).
+ * primary = the brand colour (Place order, Continue, Add to cart — the one main action of a screen); accent = the
+ * palette's accent, for a rare highlight; secondary = white with an edge; dark = the brand-dark panel colour; ghost =
+ * text only; danger = red text on white (Sign out).
  */
 export type ButtonTone = 'primary' | 'accent' | 'secondary' | 'dark' | 'ghost' | 'danger';
 
@@ -304,7 +359,7 @@ const styles = StyleSheet.create({
   buttonTextLarge: { fontSize: 16 },
   disabled: { opacity: 0.45 },
   field: { gap: 6 },
-  label: { fontFamily: fonts.semibold, fontSize: 13, color: colors.text },
+  label: { fontFamily: fonts.semibold, fontSize: 14, color: colors.text },
   input: {
     minHeight: 48,
     paddingHorizontal: 14,
@@ -315,7 +370,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.borderControl,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
   },
   inputError: { borderColor: semantic['danger-border'] },
   checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, minHeight: MIN_TARGET, paddingVertical: space[2] },
@@ -334,23 +389,27 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: 14,
     paddingVertical: space[3],
-    borderRadius: radius.md,
-    borderWidth: 2,
-    borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: semantic['border-card'],
     backgroundColor: colors.surface,
   },
-  optionOn: { borderColor: colors.actionPrimary, backgroundColor: semantic['surface-brand'] },
+  optionOn: { borderWidth: 2, paddingHorizontal: 13, borderColor: colors.actionPrimary, backgroundColor: semantic['surface-brand'] },
   optionPressed: { backgroundColor: semantic['surface-hover'] },
   optionOff: { opacity: 0.45 },
   optionText: { flex: 1, gap: 2 },
   optionTitle: { fontSize: 15 },
   optionDesc: { color: colors.textMuted },
-  notice: { borderRadius: radius.md, padding: space[3] },
+  notice: { borderRadius: radius.lg, padding: space[3] },
   noticeError: { backgroundColor: semantic['danger-bg'] },
   noticeErrorText: { color: semantic.danger },
   noticeInfo: { backgroundColor: semantic['info-bg'] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   wrap: { flexWrap: 'wrap' },
+  card: { gap: space[2], padding: space[4], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'], backgroundColor: colors.surface, ...shadow.sm },
+  cardSunken: { borderWidth: 0, backgroundColor: semantic['surface-sunken'], shadowOpacity: 0, elevation: 0 },
+  cardFlush: { padding: 0, overflow: 'hidden' },
+  cardPressed: { backgroundColor: semantic['surface-hover'] },
   spacer: { flex: 1, minHeight: space[6] },
   link: { minHeight: MIN_TARGET, justifyContent: 'center' },
 });

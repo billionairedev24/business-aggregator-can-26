@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { defineMessages } from './i18n';
 
 const useT = defineMessages({ en: { skip: 'Skip to content' }, fr: { skip: 'Passer au contenu' } });
@@ -18,27 +18,69 @@ const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayout
  * Publishes the height of a sticky header as `--nl-sticky-top` on <html>, which `scroll-padding-top` reads, so the
  * browser scrolls a focused control clear of the header instead of under it (WCAG 2.4.11 focus not obscured).
  * `onHeight` also receives it (the Studio shell positions its sidebar under the top bar); without it nothing re-renders.
+ *
+ * `tuckTo` (the consumer header, after AfroTransact's): a selector inside the header. On short screens — the header
+ * taller than 16% of the window and that element at least a row below the header's top — scrolling down tucks
+ * everything above it away past the top edge (the header's `top` goes to `-var(--nl-header-tuck)`) and scrolling up,
+ * or focusing into the header, brings it back. The returned flag is true while tucked; the published heights are then
+ * what is still on screen. Without `tuckTo` it is always false.
  */
-export function useStickyOffset<E extends HTMLElement>(ref: RefObject<E | null>, onHeight?: (height: number) => void): void {
+export function useStickyOffset<E extends HTMLElement>(ref: RefObject<E | null>, onHeight?: (height: number) => void, tuckTo?: string): boolean {
   const listener = useRef(onHeight);
   listener.current = onHeight;
+  const [tucked, setTucked] = useState(false);
   useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
+    const root = document.documentElement;
+    let tuck = 0;
+    let isTucked = false;
     const publish = () => {
-      const h = Math.round(el.getBoundingClientRect().height);
+      const box = el.getBoundingClientRect();
+      const full = Math.round(box.height);
+      const below = tuckTo ? el.querySelector<HTMLElement>(tuckTo) : null;
+      const offset = below ? Math.round(below.getBoundingClientRect().top - box.top) - 4 : 0;
+      tuck = offset > 24 && full > window.innerHeight * 0.16 ? offset : 0;
+      if (tuckTo) el.style.setProperty('--nl-header-tuck', `${tuck}px`);
+      const h = full - (isTucked ? tuck : 0);
       listener.current?.(h);
-      document.documentElement.style.setProperty('--nl-sticky-top', `${h + 8}px`);
+      root.style.setProperty('--nl-sticky-top', `${h + 8}px`);
       // what sticky columns sit under (the checkout summary, the PDP buy box…): the header as drawn, which wraps to
       // more rows on narrow screens; `--size-header` (scale.json) until it is measured
-      document.documentElement.style.setProperty('--nl-header-h', `${h}px`);
+      root.style.setProperty('--nl-header-h', `${h}px`);
+    };
+    const set = (next: boolean) => {
+      if (next === isTucked) return;
+      isTucked = next;
+      setTucked(next);
+      publish();
     };
     publish();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(publish);
-    ro.observe(el);
-    return () => { ro.disconnect(); document.documentElement.style.removeProperty('--nl-sticky-top'); document.documentElement.style.removeProperty('--nl-header-h'); };
-  }, [ref]);
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(publish);
+    ro?.observe(el);
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      // down by more than a nudge past the header tucks, up by more than a nudge shows; near the top always shown
+      set(tuck > 0 && y > el.offsetHeight ? (y > lastY + 4 ? true : y < lastY - 4 ? false : isTucked) : false);
+      lastY = y;
+    };
+    const onFocus = () => set(false); // focus never lands in the tucked-away row (WCAG 2.4.11)
+    if (tuckTo) {
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', publish);
+      el.addEventListener('focusin', onFocus);
+    }
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', publish);
+      el.removeEventListener('focusin', onFocus);
+      root.style.removeProperty('--nl-sticky-top');
+      root.style.removeProperty('--nl-header-h');
+    };
+  }, [ref, tuckTo]);
+  return tucked;
 }
 
 /** Moves focus into `ref` when `active` turns on and back to what had it when it turns off; Tab stays inside. */

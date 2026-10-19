@@ -99,6 +99,6 @@ const styles = StyleSheet.create({
   value: { maxWidth: '45%' },
   danger: { color: colors.danger },
   group: { gap: 6 },
-  box: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, overflow: 'hidden' },
-  heading: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 22, color: colors.text, marginTop: space[4] },
+  box: { borderWidth: 1, borderColor: semantic['border-card'], borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface },
+  heading: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26, color: colors.text, marginTop: space[4] },
 });

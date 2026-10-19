@@ -3,8 +3,8 @@ import { defineMessages } from '@northline/ui';
 /** Catalogue taxonomy (S-94, design 03 lines 376–381). en = the design's copy where it has one; fr-CA after design/i18n-fr.js. */
 export const useTaxonomyT = defineMessages({
   en: {
-    kicker: 'Catalogue taxonomy',
-    title: '{services} service categories · {departments} shop departments · per-province rules',
+    heading: 'Catalogue taxonomy',
+    summary: '{services} service categories · {departments} shop departments · per-province rules',
     entity: 'category', plural: 'categories',
     c_name: 'Category', c_root: 'Root', c_reg: 'Regulated · registry', c_live: 'Live in', c_sellers: 'Sellers', c_price: 'Median price',
     root_service: 'Services', root_shop: 'Shop', root_food: 'Food',
@@ -38,8 +38,8 @@ export const useTaxonomyT = defineMessages({
     cannot: 'Your role can’t change the taxonomy.',
   },
   fr: {
-    kicker: 'Taxonomie du catalogue',
-    title: '{services} catégories de services · {departments} rayons de boutique · règles par province',
+    heading: 'Taxonomie du catalogue',
+    summary: '{services} catégories de services · {departments} rayons de boutique · règles par province',
     entity: 'catégorie', plural: 'catégories',
     c_name: 'Catégorie', c_root: 'Racine', c_reg: 'Réglementé · registre', c_live: 'Offert en', c_sellers: 'Vendeurs', c_price: 'Prix médian',
     root_service: 'Services', root_shop: 'Boutique', root_food: 'Restauration',

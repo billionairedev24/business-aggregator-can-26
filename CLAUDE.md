@@ -48,3 +48,6 @@ Mandatory — see `docs/ARCHITECTURE.md` § Code standards: proper encapsulation
 - IDs ULID text. Money `*_cents bigint` CAD. Time `timestamptz`, displayed in the merchant's or market's time zone from the region model (S-134, docs/runbooks/regions.md) — never a province, city or zone in code (lint).
 - REST + OpenAPI 3.1 under `/api/v1`. Idempotency-Key header on money-moving POSTs (stored in Redis 24 h).
 - Tests: `ModularityTests` must pass; every trigger has a failing-case test; every validation rule has a message test; Testcontainers for Postgres/Kafka/ES; Storybook interaction tests for every component state.
+
+## Branches
+`develop` is the integration branch: branch from it and open every pull request against it. `main` is releases only (a `develop` → `main` pull request). Never push to either directly.

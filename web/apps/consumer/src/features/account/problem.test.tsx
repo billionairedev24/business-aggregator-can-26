@@ -80,7 +80,7 @@ describe('Something’s wrong (consumer app refund)', () => {
     expect(await screen.findByText('Case RF-2201 · in review')).toBeInTheDocument();
     expect(screen.getByText('Request received · $4.46')).toBeInTheDocument();
     expect(screen.getByText('The seller’s payout for these items is paused while we look.')).toBeInTheDocument();
-    const steps = within(screen.getByRole('list')).getAllByRole('listitem').map(li => li.textContent);
+    const steps = within(within(screen.getByRole('main')).getByRole('list')).getAllByRole('listitem').map(li => li.textContent);
     expect(steps[0]).toMatch(/^Submitted · .* · photo \+ reason attached$/);
     expect(steps[1]).toMatch(/^Seller reviews · Sunnyside Greens has until .* to accept or respond$/);
     expect(steps[2]).toBe('Northline decides · if the seller disputes, an agent rules within 2 business days');

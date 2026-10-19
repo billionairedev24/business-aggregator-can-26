@@ -39,7 +39,7 @@ export function Favourites() {
         query={list}
         skeleton={<LoadingList rows={3} height={56} />}
         isEmpty={(items) => items.length === 0}
-        empty={<EmptyState message={t('account.fav.empty')} action={t('account.fav.find')} onAction={() => router.navigate('/services')} />}
+        empty={<EmptyState draw={{ main: 'Heart', side: 'Handshake' }} message={t('account.fav.empty')} action={t('account.fav.find')} onAction={() => router.navigate('/services')} />}
       >
         {(items) => (
           <View accessibilityRole="list">

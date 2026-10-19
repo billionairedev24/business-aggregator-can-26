@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { Icon, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
+import { Art, Icon, colors, fonts, radius, semantic, shadow, space } from '@northline/mobile-kit';
 
 import { CourierTip } from '../aftercare/CourierTip';
 import { ReviewPanel } from '../aftercare/Review';
@@ -115,6 +115,7 @@ export function Confirmed() {
     >
       {(o) => (
         <View style={styles.gap}>
+          <Art subject="courier" draw={{ main: 'ShoppingBag', side: 'Truck' }} fit="contain" style={styles.confirmArt} />
           <View style={styles.placed} accessibilityRole="alert">
             <Icon name="check-circle" filled size={22} color={semantic.success} />
             <Text style={[styles.body, styles.strong, styles.flex]}>{t('rd.order.placed')}</Text>
@@ -167,10 +168,13 @@ export function Track() {
             </View>
             <View accessible accessibilityRole="image" accessibilityLabel={t('shop.track.map', { where })} style={styles.map}>
               <Svg width="100%" height="100%" viewBox="0 0 402 200" preserveAspectRatio="xMidYMid slice">
+                {/* a quiet street grid under the run (no map SDK: a schematic) */}
+                <Path d="M0 60 H402 M0 140 H402 M70 0 V200 M180 0 V200 M300 0 V200" stroke={colors.surface} strokeWidth={10} />
+                <Path d="M0 100 H402 M240 0 V200" stroke={colors.surface} strokeWidth={6} />
                 <Path d="M30 170 L110 170 L110 110 L240 110 L240 50 L340 50" fill="none" stroke={colors.actionPrimary} strokeWidth={4} strokeDasharray="8 6" />
                 <Circle cx={30} cy={170} r={8} fill={colors.textMuted} />
                 <Circle cx={110} cy={110} r={8} fill={colors.textMuted} />
-                <Circle cx={240} cy={c && c.stopsBefore === 0 ? 70 : 110} r={11} fill={semantic['action-accent']} stroke={colors.headerBg} strokeWidth={3} />
+                <Circle cx={240} cy={c && c.stopsBefore === 0 ? 70 : 110} r={11} fill={semantic['action-accent']} stroke={colors.surface} strokeWidth={3} />
                 <Circle cx={340} cy={50} r={9} fill={colors.surface} stroke={colors.text} strokeWidth={3} />
               </Svg>
               <View style={styles.etaPill}>
@@ -189,6 +193,7 @@ export function Track() {
             </View>
             <Ladder steps={steps(o)} />
             <View style={styles.courier} testID="track-courier">
+              <View style={styles.courierRow}>
               <View style={styles.courierAvatar}>
                 {c?.courierName ? <Text style={styles.courierInitials}>{initialsOf(c.courierName)}</Text> : <Icon name="truck" size={22} color={semantic['action-accent-text']} />}
               </View>
@@ -196,10 +201,13 @@ export function Track() {
                 <Text style={styles.courierName}>{c?.courierName ? t('shop.track.courier', { name: c.courierName }) : t('shop.track.noCourier')}</Text>
                 {c?.pin ? <Text style={styles.courierSub}>{t('rd.order.pinNote')}</Text> : null}
               </View>
+              </View>
               {c?.pin ? (
-                <Text style={styles.pin} accessibilityLabel={t('shop.track.pin', { pin: c.pin })}>
-                  {c.pin}
-                </Text>
+                <View style={styles.pinBox}>
+                  <Text style={styles.pin} accessibilityLabel={t('shop.track.pin', { pin: c.pin })}>
+                    {c.pin}
+                  </Text>
+                </View>
               ) : null}
             </View>
             <Body tone="small">{t('shop.track.live', { time: f.time(new Date(updatedAt).toISOString()) })}</Body>
@@ -304,6 +312,7 @@ function Proof({ orderId, kind, caption }: { orderId: string; kind: string | nul
   }
   return (
     <View style={styles.proof} testID="proof-placeholder">
+      <Art subject="courier" draw={{ main: 'Package', side: kind === 'pin' ? 'Key' : 'ShieldCheck' }} fit="contain" style={styles.proofArt} />
       <Text style={styles.proofText}>{caption}</Text>
     </View>
   );
@@ -321,25 +330,29 @@ const initialsOf = (name: string) =>
 const styles = StyleSheet.create({
   gap: { gap: space[4] },
   head: { gap: 2 },
-  headline: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 23, color: colors.text },
-  placed: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: 14, paddingVertical: space[3], borderRadius: radius.md, backgroundColor: semantic['success-bg'] },
+  headline: { fontFamily: fonts.display, fontSize: 26, lineHeight: 32, color: colors.text },
+  placed: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: 14, paddingVertical: space[3], borderRadius: radius.lg, backgroundColor: semantic['success-bg'] },
   strong: { fontFamily: fonts.bold },
   stateRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  etaPill: { position: 'absolute', left: 12, bottom: 12, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.headerBg },
-  etaText: { fontFamily: fonts.bold, fontSize: 12, color: semantic['header-indicator'] },
-  courier: { flexDirection: 'row', alignItems: 'center', gap: space[3], padding: 14, borderRadius: radius.md, backgroundColor: colors.headerBg },
-  courierAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: semantic['action-accent'], alignItems: 'center', justifyContent: 'center' },
-  courierInitials: { fontFamily: fonts.bold, fontSize: 15, color: semantic['action-accent-text'] },
-  courierName: { fontFamily: fonts.bold, fontSize: 14, color: colors.headerText },
-  courierSub: { fontFamily: fonts.regular, fontSize: 12, color: semantic['header-muted'] },
-  pin: { fontFamily: fonts.black, fontSize: 24, letterSpacing: 3, color: semantic['header-indicator'] },
+  etaPill: { position: 'absolute', right: 12, bottom: 12, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.surface, ...shadow.md },
+  etaText: { fontFamily: fonts.bold, fontSize: 13, color: semantic['action-primary'] },
+  courier: { gap: space[3], padding: space[4], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'], backgroundColor: colors.surface, ...shadow.sm },
+  courierRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  courierAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: semantic['action-primary'], alignItems: 'center', justifyContent: 'center' },
+  courierInitials: { fontFamily: fonts.bold, fontSize: 16, color: semantic['action-primary-text'] },
+  courierName: { fontFamily: fonts.semibold, fontSize: 16, color: colors.text },
+  courierSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
+  pinBox: { alignItems: 'center', paddingVertical: space[3], borderRadius: radius.lg, backgroundColor: semantic['surface-brand'] },
+  pin: { fontFamily: fonts.display, fontSize: 34, letterSpacing: 8, color: semantic['badge-brand-text'] },
   gapSmall: { gap: space[1] },
+  confirmArt: { height: 150, borderRadius: radius.lg },
   photo: { height: 240, borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
   flex: { flex: 1 },
   actions: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   map: { height: 200, borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], overflow: 'hidden' },
-  proof: { height: 200, borderRadius: radius.lg, backgroundColor: colors.headerBg, alignItems: 'center', justifyContent: 'center', padding: space[3] },
-  proofText: { fontFamily: fonts.medium, fontSize: 13, color: colors.headerText, textAlign: 'center' },
-  body: { fontFamily: fonts.body, fontSize: 15, color: colors.text },
-  small: { fontFamily: fonts.body, fontSize: 13, color: colors.text },
+  proof: { borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], overflow: 'hidden', paddingBottom: space[3], gap: space[2] },
+  proofArt: { height: 160 },
+  proofText: { fontFamily: fonts.medium, fontSize: 14, color: colors.text, textAlign: 'center', paddingHorizontal: space[3] },
+  body: { fontFamily: fonts.regular, fontSize: 15, color: colors.text },
+  small: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
 });

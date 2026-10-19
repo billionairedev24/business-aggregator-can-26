@@ -38,6 +38,13 @@ design/                       HTML design references (open in a browser) + desig
 
 Design files load `theme/northline.css` and `support.js`; keep the folder structure intact to open them.
 
+## Branches
+Two long-lived branches, nothing else:
+- **`develop`** — integration. Every change is a short-lived branch from `develop` and a pull request into it.
+- **`main`** — releases. It only moves by a pull request from `develop` into `main`.
+
+Merged branches are deleted automatically (GitHub "Automatically delete head branches"). CI stays manual-only.
+
 ## Getting started
 **Step-by-step guide: [`docs/runbooks/local.md`](docs/runbooks/local.md)** — prerequisites, using your own Postgres +
 PostGIS and Valkey or Docker stand-ins, dev auth and real sign-in, troubleshooting. Cloud environments:

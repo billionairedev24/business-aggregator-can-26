@@ -9325,3 +9325,236 @@ and after. Studio and console are untouched (another stream); `@northline/ui` ch
 Not done / open: real photography (category, department and cover photos) — the scenes are the stand-in; the
 French copy of the new strings is ours (in the translator-review queue like the rest); the Studio and console pages
 (another stream). Schema additions: none. Config additions: none. No new environment variables.
+
+## 2026-10-19 — Province legal details (fix/province-legal-details)
+
+Owner: "fix the Alberta legal fields". The Business step's legal details were Alberta-only (`corp_ab`,
+`alberta_corporate_access_number`, `alberta_extra_provincial_registration`, attorney `alberta_address`, "Alberta
+Partnership Act", "From Alberta Registries", 10-digit access numbers for everyone), against "Region-neutral by design".
+
+- **Region data, not code.** `region.legal_forms` (V372, additive; the region-table pattern of `region.age_rules` and
+  `region.privacy_laws`): one row per province/territory and structure (13 × 7) with the registry (en/fr + URL), the
+  governing act (en/fr), `trade_name_registration` (required | optional) and `fields` — overlays on the schema's keys
+  (label, help, example, pattern + pattern_message en/fr, required or `required_when {field, in | not_in}`), plus
+  `source`, `verified` and `unverified` (registry · law · identifier · format · attorney). Chosen over a JSON resource
+  because every other province fact lives in `region.*` rows the console will edit. `region.api.LegalForms` reads them.
+- **One definition for the Studio and the server.** docs/spec/legal-details.schema.json keeps each structure's shape
+  with generic keys; `LegalDetailsSchema` merges it with the business's province's row into a `LegalForm`, serves it
+  (`GET /api/v1/merchants/{id}/onboarding/legal-forms`, every structure of the province, `@RequiresMerchant(VIEW)` +
+  MFA like `GET …/onboarding`; no BFF change — the studio-bff relays `/api/**`) and validates `PUT …/onboarding/business`
+  against it. No province → the schema's generic form. A province with no row for a structure → the generic form too.
+- **Generic keys and a generic code.** `corp_ab` → `corp_prov`; `alberta_corporate_access_number` →
+  `provincial_registry_number`; `alberta_extra_provincial_registration` → `extra_provincial_registration_number`;
+  `attorney_for_service.alberta_address` → `address_in_province`. The province is the business's
+  (`merchants.merchants.province`). Old rows: **both** an additive data migration and a map on read. V373 widens the
+  structure CHECK and the V031 role trigger to accept `corp_prov` (and still `corp_ab`), then rewrites the rows' code
+  and keys; `LegacyLegalDetails` / `BusinessStructure.of` map the old code and keys whenever a row is read and before
+  a save, so an api of the previous release writing during the deploy, or an old client, keeps working. Nothing
+  writes the old forms any more.
+- **Home jurisdiction** offers every province and territory except the business's own, plus US / Other (it offered
+  five provinces). `OTHER_CA` is accepted from older rows, not offered.
+- **Formats only where verified.** A pattern is set only where the format was confirmed on an official page:
+  AB corporate access number `^\d{9,10}$` (it was `^\d{10}$`; Alberta's TRA guide says "nine- or ten-digit"),
+  BC incorporation number `BC` + 7 digits and firm registration `FM` + 7 digits, QC NEQ 10 digits. Everything else
+  takes any text (an agent checks it). The message "Corporate access number is 10 digits." became "… is 9 or 10
+  digits."; the province messages are in validation-messages.fr-CA.tsv too (the server translates 422s from that
+  file; a test keeps the TSV and the rows in step).
+- **Required-ness per province** (examples): ON asks for an agent for service only when the corporation is from
+  outside Canada (`required_when home_jurisdiction in [US, OTHER]`); NS does not register New Brunswick corporations
+  (`not_in [NB]`); YT does not register federal corporations (optional); NL has no business-name registry (trade-name
+  registration optional, the partnership number optional); QC/NT/NU attorney optional (unverified).
+- **Registry checks:** `RegistryPlan`/`BusinessDetails` read the generic keys; the adapter is still the one the
+  province names in `region.regions.registries` (only AB has one: `alberta_corporate_registry`, OpenCorporates or
+  manual); every other province goes to an agent (`manual`). `ManualRegistry`'s "registry-agent search" hint now comes
+  from the Alberta bean in `RegistriesConfig` instead of a check on the Alberta source. `RegistrySource` constants stay
+  (they are the adapters' stored codes, `merchants.registry_checks.source`).
+- **Studio** renders fields from the served form (labels/help/example/format of the province, generic copy for the
+  rest; en + fr-CA), the act and a link to the registry in the block head, the trade-name sentence only where the
+  province registers trade names. Removed messages: `bs_*_law`, `lf_alberta_*`, `lv_can`, `lf_*_ph` that said
+  "{province} Registries", `lf_attorney_ph`. Added: `legalRegistry`, `legalRegistryNone`, `legalFormsError`,
+  `legalFormsLoading`, `req_conditional`, `bs_sole_trade`, `lv_format`, the generic `lf_provincial_registry_number` /
+  `lf_extra_provincial_registration_number`. "Continue" waits for the province's form. The console's queue label key
+  is `st_corp_prov` and the queue maps a legacy `corp_ab`.
+- **Lint:** `regionLiterals.test.ts` also fails on a province in an identifier or demonym (`alberta_…`, `corp_ab`,
+  "albertain"); the legal.ts allowance for province codes is gone. The French "Registre des sociétés albertain" in the
+  registry check's description is now `{provinceOf}`.
+- **Sources** (2026-10-19): the government hosts don't resolve from the build machine, so facts were checked against
+  official pages' text as web search returned it (each row's `source`); rows say what is unverified. Every
+  co-operative and non-profit row's act and identifier name is unverified; so are SK/MB/NB/NS/PE/NL/YT/NT/NU identifier
+  names and formats, the QC/NT/NU attorney rules and most French names of English-only registries (our descriptive
+  translations). Counsel/ops should confirm before a province opens.
+- **Fixtures:** web/apps/studio/src/test/legal-forms.json (AB, BC, ON, QC) is what the api serves — written and checked
+  by `LegalFormsApiTest` (`LEGAL_FORMS_FIXTURES_WRITE=1`); the Studio tests and `make ui-shots` use it (four new
+  Business-step shots).
+- **Not done:** the kitchen profile's food-permit field is still keyed `ahsPermitNumber` (labelled generically) — a
+  separate rename; the registry check's description strings (`ckd_registry*`) still say "corporate registry"
+  generically rather than the province's registry name; no adapter beyond Alberta's.
+
+Schema additions: `region.legal_forms` (V372); `merchants.merchants` structure CHECK `chk_merchants_structure`
+(replaces V004's) and `merchants.principal_role_check()` accepting `corp_prov` (V373). Config additions: none.
+
+## 2026-10-19 — Console pages on the light direction (feat/ui-console-pages)
+
+Phase B for the staff console: every console route redesigned on the light & photo-first foundation (palette
+Evergreen) with the Studio's page grammar (#189), looked at with `make ui-shots UI_SHOTS_APPS=console` before and after,
+desktop (1440) and phone (390). 23 routes before, 35 now. The shell's top bar is untouched (the compact-header branch
+rebuilds it); all the work is below the shell.
+
+- **One page grammar.** A screen is its head (`BoHeader`: an optional kicker, the screen's name as the h1 in the display
+  face, a muted sub line, the place filters or the main action on the right), then white cards (`ChartCard` / `bo-card`)
+  16–20px apart. The design's sentence headlines ("Rules that keep sellers honest…", "23 open · 3 urgent · median first
+  reply 38 min", "Turning on a province is a record, not a release.") became the sub line or a card's lede; the h1 is
+  now the screen's name on every screen (it was a 44px sentence on nine of them, and the kicker sat above it). Message
+  keys renamed where the meaning changed (`kicker`/`title` → `heading`/`summary`).
+- **Tables that need width run full width**; side-by-side cards only where both are short (console.css `.nl-cols`,
+  container queries, splits `wide` 3:2, `narrow` 2:3, `aside` 1:2). At 1440 the tier rules, reconciliation, take rate by
+  tier, runs, couriers, roles, people and regulators were turning into phone cards inside half columns; they are tables
+  now. On phones every table is the DataTable's cards (nothing scrolls the page sideways; `_overflow.txt` is empty at
+  390 and 1440); the few hand-written tables (cohorts, age checks) scroll inside their card.
+- **Screens:** overview — one board (12-week chart beside To do, Live now beside System health; no card alone beside an
+  empty column). Applications — tabs no longer break words on phones (they scroll inside the tab bar); Listings,
+  Licences and Age checks have a title row, cards and the KPI strip (Age checks used class names that had no styles).
+  Trust & safety — open flags beside the floor and the consequences, tier rules full width, keyword lists side by side.
+  Catalogue — head with Add category, suggestions beside limits (one row per type), regulators in a card. Delivery —
+  runs full width, the map beside the couriers; the map's legend markers were stretched over the map by a selector that
+  caught every svg inside it. Finance — the KPI strip (the old `KpiRow` had no labels-first order), mix beside tax,
+  reconciliation, refund requests, tiers, promo codes as cards. Provinces — the province list beside the chosen
+  province's cards (facts, markets, zones, rollout); market stage pills are 44px. Team — roles, people and the audit log
+  as full-width cards; the log is a four-column list (time · who/role · action code · target). Support — the queue's KPI
+  strip, the queue beside a sticky ticket panel. Reports — four cards; a withheld week breaks the line instead of
+  dropping it to zero (`LineChart` takes `null`). Privacy — the head comes before the Requests/Retention tabs; CASL
+  consent is a card. Sellers / seller — the place filters sit in one row (they stacked when the orders screen's CSS had
+  not loaded); the seller page puts signals, checks and timeline beside a sticky Oversight card. Profile — a person card,
+  tabs, the panel in a card. On-call and API keys (testing tools) got the same head and cards. Sign-in — the Studio's
+  frame (one card on linen, the dark pitch panel, form first on phones). Page not found and the root error — a
+  standalone page (logo + card on linen) with a way back; it was a bare empty state top-left.
+- **Copy:** region-neutral — the check label "WCB" (one province's board) is "Workers’ comp" / "Indemnisation des
+  travailleurs". The top bar's "Ops · Alberta + BC pilot" already comes from the region model (`regionLine`); no
+  province, city or zone is in console code or messages. KPI labels start with a capital letter (sellers, support,
+  finance). New strings (en + fr-CA): shell `notFoundTitle`/`notFoundBody`; finance `kpis`, `k_varianceOk`,
+  `k_varianceOff`; support `kpis`; delivery `mapCard`; regions `provincesTitle`. The trust consequences lost their
+  leading "· ".
+- **`@northline/ui`:** `BoHeader` takes an optional `kicker`; `LineChart` accepts `null` values (gaps).
+- **Tokens:** the last legacy aliases left the console (go-live, UAT, and every rewritten screen CSS); `lint:tokens` now
+  covers all of `apps/console/src/features`.
+- **`make ui-shots` (console):** the recorded answers (the tests' "now", 2026-09-08 18:00 UTC) are moved to the day the
+  shots run for the screens recorded around that day (waiting times read "3 h", not "41 d"); fuller demo rows
+  (applications in both stages, trust flags, sellers, support tickets, team, audit log, promo codes, licences, age
+  checks, runs); new routes: the Review and Decide sheets, Licences, Age checks, the sellers sheet, the order sheet, the
+  dispute sheet, an empty place, a screen whose data failed, privacy retention, my audit trail, page not found. A route
+  can be `sheet: true` (photographs the window, like `click`).
+
+Not done / open: pilot, UAT and go-live (testing tools, hidden unless `VITE_NL_TESTING_TOOLS=1`) only got the shared
+scale (their `nl-q-*` titles are the back office's size now), not a card rebuild; the global search in the top bar is
+still a placeholder (no api); "Okta/Google SSO" on the sign-in pitch describes staff SSO that isn't built (copy kept).
+
+Schema additions: none. Config additions: none. No new environment variables.
+
+## 2026-10-19 — Consumer header: compact, one search, no overscroll (fix/consumer-header-compact)
+
+Owner feedback on the redesigned consumer site at ~2000 px: "the navbar is still very bad and there is overscrolling,
+and why 2 search bars? too big navbar and badly arranged nav items. Look at our AfroTransact navbar." The header now
+follows AfroTransact's structure and behaviour (`storefront/src/components/shell/Header.tsx`), not its look.
+
+- **One compact top bar + one slim nav row** (`SiteHeader`, `site.css`): 8 px above and below 44 px controls (the
+  search field 46 px) → a 62 px bar; the nav row is the 44 px targets themselves (the project's 44 px rule, S-143,
+  rather than AfroTransact's 36 px on fine pointers) → about 107 px in all on a desktop, down from about 117 px with a
+  near-empty second row. No drop shadow, the hairline only. Both rows stay on the 1500 px page grid, so the logo and
+  the cart line up with the page's content at 1920 and 2560 px. The search grows to fill the middle (no 720 px cap).
+- **The nav row:** "All" (a sheet from the left with every service category, every department and — with
+  `VITE_NL_FULL_NAV` — every cuisine, each group headed by its section with "See all"; then Help, Sell, the language),
+  Services · Shop (· Food), a divider, five service categories and six departments from the catalogue's tiles
+  (`features/home/catalog.ts`, the seeded taxonomy — region-neutral), Help pushed to the far end. One current item: a
+  category's shortcut when the page is under it, else its section. The row scrolls sideways by itself
+  (`overscroll-behavior-x: contain`, no scrollbar drawn), never the page.
+- **Phones:** logo · place (ellipsed) · account · cart; the search on its own full-width row; the nav row scrolling.
+  The hamburger and its menu sheet went: "All" is the same sheet at every width. When the header is taller than 16%
+  of the window (phones), scrolling down tucks the first row away above the search, scrolling up or focusing into the
+  header brings it back (`useStickyOffset(ref, onHeight, tuckTo)`; the published `--nl-header-h` / `--nl-sticky-top`
+  are what is still on screen, so sticky columns and `scroll-padding-top` follow).
+- **One search per page: the header's.** The home hero's own search field went (the hero keeps the headline, two
+  calls to action — "Find a pro" → Services, "Shop local stores" → Shop — "Near {place} · Change", popular entries).
+  The header's field is on every page at every width, so the hero copy was the duplicate. `SearchBar variant="hero"`
+  stays in `@northline/ui` (unused by the consumer site now).
+- **Overscroll:** `make ui-shots` found no element and no document wider than the window on home, search, services,
+  shop, product, cart and checkout at 2560, 1920, 1440, 390 and 360 px (the page check now lifts the html/body clip
+  while measuring; before, `overflow-x: clip` hid a wide document from `scrollWidth`). What the owner saw is the page's
+  rubber-band bounce dragging the sticky header and the footer past the window: `html { overscroll-behavior-y: none }`
+  for fine pointers (touch keeps pull-to-refresh), and every sideways row, sheet, dialog, menu and suggestion list
+  contains its own overscroll so reaching its end never moves the page.
+- **Studio and console top bars:** 60 px minimum (was 64), the hairline instead of the shadow — the same height as the
+  consumer's first row.
+- `make ui-shots UI_SHOTS_WIDTHS=2560,1920,1440,390,360` photographs any widths (`<route>-<width>.png`).
+- Not done: `CLAUDE.md`'s header line still says "a menu sheet on phones" (left to the lead: agents don't edit it).
+  Schema additions: none. Config additions: none (the `UI_SHOTS_WIDTHS` make/test variable only).
+
+## 2026-10-19 — Light & photo-first on the native apps (feat/ui-mobile-light)
+
+The consumer and courier apps (mobile/apps/consumer, mobile/apps/courier, mobile/packages/mobile-kit) moved from phase
+4's AfroTransact layouts with dark chrome (#183) to the owner's **light & photo-first** direction with palette
+**Evergreen**, mirroring the consumer web's phase B (#190). Every screen was looked at on 390×844 before and after.
+
+- **Look at it: `make mobile-shots`.** No macOS or Android SDK here, so the apps are photographed through their web
+  build (react-native-web, `expo export --platform web`, the in-app fixture backend `EXPO_PUBLIC_FIXTURES=1`) with
+  headless Chromium (`mobile/scripts/shots.mjs`): 54 consumer and 16 courier pictures (plus `-full` scroll pictures and
+  a French pass) into `mobile/shots-out/<app>/` (git-ignored), `_overflow.txt` for sideways scroll. Screens open in
+  place through `__nlGo(href)` and orders are seeded through `__nlSeedOrder(...)`, two globals the root layouts define
+  **only** when `config.fixtures && Platform.OS === 'web'` (never in a phone build). Documented in
+  docs/LOCAL_DEVELOPMENT.md. Chosen over Jest snapshots rendered to images: the web build runs the real fonts, SVG and
+  layout engine, and the apps already had the fixture web build for their smoke tests.
+- **Drawn pictures instead of grey boxes** (`mobile-kit` `Art`, react-native-svg): the web's `features/art` ported —
+  the same ~120 subject rules (`artSubjects.ts`; one addition: "sourdough" draws bread), the same six tones from the
+  palette's ramps, cover and contain fits. The pictograms are Phosphor *fill* path data generated into
+  `art.generated.ts` by `gen-brand.mjs` (checked by the kit's test like the icons). Using the ramps is limited to `Art`
+  (the theme now exports `ramp` for it); screens use the semantic roles. `Thumb` draws the scene of the product's or
+  shop's name when the api has no photo; tiles, empty states, covers and the courier's pickup do too. Decorative:
+  hidden from VoiceOver/TalkBack.
+- **The look.** Titles and sections in the display face (Fraunces 600, a new `fonts.display` role from
+  `gen-brand.mjs`), DM Sans for the rest; white surfaces, soft cards with the 3:1 `border-card` edge and a small
+  shadow, linen (`surface-sunken`) for panels and empty states, pill buttons in the brand colour (Add to cart is
+  primary now; the accent stays for rare highlights), radius 12 for cards and inputs. No dark panels are left: the
+  order-under-way banner, the courier card on tracking, the courier's top bar and the provider cover were dark;
+  `Panel tone="dark"` now renders the brand tint. The theme has no dark-mode tokens, so both apps stay
+  `userInterfaceStyle: 'light'`.
+- **Tab bar** (both apps): the current tab in the brand colour, filled icon, a short bar above it; 11 pt labels.
+- **Compact top bar** (Home, Browse): the brand's mark, "Deliver to" / "Near" over the place's name on one line with an
+  ellipsis (opens the location sheet), the inbox and account; one search pill with the round brand-coloured button.
+  Sub-screens: a one-line header in the display face with the round Back button.
+- **Screens.** Home: what's under way as a light card, the web's hero ("Everything local, from people you can trust")
+  with an illustrated collage and the verified badge, "Book a service" and "Shop local" rails of illustrated tiles,
+  tonight's run, photo-first product cards, the sellers' line. Browse: departments in two columns, the services band
+  ("N categories live", region-neutral — the province left the line as on the web), popular categories, a rail per
+  group with "N pros" / "Coming soon". Category: a cover, filter chips in a sideways row, provider cards (mark, seal,
+  rating, from-price, next opening). Provider: cover first with Back over it, the mark over its edge, stat cards,
+  service cards, review cards with stars. Product: picture first edge to edge with Back and Share over it, the name in
+  the display face, facts on linen. Cart: a card per shop, sums on linen. Search: pictures on every row. Tracking: a
+  light schematic map with a street grid, the courier card with the PIN on the brand tint. Booking, booked,
+  confirmation, delivered: pictures on top. Welcome: the logo and a collage. Sign-in/up: the social buttons stack when
+  they don't fit.
+- **Location, the web's model** (DECISIONS "Light foundation"). `DeliveryLocationProvider`: saved → the account's
+  default address (`GET /me/addresses`, `isDefault` else the first; new status `address`) → the fallback market; it
+  re-resolves on sign-in/out. The phone's position is **no longer read on launch** (phase 4 read it when the permission
+  was already granted); only the sheet's "Use my current location" asks, on the press. `/location` is now a bottom
+  sheet (`presentation: 'transparentModal'`) over the screen it was opened from, with the web dialog's sections and
+  words: what is shown now, use my current location, address or postal code (the same `/geo/autocomplete` +
+  `/geo/places`; zone, runs and tax tags, the unit note, "Deliver here"), the account's addresses, the live markets
+  (one tap), the waitlist outside a live market. The province grid of design 01's A5 is gone (the web dropped it too).
+  After sign-up/sign-in without an address, the sheet opens as A5 (`?step=address`, titled "Where should we bring
+  things?"); with a default address the sign-in goes home. `LocationScreen` is removed.
+- **Courier.** Today: a picture-first run card with progress and the next stop; Route: the same cards on the new
+  surfaces; Stop: a schematic map strip with the due time and **Navigate** (Apple Maps / the Android chooser as
+  before; the web build now links Google Maps directions, so demos can follow it); pickup opens on the shop's drawn
+  picture; proof of delivery keeps photo / signature / PIN (the PIN in the display face), a camera picture before
+  "Allow camera"; Profile: a head card (vehicle) and the privacy line on linen.
+- **i18n.** New strings in `i18n/{en,fr-CA}/light.ts` (consumer, `lt.*`, mostly the web's own words and French) and
+  `today.next` (courier). French copy of the new strings is ours, in the translator-review queue.
+- **Tests.** Jest updated for the new copy and layout (Home, Product, Browse, the location sheet — sources in order,
+  one-tap market, addresses, use-my-location only on press, Settings when refused, waitlist), a kit test for `Art`.
+  Both apps' Jest allow 15 s a test: the illustrated screens make a test file's cold first render slower than 5 s on
+  this machine (two courier tests and the consumer Home test timed out at 5 s).
+- **Not done / never run:** a real phone, Simulator or emulator (the shots are the web build: no native fonts
+  rendering differences, no safe-area notch, no Dynamic Type at large sizes — the type scales and the one-line bars cap
+  `maxFontSizeMultiplier`); real photography (the scenes stand in); the remaining sub-screens (quote, case, problem,
+  security, wallet, notification settings) only got the shared primitives' new look, not their own layouts.
+
+Schema additions: none. Config additions: none. No new environment variables. New make target: `mobile-shots`.

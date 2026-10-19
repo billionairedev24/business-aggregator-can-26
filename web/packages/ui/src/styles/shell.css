@@ -4,7 +4,8 @@
 .nl-shell { min-height: 100vh; display: flex; flex-direction: column; font-family: var(--font-sans); color: var(--color-text); background: var(--color-canvas); }
 
 /* ── header ── */
-.nl-topbar { min-height: 64px; padding: var(--space-2) var(--page-gutter); flex-wrap: wrap; row-gap: var(--space-1); gap: var(--space-3); box-shadow: var(--shadow-sm); }
+/* the Studio and console top bar: as compact as the consumer header's first row (8px around 44px controls, the hairline under it) */
+.nl-topbar { min-height: 60px; padding: var(--space-2) var(--page-gutter); box-sizing: border-box; flex-wrap: wrap; row-gap: var(--space-1); gap: var(--space-3); }
 .nl-topbar-menu { flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--size-touch); height: var(--size-touch); border: 0; border-radius: var(--radius-sm); background: none; color: var(--color-header-text); cursor: pointer; }
 .nl-topbar-menu:hover, .nl-topbar-menu[aria-expanded='true'] { background: var(--color-header-hover-bg); }
 .nl-topbar-brand { display: inline-flex; align-items: center; min-height: var(--size-touch); color: var(--color-header-text); }

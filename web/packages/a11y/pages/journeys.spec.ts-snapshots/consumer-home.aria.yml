@@ -2,10 +2,10 @@
   - region "Everything local, from people you can trust":
     - heading "Everything local, from people you can trust" [level=1]
     - paragraph: Book verified pros, shop neighbourhood stores and get it all delivered together — you pay only when it’s done.
-    - search:
-      - text: Search shops, products and services
-      - combobox "Search shops, products and services"
-      - button "Search"
+    - link "Find a pro":
+      - /url: /services
+    - link "Shop local stores":
+      - /url: /shop
     - paragraph:
       - text: Choose where you are to see what’s close
       - button "Set your location"

@@ -9,7 +9,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { useI18n, type MessageKey } from '../i18n';
 import { services } from '../services';
 import { Chip } from '../services/parts';
-import { Body, Button, Field, Notice, Title, type } from '../ui/primitives';
+import { Body, Button, Field, Notice, Section, type } from '../ui/primitives';
 import { errorMessage } from '../ui/states';
 
 export const aftercare = () => aftercareApi(services().api);
@@ -114,7 +114,7 @@ function ReviewForm({ kind, id, target, heading, existing, onDone, extra }: { ki
   };
   return (
     <View style={styles.stack} testID={`review-form-${target.merchantId}`}>
-      <Title>{heading}</Title>
+      <Section>{heading}</Section>
       <View style={styles.stars} accessibilityRole="radiogroup" accessibilityLabel={t('review.stars')}>
         {[1, 2, 3, 4, 5].map((n) => (
           <Text
@@ -160,7 +160,7 @@ function ReviewForm({ kind, id, target, heading, existing, onDone, extra }: { ki
 const styles = StyleSheet.create({
   stack: { gap: space[3] },
   stars: { flexDirection: 'row', gap: 6 },
-  star: { width: 48, height: 48, fontSize: 30, lineHeight: 48, textAlign: 'center', color: colors.neutral300 },
-  starOn: { color: colors.accent2 },
+  star: { width: 48, height: 48, fontSize: 30, lineHeight: 48, textAlign: 'center', color: colors.borderStrong },
+  starOn: { color: colors.rating },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 });

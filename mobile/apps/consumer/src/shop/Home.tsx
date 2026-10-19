@@ -2,25 +2,26 @@ import { useQuery } from '@tanstack/react-query';
 import { router, type Href } from 'expo-router';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, Icon, Logo, MIN_TARGET, colors, fonts, radius, semantic, space, type IconName } from '@northline/mobile-kit';
+import { ApiError, Art, Icon, LogoMark, MIN_TARGET, brand, colors, fonts, radius, semantic, shadow, space } from '@northline/mobile-kit';
 
 import type { MessageKey } from '../i18n';
 import { useAuth } from '../auth/AuthProvider';
-import { Body } from '../ui/primitives';
+import { PlaceBar } from '../location/PlaceBar';
+import { Body, Card } from '../ui/primitives';
 import { RoundButton, Screen } from '../ui/screen';
 import { ErrorState, Skeleton } from '../ui/states';
 import { appRoute, shop, useMarket, useShopFormat } from './common';
-import { Circle, ProductTile, SectionHead, Strip, departmentIcon } from './parts';
+import { ProductTile, SectionHead, Strip, Tile } from './parts';
 
-/** The service categories Home offers as circles (category slugs of the S-100 pages), with their icons. */
-const SERVICE_TILES: ReadonlyArray<[MessageKey, string, IconName]> = [
-  ['shop.svc.mechanic', 'mobile-mechanic', 'wrench'],
-  ['shop.svc.cleaning', 'house-cleaning', 'broom'],
-  ['shop.svc.plumber', 'plumber', 'drop'],
-  ['shop.svc.bar', 'cocktail-and-mocktail-bar', 'martini'],
-  ['shop.svc.realtor', 'real-estate-agent', 'house-line'],
-  ['shop.svc.barber', 'barber-and-hair', 'scissors'],
-  ['shop.svc.tutor', 'tutor-k-12', 'graduation-cap'],
+/** The service categories Home offers as illustrated tiles (category slugs of the S-100 pages). */
+const SERVICE_TILES: ReadonlyArray<[MessageKey, string]> = [
+  ['shop.svc.mechanic', 'mobile-mechanic'],
+  ['shop.svc.cleaning', 'house-cleaning'],
+  ['shop.svc.plumber', 'plumber'],
+  ['shop.svc.bar', 'cocktail-and-mocktail-bar'],
+  ['shop.svc.realtor', 'real-estate-agent'],
+  ['shop.svc.barber', 'barber-and-hair'],
+  ['shop.svc.tutor', 'tutor-k-12'],
 ];
 
 const nullOn404 = async <T,>(call: () => Promise<T | null>): Promise<T | null> => {
@@ -33,11 +34,11 @@ const nullOn404 = async <T,>(call: () => Promise<T | null>): Promise<T | null> =
 };
 
 /**
- * Home (redesign spec § 2.4 → MA:180 HOME): the logo with the inbox and account buttons, "Deliver to {place}", the
- * search pill, the order or booking under way as a dark banner (`GET /me/upcoming`'s first item that has a screen),
- * the Shop's departments as circles, the pooled run as the hero card (`GET /public/shop` → `run`), "Popular near you"
- * (the landing's products) and the services as circles beside a "Book a pro" card. The time-of-day greeting, the
- * "Trusted near you" tier rows, "Your week" and the Plus price are gone (thrash list items 2 and 13).
+ * Home (light & photo-first; the consumer web's home on a phone): the top bar — the brand's mark, where things come
+ * from (opens the location sheet), the inbox and the account — and the one search pill; what's under way
+ * (`GET /me/upcoming`'s first item that has a screen) as a light card; the hero (the display face, an illustrated
+ * collage, "every pro and shop verified"); "Book a service" and "Shop local" as rails of illustrated tiles; tonight's
+ * pooled run (`GET /public/shop` → `run`); "Popular near you" as photo-first product cards; the sellers' line.
  */
 export function Home() {
   const f = useShopFormat();
@@ -59,123 +60,152 @@ export function Home() {
   const place = market.label ?? landing.data?.market;
   const initials = me.data ? `${me.data.firstName.charAt(0)}${me.data.lastName.charAt(0)}`.toUpperCase() : '';
   const active = week.data?.items.map((w) => ({ w, to: appRoute(w.href) })).find((x) => !!x.to);
+  const departments = landing.data?.departments ?? [];
 
   return (
-    <Screen testID="home" refreshControl={<RefreshControl refreshing={landing.isRefetching} onRefresh={refresh} />}>
-      <View style={styles.top}>
-        <Logo size={30} style={styles.flex} />
-        <RoundButton icon="bell" label={t('shop.home.notifications')} onPress={() => router.push('/notifications')} testID="home-inbox" />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={signedIn ? t('rd.home.account') : t('rd.home.signIn')}
-          onPress={() => router.navigate('/account')}
-          style={[styles.avatar, !initials && styles.avatarGuest]}
-          testID="home-account"
-        >
-          {initials ? <Text style={styles.initials}>{initials}</Text> : <Icon name="user" size={22} />}
-        </Pressable>
-      </View>
-
-      <Pressable
-        accessibilityRole="button"
-        // S-109: a name without glyphs; the 13 pt line gets a 44 pt touch area through hitSlop
-        accessibilityLabel={place ? t('shop.home.placeLabel', { place }) : t('shop.home.setAddressLabel')}
-        accessibilityHint={t('shop.home.placeHint')}
-        hitSlop={{ top: 12, bottom: 12 }}
-        onPress={() => router.push('/location?next=/home')}
-        style={styles.place}
-        testID="home-place"
-      >
-        <Icon name="map-pin" size={16} />
-        <Text style={styles.placeText} numberOfLines={1}>
-          {place ? (
-            <>
-              <Text style={styles.muted}>{t('rd.home.deliverTo')} </Text>
-              <Text style={styles.strong}>{place}</Text>
-            </>
-          ) : (
-            <Text style={styles.strong}>{t('shop.home.setAddressLabel')}</Text>
-          )}
-        </Text>
-        <Icon name="caret-down" size={14} />
-      </Pressable>
-
-      <Pressable accessibilityRole="search" accessibilityLabel={t('rd.search.placeholder')} onPress={() => router.push('/search')} style={styles.search} testID="home-search">
-        <Icon name="magnifying-glass" size={20} />
-        <Text style={styles.searchText} numberOfLines={1}>
-          {t('rd.search.placeholder')}
-        </Text>
-      </Pressable>
-
-      {active?.to ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={[active.w.title, active.w.subtitle, active.w.state].filter(Boolean).join(', ')}
-          onPress={() => router.push(active.to as Href)}
-          style={styles.banner}
-          testID="home-active"
-        >
-          <Icon name={/booking|provider/.test(active.to) ? 'calendar-check' : 'truck'} size={26} color={semantic['action-accent']} />
-          <View style={styles.flex}>
-            <Text style={styles.bannerTitle} numberOfLines={2}>
-              {active.w.title}
-            </Text>
-            <Text style={styles.bannerSub} numberOfLines={1}>
-              {[active.w.subtitle, active.w.state].filter(Boolean).join(' · ')}
-            </Text>
-          </View>
-          <Icon name="caret-right" size={18} color={colors.headerText} />
-        </Pressable>
-      ) : null}
-
-      {landing.isPending ? (
-        <View testID="loading" accessibilityRole="progressbar" accessibilityLabel={t('common.loading')} style={styles.loading}>
-          <Skeleton height={72} />
-          <Skeleton height={180} />
-          <Skeleton height={24} width="40%" />
-        </View>
-      ) : landing.isError && !landing.data ? (
-        <ErrorState error={landing.error} onRetry={() => void landing.refetch()} />
-      ) : (
-        <>
-          {landing.isError ? <ErrorState error={landing.error} onRetry={() => void landing.refetch()} /> : null}
-          {landing.data && landing.data.departments.length > 0 ? (
-            <Strip testID="home-departments">
-              {landing.data.departments.slice(0, 8).map((d) => (
-                <Circle key={d.slug} label={d.name} icon={departmentIcon(d.slug)} onPress={() => router.push({ pathname: '/search', params: { department: d.slug, name: d.name } })} />
-              ))}
-              <Circle label={t('shop.home.services')} icon="calendar-check" onPress={() => router.navigate('/services')} />
-            </Strip>
-          ) : null}
-
-          <View style={styles.hero} testID="home-run" accessible accessibilityRole="summary">
-            <View style={styles.heroArt}>
-              <Icon name={run ? 'truck' : 'storefront'} size={64} color={semantic['action-accent']} />
+    <Screen
+      testID="home"
+      padded={false}
+      top={
+        <PlaceBar
+          lead={
+            <View accessible accessibilityRole="image" accessibilityLabel={brand.name} style={styles.mark} testID="logo">
+              <LogoMark size={32} />
             </View>
-            <View style={styles.heroText}>
-              <View style={styles.pill}>
-                <Text style={styles.pillText}>{run ? t(run.day === 'today' ? 'shop.home.runTonight' : 'shop.home.runNext') : t('rd.home.heroKicker')}</Text>
-              </View>
-              <Text style={styles.heroTitle}>{run ? t('rd.home.runTitle', { time: f.time(run.startsAt) }) : t('rd.home.heroTitle', { place: place ?? '' })}</Text>
-              <Text style={styles.heroSub}>
-                {run
-                  ? [t('rd.home.runSub', { fee: f.fee(run.feeCents), orderBy: f.time(run.orderBy) }), run.households > 0 ? t('shop.home.neighbours', { n: run.households }) : null].filter(Boolean).join(' · ')
-                  : t('rd.home.heroSub')}
+          }
+          actions={
+            <>
+              <RoundButton icon="bell" label={t('shop.home.notifications')} onPress={() => router.push('/notifications')} testID="home-inbox" />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={signedIn ? t('rd.home.account') : t('rd.home.signIn')}
+                onPress={() => router.navigate('/account')}
+                style={[styles.avatar, !initials && styles.avatarGuest]}
+                testID="home-account"
+              >
+                {initials ? <Text style={styles.initials}>{initials}</Text> : <Icon name="user" size={20} />}
+              </Pressable>
+            </>
+          }
+        />
+      }
+      refreshControl={<RefreshControl refreshing={landing.isRefetching} onRefresh={refresh} />}
+    >
+      <View style={styles.pad}>
+        {active?.to ? (
+          <Card
+            onPress={() => router.push(active.to as Href)}
+            label={[t('lt.home.underway'), active.w.title, active.w.subtitle, active.w.state].filter(Boolean).join(', ')}
+            style={styles.active}
+            testID="home-active"
+          >
+            <View style={styles.activeIcon}>
+              <Icon name={/booking|provider/.test(active.to) ? 'calendar-check' : 'truck'} size={24} color={semantic['action-primary']} />
+            </View>
+            <View style={styles.flex}>
+              <Text style={styles.activeKicker}>{t('lt.home.underway')}</Text>
+              <Text style={styles.activeTitle} numberOfLines={2}>
+                {active.w.title}
+              </Text>
+              <Text style={styles.activeSub} numberOfLines={1}>
+                {[active.w.subtitle, active.w.state].filter(Boolean).join(' · ')}
+              </Text>
+            </View>
+            <Icon name="caret-right" size={18} />
+          </Card>
+        ) : null}
+
+        <View style={styles.hero} testID="home-hero">
+          <Text accessibilityRole="header" style={styles.heroTitle}>
+            {t('lt.home.heroTitle')}
+          </Text>
+          <Body tone="muted">{t('lt.home.heroSub')}</Body>
+          <View style={styles.collage}>
+            <Art subject="mobile-mechanic" style={styles.collageMain} />
+            <View style={styles.collageSide}>
+              <Art subject="bakery" style={styles.collageSmall} />
+              <Art subject="house-cleaning" style={styles.collageSmall} />
+            </View>
+            <View style={styles.badge}>
+              <Icon name="seal-check" size={18} filled color={semantic.success} />
+              <Text style={styles.badgeText} numberOfLines={1}>
+                {t('lt.home.badge')}
               </Text>
             </View>
           </View>
-          {landing.data && !landing.data.served ? <Body tone="muted">{t('shop.home.notServed', { place: landing.data.market })}</Body> : null}
-          {landing.data && landing.data.departments.length === 0 ? <Body tone="muted">{t('shop.home.noShops')}</Body> : null}
+        </View>
+      </View>
+
+      <View style={styles.section} testID="home-services">
+        <View style={styles.pad}>
+          <SectionHead title={t('lt.home.tileServices')} link={t('lt.home.allServices')} onLink={() => router.navigate('/services')} />
+        </View>
+        <Strip edge>
+          {SERVICE_TILES.map(([key, slug]) => (
+            <Tile key={slug} label={t(key)} subject={slug} width={148} onPress={() => router.push(`/services/${slug}` as Href)} />
+          ))}
+        </Strip>
+      </View>
+
+      {landing.isPending ? (
+        <View testID="loading" accessibilityRole="progressbar" accessibilityLabel={t('common.loading')} style={[styles.pad, styles.loading]}>
+          <Skeleton height={24} width="50%" />
+          <Skeleton height={120} />
+          <Skeleton height={180} />
+        </View>
+      ) : landing.isError && !landing.data ? (
+        <View style={styles.pad}>
+          <ErrorState error={landing.error} onRetry={() => void landing.refetch()} />
+        </View>
+      ) : (
+        <>
+          {landing.isError ? (
+            <View style={styles.pad}>
+              <ErrorState error={landing.error} onRetry={() => void landing.refetch()} />
+            </View>
+          ) : null}
+          {departments.length > 0 ? (
+            <View style={styles.section} testID="home-departments">
+              <View style={styles.pad}>
+                <SectionHead title={t('lt.home.tileShop')} link={t('lt.home.allDepartments')} onLink={() => router.navigate('/services')} />
+              </View>
+              <Strip edge>
+                {departments.slice(0, 8).map((d) => (
+                  <Tile key={d.slug} label={d.name} subject={d.slug} width={148} onPress={() => router.push({ pathname: '/search', params: { department: d.slug, name: d.name } })} />
+                ))}
+              </Strip>
+            </View>
+          ) : null}
+
+          <View style={styles.pad}>
+            <Card style={styles.run} testID="home-run">
+              <View style={styles.runText} accessible accessibilityRole="summary">
+                <Text style={styles.runKicker}>{run ? t(run.day === 'today' ? 'shop.home.runTonight' : 'shop.home.runNext') : t('rd.home.heroKicker')}</Text>
+                <Text style={styles.runTitle}>{run ? t('rd.home.runTitle', { time: f.time(run.startsAt) }) : t('rd.home.heroTitle', { place: place ?? '' })}</Text>
+                <Text style={styles.runSub}>
+                  {run
+                    ? [t('rd.home.runSub', { fee: f.fee(run.feeCents), orderBy: f.time(run.orderBy) }), run.households > 0 ? t('shop.home.neighbours', { n: run.households }) : null].filter(Boolean).join(' · ')
+                    : t('rd.home.heroSub')}
+                </Text>
+              </View>
+              <Art subject={run ? 'courier' : 'shop'} style={styles.runArt} />
+            </Card>
+            {landing.data && !landing.data.served ? <Body tone="muted">{t('shop.home.notServed', { place: landing.data.market })}</Body> : null}
+            {landing.data && landing.data.departments.length === 0 ? <Body tone="muted">{t('shop.home.noShops')}</Body> : null}
+          </View>
 
           {landing.data?.popular.length ? (
             <View style={styles.section} testID="home-popular">
-              <SectionHead title={t('rd.home.popular')} link={t('rd.common.seeAll')} onLink={() => router.push('/search')} />
-              <Strip>
+              <View style={styles.pad}>
+                <SectionHead title={t('rd.home.popular')} link={t('rd.common.seeAll')} onLink={() => router.push('/search')} />
+              </View>
+              <Strip edge>
                 {landing.data.popular.slice(0, 10).map((p) => (
                   <ProductTile
                     key={p.offerId}
                     name={p.name}
                     price={f.money(p.priceCents)}
+                    meta={p.shopName}
                     imageUrl={p.imageUrl}
                     label={[p.name, p.shopName, f.money(p.priceCents)].join(', ')}
                     onPress={() => router.push({ pathname: '/product/[id]', params: { id: p.productId, offer: p.offerId } })}
@@ -187,21 +217,11 @@ export function Home() {
         </>
       )}
 
-      <View style={styles.section} testID="home-services">
-        <SectionHead title={t('rd.home.services')} link={t('rd.common.seeAll')} onLink={() => router.navigate('/services')} />
-        <Strip>
-          {SERVICE_TILES.map(([key, slug, icon]) => (
-            <Circle key={slug} label={t(key)} icon={icon} onPress={() => router.push(`/services/${slug}` as Href)} />
-          ))}
-        </Strip>
-        <Pressable accessibilityRole="button" accessibilityLabel={`${t('rd.home.bookTitle')}, ${t('rd.home.bookSub')}`} onPress={() => router.navigate('/services')} style={styles.card}>
-          <Icon name="calendar-check" size={28} />
-          <View style={styles.flex}>
-            <Text style={styles.cardTitle}>{t('rd.home.bookTitle')}</Text>
-            <Text style={styles.cardSub}>{t('rd.home.bookSub')}</Text>
-          </View>
-          <Icon name="caret-right" size={18} />
-        </Pressable>
+      <View style={styles.pad}>
+        <Card sunken style={styles.sell}>
+          <Text style={styles.sellTitle}>{t('lt.home.sellTitle')}</Text>
+          <Body tone="small">{t('lt.home.sellSub')}</Body>
+        </Card>
       </View>
     </Screen>
   );
@@ -209,39 +229,45 @@ export function Home() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
-  top: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  avatar: { width: MIN_TARGET, height: MIN_TARGET, borderRadius: MIN_TARGET / 2, backgroundColor: semantic['action-accent'], alignItems: 'center', justifyContent: 'center' },
-  avatarGuest: { backgroundColor: semantic['surface-muted'] },
-  initials: { fontFamily: fonts.bold, fontSize: 15, color: semantic['action-accent-text'] },
-  place: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 20, alignSelf: 'flex-start', maxWidth: '100%' },
-  placeText: { flexShrink: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.text },
-  muted: { color: colors.textMuted },
-  strong: { fontFamily: fonts.bold, color: colors.text },
-  search: {
+  pad: { paddingHorizontal: space[4], gap: space[4] },
+  mark: { width: 36, height: MIN_TARGET, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: MIN_TARGET, height: MIN_TARGET, borderRadius: MIN_TARGET / 2, backgroundColor: semantic['action-primary'], alignItems: 'center', justifyContent: 'center' },
+  avatarGuest: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderStrong },
+  initials: { fontFamily: fonts.bold, fontSize: 15, color: semantic['action-primary-text'] },
+  active: { flexDirection: 'row', alignItems: 'center', gap: space[3], backgroundColor: semantic['surface-brand'], borderColor: semantic['focus-ring'] },
+  activeIcon: { width: MIN_TARGET, height: MIN_TARGET, borderRadius: MIN_TARGET / 2, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  activeKicker: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.4, textTransform: 'uppercase', color: semantic['badge-brand-text'] },
+  activeTitle: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 21, color: colors.text },
+  activeSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
+  hero: { gap: space[3], paddingTop: space[2] },
+  heroTitle: { fontFamily: fonts.display, fontSize: 32, lineHeight: 37, letterSpacing: -0.4, color: colors.text },
+  collage: { flexDirection: 'row', gap: space[2], height: 196, marginTop: space[2] },
+  collageMain: { flex: 1.35, borderRadius: radius.lg },
+  collageSide: { flex: 1, gap: space[2] },
+  collageSmall: { flex: 1, borderRadius: radius.lg },
+  badge: {
+    position: 'absolute',
+    left: space[3],
+    bottom: space[3],
+    maxWidth: '86%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space[2],
-    minHeight: 48,
-    paddingHorizontal: space[4],
+    gap: 6,
+    paddingHorizontal: space[3],
+    paddingVertical: 6,
     borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.borderControl,
     backgroundColor: colors.surface,
+    ...shadow.md,
   },
-  searchText: { flex: 1, fontFamily: fonts.regular, fontSize: 15, color: colors.textMuted },
-  banner: { flexDirection: 'row', alignItems: 'center', gap: space[3], padding: 14, minHeight: MIN_TARGET, borderRadius: radius.md, backgroundColor: colors.headerBg },
-  bannerTitle: { fontFamily: fonts.bold, fontSize: 14, color: colors.headerText },
-  bannerSub: { fontFamily: fonts.regular, fontSize: 12, color: semantic['header-muted'] },
-  loading: { gap: space[3] },
-  hero: { minHeight: 180, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.headerBg, flexDirection: 'row' },
-  heroText: { flex: 1, padding: space[5], gap: space[2], justifyContent: 'center' },
-  heroArt: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '38%', alignItems: 'center', justifyContent: 'center', backgroundColor: semantic['action-primary'] },
-  pill: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: semantic['action-accent'] },
-  pillText: { fontFamily: fonts.bold, fontSize: 10, letterSpacing: 0.6, textTransform: 'uppercase', color: semantic['action-accent-text'] },
-  heroTitle: { maxWidth: '62%', fontFamily: fonts.black, fontSize: 22, lineHeight: 25, color: colors.headerText },
-  heroSub: { maxWidth: '62%', fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: semantic['header-muted'] },
-  section: { gap: space[3] },
-  card: { flexDirection: 'row', alignItems: 'center', gap: space[3], padding: space[4], minHeight: MIN_TARGET, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-  cardTitle: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
-  cardSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
+  badgeText: { flexShrink: 1, fontFamily: fonts.semibold, fontSize: 13, color: colors.text },
+  section: { gap: space[2], paddingTop: space[3] },
+  loading: { gap: space[3], paddingTop: space[3] },
+  run: { flexDirection: 'row', alignItems: 'center', gap: space[3], marginTop: space[5], padding: 0, overflow: 'hidden' },
+  runText: { flex: 1, gap: 4, padding: space[4] },
+  runKicker: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.4, textTransform: 'uppercase', color: semantic['badge-accent-text'] },
+  runTitle: { fontFamily: fonts.display, fontSize: 22, lineHeight: 27, color: colors.text },
+  runSub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.textMuted },
+  runArt: { width: 116, alignSelf: 'stretch' },
+  sell: { marginTop: space[5] },
+  sellTitle: { fontFamily: fonts.display, fontSize: 18, lineHeight: 24, color: colors.text },
 });

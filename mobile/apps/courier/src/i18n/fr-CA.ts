@@ -208,4 +208,5 @@ export const frCA: Record<MessageKey, string> = {
   'idcheck.refuseNote': 'Ne laissez rien à la porte. La commande retourne au commerce, et le client est remboursé pour les articles.',
   'idcheck.chooseReason': 'Choisissez d’abord une raison.',
   'idcheck.cancel': 'Retour',
+  'today.next': 'Prochain arrêt',
 };

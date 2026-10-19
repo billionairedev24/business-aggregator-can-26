@@ -34,7 +34,7 @@ export function SecondFactor() {
   const [handoffFailed, setHandoffFailed] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const done = () => router.replace('/location');
+  const done = () => router.replace('/location?step=address');
 
   const fail = (e: unknown) => {
     // the account exists and the auth session is signed in, but the tokens didn't arrive: offer to finish

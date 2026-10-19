@@ -4,10 +4,11 @@ import { DMSans_400Regular } from '@expo-google-fonts/dm-sans/400Regular';
 import { DMSans_500Medium } from '@expo-google-fonts/dm-sans/500Medium';
 import { DMSans_600SemiBold } from '@expo-google-fonts/dm-sans/600SemiBold';
 import { DMSans_700Bold } from '@expo-google-fonts/dm-sans/700Bold';
+import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces/600SemiBold';
 import { Fraunces_700Bold } from '@expo-google-fonts/fraunces/700Bold';
 
 /** The font files to load with `useFonts` (expo-font) before the first screen draws. */
-export const BRAND_FONT_ASSETS = { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold, Fraunces_700Bold } as const;
+export const BRAND_FONT_ASSETS = { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold, Fraunces_600SemiBold, Fraunces_700Bold } as const;
 
 /** The family name to use per role: React Native picks a weight by family name (fontWeight is ignored on Android). */
 export const BRAND_FONTS = {
@@ -17,6 +18,7 @@ export const BRAND_FONTS = {
   bold: 'DMSans_700Bold',
   black: 'DMSans_700Bold',
   heading: 'Fraunces_700Bold',
+  display: 'Fraunces_600SemiBold',
 } as const;
 
 export const BRAND_FONT_SOURCE = { palette: 'evergreen', sans: 'DM Sans', heading: 'Fraunces' } as const;

@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Image, Linking, StyleSheet, TextInput, View } from 'react-native';
 
-import { MIN_TARGET, colors, fonts, radius, randomId, space, semantic } from '@northline/mobile-kit';
+import { Art, MIN_TARGET, colors, fonts, radius, randomId, space, semantic } from '@northline/mobile-kit';
 
 import { REFUSE_REASONS, type IdCheckAnswer, type ProofKind, type RefuseReason } from '../../../../src/api/courier';
 import { SignaturePad } from '../../../../src/components/SignaturePad';
@@ -192,7 +192,10 @@ export default function DropoffScreen() {
               {t('dropoff.cameraDenied')}
             </Banner>
           ) : (
-            <Button tone="secondary" label={t('dropoff.allowCamera')} onPress={() => void requestPermission()} testID="allow-camera" />
+            <>
+              <Art subject="photo" draw={{ main: 'Camera', side: 'House' }} tone="sage" fit="contain" style={styles.cameraArt} />
+              <Button tone="secondary" label={t('dropoff.allowCamera')} onPress={() => void requestPermission()} testID="allow-camera" />
+            </>
           )}
         </>
       ) : null}
@@ -241,10 +244,10 @@ const styles = StyleSheet.create({
     minHeight: MIN_TARGET + 16,
     borderWidth: 1,
     borderColor: colors.borderControl,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    fontFamily: fonts.black,
-    fontSize: 32,
+    fontFamily: fonts.display,
+    fontSize: 34,
     letterSpacing: 16,
     textAlign: 'center',
     color: colors.text,
@@ -252,4 +255,5 @@ const styles = StyleSheet.create({
   },
   pinError: { borderColor: semantic['danger-border'], borderWidth: 2 },
   list: { gap: space[2] },
+  cameraArt: { height: 170, borderRadius: radius.lg },
 });
