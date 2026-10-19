@@ -1,13 +1,15 @@
 import Constants from 'expo-constants';
 import { useState } from 'react';
 
-import { Logo } from '@northline/mobile-kit';
+import { StyleSheet, View } from 'react-native';
+
+import { Logo, radius, semantic, space } from '@northline/mobile-kit';
 
 import { useAuth } from '../../../src/auth';
 import { LanguageSwitch } from '../../../src/components/LanguageSwitch';
-import { Banner, Body, Button, Card, Screen } from '../../../src/components/ui';
-import { useOutbox } from '../../../src/hooks';
-import { useI18n } from '../../../src/i18n';
+import { Banner, Body, Button, Card, IconBadge, Screen } from '../../../src/components/ui';
+import { useMe, useOutbox } from '../../../src/hooks';
+import { useI18n, type MessageKey } from '../../../src/i18n';
 import { ThisPhone } from '../../../src/push/PhonePush';
 
 /**
@@ -19,6 +21,7 @@ export default function AccountScreen() {
   const { signOut } = useAuth();
   const { pending } = useOutbox();
   const [confirming, setConfirming] = useState(false);
+  const me = useMe();
 
   const out = () => {
     if (pending.length > 0 && !confirming) return setConfirming(true);
@@ -27,12 +30,20 @@ export default function AccountScreen() {
 
   return (
     <Screen testID="account-screen" title={t('tab.profile')}>
-      <Logo size={30} portal={t('signIn.portal')} />
+      <Card>
+        <View style={styles.head}>
+          <IconBadge name="truck" tone="dark" size={52} />
+          <View style={styles.flex}>
+            <Logo size={26} portal={t('signIn.portal')} />
+            {me.data?.vehicle ? <Body muted>{t('shift.vehicle', { vehicle: t(`vehicle.${me.data.vehicle}` as MessageKey) })}</Body> : null}
+          </View>
+        </View>
+      </Card>
       <LanguageSwitch />
       <ThisPhone />
-      <Card>
+      <View style={styles.sunken}>
         <Body>{t('account.privacy')}</Body>
-      </Card>
+      </View>
       {confirming ? <Banner tone="warn">{t('account.signOutUnsent', { n: pending.length })}</Banner> : null}
       <Button tone="danger" large icon="sign-out" label={confirming ? t('account.signOutAnyway') : t('account.signOut')} onPress={out} testID="sign-out" />
       {confirming ? <Button tone="ghost" label={t('common.cancel')} onPress={() => setConfirming(false)} /> : null}
@@ -40,3 +51,9 @@ export default function AccountScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  head: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  flex: { flex: 1, minWidth: 0, gap: space[1] },
+  sunken: { padding: space[4], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
+});

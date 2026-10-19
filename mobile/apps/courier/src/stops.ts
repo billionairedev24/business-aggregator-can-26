@@ -35,6 +35,12 @@ export function pickedUp(run: Run, stop: Stop): boolean {
   return run.stops.filter((s) => s.kind === 'pickup' && s.orderId === stop.orderId).every((s) => s.state === 'done');
 }
 
+function coordsOrAddress(stop: Stop): string {
+  const lat = stop.kind !== 'dropoff' ? stop.place?.lat : stop.dropoff?.lat;
+  const lng = stop.kind !== 'dropoff' ? stop.place?.lng : stop.dropoff?.lng;
+  return lat != null && lng != null ? `${lat},${lng}` : stopAddress(stop);
+}
+
 /** A maps link for the platform's own maps app: coordinates when known, else the address. */
 export function mapsUrl(stop: Stop, os: string): string | null {
   const lat = stop.kind !== 'dropoff' ? stop.place?.lat : stop.dropoff?.lat;
@@ -51,6 +57,11 @@ export function mapsUrl(stop: Stop, os: string): string | null {
  * Northline doesn't draw a map.
  */
 export function navigationUrl(stop: Stop, os: string): string | null {
+  if (os === 'web') {
+    // the web build (demos, `make mobile-shots`): Google Maps directions in a new tab
+    const q = coordsOrAddress(stop);
+    return q ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}` : null;
+  }
   if (os !== 'ios') return mapsUrl(stop, os);
   const lat = stop.kind !== 'dropoff' ? stop.place?.lat : stop.dropoff?.lat;
   const lng = stop.kind !== 'dropoff' ? stop.place?.lng : stop.dropoff?.lng;

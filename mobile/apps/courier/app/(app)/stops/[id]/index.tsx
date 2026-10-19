@@ -3,6 +3,7 @@ import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
 
+import { MapStrip } from '../../../../src/components/MapStrip';
 import { OutboxBar } from '../../../../src/components/tracking';
 import { Banner, Body, Button, Card, Chip, Heading, Loading, Row, Screen } from '../../../../src/components/ui';
 import { useMarketZone, useRun } from '../../../../src/hooks';
@@ -11,8 +12,8 @@ import { services } from '../../../../src/services';
 import { kindKey, navigationUrl, pickedUp, stopAddress, stopName } from '../../../../src/stops';
 
 /**
- * One stop (redesign spec § 2.5 → AT DR:147 STOP): the map strip with when it's due and "Navigate" (the hand-off to the
- * phone's maps app), "Stop {n} · {kind}", where and what, the customer's instructions, then the next action in the
+ * One stop (redesign spec § 2.5; light direction): the schematic map strip with when it's due, "Navigate" (the hand-off
+ * to the phone's maps app), "Stop {n} · {kind}", where and what, the customer's instructions, then the next action in the
  * sticky bottom bar — I've arrived, Pick up, Hand over or the return. No customer name or phone number is shown (the
  * api gives the courier none); there is no in-app call or message yet (DECISIONS S-87). An age-restricted drop-off
  * says the ID check's age; a return stop (2026-10-04: a refused age-restricted order) takes the order back.
@@ -68,15 +69,11 @@ export default function StopScreen() {
   return (
     <Screen testID="stop-screen" title={kind} back onBack={back} footer={footer}>
       <OutboxBar />
-      <View style={styles.map}>
-        <View style={styles.mapLine}>
-          <Icon name="map-trifold" size={20} color={colors.headerText} />
-          <Text style={styles.mapText}>{stop.eta && open ? t('stop.map', { time: time(stop.eta, zone) }) : t('stop.mapNoEta')}</Text>
-        </View>
-        {nav ? (
-          <Button tone="accent" icon="navigation-arrow" label={t('stop.navigate')} hint={t('stop.navigateHint')} onPress={() => void Linking.openURL(nav)} testID="navigate" />
-        ) : null}
-      </View>
+      <MapStrip
+        kind={stop.kind}
+        label={stop.eta && open ? t('stop.map', { time: time(stop.eta, zone) }) : t('stop.mapNoEta')}
+        action={nav ? <Button tone="secondary" icon="navigation-arrow" label={t('stop.navigate')} hint={t('stop.navigateHint')} onPress={() => void Linking.openURL(nav)} testID="navigate" /> : undefined}
+      />
       <View style={styles.head}>
         <Text style={styles.kicker}>{t('stop.seqKind', { seq: stop.seq, kind })}</Text>
         <Heading>{stopName(stop)}</Heading>
@@ -119,10 +116,7 @@ export default function StopScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  map: { gap: space[3], padding: space[4], borderRadius: radius.lg, backgroundColor: colors.headerBg },
-  mapLine: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  mapText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.headerText },
   head: { gap: space[1] },
   kicker: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.5, textTransform: 'uppercase', color: colors.textMuted },
-  note: { gap: space[2], padding: 14, borderRadius: radius.md, backgroundColor: semantic['surface-muted'] },
+  note: { gap: space[2], padding: space[4], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
 });

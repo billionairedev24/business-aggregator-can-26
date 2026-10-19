@@ -209,6 +209,7 @@ export const en = {
   'idcheck.refuseNote': 'Leave nothing at the door. The order goes back to the business, and the customer is refunded for the items.',
   'idcheck.chooseReason': 'Choose a reason first.',
   'idcheck.cancel': 'Back',
+  'today.next': 'Next stop',
 } as const;
 
 export type MessageKey = keyof typeof en;

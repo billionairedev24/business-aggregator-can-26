@@ -84,6 +84,7 @@ describe('the courier app on the driver layouts', () => {
     const stop = { kind: 'dropoff', place: null, dropoff: { street: '1 Test St', city: 'Testville', postal: 'A1A 1A1', lat: 1.5, lng: -2.25 } } as unknown as Stop;
     expect(navigationUrl(stop, 'ios')).toBe('maps:?daddr=1.5%2C-2.25&dirflg=d');
     expect(navigationUrl(stop, 'android')).toBe('geo:0,0?q=1.5%2C-2.25');
+    expect(navigationUrl(stop, 'web')).toBe('https://www.google.com/maps/dir/?api=1&destination=1.5%2C-2.25');
     expect(navigationUrl({ ...stop, dropoff: null } as unknown as Stop, 'ios')).toBeNull();
   });
 

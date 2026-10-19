@@ -254,17 +254,37 @@ async function courier() {
   const list = screens([
     ['route', '/run'],
     ['stop-pickup', '/stops/st-1'],
-    ['pickup', '/stops/st-1/pickup'],
+  ]);
+  for (const [name, fn] of list) await step(name, fn);
+  await step('pickup', async () => {
+    await go('/stops/st-1/pickup');
+    await shot('pickup', { full: false });
+    // confirm both pickups so the drop-offs open
+    await page.getByRole('switch').filter({ visible: true }).first().click();
+    await shot('pickup-sealed', { full: false });
+    await tap('confirm-pickup');
+    await go('/stops/st-2/pickup');
+    await page.getByRole('switch').filter({ visible: true }).first().click();
+    await tap('confirm-pickup');
+  });
+  for (const [name, fn] of screens([
+    ['route-after-pickup', '/run'],
     ['stop-dropoff', '/stops/st-3'],
     ['dropoff', '/stops/st-3/dropoff'],
     ['profile', '/account'],
-  ]);
-  for (const [name, fn] of list) await step(name, fn);
+  ]))
+    await step(name, fn);
   await step('dropoff-pin', async () => {
     await go('/stops/st-3/dropoff');
     await page.getByRole('tab', { name: 'PIN' }).filter({ visible: true }).first().click();
+    await vis('pin').fill('4821');
     await settle(400);
     await shot('dropoff-pin', { full: false });
+  });
+  await step('dropoff-signature', async () => {
+    await page.getByRole('tab', { name: 'Signature' }).filter({ visible: true }).first().click();
+    await settle(400);
+    await shot('dropoff-signature', { full: false });
   });
   await step('french', async () => {
     await go('/account');

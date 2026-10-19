@@ -61,7 +61,7 @@ try {
 
   await step('A1 welcome', async () => {
     await page.getByText('Northline · Sample Province').waitFor({ timeout: 30_000 });
-    await page.getByText('Every trusted local,').waitFor();
+    await page.getByText('Every trusted local,', { exact: false }).waitFor();
     await noSideScroll('welcome');
     await shot('01-welcome');
   });
@@ -94,14 +94,14 @@ try {
     await page.getByText('Where should we bring things?').waitFor();
   });
   await step('A5 province & address, saved', async () => {
-    await page.getByText('Live · Sampleville, Exampleton').waitFor();
-    await page.getByLabel('Street address').fill('1204 Exa');
+    await page.getByRole('button', { name: 'Sampleville, Sample Province' }).waitFor();
+    await page.getByLabel('Address or postal code').fill('1204 Exa');
     await page.getByRole('button', { name: '1204 Example Ave, Sampleville, XA' }).click();
     await page.getByText('Zone · Old Town').waitFor();
     await page.getByText('Sales tax 5%').waitFor();
     await noSideScroll('location');
     await shot('05-location');
-    await page.getByRole('button', { name: 'Save and continue' }).click();
+    await page.getByRole('button', { name: 'Deliver here' }).click();
     await page.getByTestId('home').waitFor();
   });
   // Journey B (S-99): signed in with the address just saved; the fixture backend's payment stand-in
@@ -115,7 +115,7 @@ try {
     await noSideScroll('search');
     await shot('21-search');
     await page.getByRole('button', { name: /^Country sourdough/ }).click();
-    await page.getByText('Maple Lane Bakery · Master tier · ★ 4.8 (211)').waitFor();
+    await page.getByRole('heading', { name: 'Country sourdough' }).waitFor();
     await noSideScroll('product');
     await shot('22-product');
     await page.getByTestId('product-add').click();
@@ -226,9 +226,9 @@ try {
     await page.waitForURL(/\/(home|location)$/);
     if (page.url().endsWith('/location')) {
       // a fresh page has no saved address yet: the sign-in asks for one first (S-98)
-      await page.getByLabel('Street address').filter({ visible: true }).first().fill('1204 Exa');
+      await page.getByLabel('Address or postal code').filter({ visible: true }).first().fill('1204 Exa');
       await page.getByRole('button', { name: '1204 Example Ave, Sampleville, XA' }).filter({ visible: true }).first().click();
-      await page.getByRole('button', { name: 'Save and continue' }).filter({ visible: true }).first().click();
+      await page.getByRole('button', { name: 'Deliver here' }).filter({ visible: true }).first().click();
     }
     await page.getByRole('tab', { name: 'Browse' }).filter({ visible: true }).first().click();
     await vis('category-mobile-mechanic').click();

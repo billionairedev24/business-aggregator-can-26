@@ -5,6 +5,8 @@ const fromApp = (m) => path.dirname(require.resolve(`${m}/package.json`, { paths
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'jest-expo',
+  // screens draw illustrated scenes (react-native-svg) now: a cold first render of a test file takes a few seconds
+  testTimeout: 15_000,
   setupFiles: ['<rootDir>/jest.setup.ts'],
   testMatch: ['**/__tests__/**/*.test.[jt]s?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '/e2e/', '/dist-'],

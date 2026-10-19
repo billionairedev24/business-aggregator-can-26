@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Switch, View, StyleSheet } from 'react-native';
 
-import { colors, space } from '@northline/mobile-kit';
+import { Art, colors, radius, space } from '@northline/mobile-kit';
 
 import { Banner, Body, Button, Card, Heading, Screen } from '../../../../src/components/ui';
 import { useRun } from '../../../../src/hooks';
@@ -12,7 +12,7 @@ import { RUN_KEY, services } from '../../../../src/services';
 import { stopName } from '../../../../src/stops';
 
 /**
- * Pickup confirm: the courier confirms the sealed, labelled bag (recorded as the scan). The shop must have packed: the
+ * Pickup confirm (light direction: the shop's picture first — its drawn scene until shops have photos): the courier confirms the sealed, labelled bag (recorded as the scan). The shop must have packed: the
  * api refuses otherwise (409 not_packed, shown from the outbox) — the run read here may be older than the packing.
  * Saved on the phone first; sent when there is a connection.
  */
@@ -49,7 +49,9 @@ export default function PickupScreen() {
       onBack={back}
       footer={<Button label={t('pickup.confirm')} large icon="package" disabled={!sealed} onPress={() => void confirm()} testID="confirm-pickup" />}
     >
+      <Art subject={stopName(stop)} fit="contain" style={styles.art} />
       <Heading>{stopName(stop)}</Heading>
+      {stop.orderRef ? <Body muted>{t('stop.order', { ref: stop.orderRef })}</Body> : null}
       {!stop.packed ? <Banner tone="warn">{t('pickup.waitPacked')}</Banner> : null}
       <Card>
         <View style={styles.switchRow}>
@@ -70,4 +72,5 @@ export default function PickupScreen() {
 const styles = StyleSheet.create({
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 48 },
   label: { flex: 1 },
+  art: { height: 160, borderRadius: radius.lg },
 });
