@@ -239,6 +239,34 @@ class LegalFormsApiTest extends IntegrationTest {
         forms(id, tech).andExpect(status().isOk());
     }
 
+    /**
+     * The Studio's tests and screenshots use what the api serves for four provinces
+     * (web/apps/studio/src/test/legal-forms.json); {@code LEGAL_FORMS_FIXTURES_WRITE=1} rewrites the file.
+     */
+    @Test
+    void theStudioFixturesAreWhatTheApiServes() throws Exception {
+        var file = java.nio.file.Path.of(System.getProperty("user.dir"))
+                .resolve("../../web/apps/studio/src/test/legal-forms.json")
+                .normalize();
+        var json = tools.jackson.databind.json.JsonMapper.builder().build();
+        var served = json.createObjectNode();
+        for (var province : List.of("AB", "BC", "ON", "QC")) {
+            var body = forms(applicant(province, "provider"), user)
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+            served.set(province, json.readTree(body));
+        }
+        if ("1".equals(System.getenv("LEGAL_FORMS_FIXTURES_WRITE"))) {
+            java.nio.file.Files.writeString(
+                    file, json.writerWithDefaultPrettyPrinter().writeValueAsString(served) + "\n");
+        }
+        assertThat(json.readTree(java.nio.file.Files.readString(file)))
+                .as("web/apps/studio/src/test/legal-forms.json — rerun with LEGAL_FORMS_FIXTURES_WRITE=1")
+                .isEqualTo(served);
+    }
+
     // ------------------------------------------------------------------------------------------------ validation
 
     @Test

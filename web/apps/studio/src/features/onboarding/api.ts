@@ -22,7 +22,7 @@ export const Check = z.object({
 export type Check = z.infer<typeof Check>;
 export const PrincipalRole = z.enum(['owner', 'partner', 'partner_signing', 'director', 'officer', 'shareholder', 'chair', 'president', 'treasurer', 'secretary']);
 export type PrincipalRole = z.infer<typeof PrincipalRole>;
-export const Structure = z.enum(['sole', 'partnership', 'corp_ab', 'corp_fed', 'corp_ex', 'coop', 'nonprofit']);
+export const Structure = z.enum(['sole', 'partnership', 'corp_prov', 'corp_fed', 'corp_ex', 'coop', 'nonprofit']);
 export type Structure = z.infer<typeof Structure>;
 export const Onboarding = z.object({
   merchantId: z.string(),
@@ -55,6 +55,40 @@ export type Onboarding = z.infer<typeof Onboarding>;
 export const onboardingQuery = (merchantId: string) => queryOptions({
   queryKey: ['merchant', merchantId, 'onboarding'],
   queryFn: () => http(`/api/v1/merchants/${merchantId}/onboarding`, {}, Onboarding),
+});
+
+/**
+ * `GET /api/v1/merchants/{id}/onboarding/legal-forms`: the Business step's legal-details form of every structure in the
+ * business's province — docs/spec/legal-details.schema.json's fields with the province's labels, formats, help and
+ * registry from the region model. Saving the step is validated against the same definition on the server.
+ */
+export const Bilingual = z.object({ en: z.string(), fr: z.string() });
+export type Bilingual = z.infer<typeof Bilingual>;
+export const LegalFieldKind = z.enum(['text', 'address', 'date', 'document', 'yes_no', 'choice', 'stripe_confirmation', 'group']);
+export type LegalFieldKind = z.infer<typeof LegalFieldKind>;
+export const Condition = z.object({ field: z.string(), in: z.array(z.string()).default([]), notIn: z.array(z.string()).default([]) });
+export type Condition = z.infer<typeof Condition>;
+export interface LegalFieldDef {
+  key: string; kind: LegalFieldKind; required: boolean; requiredWhen?: Condition | null;
+  label?: Bilingual | null; help?: Bilingual | null; example?: string | null; pattern?: string | null; patternMessage?: Bilingual | null;
+  minLength?: number | null; maxLength?: number | null; compact: boolean; options: string[]; parts: LegalFieldDef[];
+}
+export const LegalFieldDef: z.ZodType<LegalFieldDef, unknown> = z.lazy(() => z.object({
+  key: z.string(), kind: LegalFieldKind, required: z.boolean(), requiredWhen: Condition.nullish(),
+  label: Bilingual.nullish(), help: Bilingual.nullish(), example: z.string().nullish(), pattern: z.string().nullish(), patternMessage: Bilingual.nullish(),
+  minLength: z.number().nullish(), maxLength: z.number().nullish(), compact: z.boolean().default(false), options: z.array(z.string()).default([]), parts: z.array(LegalFieldDef).default([]),
+}));
+export const LegalFormDef = z.object({
+  structure: Structure, registry: Bilingual.nullish(), registryUrl: z.string().nullish(), law: Bilingual.nullish(),
+  tradeNameRegistration: z.boolean(), verified: z.boolean(), unverified: z.array(z.string()).default([]), fields: z.array(LegalFieldDef),
+});
+export type LegalFormDef = z.infer<typeof LegalFormDef>;
+export const LegalForms = z.object({ province: z.string().nullish(), items: z.array(LegalFormDef) });
+export type LegalForms = z.infer<typeof LegalForms>;
+export const legalFormsQuery = (merchantId: string, province?: string | null) => queryOptions({
+  queryKey: ['merchant', merchantId, 'onboarding', 'legal-forms', province ?? null],
+  queryFn: () => http(`/api/v1/merchants/${merchantId}/onboarding/legal-forms`, {}, LegalForms),
+  staleTime: 10 * 60_000,
 });
 
 /** `GET /api/v1/onboarding/taxonomy?type=` — grouped categories served from catalogue.categories. */

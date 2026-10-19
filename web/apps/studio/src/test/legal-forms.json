@@ -1,0 +1,3248 @@
+{
+  "AB" : {
+    "province" : "AB",
+    "items" : [ {
+      "structure" : "sole",
+      "registry" : {
+        "en" : "Alberta Corporate Registry",
+        "fr" : "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl" : "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law" : {
+        "en" : "Partnership Act (Alberta) · trade-name registration",
+        "fr" : "Partnership Act (Alberta) · enregistrement du nom commercial"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "identifier" ],
+      "fields" : [ {
+        "key" : "owner_legal_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "trade_name",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 120,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "trade_name_registration",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : {
+          "field" : "trade_name",
+          "in" : [ ],
+          "notIn" : [ ]
+        },
+        "label" : {
+          "en" : "Trade name registration #",
+          "fr" : "N° d'enregistrement du nom commercial"
+        },
+        "help" : {
+          "en" : "From the trade name registration filed with an Alberta registry agent.",
+          "fr" : "Inscrit sur l'enregistrement du nom commercial déposé auprès d'un agent des registres de l'Alberta."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "sin_collected_by_stripe",
+        "kind" : "stripe_confirmation",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "address",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "partnership",
+      "registry" : {
+        "en" : "Alberta Corporate Registry",
+        "fr" : "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl" : "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law" : {
+        "en" : "Partnership Act (Alberta)",
+        "fr" : "Partnership Act (Alberta)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "identifier" ],
+      "fields" : [ {
+        "key" : "partnership_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "partnership_registration",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Partnership registration #",
+          "fr" : "N° d'enregistrement de la société de personnes"
+        },
+        "help" : {
+          "en" : "From the partnership registration with the Alberta Corporate Registry.",
+          "fr" : "Inscrit sur l'enregistrement de la société au Registre des sociétés de l'Alberta."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "partnership_agreement_doc",
+        "kind" : "document",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "corp_prov",
+      "registry" : {
+        "en" : "Alberta Corporate Registry",
+        "fr" : "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl" : "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law" : {
+        "en" : "Business Corporations Act (Alberta)",
+        "fr" : "Business Corporations Act (Alberta)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : true,
+      "unverified" : [ ],
+      "fields" : [ {
+        "key" : "legal_corporate_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "provincial_registry_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Corporate access number",
+          "fr" : "Numéro d'accès de la société"
+        },
+        "help" : {
+          "en" : "On your Alberta certificate of incorporation (9 or 10 digits).",
+          "fr" : "Inscrit sur votre certificat de constitution de l'Alberta (9 ou 10 chiffres)."
+        },
+        "example" : "2012345678",
+        "pattern" : "^\\d{9,10}$",
+        "patternMessage" : {
+          "en" : "Corporate access number is 9 or 10 digits.",
+          "fr" : "Le numéro d'accès compte 9 ou 10 chiffres."
+        },
+        "minLength" : null,
+        "maxLength" : 40,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "incorporation_date",
+        "kind" : "date",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "certificate_of_incorporation_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "operating_name",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 120,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "corp_fed",
+      "registry" : {
+        "en" : "Alberta Corporate Registry",
+        "fr" : "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl" : "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law" : {
+        "en" : "Canada Business Corporations Act · extra-provincial registration in Alberta",
+        "fr" : "Loi canadienne sur les sociétés par actions · enregistrement extraprovincial en Alberta"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : true,
+      "unverified" : [ ],
+      "fields" : [ {
+        "key" : "legal_corporate_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "corporations_canada_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{7}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "extra_provincial_registration_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Alberta extra-provincial registration # (corporate access number)",
+          "fr" : "N° d'enregistrement extraprovincial en Alberta (numéro d'accès)"
+        },
+        "help" : {
+          "en" : "Federal corporations register in Alberta before carrying on business here.",
+          "fr" : "Les sociétés fédérales s'enregistrent en Alberta avant d'y exercer."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 40,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "certificate_of_incorporation_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "annual_return_current",
+        "kind" : "yes_no",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "corp_ex",
+      "registry" : {
+        "en" : "Alberta Corporate Registry",
+        "fr" : "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl" : "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law" : {
+        "en" : "Business Corporations Act (Alberta), Part 21",
+        "fr" : "Business Corporations Act (Alberta), partie 21"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : true,
+      "unverified" : [ ],
+      "fields" : [ {
+        "key" : "legal_corporate_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "home_jurisdiction",
+        "kind" : "choice",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT", "US", "OTHER" ],
+        "parts" : [ ]
+      }, {
+        "key" : "home_registration_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "extra_provincial_registration_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Alberta extra-provincial registration # (corporate access number)",
+          "fr" : "N° d'enregistrement extraprovincial en Alberta (numéro d'accès)"
+        },
+        "help" : {
+          "en" : "On the certificate of registration Alberta issued.",
+          "fr" : "Inscrit sur le certificat d'enregistrement délivré par l'Alberta."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 40,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "attorney_for_service",
+        "kind" : "group",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Agent for service in Alberta",
+          "fr" : "Mandataire aux fins de signification en Alberta"
+        },
+        "help" : {
+          "en" : "An individual with a physical address in Alberta.",
+          "fr" : "Une personne ayant une adresse physique en Alberta."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ {
+          "key" : "name",
+          "kind" : "text",
+          "required" : true,
+          "requiredWhen" : null,
+          "label" : null,
+          "help" : null,
+          "example" : null,
+          "pattern" : null,
+          "patternMessage" : null,
+          "minLength" : null,
+          "maxLength" : null,
+          "compact" : false,
+          "options" : [ ],
+          "parts" : [ ]
+        }, {
+          "key" : "address_in_province",
+          "kind" : "address",
+          "required" : true,
+          "requiredWhen" : null,
+          "label" : null,
+          "help" : null,
+          "example" : null,
+          "pattern" : null,
+          "patternMessage" : null,
+          "minLength" : 5,
+          "maxLength" : 200,
+          "compact" : false,
+          "options" : [ ],
+          "parts" : [ ]
+        } ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "certificate_of_status_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "coop",
+      "registry" : {
+        "en" : "Alberta Corporate Registry",
+        "fr" : "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl" : "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law" : {
+        "en" : "Cooperatives Act (Alberta)",
+        "fr" : "Cooperatives Act (Alberta)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "law", "identifier" ],
+      "fields" : [ {
+        "key" : "registered_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "cooperative_registration",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Cooperative registration #",
+          "fr" : "N° d'enregistrement de la coopérative"
+        },
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "board_resolution_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "nonprofit",
+      "registry" : {
+        "en" : "Alberta Corporate Registry",
+        "fr" : "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl" : "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law" : {
+        "en" : "Societies Act (Alberta) · CRA charity rules",
+        "fr" : "Societies Act (Alberta) · règles de l'ARC sur les organismes de bienfaisance"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "law", "identifier" ],
+      "fields" : [ {
+        "key" : "registered_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "society_registration",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Society registration #",
+          "fr" : "N° d'enregistrement de la société"
+        },
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "cra_charity_number",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}RR\\d{4}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "board_resolution_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    } ]
+  },
+  "BC" : {
+    "province" : "BC",
+    "items" : [ {
+      "structure" : "sole",
+      "registry" : {
+        "en" : "BC Registries and Online Services",
+        "fr" : "BC Registries and Online Services (Colombie-Britannique)"
+      },
+      "registryUrl" : "https://www2.gov.bc.ca/gov/content/employment-business/business/managing-a-business/permits-licences/businesses-incorporated-companies",
+      "law" : {
+        "en" : "Partnership Act (British Columbia) · business name registration",
+        "fr" : "Partnership Act (Colombie-Britannique) · enregistrement du nom d'entreprise"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : true,
+      "unverified" : [ ],
+      "fields" : [ {
+        "key" : "owner_legal_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "trade_name",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 120,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "trade_name_registration",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : {
+          "field" : "trade_name",
+          "in" : [ ],
+          "notIn" : [ ]
+        },
+        "label" : {
+          "en" : "Registration number (FM)",
+          "fr" : "Numéro d'enregistrement (FM)"
+        },
+        "help" : {
+          "en" : "Starts with FM, on the statement of registration from BC Registries.",
+          "fr" : "Commence par FM, sur la déclaration d'enregistrement de BC Registries."
+        },
+        "example" : "FM1016176",
+        "pattern" : "^FM\\d{7}$",
+        "patternMessage" : {
+          "en" : "BC registration number is FM + 7 digits (e.g. FM1016176).",
+          "fr" : "Le numéro d'enregistrement de la C.-B. est FM + 7 chiffres (p. ex. FM1016176)."
+        },
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "sin_collected_by_stripe",
+        "kind" : "stripe_confirmation",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "address",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "partnership",
+      "registry" : {
+        "en" : "BC Registries and Online Services",
+        "fr" : "BC Registries and Online Services (Colombie-Britannique)"
+      },
+      "registryUrl" : "https://www2.gov.bc.ca/gov/content/employment-business/business/managing-a-business/permits-licences/businesses-incorporated-companies",
+      "law" : {
+        "en" : "Partnership Act (British Columbia)",
+        "fr" : "Partnership Act (Colombie-Britannique)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : true,
+      "unverified" : [ ],
+      "fields" : [ {
+        "key" : "partnership_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "partnership_registration",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Registration number (FM)",
+          "fr" : "Numéro d'enregistrement (FM)"
+        },
+        "help" : {
+          "en" : "Starts with FM, on the statement of registration from BC Registries.",
+          "fr" : "Commence par FM, sur la déclaration d'enregistrement de BC Registries."
+        },
+        "example" : "FM1016176",
+        "pattern" : "^FM\\d{7}$",
+        "patternMessage" : {
+          "en" : "BC registration number is FM + 7 digits (e.g. FM1016176).",
+          "fr" : "Le numéro d'enregistrement de la C.-B. est FM + 7 chiffres (p. ex. FM1016176)."
+        },
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "partnership_agreement_doc",
+        "kind" : "document",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "corp_prov",
+      "registry" : {
+        "en" : "BC Registries and Online Services",
+        "fr" : "BC Registries and Online Services (Colombie-Britannique)"
+      },
+      "registryUrl" : "https://www2.gov.bc.ca/gov/content/employment-business/business/managing-a-business/permits-licences/businesses-incorporated-companies",
+      "law" : {
+        "en" : "Business Corporations Act (British Columbia)",
+        "fr" : "Business Corporations Act (Colombie-Britannique)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : true,
+      "unverified" : [ ],
+      "fields" : [ {
+        "key" : "legal_corporate_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "provincial_registry_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Incorporation number",
+          "fr" : "Numéro de constitution"
+        },
+        "help" : {
+          "en" : "BC followed by 7 digits, top right of the certificate of incorporation.",
+          "fr" : "BC suivi de 7 chiffres, en haut à droite du certificat de constitution."
+        },
+        "example" : "BC0999999",
+        "pattern" : "^(BC)?\\d{7}$",
+        "patternMessage" : {
+          "en" : "BC incorporation number is BC + 7 digits (e.g. BC0999999).",
+          "fr" : "Le numéro de constitution de la C.-B. est BC + 7 chiffres (p. ex. BC0999999)."
+        },
+        "minLength" : null,
+        "maxLength" : 40,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "incorporation_date",
+        "kind" : "date",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "certificate_of_incorporation_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "operating_name",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 120,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "corp_fed",
+      "registry" : {
+        "en" : "BC Registries and Online Services",
+        "fr" : "BC Registries and Online Services (Colombie-Britannique)"
+      },
+      "registryUrl" : "https://www2.gov.bc.ca/gov/content/employment-business/business/managing-a-business/permits-licences/businesses-incorporated-companies",
+      "law" : {
+        "en" : "Canada Business Corporations Act · extraprovincial registration in British Columbia",
+        "fr" : "Loi canadienne sur les sociétés par actions · enregistrement extraprovincial en Colombie-Britannique"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "format" ],
+      "fields" : [ {
+        "key" : "legal_corporate_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "corporations_canada_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{7}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "extra_provincial_registration_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Extraprovincial registration number",
+          "fr" : "Numéro d'enregistrement extraprovincial"
+        },
+        "help" : {
+          "en" : "Starts with A, on the certificate of registration.",
+          "fr" : "Commence par A, sur le certificat d'enregistrement."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 40,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "certificate_of_incorporation_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "annual_return_current",
+        "kind" : "yes_no",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "corp_ex",
+      "registry" : {
+        "en" : "BC Registries and Online Services",
+        "fr" : "BC Registries and Online Services (Colombie-Britannique)"
+      },
+      "registryUrl" : "https://www2.gov.bc.ca/gov/content/employment-business/business/managing-a-business/permits-licences/businesses-incorporated-companies",
+      "law" : {
+        "en" : "Business Corporations Act (British Columbia) · extraprovincial companies",
+        "fr" : "Business Corporations Act (Colombie-Britannique) · sociétés extraprovinciales"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "format" ],
+      "fields" : [ {
+        "key" : "legal_corporate_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "home_jurisdiction",
+        "kind" : "choice",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ "AB", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT", "US", "OTHER" ],
+        "parts" : [ ]
+      }, {
+        "key" : "home_registration_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "extra_provincial_registration_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Extraprovincial registration number",
+          "fr" : "Numéro d'enregistrement extraprovincial"
+        },
+        "help" : {
+          "en" : "Starts with A, on the certificate of registration.",
+          "fr" : "Commence par A, sur le certificat d'enregistrement."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 40,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "attorney_for_service",
+        "kind" : "group",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Attorney in British Columbia",
+          "fr" : "Fondé de pouvoir en Colombie-Britannique"
+        },
+        "help" : {
+          "en" : "An individual resident in BC or a BC company.",
+          "fr" : "Une personne résidant en C.-B. ou une société de la C.-B."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ {
+          "key" : "name",
+          "kind" : "text",
+          "required" : true,
+          "requiredWhen" : null,
+          "label" : null,
+          "help" : null,
+          "example" : null,
+          "pattern" : null,
+          "patternMessage" : null,
+          "minLength" : null,
+          "maxLength" : null,
+          "compact" : false,
+          "options" : [ ],
+          "parts" : [ ]
+        }, {
+          "key" : "address_in_province",
+          "kind" : "address",
+          "required" : true,
+          "requiredWhen" : null,
+          "label" : null,
+          "help" : null,
+          "example" : null,
+          "pattern" : null,
+          "patternMessage" : null,
+          "minLength" : 5,
+          "maxLength" : 200,
+          "compact" : false,
+          "options" : [ ],
+          "parts" : [ ]
+        } ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "certificate_of_status_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "coop",
+      "registry" : {
+        "en" : "BC Registries and Online Services",
+        "fr" : "BC Registries and Online Services (Colombie-Britannique)"
+      },
+      "registryUrl" : "https://www2.gov.bc.ca/gov/content/employment-business/business/managing-a-business/permits-licences/businesses-incorporated-companies",
+      "law" : {
+        "en" : "Cooperative Association Act (British Columbia)",
+        "fr" : "Cooperative Association Act (Colombie-Britannique)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "law", "identifier" ],
+      "fields" : [ {
+        "key" : "registered_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "cooperative_registration",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Cooperative incorporation number",
+          "fr" : "Numéro de constitution de la coopérative"
+        },
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "board_resolution_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "nonprofit",
+      "registry" : {
+        "en" : "BC Registries and Online Services",
+        "fr" : "BC Registries and Online Services (Colombie-Britannique)"
+      },
+      "registryUrl" : "https://www2.gov.bc.ca/gov/content/employment-business/business/managing-a-business/permits-licences/businesses-incorporated-companies",
+      "law" : {
+        "en" : "Societies Act (British Columbia) · CRA charity rules",
+        "fr" : "Societies Act (Colombie-Britannique) · règles de l'ARC sur les organismes de bienfaisance"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "law", "identifier" ],
+      "fields" : [ {
+        "key" : "registered_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "society_registration",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Society incorporation number",
+          "fr" : "Numéro de constitution de la société"
+        },
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "cra_charity_number",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}RR\\d{4}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "board_resolution_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    } ]
+  },
+  "ON" : {
+    "province" : "ON",
+    "items" : [ {
+      "structure" : "sole",
+      "registry" : {
+        "en" : "Ontario Business Registry",
+        "fr" : "Registre des entreprises de l'Ontario"
+      },
+      "registryUrl" : "https://www.ontario.ca/page/ontario-business-registry-all-services",
+      "law" : {
+        "en" : "Business Names Act (Ontario)",
+        "fr" : "Loi sur les noms commerciaux (Ontario)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : true,
+      "unverified" : [ ],
+      "fields" : [ {
+        "key" : "owner_legal_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "trade_name",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 120,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "trade_name_registration",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : {
+          "field" : "trade_name",
+          "in" : [ ],
+          "notIn" : [ ]
+        },
+        "label" : {
+          "en" : "Business Identification Number (BIN)",
+          "fr" : "Numéro d'identification de l'entreprise (NIE)"
+        },
+        "help" : {
+          "en" : "On the business name registration (Business Names Act). Not the CRA business number.",
+          "fr" : "Inscrit sur l'enregistrement du nom commercial (Loi sur les noms commerciaux). Ce n'est pas le numéro d'entreprise de l'ARC."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "sin_collected_by_stripe",
+        "kind" : "stripe_confirmation",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "address",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "partnership",
+      "registry" : {
+        "en" : "Ontario Business Registry",
+        "fr" : "Registre des entreprises de l'Ontario"
+      },
+      "registryUrl" : "https://www.ontario.ca/page/ontario-business-registry-all-services",
+      "law" : {
+        "en" : "Partnerships Act · Business Names Act (Ontario)",
+        "fr" : "Loi sur les sociétés en nom collectif · Loi sur les noms commerciaux (Ontario)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : true,
+      "unverified" : [ ],
+      "fields" : [ {
+        "key" : "partnership_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "partnership_registration",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Business Identification Number (BIN)",
+          "fr" : "Numéro d'identification de l'entreprise (NIE)"
+        },
+        "help" : {
+          "en" : "On the business name registration (Business Names Act). Not the CRA business number.",
+          "fr" : "Inscrit sur l'enregistrement du nom commercial (Loi sur les noms commerciaux). Ce n'est pas le numéro d'entreprise de l'ARC."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "partnership_agreement_doc",
+        "kind" : "document",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "corp_prov",
+      "registry" : {
+        "en" : "Ontario Business Registry",
+        "fr" : "Registre des entreprises de l'Ontario"
+      },
+      "registryUrl" : "https://www.ontario.ca/page/ontario-business-registry-all-services",
+      "law" : {
+        "en" : "Business Corporations Act (Ontario)",
+        "fr" : "Loi sur les sociétés par actions (Ontario)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "format" ],
+      "fields" : [ {
+        "key" : "legal_corporate_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "provincial_registry_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Ontario Corporation Number (OCN)",
+          "fr" : "Numéro matricule de la personne morale de l'Ontario (NMPMO)"
+        },
+        "help" : {
+          "en" : "Assigned when the corporation was incorporated in Ontario; on the corporation profile report.",
+          "fr" : "Attribué à la constitution en Ontario; inscrit sur le rapport de profil de la personne morale."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 40,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "incorporation_date",
+        "kind" : "date",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "certificate_of_incorporation_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "operating_name",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 120,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "corp_fed",
+      "registry" : {
+        "en" : "Ontario Business Registry",
+        "fr" : "Registre des entreprises de l'Ontario"
+      },
+      "registryUrl" : "https://www.ontario.ca/page/ontario-business-registry-all-services",
+      "law" : {
+        "en" : "Canada Business Corporations Act · Corporations Information Act (Ontario) initial return",
+        "fr" : "Loi canadienne sur les sociétés par actions · rapport initial, Loi sur les renseignements exigés des personnes morales (Ontario)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : true,
+      "unverified" : [ ],
+      "fields" : [ {
+        "key" : "legal_corporate_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "corporations_canada_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{7}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "extra_provincial_registration_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Ontario Corporation Number (OCN)",
+          "fr" : "Numéro matricule de la personne morale de l'Ontario (NMPMO)"
+        },
+        "help" : {
+          "en" : "Issued when the corporation filed its Initial Return (Form 2) to operate in Ontario.",
+          "fr" : "Attribué au dépôt du rapport initial (formule 2) pour exercer en Ontario."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 40,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "certificate_of_incorporation_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "annual_return_current",
+        "kind" : "yes_no",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "corp_ex",
+      "registry" : {
+        "en" : "Ontario Business Registry",
+        "fr" : "Registre des entreprises de l'Ontario"
+      },
+      "registryUrl" : "https://www.ontario.ca/page/ontario-business-registry-all-services",
+      "law" : {
+        "en" : "Extra-Provincial Corporations Act · Corporations Information Act (Ontario)",
+        "fr" : "Loi sur les personnes morales extraprovinciales · Loi sur les renseignements exigés des personnes morales (Ontario)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : true,
+      "unverified" : [ ],
+      "fields" : [ {
+        "key" : "legal_corporate_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "home_jurisdiction",
+        "kind" : "choice",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ "AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "PE", "QC", "SK", "YT", "US", "OTHER" ],
+        "parts" : [ ]
+      }, {
+        "key" : "home_registration_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "extra_provincial_registration_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Ontario Corporation Number (OCN)",
+          "fr" : "Numéro matricule de la personne morale de l'Ontario (NMPMO)"
+        },
+        "help" : {
+          "en" : "Issued with the Initial Return (incorporated in Canada) or the extra-provincial licence (outside Canada).",
+          "fr" : "Attribué avec le rapport initial (constituée au Canada) ou le permis extraprovincial (hors du Canada)."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 40,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "attorney_for_service",
+        "kind" : "group",
+        "required" : false,
+        "requiredWhen" : {
+          "field" : "home_jurisdiction",
+          "in" : [ "US", "OTHER" ],
+          "notIn" : [ ]
+        },
+        "label" : {
+          "en" : "Agent for service in Ontario",
+          "fr" : "Mandataire aux fins de signification en Ontario"
+        },
+        "help" : {
+          "en" : "Required for corporations incorporated outside Canada.",
+          "fr" : "Obligatoire pour les sociétés constituées hors du Canada."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ {
+          "key" : "name",
+          "kind" : "text",
+          "required" : true,
+          "requiredWhen" : null,
+          "label" : null,
+          "help" : null,
+          "example" : null,
+          "pattern" : null,
+          "patternMessage" : null,
+          "minLength" : null,
+          "maxLength" : null,
+          "compact" : false,
+          "options" : [ ],
+          "parts" : [ ]
+        }, {
+          "key" : "address_in_province",
+          "kind" : "address",
+          "required" : true,
+          "requiredWhen" : null,
+          "label" : null,
+          "help" : null,
+          "example" : null,
+          "pattern" : null,
+          "patternMessage" : null,
+          "minLength" : 5,
+          "maxLength" : 200,
+          "compact" : false,
+          "options" : [ ],
+          "parts" : [ ]
+        } ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "certificate_of_status_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "coop",
+      "registry" : {
+        "en" : "Ontario Business Registry",
+        "fr" : "Registre des entreprises de l'Ontario"
+      },
+      "registryUrl" : "https://www.ontario.ca/page/ontario-business-registry-all-services",
+      "law" : {
+        "en" : "Co-operative Corporations Act (Ontario)",
+        "fr" : "Loi sur les sociétés coopératives (Ontario)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "law", "identifier" ],
+      "fields" : [ {
+        "key" : "registered_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "cooperative_registration",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Ontario Corporation Number (OCN)",
+          "fr" : "Numéro matricule de la personne morale de l'Ontario (NMPMO)"
+        },
+        "help" : {
+          "en" : "The co-operative’s Ontario Corporation Number.",
+          "fr" : "Le numéro matricule de la coopérative en Ontario."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "board_resolution_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "nonprofit",
+      "registry" : {
+        "en" : "Ontario Business Registry",
+        "fr" : "Registre des entreprises de l'Ontario"
+      },
+      "registryUrl" : "https://www.ontario.ca/page/ontario-business-registry-all-services",
+      "law" : {
+        "en" : "Not-for-Profit Corporations Act, 2010 (Ontario) · CRA charity rules",
+        "fr" : "Loi de 2010 sur les organisations sans but lucratif (Ontario) · règles de l'ARC sur les organismes de bienfaisance"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "law", "identifier" ],
+      "fields" : [ {
+        "key" : "registered_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "society_registration",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Ontario Corporation Number (OCN)",
+          "fr" : "Numéro matricule de la personne morale de l'Ontario (NMPMO)"
+        },
+        "help" : {
+          "en" : "The corporation’s Ontario Corporation Number.",
+          "fr" : "Le numéro matricule de la personne morale en Ontario."
+        },
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "cra_charity_number",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}RR\\d{4}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "board_resolution_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    } ]
+  },
+  "QC" : {
+    "province" : "QC",
+    "items" : [ {
+      "structure" : "sole",
+      "registry" : {
+        "en" : "Registraire des entreprises du Québec",
+        "fr" : "Registraire des entreprises du Québec"
+      },
+      "registryUrl" : "https://www.quebec.ca/en/businesses-and-self-employed-workers/start-entreprise/register-constitute-enterprise/learn-about-registration/quebec-enterprise-number-neq",
+      "law" : {
+        "en" : "Act respecting the legal publicity of enterprises",
+        "fr" : "Loi sur la publicité légale des entreprises"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : true,
+      "unverified" : [ ],
+      "fields" : [ {
+        "key" : "owner_legal_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "trade_name",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 120,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "trade_name_registration",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : {
+          "field" : "trade_name",
+          "in" : [ ],
+          "notIn" : [ ]
+        },
+        "label" : {
+          "en" : "Québec enterprise number (NEQ)",
+          "fr" : "Numéro d'entreprise du Québec (NEQ)"
+        },
+        "help" : {
+          "en" : "Registration is required when the name you trade under does not include your first and last names.",
+          "fr" : "L'immatriculation est obligatoire si le nom utilisé ne comprend pas vos prénom et nom."
+        },
+        "example" : "2271234567",
+        "pattern" : "^\\d{10}$",
+        "patternMessage" : {
+          "en" : "The NEQ is 10 digits.",
+          "fr" : "Le NEQ compte 10 chiffres."
+        },
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "sin_collected_by_stripe",
+        "kind" : "stripe_confirmation",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "address",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "partnership",
+      "registry" : {
+        "en" : "Registraire des entreprises du Québec",
+        "fr" : "Registraire des entreprises du Québec"
+      },
+      "registryUrl" : "https://www.quebec.ca/en/businesses-and-self-employed-workers/start-entreprise/register-constitute-enterprise/learn-about-registration/quebec-enterprise-number-neq",
+      "law" : {
+        "en" : "Civil Code of Québec · Act respecting the legal publicity of enterprises",
+        "fr" : "Code civil du Québec · Loi sur la publicité légale des entreprises"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "law" ],
+      "fields" : [ {
+        "key" : "partnership_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "partnership_registration",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Québec enterprise number (NEQ)",
+          "fr" : "Numéro d'entreprise du Québec (NEQ)"
+        },
+        "help" : {
+          "en" : "The partnership’s NEQ from the enterprise register.",
+          "fr" : "Le NEQ de la société au registre des entreprises."
+        },
+        "example" : "1171234567",
+        "pattern" : "^\\d{10}$",
+        "patternMessage" : {
+          "en" : "The NEQ is 10 digits.",
+          "fr" : "Le NEQ compte 10 chiffres."
+        },
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "partnership_agreement_doc",
+        "kind" : "document",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "corp_prov",
+      "registry" : {
+        "en" : "Registraire des entreprises du Québec",
+        "fr" : "Registraire des entreprises du Québec"
+      },
+      "registryUrl" : "https://www.quebec.ca/en/businesses-and-self-employed-workers/start-entreprise/register-constitute-enterprise/learn-about-registration/quebec-enterprise-number-neq",
+      "law" : {
+        "en" : "Business Corporations Act (Québec)",
+        "fr" : "Loi sur les sociétés par actions (Québec)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "law" ],
+      "fields" : [ {
+        "key" : "legal_corporate_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "provincial_registry_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Québec enterprise number (NEQ)",
+          "fr" : "Numéro d'entreprise du Québec (NEQ)"
+        },
+        "help" : {
+          "en" : "Assigned when the corporation registered with the Registraire des entreprises.",
+          "fr" : "Attribué à l'immatriculation au Registraire des entreprises."
+        },
+        "example" : "1171234567",
+        "pattern" : "^\\d{10}$",
+        "patternMessage" : {
+          "en" : "The NEQ is 10 digits.",
+          "fr" : "Le NEQ compte 10 chiffres."
+        },
+        "minLength" : null,
+        "maxLength" : 40,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "incorporation_date",
+        "kind" : "date",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "certificate_of_incorporation_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "operating_name",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : 120,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "corp_fed",
+      "registry" : {
+        "en" : "Registraire des entreprises du Québec",
+        "fr" : "Registraire des entreprises du Québec"
+      },
+      "registryUrl" : "https://www.quebec.ca/en/businesses-and-self-employed-workers/start-entreprise/register-constitute-enterprise/learn-about-registration/quebec-enterprise-number-neq",
+      "law" : {
+        "en" : "Canada Business Corporations Act · registration in Québec",
+        "fr" : "Loi canadienne sur les sociétés par actions · immatriculation au Québec"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : true,
+      "unverified" : [ ],
+      "fields" : [ {
+        "key" : "legal_corporate_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "corporations_canada_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{7}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "extra_provincial_registration_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Québec enterprise number (NEQ)",
+          "fr" : "Numéro d'entreprise du Québec (NEQ)"
+        },
+        "help" : {
+          "en" : "Federal corporations carrying on activity in Québec register and receive an NEQ.",
+          "fr" : "Les sociétés fédérales qui exercent au Québec s’immatriculent et reçoivent un NEQ."
+        },
+        "example" : "1171234567",
+        "pattern" : "^\\d{10}$",
+        "patternMessage" : {
+          "en" : "The NEQ is 10 digits.",
+          "fr" : "Le NEQ compte 10 chiffres."
+        },
+        "minLength" : null,
+        "maxLength" : 40,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "certificate_of_incorporation_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "annual_return_current",
+        "kind" : "yes_no",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "corp_ex",
+      "registry" : {
+        "en" : "Registraire des entreprises du Québec",
+        "fr" : "Registraire des entreprises du Québec"
+      },
+      "registryUrl" : "https://www.quebec.ca/en/businesses-and-self-employed-workers/start-entreprise/register-constitute-enterprise/learn-about-registration/quebec-enterprise-number-neq",
+      "law" : {
+        "en" : "Act respecting the legal publicity of enterprises · registration in Québec",
+        "fr" : "Loi sur la publicité légale des entreprises · immatriculation au Québec"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "attorney" ],
+      "fields" : [ {
+        "key" : "legal_corporate_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "home_jurisdiction",
+        "kind" : "choice",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ "AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "SK", "YT", "US", "OTHER" ],
+        "parts" : [ ]
+      }, {
+        "key" : "home_registration_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "extra_provincial_registration_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Québec enterprise number (NEQ)",
+          "fr" : "Numéro d'entreprise du Québec (NEQ)"
+        },
+        "help" : {
+          "en" : "Legal persons constituted outside Québec register when they carry on activity here.",
+          "fr" : "Les personnes morales constituées hors du Québec s'immatriculent lorsqu'elles y exercent une activité."
+        },
+        "example" : "1171234567",
+        "pattern" : "^\\d{10}$",
+        "patternMessage" : {
+          "en" : "The NEQ is 10 digits.",
+          "fr" : "Le NEQ compte 10 chiffres."
+        },
+        "minLength" : null,
+        "maxLength" : 40,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "attorney_for_service",
+        "kind" : "group",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Attorney in Québec (if no establishment here)",
+          "fr" : "Fondé de pouvoir au Québec (si aucun établissement)"
+        },
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ {
+          "key" : "name",
+          "kind" : "text",
+          "required" : true,
+          "requiredWhen" : null,
+          "label" : null,
+          "help" : null,
+          "example" : null,
+          "pattern" : null,
+          "patternMessage" : null,
+          "minLength" : null,
+          "maxLength" : null,
+          "compact" : false,
+          "options" : [ ],
+          "parts" : [ ]
+        }, {
+          "key" : "address_in_province",
+          "kind" : "address",
+          "required" : true,
+          "requiredWhen" : null,
+          "label" : null,
+          "help" : null,
+          "example" : null,
+          "pattern" : null,
+          "patternMessage" : null,
+          "minLength" : 5,
+          "maxLength" : 200,
+          "compact" : false,
+          "options" : [ ],
+          "parts" : [ ]
+        } ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "certificate_of_status_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "coop",
+      "registry" : {
+        "en" : "Registraire des entreprises du Québec",
+        "fr" : "Registraire des entreprises du Québec"
+      },
+      "registryUrl" : "https://www.quebec.ca/en/businesses-and-self-employed-workers/start-entreprise/register-constitute-enterprise/learn-about-registration/quebec-enterprise-number-neq",
+      "law" : {
+        "en" : "Cooperatives Act (Québec)",
+        "fr" : "Loi sur les coopératives (Québec)"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "law" ],
+      "fields" : [ {
+        "key" : "registered_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "cooperative_registration",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Québec enterprise number (NEQ)",
+          "fr" : "Numéro d'entreprise du Québec (NEQ)"
+        },
+        "help" : {
+          "en" : "The co-operative’s NEQ.",
+          "fr" : "Le NEQ de la coopérative."
+        },
+        "example" : "1171234567",
+        "pattern" : "^\\d{10}$",
+        "patternMessage" : {
+          "en" : "The NEQ is 10 digits.",
+          "fr" : "Le NEQ compte 10 chiffres."
+        },
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "board_resolution_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    }, {
+      "structure" : "nonprofit",
+      "registry" : {
+        "en" : "Registraire des entreprises du Québec",
+        "fr" : "Registraire des entreprises du Québec"
+      },
+      "registryUrl" : "https://www.quebec.ca/en/businesses-and-self-employed-workers/start-entreprise/register-constitute-enterprise/learn-about-registration/quebec-enterprise-number-neq",
+      "law" : {
+        "en" : "Companies Act, Part III (Québec) · CRA charity rules",
+        "fr" : "Loi sur les compagnies, partie III (Québec) · règles de l'ARC sur les organismes de bienfaisance"
+      },
+      "tradeNameRegistration" : true,
+      "verified" : false,
+      "unverified" : [ "law" ],
+      "fields" : [ {
+        "key" : "registered_name",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 2,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "society_registration",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : {
+          "en" : "Québec enterprise number (NEQ)",
+          "fr" : "Numéro d'entreprise du Québec (NEQ)"
+        },
+        "help" : {
+          "en" : "The organization’s NEQ.",
+          "fr" : "Le NEQ de l'organisme."
+        },
+        "example" : "1171234567",
+        "pattern" : "^\\d{10}$",
+        "patternMessage" : {
+          "en" : "The NEQ is 10 digits.",
+          "fr" : "Le NEQ compte 10 chiffres."
+        },
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "cra_charity_number",
+        "kind" : "text",
+        "required" : false,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}RR\\d{4}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "business_number",
+        "kind" : "text",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^\\d{9}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : true,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "board_resolution_doc",
+        "kind" : "document",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage" : null,
+        "minLength" : null,
+        "maxLength" : null,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      }, {
+        "key" : "registered_office",
+        "kind" : "address",
+        "required" : true,
+        "requiredWhen" : null,
+        "label" : null,
+        "help" : null,
+        "example" : null,
+        "pattern" : null,
+        "patternMessage" : null,
+        "minLength" : 5,
+        "maxLength" : 200,
+        "compact" : false,
+        "options" : [ ],
+        "parts" : [ ]
+      } ]
+    } ]
+  }
+}

@@ -50,6 +50,11 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'register', path: '/register', signedIn: false },
     { name: 'onboarding', path: '/onboarding', signedIn: true },
     { name: 'onboarding-business', path: '/onboarding/business?m=01J9ZD3V00000000000000NB01&type=provider', signedIn: true },
+    // the legal details as four provinces serve them (region data; shots/fixtures.mjs ONB_PROVINCES)
+    { name: 'onboarding-business-ab', path: '/onboarding/business?m=01J9ZD3V00000000000000NB02&type=provider', signedIn: true, ready: '.nl-ob-legal-head' },
+    { name: 'onboarding-business-on', path: '/onboarding/business?m=01J9ZD3V00000000000000NB03&type=provider', signedIn: true, ready: '.nl-ob-legal-head' },
+    { name: 'onboarding-business-bc', path: '/onboarding/business?m=01J9ZD3V00000000000000NB04&type=provider', signedIn: true, ready: '.nl-ob-legal-head' },
+    { name: 'onboarding-business-qc', path: '/onboarding/business?m=01J9ZD3V00000000000000NB05&type=provider', signedIn: true, ready: '.nl-ob-legal-head' },
     { name: 'onboarding-verification', path: '/onboarding/verification?m=01J9ZD3V00000000000000GATE&type=provider', signedIn: true },
     { name: 'onboarding-gate', path: '/onboarding/review?m=01J9ZD3V00000000000000GATE&type=provider', signedIn: true },
     { name: 'identity-done', path: '/identity/done', signedIn: true },

@@ -10287,6 +10287,66 @@ paths:
           description: Not found.
       tags:
       - onboarding-document-controller
+  /api/v1/merchants/{merchantId}/onboarding/legal-forms:
+    get:
+      operationId: onboardingLegalForms
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LegalFormsResponse"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - onboarding-controller
   /api/v1/merchants/{merchantId}/onboarding/submit:
     post:
       operationId: onboardingSubmit
@@ -16941,7 +17001,7 @@ components:
           enum:
           - sole
           - partnership
-          - corp_ab
+          - corp_prov
           - corp_fed
           - corp_ex
           - coop
@@ -17495,6 +17555,19 @@ components:
         value:
           type: number
           format: double
+    Condition:
+      type: object
+      properties:
+        field:
+          type: string
+        in:
+          type: array
+          items:
+            type: string
+        notIn:
+          type: array
+          items:
+            type: string
     ConflictsResponse:
       type: object
       properties:
@@ -18688,6 +18761,83 @@ components:
           type: integer
           format: int64
           description: Cents of Canadian dollars (CAD).
+    LegalFieldResponse:
+      type: object
+      properties:
+        compact:
+          type: boolean
+        example:
+          type: string
+        help:
+          $ref: "#/components/schemas/Text"
+        key:
+          type: string
+        kind:
+          type: string
+        label:
+          $ref: "#/components/schemas/Text"
+        maxLength:
+          type: integer
+          format: int32
+        minLength:
+          type: integer
+          format: int32
+        options:
+          type: array
+          items:
+            type: string
+        parts:
+          type: array
+          items:
+            $ref: "#/components/schemas/LegalFieldResponse"
+        pattern:
+          type: string
+        patternMessage:
+          $ref: "#/components/schemas/Text"
+        required:
+          type: boolean
+        requiredWhen:
+          $ref: "#/components/schemas/Condition"
+    LegalFormResponse:
+      type: object
+      properties:
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/LegalFieldResponse"
+        law:
+          $ref: "#/components/schemas/Text"
+        registry:
+          $ref: "#/components/schemas/Text"
+        registryUrl:
+          type: string
+        structure:
+          type: string
+          enum:
+          - sole
+          - partnership
+          - corp_prov
+          - corp_fed
+          - corp_ex
+          - coop
+          - nonprofit
+        tradeNameRegistration:
+          type: boolean
+        unverified:
+          type: array
+          items:
+            type: string
+        verified:
+          type: boolean
+    LegalFormsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LegalFormResponse"
+        province:
+          type: string
     Licence:
       type: object
       properties:
@@ -22123,6 +22273,13 @@ components:
           type: array
           items:
             type: string
+    Text:
+      type: object
+      properties:
+        en:
+          type: string
+        fr:
+          type: string
     ThreadDetail:
       type: object
       properties:
