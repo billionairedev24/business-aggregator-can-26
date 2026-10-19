@@ -51,7 +51,7 @@
 .nl-qt-signin > span { flex: 1 1 200px; }
 
 /* tables: the received quotes and a quote's lines */
-.nl-qt-tablewrap { position: relative; max-width: 100%; overflow-x: auto; }
+.nl-qt-tablewrap { position: relative; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
 .nl-qt-table, .nl-qt-lines { max-width: 900px; width: 100%; font-size: var(--text-md); }
 .nl-qt-table th, .nl-qt-lines th { padding: var(--space-3) var(--space-4); }
 .nl-qt-table td, .nl-qt-lines td { vertical-align: top; padding: var(--space-4); }
