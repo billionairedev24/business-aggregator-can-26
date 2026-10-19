@@ -4,6 +4,7 @@ import { Chip, EmptyState, ErrorState, Segmented, SiteLink, Skeleton, Tag, useFo
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { useKitchens, type Card } from './api';
 import { Art } from '../art/Art';
+import { PlaceButton } from '../pages/PlaceButton';
 import { CUISINE_NAMES, TAGS, useFoodT } from './messages';
 
 type T = ReturnType<typeof useFoodT>;
@@ -92,7 +93,7 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
       ) : !kitchens.data ? (
         <div className="nl-food-grid" aria-busy="true">{Array.from({ length: 6 }, (_, i) => <div key={i}><Skeleton height={160} radius={12} /><Skeleton width="60%" height={16} style={{ marginTop: 10 }} /></div>)}</div>
       ) : reachable.length === 0 ? (
-        <div className="nl-food-block"><EmptyState action={<Link to="/location" className="btn btn-primary">{t('changeLocation')}</Link>}>{t('empty', { area })}</EmptyState></div>
+        <div className="nl-food-block"><EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('empty', { area })}</EmptyState></div>
       ) : (
         <>
           <h2 className="nl-food-heading">

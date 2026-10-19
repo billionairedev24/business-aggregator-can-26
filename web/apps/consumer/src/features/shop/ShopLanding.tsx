@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useZone } from '../location/regions';
-import { EmptyState, SiteLink, Tag, TileGrid, useLocale } from '@northline/ui';
+import { EmptyState, Tag, TileGrid, useLocale } from '@northline/ui';
 import { Art } from '../art/Art';
 import { RailSection, RailTrack } from '../pages/Rail';
 import { Tile } from '../pages/Tile';
@@ -8,6 +8,7 @@ import { landingQuery } from './api';
 import { clock, runWhen, weekday } from './format';
 import { useArea, useMarketFollowsLocation, withMarket } from './market';
 import { useShopT } from './messages';
+import { PlaceButton } from '../pages/PlaceButton';
 import { ProductCardTile, ShopCardTile } from './parts';
 
 /**
@@ -45,9 +46,9 @@ export function ShopLanding({ market: explicit }: { market?: string }) {
       </header>
 
       {!data.served ? (
-        <div className="nl-section"><EmptyState action={<SiteLink href="/location" className="btn btn-primary">{t('changeLocation')}</SiteLink>}>{t('notServed', { city: data.market })}</EmptyState></div>
+        <div className="nl-section"><EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('notServed', { city: data.market })}</EmptyState></div>
       ) : data.shopCount === 0 ? (
-        <div className="nl-section"><EmptyState action={<SiteLink href="/location" className="btn btn-primary">{t('changeLocation')}</SiteLink>}>{t('emptyShop', { city: data.market })}</EmptyState></div>
+        <div className="nl-section"><EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('emptyShop', { city: data.market })}</EmptyState></div>
       ) : (
         <>
           <section className="nl-section" aria-labelledby="shop-depts">

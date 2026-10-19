@@ -7,6 +7,7 @@ import { departmentQuery } from './api';
 import { runWhen, weekday } from './format';
 import { useMarketFollowsLocation, withMarket } from './market';
 import { useShopT } from './messages';
+import { PlaceButton } from '../pages/PlaceButton';
 import { ProductCardTile, ShopCardTile } from './parts';
 
 /**
@@ -44,7 +45,7 @@ export function DepartmentPage({ slug, market: explicit }: { slug: string; marke
       ) : null}
 
       {!data.served ? (
-        <div className="nl-section"><EmptyState action={<SiteLink href="/location" className="btn btn-primary">{t('changeLocation')}</SiteLink>}>{t('notServed', { city: data.market })}</EmptyState></div>
+        <div className="nl-section"><EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('notServed', { city: data.market })}</EmptyState></div>
       ) : data.shops.length === 0 ? (
         <div className="nl-section"><EmptyState action={<SiteLink href={link('/shop')} className="btn btn-primary">{t('backToShop')}</SiteLink>}>{t('emptyDept', { name: data.name, city: data.market })}</EmptyState></div>
       ) : (

@@ -14,6 +14,7 @@ import { ItemCard } from './ItemCard';
 import { useSearchT } from './messages';
 import { DEPARTMENTS, SERVICE_CATEGORIES } from '../home/catalog';
 import { Tile } from '../pages/Tile';
+import { PlaceButton } from '../pages/PlaceButton';
 import { rememberSearch } from './recent';
 
 type T = ReturnType<typeof useSearchT>;
@@ -84,7 +85,7 @@ export function SearchResults({ params }: { params: SearchParams }) {
             </Group>
           ) : (
             <Group label={t('distance')}>
-              <p className="nl-results-note">{t('needsLocation')} <SiteLink href="/location?next=/search">{t('setLocation')}</SiteLink></p>
+              <p className="nl-results-note">{t('needsLocation')} <PlaceButton className="btn btn-link">{t('setLocation')}</PlaceButton></p>
             </Group>
           )}
           <Group label={t('availability')}>

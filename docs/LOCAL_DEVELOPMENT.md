@@ -213,7 +213,11 @@ providers, a fallback market, a Studio dashboard. The photos are placeholders dr
 fetched from the internet and no Content-Security-Policy changes. The Studio and the console are signed in (Ravi
 Sandhu, Priya Natarajan), the consumer is a guest unless the route says `signedIn`. A page that still looks empty
 usually lacks an answer: `ui-shots/<app>/_missing-api.txt` lists the requests nothing answered — add one to
-`shots/fixtures.mjs`.
+`shots/fixtures.mjs`. A page wider than the screen (a sideways scroll on a phone) is named in
+`ui-shots/<app>/_overflow.txt` with the outermost elements that stick out past the right edge.
+
+Sticky bars (a phone's "Add to cart", a wizard's "Continue") sit at the bottom of the 844 px screen in a full-page
+picture, over the content that happens to be there: that is where a phone shows them, not an overlap.
 
 Chromium comes from `CHROMIUM=/path`, else `/opt/pw-browsers/chromium`, else Playwright's own
 (`pnpm --filter @northline/a11y exec playwright install chromium`).

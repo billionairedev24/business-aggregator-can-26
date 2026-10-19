@@ -9,6 +9,7 @@ import { productQuery, useAddToCart, type Offer, type ProductPage } from './api'
 import { Crumbs } from '../pages/Crumbs';
 import { RailSection, RailTrack } from '../pages/Rail';
 import { Art } from '../art/Art';
+import { PlaceButton } from '../pages/PlaceButton';
 import { useProductT } from './messages';
 
 /**
@@ -41,7 +42,7 @@ export function ProductDetail({ productId, market: explicit, offerId }: { produc
         <div className="product-empty">
           {data.served
             ? <EmptyState action={<SiteLink href={link('/shop')} className="btn btn-primary">{t('backToShop')}</SiteLink>}>{t('unavailable', { city: data.market })}</EmptyState>
-            : <EmptyState action={<SiteLink href="/location" className="btn btn-primary">{t('changeLocation')}</SiteLink>}>{t('notServed', { city: data.market })}</EmptyState>}
+            : <EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('notServed', { city: data.market })}</EmptyState>}
         </div>
       </div>
     );

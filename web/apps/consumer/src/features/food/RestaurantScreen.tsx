@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Alert, Button, Dialog, Field, Tag, TextInput, useFormatters, useLocale } from '@northline/ui';
 import { useStorefrontVisit } from '../../lib/visits';
