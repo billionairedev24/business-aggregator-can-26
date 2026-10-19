@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationContext;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationToken;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -119,7 +120,8 @@ public class LocalNetworkDevices {
         }
         return context -> {
             var client = context.getRegisteredClient();
-            var requested = context.getAuthentication().getRedirectUri();
+            OAuth2AuthorizationCodeRequestAuthenticationToken authentication = context.getAuthentication();
+            var requested = authentication.getRedirectUri();
             if (requested == null
                     || client.getRedirectUris().contains(requested)
                     || registeredVariant(client, requested) == null) {
@@ -127,7 +129,7 @@ public class LocalNetworkDevices {
                 return;
             }
             var widened = RegisteredClient.from(client).redirectUri(requested).build();
-            var builder = OAuth2AuthorizationCodeRequestAuthenticationContext.with(context.getAuthentication())
+            var builder = OAuth2AuthorizationCodeRequestAuthenticationContext.with(authentication)
                     .registeredClient(widened);
             if (context.getAuthorizationRequest() != null) {
                 builder.authorizationRequest(context.getAuthorizationRequest());
