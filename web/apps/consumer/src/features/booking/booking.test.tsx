@@ -242,9 +242,9 @@ describe('demo rehearsal fixes (2026-10-19)', () => {
     const q = new URL(slots.url, 'http://x').searchParams;
     // The days come from the mock's fixed calendar; the request asks from today to the week's end (weekSpan, below),
     // which depends on the weekday the suite runs: between 1 and 7 days.
-    const days = Number(q.get('days'));
-    expect(days).toBeGreaterThanOrEqual(1);
-    expect(days).toBeLessThanOrEqual(7);
+    const asked = Number(q.get('days'));
+    expect(asked).toBeGreaterThanOrEqual(1);
+    expect(asked).toBeLessThanOrEqual(7);
   });
 
   it('asks for the rest of this week from today, then whole weeks', () => {
