@@ -86,6 +86,7 @@ class OnboardingService
     private final PilotInviteLinks pilotInvites;
     private final KitchenVisitPolicy kitchenVisits;
     private final PilotStore pilots;
+    private final SecondFactorCheck secondFactor;
 
     /** S-120: approving a kitchen that needs a visit before the visit passed. */
     static final String VISIT_FIRST = "Record a passed kitchen visit before approving this kitchen.";
@@ -126,10 +127,12 @@ class OnboardingService
         return view(application.getId());
     }
 
+    /** Writes when the second-factor row turns done ({@link SecondFactorCheck}). */
     @Override
+    @Transactional
     public OnboardingView view(String merchantId) {
         var application = load(merchantId);
-        var checks = verifications.listFor(merchantId);
+        var checks = secondFactor.settle(merchantId, verifications.listFor(merchantId));
         var docIds = new LinkedHashSet<String>();
         checks.stream()
                 .map(Verification::getDocumentId)
@@ -236,7 +239,7 @@ class OnboardingService
         if (!application.businessSaved()) {
             throw RuleViolation.of("business", "required", BUSINESS_FIRST);
         }
-        var checks = verifications.listFor(merchantId);
+        var checks = secondFactor.settle(merchantId, verifications.listFor(merchantId));
         if (checks.isEmpty() || !checks.stream().allMatch(v -> v.getStatus().complete())) {
             throw RuleViolation.of("verifications", "incomplete", CHECKS_FIRST);
         }
