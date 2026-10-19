@@ -476,6 +476,8 @@ oauthClientsJob:
 # autoscaling: an HPA on CPU (targetCPUUtilizationPercentage of the request); `behavior` (S-119, optional) replaces the
 # default (scale down after 5 minutes of low CPU) with the HPA's own `behavior` block, e.g. the api's in values-prod.yaml.
 # profiles (spring): Spring profiles added after global.environment's (consumer-bff: the bff image with `consumer`).
+# strategy (optional): the Deployment's strategy instead of the zero-downtime rolling update, e.g. { type: Recreate } for
+# northline-auth with its signing keys on a ReadWriteOnce volume (values-ovh-*.yaml).
 apps:
   api:
     enabled: true

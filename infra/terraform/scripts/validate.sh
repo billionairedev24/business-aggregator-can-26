@@ -2,7 +2,7 @@
 # Offline checks for infra/terraform (no cloud credentials, no remote state):
 #   terraform fmt -check, the module contract check, init -backend=false + validate for every module and root, and
 #   `terraform test` (plan against mocked providers) for every env root.
-# Usage: scripts/validate.sh [all|aws|gcp|azure]     (CI: .github/workflows/infra.yml, ci/gitlab/infra.yml)
+# Usage: scripts/validate.sh [all|aws|gcp|azure|ovh]     (CI: .github/workflows/infra.yml, ci/gitlab/infra.yml)
 # Set TF_PLUGIN_CACHE_DIR to share provider downloads between the roots.
 set -euo pipefail
 cloud=${1:-all}
@@ -16,8 +16,8 @@ scripts/check-contract.sh
 
 case $cloud in
   all) pattern='.*' ;; # includes shared helpers such as modules/search/elastic-cloud
-  aws | gcp | azure) pattern=$cloud ;;
-  *) echo "usage: $0 [all|aws|gcp|azure]" >&2; exit 2 ;;
+  aws | gcp | azure | ovh) pattern=$cloud ;; # ovh: stacks/ovh and envs/ovh/{vps,mks} (docs/runbooks/ovh.md)
+  *) echo "usage: $0 [all|aws|gcp|azure|ovh]" >&2; exit 2 ;;
 esac
 
 # Every module, stack, bootstrap and env root.

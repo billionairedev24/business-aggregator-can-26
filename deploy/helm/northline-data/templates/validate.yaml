@@ -1,6 +1,9 @@
 {{- /* Refusals evaluated at render time. */ -}}
-{{- if not (has .Values.externalSecrets.provider (list "gcp")) }}
-{{- fail (printf "externalSecrets.provider must be gcp (got %q)" .Values.externalSecrets.provider) }}
+{{- if not (has .Values.externalSecrets.provider (list "gcp" "none")) }}
+{{- fail (printf "externalSecrets.provider must be gcp or none (got %q)" .Values.externalSecrets.provider) }}
+{{- end }}
+{{- if and .Values.postgres.enabled .Values.postgres.backup.enabled (not (has .Values.postgres.backup.provider (list "gcs" "s3"))) }}
+{{- fail (printf "postgres.backup.provider must be gcs or s3 (got %q)" .Values.postgres.backup.provider) }}
 {{- end }}
 {{- with .Values.postgres }}
 {{- if and .enabled (ne (int .instances) 1) }}

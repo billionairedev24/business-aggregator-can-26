@@ -1,4 +1,4 @@
-# Infrastructure — Terraform modules, stacks and env roots for AWS, Google Cloud and Azure (S-2/S-3). Offline: no cloud
+# Infrastructure — Terraform modules, stacks and env roots for AWS, Google Cloud and Azure (S-2/S-3), and OVHcloud. Offline: no cloud
 # credentials, no state. docs/runbooks/infrastructure.md, ci.md. validate.sh needs bash 4+ and GNU find
 # (macOS: brew install bash findutils, then put them first on PATH).
 
@@ -18,7 +18,7 @@ tf-fmt-check: ## terraform fmt -check (no changes)
 	cd $(ROOT)/infra/terraform && terraform fmt -check -recursive -diff .
 
 .PHONY: tf-validate
-tf-validate: ## fmt check, module contract, init -backend=false + validate, terraform test (CLOUD=all|aws|gcp|azure)
+tf-validate: ## fmt check, module contract, init -backend=false + validate, terraform test (CLOUD=all|aws|gcp|azure|ovh)
 	@mkdir -p "$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}"
 	cd $(ROOT)/infra/terraform && TF_PLUGIN_CACHE_DIR="$${TF_PLUGIN_CACHE_DIR:-$$HOME/.terraform.d/plugin-cache}" bash scripts/validate.sh $(CLOUD)
 
@@ -40,8 +40,42 @@ dryrun-up: ## Bring the dry run's nodes back (NODES=2) — pods and data come ba
 dryrun-status: ## The dry run's node pool: machine type, Spot, autoscaling, running nodes
 	$(ROOT)/scripts/dryrun-nodes.sh status
 
+##@ Dry-run targets: Google Cloud or OVHcloud (docs/runbooks/README.md § Google vs OVH)
+
+.PHONY: deploy
+deploy: ## Install/upgrade the data services and Northline charts (TARGET=gcp-dryrun|ovh-vps|ovh-mks; REGISTRY, IMAGE_TAG)
+	$(ROOT)/scripts/deploy-target.sh $(TARGET)
+
+.PHONY: ovh-bootstrap
+ovh-bootstrap: ## ovh-vps: k3s, firewall and Helm on the VPS over SSH, kubeconfig + tunnel here (HOST=user@ip; default from Terraform)
+	$(ROOT)/scripts/ovh/bootstrap-k3s.sh $(HOST)
+
+.PHONY: ovh-tunnel
+ovh-tunnel: ## ovh-vps: open the SSH tunnel to the k3s API (127.0.0.1:16443)
+	$(ROOT)/scripts/ovh/bootstrap-k3s.sh tunnel $(HOST)
+
+.PHONY: ovh-secrets-init
+ovh-secrets-init: ## Create .ovh/TARGET.env: generated secrets filled in, Stripe/Twilio/registry to fill (TARGET=ovh-vps|ovh-mks)
+	$(ROOT)/scripts/ovh/secrets.sh init $(or $(TARGET),ovh-vps)
+
+.PHONY: ovh-secrets
+ovh-secrets: ## Write the Kubernetes Secrets from .ovh/TARGET.env and Terraform's S3/database credentials
+	$(ROOT)/scripts/ovh/secrets.sh apply $(or $(TARGET),ovh-vps)
+
+.PHONY: ovh-down
+ovh-down: ## Apps to 0 between demos; ovh-mks also node pool → 0 (TARGET=ovh-vps|ovh-mks; the VPS bills monthly anyway)
+	$(ROOT)/scripts/ovh/scale.sh down $(or $(TARGET),ovh-vps)
+
+.PHONY: ovh-up
+ovh-up: ## Back from ovh-down: ovh-mks nodes from terraform.tfvars, apps to their previous replicas
+	$(ROOT)/scripts/ovh/scale.sh up $(or $(TARGET),ovh-vps)
+
+.PHONY: ovh-status
+ovh-status: ## Nodes, Deployments and StatefulSets of the OVHcloud target (TARGET=ovh-vps|ovh-mks)
+	$(ROOT)/scripts/ovh/scale.sh status $(or $(TARGET),ovh-vps)
+
 .PHONY: demo-data
-demo-data: ## Demo marketplace through the product (ENV=local|dryrun; RESET=1 / RESET=all; ONLY=bakery,wine) — docs/runbooks/demo.md
+demo-data: ## Demo marketplace through the product (ENV=local|dryrun|ovh-vps|ovh-mks; RESET=1 / RESET=all; ONLY=bakery,wine) — docs/runbooks/demo.md
 	$(ROOT)/scripts/demo-data.sh --env $(or $(ENV),local) $(if $(filter all,$(RESET)),--reset-all,$(if $(RESET),--reset)) $(if $(ONLY),--only $(ONLY))
 
 .PHONY: demo-data-test

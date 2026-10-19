@@ -32,6 +32,11 @@ infra/terraform/
 │                                           services in the cluster or external instead of the managed stores
 │                                           (docs/runbooks/dryrun-gcp.md)
 │   └── tests/plan.tftest.hcl               offline plan with mocked providers + region guard
+├── stacks/ovh                              OVHcloud: Object Storage buckets + least-privilege S3 users, config_env
+├── envs/ovh/vps                            OVHcloud dry run on one VPS with k3s (ordered in the console): Object
+│                                           Storage, the Network Firewall in front of the VPS (docs/runbooks/ovh.md)
+├── envs/ovh/mks                            OVHcloud Managed Kubernetes in BHS5: private network + gateway, node pool,
+│                                           Managed PostgreSQL 17 or in-cluster Postgres, Object Storage
 ├── bootstrap/{aws,gcp,azure}               one-off roots that create the remote-state bucket
 └── scripts/
     ├── validate.sh                          fmt -check, contract check, validate + test for every root (CI runs this)

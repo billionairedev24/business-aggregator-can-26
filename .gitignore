@@ -15,5 +15,7 @@ web/e2e/env/
 pilot-dry-run/
 # make demo-data: the demo accounts' identifiers and authenticator keys (docs/runbooks/demo.md) — never committed
 .demo/
+# OVHcloud targets: the operator's secrets file per target (scripts/ovh/secrets.sh, docs/runbooks/ovh.md) — never committed
+.ovh/
 go-live-rehearsal/
 __pycache__/

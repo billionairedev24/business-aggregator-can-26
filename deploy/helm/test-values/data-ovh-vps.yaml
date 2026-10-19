@@ -1,0 +1,16 @@
+# Stand-in for `terraform output -json data_values` of infra/terraform/envs/ovh/vps in the offline checks.
+pinToZone: false
+storageClassName: local-path
+postgres:
+  enabled: true
+  backup:
+    enabled: true
+    provider: s3
+    bucket: northline-ovh-vps-pg-backups
+    retentionPolicy: 7d
+    s3: { endpointURL: "https://s3.bhs.io.cloud.ovh.net", credentialsSecret: northline-pg-backup-s3 }
+valkey: { enabled: true }
+meilisearch: { enabled: true }
+kafka: { enabled: true }
+externalSecrets: { provider: none }
+authSigningKeys: { enabled: true }

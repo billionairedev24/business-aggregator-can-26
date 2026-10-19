@@ -1,12 +1,13 @@
 apiVersion: v2
 name: northline-data
 description: >-
-  In-cluster data services for a short-lived environment (the GCP dry run, docs/runbooks/dryrun-gcp.md): PostgreSQL 17
-  + PostGIS through CloudNativePG (one instance, daily backups to object storage), Valkey, Meilisearch and a
-  single-broker KRaft Kafka — each optional, every volume in one zone, credentials from the secrets manager through
-  External Secrets. Not for real customer data: no replicas, no failover.
+  In-cluster data services for a short-lived environment (the GCP dry run, docs/runbooks/dryrun-gcp.md; the OVHcloud
+  targets, docs/runbooks/ovh.md): PostgreSQL 17 + PostGIS through CloudNativePG (one instance, daily backups to object
+  storage — GCS or S3), Valkey, Meilisearch and a single-broker KRaft Kafka — each optional, every volume in one zone,
+  credentials from the secrets manager through External Secrets or from Secrets made by a script. Not for real
+  customer data: no replicas, no failover.
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "dryrun"
 kubeVersion: ">=1.30.0-0"
 home: https://github.com/billionairedev24/business-aggregator-can-26

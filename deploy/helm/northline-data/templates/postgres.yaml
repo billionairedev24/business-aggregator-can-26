@@ -1,8 +1,9 @@
 {{- /*
 PostgreSQL 17 + PostGIS through CloudNativePG: one instance on a zonal pd-balanced volume, TLS on (sslmode=require in
 DB_URL), the database and its owner from initdb, the extensions created once as the superuser. Backups: base backup
-daily + continuous WAL archiving to the GCS bucket Terraform created, as the backup identity (GKE Workload Identity on
-the ServiceAccount CloudNativePG creates for the cluster).
+daily + continuous WAL archiving to the bucket Terraform created — GCS as the backup identity (GKE Workload Identity on
+the ServiceAccount CloudNativePG creates for the cluster), or an S3-compatible store (OVHcloud Object Storage) with
+static keys from a Secret.
 */ -}}
 {{- with .Values.postgres }}
 {{- if .enabled }}
@@ -37,20 +38,33 @@ spec:
     storageClass: {{ $.Values.storageClassName }}
   resources:
     {{- toYaml .resources | nindent 4 }}
+  {{- if $.Values.pinToZone }}
   affinity:
     nodeSelector:
       topology.kubernetes.io/zone: {{ required "zone" $.Values.zone | quote }}
+  {{- end }}
   {{- if .backup.enabled }}
+  {{- if eq .backup.provider "gcs" }}
   serviceAccountTemplate:
     metadata:
       annotations:
         {{- toYaml .backup.serviceAccountAnnotations | nindent 8 }}
+  {{- end }}
   backup:
     retentionPolicy: {{ .backup.retentionPolicy | quote }}
     barmanObjectStore:
+      {{- if eq .backup.provider "gcs" }}
       destinationPath: gs://{{ .backup.bucket }}
       googleCredentials:
         gkeEnvironment: true
+      {{- else }}
+      destinationPath: s3://{{ .backup.bucket }}/
+      endpointURL: {{ required "postgres.backup.s3.endpointURL (terraform output data_values)" .backup.s3.endpointURL }}
+      s3Credentials:
+        accessKeyId: { name: {{ .backup.s3.credentialsSecret }}, key: ACCESS_KEY_ID }
+        secretAccessKey: { name: {{ .backup.s3.credentialsSecret }}, key: ACCESS_SECRET_KEY }
+        region: { name: {{ .backup.s3.credentialsSecret }}, key: REGION }
+      {{- end }}
       wal:
         compression: gzip
       data:
