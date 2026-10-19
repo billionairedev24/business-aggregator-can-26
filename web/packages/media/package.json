@@ -1,0 +1,27 @@
+{
+  "name": "@northline/media",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The photo library (docs/runbooks/photos.md): photos.json (sources, alt text, focal point, licence and credit of every stock photo) and source/, the slot list generated from the catalogue and the demo data, make photos (sharp: AVIF/WebP/JPEG crops at 320–1440 px) and the run-time lookup the web and the native apps use.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./core": { "types": "./src/core.d.mts", "default": "./src/core.mjs" },
+    "./photos.json": "./photos.json"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "slots": "node scripts/slots.mjs",
+    "missing": "node scripts/slots.mjs --missing",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node scripts/slots.mjs --check && node scripts/build.mjs --check && vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "sharp": "0.34.5",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

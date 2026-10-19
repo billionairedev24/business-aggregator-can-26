@@ -1,0 +1,4 @@
+{
+  "$comment": "The photo library (docs/runbooks/photos.md): one entry per slot that has a photo, keyed by the slot (make photos-slots lists them all). Only Pexels or Unsplash photos under their own licence, downloaded by a person — never generated or invented. Fill file, alt (en, fr), focal, site, photographer, sourceUrl, licence and downloaded; make photos adds width, height, hash and placeholder. The credits page (/credits) is built from this file.",
+  "photos": {}
+}
