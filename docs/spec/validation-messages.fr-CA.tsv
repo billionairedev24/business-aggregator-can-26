@@ -645,6 +645,11 @@ Choose what the business needs to fix.	Choisissez ce que l’entreprise doit cor
 Pick checks from this application.	Choisissez des vérifications de cette demande.	new
 Tell the business what to fix.	Dites à l’entreprise quoi corriger.	new
 This application isn't waiting for a decision.	Cette demande n’attend pas de décision.	new
+Choose approve, reject or request info.	Choisissez Approuver, Refuser ou Demander des renseignements.	new
+Say why you recommend rejecting it.	Expliquez pourquoi vous recommandez de la refuser.	new
+Say why you approve against the review.	Expliquez pourquoi vous approuvez à l’encontre de l’examen.	new
+Review this application first: another person then decides it.	Examinez d’abord cette demande : une autre personne la tranche ensuite.	new
+You reviewed this application, so someone else has to decide it.	Vous avez examiné cette demande : une autre personne doit la trancher.	new
 Decide the open registry and identity reviews first.	Tranchez d’abord les examens de registre et d’identité en cours.	new
 Only a submitted application can be sent back.	Seule une demande soumise peut être renvoyée.	new
 Choose why the listing is rejected.	Choisissez pourquoi l’annonce est refusée.	new

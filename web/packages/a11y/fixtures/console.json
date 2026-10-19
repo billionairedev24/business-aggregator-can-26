@@ -37,7 +37,8 @@
        "decide",
        "verify",
        "vet",
-       "support"
+       "support",
+       "approve"
       ]
      }
     ]
@@ -1625,7 +1626,9 @@
       ],
       "risk": "high",
       "decision": null,
-      "decidedAt": null
+      "decidedAt": null,
+      "stage": "review",
+      "review": null
      },
      {
       "merchantId": "M1",
@@ -1674,7 +1677,18 @@
       ],
       "risk": "low",
       "decision": null,
-      "decidedAt": null
+      "decidedAt": null,
+      "stage": "decision",
+      "review": {
+       "id": "R1",
+       "recommendation": "approve",
+       "checkKeys": [],
+       "note": "Insurance certificate matches.",
+       "reviewedBy": "U2",
+       "reviewerName": "Lena Park",
+       "reviewedAt": "2026-09-08T16:00:00Z",
+       "decisionId": null
+      }
      },
      {
       "merchantId": "M3",
@@ -1723,11 +1737,14 @@
       ],
       "risk": "low",
       "decision": "approved",
-      "decidedAt": "2026-09-08T10:00:00Z"
+      "decidedAt": "2026-09-08T10:00:00Z",
+      "stage": null,
+      "review": null
      }
     ],
     "pending": 2,
-    "medianDecisionHours": 33.6
+    "medianDecisionHours": 33.6,
+    "fourEyes": true
    },
    "from": "features/verify/verify.test.tsx › verification queue (S-79, design 03 verify) > shows the design copy, the applications with their checks, region, risk, waiting and decision"
   },
@@ -1771,7 +1788,9 @@
      ],
      "risk": "high",
      "decision": null,
-     "decidedAt": null
+     "decidedAt": null,
+     "stage": "review",
+     "review": null
     },
     "owners": [
      {
@@ -1804,7 +1823,9 @@
       "reviewNote": null
      }
     ],
-    "decisions": []
+    "decisions": [],
+    "reviews": [],
+    "fourEyes": true
    },
    "from": "features/verify/verify.test.tsx › verification queue (S-79, design 03 verify) > approves inline with the role view header, and shows the api refusal inline"
   },
@@ -1848,7 +1869,9 @@
      ],
      "risk": "high",
      "decision": null,
-     "decidedAt": null
+     "decidedAt": null,
+     "stage": "review",
+     "review": null
     },
     "owners": [
      {
@@ -1881,7 +1904,9 @@
       "reviewNote": null
      }
     ],
-    "decisions": []
+    "decisions": [],
+    "reviews": [],
+    "fourEyes": true
    },
    "from": "features/verify/verify.test.tsx › verification queue (S-79, design 03 verify) > requests info with the checks to redo and a note, showing the api messages"
   },
@@ -1925,7 +1950,9 @@
      ],
      "risk": "high",
      "decision": null,
-     "decidedAt": null
+     "decidedAt": null,
+     "stage": "review",
+     "review": null
     },
     "owners": [
      {
@@ -1958,7 +1985,9 @@
       "reviewNote": null
      }
     ],
-    "decisions": []
+    "decisions": [],
+    "reviews": [],
+    "fourEyes": true
    },
    "from": "features/verify/verify.test.tsx › verification queue (S-79, design 03 verify) > opens an application with its identity and registry reviews, decided by the agent"
   },
@@ -2002,7 +2031,9 @@
      ],
      "risk": "high",
      "decision": null,
-     "decidedAt": null
+     "decidedAt": null,
+     "stage": "review",
+     "review": null
     },
     "owners": [
      {
@@ -2035,7 +2066,9 @@
       "reviewNote": null
      }
     ],
-    "decisions": []
+    "decisions": [],
+    "reviews": [],
+    "fourEyes": true
    },
    "from": "features/verify/verify.test.tsx › verification queue (S-79, design 03 verify) > opens an application with its identity and registry reviews, decided by the agent"
   },
@@ -2157,7 +2190,9 @@
       ],
       "risk": "high",
       "decision": null,
-      "decidedAt": null
+      "decidedAt": null,
+      "stage": "review",
+      "review": null
      },
      {
       "merchantId": "M1",
@@ -2206,7 +2241,18 @@
       ],
       "risk": "low",
       "decision": null,
-      "decidedAt": null
+      "decidedAt": null,
+      "stage": "decision",
+      "review": {
+       "id": "R1",
+       "recommendation": "approve",
+       "checkKeys": [],
+       "note": "Insurance certificate matches.",
+       "reviewedBy": "U2",
+       "reviewerName": "Lena Park",
+       "reviewedAt": "2026-09-08T16:00:00Z",
+       "decisionId": null
+      }
      },
      {
       "merchantId": "M3",
@@ -2255,11 +2301,14 @@
       ],
       "risk": "low",
       "decision": "approved",
-      "decidedAt": "2026-09-08T10:00:00Z"
+      "decidedAt": "2026-09-08T10:00:00Z",
+      "stage": null,
+      "review": null
      }
     ],
     "pending": 2,
-    "medianDecisionHours": 33.6
+    "medianDecisionHours": 33.6,
+    "fourEyes": true
    },
    "from": "features/verify/verify.test.tsx › verification queue (S-79, design 03 verify) > filters by province from the region model"
   },
@@ -6482,7 +6531,8 @@
        "decide",
        "verify",
        "vet",
-       "support"
+       "support",
+       "approve"
       ]
      }
     ]
@@ -7714,7 +7764,9 @@
       ],
       "risk": "high",
       "decision": null,
-      "decidedAt": null
+      "decidedAt": null,
+      "stage": "review",
+      "review": null
      },
      {
       "merchantId": "M1",
@@ -7763,7 +7815,18 @@
       ],
       "risk": "low",
       "decision": null,
-      "decidedAt": null
+      "decidedAt": null,
+      "stage": "decision",
+      "review": {
+       "id": "R1",
+       "recommendation": "approve",
+       "checkKeys": [],
+       "note": "Insurance certificate matches.",
+       "reviewedBy": "U2",
+       "reviewerName": "Lena Park",
+       "reviewedAt": "2026-09-08T16:00:00Z",
+       "decisionId": null
+      }
      },
      {
       "merchantId": "M3",
@@ -7812,11 +7875,14 @@
       ],
       "risk": "low",
       "decision": "approved",
-      "decidedAt": "2026-09-08T10:00:00Z"
+      "decidedAt": "2026-09-08T10:00:00Z",
+      "stage": null,
+      "review": null
      }
     ],
     "pending": 2,
-    "medianDecisionHours": 33.6
+    "medianDecisionHours": 33.6,
+    "fourEyes": true
    },
    "from": "features/verify/verify.test.tsx › verification queue (S-79, design 03 verify) > shows the design copy, the applications with their checks, region, risk, waiting and decision"
   },
@@ -7860,7 +7926,9 @@
      ],
      "risk": "high",
      "decision": null,
-     "decidedAt": null
+     "decidedAt": null,
+     "stage": "review",
+     "review": null
     },
     "owners": [
      {
@@ -7893,7 +7961,9 @@
       "reviewNote": null
      }
     ],
-    "decisions": []
+    "decisions": [],
+    "reviews": [],
+    "fourEyes": true
    },
    "from": "features/verify/verify.test.tsx › verification queue (S-79, design 03 verify) > approves inline with the role view header, and shows the api refusal inline"
   },
@@ -7937,7 +8007,9 @@
      ],
      "risk": "high",
      "decision": null,
-     "decidedAt": null
+     "decidedAt": null,
+     "stage": "review",
+     "review": null
     },
     "owners": [
      {
@@ -7970,7 +8042,9 @@
       "reviewNote": null
      }
     ],
-    "decisions": []
+    "decisions": [],
+    "reviews": [],
+    "fourEyes": true
    },
    "from": "features/verify/verify.test.tsx › verification queue (S-79, design 03 verify) > opens an application with its identity and registry reviews, decided by the agent"
   },
@@ -8014,7 +8088,9 @@
      ],
      "risk": "high",
      "decision": null,
-     "decidedAt": null
+     "decidedAt": null,
+     "stage": "review",
+     "review": null
     },
     "owners": [
      {
@@ -8047,7 +8123,9 @@
       "reviewNote": null
      }
     ],
-    "decisions": []
+    "decisions": [],
+    "reviews": [],
+    "fourEyes": true
    },
    "from": "features/verify/verify.test.tsx › verification queue (S-79, design 03 verify) > opens an application with its identity and registry reviews, decided by the agent"
   },

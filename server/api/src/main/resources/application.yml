@@ -148,6 +148,9 @@ northline:
     probe-interval: ${LIVE_PROBE_INTERVAL:30s}   # S-113: the live bus probe behind the KDS freshness SLO
   # S-113 (docs/runbooks/alerting.md): the on-call rota for paging tools, GET /api/v1/ops/oncall[.ics]; empty = off (404)
   oncall.export.token: ${ONCALL_EXPORT_TOKEN:}
+  # Two-person review of merchant applications (2026-10-18; docs/runbooks/README.md § Staff roles): one staff member
+  # reviews, another decides. false = one person may decide without a review (a single-staff demo); refused under prod.
+  onboarding.four-eyes.enabled: ${ONBOARDING_FOUR_EYES_ENABLED:true}
   # S-118 go-live checklist (docs/runbooks/go-live.md § Configuration): pilot businesses a market needs before launch,
   # how long a manual gate's record counts, how long a launch request waits for its second admin, and where the alert
   # gates read the deployed rules (blank = recorded by hand; default the console overview's Prometheus).

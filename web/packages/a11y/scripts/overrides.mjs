@@ -22,7 +22,7 @@ export const setSignedIn = (app, signedIn) => { state[app] = signedIn; };
 const ADMIN = {
   role: 'admin',
   screens: ['overview', 'orders', 'disputes', 'delivery', 'sellers', 'verify', 'vetting', 'trust', 'taxonomy', 'support', 'regions', 'finance', 'reports', 'privacy', 'api', 'team', 'profile', 'oncall'],
-  actions: ['suspend', 'decide', 'refund', 'province', 'payouts', 'keys', 'verify', 'vet', 'dispatch', 'support', 'macros', 'privacy'],
+  actions: ['suspend', 'decide', 'refund', 'province', 'payouts', 'keys', 'verify', 'vet', 'dispatch', 'support', 'macros', 'privacy', 'approve'],
 };
 const AMARA = { id: '01J9ZD3V0000000000000C0001', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', phone: '+14035550201', initials: 'AO', locale: 'en-CA', memberSince: '2026-03-02' };
 

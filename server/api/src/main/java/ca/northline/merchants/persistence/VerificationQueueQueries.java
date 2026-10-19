@@ -6,6 +6,7 @@ import static ca.northline.shared.JdbcTimes.ts;
 
 import ca.northline.merchants.application.VerificationQueue.Decision;
 import ca.northline.merchants.application.VerificationQueue.DecisionRow;
+import ca.northline.merchants.application.VerificationQueue.Recommendation;
 import ca.northline.merchants.application.VerificationQueueStore;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.CodedEnums;
@@ -18,6 +19,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +42,9 @@ class VerificationQueueQueries implements VerificationQueueStore {
               left join lateral (select decision, decided_at from merchants.application_decisions x
                                   where x.merchant_id = m.id order by x.decided_at desc, x.id desc limit 1) d on true
             """;
+
+    private static final String REVIEW_COLUMNS =
+            "id, merchant_id, recommendation, check_keys, note, reviewed_by, reviewed_at, decision_id\n";
 
     private final JdbcClient jdbc;
 
@@ -99,8 +104,8 @@ class VerificationQueueQueries implements VerificationQueueStore {
     public void insert(String merchantId, DecisionRow d, String role, @Nullable Instant submittedAt) {
         jdbc.sql("""
                         insert into merchants.application_decisions (id, merchant_id, decision, check_keys, note,
-                               decided_by, role, submitted_at, decided_at)
-                        values (:id, :m, :decision, :keys, :note, :by, :role, :submitted, :at)
+                               decided_by, role, submitted_at, decided_at, review_id)
+                        values (:id, :m, :decision, :keys, :note, :by, :role, :submitted, :at, :review)
                         """)
                 .param("id", d.id())
                 .param("m", merchantId)
@@ -111,13 +116,67 @@ class VerificationQueueQueries implements VerificationQueueStore {
                 .param("role", role)
                 .param("submitted", ts(submittedAt))
                 .param("at", ts(d.decidedAt()))
+                .param("review", d.reviewId())
                 .update();
+    }
+
+    @Override
+    public void insertReview(Review r, String role, @Nullable Instant submittedAt) {
+        jdbc.sql("""
+                        insert into merchants.application_reviews (id, merchant_id, recommendation, check_keys, note,
+                               reviewed_by, role, submitted_at, reviewed_at)
+                        values (:id, :m, :rec, :keys, :note, :by, :role, :submitted, :at)
+                        """)
+                .param("id", r.id())
+                .param("m", r.merchantId())
+                .param("rec", r.recommendation().code())
+                .param("keys", r.checkKeys().toArray(String[]::new))
+                .param("note", r.note())
+                .param("by", r.reviewedBy())
+                .param("role", role)
+                .param("submitted", ts(submittedAt))
+                .param("at", ts(r.reviewedAt()))
+                .update();
+    }
+
+    @Override
+    public List<Review> reviews(String merchantId) {
+        return jdbc.sql("select " + REVIEW_COLUMNS + """
+                         from merchants.application_reviews
+                         where merchant_id = :m order by reviewed_at desc, id desc""")
+                .param("m", merchantId)
+                .query((rs, _) -> review(rs))
+                .list();
+    }
+
+    @Override
+    public Map<String, Review> currentReviews(Collection<String> merchantIds) {
+        if (merchantIds.isEmpty()) {
+            return Map.of();
+        }
+        return jdbc
+                .sql("select distinct on (merchant_id) " + REVIEW_COLUMNS + """
+                         from merchants.application_reviews
+                         where merchant_id = any(:m) and decision_id is null
+                         order by merchant_id, reviewed_at desc, id desc""")
+                .param("m", merchantIds.toArray(String[]::new))
+                .query((rs, _) -> review(rs))
+                .list()
+                .stream()
+                .collect(java.util.stream.Collectors.toUnmodifiableMap(Review::merchantId, r -> r));
+    }
+
+    @Override
+    public void closeRound(String merchantId, String decisionId) {
+        jdbc.sql("""
+                        update merchants.application_reviews set decision_id = :d
+                         where merchant_id = :m and decision_id is null""").param("d", decisionId).param("m", merchantId).update();
     }
 
     @Override
     public List<DecisionRow> decisions(String merchantId) {
         return jdbc.sql("""
-                        select id, decision, check_keys, note, decided_by, decided_at
+                        select id, decision, check_keys, note, decided_by, decided_at, review_id
                           from merchants.application_decisions where merchant_id = :m
                          order by decided_at desc, id desc""")
                 .param("m", merchantId)
@@ -127,7 +186,8 @@ class VerificationQueueQueries implements VerificationQueueStore {
                         strings(rs.getArray("check_keys")),
                         rs.getString("note"),
                         rs.getString("decided_by"),
-                        requiredInstant(rs, "decided_at")))
+                        requiredInstant(rs, "decided_at"),
+                        rs.getString("review_id")))
                 .list();
     }
 
@@ -165,6 +225,18 @@ class VerificationQueueQueries implements VerificationQueueStore {
                 strings(rs.getArray("categories")),
                 CodedEnums.fromCode(rs.getString("decision"), Decision.class),
                 instant(rs, "decided_at"));
+    }
+
+    private static Review review(ResultSet rs) throws SQLException {
+        return new Review(
+                rs.getString("id"),
+                rs.getString("merchant_id"),
+                CodedEnum.fromCode(Recommendation.class, rs.getString("recommendation")),
+                strings(rs.getArray("check_keys")),
+                rs.getString("note"),
+                rs.getString("reviewed_by"),
+                requiredInstant(rs, "reviewed_at"),
+                rs.getString("decision_id"));
     }
 
     private static List<String> strings(@Nullable Array array) throws SQLException {
