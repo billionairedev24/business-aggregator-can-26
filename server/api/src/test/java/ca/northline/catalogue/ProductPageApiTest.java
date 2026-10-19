@@ -148,7 +148,8 @@ class ProductPageApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.name").value("Search loaf " + tag))
                 .andExpect(jsonPath("$.offers[0].offerId").value(loaf.offerId()));
         var draft = shopFixtures.listing(shop, BAKERY, "Draft loaf " + tag, 500, 5, "draft", "hidden", "same_day", 0);
-        mvc.perform(get("/api/v1/public/shop/products/{id}", draft.offerId()).param("market", MARKET)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/public/shop/products/{id}", draft.offerId()).param("market", MARKET))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -157,7 +158,8 @@ class ProductPageApiTest extends IntegrationTest {
         var shop = shopFixtures.shop(MARKET, "Drafts " + tag, "master");
         var draft = shopFixtures.listing(shop, BAKERY, "Draft " + tag, 500, 5, "draft", "hidden", "same_day", 0);
         var banned = shopFixtures.listing(shop, TOBACCO, "Vape " + tag, 500, 5);
-        mvc.perform(get("/api/v1/public/shop/products/{id}", draft.productId()).param("market", MARKET)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/public/shop/products/{id}", draft.productId()).param("market", MARKET))
+                .andExpect(status().isNotFound());
         mvc.perform(get("/api/v1/public/shop/products/{id}", banned.productId()).param("market", MARKET))
                 .andExpect(status().isNotFound());
         mvc.perform(get("/api/v1/public/shop/products/{id}", Ids.next()).param("market", MARKET))
