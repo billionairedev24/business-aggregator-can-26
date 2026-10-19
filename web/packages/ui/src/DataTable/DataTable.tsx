@@ -739,6 +739,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
               </Chip>
             ))}
           </div>
+          <span className="nl-dt-paging">
           <button type="button" className="btn btn-ghost btn-icon nl-dt-page-btn" aria-label={t('prevPage')} disabled={page === 0} onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.max(0, page - 1) }))}>
             <CaretLeft size={16} aria-hidden="true" />
           </button>
@@ -749,6 +750,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
           <button type="button" className="btn btn-ghost btn-icon nl-dt-page-btn" aria-label={t('nextPage')} disabled={page >= pageCount - 1} onClick={() => setPagination((p) => ({ ...p, pageIndex: Math.min(pageCount - 1, page + 1) }))}>
             <CaretRight size={16} aria-hidden="true" />
           </button>
+          </span>
         </div>
       </nav>
 

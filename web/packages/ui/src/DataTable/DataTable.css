@@ -150,6 +150,7 @@ table.nl-dt-table td { vertical-align: middle; overflow-wrap: break-word; } /* o
 .nl-dt-pager { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .nl-dt-rows-label { margin-right: 4px; }
 .nl-dt-pager .nl-dt-chips { gap: 4px; }
+.nl-dt-paging { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; } /* ‹ 1/3 › never splits over two lines */
 .nl-dt-page-btn { margin-left: 8px; }
 .nl-dt-page-btn + span + .nl-dt-page-btn { margin-left: 0; }
 

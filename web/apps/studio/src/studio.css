@@ -19,3 +19,7 @@ body { text-wrap: pretty; }
 .nl-solo-icon[data-tone='neutral'] { background: var(--color-surface-sunken); color: var(--color-text-muted); }
 .nl-solo-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-top: var(--space-2); }
 @media (max-width: 599.98px) { .nl-solo { padding-top: var(--space-6); } .nl-solo-card { padding: var(--space-6) var(--space-4); } }
+
+/* Studio pages (light direction, 2026-10-19): a page is its head, then white cards 20px apart. On phones a card keeps
+   16px inside, so a table's cards inside it don't lose a third of the width to nested padding. */
+@media (max-width: 599.98px) { .nl-main .bo-card { padding: var(--space-4); } }

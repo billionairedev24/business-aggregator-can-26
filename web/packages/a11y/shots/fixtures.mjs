@@ -219,6 +219,79 @@ const SERVICES_SOLD = [
   listing('s6', 'service', 'Alternator replacement', { meta: 'Quoted after diagnosis', pricingMode: 'quote', sales30d: 3, vetting: 'draft', status: 'hidden' }),
 ];
 
+/** The parts shop's orders: tonight's run (relative to now, so the headline reads "tonight"), pickups, today's deliveries. */
+function sellerOrders() {
+  const d = new Date(); const day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  const local = (h, m = 0) => new Date(day + (h + 6) * 3600000 + m * 60000).toISOString(); // a Prairie evening, as the calendar's
+  const run = { windowStartsAt: local(18), cutoffAt: local(17, 20), runLabel: 'R-611', placedAt: local(9, 12), deliveredAt: null, issueNote: null };
+  const line = (id, title, qty, unitCents, state) => ({ id, title, qty, unitCents, state });
+  const order = (id, ref, customerName, area, lines, status, over = {}) => ({ id, ref, customerName, area, lines, totalCents: lines.reduce((s, l) => s + l.qty * l.unitCents, 0), ...run, status, ...over });
+  const items = [
+    order('o1', 'NL-48213', 'A. Osei', 'Beltline', [line('o1a', 'Wiper blades, 22 in. pair', 2, 1900, 'pending')], 'to_pack'),
+    order('o4', 'NL-48219', 'K. Nguyen', 'Bridgeland', [line('o4a', 'Brake pads (front, ceramic)', 1, 6400, 'pending'), line('o4b', 'Washer fluid, −40 °C, 4 L', 2, 600, 'pending')], 'to_pack'),
+    order('o5', 'NL-48224', 'L. Moreau', 'Mission', [line('o5a', 'Synthetic oil 5W-30, 5 L', 1, 4299, 'pending')], 'to_pack'),
+    order('o2', 'NL-48201', 'M. Tran', 'Inglewood', [line('o2a', 'Cabin air filter', 1, 2450, 'packed')], 'awaiting_pickup', { courierPickup: { runLabel: 'R-611', courierAssigned: true, eta: local(17, 40), arrivedAt: null, pickedUpAt: null } }),
+    order('o6', 'NL-48207', 'S. Bouchard', 'Tuxedo', [line('o6a', 'Washer fluid, −40 °C, 4 L', 3, 600, 'packed')], 'awaiting_pickup'),
+    order('o7', 'NL-48177', 'P. Singh', 'Ramsay', [line('o7a', 'Wiper blades, 22 in. pair', 1, 1900, 'packed')], 'delivered', { deliveredAt: local(12, 5) }),
+    order('o8', 'NL-48171', 'J. Martin', 'Altadore', [line('o8a', 'LED headlight bulbs H11', 1, 5900, 'packed')], 'delivered', { deliveredAt: local(11, 40) }),
+    order('o3', 'NL-48188', 'D. Kowalski', 'Hillhurst', [line('o3a', 'Wiper blades, 22 in. pair', 1, 1900, 'packed')], 'issue', { issueNote: 'wrong size', deliveredAt: local(10, 30) }),
+  ];
+  return { items, counts: { toPack: 3, awaitingPickup: 2, deliveredToday: 2, issues: 1, nextCutoff: run.cutoffAt, nextRunLabel: 'R-611' } };
+}
+
+/** The inbox, minutes and hours old (the recorded one is weeks old by now). */
+const ago = min => new Date(Date.now() - min * 60000).toISOString();
+function threads() {
+  const b = rec('GET /api/v1/merchants/:id/threads');
+  [12, 55, 60 * 26, 60 * 50].forEach((m, i) => { if (b.items[i]) b.items[i].lastMessageAt = ago(m); });
+  b.items.splice(2, 0, { ...b.items[2], id: 't5', counterpartName: 'Lena W.', lastMessage: 'Can you do the battery this afternoon instead?', lastMessageAt: ago(180), unread: false });
+  return b;
+}
+function thread() {
+  const b = rec('GET /api/v1/merchants/:id/threads/:id');
+  b.thread.lastMessageAt = ago(12);
+  [60 * 20, 60 * 19, 12].forEach((m, i) => { if (b.messages[i]) b.messages[i].at = ago(m); });
+  return b;
+}
+
+/** Earnings: the overview and a ledger of the last fortnight's jobs (sale + 5 % tax held; fee 9 %). */
+function earnings() {
+  const b = rec('GET /api/v1/merchants/:id/earnings');
+  return { ...b, nextPayoutAt: new Date(Date.now() + 4 * DAY).toISOString() };
+}
+function ledger() {
+  const rows = [
+    ['Brake pads and rotors', 'Amara O.', 18000, 'held', -0.3, 1.4], ['Oil change, synthetic', 'Dev P.', 8476, 'held', -0.2, 1.6], ['Pre-purchase inspection', 'Sam R.', 15238, 'held', -1, 0.6],
+    ['Winter tire swap', 'Priya K.', 9429, 'held', -1.2, 0.4], ['Brake inspection', 'A. Osei', 8476, 'disputed', -6, null], ['Check engine light diagnostic', 'D. Kowalski', 11429, 'released', -4, null],
+    ['Battery replacement', 'Lena W.', 20381, 'released', -5, null], ['Oil change, synthetic', 'K. Nguyen', 8476, 'released', -6, null], ['Winter tire swap', 'S. Bouchard', 9429, 'released', -7, null],
+    ['Brake pads and rotors', 'J. Martin', 18000, 'refunded', -9, null],
+  ];
+  return { items: rows.map(([label, customerName, gross, state, daysAgo, releaseIn], i) => {
+    const tax = Math.round(gross * 0.05), fee = Math.round(gross * 0.09);
+    return { id: `e${i + 1}`, kind: 'service', label, orderNumber: `BK-${7790 - i * 3}`, occurredAt: new Date(Date.now() + daysAgo * DAY).toISOString(), customerName,
+      heldCents: gross + tax, grossCents: gross, taxCents: tax, feeCents: fee, netCents: gross - fee, state,
+      releaseAt: releaseIn == null ? null : new Date(Date.now() + releaseIn * DAY).toISOString(), releasedAt: state === 'released' ? new Date(Date.now() + (daysAgo + 2) * DAY).toISOString() : null };
+  }) };
+}
+
+/** Payouts: Friday payouts going back two months, one instant. */
+function payoutOverview() { return { ...rec('GET /api/v1/merchants/:id/payouts/overview'), nextPayoutAt: new Date(Date.now() + 4 * DAY).toISOString() }; }
+function payoutHistory() {
+  const [p] = rec('GET /api/v1/merchants/:id/payouts').items;
+  const amounts = [214060, 191240, 176820, 203310, 158900, 162450, 149980, 171230];
+  return { items: amounts.map((a, i) => ({ ...p, id: `p${i + 1}`, reference: `po_${(9000 + i * 37).toString(36)}`, kind: i === 2 ? 'instant' : 'scheduled', state: i === 0 ? 'in_transit' : 'paid',
+    createdAt: new Date(Date.now() - (3 + i * 7) * DAY).toISOString(), arrivesAt: new Date(Date.now() - (1 + i * 7) * DAY).toISOString(), amountCents: a, feeCents: i === 2 ? Math.round(a / 100) : 0, netCents: i === 2 ? a - Math.round(a / 100) : a, itemCount: 9 + (i * 5) % 8 })) };
+}
+
+/** Sales report: 13 weeks against the 13 before, the listings that earn most. */
+function report() {
+  const b = rec('GET /api/v1/merchants/:id/reports');
+  const start = Date.now() - 91 * DAY;
+  b.series = Array.from({ length: 13 }, (_, i) => ({ start: new Date(start + i * 7 * DAY).toISOString().slice(0, 10), currentCents: 120000 + i * 9000 + (i % 3) * 14000, previousCents: 105000 + i * 5000 + ((i + 1) % 3) * 9000 }));
+  b.byListing = [{ name: 'Brake pads and rotors', grossCents: 582000 }, { name: 'Oil change, synthetic', grossCents: 401000 }, { name: 'Winter tire swap', grossCents: 336000 }, { name: 'Pre-purchase inspection', grossCents: 224000 }, { name: null, grossCents: 401000 }];
+  return b;
+}
+
 /** The wiper blades in the editor: a filled-in draft with three photos. */
 function productDetail() {
   const b = rec('GET /api/v1/merchants/:id/listings/:id');
@@ -282,6 +355,7 @@ export const SHOTS = {
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/availability/hours`) ? { body: availabilityHours() } : undefined),
     (m, p) => (m === 'POST' && p.split('?')[0] === `/api/v1/merchants/${PROVIDER_ID}/availability/preview` ? { body: previewSlots() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/availability/services`) ? { body: { items: [{ id: 's1', name: 'Brake inspection', durationMin: 45 }, { id: 's2', name: 'Brake pads and rotors', durationMin: 90 }, { id: 's3', name: 'Oil change', durationMin: 45 }] } } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${SELLER_ID}/orders`) ? { body: sellerOrders() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${SELLER_ID}/listings/p1`) ? { body: productDetail() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${SELLER_ID}/listings/p1/french`) ? { body: { rule: 'warn', title: 'Balais d’essuie-glace, 22 po, paire', description: null, missing: true } } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${SELLER_ID}/listings/imports`) ? { body: { items: [
@@ -291,6 +365,14 @@ export const SHOTS = {
     ] } } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${SELLER_ID}/listings`) ? { body: { items: PRODUCTS_SOLD } } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/listings`) ? { body: { items: SERVICES_SOLD } } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/threads`) ? { body: threads() } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/threads/t1`) ? { body: thread() } : undefined),
+    (m, p) => (m === 'POST' && /\/threads\/[^/]+\/read$/.test(p) ? { status: 204, body: null } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/earnings`) ? { body: earnings() } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/earnings/ledger`) ? { body: ledger() } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/payouts/overview`) ? { body: payoutOverview() } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/payouts`) ? { body: payoutHistory() } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/reports`) ? { body: report() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/quote-requests`) ? { body: quoteRequests() } : undefined),
     (m, p) => { const id = /^\/api\/v1\/merchants\/([^/]+)\/onboarding$/.exec(p)?.[1]; return m === 'GET' && APPLICATIONS[id] ? { body: APPLICATIONS[id] } : undefined; },
     (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/dashboard$/.test(p) ? { body: p.includes('PWP1') ? SELLER_DASHBOARD : DASHBOARD } : undefined),

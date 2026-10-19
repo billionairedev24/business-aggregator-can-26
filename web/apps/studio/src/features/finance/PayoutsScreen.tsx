@@ -1,3 +1,4 @@
+import { FileText } from '@phosphor-icons/react';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Chip, DataTable, Field, OptionCard, PageSkeleton, RadioGroup, Select, Skeleton, TextInput, useFormatters, useLocale, type DataTableColumn, BoHeader } from '@northline/ui';
@@ -25,8 +26,8 @@ export function PayoutsScreen() {
     <div className="fin-page">
       <BoHeader title={t('payoutsKicker')} sub={t('payoutsTitle')} />
       <QueryState query={overview} skeleton={<PageSkeleton kpis={3} rows={2} />}>{o => <Money o={o} />}</QueryState>
-      <div className="fin-cols">
-        <section className="fin-card" aria-labelledby="fin-history"><h2 className="fin-h3" id="fin-history">{t('payoutHistory')}</h2><History /></section>
+      <div className="fin-split">
+        <section className="bo-card" aria-labelledby="fin-history"><h2 className="bo-card-title" id="fin-history">{t('payoutHistory')}</h2><History /></section>
         <TaxDocuments />
       </div>
     </div>
@@ -51,8 +52,8 @@ function Money({ o }: { o: PayoutOverview }) {
   const pending = o.pendingAccount;
   const ended = [pending, account].find(a => a?.disconnectedAt);
   return (
-    <section className="fin-wallet" aria-labelledby="fin-balance">
-      <h2 className="fin-h2" id="fin-balance">{t('balanceTitle')}</h2>
+    <section className="bo-card fin-wallet" aria-labelledby="fin-balance">
+      <h2 className="bo-card-title" id="fin-balance">{t('balanceTitle')}</h2>
       <ul className="fin-balance" aria-label={t('balanceTitle')}>
         <li className="fin-available">
           <span className="fin-available-k">{t('availableNow')}</span>
@@ -65,32 +66,27 @@ function Money({ o }: { o: PayoutOverview }) {
         </> : null}
         <li className="fin-tile"><span className="fin-available-k">{t('nextPayoutTile')}</span><span className="fin-tile-v">{o.schedule.frequency !== 'manual' && o.nextPayoutAt ? dayDate(o.nextPayoutAt, locale) : t('manualTile')}</span><span className="fin-small">{t(`freq_${o.schedule.frequency}` as FinanceKey)}</span></li>
       </ul>
-      {owner ? (
-        <div className="fin-request">
-          <span className="fin-request-to"><span className="fin-small">{t('paidTo')}</span><strong>{account ? t('bankLabel', { bank: bankName(account), last4: account.last4, holder: account.holderName }) : t('noAccount')}</strong></span>
-          <span className="fin-request-gap" />
+      {/* where the money goes (one line, with Change for the owner), then what the owner can do with it */}
+      <div className="fin-request">
+        <span className="fin-request-to"><span className="fin-small">{t('paidTo')}</span><strong>{pending?.effectiveAt
+          ? t('bankPendingLabel', { bank: bankName(pending), last4: pending.last4, holder: pending.holderName, date: dateTime(pending.effectiveAt, locale) })
+          : account ? t('bankLabel', { bank: bankName(account), last4: account.last4, holder: account.holderName }) : t('noAccount')}</strong></span>
+        {owner ? <Button variant="ghost" onClick={() => setPanel(p => (p === 'bank' ? null : 'bank'))} aria-expanded={panel === 'bank'}>{t('change')}</Button> : null}
+        <span className="fin-request-gap" />
+        {owner ? <>
           <Button variant="secondary" onClick={() => setPanel(p => (p === 'schedule' ? null : 'schedule'))} aria-expanded={panel === 'schedule'}>{t('changeSchedule')}</Button>
           <Button onClick={() => setPanel(p => (p === 'instant' ? null : 'instant'))} disabled={!canInstant} aria-expanded={panel === 'instant'}>{t('instantButton')}</Button>
           {!o.instant.eligible ? <span className="fin-small fin-request-note">{t('ineligible')}</span> : null}
+        </> : null}
+      </div>
+      {ended?.disconnectedAt ? (
+        <div className="fin-row fin-row-44" role="status">
+          <span className="fin-small">{t('connectionEnded', { date: dateTime(ended.disconnectedAt, locale) })}</span>
+          {owner && panel !== 'bank' ? <Button variant="ghost" onClick={() => setPanel('bank')}>{t('reconnect')}</Button> : null}
         </div>
       ) : null}
       {panel === 'instant' && account ? <InstantPanel o={o} account={account} onClose={() => setPanel(null)} /> : null}
       {panel === 'schedule' ? <SchedulePanel o={o} onClose={() => setPanel(null)} /> : null}
-      <h2 className="fin-h3">{t('bankTitle')}</h2>
-      <div className="fin-rows">
-        <div className="fin-row fin-row-44">
-          <span>{pending?.effectiveAt
-            ? t('bankPendingLabel', { bank: bankName(pending), last4: pending.last4, holder: pending.holderName, date: dateTime(pending.effectiveAt, locale) })
-            : account ? t('bankLabel', { bank: bankName(account), last4: account.last4, holder: account.holderName }) : t('noAccount')}</span>
-          {owner ? <Button variant="ghost" onClick={() => setPanel(p => (p === 'bank' ? null : 'bank'))} aria-expanded={panel === 'bank'}>{t('change')}</Button> : null}
-        </div>
-        {ended?.disconnectedAt ? (
-          <div className="fin-row fin-row-44" role="status">
-            <span className="fin-small">{t('connectionEnded', { date: dateTime(ended.disconnectedAt, locale) })}</span>
-            {owner && panel !== 'bank' ? <Button variant="ghost" onClick={() => setPanel('bank')}>{t('reconnect')}</Button> : null}
-          </div>
-        ) : null}
-      </div>
       {panel === 'bank' ? <BankPanel o={o} onClose={() => setPanel(null)} /> : null}
     </section>
   );
@@ -428,11 +424,11 @@ function TaxDocuments() {
   const merchantId = useMerchantId();
   const year = new Date().getFullYear();
   return (
-    <section className="fin-card" aria-labelledby="fin-tax">
-      <h2 className="fin-h3" id="fin-tax">{t('taxDocuments')}</h2>
-      <div className="fin-rows">
-        <div className="fin-row fin-row-40"><span>{t('gstYtd', { year })}</span><span className="fin-doc-links"><a href={downloads.gstPdf(merchantId, year, locale)} download aria-label={t('downloadPdfOf', { doc: t('gstYtd', { year }) })}>{t('pdf')}</a> · <a href={downloads.gst(merchantId, year)} download aria-label={t('downloadCsvOf', { doc: t('gstYtd', { year }) })}>{t('csv')}</a></span></div>
-        <div className="fin-row fin-row-40"><span>{t('annualStatement', { year: year - 1 })}</span><span className="fin-doc-links"><a href={downloads.annualPdf(merchantId, year - 1, locale)} download aria-label={t('downloadPdfOf', { doc: t('annualStatement', { year: year - 1 }) })}>{t('pdf')}</a> · <a href={downloads.annual(merchantId, year - 1)} download aria-label={t('downloadCsvOf', { doc: t('annualStatement', { year: year - 1 }) })}>{t('csv')}</a></span></div>
+    <section className="bo-card" aria-labelledby="fin-tax">
+      <h2 className="bo-card-title" id="fin-tax">{t('taxDocuments')}</h2>
+      <div className="fin-docs">
+        <div className="fin-doc"><FileText size={20} aria-hidden className="fin-doc-icon" /><span className="fin-doc-name">{t('gstYtd', { year })}</span><span className="fin-doc-links"><a href={downloads.gstPdf(merchantId, year, locale)} download aria-label={t('downloadPdfOf', { doc: t('gstYtd', { year }) })}>{t('pdf')}</a> · <a href={downloads.gst(merchantId, year)} download aria-label={t('downloadCsvOf', { doc: t('gstYtd', { year }) })}>{t('csv')}</a></span></div>
+        <div className="fin-doc"><FileText size={20} aria-hidden className="fin-doc-icon" /><span className="fin-doc-name">{t('annualStatement', { year: year - 1 })}</span><span className="fin-doc-links"><a href={downloads.annualPdf(merchantId, year - 1, locale)} download aria-label={t('downloadPdfOf', { doc: t('annualStatement', { year: year - 1 }) })}>{t('pdf')}</a> · <a href={downloads.annual(merchantId, year - 1)} download aria-label={t('downloadCsvOf', { doc: t('annualStatement', { year: year - 1 }) })}>{t('csv')}</a></span></div>
       </div>
     </section>
   );

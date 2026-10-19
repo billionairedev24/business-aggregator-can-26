@@ -67,6 +67,7 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'service-new', path: `/b/${PROVIDER}/listings/new` },
     { name: 'listings-bulk', path: `/b/${SELLER}/listings/bulk` },
     { name: 'orders', path: `/b/${SELLER}/orders` },
+    { name: 'orders-detail', path: `/b/${SELLER}/orders`, click: '.is-clickable' },
     { name: 'messages', path: `/b/${PROVIDER}/messages` },
     { name: 'page', path: `/b/${PROVIDER}/page` },
     { name: 'earnings', path: `/b/${PROVIDER}/earnings` },

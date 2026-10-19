@@ -150,10 +150,11 @@ describe('Reports', () => {
     const ui = renderScreen(<ReportsScreen />);
     expect(await screen.findByText('$19,440')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByText('gross sales · +22%')).toBeTruthy();
+    expect(screen.getByText('gross sales')).toBeTruthy();
+    expect(screen.getByText('+22% vs the period before')).toBeTruthy();
     expect(screen.getByText('$164.75')).toBeTruthy();
     expect(screen.getByText('71%')).toBeTruthy();
-    expect(screen.getByText('refund rate · category avg 3.1%')).toBeTruthy();
+    expect(screen.getByText('category average 3.1%')).toBeTruthy();
     expect(screen.getByText('Everything else')).toBeTruthy();
     expect(screen.getByText('Your website embed (API)')).toBeTruthy();
     expect((screen.getByRole('link', { name: 'Export CSV' })).getAttribute('href')).toBe('/api/v1/merchants/PWM1/reports/export.csv?period=90d');
