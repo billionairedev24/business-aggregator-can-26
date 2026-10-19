@@ -20,6 +20,13 @@ const CODE = /^(?:AB|BC|MB|NB|NS|NT|NU|ON|PE|QC|SK|YT)$/;
  */
 const REGIONAL = /\b(?:AHS|AGLC|AMVIC|RECA|ProServe|MT|MDT|MST)\b|\(403\)|\b(?:ca-central-1)\b/;
 
+/*
+ * 2026-10-19 (province legal details): a province in an identifier or a demonym — a field key like
+ * `alberta_corporate_access_number`, a structure code like `corp_ab`, "albertain" in French copy. Field keys, codes and
+ * copy for a province's legal details come from the region model (`GET …/onboarding/legal-forms`), never from code.
+ */
+const PROVINCE_KEY = /(?:^|[_.\-])(?:alberta|british_columbia|ontario|quebec|manitoba|saskatchewan|nova_scotia|new_brunswick|newfoundland|prince_edward_island|yukon|nunavut|northwest_territories)(?:[_.\-]|$)|\b(?:albertaine?|ontarienne?|qu[eé]b[eé]coise?|manitobaine?|saskatchewanaise?|n[eé]o-[eé]cossaise?)\b|\bcorp_(?:ab|bc|on|qc|sk|mb|nb|ns|nl|pe|yt|nt|nu)\b/i;
+
 /** file (relative to web/) → literal fragments allowed there, each with its reason. */
 const ALLOWED: Record<string, { fragment: RegExp; reason: string }[]> = {
   'apps/studio/src/features/compliance/docs.ts': [
@@ -33,9 +40,6 @@ const ALLOWED: Record<string, { fragment: RegExp; reason: string }[]> = {
   ],
   'apps/studio/src/features/compliance/messages.ts': [
     { fragment: /French required when serving Québec|français requis pour servir le Québec/, reason: 'a fact about one named province’s language law, not the business’s place' },
-  ],
-  'apps/studio/src/features/onboarding/legal.ts': [
-    { fragment: /^(?:BC|SK|MB|ON|QC)$/, reason: 'home-jurisdiction values of docs/spec/legal-details.schema.json (the spec’s enum; labels come from the region model)' },
   ],
 };
 
@@ -68,7 +72,7 @@ export function regionLiterals(): string[] {
     const code = stripComments(readFileSync(file, 'utf8'));
     for (const match of code.matchAll(LITERAL)) {
       const text = match[0].slice(1, -1);
-      const hit = PLACE.exec(text)?.[0] ?? REGIONAL.exec(text)?.[0] ?? (CODE.test(text) ? text : undefined);
+      const hit = PLACE.exec(text)?.[0] ?? REGIONAL.exec(text)?.[0] ?? PROVINCE_KEY.exec(text)?.[0] ?? (CODE.test(text) ? text : undefined);
       if (!hit) continue;
       if ((ALLOWED[rel] ?? []).some(a => a.fragment.test(text) || a.fragment.test(hit))) continue;
       const line = code.slice(0, match.index).split('\n').length;
@@ -91,5 +95,10 @@ describe('region-neutral web code (S-134)', () => {
     expect(REGIONAL.test('Full AHS vetting.')).toBe(true);
     expect(REGIONAL.test('+1 (403) …')).toBe(true);
     expect(REGIONAL.test('Mountain bike · MTB')).toBe(false);
+    expect(PROVINCE_KEY.test('alberta_corporate_access_number')).toBe(true);
+    expect(PROVINCE_KEY.test("N° d'accès de société albertain")).toBe(true);
+    expect(PROVINCE_KEY.test('corp_ab')).toBe(true);
+    expect(PROVINCE_KEY.test('provincial_registry_number')).toBe(false);
+    expect(PROVINCE_KEY.test('corp_prov')).toBe(false);
   });
 });

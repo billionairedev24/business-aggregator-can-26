@@ -78,9 +78,14 @@ final class OnboardingFlow {
 
     /** Account step → the new applicant's id. */
     String start(String userId, String type) throws Exception {
+        return start(userId, type, "AB");
+    }
+
+    /** Account step in a province (open in the region model) → the new applicant's id. */
+    String start(String userId, String type, String province) throws Exception {
         var body = mvc.perform(post("/api/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"type\":\"%s\",\"province\":\"AB\"}".formatted(type))
+                        .content("{\"type\":\"%s\",\"province\":\"%s\"}".formatted(type, province))
                         .with(TestJwt.member(userId)))
                 .andExpect(status().isCreated())
                 .andReturn()
@@ -166,12 +171,12 @@ final class OnboardingFlow {
         return String.valueOf(100_000_000 + RANDOM.nextInt(900_000_000));
     }
 
-    /** Valid Alberta corporation with two principals, AMVIC-regulated + plain categories and a suggestion. */
+    /** Valid provincial corporation (the flow starts in AB, whose registry number is 10 digits) with two principals, AMVIC-regulated + plain categories and a suggestion. */
     static String corpBusiness(String docId, String bn) {
         return """
-                {"displayName":"Aspen Wrench","legalName":"2201456 Alberta Ltd.","structure":"corp_ab",
+                {"displayName":"Aspen Wrench","legalName":"2201456 Alberta Ltd.","structure":"corp_prov",
                  "gstNumber":"123456789 rt0001",
-                 "legalDetails":{"legal_corporate_name":"2201456 Alberta Ltd.","alberta_corporate_access_number":"2201456789",
+                 "legalDetails":{"legal_corporate_name":"2201456 Alberta Ltd.","provincial_registry_number":"2201456789",
                    "business_number":"%s","incorporation_date":"2019-04-02","registered_office":"1208 17 Ave SW, Calgary AB",
                    "certificate_of_incorporation_doc":"%s"},
                  "principals":[{"legalName":"Ravi Sandhu","role":"director","ownershipPct":60},

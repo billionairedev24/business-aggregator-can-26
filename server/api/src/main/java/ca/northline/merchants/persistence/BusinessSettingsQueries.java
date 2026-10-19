@@ -10,7 +10,6 @@ import ca.northline.merchants.domain.DisplayName;
 import ca.northline.merchants.domain.GstNumber;
 import ca.northline.merchants.domain.MerchantType;
 import ca.northline.shared.CodedEnum;
-import ca.northline.shared.CodedEnums;
 import java.sql.Array;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -47,7 +46,7 @@ class BusinessSettingsQueries implements BusinessSettingsStore {
                     return new BusinessSettings(
                             rs.getString("id"),
                             CodedEnum.fromCode(MerchantType.class, rs.getString("type")),
-                            CodedEnums.fromCode(rs.getString("structure"), BusinessStructure.class),
+                            BusinessStructure.ofNullable(rs.getString("structure")),
                             new DisplayName(rs.getString("display_name")),
                             rs.getString("legal_name"),
                             gst != null && GstNumber.isValid(gst) ? new GstNumber(gst) : null,

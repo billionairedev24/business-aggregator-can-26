@@ -1,152 +1,170 @@
+import type { Locale } from '@northline/ui';
 import type { OnboardingT } from './messages';
-import type { PrincipalInput, PrincipalRole, Structure } from './api';
+import type { Bilingual, Condition, LegalFieldDef, LegalFormDef, PrincipalInput, PrincipalRole, Structure } from './api';
 
 type Key = Parameters<OnboardingT>[0];
 
-/**
- * Client mirror of docs/spec/legal-details.schema.json (one branch per business structure) with the design's labels
- * (design 02 `bsDefs`). `legal.test.ts` checks keys, required-ness and patterns against the schema file; the server
- * validates against the file itself.
+/*
+ * The legal details of the Business step come from the api (`GET …/onboarding/legal-forms`): the fields of
+ * docs/spec/legal-details.schema.json for each structure with what the business's province asks — which provincial
+ * identifiers are required, their labels, formats, help and the registry (region data, `region.legal_forms`). The
+ * server validates against the same definition. This file only knows the generic copy of each schema key (used where
+ * the province gives none) and turns the definition into the request body and the client-side errors; it names no
+ * province.
  */
-export type LegalFieldKind = 'input' | 'date' | 'doc' | 'select' | 'bool' | 'attorney' | 'sin';
-export interface LegalField {
-  key: string;
-  kind: LegalFieldKind;
-  label: Key;
-  ph?: Key;
-  req: 'required' | 'optional' | 'if_trade' | 'if_charity';
-  span?: boolean;
-  /** `province`: the value is a province code, labelled with its name from the region model (S-134). */
-  options?: readonly { value: string; label: Key; province?: boolean }[];
-  min?: 2 | 5;
-  max?: number;
-  pattern?: RegExp;
-  patternMsg?: Key;
-}
 
-const NAME = { min: 2 } as const;
-const ADDRESS = { min: 5, max: 200, span: true } as const;
-const BN: Partial<LegalField> = { pattern: /^\d{9}$/, patternMsg: 'lv_bn', ph: 'lf_business_number_ph' };
-const f = (key: string, kind: LegalFieldKind, label: Key, req: LegalField['req'], extra: Partial<LegalField> = {}): LegalField => ({ key, kind, label, req, ...extra });
-
-export const LEGAL_FIELDS: Record<Structure, readonly LegalField[]> = {
-  sole: [
-    f('owner_legal_name', 'input', 'lf_owner_legal_name', 'required', { ...NAME, ph: 'lf_owner_legal_name_ph' }),
-    f('trade_name', 'input', 'lf_trade_name', 'optional', { max: 120, ph: 'lf_trade_name_ph' }),
-    f('trade_name_registration', 'input', 'lf_trade_name_registration', 'if_trade', { ph: 'lf_trade_name_registration_ph' }),
-    f('sin_collected_by_stripe', 'sin', 'lf_sin', 'required', { ph: 'lf_sin_ph' }),
-    f('address', 'input', 'lf_address', 'required', { ...ADDRESS, ph: 'lf_address_ph' }),
-  ],
-  partnership: [
-    f('partnership_name', 'input', 'lf_partnership_name', 'required', { ...NAME, ph: 'lf_partnership_name_ph' }),
-    f('partnership_registration', 'input', 'lf_partnership_registration', 'required', { ph: 'lf_partnership_registration_ph' }),
-    f('partnership_agreement_doc', 'doc', 'lf_partnership_agreement_doc', 'optional', { ph: 'lf_pdf' }),
-    f('business_number', 'input', 'lf_business_number', 'required', BN),
-  ],
-  corp_ab: [
-    f('legal_corporate_name', 'input', 'lf_legal_corporate_name', 'required', { ...NAME, ph: 'lf_legal_corporate_name_ph_ab' }),
-    f('alberta_corporate_access_number', 'input', 'lf_alberta_corporate_access_number', 'required', { pattern: /^\d{10}$/, patternMsg: 'lv_can', ph: 'lf_alberta_corporate_access_number_ph' }),
-    f('business_number', 'input', 'lf_business_number', 'required', BN),
-    f('incorporation_date', 'date', 'lf_incorporation_date', 'required', { ph: 'lf_incorporation_date_ph' }),
-    f('registered_office', 'input', 'lf_registered_office', 'required', { ...ADDRESS, ph: 'lf_registered_office_ph' }),
-    f('certificate_of_incorporation_doc', 'doc', 'lf_certificate_of_incorporation_doc', 'required', { ph: 'lf_pdf' }),
-    f('operating_name', 'input', 'lf_operating_name', 'optional', { max: 120, ph: 'lf_operating_name_ph' }),
-  ],
-  corp_fed: [
-    f('legal_corporate_name', 'input', 'lf_legal_corporate_name', 'required', { ...NAME, ph: 'lf_legal_corporate_name_ph_fed' }),
-    f('corporations_canada_number', 'input', 'lf_corporations_canada_number', 'required', { pattern: /^\d{7}$/, patternMsg: 'lv_ccn', ph: 'lf_corporations_canada_number_ph' }),
-    f('alberta_extra_provincial_registration', 'input', 'lf_alberta_extra_provincial_registration', 'required', { ph: 'lf_alberta_extra_provincial_registration_ph' }),
-    f('business_number', 'input', 'lf_business_number', 'required', BN),
-    f('registered_office', 'input', 'lf_registered_office', 'required', ADDRESS),
-    f('certificate_of_incorporation_doc', 'doc', 'lf_certificate_of_incorporation_doc', 'required', { ph: 'lf_pdf' }),
-    f('annual_return_current', 'bool', 'lf_annual_return_current', 'required', { options: [{ value: 'true', label: 'lf_annual_yes' }, { value: 'false', label: 'lf_annual_no' }] }),
-  ],
-  corp_ex: [
-    f('legal_corporate_name', 'input', 'lf_legal_corporate_name', 'required', NAME),
-    f('home_jurisdiction', 'select', 'lf_home_jurisdiction', 'required', { options: (['BC', 'SK', 'MB', 'ON', 'QC', 'OTHER_CA', 'US', 'OTHER'] as const).map(v => (v.length === 2 ? { value: v, label: 'jur_province' as Key, province: true } : { value: v, label: `jur_${v}` as Key })) }),
-    f('home_registration_number', 'input', 'lf_home_registration_number', 'required'),
-    f('alberta_extra_provincial_registration', 'input', 'lf_alberta_extra_provincial_registration', 'required'),
-    f('attorney_for_service', 'attorney', 'lf_attorney_for_service', 'required', { span: true, ph: 'lf_attorney_ph' }),
-    f('business_number', 'input', 'lf_business_number', 'required', BN),
-    f('certificate_of_status_doc', 'doc', 'lf_certificate_of_status_doc', 'required', { ph: 'lf_certificate_of_status_doc_ph' }),
-  ],
-  coop: [
-    f('registered_name', 'input', 'lf_registered_name_coop', 'required', NAME),
-    f('cooperative_registration', 'input', 'lf_cooperative_registration', 'required', { ph: 'lf_partnership_registration_ph' }),
-    f('business_number', 'input', 'lf_business_number', 'required', BN),
-    f('board_resolution_doc', 'doc', 'lf_board_resolution_doc', 'required', { ph: 'lf_pdf' }),
-    f('registered_office', 'input', 'lf_registered_office', 'required', ADDRESS),
-  ],
-  nonprofit: [
-    f('registered_name', 'input', 'lf_registered_name', 'required', NAME),
-    f('society_registration', 'input', 'lf_society_registration', 'required', { ph: 'lf_partnership_registration_ph' }),
-    f('cra_charity_number', 'input', 'lf_cra_charity_number', 'if_charity', { pattern: /^\d{9}RR\d{4}$/, patternMsg: 'lv_charity', ph: 'lf_cra_charity_number_ph' }),
-    f('business_number', 'input', 'lf_business_number', 'required', BN),
-    f('board_resolution_doc', 'doc', 'lf_board_resolution_doc', 'required', { ph: 'lf_pdf' }),
-    f('registered_office', 'input', 'lf_registered_office', 'required', ADDRESS),
-  ],
+/** Generic label / placeholder of a schema key (`lf_<key>`, or `lf_<key>_<structure>` where the structure words it). */
+const GENERIC: Record<string, { label: Key; ph?: Key; byStructure?: Partial<Record<Structure, Key>> }> = {
+  owner_legal_name: { label: 'lf_owner_legal_name', ph: 'lf_owner_legal_name_ph' },
+  trade_name: { label: 'lf_trade_name', ph: 'lf_trade_name_ph' },
+  trade_name_registration: { label: 'lf_trade_name_registration' },
+  sin_collected_by_stripe: { label: 'lf_sin', ph: 'lf_sin_ph' },
+  address: { label: 'lf_address', ph: 'lf_address_ph' },
+  partnership_name: { label: 'lf_partnership_name', ph: 'lf_partnership_name_ph' },
+  partnership_registration: { label: 'lf_partnership_registration' },
+  partnership_agreement_doc: { label: 'lf_partnership_agreement_doc', ph: 'lf_pdf' },
+  business_number: { label: 'lf_business_number', ph: 'lf_business_number_ph' },
+  legal_corporate_name: { label: 'lf_legal_corporate_name', ph: 'lf_legal_corporate_name_ph' },
+  provincial_registry_number: { label: 'lf_provincial_registry_number' },
+  incorporation_date: { label: 'lf_incorporation_date', ph: 'lf_incorporation_date_ph' },
+  registered_office: { label: 'lf_registered_office', ph: 'lf_registered_office_ph' },
+  certificate_of_incorporation_doc: { label: 'lf_certificate_of_incorporation_doc', ph: 'lf_pdf' },
+  operating_name: { label: 'lf_operating_name', ph: 'lf_operating_name_ph' },
+  corporations_canada_number: { label: 'lf_corporations_canada_number', ph: 'lf_corporations_canada_number_ph' },
+  extra_provincial_registration_number: { label: 'lf_extra_provincial_registration_number' },
+  annual_return_current: { label: 'lf_annual_return_current' },
+  home_jurisdiction: { label: 'lf_home_jurisdiction' },
+  home_registration_number: { label: 'lf_home_registration_number' },
+  attorney_for_service: { label: 'lf_attorney_for_service' },
+  name: { label: 'lf_attorney_name' },
+  address_in_province: { label: 'lf_attorney_address' },
+  certificate_of_status_doc: { label: 'lf_certificate_of_status_doc', ph: 'lf_certificate_of_status_doc_ph' },
+  registered_name: { label: 'lf_registered_name', byStructure: { coop: 'lf_registered_name_coop' } },
+  cooperative_registration: { label: 'lf_cooperative_registration' },
+  board_resolution_doc: { label: 'lf_board_resolution_doc', ph: 'lf_pdf' },
+  society_registration: { label: 'lf_society_registration' },
+  cra_charity_number: { label: 'lf_cra_charity_number', ph: 'lf_cra_charity_number_ph' },
 };
 
-/** Keys whose spaces are typing aids (compacted and upper-cased like the server). */
-const COMPACT = new Set(['business_number', 'alberta_corporate_access_number', 'corporations_canada_number', 'cra_charity_number']);
+/** The federal identifiers' format messages (the same everywhere); a province's own format brings its message. */
+const FEDERAL_FORMAT: Record<string, Key> = { business_number: 'lv_bn', corporations_canada_number: 'lv_ccn', cra_charity_number: 'lv_charity' };
 
-export interface Attorney { name?: string; alberta_address?: string }
-export type LegalValues = Record<string, string | boolean | Attorney | undefined>;
+const text = (b: Bilingual | null | undefined, locale: Locale) => (b ? (locale === 'fr' ? b.fr : b.en) : undefined);
 
-/** The `legal_details` object sent to the api: trimmed, blanks dropped, SIN flag set, booleans typed. */
-export function toLegalDetails(structure: Structure, values: LegalValues): Record<string, unknown> {
+/** The field's label: the province's, else the generic copy for the key. */
+export function fieldLabel(f: LegalFieldDef, structure: Structure, t: OnboardingT, locale: Locale): string {
+  const g = GENERIC[f.key];
+  return text(f.label, locale) ?? (g ? t(g.byStructure?.[structure] ?? g.label) : f.key);
+}
+
+/** Placeholder: the province's example, else the generic one (documents: what to upload). */
+export function fieldPlaceholder(f: LegalFieldDef, t: OnboardingT): string | undefined {
+  if (f.example) return f.example;
+  const ph = GENERIC[f.key]?.ph;
+  return ph ? t(ph) : undefined;
+}
+
+export const fieldHelp = (f: LegalFieldDef, locale: Locale) => text(f.help, locale);
+
+/** "· required / · optional / · if trade name / · if it applies". */
+export function requirementNote(f: LegalFieldDef, t: OnboardingT): string {
+  if (f.required) return t('req_required');
+  if (f.requiredWhen) return t(f.requiredWhen.field === 'trade_name' ? 'req_if_trade' : 'req_conditional');
+  return t(f.key === 'cra_charity_number' ? 'req_if_charity' : 'req_optional');
+}
+
+export type LegalValue = string | boolean | Record<string, string> | undefined;
+export type LegalValues = Record<string, LegalValue>;
+
+const holds = (c: Condition, value: unknown) => {
+  const v = value == null ? undefined : String(value);
+  if (c.in.length) return v !== undefined && c.in.includes(v);
+  if (c.notIn.length) return v === undefined || !c.notIn.includes(v);
+  return v !== undefined && v !== '';
+};
+
+/** Required now: always, or because the field it depends on has (or has not) one of the listed values. */
+export const isRequired = (f: LegalFieldDef, details: Record<string, unknown>) => f.required || (!!f.requiredWhen && holds(f.requiredWhen, details[f.requiredWhen.field]));
+
+const clean = (f: LegalFieldDef, v: string) => (f.compact ? v.replace(/\s/g, '').toUpperCase() : v.trim());
+
+/** The `legal_details` object sent to the api: trimmed, blanks dropped, compact numbers compacted, SIN flag set, booleans typed. */
+export function toLegalDetails(form: LegalFormDef, values: LegalValues): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  for (const field of LEGAL_FIELDS[structure]) {
-    const v = values[field.key];
-    if (field.kind === 'sin') { out[field.key] = true; continue; }
-    if (field.kind === 'bool') { if (v === true || v === 'true') out[field.key] = true; else if (v === false || v === 'false') out[field.key] = false; continue; }
-    if (field.kind === 'attorney') {
-      const a = (v ?? {}) as Attorney;
-      const name = a.name?.trim(), addr = a.alberta_address?.trim();
-      if (name || addr) out[field.key] = { ...(name ? { name } : {}), ...(addr ? { alberta_address: addr } : {}) };
+  for (const f of form.fields) {
+    const v = values[f.key];
+    if (f.kind === 'stripe_confirmation') { out[f.key] = true; continue; }
+    if (f.kind === 'yes_no') { if (v === true || v === 'true') out[f.key] = true; else if (v === false || v === 'false') out[f.key] = false; continue; }
+    if (f.kind === 'group') {
+      const parts = (v && typeof v === 'object' ? v : {}) as Record<string, string>;
+      const group: Record<string, string> = {};
+      for (const p of f.parts) { const s = clean(p, parts[p.key] ?? ''); if (s) group[p.key] = s; }
+      if (Object.keys(group).length) out[f.key] = group;
       continue;
     }
     if (typeof v !== 'string') continue;
-    const s = COMPACT.has(field.key) ? v.replace(/\s/g, '').toUpperCase() : v.trim();
-    if (s) out[field.key] = s;
+    const s = clean(f, v);
+    if (s) out[f.key] = s;
   }
   return out;
 }
 
-/** Errors keyed like the server's 422 fields (`legalDetails.<key>`); documents: ids already uploaded. */
-export function validateLegal(structure: Structure, values: LegalValues, t: OnboardingT): Record<string, string> {
-  const details = toLegalDetails(structure, values);
+const isIsoDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && new Date(`${s}T00:00:00Z`).toISOString().startsWith(s);
+
+function textError(f: LegalFieldDef, v: string, t: OnboardingT, locale: Locale): string | undefined {
+  if (f.minLength && v.length < f.minLength) return t(f.minLength >= 5 ? 'lv_address' : 'lv_min2');
+  if (f.maxLength && v.length > f.maxLength) return t('lv_max', { max: f.maxLength });
+  if (f.pattern && f.kind !== 'document' && !new RegExp(f.pattern).test(v)) return text(f.patternMessage, locale) ?? t(FEDERAL_FORMAT[f.key] ?? 'lv_format');
+  if (f.kind === 'date' && !isIsoDate(v)) return t('lv_date');
+  return undefined;
+}
+
+/** Errors keyed like the server's 422 fields (`legalDetails.<key>`, a group's parts `legalDetails.<key>.<part>`). */
+export function validateLegal(form: LegalFormDef, values: LegalValues, t: OnboardingT, locale: Locale): Record<string, string> {
+  const details = toLegalDetails(form, values);
   const errors: Record<string, string> = {};
   const at = (k: string) => `legalDetails.${k}`;
-  for (const field of LEGAL_FIELDS[structure]) {
-    const v = details[field.key];
-    const required = field.req === 'required' || (field.req === 'if_trade' && details.trade_name !== undefined);
-    if (field.kind === 'attorney') {
-      const a = (v ?? {}) as Attorney;
-      if (!a.name) errors[at(`${field.key}.name`)] = t('lv_required');
-      if (!a.alberta_address) errors[at(`${field.key}.alberta_address`)] = t('lv_required');
-      else if (a.alberta_address.length < 5) errors[at(`${field.key}.alberta_address`)] = t('lv_address');
+  for (const f of form.fields) {
+    const v = details[f.key];
+    const required = isRequired(f, details);
+    if (f.kind === 'group') {
+      if (v === undefined && !required) continue;
+      const parts = (v ?? {}) as Record<string, string>;
+      for (const p of f.parts) {
+        const pv = parts[p.key];
+        if (pv === undefined) { if (p.required) errors[at(`${f.key}.${p.key}`)] = t('lv_required'); continue; }
+        const e = textError(p, pv, t, locale);
+        if (e) errors[at(`${f.key}.${p.key}`)] = e;
+      }
       continue;
     }
-    if (v === undefined) { if (required) errors[at(field.key)] = t(field.kind === 'doc' ? 'lv_doc' : 'lv_required'); continue; }
+    if (v === undefined) { if (required) errors[at(f.key)] = t(f.kind === 'document' ? 'lv_doc' : 'lv_required'); continue; }
     if (typeof v !== 'string') continue;
-    if (field.min && v.length < field.min) errors[at(field.key)] = t(field.min === 5 ? 'lv_address' : 'lv_min2');
-    else if (field.max && v.length > field.max) errors[at(field.key)] = t('lv_max', { max: field.max });
-    else if (field.pattern && !field.pattern.test(v)) errors[at(field.key)] = t(field.patternMsg ?? 'lv_required');
-    else if (field.kind === 'date' && !isIsoDate(v)) errors[at(field.key)] = t('lv_date');
+    const e = textError(f, v, t, locale);
+    if (e) errors[at(f.key)] = e;
   }
   return errors;
 }
 
-const isIsoDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && new Date(`${s}T00:00:00Z`).toISOString().startsWith(s);
+/** Select and yes/no fields start on their first option (as the design shows them). */
+export function legalDefaults(form: LegalFormDef | undefined, values: LegalValues = {}): LegalValues {
+  const out: LegalValues = { ...values };
+  for (const f of form?.fields ?? []) {
+    if (out[f.key] !== undefined) continue;
+    if (f.kind === 'choice' && f.options[0]) out[f.key] = f.options[0];
+    if (f.kind === 'yes_no') out[f.key] = 'true';
+  }
+  return out;
+}
 
 /** Owners table per structure (design 02 `bsDefs.*.hasOwners/roles/shareLabel`); roles are the schema's x-principals. */
 export interface OwnersSpec { label: Key; note: Key; roles: readonly PrincipalRole[]; share: Key | null; min: number; requiredRole: PrincipalRole | null; minMsg: Key; roleMsg: Key }
+const CORP: OwnersSpec = { label: 'owners_corp', note: 'ownersNote_corp', roles: ['director', 'officer', 'shareholder'], share: 'ownershipPct', min: 1, requiredRole: 'director', minMsg: 'pv_min_corp', roleMsg: 'pv_role_corp' };
 export const OWNERS: Partial<Record<Structure, OwnersSpec>> = {
   partnership: { label: 'owners_partnership', note: 'ownersNote_partnership', roles: ['partner_signing', 'partner'], share: 'sharePct', min: 2, requiredRole: 'partner_signing', minMsg: 'pv_min_partnership', roleMsg: 'pv_role_partnership' },
-  corp_ab: { label: 'owners_corp', note: 'ownersNote_corp', roles: ['director', 'officer', 'shareholder'], share: 'ownershipPct', min: 1, requiredRole: 'director', minMsg: 'pv_min_corp', roleMsg: 'pv_role_corp' },
-  corp_fed: { label: 'owners_corp', note: 'ownersNote_corp', roles: ['director', 'officer', 'shareholder'], share: 'ownershipPct', min: 1, requiredRole: 'director', minMsg: 'pv_min_corp', roleMsg: 'pv_role_corp' },
-  corp_ex: { label: 'owners_corp', note: 'ownersNote_corp', roles: ['director', 'officer', 'shareholder'], share: 'ownershipPct', min: 1, requiredRole: 'director', minMsg: 'pv_min_corp', roleMsg: 'pv_role_corp' },
+  corp_prov: CORP,
+  corp_fed: CORP,
+  corp_ex: CORP,
   coop: { label: 'owners_coop', note: 'ownersNote_coop', roles: ['chair', 'director', 'secretary', 'treasurer'], share: null, min: 3, requiredRole: 'chair', minMsg: 'pv_min_board', roleMsg: 'pv_role_coop' },
   nonprofit: { label: 'owners_nonprofit', note: 'ownersNote_nonprofit', roles: ['president', 'director', 'treasurer', 'secretary'], share: null, min: 3, requiredRole: 'president', minMsg: 'pv_min_board', roleMsg: 'pv_role_nonprofit' },
 };

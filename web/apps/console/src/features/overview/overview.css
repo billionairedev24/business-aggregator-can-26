@@ -7,3 +7,18 @@
 .nl-ov-dot[data-status="ok"] { background: var(--color-success); }
 .nl-ov-dot[data-status="degraded"] { background: var(--color-danger); }
 .nl-ov-note { margin: 0; color: var(--color-danger); font-size: var(--text-md); }
+/* The board (light direction): the 12-week chart beside the to-do list, then what is live now beside system health —
+   one grid, so no card is left alone beside an empty column. Container queries: the sidebar's rail changes the width. */
+.nl-ov-wrap { container-type: inline-size; min-width: 0; }
+.nl-ov-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); align-items: stretch; }
+.nl-ov-grid > * { min-width: 0; }
+.nl-ov-todo { display: flex; }
+.nl-ov-todo > .bo-card { flex: 1; }
+@container (min-width: 720px) {
+  .nl-ov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: 'gmv gmv' 'todo live' 'todo health'; }
+  .nl-ov-gmv { grid-area: gmv; } .nl-ov-todo { grid-area: todo; } .nl-ov-live { grid-area: live; } .nl-ov-hc { grid-area: health; }
+}
+@container (min-width: 1040px) {
+  .nl-ov-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: 'gmv gmv todo' 'live health health'; }
+  .nl-ov-hc .nl-ov-health { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

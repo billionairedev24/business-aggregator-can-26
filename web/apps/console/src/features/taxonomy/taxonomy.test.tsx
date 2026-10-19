@@ -53,7 +53,8 @@ describe('catalogue taxonomy (S-94, design 03)', () => {
   it('lists the categories with root, regulators by province, live provinces, sellers and median price', async () => {
     api(['admin']);
     renderConsole('/catalogue');
-    expect(await screen.findByRole('heading', { level: 1, name: '62 service categories · 9 shop departments · per-province rules' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Catalogue taxonomy' })).toBeTruthy();
+    expect(await screen.findByText('62 service categories · 9 shop departments · per-province rules')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     const mechanic = card('Mobile mechanic');
     expect(within(mechanic).getByText('Services › Automotive')).toBeTruthy();
@@ -178,7 +179,8 @@ describe('catalogue taxonomy (S-94, design 03)', () => {
     first.unmount();
     api(['admin']);
     renderConsole('/catalogue', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: '62 catégories de services · 9 rayons de boutique · règles par province' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Taxonomie du catalogue' })).toBeTruthy();
+    expect(await screen.findByText('62 catégories de services · 9 rayons de boutique · règles par province')).toBeTruthy();
     expect(within(card('Mécanicien mobile')).getByText('Oui · AMVIC (AB), BC : aucun')).toBeTruthy();
   });
 });

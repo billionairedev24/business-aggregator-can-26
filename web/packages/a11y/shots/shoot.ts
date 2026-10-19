@@ -74,7 +74,7 @@ async function shoot(page: Page, app: App, r: ShotRoute) {
     });
     if (doc.scroll > doc.client + 1) wide.unshift(`page ${doc.scroll}px > ${doc.client}px`);
     if (wide.length) appendFileSync(`${OUT}${app}/_overflow.txt`, `${r.name}-${s.suffix}: ${wide.join(' · ')}\n`);
-    await page.screenshot({ path: `${OUT}${app}/${r.name}-${s.suffix}.png`, fullPage: !r.click, animations: 'disabled' });
+    await page.screenshot({ path: `${OUT}${app}/${r.name}-${s.suffix}.png`, fullPage: !r.click && !r.sheet, animations: 'disabled' });
   }
   // what the mock api had no answer for (the browser's requests): a page that looks empty usually needs one of these
   if (missing.length) appendFileSync(`${OUT}${app}/_missing-api.txt`, `${r.name}: ${[...new Set(missing)].join(', ')}\n`);

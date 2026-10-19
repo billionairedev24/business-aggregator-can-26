@@ -113,7 +113,7 @@ class RegistriesConfig {
                         RegistryHttp.client(OpenCorporatesAlbertaRegistry.Api.class, url, _ -> {}),
                         required(s.key(), "REGISTRY_ALBERTA_KEY"));
             }
-            case "manual" -> new ManualRegistry(RegistrySource.ALBERTA_CORPORATE_REGISTRY);
+            case "manual" -> new ManualRegistry(RegistrySource.ALBERTA_CORPORATE_REGISTRY, "registry-agent search");
             default -> new FixtureBusinessRegistry(RegistrySource.ALBERTA_CORPORATE_REGISTRY);
         };
     }

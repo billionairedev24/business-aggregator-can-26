@@ -1594,7 +1594,7 @@
       "businessName": "QuickFix Auto",
       "legalName": "QuickFix Auto Inc.",
       "type": "provider",
-      "structure": "corp_ab",
+      "structure": "corp_prov",
       "categories": [
        "Mobile mechanic"
       ],
@@ -1635,7 +1635,7 @@
       "businessName": "Sable & Soda Bar Co.",
       "legalName": "Sable and Soda Ltd.",
       "type": "provider",
-      "structure": "corp_ab",
+      "structure": "corp_prov",
       "categories": [
        "Events & bar"
       ],
@@ -1695,7 +1695,7 @@
       "businessName": "Fraser Electric",
       "legalName": "Sable and Soda Ltd.",
       "type": "provider",
-      "structure": "corp_ab",
+      "structure": "corp_prov",
       "categories": [
        "Events & bar"
       ],
@@ -1756,7 +1756,7 @@
      "businessName": "QuickFix Auto",
      "legalName": "QuickFix Auto Inc.",
      "type": "provider",
-     "structure": "corp_ab",
+     "structure": "corp_prov",
      "categories": [
       "Mobile mechanic"
      ],
@@ -1837,7 +1837,7 @@
      "businessName": "QuickFix Auto",
      "legalName": "QuickFix Auto Inc.",
      "type": "provider",
-     "structure": "corp_ab",
+     "structure": "corp_prov",
      "categories": [
       "Mobile mechanic"
      ],
@@ -1918,7 +1918,7 @@
      "businessName": "QuickFix Auto",
      "legalName": "QuickFix Auto Inc.",
      "type": "provider",
-     "structure": "corp_ab",
+     "structure": "corp_prov",
      "categories": [
       "Mobile mechanic"
      ],
@@ -1999,7 +1999,7 @@
      "businessName": "QuickFix Auto",
      "legalName": "QuickFix Auto Inc.",
      "type": "provider",
-     "structure": "corp_ab",
+     "structure": "corp_prov",
      "categories": [
       "Mobile mechanic"
      ],
@@ -2080,7 +2080,7 @@
      "businessName": "QuickFix Auto",
      "legalName": "QuickFix Auto Inc.",
      "type": "provider",
-     "structure": "corp_ab",
+     "structure": "corp_prov",
      "categories": [
       "Mobile mechanic"
      ],
@@ -2158,7 +2158,7 @@
       "businessName": "QuickFix Auto",
       "legalName": "QuickFix Auto Inc.",
       "type": "provider",
-      "structure": "corp_ab",
+      "structure": "corp_prov",
       "categories": [
        "Mobile mechanic"
       ],
@@ -2199,7 +2199,7 @@
       "businessName": "Sable & Soda Bar Co.",
       "legalName": "Sable and Soda Ltd.",
       "type": "provider",
-      "structure": "corp_ab",
+      "structure": "corp_prov",
       "categories": [
        "Events & bar"
       ],
@@ -2259,7 +2259,7 @@
       "businessName": "Fraser Electric",
       "legalName": "Sable and Soda Ltd.",
       "type": "provider",
-      "structure": "corp_ab",
+      "structure": "corp_prov",
       "categories": [
        "Events & bar"
       ],
@@ -7732,7 +7732,7 @@
       "businessName": "QuickFix Auto",
       "legalName": "QuickFix Auto Inc.",
       "type": "provider",
-      "structure": "corp_ab",
+      "structure": "corp_prov",
       "categories": [
        "Mobile mechanic"
       ],
@@ -7773,7 +7773,7 @@
       "businessName": "Sable & Soda Bar Co.",
       "legalName": "Sable and Soda Ltd.",
       "type": "provider",
-      "structure": "corp_ab",
+      "structure": "corp_prov",
       "categories": [
        "Events & bar"
       ],
@@ -7833,7 +7833,7 @@
       "businessName": "Fraser Electric",
       "legalName": "Sable and Soda Ltd.",
       "type": "provider",
-      "structure": "corp_ab",
+      "structure": "corp_prov",
       "categories": [
        "Events & bar"
       ],
@@ -7894,7 +7894,7 @@
      "businessName": "QuickFix Auto",
      "legalName": "QuickFix Auto Inc.",
      "type": "provider",
-     "structure": "corp_ab",
+     "structure": "corp_prov",
      "categories": [
       "Mobile mechanic"
      ],
@@ -7975,7 +7975,7 @@
      "businessName": "QuickFix Auto",
      "legalName": "QuickFix Auto Inc.",
      "type": "provider",
-     "structure": "corp_ab",
+     "structure": "corp_prov",
      "categories": [
       "Mobile mechanic"
      ],
@@ -8056,7 +8056,7 @@
      "businessName": "QuickFix Auto",
      "legalName": "QuickFix Auto Inc.",
      "type": "provider",
-     "structure": "corp_ab",
+     "structure": "corp_prov",
      "categories": [
       "Mobile mechanic"
      ],
@@ -8137,7 +8137,7 @@
      "businessName": "QuickFix Auto",
      "legalName": "QuickFix Auto Inc.",
      "type": "provider",
-     "structure": "corp_ab",
+     "structure": "corp_prov",
      "categories": [
       "Mobile mechanic"
      ],

@@ -19,7 +19,7 @@ export function VettingScreen() {
   return (
     <div className="bo-page">
       <ApplicationsHead tab={view} filter={filter} />
-      <div>
+      <div className="bo-stack">
         {view === 'listings' ? <ListingVetting /> : view === 'licences' ? <LicenceQueue filter={filter} /> : <AgeChecks province={filter.province} />}
       </div>
     </div>

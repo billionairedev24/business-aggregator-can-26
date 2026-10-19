@@ -34,7 +34,7 @@ describe('province switchboard (S-84, design 03)', () => {
   it('lists the provinces with tax, languages and stage, and the live one’s markets and zones', async () => {
     api(['admin']);
     renderConsole('/provinces');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Turning on a province is a record, not a release.' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Province switchboard' })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     const list = screen.getByRole('list');
     expect(within(list).getByText('GST 5% + PST 7% · en · fr')).toBeTruthy();
@@ -121,8 +121,8 @@ describe('province switchboard (S-84, design 03)', () => {
     first.unmount();
     api(['admin']);
     renderConsole('/provinces', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Ouvrir une province est une inscription, pas une mise en production.' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Enregistrer et garder en service' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Tableau des provinces' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Enregistrer et garder en service' })).toBeTruthy();
   });
 
   it('reads typed dollars', () => {

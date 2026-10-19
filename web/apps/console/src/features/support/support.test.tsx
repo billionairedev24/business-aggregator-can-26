@@ -53,9 +53,9 @@ describe('support desk (S-83, design 03 support)', () => {
     vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
     api(['support']);
     renderConsole('/support');
-    expect(await screen.findByRole('heading', { level: 1, name: '23 open · 3 urgent · median first reply 38 min' })).toBeTruthy();
-    expect(screen.getByText('Support desk · agents')).toBeTruthy();
-    for (const k of ['open · 3 urgent', 'median first reply · SLA 1 h Master / 4 h', 'SLA at risk', 'resolved without escalation · 30 d', 'CSAT · 30 d', 'in French']) expect(screen.getByText(k)).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Support desk' })).toBeTruthy();
+    expect(await screen.findByText('23 open · 3 urgent · median first reply 38 min')).toBeTruthy();
+    for (const k of ['Open · 3 urgent', 'Median first reply · SLA 1 h Master / 4 h', 'SLA at risk', 'Resolved without escalation · 30 d', 'CSAT · 30 d', 'In French']) expect(screen.getByText(k)).toBeTruthy();
     expect(screen.getByText('94%')).toBeTruthy();
     expect(screen.getByText('4.7')).toBeTruthy();
     const chips = screen.getByRole('group', { name: 'Filter cases' });
@@ -185,7 +185,8 @@ describe('support desk (S-83, design 03 support)', () => {
   it('speaks French', async () => {
     api(['support']);
     renderConsole('/support', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: '23 ouverts · 3 urgents · première réponse médiane 38 min' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Centre de soutien' })).toBeTruthy();
+    expect(await screen.findByText('23 ouverts · 3 urgents · première réponse médiane 38 min')).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'Envoyer et garder ouvert' })).toBeTruthy();
     expect(screen.getByText(/94\s?%/)).toBeTruthy();
   });

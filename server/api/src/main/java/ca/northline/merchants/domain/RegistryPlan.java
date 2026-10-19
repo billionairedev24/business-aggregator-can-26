@@ -55,12 +55,12 @@ public final class RegistryPlan {
                             RegistrySubject.PARTNERSHIP,
                             text(d, "partnership_registration"),
                             withFirst(text(d, "partnership_name"), names));
-                case CORP_AB ->
+                case CORP_PROV ->
                     add(
                             out,
                             provincial,
                             RegistrySubject.CORPORATION,
-                            text(d, "alberta_corporate_access_number"),
+                            text(d, LegalKeys.PROVINCIAL_REGISTRY_NUMBER),
                             names);
                 case CORP_FED -> {
                     add(
@@ -73,7 +73,7 @@ public final class RegistryPlan {
                             out,
                             provincial,
                             RegistrySubject.EXTRA_PROVINCIAL,
-                            text(d, "alberta_extra_provincial_registration"),
+                            text(d, LegalKeys.EXTRA_PROVINCIAL_REGISTRATION_NUMBER),
                             names);
                 }
                 case CORP_EX ->
@@ -81,7 +81,7 @@ public final class RegistryPlan {
                             out,
                             provincial,
                             RegistrySubject.EXTRA_PROVINCIAL,
-                            text(d, "alberta_extra_provincial_registration"),
+                            text(d, LegalKeys.EXTRA_PROVINCIAL_REGISTRATION_NUMBER),
                             names);
                 case COOP ->
                     add(

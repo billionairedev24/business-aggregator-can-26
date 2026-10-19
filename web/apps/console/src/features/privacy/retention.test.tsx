@@ -47,7 +47,7 @@ describe('retention report (S-107)', () => {
   it('lists every category with its period, last run, rows, holds and state; laws and other deletions below', async () => {
     api(['privacy']);
     renderConsole('/privacy?view=retention');
-    expect(await screen.findByRole('heading', { level: 1, name: '3 categories · 1 overdue' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Retention schedule' })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getAllByText('2 years; a dispute: 1 year after its decision').length).toBeGreaterThan(0);
     expect(screen.getAllByText('12 months').length).toBeGreaterThan(0);
@@ -86,15 +86,15 @@ describe('retention report (S-107)', () => {
   it('switches between requests and retention', async () => {
     api(['privacy']);
     renderConsole('/privacy?view=retention');
-    await screen.findByRole('heading', { level: 1, name: '3 categories · 1 overdue' });
+    await screen.findByRole('heading', { level: 1, name: 'Retention schedule' });
     expect(screen.getByRole('tab', { name: 'Retention' }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('speaks French', async () => {
     api(['privacy']);
     renderConsole('/privacy?view=retention', { locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: '3 catégories · 1 en retard' })).toBeTruthy();
-    expect(screen.getAllByText('2 ans; litige : 1 an après la décision').length).toBeGreaterThan(0);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Calendrier de conservation' })).toBeTruthy();
+    expect((await screen.findAllByText('2 ans; litige : 1 an après la décision')).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Tout essayer' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Exporter en CSV' })).toBeTruthy();
   });

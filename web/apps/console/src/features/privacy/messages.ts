@@ -3,8 +3,8 @@ import { defineMessages } from '@northline/ui';
 /** Privacy requests (S-105). No design screen exists: copy ours, in the console's voice. */
 export const usePrivacyT = defineMessages({
   en: {
-    kicker: 'Privacy requests',
-    title: '{open, plural, one {# open request} other {# open requests}} · {overdue} overdue',
+    heading: 'Privacy requests',
+    summary: '{open, plural, one {# open request} other {# open requests}} · {overdue} overdue',
     closedTitle: 'Closed requests',
     lede: 'Access, correction and erasure requests, each under the privacy law of the person’s province and its deadline. Verify the person, answer before the deadline, extend once where the law allows. Every action is in the audit log.',
     open: 'Open', closed: 'Closed', record: 'Record a request',
@@ -30,8 +30,8 @@ export const usePrivacyT = defineMessages({
     save: 'Save', cancel: 'Cancel', close: 'Close', done: 'Done.',
   },
   fr: {
-    kicker: 'Demandes sur les renseignements personnels',
-    title: '{open, plural, one {# demande ouverte} other {# demandes ouvertes}} · {overdue} en retard',
+    heading: 'Demandes sur les renseignements personnels',
+    summary: '{open, plural, one {# demande ouverte} other {# demandes ouvertes}} · {overdue} en retard',
     closedTitle: 'Demandes fermées',
     lede: 'Demandes d’accès, de correction et de suppression, chacune selon la loi sur la protection des renseignements personnels de la province de la personne et son délai. Vérifiez la personne, répondez avant l’échéance, prolongez une fois si la loi le permet. Chaque action est journalisée.',
     open: 'Ouvertes', closed: 'Fermées', record: 'Consigner une demande',

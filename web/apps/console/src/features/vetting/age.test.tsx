@@ -75,7 +75,7 @@ describe('Listing vetting › Age checks (2026-10-04)', () => {
     await expectNoAxeViolations(document.body);
     expect(screen.getByText('Customers verified')).toBeTruthy();
     expect(screen.getByText('41')).toBeTruthy();
-    expect(screen.getByText('Nobody of age · 1')).toBeTruthy();
+    expect((await screen.findAllByText('Nobody of age')).some(e => e.nextElementSibling?.textContent === '1')).toBe(true);
     expect(within(screen.getByText('ORD-77').closest('tr')!).getByText('Door (courier) · AB')).toBeTruthy();
     expect(await screen.findByText('AB · Alcohol')).toBeTruthy();
     expect(screen.getByText('10:00–02:00')).toBeTruthy();
@@ -86,6 +86,6 @@ describe('Listing vetting › Age checks (2026-10-04)', () => {
     api(['admin']);
     renderConsole('/vetting?view=age', { locale: 'fr' });
     expect(await screen.findByRole('heading', { level: 2, name: 'Vérifications d’âge · 30 derniers jours' })).toBeTruthy();
-    expect(screen.getByText('Personne ayant l’âge requis · 1')).toBeTruthy();
+    expect((await screen.findAllByText('Personne ayant l’âge requis')).some(e => e.nextElementSibling?.textContent === '1')).toBe(true);
   });
 });

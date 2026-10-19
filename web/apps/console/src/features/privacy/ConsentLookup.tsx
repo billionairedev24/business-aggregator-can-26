@@ -22,10 +22,10 @@ export function ConsentLookup() {
   const submit = (e: FormEvent) => { e.preventDefault(); setQ(draft.trim()); };
   const label = (k: string) => t(k as Key);
   return (
-    <section aria-labelledby="nl-consent-title" className="nl-q-section">
-      <h2 id="nl-consent-title" className="nl-q-title">{t('title')}</h2>
-      <p className="nl-q-lede">{t('lede')}</p>
-      <form onSubmit={submit} className="nl-q-actions" role="search">
+    <section aria-labelledby="nl-consent-title" className="bo-card">
+      <h2 id="nl-consent-title" className="bo-card-title">{t('title')}</h2>
+      <p className="bo-muted">{t('lede')}</p>
+      <form onSubmit={submit} className="nl-pv-search" role="search">
         <Field label={t('query')}><TextInput value={draft} onChange={e => setDraft(e.target.value)} /></Field>
         <Button type="submit" variant="secondary">{t('search')}</Button>
       </form>

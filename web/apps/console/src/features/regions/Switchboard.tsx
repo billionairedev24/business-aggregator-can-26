@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { Button, Dialog, ErrorState, Field, formatNumber, PageSkeleton, RadioGroup, Segmented, Select, Tag, TextArea, TextInput, useFormatters, useLocale, type Locale } from '@northline/ui';
+import { BoHeader, Button, ChartCard, Dialog, ErrorState, Field, formatNumber, PageSkeleton, RadioGroup, Segmented, Select, Tag, TextArea, TextInput, useFormatters, useLocale, type Locale } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { SCREEN_PATH } from '../shell/screens';
@@ -42,20 +42,22 @@ export function Switchboard() {
   const search = useSearch({ strict: false }) as { province?: string };
   const navigate = useNavigate();
   const board = useQuery(boardQuery);
-  if (board.isPending) return <PageSkeleton kpis={0} rows={10} />;
-  if (board.isError) return <ErrorState message={t('loadError')} onRetry={() => void board.refetch()} />;
+  const head = <BoHeader title={t('heading')} sub={t('lede')} />;
+  if (board.isPending) return <div className="bo-page">{head}<PageSkeleton kpis={0} rows={10} /></div>;
+  if (board.isError) return <div className="bo-page">{head}<ErrorState message={t('loadError')} onRetry={() => void board.refetch()} /></div>;
   const provinces = board.data;
   const selected = provinces.find(p => p.code === search.province) ?? provinces.find(p => p.stage === 'live') ?? provinces[0];
   const pick = (code: string) => void navigate({ to: SCREEN_PATH.regions, search: { province: code } as never });
   return (
-    <div>
-      <span className="nl-rg-kicker">{t('kicker')}</span>
-      <h1 className="nl-rg-title">{t('title')}</h1>
-      <p className="nl-rg-lede">{t('lede')}</p>
-      <div className="nl-rg-cols">
-        <ProvinceList provinces={provinces} selected={selected?.code} onPick={pick} />
+    <div className="bo-page">
+      {head}
+      <div className="nl-cols-wrap"><div className="nl-cols" data-split="aside">
+        <ChartCard id="rg-list" title={t('provincesTitle')} className="nl-rg-listcard">
+          <p className="bo-muted">{t('summary')}</p>
+          <ProvinceList provinces={provinces} selected={selected?.code} onPick={pick} />
+        </ChartCard>
         {selected ? <ProvincePanel key={selected.code} province={selected} /> : null}
-      </div>
+      </div></div>
     </div>
   );
 }
@@ -86,10 +88,10 @@ function ProvincePanel({ province: p }: { province: Province }) {
   const [stage, setStage] = useState<Stage>(p.stage);
   const [confirming, setConfirming] = useState<null | { kind: 'province' } | { kind: 'market'; market: Market; stage: Stage }>(null);
   return (
-    <div>
-      <h2 className="nl-rg-h2">{name}</h2>
-      <div className="nl-rg-sub">{[taxText(p.tax, locale, t), p.languages.join(' · '), p.timeZones[0]].filter(Boolean).join(' · ')}</div>
-      <div className="nl-rg-fields">
+    <div className="nl-col">
+      <ChartCard id={`rg-${p.code}`} title={name}>
+      <p className="bo-muted">{[taxText(p.tax, locale, t), p.languages.join(' · '), p.timeZones[0]].filter(Boolean).join(' · ')}</p>
+      <div className="nl-rg-fields nl-rg-facts">
         <div className="nl-rg-field"><span className="nl-rg-label">{t('taxProfile')}</span><div>{taxText(p.tax, locale, t)}</div></div>
         <div className="nl-rg-field"><span className="nl-rg-label">{t('languages')}</span>
           <div className="nl-rg-tags"><Tag tone={p.languages.includes('en') ? 'accent' : 'neutral'}>{t('english')}</Tag><Tag tone={p.languages.includes('fr') ? 'accent' : 'neutral'}>{t('french')}</Tag></div></div>
@@ -98,9 +100,11 @@ function ProvincePanel({ province: p }: { province: Province }) {
             options={(['own', 'contracted', 'hybrid'] as const).map(m => ({ value: m, label: t(`cm_${m}` as RegionsKey) }))}
             onChange={v => { if (allowed) change.mutate({ kind: 'courierModel', code: p.code, courierModel: v }); }} />
         </div>
+      </div>
+      </ChartCard>
         <Markets province={p} name={name} allowed={allowed} onStage={(market, s) => setConfirming({ kind: 'market', market, stage: s })} />
         <Zones province={p} name={name} allowed={allowed} />
-        <div className="nl-rg-field"><span className="nl-rg-label">{t('rollout')}</span>
+        <ChartCard id={`rg-rollout-${p.code}`} title={t('rollout')}>
           <RadioGroup className="nl-rg-stages" aria-label={t('rollout')}>
             {STAGES.map(s => (
               <button key={s} type="button" role="radio" aria-checked={stage === s} className="nl-rg-stage" disabled={!allowed} onClick={() => setStage(s)}>
@@ -108,13 +112,12 @@ function ProvincePanel({ province: p }: { province: Province }) {
               </button>
             ))}
           </RadioGroup>
-        </div>
-        <div className="nl-rg-actions">
-          <Button disabled={!allowed} onClick={() => setConfirming({ kind: 'province' })}>{t(`cta_${stage}` as RegionsKey)}</Button>
-        </div>
-        {!allowed ? <div className="nl-rg-error">{t('cannot')}</div> : null}
-        <div className="nl-rg-note">{t('audited')}</div>
-      </div>
+          <div className="nl-rg-actions">
+            <Button disabled={!allowed} onClick={() => setConfirming({ kind: 'province' })}>{t(`cta_${stage}` as RegionsKey)}</Button>
+            <span className="nl-rg-note">{t('audited')}</span>
+          </div>
+          {!allowed ? <div className="nl-rg-error">{t('cannot')}</div> : null}
+        </ChartCard>
       {confirming?.kind === 'province' ? <ConfirmStage province={p} name={name} stage={stage} onClose={() => setConfirming(null)} /> : null}
       {confirming?.kind === 'market' ? <ConfirmMarket market={confirming.market} stage={confirming.stage} onClose={() => setConfirming(null)} /> : null}
     </div>
@@ -134,8 +137,8 @@ function Markets({ province: p, name, allowed, onStage }: { province: Province; 
   const add = () => change.mutate({ kind: 'addMarket', province: p.code, city: city.trim(), lat: Number(lat), lng: Number(lng), radiusKm: Number(radius) },
     { onSuccess: () => { setCity(''); setLat(''); setLng(''); } });
   return (
-    <div className="nl-rg-field">
-      <span className="nl-rg-label">{t('marketsLabel', { name })}</span>
+    <ChartCard id={`rg-markets-${p.code}`} title={t('marketsLabel', { name })}>
+      <div className="nl-rg-rows">
       {p.markets.length ? p.markets.map(m => (
         <div key={m.id} className="nl-rg-market">
           <span><strong>{m.city}</strong><span className="nl-rg-meta nl-rg-block">{t('marketMeta', { zones: m.zones, waitlist: m.waitlist })}</span></span>
@@ -148,6 +151,7 @@ function Markets({ province: p, name, allowed, onStage }: { province: Province; 
           {m.stage === 'pilot' ? <Link className="nl-rg-meta" to={SCREEN_PATH.go_live} search={{ market: m.id } as never}>{t('goLiveLink')}</Link> : null}
         </div>
       )) : <div className="nl-rg-meta">{t('noMarkets')}</div>}
+      </div>
       {allowed ? (
         <div className="nl-rg-add">
           <TextInput aria-label={t('addMarketPlaceholder')} placeholder={t('addMarketPlaceholder')} value={city} onChange={e => setCity(e.target.value)} />
@@ -161,7 +165,7 @@ function Markets({ province: p, name, allowed, onStage }: { province: Province; 
       ) : null}
       {Object.values(errors)[0] ?? conflict ? <p role="alert" className="nl-rg-error">{Object.values(errors)[0] ?? conflict}</p> : null}
       <div className="nl-rg-note">{t('ceiling')}</div>
-    </div>
+    </ChartCard>
   );
 }
 
@@ -194,8 +198,8 @@ function Zones({ province: p, name, allowed }: { province: Province; name: strin
   };
   const set = (k: keyof ZoneForm) => (e: { target: { value: string } }) => setForm(f => (f ? { ...f, [k]: e.target.value } : f));
   return (
-    <div className="nl-rg-field">
-      <span className="nl-rg-label">{t('zonesLabel', { name, count: p.zones.length })}</span>
+    <ChartCard id={`rg-zones-${p.code}`} title={t('zonesLabel', { name, count: p.zones.length })}>
+      <div className="nl-rg-rows">
       {p.zones.map(z => (
         <div key={z.id} className="nl-rg-zone">
           <span><strong>{z.name}</strong> <span className="nl-rg-meta">· {city(z.marketId)}</span>
@@ -207,6 +211,7 @@ function Zones({ province: p, name, allowed }: { province: Province; name: strin
           </div>
         </div>
       ))}
+      </div>
       {form ? (
         <div className="nl-rg-form" role="group" aria-label={form.id ? t('editZone', { name: form.name }) : t('newZone')}>
           <div className="nl-rg-form-title">{form.id ? t('editZone', { name: form.name }) : t('newZone')}</div>
@@ -243,7 +248,7 @@ function Zones({ province: p, name, allowed }: { province: Province; name: strin
           {conflictOf(change.error) ? <p role="alert" className="nl-rg-error">{conflictOf(change.error)}</p> : null}
         </Dialog>
       ) : null}
-    </div>
+    </ChartCard>
   );
 }
 

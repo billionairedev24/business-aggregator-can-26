@@ -81,9 +81,26 @@ Registries: a province or city without an adapter key has its records checked by
 adapter for a new registry is code (an adapter, like `OpenCorporatesAlbertaRegistry`); pointing a province at it is
 data.
 
+## Legal forms (onboarding legal details, 2026-10-19)
+
+What a province or territory asks of each business structure in the Business step is `region.legal_forms` (V372): one
+row per province and structure with the registry (en/fr, URL), the governing act (en/fr), whether a sole proprietor's
+trade name must be registered there, and `fields` — overlays on docs/spec/legal-details.schema.json's keys: `label`,
+`help`, `example`, `pattern` + `pattern_message` (en/fr), `required` or `required_when` (`{field, in | not_in}`). The
+api merges schema and row (`LegalDetailsSchema`), serves it (`GET /api/v1/merchants/{id}/onboarding/legal-forms`) and
+validates the step against it. `source` names the official pages a row was checked against; `verified` is true only
+when nothing is listed in `unverified` (registry · law · identifier · format · attorney). A format that is not
+verified has no pattern (any text is accepted and an agent checks the number).
+
+To change a province's legal details: edit its rows (a new migration, or the console later). A new `pattern_message`
+also goes into docs/spec/validation-messages.fr-CA.tsv with the same French (`LegalFormsApiTest` fails otherwise), and
+`LEGAL_FORMS_FIXTURES_WRITE=1 ./gradlew :api:test --tests '*LegalFormsApiTest'` rewrites the Studio's fixtures
+(web/apps/studio/src/test/legal-forms.json) when AB, BC, ON or QC change.
+
 ## 4. Lint
 
 `./gradlew build` fails on a province, city or Canadian time zone in a Java string literal or text block (Checkstyle
 `RegionLiteral`; tests, seed tools, `HolidayRule` and the province-specific registry adapters are allowed in
 `server/config/checkstyle/suppressions.xml`). `pnpm -r test` fails on the same in web `src/` code
-(`packages/ui/src/regionLiterals.test.ts`, with its own allowlist). Seeds, fixtures and test data may keep Calgary.
+(`packages/ui/src/regionLiterals.test.ts`, with its own allowlist), and on a province in an identifier or demonym
+(`alberta_corporate_access_number`, `corp_ab`, "albertain"). Seeds, fixtures and test data may keep Calgary.

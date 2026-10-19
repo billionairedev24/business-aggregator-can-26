@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, DataTable, Drawer, ErrorState, Field, formatNumber, Kpi, KpiRow, PageSkeleton, TextArea, TextInput, useFormatters, useLocale, type DataTableColumn, type DataTableTone, type Locale } from '@northline/ui';
+import { BoHeader, Button, ChartCard, DataTable, Drawer, ErrorState, Field, formatNumber, KpiStrip, PageSkeleton, TextArea, TextInput, useFormatters, useLocale, type DataTableColumn, type DataTableTone, type Locale } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { dayQuery, daysQuery, exportUrl, financeQuery, ledgerExportUrl, useReconcileTax, useResolveDay, useRunDay, type Day, type Finance, type Item } from './api';
@@ -26,8 +26,9 @@ export function FinanceScreen() {
   const t = useFinanceT();
   const finance = useQuery(financeQuery);
   const days = useQuery(daysQuery);
-  if (finance.isPending || days.isPending) return <PageSkeleton kpis={5} rows={8} />;
-  if (finance.isError || days.isError) return <ErrorState message={t('loadError')} onRetry={() => { void finance.refetch(); void days.refetch(); }} />;
+  const head = <BoHeader title={t('heading')} sub={t('summary')} />;
+  if (finance.isPending || days.isPending) return <div className="bo-page">{head}<PageSkeleton kpis={5} rows={8} /></div>;
+  if (finance.isError || days.isError) return <div className="bo-page">{head}<ErrorState message={t('loadError')} onRetry={() => { void finance.refetch(); void days.refetch(); }} /></div>;
   return <FinanceView data={finance.data} days={days.data} />;
 }
 
@@ -42,42 +43,40 @@ function FinanceView({ data, days }: { data: Finance; days: Day[] }) {
     ...(data.mix.adjustmentsCents ? [{ key: 'm_adjustments' as FinanceKey, cents: data.mix.adjustmentsCents }] : []),
   ];
   const max = Math.max(1, ...mix.map(m => Math.abs(m.cents ?? 0)));
+  const variance = latest?.varianceCents;
   return (
-    <div>
-      <span className="nl-fi-kicker">{t('kicker')}</span>
-      <h1 className="nl-fi-title">{t('title')}</h1>
-      <KpiRow>
-        <Kpi value={fmt.money(data.escrowHeldCents, { whole: true })} label={t('k_escrow', { n: data.escrowItems })} />
-        <Kpi value={fmt.money(data.payoutsInFlightCents, { whole: true })} label={t('k_payouts', { n: data.payoutsInFlightSellers })} />
-        <Kpi value={fmt.money(data.revenueWeekCents, { whole: true })} label={t('k_revenue')} />
-        <Kpi value={t('notRecorded')} label={t('k_plus')} />
-        <Kpi value={latest ? <span data-tone={latest.varianceCents === 0 ? 'ok' : 'off'} className="nl-fi-variance">{fmt.money(latest.varianceCents)}</span> : t('notRecorded')}
-          label={latest ? `${t('k_variance')} · ${dayLabel(latest.day, locale)}` : t('k_varianceNone')} />
-      </KpiRow>
-      <div className="nl-fi-cols">
-        <div>
-          <h2 className="nl-fi-h2">{t('mixTitle')}</h2>
-          <div className="nl-fi-sub">{t('mixSub')}</div>
-          {mix.map(m => (
-            <div key={m.key} className="nl-fi-bar">
-              <span>{t(m.key)}</span>
-              <div className="nl-fi-track"><div className="nl-fi-fill" data-pass={m.pass || undefined} style={{ width: `${(Math.abs(m.cents ?? 0) / max) * 100}%` }} /></div>
-              <strong>{m.cents == null ? t('notRecorded') : fmt.money(m.cents, { whole: true })}</strong>
-            </div>
-          ))}
-          <h2 className="nl-fi-h2 nl-fi-gap">{t('tiersTitle')}</h2>
-          <Tiers data={data} />
-        </div>
-        <div>
-          <h2 className="nl-fi-h2">{t('reconTitle')}</h2>
-          <Reconciliation days={days} zone={data.timeZone} />
-          <h2 className="nl-fi-h2 nl-fi-gap">{t('taxTitle')}</h2>
-          <TaxBlock data={data} />
-        </div>
-      </div>
-      <h2 className="nl-fi-h2 nl-fi-gap">{t('refundsTitle')}</h2>
-      <p className="nl-fi-sub">{t('refundsSub')}</p>
-      <RefundRequests />
+    <div className="bo-page">
+      <BoHeader title={t('heading')} sub={t('summary')} />
+      <KpiStrip label={t('kpis')} items={[
+        { key: 'escrow', label: t('k_escrow', { n: data.escrowItems }), value: fmt.money(data.escrowHeldCents, { whole: true }) },
+        { key: 'payouts', label: t('k_payouts', { n: data.payoutsInFlightSellers }), value: fmt.money(data.payoutsInFlightCents, { whole: true }) },
+        { key: 'revenue', label: t('k_revenue'), value: fmt.money(data.revenueWeekCents, { whole: true }) },
+        { key: 'plus', label: t('k_plus'), value: t('notRecorded') },
+        { key: 'variance', label: latest ? t('k_variance') : t('k_varianceNone'), value: latest ? fmt.money(latest.varianceCents) : t('notRecorded'),
+          delta: latest ? (variance === 0 ? t('k_varianceOk', { day: dayLabel(latest.day, locale) }) : t('k_varianceOff', { day: dayLabel(latest.day, locale) })) : undefined,
+          trend: variance == null ? 'flat' : variance === 0 ? 'up' : 'down' },
+      ]} />
+      <div className="nl-cols-wrap"><div className="nl-cols">
+        <ChartCard id="fi-mix" title={t('mixTitle')}>
+          <p className="bo-muted">{t('mixSub')}</p>
+          <div>
+            {mix.map(m => (
+              <div key={m.key} className="nl-fi-bar">
+                <span>{t(m.key)}</span>
+                <div className="nl-fi-track"><div className="nl-fi-fill" data-pass={m.pass || undefined} style={{ width: `${(Math.abs(m.cents ?? 0) / max) * 100}%` }} /></div>
+                <strong>{m.cents == null ? t('notRecorded') : fmt.money(m.cents, { whole: true })}</strong>
+              </div>
+            ))}
+          </div>
+        </ChartCard>
+        <ChartCard id="fi-tax" title={t('taxTitle')}><TaxBlock data={data} /></ChartCard>
+      </div></div>
+      <ChartCard id="fi-recon" title={t('reconTitle')}><Reconciliation days={days} zone={data.timeZone} /></ChartCard>
+      <ChartCard id="fi-refunds" title={t('refundsTitle')}>
+        <p className="bo-muted">{t('refundsSub')}</p>
+        <RefundRequests />
+      </ChartCard>
+      <ChartCard id="fi-tiers" title={t('tiersTitle')}><Tiers data={data} /></ChartCard>
       <PromoCodes />
     </div>
   );

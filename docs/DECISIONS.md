@@ -9326,6 +9326,130 @@ Not done / open: real photography (category, department and cover photos) — th
 French copy of the new strings is ours (in the translator-review queue like the rest); the Studio and console pages
 (another stream). Schema additions: none. Config additions: none. No new environment variables.
 
+## 2026-10-19 — Province legal details (fix/province-legal-details)
+
+Owner: "fix the Alberta legal fields". The Business step's legal details were Alberta-only (`corp_ab`,
+`alberta_corporate_access_number`, `alberta_extra_provincial_registration`, attorney `alberta_address`, "Alberta
+Partnership Act", "From Alberta Registries", 10-digit access numbers for everyone), against "Region-neutral by design".
+
+- **Region data, not code.** `region.legal_forms` (V372, additive; the region-table pattern of `region.age_rules` and
+  `region.privacy_laws`): one row per province/territory and structure (13 × 7) with the registry (en/fr + URL), the
+  governing act (en/fr), `trade_name_registration` (required | optional) and `fields` — overlays on the schema's keys
+  (label, help, example, pattern + pattern_message en/fr, required or `required_when {field, in | not_in}`), plus
+  `source`, `verified` and `unverified` (registry · law · identifier · format · attorney). Chosen over a JSON resource
+  because every other province fact lives in `region.*` rows the console will edit. `region.api.LegalForms` reads them.
+- **One definition for the Studio and the server.** docs/spec/legal-details.schema.json keeps each structure's shape
+  with generic keys; `LegalDetailsSchema` merges it with the business's province's row into a `LegalForm`, serves it
+  (`GET /api/v1/merchants/{id}/onboarding/legal-forms`, every structure of the province, `@RequiresMerchant(VIEW)` +
+  MFA like `GET …/onboarding`; no BFF change — the studio-bff relays `/api/**`) and validates `PUT …/onboarding/business`
+  against it. No province → the schema's generic form. A province with no row for a structure → the generic form too.
+- **Generic keys and a generic code.** `corp_ab` → `corp_prov`; `alberta_corporate_access_number` →
+  `provincial_registry_number`; `alberta_extra_provincial_registration` → `extra_provincial_registration_number`;
+  `attorney_for_service.alberta_address` → `address_in_province`. The province is the business's
+  (`merchants.merchants.province`). Old rows: **both** an additive data migration and a map on read. V373 widens the
+  structure CHECK and the V031 role trigger to accept `corp_prov` (and still `corp_ab`), then rewrites the rows' code
+  and keys; `LegacyLegalDetails` / `BusinessStructure.of` map the old code and keys whenever a row is read and before
+  a save, so an api of the previous release writing during the deploy, or an old client, keeps working. Nothing
+  writes the old forms any more.
+- **Home jurisdiction** offers every province and territory except the business's own, plus US / Other (it offered
+  five provinces). `OTHER_CA` is accepted from older rows, not offered.
+- **Formats only where verified.** A pattern is set only where the format was confirmed on an official page:
+  AB corporate access number `^\d{9,10}$` (it was `^\d{10}$`; Alberta's TRA guide says "nine- or ten-digit"),
+  BC incorporation number `BC` + 7 digits and firm registration `FM` + 7 digits, QC NEQ 10 digits. Everything else
+  takes any text (an agent checks it). The message "Corporate access number is 10 digits." became "… is 9 or 10
+  digits."; the province messages are in validation-messages.fr-CA.tsv too (the server translates 422s from that
+  file; a test keeps the TSV and the rows in step).
+- **Required-ness per province** (examples): ON asks for an agent for service only when the corporation is from
+  outside Canada (`required_when home_jurisdiction in [US, OTHER]`); NS does not register New Brunswick corporations
+  (`not_in [NB]`); YT does not register federal corporations (optional); NL has no business-name registry (trade-name
+  registration optional, the partnership number optional); QC/NT/NU attorney optional (unverified).
+- **Registry checks:** `RegistryPlan`/`BusinessDetails` read the generic keys; the adapter is still the one the
+  province names in `region.regions.registries` (only AB has one: `alberta_corporate_registry`, OpenCorporates or
+  manual); every other province goes to an agent (`manual`). `ManualRegistry`'s "registry-agent search" hint now comes
+  from the Alberta bean in `RegistriesConfig` instead of a check on the Alberta source. `RegistrySource` constants stay
+  (they are the adapters' stored codes, `merchants.registry_checks.source`).
+- **Studio** renders fields from the served form (labels/help/example/format of the province, generic copy for the
+  rest; en + fr-CA), the act and a link to the registry in the block head, the trade-name sentence only where the
+  province registers trade names. Removed messages: `bs_*_law`, `lf_alberta_*`, `lv_can`, `lf_*_ph` that said
+  "{province} Registries", `lf_attorney_ph`. Added: `legalRegistry`, `legalRegistryNone`, `legalFormsError`,
+  `legalFormsLoading`, `req_conditional`, `bs_sole_trade`, `lv_format`, the generic `lf_provincial_registry_number` /
+  `lf_extra_provincial_registration_number`. "Continue" waits for the province's form. The console's queue label key
+  is `st_corp_prov` and the queue maps a legacy `corp_ab`.
+- **Lint:** `regionLiterals.test.ts` also fails on a province in an identifier or demonym (`alberta_…`, `corp_ab`,
+  "albertain"); the legal.ts allowance for province codes is gone. The French "Registre des sociétés albertain" in the
+  registry check's description is now `{provinceOf}`.
+- **Sources** (2026-10-19): the government hosts don't resolve from the build machine, so facts were checked against
+  official pages' text as web search returned it (each row's `source`); rows say what is unverified. Every
+  co-operative and non-profit row's act and identifier name is unverified; so are SK/MB/NB/NS/PE/NL/YT/NT/NU identifier
+  names and formats, the QC/NT/NU attorney rules and most French names of English-only registries (our descriptive
+  translations). Counsel/ops should confirm before a province opens.
+- **Fixtures:** web/apps/studio/src/test/legal-forms.json (AB, BC, ON, QC) is what the api serves — written and checked
+  by `LegalFormsApiTest` (`LEGAL_FORMS_FIXTURES_WRITE=1`); the Studio tests and `make ui-shots` use it (four new
+  Business-step shots).
+- **Not done:** the kitchen profile's food-permit field is still keyed `ahsPermitNumber` (labelled generically) — a
+  separate rename; the registry check's description strings (`ckd_registry*`) still say "corporate registry"
+  generically rather than the province's registry name; no adapter beyond Alberta's.
+
+Schema additions: `region.legal_forms` (V372); `merchants.merchants` structure CHECK `chk_merchants_structure`
+(replaces V004's) and `merchants.principal_role_check()` accepting `corp_prov` (V373). Config additions: none.
+
+## 2026-10-19 — Console pages on the light direction (feat/ui-console-pages)
+
+Phase B for the staff console: every console route redesigned on the light & photo-first foundation (palette
+Evergreen) with the Studio's page grammar (#189), looked at with `make ui-shots UI_SHOTS_APPS=console` before and after,
+desktop (1440) and phone (390). 23 routes before, 35 now. The shell's top bar is untouched (the compact-header branch
+rebuilds it); all the work is below the shell.
+
+- **One page grammar.** A screen is its head (`BoHeader`: an optional kicker, the screen's name as the h1 in the display
+  face, a muted sub line, the place filters or the main action on the right), then white cards (`ChartCard` / `bo-card`)
+  16–20px apart. The design's sentence headlines ("Rules that keep sellers honest…", "23 open · 3 urgent · median first
+  reply 38 min", "Turning on a province is a record, not a release.") became the sub line or a card's lede; the h1 is
+  now the screen's name on every screen (it was a 44px sentence on nine of them, and the kicker sat above it). Message
+  keys renamed where the meaning changed (`kicker`/`title` → `heading`/`summary`).
+- **Tables that need width run full width**; side-by-side cards only where both are short (console.css `.nl-cols`,
+  container queries, splits `wide` 3:2, `narrow` 2:3, `aside` 1:2). At 1440 the tier rules, reconciliation, take rate by
+  tier, runs, couriers, roles, people and regulators were turning into phone cards inside half columns; they are tables
+  now. On phones every table is the DataTable's cards (nothing scrolls the page sideways; `_overflow.txt` is empty at
+  390 and 1440); the few hand-written tables (cohorts, age checks) scroll inside their card.
+- **Screens:** overview — one board (12-week chart beside To do, Live now beside System health; no card alone beside an
+  empty column). Applications — tabs no longer break words on phones (they scroll inside the tab bar); Listings,
+  Licences and Age checks have a title row, cards and the KPI strip (Age checks used class names that had no styles).
+  Trust & safety — open flags beside the floor and the consequences, tier rules full width, keyword lists side by side.
+  Catalogue — head with Add category, suggestions beside limits (one row per type), regulators in a card. Delivery —
+  runs full width, the map beside the couriers; the map's legend markers were stretched over the map by a selector that
+  caught every svg inside it. Finance — the KPI strip (the old `KpiRow` had no labels-first order), mix beside tax,
+  reconciliation, refund requests, tiers, promo codes as cards. Provinces — the province list beside the chosen
+  province's cards (facts, markets, zones, rollout); market stage pills are 44px. Team — roles, people and the audit log
+  as full-width cards; the log is a four-column list (time · who/role · action code · target). Support — the queue's KPI
+  strip, the queue beside a sticky ticket panel. Reports — four cards; a withheld week breaks the line instead of
+  dropping it to zero (`LineChart` takes `null`). Privacy — the head comes before the Requests/Retention tabs; CASL
+  consent is a card. Sellers / seller — the place filters sit in one row (they stacked when the orders screen's CSS had
+  not loaded); the seller page puts signals, checks and timeline beside a sticky Oversight card. Profile — a person card,
+  tabs, the panel in a card. On-call and API keys (testing tools) got the same head and cards. Sign-in — the Studio's
+  frame (one card on linen, the dark pitch panel, form first on phones). Page not found and the root error — a
+  standalone page (logo + card on linen) with a way back; it was a bare empty state top-left.
+- **Copy:** region-neutral — the check label "WCB" (one province's board) is "Workers’ comp" / "Indemnisation des
+  travailleurs". The top bar's "Ops · Alberta + BC pilot" already comes from the region model (`regionLine`); no
+  province, city or zone is in console code or messages. KPI labels start with a capital letter (sellers, support,
+  finance). New strings (en + fr-CA): shell `notFoundTitle`/`notFoundBody`; finance `kpis`, `k_varianceOk`,
+  `k_varianceOff`; support `kpis`; delivery `mapCard`; regions `provincesTitle`. The trust consequences lost their
+  leading "· ".
+- **`@northline/ui`:** `BoHeader` takes an optional `kicker`; `LineChart` accepts `null` values (gaps).
+- **Tokens:** the last legacy aliases left the console (go-live, UAT, and every rewritten screen CSS); `lint:tokens` now
+  covers all of `apps/console/src/features`.
+- **`make ui-shots` (console):** the recorded answers (the tests' "now", 2026-09-08 18:00 UTC) are moved to the day the
+  shots run for the screens recorded around that day (waiting times read "3 h", not "41 d"); fuller demo rows
+  (applications in both stages, trust flags, sellers, support tickets, team, audit log, promo codes, licences, age
+  checks, runs); new routes: the Review and Decide sheets, Licences, Age checks, the sellers sheet, the order sheet, the
+  dispute sheet, an empty place, a screen whose data failed, privacy retention, my audit trail, page not found. A route
+  can be `sheet: true` (photographs the window, like `click`).
+
+Not done / open: pilot, UAT and go-live (testing tools, hidden unless `VITE_NL_TESTING_TOOLS=1`) only got the shared
+scale (their `nl-q-*` titles are the back office's size now), not a card rebuild; the global search in the top bar is
+still a placeholder (no api); "Okta/Google SSO" on the sign-in pitch describes staff SSO that isn't built (copy kept).
+
+Schema additions: none. Config additions: none. No new environment variables.
+
 ## 2026-10-19 — Consumer header: compact, one search, no overscroll (fix/consumer-header-compact)
 
 Owner feedback on the redesigned consumer site at ~2000 px: "the navbar is still very bad and there is overscrolling,
