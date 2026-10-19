@@ -3,7 +3,8 @@ PostgreSQL 17 + PostGIS through CloudNativePG: one instance on a zonal pd-balanc
 DB_URL), the database and its owner from initdb, the extensions created once as the superuser. Backups: base backup
 daily + continuous WAL archiving to the bucket Terraform created — GCS as the backup identity (GKE Workload Identity on
 the ServiceAccount CloudNativePG creates for the cluster), or an S3-compatible store (OVHcloud Object Storage) with
-static keys from a Secret.
+static keys from a Secret. postgres.recovery.enabled bootstraps from those backups instead of initdb (restore,
+docs/runbooks/ovh.md § Backups and restore); the new cluster then archives under backup.serverName.
 */ -}}
 {{- with .Values.postgres }}
 {{- if .enabled }}
@@ -24,6 +25,18 @@ spec:
     parameters:
       {{- toYaml .parameters | nindent 6 }}
   bootstrap:
+    {{- if .recovery.enabled }}
+    recovery:
+      source: backup
+      database: {{ .database }}
+      owner: {{ .owner }}
+      secret:
+        name: {{ .name }}-app
+      {{- with .recovery.targetTime }}
+      recoveryTarget:
+        targetTime: {{ . | quote }}
+      {{- end }}
+    {{- else }}
     initdb:
       database: {{ .database }}
       owner: {{ .owner }}
@@ -33,6 +46,14 @@ spec:
         {{- range .extensions }}
         - CREATE EXTENSION IF NOT EXISTS {{ . }};
         {{- end }}
+    {{- end }}
+  {{- if .recovery.enabled }}
+  externalClusters:
+    - name: backup
+      barmanObjectStore:
+        serverName: {{ default .name .recovery.sourceServerName }}
+        {{- include "data.pgStore" $ | nindent 8 }}
+  {{- end }}
   storage:
     size: {{ .storage.size }}
     storageClass: {{ $.Values.storageClassName }}
@@ -53,18 +74,10 @@ spec:
   backup:
     retentionPolicy: {{ .backup.retentionPolicy | quote }}
     barmanObjectStore:
-      {{- if eq .backup.provider "gcs" }}
-      destinationPath: gs://{{ .backup.bucket }}
-      googleCredentials:
-        gkeEnvironment: true
-      {{- else }}
-      destinationPath: s3://{{ .backup.bucket }}/
-      endpointURL: {{ required "postgres.backup.s3.endpointURL (terraform output data_values)" .backup.s3.endpointURL }}
-      s3Credentials:
-        accessKeyId: { name: {{ .backup.s3.credentialsSecret }}, key: ACCESS_KEY_ID }
-        secretAccessKey: { name: {{ .backup.s3.credentialsSecret }}, key: ACCESS_SECRET_KEY }
-        region: { name: {{ .backup.s3.credentialsSecret }}, key: REGION }
+      {{- with .backup.serverName }}
+      serverName: {{ . }}
       {{- end }}
+      {{- include "data.pgStore" $ | nindent 6 }}
       wal:
         compression: gzip
       data:

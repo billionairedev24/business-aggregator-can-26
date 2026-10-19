@@ -67,7 +67,11 @@ if [ "$OVH_TARGET" = ovh-mks ] && [ "$(tf_out postgres .mode)" = managed ]; then
 fi
 
 echo "== 4. northline-data"
-helm upgrade --install northline-data "$H/northline-data" -n "$NS" -f "$work/data.json" --wait --timeout 15m
+# .ovh/<target>-data.yaml (optional, git-ignored): the operator's lasting overrides, e.g. after a restore
+# (docs/runbooks/ovh.md § Backups and restore).
+data_extra=(); [ -f "$OVH_REPO/.ovh/$OVH_TARGET-data.yaml" ] && data_extra=(-f "$OVH_REPO/.ovh/$OVH_TARGET-data.yaml")
+helm upgrade --install northline-data "$H/northline-data" -n "$NS" -f "$work/data.json" ${data_extra[@]+"${data_extra[@]}"} \
+  --wait --timeout 15m
 
 echo "== 5. northline"
 extra=()

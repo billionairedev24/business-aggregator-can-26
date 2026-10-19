@@ -76,8 +76,18 @@ postgres:
     s3:
       endpointURL: ""             # e.g. https://s3.bhs.io.cloud.ovh.net
       credentialsSecret: northline-pg-backup-s3
+    # Folder of this cluster's backups in the bucket; empty = the cluster's name. After a restore, a new name (e.g.
+    # northline-pg-2): Barman refuses to archive into a folder that already holds another cluster's WAL.
+    serverName: ""
     retentionPolicy: 7d
     schedule: "0 0 3 * * *"       # CloudNativePG cron has seconds: daily at 03:00 UTC
+  # Restore (docs/runbooks/ovh.md § Backups and restore, dryrun-gcp.md): bootstrap the cluster from the backup store
+  # instead of initdb — the latest state, or targetTime (RFC 3339, within the retention). Only when the Cluster is
+  # created (delete the old one first); keep these values for every later upgrade.
+  recovery:
+    enabled: false
+    sourceServerName: ""          # the backups' folder to restore from; empty = the cluster's name
+    targetTime: ""                # e.g. "2026-10-20T14:00:00Z"; empty = the end of the WAL
 
 valkey:
   enabled: true

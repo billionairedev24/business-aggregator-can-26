@@ -304,6 +304,12 @@ else echo "ok   northline-data: secrets provider gcp or none only"; fi
 if helm template northline-data "$DATA" -f test-values/data-ovh-vps.yaml --set postgres.backup.provider=azure >/dev/null 2>&1; then
   echo "FAIL northline-data accepted an unknown backup provider"; failed=1
 else echo "ok   northline-data: Postgres backups to gcs or s3 only"; fi
+# Restore: a new cluster bootstrapped from the backups, archiving into a new folder of the bucket.
+check_data "northline-data: restore from the S3 backups (recovery)" -f test-values/data-ovh-vps.yaml --set postgres.recovery.enabled=true \
+  --set postgres.backup.serverName=northline-pg-2 --set postgres.recovery.targetTime=2026-10-20T14:00:00Z
+if helm template northline-data "$DATA" -f test-values/data-ovh-vps.yaml --set postgres.recovery.enabled=true >/dev/null 2>&1; then
+  echo "FAIL northline-data accepted a restore archiving into the folder it restores from"; failed=1
+else echo "ok   northline-data: a restored cluster archives into a new folder"; fi
 if helm template northline-data "$DATA" -f test-values/data-ovh-vps.yaml --set postgres.backup.s3.endpointURL= >/dev/null 2>&1; then
   echo "FAIL northline-data accepted S3 backups without an endpoint"; failed=1
 else echo "ok   northline-data refuses S3 backups without an endpoint"; fi
