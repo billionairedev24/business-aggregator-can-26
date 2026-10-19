@@ -165,7 +165,9 @@ class FourEyesReviewApiTest extends IntegrationTest {
     @Test
     void theReviewerCantDecide_403() throws Exception {
         var id = submittedBakery("Same Hands Bakery");
-        review(id, reviewer, "{\"recommendation\":\"approve\"}").andExpect(status().isOk());
+        // the demo-data script's body (scripts/demo/demo-data.mjs) also sends a `decision`: ignored
+        review(id, reviewer, "{\"decision\":\"approve\",\"recommendation\":\"approve\",\"note\":\"Demo\"}")
+                .andExpect(status().isOk());
 
         decide(id, reviewer, "{\"decision\":\"approve\"}", StaffRole.TRUST_SAFETY)
                 .andExpect(status().isForbidden())
