@@ -37,7 +37,6 @@ import ca.northline.shared.Ids;
 import ca.northline.shared.MerchantScope;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
-import ca.northline.shared.security.StaffAccessDenied;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -195,18 +194,7 @@ class VerificationQueueService
     @Transactional
     public ApplicationDetail decide(DecideApplication.Command command, String lang) {
         var application = pending(command.merchantId());
-        var round = store.reviews(command.merchantId()).stream()
-                .filter(Review::open)
-                .toList();
-        var current = round.isEmpty() ? null : round.getFirst();
-        if (fourEyes.enabled()) {
-            if (current == null) {
-                throw new Conflict("review_required", VerificationQueue.REVIEW_REQUIRED);
-            }
-            if (round.stream().anyMatch(r -> r.reviewedBy().equals(command.agentId()))) {
-                throw new StaffAccessDenied(StaffAccessDenied.Reason.SAME_PERSON, VerificationQueue.SAME_PERSON);
-            }
-        }
+        var current = fourEyes.admit(store.reviews(command.merchantId()), command.agentId());
         var reviewId = current == null ? null : current.id();
         var now = clock.instant();
         var submittedAt = application.getSubmittedAt();

@@ -513,7 +513,13 @@ class PilotOnboardingApiTest extends IntegrationTest {
         assertThat(shops.shopsIn(city)).anyMatch(s -> s.merchantId().equals(id));
     }
 
+    /** Two-person review: a second agent recommends approval, then {@code agent} decides. */
     org.springframework.test.web.servlet.ResultActions approve(String merchantId) throws Exception {
+        mvc.perform(json(
+                                post("/api/v1/console/verification/applications/{id}/review", merchantId),
+                                "{\"recommendation\":\"approve\"}")
+                        .with(TestJwt.staff(data.user("Lena Park"), StaffRole.TRUST_SAFETY)))
+                .andExpect(status().isOk());
         return mvc.perform(json(
                         post("/api/v1/console/verification/applications/{id}/decision", merchantId),
                         "{\"decision\":\"approve\"}")

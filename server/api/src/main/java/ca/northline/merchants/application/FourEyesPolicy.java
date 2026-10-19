@@ -1,6 +1,11 @@
 package ca.northline.merchants.application;
 
+import ca.northline.merchants.application.VerificationQueueStore.Review;
+import ca.northline.shared.Conflict;
+import ca.northline.shared.security.StaffAccessDenied;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
@@ -34,5 +39,28 @@ class FourEyesPolicy {
 
     boolean enabled() {
         return enabled;
+    }
+
+    /**
+     * Lets {@code approverId} decide an application, or refuses: 409 {@code review_required} while its open round has
+     * no review, 403 {@code same_person} when the approver reviewed in that round. With the rule off, anyone may.
+     *
+     * @param reviews the application's reviews, newest first
+     * @return the current review (the newest of the open round), null when there is none
+     */
+    @Nullable
+    Review admit(List<Review> reviews, String approverId) {
+        var round = reviews.stream().filter(Review::open).toList();
+        var current = round.isEmpty() ? null : round.getFirst();
+        if (!enabled) {
+            return current;
+        }
+        if (current == null) {
+            throw new Conflict("review_required", VerificationQueue.REVIEW_REQUIRED);
+        }
+        if (round.stream().anyMatch(r -> r.reviewedBy().equals(approverId))) {
+            throw new StaffAccessDenied(StaffAccessDenied.Reason.SAME_PERSON, VerificationQueue.SAME_PERSON);
+        }
+        return current;
     }
 }
