@@ -13,7 +13,7 @@
 .nl-qt-steps > li { flex: 1 1 auto; display: flex; align-items: center; min-width: 0; }
 .nl-qt-steps > li:first-child { flex: none; }
 .nl-qt-steps > li + li::before { content: ''; flex: 1 1 24px; min-width: 12px; height: 2px; background: var(--color-border-strong); margin: 0 var(--space-3); border-radius: 1px; }
-.nl-qt-step { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); background: none; border: 0; padding: 0; font: inherit; color: var(--color-text-muted); cursor: pointer; white-space: nowrap; }
+.nl-qt-step { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--size-touch); min-width: var(--size-touch); background: none; border: 0; padding: 0; font: inherit; color: var(--color-text-muted); cursor: pointer; white-space: nowrap; }
 .nl-qt-step:disabled { cursor: default; }
 .nl-qt-step[data-state='current'] { color: var(--color-text); font-weight: var(--weight-bold); }
 .nl-qt-step[data-state='done'] { color: var(--color-text); }
