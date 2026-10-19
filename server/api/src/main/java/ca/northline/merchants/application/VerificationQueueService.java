@@ -134,25 +134,27 @@ class VerificationQueueService
         var application = pending(command.merchantId());
         var checklist = verifications.listFor(command.merchantId());
         var note = blankToNull(command.note());
-        List<String> keys = List.of();
-        switch (command.recommendation()) {
+        List<String> keys = switch (command.recommendation()) {
             case APPROVE -> {
                 if (hasOpenReviews(command.merchantId(), checklist)) {
                     throw new Conflict("reviews_open", "Decide the open registry and identity reviews first.");
                 }
+                yield List.of();
             }
             case REJECT -> {
                 if (note == null) {
                     throw RuleViolation.of("note", "required", VerificationQueue.REJECT_REASON_REQUIRED);
                 }
+                yield List.of();
             }
             case REQUEST_INFO -> {
-                keys = List.copyOf(checkKeys(command.checkKeys(), checklist));
+                var redo = List.copyOf(checkKeys(command.checkKeys(), checklist));
                 if (note == null) {
                     throw RuleViolation.of("note", "required", VerificationQueue.NOTE_REQUIRED);
                 }
+                yield redo;
             }
-        }
+        };
         var now = clock.instant();
         var review = new Review(
                 Ids.next(),
