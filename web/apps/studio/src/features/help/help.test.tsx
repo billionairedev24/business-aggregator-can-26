@@ -181,6 +181,7 @@ describe('My cases and status', () => {
     expect(await screen.findByText('Ordering & checkout')).toBeTruthy();
     const row = screen.getByText('Notifications (SMS)').closest('li')!;
     expect(within(row).getByText(/^Degraded · carrier delays in AB · 12:40/)).toBeTruthy();
-    expect(screen.getByText('Incidents post here and by SMS to the account owner. Scheduled maintenance: Sun 2–4 am MT.')).toBeTruthy();
+    // the window is kept in the platform zone (region configuration) and named by it — never a zone in copy
+    expect(screen.getByText(/^Incidents post here and by SMS to the account owner\. Scheduled maintenance: Sundays 2:00 a\.m\. – 4:00 a\.m\. [A-Z][A-Za-z+0-9:−-]*\.$/)).toBeTruthy();
   });
 });

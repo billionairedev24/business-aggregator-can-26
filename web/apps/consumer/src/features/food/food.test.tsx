@@ -158,7 +158,7 @@ describe('Restaurant (design 06 restaurant)', () => {
     open('/food/pho-lucky');
     expect(await screen.findByRole('heading', { level: 1, name: 'Pho Lucky' })).toBeInTheDocument();
     expect(screen.getByText('Vietnamese · 1129 Edmonton Tr NE · ★ 4.8 (120)')).toBeInTheDocument();
-    expect(screen.getByText('AHS permit verified')).toBeInTheDocument();
+    expect(screen.getByText('Food permit verified')).toBeInTheDocument();
     expect(screen.getByText('Min order $15')).toBeInTheDocument();
     const sections = screen.getByRole('navigation', { name: 'Menu sections' });
     expect(within(sections).getAllByRole('link').map(a => a.textContent)).toEqual(['Combos', 'Soups & rolls']);

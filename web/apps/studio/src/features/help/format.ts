@@ -5,6 +5,13 @@ import { agoParts, useAgo } from '../messages/time';
 import type { CaseSummary } from './api';
 import { useHelpT } from './messages';
 
+/**
+ * Support hours and the maintenance window, kept in the platform zone (region configuration, REGION_PLATFORM_ZONE —
+ * the server's SupportSla counts the same hours) and shown with that zone's name: copy never names a zone.
+ */
+export const SUPPORT_HOURS = ['07:00', '23:00'] as const;
+export const MAINTENANCE_HOURS = ['02:00', '04:00'] as const;
+
 /** First-reply promise shown on Help (design helpSlaNote): urgent → 15 min, Master → 1 h, everyone else → 4 business hours. */
 export function useSlaNote() {
   const t = useHelpT();
