@@ -4,7 +4,7 @@ The consumer app (`mobile/apps/consumer`) and the courier app (`mobile/apps/cour
 the iOS Simulator or an Android emulator, talking to the stack `make up-all` runs on your Mac
 ([local.md § 6a](local.md#6a-run-everything-locally-with-your-own-postgres-valkey-and-grafana)). One command starts
 Metro with the apps' API addresses pointed at your Mac; the auth server's `local` profile lets a phone on your Wi-Fi
-sign in. Both apps wear the redesign ([redesign-spec.md § 2.4, § 2.5](../design/redesign-spec.md)): the palette,
+sign in. Both apps wear the redesign (`docs/design/redesign-spec.md` § 2.4, § 2.5): the palette,
 fonts and logo of `web/packages/tokens/brand.json`.
 
 > **Status (2026-10-19):** built and checked on Linux (typecheck, Jest, ESLint, the auth server's integration tests
