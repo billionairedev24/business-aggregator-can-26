@@ -4,7 +4,7 @@ Everything runs on your machine. You can use **your own Postgres and Valkey** or
 anything you don't have, one service at a time (compose profiles). The Spring profile `local` needs only Postgres.
 
 **The short version (S-124):** `make setup up run` — toolchain check, `.env` files and `pnpm install`; Postgres in
-Docker, migrations and seed; the api and the Studio (dev auth as Ravi Sandhu) on http://localhost:3100. Every
+Docker, migrations and seed; northline-auth, the api, the Studio BFF and the Studio on http://localhost:3100, where you sign in for real (§ 5). Every
 workflow as a make target, and the app runner behind it: [LOCAL_DEVELOPMENT.md](../LOCAL_DEVELOPMENT.md); `make help`
 lists them all. This page explains what those targets do underneath and how to configure each piece; the plain
 Gradle/pnpm/compose commands still work and are shown next to each target.
@@ -86,9 +86,9 @@ cd server
 ./gradlew :api:seedCategories                    # db/seed/categories.json — required once, nothing else loads categories
 ```
 
-## 4. Studio with dev auth (fastest — api + Postgres only)
+## 4. Studio with dev auth (tests only — api + Postgres only)
 
-`make up` (default `SERVICES="api studio"`) runs exactly this in the background; `make run` in the foreground. By hand:
+Not the default: `make up` starts auth, api, bff and studio and you sign in for real (§ 5). Dev auth signs every visitor in as one fixed persona, so it is only for automated tests and quick API work: `make up DEV_AUTH=1 SERVICES="api studio"`. By hand:
 
 ```sh
 cd server && ./gradlew :api:bootRun --args='--spring.profiles.active=local'   # :8080, accepts X-Dev-User

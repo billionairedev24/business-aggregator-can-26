@@ -2,7 +2,7 @@
 # Local app runner behind the Makefile (S-124): start, stop and inspect the Northline apps on one machine.
 # The stand-ins (Postgres, Valkey, Kafka, …) are docker compose's job (make up / make down); this script runs the apps.
 #
-#   scripts/stack.sh up [service…]      start services in the background and wait until each answers (default: api studio)
+#   scripts/stack.sh up [service…]      start services in the background and wait until each answers (default: auth api bff studio)
 #   scripts/stack.sh down [service…]    stop them (default: every running one)
 #   scripts/stack.sh status             what runs, where, and whether it answers; the useful URLs
 #   scripts/stack.sh logs [service…]    follow the logs, one prefix per service
@@ -11,8 +11,9 @@
 # Services: api auth bff bff-consumer bff-console worker studio consumer console storybook docs  ("all" = every one)
 #   bff = studio-bff (:8082), bff-consumer = the same jar with the `consumer` profile (:8081), bff-console with the
 #   `console` profile (:8083, S-90).
-#   studio / consumer / console use dev auth (DEV_USER / CONSUMER_DEV_USER / CONSOLE_DEV_USER, no sign-in, only the api needed) unless their BFF is
-#   started with them or already runs; DEV_AUTH=1 or DEV_AUTH=0 forces it either way.
+#   studio / consumer / console sign in for real, through their BFF and northline-auth (start those with them). Dev auth
+#   (a fixed persona, no sign-in, only the api needed) is opt-in for tests only: DEV_AUTH=1 (DEV_USER / CONSUMER_DEV_USER /
+#   CONSOLE_DEV_USER); DEV_AUTH=auto uses it when the app's BFF is neither started nor running.
 #
 # Each service runs in its own session / process group (setsid on Linux, Perl's POSIX::setsid on macOS) and is stopped
 # by that group id only, never by name, so a stop can't hit anything this script didn't start. PIDs and logs live in
@@ -27,10 +28,10 @@ GRADLE_FLAGS="${GRADLE_FLAGS:---max-workers=2}"
 DEV_USER="${DEV_USER:-01J9ZD3V00000000000000RAV1}"                   # Ravi Sandhu, owner of the three seeded businesses
 CONSUMER_DEV_USER="${CONSUMER_DEV_USER:-01J9ZD3V0000000000000C0001}" # Amara Osei, the seeded consumer
 CONSOLE_DEV_USER="${CONSOLE_DEV_USER:-01J9ZD3V00000000000000PNA1}"   # Priya Natarajan, staff with every console role (S-90)
-DEV_AUTH="${DEV_AUTH:-auto}"
+DEV_AUTH="${DEV_AUTH:-0}"
 
 ALL_SERVICES="auth api bff bff-consumer bff-console worker studio consumer console storybook docs"
-DEFAULT_SERVICES="api studio"
+DEFAULT_SERVICES="auth api bff studio"
 JAVA_SERVICES="auth api bff bff-consumer bff-console worker"
 
 c_dim=$'\033[2m'; c_ok=$'\033[32m'; c_bad=$'\033[31m'; c_warn=$'\033[33m'; c_off=$'\033[0m'
@@ -149,12 +150,27 @@ start_one() { # start_one <service> <services being started>
   say "${c_dim}… $s starting (log: .run/logs/$s.log)${c_off}"
 }
 
+# explain_failure <service>: why a service exited. For a Spring app, its own failure report ("APPLICATION FAILED TO
+# START" … "Action:") or the root causes of the exception, not the Gradle lines that follow them; else the log's tail.
+explain_failure() {
+  local s="$1" log="$LOG_DIR/$1.log" why
+  say "${c_bad}✗ $s exited — from .run/logs/$s.log:${c_off}" >&2
+  if is_java "$s"; then
+    why="$(awk '/APPLICATION FAILED TO START/ { on = 1 } on { print; if (/^Action:/) { act = 1; n = 0 } else if (act && ++n > 3) exit }' "$log")"
+    # else the innermost causes (the last "Caused by" lines name the real problem), cut to one line each
+    [ -n "$why" ] || why="$(grep -E '^Caused by: ' "$log" | tail -n 2 | cut -c 1-400)"
+    [ -n "$why" ] || why="$(grep -E '[[:space:]]ERROR[[:space:]]|Exception: ' "$log" | grep -v 'org.gradle' | tail -n 3 | cut -c 1-400)"
+    if [ -n "$why" ]; then printf '%s\n' "$why" >&2; say "${c_dim}  (whole log: .run/logs/$s.log)${c_off}" >&2; return; fi
+  fi
+  tail -n 25 "$log" >&2
+}
+
 wait_healthy() {
   local s="$1" url tries=0 max=120
   url="$(health_url "$s")"
   is_java "$s" && max=360 # the first start compiles, migrates and seeds
   while ! curl -sf -o /dev/null --max-time 2 "$url"; do
-    running "$s" || { say "${c_bad}✗ $s exited — last lines of .run/logs/$s.log:${c_off}"; tail -n 25 "$LOG_DIR/$s.log" >&2; return 1; }
+    running "$s" || { explain_failure "$s"; return 1; }
     tries=$((tries + 1)); [ "$tries" -ge "$max" ] && { say "${c_bad}✗ $s did not answer on $url${c_off}"; return 1; }
     sleep 1
   done
@@ -220,9 +236,9 @@ cmd_status() {
     if curl -sf -o /dev/null --max-time 2 "$(health_url "$s")"; then state="${c_ok}up${c_off}      "; else state="${c_warn}starting${c_off}"; fi
     printf '  %-14s %s  http://localhost:%s\n' "$s" "$state" "$(port_of "$s")"
   done
-  [ $any = 1 ] || { say "  No app started by make runs. make up (api + studio) · make up SERVICES=all"; say ""; return 0; }
+  [ $any = 1 ] || { say "  No app started by make runs. make up (auth, api, bff, studio) · make up SERVICES=all"; say ""; return 0; }
   say ""
-  if running api; then
+  if running api && grep -q NL_DEV_USER "$RUN_DIR"/*.cmd 2>/dev/null; then
     say "  api        curl -H 'X-Dev-User: $DEV_USER' localhost:8080/api/v1/me/businesses   (dev auth: local profile only)"
   fi
   if running studio; then
