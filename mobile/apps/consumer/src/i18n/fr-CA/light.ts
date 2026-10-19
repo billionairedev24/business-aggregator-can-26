@@ -14,7 +14,7 @@ export const light: { [k in keyof typeof en]: string } = {
   'lt.home.allDepartments': 'Tous les rayons',
   'lt.home.underway': 'En cours',
   'lt.home.shops': '{n, plural, one {# commerce} other {# commerces}}',
-  'lt.home.pros': '{n, plural, one {# pro} other {# pros}}',
+  'lt.home.pros': '{n, plural, one {# prestataire} other {# prestataires}}',
   'lt.home.soon': 'Bientôt',
   'lt.home.sellTitle': 'Vendez ou offrez vos services sur {brand}',
   'lt.home.sellSub': 'Commerces et pros locaux vérifiés seulement. Inscrivez-vous sur le site web.',
