@@ -8,7 +8,7 @@ const NOW = new Date('2026-09-08T18:00:00Z');
 const check = (key: string, state: string, registry: string | null = null, type = 'kyc') => ({ id: `v-${key}`, key, type, registry, status: state === 'passed' ? 'verified' : 'submitted', state, reference: null, expiresAt: null });
 
 const SABLE = {
-  merchantId: 'M1', businessName: 'Sable & Soda Bar Co.', legalName: 'Sable and Soda Ltd.', type: 'provider', structure: 'corp_ab',
+  merchantId: 'M1', businessName: 'Sable & Soda Bar Co.', legalName: 'Sable and Soda Ltd.', type: 'provider', structure: 'corp_prov',
   categories: ['Events & bar'], province: 'AB', city: 'Calgary', status: 'pending', submittedAt: '2026-09-08T14:00:00Z',
   checks: [check('kyc', 'passed'), check('registry', 'passed', null, 'registry'), check('insurance', 'waiting', null, 'insurance')], risk: 'low', decision: null, decidedAt: null,
   stage: 'decision' as string | null,

@@ -100,12 +100,18 @@ review with the expiry date they saw, which reaches `ComplianceStatus`, or rejec
 
 | structure (legal-details.schema.json) | registry row looks up |
 |---|---|
-| `sole` | the trade name (`trade_name_registration`) in Alberta when there is one. Without one, nothing is registered and the row is verified with `not_required` |
-| `partnership` | `partnership_registration` (Alberta) |
-| `corp_ab` | `alberta_corporate_access_number` (Alberta) |
-| `corp_fed` | `corporations_canada_number` (Corporations Canada) **and** `alberta_extra_provincial_registration` (Alberta) |
-| `corp_ex` | `alberta_extra_provincial_registration` (Alberta) |
-| `coop`, `nonprofit` | `cooperative_registration` / `society_registration` (Alberta) |
+| `sole` | the trade name (`trade_name_registration`) in the business's province when there is one. Without one, nothing is registered and the row is verified with `not_required` |
+| `partnership` | `partnership_registration` (the province) |
+| `corp_prov` | `provincial_registry_number` (the province) |
+| `corp_fed` | `corporations_canada_number` (Corporations Canada) **and** `extra_provincial_registration_number` (the province) |
+| `corp_ex` | `extra_provincial_registration_number` (the province) |
+| `coop`, `nonprofit` | `cooperative_registration` / `society_registration` (the province) |
+
+"The province" is the adapter the business's province names in `region.regions.registries` (Alberta:
+`alberta_corporate_registry`, the OpenCorporates or manual adapter); a province without one sends the lookup to an agent
+(`source = manual`). What each province calls these numbers, their formats and its registry's name are region data
+(`region.legal_forms`, V372; docs/runbooks/regions.md § Legal forms), not code. Rows written before 2026-10-19 used
+`corp_ab` and `alberta_*` keys; V373 rewrote them and the api still reads them as the generic keys.
 | kitchen with a city licence # (Business step) in Calgary | plus the City of Calgary licence |
 
 **Matching:**

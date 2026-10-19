@@ -13,6 +13,7 @@ import static ca.northline.merchants.domain.PrincipalRole.TREASURER;
 
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.RuleViolation.Violation;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +28,8 @@ import org.jspecify.annotations.Nullable;
 public enum BusinessStructure implements CodedEnum {
     SOLE(1, Set.of(OWNER), 0, null, false),
     PARTNERSHIP(2, Set.of(PARTNER_SIGNING, PARTNER), 25, PARTNER_SIGNING, true),
-    CORP_AB(1, Set.of(DIRECTOR, OFFICER, SHAREHOLDER), 25, DIRECTOR, true),
+    /** Incorporated in the province it operates in (stored {@code corp_ab} before V373). */
+    CORP_PROV(1, Set.of(DIRECTOR, OFFICER, SHAREHOLDER), 25, DIRECTOR, true),
     CORP_FED(1, Set.of(DIRECTOR, OFFICER, SHAREHOLDER), 25, DIRECTOR, true),
     CORP_EX(1, Set.of(DIRECTOR, OFFICER, SHAREHOLDER), 25, DIRECTOR, true),
     COOP(3, Set.of(CHAIR, DIRECTOR, SECRETARY, TREASURER), 0, CHAIR, false),
@@ -38,6 +40,9 @@ public enum BusinessStructure implements CodedEnum {
     public static final String PCT_RANGE = "Enter a percentage from 0 to 100.";
     public static final String ROLE_NOT_ALLOWED = "Pick one of the roles listed.";
     public static final String SUM_OVER_100 = "Ownership can't add up to more than 100 %.";
+
+    /** The code a provincial corporation had before V373; read from older rows and clients, never written. */
+    static final String LEGACY_PROVINCIAL = "corp_ab";
 
     private final int minPrincipals;
 
@@ -59,6 +64,17 @@ public enum BusinessStructure implements CodedEnum {
         this.kycThresholdPct = kycThresholdPct;
         this.requiredRole = requiredRole;
         this.hasOwnership = hasOwnership;
+    }
+
+    /** By code, reading the pre-V373 code of a provincial corporation as {@link #CORP_PROV}. */
+    @JsonCreator
+    public static BusinessStructure of(String code) {
+        return CodedEnum.fromCode(BusinessStructure.class, LEGACY_PROVINCIAL.equals(code) ? CORP_PROV.code() : code);
+    }
+
+    /** {@link #of} for a nullable column. */
+    public static @Nullable BusinessStructure ofNullable(@Nullable String code) {
+        return code == null ? null : of(code);
     }
 
     public int minPrincipals() {
@@ -124,7 +140,7 @@ public enum BusinessStructure implements CodedEnum {
         return switch (this) {
             case SOLE -> "Add the owner.";
             case PARTNERSHIP -> "Add at least 2 partners.";
-            case CORP_AB, CORP_FED, CORP_EX -> "Add at least one director or owner.";
+            case CORP_PROV, CORP_FED, CORP_EX -> "Add at least one director or owner.";
             case COOP, NONPROFIT -> "Add at least 3 board members.";
         };
     }
@@ -132,7 +148,7 @@ public enum BusinessStructure implements CodedEnum {
     public String requiredRoleMessage() {
         return switch (this) {
             case PARTNERSHIP -> "One partner must be the signing partner.";
-            case CORP_AB, CORP_FED, CORP_EX -> "Add at least one director.";
+            case CORP_PROV, CORP_FED, CORP_EX -> "Add at least one director.";
             case COOP -> "Add the board chair.";
             case NONPROFIT -> "Add the president.";
             case SOLE -> "Add the owner.";

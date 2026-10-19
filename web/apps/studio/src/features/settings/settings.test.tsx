@@ -21,7 +21,7 @@ vi.mock('@tanstack/react-router', async orig => ({
 vi.mock('../../lib/session', async orig => ({ ...(await orig<typeof import('../../lib/session')>()), useSession: () => ({ data: { user: { email: 'ravi@prairiewrench.ca' }, sid: 'sess-bff' } }) }));
 
 const S = '/api/v1/merchants/m1/settings';
-const business = { type: 'provider', structure: 'corp_ab', displayName: 'Prairie Wrench', legalName: 'Prairie Wrench Automotive Ltd.', gstNumber: '781234567 RT0001', gstRequired: true, serviceArea: 'Calgary + 40 km', cancellationPolicy: '12h', autoAcceptQuoteCents: 15000, languages: ['en', 'pa'], storeSlug: 'prairie-wrench' };
+const business = { type: 'provider', structure: 'corp_prov', displayName: 'Prairie Wrench', legalName: 'Prairie Wrench Automotive Ltd.', gstNumber: '781234567 RT0001', gstRequired: true, serviceArea: 'Calgary + 40 km', cancellationPolicy: '12h', autoAcceptQuoteCents: 15000, languages: ['en', 'pa'], storeSlug: 'prairie-wrench' };
 const compliance = {
   business: { type: 'provider', displayName: 'Prairie Wrench', legalName: 'PW Ltd.' },
   stripe: { status: 'not_connected', chargesEnabled: false, payoutsEnabled: false, requirements: [], instantPayouts: false },

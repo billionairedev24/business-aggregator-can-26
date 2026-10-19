@@ -300,7 +300,7 @@
    "status": 200,
    "body": {
     "type": "provider",
-    "structure": "corp_ab",
+    "structure": "corp_prov",
     "displayName": "Prairie Wrench",
     "legalName": "Prairie Wrench Automotive Ltd.",
     "gstNumber": "781234567 RT0001",
@@ -438,7 +438,7 @@
    "status": 200,
    "body": {
     "type": "provider",
-    "structure": "corp_ab",
+    "structure": "corp_prov",
     "displayName": "Prairie Wrench",
     "legalName": "Prairie Wrench Automotive Ltd.",
     "gstNumber": "781234567 RT0001",
@@ -6143,7 +6143,7 @@
    "status": 200,
    "body": {
     "type": "provider",
-    "structure": "corp_ab",
+    "structure": "corp_prov",
     "displayName": "Prairie Wrench",
     "legalName": "Prairie Wrench Automotive Ltd.",
     "gstNumber": "781234567 RT0001",
@@ -6281,7 +6281,7 @@
    "status": 200,
    "body": {
     "type": "provider",
-    "structure": "corp_ab",
+    "structure": "corp_prov",
     "displayName": "Prairie Wrench",
     "legalName": "Prairie Wrench Automotive Ltd.",
     "gstNumber": "781234567 RT0001",
@@ -11117,6 +11117,897 @@
    "status": 204,
    "body": null,
    "from": "lib/session.test.tsx › useSignOut (\"Sign out\", onboarding \"Not you? Sign out\") > ends the BFF session and the auth-server session, clears the cache and shows /sign-in"
+  },
+  "GET /api/v1/merchants/:id/onboarding/legal-forms": {
+   "status": 200,
+   "body": {
+    "province": "AB",
+    "items": [
+     {
+      "structure": "sole",
+      "registry": {
+       "en": "Alberta Corporate Registry",
+       "fr": "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl": "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law": {
+       "en": "Partnership Act (Alberta) · trade-name registration",
+       "fr": "Partnership Act (Alberta) · enregistrement du nom commercial"
+      },
+      "tradeNameRegistration": true,
+      "verified": false,
+      "unverified": [
+       "identifier"
+      ],
+      "fields": [
+       {
+        "key": "owner_legal_name",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": 2,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "trade_name",
+        "kind": "text",
+        "required": false,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": 120,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "trade_name_registration",
+        "kind": "text",
+        "required": false,
+        "requiredWhen": {
+         "field": "trade_name",
+         "in": [],
+         "notIn": []
+        },
+        "label": {
+         "en": "Trade name registration #",
+         "fr": "N° d'enregistrement du nom commercial"
+        },
+        "help": {
+         "en": "From the trade name registration filed with an Alberta registry agent.",
+         "fr": "Inscrit sur l'enregistrement du nom commercial déposé auprès d'un agent des registres de l'Alberta."
+        },
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "sin_collected_by_stripe",
+        "kind": "stripe_confirmation",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "address",
+        "kind": "address",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": 5,
+        "maxLength": 200,
+        "compact": false,
+        "options": [],
+        "parts": []
+       }
+      ]
+     },
+     {
+      "structure": "partnership",
+      "registry": {
+       "en": "Alberta Corporate Registry",
+       "fr": "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl": "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law": {
+       "en": "Partnership Act (Alberta)",
+       "fr": "Partnership Act (Alberta)"
+      },
+      "tradeNameRegistration": true,
+      "verified": false,
+      "unverified": [
+       "identifier"
+      ],
+      "fields": [
+       {
+        "key": "partnership_name",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": 2,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "partnership_registration",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": {
+         "en": "Partnership registration #",
+         "fr": "N° d'enregistrement de la société de personnes"
+        },
+        "help": {
+         "en": "From the partnership registration with the Alberta Corporate Registry.",
+         "fr": "Inscrit sur l'enregistrement de la société au Registre des sociétés de l'Alberta."
+        },
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "partnership_agreement_doc",
+        "kind": "document",
+        "required": false,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "business_number",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^\\d{9}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": true,
+        "options": [],
+        "parts": []
+       }
+      ]
+     },
+     {
+      "structure": "corp_prov",
+      "registry": {
+       "en": "Alberta Corporate Registry",
+       "fr": "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl": "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law": {
+       "en": "Business Corporations Act (Alberta)",
+       "fr": "Business Corporations Act (Alberta)"
+      },
+      "tradeNameRegistration": true,
+      "verified": true,
+      "unverified": [],
+      "fields": [
+       {
+        "key": "legal_corporate_name",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": 2,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "provincial_registry_number",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": {
+         "en": "Corporate access number",
+         "fr": "Numéro d'accès de la société"
+        },
+        "help": {
+         "en": "On your Alberta certificate of incorporation (9 or 10 digits).",
+         "fr": "Inscrit sur votre certificat de constitution de l'Alberta (9 ou 10 chiffres)."
+        },
+        "example": "2012345678",
+        "pattern": "^\\d{9,10}$",
+        "patternMessage": {
+         "en": "Corporate access number is 9 or 10 digits.",
+         "fr": "Le numéro d'accès compte 9 ou 10 chiffres."
+        },
+        "minLength": null,
+        "maxLength": 40,
+        "compact": true,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "business_number",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^\\d{9}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": true,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "incorporation_date",
+        "kind": "date",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "registered_office",
+        "kind": "address",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": 5,
+        "maxLength": 200,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "certificate_of_incorporation_doc",
+        "kind": "document",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "operating_name",
+        "kind": "text",
+        "required": false,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": 120,
+        "compact": false,
+        "options": [],
+        "parts": []
+       }
+      ]
+     },
+     {
+      "structure": "corp_fed",
+      "registry": {
+       "en": "Alberta Corporate Registry",
+       "fr": "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl": "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law": {
+       "en": "Canada Business Corporations Act · extra-provincial registration in Alberta",
+       "fr": "Loi canadienne sur les sociétés par actions · enregistrement extraprovincial en Alberta"
+      },
+      "tradeNameRegistration": true,
+      "verified": true,
+      "unverified": [],
+      "fields": [
+       {
+        "key": "legal_corporate_name",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": 2,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "corporations_canada_number",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^\\d{7}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": true,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "extra_provincial_registration_number",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": {
+         "en": "Alberta extra-provincial registration # (corporate access number)",
+         "fr": "N° d'enregistrement extraprovincial en Alberta (numéro d'accès)"
+        },
+        "help": {
+         "en": "Federal corporations register in Alberta before carrying on business here.",
+         "fr": "Les sociétés fédérales s'enregistrent en Alberta avant d'y exercer."
+        },
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": 40,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "business_number",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^\\d{9}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": true,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "registered_office",
+        "kind": "address",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": 5,
+        "maxLength": 200,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "certificate_of_incorporation_doc",
+        "kind": "document",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "annual_return_current",
+        "kind": "yes_no",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       }
+      ]
+     },
+     {
+      "structure": "corp_ex",
+      "registry": {
+       "en": "Alberta Corporate Registry",
+       "fr": "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl": "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law": {
+       "en": "Business Corporations Act (Alberta), Part 21",
+       "fr": "Business Corporations Act (Alberta), partie 21"
+      },
+      "tradeNameRegistration": true,
+      "verified": true,
+      "unverified": [],
+      "fields": [
+       {
+        "key": "legal_corporate_name",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": 2,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "home_jurisdiction",
+        "kind": "choice",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [
+         "BC",
+         "MB",
+         "NB",
+         "NL",
+         "NS",
+         "NT",
+         "NU",
+         "ON",
+         "PE",
+         "QC",
+         "SK",
+         "YT",
+         "US",
+         "OTHER"
+        ],
+        "parts": []
+       },
+       {
+        "key": "home_registration_number",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "extra_provincial_registration_number",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": {
+         "en": "Alberta extra-provincial registration # (corporate access number)",
+         "fr": "N° d'enregistrement extraprovincial en Alberta (numéro d'accès)"
+        },
+        "help": {
+         "en": "On the certificate of registration Alberta issued.",
+         "fr": "Inscrit sur le certificat d'enregistrement délivré par l'Alberta."
+        },
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": 40,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "attorney_for_service",
+        "kind": "group",
+        "required": true,
+        "requiredWhen": null,
+        "label": {
+         "en": "Agent for service in Alberta",
+         "fr": "Mandataire aux fins de signification en Alberta"
+        },
+        "help": {
+         "en": "An individual with a physical address in Alberta.",
+         "fr": "Une personne ayant une adresse physique en Alberta."
+        },
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": [
+         {
+          "key": "name",
+          "kind": "text",
+          "required": true,
+          "requiredWhen": null,
+          "label": null,
+          "help": null,
+          "example": null,
+          "pattern": null,
+          "patternMessage": null,
+          "minLength": null,
+          "maxLength": null,
+          "compact": false,
+          "options": [],
+          "parts": []
+         },
+         {
+          "key": "address_in_province",
+          "kind": "address",
+          "required": true,
+          "requiredWhen": null,
+          "label": null,
+          "help": null,
+          "example": null,
+          "pattern": null,
+          "patternMessage": null,
+          "minLength": 5,
+          "maxLength": 200,
+          "compact": false,
+          "options": [],
+          "parts": []
+         }
+        ]
+       },
+       {
+        "key": "business_number",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^\\d{9}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": true,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "certificate_of_status_doc",
+        "kind": "document",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       }
+      ]
+     },
+     {
+      "structure": "coop",
+      "registry": {
+       "en": "Alberta Corporate Registry",
+       "fr": "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl": "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law": {
+       "en": "Cooperatives Act (Alberta)",
+       "fr": "Cooperatives Act (Alberta)"
+      },
+      "tradeNameRegistration": true,
+      "verified": false,
+      "unverified": [
+       "law",
+       "identifier"
+      ],
+      "fields": [
+       {
+        "key": "registered_name",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": 2,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "cooperative_registration",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": {
+         "en": "Cooperative registration #",
+         "fr": "N° d'enregistrement de la coopérative"
+        },
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "business_number",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^\\d{9}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": true,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "board_resolution_doc",
+        "kind": "document",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "registered_office",
+        "kind": "address",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": 5,
+        "maxLength": 200,
+        "compact": false,
+        "options": [],
+        "parts": []
+       }
+      ]
+     },
+     {
+      "structure": "nonprofit",
+      "registry": {
+       "en": "Alberta Corporate Registry",
+       "fr": "Registre des sociétés de l'Alberta"
+      },
+      "registryUrl": "https://www.alberta.ca/incorporate-alberta-corporation",
+      "law": {
+       "en": "Societies Act (Alberta) · CRA charity rules",
+       "fr": "Societies Act (Alberta) · règles de l'ARC sur les organismes de bienfaisance"
+      },
+      "tradeNameRegistration": true,
+      "verified": false,
+      "unverified": [
+       "law",
+       "identifier"
+      ],
+      "fields": [
+       {
+        "key": "registered_name",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": 2,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "society_registration",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": {
+         "en": "Society registration #",
+         "fr": "N° d'enregistrement de la société"
+        },
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "cra_charity_number",
+        "kind": "text",
+        "required": false,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^\\d{9}RR\\d{4}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": true,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "business_number",
+        "kind": "text",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^\\d{9}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": true,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "board_resolution_doc",
+        "kind": "document",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+        "patternMessage": null,
+        "minLength": null,
+        "maxLength": null,
+        "compact": false,
+        "options": [],
+        "parts": []
+       },
+       {
+        "key": "registered_office",
+        "kind": "address",
+        "required": true,
+        "requiredWhen": null,
+        "label": null,
+        "help": null,
+        "example": null,
+        "pattern": null,
+        "patternMessage": null,
+        "minLength": 5,
+        "maxLength": 200,
+        "compact": false,
+        "options": [],
+        "parts": []
+       }
+      ]
+     }
+    ]
+   },
+   "from": "features/onboarding/BusinessStep.test.tsx › BusinessStep > shows every problem of the Business step and the attention summary (validation-rules.md messages)"
   }
  }
 }

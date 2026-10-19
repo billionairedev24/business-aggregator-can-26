@@ -8,6 +8,7 @@ import ca.northline.merchants.application.VerificationQueue.Decision;
 import ca.northline.merchants.application.VerificationQueue.DecisionRow;
 import ca.northline.merchants.application.VerificationQueue.Recommendation;
 import ca.northline.merchants.application.VerificationQueueStore;
+import ca.northline.merchants.domain.BusinessStructure;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.CodedEnums;
 import ca.northline.shared.MerchantScope;
@@ -217,7 +218,7 @@ class VerificationQueueQueries implements VerificationQueueStore {
                 rs.getString("display_name"),
                 rs.getString("legal_name"),
                 rs.getString("type"),
-                rs.getString("structure"),
+                CodedEnums.toCode(BusinessStructure.ofNullable(rs.getString("structure"))),
                 rs.getString("province"),
                 rs.getString("city"),
                 rs.getString("status"),

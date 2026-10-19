@@ -1,24 +1,18 @@
-import { useMemo, useState } from 'react';
-import { Chip, Field, FormGrid, Select, TextArea, TextInput } from '@northline/ui';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Chip, Field, FormGrid, Select, TextArea, TextInput, useLocale } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { attentionCount } from '../../lib/forms';
 import type { MerchantType } from '../shell/api';
-import { useSaveBusiness, type Onboarding, type Structure } from './api';
+import { legalFormsQuery, useSaveBusiness, type LegalFormDef, type Onboarding, type Structure } from './api';
 import { PROFILE_FIELDS, defaultProfile, type BusinessProfile } from './businessFields';
 import { CategoryPicker } from './CategoryPicker';
 import { LegalBlock } from './LegalBlock';
 import { useOnboardingT } from './messages';
-import { LEGAL_FIELDS, OWNERS, toLegalDetails, toPrincipals, validateLegal, validatePrincipals, type LegalValues, type OwnerRow } from './legal';
+import { OWNERS, legalDefaults, toLegalDetails, toPrincipals, validateLegal, validatePrincipals, type LegalValues, type OwnerRow } from './legal';
 import { businessSchema, gstOptional, zodErrors } from './validation';
 
-const STRUCTURES: Structure[] = ['sole', 'partnership', 'corp_ab', 'corp_fed', 'corp_ex', 'coop', 'nonprofit'];
-
-/** Select / yes-no legal fields start on their first option (as the design shows them). */
-function legalDefaults(structure: Structure, values: LegalValues = {}): LegalValues {
-  const out: LegalValues = { ...values };
-  for (const f of LEGAL_FIELDS[structure]) if ((f.kind === 'select' || f.kind === 'bool') && out[f.key] === undefined) out[f.key] = f.options![0]!.value;
-  return out;
-}
+const STRUCTURES: Structure[] = ['sole', 'partnership', 'corp_prov', 'corp_fed', 'corp_ex', 'coop', 'nonprofit'];
 const firstOwner = (s: Structure): OwnerRow[] => (OWNERS[s] ? [{ legalName: '', role: OWNERS[s]!.roles[0]!, pct: '' }] : []);
 
 export interface BusinessStepProps {
@@ -44,16 +38,23 @@ export function BusinessStep({ onboarding, part = 'categories', onBack, onNext, 
   const type: MerchantType = onboarding.type;
   const saved = onboarding.business;
   const save = useSaveBusiness(onboarding.merchantId);
+  const { locale } = useLocale();
+  // the legal-details forms of the business's province (region data); the server validates against the same ones
+  const legalForms = useQuery(legalFormsQuery(onboarding.merchantId, onboarding.province));
+  const formOf = (s: Structure): LegalFormDef | undefined => legalForms.data?.items.find(f => f.structure === s);
 
   const [displayName, setDisplayName] = useState(saved?.displayName ?? '');
   const [legalName, setLegalName] = useState(saved?.legalName ?? '');
   const [structure, setStructure] = useState<Structure>(saved?.structure ?? 'sole');
   const [gstNumber, setGst] = useState(saved?.gstNumber ?? '');
-  const [legal, setLegal] = useState<LegalValues>(() => legalDefaults(saved?.structure ?? 'sole', (saved?.legalDetails ?? {}) as LegalValues));
+  const [legal, setLegal] = useState<LegalValues>(() => (saved?.legalDetails ?? {}) as LegalValues);
   const [owners, setOwners] = useState<OwnerRow[]>(() =>
     saved?.principals.length && saved.structure !== 'sole'
       ? saved.principals.map(p => ({ legalName: p.legalName, role: p.role, pct: p.ownershipPct == null ? '' : String(p.ownershipPct) }))
       : firstOwner(saved?.structure ?? 'sole'));
+  const form = formOf(structure);
+  // select / yes-no fields start on their first option once the province's form has arrived
+  useEffect(() => { if (form) setLegal(v => legalDefaults(form, v)); }, [form]);
   const [categoryIds, setCategoryIds] = useState<string[]>(saved?.categories.filter(c => !c.suggested).map(c => c.id) ?? []);
   const [suggestions, setSuggestions] = useState<string[]>(saved?.categories.filter(c => c.suggested).map(c => c.name) ?? []);
   const [profile, setProfile] = useState<BusinessProfile>(() => ({ ...defaultProfile(type), ...((saved?.profile ?? {}) as BusinessProfile) }));
@@ -65,9 +66,9 @@ export function BusinessStep({ onboarding, part = 'categories', onBack, onNext, 
 
   const clientErrors = useMemo(() => ({
     ...zodErrors(businessSchema(type, structure, t).safeParse({ displayName, legalName, gstNumber, categories: categoryIds.length + suggestions.length })),
-    ...validateLegal(structure, legal, t),
+    ...(form ? validateLegal(form, legal, t, locale) : {}),
     ...validatePrincipals(structure, owners, t),
-  }), [type, structure, t, displayName, legalName, gstNumber, categoryIds, suggestions, legal, owners]);
+  }), [type, structure, t, locale, form, displayName, legalName, gstNumber, categoryIds, suggestions, legal, owners]);
   const errorsAll: Record<string, string> = { ...server, ...clientErrors };
   const visible: Record<string, string | undefined> = Object.fromEntries(Object.entries(errorsAll).map(([k, v]) => [k, tried || touched[k] || server[k] ? v : undefined]));
   const partOf = (k: string) => (isCategoryField(k) ? 'categories' : 'business');
@@ -75,9 +76,10 @@ export function BusinessStep({ onboarding, part = 'categories', onBack, onNext, 
   const count = tried ? attentionCount(partErrors(part, errorsAll)) : 0;
   const clearServer = (k: string) => setServer(s => { if (!(k in s)) return s; const n = { ...s }; delete n[k]; return n; });
 
-  const changeStructure = (s: Structure) => { setStructure(s); setLegal(legalDefaults(s)); setOwners(firstOwner(s)); setServer({}); };
+  const changeStructure = (s: Structure) => { setStructure(s); setLegal(legalDefaults(formOf(s))); setOwners(firstOwner(s)); setServer({}); };
 
   const next = () => {
+    if (!form) return;
     setTried(true);
     if (attentionCount(partErrors('business', clientErrors))) return;
     setTried(false);
@@ -87,10 +89,10 @@ export function BusinessStep({ onboarding, part = 'categories', onBack, onNext, 
     setTried(true);
     // reloaded on Categories before the business was ever saved: its own fields are still empty
     if (attentionCount(partErrors('business', clientErrors))) { onBack(); return; }
-    if (attentionCount(clientErrors)) return;
+    if (attentionCount(clientErrors) || !form) return;
     save.mutate({
       displayName: displayName.trim(), legalName: legalName.trim(), structure, gstNumber: gstNumber.trim() || undefined,
-      legalDetails: toLegalDetails(structure, legal), principals: toPrincipals(structure, owners), categoryIds, suggestedCategories: suggestions, profile,
+      legalDetails: toLegalDetails(form, legal), principals: toPrincipals(structure, owners), categoryIds, suggestedCategories: suggestions, profile,
     }, {
       onSuccess: onDone,
       onError: e => {
@@ -146,9 +148,9 @@ export function BusinessStep({ onboarding, part = 'categories', onBack, onNext, 
         <Field label={t('gst')} note={`· ${t(gstOptional(structure) ? 'gstNoteOptional' : 'gstNoteRequired')}`} error={visible.gstNumber}>
           <TextInput placeholder={t('gstPh')} value={gstNumber} onChange={e => { setGst(e.target.value); clearServer('gstNumber'); }} onBlur={() => touch('gstNumber')} />
         </Field>
-        <LegalBlock
+        {form ? <LegalBlock
           merchantId={onboarding.merchantId}
-          structure={structure}
+          form={form}
           values={legal}
           onChange={v => { setLegal(v); setServer(s => Object.fromEntries(Object.entries(s).filter(([k]) => !k.startsWith('legalDetails.')))); }}
           documents={documents}
@@ -157,7 +159,13 @@ export function BusinessStep({ onboarding, part = 'categories', onBack, onNext, 
           onOwners={rows => { setOwners(rows); setServer(s => Object.fromEntries(Object.entries(s).filter(([k]) => !k.startsWith('principals')))); }}
           errors={visible}
           onTouch={touch}
-        />
+        /> : (
+          <div className="nl-ob-legal" role={legalForms.isError ? 'alert' : 'status'}>
+            {legalForms.isError
+              ? <>{t('legalFormsError')} <button type="button" className="btn btn-ghost" onClick={() => void legalForms.refetch()}>{t('retry')}</button></>
+              : <span className="nl-small nl-muted">{t('legalFormsLoading')}</span>}
+          </div>
+        )}
         {PROFILE_FIELDS[type].map(f => {
           const value = profile[f.key];
           const set = (v: unknown) => setProfile(p => ({ ...p, [f.key]: v }));
@@ -182,7 +190,7 @@ export function BusinessStep({ onboarding, part = 'categories', onBack, onNext, 
       <div className="nl-ob-actions">
         <button type="button" className="btn btn-secondary" onClick={onBack}>{t('back')}</button>
         <span className="nl-ob-hint">{t('bizHint')}</span>
-        <button type="button" className="btn btn-primary" onClick={next}>{t('bizToCategories')}</button>
+        <button type="button" className="btn btn-primary" disabled={!form} onClick={next}>{t('bizToCategories')}</button>
       </div>
     </>
   );

@@ -173,11 +173,11 @@ Provider, seller or kitchen; one row per business.
 | type | enum | provider \| seller \| kitchen \| both |
 | display_name | text | not null · 2–80 chars |
 | legal_name | text | not null |
-| structure | enum | sole \| partnership \| corp_ab \| corp_fed \| corp_ex \| coop \| nonprofit |
+| structure | enum | sole \| partnership \| corp_prov \| corp_fed \| corp_ex \| coop \| nonprofit (`corp_ab` before V373, still accepted by the CHECK and read as corp_prov) |
 | legal_details | jsonb | per-structure fields · JSON-schema validated by structure |
 | business_number | text | CRA BN · 9 digits |
 | gst_number | text | check ^\d{9}RT\d{4}$ · required unless sole/partnership |
-| registry_ref | text | corporate access # / registration # |
+| registry_ref | text | provincial registry # / registration # |
 | registry_jurisdiction | text | AB \| CA \| BC \| … |
 | tier | enum | registered \| trusted \| master |
 | take_rate_bps | int | 1500 → 900 |

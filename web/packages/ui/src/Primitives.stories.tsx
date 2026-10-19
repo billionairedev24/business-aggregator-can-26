@@ -20,7 +20,7 @@ export const Fields: S = {
       <FormGrid>
         <Field label="Business name" error={err}><TextInput placeholder="e.g. Prairie Wrench" value={name} onChange={e => setName(e.target.value)} onBlur={() => setTouched(true)} /></Field>
         <Field label="GST/HST number" note="· optional for sole proprietors" hint="Format is 9 digits + RT0001."><TextInput placeholder="123456789 RT0001" /></Field>
-        <Field label="Business structure"><Select options={[{ value: 'sole', label: 'Sole proprietorship' }, { value: 'corp_ab', label: 'Corporation (Alberta)' }]} /></Field>
+        <Field label="Business structure"><Select options={[{ value: 'sole', label: 'Sole proprietorship' }, { value: 'corp_prov', label: 'Corporation (provincial)' }]} /></Field>
         <Field label="What's included" span><TextArea placeholder="Scope, what the customer gets, what's excluded." /></Field>
       </FormGrid>
     );

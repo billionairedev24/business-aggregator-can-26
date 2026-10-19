@@ -361,8 +361,19 @@ const application = (merchantId, over) => ({
   checklist: [chk('V1', 'kyc', 'kyc', 'identity', 'todo'), chk('V2', 'registry', 'registry', 'instant', 'todo'), chk('V3', 'insurance', 'insurance', 'upload', 'todo'), chk('V4', 'bank', 'bank', 'instant', 'todo'), chk('V5', 'mfa', 'mfa', 'instant', 'todo')],
   checksComplete: 0, submittedAt: null, approvedAt: null, ...over,
 });
+/**
+ * The Business step in four provinces (2026-10-19, province legal details): what the api serves for each
+ * (web/apps/studio/src/test/legal-forms.json, written and checked by the server's LegalFormsApiTest), each with the
+ * structure whose provincial identifiers show the difference.
+ */
+const LEGAL_FORMS = JSON.parse(readFileSync(new URL('../../../apps/studio/src/test/legal-forms.json', import.meta.url), 'utf8'));
+export const ONB_PROVINCES = { AB: '01J9ZD3V00000000000000NB02', ON: '01J9ZD3V00000000000000NB03', BC: '01J9ZD3V00000000000000NB04', QC: '01J9ZD3V00000000000000NB05' };
+const STRUCTURE_SHOWN = { AB: 'corp_prov', ON: 'corp_ex', BC: 'sole', QC: 'corp_prov' };
+const CITY = { AB: 'Calgary', ON: 'Toronto', BC: 'Vancouver', QC: 'Montréal' };
+const savedBusiness = structure => ({ displayName: 'Prairie Wrench', legalName: 'Prairie Wrench Mobile Mechanics Ltd.', structure, gstNumber: null, legalDetails: {}, principals: [], categories: [], profile: {}, documents: [] });
 const APPLICATIONS = {
   [ONB]: application(ONB, {}),
+  ...Object.fromEntries(Object.entries(ONB_PROVINCES).map(([province, id]) => [id, application(id, { province, city: CITY[province], business: savedBusiness(STRUCTURE_SHOWN[province]) })])),
   [GATE]: application(GATE, {
     status: 'pending', step: 'review', submittedAt: '2026-10-18T15:10:00Z', checksComplete: 5,
     checklist: [chk('V1', 'kyc', 'kyc', 'identity', 'verified'), chk('V2', 'registry', 'registry', 'instant', 'verified'), chk('V3', 'insurance', 'insurance', 'upload', 'submitted'), { ...chk('V4', 'bank', 'bank', 'instant', 'verified'), reference: 'TD ··3391' }, chk('V5', 'mfa', 'mfa', 'instant', 'verified')],
@@ -459,6 +470,7 @@ export const SHOTS = {
     (m, p) => (live(m, p, `/api/v1/merchants/${KITCHEN_ID}/menus/mn1`) ? { body: menu() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/quote-requests`) ? { body: quoteRequests() } : undefined),
     (m, p) => { const id = /^\/api\/v1\/merchants\/([^/]+)\/onboarding$/.exec(p)?.[1]; return m === 'GET' && APPLICATIONS[id] ? { body: APPLICATIONS[id] } : undefined; },
+    (m, p) => { const id = /^\/api\/v1\/merchants\/([^/]+)\/onboarding\/legal-forms$/.exec(p)?.[1]; const province = APPLICATIONS[id]?.province; return m === 'GET' && LEGAL_FORMS[province] ? { body: LEGAL_FORMS[province] } : undefined; },
     (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/dashboard$/.test(p) ? { body: p.includes('PWP1') ? SELLER_DASHBOARD : DASHBOARD } : undefined),
     // the live stream (EventSource) has nothing to say in a screenshot
     (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/live$/.test(p) ? { status: 204, body: null } : undefined),

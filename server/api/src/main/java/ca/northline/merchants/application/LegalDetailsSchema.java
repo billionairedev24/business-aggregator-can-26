@@ -1,6 +1,12 @@
 package ca.northline.merchants.application;
 
+import ca.northline.merchants.application.LegalForm.Field;
+import ca.northline.merchants.application.LegalForm.Kind;
 import ca.northline.merchants.domain.BusinessStructure;
+import ca.northline.merchants.domain.LegacyLegalDetails;
+import ca.northline.region.api.LegalForms;
+import ca.northline.region.api.LegalForms.Condition;
+import ca.northline.region.api.LegalForms.FieldRule;
 import ca.northline.shared.RuleViolation.Violation;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,27 +14,36 @@ import java.io.UncheckedIOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Validates {@code merchants.merchants.legal_details} against the branch of docs/spec/legal-details.schema.json that
- * matches the business structure — the spec file itself, packaged on the classpath as
- * {@code spec/legal-details.schema.json}, is the rule set. Supports the keywords that file uses ({@code $ref},
- * {@code type}, {@code properties}, {@code required}, {@code additionalProperties}, {@code if/then}, {@code const},
- * {@code enum}, {@code pattern}, {@code format: date}, {@code minLength}, {@code maxLength}).
+ * The legal details of the Business step: the branch of docs/spec/legal-details.schema.json that matches the business
+ * structure (packaged on the classpath as {@code spec/legal-details.schema.json}) with the overlays of the business's
+ * province from the region model ({@link LegalForms}, {@code region.legal_forms}) — merged into a {@link LegalForm},
+ * which the api serves to the Studio and validates {@code merchants.merchants.legal_details} against. Nothing here names
+ * a province: which provincial identifiers are required, their labels, formats and help are region data.
  *
  * <p>Messages are the per-field "required" family of validation-rules.md › Business step; one violation per field,
- * reported as {@code legalDetails.<property>}.
+ * reported as {@code legalDetails.<property>}. A format the province defines has the province's message.
  */
+@Slf4j
 @Component
 public class LegalDetailsSchema {
     public static final String RESOURCE = "spec/legal-details.schema.json";
@@ -43,152 +58,232 @@ public class LegalDetailsSchema {
     public static final String SIN = "Stripe collects the SIN — confirm to continue.";
     public static final String UNKNOWN = "Not a field for this structure.";
     public static final String INVALID = "Check this field.";
+    /** The federal identifiers' formats (the same in every province). */
     public static final Map<String, String> PATTERN_MESSAGES = Map.of(
             "business_number", "Business number is 9 digits (e.g. 123456789).",
-            "alberta_corporate_access_number", "Corporate access number is 10 digits.",
             "corporations_canada_number", "Corporation number is 7 digits.",
             "cra_charity_number", "Format is 9 digits + RR0001 (e.g. 123456789 RR0001).");
 
-    /** Number fields where spaces are typing aids ("123 456 789"); stripped and upper-cased before validation. */
-    private static final Set<String> COMPACT = PATTERN_MESSAGES.keySet();
+    /** Home-jurisdiction values read from rows written before every province was offered; accepted, not offered. */
+    static final Set<String> LEGACY_OPTIONS = Set.of("OTHER_CA");
 
-    private final JsonMapper json = JsonMapper.builder().build();
+    private static final String HOME_JURISDICTION = "home_jurisdiction";
+    private static final String TRADE_NAME_REGISTRATION = "trade_name_registration";
+
+    private final LegalForms regionForms;
     private final JsonNode root;
+    private final Map<BusinessStructure, List<Field>> base = new EnumMap<>(BusinessStructure.class);
+    private final Map<String, Optional<Pattern>> patterns = new ConcurrentHashMap<>();
 
-    public LegalDetailsSchema() {
+    public LegalDetailsSchema(LegalForms regionForms) {
+        this.regionForms = regionForms;
+        var json = JsonMapper.builder().build();
         try (InputStream in = Objects.requireNonNull(
                 getClass().getClassLoader().getResourceAsStream(RESOURCE), RESOURCE + " not on classpath")) {
             root = json.readTree(in);
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }
+        for (var structure : BusinessStructure.values()) {
+            base.put(structure, fields(root.path("$defs").path(structure.code())));
+        }
     }
 
-    /** Trims strings, drops blanks, compacts number fields and sets {@code structure}. */
-    public Map<String, Object> normalize(BusinessStructure structure, Map<String, Object> details) {
+    /** The structure's form in the province (the schema's generic form when the region model has no row). */
+    public LegalForm form(BusinessStructure structure, @Nullable String province) {
+        var row = regionForms.form(province, structure.code());
+        return merge(structure, province, row.orElse(null));
+    }
+
+    /** Every structure's form in the province, in the schema's order. */
+    public List<LegalForm> forms(@Nullable String province) {
+        var rows = new LinkedHashMap<String, LegalForms.LegalForm>();
+        regionForms.forms(province).forEach(r -> rows.put(r.structure(), r));
+        return Arrays.stream(BusinessStructure.values())
+                .map(s -> merge(s, province, rows.get(s.code())))
+                .toList();
+    }
+
+    /** Old keys renamed, strings trimmed, blanks dropped, compact fields compacted, {@code structure} set. */
+    public Map<String, Object> normalize(LegalForm form, Map<String, Object> details) {
+        var compact = new LinkedHashSet<String>();
+        form.fields().stream().filter(Field::compact).forEach(f -> compact.add(f.key()));
         var out = new LinkedHashMap<String, Object>();
-        details.forEach((key, value) -> {
-            var v = normalizeValue(key, value);
+        LegacyLegalDetails.upgrade(details).forEach((key, value) -> {
+            var v = normalizeValue(compact.contains(key), value);
             if (v != null) {
                 out.put(key, v);
             }
         });
-        out.put("structure", structure.code());
+        out.put("structure", form.structure().code());
         return out;
     }
 
-    /** Validates normalized details; empty when valid. */
-    public List<Violation> validate(BusinessStructure structure, Map<String, Object> details) {
-        var def = resolve(root.path("$defs").path(structure.code()));
+    /** Validates normalized details against the form; empty when valid. */
+    public List<Violation> validate(LegalForm form, Map<String, Object> details) {
         var out = new ArrayList<Violation>();
-        checkObject(def, json.valueToTree(details), FIELD, out);
+        for (var field : form.fields()) {
+            check(field, details, FIELD, out);
+        }
+        details.keySet().stream()
+                .filter(k -> !k.equals("structure") && form.field(k).isEmpty())
+                .forEach(k -> out.add(new Violation(FIELD + "." + k, "unknown", UNKNOWN)));
         return out;
     }
 
-    /** Property names of the structure's branch (for the documents check). */
+    /** Document fields of the structure (for the documents check). */
     public Set<String> documentFields(BusinessStructure structure) {
-        var def = resolve(root.path("$defs").path(structure.code()));
-        var out = new java.util.LinkedHashSet<String>();
-        def.path("properties").properties().forEach(e -> {
-            if (isDoc(e.getValue())) {
-                out.add(e.getKey());
-            }
-        });
+        var out = new LinkedHashSet<String>();
+        baseFields(structure).stream().filter(f -> f.kind() == Kind.DOCUMENT).forEach(f -> out.add(f.key()));
         return out;
     }
 
-    private void checkObject(JsonNode schema, JsonNode value, String path, List<Violation> out) {
-        if (!value.isObject()) {
-            out.add(new Violation(path, "type", INVALID));
-            return;
-        }
-        var props = schema.path("properties");
-        var required = new ArrayList<String>();
-        schema.path("required").forEach(r -> required.add(r.asString()));
-        var cond = schema.path("if");
-        if (!cond.isMissingNode()) {
-            var condMet = true;
-            for (var r : cond.path("required")) {
-                condMet &= value.has(r.asString());
-            }
-            if (condMet) {
-                schema.path("then").path("required").forEach(r -> required.add(r.asString()));
-            }
-        }
-        for (var name : required) {
-            if (!value.has(name)) {
-                var prop = resolve(props.path(name));
-                out.add(new Violation(
-                        path + "." + name,
-                        "required",
-                        isDoc(prop) ? DOC_REQUIRED : prop.has("const") ? SIN : REQUIRED));
-            }
-        }
-        value.properties().forEach(e -> {
-            var name = e.getKey();
-            var at = path + "." + name;
-            if (!props.has(name)) {
-                if (schema.path("additionalProperties").isBoolean()
-                        && !schema.path("additionalProperties").asBoolean()) {
-                    out.add(new Violation(at, "unknown", UNKNOWN));
-                }
-                return;
-            }
-            var prop = resolve(props.path(name));
-            if ("object".equals(prop.path("type").asString(""))) {
-                checkObject(prop, e.getValue(), at, out);
-            } else {
-                checkValue(name, prop, e.getValue(), at, out);
-            }
-        });
+    // ------------------------------------------------------------------------------------------------- the merge
+
+    private List<Field> baseFields(BusinessStructure structure) {
+        return Objects.requireNonNull(base.get(structure), structure::code);
     }
 
-    private void checkValue(String name, JsonNode schema, JsonNode value, String path, List<Violation> out) {
-        if (schema.has("const")) {
-            if (!schema.get("const").equals(value)) {
-                out.add(new Violation(path, "required", name.equals("structure") ? INVALID : SIN));
+    private LegalForm merge(
+            BusinessStructure structure, @Nullable String province, LegalForms.@Nullable LegalForm row) {
+        var tradeName = row == null || row.tradeNameRegistration();
+        var fields = baseFields(structure).stream()
+                .map(f -> overlay(f, row == null ? null : row.fields().get(f.key()), province, tradeName))
+                .toList();
+        return new LegalForm(
+                structure,
+                province,
+                row == null ? null : row.registry(),
+                row == null ? null : row.registryUrl(),
+                row == null ? null : row.law(),
+                tradeName,
+                row != null && row.verified(),
+                row == null ? List.of("registry", "law", "identifier") : row.unverified(),
+                fields);
+    }
+
+    private Field overlay(Field f, @Nullable FieldRule rule, @Nullable String province, boolean tradeName) {
+        var required = f.required();
+        var when = f.requiredWhen();
+        if (f.key().equals(TRADE_NAME_REGISTRATION) && !tradeName) {
+            required = false;
+            when = null;
+        }
+        var options = f.options();
+        if (f.key().equals(HOME_JURISDICTION)) {
+            var own = province == null ? "" : province.strip().toUpperCase(Locale.ROOT);
+            options = f.accepted().stream()
+                    .filter(o -> !o.equals(own) && !LEGACY_OPTIONS.contains(o))
+                    .toList();
+        }
+        if (rule == null) {
+            return withOptions(f, required, when, options);
+        }
+        if (rule.required() != null || rule.requiredWhen() != null) {
+            required = Boolean.TRUE.equals(rule.required());
+            when = rule.requiredWhen();
+        }
+        var pattern = rule.pattern() != null && compiled(rule.pattern()).isPresent() ? rule.pattern() : f.pattern();
+        return new Field(
+                f.key(),
+                f.kind(),
+                required,
+                when,
+                rule.label() != null ? rule.label() : f.label(),
+                rule.help() != null ? rule.help() : f.help(),
+                rule.example() != null ? rule.example() : f.example(),
+                pattern,
+                rule.pattern() != null && pattern != null && pattern.equals(rule.pattern())
+                        ? rule.patternMessage()
+                        : null,
+                f.minLength(),
+                f.maxLength(),
+                f.compact() || (f.kind() == Kind.TEXT && pattern != null),
+                options,
+                f.accepted(),
+                f.parts());
+    }
+
+    private static Field withOptions(Field f, boolean required, @Nullable Condition when, List<String> options) {
+        return new Field(
+                f.key(),
+                f.kind(),
+                required,
+                when,
+                f.label(),
+                f.help(),
+                f.example(),
+                f.pattern(),
+                f.patternMessage(),
+                f.minLength(),
+                f.maxLength(),
+                f.compact(),
+                options,
+                f.accepted(),
+                f.parts());
+    }
+
+    // ------------------------------------------------------------------------------------------------- the schema
+
+    private List<Field> fields(JsonNode def) {
+        var required = strings(def.path("required"));
+        var conditions = new LinkedHashMap<String, Condition>();
+        var cond = strings(def.path("if").path("required"));
+        if (cond.size() == 1) {
+            for (var key : strings(def.path("then").path("required"))) {
+                conditions.put(key, new Condition(cond.getFirst(), List.of(), List.of()));
             }
-            return;
         }
-        if (schema.has("enum")) {
-            var ok = false;
-            for (var option : schema.get("enum")) {
-                ok |= option.equals(value);
+        var out = new ArrayList<Field>();
+        def.path("properties").properties().forEach(e -> {
+            if (!e.getKey().equals("structure")) {
+                out.add(field(e.getKey(), e.getValue(), required.contains(e.getKey()), conditions.get(e.getKey())));
             }
-            if (!ok) {
-                out.add(new Violation(path, "enum", OPTION));
-            }
-            return;
+        });
+        return List.copyOf(out);
+    }
+
+    private Field field(String key, JsonNode schema, boolean required, @Nullable Condition when) {
+        var doc = "#/$defs/doc".equals(schema.path("$ref").asString(""));
+        var address = "#/$defs/address".equals(schema.path("$ref").asString(""));
+        var s = resolve(schema);
+        Kind kind;
+        if (doc) {
+            kind = Kind.DOCUMENT;
+        } else if (address) {
+            kind = Kind.ADDRESS;
+        } else if (s.has("const")) {
+            kind = Kind.STRIPE_CONFIRMATION;
+        } else if (s.has("enum")) {
+            kind = Kind.CHOICE;
+        } else if ("boolean".equals(s.path("type").asString(""))) {
+            kind = Kind.YES_NO;
+        } else if ("object".equals(s.path("type").asString(""))) {
+            kind = Kind.GROUP;
+        } else if ("date".equals(s.path("format").asString(""))) {
+            kind = Kind.DATE;
+        } else {
+            kind = Kind.TEXT;
         }
-        var type = schema.path("type").asString("");
-        if (type.equals("boolean")) {
-            if (!value.isBoolean()) {
-                out.add(new Violation(path, "type", OPTION));
-            }
-            return;
-        }
-        if (!value.isString()) {
-            out.add(new Violation(path, "type", INVALID));
-            return;
-        }
-        var text = value.asString();
-        if (schema.has("minLength") && text.length() < schema.get("minLength").asInt()) {
-            out.add(new Violation(path, "length", schema.get("minLength").asInt() >= 5 ? ADDRESS : MIN_2));
-        } else if (schema.has("maxLength")
-                && text.length() > schema.get("maxLength").asInt()) {
-            out.add(new Violation(
-                    path,
-                    "length",
-                    "At most %d characters.".formatted(schema.get("maxLength").asInt())));
-        } else if (schema.has("pattern")
-                && !Pattern.compile(schema.get("pattern").asString())
-                        .matcher(text)
-                        .find()) {
-            out.add(new Violation(
-                    path, "format", isDoc(schema) ? DOC_REQUIRED : PATTERN_MESSAGES.getOrDefault(name, INVALID)));
-        } else if ("date".equals(schema.path("format").asString("")) && !isDate(text)) {
-            out.add(new Violation(path, "format", DATE));
-        }
+        var pattern = s.path("pattern").isString() ? s.path("pattern").asString() : null;
+        var options = strings(s.path("enum"));
+        var parts = kind == Kind.GROUP ? fields(s) : List.<Field>of();
+        return new Field(
+                key,
+                kind,
+                required,
+                when,
+                null,
+                null,
+                null,
+                pattern,
+                null,
+                s.has("minLength") ? s.get("minLength").asInt() : null,
+                s.has("maxLength") ? s.get("maxLength").asInt() : null,
+                kind == Kind.TEXT && pattern != null,
+                options,
+                options,
+                parts);
     }
 
     private JsonNode resolve(JsonNode schema) {
@@ -199,9 +294,94 @@ public class LegalDetailsSchema {
                 : schema;
     }
 
-    private boolean isDoc(JsonNode prop) {
-        return prop.equals(root.path("$defs").path("doc"))
-                || "#/$defs/doc".equals(prop.path("$ref").asString(""));
+    private static List<String> strings(JsonNode array) {
+        var out = new ArrayList<String>();
+        array.forEach(n -> out.add(n.asString()));
+        return out;
+    }
+
+    // ------------------------------------------------------------------------------------------------- validation
+
+    private void check(Field field, Map<String, ?> values, String at, List<Violation> out) {
+        var path = at + "." + field.key();
+        var value = values.get(field.key());
+        if (value == null) {
+            var when = field.requiredWhen();
+            if (field.required() || (when != null && when.holds(values.get(when.field())))) {
+                out.add(new Violation(
+                        path,
+                        "required",
+                        switch (field.kind()) {
+                            case DOCUMENT -> DOC_REQUIRED;
+                            case STRIPE_CONFIRMATION -> SIN;
+                            default -> REQUIRED;
+                        }));
+            }
+            return;
+        }
+        switch (field.kind()) {
+            case STRIPE_CONFIRMATION -> {
+                if (!Boolean.TRUE.equals(value)) {
+                    out.add(new Violation(path, "required", SIN));
+                }
+            }
+            case CHOICE -> {
+                if (!(value instanceof String s) || !field.accepted().contains(s)) {
+                    out.add(new Violation(path, "enum", OPTION));
+                }
+            }
+            case YES_NO -> {
+                if (!(value instanceof Boolean)) {
+                    out.add(new Violation(path, "type", OPTION));
+                }
+            }
+            case GROUP -> {
+                if (value instanceof Map<?, ?> m) {
+                    var parts = new LinkedHashMap<String, Object>();
+                    m.forEach((k, v) -> parts.put(String.valueOf(k), v));
+                    field.parts().forEach(p -> check(p, parts, path, out));
+                } else {
+                    out.add(new Violation(path, "type", INVALID));
+                }
+            }
+            default -> checkText(field, value, path, out);
+        }
+    }
+
+    private void checkText(Field field, Object value, String path, List<Violation> out) {
+        if (!(value instanceof String text)) {
+            out.add(new Violation(path, "type", INVALID));
+            return;
+        }
+        var pattern = field.pattern() == null ? Optional.<Pattern>empty() : compiled(field.pattern());
+        if (field.minLength() != null && text.length() < field.minLength()) {
+            out.add(new Violation(path, "length", field.minLength() >= 5 ? ADDRESS : MIN_2));
+        } else if (field.maxLength() != null && text.length() > field.maxLength()) {
+            out.add(new Violation(path, "length", "At most %d characters.".formatted(field.maxLength())));
+        } else if (pattern.isPresent() && !pattern.get().matcher(text).find()) {
+            out.add(new Violation(path, "format", formatMessage(field)));
+        } else if (field.kind() == Kind.DATE && !isDate(text)) {
+            out.add(new Violation(path, "format", DATE));
+        }
+    }
+
+    private static String formatMessage(Field field) {
+        if (field.kind() == Kind.DOCUMENT) {
+            return DOC_REQUIRED;
+        }
+        var province = field.patternMessage();
+        return province != null ? province.en() : PATTERN_MESSAGES.getOrDefault(field.key(), INVALID);
+    }
+
+    private Optional<Pattern> compiled(String regex) {
+        return patterns.computeIfAbsent(regex, r -> {
+            try {
+                return Optional.of(Pattern.compile(r));
+            } catch (PatternSyntaxException e) {
+                log.warn("region.legal_forms pattern {} does not compile; ignored: {}", r, e.getMessage());
+                return Optional.empty();
+            }
+        });
     }
 
     private static boolean isDate(String text) {
@@ -213,11 +393,10 @@ public class LegalDetailsSchema {
         }
     }
 
-    private static @org.jspecify.annotations.Nullable Object normalizeValue(
-            String key, @org.jspecify.annotations.Nullable Object value) {
+    private static @Nullable Object normalizeValue(boolean compact, @Nullable Object value) {
         if (value instanceof String s) {
             var t = s.strip();
-            if (COMPACT.contains(key)) {
+            if (compact) {
                 t = t.replaceAll("\\s", "").toUpperCase(Locale.ROOT);
             }
             return t.isEmpty() ? null : t;
@@ -225,7 +404,7 @@ public class LegalDetailsSchema {
         if (value instanceof Map<?, ?> m) {
             var out = new LinkedHashMap<String, Object>();
             m.forEach((k, v) -> {
-                var n = normalizeValue(String.valueOf(k), v);
+                var n = normalizeValue(false, v);
                 if (n != null) {
                     out.put(String.valueOf(k), n);
                 }
