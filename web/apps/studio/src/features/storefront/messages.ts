@@ -61,7 +61,7 @@ export const useStorefrontT = defineMessages({
     saving: 'Saving…', saved: 'Saved', saveError: "We couldn't save that change.",
     loadError: "We couldn't load your page.", empty: "You don't have a page yet.", create: 'Create my page',
     // preview content
-    noReviews: 'no reviews yet', verified: 'verified', insured: 'insured', permitValid: 'permit valid', cutoff: 'same-day cut-off',
+    noReviews: 'no reviews yet', verified: 'verified', insured: 'insured', permitValid: 'permit valid', permitKind: 'Food', cutoff: 'same-day cut-off',
     newOnNorthline: 'New on {brand}', verifiedTag: 'Verified', onTime: 'On-time record',
     aboutEmpty: 'Your description from the Business step shows here.',
     servicesEmpty: 'Your approved services show here with price and duration.',
@@ -75,7 +75,7 @@ export const useStorefrontT = defineMessages({
     deliveryText: 'Same-day before {cutoff}', deliveryEmpty: 'Same-day pooled delivery · pickup',
     hoursToday: 'Today', hoursPrep: 'Prep time now', fromKitchen: 'from Kitchen settings',
     fulfilEmpty: 'Hot courier · pickup · catering quotes',
-    permitRow: 'AHS permit', visitRow: 'Kitchen visit', valid: 'Valid', passed: 'Passed', pending: 'Pending',
+    permitRow: 'Food permit', visitRow: 'Kitchen visit', valid: 'Valid', passed: 'Passed', pending: 'Pending',
     quote: 'Quote',
     cta_book_visit: 'Book a visit', cta_request_quote: 'Request a quote', cta_order_now: 'Order now', cta_reserve: 'Reserve',
     // section library (storefront-sections.json)
@@ -94,7 +94,7 @@ export const useStorefrontT = defineMessages({
     s_menu_name: 'Menu', s_menu_desc: 'Sections, items, modifiers, allergens.', s_menu_shows: 'Full menu grouped by section, with photos, prices, modifier groups and allergen declarations.', s_menu_on: 'Customers order directly. Required for online ordering.', s_menu_off: "Not recommended — the Order button opens an empty basket. Use 'pause ordering' in Live orders instead.", s_menu_source: 'food.menus / menu_sections / menu_items.',
     s_hours_name: 'Hours & prep time', s_hours_desc: "When you're open and current wait.", s_hours_shows: 'Ordering hours, holiday hours, live prep time, accepting-orders flag.', s_hours_on: "Customers see 'closed · opens 11:00' instead of ordering into a closed kitchen.", s_hours_off: 'Hours only appear in the ordering flow. Prep time still shows at checkout.', s_hours_source: 'food.kitchen_settings; live prep time from KDS.',
     s_fulfil_name: 'Delivery, pickup & catering', s_fulfil_desc: 'How customers can get your food.', s_fulfil_shows: 'Hot courier zones, pickup, scheduled orders, catering quotes.', s_fulfil_on: 'Customers pick a fulfilment before they build a basket.', s_fulfil_off: 'Fulfilment options only appear at checkout.', s_fulfil_source: 'food.kitchen_settings.fulfilment.',
-    s_permit_name: 'Permit & inspection', s_permit_desc: 'Your AHS permit and last inspection, public.', s_permit_shows: 'AHS permit number and status, date of last {brand} kitchen visit.', s_permit_on: 'Transparency customers value — already public record.', s_permit_off: 'Hidden from your page. Permit status still appears as a header badge and in search.', s_permit_source: 'merchants.verifications (ahs_permit, site_visit).',
+    s_permit_name: 'Permit & inspection', s_permit_desc: 'Your food permit and last inspection, public.', s_permit_shows: 'Food permit number and status, date of last {brand} kitchen visit.', s_permit_on: 'Transparency customers value — already public record.', s_permit_off: 'Hidden from your page. Permit status still appears as a header badge and in search.', s_permit_source: 'merchants.verifications (ahs_permit, site_visit).',
   },
   fr: {
     title_provider: "Votre page d'entreprise.", title_seller: 'Votre boutique.', title_kitchen: 'Votre page menu.', title_both: "Votre page d'entreprise.",
@@ -148,7 +148,7 @@ export const useStorefrontT = defineMessages({
     ppLook: 'L’apparence de votre page', ppAbout: 'À propos', ppAboutNote: 'Tiré de votre profil d’entreprise (Paramètres › Entreprise).', ppParts: 'Ce que voient les clients', ppPartsNote: 'Désactivez une partie pour la masquer; son contenu est conservé.', ppShow: 'Afficher {name}', ppPublish: 'Annonce, récompense et publication', ppOpenLive: 'Ouvrir votre page en ligne',
     saving: 'Enregistrement…', saved: 'Enregistré', saveError: "Impossible d'enregistrer ce changement.",
     loadError: 'Impossible de charger votre page.', empty: "Vous n'avez pas encore de page.", create: 'Créer ma page',
-    noReviews: "pas encore d'avis", verified: 'vérifié', insured: 'assuré', permitValid: 'permis valide', cutoff: 'heure limite jour même',
+    noReviews: "pas encore d'avis", verified: 'vérifié', insured: 'assuré', permitValid: 'permis valide', permitKind: 'Aliments', cutoff: 'heure limite jour même',
     newOnNorthline: 'Nouveau sur {brand}', verifiedTag: 'Vérifié', onTime: 'Ponctualité',
     aboutEmpty: "La description de l'étape Entreprise s'affiche ici.",
     servicesEmpty: "Vos services approuvés s'affichent ici avec le prix et la durée.",
@@ -162,7 +162,7 @@ export const useStorefrontT = defineMessages({
     deliveryText: 'Le jour même avant {cutoff}', deliveryEmpty: 'Livraison groupée le jour même · cueillette',
     hoursToday: "Aujourd'hui", hoursPrep: 'Temps de préparation actuel', fromKitchen: 'selon les paramètres de cuisine',
     fulfilEmpty: 'Livreur chaud · cueillette · devis traiteur',
-    permitRow: 'Permis AHS', visitRow: 'Visite de la cuisine', valid: 'Valide', passed: 'Réussie', pending: 'En attente',
+    permitRow: 'Permis alimentaire', visitRow: 'Visite de la cuisine', valid: 'Valide', passed: 'Réussie', pending: 'En attente',
     quote: 'Devis',
     cta_book_visit: 'Réserver une visite', cta_request_quote: 'Demander un devis', cta_order_now: 'Commander', cta_reserve: 'Réserver',
     s_hero_name: 'En-tête et badges vérifiés', s_hero_desc: 'Logo, nom, slogan, niveau et badges de confiance vérifiés par {brand}.', s_hero_shows: "Votre logo sur votre couleur de marque, le nom de l'entreprise, le slogan, le badge de niveau et jusqu'à trois faits vérifiés (permis, assurance, note).", s_hero_on: 'Les clients voient qui vous êtes et ce que {brand} a vérifié avant de défiler.', s_hero_off: 'Impossible à désactiver — chaque page {brand} commence par un en-tête vérifié.', s_hero_source: "Étape Entreprise + résultats de vérification. Les badges se mettent à jour automatiquement quand un document est revérifié.",
@@ -180,7 +180,7 @@ export const useStorefrontT = defineMessages({
     s_menu_name: 'Menu', s_menu_desc: 'Sections, plats, options, allergènes.', s_menu_shows: 'Le menu complet regroupé par section, avec photos, prix, groupes d’options et déclarations d’allergènes.', s_menu_on: 'Les clients commandent directement. Requis pour la commande en ligne.', s_menu_off: "Déconseillé — le bouton Commander ouvre un panier vide. Utilisez plutôt « suspendre les commandes » dans Commandes en direct.", s_menu_source: 'food.menus / menu_sections / menu_items.',
     s_hours_name: 'Heures et temps de préparation', s_hours_desc: "Vos heures d'ouverture et l'attente actuelle.", s_hours_shows: 'Heures de commande, heures des fériés, temps de préparation en direct, indicateur de prise de commandes.', s_hours_on: "Les clients voient « fermé · ouvre à 11 h » au lieu de commander dans une cuisine fermée.", s_hours_off: "Les heures n'apparaissent que dans le parcours de commande. Le temps de préparation s'affiche toujours au paiement.", s_hours_source: 'food.kitchen_settings; temps de préparation en direct depuis l’écran cuisine.',
     s_fulfil_name: 'Livraison, cueillette et traiteur', s_fulfil_desc: 'Comment les clients obtiennent vos plats.', s_fulfil_shows: 'Zones de livreur chaud, cueillette, commandes planifiées, devis traiteur.', s_fulfil_on: "Les clients choisissent le mode de réception avant de composer leur panier.", s_fulfil_off: "Les modes de réception n'apparaissent qu'au paiement.", s_fulfil_source: 'food.kitchen_settings.fulfilment.',
-    s_permit_name: 'Permis et inspection', s_permit_desc: 'Votre permis AHS et votre dernière inspection, publics.', s_permit_shows: 'Numéro et statut du permis AHS, date de la dernière visite de cuisine {brand}.', s_permit_on: 'Une transparence appréciée des clients — déjà du domaine public.', s_permit_off: "Masquée de votre page. Le statut du permis apparaît toujours comme badge dans l'en-tête et dans la recherche.", s_permit_source: 'merchants.verifications (ahs_permit, site_visit).',
+    s_permit_name: 'Permis et inspection', s_permit_desc: 'Votre permis alimentaire et votre dernière inspection, publics.', s_permit_shows: 'Numéro et statut du permis alimentaire, date de la dernière visite de cuisine {brand}.', s_permit_on: 'Une transparence appréciée des clients — déjà du domaine public.', s_permit_off: "Masquée de votre page. Le statut du permis apparaît toujours comme badge dans l'en-tête et dans la recherche.", s_permit_source: 'merchants.verifications (ahs_permit, site_visit).',
   },
 });
 export type StorefrontT = ReturnType<typeof useStorefrontT>;

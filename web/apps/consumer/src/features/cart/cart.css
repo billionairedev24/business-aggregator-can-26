@@ -34,7 +34,7 @@ a.cart-line-name:focus-visible { outline: 2px solid var(--color-focus); outline-
 .cart-subtotal .nl-price { vertical-align: top; }
 .cart-subtotal-aside { text-align: left; border-top: 0; padding: 0; }
 
-.cart-summary { position: sticky; top: calc(var(--space-4) + 104px); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.cart-summary { position: sticky; top: calc(var(--nl-header-h, var(--size-header)) + var(--space-4)); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .cart-summary .btn-block { margin-top: var(--space-2); }
 .cart-note { font-size: var(--text-xs); color: var(--color-text-muted); margin: 0; line-height: var(--leading-normal); }
 .cart-note-warn { color: var(--color-danger); font-weight: var(--weight-semibold); }

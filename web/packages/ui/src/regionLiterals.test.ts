@@ -13,9 +13,24 @@ const WEB = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..
 
 const PLACE = /Alberta|Calgary|Edmonton|Airdrie|Beltline|British Columbia|Ontario|Qu[eé]bec|Manitoba|Saskatchewan|Nova Scotia|New Brunswick|Newfoundland|Prince Edward Island|Yukon|Nunavut|Northwest Territories|America\/(?:Edmonton|Vancouver|Toronto|Winnipeg|Regina|Halifax|St_Johns|Moncton|Whitehorse|Iqaluit|Yellowknife)/;
 const CODE = /^(?:AB|BC|MB|NB|NS|NT|NU|ON|PE|QC|SK|YT)$/;
+/*
+ * Demo rehearsal 2026-10-19: one province's bodies, zone abbreviations and area code in copy ("AHS vetting", "7 am – 11
+ * pm MT", "AGLC licence", "+1 (403)") and the cloud's region name ("ca-central-1"). Regulators come from the region
+ * model or the taxonomy data; copy says what they are ("food permit", "liquor licence").
+ */
+const REGIONAL = /\b(?:AHS|AGLC|AMVIC|RECA|ProServe|MT|MDT|MST)\b|\(403\)|\b(?:ca-central-1)\b/;
 
 /** file (relative to web/) → literal fragments allowed there, each with its reason. */
 const ALLOWED: Record<string, { fragment: RegExp; reason: string }[]> = {
+  'apps/studio/src/features/compliance/docs.ts': [
+    { fragment: /^(?:AMVIC|AGLC)$/, reason: 'a registry code the server sends (merchants.registry_checks.source, taxonomy data), compared to pick a note — not copy' },
+  ],
+  'apps/studio/src/features/onboarding/checks.ts': [
+    { fragment: /^AMVIC$/, reason: 'a registry code the server sends (taxonomy data), compared to pick a description — not copy' },
+  ],
+  'apps/studio/src/features/onboarding/CategoryPicker.tsx': [
+    { fragment: /AMVIC|AGLC|AHS|ProServe/, reason: 'French for the taxonomy seed\u2019s English group notes (db/seed/categories.json, served as data): keys must match the data until the seed is region-neutral' },
+  ],
   'apps/studio/src/features/compliance/messages.ts': [
     { fragment: /French required when serving Québec|français requis pour servir le Québec/, reason: 'a fact about one named province’s language law, not the business’s place' },
   ],
@@ -53,7 +68,7 @@ export function regionLiterals(): string[] {
     const code = stripComments(readFileSync(file, 'utf8'));
     for (const match of code.matchAll(LITERAL)) {
       const text = match[0].slice(1, -1);
-      const hit = PLACE.exec(text)?.[0] ?? (CODE.test(text) ? text : undefined);
+      const hit = PLACE.exec(text)?.[0] ?? REGIONAL.exec(text)?.[0] ?? (CODE.test(text) ? text : undefined);
       if (!hit) continue;
       if ((ALLOWED[rel] ?? []).some(a => a.fragment.test(text) || a.fragment.test(hit))) continue;
       const line = code.slice(0, match.index).split('\n').length;
@@ -72,5 +87,9 @@ describe('region-neutral web code (S-134)', () => {
     expect(stripComments("// in Calgary\nconst a = 'x'; /* Alberta */ const u = 'https://x.test';")).not.toMatch(PLACE);
     expect(PLACE.test('Join Northline · Alberta')).toBe(true);
     expect(CODE.test('AB')).toBe(true);
+    expect(REGIONAL.test('Bilingual support 7 am – 11 pm MT')).toBe(true);
+    expect(REGIONAL.test('Full AHS vetting.')).toBe(true);
+    expect(REGIONAL.test('+1 (403) …')).toBe(true);
+    expect(REGIONAL.test('Mountain bike · MTB')).toBe(false);
   });
 });

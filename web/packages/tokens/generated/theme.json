@@ -236,6 +236,7 @@
     "control-lg": 48,
     "touch": 44,
     "header-mark": 32,
+    "header": 104,
     "sidebar": 264,
     "rail": 72,
     "sheet": 680

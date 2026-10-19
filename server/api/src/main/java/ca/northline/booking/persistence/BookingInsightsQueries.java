@@ -51,6 +51,23 @@ class BookingInsightsQueries implements BookingCalendar, BookingInsights, Servic
     }
 
     @Override
+    public List<Commitment> elsewhere(String memberUserId, String merchantId, Instant from, Instant to) {
+        return jdbc.sql("""
+                        select starts_at, coalesce(ends_at, starts_at) as ends_at from booking.bookings
+                         where member_user_id = :member and merchant_id <> :merchantId and state <> 'cancelled'
+                           and starts_at < :to and coalesce(ends_at, starts_at) > :from
+                         order by starts_at
+                        """)
+                .param("member", memberUserId)
+                .param("merchantId", merchantId)
+                .param("from", JdbcTimes.ts(from))
+                .param("to", JdbcTimes.ts(to))
+                .query((rs, _) -> new Commitment(
+                        JdbcTimes.requiredInstant(rs, "starts_at"), JdbcTimes.requiredInstant(rs, "ends_at")))
+                .list();
+    }
+
+    @Override
     public List<QuoteHold> quoteHolds(String merchantId, Instant from, Instant to) {
         return jdbc.sql("""
                         select q.id, q.request_id, q.ref, r.customer_id, q.proposed_at, coalesce(q.duration_min, 60) as duration

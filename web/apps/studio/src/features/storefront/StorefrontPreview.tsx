@@ -20,7 +20,7 @@ export function heroStats(s: Storefront, t: StorefrontT): { v: string; k: string
   const out = [{ v: '—', k: t('noReviews') }];
   for (const f of s.business.verifiedFacts) {
     if (f.startsWith('licence:')) out.push({ v: f.slice('licence:'.length), k: t('verified') });
-    else if (f === 'ahs_permit') out.push({ v: 'AHS', k: t('permitValid') });
+    else if (f === 'ahs_permit') out.push({ v: t('permitKind'), k: t('permitValid') });
     else if (f === 'insurance') out.push({ v: '$2M', k: t('insured') });
   }
   if (s.business.type === 'seller' && s.business.sameDayCutoff) out.push({ v: s.business.sameDayCutoff, k: t('cutoff') });

@@ -1,4 +1,6 @@
-import { type Locale, timeZone } from '@northline/ui';
+import { addDays, isoWeekday, type Locale, timeZone, weekStartOf } from '@northline/ui';
+
+export { addDays, isoWeekday, weekStartOf };
 
 /** Calendar date (YYYY-MM-DD) of an instant in the merchant's time zone. */
 export function localDate(value: string | number | Date): string {
@@ -11,18 +13,6 @@ export function localDate(value: string | number | Date): string {
 /** Today in the merchant's time zone (YYYY-MM-DD). */
 export const today = (now: Date = new Date()) => localDate(now);
 
-/** Adds days to a YYYY-MM-DD date. */
-export function addDays(date: string, days: number): string {
-  const d = new Date(`${date}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-/** ISO weekday of a YYYY-MM-DD date: 1 = Monday … 7 = Sunday. */
-export const isoWeekday = (date: string) => { const w = new Date(`${date}T12:00:00Z`).getUTCDay(); return w === 0 ? 7 : w; };
-
-/** Monday of the week containing `date`. */
-export const mondayOf = (date: string) => addDays(date, 1 - isoWeekday(date));
 
 /** Offset (minutes) of the merchant's time zone at a given UTC instant. */
 function offsetMinutes(at: Date): number {

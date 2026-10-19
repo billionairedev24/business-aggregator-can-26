@@ -1,3 +1,4 @@
+import { addDays, isoWeekday, timeZone, zonedInstant } from '@northline/ui';
 import type { MerchantType } from '../shell/api';
 
 /**
@@ -39,18 +40,17 @@ export function validateOnboardingSearch(search: Record<string, unknown>): Onboa
 /** Studio home after "Open your Studio" (kitchens land on Live orders). */
 export const studioHome = (merchantId: string, type: MerchantType) => (type === 'kitchen' ? `/b/${merchantId}/kitchen/live` : `/b/${merchantId}`);
 
-/** Next business days at 10:00 and 14:00 in the business's time zone, starting tomorrow, for the kitchen-visit booking. */
-export function visitSlots(now: Date, count = 6): Date[] {
+/**
+ * Next business days at 10:00 and 14:00 in the business's time zone (the merchant's, set for the Studio from the
+ * region model — never a zone in code), starting tomorrow, for the kitchen-visit booking. The server re-checks.
+ */
+export function visitSlots(now: Date, count = 6, zone: string = timeZone()): Date[] {
   const out: Date[] = [];
-  const day = new Date(now);
+  let day = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
   while (out.length < count) {
-    day.setUTCDate(day.getUTCDate() + 1);
-    const dow = day.getUTCDay();
-    if (dow === 0 || dow === 6) continue;
-    for (const hour of [16, 20]) { // 10:00 and 14:00 MDT (UTC−6); good enough for a slot list, the server re-checks
-      const slot = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), hour));
-      if (out.length < count) out.push(slot);
-    }
+    day = addDays(day, 1);
+    if (isoWeekday(day) >= 6) continue;
+    for (const time of ['10:00', '14:00']) if (out.length < count) out.push(new Date(zonedInstant(day, time, zone)));
   }
   return out;
 }

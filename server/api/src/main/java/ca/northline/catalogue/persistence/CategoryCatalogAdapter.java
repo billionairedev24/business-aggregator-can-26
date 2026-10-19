@@ -5,6 +5,7 @@ import ca.northline.catalogue.domain.CategoryProfile;
 import ca.northline.catalogue.domain.CategoryProfile.AttributeSpec;
 import ca.northline.catalogue.domain.VariantTheme;
 import ca.northline.region.api.AgeClass;
+import ca.northline.region.api.Regions;
 import ca.northline.shared.CodedEnum;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -21,7 +22,9 @@ import org.springframework.stereotype.Repository;
 
 /**
  * Categories joined with their attribute template ({@code catalogue.attribute_templates}) and the median price of
- * approved listings in the category (needs at least three to count). Banned leaves come from configuration.
+ * approved listings in the category (needs at least three to count). Banned leaves come from configuration. A
+ * template's option {@value #PROVINCES} stands for every province and territory of the region model, by English name
+ * (stored values are English): templates never name a place.
  */
 @Repository
 @EnableConfigurationProperties(CategoryCatalogAdapter.Properties.class)
@@ -35,6 +38,9 @@ class CategoryCatalogAdapter implements CategoryCatalog {
     record Properties(
             @DefaultValue({"shop.restricted.cannabis-accessories", "shop.restricted.tobacco-and-vape"})
             List<String> bannedCategories) {}
+
+    /** The option that expands to the region model's provinces and territories (V371). */
+    static final String PROVINCES = "@provinces";
 
     private static final List<VariantTheme> DEFAULT_THEMES =
             List.of(VariantTheme.SIZE, VariantTheme.COLOUR, VariantTheme.SIZE_COLOUR);
@@ -61,10 +67,12 @@ class CategoryCatalogAdapter implements CategoryCatalog {
 
     private final JdbcClient jdbc;
     private final Set<String> banned;
+    private final Regions regions;
 
-    CategoryCatalogAdapter(JdbcClient jdbc, Properties properties) {
+    CategoryCatalogAdapter(JdbcClient jdbc, Properties properties, Regions regions) {
         this.jdbc = jdbc;
         this.banned = Set.copyOf(properties.bannedCategories());
+        this.regions = regions;
     }
 
     @Override
@@ -104,9 +112,31 @@ class CategoryCatalogAdapter implements CategoryCatalog {
                 rs.getString("regulated_registry"),
                 banned.contains(id),
                 id.startsWith("shop.food-and-grocery."),
-                Sql.list(rs.getString("attributes"), AttributeSpec.class),
+                Sql.list(rs.getString("attributes"), AttributeSpec.class).stream()
+                        .map(this::withPlaces)
+                        .toList(),
                 themes.isEmpty() ? DEFAULT_THEMES : themes,
                 Sql.longOrNull(rs, "median"),
                 AgeClass.of(rs.getString("age_class")).orElse(null));
+    }
+
+    private AttributeSpec withPlaces(AttributeSpec spec) {
+        if (!spec.options().contains(PROVINCES)) {
+            return spec;
+        }
+        var options = spec.options().stream()
+                .<String>mapMulti((option, out) -> {
+                    if (PROVINCES.equals(option)) {
+                        regions.provinces().stream()
+                                .map(p -> p.name(Locale.ENGLISH))
+                                .sorted()
+                                .forEach(out);
+                    } else {
+                        out.accept(option);
+                    }
+                })
+                .distinct()
+                .toList();
+        return new AttributeSpec(spec.key(), spec.label(), options, spec.required());
     }
 }

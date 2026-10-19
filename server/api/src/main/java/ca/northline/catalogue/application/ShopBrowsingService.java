@@ -10,9 +10,14 @@ import ca.northline.catalogue.application.ShopViews.DepartmentTile;
 import ca.northline.catalogue.application.ShopViews.ProductCard;
 import ca.northline.catalogue.application.ShopViews.Run;
 import ca.northline.catalogue.application.ShopViews.ShopCard;
+import ca.northline.catalogue.domain.CategoryProfile;
 import ca.northline.merchants.api.ShopDirectory;
 import ca.northline.merchants.api.ShopDirectory.Shop;
 import ca.northline.orders.api.DeliveryRuns;
+import ca.northline.region.api.AgeClass;
+import ca.northline.region.api.AgeRules;
+import ca.northline.region.api.MarketProfile;
+import ca.northline.region.api.Regions;
 import ca.northline.trust.api.RatingQuery;
 import java.time.Clock;
 import java.time.Instant;
@@ -57,6 +62,8 @@ class ShopBrowsingService implements BrowseShop {
     private final MediaRepository media;
     private final DeliveryRuns deliveryRuns;
     private final RatingQuery ratings;
+    private final Regions regions;
+    private final AgeRules ageRules;
     private final Clock clock;
 
     @Override
@@ -184,6 +191,10 @@ class ShopBrowsingService implements BrowseShop {
                             .sorted(BEST_FIRST)
                             .toList();
                     var direct = ctx.served() ? deliveryRuns.direct() : null;
+                    var ageClass = categories
+                            .profile(record.categoryId())
+                            .map(CategoryProfile::ageClass)
+                            .orElse(null);
                     return new ShopViews.ProductPage(
                             record.productId(),
                             record.name(),
@@ -198,7 +209,8 @@ class ShopBrowsingService implements BrowseShop {
                             offers,
                             direct == null
                                     ? null
-                                    : new ShopViews.Direct((int) direct.eta().toMinutes(), direct.feeCents()));
+                                    : new ShopViews.Direct((int) direct.eta().toMinutes(), direct.feeCents()),
+                            age(ctx, ageClass));
                 });
     }
 
@@ -319,9 +331,21 @@ class ShopBrowsingService implements BrowseShop {
                             r.priceCents(),
                             image != null && approved.contains(image) ? MEDIA_URL + image : null,
                             r.sellers(),
-                            ctx.runFor(r.handlingDays()));
+                            ctx.runFor(r.handlingDays()),
+                            age(ctx, AgeClass.of(r.ageClass()).orElse(null)));
                 })
                 .toList();
+    }
+
+    /** What an age-restricted product needs in the market's province (region data); null when it isn't one. */
+    private ShopViews.@Nullable Age age(Context ctx, @Nullable AgeClass ageClass) {
+        if (ageClass == null) {
+            return null;
+        }
+        var minimum = ageRules.rule(ctx.province(), ageClass)
+                .map(AgeRules.AgeRule::minimumAge)
+                .orElse(null);
+        return new ShopViews.Age(ageClass.code(), minimum);
     }
 
     private Context context(String market, Locale locale) {
@@ -343,7 +367,8 @@ class ShopBrowsingService implements BrowseShop {
                 new HashSet<>(categories.banned()),
                 runs,
                 now,
-                deliveryRuns.zone(name));
+                deliveryRuns.zone(name),
+                regions.market(name, null).map(MarketProfile::province).orElse(null));
     }
 
     /** One request's market, sellers, taxonomy and runs. */
@@ -356,7 +381,8 @@ class ShopBrowsingService implements BrowseShop {
             Collection<String> excluded,
             List<DeliveryRuns.Run> runs,
             Instant now,
-            ZoneId zone) {
+            ZoneId zone,
+            @Nullable String province) {
 
         Collection<String> merchantIds() {
             return shops.keySet();

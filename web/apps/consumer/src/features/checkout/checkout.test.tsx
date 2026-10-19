@@ -6,6 +6,7 @@ import { mockFetch, renderApp, type Call } from '../../test/render';
 import { CheckoutPage } from './CheckoutPage';
 import { CompletePage } from './CompletePage';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
+import { readFileSync } from 'node:fs';
 
 const AMARA = { id: 'C1', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', phone: '+14035550201', initials: 'AO', locale: 'en-CA', memberSince: '2026-03-02' };
 const line = (itemId: string, merchantId: string, name: string, unitCents: number, qty: number, extra = {}) => ({
@@ -128,6 +129,32 @@ describe('3-step checkout (redesign § 1.3, AT Shop:502)', () => {
     expect(screen.getByRole('link', { name: 'Track your order' })).toHaveAttribute('href', '/orders/ORD1');
     // the cart is read again after placing (the api removed the ordered lines)
     expect(calls.filter(c => c.url === '/api/v1/cart').length).toBeGreaterThan(1);
+  });
+
+  it('keeps the sticky summary under the header as drawn (its measured height, else the header token)', () => {
+    const checkoutCss = readFileSync('src/features/checkout/checkout.css', 'utf8'); // vitest runs in apps/consumer
+    expect(checkoutCss).toMatch(/\.co-summary \{[^}]*position: sticky; top: calc\(var\(--nl-header-h, var\(--size-header\)\) \+ var\(--space-4\)\)/);
+    expect(checkoutCss).not.toContain('104px');
+  });
+
+  it('asks for no quote once the order is placed (the emptied cart answered 409: demo rehearsal)', async () => {
+    let placedAt = -1;
+    const { calls } = open();
+    routes['POST /api/v1/me/checkouts/K1/place'] = () => { placedAt = calls.length; return { status: 201, body: { orderId: 'ORD1', ref: 'NL-50001' } }; };
+    routes['POST /api/v1/me/checkout/quote'] = c => (placedAt >= 0 ? { status: 409, body: { code: 'cart_empty', detail: 'Your cart is empty.' } } : { body: quoteFor(c) });
+    routes['GET /api/v1/cart'] = () => ({ body: placedAt >= 0 ? { ...CART, itemCount: 0, shopCount: 0, subtotalCents: 0, groups: [] } : CART });
+    const errors = vi.spyOn(console, 'error');
+    const u = userEvent.setup({ delay: null });
+    await u.click(await within(await screen.findByRole('region', { name: 'Delivery address and time' })).findByRole('button', { name: 'Continue' }));
+    await u.click(within(step('Payment')).getByRole('button', { name: 'Continue to payment' }));
+    await screen.findByRole('region', { name: 'Review items and delivery' });
+    await u.click(within(screen.getByRole('complementary', { name: 'Total' })).getByRole('button', { name: 'Place your order' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Thank you — your order is placed.' })).toBeInTheDocument();
+    await waitFor(() => expect(calls.filter(c => c.url === '/api/v1/cart').length).toBeGreaterThan(1));
+    expect(placedAt).toBeGreaterThan(0);
+    expect(calls.slice(placedAt).filter(c => c.url.startsWith('/api/v1/me/checkout/quote'))).toEqual([]);
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
   });
 
   it('opens a new checkout when the delivery changes after the payment opened', async () => {

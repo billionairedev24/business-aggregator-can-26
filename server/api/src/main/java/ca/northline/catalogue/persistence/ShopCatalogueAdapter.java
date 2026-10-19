@@ -99,6 +99,7 @@ class ShopCatalogueAdapter implements ShopCatalogue {
                                           o.price_cents, 0) as price,
                                  coalesce(case when o.image_source = 'shared' then cp.image_set[1] end,
                                           o.own_images[1], cp.image_set[1]) as image_id,
+                                 catalogue.age_class_of(cp.category_id) as age_class,
                         """ + HANDLING + " as handling " + LIVE + """
                         ), ranked as (
                           select l.*, row_number() over (partition by product_id order by price, offer_id) as rn,
@@ -124,7 +125,8 @@ class ShopCatalogueAdapter implements ShopCatalogue {
                         rs.getLong("price"),
                         rs.getString("image_id"),
                         Sql.intOrNull(rs, "handling"),
-                        rs.getInt("sellers")))
+                        rs.getInt("sellers"),
+                        rs.getString("age_class")))
                 .list();
     }
 

@@ -16,8 +16,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * One member's day as slots see it: the hours in effect (or the special hours of a time-off entry), closures (time off,
- * statutory holidays of the business's province it doesn't open), and what already takes time — confirmed jobs and busy times from the
- * member's connected calendars (S-32). Shared by the Studio preview and the customer's booking calendar (S-55).
+ * statutory holidays of the business's province it doesn't open), and what already takes time — confirmed jobs, busy times from the
+ * member's connected calendars (S-32) and the same person's jobs at other businesses (times only). Shared by the Studio
+ * preview and the customer's booking calendar (S-55).
  */
 @Component
 @RequiredArgsConstructor
@@ -76,9 +77,13 @@ class DaySchedule {
         var to = start(day.plusDays(1), zone);
         var jobs = calendar.busy(merchantId, memberUserId, from, to);
         var calendarBusy = calendarSync.busy(merchantId, memberUserId, from, to);
-        var busy = Stream.concat(
+        // the same person's jobs at other businesses take the time too (times only: nothing says where)
+        var elsewhere = calendar.elsewhere(memberUserId, merchantId, from, to);
+        var busy = Stream.of(
                         jobs.stream().map(b -> busy(b.startsAt(), b.endsAt(), day, zone)),
-                        calendarBusy.stream().map(b -> busy(b.startsAt(), b.endsAt(), day, zone)))
+                        calendarBusy.stream().map(b -> busy(b.startsAt(), b.endsAt(), day, zone)),
+                        elsewhere.stream().map(b -> busy(b.startsAt(), b.endsAt(), day, zone)))
+                .flatMap(s -> s)
                 .toList();
         return new Day(ranges, busy, jobs.size(), calendarBusy.size(), closed);
     }

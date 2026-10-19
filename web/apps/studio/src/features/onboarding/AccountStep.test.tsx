@@ -31,7 +31,7 @@ describe('AccountStep', () => {
     expect(onTypeChange).toHaveBeenCalledWith('kitchen');
     expect(screen.getByText('Kitchen · food')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Change' })).toBeTruthy();
-    expect(screen.getByText('Next: business and categories, then the full AHS food checklist.')).toBeTruthy();
+    expect(screen.getByText('Next: business and categories, then the full food-safety checklist.')).toBeTruthy();
   });
 
   it('the business type picker is one Tab stop; the arrow keys move and select (S-140)', async () => {

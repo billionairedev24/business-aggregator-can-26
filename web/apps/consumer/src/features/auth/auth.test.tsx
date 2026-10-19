@@ -50,6 +50,13 @@ const open = (path: string, locale: 'en' | 'fr' = 'en') => {
 const card = () => screen.getByRole('region', { name: /Sign in|Create account|Se connecter|Créer un compte/ });
 
 describe('sign in (design 06 auth)', () => {
+  it('names the visitor\'s own province\'s privacy law once their place is known', async () => {
+    localStorage.setItem('nl.location', JSON.stringify({ label: '1204 17 Ave SW', city: 'Calgary', province: 'AB' }));
+    open('/sign-in');
+    expect(await screen.findByText('Stored on servers in Canada under PIPEDA and Alberta PIPA.')).toBeInTheDocument();
+    localStorage.removeItem('nl.location');
+  });
+
   it('shows the design: pitch, card, passkey, Apple / Google back to the consumer site', async () => {
     open('/sign-in?next=%2Fcart');
     expect(await screen.findByRole('heading', { level: 1, name: 'Sign in to pick up where you left off.' })).toBeInTheDocument();
@@ -58,8 +65,11 @@ describe('sign in (design 06 auth)', () => {
     expect(screen.getAllByRole('listitem').map(li => li.textContent)).toEqual([
       '1Passkeys, not passwordsFace ID, Touch ID or Windows Hello. Phishing-resistant by design.',
       '2Two factors for paymentsEscrow and saved cards sit behind a second factor.',
-      '3Your data stays in CanadaStored in ca-central-1 under PIPEDA and Alberta PIPA.',
+      // the visitor's place is unknown: no province's law is named (demo rehearsal: "Alberta PIPA" to everyone)
+      '3Your data stays in CanadaStored on servers in Canada under PIPEDA and provincial privacy law.',
     ]);
+    // support hours in the platform zone (region configuration), named by it: never a zone in copy
+    expect(screen.getByText(/^Bilingual support 7:00 a\.m\. – 11:00 p\.m\. M[DS]T · northline\.ca\/help$/)).toBeInTheDocument();
     const c = card();
     expect(within(c).getByText('Welcome back. Use your passkey or a code to your phone.')).toBeInTheDocument();
     expect(within(c).getByRole('link', { name: 'Back to browsing' })).toHaveAttribute('href', '/cart');

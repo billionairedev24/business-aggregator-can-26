@@ -29,6 +29,18 @@ const data: Dashboard = {
 };
 
 describe('Dashboard', () => {
+  it('counts verified reviews and orders with plurals (demo rehearsal: "1 verified reviews"), en and fr', () => {
+    const one = { ...data, reputation: { ...data.reputation, reviews: 1 } };
+    const { unmount } = renderWithProviders(<DashboardView data={one} kind="provider" city="Calgary" merchantId="m1" />);
+    expect(screen.getByText('1 verified review')).toBeTruthy();
+    unmount();
+    const many = renderWithProviders(<DashboardView data={{ ...data, reputation: { ...data.reputation, reviews: 1312 } }} kind="seller" city="Calgary" merchantId="m1" />);
+    expect(screen.getByText('1,312 verified orders')).toBeTruthy();
+    many.unmount();
+    renderWithProviders(<DashboardView data={one} kind="provider" city="Calgary" merchantId="m1" />, 'fr');
+    expect(screen.getByText('1 avis vérifié')).toBeTruthy();
+  });
+
   it('provider: KPI strip, charts, today and needs-you; no headline sentence, no coaching', async () => {
     renderWithProviders(<DashboardView data={data} kind="provider" city="Calgary" merchantId="m1" />);
     await expectNoAxeViolations(document.body); // S-109

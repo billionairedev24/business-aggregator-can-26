@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import type { ProviderFacts, Storefront } from '../provider/api';
-import { BookingWizard, complete, stepsFor, type Step } from './BookingWizard';
+import { BookingWizard, complete, nextSteps, stepsFor, weekSpan, type Step } from './BookingWizard';
 import { EMPTY, toRequest, type Draft } from './draft';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
@@ -188,6 +188,88 @@ describe('booking wizard (design 06 book)', () => {
     renderApp('/providers/prairie-wrench/book', { routes, locale: 'fr' });
     expect(await screen.findByRole('heading', { level: 1, name: 'De quoi avez-vous besoin ?' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continuer vers le lieu' })).toBeDisabled();
+  });
+});
+
+describe('demo rehearsal fixes (2026-10-19)', () => {
+  it('shows the confirmation in the business\'s time zone, not the browser\'s, with one full stop after the time', async () => {
+    // 19:00Z is 4:00 p.m. in Halifax and 1:00 p.m. in Calgary: the booking's zone wins over the platform's (UTC here)
+    mockFetch(api(true, c => (c.url === '/api/v1/me/bookings/b1' ? { body: { ...confirmation, startsAt: '2026-10-20T19:00:00Z', endsAt: '2026-10-20T20:00:00Z', timeZone: 'America/Halifax' } } : undefined)));
+    renderApp('/providers/prairie-wrench/book?step=done&booking=b1', { routes });
+    const title = await screen.findByRole('heading', { level: 1, name: /^Booked\./ });
+    expect(title).toHaveTextContent('Booked. Kai is coming Oct 20, 4:00 p.m.');
+    expect(title.textContent).not.toMatch(/\.\.$/);
+  });
+
+  it('holds and shows times in the zone of the business\'s calendar', async () => {
+    prefill(filled);
+    mockFetch(api(true, c => {
+      if (c.url.startsWith('/api/v1/public/providers/prairie-wrench/slots')) {
+        const body = calendar(new URL(c.url, 'http://x').searchParams.get('from')!);
+        return { body: { ...body, timeZone: 'America/Halifax' } };
+      }
+      if (c.url === '/api/v1/me/bookings/holds' && c.method === 'POST') {
+        const at = (c.body as { startsAt: string }).startsAt;
+        return { status: 201, body: { holdId: 'h1', bookingId: 'b1', startsAt: at, endsAt: at, expiresAt: '2026-10-20T02:27:00Z' } };
+      }
+      return undefined;
+    }));
+    renderApp('/providers/prairie-wrench/book?step=schedule', { routes });
+    const u = user();
+    const days = await screen.findByRole('group', { name: 'Schedule' });
+    await u.click(within(days).getAllByRole('button')[0]!);
+    const slots = await screen.findByRole('group', { name: /^Times on/ });
+    // 16:00Z in Halifax (UTC−3) is 1 pm
+    expect(within(slots).getAllByRole('button')[0]).toHaveTextContent('1 pm');
+    await u.click(within(slots).getAllByRole('button')[0]!);
+    await u.click(screen.getByRole('button', { name: 'Continue to payment' }));
+    // 02:27Z is 11:27 p.m. the evening before in Halifax; one full stop after "p.m."
+    expect(await screen.findByText('Held for you until 11:27 p.m.')).toBeInTheDocument();
+    expect(JSON.parse(sessionStorage.getItem('nl.book.prairie-wrench')!).timeZone).toBe('America/Halifax');
+  });
+
+  it('titles the week with the days it shows: the current week starts today', async () => {
+    prefill(filled);
+    const calls = mockFetch(api(false));
+    renderApp('/providers/prairie-wrench/book?step=schedule', { routes });
+    const days = await screen.findByRole('group', { name: 'Schedule' });
+    const shown = within(days).getAllByRole('button').map(b => b.querySelector('.nl-bk-dnum')!.textContent);
+    const label = screen.getByText(/^This week · /).textContent!;
+    const [first, last] = label.replace('This week · ', '').split('–');
+    expect(first).toMatch(new RegExp(` ${shown[0]}$`));
+    expect(last).toMatch(new RegExp(` ${shown.at(-1)}$`));
+    const slots = calls.find(c => c.url.includes('/slots?'))!;
+    const q = new URL(slots.url, 'http://x').searchParams;
+    expect(Number(q.get('days'))).toBe(shown.length);
+  });
+
+  it('asks for the rest of this week from today, then whole weeks', () => {
+    expect(weekSpan('2026-10-18', '2026-10-18')).toEqual({ from: '2026-10-18', days: 7 }); // Sunday, the week's first day
+    expect(weekSpan('2026-10-18', '2026-10-21')).toEqual({ from: '2026-10-21', days: 4 }); // Wednesday → Saturday
+    expect(weekSpan('2026-10-25', '2026-10-21')).toEqual({ from: '2026-10-25', days: 7 });
+  });
+
+  it('says what happens next by who travels: the provider comes to you, or you go to them', () => {
+    expect(nextSteps('visit')).toContain('next_1');
+    expect(nextSteps('appointment')).toEqual(['next_0', 'next_1_visit', 'next_2_visit', 'next_3', 'next_4_visit']);
+  });
+
+  it('never tells a barber\'s customer about a technician\'s plate (en and fr)', async () => {
+    mockFetch(api(true, c => (c.url === '/api/v1/me/bookings/b1' ? { body: { ...confirmation, type: 'appointment', memberFirstName: null, providerName: 'Fade Lab', addressLine: null } } : undefined)));
+    const { unmount } = renderApp('/providers/prairie-wrench/book?step=done&booking=b1', { routes });
+    const list = await screen.findByRole('list');
+    expect(list).toHaveTextContent("Reminder the evening before with Fade Lab's address and directions");
+    expect(list).not.toHaveTextContent(/technician|plate|access code/i);
+    unmount();
+    mockFetch(api(true, c => (c.url === '/api/v1/me/bookings/b1' ? { body: { ...confirmation, type: 'appointment', providerName: 'Fade Lab' } } : undefined)));
+    renderApp('/providers/prairie-wrench/book?step=done&booking=b1', { routes, locale: 'fr' });
+    expect(await screen.findByText('Rappel la veille avec l’adresse de Fade Lab et l’itinéraire')).toBeInTheDocument();
+  });
+
+  it('keeps the vehicle details for a mobile mechanic', async () => {
+    mockFetch(api(true));
+    renderApp('/providers/prairie-wrench/book?step=done&booking=b1', { routes });
+    expect(await screen.findByText("Reminder the evening before with the photo of who's coming and their vehicle")).toBeInTheDocument();
   });
 });
 

@@ -55,7 +55,7 @@
 .co-item-price { white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* the summary rail */
-.co-summary { grid-area: rail; position: sticky; top: calc(var(--space-4) + 104px); display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-md); min-width: 0; }
+.co-summary { grid-area: rail; position: sticky; top: calc(var(--nl-header-h, var(--size-header)) + var(--space-4)); display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-md); min-width: 0; }
 .co-totals { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-sm); }
 .co-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-4); align-items: baseline; }
 .co-row dd { margin: 0; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }

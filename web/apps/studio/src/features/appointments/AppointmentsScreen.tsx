@@ -5,7 +5,7 @@ import { DataTable, Drawer, ErrorState, Segmented, Skeleton, useLocale, type Dat
 import { useMerchantId } from '../shell/api';
 import { useSession } from '../../lib/session';
 import { timeOffQuery } from '../availability/api';
-import { addDays, clock, localDate, localInstant, minuteOfDay, mondayOf, today } from '../../lib/time';
+import { addDays, clock, isoWeekday, localDate, localInstant, minuteOfDay, today, weekStartOf } from '../../lib/time';
 import { calendarCellsQuery, jobsQuery, type CalendarCells, type Job } from './api';
 import { JobPanel } from './JobPanel';
 import { useAppointmentsT } from './messages';
@@ -26,8 +26,10 @@ export function AppointmentsScreen() {
   const [view, setView] = useState<View>('week');
   const [anchor, setAnchor] = useState(today());
   const [selected, setSelected] = useState<string | null>(null);
-  const monday = mondayOf(anchor);
-  const range = view === 'day' ? [anchor, addDays(anchor, 1)] : [monday, addDays(monday, 7)];
+  // the week as the locale counts it (en-CA, fr-CA: from Sunday), so "this week" always holds today — on a Sunday it
+  // was the past Monday–Saturday with today hidden and the coming jobs under "Next week" (demo rehearsal 2026-10-19)
+  const start = weekStartOf(anchor, locale);
+  const range = view === 'day' ? [anchor, addDays(anchor, 1)] : [start, addDays(start, 7)];
   const q = useQuery(jobsQuery(merchantId, localInstant(range[0]!), localInstant(range[1]!)));
   const timeOff = useQuery(timeOffQuery(merchantId));
   // S-74: open slots and quote holds — extras; the calendar shows without them when they fail
@@ -41,7 +43,7 @@ export function AppointmentsScreen() {
   const open = jobs.find(j => j.id === selected);
 
   const step = view === 'day' ? 1 : 7;
-  const title = view === 'day' ? fmt(anchor, locale, { weekday: 'long', month: 'long', day: 'numeric' }) : t('weekOf', { date: fmt(monday, locale, { month: 'short', day: 'numeric' }) });
+  const title = view === 'day' ? fmt(anchor, locale, { weekday: 'long', month: 'long', day: 'numeric' }) : t('weekOf', { date: fmt(start, locale, { month: 'short', day: 'numeric' }) });
   const blocked = (date: string) => (timeOff.data?.entries ?? []).filter(e => e.kind === 'closed' && !e.memberUserId && e.startsOn <= date && e.endsOn >= date);
   const upcoming = jobs.filter(j => !DONE.has(j.state)).length;
 
@@ -65,7 +67,7 @@ export function AppointmentsScreen() {
         : q.isError ? <ErrorState message={t('loadJobsError')} onRetry={() => void q.refetch()} />
         : view === 'list' ? <JobTable t={t} locale={locale} jobs={jobs} loading={stale} onOpen={setSelected} />
         : <div className="nl-appt-view" aria-busy={stale || undefined} inert={stale || undefined}>
-            <TimeGrid t={t} locale={locale} days={view === 'week' ? weekDays(monday, jobs, cells) : [anchor]} jobs={jobs} cells={cells} selected={selected} onSelect={setSelected} blocked={blocked} />
+            <TimeGrid t={t} locale={locale} days={view === 'week' ? weekDays(start, jobs, cells) : [anchor]} jobs={jobs} cells={cells} selected={selected} onSelect={setSelected} blocked={blocked} />
           </div>}
 
       <QuoteRequests />
@@ -76,11 +78,10 @@ export function AppointmentsScreen() {
   );
 }
 
-/** Monday–Saturday, and Sunday when something is on it. */
-function weekDays(monday: string, jobs: Job[], cells: CalendarCells): string[] {
-  const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
-  const sunday = days[6]!;
-  return jobs.some(j => localDate(j.startsAt) === sunday) || hasCells(dayCells(cells, sunday)) ? days : days.slice(0, 6);
+/** The week's seven days from its first; Sunday only when something is on it or it is today. */
+export function weekDays(start: string, jobs: Job[], cells: CalendarCells, now: string = today()): string[] {
+  return Array.from({ length: 7 }, (_, i) => addDays(start, i))
+    .filter(d => isoWeekday(d) !== 7 || d === now || jobs.some(j => localDate(j.startsAt) === d) || hasCells(dayCells(cells, d)));
 }
 
 const HOUR_PX = 64;

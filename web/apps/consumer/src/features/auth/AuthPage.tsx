@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import { useRouter } from '@tanstack/react-router';
-import { Alert, SiteLink } from '@northline/ui';
+import { Alert, formatZonedHours, SiteLink, useLocale } from '@northline/ui';
 import { appAuthorizationUrl, bffLoginUrl, safeNext, type AuthSession } from '@northline/auth-kit';
 import { signInHref, useViewer } from '../session/api';
+import { useRegions } from '../location/regions';
 import { LegalLink } from './LegalLink';
 import { useAuthT, type AuthKey } from './messages';
 import { RegisterFlow } from './RegisterFlow';
@@ -31,6 +32,9 @@ const ERRORS: Record<string, AuthKey> = {
 };
 const PROVIDERS = { google: 'Google', apple: 'Apple' } as const;
 
+/** Support hours, kept in the platform zone (region configuration; the server's SupportSla counts the same hours). */
+const SUPPORT_HOURS = ['07:00', '23:00'] as const;
+
 /**
  * Design 06 `auth`: the pitch on the left (kicker, hero, three points, support line), the card on the right (title,
  * "Back to browsing", progress, the flow, the legal line). After the JSON flow against northline-auth, the browser
@@ -39,6 +43,8 @@ const PROVIDERS = { google: 'Google', apple: 'Apple' } as const;
  */
 export function AuthPage({ mode, search, navigate = url => window.location.assign(url) }: { mode: AuthMode; search: AuthSearch; navigate?: (url: string) => void }) {
   const t = useAuthT();
+  const { locale } = useLocale();
+  const regions = useRegions();
   const router = useRouter();
   const { user } = useViewer();
   const next = safeNext(search.next);
@@ -70,7 +76,7 @@ export function AuthPage({ mode, search, navigate = url => window.location.assig
             </li>
           ))}
         </ol>
-        <div className="nl-auth-foot">{t('foot')}</div>
+        <div className="nl-auth-foot">{regions ? t('foot', { hours: formatZonedHours(SUPPORT_HOURS[0], SUPPORT_HOURS[1], regions.platformTimeZone, locale) }) : t('footNoHours')}</div>
       </div>
       <section className="nl-auth-card" aria-labelledby="nl-auth-title">
         <div className="nl-auth-head">

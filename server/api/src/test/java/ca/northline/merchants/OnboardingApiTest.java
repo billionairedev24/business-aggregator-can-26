@@ -139,6 +139,39 @@ class OnboardingApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.code").value("mfa_required"));
         }
 
+        /** Demo rehearsal 2026-10-19: an owner with an authenticator app or a passkey isn't asked to set one up. */
+        @Test
+        void theSecondFactorRowIsDoneWhenTheOwnerHasOne() throws Exception {
+            var withApp = data.user("Has Authenticator");
+            jdbc.sql("update identity.users set mfa_primary = 'totp' where id = ?")
+                    .params(withApp)
+                    .update();
+            var id = flow.start(withApp, "provider");
+            mvc.perform(get("/api/v1/merchants/{id}/onboarding", id).with(TestJwt.member(withApp)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.checklist[?(@.key == 'mfa')].status").value("verified"))
+                    .andExpect(jsonPath("$.checksComplete").value(1));
+
+            var passkey = data.user("Has Passkey");
+            jdbc.sql("update identity.users set mfa_primary = 'passkey' where id = ?")
+                    .params(passkey)
+                    .update();
+            var seller = flow.start(passkey, "seller");
+            assertThat(JsonPath.<List<String>>read(
+                            flow.onboarding(seller, passkey), "$.checklist[?(@.key == 'mfa')].status"))
+                    .containsExactly("verified");
+
+            // no passkey or authenticator app on the account (a text-message code is not a business second factor)
+            var smsOnly = data.user("Text Only");
+            jdbc.sql("update identity.users set mfa_primary = 'sms' where id = ?")
+                    .params(smsOnly)
+                    .update();
+            var open = flow.start(smsOnly, "provider");
+            assertThat(JsonPath.<List<String>>read(
+                            flow.onboarding(open, smsOnly), "$.checklist[?(@.key == 'mfa')].status"))
+                    .doesNotContain("verified");
+        }
+
         @Test
         void needsTheMerchantScope() throws Exception {
             mvc.perform(post("/api/v1/merchants")

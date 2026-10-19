@@ -281,7 +281,7 @@ describe('Hours, prep & capacity', () => {
     expect(screen.getByText('Tue–Fri 11:00–2:00')).toBeTruthy();
     expect(screen.getByText('On · 15–20 min')).toBeTruthy();
     expect(screen.getByText('6 km · Beltline, Kensington')).toBeTruthy();
-    expect(screen.getByText('AHS food permit · #FS-2024-88120')).toBeTruthy();
+    expect(screen.getByText('Food permit · #FS-2024-88120')).toBeTruthy();
     expect(screen.getByText('Verified · renews Mar 2027')).toBeTruthy();
     await user.selectOptions(screen.getByLabelText('Default prep time'), '30');
     await waitFor(() => expect(calls.find(c => c.method === 'PUT')?.body).toEqual({ defaultPrepMin: 30, maxOrdersPer15: 6, largeOrderCents: 12000, autoPauseLate: 3 }));

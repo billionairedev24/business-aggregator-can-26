@@ -3,7 +3,7 @@ import { useZone } from '../location/regions';
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { ApiError, newIdempotencyKey, ValidationError } from '@northline/client';
-import { BrandMark, EmptyState, ErrorState, Field, Skeleton, TextArea, TextInput, useFormatters, useLocale, timeZone } from '@northline/ui';
+import { addDays, BrandMark, EmptyState, ErrorState, Field, formatDay, Skeleton, TextArea, TextInput, useFormatters, useLocale, timeZone, weekStartOf } from '@northline/ui';
 import { StepUpDialog } from '../cart/StepUpDialog';
 import { providerQuery, storefrontQuery, type ProviderFacts, type ProviderService } from '../provider/api';
 import { signInHref, useViewer } from '../session/api';
@@ -27,8 +27,27 @@ export function stepsFor(kind: string): Step[] {
 }
 
 const dayKey = (d: Date, zone: string = timeZone()) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
-const addDays = (iso: string, n: number) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-const mondayOf = (iso: string) => { const d = new Date(`${iso}T12:00:00Z`); return addDays(iso, -((d.getUTCDay() + 6) % 7)); };
+const daysBetween = (from: string, to: string) => Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000);
+
+/**
+ * The days the schedule asks for in the week starting `week` (the locale's first day): the whole week, except the
+ * current one, which starts today — the calendar never serves past days, so the title names exactly the days shown.
+ */
+export function weekSpan(week: string, today: string): { from: string; days: number } {
+  const from = week < today ? today : week;
+  return { from, days: Math.max(1, 7 - daysBetween(week, from)) };
+}
+
+/**
+ * What happens next on the confirmation (demo rehearsal 2026-10-19: a barber appointment said "the technician's photo
+ * and plate"): the provider coming to the customer, or the customer going to the provider (appointments).
+ */
+export function nextSteps(type: string): readonly NextKey[] {
+  return type === 'appointment'
+    ? ['next_0', 'next_1_visit', 'next_2_visit', 'next_3', 'next_4_visit']
+    : ['next_0', 'next_1', 'next_2', 'next_3', 'next_4'];
+}
+type NextKey = 'next_0' | 'next_1' | 'next_2' | 'next_3' | 'next_4' | 'next_1_visit' | 'next_2_visit' | 'next_4_visit';
 
 type Kind = ProviderService['kind'];
 
@@ -69,8 +88,11 @@ export function BookingWizard({ slug, step, serviceId, bookingId, onStep }: {
   const cleaning = kind === 'home' && CLEANING.has(chosen?.categorySlug ?? '');
   const steps = stepsFor(kind);
   const current = step === 'done' || steps.includes(step) ? step : 'details';
+  // times read in the business's zone (its calendar's, kept with the chosen slot), else its market's — never the browser's
+  const marketZone = useZone(facts.city);
+  const zone = draft.timeZone ?? marketZone;
 
-  if (current === 'done' && bookingId) return <Done slug={slug} bookingId={bookingId} onAgain={clear} />;
+  if (current === 'done' && bookingId) return <Done slug={slug} bookingId={bookingId} onAgain={clear} zone={marketZone} />;
   if (facts.services.length === 0) {
     return <div className="nl-page"><EmptyState action={<Link to="/providers/$slug" params={{ slug }} className="btn btn-secondary">{facts.name}</Link>}>{t('loadError')}</EmptyState></div>;
   }
@@ -97,10 +119,10 @@ export function BookingWizard({ slug, step, serviceId, bookingId, onStep }: {
           </ol>
           {current === 'details' ? <Details facts={facts} draft={draft} update={update} kind={kind} vehicle={vehicle} cleaning={cleaning} services={bookable} onNext={next} categoryHref={facts.category?.slug} /> : null}
           {current === 'location' ? <Location draft={draft} update={update} kind={kind} vehicle={vehicle} onNext={next} onBack={back} /> : null}
-          {current === 'schedule' && chosen ? <Schedule slug={slug} facts={facts} service={chosen} draft={draft} update={update} notice={notice} onNext={() => { setNotice(undefined); next(); }} onBack={back} hoursValue={kind === 'home' ? hoursOf(draft, cleaning) : undefined} /> : null}
-          {current === 'pay' && chosen ? <Pay facts={facts} service={chosen} draft={draft} update={update} kind={kind} vehicle={vehicle} cleaning={cleaning} onBack={back} onBooked={b => { clear(); onStep('done', { booking: b.bookingId }); }} onHoldGone={() => { setNotice(t('holdExpired')); update({ hold: undefined, startsAt: undefined }); onStep('schedule'); }} /> : null}
+          {current === 'schedule' && chosen ? <Schedule slug={slug} facts={facts} service={chosen} draft={draft} update={update} notice={notice} zone={zone} onNext={() => { setNotice(undefined); next(); }} onBack={back} hoursValue={kind === 'home' ? hoursOf(draft, cleaning) : undefined} /> : null}
+          {current === 'pay' && chosen ? <Pay zone={zone} facts={facts} service={chosen} draft={draft} update={update} kind={kind} vehicle={vehicle} cleaning={cleaning} onBack={back} onBooked={b => { clear(); onStep('done', { booking: b.bookingId }); }} onHoldGone={() => { setNotice(t('holdExpired')); update({ hold: undefined, startsAt: undefined }); onStep('schedule'); }} /> : null}
         </div>
-        <Summary facts={facts} brand={page.brandColor} service={chosen} draft={draft} kind={kind} vehicle={vehicle} cleaning={cleaning} />
+        <Summary zone={zone} facts={facts} brand={page.brandColor} service={chosen} draft={draft} kind={kind} vehicle={vehicle} cleaning={cleaning} />
       </div>
     </div>
   );
@@ -256,22 +278,25 @@ function Location({ draft, update, kind, vehicle, onNext, onBack }: { draft: Dra
   );
 }
 
-function Schedule({ slug, facts, service, draft, update, notice, onNext, onBack, hoursValue }: {
-  slug: string; facts: ProviderFacts; service: ProviderService; draft: Draft; update: (p: Partial<Draft>) => void; notice?: string; onNext: () => void; onBack: () => void; hoursValue?: number;
+function Schedule({ slug, facts, service, draft, update, notice, onNext, onBack, hoursValue, zone }: {
+  slug: string; facts: ProviderFacts; service: ProviderService; draft: Draft; update: (p: Partial<Draft>) => void; notice?: string; onNext: () => void; onBack: () => void; hoursValue?: number; zone: string;
 }) {
   const t = useBookingT();
   const { locale } = useLocale();
-  const { date } = useFormatters();
   const viewer = useViewer();
   const qc = useQueryClient();
-  const zone = useZone();
   const today = dayKey(new Date(), zone);
-  const [week, setWeek] = useState(() => mondayOf(draft.day ?? today));
-  const cal = useQuery(calendarQuery(slug, service.id, week, 7));
+  const thisWeek = weekStartOf(today, locale);
+  const [week, setWeek] = useState(() => weekStartOf(draft.day && draft.day > today ? draft.day : today, locale));
+  const span = weekSpan(week, today);
+  const cal = useQuery(calendarQuery(slug, service.id, span.from, span.days));
+  const calZone = cal.data?.timeZone ?? zone;
   const [error, setError] = useState<string | undefined>(notice);
   const [holding, setHolding] = useState(false);
   const selectedDay = cal.data?.days.find(d => d.date === draft.day);
-  const range = `${date(`${week}T18:00:00Z`)}–${date(`${addDays(week, 6)}T18:00:00Z`)}`;
+  const shown = cal.data?.days ?? [];
+  const range = `${formatDay(shown[0]?.date ?? span.from, locale)}–${formatDay(shown.at(-1)?.date ?? addDays(week, 6), locale)}`;
+  const weekday = (date: string) => new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`));
   const here = useLocation({ select: l => l.href });
 
   const cont = async () => {
@@ -295,8 +320,8 @@ function Schedule({ slug, facts, service, draft, update, notice, onNext, onBack,
       <h1 id="bk-sched" className="nl-bk-title">{t('scheduleTitle')}</h1>
       <p className="nl-bk-lede">{t('scheduleLede', { name: facts.name })}</p>
       <div className="nl-bk-week">
-        <button type="button" className="btn btn-ghost" disabled={week <= mondayOf(today)} onClick={() => setWeek(addDays(week, -7))}>{t('prevWeek')}</button>
-        <span className="nl-bk-week-label">{week === mondayOf(today) ? t('thisWeek', { range }) : range}</span>
+        <button type="button" className="btn btn-ghost" disabled={week <= thisWeek} onClick={() => setWeek(addDays(week, -7))}>{t('prevWeek')}</button>
+        <span className="nl-bk-week-label">{week === thisWeek ? t('thisWeek', { range }) : range}</span>
         <button type="button" className="btn btn-ghost" onClick={() => setWeek(addDays(week, 7))}>{t('nextWeek')}</button>
       </div>
       {cal.isPending ? <div className="nl-bk-days">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} height={64} />)}</div>
@@ -305,11 +330,10 @@ function Schedule({ slug, facts, service, draft, update, notice, onNext, onBack,
             <>
               <div className="nl-bk-days" role="group" aria-label={t('step_schedule')}>
                 {cal.data.days.map(d => {
-                  const at = new Date(`${d.date}T18:00:00Z`);
                   const off = d.free === 0;
                   return (
                     <button key={d.date} type="button" className="nl-bk-day" aria-pressed={draft.day === d.date} disabled={off} onClick={() => update({ day: d.date, startsAt: undefined })}>
-                      <span className="nl-bk-dow">{new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'short', timeZone: zone }).format(at)}</span>
+                      <span className="nl-bk-dow">{weekday(d.date)}</span>
                       <span className="nl-bk-dnum">{Number(d.date.slice(8))}</span>
                       <span className="nl-bk-dfree">{d.closed ? t('dayClosed') : t('dayFree', { count: d.free })}</span>
                     </button>
@@ -317,9 +341,9 @@ function Schedule({ slug, facts, service, draft, update, notice, onNext, onBack,
                 })}
               </div>
               {selectedDay ? (
-                <div className="nl-bk-slots" role="group" aria-label={t('slotsFor', { day: date(`${selectedDay.date}T18:00:00Z`, 'long') })}>
+                <div className="nl-bk-slots" role="group" aria-label={t('slotsFor', { day: formatDay(selectedDay.date, locale, 'long') })}>
                   {selectedDay.slots.map(s => (
-                    <button key={s.startsAt} type="button" className="nl-chip nl-bk-slot" aria-pressed={draft.startsAt === s.startsAt} disabled={!s.free} onClick={() => update({ startsAt: s.startsAt })}>{shortTime(new Date(s.startsAt), locale)}</button>
+                    <button key={s.startsAt} type="button" className="nl-chip nl-bk-slot" aria-pressed={draft.startsAt === s.startsAt} disabled={!s.free} onClick={() => update({ startsAt: s.startsAt, timeZone: calZone })}>{shortTime(new Date(s.startsAt), locale, calZone)}</button>
                   ))}
                 </div>
               ) : <p className="nl-bk-muted">{t('noDay')}</p>}
@@ -344,8 +368,8 @@ function Schedule({ slug, facts, service, draft, update, notice, onNext, onBack,
 
 type PayPhase = { step: 'form' } | { step: 'stepUp'; mode: 'required' | 'enrol' } | { step: 'card'; checkout: Checkout };
 
-function Pay({ facts, service, draft, update, kind, vehicle, cleaning, onBack, onBooked, onHoldGone }: {
-  facts: ProviderFacts; service: ProviderService; draft: Draft; update: (p: Partial<Draft>) => void; kind: Kind; vehicle: boolean; cleaning: boolean;
+function Pay({ zone, facts, service, draft, update, kind, vehicle, cleaning, onBack, onBooked, onHoldGone }: {
+  zone: string; facts: ProviderFacts; service: ProviderService; draft: Draft; update: (p: Partial<Draft>) => void; kind: Kind; vehicle: boolean; cleaning: boolean;
   onBack: () => void; onBooked: (b: Confirmation) => void; onHoldGone: () => void;
 }) {
   const t = useBookingT();
@@ -404,7 +428,7 @@ function Pay({ facts, service, draft, update, kind, vehicle, cleaning, onBack, o
     <section aria-labelledby="bk-pay">
       <h1 id="bk-pay" className="nl-bk-title">{t('payTitle')}</h1>
       <p className="nl-bk-lede">{free ? t('payLedeFree') : t('payLede', { name: facts.name })}</p>
-      {hold ? <p className="nl-bk-muted">{t('heldUntil', { time: date(hold.expiresAt, 'time') })}</p> : null}
+      {hold ? <p className="nl-bk-muted">{t('heldUntil', { time: date(hold.expiresAt, 'time', zone) })}</p> : null}
       {!free ? (
         <>
           <h2 className="nl-bk-h2">{t('paymentMethod')}</h2>
@@ -421,7 +445,7 @@ function Pay({ facts, service, draft, update, kind, vehicle, cleaning, onBack, o
           {!usePoints && !priced.data ? <button type="button" className="btn btn-ghost" onClick={() => setUsePoints(true)}>{tp('pointsCheck')}</button> : null}
           <h2 className="nl-bk-h2">{t('policies')}</h2>
           <div className="nl-bk-policies">
-            <label className="nl-bk-check"><input type="checkbox" checked={draft.agreePolicies} onChange={e => update({ agreePolicies: e.target.checked })} /><span>{t('agreePolicies', { cancelBy: cancelBy ? date(cancelBy, 'dateTime') : '' })}</span></label>
+            <label className="nl-bk-check"><input type="checkbox" checked={draft.agreePolicies} onChange={e => update({ agreePolicies: e.target.checked })} /><span>{t('agreePolicies', { cancelBy: cancelBy ? date(cancelBy, 'dateTime', zone) : '' })}</span></label>
             {fieldErrors.agreePolicies ? <span className="nl-error">{fieldErrors.agreePolicies}</span> : null}
             <label className="nl-bk-check"><input type="checkbox" checked={draft.agreeTerms} onChange={e => update({ agreeTerms: e.target.checked })} /><span>{t('agreeTerms')}</span></label>
             {fieldErrors.agreeTerms ? <span className="nl-error">{fieldErrors.agreeTerms}</span> : null}
@@ -452,7 +476,7 @@ function estimateOf(service: ProviderService, draft: Draft, cleaning: boolean): 
   return price;
 }
 
-function Summary({ facts, brand, service, draft, kind, vehicle, cleaning }: { facts: ProviderFacts; brand: string; service?: ProviderService; draft: Draft; kind: Kind; vehicle: boolean; cleaning: boolean }) {
+function Summary({ zone, facts, brand, service, draft, kind, vehicle, cleaning }: { zone: string; facts: ProviderFacts; brand: string; service?: ProviderService; draft: Draft; kind: Kind; vehicle: boolean; cleaning: boolean }) {
   const t = useBookingT();
   const s = useServicesT();
   const { money, date } = useFormatters();
@@ -463,7 +487,7 @@ function Summary({ facts, brand, service, draft, kind, vehicle, cleaning }: { fa
   const row = (label: ReactNode, value: ReactNode) => <div className="nl-bk-sum-row"><dt>{label}</dt><dd>{value}</dd></div>;
   const vehicleText = [draft.vehicle.year, draft.vehicle.make, draft.vehicle.model].filter(Boolean).join(' ') + (draft.vehicle.plate ? ` · ${draft.vehicle.plate}` : '');
   const second = kind === 'visit' ? (vehicle ? vehicleText : '') : kind === 'home' ? (draft.home.type ? `${draft.home.type} · ${draft.home.beds || '?'}` : '') : kind === 'consult' && draft.consult.goal !== undefined ? t(`goal_${draft.consult.goal}` as 'goal_0') : '';
-  const when = draft.startsAt ? date(draft.startsAt, 'dateTime') : t('dash');
+  const when = draft.startsAt ? date(draft.startsAt, 'dateTime', zone) : t('dash');
   const meta = [dyn(s, `tier_${facts.tier}`, facts.tier), facts.reviewCount > 0 ? `★ ${rating(facts.rating, locale)} (${facts.reviewCount})` : null, facts.onTimePct != null ? s('onTime', { pct: percent(facts.onTimePct, locale) }) : null].filter(Boolean).join(' · ');
   return (
     <aside className="nl-bk-aside" aria-label={facts.name}>
@@ -487,21 +511,22 @@ function Summary({ facts, brand, service, draft, kind, vehicle, cleaning }: { fa
   );
 }
 
-function Done({ slug, bookingId, onAgain }: { slug: string; bookingId: string; onAgain: () => void }) {
+function Done({ slug, bookingId, onAgain, zone: marketZone }: { slug: string; bookingId: string; onAgain: () => void; zone: string }) {
   const t = useBookingT();
   const { money, date } = useFormatters();
   const navigate = useNavigate();
   const q = useQuery(bookingQuery(bookingId));
   const b = q.data;
+  const zone = b?.timeZone ?? marketZone;
   return (
     <div className="nl-page nl-bk">
       {q.isPending ? <Skeleton height={200} /> : q.isError || !b ? <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /> : (
         <section aria-labelledby="bk-done" className="nl-bk-done">
           <svg width="64" height="64" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="34" fill="var(--color-surface-brand)" stroke="var(--color-action-primary)" strokeWidth="2" /><path d="M22 37 L32 47 L51 27" fill="none" stroke="var(--color-link)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          <h1 id="bk-done" className="nl-bk-title">{b.type === 'appointment' ? t('doneTitleShop', { when: date(b.startsAt, 'dateTime') }) : t('doneTitle', { who: b.memberFirstName ?? b.providerName, when: date(b.startsAt, 'dateTime') })}</h1>
+          <h1 id="bk-done" className="nl-bk-title">{b.type === 'appointment' ? t('doneTitleShop', { when: date(b.startsAt, 'dateTime', zone) }) : t('doneTitle', { who: b.memberFirstName ?? b.providerName, when: date(b.startsAt, 'dateTime', zone) })}</h1>
           <p className="nl-bk-lede">{b.heldCents > 0 ? t('doneBody', { ref: b.ref, total: money(b.heldCents), name: b.providerName }) : t('doneBodyFree', { ref: b.ref, name: b.providerName })}</p>
           <h2 className="nl-bk-h2">{t('nextTitle')}</h2>
-          <ul className="nl-bk-next">{[0, 1, 2, 3, 4].map(i => <li key={i}>{t(`next_${i}` as 'next_0', { name: b.providerName })}</li>)}</ul>
+          <ul className="nl-bk-next">{nextSteps(b.type).map(k => <li key={k}>{t(k, { name: b.providerName })}</li>)}</ul>
           <div className="nl-bk-actions">
             <Link to="/account/orders" className="btn btn-primary">{t('seeBookings')}</Link>
             <Link to="/bookings/$bookingId" params={{ bookingId }} className="btn btn-secondary">{t('followBooking')}</Link>

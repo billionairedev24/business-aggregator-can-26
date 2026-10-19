@@ -29,9 +29,17 @@ export const ShopCard = z.object({
 });
 export type ShopCard = z.infer<typeof ShopCard>;
 
+/**
+ * An age-restricted product (demo rehearsal 2026-10-19: nothing said so before checkout): its class and the age the
+ * market's province asks for it (region data; null when unknown there).
+ */
+export const AgeNotice = z.object({ ageClass: z.string(), minimumAge: z.number().int().nullish() });
+export type AgeNotice = z.infer<typeof AgeNotice>;
+
 export const ProductCard = z.object({
   productId: z.string(), offerId: z.string(), name: z.string(), merchantId: z.string(), shopName: z.string(),
   unit: z.string().nullish(), priceCents: z.number().int(), imageUrl: z.string().nullish(), sellers: z.number().int(), run: Run.nullish(),
+  age: AgeNotice.nullish(),
 });
 export type ProductCard = z.infer<typeof ProductCard>;
 

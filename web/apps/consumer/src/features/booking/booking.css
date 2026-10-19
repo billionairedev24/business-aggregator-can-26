@@ -60,7 +60,7 @@
 .nl-bk-policies { display: flex; flex-direction: column; gap: 10px; }
 .nl-bk-check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.5; cursor: pointer; }
 .nl-bk-check input { width: 20px; height: 20px; margin-top: 2px; flex: none; }
-.nl-bk-aside { position: sticky; top: calc(var(--space-4) + 104px); max-height: calc(100vh - 32px - 104px); overflow: auto; padding: var(--space-5); border: 1px solid var(--color-border); background: var(--color-surface); border-radius: var(--radius-md); min-width: 0; box-sizing: border-box; }
+.nl-bk-aside { position: sticky; top: calc(var(--nl-header-h, var(--size-header)) + var(--space-4)); max-height: calc(100vh - 32px - var(--nl-header-h, var(--size-header))); overflow: auto; padding: var(--space-5); border: 1px solid var(--color-border); background: var(--color-surface); border-radius: var(--radius-md); min-width: 0; box-sizing: border-box; }
 .nl-bk-who { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
 .nl-bk-who-name { font-weight: 600; }
 .nl-bk-sum { margin: 0; font-size: 14px; }

@@ -120,24 +120,28 @@ const useLawT = defineMessages({
 
 /**
  * Fills {province}, {provinceIn}, {provinceOf} and {privacyLaw} for the page — the province of the visitor's location,
- * else the configured default province — and makes the visitor's market's zone the page's ({@link useZone}). Before the region model answers, the law reads "PIPEDA and provincial privacy
- * law" and the province is empty.
+ * else the configured default province — and makes the visitor's market's zone the page's ({@link useZone}). The law
+ * is the visitor's own province's only: until we know where they are (or the region model answers) it reads "PIPEDA
+ * and provincial privacy law", never the default province's (demo rehearsal 2026-10-19: "Alberta PIPA" to everyone).
  */
 export function VisitorPlace({ children }: { children: ReactNode }) {
   const regions = useRegions();
   const { location } = useDeliveryLocation();
   const t = useLawT();
-  const code = (location.status !== 'locating' ? location.province : undefined) ?? regions?.defaultProvince;
+  // the visitor's own place: one they saved or we detected — not the api's fallback market (the default province's)
+  const own = location.status !== 'locating' && location.status !== 'fallback' ? location.province : undefined;
+  const code = own ?? (location.status === 'fallback' ? location.province : undefined) ?? regions?.defaultProvince;
   const p = code ? regions?.provinces.find(r => r.code === code) : undefined;
+  const known = !!own && p?.code === own;
   const values = useMemo(() => {
     const province = p?.name ?? '';
     const names = { province, provinceIn: p?.nameIn ?? province, provinceOf: p?.nameOf ?? province };
-    const law = !p ? t('law_any')
+    const law = !p || !known ? t('law_any')
       : p.privacyLaw === 'qc_law25' ? t('law_law25', names)
       : p.privacyLaw.endsWith('_pipa') ? t('law_pipa', names)
       : t('law_pipeda');
     return { ...names, privacyLaw: law };
-  }, [p, t]);
+  }, [p, known, t]);
   const city = location.status !== 'locating' ? location.city : undefined;
   return (
     <MessageValues values={values}>

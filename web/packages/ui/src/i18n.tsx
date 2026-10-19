@@ -84,6 +84,7 @@ const cache = new Map<string, IntlMessageFormat>();
 function format(message: string, locale: Locale, values?: Values): string {
   if (!message.includes('{')) return message;
   values = { ...BRAND_VALUES, ...values };
+  message = oneFullStop(message, values);
   const id = `${locale}\u0000${message}`;
   let f = cache.get(id);
   if (!f) { f = new IntlMessageFormat(message, INTL_LOCALE[locale]); cache.set(id, f); }
@@ -93,6 +94,18 @@ function format(message: string, locale: Locale, values?: Values): string {
     if (name && (filled === undefined || filled[name] === undefined)) filled = { ...filled, [name]: '' };
   }
   return String(f.format(filled as Record<string, string | number>));
+}
+
+/**
+ * A sentence's full stop right after a value that already ends with one is dropped (demo rehearsal 2026-10-19: en-CA
+ * times end in "a.m." / "p.m.", so "Held for you until {time}." read "…11:27 p.m.."). Copy keeps its full stops.
+ */
+function oneFullStop(message: string, values: Values): string {
+  if (!message.includes('}.')) return message;
+  return message.replace(/\{(\w+)\}\./g, (whole, name: string) => {
+    const v = values[name];
+    return typeof v === 'string' && v.endsWith('.') ? `{${name}}` : whole;
+  });
 }
 
 /**
@@ -142,11 +155,70 @@ export function formatDate(value: string | number | Date, locale: Locale = 'en',
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], { timeZone: zone, ...o[style] }).format(d);
 }
 
+/**
+ * The first day of the week where the locale is used, ISO-numbered (1 = Monday … 7 = Sunday), from the platform's
+ * locale data (CLDR `weekInfo`); browsers without it get the CLDR answer for the locales we serve (en-CA, fr-CA:
+ * Sunday). Calendars start their weeks here.
+ */
+export function firstDayOfWeek(locale: Locale): number {
+  try {
+    const l = new Intl.Locale(INTL_LOCALE[locale]) as Intl.Locale & { getWeekInfo?: () => { firstDay: number }; weekInfo?: { firstDay: number } };
+    const day = l.getWeekInfo?.().firstDay ?? l.weekInfo?.firstDay;
+    if (day && day >= 1 && day <= 7) return day;
+  } catch { /* old engine */ }
+  return 7;
+}
+
+/** ISO weekday of a calendar date (YYYY-MM-DD): 1 = Monday … 7 = Sunday. */
+export const isoWeekday = (date: string): number => { const w = new Date(`${date}T12:00:00Z`).getUTCDay(); return w === 0 ? 7 : w; };
+
+/** Adds days to a calendar date (YYYY-MM-DD). */
+export function addDays(date: string, days: number): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** The first day of the week containing `date` (YYYY-MM-DD), as the locale counts weeks ({@link firstDayOfWeek}). */
+export function weekStartOf(date: string, locale: Locale): string {
+  return addDays(date, -((isoWeekday(date) - firstDayOfWeek(locale) + 7) % 7));
+}
+
+/** A calendar date (YYYY-MM-DD, no time or zone) in the formatter's styles: never shifted by a time zone. */
+export function formatDay(date: string, locale: Locale = 'en', style: 'date' | 'long' | 'full' = 'date'): string {
+  return formatDate(`${date}T12:00:00Z`, locale, style, 'UTC');
+}
+
+/** The instant of a wall-clock time (HH:mm) on a calendar date in `zone`, as ISO-8601. */
+export function zonedInstant(date: string, time: string, zone: string): string {
+  const offset = (at: Date) => {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(at);
+    const g = (t: string) => Number(parts.find(p => p.type === t)?.value);
+    return Math.round((Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute')) - at.getTime()) / 60000);
+  };
+  const guess = new Date(`${date}T${time}:00Z`);
+  const first = new Date(guess.getTime() - offset(guess) * 60000);
+  return new Date(guess.getTime() - offset(first) * 60000).toISOString();
+}
+
+/**
+ * Daily hours kept in a zone (support hours in the platform zone), shown with the zone's short name: "7 a.m. – 11 p.m.
+ * MDT" / "7 h à 23 h HAR". No zone is named in copy: it comes from the region configuration.
+ */
+export function formatZonedHours(from: string, until: string, zone: string, locale: Locale = 'en', on: Date = new Date()): string {
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(on);
+  const opts: Intl.DateTimeFormatOptions = { timeZone: zone, hour: 'numeric', minute: '2-digit' };
+  const start = new Intl.DateTimeFormat(INTL_LOCALE[locale], opts).format(new Date(zonedInstant(day, from, zone)));
+  const end = new Intl.DateTimeFormat(INTL_LOCALE[locale], { ...opts, timeZoneName: 'short' }).format(new Date(zonedInstant(day, until, zone)));
+  return locale === 'fr' ? `${start} à ${end}` : `${start} – ${end}`;
+}
+
 export function useFormatters() {
   const { locale } = useLocale();
   return useMemo(() => ({
     money: (cents: number, opts?: { whole?: boolean }) => formatMoney(cents, locale, opts),
     number: (n: number, opts?: Intl.NumberFormatOptions) => formatNumber(n, locale, opts),
-    date: (v: string | number | Date, style?: Parameters<typeof formatDate>[2]) => formatDate(v, locale, style),
+    /** `zone`: the booking's, merchant's or market's when the page knows it; else the current zone. */
+    date: (v: string | number | Date, style?: Parameters<typeof formatDate>[2], zone?: string) => formatDate(v, locale, style, zone),
   }), [locale]);
 }

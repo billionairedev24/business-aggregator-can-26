@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { ErrorState, Skeleton, useFormatters, useLocale } from '@northline/ui';
+import { ErrorState, formatZonedHours, platformTimeZone, Skeleton, useFormatters, useLocale } from '@northline/ui';
 import { statusQuery } from './api';
+import { MAINTENANCE_HOURS } from './format';
 import { useHelpT } from './messages';
 
 /** Platform status (design statusRows): "Operational" in spruce, anything else in rosehip with the note and time. */
@@ -25,7 +26,7 @@ export function PlatformStatus({ merchantId }: { merchantId: string }) {
               ))}
             </ul>
           )}
-      <p className="nl-help-note">{t('statusFooter')}</p>
+      <p className="nl-help-note">{t('statusFooter', { hours: formatZonedHours(MAINTENANCE_HOURS[0], MAINTENANCE_HOURS[1], platformTimeZone(), locale) })}</p>
     </div>
   );
 }

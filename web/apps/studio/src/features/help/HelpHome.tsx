@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Button, Drawer, ErrorState, Skeleton, useLocale } from '@northline/ui';
+import { Button, Drawer, ErrorState, formatZonedHours, platformTimeZone, Skeleton, useLocale } from '@northline/ui';
 import { useMerchant } from '../shell/api';
 import { screenHref, type ScreenKey } from '../shell/nav';
 import { articleQuery, articlesQuery, casesQuery, topicsQuery, type ArticleSummary, type HelpTopic } from './api';
-import { useCaseCells, useSlaNote } from './format';
+import { SUPPORT_HOURS, useCaseCells, useSlaNote } from './format';
 import { useHelpT } from './messages';
 
 export interface HelpHomeProps {
@@ -111,7 +111,7 @@ export function HelpHome({ merchantId, onContact, onOpenCase }: HelpHomeProps) {
             {fix('fix_signoff', 'earnings', t('fix_signoff_link'))}
             {fix('fix_gst', kitchen ? 'menu' : 'products', kitchen ? t('fix_gst_link_kitchen') : t('fix_gst_link'))}
           </ul>
-          <p className="nl-help-footer">{t('footer')}</p>
+          <p className="nl-help-footer">{t('footer', { hours: formatZonedHours(SUPPORT_HOURS[0], SUPPORT_HOURS[1], platformTimeZone(), locale) })}</p>
         </div>
       </div>
       {article ? <ArticleDrawer merchantId={merchantId} slug={article} topics={topics.data ?? []} onClose={() => setArticle(null)} onContact={onContact} /> : null}
