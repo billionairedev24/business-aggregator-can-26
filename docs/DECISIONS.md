@@ -9201,3 +9201,59 @@ from empty states (they reach the dialog through the redirect but on the home pa
 only through the shells; the Studio KPI strip leaving a sixth card alone on a row.
 
 Schema additions: none. Config additions: `brand.json` `chrome`. No new environment variables.
+
+## 2026-10-19 — Studio pages on the light direction (feat/ui-studio-pages)
+
+Phase B for the Studio: every Studio route redesigned on the light & photo-first foundation (palette Evergreen), looked
+at with `make ui-shots` before and after, desktop and phone.
+
+- **One page grammar.** A screen is its head (kicker · Fraunces title · muted sub line), then white cards
+  (`bo-card`: `border-card` edge, radius 12, soft shadow) 16–20px apart; linen only for sunken areas (the sidebar, the
+  inbox list, upload areas, step tiles). Sections that were loose text on white (reports, reviews, compliance, help,
+  payouts, settings, kitchen hours and combos) are cards now. Two-column pages put the table that needs width full
+  width under the columns (payout history, refund history, Stripe Tax) instead of squeezing it into a half column where
+  the table turned into cards on a desktop. On phones a card keeps 16px inside (`studio.css`).
+- **Shared pieces changed in `@northline/ui` (small, Studio-driven; the console benefits too):**
+  - `AppShell`: the sidebar sits in a stretching column (`.nl-side-col`) so the linen runs to the bottom of a long
+    page; the navigation inside stays sticky. It used to stop at the window's height.
+  - `KpiStrip`: the columns follow the number of cards and the strip's width (container queries), so a row never
+    ends with one card alone: 6 → 6 / 3+3 / 2+2+2, 5 → 5 / 3+2 / 2+2+1 (the last full width), 4 → 4 / 2+2, 3 → 3 / 2+1;
+    phones get two compact columns. Markup: a wrapper div (no ARIA change).
+  - `StackedBarChart` / `LineChart`: drawn at the width they are shown at (ResizeObserver; 480 before measuring and in
+    tests), labels 11px and thinned to one per ~56px. The fixed 480 viewBox scaled them to 6px on a phone.
+  - `DataTable`: a `thumb` column option (a photo, or the value's initial on linen, before the primary value and on
+    the phone card); cells centred vertically (base `.table td` won with `top`); cards with the card edge; the
+    ‹ page › controls never split over two lines.
+- **Studio-only pieces:** `features/shell/Standalone.tsx` — the logo and one white card on linen for pages outside
+  the shell (team invitation, pilot invite, identity done, page not found; the 404 now says what happened and links
+  back). The sign-in page and the onboarding wizard sit on linen too; on phones the sign-in form comes first and the
+  pitch follows. Business-type cards in onboarding have icons; the progress bar shows the current step as reached
+  (step 1 of 5 = a fifth, it was empty).
+- **Dashboard order:** KPIs, then today's work (jobs or tonight's run, with "Open calendar"/"All orders") beside what
+  needs the owner and Get set up, then the charts side by side at the same width. Job times read "1:30 pm", not "1:30".
+- **Screens:** calendar entries are two lines (time + job, customer) with ellipses; availability's remove-hours is a
+  44px icon button and the from/until selects fit on phones; listings show a thumbnail; the product editor's Images
+  step has a real upload area that also takes dropped files; bulk upload is steps | integrations, then the uploads
+  table full width; messages are one inbox panel (avatars, linen list, thread with a header and the composer at the
+  bottom); reviews are a sticky summary card and one card per review; payouts merged the duplicated bank line into the
+  wallet card ("Paid to … Change"), tax documents are a card of documents with PDF · CSV; reports use the KPI strip.
+  Kitchen screens use the Studio's title size and cards; combos lost its second "New combo" button (the table has one).
+- **Copy:** region-neutral fixes in the product editor ("GST 5%, no PST in AB" → "GST/HST, and PST where it
+  applies"; the tax line says GST/HST instead of a hard-coded GST 5%). New strings (en + fr-CA): dashboard
+  `openCalendar`/`openOrders`, catalogue `addFirstImage`/`taxKind`, finance `ledgerTitle`/`kpiVsPrevious`/
+  `kpiCategoryAvg`, the 404 body. Removed (unused now): finance `bankTitle`, `kpiGrossChange`, `kpiRefundBenchmark`.
+- **Tokens:** the last legacy aliases left the Studio (kitchen, settings, help, assistant, writing, messages, reviews,
+  compliance); `lint:tokens` now covers all of `apps/studio/src/features`.
+- **`make ui-shots`:** demo-like Studio data in `shots/fixtures.mjs`, relative to the day the shots run (a week of
+  jobs and open slots, tonight's run, inbox, ledger, payouts, reports, reviews, listings with photos, a menu with
+  photos, an application in review), and new routes: onboarding verification + approval gate, the calendar's job
+  sheet and the order sheet (`click`), the product editor's Images step, a new service, settings team and security,
+  page not found. The onboarding fixtures use valid ULIDs (the wizard dropped `ONB1`, so the "business" shot showed
+  the Account step).
+- **Not done / needs a decision:** the listings api sends no photo yet — the client reads an optional `imageUrl` and
+  shows the initial until the api adds the listing's first approved image (one join in `ListingQueriesAdapter`).
+  Services have no photos in the data model, so the service editor has no upload area. The 3:1 card edge
+  (`border-card`) is kept as PR #187 set it.
+
+Schema additions: none. Config additions: none. a11y snapshot updated: `studio-payouts.aria.yml` (the bank line moved
+into the wallet; the history's Jobs column is sortable on the wider card).
