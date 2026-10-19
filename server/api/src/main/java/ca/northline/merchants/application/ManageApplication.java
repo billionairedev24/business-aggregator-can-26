@@ -11,6 +11,14 @@ public final class ManageApplication {
         OnboardingView view(String merchantId);
     }
 
+    /**
+     * The legal-details forms of every business structure in the business's province (region-neutral legal details,
+     * 2026-10-19): what the Business step renders and what saving it is validated against.
+     */
+    public interface ViewLegalForms {
+        java.util.List<LegalForm> legalForms(String merchantId);
+    }
+
     /** Remembers how far the owner got; steps after Verification need a submitted application. */
     public interface AdvanceOnboarding {
         OnboardingView advance(String merchantId, OnboardingStep step);

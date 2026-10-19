@@ -249,7 +249,7 @@ class OnboardingApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.city").value("Calgary"))
                     .andExpect(jsonPath("$.step").value("verification"))
                     .andExpect(jsonPath("$.business.gstNumber").value("123456789 RT0001"))
-                    .andExpect(jsonPath("$.business.legalDetails.structure").value("corp_ab"))
+                    .andExpect(jsonPath("$.business.legalDetails.structure").value("corp_prov"))
                     .andExpect(
                             jsonPath("$.business.legalDetails.business_number").value(bn))
                     .andExpect(jsonPath("$.business.principals", hasSize(2)))
@@ -411,9 +411,9 @@ class OnboardingApiTest extends IntegrationTest {
             var user = data.user("Owner");
             var id = flow.start(user, "provider");
             var json = """
-                    {"displayName":"Northwind","legalName":"Northwind Services Inc.","structure":"corp_ab",
+                    {"displayName":"Northwind","legalName":"Northwind Services Inc.","structure":"corp_prov",
                      "gstNumber":"123456789 RT0001",
-                     "legalDetails":{"legal_corporate_name":"N","alberta_corporate_access_number":"12345",
+                     "legalDetails":{"legal_corporate_name":"N","provincial_registry_number":"12345",
                        "business_number":"12 34","incorporation_date":"2019-13-40","registered_office":"x",
                        "certificate_of_incorporation_doc":"01J9ZD3V000000000000000000"},
                      "principals":[{"legalName":"Dana Li","role":"director","ownershipPct":100}],
@@ -422,7 +422,7 @@ class OnboardingApiTest extends IntegrationTest {
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(err("legalDetails.legal_corporate_name", "At least 2 characters."))
                     .andExpect(err(
-                            "legalDetails.alberta_corporate_access_number", "Corporate access number is 10 digits."))
+                            "legalDetails.provincial_registry_number", "Corporate access number is 9 or 10 digits."))
                     .andExpect(err("legalDetails.business_number", "Business number is 9 digits (e.g. 123456789)."))
                     .andExpect(err("legalDetails.incorporation_date", "Use the format YYYY-MM-DD."))
                     .andExpect(err("legalDetails.registered_office", "Enter the full address."))

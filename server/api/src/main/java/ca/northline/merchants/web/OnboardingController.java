@@ -6,11 +6,13 @@ import static ca.northline.shared.security.MerchantPermission.VIEW;
 import ca.northline.merchants.application.CompleteVerification;
 import ca.northline.merchants.application.ManageApplication.AdvanceOnboarding;
 import ca.northline.merchants.application.ManageApplication.SubmitApplication;
+import ca.northline.merchants.application.ManageApplication.ViewLegalForms;
 import ca.northline.merchants.application.ManageApplication.ViewOnboarding;
 import ca.northline.merchants.application.SaveBusiness;
 import ca.northline.merchants.application.StartOnboarding;
 import ca.northline.merchants.application.UpdateAccount;
 import ca.northline.merchants.domain.BusinessProfile;
+import ca.northline.merchants.web.LegalFormResponses.LegalFormsResponse;
 import ca.northline.merchants.web.OnboardingRequests.AccountRequest;
 import ca.northline.merchants.web.OnboardingRequests.BusinessRequest;
 import ca.northline.merchants.web.OnboardingRequests.CompleteRequest;
@@ -48,6 +50,7 @@ class OnboardingController {
     private final UpdateAccount updateAccount;
     private final SaveBusiness saveBusiness;
     private final ViewOnboarding viewOnboarding;
+    private final ViewLegalForms viewLegalForms;
     private final AdvanceOnboarding advanceOnboarding;
     private final SubmitApplication submitApplication;
     private final CompleteVerification completeVerification;
@@ -75,6 +78,17 @@ class OnboardingController {
     @RequiresMerchant(VIEW)
     OnboardingResponse get(@PathVariable String merchantId) {
         return mapper.toResponse(viewOnboarding.view(merchantId));
+    }
+
+    /**
+     * The Business step's legal-details form of every structure in the business's province (region model): fields,
+     * labels, formats, help, registry. {@code PUT …/onboarding/business} validates against the same definition.
+     */
+    @GetMapping("/api/v1/merchants/{merchantId}/onboarding/legal-forms")
+    @RequiresMerchant(VIEW)
+    LegalFormsResponse legalForms(@PathVariable String merchantId) {
+        var forms = viewLegalForms.legalForms(merchantId);
+        return LegalFormResponses.of(forms.isEmpty() ? null : forms.getFirst().province(), forms);
     }
 
     @PutMapping("/api/v1/merchants/{merchantId}/onboarding/account")
