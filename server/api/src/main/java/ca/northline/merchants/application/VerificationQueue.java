@@ -24,6 +24,27 @@ public final class VerificationQueue {
     public static final String TOO_LONG = "At most 500 characters.";
     public static final String REVIEW_DECISION_REQUIRED = "Choose approve or reject.";
     public static final int NOTE_MAX = 500;
+    public static final String RECOMMENDATION_REQUIRED = "Choose approve, reject or request info.";
+    public static final String REJECT_REASON_REQUIRED = "Say why you recommend rejecting it.";
+    public static final String OVERRIDE_REASON_REQUIRED = "Say why you approve against the review.";
+    public static final String REVIEW_REQUIRED = "Review this application first: another person then decides it.";
+    public static final String SAME_PERSON = "You reviewed this application, so someone else has to decide it.";
+
+    /** A reviewer's recommendation ({@code merchants.application_reviews.recommendation}). */
+    public enum Recommendation implements CodedEnum {
+        APPROVE,
+        REJECT,
+        REQUEST_INFO
+    }
+
+    /**
+     * Where a pending application stands: {@code review} until someone has recommended, then {@code decision} (the
+     * open round has a review).
+     */
+    public enum Stage implements CodedEnum {
+        REVIEW,
+        DECISION
+    }
 
     /** What an agent decided on an application ({@code merchants.application_decisions.decision}). */
     public enum Decision implements CodedEnum {
@@ -89,6 +110,28 @@ public final class VerificationQueue {
         ApplicationDetail decide(DecideApplication.Command command, String lang);
     }
 
+    /** Stage 1: a reviewer's recommendation on a pending application (a later one replaces it as the current one). */
+    public interface ReviewApplication {
+        /**
+         * @param checkKeys checklist keys the reviewer would send back ({@link Recommendation#REQUEST_INFO})
+         * @param note for the approver (internal); required to reject or request info
+         * @param role the console role(s) the reviewer acts with, for the audit log
+         */
+        record Command(
+                String merchantId,
+                Recommendation recommendation,
+                List<String> checkKeys,
+                @Nullable String note,
+                String reviewerId,
+                String role) {
+            public Command {
+                checkKeys = List.copyOf(checkKeys);
+            }
+        }
+
+        ApplicationDetail review(ReviewApplication.Command command, String lang);
+    }
+
     public interface DecideIdentityReview {
         record Command(
                 String merchantId,
@@ -101,11 +144,15 @@ public final class VerificationQueue {
         ApplicationDetail decide(DecideIdentityReview.Command command, String lang);
     }
 
-    /** @param medianDecisionHours null before the first decision of the last 30 days */
+    /**
+     * @param medianDecisionHours null before the first decision of the last 30 days
+     * @param fourEyes whether a decision needs another person's review first
+     */
     public record Queue(
             List<ApplicationRow> items,
             long pending,
-            @Nullable Double medianDecisionHours) {
+            @Nullable Double medianDecisionHours,
+            boolean fourEyes) {
         public Queue {
             items = List.copyOf(items);
         }
@@ -118,6 +165,8 @@ public final class VerificationQueue {
      * @param province two-letter code (the console names it from the region model)
      * @param status the business's status now ({@code pending} = waiting for a decision)
      * @param decision the latest decision, when there is one
+     * @param stage while pending: {@code review} or {@code decision}; null otherwise
+     * @param review the current review of the open round, when there is one
      */
     public record ApplicationRow(
             String merchantId,
@@ -133,7 +182,9 @@ public final class VerificationQueue {
             List<CheckRow> checks,
             Risk risk,
             @Nullable Decision decision,
-            @Nullable Instant decidedAt) {
+            @Nullable Instant decidedAt,
+            @Nullable Stage stage,
+            @Nullable ReviewRow review) {
         public ApplicationRow {
             categories = List.copyOf(categories);
             checks = List.copyOf(checks);
@@ -151,15 +202,42 @@ public final class VerificationQueue {
             @Nullable String reference,
             @Nullable Instant expiresAt) {}
 
+    /**
+     * @param reviews every stage-1 review, newest first
+     * @param fourEyes whether a decision needs another person's review first
+     */
     public record ApplicationDetail(
             ApplicationRow application,
             List<OwnerReview> owners,
             List<ReviewView> registryReviews,
-            List<DecisionRow> decisions) {
+            List<ReviewRow> reviews,
+            List<DecisionRow> decisions,
+            boolean fourEyes) {
         public ApplicationDetail {
             owners = List.copyOf(owners);
             registryReviews = List.copyOf(registryReviews);
+            reviews = List.copyOf(reviews);
             decisions = List.copyOf(decisions);
+        }
+    }
+
+    /**
+     * One stage-1 review.
+     *
+     * @param reviewerName the reviewer's name from the staff directory (their id when the account is gone)
+     * @param decisionId the decision that closed its round; null while the round is open
+     */
+    public record ReviewRow(
+            String id,
+            Recommendation recommendation,
+            List<String> checkKeys,
+            @Nullable String note,
+            String reviewedBy,
+            String reviewerName,
+            Instant reviewedAt,
+            @Nullable String decisionId) {
+        public ReviewRow {
+            checkKeys = List.copyOf(checkKeys);
         }
     }
 
@@ -182,13 +260,15 @@ public final class VerificationQueue {
             @Nullable String reviewNote,
             @Nullable Instant reviewedAt) {}
 
+    /** @param reviewId the review the decision followed; null when decided without one */
     public record DecisionRow(
             String id,
             Decision decision,
             List<String> checkKeys,
             @Nullable String note,
             String decidedBy,
-            Instant decidedAt) {
+            Instant decidedAt,
+            @Nullable String reviewId) {
         public DecisionRow {
             checkKeys = List.copyOf(checkKeys);
         }

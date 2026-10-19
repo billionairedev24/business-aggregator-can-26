@@ -22,6 +22,11 @@ public final class StaffAccessDenied extends AccessDeniedException {
         ROLE_NOT_HELD,
         /** None of the caller's (active) roles opens the screen or allows the action. */
         INSUFFICIENT_ROLE,
+        /**
+         * Two-person rule: the caller already took part in this (reviewed the application they want to decide). The
+         * message names the rule.
+         */
+        SAME_PERSON,
         /** Programming error: a console handler without {@link RequiresConsole}. */
         UNGUARDED_ENDPOINT
     }

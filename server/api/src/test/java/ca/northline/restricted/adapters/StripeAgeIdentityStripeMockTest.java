@@ -37,7 +37,7 @@ class StripeAgeIdentityStripeMockTest {
         // stripe-mock validates the request against Stripe's spec; its fixture has no hosted-flow `url`, which the
         // adapter refuses (a real new session always has one)
         var start = new AgeIdentityProvider.StartRequest(
-                "01J9ZD3V0000000000000CUS01", 3, "http://localhost:3000/cart?age=done");
+                "01J9ZD3V0000000000000CUS01", 3, "http://localhost:3000/checkout?age=done");
         assertThatThrownBy(() -> identity.start(start))
                 .isInstanceOf(Conflict.class)
                 .hasFieldOrPropertyWithValue("code", "age_check_unavailable");

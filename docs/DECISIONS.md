@@ -8781,6 +8781,115 @@ sheet); UI only — no backend, schema or api change.
   features (the Studio's `components` root went with the move to `@northline/ui`).
 - **Schema additions:** none. No backend change.
 
+## 2026-10-18 — Demo data through the product (`make demo-data`)
+
+Branch `feat/demo-data`. A believable demo marketplace for the client demos on the dry run, made through the product
+(the dev seed stays local: its credentials are public) — [docs/runbooks/demo.md](runbooks/demo.md).
+
+- **Through the BFFs, not the api.** `scripts/demo/demo-data.mjs` (Node 22, no dependencies) signs people up and in at
+  northline-auth's JSON API, completes the BFF's authorization-code login without a browser (a cookie jar per person
+  and app, redirects followed by hand) and calls each app's `/api` with the session cookie and the CSRF header — the
+  same calls the Studio, consumer site and console make. No `X-Dev-User`, no SQL. Locally the only extras are the local
+  fakes' pages and outboxes (SMS codes, the fake Stripe Identity and age pages), which the e2e suite uses too.
+- **Credentials:** the product has no passwords, so "random strong credentials" are the **authenticator-app keys**
+  northline-auth generates at sign-up (plus backup codes), written only to a git-ignored state file (`.demo/<env>.json`,
+  mode 600) with each key's QR code; never printed, and with `CI=true` not even the identifiers.
+- **Accounts:** one owner owns every demo business (fewer phones on the dry run: each account needs a phone that
+  receives SMS), an applicant with no business (the live onboarding), three customers, and two console accounts for
+  the four-eyes review: the operator's admin decides (approver), a demo reviewer (trust & safety) is registered and
+  invited by the admin. The approval posts the review first (`POST …/verification/applications/{id}/review`) and falls
+  back to the single decision on 404/405, so it works before and after the four-eyes change (the review path is a
+  guess until that change lands). Consequence of one owner: the owner is the only bookable person of all seven
+  providers, so their jobs may overlap across businesses (the script tries the next slot on `slot_taken`).
+- **Idempotency and tags:** listings carry SKU `DEMO-<business>-<listing>`; businesses are found by the state file or
+  their name; activity is recorded once in the state file. `--reset` hides listings outside the plan in demo
+  businesses and every listing of the applicant's businesses, and puts the plan's prices, stock and visibility back;
+  `--reset-all` hides every demo listing. Nothing is deleted (orders, bookings and approved applications can't be).
+- **Places:** the market is the region model's configured default (`GET /api/v1/geo/markets` → `fallback`) or
+  `DEMO_MARKET`; addresses come from the product's address search in that market; the plan has `{city}` placeholders
+  and a test fails on a place name in it.
+- **Pictures** are generated at run time (PNG 1000 × 1000 on white, the item's name in a 5 × 7 pixel font): nothing
+  downloaded or stored in the repository.
+- **Dry-run configuration:** `values-dryrun.yaml` sets `IDENTITY_PROVIDER=stripe` and `AGE_VERIFICATION_PROVIDER=stripe`
+  (test mode) — with the `local` fakes their outcome pages exist only under the `local` profile, so on the dry run no
+  owner could finish onboarding and no customer could buy an age-restricted item.
+- **Found: the dry run can't register anyone yet.** Under `dev` the local SMS stand-in withholds codes (S-112, no
+  escape hatch on purpose); dryrun-gcp.md and dev.md said they were in the auth log (corrected). The dry run needs
+  Twilio for northline-auth before the first admin or any demo account can sign up (demo.md § 2).
+- **Fix:** the age check's web return URL is `/checkout?age=done` (it was `/cart?age=done`; the age step moved to the
+  checkout in redesign phase 1, so customers came back to the cart).
+- **Not done / never run:** the dry-run path (Twilio codes, Stripe Identity and Connect hosted test pages, confirming
+  PaymentIntents with `pm_card_visa` and the publishable key, the four-eyes review endpoint) has never run against a
+  deployed environment or real Stripe; it was run end to end only locally (e2e stack + Meilisearch + a reindex).
+  History is dated today (the product can't backdate). Goods orders end at "packed" (delivery needs a courier).
+  Schema additions: none.
+
+## 2026-10-18 — Two-person review of merchant applications (four-eyes)
+
+Owner request: one staff member could review and decide an application alone (S-79 records one decision). Now a
+reviewer recommends and a **different** staff member decides. Builds on S-79 (verification queue), S-90 (staff roles)
+and redesign phase 3 (the Applications screen's "1 · Review" / "2 · Decision" stages and the 680px sheet).
+
+- **Two stages on the server.** Stage 1 `POST /api/v1/console/verification/applications/{id}/review`
+  `{recommendation: approve|reject|request_info, checkKeys?, note?}`; stage 2 is the existing `POST …/decision`
+  (`approve | request_info`, unchanged body). The application's `stage` (`review` | `decision`, null when not pending)
+  and current `review` come from the api; the redesign's client-side derivation ("a check waits for an agent") is only
+  the fallback for an older api.
+- **Rounds.** Reviews of an application belong to its open round until a decision closes it
+  (`application_reviews.decision_id`). The newest open review is the current one; a later review replaces it as current
+  (a reviewer may change their mind, or another reviewer may look again). **Everyone who reviewed the open round is
+  excluded from deciding it** — a second review doesn't let the first reviewer decide. Request info closes the round,
+  sends the application back (S-79 behaviour) and **the next submission starts at stage 1** with no review.
+- **Errors.** Deciding before a review: 409 `review_required` ("Review this application first: another person then
+  decides it."). The reviewer deciding: **403 `same_person`** ("You reviewed this application, so someone else has to
+  decide it." — a new `StaffAccessDenied.Reason`, rendered by the existing 403 handler; the go-live switch's
+  `same_person` is a 409, this one is an authorization refusal as the owner asked). Review 422s: "Choose approve,
+  reject or request info.", "Say why you recommend rejecting it." (reject needs a note), request info needs checks and
+  a note (S-79's messages); recommending approve while a registry/identity review is open is S-79's 409 `reviews_open`;
+  a decided application is 409 `not_pending`. Approving against a reject or request-info recommendation needs the
+  approver's note: 422 "Say why you approve against the review." All in the fr-CA catalogue.
+- **Roles (S-90 model).** Review = the existing `verify` action; decide = a new **`approve`** action. Both are held by
+  `admin` and `trust_safety` (who already decided alone), so nobody loses a power; the split is what lets the rule be
+  stated and later narrowed (e.g. decide = admins only) in `StaffRole` alone. Identity and registry reviews stay
+  `verify` (stage-1 work).
+- **"Reject" is a recommendation, not an outcome.** The approver's outcomes stay approve / request info: declining a
+  business for good is still not built (S-79; suspension is S-82). A reject recommendation tells the approver to send it
+  back or to override with a reason.
+- **The reviewer's note is internal** (for the approver, never emailed); the approver's note is the one emailed to the
+  owners (S-79). The console's request-info dialog is prefilled with the reviewer's checks and note; the approver edits
+  and sends it.
+- **Configuration:** `northline.onboarding.four-eyes.enabled` (`ONBOARDING_FOUR_EYES_ENABLED`), **default `true` in
+  every profile, `local` included** — the local seed already has two console staff (Priya Natarajan, every role;
+  Marc Bélanger, admin, V334), so development sees the real flow. `false` lets one person decide without a review (a
+  single-staff demo); the api logs a warning at start and **refuses to start with `false` under `prod`**
+  (`FourEyesPolicy`). The Studio's local-only "Demo the approval" keeps approving in one step (dev endpoint).
+- **Audit (existing `developer.audit_log`, in the same transaction):** `verification.application_reviewed` (actor = the
+  reviewer, role, after = stage, reviewId, recommendation, checks, note); the decision's existing entries
+  (`application_approved`, `info_requested`) now also carry reviewId, reviewedBy, recommendation and the approver's
+  note. Notes are staff free text about the business; the DR mask scrubs `note` keys (S-114) and the new column.
+- **Events:** new in-process `merchants.api.ApplicationReviewed` (eventId, occurredAt, merchant id, reviewer id,
+  review id, recommendation — ids and codes, no note, no names); `ApplicationDecided` gains `reviewerId`. Neither is
+  externalized (as S-79's `ApplicationDecided`), so no topic or JSON schema; nothing listens to `ApplicationReviewed`
+  yet (no owner notification at stage 1).
+- **Console.** The table's inline action is "Review" in stage 1 (`verify`) and "Decide" in stage 2 (`approve`); both
+  open the sheet. The sheet shows a Review section (reviewer's name from `identity.api.StaffDirectory`,
+  recommendation, time, checks, note), the review in the History, and its footer: "Review" (dialog: recommendation
+  radio cards, checks for request info, note) or Approve / Request info — **disabled for the person who reviewed the
+  round, with the reason in text next to them (`aria-describedby`)**. Approving against the review opens a dialog for
+  the reason. en + fr-CA; axe in the vitest suite on the sheet and the review dialog; the a11y sweep's console grants
+  carry `approve` and its ARIA snapshot shows Review/Decide.
+- **Scripts.** `scripts/pilot/dry-run.mjs` approves with two people (Priya reviews, Marc decides).
+  `scripts/demo/demo-data.mjs` (#180) posts `POST …/review {recommendation: 'approve', note}` as its demo reviewer
+  (`trust_safety`) and the decision as the staff account. Changed here: "reviews_open" now arrives at the review step
+  (cleared, then reviewed again), identity mismatches are read from the detail's `owners` (the api has no
+  `identityReviews`), and a 403 `same_person` stops with "the reviewer and the approver are the same console account".
+- **Schema V370** (range V370–V379, above main's V364): `merchants.application_reviews` (recommendation CHECK, check
+  keys, note ≤ 500, reviewer, role, submitted/reviewed times, `decision_id` → `application_decisions`), partial index of
+  open rounds; `application_decisions.review_id`. Additive only.
+- **Not done:** assigning applications to a reviewer; notifying anyone when a review is waiting for a decision; a
+  permanent decline outcome; the a11y page sweep of an open sheet (an open Drawer reports its scrollable body without
+  keyboard access and the backdrop's table targets — the shared Drawer's, from redesign phase 3, not this change).
+
 ## 2026-10-19 — Demo rehearsal fixes (fix/demo-path-bugs)
 
 Thirteen bugs from the demo rehearsal, each with a test. Decisions the spec didn't make:

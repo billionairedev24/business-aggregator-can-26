@@ -14,6 +14,8 @@ import org.jspecify.annotations.Nullable;
  * @param aggregateId the merchant id
  * @param decision {@code approved | info_requested}
  * @param checkKeys checklist keys to redo ({@code insurance}, {@code licence:AMVIC}); empty when approved
+ * @param reviewerId who reviewed it first (two-person review, {@link ApplicationReviewed}); null when decided without a
+ *     review (four-eyes off)
  */
 public record ApplicationDecided(
         String eventId,
@@ -22,7 +24,8 @@ public record ApplicationDecided(
         String actorId,
         String decision,
         List<String> checkKeys,
-        @Nullable String note)
+        @Nullable String note,
+        @Nullable String reviewerId)
         implements DomainEvent {
     public ApplicationDecided {
         checkKeys = List.copyOf(checkKeys);

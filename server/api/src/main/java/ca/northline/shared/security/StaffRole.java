@@ -103,6 +103,8 @@ public enum StaffRole implements CodedEnum {
                         ConsoleAction.SUSPEND,
                         ConsoleAction.DECIDE,
                         ConsoleAction.VERIFY,
+                        // two-person review: trust & safety review and decide applications (never the same one)
+                        ConsoleAction.APPROVE,
                         ConsoleAction.VET,
                         ConsoleAction.SUPPORT);
             case DISPATCH -> Set.of(ConsoleAction.DISPATCH);

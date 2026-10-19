@@ -13,5 +13,7 @@ web/e2e/env/
 .cache/security-tools/
 /build/
 pilot-dry-run/
+# make demo-data: the demo accounts' identifiers and authenticator keys (docs/runbooks/demo.md) — never committed
+.demo/
 go-live-rehearsal/
 __pycache__/

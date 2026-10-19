@@ -17,6 +17,7 @@ const OUT = process.env.OUT ?? '.';
 if (!MARKET || !SECRET || !PSQL) throw new Error('MARKET, WEBHOOK_SECRET and PSQL are required (run scripts/pilot/dry-run.sh)');
 
 const STAFF = '01J9ZD3V00000000000000PNA1'; // Priya Natarajan, dev seed V191 (+ merchant success, V323)
+const APPROVER = '01J9ZD3V00000000000000MRC1'; // Marc Bélanger, dev seed V334: decides what Priya reviewed (four-eyes)
 const sql = q => execSync(`${PSQL}`, { input: q, encoding: 'utf8' }).trim();
 const quote = s => `'${String(s).replace(/'/g, "''")}'`;
 const [CITY, PROVINCE] = sql(`select city || '|' || province from region.regions where id = ${quote(MARKET)}`).split('|');
@@ -58,6 +59,13 @@ async function call(method, path, { user, role, body, form, multipart, raw, head
 }
 const staff = (method, path, opts = {}) => call(method, path, { user: STAFF, role: 'merchant_success', ...opts });
 const agent = (method, path, opts = {}) => call(method, path, { user: STAFF, role: 'trust_safety', ...opts });
+const approver = (method, path, opts = {}) => call(method, path, { user: APPROVER, role: 'admin', ...opts });
+/** Two-person review: Priya (trust & safety) recommends, Marc (admin) decides. */
+async function approveApplication(merchantId, opts = {}) {
+  const base = `/api/v1/console/verification/applications/${merchantId}`;
+  await agent('POST', `${base}/review`, { body: { recommendation: 'approve' } });
+  return approver('POST', `${base}/decision`, { body: { decision: 'approve' }, ...opts });
+}
 
 // ── fake files ────────────────────────────────────────────────────────────────────────────────────────────────────
 const PDF = new Blob(['%PDF-1.4\n% dry run — not a real document\n'], { type: 'application/pdf' });
@@ -230,11 +238,11 @@ for (const [i, [type, name, category, address]] of PLAN.entries()) {
   b.listing = await addListing(b, b.merchantId, owner);
   if (type === 'kitchen') {
     // the region requires a passed visit: approving first is refused
-    await agent('POST', `/api/v1/console/verification/applications/${b.merchantId}/decision`, { body: { decision: 'approve' }, expect: [409] }).catch(() => {});
+    await approveApplication(b.merchantId, { expect: [409] }).catch(() => {});
     await kitchenVisit(b.pilotId);
   }
   await clearReviews(b.merchantId);
-  await agent('POST', `/api/v1/console/verification/applications/${b.merchantId}/decision`, { body: { decision: 'approve' } });
+  await approveApplication(b.merchantId);
   if (type === 'kitchen') {
     await call('POST', `/api/v1/merchants/${b.merchantId}/menus/${b.listing.menuId}/publish`, { user: owner.id });
     // Kitchen › Hours: without fulfilment settings the market's kitchen list leaves the kitchen out
