@@ -40,24 +40,29 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('home (redesign § 1.3)', () => {
-  it('opens on the hero carousel, the tiles and rails of real products and services', async () => {
+  it('opens on the hero (search and place first), illustrated tiles and rails of real products and services', async () => {
     const calls = mockFetch(api());
     renderApp('/', { routes: home });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Book trusted local pros' })).toBeInTheDocument();
-    // § 3.2: no greeting, no "what do you need" question, no promises, no "Your week", no tier tags
+    expect(await screen.findByRole('heading', { level: 1, name: 'Everything local, from people you can trust' })).toBeInTheDocument();
+    // § 3.2: no greeting, no "what do you need" question, no promises, no "Your week", no tier tags; phase B: no carousel
     expect(screen.queryByText(/^Good (morning|afternoon|evening)/)).toBeNull();
     expect(screen.queryByText(/What do you need/)).toBeNull();
     expect(screen.queryByText('Paid into escrow')).toBeNull();
     expect(screen.queryByText('Your week')).toBeNull();
+    expect(screen.queryByRole('button', { name: /slide/i })).toBeNull();
+    // the hero leads with the search and the place
+    expect(screen.getAllByRole('search').length).toBeGreaterThan(0);
+    expect(await screen.findByText('Near Beltline')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Home cleaning' })[0]).toHaveAttribute('href', '/services/house-cleaning');
 
-    const tiles = screen.getByRole('list', { name: 'Browse' });
-    expect(within(tiles).getByRole('heading', { level: 2, name: 'Book a service' })).toBeInTheDocument();
-    expect(within(tiles).getByRole('link', { name: 'Mobile mechanic' })).toHaveAttribute('href', '/services/mobile-mechanic');
+    const services = screen.getByRole('region', { name: 'Book a service' });
+    expect(within(services).getByRole('link', { name: 'Mobile mechanic' })).toHaveAttribute('href', '/services/mobile-mechanic');
+    expect(within(services).getByRole('link', { name: 'See more: Book a service' })).toHaveAttribute('href', '/services');
     // § 3.7: food is a department of the Shop, not a vertical of its own
-    expect(within(tiles).getByRole('heading', { name: 'Groceries & fresh food' })).toBeInTheDocument();
-    expect(within(tiles).getByRole('link', { name: 'Bakery' })).toHaveAttribute('href', '/shop/bakery');
-    expect(within(tiles).queryByRole('link', { name: /Vietnamese/ })).toBeNull();
-    expect(within(tiles).getByRole('link', { name: 'See more: Book a service' })).toHaveAttribute('href', '/services');
+    const shop = screen.getByRole('region', { name: 'Shop local' });
+    expect(within(shop).getByRole('link', { name: 'Bakery' })).toHaveAttribute('href', '/shop/bakery');
+    expect(within(shop).queryByRole('link', { name: /Vietnamese/ })).toBeNull();
 
     const products = await screen.findByRole('region', { name: 'Popular near Beltline' });
     const sourdough = await within(products).findByRole('article', { name: 'Country sourdough' });
@@ -75,19 +80,12 @@ describe('home (redesign § 1.3)', () => {
     await expectNoAxeViolations(document.body); // S-109
   });
 
-  it('moves through the slides with the arrows and the dots', async () => {
+  it('opens the location dialog from the hero', async () => {
     mockFetch(api());
     const u = userEvent.setup({ delay: null });
     renderApp('/', { routes: home });
-    const hero = await screen.findByRole('region', { name: 'Featured' });
-    await u.click(within(hero).getByRole('button', { name: 'Next slide' }));
-    expect(screen.getByRole('heading', { level: 1, name: 'Your neighbourhood shops, delivered together' })).toBeInTheDocument();
-    expect(within(hero).getByRole('link', { name: 'Start shopping' })).toHaveAttribute('href', '/shop');
-    await u.click(within(hero).getByRole('button', { name: 'Previous slide' }));
-    await u.click(within(hero).getByRole('button', { name: 'Previous slide' }));
-    expect(screen.getByRole('heading', { level: 1, name: 'Bigger job? Get itemized quotes' })).toBeInTheDocument();
-    await u.click(within(hero).getByRole('button', { name: 'Slide 1 of 3' }));
-    expect(within(hero).getByRole('button', { name: 'Slide 1 of 3' })).toHaveAttribute('aria-current', 'true');
+    await u.click(await screen.findByRole('button', { name: 'Change' }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 
   it('offers another location where nothing is listed yet', async () => {
@@ -95,7 +93,7 @@ describe('home (redesign § 1.3)', () => {
     localStorage.setItem(SAVED_KEY, JSON.stringify({ label: 'Toronto', city: 'Toronto', province: 'ON' }));
     renderApp('/', { routes: home });
     expect(await screen.findByText('Nothing near Toronto yet.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Choose another location' })).toHaveAttribute('href', '/location');
+    expect(screen.getByRole('button', { name: 'Choose another location' })).toBeInTheDocument();
   });
 
   it('shows an error with Retry when the listings can’t load', async () => {
@@ -113,9 +111,9 @@ describe('home (redesign § 1.3)', () => {
   it('speaks French', async () => {
     mockFetch(api());
     renderApp('/', { routes: home, locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Réservez des pros de confiance près de chez vous' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Épicerie et produits frais' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Boulangerie' })).toHaveAttribute('href', '/shop/bakery');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Tout le local, par des gens de confiance' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Acheter local' })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Acheter local' })).getByRole('link', { name: 'Boulangerie' })).toHaveAttribute('href', '/shop/bakery');
     const products = await screen.findByRole('region', { name: 'Populaire près de Beltline' });
     await waitFor(() => expect(within(products).getByRole('article', { name: 'Country sourdough' })).toHaveTextContent('Livré ce soir'));
     expect(within(products).getByRole('img', { name: '4,6 sur 5 étoiles' })).toBeInTheDocument();
@@ -125,7 +123,7 @@ describe('home (redesign § 1.3)', () => {
     localStorage.clear();
     const calls = mockFetch(api());
     renderApp('/', { routes: home, geolocation: { getCurrentPosition: () => {} } as unknown as Geolocation });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Book trusted local pros' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Everything local, from people you can trust' })).toBeInTheDocument();
     expect(calls.some(c => c.url.startsWith('/api/v1/search?'))).toBe(false);
   });
 });

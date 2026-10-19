@@ -6,6 +6,8 @@ import tokensCss from '@northline/tokens/tokens.css?url';
 import uiCss from '@northline/ui/styles.css?url';
 import shellCss from '../features/shell/shell.css?url';
 import locationCss from '../features/location/location.css?url';
+import artCss from '../features/art/art.css?url';
+import pagesCss from '../features/pages/pages.css?url';
 import { ConsumerLayout } from '../features/shell/ConsumerLayout';
 import { NotFound } from '../features/shell/NotFound';
 import { RouteError } from '../features/shell/RouteError';
@@ -31,6 +33,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { rel: 'stylesheet', href: uiCss },
       { rel: 'stylesheet', href: shellCss },
       { rel: 'stylesheet', href: locationCss },
+      // the illustrated scenes (features/art): category, department and cuisine pictures on every landing page
+      { rel: 'stylesheet', href: artCss },
+      // the shared page parts (features/pages): rails, tiles, landing bands, breadcrumbs, sticky phone actions
+      { rel: 'stylesheet', href: pagesCss },
     ],
   }),
   shellComponent: Document,

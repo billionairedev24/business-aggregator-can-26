@@ -1,0 +1,95 @@
+/* Shared consumer page parts (light direction, phase B): rails, illustrated tiles, the landing band, section heads,
+   sticky phone actions. Every landing page and many detail pages use them; semantic tokens only. */
+
+/* ── section rhythm ── */
+.nl-section { margin-top: var(--space-12); min-width: 0; }
+.nl-section-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2) var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4); }
+.nl-section-title { margin: 0; font-size: var(--text-2xl); letter-spacing: var(--tracking-tight); }
+.nl-section-lede { margin: var(--space-1) 0 0; color: var(--color-text-muted); font-size: var(--text-md); max-width: 62ch; }
+.nl-section-more { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--size-touch); font-weight: var(--weight-semibold); color: var(--color-link); }
+@media (max-width: 599.98px) {
+  .nl-section { margin-top: var(--space-8); }
+  .nl-section-title { font-size: var(--text-xl); }
+}
+
+/* ── rails: one row that scrolls sideways, snap points, the buttons above (never over the cards) ── */
+.nl-rail { margin-top: var(--space-12); min-width: 0; }
+.nl-rail-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2) var(--space-4); margin-bottom: var(--space-4); }
+.nl-rail-titles { min-width: 0; }
+.nl-rail-title { margin: 0; font-size: var(--text-2xl); letter-spacing: var(--tracking-tight); }
+.nl-rail-lede { margin: var(--space-1) 0 0; color: var(--color-text-muted); font-size: var(--text-md); }
+.nl-rail-tools { display: flex; align-items: center; gap: var(--space-3); flex: none; }
+.nl-rail-more { display: inline-flex; align-items: center; min-height: var(--size-touch); font-weight: var(--weight-semibold); color: var(--color-link); white-space: nowrap; }
+.nl-rail-buttons { display: inline-flex; gap: var(--space-2); }
+.nl-rail-btn { width: var(--size-touch); height: var(--size-touch); display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--color-border-card); background: var(--color-surface); color: var(--color-text); cursor: pointer; box-shadow: var(--shadow-sm); }
+.nl-rail-btn:hover:not(:disabled) { background: var(--color-surface-hover); }
+.nl-rail-btn:disabled { opacity: .35; cursor: default; box-shadow: none; }
+.nl-rail-track { list-style: none; margin: 0 calc(-1 * var(--space-2)); padding: var(--space-2) var(--space-2) var(--space-4); display: grid; grid-auto-flow: column; gap: var(--space-5); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: var(--space-2); }
+.nl-rail-track > li { position: relative; scroll-snap-align: start; min-width: 0; display: flex; container-type: inline-size; } /* relative: a card's visually hidden text stays inside the scroller */
+.nl-rail-track > li > * { flex: 1; min-width: 0; }
+.nl-rail-product { grid-auto-columns: 196px; }
+.nl-rail-service { grid-auto-columns: 300px; }
+.nl-rail-tile { grid-auto-columns: 176px; }
+@media (max-width: 599.98px) {
+  .nl-rail { margin-top: var(--space-8); }
+  .nl-rail-title { font-size: var(--text-xl); }
+  .nl-rail-buttons { display: none; }
+  /* full-bleed to the screen edge so the next card peeks */
+  .nl-rail-track { margin-inline: calc(-1 * var(--page-gutter)); padding-inline: var(--page-gutter); scroll-padding-inline: var(--page-gutter); gap: var(--space-3); }
+  .nl-rail-product { grid-auto-columns: 152px; }
+  .nl-rail-service { grid-auto-columns: 264px; }
+  .nl-rail-tile { grid-auto-columns: 132px; }
+}
+@media (hover: none) { .nl-rail-buttons { display: none; } }
+
+/* ── illustrated tile: the picture (4:3, radius lg) and a name under it ── */
+.nl-tile { display: flex; flex-direction: column; gap: var(--space-2); color: var(--color-text); text-decoration: none; min-width: 0; border-radius: var(--radius-lg); }
+.nl-tile:hover { color: var(--color-text); text-decoration: none; }
+.nl-tile-pic { position: relative; display: block; aspect-ratio: 4 / 3; border-radius: var(--radius-lg); overflow: hidden; box-shadow: inset 0 0 0 1px var(--color-border); }
+.nl-tile-pic .nl-art { transition: transform var(--duration) var(--ease); }
+@media (hover: hover) { .nl-tile:hover .nl-tile-pic .nl-art { transform: scale(1.04); } .nl-tile:hover .nl-tile-name { text-decoration: underline; } }
+.nl-tile-name { font-weight: var(--weight-semibold); font-size: var(--text-md); line-height: var(--leading-tight); overflow-wrap: anywhere; }
+.nl-tile-meta { font-size: var(--text-sm); color: var(--color-text-muted); margin-top: calc(-1 * var(--space-1)); }
+.nl-tile:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+.nl-tiles { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-5) var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr)); }
+.nl-tiles > li { min-width: 0; display: flex; }
+.nl-tiles > li > * { flex: 1; }
+@media (max-width: 599.98px) {
+  .nl-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-3); }
+}
+
+/* ── landing band: a linen panel, the title and lede on the left, a picture on the right ── */
+.nl-band { margin-top: var(--space-6); display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: stretch; background: var(--color-surface-sunken); border-radius: var(--radius-lg); overflow: hidden; min-height: 260px; }
+.nl-band-copy { padding: var(--space-10) var(--space-8); display: flex; flex-direction: column; justify-content: center; gap: var(--space-3); min-width: 0; }
+.nl-band-kicker { font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
+.nl-band-title { margin: 0; font-size: var(--text-4xl); letter-spacing: var(--tracking-tight); line-height: 1.08; overflow-wrap: anywhere; }
+.nl-band-lede { margin: 0; color: var(--color-text-muted); font-size: var(--text-lg); line-height: var(--leading-normal); max-width: 52ch; }
+.nl-band-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+.nl-band-pic { position: relative; min-height: 220px; }
+@media (max-width: 767.98px) {
+  .nl-band { grid-template-columns: minmax(0, 1fr); min-height: 0; margin-top: var(--space-4); }
+  .nl-band-copy { padding: var(--space-6) var(--space-5); order: 2; }
+  .nl-band-title { font-size: var(--text-3xl); }
+  .nl-band-lede { font-size: var(--text-md); }
+  .nl-band-pic { min-height: 0; aspect-ratio: 16 / 7; order: 1; }
+}
+
+/* ── breadcrumbs: one muted line, the links in the link colour ── */
+.nl-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-1); margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); color: var(--color-text-muted); }
+.nl-crumbs li { display: inline-flex; align-items: center; gap: var(--space-1); }
+.nl-crumbs li + li::before { content: '/'; color: var(--color-border-strong); }
+.nl-crumbs a { display: inline-flex; align-items: center; min-height: 32px; color: var(--color-link); }
+
+/* ── a phone's sticky action bar (product, booking, checkout): the main action within thumb reach ── */
+.nl-stickybar { display: none; }
+@media (max-width: 767.98px) {
+  .nl-stickybar { position: sticky; bottom: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--space-3); margin: var(--space-6) calc(-1 * var(--page-gutter)) 0; padding: var(--space-3) var(--page-gutter) calc(var(--space-3) + env(safe-area-inset-bottom, 0px)); background: var(--color-surface); border-top: 1px solid var(--color-border); box-shadow: var(--shadow-md); }
+  .nl-stickybar > .btn { flex: 1; }
+  .nl-stickybar-sum { display: flex; flex-direction: column; min-width: 0; font-size: var(--text-xs); color: var(--color-text-muted); }
+  .nl-stickybar-sum strong { font-size: var(--text-lg); color: var(--color-text); }
+}
+
+/* a card without a photo shows its category's illustration (ServiceCard `mark`) */
+.nl-scard-thumb > .nl-art { position: absolute; inset: 0; }
+/* service cards in a row keep their price on one line at the bottom */
+.nl-rail-track .nl-scard-stack { grid-template-rows: auto 1fr auto; }
