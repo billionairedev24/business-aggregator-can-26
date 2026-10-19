@@ -87,7 +87,7 @@ export function SupportDesk() {
           </Chip>
         ))}
       </div>
-      <div className="nl-cols-wrap"><div className="nl-cols" data-split="wide">
+      <div className="nl-cols-wrap"><div className="nl-cols" data-split="main">
         <div className="nl-sd-table">
           <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
             can={{ create: false, update: false, delete: false }} roleName={roleName}

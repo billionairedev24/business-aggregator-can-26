@@ -18,6 +18,7 @@ body { text-wrap: pretty; }
   .nl-cols[data-split='wide'] { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
   .nl-cols[data-split='narrow'] { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
   .nl-cols[data-split='aside'] { grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr); }
+  .nl-cols[data-split='main'] { grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); }
 }
 .nl-col { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 /* a card's own lede and its list of rows (hairlines between, 44px tall) */
