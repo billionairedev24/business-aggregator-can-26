@@ -28,7 +28,7 @@ class EmailBrandTest {
         assertThat(colour(palette, "textMuted")).isEqualToIgnoringCase(EmailBrand.MUTED);
         assertThat(colour(palette, "accentTint")).isEqualToIgnoringCase(EmailBrand.HIGHLIGHT_100);
         assertThat(colour(palette, "primaryText")).isEqualToIgnoringCase(EmailBrand.ON_ACCENT);
-        assertThat(EmailBrand.FONT_BODY).startsWith(value(palette, "family", "[^\"]+"));
+        assertThat(EmailBrand.FONT_BODY.replace("'", "")).startsWith(value(palette, "family", "[^\"]+"));
     }
 
     private static String colour(String json, String name) {
