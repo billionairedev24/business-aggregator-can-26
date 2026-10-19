@@ -29,7 +29,7 @@ describe('Sell or offer a service (design 06 account › sell)', () => {
     open('/sell');
     expect(await screen.findByRole('heading', { level: 1, name: 'Sell or offer a service on Northline' })).toBeInTheDocument();
     expect(screen.getByText('Your customer account carries over — same login, same passkey. You’ll add business details, pass verification, and get a Studio.')).toBeInTheDocument();
-    const cards = screen.getAllByRole('listitem');
+    const cards = within(screen.getByRole('main')).getAllByRole('listitem'); // the header's nav row is a list too
     expect(cards.map(c => within(c).getByRole('heading', { level: 2 }).textContent)).toEqual(['Offer a service', 'Sell products', 'Run a kitchen']);
     expect(within(cards[0]!).getByText('Mechanic, cleaner, bartender, realtor… appointments, quotes, escrow payouts. Take rate 15% → 9% at Master.')).toBeInTheDocument();
     expect(within(cards[1]!).getByText('Verification: KYC · business registry · GST · product-category permits · MFA')).toBeInTheDocument();

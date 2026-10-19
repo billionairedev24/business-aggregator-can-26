@@ -99,7 +99,7 @@
 .nl-acct-form { max-width: 640px; margin-top: 22px; }
 .nl-acct-wide { max-width: 640px; margin-top: 12px; }
 .nl-acct-note { font-size: 14px; color: var(--color-text-muted); margin-top: 16px; }
-.nl-acct-table { max-width: 720px; width: 100%; min-width: 0; overflow-x: auto; }
+.nl-acct-table { max-width: 720px; width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; }
 .nl-acct-fieldset { border: 0; padding: 0; margin: 18px 0 0; max-width: 520px; }
 .nl-danger { color: var(--color-danger); }
 .nl-danger-btn { background: var(--color-action-danger); color: var(--color-action-danger-text); }

@@ -12,6 +12,12 @@ const links = [
   { key: 'shop', label: 'Shop', href: '/shop' },
   { key: 'food', label: 'Food', href: '/food' },
 ];
+const shortcuts = ['Mobile mechanic', 'Home cleaning', 'Plumber', 'Groceries', 'Bakery', 'Butcher', 'Pharmacy']
+  .map(label => ({ key: label, label, href: `/${label.toLowerCase().replace(/ /g, '-')}` }));
+const menu = [
+  { key: 'services', heading: 'Services', href: '/services', links: shortcuts.slice(0, 3) },
+  { key: 'shop', heading: 'Shop', href: '/shop', links: shortcuts.slice(3) },
+];
 const signedOut = (
   <AccountMenu sections={[{ items: [{ key: 'in', label: 'Sign in', icon: SignIn, href: '/sign-in' }, { key: 'up', label: 'Create account', icon: UserPlus, href: '/register' }] }]} />
 );
@@ -28,6 +34,9 @@ const meta = {
   args: {
     location: <LocationPill status="detected" label="Calgary" href="/location" />,
     links,
+    shortcuts,
+    end: [{ key: 'help', label: 'Help', href: '/help' }],
+    menu,
     cart: { count: 3, href: '/cart' },
     account: signedOut,
   },
@@ -49,6 +58,15 @@ export const SignedOut: S = {
     await expect(c.getByRole('menu')).toHaveTextContent('Welcome, guest');
   },
 };
+/** "All": every category by section, in a sheet from the left. */
+export const AllCategories: S = {
+  args: { search },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'All categories' }));
+    const sheet = within(document.body).getByRole('dialog', { name: 'All categories' });
+    await expect(within(sheet).getByRole('navigation', { name: 'Shop' })).toBeInTheDocument();
+  },
+};
 export const SignedIn: S = {
   args: { account: signedIn, search, links: links.map(l => ({ ...l, current: l.key === 'shop' })) },
 };
@@ -57,7 +75,7 @@ export const French: S = {
   args: { links: [{ key: 'services', label: 'Services', href: '/services' }, { key: 'shop', label: 'Boutique', href: '/shop' }, { key: 'food', label: 'Restaurants', href: '/food' }] },
   decorators: [Story => <I18nProvider initial="fr"><Story /></I18nProvider>],
 };
-/** 320 px: the header wraps onto more rows; nothing scrolls sideways. */
+/** 320 px: logo · place · account · cart, the search under them, the nav row scrolling by itself; the page never scrolls sideways. */
 export const Narrow: S = {
   args: { account: signedIn, search: <SearchBar variant="header" value="" onChange={() => {}} onSubmit={() => {}} /> },
   decorators: [Story => <div style={{ width: 320, overflow: 'hidden' }}><Story /></div>],

@@ -117,7 +117,7 @@
 
 @media (max-width: 599.98px) {
   .nl-food-title, .nl-rest-banner h1, .nl-track h1 { font-size: var(--text-3xl); }
-  .nl-food-chips { flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(-1 * var(--page-gutter)); padding-inline: var(--page-gutter); }
+  .nl-food-chips { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; margin-inline: calc(-1 * var(--page-gutter)); padding-inline: var(--page-gutter); }
   .nl-food-chips .nl-chip { flex: none; }
   .nl-food-info { padding: var(--space-5); }
   .nl-rest-cover { height: 140px; }

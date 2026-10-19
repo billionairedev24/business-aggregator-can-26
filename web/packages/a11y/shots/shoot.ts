@@ -12,7 +12,16 @@ import { photo, PHOTO_PREFIX } from './photos.mjs';
  * photos (shots/photos.mjs, served same-origin so no CSP changes). Nothing is asserted: the pictures are for people.
  */
 const OUT = new URL('../../../../ui-shots/', import.meta.url).pathname;
-const SIZES = [{ suffix: 'd', width: 1440, height: 900 }, { suffix: 'm', width: 390, height: 844 }] as const;
+const DEFAULT_SIZES = [{ suffix: 'd', width: 1440, height: 900 }, { suffix: 'm', width: 390, height: 844 }] as const;
+/**
+ * `UI_SHOTS_WIDTHS=2560,1920,1440,390,360` photographs those widths instead (named `<route>-<width>.png`; the height a
+ * common screen of that width: 16:9 from 1024px up, a phone's below). Default: 1440 (`-d`) and 390 (`-m`).
+ */
+const SIZES: readonly { suffix: string; width: number; height: number }[] = process.env.UI_SHOTS_WIDTHS
+  ? process.env.UI_SHOTS_WIDTHS.split(',').map(Number).filter(w => w >= 280).map(width => ({
+    suffix: String(width), width, height: width >= 1024 ? Math.round(width * 9 / 16) : width < 380 ? 760 : 844,
+  }))
+  : DEFAULT_SIZES;
 
 async function photos(page: Page) {
   // the generated photos, the catalogue's media (`/api/v1/public/catalogue/media/{id}`, what listings point at) and
@@ -52,6 +61,18 @@ async function shoot(page: Page, app: App, r: ShotRoute) {
     await page.waitForTimeout(400);
     // a page wider than the screen (a sideways scroll on a phone): name what sticks out (_overflow.txt)
     const wide = await page.evaluate(overflowing);
+    // and the page itself: wider than the window = a sideways scroll. base.css clips html and body (overflow-x: clip),
+    // which hides it from scrollWidth, so measure with the clip lifted for a moment
+    const doc = await page.evaluate(() => {
+      const els = [document.documentElement, document.body];
+      const before = els.map(el => el.style.overflowX);
+      els.forEach(el => { el.style.overflowX = 'visible'; });
+      const el = document.scrollingElement ?? document.documentElement;
+      const out = { scroll: el.scrollWidth, client: el.clientWidth };
+      els.forEach((e, i) => { e.style.overflowX = before[i]!; });
+      return out;
+    });
+    if (doc.scroll > doc.client + 1) wide.unshift(`page ${doc.scroll}px > ${doc.client}px`);
     if (wide.length) appendFileSync(`${OUT}${app}/_overflow.txt`, `${r.name}-${s.suffix}: ${wide.join(' · ')}\n`);
     await page.screenshot({ path: `${OUT}${app}/${r.name}-${s.suffix}.png`, fullPage: !r.click && !r.sheet, animations: 'disabled' });
   }

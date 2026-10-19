@@ -40,7 +40,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('home (redesign § 1.3)', () => {
-  it('opens on the hero (search and place first), illustrated tiles and rails of real products and services', async () => {
+  it('opens on the hero (the place first, one search: the header\'s), illustrated tiles and rails of real products and services', async () => {
     const calls = mockFetch(api());
     renderApp('/', { routes: home });
     expect(await screen.findByRole('heading', { level: 1, name: 'Everything local, from people you can trust' })).toBeInTheDocument();
@@ -50,8 +50,9 @@ describe('home (redesign § 1.3)', () => {
     expect(screen.queryByText('Paid into escrow')).toBeNull();
     expect(screen.queryByText('Your week')).toBeNull();
     expect(screen.queryByRole('button', { name: /slide/i })).toBeNull();
-    // the hero leads with the search and the place
-    expect(screen.getAllByRole('search').length).toBeGreaterThan(0);
+    // one search on the page — the header's (owner 2026-10-19: "why 2 search bars?") — and the hero leads with the place
+    expect(screen.getAllByRole('search')).toHaveLength(1);
+    expect(screen.getByRole('banner')).toContainElement(screen.getByRole('search'));
     expect(await screen.findByText('Near Beltline')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Change' })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'Home cleaning' })[0]).toHaveAttribute('href', '/services/house-cleaning');

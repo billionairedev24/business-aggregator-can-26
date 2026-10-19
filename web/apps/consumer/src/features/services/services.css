@@ -60,7 +60,7 @@
 }
 @media (max-width: 599.98px) {
   .nl-svc-list-title { font-size: var(--text-2xl); }
-  .nl-svc-filter-chips { flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(-1 * var(--page-gutter)); padding-inline: var(--page-gutter); }
+  .nl-svc-filter-chips { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; margin-inline: calc(-1 * var(--page-gutter)); padding-inline: var(--page-gutter); }
   .nl-svc-filter-chips .nl-chip { flex: none; }
   .nl-svc-list-aside { grid-template-columns: 96px minmax(0, 1fr); }
 }

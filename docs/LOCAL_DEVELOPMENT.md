@@ -200,6 +200,7 @@ consumer site, the Studio and the console and photographs **every route** of the
 make ui-shots                                   # all three apps (about 8 minutes)
 make ui-shots UI_SHOTS_APPS=consumer            # one app (or consumer,studio)
 make ui-shots UI_SHOTS_SKIP_BUILD=1 UI_SHOTS_GREP=home   # reuse the last build, only the routes matching "home"
+make ui-shots UI_SHOTS_WIDTHS=2560,1920,1440,390,360    # those widths instead (<route>-<width>.png)
 ```
 
 The pictures land in `ui-shots/<app>/<route>-d.png` (desktop) and `<route>-m.png` (phone) at the repository root
@@ -216,7 +217,8 @@ fetched from the internet and no Content-Security-Policy changes. The Studio and
 Sandhu, Priya Natarajan), the consumer is a guest unless the route says `signedIn`. A page that still looks empty
 usually lacks an answer: `ui-shots/<app>/_missing-api.txt` lists the requests nothing answered — add one to
 `shots/fixtures.mjs`. A page wider than the screen (a sideways scroll on a phone) is named in
-`ui-shots/<app>/_overflow.txt` with the outermost elements that stick out past the right edge.
+`ui-shots/<app>/_overflow.txt` with the outermost elements that stick out past the right edge (and `page Npx > Mpx`
+when the document itself is wider than the window, measured with the html/body clip lifted).
 
 Sticky bars (a phone's "Add to cart", a wizard's "Continue") sit at the bottom of the 844 px screen in a full-page
 picture, over the content that happens to be there: that is where a phone shows them, not an overlap.
