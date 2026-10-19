@@ -11,8 +11,10 @@
 
 /* the step rail: numbered circles joined by a line; done and current in the primary colour */
 .nl-bk-steps { display: flex; gap: 0; margin: 0 0 var(--space-6); padding: 0; list-style: none; font-size: var(--text-sm); counter-reset: step; }
-.nl-bk-steps > li { flex: 1; display: flex; align-items: center; min-width: 0; }
-.nl-bk-steps > li + li::before { content: ''; flex: 0 1 32px; height: 2px; background: var(--color-border-strong); margin: 0 var(--space-2); border-radius: 1px; }
+/* the first step at its own width; each next one grows a line from the previous */
+.nl-bk-steps > li { flex: 1 1 auto; display: flex; align-items: center; min-width: 0; }
+.nl-bk-steps > li:first-child { flex: none; }
+.nl-bk-steps > li + li::before { content: ''; flex: 1 1 24px; min-width: 12px; height: 2px; background: var(--color-border-strong); margin: 0 var(--space-3); border-radius: 1px; }
 .nl-bk-step { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); background: none; border: 0; padding: 0; font: inherit; color: var(--color-text-muted); cursor: pointer; white-space: nowrap; }
 .nl-bk-step:disabled { cursor: default; }
 .nl-bk-step[data-state='current'] { color: var(--color-text); font-weight: var(--weight-bold); }
@@ -97,7 +99,7 @@
   .nl-bk-title { font-size: var(--text-2xl); }
   .nl-bk-grid-address { grid-template-columns: minmax(0, 1fr); }
   /* the rail shows the current step's name only */
-  .nl-bk-steps > li + li::before { flex-basis: 12px; margin: 0 var(--space-1); }
+  .nl-bk-steps > li + li::before { flex-basis: 12px; margin: 0 var(--space-2); }
   .nl-bk-step:not([data-state='current']) .nl-bk-step-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
   .nl-bk-steps > li:has(.nl-bk-step[data-state='current']) { flex: 1 0 auto; }
   .nl-bk-steps > li { flex: 0 0 auto; }

@@ -38,7 +38,7 @@ export const useFoodT = defineMessages({
     closedBanner: '{name} is closed right now. {when}', closedOpens: 'It opens {time} — schedule for later at checkout.', pausedBanner: '{name} isn’t taking orders right now. Try again in a few minutes.',
     notFound: 'We couldn’t find this kitchen.',
     // checkout
-    checkoutTitle: 'Food checkout · {name}', when: 'When', asap: 'As soon as possible', scheduleOpt: 'Schedule', scheduleDesc: 'Pick a 30-min window',
+    checkoutTitle: 'Food checkout · {name}', emptyCheckoutTitle: 'Food checkout', when: 'When', asap: 'As soon as possible', scheduleOpt: 'Schedule', scheduleDesc: 'Pick a 30-min window',
     pickupOpt: 'Pickup', pickupDesc: 'Ready in {from}–{to} min · no fees', window: 'Window', today: 'Today', tomorrow: 'Tomorrow', noWindows: 'No windows left to schedule today or tomorrow.',
     deliverTo: 'Deliver to', change: 'Change', noAddress: 'Add the address to deliver to.', addAddress: 'Add address',
     dropoff: 'Drop-off', hand: 'Hand it to me', door: 'Leave at door', lobby: 'Meet in lobby',
@@ -99,7 +99,7 @@ export const useFoodT = defineMessages({
     otherKitchenTitle: 'Commencer une nouvelle commande ?', otherKitchenBody: 'Votre commande chez {name} sera effacée. Une commande de repas vient d’une seule cuisine.', startNew: 'Nouvelle commande',
     closedBanner: '{name} est fermé en ce moment. {when}', closedOpens: 'Ouverture à {time} — planifiez pour plus tard au paiement.', pausedBanner: '{name} ne prend pas de commandes en ce moment. Réessayez dans quelques minutes.',
     notFound: 'Cuisine introuvable.',
-    checkoutTitle: 'Paiement · {name}', when: 'Quand', asap: 'Dès que possible', scheduleOpt: 'Horaire', scheduleDesc: 'Choisir une plage de 30 min',
+    checkoutTitle: 'Paiement · {name}', emptyCheckoutTitle: 'Paiement du repas', when: 'Quand', asap: 'Dès que possible', scheduleOpt: 'Horaire', scheduleDesc: 'Choisir une plage de 30 min',
     pickupOpt: 'Cueillette', pickupDesc: 'Prêt en {from} à {to} min · sans frais', window: 'Plage', today: 'Aujourd’hui', tomorrow: 'Demain', noWindows: 'Plus aucune plage à planifier aujourd’hui ni demain.',
     deliverTo: 'Livrer à', change: 'Modifier', noAddress: 'Ajoutez l’adresse de livraison.', addAddress: 'Ajouter une adresse',
     dropoff: 'Dépôt', hand: 'Me le remettre', door: 'Laisser à la porte', lobby: 'Rencontre au hall',

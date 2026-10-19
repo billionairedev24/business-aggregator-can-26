@@ -9201,3 +9201,71 @@ from empty states (they reach the dialog through the redirect but on the home pa
 only through the shells; the Studio KPI strip leaving a sixth card alone on a row.
 
 Schema additions: none. Config additions: `brand.json` `chrome`. No new environment variables.
+
+## 2026-10-19 — Light & photo-first, phase B: every consumer page (feat/ui-consumer-pages)
+
+Phase B of the owner's **light & photo-first** direction (palette B Evergreen) on the consumer web: all 33 routes of
+`make ui-shots` plus the account sections and the bookings tab (now 41), each looked at on a desktop and a phone before
+and after. Studio and console are untouched (another stream); `@northline/ui` changed in one place (below).
+
+- **Pictures without photographs: illustrated scenes** (`features/art`). The catalogue has merchants' photos for
+  listings only; categories, departments, cuisines, covers and empty pages had none, and nothing may be hotlinked
+  (CSP `'self'`). `Art` draws a still life — a backdrop and ground in one of the palette's ramps (`--primary-*`,
+  `--accent-*`, `--success-*`, `--warning-*`, `--neutral-*`, linen), a light disc, the subject's Phosphor *fill*
+  pictogram with a companion in a white badge, a few dots — as one inline SVG, so a palette switch re-colours every
+  picture and nothing is downloaded. `subjectFor(key)` maps a slug, code or name to a subject by words, specific rules
+  first (about 120 rules: every seeded service and shop category has a subject except tobacco & vape, which shows a storefront); `toneFor(key)` is stable per key. `fit:
+  'cover'` crops tiles; `'contain'` keeps the subject's size on wide banners and covers (the backdrop then comes from
+  CSS). Using the palette ramps (not only semantic roles) is limited to `art.css`. The thrash list's "Phosphor
+  duotone goes" is respected: the scenes use *fill*. Empty states stay text (the primitives' rule); the 404 and the
+  route-error page are pages, not empty states, and get a picture. Real photography (merchants' covers and category
+  photos from a CMS) can replace a scene wherever one is passed in; nothing in the data model changed.
+- **Shared page parts** (`features/pages`, loaded on every page): `RailSection`/`RailTrack` — one row of cards that
+  scrolls sideways with snap points, its back/on buttons beside the title (never over the cards; hidden on touch and
+  phones, where the row runs to the screen edge so the next card peeks); `Tile` (picture + name + a muted line);
+  the landing **band** (linen panel, copy left, picture right; picture first on phones); `Crumbs` (one muted line, "›"
+  between, 44 px targets — the ad-hoc crumb markups of eight screens are gone); `.nl-stickybar` and sticky step
+  actions (a phone's main action in thumb reach); `PlaceButton` (opens the location dialog in place).
+- **Home:** the carousel (an empty green box with arrows over it) is gone. The hero leads with the search (its own
+  label, "Search shops, products and services"; hidden below 900 px where the header carries the search row) and the
+  place ("Near {place} · Change" opens the dialog), a row of popular entries, and an illustrated collage with one
+  "every pro and shop verified" badge. Six illustrated service tiles and six shop departments, then sideways rails of
+  real products and services, then the sellers' banner. The four "quad" tile cards and "Around the home" went; no
+  promises block came back (§ 3.2).
+- **Services landing:** a band ("{count} categories live" — the "in {province}" part is gone, region-neutral) and one
+  sideways row of illustrated category tiles per group with "N pros" or "Coming soon" (no wall of chips); the
+  categories with the most providers first. **Category:** a band with the picture, typical prices as a card list,
+  numbered steps, the sticky way in (first after the band on phones). **Provider list:** cards beside the category's
+  picture with the quote way in (or "How it works" where the category takes no quotes). **Provider page:** a cover
+  (the category's scene) with the business's mark over its edge (ringed in its brand colour), stat cards, credentials,
+  review cards with stars, FAQ, area, the booking card sticky (first on phones).
+- **Shop:** the run headline stays the landing's h1, now in a band with a picture; departments are illustrated tiles;
+  popular products a rail. Departments: a band and sibling chips (one sideways row on phones). **Product:** "Also
+  from" is a rail of cards (an illustration, the name, the price) instead of chips; phones get a sticky
+  "Add to cart · {price}" (the buy box sits far below the photo). **Search:** a plain head row, a sticky filter
+  column, and "Popular right now" tiles under "No results".
+- **Cart / checkout / done:** cart groups are cards, lines without a photo show an illustration, the subtotal and
+  "Proceed to checkout" come first on phones; checkout's steps are cards (the steps to come recede onto linen); the
+  confirmation card opens on a picture. **Tracking:** order and booking pages get the unified crumbs, card styling,
+  shop pictures and a picture on the booking. **Booking and quote wizards:** a step rail with connecting lines (the
+  current step's name only on phones) and a sticky main action on phones; received quotes read as one card per
+  provider on phones (the table on wide screens; it used to scroll the page sideways).
+- **Account:** sections open beside the account's sections (a linen side list, the current one marked; hidden below
+  900 px) and their lists are cards. **Food** (flagged): cards, the kitchen cover and dishes show illustrations instead
+  of gradients; `food.css` moved to the semantic tokens; the tracking map uses the primary and accent roles (it was
+  danger red). **Help, sell, sign-in/register:** bands and pictured cards; the sign-in form comes first on phones.
+- **Empty states that offered "Change location"** (shop, departments, product, food, search) opened `/location`,
+  which redirects to the home page; they open the dialog over the page now.
+- **`@northline/ui`:** `ProductCard` takes an optional `fallback` picture (default: the phase-A `MediaFallback`), with a
+  story; the consumer passes its illustration so product and service cards without photos look alike.
+- **ui-shots:** routes for the seven account sections and the bookings tab; fixtures for the whole service taxonomy
+  (from `db/seed/categories.json`), a provider page with its sections, reviews and two more services, a cart line with
+  a photo, the storefront visit beacon; `_overflow.txt` names what sticks out past the screen's right edge
+  (respecting containing blocks — an absolutely positioned visually-hidden label inside a sideways rail escaped it and
+  widened the page; rail items are positioned now).
+- **Accessibility:** aria snapshots updated for consumer home, product and booking (the hero, the crumbs as a list, the
+  sections); breadcrumb links are 44 px targets.
+
+Not done / open: real photography (category, department and cover photos) — the scenes are the stand-in; the
+French copy of the new strings is ours (in the translator-review queue like the rest); the Studio and console pages
+(another stream). Schema additions: none. Config additions: none. No new environment variables.

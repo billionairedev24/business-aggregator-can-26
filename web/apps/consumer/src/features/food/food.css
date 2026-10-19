@@ -126,3 +126,4 @@
 }
 /* a dish's picture is small: the main pictogram only, the "+" in the corner */
 .nl-rest-plus .nl-art-badge, .nl-rest-plus .nl-art-side { display: none; }
+.nl-fco-empty .nl-empty { margin-top: var(--space-5); }
