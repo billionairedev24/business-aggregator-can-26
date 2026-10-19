@@ -93,11 +93,11 @@ export function FactList({ rows }: { rows: readonly (readonly [ReactNode, ReactN
   );
 }
 
-/** The back-office page head (PH:41): H1 2xl + a muted sub line, actions on the right. */
-export function BoHeader({ title, sub, actions }: { title: ReactNode; sub?: ReactNode; actions?: ReactNode }) {
+/** The back-office page head (PH:41): an optional kicker, H1 2xl + a muted sub line, actions on the right. */
+export function BoHeader({ title, sub, actions, kicker }: { title: ReactNode; sub?: ReactNode; actions?: ReactNode; kicker?: ReactNode }) {
   return (
     <div className="bo-head">
-      <div className="bo-head-text"><h1 className="bo-title">{title}</h1>{sub ? <p className="bo-sub">{sub}</p> : null}</div>
+      <div className="bo-head-text">{kicker ? <p className="bo-kicker">{kicker}</p> : null}<h1 className="bo-title">{title}</h1>{sub ? <p className="bo-sub">{sub}</p> : null}</div>
       {actions ? <div className="bo-head-actions">{actions}</div> : null}
     </div>
   );
