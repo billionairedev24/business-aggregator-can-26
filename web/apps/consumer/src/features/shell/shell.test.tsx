@@ -240,17 +240,28 @@ describe('screens and states', () => {
     expect(within(footer).getByRole('link', { name: 'Help' })).toHaveAttribute('href', '/help'); // S-145: for guests too
     expect(within(footer).getByRole('link', { name: 'Offer a service' })).toHaveAttribute('href', '/sell?type=provider');
     expect(within(footer).getByRole('link', { name: `Sell on ${brand.name}` })).toHaveAttribute('href', '/sell?type=seller');
-    expect(within(footer).getByRole('link', { name: 'Run a kitchen' })).toHaveAttribute('href', '/sell?type=kitchen');
+    // Food is hidden for the demo, so is "Run a kitchen" (demo rehearsal 2026-10-19)
+    expect(within(footer).queryByRole('link', { name: 'Run a kitchen' })).toBeNull();
     expect(within(footer).getByText(brand.legalName)).toBeInTheDocument();
+  });
+
+  it('offers "Run a kitchen" in the footer when the full navigation (Food) is on', async () => {
+    vi.stubEnv('VITE_NL_FULL_NAV', '1');
+    mockFetch(guest);
+    renderApp('/');
+    const footer = await screen.findByRole('contentinfo');
+    expect(within(footer).getByRole('link', { name: 'Run a kitchen' })).toHaveAttribute('href', '/sell?type=kitchen');
+    vi.unstubAllEnvs();
   });
 
   it('has the footer in French', async () => {
     mockFetch(guest);
     renderApp('/', { locale: 'fr' });
     const footer = await screen.findByRole('contentinfo');
-    for (const name of ['Confidentialité', 'Conditions', 'Aide', `Vendre sur ${brand.name}`, 'Offrir un service', 'Gérer une cuisine']) {
+    for (const name of ['Confidentialité', 'Conditions', 'Aide', `Vendre sur ${brand.name}`, 'Offrir un service']) {
       expect(within(footer).getByRole('link', { name })).toBeInTheDocument();
     }
+    expect(within(footer).queryByRole('link', { name: 'Gérer une cuisine' })).toBeNull(); // Food is hidden for the demo
     expect(within(footer).getByRole('button', { name: 'English' })).toHaveAttribute('lang', 'en-CA');
   });
 });
