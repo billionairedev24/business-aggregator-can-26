@@ -6,6 +6,10 @@ import { Alert, EmptyState, Price, QuantityStepper, SiteLink, Skeleton, Stars, s
 import { clock, runWhen, weekday, windowRange } from '../shop/format';
 import { useMarketFollowsLocation, withMarket } from '../shop/market';
 import { productQuery, useAddToCart, type Offer, type ProductPage } from './api';
+import { Crumbs } from '../pages/Crumbs';
+import { RailSection, RailTrack } from '../pages/Rail';
+import { Art } from '../art/Art';
+import { PlaceButton } from '../pages/PlaceButton';
 import { useProductT } from './messages';
 
 /**
@@ -23,13 +27,11 @@ export function ProductDetail({ productId, market: explicit, offerId }: { produc
   const offer = data.offers.find(o => o.offerId === offerId) ?? data.offers[0];
 
   const crumbs = (
-    <nav aria-label={t('crumbs')} className="product-crumbs">
-      <ol>
-        <li><SiteLink href={link('/shop')}>{t('shop')}</SiteLink></li>
-        {data.departmentSlug ? <li><SiteLink href={link(`/shop/${data.departmentSlug}`)}>{data.departmentName}</SiteLink></li> : null}
-        <li aria-current="page">{data.name}</li>
-      </ol>
-    </nav>
+    <Crumbs label={t('crumbs')} items={[
+      { label: t('shop'), href: link('/shop') },
+      ...(data.departmentSlug ? [{ label: data.departmentName ?? data.departmentSlug, href: link(`/shop/${data.departmentSlug}`) }] : []),
+      { label: data.name },
+    ]} />
   );
 
   if (!offer) {
@@ -40,7 +42,7 @@ export function ProductDetail({ productId, market: explicit, offerId }: { produc
         <div className="product-empty">
           {data.served
             ? <EmptyState action={<SiteLink href={link('/shop')} className="btn btn-primary">{t('backToShop')}</SiteLink>}>{t('unavailable', { city: data.market })}</EmptyState>
-            : <EmptyState action={<SiteLink href="/location" className="btn btn-primary">{t('changeLocation')}</SiteLink>}>{t('notServed', { city: data.market })}</EmptyState>}
+            : <EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('notServed', { city: data.market })}</EmptyState>}
         </div>
       </div>
     );
@@ -194,13 +196,29 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
       </aside>
 
       {offer.more.length > 0 ? (
-        <section aria-labelledby="product-more" className="product-more-section">
-          <h2 id="product-more" className="product-h2">{t('alsoFrom', { shop: offer.shopName })}</h2>
-          <ul className="product-more">
-            {offer.more.map(m => <li key={m.productId}><SiteLink href={link(`/products/${m.productId}`)}>{t('moreItem', { name: m.name, price: money(m.priceCents) })}</SiteLink></li>)}
-          </ul>
-        </section>
+        <div className="product-more-section">
+          <RailSection id="product-more" title={t('alsoFrom', { shop: offer.shopName })}>
+            <RailTrack size="tile">
+              {offer.more.map(m => (
+                <li key={m.productId}>
+                  <SiteLink href={link(`/products/${m.productId}`)} className="nl-tile product-more-card" aria-label={t('moreItem', { name: m.name, price: money(m.priceCents) })}>
+                    <span className="nl-tile-pic product-more-pic"><Art subject={`${m.name} ${data.departmentSlug ?? ''}`} /></span>
+                    <span className="nl-tile-name">{m.name}</span>
+                    <span className="product-more-price">{money(m.priceCents)}</span>
+                  </SiteLink>
+                </li>
+              ))}
+            </RailTrack>
+          </RailSection>
+        </div>
       ) : null}
+
+      {/* phones: the main action within thumb reach (the buy box is far below the photo and the details) */}
+      <div className="nl-stickybar product-stickybar">
+        <button type="button" className="btn btn-accent btn-lg" disabled={stock <= 0 || add.isPending} onClick={onAdd}>
+          {t('addWithPrice', { price: money(price) })}
+        </button>
+      </div>
     </div>
   );
 }

@@ -196,7 +196,7 @@ describe('search results (redesign § 1.3 results page)', () => {
   it('leaves distance out without a location and says why', async () => {
     const { calls } = open('/search?q=pho&sort=distance&radiusKm=3');
     expect(await screen.findByText('Set your location to sort and filter by distance.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Set location' })).toHaveAttribute('href', '/location?next=/search');
+    expect(screen.getByRole('button', { name: 'Set location' })).toBeInTheDocument(); // the location dialog, in place
     const q = searches(calls).at(-1)!;
     expect(q.has('sort')).toBe(false);
     expect(q.has('radiusKm')).toBe(false);

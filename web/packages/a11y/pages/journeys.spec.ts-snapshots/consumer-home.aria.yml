@@ -1,85 +1,73 @@
 - main:
-  - region "Featured":
-    - button "Previous slide"
-    - group "Slide 1 of 3":
-      - heading "Book trusted local pros" [level=1]
-      - paragraph: Mechanics, cleaners, tutors and more — verified before they appear, paid only when the job is done.
-      - link "Find a pro":
-        - /url: /services
-    - button "Next slide"
-    - group "Choose a slide":
-      - button "Slide 1 of 3"
-      - button "Slide 2 of 3"
-      - button "Slide 3 of 3"
-  - list "Browse":
-    - listitem:
-      - heading "Book a service" [level=2]
-      - list:
-        - listitem:
-          - link "Mobile mechanic":
-            - /url: /services/mobile-mechanic
-        - listitem:
-          - link "Barber & hair":
-            - /url: /services/barber-and-hair
-        - listitem:
-          - link "Plumber":
-            - /url: /services/plumber
-        - listitem:
-          - link "Tutor":
-            - /url: /services/tutor-k-12
-      - 'link "See more: Book a service"':
-        - /url: /services
-    - listitem:
-      - heading "Shop local" [level=2]
-      - list:
-        - listitem:
-          - link "Clothing":
-            - /url: /shop/clothing
-        - listitem:
-          - link "Pharmacy":
-            - /url: /shop/pharmacy-otc
-        - listitem:
-          - link "Hardware":
-            - /url: /shop/hardware
-        - listitem:
-          - link "Gifts":
-            - /url: /shop/gifts-and-crafts
-      - 'link "See more: Shop local"':
-        - /url: /shop
-    - listitem:
-      - heading "Groceries & fresh food" [level=2]
-      - list:
-        - listitem:
-          - link "Groceries":
-            - /url: /shop/groceries
-        - listitem:
-          - link "Butcher":
-            - /url: /shop/butcher
-        - listitem:
-          - link "Bakery":
-            - /url: /shop/bakery
-        - listitem:
-          - link "Produce":
-            - /url: /shop/produce
-      - 'link "See more: Groceries & fresh food"':
-        - /url: /shop/groceries
-    - listitem:
-      - heading "Around the home" [level=2]
-      - list:
-        - listitem:
-          - link "Home cleaning":
-            - /url: /services/house-cleaning
-        - listitem:
-          - link "Real-estate agent":
-            - /url: /services/real-estate-agent
-        - listitem:
-          - link "Movers":
-            - /url: /services/movers
-        - listitem:
-          - link "Snow removal":
-            - /url: /services/snow-removal
-      - 'link "See more: Around the home"':
-        - /url: /services
+  - region "Everything local, from people you can trust":
+    - heading "Everything local, from people you can trust" [level=1]
+    - paragraph: Book verified pros, shop neighbourhood stores and get it all delivered together — you pay only when it’s done.
+    - search:
+      - text: Search shops, products and services
+      - combobox "Search shops, products and services"
+      - button "Search"
+    - paragraph:
+      - text: Choose where you are to see what’s close
+      - button "Set your location"
+    - list "Popular":
+      - listitem:
+        - link "Mobile mechanic":
+          - /url: /services/mobile-mechanic
+      - listitem:
+        - link "Home cleaning":
+          - /url: /services/house-cleaning
+      - listitem:
+        - link "Bakery":
+          - /url: /shop/bakery
+      - listitem:
+        - link "Groceries":
+          - /url: /shop/groceries
+  - region "Book a service":
+    - heading "Book a service" [level=2]
+    - 'link "See more: Book a service"':
+      - /url: /services
+    - list:
+      - listitem:
+        - link "Mobile mechanic":
+          - /url: /services/mobile-mechanic
+      - listitem:
+        - link "Home cleaning":
+          - /url: /services/house-cleaning
+      - listitem:
+        - link "Plumber":
+          - /url: /services/plumber
+      - listitem:
+        - link "Barber & hair":
+          - /url: /services/barber-and-hair
+      - listitem:
+        - link "Tutor":
+          - /url: /services/tutor-k-12
+      - listitem:
+        - link "Movers":
+          - /url: /services/movers
+  - region "Shop local":
+    - heading "Shop local" [level=2]
+    - 'link "See more: Shop local"':
+      - /url: /shop
+    - list:
+      - listitem:
+        - link "Groceries":
+          - /url: /shop/groceries
+      - listitem:
+        - link "Bakery":
+          - /url: /shop/bakery
+      - listitem:
+        - link "Butcher":
+          - /url: /shop/butcher
+      - listitem:
+        - link "Produce":
+          - /url: /shop/produce
+      - listitem:
+        - link "Pharmacy":
+          - /url: /shop/pharmacy-otc
+      - listitem:
+        - link "Gifts":
+          - /url: /shop/gifts-and-crafts
   - region "Popular near you":
     - heading "Popular near you" [level=2]
     - 'link "See more: Popular near you"':
@@ -112,6 +100,8 @@
     - heading "Pros near you" [level=2]
     - 'link "See more: Pros near you"':
       - /url: /services
+    - 'button "Scroll back: Pros near you" [disabled]'
+    - 'button "Scroll on: Pros near you"'
     - list:
       - listitem:
         - article "Country sourdough":

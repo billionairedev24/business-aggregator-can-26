@@ -1,12 +1,21 @@
-import { EmptyState, PageHeader, SiteLink } from '@northline/ui';
+import { Compass, MagnifyingGlass } from '@phosphor-icons/react';
+import { SiteLink } from '@northline/ui';
+import { Art } from '../art/Art';
 import { useShellT } from './messages';
 
+/** No such page: a picture, what happened, and the ways back (home, Services, Shop). */
 export function NotFound() {
   const t = useShellT();
   return (
-    <div className="nl-page">
-      <PageHeader title={t('notFoundTitle')} lede={t('notFoundBody')} />
-      <EmptyState action={<SiteLink href="/" className="btn btn-primary">{t('backHome')}</SiteLink>}>{t('notFoundBody')}</EmptyState>
+    <div className="nl-page nl-lost">
+      <span className="nl-lost-pic" aria-hidden><Art subject="lost" tone="linen" draw={{ main: Compass, side: MagnifyingGlass }} fit="contain" /></span>
+      <h1 className="nl-lost-title">{t('notFoundTitle')}</h1>
+      <p className="nl-lost-body">{t('notFoundBody')}</p>
+      <div className="nl-lost-actions">
+        <SiteLink href="/" className="btn btn-primary btn-lg">{t('backHome')}</SiteLink>
+        <SiteLink href="/services" className="btn btn-secondary btn-lg">{t('services')}</SiteLink>
+        <SiteLink href="/shop" className="btn btn-secondary btn-lg">{t('shop')}</SiteLink>
+      </div>
     </div>
   );
 }

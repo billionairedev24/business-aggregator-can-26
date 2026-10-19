@@ -90,7 +90,12 @@ export function CheckoutScreen() {
 
   if (loading) return <div className="nl-page"><Skeleton width={320} height={36} /><Skeleton height={200} style={{ marginTop: 20 }} /></div>;
   if (!cart || cart.lines.length === 0) {
-    return <div className="nl-page"><EmptyState action={<Link to="/food" className="btn btn-primary">{t('browseFood')}</Link>}>{t('emptyCheckout')}</EmptyState></div>;
+    return (
+      <div className="nl-page nl-fco-empty">
+        <h1 className="nl-page-title">{t('emptyCheckoutTitle')}</h1>
+        <EmptyState action={<Link to="/food" className="btn btn-primary">{t('browseFood')}</Link>}>{t('emptyCheckout')}</EmptyState>
+      </div>
+    );
   }
   if (!user) {
     return (

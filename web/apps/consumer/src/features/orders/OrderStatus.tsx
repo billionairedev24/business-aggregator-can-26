@@ -7,6 +7,8 @@ import { clock, runWhen, weekday, windowRange } from '../shop/format';
 import { useConfirmDelivery, useOrder, useOrderStream, useProofPhoto, type OrderTracking } from './api';
 import { useOrderT } from './messages';
 import { CourierStatus } from '../tracking/CourierStatus';
+import { Crumbs } from '../pages/Crumbs';
+import { Art } from '../art/Art';
 import { CourierTip, ReviewPanel } from '../aftercare/Aftercare';
 
 /**
@@ -73,9 +75,7 @@ function OrderView({ order }: { order: OrderTracking }) {
 
   return (
     <div className="nl-page order-page">
-      <nav aria-label={t('crumbs')} className="order-crumbs">
-        <SiteLink href="/account">{t('crumbAccount')}</SiteLink> › <SiteLink href="/account/orders">{t('crumbOrders')}</SiteLink> › <span aria-current="page">{ref}</span>
-      </nav>
+      <Crumbs label={t('crumbs')} items={[{ label: t('crumbAccount'), href: '/account' }, { label: t('crumbOrders'), href: '/account/orders' }, { label: ref }]} />
       <div className="order-grid">
         <div className="order-main">
           <dl className="order-head">
@@ -116,6 +116,7 @@ function OrderView({ order }: { order: OrderTracking }) {
             <ul className="order-shops">
               {order.shops.map(s => (
                 <li key={s.merchantId} className="order-shop">
+                  <span className="order-shop-pic" aria-hidden><Art subject={s.name} /></span>
                   <span className="order-shop-name">{s.name}</span>
                   <span className="order-shop-meta">{t('shopItems', { count: s.items })}</span>
                   {!done ? <span className={`tag ${s.packed ? 'tag-success' : 'tag-neutral'}`}>{s.packed ? t('shopPacked') : t('shopPacking')}</span> : null}

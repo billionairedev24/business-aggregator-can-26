@@ -18,3 +18,17 @@ body { text-wrap: pretty; }
 .nl-footer :focus-visible { outline-color: var(--color-focus); }
 .nl-footer-lang { font: inherit; font-weight: var(--weight-semibold); background: var(--color-surface); border: 1px solid var(--color-border-card); border-radius: var(--radius-pill); padding: 0 var(--space-4); cursor: pointer; color: var(--color-footer-text); }
 .nl-footer-legal { max-width: var(--page-max); margin: var(--space-8) auto 0; padding-top: var(--space-4); border-top: 1px solid var(--color-footer-border); font-size: var(--text-sm); color: var(--color-footer-muted); }
+
+/* no such page / a page that failed: a picture, one line, the ways back (centred) */
+.nl-lost { max-width: 640px; margin: 0 auto; text-align: center; display: flex; flex-direction: column; align-items: center; padding-top: var(--space-10); }
+.nl-lost-pic { position: relative; display: block; width: 100%; height: 220px; border-radius: var(--radius-lg); overflow: hidden; margin-bottom: var(--space-6); }
+.nl-lost-title { margin: 0; font-size: var(--text-4xl); letter-spacing: var(--tracking-tight); }
+.nl-lost-body { margin: var(--space-3) 0 0; color: var(--color-text-muted); font-size: var(--text-lg); }
+.nl-lost-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); margin-top: var(--space-6); }
+.nl-lost .nl-errorstate { margin-top: var(--space-6); width: 100%; text-align: left; }
+@media (max-width: 599.98px) {
+  .nl-lost { padding-top: var(--space-5); }
+  .nl-lost-pic { height: 150px; }
+  .nl-lost-title { font-size: var(--text-3xl); }
+  .nl-lost-actions { flex-direction: column; align-items: stretch; width: 100%; }
+}

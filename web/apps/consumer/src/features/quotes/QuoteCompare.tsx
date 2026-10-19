@@ -6,6 +6,7 @@ import { NotFound } from '../shell/NotFound';
 import { percent, rating } from '../services/format';
 import { comparisonQuery, type Offer } from './api';
 import { useQuotesT } from './messages';
+import { Crumbs } from '../pages/Crumbs';
 
 /** design 06 `book` quote mode, "N quotes received": every provider asked, cheapest quote first, then the waiting ones. */
 export function QuoteCompare({ requestId }: { requestId: string }) {
@@ -19,9 +20,7 @@ export function QuoteCompare({ requestId }: { requestId: string }) {
   const quoted = c.offers.filter(o => o.status === 'quoted').length;
   return (
     <div className="nl-page nl-qt">
-      <nav aria-label={t('breadcrumb')} className="nl-qt-crumbs">
-        <Link to="/services">{t('crumbServices')}</Link> › <span aria-current="page">{c.ref}</span>
-      </nav>
+      <Crumbs label={t('breadcrumb')} items={[{ label: t('crumbServices'), href: '/services' }, { label: c.ref }]} />
       <h1 className="nl-qt-title">{t('compareTitle', { count: quoted })}</h1>
       <p className="nl-qt-lede">{t('compareLede')}</p>
       <p className="nl-qt-muted">{t('sentTo', { ref: c.ref, count: c.offers.length, time: c.respondBy ? date(c.respondBy, 'time') : '—' })}</p>
@@ -42,21 +41,21 @@ function Row({ offer: o }: { offer: Offer }) {
   const { money, date } = useFormatters();
   const p = o.provider;
   const tier = t(`tier_${p.tier === 'master' || p.tier === 'trusted' ? p.tier : 'registered'}`);
-  const who = <td><strong>{p.name}</strong><br /><span className="nl-qt-muted">{p.reviewCount > 0 ? `${tier} · ★ ${rating(p.rating, locale)}` : tier}</span></td>;
+  const who = <td className="nl-qt-who"><strong>{p.name}</strong><br /><span className="nl-qt-muted">{p.reviewCount > 0 ? `${tier} · ★ ${rating(p.rating, locale)}` : tier}</span></td>;
   const trust = p.onTimePct != null ? t('trust', { onTime: percent(p.onTimePct, locale), disputes: percent(p.disputePct ?? 0, locale) }) : t('noScore');
   const q = o.quote;
   if (!q) {
-    return <tr>{who}<td colSpan={3} className="nl-qt-muted">{o.status === 'declined' ? t('declined') : t('waiting')}</td><td>{trust}</td><td /></tr>;
+    return <tr>{who}<td colSpan={3} className="nl-qt-muted">{o.status === 'declined' ? t('declined') : t('waiting')}</td><td data-label={t('thTrust')}>{trust}</td><td className="nl-qt-empty" /></tr>;
   }
   const includes = q.lines.filter(l => l.kind !== 'discount').slice(0, 2).map(l => l.description).join(', ');
   return (
     <tr data-state={q.state}>
       {who}
-      <td className="nl-qt-price">{money(q.totalCents)}{q.version > 1 ? <span className="tag nl-qt-vtag">{t('versionTag', { version: q.version })}</span> : null}<br /><span className="nl-qt-muted">{q.depositCents > 0 ? t('depositOf', { amount: money(q.depositCents) }) : t('noDeposit')}</span></td>
-      <td>{q.proposedAt ? date(q.proposedAt, 'dateTime') : '—'}</td>
-      <td className="nl-qt-small">{includes}{q.expired ? <> · <span className="tag">{t('expiredTag')}</span></> : null}</td>
-      <td className="nl-qt-small">{trust}</td>
-      <td><Link to="/quotes/$quoteId" params={{ quoteId: q.id }} className="btn btn-secondary nl-qt-view">{t('viewQuote')}</Link></td>
+      <td className="nl-qt-price" data-label={t('thQuote')}>{money(q.totalCents)}{q.version > 1 ? <span className="tag nl-qt-vtag">{t('versionTag', { version: q.version })}</span> : null}<br /><span className="nl-qt-muted">{q.depositCents > 0 ? t('depositOf', { amount: money(q.depositCents) }) : t('noDeposit')}</span></td>
+      <td data-label={t('thEarliest')}>{q.proposedAt ? date(q.proposedAt, 'dateTime') : '—'}</td>
+      <td className="nl-qt-small" data-label={t('thIncludes')}>{includes}{q.expired ? <> · <span className="tag">{t('expiredTag')}</span></> : null}</td>
+      <td className="nl-qt-small" data-label={t('thTrust')}>{trust}</td>
+      <td className="nl-qt-go"><Link to="/quotes/$quoteId" params={{ quoteId: q.id }} className="btn btn-secondary nl-qt-view">{t('viewQuote')}</Link></td>
     </tr>
   );
 }

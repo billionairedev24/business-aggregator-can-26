@@ -4,6 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { useParams } from '@tanstack/react-router';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import { OrderStatus } from './OrderStatus';
+
+/** The page's list items outside the breadcrumb (the timeline's steps, the shops…). */
+const listItems = () => screen.queryAllByRole('listitem').filter(li => !li.closest('nav'));
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const AMARA = { id: 'C1', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', phone: null, initials: 'AO', locale: 'en-CA', memberSince: '2026-03-02' };
@@ -65,7 +68,7 @@ describe('Order detail and tracking (redesign § 2.1)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: /^Order placed\. Arriving tonight 6.9.p\.m\.$/ })).toBeInTheDocument();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('NL-48213 · $47.76 · 3 shops packing now. Live tracking starts when the courier leaves.')).toBeInTheDocument();
-    const steps = within(screen.getAllByRole('list')[0]!).getAllByRole('listitem').map(li => li.textContent);
+    const steps = within(screen.getAllByRole('list').filter(l => !l.closest('nav'))[0]!).getAllByRole('listitem').map(li => li.textContent);
     expect(steps).toEqual([
       'Paid (done)',
       'Shops packing · 0 of 3 packed (now)',
@@ -90,7 +93,7 @@ describe('Order detail and tracking (redesign § 2.1)', () => {
     expect(FakeEventSource.last?.url).toBe('/api/v1/me/orders/ORD1/events');
     act(() => FakeEventSource.last!.emit('order', { ...ORDER, state: 'picked_up', steps: steps(3), shops: ORDER.shops.map(s => ({ ...s, packed: true })) }));
     expect(await screen.findByRole('heading', { level: 1, name: /^On the way\. Arriving tonight 6.9.p\.m\.$/ })).toBeInTheDocument();
-    expect(screen.getAllByRole('listitem')[1]).toHaveTextContent('Shops packing · 3 of 3 packed (done)');
+    expect(listItems()[1]).toHaveTextContent('Shops packing · 3 of 3 packed (done)');
     act(() => FakeEventSource.last!.emit('order', { ...ORDER, state: 'delivered', steps: steps(4), deliveredAt: '2026-10-01T01:10:00Z' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Delivered.' })).toBeInTheDocument();
   });
@@ -105,7 +108,7 @@ describe('Order detail and tracking (redesign § 2.1)', () => {
   it('is in French', async () => {
     open('fr');
     expect(await screen.findByRole('heading', { level: 1, name: /Commande passée\. Arrivée ce soir 18 h – 21 h\./ })).toBeInTheDocument();
-    expect(screen.getAllByRole('listitem')[0]).toHaveTextContent('Payé (fait)');
+    expect(listItems()[0]).toHaveTextContent('Payé (fait)');
     expect(screen.getByRole('link', { name: 'Voir les commandes' })).toBeInTheDocument();
   });
 

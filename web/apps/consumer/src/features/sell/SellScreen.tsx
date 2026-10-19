@@ -3,6 +3,7 @@ import { useRouterState } from '@tanstack/react-router';
 import { SiteLink, Skeleton, useMessageValues } from '@northline/ui';
 import { useSiteConfig } from '../../lib/config';
 import { signInHref, useViewer } from '../session/api';
+import { Art } from '../art/Art';
 import { useSellT } from './messages';
 
 export type BusinessType = 'provider' | 'seller' | 'kitchen';
@@ -33,6 +34,9 @@ export const studioFresh = (studio: string, type?: BusinessType) =>
  * kitchen — each into Studio onboarding (07a–07c); `?type=` (the footer's links) marks one. Who is signed in is known
  * in the browser only, so the account line starts as a skeleton.
  */
+const SUBJECT: Record<BusinessType, string> = { provider: 'service', seller: 'shop', kitchen: 'kitchen' };
+const TONE: Record<BusinessType, 'sage' | 'ember' | 'clay'> = { provider: 'sage', seller: 'ember', kitchen: 'clay' };
+
 export function SellScreen({ type }: { type?: BusinessType }) {
   const t = useSellT();
   const { studioOrigin } = useSiteConfig();
@@ -47,15 +51,21 @@ export function SellScreen({ type }: { type?: BusinessType }) {
   };
 
   return (
-    <div className="nl-sell">
-      <h1>{t('heading')}</h1>
-      <p className="nl-sell-lede">{t('lede')}</p>
+    <div className="nl-page nl-sell">
+      <header className="nl-band">
+        <div className="nl-band-copy">
+          <h1 className="nl-band-title">{t('heading')}</h1>
+          <p className="nl-band-lede">{t('lede')}</p>
+        </div>
+        <span className="nl-band-pic" aria-hidden><Art subject="storefront" tone="sage" fit="contain" /></span>
+      </header>
       <ul className="nl-sell-cards">
         {TYPES.map(key => {
           const card = cards[key];
           const chosen = key === type;
           return (
             <li key={key} className={clsx('nl-sell-card', chosen && 'nl-sell-card-chosen')} aria-labelledby={`sell-${key}`}>
+              <span className="nl-sell-pic" aria-hidden><Art subject={SUBJECT[key]} tone={TONE[key]} /></span>
               <h2 id={`sell-${key}`}>{card.title}{chosen ? <span className="nl-sr-only"> · {t('chosen')}</span> : null}</h2>
               <p>{card.body}</p>
               <p className="nl-sell-verify">{card.verify}</p>

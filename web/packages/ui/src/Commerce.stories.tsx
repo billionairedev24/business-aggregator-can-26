@@ -62,6 +62,18 @@ export const Rail: S = {
   ),
 };
 
+/** No photo: the initial on linen by default, or the app's own picture (`fallback`, e.g. the consumer's illustrations). */
+export const NoPhoto: S = {
+  render: args => (
+    <ul className="nl-card-grid nl-card-grid-rail" aria-label="Without photos">
+      <li><ProductCard {...args} variant="rail" name="Strawberry jam" href="/products/j" /></li>
+      <li><ProductCard {...args} variant="rail" name="Rye loaf" href="/products/r"
+        fallback={<span style={{ display: 'grid', placeItems: 'center', background: 'var(--color-surface-brand)', color: 'var(--color-action-primary)', fontWeight: 700 }}>Illustration</span>} /></li>
+    </ul>
+  ),
+  play: async ({ canvasElement }) => { await expect(within(canvasElement).getByText('Illustration')).toBeInTheDocument(); },
+};
+
 export const Services: S = {
   render: () => (
     <ul className="nl-card-grid nl-card-grid-services" aria-label="Providers">

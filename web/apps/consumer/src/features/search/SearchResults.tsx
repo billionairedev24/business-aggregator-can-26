@@ -12,6 +12,9 @@ import {
 } from './api';
 import { ItemCard } from './ItemCard';
 import { useSearchT } from './messages';
+import { DEPARTMENTS, SERVICE_CATEGORIES } from '../home/catalog';
+import { Tile } from '../pages/Tile';
+import { PlaceButton } from '../pages/PlaceButton';
 import { rememberSearch } from './recent';
 
 type T = ReturnType<typeof useSearchT>;
@@ -82,7 +85,7 @@ export function SearchResults({ params }: { params: SearchParams }) {
             </Group>
           ) : (
             <Group label={t('distance')}>
-              <p className="nl-results-note">{t('needsLocation')} <SiteLink href="/location?next=/search">{t('setLocation')}</SiteLink></p>
+              <p className="nl-results-note">{t('needsLocation')} <PlaceButton className="btn btn-link">{t('setLocation')}</PlaceButton></p>
             </Group>
           )}
           <Group label={t('availability')}>
@@ -100,11 +103,14 @@ export function SearchResults({ params }: { params: SearchParams }) {
           ) : !first ? (
             <ResultsSkeleton />
           ) : items.length === 0 ? (
-            <EmptyState title={t('noResults')} action={anyFilter
-              ? <button type="button" className="btn btn-primary" onClick={clear}>{t('emptyFiltered')}</button>
-              : <SiteLink href="/services" className="btn btn-primary">{t('emptyBrowse')}</SiteLink>}>
-              {anyFilter ? t('emptyHint') : params.q?.trim() ? t('empty', { q: params.q.trim() }) : t('emptyBlank')}
-            </EmptyState>
+            <>
+              <EmptyState title={t('noResults')} action={anyFilter
+                ? <button type="button" className="btn btn-primary" onClick={clear}>{t('emptyFiltered')}</button>
+                : <SiteLink href="/services" className="btn btn-primary">{t('emptyBrowse')}</SiteLink>}>
+                {anyFilter ? t('emptyHint') : params.q?.trim() ? t('empty', { q: params.q.trim() }) : t('emptyBlank')}
+              </EmptyState>
+              {!anyFilter ? <Suggestions t={t} /> : null}
+            </>
           ) : (
             <>
               <ul className={clsx('nl-card-grid', results.isPlaceholderData && 'nl-results-stale')} aria-label={t('resultsLabel')}>
@@ -236,5 +242,19 @@ export function SearchSkeleton() {
         <div className="nl-results-main"><ResultsSkeleton /></div>
       </div>
     </div>
+  );
+}
+
+/** Under "No results": popular ways in — services and shop departments as illustrated tiles. */
+function Suggestions({ t }: { t: ReturnType<typeof useSearchT> }) {
+  const { locale } = useLocale();
+  const tiles = [...SERVICE_CATEGORIES.filter(s => ['mechanic', 'cleaning', 'plumber'].includes(s.key)), ...DEPARTMENTS.filter(d => ['groceries', 'bakery', 'pharmacy'].includes(d.key))];
+  return (
+    <section className="nl-section nl-results-suggest" aria-labelledby="results-suggest">
+      <div className="nl-section-head"><h2 id="results-suggest" className="nl-section-title">{t('suggestTitle')}</h2></div>
+      <ul className="nl-tiles">
+        {tiles.map(tile => <li key={tile.key}><Tile href={tile.href} name={locale === 'fr' ? tile.fr : tile.en} subject={tile.ids[0]!.split('.').pop()!} /></li>)}
+      </ul>
+    </section>
   );
 }

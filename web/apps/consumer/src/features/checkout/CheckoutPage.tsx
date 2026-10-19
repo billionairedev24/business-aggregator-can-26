@@ -22,6 +22,7 @@ import { useAgeT } from '../cart/ageMessages';
 import { PromoPoints, TipPicker, type TipChoice } from '../promotions/PromoPoints';
 import { usePromoT } from '../promotions/messages';
 import { legalHref } from '../../lib/legal';
+import { Art } from '../art/Art';
 import { useCheckoutT } from './messages';
 
 type Substitution = CheckoutBody['substitution'];
@@ -322,7 +323,7 @@ function Checkout({ cart }: { cart: Cart }) {
                     <ul className="co-items">
                       {g.items.map(i => (
                         <li key={i.itemId} className="co-item">
-                          <span className="co-thumb" aria-hidden>{i.imageUrl ? <img src={i.imageUrl} alt="" /> : null}</span>
+                          <span className="co-thumb" aria-hidden>{i.imageUrl ? <img src={i.imageUrl} alt="" /> : <Art subject={i.name} />}</span>
                           <span className="co-item-text"><span>{i.name}</span><span className="co-muted">{[i.option, c('qtyValue', { qty: i.qty })].filter(Boolean).join(' · ')}</span></span>
                           <span className="co-item-price">{money(i.lineCents)}</span>
                         </li>

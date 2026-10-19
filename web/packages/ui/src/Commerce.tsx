@@ -202,6 +202,8 @@ export interface ProductCardProps {
   badges?: readonly CardBadge[];
   /** The delivery promise ("Get it <strong>tonight</strong>"). */
   eta?: ReactNode;
+  /** What the picture shows without a photo (an app's illustration); the initial on linen (MediaFallback) by default. */
+  fallback?: ReactNode;
   /** Shows "Only N left" in the low-stock colour. */
   lowStock?: number | null;
   soldOut?: boolean;
@@ -233,7 +235,7 @@ export function ProductCard(p: ProductCardProps) {
   return (
     <article className={clsx('nl-pcard', `nl-pcard-${variant}`, p.className)} aria-label={p.name}>
       <SiteLink href={p.href} className="nl-pcard-media" tabIndex={-1} aria-hidden="true">
-        <span className="nl-pcard-img">{p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" decoding="async" /> : <MediaFallback name={p.name} />}</span>
+        <span className="nl-pcard-img">{p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" decoding="async" /> : p.fallback ?? <MediaFallback name={p.name} />}</span>
       </SiteLink>
       <div className="nl-pcard-body">
         <H className="nl-pcard-heading"><SiteLink href={p.href} className="nl-pcard-title">{p.name}</SiteLink></H>

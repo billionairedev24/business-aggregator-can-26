@@ -23,8 +23,7 @@
       - heading "Distance" [level=2]
       - paragraph:
         - text: Set your location to sort and filter by distance.
-        - link "Set location":
-          - /url: /location?next=/search
+        - button "Set location"
     - region "Availability":
       - heading "Availability" [level=2]
       - checkbox "Open now"

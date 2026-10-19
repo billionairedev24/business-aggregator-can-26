@@ -1,27 +1,54 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { Link } from '@tanstack/react-router';
 import { EmptyState, Skeleton, useLocale } from '@northline/ui';
-import { servicesLandingQuery, type ServiceGroup } from './api';
+import { Art } from '../art/Art';
+import { RailSection, RailTrack } from '../pages/Rail';
+import { Tile } from '../pages/Tile';
+import { servicesLandingQuery, type ServiceGroup, type ServiceItem } from './api';
 import { useServicesT } from './messages';
 import { categoryName } from './taxonomy';
-import { useRegionNames } from '../location/regions';
 import { dyn } from './text';
 
-/** design 06 `services`: every service group with its categories, each opening the category page. */
+/**
+ * Services landing (light & photo-first, phase B; design 06 `services` behaviour): a band with what Services promises,
+ * the categories with the most providers first, then every group as a sideways row of illustrated category tiles (no
+ * wall of chips), each tile opening the category page. Region-neutral: the count line names no province.
+ */
 export function ServicesLanding() {
   const t = useServicesT();
   const { locale } = useLocale();
   const { data } = useSuspenseQuery(servicesLandingQuery(locale));
-  const regionList = useRegionNames(data.provinces);
+  const popular = data.groups.flatMap(g => g.items).filter(i => i.providers > 0).sort((a, b) => b.providers - a.providers).slice(0, 10);
   return (
     <div className="nl-page nl-svc">
-      <h1 className="nl-svc-title">{t('landingTitle')}</h1>
-      <p className="nl-svc-sub">{data.provinces.length > 0 ? t('landingSub', { count: data.liveCategories, region: regionList }) : t('landingSubNoRegion', { count: data.liveCategories })}</p>
+      <section className="nl-band" aria-labelledby="svc-title">
+        <div className="nl-band-copy">
+          <span className="nl-band-kicker">{t('landingKicker', { count: data.liveCategories })}</span>
+          <h1 id="svc-title" className="nl-band-title">{t('landingTitle')}</h1>
+          <p className="nl-band-lede">{t('landingLede')}</p>
+        </div>
+        <span className="nl-band-pic" aria-hidden><Art subject="mobile-mechanic" tone="sage" fit="contain" /></span>
+      </section>
       {data.groups.length === 0
-        ? <EmptyState>{t('landingEmpty')}</EmptyState>
-        : <div className="nl-svc-groups">{data.groups.map(g => <Group key={g.id} group={g} />)}</div>}
+        ? <div className="nl-section"><EmptyState>{t('landingEmpty')}</EmptyState></div>
+        : (
+          <>
+            {popular.length >= 4 ? (
+              <RailSection id="svc-popular" title={t('popularTitle')}>
+                <RailTrack size="tile">{popular.map(item => <li key={item.slug}><CategoryTile item={item} /></li>)}</RailTrack>
+              </RailSection>
+            ) : null}
+            {data.groups.map(g => <Group key={g.id} group={g} />)}
+          </>
+        )}
     </div>
   );
+}
+
+function CategoryTile({ item }: { item: ServiceItem }) {
+  const t = useServicesT();
+  const { locale } = useLocale();
+  const n = categoryName(item.slug, item.names, locale);
+  return <Tile href={`/services/${item.slug}`} name={n.text} lang={n.lang} subject={item.slug} meta={t('tilePros', { count: item.providers })} />;
 }
 
 function Group({ group }: { group: ServiceGroup }) {
@@ -29,39 +56,26 @@ function Group({ group }: { group: ServiceGroup }) {
   const { locale } = useLocale();
   const name = categoryName(group.key, group.names, locale);
   const line = dyn(t, `group_${group.key.replace(/-/g, '_')}`, group.note ?? '');
-  const id = `svc-group-${group.key}`;
   return (
-    <section aria-labelledby={id}>
-      <h2 id={id} className="nl-svc-group-title" lang={name.lang}>{name.text}</h2>
-      {line ? <div className="nl-svc-group-kind">{line}</div> : null}
-      <ul className="nl-svc-chips">
-        {group.items.map(item => {
-          const n = categoryName(item.slug, item.names, locale);
-          return (
-            <li key={item.slug}>
-              <Link to="/services/$category" params={{ category: item.slug }} className="nl-svc-chip" lang={n.lang}>{n.text}</Link>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <RailSection id={`svc-group-${group.key}`} title={name.text} lede={line || undefined}>
+      <RailTrack size="tile">{group.items.map(item => <li key={item.slug}><CategoryTile item={item} /></li>)}</RailTrack>
+    </RailSection>
   );
 }
 
-/** Loading: the title and a few groups of chips. */
+/** Loading: the band and a few rows of tiles. */
 export function ServicesLandingSkeleton() {
   return (
     <div className="nl-page nl-svc" aria-busy="true">
-      <Skeleton width={200} height={36} />
-      <Skeleton width="min(520px, 90%)" height={14} style={{ marginTop: 10 }} />
-      <div className="nl-svc-groups">
-        {Array.from({ length: 5 }, (_, i) => (
-          <div key={i}>
-            <Skeleton width={160} height={22} />
-            <div className="nl-svc-chips">{Array.from({ length: 6 }, (_, j) => <Skeleton key={j} width={90 + (j % 3) * 20} height={40} />)}</div>
+      <Skeleton height={260} radius="var(--radius-lg)" style={{ marginTop: 24 }} />
+      {Array.from({ length: 3 }, (_, i) => (
+        <div key={i} className="nl-rail">
+          <Skeleton width={200} height={28} />
+          <div className="nl-rail-track nl-rail-tile" style={{ marginTop: 16 }}>
+            {Array.from({ length: 6 }, (_, j) => <Skeleton key={j} height={160} radius="var(--radius-lg)" />)}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 }

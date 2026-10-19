@@ -6,6 +6,7 @@ import { useZone } from '../location/regions';
 import { signInHref, useViewer } from '../session/api';
 import { activityQuery, type ActivityItem } from './api';
 import { statusText, titleText, whenText, withText } from './format';
+import { Crumbs } from '../pages/Crumbs';
 import { useAccountT } from './messages';
 
 export const ORDER_VIEWS = ['active', 'past', 'cases'] as const;
@@ -69,7 +70,7 @@ function OrdersList({ items, view, tab }: { items: ActivityItem[]; view: OrderVi
 
   return (
     <div className="nl-page nl-orders">
-      <nav aria-label={t('crumbs')} className="nl-acct-crumbs"><SiteLink href="/account">{t('crumbAccount')}</SiteLink> › <span aria-current="page">{t('ordersTitle')}</span></nav>
+      <Crumbs label={t('crumbs')} items={[{ label: t('crumbAccount'), href: '/account' }, { label: t('ordersTitle') }]} />
       <h1 className="nl-acct-h1">{t('ordersTitle')}</h1>
       <div className="nl-orders-tabs" role="group" aria-label={t('tabsKind')}>
         {ORDER_TABS.map(k => (

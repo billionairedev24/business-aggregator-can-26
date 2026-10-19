@@ -1,9 +1,13 @@
 - main:
   - navigation "Breadcrumb":
-    - link "Services":
-      - /url: /services
-    - link "Prairie Wrench":
-      - /url: /providers/prairie-wrench
+    - list:
+      - listitem:
+        - link "Services":
+          - /url: /services
+      - listitem:
+        - link "Prairie Wrench":
+          - /url: /providers/prairie-wrench
+      - listitem: Book
   - list "Booking steps":
     - listitem:
       - button "Job details"

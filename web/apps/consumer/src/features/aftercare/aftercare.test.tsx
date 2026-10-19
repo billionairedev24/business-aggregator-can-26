@@ -5,6 +5,9 @@ import { useParams } from '@tanstack/react-router';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import { BookingStatus } from './BookingStatus';
 import { CourierTip, ReviewPanel } from './Aftercare';
+
+/** The page's list items outside the breadcrumb (the timeline's steps, the shops…). */
+const listItems = () => screen.queryAllByRole('listitem').filter(li => !li.closest('nav'));
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 /** Mobile gaps part 2 on the web: posting and changing a review, tipping the courier after delivery, the visit's ETA. */
@@ -55,7 +58,7 @@ describe('The visit’s live ETA (design 01 C9 on the web)', () => {
   it('lays the booking out as its detail: the state on the booked → done line, the details, the policy', async () => {
     openBooking();
     expect(await screen.findByText('Jas is on the way.')).toBeInTheDocument();
-    const steps = screen.getAllByRole('listitem').map(li => li.textContent);
+    const steps = listItems().map(li => li.textContent);
     expect(steps).toEqual(['Booked (done)', 'On the way (now)', 'On site (next)', 'Done (next)']);
     const details = screen.getByRole('region', { name: 'Booking details' });
     expect(within(details).getByRole('link', { name: 'Sample Wrench' })).toHaveAttribute('href', '/providers/sample-wrench');
@@ -69,7 +72,7 @@ describe('The visit’s live ETA (design 01 C9 on the web)', () => {
     routes['GET /api/v1/me/bookings/B1'] = () => ({ body: { ...BOOKING, state: 'cancelled', freeCancelUntil: '2026-10-09T04:00:00Z' } });
     openBooking('fr');
     expect(await screen.findByText('Cette réservation a été annulée.')).toBeInTheDocument();
-    expect(screen.queryByRole('list')).toBeNull();
+    expect(screen.queryAllByRole('list').filter(l => !l.closest('nav'))).toHaveLength(0); // no timeline
     expect(screen.getByRole('region', { name: 'Politique d’annulation' })).toHaveTextContent(/Annulation gratuite jusqu’au/);
   });
 

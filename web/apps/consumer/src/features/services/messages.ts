@@ -10,8 +10,10 @@ export const useServicesT = defineMessages({
   en: {
     // landing
     landingTitle: 'Services',
-    landingSub: '{count, plural, =0 {No categories live yet} one {# category live in {region}} other {# categories live in {region}}} · every provider verified, every job paid into escrow',
-    landingSubNoRegion: '{count, plural, =0 {No categories live yet} one {# category live} other {# categories live}} · every provider verified, every job paid into escrow',
+    landingKicker: '{count, plural, =0 {No categories live yet} one {# category live} other {# categories live}}',
+    landingLede: 'Every provider is verified before they appear, and every job is paid into escrow — released only when you sign off.',
+    popularTitle: 'Popular categories',
+    tilePros: '{count, plural, =0 {Coming soon} one {# pro} other {# pros}}',
     landingEmpty: 'No service categories yet.',
     group_automotive: 'Mobile visits · fixed prices · licence checked',
     group_home_trades: 'On-site visits · hourly or fixed · quotes for projects',
@@ -103,11 +105,14 @@ export const useServicesT = defineMessages({
     filteredEmpty: 'No providers match these filters.', clearFilters: 'Clear filters',
     loadError: "We couldn't load this list.", retry: 'Retry',
     locating: 'Finding providers near you…',
+    asideHint: 'Not sure who to pick? Describe the job once and up to three providers send fixed, itemized quotes.', asideHintAbout: 'Every provider here is verified, and your payment is held until you sign off on the job.', asideAbout: 'How it works',
   },
   fr: {
     landingTitle: 'Services',
-    landingSub: '{count, plural, =0 {Aucune catégorie active pour l’instant} one {# catégorie active en {region}} other {# catégories actives en {region}}} · chaque prestataire vérifié, chaque travail payé en fiducie',
-    landingSubNoRegion: '{count, plural, =0 {Aucune catégorie active pour l’instant} one {# catégorie active} other {# catégories actives}} · chaque prestataire vérifié, chaque travail payé en fiducie',
+    landingKicker: '{count, plural, =0 {Aucune catégorie active pour l’instant} one {# catégorie active} other {# catégories actives}}',
+    landingLede: 'Chaque prestataire est vérifié avant d’apparaître, et chaque travail est payé en fiducie — versé seulement une fois que vous l’approuvez.',
+    popularTitle: 'Catégories populaires',
+    tilePros: '{count, plural, =0 {Bientôt} one {# pro} other {# pros}}',
     landingEmpty: 'Aucune catégorie de service pour l’instant.',
     group_automotive: 'Visites mobiles · prix fixes · permis vérifié',
     group_home_trades: 'Visites sur place · à l’heure ou prix fixe · devis pour les projets',
@@ -196,5 +201,6 @@ export const useServicesT = defineMessages({
     filteredEmpty: 'Aucun prestataire ne correspond à ces filtres.', clearFilters: 'Effacer les filtres',
     loadError: 'Impossible de charger cette liste.', retry: 'Réessayer',
     locating: 'Recherche de prestataires près de chez vous…',
+    asideHint: 'Vous hésitez ? Décrivez le travail une fois et jusqu’à trois prestataires envoient des devis fixes et détaillés.', asideHintAbout: 'Chaque prestataire ici est vérifié, et votre paiement est retenu jusqu’à ce que vous approuviez le travail.', asideAbout: 'Comment ça marche',
   },
 });

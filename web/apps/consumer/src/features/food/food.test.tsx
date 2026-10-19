@@ -137,7 +137,7 @@ describe('Food landing (design 06 food)', () => {
     routes['GET /api/v1/public/kitchens'] = () => ({ body: { city: 'Calgary', items: [] } });
     const first = open('/food');
     expect(await screen.findByText('No kitchens near Beltline yet.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Choose another location' })).toHaveAttribute('href', '/location');
+    expect(screen.getByRole('button', { name: 'Choose another location' })).toBeInTheDocument(); // the location dialog, in place
     first.unmount();
     routes['GET /api/v1/public/kitchens'] = () => ({ status: 500, body: { detail: 'boom' } });
     open('/food');

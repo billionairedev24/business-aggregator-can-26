@@ -5,6 +5,7 @@ import { cartQuery, useChangeCartLine } from '../cart/api';
 import { useAddToCart } from '../product/api';
 import { imageUrl, itemHref, type SearchItem } from './api';
 import { useSearchT } from './messages';
+import { Art } from '../art/Art';
 
 /**
  * One search item as a card (redesign § 1.3): products and dishes as ProductCards (results grid or home rail), services
@@ -22,7 +23,7 @@ export function ItemCard({ item, variant = 'grid', level = 3 }: { item: SearchIt
     return (
       <ServiceCard href={href} layout={variant === 'grid' ? 'stack' : 'row'} level={level}
         kind={item.kind === 'merchant' ? t(`type_${item.merchant.type}` as 'type_seller') : item.category?.name ?? undefined}
-        name={item.name} imageUrl={image} rating={item.rating} reviewCount={item.reviewCount}
+        name={item.name} imageUrl={image} mark={<Art subject={item.category?.id ?? item.name} />} rating={item.rating} reviewCount={item.reviewCount}
         place={[item.kind === 'service' ? item.merchant.name : null, km].filter(Boolean).join(' · ') || undefined}
         note={item.kind === 'service' && item.instantBook ? t('tag_instant') : undefined}
         priceCents={quote ? null : item.priceCents} priceText={quote ? t('quote') : undefined}
@@ -46,7 +47,7 @@ function ProductItemCard({ item, href, image, km, variant, level }: { item: Sear
   const eta = item.onTonightsRun ? <>{t('getIt')} <strong>{t('tonight')}</strong></>
     : item.kind === 'food' && item.openNow ? <strong>{t('tag_open')}</strong> : undefined;
   return (
-    <ProductCard href={href} name={item.name} imageUrl={image} variant={variant} level={level}
+    <ProductCard href={href} name={item.name} imageUrl={image} fallback={<Art subject={`${item.name} ${item.category?.id ?? ''}`} />} variant={variant} level={level}
       priceCents={item.priceCents ?? null} priceText={item.priceCents == null ? t('quote') : undefined}
       meta={[item.merchant.name, item.category?.name, km].filter(Boolean).join(' · ')}
       rating={item.rating} reviewCount={item.reviewCount} eta={eta} soldOut={!!item.soldOut}

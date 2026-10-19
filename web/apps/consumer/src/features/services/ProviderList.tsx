@@ -8,6 +8,8 @@ import { providersQuery, serviceCategoryQuery, type ProviderCard, type ProviderP
 import { nextAvailable, percent, price } from './format';
 import { useServicesT } from './messages';
 import { categoryName, familyOf, nouns } from './taxonomy';
+import { Crumbs } from '../pages/Crumbs';
+import { Art } from '../art/Art';
 
 export type ProviderFilter = 'master' | 'instant' | 'today' | 'under80';
 export const FILTERS: readonly ProviderFilter[] = ['master', 'instant', 'today', 'under80'];
@@ -56,25 +58,37 @@ export function ProviderList({ slug }: { slug: string }) {
 
   return (
     <div className="nl-page nl-svc nl-svc-providers">
-      <nav aria-label={t('breadcrumb')} className="nl-svc-crumbs">
-        <Link to="/services">{t('crumbServices')}</Link> › <Link to="/services/$category" params={{ category: category.slug }} lang={name.lang}>{name.text}</Link> › <span aria-current="page">{t('providersCrumb')}</span>
-      </nav>
-      <h1 className="nl-svc-list-title" lang={name.lang && noun === name.text ? name.lang : undefined}>
-        {list.data ? heading(t, category.kind, noun, area, shown.length) : noun}
-      </h1>
-      <div className="nl-svc-muted nl-svc-sortnote">{t('sortNote')}</div>
-      <div className="nl-chips nl-svc-filter-chips" role="group" aria-label={t('filter')}>
-        {FILTERS.map(f => <button key={f} type="button" className="nl-chip" aria-pressed={filters.has(f)} onClick={() => toggle(f)}>{t(`f_${f}`)}</button>)}
+      <Crumbs label={t('breadcrumb')} items={[{ label: t('crumbServices'), href: '/services' }, { label: name.text, href: `/services/${category.slug}`, lang: name.lang }, { label: t('providersCrumb') }]} />
+      <div className="nl-svc-list-split">
+        <div className="nl-svc-list-main">
+          <h1 className="nl-svc-list-title" lang={name.lang && noun === name.text ? name.lang : undefined}>
+            {list.data ? heading(t, category.kind, noun, area, shown.length) : noun}
+          </h1>
+          <div className="nl-svc-muted nl-svc-sortnote">{t('sortNote')}</div>
+          <div className="nl-chips nl-svc-filter-chips" role="group" aria-label={t('filter')}>
+            {FILTERS.map(f => <button key={f} type="button" className="nl-chip" aria-pressed={filters.has(f)} onClick={() => toggle(f)}>{t(`f_${f}`)}</button>)}
+          </div>
+          {place === null || list.isPending
+            ? <ProviderRowsSkeleton label={t('locating')} />
+            : list.isError
+              ? <ErrorState message={t('loadError')} onRetry={() => void list.refetch()} />
+              : shown.length === 0
+                ? (list.data.items.length === 0
+                  ? <EmptyState action={<Link to="/services" className="btn btn-secondary">{t('listEmptyAction')}</Link>}>{t('listEmpty', { area })}</EmptyState>
+                  : <EmptyState action={<button type="button" className="btn btn-secondary" onClick={() => setFilters(new Set())}>{t('clearFilters')}</button>}>{t('filteredEmpty')}</EmptyState>)
+                : <ul className="nl-svc-rows">{shown.map(p => <li key={p.merchantId}><ProviderRow provider={p} locale={locale} kind={name} /></li>)}</ul>}
+        </div>
+        <aside className="nl-svc-list-aside" aria-labelledby="svc-list-aside">
+          <span className="nl-svc-list-pic" aria-hidden><Art subject={category.slug} fit="contain" /></span>
+          <div className="nl-svc-list-aside-body">
+            <h2 id="svc-list-aside" className="nl-svc-aside-title" lang={name.lang}>{name.text}</h2>
+            <p className="nl-svc-aside-hint">{category.quoteable ? t('asideHint') : t('asideHintAbout')}</p>
+            {category.quoteable
+              ? <Link to="/services/$category/quote" params={{ category: category.slug }} className="btn btn-secondary nl-svc-cta2">{t('quoteCta')}</Link>
+              : <Link to="/services/$category" params={{ category: category.slug }} className="btn btn-secondary nl-svc-cta2">{t('asideAbout')}</Link>}
+          </div>
+        </aside>
       </div>
-      {place === null || list.isPending
-        ? <ProviderRowsSkeleton label={t('locating')} />
-        : list.isError
-          ? <ErrorState message={t('loadError')} onRetry={() => void list.refetch()} />
-          : shown.length === 0
-            ? (list.data.items.length === 0
-              ? <EmptyState action={<Link to="/services" className="btn btn-secondary">{t('listEmptyAction')}</Link>}>{t('listEmpty', { area })}</EmptyState>
-              : <EmptyState action={<button type="button" className="btn btn-secondary" onClick={() => setFilters(new Set())}>{t('clearFilters')}</button>}>{t('filteredEmpty')}</EmptyState>)
-            : <ul className="nl-svc-rows">{shown.map(p => <li key={p.merchantId}><ProviderRow provider={p} locale={locale} kind={name} /></li>)}</ul>}
     </div>
   );
 }
