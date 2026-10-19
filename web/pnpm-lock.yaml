@@ -96,6 +96,9 @@ importers:
       '@northline/client':
         specifier: workspace:*
         version: link:../../packages/client
+      '@northline/media':
+        specifier: workspace:*
+        version: link:../../packages/media
       '@northline/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
@@ -448,6 +451,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@northline/media':
+        specifier: workspace:*
+        version: link:../media
       '@northline/tokens':
         specifier: workspace:*
         version: link:../tokens

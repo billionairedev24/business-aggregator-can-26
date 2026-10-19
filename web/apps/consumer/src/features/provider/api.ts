@@ -36,6 +36,8 @@ export type ReviewPage = z.infer<typeof ReviewPage>;
 export const ProviderService = z.object({
   id: z.string(), name: z.string(), included: z.string().nullish(), pricingMode: PricingMode, priceCents: z.number().nullish(),
   durationMin: z.number().int(), instantBook: z.boolean(), categorySlug: z.string().nullish(), kind: ServiceKind,
+  // the service's photo the business uploaded (approved), when it has one
+  imageUrl: z.string().nullish(),
 });
 export type ProviderService = z.infer<typeof ProviderService>;
 

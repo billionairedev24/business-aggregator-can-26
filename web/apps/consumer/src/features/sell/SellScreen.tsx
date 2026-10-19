@@ -3,7 +3,7 @@ import { useRouterState } from '@tanstack/react-router';
 import { SiteLink, Skeleton, useMessageValues } from '@northline/ui';
 import { useSiteConfig } from '../../lib/config';
 import { signInHref, useViewer } from '../session/api';
-import { Art } from '../art/Art';
+import { Scene } from '../art/Scene';
 import { useSellT } from './messages';
 
 export type BusinessType = 'provider' | 'seller' | 'kitchen';
@@ -57,7 +57,7 @@ export function SellScreen({ type }: { type?: BusinessType }) {
           <h1 className="nl-band-title">{t('heading')}</h1>
           <p className="nl-band-lede">{t('lede')}</p>
         </div>
-        <span className="nl-band-pic" aria-hidden><Art subject="storefront" tone="sage" fit="contain" /></span>
+        <span className="nl-band-pic" aria-hidden><Scene slot="banner/sell" subject="storefront" tone="sage" fit="contain" sizes="(min-width: 960px) 45vw, 100vw" priority /></span>
       </header>
       <ul className="nl-sell-cards">
         {TYPES.map(key => {
@@ -65,7 +65,7 @@ export function SellScreen({ type }: { type?: BusinessType }) {
           const chosen = key === type;
           return (
             <li key={key} className={clsx('nl-sell-card', chosen && 'nl-sell-card-chosen')} aria-labelledby={`sell-${key}`}>
-              <span className="nl-sell-pic" aria-hidden><Art subject={SUBJECT[key]} tone={TONE[key]} /></span>
+              <span className="nl-sell-pic" aria-hidden><Scene slot={`sell/${key}`} subject={SUBJECT[key]} tone={TONE[key]} sizes="(min-width: 960px) 30vw, 100vw" /></span>
               <h2 id={`sell-${key}`}>{card.title}{chosen ? <span className="nl-sr-only"> · {t('chosen')}</span> : null}</h2>
               <p>{card.body}</p>
               <p className="nl-sell-verify">{card.verify}</p>

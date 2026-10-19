@@ -143,7 +143,8 @@ const server = createServer(async (req, res) => {
           ...securityHeaders,
           'content-type': types[extname(found.file)] ?? 'application/octet-stream',
           'content-length': found.size,
-          'cache-control': pathname.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'public, max-age=0, must-revalidate',
+          // /assets/ (Vite) and /photos/ (make photos) carry a content hash in every file name
+          'cache-control': /^\/(assets|photos)\//.test(pathname) ? 'public, max-age=31536000, immutable' : 'public, max-age=0, must-revalidate',
         });
         if (req.method === 'HEAD') res.end();
         else createReadStream(found.file).pipe(res);

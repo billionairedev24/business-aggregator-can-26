@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { MapPin, SealCheck } from '@phosphor-icons/react';
+import { MapPin } from '@phosphor-icons/react';
 import { EmptyState, ErrorState, SiteLink, Skeleton, useLocale } from '@northline/ui';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { marketOf, railQuery, type Place, type SearchPage } from '../search/api';
 import { ItemCard } from '../search/ItemCard';
-import { Art } from '../art/Art';
+import { categorySlot, departmentSlot } from '@northline/media';
+import { Scene } from '../art/Scene';
 import { RailSection, RailTrack } from '../pages/Rail';
 import { Tile } from '../pages/Tile';
 import { DEPARTMENTS, SERVICE_CATEGORIES, type Tile as CatalogTile } from './catalog';
@@ -19,9 +20,9 @@ const QUICK = ['mechanic', 'cleaning', 'bakery', 'groceries'];
 
 /**
  * Home (light & photo-first, phase B; redesign § 1.3 behaviour): a hero that leads with the place — the headline,
- * two ways in (Services, Shop), "Near {place} · Change" (the location dialog) and a few popular entries — beside an illustrated collage (no search
+ * two ways in (Services, Shop), "Near {place} · Change" (the location dialog) and a few popular entries — beside a photo collage (the library's hero slots; drawn pictures until they have photos) (no search
  * field of its own: the header's is the page's one search, owner 2026-10-19);
- * then illustrated tiles for services and the shop's departments; then sideways rails of real listings, products and
+ * then photo tiles for services and the shop's departments; then sideways rails of real listings, products and
  * services, where the visitor is; then the sellers' banner. No carousel, no arrows over content. The greeting, the
  * "what do you need" question, live counts, promises, tier tags and "Your week" stay gone (§ 3.2). The server renders
  * the hero and the tiles (the same for everyone); the rails load in the browser once the place is known.
@@ -65,18 +66,18 @@ export function HomeScreen() {
           </div>
         </div>
         <div className="nl-home-collage" aria-hidden>
-          <span className="nl-home-pic nl-home-pic-a"><Art subject="mobile-mechanic" tone="sage" /></span>
-          <span className="nl-home-pic nl-home-pic-b"><Art subject="bakery" tone="ember" /></span>
-          <span className="nl-home-pic nl-home-pic-c"><Art subject="house-cleaning" tone="clay" /></span>
-          <span className="nl-home-badge"><SealCheck size={22} weight="fill" />{t('badge')}</span>
+          <span className="nl-home-pic nl-home-pic-a"><Scene slot="hero/home-main" subject="mobile-mechanic" tone="sage" crop="card" sizes="(min-width: 960px) 34vw, 60vw" priority /></span>
+          <span className="nl-home-pic nl-home-pic-b"><Scene slot="hero/home-side-a" subject="bakery" tone="ember" crop="square" sizes="(min-width: 960px) 16vw, 36vw" priority /></span>
+          <span className="nl-home-pic nl-home-pic-c"><Scene slot="hero/home-side-b" subject="house-cleaning" tone="clay" crop="square" sizes="(min-width: 960px) 16vw, 36vw" priority /></span>
+          <span className="nl-home-badge">{t('badge')}</span>
         </div>
       </section>
 
       <div className="nl-home-body">
         <TileSection t={t} id="home-services" title={t('tileServices')} more={{ href: '/services', label: t('allServices') }}
-          tiles={pick(SERVICE_CATEGORIES, SERVICE_TILES).map(s => ({ key: s.key, href: s.href, name: name(s), subject: s.ids[0]!.split('.').pop()! }))} />
+          tiles={pick(SERVICE_CATEGORIES, SERVICE_TILES).map(s => ({ key: s.key, href: s.href, name: name(s), slot: categorySlot(s.ids[0]) ?? 'banner/services', subject: s.ids[0]!.split('.').pop()! }))} />
         <TileSection t={t} id="home-shop" title={t('tileShop')} more={{ href: '/shop', label: t('allDepartments') }}
-          tiles={pick(DEPARTMENTS, SHOP_TILES).map(d => ({ key: d.key, href: d.href, name: name(d), subject: d.key }))} />
+          tiles={pick(DEPARTMENTS, SHOP_TILES).map(d => ({ key: d.key, href: d.href, name: name(d), slot: departmentSlot(d.href.split('/').pop()) ?? 'banner/shop', subject: d.key }))} />
       </div>
 
       {empty ? (
@@ -96,7 +97,7 @@ export function HomeScreen() {
           <p className="nl-home-sell-text">{t('sellText')}</p>
           <SiteLink href="/sell" className="btn btn-primary btn-lg">{t('sellCta')}</SiteLink>
         </div>
-        <span className="nl-home-sell-pic" aria-hidden><Art subject="storefront" tone="sage" fit="contain" /></span>
+        <span className="nl-home-sell-pic" aria-hidden><Scene slot="banner/sell" subject="storefront" tone="sage" fit="contain" sizes="(min-width: 960px) 40vw, 100vw" /></span>
       </section>
     </div>
   );
@@ -104,9 +105,9 @@ export function HomeScreen() {
 
 // ── tiles ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-interface TileItem { key: string; href: string; name: string; subject: string }
+interface TileItem { key: string; href: string; name: string; slot: string; subject: string }
 
-/** A titled row of illustrated entry tiles (six; a sideways row on phones). */
+/** A titled row of photo entry tiles (six; a sideways row on phones). */
 function TileSection({ t, id, title, more, tiles }: { t: T; id: string; title: string; more: { href: string; label: string }; tiles: readonly TileItem[] }) {
   return (
     <section className="nl-home-tiles" aria-labelledby={id}>
@@ -115,7 +116,7 @@ function TileSection({ t, id, title, more, tiles }: { t: T; id: string; title: s
         <SiteLink href={more.href} className="nl-section-more" aria-label={t('seeMoreOf', { title })}>{more.label}</SiteLink>
       </div>
       <ul className="nl-home-tile-row">
-        {tiles.map(tile => <li key={tile.key}><Tile href={tile.href} name={tile.name} subject={tile.subject} /></li>)}
+        {tiles.map(tile => <li key={tile.key}><Tile href={tile.href} name={tile.name} slot={tile.slot} subject={tile.subject} /></li>)}
       </ul>
     </section>
   );

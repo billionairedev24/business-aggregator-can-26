@@ -11,6 +11,7 @@
     "test-storybook": "pnpm --filter @northline/tokens build && vitest run --project storybook"
   },
   "dependencies": {
+    "@northline/media": "workspace:*",
     "@northline/tokens": "workspace:*",
     "@phosphor-icons/react": "^2.1.7",
     "@tanstack/react-form": "^1.33.5",

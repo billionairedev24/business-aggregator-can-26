@@ -9,7 +9,7 @@ export const useShellT = defineMessages({
     search: 'Search “sourdough”, “mobile mechanic”, “DJ”…',
     signIn: 'Sign in', createAccount: 'Create account',
     skip: 'Skip to content',
-    privacy: 'Privacy', terms: 'Terms', helpLink: 'Help', langSwitch: 'Français',
+    privacy: 'Privacy', terms: 'Terms', helpLink: 'Help', langSwitch: 'Français', photoCredits: 'Photo credits',
     sell: 'Sell on {brand}', offer: 'Offer a service', kitchen: 'Run a kitchen',
     footerBusiness: 'For businesses', footerHelp: 'Help and policies', footerLanguage: 'Language',
     // account menu
@@ -33,7 +33,7 @@ export const useShellT = defineMessages({
     search: 'Rechercher « pain au levain », « mécanicien mobile », « DJ »…',
     signIn: 'Se connecter', createAccount: 'Créer un compte',
     skip: 'Aller au contenu',
-    privacy: 'Confidentialité', terms: 'Conditions', helpLink: 'Aide', langSwitch: 'English',
+    privacy: 'Confidentialité', terms: 'Conditions', helpLink: 'Aide', langSwitch: 'English', photoCredits: 'Crédits photo',
     sell: 'Vendre sur {brand}', offer: 'Offrir un service', kitchen: 'Gérer une cuisine',
     footerBusiness: 'Pour les entreprises', footerHelp: 'Aide et politiques', footerLanguage: 'Langue',
     activity: 'Activité', account: 'Compte', preferences: 'Préférences',

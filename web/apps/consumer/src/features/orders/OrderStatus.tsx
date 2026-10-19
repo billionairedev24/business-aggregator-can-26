@@ -8,7 +8,7 @@ import { useConfirmDelivery, useOrder, useOrderStream, useProofPhoto, type Order
 import { useOrderT } from './messages';
 import { CourierStatus } from '../tracking/CourierStatus';
 import { Crumbs } from '../pages/Crumbs';
-import { Art } from '../art/Art';
+import { Scene } from '../art/Scene';
 import { CourierTip, ReviewPanel } from '../aftercare/Aftercare';
 
 /**
@@ -116,7 +116,7 @@ function OrderView({ order }: { order: OrderTracking }) {
             <ul className="order-shops">
               {order.shops.map(s => (
                 <li key={s.merchantId} className="order-shop">
-                  <span className="order-shop-pic" aria-hidden><Art subject={s.name} /></span>
+                  <span className="order-shop-pic" aria-hidden><Scene slot="banner/shop" subject={s.name} crop="square" sizes="64px" /></span>
                   <span className="order-shop-name">{s.name}</span>
                   <span className="order-shop-meta">{t('shopItems', { count: s.items })}</span>
                   {!done ? <span className={`tag ${s.packed ? 'tag-success' : 'tag-neutral'}`}>{s.packed ? t('shopPacked') : t('shopPacking')}</span> : null}

@@ -26,6 +26,8 @@ export type DepartmentTile = z.infer<typeof DepartmentTile>;
 export const ShopCard = z.object({
   merchantId: z.string(), name: z.string(), tier: z.string(), departmentSlug: z.string(), departmentName: z.string(),
   products: z.number().int(), run: Run.nullish(),
+  // the shop's own photo (its best-selling listing's approved image), when it has one
+  imageUrl: z.string().nullish(),
 });
 export type ShopCard = z.infer<typeof ShopCard>;
 
@@ -40,6 +42,8 @@ export const ProductCard = z.object({
   productId: z.string(), offerId: z.string(), name: z.string(), merchantId: z.string(), shopName: z.string(),
   unit: z.string().nullish(), priceCents: z.number().int(), imageUrl: z.string().nullish(), sellers: z.number().int(), run: Run.nullish(),
   age: AgeNotice.nullish(),
+  // the catalogue category: its library photo stands in when the product has no approved image
+  categoryId: z.string().nullish(),
 });
 export type ProductCard = z.infer<typeof ProductCard>;
 

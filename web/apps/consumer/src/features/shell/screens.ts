@@ -10,7 +10,7 @@ export type ScreenKey =
   | 'shop' | 'category' | 'product' | 'cart' | 'checkout' | 'checkoutComplete' | 'confirmed'
   | 'food' | 'restaurant' | 'foodCheckout' | 'foodTrack'
   | 'services' | 'svcCategory' | 'providers' | 'provider' | 'book' | 'booking' | 'quote' | 'quoteRequest' | 'quoteCompare'
-  | 'orders' | 'account' | 'problem' | 'signIn' | 'register' | 'sell' | 'help';
+  | 'orders' | 'account' | 'problem' | 'signIn' | 'register' | 'sell' | 'help' | 'credits';
 
 export interface Screen {
   /** Route path (TanStack Router syntax). */
@@ -61,6 +61,8 @@ export const SCREENS: Record<ScreenKey, Screen> = {
   sell: { path: '/sell', story: 'S-61' },
   /** Help for guests and signed-in people alike, linked from every page's footer (WCAG 3.2.6). */
   help: { path: '/help', story: 'S-145' },
+  /** Photo credits: the stock photos' photographers and licences (photo library, owner 2026-10-19), from the footer. */
+  credits: { path: '/credits', story: 'real photos' },
 };
 
 /** The screen a pathname shows (the most specific route match), for the shell. */

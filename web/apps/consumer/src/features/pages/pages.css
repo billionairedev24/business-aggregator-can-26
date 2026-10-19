@@ -46,8 +46,8 @@
 .nl-tile { display: flex; flex-direction: column; gap: var(--space-2); color: var(--color-text); text-decoration: none; min-width: 0; border-radius: var(--radius-lg); }
 .nl-tile:hover { color: var(--color-text); text-decoration: none; }
 .nl-tile-pic { position: relative; display: block; aspect-ratio: 4 / 3; border-radius: var(--radius-lg); overflow: hidden; box-shadow: inset 0 0 0 1px var(--color-border); }
-.nl-tile-pic .nl-art { transition: transform var(--duration) var(--ease); }
-@media (hover: hover) { .nl-tile:hover .nl-tile-pic .nl-art { transform: scale(1.04); } .nl-tile:hover .nl-tile-name { text-decoration: underline; } }
+.nl-tile-pic .nl-art, .nl-tile-pic .nl-photo { transition: transform var(--duration) var(--ease); }
+@media (hover: hover) { .nl-tile:hover .nl-tile-pic :is(.nl-art, .nl-photo) { transform: scale(1.04); } .nl-tile:hover .nl-tile-name { text-decoration: underline; } }
 .nl-tile-name { font-weight: var(--weight-semibold); font-size: var(--text-md); line-height: var(--leading-tight); overflow-wrap: anywhere; }
 .nl-tile-meta { font-size: var(--text-sm); color: var(--color-text-muted); margin-top: calc(-1 * var(--space-1)); }
 .nl-tile:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
@@ -94,6 +94,6 @@
 }
 
 /* a card without a photo shows its category's illustration (ServiceCard `mark`) */
-.nl-scard-thumb > .nl-art { position: absolute; inset: 0; }
+.nl-scard-thumb > .nl-art, .nl-scard-thumb > .nl-photo { position: absolute; inset: 0; }
 /* service cards in a row keep their price on one line at the bottom */
 .nl-rail-track .nl-scard-stack { grid-template-rows: auto 1fr auto; }

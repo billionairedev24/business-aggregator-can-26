@@ -13,6 +13,7 @@ import {
 import { ItemCard } from './ItemCard';
 import { useSearchT } from './messages';
 import { DEPARTMENTS, SERVICE_CATEGORIES } from '../home/catalog';
+import { categorySlot } from '@northline/media';
 import { Tile } from '../pages/Tile';
 import { PlaceButton } from '../pages/PlaceButton';
 import { rememberSearch } from './recent';
@@ -245,7 +246,7 @@ export function SearchSkeleton() {
   );
 }
 
-/** Under "No results": popular ways in — services and shop departments as illustrated tiles. */
+/** Under "No results": popular ways in — services and shop departments as photo tiles. */
 function Suggestions({ t }: { t: ReturnType<typeof useSearchT> }) {
   const { locale } = useLocale();
   const tiles = [...SERVICE_CATEGORIES.filter(s => ['mechanic', 'cleaning', 'plumber'].includes(s.key)), ...DEPARTMENTS.filter(d => ['groceries', 'bakery', 'pharmacy'].includes(d.key))];
@@ -253,7 +254,7 @@ function Suggestions({ t }: { t: ReturnType<typeof useSearchT> }) {
     <section className="nl-section nl-results-suggest" aria-labelledby="results-suggest">
       <div className="nl-section-head"><h2 id="results-suggest" className="nl-section-title">{t('suggestTitle')}</h2></div>
       <ul className="nl-tiles">
-        {tiles.map(tile => <li key={tile.key}><Tile href={tile.href} name={locale === 'fr' ? tile.fr : tile.en} subject={tile.ids[0]!.split('.').pop()!} /></li>)}
+        {tiles.map(tile => <li key={tile.key}><Tile href={tile.href} name={locale === 'fr' ? tile.fr : tile.en} slot={categorySlot(tile.ids[0]) ?? 'empty/search'} subject={tile.ids[0]!.split('.').pop()!} /></li>)}
       </ul>
     </section>
   );

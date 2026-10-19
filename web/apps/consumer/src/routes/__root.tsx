@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { createRootRouteWithContext, HeadContent, Outlet, Scripts, useRouter } from '@tanstack/react-router';
 import { I18nProvider, SiteLinkProvider, brand } from '@northline/ui';
 import { configureAuthOrigin } from '@northline/auth-kit';
+import { configurePhotoBase } from '@northline/media';
 import tokensCss from '@northline/tokens/tokens.css?url';
 import uiCss from '@northline/ui/styles.css?url';
 import shellCss from '../features/shell/shell.css?url';
@@ -66,6 +67,7 @@ function Document({ children }: { children: ReactNode }) {
 function App() {
   const { locale, config } = Route.useRouteContext();
   configureAuthOrigin(config.authOrigin); // idempotent; server and browser render the same auth links
+  configurePhotoBase(config.photosBaseUrl); // the stock photos' CDN when set (NL_PHOTOS_BASE_URL), else /photos/
   // S-63: arriving on a `?lang=` URL (a search engine's French result) keeps that language for the next pages
   useEffect(() => { if (urlLocale(window.location.href)) persistLocale(locale); }, [locale]);
   return (

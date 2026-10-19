@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { EmptyState, Skeleton, useLocale } from '@northline/ui';
-import { Art } from '../art/Art';
+import { serviceSlot } from '@northline/media';
+import { Scene } from '../art/Scene';
 import { RailSection, RailTrack } from '../pages/Rail';
 import { Tile } from '../pages/Tile';
 import { servicesLandingQuery, type ServiceGroup, type ServiceItem } from './api';
@@ -10,7 +11,7 @@ import { dyn } from './text';
 
 /**
  * Services landing (light & photo-first, phase B; design 06 `services` behaviour): a band with what Services promises,
- * the categories with the most providers first, then every group as a sideways row of illustrated category tiles (no
+ * the categories with the most providers first, then every group as a sideways row of category photo tiles (no
  * wall of chips), each tile opening the category page. Region-neutral: the count line names no province.
  */
 export function ServicesLanding() {
@@ -26,7 +27,7 @@ export function ServicesLanding() {
           <h1 id="svc-title" className="nl-band-title">{t('landingTitle')}</h1>
           <p className="nl-band-lede">{t('landingLede')}</p>
         </div>
-        <span className="nl-band-pic" aria-hidden><Art subject="mobile-mechanic" tone="sage" fit="contain" /></span>
+        <span className="nl-band-pic" aria-hidden><Scene slot="banner/services" subject="mobile-mechanic" tone="sage" fit="contain" sizes="(min-width: 960px) 45vw, 100vw" priority /></span>
       </section>
       {data.groups.length === 0
         ? <div className="nl-section"><EmptyState>{t('landingEmpty')}</EmptyState></div>
@@ -48,7 +49,7 @@ function CategoryTile({ item }: { item: ServiceItem }) {
   const t = useServicesT();
   const { locale } = useLocale();
   const n = categoryName(item.slug, item.names, locale);
-  return <Tile href={`/services/${item.slug}`} name={n.text} lang={n.lang} subject={item.slug} meta={t('tilePros', { count: item.providers })} />;
+  return <Tile href={`/services/${item.slug}`} name={n.text} lang={n.lang} slot={serviceSlot(item.slug) ?? 'banner/services'} subject={item.slug} meta={t('tilePros', { count: item.providers })} />;
 }
 
 function Group({ group }: { group: ServiceGroup }) {

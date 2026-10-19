@@ -3,7 +3,8 @@ import { Link } from '@tanstack/react-router';
 import { Chip, EmptyState, ErrorState, Segmented, SiteLink, Skeleton, Tag, useFormatters, useLocale } from '@northline/ui';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { useKitchens, type Card } from './api';
-import { Art } from '../art/Art';
+import { cuisineSlot } from '@northline/media';
+import { Scene } from '../art/Scene';
 import { PlaceButton } from '../pages/PlaceButton';
 import { CUISINE_NAMES, TAGS, useFoodT } from './messages';
 
@@ -76,7 +77,7 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
           <button type="button" className="btn btn-secondary" aria-pressed={sched} onClick={() => setSched(s => !s)}>{sched ? t('now') : t('schedule')}</button>
           </div>
         </div>
-        <span className="nl-band-pic" aria-hidden><Art subject="vietnamese" tone="clay" fit="contain" /></span>
+        <span className="nl-band-pic" aria-hidden><Scene slot="banner/food" subject="vietnamese" tone="clay" fit="contain" sizes="(min-width: 960px) 45vw, 100vw" priority /></span>
       </div>
       {sched && <p className="nl-food-panel">{t('scheduleNote')}</p>}
 
@@ -129,7 +130,7 @@ function KitchenCard({ t, k, pickup, cuisineName }: { t: T; k: Card; pickup: boo
   const body = (
     <>
       <div className="nl-food-tile">
-        <Art subject={k.cuisines[0] ?? 'food'} />
+        <Scene slot={[cuisineSlot(k.cuisines[0]), 'banner/food']} subject={k.cuisines[0] ?? 'food'} sizes="(min-width: 960px) 30vw, 90vw" />
         <span className="tag nl-food-eta">{eta}</span>
         {!k.open && <span className="tag tag-neutral nl-food-opens">{k.paused ? t('paused') : k.opensAt ? t('opens', { time: date(k.opensAt, 'time') }) : t('closedNow')}</span>}
       </div>

@@ -71,7 +71,8 @@ function credit(slot: string, e: PhotoEntry): Credit {
   };
 }
 
-function photo(slot: string, e: PhotoEntry & { width: number; height: number; hash: string; placeholder?: string }): Photo {
+/** The Photo of a processed entry (the lookup below; tests and stories build one from a fixture). */
+export function photoOf(slot: string, e: PhotoEntry & { width: number; height: number; hash: string; placeholder?: string }): Photo {
   const all = variants(slot, e);
   const url = (path: string) => base + path;
   const of = (crop: Crop, format: Format) => all.filter(v => v.crop === crop && v.format === format);
@@ -97,7 +98,7 @@ function photo(slot: string, e: PhotoEntry & { width: number; height: number; ha
 export function photoFor(slots: string | readonly (string | null | undefined)[]): Photo | null {
   const list = (typeof slots === 'string' ? [slots] : slots).filter((s): s is string => !!s);
   const hit = resolve(list, photos, fallback);
-  return hit ? photo(hit.slot, hit.entry) : null;
+  return hit ? photoOf(hit.slot, hit.entry) : null;
 }
 
 /** The slot of a catalogue category or group id (`service.home-trades.plumber`, `shop.apparel`). */
