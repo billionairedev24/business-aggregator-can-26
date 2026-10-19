@@ -1,0 +1,69 @@
+/**
+ * Redesign phase 4 (docs/design/redesign-spec.md § 2.4): the new mobile layouts' words — tab names, Home, Search,
+ * Product, Cart, the three-step checkout, tracking, Account. `{brand}` is the product's name from brand.json.
+ */
+export const redesign = {
+  'rd.common.seeAll': 'See all',
+
+  'rd.home.account': 'Your account',
+  'rd.home.signIn': 'Sign in or create an account',
+  'rd.home.deliverTo': 'Deliver to',
+  'rd.home.heroKicker': 'Near you',
+  'rd.home.heroTitle': 'Shops and pros in {place}',
+  'rd.home.heroSub': 'Order from local shops, book a pro — paid safely in the app.',
+  'rd.home.runTitle': 'Leaves at {time}',
+  'rd.home.runSub': 'Delivery {fee} · order by {orderBy}',
+  'rd.home.popular': 'Popular near you',
+  'rd.home.services': 'Book a pro',
+  'rd.home.bookTitle': 'Book a mechanic, cleaner or tutor',
+  'rd.home.bookSub': 'Verified pros near you · paid only when the job is done',
+
+  'rd.browse.title': 'Browse',
+
+  'rd.search.placeholder': 'Search products and services',
+  'rd.search.cancel': 'Cancel',
+  'rd.search.clearText': 'Clear the search',
+  'rd.search.type': 'Show',
+  'rd.search.kind.all': 'All',
+  'rd.search.kind.product': 'Products',
+  'rd.search.kind.service': 'Services',
+  'rd.search.from': 'from {price}',
+
+  'rd.product.share': 'Share',
+  'rd.product.rating': '{rating} out of 5 stars, {count, plural, one {# review} other {# reviews}}',
+  'rd.product.ratingShort': '{rating} · {count, plural, one {# review} other {# reviews}}',
+  'rd.product.run': '{when} to {place}',
+  'rd.product.soldBy': 'Sold by {shop}',
+  'rd.product.inStock': 'In stock',
+  'rd.product.held': 'Your payment is held until it arrives',
+
+  'rd.cart.subtotal': 'Subtotal ({n, plural, one {# item} other {# items}})',
+  'rd.cart.delete': 'Delete {name}',
+  'rd.cart.deleteShort': 'Delete',
+
+  'rd.checkout.secure': 'Secure checkout · {n, plural, one {# item} other {# items}}',
+  'rd.checkout.step1': 'Delivery address and time',
+  'rd.checkout.step2': 'Payment',
+  'rd.checkout.step3': 'Review items and delivery',
+  'rd.checkout.stepOf': 'Step {n} of {total}',
+  'rd.checkout.current': 'current step',
+  'rd.checkout.done': 'done',
+  'rd.checkout.later': 'next',
+  'rd.checkout.change': 'Change',
+  'rd.checkout.toPayment': 'Continue to payment',
+  'rd.checkout.place': 'Place your order · {total}',
+  'rd.checkout.qty': 'Qty {qty}',
+  'rd.checkout.terms': "By placing your order you agree to {brand}'s terms. Your payment is held until the delivery.",
+
+  'rd.order.placed': 'Order placed.',
+  'rd.order.minutes': '{n, plural, one {# min} other {# min}} away',
+  'rd.order.pinNote': 'Share this code at the door',
+
+  'rd.account.hi': 'Hi, {name}',
+  'rd.account.yourOrders': 'Your orders',
+  'rd.account.noOrders': 'Nothing yet — your orders and bookings show here.',
+  'rd.account.groupAccount': 'Account',
+  'rd.account.groupPrefs': 'Preferences',
+  'rd.account.groupHelp': 'Help',
+  'rd.account.saved': 'Saved',
+} as const;

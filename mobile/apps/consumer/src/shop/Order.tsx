@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { colors, fonts, radius, space } from '@northline/mobile-kit';
+import { Icon, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
 
 import { CourierTip } from '../aftercare/CourierTip';
 import { ReviewPanel } from '../aftercare/Review';
@@ -16,7 +16,7 @@ import { Body, Button, Notice, Tag, Title } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { QueryView, SignInPrompt, Skeleton, errorMessage } from '../ui/states';
 import { backToTab, shop, useShopFormat } from './common';
-import { Ladder, Panel, Thumb, shopStyles } from './parts';
+import { Ladder, Panel, shopStyles } from './parts';
 
 /**
  * Live tracking: React Native has no EventSource, so instead of `GET /me/orders/{id}/events` (SSE) the order is read
@@ -115,10 +115,10 @@ export function Confirmed() {
     >
       {(o) => (
         <View style={styles.gap}>
-          <Svg width={72} height={72} viewBox="0 0 72 72" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            <Circle cx={36} cy={36} r={34} fill={colors.accent100} stroke={colors.accent} strokeWidth={2} />
-            <Path d="M22 37 L32 47 L51 27" fill="none" stroke={colors.accent700} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
+          <View style={styles.placed} accessibilityRole="alert">
+            <Icon name="check-circle" filled size={22} color={semantic.success} />
+            <Text style={[styles.body, styles.strong, styles.flex]}>{t('rd.order.placed')}</Text>
+          </View>
           {/* the sentence's own full stop, not a second one after "p.m." */}
           <Title>{t('shop.order.placed', { when: when(o).replace(/\.$/, '') })}</Title>
           <Body tone="muted">{t('shop.order.sub', { ref: o.ref ?? '', total: f.money(o.totalCents), shops: o.shops.length })}</Body>
@@ -159,39 +159,49 @@ export function Track() {
         const ref = o.ref ?? id;
         return (
           <View style={styles.gap}>
+            <View style={styles.head}>
+              <Text style={styles.small}>{ref}</Text>
+              <Text accessibilityRole="header" style={styles.headline}>
+                {t('shop.track.arriving', { when: eta ? f.time(eta) : when(o) })}
+              </Text>
+            </View>
             <View accessible accessibilityRole="image" accessibilityLabel={t('shop.track.map', { where })} style={styles.map}>
-              <Svg width="100%" height="100%" viewBox="0 0 402 220" preserveAspectRatio="xMidYMid slice">
-                <Path d="M30 190 L110 190 L110 120 L240 120 L240 60 L340 60" fill="none" stroke={colors.accent} strokeWidth={4} strokeDasharray="8 6" />
-                <Circle cx={30} cy={190} r={8} fill={colors.neutral700} />
-                <Circle cx={110} cy={120} r={8} fill={colors.neutral700} />
-                <Circle cx={240} cy={c && c.stopsBefore === 0 ? 80 : 120} r={11} fill={colors.accent2} />
-                <Circle cx={340} cy={60} r={9} fill={colors.bg} stroke={colors.text} strokeWidth={3} />
+              <Svg width="100%" height="100%" viewBox="0 0 402 200" preserveAspectRatio="xMidYMid slice">
+                <Path d="M30 170 L110 170 L110 110 L240 110 L240 50 L340 50" fill="none" stroke={colors.actionPrimary} strokeWidth={4} strokeDasharray="8 6" />
+                <Circle cx={30} cy={170} r={8} fill={colors.textMuted} />
+                <Circle cx={110} cy={110} r={8} fill={colors.textMuted} />
+                <Circle cx={240} cy={c && c.stopsBefore === 0 ? 70 : 110} r={11} fill={semantic['action-accent']} stroke={colors.headerBg} strokeWidth={3} />
+                <Circle cx={340} cy={50} r={9} fill={colors.surface} stroke={colors.text} strokeWidth={3} />
               </Svg>
-              <View style={styles.mapLabel}>
-                <Text style={styles.small}>{where}</Text>
+              <View style={styles.etaPill}>
+                <Text style={styles.etaText}>{minutes !== null && c ? t('rd.order.minutes', { n: minutes }) : where}</Text>
               </View>
             </View>
-            <View style={shopStyles.head}>
-              <View style={shopStyles.rowText}>
-                <Title>{t('shop.track.arriving', { when: eta ? f.time(eta) : when(o) })}</Title>
-                <Body tone="small">
-                  {o.delivery.kind === 'direct'
-                    ? t('shop.track.direct', { ref })
-                    : minutes !== null && c
-                      ? t('shop.track.away', { ref, n: minutes })
-                      : t('shop.track.pooled', { ref })}
-                </Body>
-              </View>
-              <Tag label={t(`shop.state.${o.state}` as MessageKey)} tone="accent2" />
-            </View>
-            <View style={shopStyles.row}>
-              <Thumb size={48} style={styles.avatar} />
-              <View style={shopStyles.rowText}>
-                <Text style={[styles.body, shopStyles.strong]}>{c?.courierName ? t('shop.track.courier', { name: c.courierName }) : t('shop.track.noCourier')}</Text>
-                {c?.pin ? <Text style={styles.small}>{t('shop.track.pin', { pin: c.pin })}</Text> : null}
-              </View>
+            <View style={styles.stateRow}>
+              <Body tone="small" style={styles.flex}>
+                {o.delivery.kind === 'direct'
+                  ? t('shop.track.direct', { ref })
+                  : minutes !== null && c
+                    ? t('shop.track.away', { ref, n: minutes })
+                    : t('shop.track.pooled', { ref })}
+              </Body>
+              <Tag label={t(`shop.state.${o.state}` as MessageKey)} tone="accent" />
             </View>
             <Ladder steps={steps(o)} />
+            <View style={styles.courier} testID="track-courier">
+              <View style={styles.courierAvatar}>
+                {c?.courierName ? <Text style={styles.courierInitials}>{initialsOf(c.courierName)}</Text> : <Icon name="truck" size={22} color={semantic['action-accent-text']} />}
+              </View>
+              <View style={styles.flex}>
+                <Text style={styles.courierName}>{c?.courierName ? t('shop.track.courier', { name: c.courierName }) : t('shop.track.noCourier')}</Text>
+                {c?.pin ? <Text style={styles.courierSub}>{t('rd.order.pinNote')}</Text> : null}
+              </View>
+              {c?.pin ? (
+                <Text style={styles.pin} accessibilityLabel={t('shop.track.pin', { pin: c.pin })}>
+                  {c.pin}
+                </Text>
+              ) : null}
+            </View>
             <Body tone="small">{t('shop.track.live', { time: f.time(new Date(updatedAt).toISOString()) })}</Body>
           </View>
         );
@@ -299,17 +309,37 @@ function Proof({ orderId, kind, caption }: { orderId: string; kind: string | nul
   );
 }
 
+/** "Kwame B." → "KB" (the courier card's avatar). */
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join('');
+
 const styles = StyleSheet.create({
-  gap: { gap: space[3] },
+  gap: { gap: space[4] },
+  head: { gap: 2 },
+  headline: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 23, color: colors.text },
+  placed: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: 14, paddingVertical: space[3], borderRadius: radius.md, backgroundColor: semantic['success-bg'] },
+  strong: { fontFamily: fonts.bold },
+  stateRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  etaPill: { position: 'absolute', left: 12, bottom: 12, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.headerBg },
+  etaText: { fontFamily: fonts.bold, fontSize: 12, color: semantic['header-indicator'] },
+  courier: { flexDirection: 'row', alignItems: 'center', gap: space[3], padding: 14, borderRadius: radius.md, backgroundColor: colors.headerBg },
+  courierAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: semantic['action-accent'], alignItems: 'center', justifyContent: 'center' },
+  courierInitials: { fontFamily: fonts.bold, fontSize: 15, color: semantic['action-accent-text'] },
+  courierName: { fontFamily: fonts.bold, fontSize: 14, color: colors.headerText },
+  courierSub: { fontFamily: fonts.regular, fontSize: 12, color: semantic['header-muted'] },
+  pin: { fontFamily: fonts.black, fontSize: 24, letterSpacing: 3, color: semantic['header-indicator'] },
   gapSmall: { gap: space[1] },
-  photo: { height: 240, borderRadius: radius.md, backgroundColor: colors.neutral200 },
+  photo: { height: 240, borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
   flex: { flex: 1 },
   actions: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-  map: { height: 220, marginHorizontal: -24, backgroundColor: colors.neutral200, overflow: 'hidden' },
-  mapLabel: { position: 'absolute', left: 24, bottom: 16, backgroundColor: colors.bg, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.md },
-  avatar: { borderRadius: 24 },
-  proof: { height: 200, borderRadius: radius.md, backgroundColor: colors.neutral500, alignItems: 'center', justifyContent: 'center', padding: space[3] },
-  proofText: { fontFamily: fonts.body, fontSize: 12, color: colors.onAccent, textAlign: 'center' },
+  map: { height: 200, borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], overflow: 'hidden' },
+  proof: { height: 200, borderRadius: radius.lg, backgroundColor: colors.headerBg, alignItems: 'center', justifyContent: 'center', padding: space[3] },
+  proofText: { fontFamily: fonts.medium, fontSize: 13, color: colors.headerText, textAlign: 'center' },
   body: { fontFamily: fonts.body, fontSize: 15, color: colors.text },
   small: { fontFamily: fonts.body, fontSize: 13, color: colors.text },
 });

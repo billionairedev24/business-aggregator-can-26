@@ -12,29 +12,32 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
+import { MIN_TARGET, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
 
 /**
- * The consumer app's building blocks, one per class of design 01 (`Consumer Screen.dc.html`): `btn-primary` /
- * `btn-secondary` / `btn-ghost`, `field` + `input`, `tag-*`, the `opt` selectable card, the kicker. Colours, radii,
- * spacing and fonts come from @northline/mobile-kit (the tokens), never literals; every control is ≥ 48 dp.
+ * The consumer app's building blocks on the redesign's mobile language (docs/design/redesign-spec.md § 1.3 Mobile,
+ * AfroTransact's customer app with our brand): pill buttons (44 / 48 / 52 pt), one sans family with 700/800 headings,
+ * 48 pt inputs, pill tags, 2 px selectable cards. Colours, radii, spacing and fonts come from @northline/mobile-kit
+ * (brand.json's palette), never literals; every control is ≥ 44 pt (MIN_TARGET). Text sizes scale with the person's
+ * Dynamic Type / font size setting (React Native's default), capped where a layout would break.
  */
 
 export const type = StyleSheet.create({
-  /** Welcome's hero (h1 40px, tight). */
-  hero: { fontFamily: fonts.heading, fontSize: 40, lineHeight: 42, letterSpacing: -1, color: colors.text },
-  /** A screen's title (h2 28px). */
-  title: { fontFamily: fonts.heading, fontSize: 28, lineHeight: 32, letterSpacing: -0.5, color: colors.text },
-  /** A section (h3 20px). */
-  section: { fontFamily: fonts.heading, fontSize: 20, lineHeight: 24, color: colors.text },
-  body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.text },
-  lead: { fontFamily: fonts.body, fontSize: 16, lineHeight: 23, color: colors.neutral700 },
-  muted: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.neutral700 },
-  small: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.neutral700 },
-  strong: { fontFamily: fonts.bodyStrong },
-  kicker: { fontFamily: fonts.body, fontSize: 13, letterSpacing: 1, textTransform: 'uppercase', color: colors.neutral700 },
-  link: { fontFamily: fonts.body, color: colors.accent700, textDecorationLine: 'underline' },
-  error: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.accent2_700 },
+  /** Welcome's hero. */
+  hero: { fontFamily: fonts.black, fontSize: 38, lineHeight: 40, letterSpacing: -0.6, color: colors.text },
+  /** A screen's title (MA: "Cart", 28 / 800). */
+  title: { fontFamily: fonts.black, fontSize: 28, lineHeight: 32, letterSpacing: -0.4, color: colors.text },
+  /** A section (MA: 18 / 700). */
+  section: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 23, color: colors.text },
+  body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.text },
+  lead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, color: colors.textMuted },
+  muted: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.textMuted },
+  small: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.textMuted },
+  strong: { fontFamily: fonts.bold },
+  /** MA's group labels: 12 / 700 uppercase, .04em. */
+  kicker: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.5, textTransform: 'uppercase', color: colors.textMuted },
+  link: { fontFamily: fonts.semibold, color: colors.link, textDecorationLine: 'underline' },
+  error: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, color: colors.danger },
 });
 
 export function Title({ children, hero, testID }: { children: ReactNode; hero?: boolean; testID?: string }) {
@@ -66,7 +69,11 @@ export function Link({ label, onPress, hint, testID }: { label: string; onPress:
   );
 }
 
-export type ButtonTone = 'primary' | 'secondary' | 'ghost' | 'danger';
+/**
+ * primary = the brand's primary (Place order, Continue); accent = AT's gold role (Add to cart); secondary = white with
+ * a hairline; dark = the header colour; ghost = text only; danger = red text on white (Sign out).
+ */
+export type ButtonTone = 'primary' | 'accent' | 'secondary' | 'dark' | 'ghost' | 'danger';
 
 export function Button({
   label,
@@ -85,7 +92,7 @@ export function Button({
   disabled?: boolean;
   busy?: boolean;
   hint?: string;
-  /** The design's main call to action (50 dp, 16px). */
+  /** The screen's main call to action (52 pt, 16 / 700 — MA's bottom action bar). */
   large?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -102,29 +109,35 @@ export function Button({
       testID={testID}
       style={({ pressed }) => [styles.button, large && styles.buttonLarge, buttonTone[tone], pressed && pressedTone[tone], off && styles.disabled, style]}
     >
-      {busy ? <ActivityIndicator color={tone === 'primary' ? colors.onAccent : colors.accent} /> : null}
+      {busy ? <ActivityIndicator color={buttonText[tone].color as string} /> : null}
       <Text style={[styles.buttonText, large && styles.buttonTextLarge, buttonText[tone]]}>{label}</Text>
     </Pressable>
   );
 }
 
 const buttonTone: Record<ButtonTone, ViewStyle> = {
-  primary: { backgroundColor: colors.accent },
-  secondary: { backgroundColor: colors.surface, borderColor: colors.divider, borderWidth: 1 },
+  primary: { backgroundColor: semantic['action-primary'] },
+  accent: { backgroundColor: semantic['action-accent'] },
+  secondary: { backgroundColor: semantic['action-neutral'], borderColor: semantic['action-neutral-border'], borderWidth: 1 },
+  dark: { backgroundColor: semantic['action-dark'] },
   ghost: { backgroundColor: 'transparent' },
-  danger: { backgroundColor: 'transparent' },
+  danger: { backgroundColor: semantic.surface, borderColor: semantic['border-control'], borderWidth: 1 },
 };
 const pressedTone: Record<ButtonTone, ViewStyle> = {
-  primary: { backgroundColor: colors.accent700 },
-  secondary: { backgroundColor: colors.accent200 },
-  ghost: { backgroundColor: colors.accent100 },
-  danger: { backgroundColor: colors.accent2_100 },
+  primary: { backgroundColor: semantic['action-primary-press'] },
+  accent: { backgroundColor: semantic['action-accent-hover'] },
+  secondary: { backgroundColor: semantic['action-neutral-hover'] },
+  dark: { backgroundColor: semantic['action-dark-hover'] },
+  ghost: { backgroundColor: semantic['surface-hover'] },
+  danger: { backgroundColor: semantic['danger-bg'] },
 };
 const buttonText: Record<ButtonTone, TextStyle> = {
-  primary: { color: colors.onAccent },
-  secondary: { color: colors.text },
-  ghost: { color: colors.accent },
-  danger: { color: colors.accent2_700 },
+  primary: { color: semantic['action-primary-text'] },
+  accent: { color: semantic['action-accent-text'] },
+  secondary: { color: semantic['action-neutral-text'] },
+  dark: { color: semantic['action-dark-text'] },
+  ghost: { color: semantic.link },
+  danger: { color: semantic.danger },
 };
 
 export interface FieldProps extends Omit<TextInputProps, 'style'> {
@@ -134,7 +147,7 @@ export interface FieldProps extends Omit<TextInputProps, 'style'> {
   testID?: string;
 }
 
-/** `field` + `input`: a label above, the error under it in rosehip (and announced), 46 dp, 16px so iOS doesn't zoom. */
+/** A label above (13 / 600), a 48 pt input (16 pt so iOS doesn't zoom), the error under it in the danger colour (and announced). */
 export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, error, hint, testID, ...input }, ref) {
   return (
     <View style={styles.field}>
@@ -146,7 +159,7 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, e
         accessibilityLabel={label}
         accessibilityHint={hint}
         aria-invalid={!!error}
-        placeholderTextColor={colors.neutral600}
+        placeholderTextColor={colors.textSubtle}
         style={[styles.input, !!error && styles.inputError]}
         testID={testID}
         {...input}
@@ -184,7 +197,8 @@ export function Checkbox({ checked, onChange, label, children, error, testID }: 
   );
 }
 
-export type TagTone = 'accent' | 'accent2' | 'neutral';
+/** accent = brand (primary tint), accent2 = attention (danger tint), neutral; success / warning for states. */
+export type TagTone = 'accent' | 'accent2' | 'neutral' | 'success' | 'warning';
 
 export function Tag({ label, tone = 'neutral', small }: { label: string; tone?: TagTone; small?: boolean }) {
   return (
@@ -195,17 +209,21 @@ export function Tag({ label, tone = 'neutral', small }: { label: string; tone?: 
 }
 
 const tagTone: Record<TagTone, ViewStyle> = {
-  accent: { backgroundColor: colors.accent100 },
-  accent2: { backgroundColor: colors.accent2_100 },
-  neutral: { backgroundColor: colors.neutral200 },
+  accent: { backgroundColor: semantic['badge-brand-bg'] },
+  accent2: { backgroundColor: semantic['danger-bg'] },
+  neutral: { backgroundColor: semantic['badge-neutral-bg'] },
+  success: { backgroundColor: semantic['success-bg'] },
+  warning: { backgroundColor: semantic['warning-bg'] },
 };
 const tagText: Record<TagTone, TextStyle> = {
-  accent: { color: colors.accent800 },
-  accent2: { color: colors.accent2_800 },
-  neutral: { color: colors.neutral900 },
+  accent: { color: semantic['badge-brand-text'] },
+  accent2: { color: semantic.danger },
+  neutral: { color: semantic['badge-neutral-text'] },
+  success: { color: semantic.success },
+  warning: { color: semantic.warning },
 };
 
-/** The design's `opt`: a selectable card (accent border and accent-100 fill when chosen). */
+/** A selectable card (MA's radio cards): a 2 pt border, the primary colour and the brand tint when chosen. */
 export function Option({
   selected,
   onPress,
@@ -246,7 +264,7 @@ export function Option({
   );
 }
 
-/** A message about the whole form or step: rosehip for errors (announced), accent for news ("New code sent."). */
+/** A message about the whole form or step: danger for errors (announced), the info tint for news ("New code sent."). */
 export function Notice({ message, tone = 'error', testID }: { message: string; tone?: 'error' | 'info'; testID?: string }) {
   return (
     <View
@@ -273,64 +291,64 @@ const styles = StyleSheet.create({
   button: {
     minHeight: MIN_TARGET,
     minWidth: MIN_TARGET,
-    paddingHorizontal: space[4],
+    paddingHorizontal: space[5],
     paddingVertical: space[2],
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: space[2],
   },
-  buttonLarge: { minHeight: 50 },
-  buttonText: { fontFamily: fonts.bodyStrong, fontSize: 15, textAlign: 'center' },
+  buttonLarge: { minHeight: 52, paddingHorizontal: space[6] },
+  buttonText: { fontFamily: fonts.bold, fontSize: 15, textAlign: 'center' },
   buttonTextLarge: { fontSize: 16 },
   disabled: { opacity: 0.45 },
   field: { gap: 6 },
-  label: { fontFamily: fonts.body, fontSize: 13, color: colors.neutral800 },
+  label: { fontFamily: fonts.semibold, fontSize: 13, color: colors.text },
   input: {
     minHeight: 48,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    fontFamily: fonts.body,
+    fontFamily: fonts.regular,
     fontSize: 16,
     color: colors.text,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.neutral300,
+    borderColor: colors.borderControl,
     borderRadius: radius.md,
   },
-  inputError: { borderColor: colors.accent2 },
+  inputError: { borderColor: semantic['danger-border'] },
   checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, minHeight: MIN_TARGET, paddingVertical: space[2] },
-  box: { width: 20, height: 20, marginTop: 1, borderRadius: radius.sm, borderWidth: 1.5, borderColor: colors.neutral400, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
-  boxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  tick: { width: 8, height: 8, borderRadius: 2, backgroundColor: colors.onAccent },
+  box: { width: 20, height: 20, marginTop: 1, borderRadius: radius.xs, borderWidth: 1.5, borderColor: colors.borderControl, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  boxOn: { backgroundColor: colors.actionPrimary, borderColor: colors.actionPrimary },
+  tick: { width: 8, height: 8, borderRadius: 2, backgroundColor: colors.actionPrimaryText },
   checkText: { flex: 1 },
   tag: { alignSelf: 'flex-start', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 3 },
-  tagSmall: { paddingHorizontal: 7, paddingVertical: 1 },
-  tagText: { fontFamily: fonts.bodyStrong, fontSize: 12 },
-  tagTextSmall: { fontSize: 10 },
+  tagSmall: { paddingHorizontal: 8, paddingVertical: 2 },
+  tagText: { fontFamily: fonts.bold, fontSize: 12 },
+  tagTextSmall: { fontSize: 11 },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    minHeight: MIN_TARGET,
+    minHeight: 52,
     paddingHorizontal: 14,
     paddingVertical: space[3],
     borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
-  optionOn: { borderColor: colors.accent, backgroundColor: colors.accent100 },
-  optionPressed: { backgroundColor: colors.accent100 },
+  optionOn: { borderColor: colors.actionPrimary, backgroundColor: semantic['surface-brand'] },
+  optionPressed: { backgroundColor: semantic['surface-hover'] },
   optionOff: { opacity: 0.45 },
   optionText: { flex: 1, gap: 2 },
-  optionTitle: { fontSize: 16 },
-  optionDesc: { color: colors.neutral700 },
-  notice: { borderRadius: radius.md, borderWidth: 1, padding: space[3] },
-  noticeError: { borderColor: colors.accent2, backgroundColor: colors.accent2_100 },
-  noticeErrorText: { color: colors.accent2_700 },
-  noticeInfo: { borderColor: colors.accent200, backgroundColor: colors.accent100 },
+  optionTitle: { fontSize: 15 },
+  optionDesc: { color: colors.textMuted },
+  notice: { borderRadius: radius.md, padding: space[3] },
+  noticeError: { backgroundColor: semantic['danger-bg'] },
+  noticeErrorText: { color: semantic.danger },
+  noticeInfo: { backgroundColor: semantic['info-bg'] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   wrap: { flexWrap: 'wrap' },
   spacer: { flex: 1, minHeight: space[6] },

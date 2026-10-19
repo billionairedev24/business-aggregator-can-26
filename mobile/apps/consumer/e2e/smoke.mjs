@@ -127,7 +127,7 @@ try {
     await noSideScroll('checkout');
     await shot('24-checkout');
     await page.getByTestId('checkout-continue').click();
-    await page.getByRole('button', { name: /^Pay \$/ }).click();
+    await page.getByRole('button', { name: /^Place your order · \$/ }).click();
     await page.getByText('Confirm this payment').waitFor();
     await shot('25-bank-step');
     await page.getByTestId('bank-approve').click();
@@ -137,8 +137,8 @@ try {
     await page.getByRole('button', { name: 'Back to home' }).click();
     await page.getByTestId('home').waitFor();
   });
-  await step('Journey D: orders, a quote accepted, You, wallet, security, notifications', async () => {
-    await page.getByRole('tab', { name: 'Orders' }).click();
+  await step('Journey D: activity, a quote accepted, Account, security, notifications', async () => {
+    await page.getByRole('tab', { name: 'Activity' }).click();
     await page.getByText('Grocery run · 3 shops').waitFor();
     await noSideScroll('orders');
     await shot('30-orders');
@@ -152,17 +152,11 @@ try {
     await page.getByText(/^Accepted\. /).waitFor();
     await shot('32-quote-accepted');
     await page.getByTestId('quote-bookings').click();
-    await page.getByText('Orders & bookings').first().waitFor();
-    await page.getByRole('tab', { name: 'You' }).click();
-    await page.getByText('Grace Hopper').waitFor();
-    await page.getByText(/^1,240 pts · /).waitFor();
+    await page.getByText('Activity').first().waitFor();
+    await page.getByRole('tab', { name: 'Account' }).click();
+    await page.getByText('Hi, Grace').waitFor();
     await noSideScroll('you-profile');
     await shot('33-you');
-    await page.getByTestId('you-wallet').click();
-    await page.getByText('Northline points').waitFor();
-    await noSideScroll('wallet');
-    await shot('34-wallet');
-    await page.getByTestId('header-back').click();
     await page.getByTestId('row-security').click();
     await page.getByTestId('security-code').fill('135790');
     await page.getByTestId('security-confirm-button').click();
@@ -177,32 +171,32 @@ try {
     await page.getByTestId('header-back').click();
   });
   await step('You: signed in, French, sign out', async () => {
-    await page.getByRole('tab', { name: 'You' }).click();
-    await page.getByText('Grace Hopper').waitFor();
+    await page.getByRole('tab', { name: 'Account' }).click();
+    await page.getByText('Hi, Grace').waitFor();
     await page.getByRole('radio', { name: 'Français' }).click();
     await page.getByRole('button', { name: 'Se déconnecter' }).waitFor();
     await noSideScroll('you');
     await shot('06-you-fr');
     await page.getByRole('button', { name: 'Se déconnecter' }).click();
-    await page.getByRole('tab', { name: 'Vous' }).click();
-    await page.getByText('Connectez-vous pour voir vos commandes, vos réservations et vos points.').waitFor();
+    await page.getByRole('tab', { name: 'Compte' }).click();
+    await page.getByText('Connectez-vous pour voir vos commandes et vos réservations.').waitFor();
     await page.getByRole('radio', { name: 'English' }).click();
   });
 
-  await step('the tab shell: Home · Services · Cart · Orders · You', async () => {
+  await step('the tab shell: Home · Browse · Activity · Cart · Account', async () => {
     await page.getByRole('tab', { name: 'Home' }).click();
     await page.getByTestId('home').waitFor({ timeout: 30_000 });
     const tabs = await page.getByRole('tab').allTextContents();
-    if (tabs.join('|') !== 'Home|Services|Cart|Orders|You') throw new Error(tabs.join('|'));
-    await page.getByRole('tab', { name: 'Services' }).click();
+    if (tabs.join('|') !== 'Home|Browse|Activity|Cart|Account') throw new Error(tabs.join('|'));
+    await page.getByRole('tab', { name: 'Browse' }).click();
     await page.getByTestId('services').waitFor();
     await noSideScroll('services');
     await shot('10-tabs-services');
   });
-  await step('a sub-screen with the design header', async () => {
+  await step('a sub-screen with the shared header', async () => {
     await page.goto(`${base}/orders/NL-48213/track`);
     await page.getByText('Order NL-48213').waitFor();
-    await page.getByText('← Back').waitFor();
+    await page.getByRole('button', { name: 'Back' }).first().waitFor();
     await shot('11-sub-screen');
   });
   // S-100 Journey C: a guest browses, signs in (fixture passkey), books a visit and signs a finished job off
@@ -236,7 +230,7 @@ try {
       await page.getByRole('button', { name: '1204 Example Ave, Sampleville, XA' }).filter({ visible: true }).first().click();
       await page.getByRole('button', { name: 'Save and continue' }).filter({ visible: true }).first().click();
     }
-    await page.getByRole('tab', { name: 'Services' }).filter({ visible: true }).first().click();
+    await page.getByRole('tab', { name: 'Browse' }).filter({ visible: true }).first().click();
     await vis('category-mobile-mechanic').click();
     await vis('provider-prairie-wrench').click();
     await vis('book-visit').click();

@@ -287,21 +287,21 @@ describe('signing out (You)', () => {
     const pushes: string[] = [];
     setPushRegistrar({ signedIn: async () => void pushes.push('in'), signingOut: async () => void pushes.push('out') });
     const { server, services, view } = await start({ signedIn: true, url: '/account' });
-    expect(await screen.findByText('Ada Example')).toBeTruthy();
+    expect(await screen.findByText('Hi, Ada')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
     await waitFor(() => expect(view.getPathname()).toBe('/home'));
     expect(pushes).toEqual(['out']);
     expect(server.auth.revoked).toEqual(['fixture-refresh-1']);
     expect(await services.session.restore()).toBe(false);
-    fireEvent.press(screen.getByRole('tab', { name: 'You' }));
-    expect(await screen.findByText('Sign in to see your orders, bookings and points.')).toBeTruthy();
+    fireEvent.press(screen.getByRole('tab', { name: 'Account' }));
+    expect(await screen.findByText('Sign in to see your orders and bookings.')).toBeTruthy();
   });
 
   it('switches the language in place', async () => {
     await start({ welcomed: true, url: '/account' });
     fireEvent.press(await screen.findByRole('radio', { name: 'Français' }));
-    expect(await screen.findByText('Connectez-vous pour voir vos commandes, vos réservations et vos points.')).toBeTruthy();
-    expect(screen.getAllByRole('tab').map((t) => t.props.accessibilityLabel)).toEqual(['Accueil', 'Services', 'Panier', 'Commandes', 'Vous']);
+    expect(await screen.findByText('Connectez-vous pour voir vos commandes et vos réservations.')).toBeTruthy();
+    expect(screen.getAllByRole('tab').map((t) => t.props.accessibilityLabel)).toEqual(['Accueil', 'Parcourir', 'Activité', 'Panier', 'Compte']);
   });
 });
 

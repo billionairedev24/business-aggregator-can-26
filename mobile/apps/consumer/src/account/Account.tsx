@@ -4,21 +4,26 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { MIN_TARGET, colors, fonts, radius, space, type Locale } from '@northline/mobile-kit';
+import { Icon, MIN_TARGET, colors, fonts, radius, semantic, space, type Locale } from '@northline/mobile-kit';
 
 import { useAuth } from '../auth/AuthProvider';
-import { config, legalUrl } from '../config';
+import { config, fullNav, legalUrl } from '../config';
 import { useI18n } from '../i18n';
 import { useDeliveryLocation } from '../location/DeliveryLocation';
 import { formatMoney } from '../shop/common';
 import { Body, Button, Link, Notice, Row, Tag, Title, type } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { ErrorState, SignInPrompt, Skeleton } from '../ui/states';
-import { KEYS, account, clock, count, decimal, monthYear, useAccountSummary } from './common';
-import { SettingsRow } from './parts';
+import { KEYS, account, clock, count, decimal, monthYear, useAccountSummary, worded } from './common';
+import { SettingsGroup, SettingsRow } from './parts';
+import { activityTitle } from './Orders';
+import { targetOf } from './routes';
 
 /**
- * D3 Profile — the You tab (design 01 `account`): who you are (name, reliability, member since, where you are), the
+ * Account tab (redesign spec § 2.4 → MA:296 ACCOUNT): the 56 pt avatar with "Hi, {first}" and the email, "Your orders"
+ * (the two latest of `GET /me/activity`, See all → Activity), then the settings in bordered groups (account, preferences,
+ * help), the language, Sign out and the legal links. Wallet & points and the dietary preferences are behind the full
+ * navigation flag (EXPO_PUBLIC_FULL_NAV, thrash item 6); Favourites is "Saved". D3 Profile (design 01 `account`): who you are (name, reliability, member since, where you are), the
  * wallet up top (points and Plus, → Wallet), then the design's rows, each leading somewhere real (`GET
  * /me/account-summary` gives their values): personal details, addresses & household, payment methods, security &
  * sign-in, notifications, dietary & accessibility, favourite providers, refunds & help, "Language / Langue" (here, in
@@ -33,6 +38,7 @@ export function Account() {
   const signedIn = status === 'signedIn';
   const summary = useAccountSummary();
   const profile = useQuery({ queryKey: KEYS.profile, queryFn: () => account().profile(), enabled: signedIn, staleTime: 300_000 });
+  const activity = useQuery({ queryKey: KEYS.activity, queryFn: () => account().activity(), enabled: signedIn, staleTime: 30_000 });
   const { location } = useDeliveryLocation();
   const [busy, setBusy] = useState(false);
   const [langError, setLangError] = useState(false);
@@ -125,100 +131,140 @@ export function Account() {
     );
   }
 
+  const first = p?.firstName ?? '';
+  const recent = (activity.data ?? []).slice(0, 2);
   return (
     <Screen testID="you">
-      <View style={styles.head}>
-        <View style={styles.avatar} accessible={false}>
+      <Pressable accessibilityRole="button" accessibilityLabel={[first ? t('rd.account.hi', { name: first }) : t('you.signedInNoName'), p?.email].filter(Boolean).join(', ')} onPress={() => router.push('/account/profile')} style={styles.head} testID="you-head">
+        <View style={styles.avatar}>
           <Text style={styles.initials}>{p ? `${p.firstName.charAt(0)}${p.lastName.charAt(0)}`.toUpperCase() : ''}</Text>
         </View>
         <View style={styles.headText}>
-          {profile.isPending ? <Skeleton height={28} width="70%" /> : <Title>{name || t('you.signedInNoName')}</Title>}
+          {profile.isPending ? <Skeleton height={24} width="60%" /> : <Text accessibilityRole="header" style={styles.hi}>{first ? t('rd.account.hi', { name: first }) : name || t('you.signedInNoName')}</Text>}
+          {p?.email ? <Text style={type.small} numberOfLines={1}>{p.email}</Text> : null}
           {meta ? <Text style={type.small}>{meta}</Text> : null}
         </View>
-      </View>
+      </Pressable>
       {profile.isError && !p ? <ErrorState error={profile.error} onRetry={() => void profile.refetch()} /> : null}
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={[t('account.you.wallet'), s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatMoney(s.points.valueCents, locale) }) : '', s ? t(s.plus ? 'account.you.plus' : 'account.you.standard') : ''].filter(Boolean).join(', ')}
-        onPress={() => router.push('/wallet')}
-        style={({ pressed }) => [styles.wallet, pressed && styles.walletPressed]}
-        testID="you-wallet"
-      >
-        <View style={styles.headText}>
-          <Text style={styles.walletKicker}>{t('account.you.wallet')}</Text>
-          {summary.isPending ? (
-            <Skeleton height={22} width="60%" />
-          ) : (
-            <Text style={styles.walletPoints}>
-              {s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatMoney(s.points.valueCents, locale) }) : t('account.you.walletOpen')}
-            </Text>
-          )}
+      <View style={styles.section} testID="you-orders">
+        <View style={styles.sectionHead}>
+          <Text accessibilityRole="header" style={styles.h3}>
+            {t('rd.account.yourOrders')}
+          </Text>
+          <Link label={t('rd.common.seeAll')} onPress={() => router.navigate('/orders')} testID="you-orders-all" />
         </View>
-        {s ? <Tag label={t(s.plus ? 'account.you.plus' : 'account.you.standard')} tone="accent2" /> : null}
-      </Pressable>
-      {summary.isError ? <ErrorState error={summary.error} onRetry={() => void summary.refetch()} /> : null}
-
-      <View style={styles.rows}>
-        <SettingsRow name={t('account.you.profile')} value={p?.email ?? undefined} onPress={() => router.push('/account/profile')} testID="row-profile" />
-        <SettingsRow
-          name={t('account.you.addresses')}
-          value={value(s?.addresses ? String(s.addresses.count) : null)}
-          onPress={() => router.push('/account/addresses')}
-          testID="row-addresses"
-        />
-        <SettingsRow name={t('account.you.payments')} value={value(card)} onPress={() => router.push('/account/payments')} testID="row-payments" />
-        <SettingsRow name={t('account.you.security')} value={value(signIn)} onPress={() => router.push('/security')} testID="row-security" />
-        <SettingsRow name={t('account.you.notifications')} value={value(quiet)} onPress={() => router.push('/account/notifications')} testID="row-notifications" />
-        <SettingsRow
-          name={t('account.you.preferences')}
-          value={value(s?.dietary?.length ? s.dietary.join(', ') : null)}
-          onPress={() => router.push('/account/preferences')}
-          testID="row-preferences"
-        />
-        <SettingsRow name={t('account.you.favourites')} value={value(s?.favourites != null ? String(s.favourites) : null)} onPress={() => router.push('/account/favourites')} testID="row-favourites" />
-        <SettingsRow
-          name={t('account.you.help')}
-          value={value(s?.openCases ? t('account.you.cases', { n: s.openCases }) : null)}
-          onPress={() => router.push('/account/help')}
-          testID="row-help"
-        />
-        <SettingsRow name={t('account.you.sell')} hint={t('common.opensInBrowser')} onPress={() => void Linking.openURL(`${config.siteOrigin}/sell`)} testID="row-sell" />
+        {activity.isPending ? (
+          <Skeleton height={56} />
+        ) : recent.length === 0 ? (
+          <Body tone="small">{t('rd.account.noOrders')}</Body>
+        ) : (
+          recent.map((i) => {
+            const target = targetOf(i);
+            return (
+              <Pressable
+                key={`${i.kind}-${i.id}`}
+                accessibilityRole="button"
+                accessibilityLabel={[activityTitle(i, t), worded(t, 'account.status', i.status)].join(', ')}
+                disabled={!target || !('route' in target)}
+                onPress={() => target && 'route' in target && router.push(target.route as never)}
+                style={styles.orderRow}
+              >
+                <Icon name={i.kind === 'booking' || i.kind === 'quote' ? 'calendar-check' : 'package'} size={22} />
+                <View style={styles.headText}>
+                  <Text style={[type.body, type.strong]} numberOfLines={1}>
+                    {activityTitle(i, t)}
+                  </Text>
+                  <Text style={type.small} numberOfLines={1}>
+                    {[i.ref, worded(t, 'account.status', i.status)].filter(Boolean).join(' · ')}
+                  </Text>
+                </View>
+                <Icon name="caret-right" size={16} color={colors.textMuted} />
+              </Pressable>
+            );
+          })
+        )}
       </View>
 
+      {fullNav() ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={[t('account.you.wallet'), s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatMoney(s.points.valueCents, locale) }) : '', s ? t(s.plus ? 'account.you.plus' : 'account.you.standard') : ''].filter(Boolean).join(', ')}
+          onPress={() => router.push('/wallet')}
+          style={({ pressed }) => [styles.wallet, pressed && styles.walletPressed]}
+          testID="you-wallet"
+        >
+          <View style={styles.headText}>
+            <Text style={styles.walletKicker}>{t('account.you.wallet')}</Text>
+            {summary.isPending ? (
+              <Skeleton height={22} width="60%" />
+            ) : (
+              <Text style={styles.walletPoints}>
+                {s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatMoney(s.points.valueCents, locale) }) : t('account.you.walletOpen')}
+              </Text>
+            )}
+          </View>
+          {s ? <Tag label={t(s.plus ? 'account.you.plus' : 'account.you.standard')} tone="accent2" /> : null}
+        </Pressable>
+      ) : null}
+      {summary.isError ? <ErrorState error={summary.error} onRetry={() => void summary.refetch()} /> : null}
+
+      <SettingsGroup title={t('rd.account.groupAccount')}>
+        <SettingsRow icon="user" name={t('account.you.profile')} value={p?.email ?? undefined} onPress={() => router.push('/account/profile')} testID="row-profile" />
+        <SettingsRow icon="map-pin" name={t('account.you.addresses')} value={value(s?.addresses ? String(s.addresses.count) : null)} onPress={() => router.push('/account/addresses')} testID="row-addresses" />
+        <SettingsRow icon="credit-card" name={t('account.you.payments')} value={value(card)} onPress={() => router.push('/account/payments')} testID="row-payments" />
+        <SettingsRow icon="lock-simple" name={t('account.you.security')} value={value(signIn)} onPress={() => router.push('/security')} testID="row-security" />
+      </SettingsGroup>
+      <SettingsGroup title={t('rd.account.groupPrefs')}>
+        <SettingsRow icon="bell" name={t('account.you.notifications')} value={value(quiet)} onPress={() => router.push('/account/notifications')} testID="row-notifications" />
+        {fullNav() ? (
+          <SettingsRow icon="list-checks" name={t('account.you.preferences')} value={value(s?.dietary?.length ? s.dietary.join(', ') : null)} onPress={() => router.push('/account/preferences')} testID="row-preferences" />
+        ) : null}
+        <SettingsRow icon="heart" name={t('rd.account.saved')} value={value(s?.favourites != null ? String(s.favourites) : null)} onPress={() => router.push('/account/favourites')} testID="row-favourites" />
+      </SettingsGroup>
+      <SettingsGroup title={t('rd.account.groupHelp')}>
+        <SettingsRow icon="question" name={t('account.you.help')} value={value(s?.openCases ? t('account.you.cases', { n: s.openCases }) : null)} onPress={() => router.push('/account/help')} testID="row-help" />
+        <SettingsRow icon="storefront" name={t('account.you.sell')} hint={t('common.opensInBrowser')} onPress={() => void Linking.openURL(`${config.siteOrigin}/sell`)} testID="row-sell" />
+      </SettingsGroup>
+
       {language}
-      <Button label={t('you.signOut')} tone="danger" busy={busy} onPress={() => void out()} testID="sign-out" />
+      <Button label={t('you.signOut')} tone="danger" large busy={busy} onPress={() => void out()} testID="sign-out" />
       {legal}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET },
   headText: { flex: 1, minWidth: 0, gap: 2 },
-  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.neutral400, alignItems: 'center', justifyContent: 'center' },
-  initials: { fontFamily: fonts.bodyStrong, fontSize: 18, color: colors.text },
+  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: semantic['action-accent'], alignItems: 'center', justifyContent: 'center' },
+  initials: { fontFamily: fonts.bold, fontSize: 20, color: semantic['action-accent-text'] },
+  hi: { fontFamily: fonts.bold, fontSize: 20, lineHeight: 25, color: colors.text },
+  section: { gap: space[2] },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  h3: { fontFamily: fonts.bold, fontSize: 17, color: colors.text },
+  orderRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56, paddingHorizontal: 14, paddingVertical: space[3], borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
   wallet: {
     marginTop: space[2],
     paddingHorizontal: space[4],
     paddingVertical: 14,
     minHeight: MIN_TARGET,
     borderRadius: radius.md,
-    backgroundColor: colors.accent100,
+    backgroundColor: semantic['surface-brand'],
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: space[3],
   },
-  walletPressed: { backgroundColor: colors.accent200 },
-  walletKicker: { ...StyleSheet.flatten(type.kicker), fontSize: 11, color: colors.accent800 },
-  walletPoints: { fontFamily: fonts.bodyStrong, fontSize: 18, color: colors.accent900 },
+  walletPressed: { backgroundColor: semantic['surface-hover'] },
+  walletKicker: { ...StyleSheet.flatten(type.kicker), fontSize: 11, color: semantic['badge-brand-text'] },
+  walletPoints: { fontFamily: fonts.bold, fontSize: 18, color: semantic['badge-brand-text'] },
   rows: { paddingTop: space[2] },
   language: { gap: space[2], paddingTop: space[3] },
-  segmented: { flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 3, gap: 2 },
-  segment: { flex: 1, minHeight: MIN_TARGET, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
+  segmented: { flexDirection: 'row', backgroundColor: semantic['surface-muted'], borderRadius: radius.pill, padding: 3, gap: 2 },
+  segment: { flex: 1, minHeight: MIN_TARGET, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill },
   segmentOn: { backgroundColor: colors.surface },
-  segmentText: { fontFamily: fonts.body, fontSize: 15, color: colors.text },
-  segmentTextOn: { fontFamily: fonts.bodyStrong, color: colors.accent800 },
+  segmentText: { fontFamily: fonts.medium, fontSize: 15, color: colors.text },
+  segmentTextOn: { fontFamily: fonts.bold, color: colors.text },
   legal: { paddingTop: space[6] },
 });

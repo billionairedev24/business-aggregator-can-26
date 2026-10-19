@@ -47,6 +47,7 @@ export const ICONS = {
   'clock-counter-clockwise': 'ClockCounterClockwise',
   'cloud-arrow-up': 'CloudArrowUp',
   'credit-card': 'CreditCard',
+  export: 'Export',
   database: 'Database',
   drop: 'Drop',
   envelope: 'Envelope',

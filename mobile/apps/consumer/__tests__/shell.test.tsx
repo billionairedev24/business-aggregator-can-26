@@ -18,7 +18,7 @@ afterEach(async () => {
 });
 
 describe('the shell', () => {
-  it('opens on Welcome the first time, and on Home with the five tabs afterwards', async () => {
+  it('opens on Welcome the first time, and on Home with the redesign\'s five tabs afterwards (spec § 2.4)', async () => {
     const first = await start();
     expect(await routerScreen.findByTestId('welcome')).toBeTruthy();
     expect(first.view.getPathname()).toBe('/welcome');
@@ -28,19 +28,22 @@ describe('the shell', () => {
     expect(await routerScreen.findByTestId('home')).toBeTruthy();
     expect(again.view.getPathname()).toBe('/home');
     const tabs = routerScreen.getAllByRole('tab').map((t) => t.props.accessibilityLabel);
-    expect(tabs).toEqual(['Home', 'Services', 'Cart', 'Orders', 'You']);
+    expect(tabs).toEqual(['Home', 'Browse', 'Activity', 'Cart', 'Account']);
     expect(routerScreen.getByRole('tab', { name: 'Home' }).props.accessibilityState).toEqual({ selected: true });
   });
 
   it('moves between tabs, the current one marked', async () => {
     const { view } = await start({ welcomed: true });
-    fireEvent.press(await routerScreen.findByRole('tab', { name: 'Services' }));
+    fireEvent.press(await routerScreen.findByRole('tab', { name: 'Browse' }));
     expect(await routerScreen.findByTestId('services')).toBeTruthy();
     expect(view.getPathname()).toBe('/services');
-    expect(routerScreen.getByRole('tab', { name: 'Services' }).props.accessibilityState).toEqual({ selected: true });
+    expect(routerScreen.getByRole('tab', { name: 'Browse' }).props.accessibilityState).toEqual({ selected: true });
+    // the current tab draws the filled icon, the others the regular one (spec § 1.2)
+    expect(routerScreen.getByTestId('icon-squares-four-fill', { includeHiddenElements: true })).toBeTruthy();
+    expect(routerScreen.getByTestId('icon-house', { includeHiddenElements: true })).toBeTruthy();
   });
 
-  it('opens sub-screens with the design header and its "← Back"', async () => {
+  it('opens sub-screens with the shared header and its round Back button', async () => {
     const { view } = await start({ welcomed: true, url: '/orders/NL-48213/track' });
     expect(await routerScreen.findByText('Order NL-48213')).toBeTruthy();
     expect(routerScreen.getByRole('button', { name: 'Back' })).toBeTruthy();
@@ -60,7 +63,7 @@ describe('the shell', () => {
     const { getLocales } = jest.requireMock('expo-localization') as { getLocales: jest.Mock };
     getLocales.mockReturnValueOnce([{ languageTag: 'fr-CA' }]);
     await start({ welcomed: true });
-    expect((await routerScreen.findAllByRole('tab')).map((t) => t.props.accessibilityLabel)).toEqual(['Accueil', 'Services', 'Panier', 'Commandes', 'Vous']);
+    expect((await routerScreen.findAllByRole('tab')).map((t) => t.props.accessibilityLabel)).toEqual(['Accueil', 'Parcourir', 'Activité', 'Panier', 'Compte']);
   });
 
   it('keeps one random guest id per installation and sends it on api calls (the guest cart, S-51)', async () => {

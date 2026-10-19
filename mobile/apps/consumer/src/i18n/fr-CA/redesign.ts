@@ -1,0 +1,67 @@
+import type { redesign as en } from '../en/redesign';
+
+export const redesign: { [k in keyof typeof en]: string } = {
+  'rd.common.seeAll': 'Tout voir',
+
+  'rd.home.account': 'Votre compte',
+  'rd.home.signIn': 'Se connecter ou créer un compte',
+  'rd.home.deliverTo': 'Livrer à',
+  'rd.home.heroKicker': 'Près de chez vous',
+  'rd.home.heroTitle': 'Commerces et pros à {place}',
+  'rd.home.heroSub': 'Commandez aux commerces d’ici, réservez un pro — payé en toute sécurité dans l’appli.',
+  'rd.home.runTitle': 'Départ à {time}',
+  'rd.home.runSub': 'Livraison {fee} · commandez avant {orderBy}',
+  'rd.home.popular': 'Populaire près de chez vous',
+  'rd.home.services': 'Réserver un pro',
+  'rd.home.bookTitle': 'Réservez un mécanicien, un ménage ou un tuteur',
+  'rd.home.bookSub': 'Pros vérifiés près de chez vous · payés seulement une fois le travail fait',
+
+  'rd.browse.title': 'Parcourir',
+
+  'rd.search.placeholder': 'Rechercher produits et services',
+  'rd.search.cancel': 'Annuler',
+  'rd.search.clearText': 'Effacer la recherche',
+  'rd.search.type': 'Afficher',
+  'rd.search.kind.all': 'Tout',
+  'rd.search.kind.product': 'Produits',
+  'rd.search.kind.service': 'Services',
+  'rd.search.from': 'à partir de {price}',
+
+  'rd.product.share': 'Partager',
+  'rd.product.rating': '{rating} sur 5 étoiles, {count, plural, one {# avis} other {# avis}}',
+  'rd.product.ratingShort': '{rating} · {count, plural, one {# avis} other {# avis}}',
+  'rd.product.run': '{when} à {place}',
+  'rd.product.soldBy': 'Vendu par {shop}',
+  'rd.product.inStock': 'En stock',
+  'rd.product.held': 'Votre paiement est retenu jusqu’à la livraison',
+
+  'rd.cart.subtotal': 'Sous-total ({n, plural, one {# article} other {# articles}})',
+  'rd.cart.delete': 'Supprimer {name}',
+  'rd.cart.deleteShort': 'Supprimer',
+
+  'rd.checkout.secure': 'Paiement sécurisé · {n, plural, one {# article} other {# articles}}',
+  'rd.checkout.step1': 'Adresse et heure de livraison',
+  'rd.checkout.step2': 'Paiement',
+  'rd.checkout.step3': 'Vérifier les articles et la livraison',
+  'rd.checkout.stepOf': 'Étape {n} sur {total}',
+  'rd.checkout.current': 'étape en cours',
+  'rd.checkout.done': 'terminée',
+  'rd.checkout.later': 'à venir',
+  'rd.checkout.change': 'Modifier',
+  'rd.checkout.toPayment': 'Continuer vers le paiement',
+  'rd.checkout.place': 'Passer la commande · {total}',
+  'rd.checkout.qty': 'Qté {qty}',
+  'rd.checkout.terms': 'En passant votre commande, vous acceptez les conditions de {brand}. Votre paiement est retenu jusqu’à la livraison.',
+
+  'rd.order.placed': 'Commande passée.',
+  'rd.order.minutes': 'à {n, plural, one {# min} other {# min}}',
+  'rd.order.pinNote': 'Donnez ce code à la porte',
+
+  'rd.account.hi': 'Bonjour, {name}',
+  'rd.account.yourOrders': 'Vos commandes',
+  'rd.account.noOrders': 'Rien pour l’instant — vos commandes et réservations s’afficheront ici.',
+  'rd.account.groupAccount': 'Compte',
+  'rd.account.groupPrefs': 'Préférences',
+  'rd.account.groupHelp': 'Aide',
+  'rd.account.saved': 'Enregistrés',
+};

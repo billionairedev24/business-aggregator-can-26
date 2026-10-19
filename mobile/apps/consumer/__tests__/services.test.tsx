@@ -107,7 +107,7 @@ describe('empty states', () => {
   it('C1: no live category yet', async () => {
     const { server } = await start({ welcomed: true, url: '/home' });
     server.services.empty = true;
-    fireEvent.press(await screen.findByRole('tab', { name: 'Services' }));
+    fireEvent.press(await screen.findByRole('tab', { name: 'Browse' }));
     expect(await screen.findByText('No service categories are live yet.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Back to Home' })).toBeTruthy();
   });

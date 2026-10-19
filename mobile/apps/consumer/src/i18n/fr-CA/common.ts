@@ -1,14 +1,14 @@
 import type { common as en } from '../en/common';
 
 export const common: { [k in keyof typeof en]: string } = {
-  'app.name': 'Northline',
+  'app.name': '{brand}',
   'common.back': 'Retour',
   'common.retry': 'Réessayer',
   'common.loading': 'Chargement…',
-  'common.offline': 'Vous êtes hors ligne. Northline se mettra à jour à votre retour en ligne.',
-  'common.network': 'Impossible de joindre Northline. Vérifiez votre connexion et réessayez.',
+  'common.offline': 'Vous êtes hors ligne. {brand} se mettra à jour à votre retour en ligne.',
+  'common.network': 'Impossible de joindre {brand}. Vérifiez votre connexion et réessayez.',
   'common.error': 'Un problème est survenu. Réessayez.',
-  'common.serverError': 'Northline éprouve des difficultés en ce moment. Réessayez dans un instant.',
+  'common.serverError': '{brand} éprouve des difficultés en ce moment. Réessayez dans un instant.',
   'common.tooMany': 'Trop de tentatives. Patientez un moment, puis réessayez.',
   'common.signedOut': 'Votre connexion a pris fin. Reconnectez-vous pour continuer.',
   'common.signIn': 'Se connecter',
@@ -17,10 +17,10 @@ export const common: { [k in keyof typeof en]: string } = {
 
   'tab.label': 'Sections principales',
   'tab.home': 'Accueil',
-  'tab.services': 'Services',
+  'tab.services': 'Parcourir',
   'tab.cart': 'Panier',
-  'tab.orders': 'Commandes',
-  'tab.account': 'Vous',
+  'tab.orders': 'Activité',
+  'tab.account': 'Compte',
   'tab.cartCount': '{n, plural, one {# article} other {# articles}} dans votre panier',
 
   'browserSignIn.cancelled': 'La connexion a été annulée.',
