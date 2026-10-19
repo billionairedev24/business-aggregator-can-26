@@ -78,7 +78,8 @@ final class DocumentSource {
             boolean instantBook,
             int sales30d,
             Instant updatedAt,
-            boolean visible) {}
+            boolean visible,
+            @Nullable String imageId) {}
 
     record OfferRow(
             String id,
@@ -272,7 +273,7 @@ final class DocumentSource {
     private List<ServiceRow> services(String merchantId, @Nullable String id) {
         return jdbc.sql("""
                         select s.id, s.category_id, s.pricing_mode, s.price_cents, coalesce(s.instant_book, false) as instant,
-                               s.sales_30d, s.updated_at,
+                               s.sales_30d, s.updated_at, s.own_images[1] as image_id,
                                coalesce(s.vetting = 'approved' and s.status = 'live', false) as visible,
                                coalesce(nullif(s.name_i18n->>'en', ''), s.name, s.name_i18n->>'fr', '') as name_en,
                                coalesce(nullif(s.name_i18n->>'fr', ''), s.name, s.name_i18n->>'en', '') as name_fr,
@@ -295,7 +296,8 @@ final class DocumentSource {
                         rs.getBoolean("instant"),
                         rs.getInt("sales_30d"),
                         java.util.Objects.requireNonNull(instant(rs, "updated_at")),
-                        rs.getBoolean("visible")))
+                        rs.getBoolean("visible"),
+                        rs.getString("image_id")))
                 .list();
     }
 

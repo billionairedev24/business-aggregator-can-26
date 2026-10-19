@@ -94,6 +94,44 @@ class PublicShopApiTest extends IntegrationTest {
         assertThat(glenmore.path("tier").asString()).isEqualTo("master");
         assertThat(glenmore.path("departmentSlug").asString()).isEqualTo("bakery");
         assertThat(glenmore.path("products").asInt()).isEqualTo(2);
+        // real photos (2026-10-19): the card's category stands in for a missing image; a shop without images has none
+        assertThat(card.path("categoryId").asString()).isEqualTo(BAKERY);
+        assertThat(glenmore.path("imageUrl").isMissingNode()
+                        || glenmore.path("imageUrl").isNull())
+                .isTrue();
+    }
+
+    @Test
+    void aShopsCardShowsItsBestSellersApprovedImage() throws Exception {
+        var tag = Ids.next().substring(18);
+        var bakery = shopFixtures.shop(MARKET, "Photo Bakery " + tag, "master");
+        var loaf =
+                shopFixtures.listing(bakery, BAKERY, "Photo loaf " + tag, 750, 12, "approved", "live", "same_day", 40);
+        var media = Ids.next();
+        jdbc.sql("""
+                        insert into catalogue.media (id, url, exif_ok, kind, merchant_id, content_type, width, height,
+                          byte_size, on_white)
+                        values (:id, :key, true, 'gallery', :m, 'image/jpeg', 1200, 1200, 1000, true)
+                        """)
+                .param("id", media)
+                .param("key", "merchants/" + bakery + "/" + media + ".jpg")
+                .param("m", bakery)
+                .update();
+        jdbc.sql("update catalogue.offers set own_images = array[:media] where id = :id")
+                .param("media", media)
+                .param("id", loaf.offerId())
+                .update();
+
+        var landing = json(mvc.perform(get("/api/v1/public/shop").param("market", "shopville"))
+                .andExpect(status().isOk()));
+        assertThat(find(landing.path("shops"), "merchantId", bakery)
+                        .path("imageUrl")
+                        .asString())
+                .isEqualTo("/api/v1/public/catalogue/media/" + media);
+        assertThat(find(landing.path("popular"), "productId", loaf.productId())
+                        .path("imageUrl")
+                        .asString())
+                .isEqualTo("/api/v1/public/catalogue/media/" + media);
     }
 
     @Test

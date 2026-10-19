@@ -28,6 +28,10 @@ class ShopCatalogueAdapter implements ShopCatalogue {
              and (cast(:category as text) is null or cp.category_id = :category)
             """;
 
+    /** An offer's main image: the shared record's when it uses it, else its own, else the record's. */
+    static final String IMAGE = """
+            coalesce(case when o.image_source = 'shared' then cp.image_set[1] end, o.own_images[1], cp.image_set[1])""";
+
     /** Handling days of an in-stock pooled offer, else null. */
     static final String HANDLING = """
             case when (o.fulfilment is null or cardinality(o.fulfilment) = 0 or 'pooled' = any(o.fulfilment))
@@ -60,11 +64,14 @@ class ShopCatalogueAdapter implements ShopCatalogue {
         if (merchantIds.isEmpty()) {
             return List.of();
         }
-        return jdbc.sql("with live as (select o.merchant_id, o.product_id, cp.category_id, " + HANDLING
-                        + " as handling " + LIVE + """
+        return jdbc.sql(
+                        "with live as (select o.merchant_id, o.product_id, o.id as offer_id, o.sales_30d, cp.category_id, "
+                                + IMAGE + " as image_id, " + HANDLING + " as handling " + LIVE + """
                         )
                         select merchant_id, mode() within group (order by category_id) as department_id,
-                               count(distinct product_id) as products, min(handling) as handling_days
+                               count(distinct product_id) as products, min(handling) as handling_days,
+                               (array_agg(image_id order by sales_30d desc, offer_id)
+                                  filter (where image_id is not null))[1] as image_id
                           from live group by merchant_id
                         """)
                 .param("merchants", Sql.array(merchantIds))
@@ -74,7 +81,8 @@ class ShopCatalogueAdapter implements ShopCatalogue {
                         rs.getString("merchant_id"),
                         rs.getString("department_id"),
                         rs.getInt("products"),
-                        Sql.intOrNull(rs, "handling_days")))
+                        Sql.intOrNull(rs, "handling_days"),
+                        rs.getString("image_id")))
                 .list();
     }
 
@@ -97,8 +105,8 @@ class ShopCatalogueAdapter implements ShopCatalogue {
                                  coalesce(cp.attributes ->> 'volume', cp.attributes ->> 'size') as unit,
                                  coalesce((select min(v.price_cents) from catalogue.variants v where v.offer_id = o.id),
                                           o.price_cents, 0) as price,
-                                 coalesce(case when o.image_source = 'shared' then cp.image_set[1] end,
-                                          o.own_images[1], cp.image_set[1]) as image_id,
+                        """ + IMAGE + """
+                                 as image_id, cp.category_id,
                                  catalogue.age_class_of(cp.category_id) as age_class,
                         """ + HANDLING + " as handling " + LIVE + """
                         ), ranked as (
@@ -126,7 +134,8 @@ class ShopCatalogueAdapter implements ShopCatalogue {
                         rs.getString("image_id"),
                         Sql.intOrNull(rs, "handling"),
                         rs.getInt("sellers"),
-                        rs.getString("age_class")))
+                        rs.getString("age_class"),
+                        rs.getString("category_id")))
                 .list();
     }
 

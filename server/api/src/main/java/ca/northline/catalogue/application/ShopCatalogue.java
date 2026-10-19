@@ -105,17 +105,21 @@ public interface ShopCatalogue {
      * @param departmentId the leaf most of the merchant's live products are in
      * @param handlingDays the shortest handling time (0 same day, 1 next day, 2) of an in-stock offer that goes on
      *     pooled runs; null when there is none
+     * @param imageId the main image of its best-selling live offer that has one (the shop's photo on its card) —
+     *     the caller checks it's approved
      */
     record ShopStats(
             String merchantId,
             String departmentId,
             int products,
-            @Nullable Integer handlingDays) {}
+            @Nullable Integer handlingDays,
+            @Nullable String imageId) {}
 
     /**
      * @param imageId the offer's main image candidate (own or the catalogue record's) — the caller checks it's approved
      * @param handlingDays as in {@link ShopStats}, for this offer
      * @param ageClass the category's age-restriction class code, or null
+     * @param categoryId the catalogue record's leaf category
      */
     record ProductRow(
             String productId,
@@ -127,5 +131,6 @@ public interface ShopCatalogue {
             @Nullable String imageId,
             @Nullable Integer handlingDays,
             int sellers,
-            @Nullable String ageClass) {}
+            @Nullable String ageClass,
+            @Nullable String categoryId) {}
 }

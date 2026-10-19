@@ -22,7 +22,7 @@ class ServiceOfferQueries implements ServiceOffers {
                    coalesce(t.title, s.name_i18n ->> :lang, s.name, s.name_i18n ->> 'en', s.id) as name,
                    coalesce(t.description, s.included) as included, coalesce(s.pricing_mode, 'fixed') as pricing_mode,
                    s.price_cents, coalesce(s.duration_min, 60) as duration_min, coalesce(s.buffer_min, 0) as buffer_min,
-                   coalesce(s.instant_book, false) as instant_book, s.sales_30d
+                   coalesce(s.instant_book, false) as instant_book, s.sales_30d, s.own_images[1] as image_id
               from catalogue.services s
               left join catalogue.listing_texts t on t.listing_id = s.id and t.lang = :lang
              where s.vetting = 'approved' and coalesce(s.status, 'live') = 'live'
@@ -75,6 +75,7 @@ class ServiceOfferQueries implements ServiceOffers {
                 rs.getInt("duration_min"),
                 rs.getInt("buffer_min"),
                 rs.getBoolean("instant_book"),
-                rs.getInt("sales_30d"));
+                rs.getInt("sales_30d"),
+                rs.getString("image_id"));
     }
 }

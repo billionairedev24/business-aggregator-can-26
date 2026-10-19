@@ -127,6 +127,21 @@ class SearchIndexerTest extends WorkerIntegrationTest {
     }
 
     @Test
+    void aServicesPhoto_isItsImage() {
+        var fx = fx();
+        var m = fx.merchant("provider", "trusted", "Photo Test Cleaners");
+        var service = fx.service(m, "Deep clean", null, 18000, "live");
+        jdbc.sql("update catalogue.services set own_images = array['01PHOTO0000000000000000002'] where id = :id")
+                .param("id", service)
+                .update();
+        send("catalogue.listing", "catalogue.listing_published", listing(service, m.id(), "service"));
+        var doc = await().atMost(INDEXED)
+                .until(() -> doc("listings_en", service), Optional::isPresent)
+                .get();
+        assertThat(doc.imageKey()).isEqualTo("media:01PHOTO0000000000000000002");
+    }
+
+    @Test
     void eventsOnlySayWhereToLook_theRowsDecide_evenOutOfOrder() {
         var fx = fx();
         var m = fx.merchant("provider", "trusted", "Order Test Co");

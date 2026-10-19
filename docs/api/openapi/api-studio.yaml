@@ -19157,6 +19157,8 @@ components:
           type: string
         id:
           type: string
+        imageUrl:
+          type: string
         kind:
           type: string
           enum:
@@ -21728,6 +21730,12 @@ components:
           format: int32
           maximum: 720
           minimum: 15
+        imageIds:
+          type: array
+          items:
+            type: string
+          maxItems: 9
+          minItems: 0
         included:
           type: string
           maxLength: 2000
@@ -21775,6 +21783,10 @@ components:
             format: int32
           id:
             type: string
+          images:
+            type: array
+            items:
+              $ref: "#/components/schemas/MediaResponse"
           included:
             type: string
           instantBook:

@@ -18,6 +18,8 @@ import org.jspecify.annotations.Nullable;
  * @param stock products only (null for services)
  * @param revetReasons S-39: why an approved listing is back in vetting (empty otherwise)
  * @param bundle S-65: a bundle of the business's products (its stock is what the items allow)
+ * @param imageId the main image the business uploaded (a service's first photo; a product's own or catalogue image, as
+ *     its storefront shows it), or null
  */
 public record ListingSummary(
         String id,
@@ -38,7 +40,8 @@ public record ListingSummary(
         @Nullable Integer durationMin,
         boolean instantBook,
         Instant updatedAt,
-        boolean bundle) {
+        boolean bundle,
+        @Nullable String imageId) {
 
     public ListingSummary {
         flags = List.copyOf(flags);

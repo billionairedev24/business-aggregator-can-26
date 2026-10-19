@@ -10,11 +10,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
  * {@code POST /services} and {@code PUT /services/{id}} (contract: {@code name, categoryId?, pricingMode, priceCents?,
- * durationMin, bufferMin, included, instantBook}; {@code sku} optional — generated from the name when absent).
+ * durationMin, bufferMin, included, instantBook}; {@code sku} optional — generated from the name when absent;
+ * {@code imageIds} optional — photos of the work uploaded through {@code POST /media}, main first; absent = none).
  */
 record ServiceRequest(
         @NotBlank(message = NAME_REQUIRED) @Size(max = NAME_MAX, message = NAME_TOO_LONG)
@@ -40,7 +42,10 @@ record ServiceRequest(
         @Nullable Boolean instantBook,
 
         @Nullable @Size(max = SKU_MAX, message = SKU_TOO_LONG)
-        String sku) {
+        String sku,
+
+        @Nullable @Size(max = IMAGES_MAX, message = IMAGES_TOO_MANY)
+        List<String> imageIds) {
 
     ServiceDetails toDetails() {
         return new ServiceDetails(
@@ -52,6 +57,7 @@ record ServiceRequest(
                 bufferMin == null ? 0 : bufferMin,
                 included,
                 !Boolean.FALSE.equals(instantBook),
-                sku);
+                sku,
+                imageIds == null ? List.of() : imageIds);
     }
 }

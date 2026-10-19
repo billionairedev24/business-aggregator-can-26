@@ -295,6 +295,9 @@ class ShopBrowsingService implements BrowseShop {
     }
 
     private List<ShopCard> shopCards(Context ctx, List<ShopStats> stats) {
+        var images =
+                stats.stream().map(ShopStats::imageId).filter(Objects::nonNull).toList();
+        var approved = images.isEmpty() ? Set.<String>of() : media.approved(images);
         return stats.stream()
                 .<ShopCard>mapMulti((s, sink) -> {
                     var shop = ctx.shops().get(s.merchantId());
@@ -307,7 +310,10 @@ class ShopBrowsingService implements BrowseShop {
                                 dept.slug(),
                                 dept.name(),
                                 s.products(),
-                                ctx.runFor(s.handlingDays())));
+                                ctx.runFor(s.handlingDays()),
+                                s.imageId() != null && approved.contains(s.imageId())
+                                        ? MEDIA_URL + s.imageId()
+                                        : null));
                     }
                 })
                 .toList();
@@ -332,7 +338,8 @@ class ShopBrowsingService implements BrowseShop {
                             image != null && approved.contains(image) ? MEDIA_URL + image : null,
                             r.sellers(),
                             ctx.runFor(r.handlingDays()),
-                            age(ctx, AgeClass.of(r.ageClass()).orElse(null)));
+                            age(ctx, AgeClass.of(r.ageClass()).orElse(null)),
+                            r.categoryId());
                 })
                 .toList();
     }

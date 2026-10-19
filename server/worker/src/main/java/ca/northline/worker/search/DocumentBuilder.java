@@ -118,6 +118,7 @@ final class DocumentBuilder {
                 .priceCents(s.priceCents())
                 .pricingMode(s.pricingMode())
                 .instantBook(s.instantBook())
+                .imageKey(s.imageId() == null ? null : "media:" + s.imageId()) // the business's photo of the work
                 .openHours(OpenHours.of(m.serviceHours(), json))
                 .sales30d(s.sales30d())
                 .updatedAt(s.updatedAt()));

@@ -588,7 +588,8 @@ class BulkImportService implements BulkImport {
                 set(v, "buffer_min") ? Integer.parseInt(v.getOrDefault("buffer_min", "0")) : d.bufferMin(),
                 set(v, "included") ? blankToNull(v.get("included")) : d.included(),
                 set(v, "instant_book") ? Boolean.parseBoolean(v.getOrDefault("instant_book", "true")) : d.instantBook(),
-                d.sku());
+                d.sku(),
+                d.imageIds()); // the template has no photo column: the editor's photos stay
         editService.update(new EditService.Command(merchantId, s.getId(), details, actorId));
     }
 
@@ -731,7 +732,8 @@ class BulkImportService implements BulkImport {
                 Integer.parseInt(v.getOrDefault("buffer_min", "0")),
                 blankToNull(v.get("included")),
                 Boolean.parseBoolean(v.getOrDefault("instant_book", "true")),
-                row.sku());
+                row.sku(),
+                List.of());
     }
 
     private static ProductDetails product(String sku, List<ValidRow> rows, List<String> imageIds) {
