@@ -66,7 +66,7 @@ export function Help() {
         query={list}
         skeleton={<LoadingList rows={3} height={56} />}
         isEmpty={(items) => items.length === 0}
-        empty={<EmptyState message={t('account.help.empty')} action={t('account.orders.title')} onAction={() => backToTab('/orders')} />}
+        empty={<EmptyState draw={{ main: 'HandHeart', side: 'ShieldCheck' }} message={t('account.help.empty')} action={t('account.orders.title')} onAction={() => backToTab('/orders')} />}
       >
         {(items) => (
           <View accessibilityRole="list">

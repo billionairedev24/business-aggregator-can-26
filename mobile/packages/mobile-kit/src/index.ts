@@ -53,10 +53,12 @@ export {
   type Locale,
   type Params,
 } from './i18n';
-export { MIN_TARGET, brand, colors, fontAssets, fontSource, fonts, radius, semantic, shadow, space, text, theme, type Theme } from './theme';
+export { MIN_TARGET, brand, colors, fontAssets, fontSource, fonts, radius, ramp, semantic, shadow, space, text, theme, type Theme } from './theme';
 // redesign phase 4: the palette's mark + wordmark and the Phosphor icons (regular / fill)
 export { Logo, LogoMark } from './ui/Logo';
 export { ICON_PATHS, Icon, type IconName } from './ui/Icon';
+// light direction: the illustrated scenes that stand in for photographs
+export { Art, TONES, subjectFor, toneFor, type ArtProps, type Subject, type Tone } from './ui/Art';
 export { PushHooks, setPushRegistrar, type PushRegistrar } from './push/hooks';
 // mobile gaps part 1: photos from the apps (pilot feedback screenshots, problem-report photos) and pilot feedback
 export {

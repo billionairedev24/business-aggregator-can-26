@@ -304,7 +304,7 @@ export function Pay() {
             <Kicker>{g.shopName}</Kicker>
             {g.items.map((it) => (
               <View key={it.itemId} style={styles.item}>
-                <Thumb uri={it.imageUrl} size={56} />
+                <Thumb uri={it.imageUrl} size={56} subject={it.name} />
                 <View style={styles.flex}>
                   <Text style={styles.body15} numberOfLines={2}>
                     {it.name}

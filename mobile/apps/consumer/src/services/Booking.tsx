@@ -2,9 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
 
-import { colors, fonts, space } from '@northline/mobile-kit';
+import { Art, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
 
 import { aftercare, ReviewPanel } from '../aftercare/Review';
 import type { Booking } from '../api/services';
@@ -15,7 +14,7 @@ import { Body, Button, Checkbox, Notice, Section, Tag, Title, type } from '../ui
 import { Screen } from '../ui/screen';
 import { errorMessage, Loading, QueryView, SignInPrompt, Skeleton } from '../ui/states';
 import { hoursUntil, money } from './format';
-import { favouritesChanged, Kicker, Panel, useServicesApi, type T } from './parts';
+import { favouritesChanged, Kicker, Mark, Panel, useServicesApi, type T } from './parts';
 
 /** The live states refresh on their own (the push says so too, S-102); the rest only on demand. */
 const LIVE: ReadonlySet<string> = new Set(['confirmed', 'en_route', 'on_site']);
@@ -89,10 +88,7 @@ export function Booked({ id }: { id: string }) {
     >
       {(b) => (
         <View style={styles.stack}>
-          <Svg width={72} height={72} viewBox="0 0 72 72" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            <Circle cx={36} cy={36} r={34} fill={colors.accent100} stroke={colors.accent} strokeWidth={2} />
-            <Path d="M22 37 L32 47 L51 27" fill="none" stroke={colors.accent700} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
+          <Art subject={b.title} draw={{ main: 'CalendarCheck', side: 'Handshake' }} fit="contain" style={styles.cover} />
           <Title>{t('services.booked.title', { name: who(b), when: when(b, day, time) })}</Title>
           <Body tone="muted">
             {b.heldCents > 0 ? t('services.booked.held', { ref: b.ref, total: money(b.heldCents, locale) }) : t('services.booked.free', { ref: b.ref })}
@@ -188,6 +184,7 @@ export function Eta({ id }: { id: string }) {
         ];
         return (
           <View style={styles.stack}>
+            <Art subject={b.title} fit="contain" style={styles.cover} />
             <View style={styles.head}>
               <View style={styles.flex}>
                 <Title>{headline}</Title>
@@ -196,7 +193,7 @@ export function Eta({ id }: { id: string }) {
               <Tag label={tag.label} tone={tag.tone} />
             </View>
             <View style={styles.person} accessible>
-              <View style={styles.avatar} />
+              <Mark name={b.memberFirstName ?? b.providerName} size={48} />
               <View style={styles.flex}>
                 <Text style={[type.body, type.strong]}>{b.memberFirstName ? `${b.memberFirstName} · ${b.providerName}` : b.providerName}</Text>
                 <Text style={type.small}>{t('services.eta.verified')}</Text>
@@ -204,7 +201,7 @@ export function Eta({ id }: { id: string }) {
             </View>
             {b.state === 'en_route' ? <LiveEta b={b} /> : null}
             {b.addressLine ? <Body tone="small">{t('services.eta.where', { address: b.addressLine })}</Body> : null}
-            <View style={styles.timeline} accessibilityLabel={t('services.eta.timeline')}>
+            <View style={[styles.timeline, styles.timelineCard]} accessibilityLabel={t('services.eta.timeline')}>
               <View style={styles.step}>
                 <Text style={[type.small, styles.stepAt]}>{day(b.startsAt, b.timeZone)}</Text>
                 <Text style={[type.body, styles.flex]}>{t('services.step.booked', { time: time(b.startsAt, b.timeZone) })}</Text>
@@ -363,21 +360,22 @@ function BookingSkeleton() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   stack: { gap: space[3], paddingTop: space[2] },
-  next: { color: colors.neutral800, fontSize: 14 },
+  next: { color: colors.text, fontSize: 15 },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3] },
   person: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.neutral400 },
+  cover: { height: 150, borderRadius: radius.lg },
   timeline: { gap: 10 },
+  timelineCard: { padding: space[4], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'] },
   step: { flexDirection: 'row', gap: 12 },
   stepAt: { width: 72 },
-  now: { color: colors.accent700, fontFamily: fonts.bodyStrong },
+  now: { color: colors.link, fontFamily: fonts.bold },
   photos: { flexDirection: 'row', gap: space[2] },
   photo: { flex: 1, minHeight: 80, alignItems: 'center', justifyContent: 'center' },
-  released: { color: colors.accent900 },
+  released: { color: semantic['badge-brand-text'] },
   heldRow: { flexDirection: 'row', justifyContent: 'space-between' },
   actions: { flexDirection: 'row', gap: 10 },
   stars: { flexDirection: 'row', gap: 6 },
-  star: { width: 48, height: 48, fontSize: 30, lineHeight: 48, textAlign: 'center', color: colors.neutral300 },
-  starOn: { color: colors.accent2 },
+  star: { width: 48, height: 48, fontSize: 30, lineHeight: 48, textAlign: 'center', color: colors.borderStrong },
+  starOn: { color: colors.rating },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 });

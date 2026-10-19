@@ -3,14 +3,15 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { colors, fonts, space } from '@northline/mobile-kit';
+import { Art, Icon, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
 
 import { nameIn, type ProviderCard } from '../api/services';
 import { useI18n } from '../i18n';
 import { useDeliveryLocation } from '../location/DeliveryLocation';
-import { Body, Tag, type } from '../ui/primitives';
+import { Body, type } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { EmptyState, QueryView, Skeleton } from '../ui/states';
+import { Strip } from '../shop/parts';
 import { dateIn, price } from './format';
 import { brand, Chip, Mark, Row, useServicesApi, useTier, type T } from './parts';
 
@@ -72,17 +73,21 @@ export function Providers({ slug }: { slug: string }) {
       testID="providers"
       refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} accessibilityLabel={t('common.retry')} />}
     >
-      <View style={styles.chips} accessibilityLabel={t('services.providers.filters')}>
-        {FILTERS.map((f) => (
-          <Chip key={f} label={t(`services.filter.${f}`)} selected={on.has(f)} onPress={() => toggle(f)} testID={`filter-${f}`} />
-        ))}
-      </View>
+      <Art subject={slug} fit="contain" style={styles.cover} />
+      <Strip testID="provider-filters">
+        <View style={styles.chips} accessibilityLabel={t('services.providers.filters')}>
+          {FILTERS.map((f) => (
+            <Chip key={f} label={t(`services.filter.${f}`)} selected={on.has(f)} onPress={() => toggle(f)} testID={`filter-${f}`} />
+          ))}
+        </View>
+      </Strip>
       <QueryView
         query={location.status === 'locating' ? { ...list, isPending: true } : list}
         skeleton={<ListSkeleton />}
         isEmpty={(d) => d.items.length === 0}
         empty={
           <EmptyState
+            art={slug}
             message={t('services.providers.empty', { area: list.data?.area ?? list.data?.city ?? location.city ?? '' })}
             action={t('services.providers.emptyAction')}
             onAction={() => router.push('/services')}
@@ -98,7 +103,7 @@ export function Providers({ slug }: { slug: string }) {
               {shown.length === 0 ? (
                 <EmptyState message={t('services.providers.filteredEmpty')} action={t('services.providers.clearFilters')} onAction={() => setOn(new Set())} />
               ) : (
-                shown.map((p) => <Card key={p.slug} p={p} />)
+                shown.map((p) => <ProviderRow key={p.slug} p={p} />)
               )}
             </>
           );
@@ -108,7 +113,7 @@ export function Providers({ slug }: { slug: string }) {
   );
 }
 
-function Card({ p }: { p: ProviderCard }) {
+function ProviderRow({ p }: { p: ProviderCard }) {
   const { t, time, locale } = useI18n();
   const tier = useTier()(p.tier);
   const avail = nextSlot(t, time, locale, p.nextAvailable, p.timeZone);
@@ -124,20 +129,31 @@ function Card({ p }: { p: ProviderCard }) {
   return (
     <Row onPress={() => router.push(`/providers/${p.slug}`)} label={[p.name, tier.label, spoken, from, avail].join(', ')} testID={`provider-${p.slug}`}>
       <View style={styles.card}>
-        <Mark name={p.name} color={brand(p.brandColor)} />
+        <Mark name={p.name} color={brand(p.brandColor)} size={52} />
         <View style={styles.cardMain}>
+          <Text style={styles.name} numberOfLines={2}>
+            {p.name}
+          </Text>
           <View style={styles.nameRow}>
-            <Text style={[type.body, styles.name]}>{p.name}</Text>
-            <Tag label={tier.label} tone={tier.tone} small />
+            {p.tier === 'master' || p.tier === 'trusted' ? <Icon name="seal-check" size={16} filled color={semantic.success} /> : null}
+            <Text style={type.small}>{tier.label}</Text>
           </View>
-          <Text style={type.small}>{stats}</Text>
-        </View>
-        <View style={styles.cardEnd}>
-          <Text style={[type.small, styles.from]}>{from}</Text>
-          <Text style={type.small}>{avail}</Text>
+          <View style={styles.nameRow}>
+            <Text style={type.small}>{stats}</Text>
+          </View>
         </View>
       </View>
-      {p.blurb ? <Text style={[type.small, styles.blurb]}>{p.blurb}</Text> : null}
+      {p.blurb ? (
+        <Text style={type.small} numberOfLines={2}>
+          {p.blurb}
+        </Text>
+      ) : null}
+      <View style={styles.cardFoot}>
+        <Text style={styles.from}>{from}</Text>
+        <Text style={[type.small, styles.avail, !!p.nextAvailable && styles.open]} numberOfLines={1}>
+          {avail}
+        </Text>
+      </View>
     </Row>
   );
 }
@@ -161,13 +177,15 @@ function ListSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  cover: { height: 150, borderRadius: radius.lg },
+  chips: { flexDirection: 'row', gap: space[2] },
   list: { gap: space[4] },
   card: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   cardMain: { flex: 1, minWidth: 0, gap: 2 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: space[2] },
-  name: { fontFamily: fonts.bodyStrong, fontSize: 16 },
-  cardEnd: { alignItems: 'flex-end', gap: 2 },
-  from: { fontFamily: fonts.bodyStrong, color: colors.text },
-  blurb: { paddingLeft: 70 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
+  name: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22, color: colors.text },
+  cardFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[3], paddingTop: space[3], borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  from: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
+  avail: { flexShrink: 1, textAlign: 'right' },
+  open: { color: semantic.success },
 });

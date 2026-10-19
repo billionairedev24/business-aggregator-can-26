@@ -237,12 +237,12 @@ export function Account() {
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET },
   headText: { flex: 1, minWidth: 0, gap: 2 },
-  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: semantic['action-accent'], alignItems: 'center', justifyContent: 'center' },
-  initials: { fontFamily: fonts.bold, fontSize: 20, color: semantic['action-accent-text'] },
-  hi: { fontFamily: fonts.bold, fontSize: 20, lineHeight: 25, color: colors.text },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: semantic['action-primary'], alignItems: 'center', justifyContent: 'center' },
+  initials: { fontFamily: fonts.display, fontSize: 24, color: semantic['action-primary-text'] },
+  hi: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.text },
   section: { gap: space[2] },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  h3: { fontFamily: fonts.bold, fontSize: 17, color: colors.text },
+  h3: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26, color: colors.text },
   orderRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56, paddingHorizontal: 14, paddingVertical: space[3], borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
   wallet: {
     marginTop: space[2],

@@ -2,7 +2,7 @@ import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon, MIN_TARGET, colors, fonts, radius, semantic, type IconName } from '@northline/mobile-kit';
+import { Icon, colors, fonts, radius, semantic, type IconName } from '@northline/mobile-kit';
 
 import { useI18n, type MessageKey } from '../i18n';
 
@@ -16,9 +16,9 @@ const ICONS: Record<string, IconName> = {
 };
 
 /**
- * The redesign's tab bar (MA, spec § 1.3 Mobile / § 2.4): five equal tabs — Home · Browse · Activity · Cart · Account —
- * each a 24 pt icon over a 10 pt semibold label, the current one in the text colour with the filled icon, the others
- * muted; the cart's count on an 18 pt red pill; a hairline on top, white, the home indicator's room below.
+ * The tab bar (light direction): five equal tabs — Home · Browse · Activity · Cart · Account — each a 24 pt Phosphor
+ * icon over an 11 pt label; the current one in the brand colour with the filled icon and a short bar above it, the
+ * others muted; the cart's count on an 18 pt pill; white with a hairline on top, the home indicator's room below.
  */
 export function TabBar({ state, navigation, cartCount = 0 }: Pick<BottomTabBarProps, 'state' | 'navigation'> & { cartCount?: number }) {
   const { t } = useI18n();
@@ -43,7 +43,8 @@ export function TabBar({ state, navigation, cartCount = 0 }: Pick<BottomTabBarPr
             style={styles.tab}
             testID={`tab-${route.name}`}
           >
-            <Icon name={ICONS[route.name] ?? 'squares-four'} size={24} filled={focused} color={focused ? colors.text : colors.textSubtle} />
+            {focused ? <View style={styles.marker} /> : null}
+            <Icon name={ICONS[route.name] ?? 'squares-four'} size={24} filled={focused} color={focused ? semantic['action-primary'] : colors.textMuted} />
             <Text style={[styles.label, focused && styles.labelOn]} numberOfLines={1} maxFontSizeMultiplier={1.3}>
               {label}
             </Text>
@@ -64,20 +65,21 @@ export function TabBar({ state, navigation, cartCount = 0 }: Pick<BottomTabBarPr
 const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
-    paddingTop: 6,
-    paddingHorizontal: 8,
+    paddingTop: 4,
+    paddingHorizontal: 4,
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: colors.borderStrong,
   },
-  tab: { flex: 1, minHeight: Math.max(MIN_TARGET, 50), alignItems: 'center', justifyContent: 'center', gap: 2 },
-  label: { fontFamily: fonts.semibold, fontSize: 10, color: colors.textSubtle },
-  labelOn: { color: colors.text },
+  tab: { flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  marker: { position: 'absolute', top: -4, width: 28, height: 3, borderBottomLeftRadius: 3, borderBottomRightRadius: 3, backgroundColor: semantic['action-primary'] },
+  label: { fontFamily: fonts.medium, fontSize: 11, color: colors.textMuted },
+  labelOn: { fontFamily: fonts.bold, color: semantic['action-primary'] },
   badge: {
     position: 'absolute',
-    top: 0,
+    top: 2,
     left: '50%',
-    marginLeft: 4,
+    marginLeft: 6,
     minWidth: 18,
     height: 18,
     borderRadius: radius.pill,

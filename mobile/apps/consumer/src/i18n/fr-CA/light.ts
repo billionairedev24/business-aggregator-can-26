@@ -1,0 +1,47 @@
+import type { light as en } from '../en/light';
+
+/** La direction claire, axée sur les photos (2026-10-19) : les mots du site web (dialogue d'adresse, accueil). */
+export const light: { [k in keyof typeof en]: string } = {
+  'lt.near': 'Près de',
+  'lt.setPlace': 'Choisir votre adresse',
+
+  'lt.home.heroTitle': 'Tout le local, par des gens de confiance',
+  'lt.home.heroSub': 'Réservez des pros vérifiés, magasinez dans les commerces du quartier et recevez tout en une seule livraison — vous payez seulement une fois le travail terminé.',
+  'lt.home.badge': 'Chaque pro et chaque commerce vérifiés',
+  'lt.home.tileServices': 'Réserver un service',
+  'lt.home.tileShop': 'Magasiner local',
+  'lt.home.allServices': 'Tous les services',
+  'lt.home.allDepartments': 'Tous les rayons',
+  'lt.home.underway': 'En cours',
+  'lt.home.shops': '{n, plural, one {# commerce} other {# commerces}}',
+  'lt.home.pros': '{n, plural, one {# pro} other {# pros}}',
+  'lt.home.soon': 'Bientôt',
+  'lt.home.sellTitle': 'Vendez ou offrez vos services sur {brand}',
+  'lt.home.sellSub': 'Commerces et pros locaux vérifiés seulement. Inscrivez-vous sur le site web.',
+
+  'lt.browse.popular': 'Catégories populaires',
+  'lt.browse.filter': 'Trouver un service',
+
+  'lt.loc.title': 'Choisissez votre adresse',
+  'lt.loc.close': 'Fermer',
+  'lt.loc.currentNone': 'Indiquez où vous êtes pour voir ce qui est offert près de chez vous.',
+  'lt.loc.currentSaved': 'Vous voyez ce qui est offert près de {place}.',
+  'lt.loc.currentAddress': 'Vous voyez ce qui est offert près de votre adresse par défaut, {place}.',
+  'lt.loc.currentDefault': 'Vous voyez {place} en attendant que vous choisissiez votre adresse.',
+  'lt.loc.useHere': 'Utiliser ma position actuelle',
+  'lt.loc.locating': 'Recherche de votre position…',
+  'lt.loc.hereDenied': 'La localisation est désactivée pour {brand}. Cherchez plutôt votre adresse ou votre code postal, ou autorisez la localisation dans Réglages.',
+  'lt.loc.hereUnavailable': 'Votre téléphone n’a pas trouvé votre position. Cherchez plutôt votre adresse ou votre code postal.',
+  'lt.loc.hereOutside': '{brand} n’est pas encore offert là où vous êtes. Choisissez l’un de nos marchés ci-dessous.',
+  'lt.loc.search': 'Adresse ou code postal',
+  'lt.loc.searchPlaceholder': 'Tapez une adresse ou un code postal…',
+  'lt.loc.savedAddresses': 'Vos adresses',
+  'lt.loc.default': 'par défaut',
+  'lt.loc.markets': 'Où {brand} est en service',
+  'lt.loc.marketHint': 'Affiche ce qui est offert à {city}',
+  'lt.loc.useThis': 'Livrer ici',
+  'lt.loc.chosen': 'Livraison à',
+  'lt.loc.chooseAnother': 'Choisir un autre endroit',
+  'lt.browse.live': '{n, plural, one {# catégorie active} other {# catégories actives}}',
+  'lt.browse.bandSub': 'Chaque prestataire est vérifié avant d’apparaître, et chaque travail est payé en fiducie — versé seulement une fois que vous l’approuvez.',
+};

@@ -1,4 +1,4 @@
-import { LocationScreen } from '../src/journeyA/LocationScreen';
+import { LocationSheet } from '../src/location/LocationSheet';
 
-/** Design 01 Journey A (S-98) — src/journeyA/LocationScreen.tsx. */
-export default LocationScreen;
+/** The location sheet (light direction; src/location/LocationSheet.tsx), presented over the screen it opened from. */
+export default LocationSheet;

@@ -2,17 +2,17 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Icon, colors, fonts, semantic, space } from '@northline/mobile-kit';
+import { Art, Icon, colors, fonts, radius, semantic, shadow, space } from '@northline/mobile-kit';
 
 import { nameIn, type ProviderPage, type ProviderService, type Review } from '../api/services';
 import { useAuth } from '../auth/AuthProvider';
 import { useI18n } from '../i18n';
 import { Body, Button, Link, Notice, Section, Tag, type } from '../ui/primitives';
-import { GUTTER, Screen } from '../ui/screen';
+import { GUTTER, Header, RoundButton, Screen } from '../ui/screen';
 import { errorMessage, QueryView, Skeleton } from '../ui/states';
 import { updateDraft } from './draft';
 import { price } from './format';
-import { FAVOURITES_KEY, favouritesChanged, Mark, Row, useServicesApi } from './parts';
+import { brand, FAVOURITES_KEY, favouritesChanged, Mark, Row, useServicesApi } from './parts';
 
 /** "45 min" / "1 h 30" — a service's length. */
 export function duration(min: number, t: (k: 'services.minutes' | 'services.hours', p: Record<string, number>) => string) {
@@ -26,9 +26,11 @@ export function servicePrice(s: ProviderService, locale: 'en' | 'fr-CA', t: (k: 
 }
 
 /**
- * C3 Provider profile (design 01 `provider`): the provider-branded hero, Northline-verified figures (rating, on time,
- * disputes, re-book), credentials, the services with fixed prices, real reviews (more on request), "Book a visit" and
- * favourites (signed in). Guests may look.
+ * C3 Provider profile (design 01 `provider`; light & photo-first): the cover first, edge to edge (the category's drawn
+ * scene until providers upload covers), Back over it, the business's mark over the cover's edge ringed in its brand
+ * colour, the name in the display face and the verified seal; the verified figures as stat cards (rating, on time,
+ * disputes, re-book), credentials, the services as cards with their prices, review cards with stars (more on request),
+ * "Book a visit" and favourites (signed in) in the sticky bar. Guests may look.
  */
 export function Provider({ slug }: { slug: string }) {
   const { t, locale } = useI18n();
@@ -36,7 +38,12 @@ export function Provider({ slug }: { slug: string }) {
   const lang = locale === 'fr-CA' ? 'fr' : 'en';
   const page = useQuery({ queryKey: ['services', 'provider', slug, lang], queryFn: () => api.provider(slug, lang), staleTime: 60_000 });
   return (
-    <Screen title={page.data?.name ?? t('title.provider')} testID="provider" footer={page.data ? <Actions p={page.data} /> : undefined}>
+    <Screen
+      testID="provider"
+      padded={false}
+      top={page.data ? undefined : <Header title={t('title.provider')} />}
+      footer={page.data ? <Actions p={page.data} /> : undefined}
+    >
       <QueryView query={page} skeleton={<ProfileSkeleton />}>
         {(p) => <Profile p={p} />}
       </QueryView>
@@ -61,32 +68,36 @@ function Profile({ p }: { p: ProviderPage }) {
   };
   return (
     <>
-      <View style={styles.cover} testID="provider-hero">
-        <Icon name="storefront" size={56} color={semantic['action-accent']} />
+      <View testID="provider-hero">
+        <Art subject={p.category?.slug ?? p.name} fit="contain" style={styles.cover} />
+        <View style={styles.overlay}>
+          <RoundButton icon="caret-left" label={t('common.back')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))} onPhoto testID="header-back" />
+        </View>
+        <View style={[styles.avatar, { borderColor: brand(null) }]}>
+          <Mark name={p.name} color={colors.surface} ink={colors.text} size={64} />
+        </View>
       </View>
-      <View style={styles.idRow}>
-        <View style={styles.avatar}>
-          <Mark name={p.name} color={semantic['surface-brand']} ink={colors.text} size={64} />
-        </View>
-        <View style={styles.flex}>
-          <Text accessibilityRole="header" style={styles.heroName}>
-            {p.name}
-          </Text>
-          <Text style={type.small}>{line}</Text>
-          {p.tier === 'master' || p.tier === 'trusted' ? (
-            <View style={styles.seal}>
-              <Icon name="seal-check" filled size={16} color={semantic.success} />
-              <Text style={styles.sealText}>{t('rd.provider.verified')}</Text>
-            </View>
-          ) : null}
-        </View>
+      <View style={styles.pad}>
+      <View style={styles.idBlock}>
+        <Text accessibilityRole="header" style={styles.heroName}>
+          {p.name}
+        </Text>
+        <Text style={type.small}>{line}</Text>
+        {p.tier === 'master' || p.tier === 'trusted' ? (
+          <View style={styles.seal}>
+            <Icon name="seal-check" filled size={16} color={semantic.success} />
+            <Text style={styles.sealText}>{t('rd.provider.verified')}</Text>
+          </View>
+        ) : null}
       </View>
       {figures.length > 0 ? (
         <View style={styles.figures}>
           {figures.map((f) => (
-            <View key={f.label} accessible accessibilityLabel={`${f.value} ${f.label}`}>
+            <View key={f.label} style={styles.figureCard} accessible accessibilityLabel={`${f.value} ${f.label}`}>
               <Text style={styles.figure}>{f.value}</Text>
-              <Text style={type.small}>{f.label}</Text>
+              <Text style={type.small} numberOfLines={2}>
+                {f.label}
+              </Text>
             </View>
           ))}
         </View>
@@ -116,6 +127,7 @@ function Profile({ p }: { p: ProviderPage }) {
         </Row>
       ))}
       <Reviews p={p} />
+      </View>
     </>
   );
 }
@@ -138,6 +150,11 @@ function Reviews({ p }: { p: ProviderPage }) {
       {items.length === 0 ? <Body tone="muted">{t('services.provider.noReviews')}</Body> : null}
       {items.map((r) => (
         <View key={r.id} style={styles.review} accessible>
+          <View style={styles.stars}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <Icon key={n} name="star" size={14} filled={n <= r.rating} color={n <= r.rating ? colors.rating : colors.borderStrong} />
+            ))}
+          </View>
           {r.text ? <Text style={[type.body, styles.quote]}>“{r.text}”</Text> : null}
           <Text style={type.small}>
             {[r.author, t(r.refType === 'order' ? 'services.provider.verifiedOrder' : 'services.provider.verifiedBooking'), day(r.createdAt, p.timeZone), t('services.stars', { n: r.rating })]
@@ -200,7 +217,7 @@ function Actions({ p }: { p: ProviderPage }) {
 function ProfileSkeleton() {
   const { t } = useI18n();
   return (
-    <View accessibilityRole="progressbar" accessibilityLabel={t('common.loading')} style={styles.reviews} testID="loading">
+    <View accessibilityRole="progressbar" accessibilityLabel={t('common.loading')} style={[styles.reviews, styles.pad]} testID="loading">
       <Skeleton height={150} />
       <Skeleton height={40} width="80%" />
       <Skeleton height={16} width="60%" />
@@ -213,19 +230,23 @@ function ProfileSkeleton() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0, gap: 2 },
-  cover: { height: 150, marginHorizontal: -GUTTER, marginTop: -space[2], backgroundColor: colors.headerBg, alignItems: 'center', justifyContent: 'center' },
-  idRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  avatar: { width: 64, height: 64, borderRadius: 32, overflow: 'hidden' },
-  seal: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  sealText: { fontFamily: fonts.semibold, fontSize: 12, color: semantic.success },
-  heroName: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 27, color: colors.text },
-  figures: { flexDirection: 'row', flexWrap: 'wrap', gap: 22 },
-  figure: { fontFamily: fonts.black, fontSize: 20, color: colors.text },
+  pad: { paddingHorizontal: GUTTER, gap: space[4] },
+  cover: { height: 200, marginTop: -space[3] },
+  overlay: { position: 'absolute', top: 0, left: GUTTER, right: GUTTER, flexDirection: 'row' },
+  avatar: { position: 'absolute', left: GUTTER, bottom: -36, width: 76, height: 76, borderRadius: radius.lg + 4, borderWidth: 3, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...shadow.md },
+  idBlock: { gap: 4, paddingTop: 44 },
+  seal: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, marginTop: 4, borderRadius: radius.pill, backgroundColor: semantic['success-bg'] },
+  sealText: { fontFamily: fonts.semibold, fontSize: 13, color: semantic.success },
+  heroName: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.text },
+  figures: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  figureCard: { flexGrow: 1, flexBasis: '45%', gap: 2, padding: space[3], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'], backgroundColor: colors.surface },
+  figure: { fontFamily: fonts.display, fontSize: 22, color: colors.text },
+  stars: { flexDirection: 'row', gap: 2 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: space[2] },
   menuRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: space[3] },
   reviews: { gap: space[3], paddingTop: space[2] },
-  review: { gap: 4 },
-  quote: { fontStyle: 'italic' },
+  review: { gap: 6, padding: space[4], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
+  quote: {},
   actions: { flexDirection: 'row', gap: 10 },
 });

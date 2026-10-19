@@ -3,7 +3,7 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Icon, MIN_TARGET, colors, fonts, radius, space, type IconName } from '@northline/mobile-kit';
+import { Icon, MIN_TARGET, colors, fonts, radius, semantic, shadow, space } from '@northline/mobile-kit';
 
 import type { ProductCard, SearchItem, SearchQuery, Sort } from '../api/shop';
 import type { MessageKey } from '../i18n';
@@ -30,6 +30,9 @@ interface Row {
   priceCents?: number | null;
   rating?: number | null;
   tag?: 'tonight' | 'soldOut' | 'later';
+  /** What the no-photo picture draws (the category's id or the product's name). */
+  subject: string;
+  imageUrl?: string | null;
   to: Href | null;
 }
 
@@ -42,6 +45,7 @@ const fromSearch = (i: SearchItem): Row => ({
   priceCents: i.priceCents,
   rating: i.rating,
   tag: i.kind === 'service' ? undefined : i.onTonightsRun ? 'tonight' : i.soldOut ? 'soldOut' : 'later',
+  subject: i.kind === 'service' ? (i.category?.id ?? i.name) : i.name,
   // a product result is its offer (the product page takes an offer id too, S-50); a service opens its provider
   to:
     i.kind === 'service'
@@ -57,6 +61,8 @@ const fromCard = (p: ProductCard): Row => ({
   shop: p.shopName,
   meta: p.unit,
   priceCents: p.priceCents,
+  subject: p.name,
+  imageUrl: p.imageUrl,
   tag: p.run?.day === 'today' ? 'tonight' : 'later',
   to: { pathname: '/product/[id]', params: { id: p.productId, offer: p.offerId } },
 });
@@ -177,7 +183,7 @@ export function Search() {
         query={view}
         skeleton={<LoadingList rows={5} height={96} />}
         isEmpty={(d) => d.length === 0}
-        empty={<EmptyState message={q ? t('shop.search.empty', { q }) : t('shop.search.emptyBrowse')} action={anyFilter ? t('shop.search.clear') : undefined} onAction={clear} />}
+        empty={<EmptyState art="search" message={q ? t('shop.search.empty', { q }) : t('shop.search.emptyBrowse')} action={anyFilter ? t('shop.search.clear') : undefined} onAction={clear} />}
       >
         {(list) => (
           <View style={styles.results}>
@@ -213,7 +219,6 @@ function ResultRow({ row: r, f }: { row: Row; f: ReturnType<typeof useShopFormat
   const { t } = f;
   const price = r.priceCents != null ? (r.kind === 'service' ? t('rd.search.from', { price: f.money(r.priceCents) }) : f.money(r.priceCents)) : null;
   const kindWord = t(r.kind === 'service' ? 'rd.search.kind.service' : 'rd.search.kind.product');
-  const icon: IconName = r.kind === 'service' ? 'calendar-check' : 'package';
   return (
     <Pressable
       accessibilityRole="button"
@@ -223,7 +228,7 @@ function ResultRow({ row: r, f }: { row: Row; f: ReturnType<typeof useShopFormat
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
       testID={`result-${r.key}`}
     >
-      <Thumb size={96} icon={icon} />
+      <Thumb size={88} uri={r.imageUrl} subject={r.subject} />
       <View style={shopStyles.rowText}>
         <Text style={styles.name} numberOfLines={2}>
           {r.name}
@@ -255,9 +260,10 @@ const styles = StyleSheet.create({
     paddingLeft: space[4],
     paddingRight: space[2],
     borderRadius: radius.pill,
-    borderWidth: 2,
-    borderColor: colors.text,
+    borderWidth: 1.5,
+    borderColor: semantic['action-primary'],
     backgroundColor: colors.surface,
+    ...shadow.sm,
   },
   inputText: { flex: 1, minWidth: 0, minHeight: 44, fontFamily: fonts.regular, fontSize: 16, color: colors.text },
   clearText: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
@@ -267,10 +273,10 @@ const styles = StyleSheet.create({
   countRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   sort: { minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: 4 },
   sortText: { fontFamily: fonts.bold, color: colors.text },
-  row: { flexDirection: 'row', gap: space[3], paddingBottom: space[3], borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, minHeight: MIN_TARGET },
+  row: { flexDirection: 'row', gap: space[3], paddingBottom: space[4], borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, minHeight: MIN_TARGET },
   pressed: { opacity: 0.85 },
-  name: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 18, color: colors.text },
-  small: { fontFamily: fonts.regular, fontSize: 12, color: colors.textMuted },
+  name: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.text },
+  small: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
   rating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 });
 

@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, type ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { LOCALES, colors, fontAssets, type Locale } from '@northline/mobile-kit';
@@ -13,11 +14,20 @@ import { Loading } from '../src/components/ui';
 import { I18nProvider, LANGUAGE_KEY, useI18n } from '../src/i18n';
 import { defineLocationTask } from '../src/location/tracker';
 import { setUpPush } from '../src/push/install';
+import { config } from '../src/config';
 import { services } from '../src/services';
 
 // The background location task must exist before anything else runs (also when the OS starts the app for it).
 defineLocationTask();
 
+
+/**
+ * `make mobile-shots` (scripts/mobile-shots.mjs): on the web build with the fixture backend only, the screenshot run
+ * opens screens in place (a page load would start a new, signed-out session). Never present in a phone build.
+ */
+if (config.fixtures && Platform.OS === 'web') {
+  (globalThis as { __nlGo?: (href: string) => void }).__nlGo = (href) => router.push(href as never);
+}
 /** The language the courier picked (Account), else the device's; the api answers in it too (Accept-Language). */
 function LanguageSync({ children }: { children: ReactNode }) {
   const { locale, setLocale } = useI18n();

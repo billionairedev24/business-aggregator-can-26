@@ -199,7 +199,7 @@ export function Checkout() {
         query={setup}
         skeleton={<LoadingList rows={5} height={52} />}
         isEmpty={(s) => !s || s.cart.itemCount === 0}
-        empty={<EmptyState message={t('shop.cart.empty')} action={t('shop.cart.browse')} onAction={() => router.replace('/search')} />}
+        empty={<EmptyState art="grocery" message={t('shop.cart.empty')} action={t('shop.cart.browse')} onAction={() => router.replace('/search')} />}
       >
         {(s) =>
           s ? (

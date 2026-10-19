@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { Icon, MIN_TARGET, colors, fonts, radius, semantic, space, type IconName } from '@northline/mobile-kit';
+import { Art, Icon, MIN_TARGET, colors, fonts, radius, semantic, space, type IconName } from '@northline/mobile-kit';
 
 import { config } from '../config';
 import { useI18n, type MessageKey } from '../i18n';
@@ -10,32 +10,45 @@ import { GUTTER } from '../ui/screen';
 import type { StepState } from '../api/shop';
 
 /**
- * Journey B's pieces on the redesign's mobile layout (MA, spec § 1.3 Mobile): the picture block (a tinted tile with an
- * icon when the shop has no photo), the − n + pill stepper, pill chips, a sums row, the vertical status timeline
- * (MA:261), category circles (60 pt in a 72 pt column), the 132 pt product tile of a rail and a section head.
+ * Journey B's pieces on the light, photo-first direction: the picture (the merchant's photo, else an illustrated scene
+ * of the thing — `Art`, the web's drawn still lifes), the − n + pill stepper, pill chips, a sums row, the vertical
+ * status timeline, illustrated tiles, the product card of a rail and a section head.
  */
 
-/** An image the api names (absolute, or a path on the api's origin); none → a tinted tile with the item's icon. */
-export function Thumb({ uri, size, height, label, icon = 'package', style }: { uri?: string | null; size?: number; height?: number; label?: string; icon?: IconName; style?: StyleProp<ViewStyle> }) {
-  const src = uri ? (/^https?:\/\//.test(uri) ? uri : uri.startsWith('/') ? `${new URL(config.apiUrl).origin}${uri}` : null) : null;
+/** A photo url the api names (absolute, or a path on the api's origin), else null. */
+export const photoUri = (uri?: string | null) => (uri ? (/^https?:\/\//.test(uri) ? uri : uri.startsWith('/') ? `${new URL(config.apiUrl).origin}${uri}` : null) : null);
+
+/**
+ * An image the api names; none → the designed no-photo picture: an illustrated scene of `subject` (the product's,
+ * shop's or category's name or slug — `Art` picks the drawing from its words), never a grey box.
+ */
+export function Thumb({
+  uri,
+  size,
+  height,
+  label,
+  subject,
+  icon: _icon,
+  style,
+}: {
+  uri?: string | null;
+  size?: number;
+  height?: number;
+  label?: string;
+  /** What the picture shows when there is no photo (a name or slug). */
+  subject?: string;
+  /** @deprecated the no-photo picture is drawn from `subject` now. */
+  icon?: IconName;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const src = photoUri(uri);
   const box = [styles.thumb, size ? { width: size, height: size } : { height: height ?? 200 }, style];
   if (src) return <Image source={{ uri: src }} style={box as never} accessibilityLabel={label} accessibilityRole="image" />;
-  const glyph = Math.round(Math.min(size ?? height ?? 200, 120) * 0.36);
   return (
-    <View style={[box, styles.placeholder]} accessible={!!label} accessibilityLabel={label} accessibilityRole={label ? 'image' : undefined}>
-      <Icon name={icon} size={glyph} color={semantic['text-muted']} />
+    <View style={box} accessible={!!label} accessibilityLabel={label} accessibilityRole={label ? 'image' : undefined} testID="no-photo">
+      <Art subject={subject ?? label ?? 'shop'} style={StyleSheet.absoluteFill} />
     </View>
   );
-}
-
-/** A department's icon from words in its slug (the catalogue's departments have no icon of their own). */
-export function departmentIcon(slug: string): IconName {
-  if (/groc|pantry|produce|food|bake|butcher|deli/.test(slug)) return 'basket';
-  if (/auto|part|hardware|tool/.test(slug)) return 'wrench';
-  if (/beauty|hair|barber/.test(slug)) return 'scissors';
-  if (/drink|bar|wine|beer|liquor/.test(slug)) return 'martini';
-  if (/home|garden|furn/.test(slug)) return 'house-line';
-  return 'shopping-bag';
 }
 
 export function Kicker({ children }: { children: ReactNode }) {
@@ -147,7 +160,7 @@ export function Ladder({ steps }: { steps: Array<{ key: string; state: StepState
   );
 }
 
-/** A panel: the muted surface (MA's info boxes), the brand tint (`accent`) or the dark header colour (`dark`). */
+/** A panel: linen (info boxes, the parts that recede), the brand tint (`accent`); `dark` is the brand tint too now (the light direction has no dark panels). */
 export function Panel({ children, tone = 'surface', style, testID }: { children: ReactNode; tone?: 'surface' | 'accent' | 'dark'; style?: StyleProp<ViewStyle>; testID?: string }) {
   return <View style={[styles.panel, tone === 'accent' && styles.panelAccent, tone === 'dark' && styles.panelDark, style]} testID={testID}>{children}</View>;
 }
@@ -162,38 +175,62 @@ export function InfoLine({ icon, children, color }: { icon: IconName; children: 
   );
 }
 
-/** A horizontal strip that bleeds to the screen's edges (rails, category circles). */
-export function Strip({ children, testID }: { children: ReactNode; testID?: string }) {
+/**
+ * A sideways rail that runs to the screen's edges, so the next card peeks (rails of tiles and cards). In a padded
+ * screen it reaches past the gutter; `edge` = the parent has no side padding (a full-width screen).
+ */
+export function Strip({ children, edge, testID }: { children: ReactNode; edge?: boolean; testID?: string }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.strip} contentContainerStyle={styles.stripContent} testID={testID}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={!edge && styles.strip} contentContainerStyle={styles.stripContent} testID={testID}>
       {children}
     </ScrollView>
   );
 }
 
-/** A category circle (MA:191): a 60 pt tinted circle with the icon over a 12 pt semibold label, in a 72 pt column. */
-export function Circle({ label, icon, onPress, testID }: { label: string; icon: IconName; onPress: () => void; testID?: string }) {
+/**
+ * An illustrated tile (the web's `Tile`): a picture with rounded corners — the photo, else the scene of `subject` — the
+ * name (two lines at most) and a muted line under it ("22 pros", "Coming soon"). `width` sets a rail's tile; without
+ * it the tile fills its column (grids).
+ */
+export function Tile({ label, sub, subject, imageUrl, onPress, width, testID }: { label: string; sub?: string; subject: string; imageUrl?: string | null; onPress: () => void; width?: number; testID?: string }) {
+  const w = width ?? undefined;
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.circleCol} testID={testID}>
-      <View style={styles.circle}>
-        <Icon name={icon} size={26} />
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={sub ? `${label}, ${sub}` : label}
+      onPress={onPress}
+      style={({ pressed }) => [styles.tileBox, w ? { width: w } : styles.tileFill, pressed && styles.pressed]}
+      testID={testID}
+    >
+      <View style={[styles.tilePic, { aspectRatio: 4 / 3 }]}>
+        {photoUri(imageUrl) ? <Image source={{ uri: photoUri(imageUrl)! }} style={StyleSheet.absoluteFill} /> : <Art subject={subject} style={StyleSheet.absoluteFill} />}
       </View>
-      <Text style={styles.circleText} numberOfLines={2} maxFontSizeMultiplier={1.3}>
+      <Text style={styles.tileName} numberOfLines={2}>
         {label}
       </Text>
+      {sub ? (
+        <Text style={styles.tileSub} numberOfLines={1}>
+          {sub}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }
 
-/** A rail's product tile (MA:200): a 132 pt picture, the name on two lines, the price. */
-export function ProductTile({ name, price, imageUrl, onPress, label, testID }: { name: string; price: string; imageUrl?: string | null; onPress: () => void; label: string; testID?: string }) {
+/** A rail's product card (photo first): a 156 pt square picture, the name on two lines, the price and the shop. */
+export function ProductTile({ name, price, imageUrl, onPress, label, meta, testID }: { name: string; price: string; imageUrl?: string | null; onPress: () => void; label: string; meta?: string; testID?: string }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.tile} testID={testID}>
-      <Thumb uri={imageUrl} size={132} />
-      <Text style={styles.tileName} numberOfLines={2}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.tile, pressed && styles.pressed]} testID={testID}>
+      <Thumb uri={imageUrl} size={156} subject={name} />
+      <Text style={styles.productName} numberOfLines={2}>
         {name}
       </Text>
       <Text style={styles.tilePrice}>{price}</Text>
+      {meta ? (
+        <Text style={styles.tileSub} numberOfLines={1}>
+          {meta}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -207,24 +244,24 @@ export const shopStyles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   strong: { fontFamily: fonts.bold },
   price: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
-  bigPrice: { fontFamily: fonts.black, fontSize: 28, color: colors.text },
+  bigPrice: { fontFamily: fonts.bold, fontSize: 28, color: colors.text },
   accentText: { color: semantic['badge-brand-text'] },
   accent800: { color: semantic['badge-brand-text'] },
 });
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  thumb: { borderRadius: radius.md, backgroundColor: semantic['surface-sunken'], overflow: 'hidden' },
-  placeholder: { alignItems: 'center', justifyContent: 'center' },
+  thumb: { borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], overflow: 'hidden' },
+  pressed: { opacity: 0.85 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[2] },
   headLink: { minHeight: MIN_TARGET, justifyContent: 'center' },
-  headLinkText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.text, textDecorationLine: 'underline' },
+  headLinkText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.link },
   stepper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.borderControl, borderRadius: radius.pill, minHeight: 52 },
   stepperCompact: { minHeight: MIN_TARGET },
   step: { width: 48, height: 52, alignItems: 'center', justifyContent: 'center' },
   stepCompact: { width: MIN_TARGET, height: MIN_TARGET },
   stepValue: { minWidth: 24, textAlign: 'center', fontFamily: fonts.bold, fontSize: 15, color: colors.text },
-  chip: { minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderControl, backgroundColor: colors.surface },
+  chip: { minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderControl, backgroundColor: colors.surface },
   chipOn: { backgroundColor: colors.actionPrimary, borderColor: colors.actionPrimary },
   chipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
   chipTextOn: { fontFamily: fonts.semibold, color: colors.actionPrimaryText },
@@ -243,16 +280,18 @@ const styles = StyleSheet.create({
   lineDone: { backgroundColor: colors.actionPrimary },
   rungText: { flex: 1, paddingBottom: 14, gap: 2 },
   muted: { color: colors.textMuted },
-  panel: { padding: 14, borderRadius: radius.md, backgroundColor: semantic['surface-muted'], gap: space[2] },
+  panel: { padding: space[4], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], gap: space[2] },
   panelAccent: { backgroundColor: semantic['surface-brand'] },
-  panelDark: { backgroundColor: colors.headerBg },
+  panelDark: { backgroundColor: semantic['surface-brand'] },
   info: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   strip: { marginHorizontal: -GUTTER },
   stripContent: { paddingHorizontal: GUTTER, gap: space[3] },
-  circleCol: { width: 72, alignItems: 'center', gap: 6, minHeight: MIN_TARGET },
-  circle: { width: 60, height: 60, borderRadius: 30, backgroundColor: semantic['surface-brand'], alignItems: 'center', justifyContent: 'center' },
-  circleText: { fontFamily: fonts.semibold, fontSize: 12, lineHeight: 15, textAlign: 'center', color: colors.text },
-  tile: { width: 132, gap: 6, minHeight: MIN_TARGET },
-  tileName: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 16, color: colors.text },
-  tilePrice: { fontFamily: fonts.bold, fontSize: 14, color: colors.text },
+  tileBox: { gap: 4, minHeight: MIN_TARGET },
+  tileFill: { flex: 1 },
+  tilePic: { width: '100%', borderRadius: radius.lg, overflow: 'hidden', backgroundColor: semantic['surface-sunken'], marginBottom: 4 },
+  tileName: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.text },
+  tileSub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.textMuted },
+  tile: { width: 156, gap: 4, minHeight: MIN_TARGET },
+  productName: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 19, color: colors.text, marginTop: 4 },
+  tilePrice: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
 });
