@@ -119,7 +119,8 @@ export const SHOTS = {
     (m, p) => (live(m, p, '/api/v1/public/services/mobile-mechanic/providers') ? { body: {
       ...body('GET /api/v1/public/services/mobile-mechanic/providers?lang=en'),
       items: [...body('GET /api/v1/public/services/mobile-mechanic/providers?lang=en').items, ...['Northside Auto Care', 'Chinook Mobile Mechanics'].map((name, i) => ({
-        merchantId: `m${3 + i}`, slug: name.toLowerCase().replace(/[^a-z]+/g, '-'), name, tier: 'trusted', brandColor: null, blurb: 'Comes to your driveway · fixed prices, receipts on every job.',
+        merchantId: `m${3 + i}`, slug: name.toLowerCase().replace(/[^a-z]+/g, '-'), name, tier: 'trusted',
+        brandColor: body('GET /api/v1/public/services/mobile-mechanic/providers?lang=en').items[0].brandColor, blurb: 'Comes to your driveway · fixed prices, receipts on every job.',
         rating: 4.6 - i * 0.2, reviewCount: 40 + i * 13, onTimePct: 95, disputePct: 0.5, rebookPct: 60, fromCents: 8900 + i * 1000, pricingMode: 'fixed', instantBook: i === 0, nextAvailable: '2026-10-21T16:00:00Z', zones: [],
       }))],
     } } : undefined),

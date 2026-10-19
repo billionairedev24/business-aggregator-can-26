@@ -71,3 +71,12 @@
 .nl-logo-mark { flex: none; display: block; }
 .nl-logo-word { font-family: var(--font-heading); font-weight: var(--weight-bold); font-size: calc(var(--nl-logo-size, 32px) * 0.72); letter-spacing: -0.02em; white-space: nowrap; }
 .nl-logo-product { font-weight: var(--weight-medium); opacity: .8; letter-spacing: 0; }
+
+/* phones: the menu, the logo and the avatar on one row; the workspace line under them, full width */
+@media (max-width: 767.98px) {
+  .nl-topbar { column-gap: var(--space-2); }
+  .nl-topbar-item-text { display: none; }
+  .nl-topbar-meta, .nl-topbar > .nl-console-region { order: 10; flex: 1 1 60%; }
+  .nl-topbar > .tag { order: 11; }
+  .nl-topbar-brand .nl-logo-product { display: none; }
+}

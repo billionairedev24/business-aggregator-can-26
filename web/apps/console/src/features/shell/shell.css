@@ -1,8 +1,8 @@
-/* Console shell — the back-office frame's dark top bar (redesign § 1.3, BO:30): the global search, the region line, the
+/* Console shell — the back-office frame's white top bar (redesign § 1.3, BO:30): the global search, the region line, the
    account. Semantic tokens only. */
 .nl-console-search { flex: 1 1 220px; max-width: 420px; position: relative; margin: 0; }
-.nl-console-search .input { width: 100%; min-height: var(--size-touch); padding-left: 40px; border-radius: var(--radius-sm); border-color: var(--color-surface); box-sizing: border-box; }
-.nl-console-search .input:focus, .nl-console-search .input:focus-visible { box-shadow: 0 0 0 3px var(--color-header-focus); }
+.nl-console-search .input { width: 100%; min-height: var(--size-touch); padding-left: 40px; border-radius: var(--radius-pill); border-color: var(--color-header-ring); background: var(--color-surface-sunken); box-sizing: border-box; }
+.nl-console-search .input:focus, .nl-console-search .input:focus-visible { background: var(--color-surface); border-color: var(--color-focus); box-shadow: var(--shadow-focus); }
 .nl-console-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--color-text-muted); pointer-events: none; }
 .nl-console-region { font-size: var(--text-sm); color: var(--color-header-muted); }
 .nl-console-role-note { font-size: var(--text-2xs); color: var(--color-text-muted); padding: 4px 16px 8px 28px; }

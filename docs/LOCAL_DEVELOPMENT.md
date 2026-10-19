@@ -20,10 +20,11 @@ were reviewed for it, not run on a Mac.
 4. [Start and stop](#start-and-stop)
 5. [Ports and URLs](#ports-and-urls)
 6. [Build, test, lint, format](#build-test-lint-format)
-7. [Database, Kafka, search](#database-kafka-search)
-8. [Deploy and infrastructure checks](#deploy-and-infrastructure-checks)
-9. [CI runs the same targets](#ci-runs-the-same-targets)
-10. [Troubleshooting](#troubleshooting)
+7. [Look at the UI: `make ui-shots`](#look-at-the-ui-make-ui-shots)
+8. [Database, Kafka, search](#database-kafka-search)
+9. [Deploy and infrastructure checks](#deploy-and-infrastructure-checks)
+10. [CI runs the same targets](#ci-runs-the-same-targets)
+11. [Troubleshooting](#troubleshooting)
 
 ## The short version
 
@@ -182,11 +183,40 @@ The profiles are docker-compose.yml's: `db`, `cache`, `events` (Kafka + topic cr
 | `make docs [DOCS_VARIANT=public]` · `docs-serve` · `docs-dev` | build the documentation site and check every page · serve it · live dev server |
 | `make e2e` · `e2e-smoke` · `e2e-target ENV=staging` | the end-to-end suite (S-117): its own disposable Postgres, the whole stack under `local`, Playwright journeys + the Studio smoke sweep · only the sweep · against a deployed environment ([runbooks/e2e.md](runbooks/e2e.md)) |
 | `make a11y` | the accessibility page sweep (S-109): builds the three web apps, Playwright + axe against them with a mock api ([a11y/audit.md](a11y/audit.md)); `make a11y-record` refreshes its fixtures |
+| `make ui-shots` | full-page screenshots of every web route, desktop and phone, without a backend ([below](#look-at-the-ui-make-ui-shots)) |
 | `make all` · `make build` · `make test` · `make lint` · `make format` | both stacks |
 | `make clean` · `make clean-all` | build outputs and runner logs · also `node_modules` and `server/.gradle` |
 
 Gradle runs with `--max-workers=2` (`GRADLE_FLAGS` to change) and CI's optional Maven mirror init script (a no-op
 unless `MAVEN_MIRROR_URL` is set).
+
+## Look at the UI: `make ui-shots`
+
+Every UI change gets looked at, on a desktop and on a phone, before it is reviewed. `make ui-shots` builds the
+consumer site, the Studio and the console and photographs **every route** of the three, full page, at 1440×900 and
+390×844:
+
+```
+make ui-shots                                   # all three apps (about 8 minutes)
+make ui-shots UI_SHOTS_APPS=consumer            # one app (or consumer,studio)
+make ui-shots UI_SHOTS_SKIP_BUILD=1 UI_SHOTS_GREP=home   # reuse the last build, only the routes matching "home"
+```
+
+The pictures land in `ui-shots/<app>/<route>-d.png` (desktop) and `<route>-m.png` (phone) at the repository root
+(git-ignored). The route list is `web/packages/a11y/shots/routes.ts` — a new route goes there too.
+
+No backend is needed: the apps run as built (`vite preview` for the Studio and the console, the consumer's own Node
+server) on ports 4641–4644, answered by the accessibility sweep's mock api (`web/packages/a11y/fixtures`, recorded from
+the apps' own tests) plus demo-like data in `web/packages/a11y/shots/fixtures.mjs`: a catalogue with photos, shops,
+providers, a fallback market, a Studio dashboard. The photos are placeholders drawn as SVG on request
+(`shots/photos.mjs`) and served from the apps' own origin under `/api/v1/public/catalogue/media/…` — nothing is
+fetched from the internet and no Content-Security-Policy changes. The Studio and the console are signed in (Ravi
+Sandhu, Priya Natarajan), the consumer is a guest unless the route says `signedIn`. A page that still looks empty
+usually lacks an answer: `ui-shots/<app>/_missing-api.txt` lists the requests nothing answered — add one to
+`shots/fixtures.mjs`.
+
+Chromium comes from `CHROMIUM=/path`, else `/opt/pw-browsers/chromium`, else Playwright's own
+(`pnpm --filter @northline/a11y exec playwright install chromium`).
 
 ## Database, Kafka, search
 

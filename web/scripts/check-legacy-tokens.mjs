@@ -17,6 +17,8 @@ const roots = ['packages/ui/src', 'apps/consumer/src/features/shell',
   'apps/consumer/src/features/cart', 'apps/consumer/src/features/checkout', 'apps/consumer/src/features/orders',
   'apps/consumer/src/features/aftercare', 'apps/consumer/src/features/tracking', 'apps/consumer/src/features/account',
   'apps/consumer/src/features/services', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking',
+  // the light foundation (2026-10-19): the location dialog
+  'apps/consumer/src/features/location',
   'apps/studio/src/features/shell', 'apps/console/src/features/shell', 'apps/studio/src/studio.css', 'apps/console/src/console.css',
   // redesign phase 2 (the merchant demo path): the Studio screens rebuilt on the AT layouts
   ...['auth', 'onboarding', 'dashboard', 'catalogue', 'orders', 'appointments', 'availability', 'finance', 'storefront'].map(f => `apps/studio/src/features/${f}`),

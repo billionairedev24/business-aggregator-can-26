@@ -9133,3 +9133,71 @@ Prices are from the hosting research (§ 5, search-engine excerpts) and **unveri
   network), Object Storage over S3 (the api and barman), Let's Encrypt on these hosts. Unverified facts are listed in
   ovh.md § Open items (prices, VPS stock/range in BHS, S3 endpoint, DB region name `BHS`, a node pool at 0, the gateway
   requirement). Schema additions: none. No app variables added.
+
+## 2026-10-19 — Light foundation, phase A (feat/ui-foundation-light)
+
+The owner called the UI an eyesore (dark navy header, the location a bare pin on phones, invisible cards, blank
+product cards, a broken shop list, the brand font never loading, a geolocation prompt on every load) and chose **light &
+photo-first** with palette **B Evergreen**. Phase A is the foundation every app uses; the pages follow in phase B.
+
+- **Look at it first: `make ui-shots`.** Playwright over the built apps and the a11y sweep's mock api (ports 4641–4644,
+  so both can run): every consumer, Studio and console route (`web/packages/a11y/shots/routes.ts`, 86 routes) at
+  1440×900 and 390×844, full page, into `ui-shots/` (git-ignored). Demo-like data in `shots/fixtures.mjs` (a catalogue
+  with photos, shops, providers, a fallback market, a Studio dashboard) goes before the recorded fixtures only when
+  `NL_MOCK_SHOTS=1`. The photos are SVG still lifes drawn on request (`shots/photos.mjs`) and served same-origin,
+  including under `/api/v1/public/catalogue/media/…` — nothing hotlinked, no CSP change. `_missing-api.txt` lists what
+  nothing answered. Documented in docs/LOCAL_DEVELOPMENT.md.
+- **Root cause of "invisible cards":** the legacy aliases `--color-text: var(--color-text)` and
+  `--color-surface: var(--color-surface)` (same name as the semantic role) were cycles, which CSS treats as invalid —
+  every `background: var(--color-surface)` and `color: var(--color-text)` fell back to transparent / inherited. Removed;
+  the build now refuses an alias to itself.
+- **Tokens.** `brand.json` `palette: evergreen` and a new `chrome: "light" | "dark"` (light by default). Light: canvas
+  = white, the palette's ground (linen) is `surface-sunken` and the footer (`footer-bg`, a touch darker); header and
+  tabs on white with ink text, the current tab and focus in the primary colour; new roles `header-focus`,
+  `header-border`, `footer-border`, `inverse-*` (the brand-dark panel: the Studio sign-in advertorial, the dark button)
+  and `border-card` (card, tile and panel edges at 3:1 against white, the page, linen and the footer — WCAG 1.4.11).
+  The contrast gate checks the new pairs on all three palettes (an accent button's *shape* is not checked: its label
+  names it; lakeshore's gold would fail it). `chrome: "dark"` keeps AfroTransact's header for anyone who wants it.
+- **Fonts self-hosted.** `@fontsource/{dm-sans,fraunces,manrope,plus-jakarta-sans}` 5.3.0 (every palette's families,
+  so switching still works). The token build copies the chosen palette's latin + latin-ext woff2 per weight into
+  `dist/fonts/` and puts the `@font-face` rules at the top of `tokens.css`, which every app already loads. Removed: the
+  Google Fonts links and preconnects (consumer root, Studio and console `index.html` + `main.tsx`), `fontHref`,
+  `%BRAND_FONTS%`; the consumer CSP's `style-src`/`font-src` lost the Google origins (nothing loosened). The legal
+  pages' own Google import is removed (their stacks fall back to Georgia / the system sans; their text is unchanged,
+  so the legal registry hashes hold). Mobile already bundles the families (`@expo-google-fonts/*`); `brandFonts.ts`
+  is regenerated for Evergreen.
+- **@northline/ui.** One white site header (logo · location control · pill search with a round primary button ·
+  account · cart; sections as tabs under it; under 900px a menu button with a left sheet holding the sections, Help,
+  Sell and the language switch, and the search on its own row). `LocationPill` is a button (`onOpen`) or a link, says
+  "Deliver to" or "Near", shows the place at every width with an ellipsis. `MediaFallback` (initial in the display
+  face + an icon on linen) wherever a product, service or product tile has no photo. Product cards: photo full-bleed on
+  top (cover), radius 12, border-card, shadow-sm. Service cards stack (photo on top) in columns under 360px (container
+  query) and in `stack` layout — they used to squeeze into one letter a line in rails. Shop tiles: one grid (mark |
+  name, meta, tags under), names clamp to two lines. Dialog: `dismissible` (×) and `sheetOnPhone`. Headings in the
+  display face at 600; chips, panels, KPI cards, empty states (linen, a display-face title), skeletons restyled. Back
+  office: white top bar with a hairline, linen sidebar, the current item a white pill with a 3px primary bar; on
+  phones the person's name hides behind the avatar and the workspace line wraps under the logo.
+- **Location, rebuilt (consumer web).** Never prompts on load. Sources in order: the saved choice (localStorage
+  `nl.location`) → the signed-in default address (`GET /api/v1/me/addresses`, `isDefault` else the first) → the CDN's
+  city (session) → the api's fallback market (`/geo/markets` → `fallback`) → nothing ("Set your location").
+  `sources.ts` is the pure part (unit-tested). The dialog (`LocationChooser`, a bottom sheet on phones): "Use my
+  current location" (the only place geolocation is asked, on the press; `/geo/reverse`; messages for refused,
+  unavailable, outside our markets, api error), "Address or postal code" (the existing `/geo/autocomplete` +
+  `/geo/places/{id}` — Google Places takes postal codes, so no new endpoint), the signed-in person's addresses, the
+  live markets, and the waitlist when the address resolves outside a live or pilot market. Choosing saves and closes;
+  every screen reads the same context, so search, listings and checkout follow in place. `/location?next=` now
+  redirects to `next` (else home) with `#location`, which opens the dialog; any `#location` link does. The old
+  sessionStorage "detected" key and the 4-second fallback are gone. Removed: `LocationScreen` (the page) and its test.
+- **Mobile parity (not built here):** the native apps should follow the same order (saved → default address →
+  fallback market; no CDN city in the app), never call `expo-location` on launch, and offer the same four sections in a
+  bottom sheet: current location (permission on the press), address/postal search (same endpoints), saved addresses,
+  live markets.
+
+**Phase B (page-level, not in this PR):** the home hero (an empty green box with an icon; arrows over it) and its icon
+tiles; the services landing (a wall of chips; the "N categories live in {province}" line); the shop landing's
+headline-as-hero and text-only department tiles (`shop.css` still on legacy tokens); pages that link to `/location`
+from empty states (they reach the dialog through the redirect but on the home page, not in place); the product page's
+"Also from" chips; provider page, booking, cart, checkout, account sub-pages and the console/Studio screens reviewed
+only through the shells; the Studio KPI strip leaving a sixth card alone on a row.
+
+Schema additions: none. Config additions: `brand.json` `chrome`. No new environment variables.
