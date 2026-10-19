@@ -19,7 +19,7 @@ set -euo pipefail
 ovh_target "${1:-}"
 need kubectl helm terraform jq
 : "${REGISTRY:?REGISTRY: the image registry path (e.g. ghcr.io/<org>/northline) — docs/runbooks/ovh.md § Images}"
-: "${IMAGE_TAG:?IMAGE_TAG: the images' tag (git rev-parse --short=12 HEAD when you built them)}"
+: "${IMAGE_TAG:?IMAGE_TAG: the tag of the images (git rev-parse --short=12 HEAD when you built them)}"
 NS=$OVH_NAMESPACE
 A="$OVH_REPO/deploy/argocd/addons"
 H="$OVH_REPO/deploy/helm"

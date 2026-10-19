@@ -43,8 +43,12 @@ init() {
   [ ! -e "$OVH_ENV_FILE" ] || die "$OVH_ENV_FILE exists — edit it, or move it away to start over"
   mkdir -p "$(dirname "$OVH_ENV_FILE")"
   umask 077
-  local s_studio s_consumer s_console
+  local s_studio s_consumer s_console h_studio h_consumer h_console h
   s_studio=$(rand_b64); s_consumer=$(rand_b64); s_console=$(rand_b64)
+  h_studio=$(bcrypt "$s_studio"); h_consumer=$(bcrypt "$s_consumer"); h_console=$(bcrypt "$s_console")
+  for h in "$h_studio" "$h_consumer" "$h_console"; do
+    case "$h" in ('{bcrypt}$2'*) ;; (*) die "bcrypt failed (htpasswd, or Docker with httpd:2.4-alpine, is needed)" ;; esac
+  done
   {
     echo "# Northline $OVH_TARGET secrets (docs/runbooks/ovh.md § Secrets). KEY=value, taken literally; never commit."
     echo "# Generated:"
@@ -53,11 +57,11 @@ init() {
     echo "EMAIL_UNSUBSCRIBE_KEY=$(rand_b64)"
     echo "KMS_LOCAL_KEY=$(rand_b64)"
     echo "STUDIO_BFF_SECRET=$s_studio"
-    echo "STUDIO_BFF_SECRET_HASH=$(bcrypt "$s_studio")"
+    echo "STUDIO_BFF_SECRET_HASH=$h_studio"
     echo "CONSUMER_BFF_SECRET=$s_consumer"
-    echo "CONSUMER_BFF_SECRET_HASH=$(bcrypt "$s_consumer")"
+    echo "CONSUMER_BFF_SECRET_HASH=$h_consumer"
     echo "CONSOLE_BFF_SECRET=$s_console"
-    echo "CONSOLE_BFF_SECRET_HASH=$(bcrypt "$s_console")"
+    echo "CONSOLE_BFF_SECRET_HASH=$h_console"
     echo "# In-cluster data services (with Managed PostgreSQL, DB_PASSWORD comes from Terraform instead; an external"
     echo "# service: its provider's credential here)."
     echo "DB_PASSWORD=$(rand_hex)"

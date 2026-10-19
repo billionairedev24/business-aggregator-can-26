@@ -13,7 +13,7 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 target=${1:-}
 : "${REGISTRY:?REGISTRY: the image registry path}"
-: "${IMAGE_TAG:?IMAGE_TAG: the images' tag}"
+: "${IMAGE_TAG:?IMAGE_TAG: the tag of the images}"
 
 case "$target" in
   gcp-dryrun)
