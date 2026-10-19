@@ -84,11 +84,15 @@ public class LocalNetworkDevices {
             return false;
         }
         var h = host.toLowerCase(Locale.ROOT);
-        return h.equals("localhost") || h.equals("[::1]") || h.equals("::1") || (IPV4.matcher(h).matches() && h.startsWith("127."));
+        return h.equals("localhost")
+                || h.equals("[::1]")
+                || h.equals("::1")
+                || (IPV4.matcher(h).matches() && h.startsWith("127."));
     }
 
     /** The loopback redirect URI of {@code client} that {@code requested} is the network variant of; null if none. */
-    @Nullable String registeredVariant(RegisteredClient client, @Nullable String requested) {
+    @Nullable
+    String registeredVariant(RegisteredClient client, @Nullable String requested) {
         var wanted = enabled ? uri(requested) : null;
         if (wanted == null || !isLocalNetworkHost(wanted.getHost())) {
             return null;
@@ -144,13 +148,17 @@ public class LocalNetworkDevices {
     /** Whether {@code origin} is the network variant (same scheme and port) of one of the allowed loopback origins. */
     boolean allowsOrigin(@Nullable String origin, Collection<String> allowed) {
         var o = enabled ? uri(origin) : null;
-        if (o == null || !isLocalNetworkHost(o.getHost()) || (o.getRawPath() != null && !o.getRawPath().isEmpty())) {
+        if (o == null
+                || !isLocalNetworkHost(o.getHost())
+                || (o.getRawPath() != null && !o.getRawPath().isEmpty())) {
             return false;
         }
-        return allowed.stream().map(LocalNetworkDevices::uri).anyMatch(a -> a != null
-                && isLoopback(a.getHost())
-                && Objects.equals(a.getScheme(), o.getScheme())
-                && a.getPort() == o.getPort());
+        return allowed.stream()
+                .map(LocalNetworkDevices::uri)
+                .anyMatch(a -> a != null
+                        && isLoopback(a.getHost())
+                        && Objects.equals(a.getScheme(), o.getScheme())
+                        && a.getPort() == o.getPort());
     }
 
     /** The sign-in page for a request: a loopback page keeps the private-network host the request came in on. */

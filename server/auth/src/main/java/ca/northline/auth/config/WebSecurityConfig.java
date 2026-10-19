@@ -112,7 +112,9 @@ class WebSecurityConfig {
                     @Override
                     public @Nullable String checkOrigin(@Nullable String origin) {
                         var allowed = super.checkOrigin(origin);
-                        return allowed != null || !devices.allowsOrigin(origin, props.allowedOrigins()) ? allowed : origin;
+                        return allowed != null || !devices.allowsOrigin(origin, props.allowedOrigins())
+                                ? allowed
+                                : origin;
                     }
                 };
         config.setAllowedOrigins(props.allowedOrigins());

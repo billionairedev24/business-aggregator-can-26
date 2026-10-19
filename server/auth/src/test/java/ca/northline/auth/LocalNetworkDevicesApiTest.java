@@ -81,7 +81,8 @@ class LocalNetworkDevicesApiTest extends AuthIntegrationTest {
 
     @Test
     void theSameRequestOnLocalhost_keepsTheConfiguredPage() throws Exception {
-        mvc.perform(authorize("http://localhost:9000", new MockHttpSession(), "http://localhost:3000/app/oauth2redirect"))
+        mvc.perform(authorize(
+                        "http://localhost:9000", new MockHttpSession(), "http://localhost:3000/app/oauth2redirect"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("http://localhost:3000/sign-in"));
     }
@@ -140,7 +141,8 @@ class LocalNetworkDevicesApiTest extends AuthIntegrationTest {
                         .header("Origin", "http://192.168.1.20:3100")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotEqualTo(403));
+                .andExpect(
+                        result -> assertThat(result.getResponse().getStatus()).isNotEqualTo(403));
         mvc.perform(post(LAN + "/api/auth/sign-in")
                         .header("Origin", "http://evil.example:3100")
                         .contentType(MediaType.APPLICATION_JSON)
