@@ -564,7 +564,8 @@ async function book(c, b, n) {
   const slots = await freeSlots(c, merchant.slug, svc.id, b.daysAhead);
   if (!slots.length) { log(`  ! ${svc.title}: no free slot in the next two weeks (Studio › Availability)`); return null; }
   let booked, startsAt;
-  for (const candidate of slots.slice(0, 4)) {
+  // the owner is every demo provider's one bookable person: their other jobs can take a slot this calendar shows free
+  for (const candidate of slots.slice(0, 16)) {
     startsAt = candidate;
     try { booked = await bookSlot(c, b, svc, merchant, address, startsAt, doneKey); break; } catch (e) {
       if (!(e instanceof HttpError) || e.status !== 409) throw e; // slot_taken / hold_expired: the next slot
@@ -610,7 +611,7 @@ async function freeSlots(c, slug, serviceId, daysAhead) {
     // not all at the first hour of the day: a calendar that looks lived in
     const pivot = Math.min(free.length - 1, 2 + (Number(d.date.slice(-1)) % 3));
     out.push(...free.slice(pivot), ...free.slice(0, pivot));
-    if (out.length >= 6) break;
+    if (out.length >= 24) break;
   }
   return out;
 }
