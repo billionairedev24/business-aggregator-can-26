@@ -93,6 +93,8 @@ function Checkout({ cart }: { cart: Cart }) {
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  // once placed, the cart is empty: nothing may ask for a quote again (it answered 409 after a successful order)
+  const [placed, setPlaced] = useState(false);
   const [started, setStarted] = useState<Started | null>(null);
   const [stepUp, setStepUp] = useState<'required' | 'enrol' | null>(null);
   const key = useRef<string>(newIdempotencyKey());
@@ -123,7 +125,7 @@ function Checkout({ cart }: { cart: Cart }) {
     ...(promoCode ? { promoCode } : {}), ...(usePoints ? { usePoints } : {}), ...(tip.kind !== 'none' ? { tip } : {}),
   };
   const complete = !!option && Object.keys(clientErrors).length === 0;
-  const quote = useQuery(quoteQuery(body, locale, complete));
+  const quote = useQuery(quoteQuery(body, locale, complete && !placed));
   const shownErrors = { ...(touched ? clientErrors : {}), ...serverErrors };
   const promoError = serverErrors.promoCode ?? (quote.error instanceof ValidationError ? quote.error.byField().promoCode : undefined);
   const age = quote.data?.age ?? setup.data?.age ?? NO_AGE;
@@ -191,11 +193,14 @@ function Checkout({ cart }: { cart: Cart }) {
     setError(undefined);
     try {
       if (pay.needed && !(await pay.confirm())) return;
-      const placed = await placeOrder(started.checkoutId, newIdempotencyKey());
+      const order = await placeOrder(started.checkoutId, newIdempotencyKey());
       key.current = newIdempotencyKey();
-      await qc.invalidateQueries({ queryKey: cartQuery.queryKey });
-      void qc.invalidateQueries({ queryKey: ['checkout'] });
-      await navigate({ to: '/checkout/complete', search: { order: placed.orderId, ref: placed.ref } });
+      setPlaced(true);
+      await qc.cancelQueries({ queryKey: ['checkout'] });
+      await navigate({ to: '/checkout/complete', search: { order: order.orderId, ref: order.ref } });
+      // after leaving: the cart is refetched (now empty) and the next checkout starts from a fresh set-up and quote
+      qc.removeQueries({ queryKey: ['checkout'] });
+      void qc.invalidateQueries({ queryKey: cartQuery.queryKey });
     } catch (e) {
       fail(e);
       key.current = newIdempotencyKey();
