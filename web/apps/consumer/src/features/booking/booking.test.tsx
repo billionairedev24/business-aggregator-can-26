@@ -261,7 +261,7 @@ describe('demo rehearsal fixes (2026-10-19)', () => {
   it('never tells a barber\'s customer about a technician\'s plate (en and fr)', async () => {
     mockFetch(api(true, c => (c.url === '/api/v1/me/bookings/b1' ? { body: { ...confirmation, type: 'appointment', memberFirstName: null, providerName: 'Fade Lab', addressLine: null } } : undefined)));
     const { unmount } = renderApp('/providers/prairie-wrench/book?step=done&booking=b1', { routes });
-    const list = await screen.findByRole('list');
+    const list = await within(await screen.findByRole('main')).findByRole('list'); // the header's nav row is a list too
     expect(list).toHaveTextContent("Reminder the evening before with Fade Lab's address and directions");
     expect(list).not.toHaveTextContent(/technician|plate|access code/i);
     unmount();
