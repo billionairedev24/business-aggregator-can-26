@@ -15,8 +15,8 @@
     - tab "Licences"
     - tab "Age checks"
   - list "Applications by stage":
-    - listitem: Stage 1 · Review 1 an agent settles identity or a registry
-    - listitem: Stage 2 · Decision 1 checks settled · approve or request info
+    - listitem: Stage 1 · Review 1 a reviewer settles the checks and recommends
+    - listitem: Stage 2 · Decision 1 another person approves or requests info
     - listitem: Info requested 0 waiting for the business
     - listitem: Approved 1 in this list
   - searchbox "Search table"
@@ -40,7 +40,7 @@
           - button "Risk"
         - columnheader "Actions"
     - rowgroup:
-      - row "Select QuickFix Auto QuickFix Auto QuickFix Auto Inc. Mobile mechanic Alberta KYC ✓ · AMVIC ✗ High · no licence Open · QuickFix Auto Approve · QuickFix Auto Request info · QuickFix Auto":
+      - row "Select QuickFix Auto QuickFix Auto QuickFix Auto Inc. Mobile mechanic Alberta KYC ✓ · AMVIC ✗ High · no licence Open · QuickFix Auto Review · QuickFix Auto":
         - cell "Select QuickFix Auto":
           - checkbox "Select QuickFix Auto"
         - cell "QuickFix Auto QuickFix Auto Inc."
@@ -48,11 +48,10 @@
         - cell "Alberta"
         - cell "KYC ✓ · AMVIC ✗"
         - cell "High · no licence"
-        - cell "Open · QuickFix Auto Approve · QuickFix Auto Request info · QuickFix Auto":
+        - cell "Open · QuickFix Auto Review · QuickFix Auto":
           - button "Open · QuickFix Auto"
-          - button "Approve · QuickFix Auto"
-          - button "Request info · QuickFix Auto"
-      - row "Select Sable & Soda Bar Co. Sable & Soda Bar Co. Sable and Soda Ltd. Events & bar Alberta KYC ✓ · Registry ✓ · Insurance ○ Low Open · Sable & Soda Bar Co. Approve · Sable & Soda Bar Co. Request info · Sable & Soda Bar Co.":
+          - button "Review · QuickFix Auto"
+      - row "Select Sable & Soda Bar Co. Sable & Soda Bar Co. Sable and Soda Ltd. Events & bar Alberta KYC ✓ · Registry ✓ · Insurance ○ Low Open · Sable & Soda Bar Co. Decide · Sable & Soda Bar Co.":
         - cell "Select Sable & Soda Bar Co.":
           - checkbox "Select Sable & Soda Bar Co."
         - cell "Sable & Soda Bar Co. Sable and Soda Ltd."
@@ -60,10 +59,9 @@
         - cell "Alberta"
         - cell "KYC ✓ · Registry ✓ · Insurance ○"
         - cell "Low"
-        - cell "Open · Sable & Soda Bar Co. Approve · Sable & Soda Bar Co. Request info · Sable & Soda Bar Co.":
+        - cell "Open · Sable & Soda Bar Co. Decide · Sable & Soda Bar Co.":
           - button "Open · Sable & Soda Bar Co."
-          - button "Approve · Sable & Soda Bar Co."
-          - button "Request info · Sable & Soda Bar Co."
+          - button "Decide · Sable & Soda Bar Co."
       - row "Select Fraser Electric Fraser Electric Sable and Soda Ltd. Events & bar BC pilot KYC ✓ · Registry ✓ · Insurance ○ Low Open · Fraser Electric":
         - cell "Select Fraser Electric":
           - checkbox "Select Fraser Electric"
