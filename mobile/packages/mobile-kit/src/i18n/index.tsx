@@ -1,4 +1,5 @@
 import { getLocales } from 'expo-localization';
+import theme from '@northline/tokens/theme.json';
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
 /** Northline is bilingual from day one: English and Canadian French. */
@@ -89,6 +90,9 @@ function formatDate(locale: Locale, iso: string | null | undefined, options: Int
   }
 }
 
+/** Filled into every message: `{brand}`, `{brandShort}` and `{brandLegal}` (brand.json `identity`, via the generated theme). */
+const BRAND_PARAMS = { brand: theme.brand.name, brandShort: theme.brand.shortName, brandLegal: theme.brand.legalName } as const;
+
 /**
  * An i18n context for one app's catalogues. Both catalogues have the same keys (a test checks it); a key missing in
  * French falls back to English.
@@ -101,7 +105,8 @@ export function createI18n<M extends Record<string, string>>(catalogs: { en: M; 
     return {
       locale,
       setLocale,
-      t: (key, params) => formatMessage(locale, catalogs[locale][key] ?? catalogs.en[key] ?? key, params),
+      // redesign: the product's name comes from brand.json — messages say {brand} / {brandShort}, as on the web
+      t: (key, params) => formatMessage(locale, catalogs[locale][key] ?? catalogs.en[key] ?? key, { ...BRAND_PARAMS, ...params }),
       time: (iso, tz) => formatDate(locale, iso, { hour: 'numeric', minute: '2-digit' }, tz),
       day: (iso, tz) => formatDate(locale, iso, { weekday: 'short', month: 'short', day: 'numeric' }, tz),
     };

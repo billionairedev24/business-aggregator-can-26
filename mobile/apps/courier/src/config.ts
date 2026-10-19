@@ -16,3 +16,6 @@ export const config = {
 export const PING_INTERVAL_MS = 4000;
 /** How often the open run is read again while the app is in the foreground. */
 export const RUN_REFRESH_MS = 30_000;
+
+/** Redesign § 3.5: the pilot's "Feedback" control is a testing tool — only builds with EXPO_PUBLIC_TESTING_TOOLS=1 show it. */
+export const testingTools = () => process.env.EXPO_PUBLIC_TESTING_TOOLS === '1';

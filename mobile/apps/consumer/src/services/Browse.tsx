@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { RefreshControl, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { space } from '@northline/mobile-kit';
+import { Icon, colors, fonts, radius, space } from '@northline/mobile-kit';
 
 import { geoApi } from '../api/geo';
 import { nameIn, type Landing } from '../api/services';
@@ -12,10 +12,13 @@ import { services } from '../services';
 import { Body, Field, Section, Tag, Title } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { EmptyState, QueryView, Skeleton } from '../ui/states';
+import { shop, useMarket, useShopFormat } from '../shop/common';
+import { Circle, departmentIcon } from '../shop/parts';
 import { Chip, useServicesApi } from './parts';
 
 /**
- * C1 Browse services (design 01 `services`, the Services tab): the live categories in their groups, two taps from a
+ * Browse tab (redesign spec § 2.4: "Services lives inside Browse and Home"): the search pill (products and services),
+ * the Shop's departments as circles, then the services. C1 Browse services (design 01 `services`): the live categories in their groups, two taps from a
  * provider. The line under the title names the province only when all live providers are in one (region model); the
  * search box narrows the categories on the phone. Guests may browse.
  */
@@ -36,7 +39,15 @@ export function Browse() {
       testID="services"
       refreshControl={<RefreshControl refreshing={landing.isRefetching} onRefresh={() => void landing.refetch()} accessibilityLabel={t('common.retry')} />}
     >
-      <Title>{t('services.browse.title')}</Title>
+      <Title>{t('rd.browse.title')}</Title>
+      <Pressable accessibilityRole="search" accessibilityLabel={t('rd.search.placeholder')} onPress={() => router.push('/search')} style={styles.search} testID="browse-search">
+        <Icon name="magnifying-glass" size={20} />
+        <Text style={styles.searchText} numberOfLines={1}>
+          {t('rd.search.placeholder')}
+        </Text>
+      </Pressable>
+      <ShopDepartments />
+      <Section>{t('services.browse.title')}</Section>
       <QueryView
         query={landing}
         skeleton={<BrowseSkeleton />}
@@ -93,6 +104,31 @@ function Groups({ data, province, text, setText }: { data: Landing; province: st
   );
 }
 
+/** The Shop's departments as circles (the same `GET /public/shop` Home reads), each opening its department list. */
+function ShopDepartments() {
+  const { t } = useI18n();
+  const f = useShopFormat();
+  const market = useMarket();
+  const landing = useQuery({
+    queryKey: ['shop', 'landing', market.city?.toLowerCase() ?? '', f.locale],
+    queryFn: () => shop().landing(market.city, f.locale),
+    enabled: market.ready,
+    staleTime: 60_000,
+  });
+  const departments = landing.data?.departments ?? [];
+  if (!departments.length) return null;
+  return (
+    <View style={styles.group} testID="browse-shop">
+      <Section>{t('shop.home.shop')}</Section>
+      <View style={styles.circles}>
+        {departments.map((d) => (
+          <Circle key={d.slug} label={d.name} icon={departmentIcon(d.slug)} onPress={() => router.push({ pathname: '/search', params: { department: d.slug, name: d.name } })} testID={`department-${d.slug}`} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function BrowseSkeleton() {
   const { t } = useI18n();
   return (
@@ -114,6 +150,9 @@ function BrowseSkeleton() {
 }
 
 const styles = StyleSheet.create({
+  search: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 48, paddingHorizontal: space[4], borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderControl, backgroundColor: colors.surface },
+  searchText: { flex: 1, fontFamily: fonts.regular, fontSize: 15, color: colors.textMuted },
+  circles: { flexDirection: 'row', flexWrap: 'wrap', gap: space[3] },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   group: { gap: space[2], paddingTop: space[2] },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

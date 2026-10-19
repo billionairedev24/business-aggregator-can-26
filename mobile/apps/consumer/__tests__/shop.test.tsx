@@ -67,25 +67,29 @@ async function withOrder(orderState: Parameters<typeof seedOrder>[2], url: strin
 }
 
 describe('B1 Home', () => {
-  it('shows where you are, tonight’s pooled run, the departments, the service tiles and trusted providers — to a guest', async () => {
-    const { server } = await start({ welcomed: true, store: saved() });
-    expect(await screen.findByText('1204 Example Ave, Sampleville ▾')).toBeTruthy();
-    expect(screen.getByText(/^Good (morning|afternoon|evening)$/)).toBeTruthy();
+  it('shows where you deliver, the search pill, the run as the hero, the departments, the services and the popular rail — to a guest (MA:180)', async () => {
+    const { server, view } = await start({ welcomed: true, store: saved() });
+    expect(await screen.findByRole('button', { name: 'Delivery address: 1204 Example Ave, Sampleville' })).toBeTruthy();
+    expect(screen.getByText('Deliver to', { exact: false })).toBeTruthy();
+    expect(screen.getByRole('image', { name: 'Northline' })).toBeTruthy(); // the logo, from brand.json
     expect(await screen.findByText("Tonight's pooled run")).toBeTruthy();
-    expect(screen.getByText(/^Leaves 6:00 p\.m\. · \$2\.99 · order by 5:19 p\.m\.$/)).toBeTruthy();
-    expect(screen.getByText('5 neighbours')).toBeTruthy();
-    for (const tile of ['Bakery', 'Butcher', 'Produce', 'Mechanic', 'Cleaning', 'Events & bar', 'Realtor']) expect(screen.getByRole('button', { name: tile })).toBeTruthy();
-    expect(await screen.findByText('Trusted near you')).toBeTruthy();
-    expect(screen.getByText('Tidy Nook Cleaners')).toBeTruthy();
+    expect(screen.getByText(/^Leaves at 6:00 p\.m\.$/)).toBeTruthy();
+    expect(screen.getByText(/^Delivery \$2\.99 · order by 5:19 p\.m\. · 5 neighbours$/)).toBeTruthy();
+    for (const circle of ['Bakery', 'Butcher', 'Produce', 'Mechanic', 'Cleaning', 'Events & bar', 'Realtor']) expect(screen.getByRole('button', { name: circle })).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Popular near you' })).toBeTruthy();
     expect(server.calls.find((c) => c.path === '/public/shop')).toMatchObject({ signed: false });
+    // thrash item 2: no greeting, no tier rows, no "Your week"
+    expect(screen.queryByText(/^Good (morning|afternoon|evening)/)).toBeNull();
+    expect(screen.queryByText('Trusted near you')).toBeNull();
     expect(screen.queryByText('Your week')).toBeNull();
+    fireEvent.press(screen.getByTestId('home-search'));
+    await waitFor(() => expect(view.getPathname()).toBe('/search'));
   });
 
-  it('greets the person by name, shows their week, and opens search, a department and a service', async () => {
+  it('signed in: the initials open the account, and the order under way is the dark banner', async () => {
     const { view } = await withOrder('picked_up', '/home');
-    expect(await screen.findByText(/^Good (morning|afternoon|evening), Ada$/)).toBeTruthy();
-    expect(await screen.findByText('Your week')).toBeTruthy();
-    fireEvent.press(screen.getByText('Order NL-1001'));
+    expect(await screen.findByText('AE')).toBeTruthy();
+    fireEvent.press(await screen.findByTestId('home-active'));
     await waitFor(() => expect(view.getPathname()).toBe('/orders/ord-1001/track'));
   });
 
@@ -94,9 +98,9 @@ describe('B1 Home', () => {
     fireEvent.press(await screen.findByRole('button', { name: 'Bakery' }));
     expect(await screen.findByText('Department · Bakery')).toBeTruthy();
     expect(await screen.findByText('Country sourdough')).toBeTruthy();
-    expect(screen.queryByText('Sourdough rye')).toBeNull(); // not on tonight's run
+    expect(screen.getByText('Sourdough rye')).toBeTruthy(); // every run until a filter is on
     fireEvent.press(screen.getByRole('checkbox', { name: "On tonight's run" }));
-    expect(await screen.findByText('Sourdough rye')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText('Sourdough rye')).toBeNull());
     expect(view.getPathname()).toBe('/search');
   });
 
@@ -130,29 +134,52 @@ describe('B1 Home', () => {
     getLocales.mockReturnValueOnce([{ languageTag: 'fr-CA' }]);
     await start({ welcomed: true, store: saved() });
     expect(await screen.findByText('La tournée groupée de ce soir')).toBeTruthy();
-    expect(screen.getByText(/^Départ 18 h 00 · 2,99 \$ · commandez avant 17 h 19$/)).toBeTruthy();
+    expect(screen.getByText(/^Départ à 18 h 00$/)).toBeTruthy();
+    expect(screen.getByText(/^Livraison 2,99 \$ · commandez avant 17 h 19/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Événements et bar' })).toBeTruthy();
+    expect(screen.getAllByRole('tab').map((t) => t.props.accessibilityLabel)).toEqual(['Accueil', 'Parcourir', 'Activité', 'Panier', 'Compte']);
   });
 });
 
 describe('B2 Search', () => {
-  it('searches the shops with "On tonight\'s run" on, filters, sorts, and opens a result', async () => {
+  it('searches products and services together, filters, sorts, and opens a result (MA:212)', async () => {
     const { server, view } = await start({ welcomed: true, store: saved(), url: '/search' });
     fireEvent.changeText(await screen.findByTestId('search-input'), 'sour');
-    expect(await screen.findByText('1 result · sorted by')).toBeTruthy();
+    expect(await screen.findByText('2 results · sorted by')).toBeTruthy();
     expect(screen.getByText('Country sourdough')).toBeTruthy();
+    expect(screen.getByText('Sourdough rye')).toBeTruthy();
     const call = server.calls.filter((c) => c.path === '/search').at(-1)!;
     expect(call.signed).toBe(false);
     fireEvent.press(screen.getByRole('checkbox', { name: "On tonight's run" }));
+    expect(await screen.findByText('1 result · sorted by')).toBeTruthy();
+    fireEvent.press(screen.getByRole('checkbox', { name: "On tonight's run" }));
     expect(await screen.findByText('Sourdough rye')).toBeTruthy();
-    expect(screen.getByText('2 results · sorted by')).toBeTruthy();
     fireEvent.press(screen.getByTestId('search-sort'));
-    expect(await screen.findByText('price, low to high ▾')).toBeTruthy();
+    expect(await screen.findByText('price, low to high')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: /^Sourdough rye/ }));
     await waitFor(() => expect(view.getPathname()).toBe('/product/o-rye'));
   });
 
-  it('sends the design’s filters to the api and offers to clear them when nothing matches', async () => {
+  it('finds a service beside the products, opens its provider, and narrows to one kind', async () => {
+    const urls: string[] = [];
+    const { view } = await start({
+      welcomed: true,
+      store: saved(),
+      url: '/search?q=brake',
+      wrap: (f) => (async (i: RequestInfo | URL, init?: RequestInit) => (urls.push(String(i)), f(i, init))) as typeof fetch,
+    });
+    expect((await screen.findAllByText('Brake inspection')).length).toBeGreaterThan(0);
+    expect(new URL(urls.filter((u) => u.includes('/search?')).at(-1)!).searchParams.has('kind')).toBe(false);
+    expect(screen.getAllByText('from $89.00').length).toBeGreaterThan(0);
+    fireEvent.press(screen.getByRole('radio', { name: 'Products' }));
+    expect(await screen.findByText('Nothing matches “brake” with these filters.')).toBeTruthy();
+    expect(new URL(urls.filter((u) => u.includes('/search?')).at(-1)!).searchParams.get('kind')).toBe('product');
+    fireEvent.press(screen.getByRole('button', { name: 'Clear filters' }));
+    fireEvent.press((await screen.findAllByRole('button', { name: /^Brake inspection, Services, Prairie Wrench/ }))[0]!);
+    await waitFor(() => expect(view.getPathname()).toBe('/providers/prairie-wrench'));
+  });
+
+  it('sends the filters to the api and offers to clear them when nothing matches', async () => {
     const urls: string[] = [];
     await start({
       welcomed: true,
@@ -161,15 +188,16 @@ describe('B2 Search', () => {
       wrap: (f) => (async (i: RequestInfo | URL, init?: RequestInit) => (urls.push(String(i)), f(i, init))) as typeof fetch,
     });
     expect(await screen.findByText('Ribeye, AAA')).toBeTruthy();
+    fireEvent.press(screen.getByRole('checkbox', { name: "On tonight's run" }));
     fireEvent.press(screen.getByRole('checkbox', { name: 'Under $10' }));
     expect(await screen.findByText('Nothing matches “ribeye” with these filters.')).toBeTruthy();
     const last = new URL(urls.filter((u) => u.includes('/search?')).at(-1)!);
-    expect(Object.fromEntries(last.searchParams)).toMatchObject({ q: 'ribeye', kind: 'product', market: 'XA', delivery: 'tonight', maxPrice: '999' });
+    expect(Object.fromEntries(last.searchParams)).toMatchObject({ q: 'ribeye', market: 'XA', delivery: 'tonight', maxPrice: '999' });
     fireEvent.press(screen.getByRole('button', { name: 'Clear filters' }));
     expect(await screen.findByText('Ribeye, AAA')).toBeTruthy();
-    fireEvent.press(screen.getByRole('checkbox', { name: 'Halal' }));
-    fireEvent.press(screen.getByRole('checkbox', { name: 'Master sellers' }));
-    expect(await screen.findByText('Nothing matches “ribeye” with these filters.')).toBeTruthy();
+    // thrash item 13: no tier or dietary chips
+    expect(screen.queryByRole('checkbox', { name: 'Master sellers' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Halal' })).toBeNull();
   });
 
   it('error: the api’s words and Try again', async () => {
@@ -183,8 +211,10 @@ describe('B3 Product and B4 Cart', () => {
   it('shows the product as the design does and adds it — a guest, by the guest id — then opens the cart with its badge', async () => {
     const { server, view, services } = await start({ welcomed: true, store: saved(), url: '/product/p-sourdough' });
     expect(await screen.findByText('Country sourdough')).toBeTruthy();
-    expect(screen.getByText('Maple Lane Bakery')).toBeTruthy(); // the header: the shop
-    expect(screen.getByText('Maple Lane Bakery · Master tier · ★ 4.8 (211)')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Maple Lane Bakery' })).toBeTruthy(); // the header: the shop
+    expect(screen.getByLabelText('4.8 out of 5 stars, 211 reviews')).toBeTruthy();
+    expect(screen.getByText('Sold by Maple Lane Bakery')).toBeTruthy();
+    expect(screen.queryByText(/Master tier/)).toBeNull(); // thrash item 13
     expect(screen.getByText('$7.50')).toBeTruthy();
     expect(screen.getByText('900 g loaf')).toBeTruthy();
     expect(screen.getByText("On tonight's run")).toBeTruthy();
@@ -366,6 +396,24 @@ describe('B5 Checkout', () => {
 describe('B6 Payment', () => {
   const PAY = '/pay?kind=pooled&window=w-today&sub=similar&address=location';
 
+  it('is the checkout’s three numbered steps: 1 done with Change, 2 payment, 3 each shop’s items beside the delivery', async () => {
+    const { view } = await signedInWithCart({ url: '/checkout' });
+    expect(await screen.findByRole('header', { name: 'Step 1 of 3: Delivery address and time, current step' })).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Step 2 of 3: Payment, next' })).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Step 3 of 3: Review items and delivery, next' })).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId('checkout-continue').props.accessibilityState).toMatchObject({ disabled: false }));
+    fireEvent.press(screen.getByTestId('checkout-continue'));
+    await waitFor(() => expect(view.getPathname()).toBe('/pay'));
+    expect(await screen.findByRole('header', { name: 'Step 1 of 3: Delivery address and time, done' })).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Step 2 of 3: Payment, current step' })).toBeTruthy();
+    const review = screen.getByTestId('checkout-review');
+    expect(within(review).getByText('Maple Lane Bakery')).toBeTruthy();
+    expect(within(review).getByText('Country sourdough')).toBeTruthy();
+    expect(within(review).getByText('Qty 2')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('checkout-change-1'));
+    await waitFor(() => expect(view.getPathname()).toBe('/checkout'));
+  });
+
   it('pays with the stand-in: the bank step, then the order is placed with one Idempotency-Key, and the cart empties', async () => {
     const keys: string[] = [];
     const { view } = await signedInWithCart({
@@ -378,7 +426,7 @@ describe('B6 Payment', () => {
     expect(await screen.findByRole('radio', { name: 'Visa ··4471, 09/28' })).toBeTruthy();
     expect(screen.getByText('Test payments · nothing is charged. Stripe isn’t configured here, so a stand-in approves every payment.')).toBeTruthy();
     expect(await screen.findByText(/^Charged \$23\.35 now\./)).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'Pay $23.35' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Place your order · $23.35' }));
     expect(await screen.findByText('Confirm this payment')).toBeTruthy();
     expect(screen.getByText('Northline Marketplace · $23.35. Approve in your banking app or enter the code we texted.')).toBeTruthy();
     fireEvent.press(screen.getByTestId('bank-approve'));
@@ -411,9 +459,9 @@ describe('B6 Payment', () => {
         return f(i, init);
       }) as typeof fetch,
     });
-    fireEvent.press(await screen.findByRole('button', { name: 'Pay $23.35' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Place your order · $23.35' }));
     expect(await screen.findByText("We couldn't reach Northline. Check your connection and try again.")).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'Pay $23.35' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Place your order · $23.35' }));
     expect(await screen.findByText('Confirm this payment')).toBeTruthy();
     expect(keys).toHaveLength(2);
     expect(keys[0]).toBe(keys[1]);
@@ -433,7 +481,7 @@ describe('B6 Payment', () => {
       },
     });
     server.shop.stepUp = 'required';
-    fireEvent.press(await screen.findByRole('button', { name: 'Pay $23.35' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Place your order · $23.35' }));
     expect(await screen.findByText('Confirm it’s you')).toBeTruthy();
     fireEvent.press(screen.getByTestId('step-up-confirm'));
     expect(await screen.findByText('That code didn’t work. Check it and try again.')).toBeTruthy();
@@ -447,7 +495,7 @@ describe('B6 Payment', () => {
     let answer: [number, unknown] = [422, { code: 'invalid_code', detail: 'mismatch' }];
     const { server } = await signedInWithCart({ url: PAY, wrap: intercept((u) => u.endsWith('/api/auth/step-up/totp'), () => answer) });
     server.shop.stepUp = 'required';
-    fireEvent.press(await screen.findByRole('button', { name: 'Pay $23.35' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Place your order · $23.35' }));
     fireEvent.changeText(await screen.findByTestId('step-up-code'), '000000');
     fireEvent.press(screen.getByTestId('step-up-confirm'));
     expect(await screen.findByText('That code didn’t work. Check it and try again.')).toBeTruthy();
@@ -460,7 +508,7 @@ describe('B6 Payment', () => {
   it('a phone that can’t step up is told so; an account without a second factor is sent to add one', async () => {
     const { server } = await signedInWithCart({ url: PAY, wrap: intercept((u) => u.endsWith('/api/auth/step-up/totp'), () => [401, { code: 'unauthenticated' }]) });
     server.shop.stepUp = 'required';
-    fireEvent.press(await screen.findByRole('button', { name: 'Pay $23.35' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Place your order · $23.35' }));
     fireEvent.changeText(await screen.findByTestId('step-up-code'), '123456');
     fireEvent.press(screen.getByTestId('step-up-confirm'));
     expect(await screen.findByText('This phone can’t confirm your second factor right now. Sign in again here, or pay on the Northline website.')).toBeTruthy();
@@ -468,7 +516,7 @@ describe('B6 Payment', () => {
     setServices(null);
     const again = await signedInWithCart({ url: PAY });
     again.server.shop.stepUp = 'enrol';
-    fireEvent.press(await screen.findByRole('button', { name: 'Pay $23.35' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Place your order · $23.35' }));
     expect(await screen.findByText('Add a second factor to pay')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Open the Northline website' }));
     expect(Linking.openURL).toHaveBeenCalledWith('http://localhost:3000/account?tab=security');
@@ -484,13 +532,13 @@ describe('B6 Payment', () => {
     });
     fireEvent.press(await screen.findByRole('radio', { name: '+ New card' }));
     expect(await screen.findByText('You’ll enter the card on Stripe’s secure form. Card details go to Stripe only — never Northline.')).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'Pay $23.35' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Place your order · $23.35' }));
     expect(await screen.findByText('Payment cancelled. Nothing was charged.')).toBeTruthy();
     expect(pay.mock.calls[0]![1]).toEqual({ kind: 'new' });
     expect(pay.mock.calls[0]![0].intents.map((i) => i.status)).toEqual(['requires_payment_method', 'requires_payment_method', 'requires_payment_method']);
     pay.mockResolvedValueOnce({ status: 'paid' });
     fireEvent.press(screen.getByRole('radio', { name: 'Visa ··4471, 09/28' }));
-    fireEvent.press(screen.getByRole('button', { name: 'Pay $23.35' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Place your order · $23.35' }));
     await waitFor(() => expect(view.getPathname()).toBe('/orders/ord-48213/confirmed'));
     expect(pay.mock.calls[1]![1]).toEqual({ kind: 'saved', paymentMethodId: 'pm_fixture_visa' });
     // the same checkout both times (the replayed start): one order
@@ -500,14 +548,14 @@ describe('B6 Payment', () => {
   it('says what went wrong: sold out, and a declined card', async () => {
     const { server } = await signedInWithCart({ url: PAY });
     server.shop.carts.get('user')![1]!.qty = 3; // kale: only 2 left
-    fireEvent.press(await screen.findByRole('button', { name: /^Pay \$/ }));
+    fireEvent.press(await screen.findByRole('button', { name: /^Place your order · \$/ }));
     expect(await screen.findByText('Something in your cart just sold out. Check your cart and try again.')).toBeTruthy();
     screen.unmount();
     setServices(null);
     setCardPayments({ pay: async () => ({ status: 'failed', message: 'Your card has insufficient funds.' }) });
     const again = await signedInWithCart({ url: PAY });
     again.server.shop.provider = 'stripe';
-    fireEvent.press(await screen.findByRole('button', { name: 'Pay $23.35' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Place your order · $23.35' }));
     expect(await screen.findByText('Your card was declined: Your card has insufficient funds.')).toBeTruthy();
   });
 
@@ -577,7 +625,7 @@ describe('B7–B9 the order: confirmed, tracking, delivered', () => {
     expect(await screen.findByText('Order NL-1001')).toBeTruthy();
     expect(screen.getByText(/^Arriving 6:52 p\.m\.$/)).toBeTruthy();
     expect(screen.getByText('Robin · Northline courier')).toBeTruthy();
-    expect(screen.getByText('Drop-off PIN 4827')).toBeTruthy();
+    expect(screen.getByLabelText('Drop-off PIN 4827')).toBeTruthy(); // the courier card's big code (MA:263)
     expect(screen.getByLabelText("Delivery map: You're next")).toBeTruthy();
     expect(screen.getByText('On the way')).toBeTruthy();
     expect(screen.getByLabelText('Courier picks up, now')).toBeTruthy();
@@ -686,7 +734,7 @@ describe('mobile gaps part 2: promo codes, points and the courier’s tip', () =
     fireEvent.press(screen.getByTestId('checkout-continue'));
     await waitFor(() => expect(view.getPathname()).toBe('/pay'));
     expect(view.getSearchParams()).toMatchObject({ promo: 'SAVE10', points: '1', tip: 'amount:400' });
-    fireEvent.press(await screen.findByRole('button', { name: 'Pay $14.67' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Place your order · $14.67' }));
     fireEvent.press(await screen.findByTestId('bank-approve'));
     await waitFor(() => expect(view.getPathname()).toBe('/orders/ord-48213/confirmed'));
     const started = server.calls.find((c) => c.method === 'POST' && c.path === '/me/checkouts');

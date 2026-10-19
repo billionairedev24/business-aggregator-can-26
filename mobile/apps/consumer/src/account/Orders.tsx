@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { colors, space } from '@northline/mobile-kit';
+import { Icon, colors, radius, semantic, space, type IconName } from '@northline/mobile-kit';
 
 import type { ActivityItem } from '../api/account';
 import { useAuth } from '../auth/AuthProvider';
@@ -21,7 +21,8 @@ const VIEWS: readonly OrdersView[] = ['active', 'past', 'refunds'];
 const inView = (i: ActivityItem, v: OrdersView) => (v === 'refunds' ? !!i.caseRef : v === 'active' ? i.active : !i.active);
 
 /**
- * D1 Orders & bookings (design 01 `orders`, the Orders tab; signed in): every order, food order, booking and open
+ * Activity tab (redesign spec § 2.4: Home · Browse · Activity · Cart · Account — orders and bookings live here and in
+ * Account, never in a top nav; MA:268 ORDERS cards). D1 Orders & bookings (design 01 `orders`; signed in): every order, food order, booking and open
  * quote request in one list (`GET /me/activity`, active first), filtered "Active · n" / "Past" / "Refunds" (rows with
  * a refund case or dispute). A row opens the other journeys' screens by route (`targetOf`); pull to refresh.
  */
@@ -68,7 +69,7 @@ export function Orders() {
         }
       >
         {() => (
-          <View accessibilityRole="list">
+          <View accessibilityRole="list" style={styles.list}>
             {shown.map((i) => (
               <Row key={`${i.kind}-${i.id}`} item={i} f={f} />
             ))}
@@ -79,14 +80,20 @@ export function Orders() {
   );
 }
 
+/** An activity row's title: an order by how it comes ("Delivery · 2 shops"), a booking or quote by its own title. */
+export function activityTitle(item: ActivityItem, t: ReturnType<typeof useShopFormat>['t']): string {
+  return item.kind === 'order'
+    ? t(item.delivery === 'direct' ? 'account.orders.direct' : 'account.orders.pooled', { n: item.shops })
+    : item.kind === 'food'
+      ? t('account.orders.food')
+      : item.title;
+}
+
+const KIND_ICON: Record<ActivityItem['kind'], IconName> = { order: 'package', food: 'package', booking: 'calendar-check', quote: 'clipboard-text' };
+
 function Row({ item, f }: { item: ActivityItem; f: ReturnType<typeof useShopFormat> }) {
   const { t } = f;
-  const title =
-    item.kind === 'order'
-      ? t(item.delivery === 'direct' ? 'account.orders.direct' : 'account.orders.pooled', { n: item.shops })
-      : item.kind === 'food'
-        ? t('account.orders.food')
-        : item.title;
+  const title = activityTitle(item, t);
   const when = item.active ? `${f.date(item.when)} ${f.range(item.when, item.whenEnd)}` : f.date(item.when);
   const sub = [item.ref, when, item.with.join(', ')].filter(Boolean).join(' · ');
   const state = item.caseRef?.open ? t('account.status.case', { number: item.caseRef.number }) : worded(t, 'account.status', item.status);
@@ -108,22 +115,21 @@ function Row({ item, f }: { item: ActivityItem; f: ReturnType<typeof useShopForm
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
       testID={`activity-${item.id}`}
     >
+      <Icon name={KIND_ICON[item.kind]} size={24} color={item.active ? colors.link : colors.textMuted} />
       <View style={styles.text}>
         <Text style={[type.body, type.strong]}>{title}</Text>
         <Text style={type.small}>{sub}</Text>
+        <Tag label={state} tone={tone} small />
       </View>
-      <View style={styles.right}>
-        <Tag label={state} tone={tone} />
-        <Text style={type.small}>{amount}</Text>
-      </View>
+      <Text style={[type.body, type.strong]}>{amount}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: space[3], paddingVertical: space[3], minHeight: 56 },
-  pressed: { backgroundColor: colors.accent100 },
-  text: { flex: 1, minWidth: 0, gap: 2 },
-  right: { alignItems: 'flex-end', gap: 4, flexShrink: 0, maxWidth: '45%' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  list: { gap: space[3] },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3], padding: 14, minHeight: 56, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
+  pressed: { backgroundColor: semantic['surface-hover'] },
+  text: { flex: 1, minWidth: 0, gap: 4 },
 });

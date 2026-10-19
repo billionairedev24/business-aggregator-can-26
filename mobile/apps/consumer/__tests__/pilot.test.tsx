@@ -33,6 +33,21 @@ function pilot(participant: boolean, sent: Sent[]) {
 }
 
 describe('pilot feedback in the app (S-121)', () => {
+  // redesign § 3.5: the control is a testing tool — only builds with EXPO_PUBLIC_TESTING_TOOLS=1 show it
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_TESTING_TOOLS = '1';
+  });
+  afterEach(() => {
+    delete process.env.EXPO_PUBLIC_TESTING_TOOLS;
+  });
+
+  it('hides the Feedback button from pilot customers too unless the build has the testing tools', async () => {
+    delete process.env.EXPO_PUBLIC_TESTING_TOOLS;
+    await start({ signedIn: true, url: '/wallet', wrap: pilot(true, []) });
+    expect(await screen.findByText('Northline points')).toBeTruthy();
+    expect(screen.queryByTestId('pilot-feedback')).toBeNull();
+  });
+
   it('shows the Feedback button to pilot customers and sends what they wrote with the screen', async () => {
     const sent: Sent[] = [];
     await start({ signedIn: true, url: '/wallet', wrap: pilot(true, sent) });

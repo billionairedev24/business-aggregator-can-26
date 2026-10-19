@@ -67,7 +67,7 @@ function appLinkFiles(env: Record<string, string>): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, import.meta.dirname, 'NL_');
   // Server-side code reads these from process.env (as in the container); .env feeds them to the dev server too.
-  for (const key of ['NL_BFF_URL', 'NL_AUTH_ORIGIN']) if (env[key] && !process.env[key]) process.env[key] = env[key];
+  for (const key of ['NL_BFF_URL', 'NL_AUTH_ORIGIN', 'NL_DEV_HOST']) if (env[key] && !process.env[key]) process.env[key] = env[key];
   const bff = env.NL_BFF ?? 'http://localhost:8081';
   // S-117: keep the browser's Host (Vite's string shorthand rewrites it to the target), so the BFF builds its OAuth
   // redirect URI and its post-login redirect on this origin instead of sending the browser to the BFF's own port.
@@ -81,6 +81,8 @@ export default defineConfig(({ mode }) => {
     plugins: [tanstackStart(), react(), devAuth(env), legalPages(), seoFiles(env), appLinkFiles(env)],
     // Server-side rendering fetches public data through the consumer-bff (NL_BFF_URL, default http://localhost:8081;
     // the chart sets the in-cluster Service). In dev-auth mode there is no bff: NL_BFF_URL=http://localhost:8080.
-    server: { port: 3000, strictPort: true, proxy },
+    // NL_DEV_HOST=0.0.0.0 (make mobile-dev, docs/runbooks/mobile-local.md): a phone on the same Wi-Fi reaches the
+    // sign-in page and the apps' /app/oauth2redirect here; unset = this machine only, as before.
+    server: { port: 3000, strictPort: true, host: process.env.NL_DEV_HOST || env.NL_DEV_HOST || undefined, proxy },
   };
 });

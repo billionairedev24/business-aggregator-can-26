@@ -26,10 +26,11 @@ export default function PickupScreen() {
   const qc = useQueryClient();
   // the shop may have packed since the run was read
   useEffect(() => void qc.invalidateQueries({ queryKey: RUN_KEY }), [qc]);
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/run'));
 
   if (!stop || stop.kind !== 'pickup') {
     return (
-      <Screen>
+      <Screen title={t('pickup.title')} back onBack={back}>
         <Banner tone="warn">{t('stop.notFound')}</Banner>
       </Screen>
     );
@@ -41,7 +42,13 @@ export default function PickupScreen() {
   };
 
   return (
-    <Screen testID="pickup-screen">
+    <Screen
+      testID="pickup-screen"
+      title={t('pickup.title')}
+      back
+      onBack={back}
+      footer={<Button label={t('pickup.confirm')} large icon="package" disabled={!sealed} onPress={() => void confirm()} testID="confirm-pickup" />}
+    >
       <Heading>{stopName(stop)}</Heading>
       {!stop.packed ? <Banner tone="warn">{t('pickup.waitPacked')}</Banner> : null}
       <Card>
@@ -51,12 +58,11 @@ export default function PickupScreen() {
             value={sealed}
             onValueChange={setSealed}
             accessibilityLabel={t('pickup.sealed', { ref: stop.orderRef ?? '' })}
-            trackColor={{ true: colors.accent, false: colors.neutral300 }}
+            trackColor={{ true: colors.actionPrimary, false: colors.borderControl }}
             testID="sealed"
           />
         </View>
       </Card>
-      <Button label={t('pickup.confirm')} disabled={!sealed} onPress={() => void confirm()} testID="confirm-pickup" />
     </Screen>
   );
 }

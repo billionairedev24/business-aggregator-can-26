@@ -1,7 +1,7 @@
 import { createIsomorphicFn } from '@tanstack/react-start';
 import { getCookie, getRequestHeader, getRequestUrl } from '@tanstack/react-start/server';
 import type { Locale } from '@northline/ui';
-import { FALLBACK_CONFIG, type PublicConfig } from './config';
+import { FALLBACK_CONFIG, onRequestHost, type PublicConfig } from './config';
 import { LOCALE_COOKIE, pickLocale, readCookie, urlLocale } from './locale';
 import type { PageHost } from './pages';
 
@@ -48,10 +48,16 @@ export const cspNonce = createIsomorphicFn()
   })
   .client((): string | undefined => document.querySelector<HTMLScriptElement>('script[nonce]')?.nonce || undefined);
 
+/** The Host of this request when the dev server listens for phones (NL_DEV_HOST), else none. */
+function devRequestHost(): string | undefined {
+  if (!process.env.NL_DEV_HOST) return undefined;
+  try { return getRequestHeader('host') || undefined; } catch { return undefined; }
+}
+
 export const publicConfig = createIsomorphicFn()
   .server((): PublicConfig => ({
-    authOrigin: process.env.NL_AUTH_ORIGIN ?? FALLBACK_CONFIG.authOrigin,
-    siteOrigin: (process.env.NL_SITE_ORIGIN ?? FALLBACK_CONFIG.siteOrigin).replace(/\/$/, ''),
+    authOrigin: onRequestHost(process.env.NL_AUTH_ORIGIN ?? FALLBACK_CONFIG.authOrigin, devRequestHost()),
+    siteOrigin: onRequestHost((process.env.NL_SITE_ORIGIN ?? FALLBACK_CONFIG.siteOrigin).replace(/\/$/, ''), devRequestHost()),
     legalEntity: process.env.NL_LEGAL_ENTITY?.trim() || FALLBACK_CONFIG.legalEntity,
     studioOrigin: (process.env.NL_STUDIO_ORIGIN ?? FALLBACK_CONFIG.studioOrigin).replace(/\/$/, ''),
     supportEmail: process.env.NL_SUPPORT_EMAIL?.trim() || null,

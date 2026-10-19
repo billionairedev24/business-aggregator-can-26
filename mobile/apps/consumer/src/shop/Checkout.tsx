@@ -3,11 +3,11 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
+import { ApiError, MIN_TARGET, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
 
 import { PromoPoints, TipPicker } from '../aftercare/PromoPoints';
 import type { TipChoice } from '../api/aftercare';
-import { ageCleared, type AddressInput, type CheckoutBody, type CheckoutSetup, type DeliveryOption, type Substitution } from '../api/shop';
+import { ageCleared, type AddressInput, type CheckoutBody, type CheckoutSetup, type DeliveryOption, type SavedAddress, type Substitution } from '../api/shop';
 import { useAuth } from '../auth/AuthProvider';
 import { useDeliveryLocation, type DeliveryLocation } from '../location/DeliveryLocation';
 import { Body, Button, Notice } from '../ui/primitives';
@@ -16,6 +16,7 @@ import { EmptyState, ErrorState, LoadingList, QueryView, SignInPrompt, Skeleton,
 import { AgeCheck } from './AgeCheck';
 import { serverMessage, shop, useMarket, useShopFormat } from './common';
 import { Chip, Kicker, SumRow, shopStyles } from './parts';
+import { CheckoutStep } from './steps';
 
 export const SUBSTITUTIONS: Substitution[] = ['similar', 'refund', 'ask'];
 
@@ -42,7 +43,11 @@ export function chooseAddress(location: DeliveryLocation, setup: Pick<CheckoutSe
     };
   }
   const saved = setup?.addresses.find((a) => a.isDefault) ?? setup?.addresses[0];
-  if (!saved) return null;
+  return saved ? savedAddress(saved) : null;
+}
+
+/** One of the account's saved addresses as the checkout shows it. */
+export function savedAddress(saved: SavedAddress): ChosenAddress {
   return {
     source: `saved:${saved.id}`,
     input: { addressId: saved.id },
@@ -126,7 +131,8 @@ export function quoteProblem(error: unknown, t: ReturnType<typeof useShopFormat>
 export const promoProblem = (error: unknown) => (error instanceof ApiError ? (error.fieldMessage('promoCode') ?? null) : null);
 
 /**
- * B5 Checkout (design 01 `checkout`; signed in): deliver to (Change → the Location screen and back), the delivery
+ * Checkout, step 1 of 3 (redesign spec § 2.4 → MA:244 CHECKOUT, in the web's three numbered sections: 1 address and
+ * time · 2 payment · 3 review; the same APIs as the web's /checkout). B5 (design 01 `checkout`; signed in): deliver to (Change → the Location screen and back), the delivery
  * window (the market's pooled runs and the direct courier with their fees), substitutions, a promo code and points
  * and the courier's tip (mobile gaps part 2), then the quote: items, delivery, the code's discount, each tax by name and
  * rate (from the province — never a fixed "GST 5%"; tax is on the price after the code), the tip, the points, total. A cart with age-restricted items shows the age step (2026-10-04) and Continue
@@ -184,7 +190,7 @@ export function Checkout() {
           <>
             {data.stepUp !== 'none' ? <Body tone="small">{t('shop.checkout.stepUp')}</Body> : null}
             {!ageCleared(age) ? <Body tone="small">{t('shop.age.blocked')}</Body> : null}
-            <Button label={t('shop.checkout.continue')} large disabled={!body || !quote.data || quote.isPlaceholderData || !ageCleared(age)} onPress={next} testID="checkout-continue" />
+            <Button label={t('rd.checkout.toPayment')} large disabled={!body || !quote.data || quote.isPlaceholderData || !ageCleared(age)} onPress={next} testID="checkout-continue" />
           </>
         ) : undefined
       }
@@ -198,61 +204,75 @@ export function Checkout() {
         {(s) =>
           s ? (
             <View style={styles.body}>
-              <Kicker>{t('shop.checkout.deliverTo')}</Kicker>
-              {address ? (
-                <View style={styles.address}>
-                  <View style={shopStyles.rowText}>
-                    <Text style={[styles.body15, shopStyles.strong]}>{address.line1}</Text>
-                    <Text style={styles.small}>{address.line2}</Text>
-                  </View>
-                  <Button label={t('shop.checkout.change')} tone="ghost" hint={t('shop.checkout.changeHint')} onPress={() => router.push('/location?next=/checkout')} />
-                </View>
-              ) : (
-                <View style={styles.gap}>
-                  <Body tone="muted">{t('shop.checkout.noAddress')}</Body>
-                  <Button label={t('shop.checkout.addAddress')} tone="secondary" onPress={() => router.push('/location?next=/checkout')} testID="checkout-add-address" />
-                </View>
-              )}
+              <Body tone="small">{t('rd.checkout.secure', { n: s.cart.itemCount })}</Body>
+              <CheckoutStep n={1} title={t('rd.checkout.step1')} state="open">
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={address ? `${t('shop.checkout.deliverTo')}: ${address.line1}, ${address.line2}. ${t('shop.checkout.change')}` : t('shop.checkout.addAddress')}
+                  accessibilityHint={t('shop.checkout.changeHint')}
+                  onPress={() => router.push('/location?next=/checkout')}
+                  style={styles.address}
+                  testID={address ? 'checkout-address' : 'checkout-add-address'}
+                >
+                  <Kicker>{t('shop.checkout.deliverTo')}</Kicker>
+                  {address ? (
+                    <View style={styles.addressRow}>
+                      <View style={shopStyles.rowText}>
+                        <Text style={[styles.body15, shopStyles.strong]}>{address.line1}</Text>
+                        <Text style={styles.small}>{address.line2}</Text>
+                      </View>
+                      <Text style={styles.change}>{t('shop.checkout.change')}</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.addressRow}>
+                      <Text style={[styles.body15, styles.flex]}>{t('shop.checkout.noAddress')}</Text>
+                      <Text style={styles.change}>{t('shop.checkout.addAddress')}</Text>
+                    </View>
+                  )}
+                </Pressable>
 
-              <Kicker>{t('shop.checkout.window')}</Kicker>
-              {!s.served ? (
-                <Body tone="muted">{t('shop.checkout.notServed', { place: s.market })}</Body>
-              ) : s.options.length === 0 ? (
-                <Body tone="muted">{t('shop.checkout.noWindow')}</Body>
-              ) : (
-                <View style={styles.gap} accessibilityRole="radiogroup">
-                  {s.options.map((o) => (
-                    <WindowOption key={o.id} option={o} selected={o.id === option?.id} onPress={() => setOptionId(o.id)} />
+                <Kicker>{t('shop.checkout.window')}</Kicker>
+                {!s.served ? (
+                  <Body tone="muted">{t('shop.checkout.notServed', { place: s.market })}</Body>
+                ) : s.options.length === 0 ? (
+                  <Body tone="muted">{t('shop.checkout.noWindow')}</Body>
+                ) : (
+                  <View style={styles.gap} accessibilityRole="radiogroup">
+                    {s.options.map((o) => (
+                      <WindowOption key={o.id} option={o} selected={o.id === option?.id} onPress={() => setOptionId(o.id)} />
+                    ))}
+                  </View>
+                )}
+
+                <Kicker>{t('shop.checkout.substitution')}</Kicker>
+                <View style={shopStyles.chips} accessibilityRole="radiogroup">
+                  {SUBSTITUTIONS.map((x) => (
+                    <Chip key={x} role="radio" label={t(`shop.checkout.${x}`)} on={substitution === x} onPress={() => setSubstitution(x)} testID={`sub-${x}`} />
                   ))}
                 </View>
-              )}
 
-              <Kicker>{t('shop.checkout.substitution')}</Kicker>
-              <View style={shopStyles.chips} accessibilityRole="radiogroup">
-                {SUBSTITUTIONS.map((x) => (
-                  <Chip key={x} role="radio" label={t(`shop.checkout.${x}`)} on={substitution === x} onPress={() => setSubstitution(x)} testID={`sub-${x}`} />
-                ))}
-              </View>
+                <Kicker>{t('promo.title')}</Kicker>
+                <PromoPoints
+                  code={promoCode}
+                  onCode={setPromoCode}
+                  error={promoProblem(quote.error)}
+                  discountCents={quote.data?.discountCents}
+                  usePoints={usePoints}
+                  onUsePoints={setUsePoints}
+                  pointsAvailable={quote.data?.pointsAvailable}
+                  pointsCents={quote.data?.pointsCents}
+                />
 
-              <Kicker>{t('promo.title')}</Kicker>
-              <PromoPoints
-                code={promoCode}
-                onCode={setPromoCode}
-                error={promoProblem(quote.error)}
-                discountCents={quote.data?.discountCents}
-                usePoints={usePoints}
-                onUsePoints={setUsePoints}
-                pointsAvailable={quote.data?.pointsAvailable}
-                pointsCents={quote.data?.pointsCents}
-              />
+                <Kicker>{t('tip.title')}</Kicker>
+                <TipPicker value={tip} onChange={setTip} />
+                <Body tone="small">{t('tip.note')}</Body>
 
-              <Kicker>{t('tip.title')}</Kicker>
-              <TipPicker value={tip} onChange={setTip} />
-              <Body tone="small">{t('tip.note')}</Body>
-
-              {age?.required ? <AgeCheck age={age} /> : null}
-              {problem ? <Notice message={problem} /> : null}
-              {quote.isError && !problem && !promoProblem(quote.error) ? <ErrorState error={quote.error} onRetry={() => void quote.refetch()} /> : null}
+                {age?.required ? <AgeCheck age={age} /> : null}
+                {problem ? <Notice message={problem} /> : null}
+                {quote.isError && !problem && !promoProblem(quote.error) ? <ErrorState error={quote.error} onRetry={() => void quote.refetch()} /> : null}
+              </CheckoutStep>
+              <CheckoutStep n={2} title={t('rd.checkout.step2')} state="later" />
+              <CheckoutStep n={3} title={t('rd.checkout.step3')} state="later" />
               <Sums subtotalCents={s.cart.subtotalCents} deliveryCents={option?.feeCents} quote={quote} />
             </View>
           ) : null
@@ -293,12 +313,15 @@ function WindowOption({ option, selected, onPress }: { option: DeliveryOption; s
 }
 
 const styles = StyleSheet.create({
-  body: { gap: space[3] },
+  flex: { flex: 1 },
+  body: { gap: space[4] },
   gap: { gap: space[2] },
-  address: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  body15: { fontFamily: fonts.body, fontSize: 15, color: colors.text },
-  small: { fontFamily: fonts.body, fontSize: 13, color: colors.neutral700 },
+  address: { gap: 6, padding: 14, minHeight: MIN_TARGET, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderControl, backgroundColor: colors.surface },
+  addressRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  change: { fontFamily: fonts.semibold, fontSize: 14, color: colors.link, textDecorationLine: 'underline' },
+  body15: { fontFamily: fonts.regular, fontSize: 15, color: colors.text },
+  small: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
   sums: { gap: 6, paddingTop: space[3] },
-  option: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: MIN_TARGET, paddingHorizontal: 14, paddingVertical: space[3], borderRadius: radius.md, borderWidth: 1, borderColor: colors.divider },
-  optionOn: { borderColor: colors.accent, backgroundColor: colors.accent100 },
+  option: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, paddingHorizontal: 14, paddingVertical: space[3], borderRadius: radius.md, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
+  optionOn: { borderColor: colors.actionPrimary, backgroundColor: semantic['surface-brand'] },
 });

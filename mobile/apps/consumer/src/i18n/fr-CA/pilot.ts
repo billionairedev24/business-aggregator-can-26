@@ -2,7 +2,7 @@ import type { pilot as en } from '../en/pilot';
 
 export const pilot: { [k in keyof typeof en]: string } = {
   'pilot.open': 'Commentaire',
-  'pilot.openHint': 'Envoyer un commentaire sur cet écran à l’équipe Northline',
+  'pilot.openHint': 'Envoyer un commentaire sur cet écran à l’équipe {brand}',
   'pilot.title': 'Envoyer un commentaire',
   'pilot.lede': 'Vous faites partie du pilote. Dites-nous ce qui a marché et ce qui n’a pas marché — l’équipe lit chaque note.',
   'pilot.category': 'De quoi s’agit-il?',

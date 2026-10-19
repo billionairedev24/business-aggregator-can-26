@@ -10,6 +10,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -45,16 +47,24 @@ class WebSecurityConfig {
 
     @Bean
     @Order(2)
-    SecurityFilterChain web(HttpSecurity http, AuthProperties props, FederationConfig.FederationLogin federation) {
+    SecurityFilterChain web(
+            HttpSecurity http,
+            AuthProperties props,
+            FederationConfig.FederationLogin federation,
+            LocalNetworkDevices devices) {
         http.authorizeHttpRequests(a -> a.requestMatchers(
                                 "/api/auth/**", "/actuator/health/**", "/error", "/oauth2/authorization/**")
                         .permitAll()
                         .anyRequest()
                         .authenticated())
-                .cors(c -> c.configurationSource(cors(props)))
+                .cors(c -> c.configurationSource(cors(props, devices)))
                 .headers(WebSecurityConfig::lockedDown)
                 .csrf(AbstractHttpConfigurer::disable)
-                .addFilterBefore(new OriginCheck(Set.copyOf(props.allowedOrigins())), CsrfFilter.class)
+                .addFilterBefore(
+                        new OriginCheck(
+                                Set.copyOf(props.allowedOrigins()),
+                                o -> devices.allowsOrigin(o, props.allowedOrigins())),
+                        CsrfFilter.class)
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -94,8 +104,19 @@ class WebSecurityConfig {
         return registration;
     }
 
-    private static CorsConfigurationSource cors(AuthProperties props) {
-        var config = new CorsConfiguration();
+    private static CorsConfigurationSource cors(AuthProperties props, LocalNetworkDevices devices) {
+        // local profile: a phone's browser on the LAN shows the consumer site's sign-in page (LocalNetworkDevices)
+        var config = !devices.enabled()
+                ? new CorsConfiguration()
+                : new CorsConfiguration() {
+                    @Override
+                    public @Nullable String checkOrigin(@Nullable String origin) {
+                        var allowed = super.checkOrigin(origin);
+                        return allowed != null || !devices.allowsOrigin(origin, props.allowedOrigins())
+                                ? allowed
+                                : origin;
+                    }
+                };
         config.setAllowedOrigins(props.allowedOrigins());
         config.setAllowedMethods(List.of("GET", "POST", "DELETE"));
         config.setAllowedHeaders(List.of("*"));
@@ -114,9 +135,15 @@ class WebSecurityConfig {
      */
     static final class OriginCheck extends OncePerRequestFilter {
         private final Set<String> allowed;
+        private final Predicate<String> alsoAllowed;
 
         OriginCheck(Set<String> allowed) {
+            this(allowed, o -> false);
+        }
+
+        OriginCheck(Set<String> allowed, Predicate<String> alsoAllowed) {
             this.allowed = allowed;
+            this.alsoAllowed = alsoAllowed;
         }
 
         @Override
@@ -132,7 +159,7 @@ class WebSecurityConfig {
             var origin = request.getHeader("Origin");
             var refused = origin == null
                     ? "cross-site".equals(request.getHeader("Sec-Fetch-Site"))
-                    : !allowed.contains(origin) && !origin.equals(ownOrigin(request));
+                    : !allowed.contains(origin) && !origin.equals(ownOrigin(request)) && !alsoAllowed.test(origin);
             if (refused) {
                 response.setStatus(HttpStatus.FORBIDDEN.value());
                 response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);

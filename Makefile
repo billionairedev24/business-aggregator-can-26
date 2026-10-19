@@ -12,6 +12,8 @@
 #   make up SERVICES=all PROFILES=all               every app and every stand-in (Kafka, Elasticsearch, …)
 #   make up-all                                     everything incl. observability, with your own Postgres / Valkey /
 #                                                   Grafana from BYO_SERVICES in .env (e.g. db,cache,grafana)
+#   make mobile-dev APP=consumer                    the native app on your phone / simulator against that stack
+#                                                   (TARGET=device|ios|android; docs/runbooks/mobile-local.md)
 # `make help` lists every target; docs/LOCAL_DEVELOPMENT.md explains each workflow, docs/runbooks/local.md the stand-ins.
 #
 # Portable: GNU make 3.81 (macOS's /usr/bin/make) or later, bash 3.2+, BSD or GNU userland — no .ONESHELL,
@@ -228,6 +230,7 @@ include $(ROOT)/make/compliance.mk
 include $(ROOT)/make/courier.mk
 include $(ROOT)/make/mobile-consumer.mk
 include $(ROOT)/make/mobile-release.mk
+include $(ROOT)/make/mobile-dev.mk
 include $(ROOT)/make/db.mk
 include $(ROOT)/make/kafka.mk
 include $(ROOT)/make/search.mk

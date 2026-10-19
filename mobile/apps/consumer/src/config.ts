@@ -26,3 +26,12 @@ export const config = {
 
 /** The verbatim legal pages (design 09/10, S-63; English only, as on the web), opened outside the app. */
 export const legalUrl = (doc: 'terms' | 'privacy') => `${config.siteOrigin}/legal/${doc}.html`;
+
+/**
+ * Redesign nav flags (as the web's VITE_NL_FULL_NAV / VITE_NL_TESTING_TOOLS; docs/design/redesign-spec.md § 3): unset,
+ * the app hides what the demo hides — the Wallet & points and the dietary preferences rows of Account (§ 3.6) and the
+ * pilot "Send feedback" button (§ 3.5). Their screens and every endpoint stay (a typed link still opens them). Read at
+ * call time so a build sets them with EXPO_PUBLIC_FULL_NAV=1 / EXPO_PUBLIC_TESTING_TOOLS=1 (and tests per test).
+ */
+export const fullNav = () => process.env.EXPO_PUBLIC_FULL_NAV === '1';
+export const testingTools = () => process.env.EXPO_PUBLIC_TESTING_TOOLS === '1';

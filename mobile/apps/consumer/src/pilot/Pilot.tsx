@@ -9,6 +9,7 @@ import { MIN_TARGET, SCREENSHOT_MAX_BYTES, SCREENSHOT_TYPES, checkPhoto, colors,
 import { pilotApi, screenOf, type FeedbackCategory, type FeedbackSeverity } from '../api/pilot';
 import { pickImage } from '../photos/pick';
 import { useAuth } from '../auth/AuthProvider';
+import { testingTools } from '../config';
 import { useI18n } from '../i18n';
 import { services } from '../services';
 import { Body, Button, Field, Notice, Option } from '../ui/primitives';
@@ -37,7 +38,8 @@ export function PilotButton() {
   const { t } = useI18n();
   const pathname = usePathname();
   const pilot = usePilot();
-  if (!pilot.data || pathname === '/feedback') return null;
+  // redesign § 3.5: the pilot's "Send feedback" control only in builds with the testing tools
+  if (!testingTools() || !pilot.data || pathname === '/feedback') return null;
   return (
     <Pressable
       accessibilityRole="button"

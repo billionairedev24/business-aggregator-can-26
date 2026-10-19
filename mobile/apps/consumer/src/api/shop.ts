@@ -53,6 +53,8 @@ export interface SearchItem {
 }
 export interface SearchPage { items: SearchItem[]; total: number; next?: string | null }
 export interface SearchQuery {
+  /** Redesign: products and services together unless one kind is asked for. */
+  kind?: 'product' | 'service';
   q: string; market?: string; lat?: number; lng?: number; sort: Sort;
   tonight?: boolean; maxPrice?: number; tier?: 'master'; dietary?: string[];
 }
@@ -136,7 +138,7 @@ export function searchPath(s: SearchQuery, after?: string): string {
   return `/search?${qs({
     q: s.q.trim(),
     market: s.market,
-    kind: 'product',
+    kind: s.kind,
     delivery: s.tonight ? 'tonight' : undefined,
     maxPrice: s.maxPrice,
     tier: s.tier,

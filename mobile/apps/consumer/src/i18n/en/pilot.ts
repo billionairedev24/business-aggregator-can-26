@@ -1,7 +1,7 @@
 /** S-121 pilot feedback (pilot participants only). fr-CA in ../fr-CA/pilot.ts with the same keys. */
 export const pilot = {
   'pilot.open': 'Feedback',
-  'pilot.openHint': 'Send feedback about this screen to the Northline team',
+  'pilot.openHint': 'Send feedback about this screen to the {brand} team',
   'pilot.title': 'Send feedback',
   'pilot.lede': 'You’re in the pilot. Tell us what worked and what didn’t — the team reads every note.',
   'pilot.category': 'What is it?',

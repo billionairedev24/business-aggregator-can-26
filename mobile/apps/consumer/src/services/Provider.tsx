@@ -2,17 +2,17 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, fonts, space } from '@northline/mobile-kit';
+import { Icon, colors, fonts, semantic, space } from '@northline/mobile-kit';
 
 import { nameIn, type ProviderPage, type ProviderService, type Review } from '../api/services';
 import { useAuth } from '../auth/AuthProvider';
 import { useI18n } from '../i18n';
 import { Body, Button, Link, Notice, Section, Tag, type } from '../ui/primitives';
-import { Screen } from '../ui/screen';
+import { GUTTER, Screen } from '../ui/screen';
 import { errorMessage, QueryView, Skeleton } from '../ui/states';
 import { updateDraft } from './draft';
 import { price } from './format';
-import { FAVOURITES_KEY, favouritesChanged, Mark, Row, useServicesApi, useTier } from './parts';
+import { FAVOURITES_KEY, favouritesChanged, Mark, Row, useServicesApi } from './parts';
 
 /** "45 min" / "1 h 30" — a service's length. */
 export function duration(min: number, t: (k: 'services.minutes' | 'services.hours', p: Record<string, number>) => string) {
@@ -46,7 +46,6 @@ export function Provider({ slug }: { slug: string }) {
 
 function Profile({ p }: { p: ProviderPage }) {
   const { t, locale } = useI18n();
-  const tier = useTier()(p.tier);
   const category = p.category ? nameIn(p.category.names, locale) : null;
   const since = new Date(p.since).getUTCFullYear();
   const line = [category, p.city, t('services.provider.since', { year: since })].filter(Boolean).join(' · ');
@@ -62,17 +61,25 @@ function Profile({ p }: { p: ProviderPage }) {
   };
   return (
     <>
-      <View style={styles.hero} testID="provider-hero">
-        <View style={styles.heroTop}>
-          <View style={styles.heroMark}>
-            <Mark name={p.name} color={colors.surface} ink={colors.text} />
-          </View>
-          <View style={styles.heroTag}>
-            <Text style={styles.heroTagText}>{t('services.provider.tier', { tier: tier.label })}</Text>
-          </View>
+      <View style={styles.cover} testID="provider-hero">
+        <Icon name="storefront" size={56} color={semantic['action-accent']} />
+      </View>
+      <View style={styles.idRow}>
+        <View style={styles.avatar}>
+          <Mark name={p.name} color={semantic['surface-brand']} ink={colors.text} size={64} />
         </View>
-        <Text accessibilityRole="header" style={styles.heroName}>{p.name}</Text>
-        <Text style={styles.heroLine}>{line}</Text>
+        <View style={styles.flex}>
+          <Text accessibilityRole="header" style={styles.heroName}>
+            {p.name}
+          </Text>
+          <Text style={type.small}>{line}</Text>
+          {p.tier === 'master' || p.tier === 'trusted' ? (
+            <View style={styles.seal}>
+              <Icon name="seal-check" filled size={16} color={semantic.success} />
+              <Text style={styles.sealText}>{t('rd.provider.verified')}</Text>
+            </View>
+          ) : null}
+        </View>
       </View>
       {figures.length > 0 ? (
         <View style={styles.figures}>
@@ -205,16 +212,15 @@ function ProfileSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  hero: { marginHorizontal: -24, marginTop: -space[4], paddingHorizontal: 24, paddingTop: 22, paddingBottom: 24, backgroundColor: colors.accent, gap: 2 },
-  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: space[4] },
-  heroMark: { borderRadius: 12, overflow: 'hidden' },
-  heroTag: { backgroundColor: colors.surface, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
-  heroTagText: { fontFamily: fonts.bodyStrong, fontSize: 12, color: colors.text },
-  heroName: { fontFamily: fonts.heading, fontSize: 28, lineHeight: 32, color: colors.onAccent },
-  heroLine: { fontFamily: fonts.body, fontSize: 14, color: colors.accent100 },
+  flex: { flex: 1, minWidth: 0, gap: 2 },
+  cover: { height: 150, marginHorizontal: -GUTTER, marginTop: -space[2], backgroundColor: colors.headerBg, alignItems: 'center', justifyContent: 'center' },
+  idRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  avatar: { width: 64, height: 64, borderRadius: 32, overflow: 'hidden' },
+  seal: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  sealText: { fontFamily: fonts.semibold, fontSize: 12, color: semantic.success },
+  heroName: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 27, color: colors.text },
   figures: { flexDirection: 'row', flexWrap: 'wrap', gap: 22 },
-  figure: { fontFamily: fonts.bodyStrong, fontSize: 20, color: colors.text },
+  figure: { fontFamily: fonts.black, fontSize: 20, color: colors.text },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: space[2] },
   menuRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: space[3] },

@@ -99,6 +99,7 @@ describe('pilot feedback from the courier app (S-121, mobile gaps part 1)', () =
   });
 
   it('sends what happened with the screen, app courier, and a screenshot from the photo library', async () => {
+    process.env.EXPO_PUBLIC_TESTING_TOOLS = '1'; // redesign § 3.5: a testing tool, in pilot builds only
     const { server, view } = await start({ fixture: { pilot: true }, url: '/run' });
     fireEvent.press(await screen.findByTestId('pilot-feedback'));
     await waitFor(() => expect(view.getPathname()).toBe('/feedback'));
@@ -120,5 +121,12 @@ describe('pilot feedback from the courier app (S-121, mobile gaps part 1)', () =
       expect.objectContaining({ app: 'courier', category: 'confusing', severity: 'major', route: '/run', screenshotId: 'shot-1', locale: 'en', body: 'The next-stop card hides the PIN field.' }),
     ]);
     expect(String(server.feedback[1]!.platform)).toMatch(/^Northline Courier · ios /);
+    delete process.env.EXPO_PUBLIC_TESTING_TOOLS;
+  });
+
+  it('hides “Feedback” from pilot couriers too in a build without the testing tools', async () => {
+    await start({ fixture: { pilot: true }, url: '/run' });
+    await screen.findByTestId('run-screen');
+    await waitFor(() => expect(screen.queryByTestId('pilot-feedback')).toBeNull());
   });
 });

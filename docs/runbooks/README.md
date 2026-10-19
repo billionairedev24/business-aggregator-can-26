@@ -52,6 +52,7 @@ say where a step is still manual or missing.
 | [courier-app.md](courier-app.md) | the courier app (S-87, `mobile/`, Expo): run it locally, the fixture backend, checks, EAS builds, store accounts, signing, permission texts, what has never run on a device |
 | [mobile.md](mobile.md) | the consumer app (S-97, `mobile/apps/consumer`, Expo): run it locally, environments, the fixture backend, checks, the native prebuild check, EAS builds, App Links (the consumer site's association files), the in-app sign-in, what has never run on a device |
 | [mobile-release.md](mobile-release.md) | the consumer and courier apps' store release (S-103): EAS Build / Submit / Update, TestFlight and the Play internal track, App Review and the staged rollout, rollback, versions, the store listings en/fr-CA, App Privacy / Data safety answers, age ratings, screenshots, push credentials, the release secrets; nothing submitted yet |
+| [mobile-local.md](mobile-local.md) | both apps on your iPhone, Android phone, the iOS Simulator or an emulator against `make up-all` on your Mac: prerequisites, the development build, `make mobile-dev` (the LAN address, the checks), the sign-in accounts, a Stripe test card, Expo Go's limits, how the phone reaches the stack (the `local` profile's LAN sign-in), troubleshooting |
 | [mobile-auth.md](mobile-auth.md) | the consumer and courier apps: sign-in with PKCE, DPoP-bound tokens, nonces, rotating refresh tokens and reuse detection, calling the api, sign-out, sessions (S-29) |
 | [mcp.md](mcp.md) | the built-in MCP server for AI agents (Claude, IDEs, the MCP Inspector): connecting, OAuth 2.1 sign-in and consent, scopes, tools and confirmations, limits, audit, operations (S-127); the developer docs MCP server over docs/ and the OpenAPI documents (S-128) |
 | [partners.md](partners.md) | partner API clients: `client_credentials` with `private_key_jwt`, keys (JWK Set URL or registered), scopes, business binding, rotation, revocation, rate limits, audit (S-30) |
@@ -433,7 +434,10 @@ the database but not in configuration is logged as `stored but not in configurat
 
 Defaults for anything not set: grant types `authorization_code` + `refresh_token`, PKCE required, no consent screen,
 access token 10 min, rotating refresh token 12 h (= the session idle limit), ES256 ID tokens. How the apps use their
-clients (DPoP proofs, nonces, refresh, reuse detection, sign-out): [mobile-auth.md](mobile-auth.md).
+clients (DPoP proofs, nonces, refresh, reuse detection, sign-out): [mobile-auth.md](mobile-auth.md). Under the
+`local` profile only (`northline.auth.local-network-devices`), a redirect registered on `localhost` also matches on a
+private-network host of the same scheme, port and path, so the apps on a phone sign in against a laptop
+([mobile-local.md § 9](mobile-local.md#9-how-the-phone-reaches-your-mac)); every other environment matches exactly.
 
 **Rules, checked before anything is written** (the app or the Job stops with every problem listed):
 

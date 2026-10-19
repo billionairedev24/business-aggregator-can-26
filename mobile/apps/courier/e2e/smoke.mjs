@@ -97,7 +97,8 @@ try {
   });
   await step('French', async () => {
     // in-app navigation: a reload would start a new (signed-out) session, as on a phone after sign-out
-    const account = page.getByRole('button', { name: 'Account' });
+    // the Profile tab (redesign § 2.5: Today · Route · Profile)
+    const account = page.getByRole('tab', { name: 'Profile' });
     for (let i = 0; i < 6 && !(await account.isVisible()); i++) await page.goBack();
     await account.click();
     await page.getByRole('tab', { name: 'Français' }).click();

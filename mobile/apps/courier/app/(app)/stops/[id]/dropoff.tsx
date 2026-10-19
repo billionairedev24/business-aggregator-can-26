@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Image, Linking, StyleSheet, TextInput, View } from 'react-native';
 
-import { MIN_TARGET, colors, fonts, radius, randomId, space } from '@northline/mobile-kit';
+import { MIN_TARGET, colors, fonts, radius, randomId, space, semantic } from '@northline/mobile-kit';
 
 import { REFUSE_REASONS, type IdCheckAnswer, type ProofKind, type RefuseReason } from '../../../../src/api/courier';
 import { SignaturePad } from '../../../../src/components/SignaturePad';
@@ -46,17 +46,18 @@ export default function DropoffScreen() {
   const [reason, setReason] = useState<RefuseReason | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/run'));
 
   if (!run || !stop || stop.kind !== 'dropoff') {
     return (
-      <Screen>
+      <Screen title={t('dropoff.title')} back onBack={back}>
         <Banner tone="warn">{t('stop.notFound')}</Banner>
       </Screen>
     );
   }
   if (!pickedUp(run, stop)) {
     return (
-      <Screen>
+      <Screen title={t('dropoff.title')} back onBack={back}>
         <Banner tone="warn">{t('stop.waitPickup')}</Banner>
       </Screen>
     );
@@ -120,7 +121,7 @@ export default function DropoffScreen() {
 
   if (stop.idCheck && refusing) {
     return (
-      <Screen testID="refuse-screen">
+      <Screen testID="refuse-screen" title={t('dropoff.title')} back onBack={back}>
         <Heading>{t('idcheck.refuseTitle')}</Heading>
         <View accessibilityRole="radiogroup" accessibilityLabel={t('idcheck.refuseTitle')} style={styles.list}>
           {REFUSE_REASONS.map((r) => (
@@ -136,7 +137,13 @@ export default function DropoffScreen() {
   }
 
   return (
-    <Screen testID="dropoff-screen">
+    <Screen
+      testID="dropoff-screen"
+      title={t('dropoff.title')}
+      back
+      onBack={back}
+      footer={<Button label={t('dropoff.complete')} large icon="check-circle" onPress={() => void complete()} busy={busy} testID="complete-dropoff" />}
+    >
       <Heading>{stopName(stop)}</Heading>
       {stop.idCheck ? (
         <Card testID="id-check">
@@ -224,26 +231,25 @@ export default function DropoffScreen() {
           {error}
         </Banner>
       ) : null}
-      <Button label={t('dropoff.complete')} onPress={() => void complete()} busy={busy} testID="complete-dropoff" />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  preview: { width: '100%', aspectRatio: 3 / 4, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.neutral200 },
+  preview: { width: '100%', aspectRatio: 3 / 4, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: semantic['surface-sunken'] },
   pin: {
     minHeight: MIN_TARGET + 16,
     borderWidth: 1,
-    borderColor: colors.neutral500,
+    borderColor: colors.borderControl,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
-    fontFamily: fonts.bodyStrong,
+    fontFamily: fonts.black,
     fontSize: 32,
     letterSpacing: 16,
     textAlign: 'center',
     color: colors.text,
     paddingHorizontal: space[4],
   },
-  pinError: { borderColor: colors.accent2, borderWidth: 2 },
+  pinError: { borderColor: semantic['danger-border'], borderWidth: 2 },
   list: { gap: space[2] },
 });

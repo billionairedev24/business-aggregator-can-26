@@ -74,6 +74,12 @@ VITE_NL_DEV_STEP_UP=1` (studio :3100 as Ravi Sandhu).
 Ravi owns the three seeded businesses (Switch business in the account menu): **Prairie Wrench** (provider), **Prairie Wrench Parts** (seller) and **Pho Dau Bo** (kitchen). Settings › Security needs the auth server (see Local sign-in below).
 End-to-end suite (S-117): `make e2e` starts a disposable Postgres and the whole stack under `local`, runs the Playwright journeys (sign-in, onboarding, quote → booking → escrow, order → pack → deliver, payout) and the Studio smoke sweep of every screen, then stops everything — `docs/runbooks/e2e.md`.
 
+## The mobile apps on your phone
+`make up-all`, then `make mobile-dev APP=consumer` (or `APP=courier`): Metro with the apps' API addresses on your Mac's
+LAN IP, for a phone on the same Wi-Fi (`TARGET=ios` for the Simulator, `TARGET=android` for the emulator). Build the
+development app once with `make mobile-dev-build`. Step by step, accounts, a test card and troubleshooting:
+`docs/runbooks/mobile-local.md`.
+
 ## Local sign-in (Studio → auth → BFF → api, Postgres only)
 ```
 make up SERVICES="auth api bff studio"

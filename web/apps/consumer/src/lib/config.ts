@@ -17,6 +17,28 @@ declare global { interface Window { __NL_CONFIG__?: PublicConfig } }
 
 export const FALLBACK_CONFIG: PublicConfig = { authOrigin: 'http://localhost:9000', siteOrigin: 'http://localhost:3000', legalEntity: brand.legalName, studioOrigin: 'http://localhost:3100', supportEmail: null, page: null };
 
+const PRIVATE_V4 = /^(10\.\d{1,3}|172\.(1[6-9]|2\d|3[01])|192\.168|169\.254)\.\d{1,3}\.\d{1,3}$/;
+const LOOPBACK = /^(localhost|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|\[::1\])$/;
+
+/**
+ * The local dev server only (NL_DEV_HOST, `make mobile-dev`; docs/runbooks/mobile-local.md): a page requested on a
+ * private-network host — a phone on the Wi-Fi asking for `http://192.168.1.20:3000/sign-in`, an Android emulator for
+ * `http://10.0.2.2:3000/…` — gets that host in place of a configured loopback one (`http://localhost:9000` →
+ * `http://192.168.1.20:9000`), so the phone's browser reaches this machine's auth server. Anything else is unchanged.
+ */
+export function onRequestHost(origin: string, requestHost: string | null | undefined): string {
+  const host = (requestHost ?? '').replace(/:\d+$/, '').toLowerCase();
+  if (!PRIVATE_V4.test(host) && !(host.endsWith('.local') && host.length > 6)) return origin;
+  try {
+    const url = new URL(origin);
+    if (!LOOPBACK.test(url.hostname)) return origin;
+    url.hostname = host;
+    return url.origin;
+  } catch {
+    return origin;
+  }
+}
+
 /** The configuration from the root route's context (a render without it — tests — gets the local defaults). */
 export function useSiteConfig(): PublicConfig {
   const context = useRouteContext({ strict: false }) as { config?: PublicConfig };

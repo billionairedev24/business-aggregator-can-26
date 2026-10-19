@@ -93,7 +93,8 @@ class AuthorizationServerConfig {
             PartnerAssertions partnerAssertions,
             PartnerTokens partnerTokens,
             ResourceIndicators resources,
-            AuthProperties props) {
+            AuthProperties props,
+            LocalNetworkDevices devices) {
         var authorizationServer = new OAuth2AuthorizationServerConfigurer();
         return http.securityMatcher(authorizationServer.getEndpointsMatcher())
                 .with(
@@ -107,9 +108,11 @@ class AuthorizationServerConfig {
                                         b -> b.claim(CLIENT_ID_METADATA_DOCUMENTS, true)))
                                 .authorizationEndpoint(a -> a.authenticationProviders(l -> l.forEach(p -> {
                                     if (p instanceof OAuth2AuthorizationCodeRequestAuthenticationProvider codes) {
-                                        codes.setAuthenticationValidator(
-                                                new OAuth2AuthorizationCodeRequestAuthenticationValidator()
-                                                        .andThen(c -> checkResource(c, resources)));
+                                        // local profile: a phone on the LAN uses the loopback redirects' network
+                                        // variant
+                                        codes.setAuthenticationValidator(devices.redirects(
+                                                        new OAuth2AuthorizationCodeRequestAuthenticationValidator())
+                                                .andThen(c -> checkResource(c, resources)));
                                     }
                                 })))
                                 // S-29: the mobile apps refresh (their DPoP key is the proof) and sign out
@@ -137,8 +140,8 @@ class AuthorizationServerConfig {
                 .headers(WebSecurityConfig::lockedDown)
                 // S-62: each client's people sign in on their own site (the Studio's, the consumer's).
                 .exceptionHandling(e -> e.defaultAuthenticationEntryPointFor(
-                        (request, response, ex) -> new LoginUrlAuthenticationEntryPoint(
-                                        pages.forClient(request.getParameter(OAuth2ParameterNames.CLIENT_ID)))
+                        (request, response, ex) -> new LoginUrlAuthenticationEntryPoint(devices.loginPage(
+                                        pages.forClient(request.getParameter(OAuth2ParameterNames.CLIENT_ID)), request))
                                 .commence(request, response, ex),
                         new MediaTypeRequestMatcher(MediaType.TEXT_HTML)))
                 // S-62: no Studio / console code for a sign-in without a second factor.

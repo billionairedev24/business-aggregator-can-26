@@ -10,7 +10,7 @@ const config = getDefaultConfig(projectRoot);
 const tokens = path.resolve(projectRoot, '../../../web/packages/tokens');
 config.watchFolders = [...(config.watchFolders ?? []), tokens];
 
-const SINGLETONS = ['react', 'react-dom', 'react-native', 'react-native-web', '@tanstack/react-query'];
+const SINGLETONS = ['react', 'react-dom', 'react-native', 'react-native-web', 'react-native-svg', '@tanstack/react-query'];
 const appOrigin = path.join(projectRoot, 'package.json');
 const upstream = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
