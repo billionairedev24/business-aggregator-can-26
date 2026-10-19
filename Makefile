@@ -218,6 +218,7 @@ help: ## This list, and the common variables
 ##> REGISTRY IMAGE_TAG PUSH  images-*: registry path, tag, PUSH=1 pushes
 ##> E2E_ARGS ENV  e2e: playwright arguments (e.g. --grep @smoke); e2e-target: the environment (dev, staging)
 ##> ENV MARKET RECORD  go-live-check: environment, region market id, 1 = record the repository's results on the checklist (S-118)
+##> ENV RESET ONLY  demo-data: local or dryrun; RESET=1 (live-demo leftovers) or all (every demo listing); ONLY=merchant keys (docs/runbooks/demo.md)
 ##> STRICT  i18n-check: 1 = known gaps (legal texts, French awaiting a translator) fail too — before a French-first launch
 
 include $(ROOT)/make/server.mk

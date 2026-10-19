@@ -39,3 +39,11 @@ dryrun-up: ## Bring the dry run's nodes back (NODES=2) — pods and data come ba
 .PHONY: dryrun-status
 dryrun-status: ## The dry run's node pool: machine type, Spot, autoscaling, running nodes
 	$(ROOT)/scripts/dryrun-nodes.sh status
+
+.PHONY: demo-data
+demo-data: ## Demo marketplace through the product (ENV=local|dryrun; RESET=1 / RESET=all; ONLY=bakery,wine) — docs/runbooks/demo.md
+	$(ROOT)/scripts/demo-data.sh --env $(or $(ENV),local) $(if $(filter all,$(RESET)),--reset-all,$(if $(RESET),--reset)) $(if $(ONLY),--only $(ONLY))
+
+.PHONY: demo-data-test
+demo-data-test: ## The demo plan's rules (counts, references, no place names) and the driver's helpers (node --test)
+	cd $(ROOT) && node --test scripts/demo/demo-data.test.mjs
