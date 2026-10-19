@@ -45,16 +45,16 @@ export function HomeScreen() {
         <div className="nl-home-hero-copy">
           <h1 id="home-title" className="nl-home-title">{t('heroTitle')}</h1>
           <p className="nl-home-sub">{t('heroSub')}</p>
+          <div className="nl-home-cta">
+            <SiteLink href="/services" className="btn btn-primary btn-lg">{t('ctaServices')}</SiteLink>
+            <SiteLink href="/shop" className="btn btn-neutral btn-lg">{t('ctaShop')}</SiteLink>
+          </div>
           <p className="nl-home-where">
             <MapPin size={20} weight="fill" aria-hidden />
             {location.status === 'locating' ? <Skeleton width={160} height={20} />
               : city ? <span>{t('near', { place: city })}</span> : <span>{t('noPlace')}</span>}
             <button type="button" className="btn btn-link nl-home-where-btn" onClick={chooser.show}>{city ? t('changePlace') : t('setPlace')}</button>
           </p>
-          <div className="nl-home-cta">
-            <SiteLink href="/services" className="btn btn-primary btn-lg">{t('ctaServices')}</SiteLink>
-            <SiteLink href="/shop" className="btn btn-neutral btn-lg">{t('ctaShop')}</SiteLink>
-          </div>
           <div className="nl-home-quick">
             <span className="nl-home-quick-label" id="home-quick">{t('popular')}</span>
             <ul aria-labelledby="home-quick">
