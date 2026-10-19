@@ -153,6 +153,21 @@ class LegalFormsApiTest extends IntegrationTest {
     }
 
     @Test
+    void everyProvincesFormatMessageIsInTheFrenchCatalogue_withTheSameFrench() {
+        var french = ca.northline.platform.MessageCatalogue.frenchCanadian();
+        for (var province : PROVINCES.split(",")) {
+            for (var row : legalForms.forms(province)) {
+                row.fields().values().stream()
+                        .map(LegalForms.FieldRule::patternMessage)
+                        .filter(java.util.Objects::nonNull)
+                        .forEach(m -> assertThat(french.french(m.en(), ca.northline.platform.MessageCatalogue.Arguments.AS_IS))
+                                .as("docs/spec/validation-messages.fr-CA.tsv: " + m.en())
+                                .contains(m.fr()));
+            }
+        }
+    }
+
+    @Test
     void noProvinceNameIsWrittenInTheSchema() throws Exception {
         try (var in = getClass().getClassLoader().getResourceAsStream(LegalDetailsSchema.RESOURCE)) {
             var text = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
@@ -287,6 +302,20 @@ class LegalFormsApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.business.structure").value("corp_prov"))
                 .andExpect(jsonPath("$.business.legalDetails.provincial_registry_number")
                         .value("1234567"));
+    }
+
+    @Test
+    void theProvincesFormatMessageIsSentInFrench() throws Exception {
+        var qc = applicant("QC", "provider");
+        var json = corpProv("123").formatted(flow.upload(qc, user, "legal"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
+                                "/api/v1/merchants/{id}/onboarding/business", qc)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .header("Accept-Language", "fr-CA")
+                        .content(json)
+                        .with(TestJwt.member(user)))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(err("legalDetails.provincial_registry_number", "Le NEQ compte 10 chiffres."));
     }
 
     @Test
