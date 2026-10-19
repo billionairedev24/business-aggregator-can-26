@@ -13,7 +13,8 @@
     "test": "vitest run",
     "a11y": "playwright test",
     "csp": "NL_A11Y_APPS=consumer playwright test --project csp",
-    "record": "node scripts/record.mjs"
+    "record": "node scripts/record.mjs",
+    "shots": "playwright test -c shots.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
