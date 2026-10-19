@@ -12,6 +12,7 @@ export const en = {
   'common.offline': "You're offline. What you do is saved on this phone and sent when you're back online.",
   'common.error': "Something went wrong. {detail}",
 
+  'signIn.portal': 'Courier',
   'signIn.title': 'Courier sign-in',
   'signIn.body': 'Sign in with your {brand} account to see your shift, your run and its stops.',
   'signIn.button': 'Sign in',
@@ -22,6 +23,17 @@ export const en = {
   'signIn.webOnly': 'The courier app runs on iPhone and Android. This preview needs the fixture backend.',
   'signIn.ended': 'Your sign-in ended. Sign in again to continue.',
   'signIn.unsent': '{n, plural, one {# action is} other {# actions are}} saved on this phone. Sign in again to send {n, plural, one {it} other {them}}.',
+
+  'tab.label': 'Main sections',
+  'tab.today': 'Today',
+  'tab.route': 'Route',
+  'tab.profile': 'Profile',
+  'stop.seqKind': 'Stop {seq} · {kind}',
+  'stop.navigate': 'Navigate',
+  'stop.navigateHint': 'Opens the address in your maps app',
+  'stop.map': 'Map · due {time}',
+  'stop.mapNoEta': 'Map',
+  'run.progressBar': '{done} of {total} stops done',
 
   'shift.title': 'Shift',
   'shift.status.offline': 'Off shift',

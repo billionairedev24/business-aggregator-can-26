@@ -11,6 +11,7 @@ export const frCA: Record<MessageKey, string> = {
   'common.offline': 'Vous êtes hors ligne. Ce que vous faites est enregistré sur ce téléphone et envoyé au retour de la connexion.',
   'common.error': 'Un problème est survenu. {detail}',
 
+  'signIn.portal': 'Coursier',
   'signIn.title': 'Connexion coursier',
   'signIn.body': 'Connectez-vous avec votre compte {brand} pour voir votre quart, votre tournée et ses arrêts.',
   'signIn.button': 'Se connecter',
@@ -21,6 +22,17 @@ export const frCA: Record<MessageKey, string> = {
   'signIn.webOnly': 'L’app des coursiers fonctionne sur iPhone et Android. Cet aperçu nécessite le serveur de démonstration.',
   'signIn.ended': 'Votre session a pris fin. Reconnectez-vous pour continuer.',
   'signIn.unsent': '{n, plural, one {# action est enregistrée} other {# actions sont enregistrées}} sur ce téléphone. Reconnectez-vous pour {n, plural, one {l’envoyer} other {les envoyer}}.',
+
+  'tab.label': 'Sections principales',
+  'tab.today': 'Aujourd’hui',
+  'tab.route': 'Tournée',
+  'tab.profile': 'Profil',
+  'stop.seqKind': 'Arrêt {seq} · {kind}',
+  'stop.navigate': 'Itinéraire',
+  'stop.navigateHint': 'Ouvre l’adresse dans votre appli de cartes',
+  'stop.map': 'Carte · prévu à {time}',
+  'stop.mapNoEta': 'Carte',
+  'run.progressBar': '{done} arrêts faits sur {total}',
 
   'shift.title': 'Quart',
   'shift.status.offline': 'Hors quart',

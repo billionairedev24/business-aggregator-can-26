@@ -23,6 +23,7 @@ import {
 
 import { Banner, Body, Button, Heading, Screen } from '../components/ui';
 import { useI18n } from '../i18n';
+import { testingTools } from '../config';
 import { services } from '../services';
 
 const CATEGORIES: readonly FeedbackCategory[] = ['bug', 'confusing', 'idea', 'praise'];
@@ -44,7 +45,7 @@ export function FeedbackButton() {
   const router = useRouter();
   const pathname = usePathname();
   const pilot = usePilotCourier();
-  if (!pilot.data || pathname === '/feedback') return null;
+  if (!testingTools() || !pilot.data || pathname === '/feedback') return null;
   return <Button tone="ghost" label={t('pilot.open')} hint={t('pilot.openHint')} onPress={() => router.push({ pathname: '/feedback', params: { from: screenOf(pathname) } })} testID="pilot-feedback" />;
 }
 
@@ -68,6 +69,7 @@ async function pickScreenshot(): Promise<PickedImage | null> {
  */
 export function FeedbackScreen() {
   const { t, locale } = useI18n();
+  const router = useRouter();
   const { from } = useLocalSearchParams<{ from?: string }>();
   const screen = screenOf(from);
   const [category, setCategory] = useState<FeedbackCategory>('bug');
@@ -107,13 +109,13 @@ export function FeedbackScreen() {
   };
   if (send.data) {
     return (
-      <Screen testID="pilot-sent">
+      <Screen testID="pilot-sent" title={t('pilot.title')} back onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
         <Banner tone="info" role="text">{t('pilot.sent', { reference: send.data.reference })}</Banner>
       </Screen>
     );
   }
   return (
-    <Screen testID="pilot-form">
+    <Screen testID="pilot-form" title={t('pilot.title')} back onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}>
       <Heading>{t('pilot.title')}</Heading>
       <Body>{t('pilot.lede')}</Body>
       <Choices label={t('pilot.category')} options={CATEGORIES.map((c) => ({ value: c, label: t(`pilot.c.${c}`) }))} value={category} onChange={setCategory} testID="pilot-c" />

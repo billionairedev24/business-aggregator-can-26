@@ -63,6 +63,6 @@ export function SignaturePad({
 }
 
 const styles = StyleSheet.create({
-  box: { backgroundColor: colors.onAccent, borderRadius: radius.md, borderWidth: 1, borderColor: colors.neutral300, overflow: 'hidden' },
-  baseline: { position: 'absolute', left: 24, right: 24, bottom: 40, height: 1, backgroundColor: colors.neutral300 },
+  box: { backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderControl, overflow: 'hidden' },
+  baseline: { position: 'absolute', left: 24, right: 24, bottom: 40, height: 1, backgroundColor: colors.borderStrong },
 });

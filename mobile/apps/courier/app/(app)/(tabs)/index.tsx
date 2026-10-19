@@ -1,17 +1,18 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
-import { ApiError, NetworkError } from '@northline/mobile-kit';
+import { ApiError, Icon, NetworkError, colors, radius, semantic, space } from '@northline/mobile-kit';
 
-import type { Shift } from '../../src/api/courier';
-import { OutboxBar } from '../../src/components/tracking';
-import { Banner, Body, Button, Card, Chip, Heading, Loading, Row, Screen } from '../../src/components/ui';
-import { useMarketZone, useMe, useRun, useShifts } from '../../src/hooks';
-import { useI18n, type MessageKey } from '../../src/i18n';
-import { FeedbackButton } from '../../src/pilot/Feedback';
-import { PushPrompt } from '../../src/push/PhonePush';
-import { ME_KEY, RUN_KEY, SHIFTS_KEY, services } from '../../src/services';
+import type { Shift } from '../../../src/api/courier';
+import { OutboxBar } from '../../../src/components/tracking';
+import { Banner, Body, Button, Card, Chip, Heading, IconBadge, Loading, Row, Screen } from '../../../src/components/ui';
+import { useMarketZone, useMe, useRun, useShifts } from '../../../src/hooks';
+import { useI18n, type MessageKey } from '../../../src/i18n';
+import { FeedbackButton } from '../../../src/pilot/Feedback';
+import { PushPrompt } from '../../../src/push/PhonePush';
+import { ME_KEY, RUN_KEY, SHIFTS_KEY, services } from '../../../src/services';
 
 const EARLY_START_MS = 15 * 60_000;
 
@@ -25,7 +26,10 @@ function useNow(): number {
   return now;
 }
 
-/** Shift status: on or off shift, start / end, the next shift, and the way into the open run. */
+/**
+ * Today (redesign spec § 2.5 → AT DR:69 HOME): the courier's status, the shift (start 15 minutes early / end), the run
+ * as a card with its progress — the way into Route — and the run notifications prompt.
+ */
 export default function ShiftScreen() {
   const { t, time, day } = useI18n();
   const router = useRouter();
@@ -53,30 +57,17 @@ export default function ShiftScreen() {
     },
   });
 
-  const header = (
-    <Stack.Screen
-      options={{
-        headerRight: () => (
-          <Row>
-            <FeedbackButton />
-            <Button tone="ghost" label={t('account.title')} onPress={() => router.push('/account')} />
-          </Row>
-        ),
-      }}
-    />
-  );
+  const title = t('tab.today');
   if (me.isPending) {
     return (
-      <>
-        {header}
+      <Screen title={title} scroll={false}>
         <Loading label={t('common.loading')} />
-      </>
+      </Screen>
     );
   }
   if (me.error && !me.data) {
     return (
-      <Screen>
-        {header}
+      <Screen title={title}>
         <Banner tone="error" action={<Button tone="ghost" label={t('common.retry')} onPress={() => void me.refetch()} />}>
           {me.error instanceof NetworkError ? t('common.offline') : t('common.error', { detail: me.error.message })}
         </Banner>
@@ -91,13 +82,15 @@ export default function ShiftScreen() {
   const done = run?.stops.filter((s) => s.state === 'done').length ?? 0;
 
   return (
-    <Screen testID="shift-screen">
-      {header}
+    <Screen testID="shift-screen" title={title} action={<FeedbackButton />}>
       <OutboxBar />
-      <Row>
-        <Chip tone={courier.status === 'offline' ? 'neutral' : 'accent'} label={t(`shift.status.${courier.status}` as MessageKey)} />
-        {courier.vehicle ? <Body muted>{t('shift.vehicle', { vehicle: t(`vehicle.${courier.vehicle}` as MessageKey) })}</Body> : null}
-      </Row>
+      <View style={styles.status}>
+        <IconBadge name={courier.status === 'offline' ? 'clock' : courier.status === 'on_run' ? 'truck' : 'check-circle'} tone={courier.status === 'offline' ? 'muted' : 'brand'} />
+        <View style={styles.flex}>
+          <Chip tone={courier.status === 'offline' ? 'neutral' : 'accent'} label={t(`shift.status.${courier.status}` as MessageKey)} />
+          {courier.vehicle ? <Body muted>{t('shift.vehicle', { vehicle: t(`vehicle.${courier.vehicle}` as MessageKey) })}</Body> : null}
+        </View>
+      </View>
 
       {current ? (
         <Card>
@@ -118,6 +111,8 @@ export default function ShiftScreen() {
           <Heading level={2}>{t('shift.next', { day: day(next.startsAt, zone), start: time(next.startsAt, zone), end: time(next.endsAt, zone) })}</Heading>
           <Button
             label={t('shift.start')}
+            large
+            icon="truck"
             disabled={!startable}
             busy={change.isPending && change.variables?.to === 'start'}
             onPress={() => change.mutate({ shift: next, to: 'start' })}
@@ -135,10 +130,19 @@ export default function ShiftScreen() {
       {error ? <Banner tone="error">{error}</Banner> : null}
 
       {run ? (
-        <Card highlight onPress={() => router.push('/run')} label={t('shift.openRun')} testID="open-run">
-          <Heading level={2}>{run.label ? t('shift.run', { label: run.part > 1 ? `${run.label} · ${run.part}` : run.label }) : t('run.titleNoLabel')}</Heading>
-          <Body>{t('shift.runProgress', { done, total: run.stops.length })}</Body>
-          <Body strong>{t('shift.openRun')} ›</Body>
+        <Card highlight onPress={() => router.navigate('/run')} label={t('shift.openRun')} testID="open-run">
+          <Row>
+            <IconBadge name="path" tone="dark" />
+            <View style={styles.flex}>
+              <Heading level={2}>{run.label ? t('shift.run', { label: run.part > 1 ? `${run.label} · ${run.part}` : run.label }) : t('run.titleNoLabel')}</Heading>
+              <Body muted>{t('shift.runProgress', { done, total: run.stops.length })}</Body>
+            </View>
+            <Icon name="caret-right" size={18} />
+          </Row>
+          <View style={styles.track} accessible={false}>
+            <View style={[styles.fill, { width: `${run.stops.length ? Math.round((done / run.stops.length) * 100) : 0}%` }]} />
+          </View>
+          <Body strong>{t('shift.openRun')}</Body>
         </Card>
       ) : current ? (
         <Body muted>{t('shift.noRun')}</Body>
@@ -146,3 +150,10 @@ export default function ShiftScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0, gap: space[1] },
+  status: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  track: { height: 6, borderRadius: radius.pill, backgroundColor: semantic['surface-muted'], overflow: 'hidden' },
+  fill: { height: 6, borderRadius: radius.pill, backgroundColor: colors.actionPrimary },
+});
