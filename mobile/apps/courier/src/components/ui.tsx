@@ -13,14 +13,15 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon, MIN_TARGET, colors, fonts, radius, semantic, space, type IconName } from '@northline/mobile-kit';
+import { Icon, MIN_TARGET, colors, fonts, radius, semantic, shadow, space, type IconName } from '@northline/mobile-kit';
 
 import { useI18n } from '../i18n';
 
 /**
- * The courier app's building blocks on the redesign's driver layouts (AfroTransact's driver app, our brand:
- * docs/design/redesign-spec.md § 2.5): a dark top bar with the screen's title (and a round Back on a sub-screen),
- * pill buttons, white cards with a hairline, a sticky bottom action bar. Colours, radii, spacing and fonts come from
+ * The courier app's building blocks on the light direction (owner 2026-10-19, palette Evergreen; the consumer app's
+ * language): a white top bar with the screen's title in the display face (and a round Back on a sub-screen), pill
+ * buttons in the brand colour, soft cards with the 3:1 edge (`border-card`), linen for sunken panels, a sticky bottom
+ * action bar. Colours, radii, spacing and fonts come from
  * @northline/mobile-kit (brand.json's palette), never literals. Large type and ≥ 44 pt targets (52 pt for the main
  * action): couriers use the app outdoors, often one-handed.
  */
@@ -63,7 +64,7 @@ export function Screen({
   );
 }
 
-/** The driver app's dark top bar: the round Back button on a sub-screen, the title (20 / 700), one action on the right. */
+/** The top bar: white with a hairline, the round Back button on a sub-screen, the title (the display face), one action on the right. */
 export function TopBar({ title, back, onBack, action }: { title: string; back?: boolean; onBack?: () => void; action?: ReactNode }) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -71,7 +72,7 @@ export function TopBar({ title, back, onBack, action }: { title: string; back?: 
     <View style={[styles.bar, { paddingTop: insets.top + space[2] }]}>
       {back ? (
         <Pressable accessibilityRole="button" accessibilityLabel={t('common.back')} onPress={onBack} hitSlop={4} style={styles.round} testID="header-back">
-          <Icon name="caret-left" size={20} color={colors.headerText} />
+          <Icon name="caret-left" size={20} color={colors.text} />
         </Pressable>
       ) : null}
       <Text accessibilityRole="header" numberOfLines={2} maxFontSizeMultiplier={1.4} style={styles.barTitle}>
@@ -90,8 +91,8 @@ export function BottomBar({ children }: { children: ReactNode }) {
 
 /** An icon in a tinted circle (the route's stop markers, the shift's phases). */
 export function IconBadge({ name, tone = 'brand', size = 40 }: { name: IconName; tone?: 'brand' | 'done' | 'muted' | 'dark'; size?: number }) {
-  const bg = tone === 'done' ? semantic['success-bg'] : tone === 'muted' ? semantic['surface-muted'] : tone === 'dark' ? colors.headerBg : semantic['surface-brand'];
-  const fg = tone === 'done' ? semantic.success : tone === 'muted' ? colors.textMuted : tone === 'dark' ? semantic['action-accent'] : colors.actionPrimary;
+  const bg = tone === 'done' ? semantic['success-bg'] : tone === 'muted' ? semantic['surface-muted'] : tone === 'dark' ? semantic['action-primary'] : semantic['surface-brand'];
+  const fg = tone === 'done' ? semantic.success : tone === 'muted' ? colors.textMuted : tone === 'dark' ? semantic['action-primary-text'] : colors.actionPrimary;
   return (
     <View style={[styles.iconBadge, { width: size, height: size, borderRadius: size / 2, backgroundColor: bg }]}>
       <Icon name={name} size={Math.round(size * 0.5)} color={fg} />
@@ -154,8 +155,8 @@ export function Button({
   );
 }
 
-export function Card({ children, onPress, label, highlight, testID }: { children: ReactNode; onPress?: () => void; label?: string; highlight?: boolean; testID?: string }) {
-  const style = [styles.card, highlight && styles.cardHighlight];
+export function Card({ children, onPress, label, highlight, flush, testID }: { children: ReactNode; onPress?: () => void; label?: string; highlight?: boolean; /** no inner padding: a card that opens on a picture */ flush?: boolean; testID?: string }) {
+  const style = [styles.card, highlight && styles.cardHighlight, flush && styles.cardFlush];
   if (!onPress) {
     return (
       <View style={style} testID={testID}>
@@ -283,13 +284,13 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
   scroll: { flexGrow: 1 },
   screenBody: { flex: 1, padding: space[4], gap: space[3] },
-  bar: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[4], paddingBottom: space[3], backgroundColor: colors.headerBg },
-  barTitle: { flex: 1, fontFamily: fonts.bold, fontSize: 20, lineHeight: 25, color: colors.headerText },
-  round: { width: MIN_TARGET, height: MIN_TARGET, borderRadius: MIN_TARGET / 2, backgroundColor: semantic['header-hover-bg'], alignItems: 'center', justifyContent: 'center' },
-  bottom: { gap: space[2], paddingTop: 10, paddingHorizontal: space[4], borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, backgroundColor: colors.surface },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingHorizontal: space[4], paddingBottom: space[3], backgroundColor: colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  barTitle: { flex: 1, fontFamily: fonts.display, fontSize: 22, lineHeight: 28, color: colors.text },
+  round: { width: MIN_TARGET, height: MIN_TARGET, borderRadius: MIN_TARGET / 2, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  bottom: { gap: space[2], paddingTop: space[3], paddingHorizontal: space[4], borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderStrong, backgroundColor: colors.surface },
   iconBadge: { alignItems: 'center', justifyContent: 'center' },
-  h1: { fontFamily: fonts.black, fontSize: 28, lineHeight: 33, color: colors.text },
-  h2: { fontFamily: fonts.bold, fontSize: 17, lineHeight: 23, color: colors.text },
+  h1: { fontFamily: fonts.display, fontSize: 30, lineHeight: 36, color: colors.text },
+  h2: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26, color: colors.text },
   body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, color: colors.text, flexShrink: 1 },
   muted: { color: colors.textMuted },
   strong: { fontFamily: fonts.bold },
@@ -311,17 +312,18 @@ const styles = StyleSheet.create({
   segmentText: { color: colors.text },
   errorText: { color: colors.danger },
   disabled: { opacity: 0.45 },
-  card: { minHeight: MIN_TARGET, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: space[4], gap: space[2] },
+  card: { minHeight: MIN_TARGET, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'], padding: space[4], gap: space[2], ...shadow.sm },
   cardHighlight: { borderColor: colors.actionPrimary, borderWidth: 2 },
+  cardFlush: { padding: 0, overflow: 'hidden' },
   cardPressed: { backgroundColor: semantic['surface-hover'] },
   chip: { alignSelf: 'flex-start', borderRadius: radius.pill, paddingHorizontal: space[3], paddingVertical: space[1] },
   chipText: { fontFamily: fonts.bold, fontSize: 13, color: colors.text },
-  banner: { borderRadius: radius.md, padding: space[3], gap: space[2] },
+  banner: { borderRadius: radius.lg, padding: space[4], gap: space[2] },
   segmented: { flexDirection: 'row', backgroundColor: semantic['surface-muted'], borderRadius: radius.pill, padding: space[1], gap: space[1] },
   segment: { flex: 1, minHeight: MIN_TARGET, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   segmentOn: { backgroundColor: colors.actionPrimary },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], flexWrap: 'wrap' },
-  check: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 52, paddingHorizontal: space[3], paddingVertical: space[2], borderRadius: radius.md, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
+  check: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 52, paddingHorizontal: space[3], paddingVertical: space[2], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'], backgroundColor: colors.surface },
   checkOn: { borderColor: colors.actionPrimary, backgroundColor: semantic['surface-brand'] },
   box: { width: 24, height: 24, borderRadius: radius.xs, borderWidth: 2, borderColor: colors.borderControl, alignItems: 'center', justifyContent: 'center' },
   roundBox: { borderRadius: radius.pill },

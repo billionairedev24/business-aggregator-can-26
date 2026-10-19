@@ -62,9 +62,9 @@ export function Orders() {
         isEmpty={() => shown.length === 0}
         empty={
           view === 'refunds' ? (
-            <EmptyState message={t('account.orders.emptyRefunds')} />
+            <EmptyState draw={{ main: 'Receipt', side: 'ShieldCheck' }} message={t('account.orders.emptyRefunds')} />
           ) : (
-            <EmptyState message={t(view === 'active' ? 'account.orders.emptyActive' : 'account.orders.emptyPast')} action={t('account.orders.startShopping')} onAction={() => router.navigate('/home')} />
+            <EmptyState draw={{ main: 'ShoppingBag', side: 'CalendarCheck' }} message={t(view === 'active' ? 'account.orders.emptyActive' : 'account.orders.emptyPast')} action={t('account.orders.startShopping')} onAction={() => router.navigate('/home')} />
           )
         }
       >

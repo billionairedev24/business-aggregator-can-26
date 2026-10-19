@@ -109,7 +109,7 @@ function Item({ i }: { i: ActivityItem }) {
   const title = known.includes(i.status) ? t(`services.activity.${i.status}` as 'services.activity.done', { name }) : name || i.title;
   const body = [i.title, i.ref].filter(Boolean).join(' · ');
   const when = ago(i.when, t);
-  const dot = i.tone === 'accent-2' ? colors.accent2 : i.tone === 'accent' && i.active ? colors.accent : colors.neutral400;
+  const dot = i.tone === 'accent-2' ? colors.actionAccent : i.tone === 'accent' && i.active ? colors.actionPrimary : colors.borderStrong;
   return (
     <Row onPress={() => router.push(target(i))} label={`${title}. ${body}. ${when}`} testID={`notification-${i.id}`}>
       <View style={styles.item}>

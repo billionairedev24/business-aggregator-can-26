@@ -69,7 +69,7 @@ export function SignUp() {
         <>
           {message ? <Notice message={message} /> : null}
           <Button label={t('signup.send')} large busy={busy} disabled={!form.phone.trim() || !form.terms} onPress={() => void send()} testID="send-code" />
-          <Row>
+          <Row wrap>
             <Button label={t('social.apple')} tone="secondary" hint={t('social.hint')} onPress={() => void social()} style={styles.half} />
             <Button label={t('social.google')} tone="secondary" hint={t('social.hint')} onPress={() => void social()} style={styles.half} />
           </Row>
@@ -133,6 +133,7 @@ export function SignUp() {
 
 const styles = StyleSheet.create({
   fields: { gap: 14, paddingTop: space[2] },
-  half: { flex: 1 },
+  // two to a row when they fit; "Continue with Apple" in French or at a large text size takes its own row
+  half: { flexGrow: 1, flexBasis: 180, paddingHorizontal: space[3] },
   center: { justifyContent: 'center' },
 });

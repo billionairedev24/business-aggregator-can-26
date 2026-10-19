@@ -40,6 +40,19 @@ mobile-consumer-web-smoke: $(MOBILE_INSTALLED) ## Web build on the fixture backe
 	$(CONSUMER_APP_PNPM) export:web
 	$(CONSUMER_APP_PNPM) smoke:web
 
+# Look at the native apps' screens without a phone (light direction): the web build of each app on its fixture
+# backend, every screen photographed at 390 × 844 by headless Chromium (mobile/scripts/shots.mjs).
+# MOBILE_SHOTS_APPS=consumer|courier (default both) · MOBILE_SHOTS_SKIP_BUILD=1 · MOBILE_SHOTS_ONLY=home,product
+MOBILE_SHOTS_APPS ?= consumer courier
+.PHONY: mobile-shots
+mobile-shots: $(MOBILE_INSTALLED) ## Screenshots of every consumer and courier screen (web build, fixture backend, 390×844) into mobile/shots-out/<app>/
+	@for app in $(MOBILE_SHOTS_APPS); do \
+	  pkg=$$( [ "$$app" = consumer ] && echo @northline/consumer-app || echo @northline/courier ); \
+	  if [ -z "$(MOBILE_SHOTS_SKIP_BUILD)" ]; then (cd $(ROOT)/mobile && pnpm --filter $$pkg export:web) || exit 1; fi; \
+	  node $(ROOT)/mobile/scripts/shots.mjs $$app $(if $(MOBILE_SHOTS_ONLY),--only $(MOBILE_SHOTS_ONLY),) || exit 1; \
+	done
+	@echo "mobile-shots: $(ROOT)/mobile/shots-out/<app>/<nn>-<screen>.png (390×844; -full = the whole scroll, -fr = French); sideways scroll in _overflow.txt"
+
 .PHONY: mobile-consumer-start
 mobile-consumer-start: $(MOBILE_INSTALLED) ## Expo dev server for a dev build on a phone/simulator (EXPO_PUBLIC_* must reach your machine)
 	$(CONSUMER_APP_PNPM) start
@@ -55,4 +68,4 @@ mobile-consumer-eas-build: $(MOBILE_INSTALLED) ## EAS Build (EAS_PROFILE=preview
 .PHONY: mobile-consumer-clean
 mobile-consumer-clean: ## Delete the consumer app's export outputs, smoke screenshots and any prebuild output
 	rm -rf $(ROOT)/mobile/apps/consumer/dist-ios $(ROOT)/mobile/apps/consumer/dist-android $(ROOT)/mobile/apps/consumer/dist-web \
-	  $(ROOT)/mobile/apps/consumer/smoke-out $(ROOT)/mobile/apps/consumer/ios $(ROOT)/mobile/apps/consumer/android
+	  $(ROOT)/mobile/apps/consumer/smoke-out $(ROOT)/mobile/apps/consumer/ios $(ROOT)/mobile/apps/consumer/android $(ROOT)/mobile/shots-out

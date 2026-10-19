@@ -2,7 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
+import { MIN_TARGET, colors, fonts, radius, semantic, shadow, space } from '@northline/mobile-kit';
 
 import { KEYS as ACCOUNT_KEYS } from '../account/common';
 import { servicesApi } from '../api/services';
@@ -60,7 +60,7 @@ export function Chip({ label, selected, onPress, disabled, hint, testID }: { lab
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
 /** The api's `brandColor` when it is a usable colour, else the accent. */
-export const brand = (color: string | null | undefined) => (color && HEX.test(color) ? color : colors.accent);
+export const brand = (color: string | null | undefined) => (color && HEX.test(color) ? color : colors.actionPrimary);
 
 /** The provider's initial on a colour (its brand colour, see {@link brand}). */
 export function Mark({ name, color, size = 56, ink }: { name: string; color?: string | null; size?: number; ink?: string }) {
@@ -68,7 +68,7 @@ export function Mark({ name, color, size = 56, ink }: { name: string; color?: st
     <View
       accessible={false}
       importantForAccessibility="no-hide-descendants"
-      style={[styles.mark, { width: size, height: size, backgroundColor: color ?? colors.accent }]}
+      style={[styles.mark, { width: size, height: size, backgroundColor: color ?? colors.actionPrimary }]}
     >
       <Text style={[styles.markText, { fontSize: size * 0.4 }, ink ? { color: ink } : null]}>{name.trim().charAt(0).toUpperCase()}</Text>
     </View>
@@ -128,29 +128,30 @@ export type T = (key: MessageKey, params?: Record<string, string | number>) => s
 const styles = StyleSheet.create({
   chip: {
     minHeight: MIN_TARGET,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     justifyContent: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.divider,
+    borderColor: colors.borderControl,
+    backgroundColor: colors.surface,
   },
-  chipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipPressed: { backgroundColor: colors.accent100 },
+  chipOn: { backgroundColor: colors.actionPrimary, borderColor: colors.actionPrimary },
+  chipPressed: { backgroundColor: semantic['surface-hover'] },
   chipOff: { opacity: 0.45 },
-  chipText: { fontFamily: fonts.body, fontSize: 13, color: colors.text },
-  chipTextOn: { color: colors.onAccent },
+  chipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
+  chipTextOn: { fontFamily: fonts.semibold, color: colors.actionPrimaryText },
   chipTextOff: { textDecorationLine: 'line-through' },
-  mark: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  markText: { fontFamily: fonts.bodyStrong, color: colors.onAccent },
+  mark: { borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
+  markText: { fontFamily: fonts.display, color: colors.onAccent },
   line: { flexDirection: 'row', justifyContent: 'space-between', gap: space[3] },
   lineLeft: { flex: 1 },
-  lineStrong: { fontFamily: fonts.bodyStrong, fontSize: 17 },
-  muted: { color: colors.neutral700 },
-  panel: { padding: 14, borderRadius: radius.md, backgroundColor: colors.surface, gap: space[2] },
-  panelAccent: { backgroundColor: colors.accent100 },
-  steps: { flexDirection: 'row', gap: 4 },
-  step: { flex: 1, height: 3, backgroundColor: colors.neutral300 },
-  stepOn: { backgroundColor: colors.accent },
-  row: { minHeight: MIN_TARGET, paddingVertical: space[3], gap: space[2] },
-  rowPressed: { backgroundColor: colors.accent100 },
+  lineStrong: { fontFamily: fonts.bold, fontSize: 17 },
+  muted: { color: colors.textMuted },
+  panel: { padding: space[4], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], gap: space[2] },
+  panelAccent: { backgroundColor: semantic['surface-brand'] },
+  steps: { flexDirection: 'row', gap: 6 },
+  step: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong },
+  stepOn: { backgroundColor: colors.actionPrimary },
+  row: { minHeight: MIN_TARGET, padding: space[4], gap: space[2], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'], backgroundColor: colors.surface, ...shadow.sm },
+  rowPressed: { backgroundColor: semantic['surface-hover'] },
 });

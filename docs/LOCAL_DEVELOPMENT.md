@@ -184,6 +184,7 @@ The profiles are docker-compose.yml's: `db`, `cache`, `events` (Kafka + topic cr
 | `make e2e` · `e2e-smoke` · `e2e-target ENV=staging` | the end-to-end suite (S-117): its own disposable Postgres, the whole stack under `local`, Playwright journeys + the Studio smoke sweep · only the sweep · against a deployed environment ([runbooks/e2e.md](runbooks/e2e.md)) |
 | `make a11y` | the accessibility page sweep (S-109): builds the three web apps, Playwright + axe against them with a mock api ([a11y/audit.md](a11y/audit.md)); `make a11y-record` refreshes its fixtures |
 | `make ui-shots` | full-page screenshots of every web route, desktop and phone, without a backend ([below](#look-at-the-ui-make-ui-shots)) |
+| `make mobile-shots` | screenshots of every consumer and courier app screen at 390×844, without a phone or a backend ([below](#the-native-apps-make-mobile-shots)) |
 | `make all` · `make build` · `make test` · `make lint` · `make format` | both stacks |
 | `make clean` · `make clean-all` | build outputs and runner logs · also `node_modules` and `server/.gradle` |
 
@@ -225,6 +226,27 @@ picture, over the content that happens to be there: that is where a phone shows 
 
 Chromium comes from `CHROMIUM=/path`, else `/opt/pw-browsers/chromium`, else Playwright's own
 (`pnpm --filter @northline/a11y exec playwright install chromium`).
+
+### The native apps: `make mobile-shots`
+
+There is no simulator here (no macOS, no Android SDK), so the native apps are looked at through their web build:
+react-native-web renders the same screens, primitives and fonts, on the in-app fixture backend
+(`EXPO_PUBLIC_FIXTURES=1`, the one the Jest tests and the web smoke tests use — no server).
+
+```
+make mobile-shots                                        # both apps (about 6 minutes)
+make mobile-shots MOBILE_SHOTS_APPS=courier              # one app
+make mobile-shots MOBILE_SHOTS_SKIP_BUILD=1 MOBILE_SHOTS_ONLY=home,product   # reuse the last build, only these screens
+```
+
+`mobile/scripts/shots.mjs` serves `apps/<app>/dist-web`, signs in through the fixture's browser sign-in, then opens
+each screen in place (the fixture build's `__nlGo(href)`; a page load would start a new, signed-out session) and walks
+the flows that need state (cart → checkout → payment, a booking's service → time → review → booked, a pickup before
+its drop-off). Pictures land in `mobile/shots-out/<app>/<nn>-<screen>.png` at 390×844 (an iPhone's points, at 2×),
+`-full.png` when the screen scrolls (the whole scroll content in one picture; sticky bars then sit at its bottom),
+`-fr.png` for the French pass, and `_overflow.txt` names screens that scroll sideways. A screen is added to the lists in
+`shots.mjs`. Native-only parts — the camera, the system browser, Keychain, Stripe's sheet, maps — show their web
+fallbacks.
 
 ## Database, Kafka, search
 

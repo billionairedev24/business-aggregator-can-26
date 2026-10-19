@@ -101,7 +101,7 @@ export default function RunScreen() {
 const styles = StyleSheet.create({
   summary: { gap: space[2] },
   summaryRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space[2], flexWrap: 'wrap' },
-  summaryTitle: { fontFamily: fonts.bold, fontSize: 17, color: colors.text },
+  summaryTitle: { fontFamily: fonts.display, fontSize: 20, color: colors.text },
   track: { height: 8, borderRadius: radius.pill, backgroundColor: semantic['surface-muted'], overflow: 'hidden' },
   fill: { height: 8, borderRadius: radius.pill, backgroundColor: colors.actionPrimary },
   stopRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },

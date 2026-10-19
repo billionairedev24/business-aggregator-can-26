@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, type DimensionValue } from 'react-native';
 
-import { ApiError, NetworkError, SignedOutError, colors, radius, space } from '@northline/mobile-kit';
+import { ApiError, Art, NetworkError, SignedOutError, colors, fonts, radius, semantic, space, type Subject } from '@northline/mobile-kit';
 
 import { useI18n, type MessageKey } from '../i18n';
 import { Body, Button, type } from './primitives';
@@ -54,16 +54,26 @@ export function Loading() {
   const { t } = useI18n();
   return (
     <View style={styles.center} accessibilityRole="progressbar" accessibilityLabel={t('common.loading')} testID="loading">
-      <ActivityIndicator color={colors.accent} size="large" />
+      <ActivityIndicator color={colors.actionPrimary} size="large" />
     </View>
   );
 }
 
-export function EmptyState({ message, action, onAction }: { message: string; action?: string; onAction?: () => void }) {
+/**
+ * Nothing to show (light direction): a linen panel with a small illustrated scene (`art`: the subject's words, as
+ * `Art` reads them — "basket", "receipt", …), an optional title in the display face, the line and the one action.
+ */
+export function EmptyState({ message, action, onAction, art, draw, title }: { message: string; action?: string; onAction?: () => void; art?: string; draw?: Subject; title?: string }) {
   return (
     <View style={styles.empty} testID="empty">
-      <Body tone="muted">{message}</Body>
-      {action && onAction ? <Button label={action} onPress={onAction} /> : null}
+      {art || draw ? <Art subject={art ?? 'empty'} draw={draw} style={styles.emptyArt} /> : null}
+      {title ? <Text style={styles.emptyTitle}>{title}</Text> : null}
+      {message ? (
+        <Body tone="muted" style={styles.emptyText}>
+          {message}
+        </Body>
+      ) : null}
+      {action && onAction ? <Button label={action} onPress={onAction} style={styles.emptyAction} /> : null}
     </View>
   );
 }
@@ -96,13 +106,16 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 }
 
 /** For screens only a signed-in person can use (orders, account…): one line and the way in. */
-export function SignInPrompt({ message }: { message: string }) {
+export function SignInPrompt({ message, art = 'user' }: { message: string; art?: string }) {
   const { t } = useI18n();
   return (
     <View style={styles.empty} testID="sign-in-prompt">
-      <Body tone="muted">{message}</Body>
-      <Button label={t('common.signIn')} onPress={() => router.push('/sign-in')} />
-      <Button label={t('common.createAccount')} tone="secondary" onPress={() => router.push('/sign-up')} />
+      <Art subject={art} draw={{ main: 'HandHeart', side: 'Key' }} style={styles.emptyArt} />
+      <Body tone="muted" style={styles.emptyText}>
+        {message}
+      </Body>
+      <Button label={t('common.signIn')} onPress={() => router.push('/sign-in')} style={styles.emptyAction} />
+      <Button label={t('common.createAccount')} tone="secondary" onPress={() => router.push('/sign-up')} style={styles.emptyAction} />
     </View>
   );
 }
@@ -138,11 +151,15 @@ export function QueryView<T>({
 }
 
 const styles = StyleSheet.create({
-  offline: { marginHorizontal: 24, marginTop: space[2], padding: space[3], borderRadius: radius.md, backgroundColor: colors.highlight100 },
-  skeleton: { backgroundColor: colors.neutral200, borderRadius: radius.md },
+  offline: { marginHorizontal: space[4], marginTop: space[2], padding: space[3], borderRadius: radius.lg, backgroundColor: semantic['warning-bg'] },
+  skeleton: { backgroundColor: semantic['surface-muted'], borderRadius: radius.lg },
   list: { gap: space[3] },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space[8], backgroundColor: colors.bg },
-  empty: { gap: space[3], paddingVertical: space[6] },
-  error: { gap: space[2], padding: space[3], borderRadius: radius.md, borderWidth: 1, borderColor: colors.accent2, backgroundColor: colors.accent2_100 },
-  errorText: { ...StyleSheet.flatten(type.body), color: colors.accent2_700 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space[8], backgroundColor: colors.canvas },
+  empty: { gap: space[3], padding: space[5], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], alignItems: 'center' },
+  emptyArt: { width: 160, height: 120, borderRadius: radius.lg },
+  emptyTitle: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26, color: colors.text, textAlign: 'center' },
+  emptyText: { textAlign: 'center' },
+  emptyAction: { alignSelf: 'stretch' },
+  error: { gap: space[2], padding: space[4], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['danger-border'], backgroundColor: semantic['danger-bg'] },
+  errorText: { ...StyleSheet.flatten(type.body), color: semantic.danger },
 });

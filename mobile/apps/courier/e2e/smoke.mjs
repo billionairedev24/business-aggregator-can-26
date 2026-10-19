@@ -71,7 +71,7 @@ try {
   });
   await step('the run lists its stops in order', async () => {
     await page.getByRole('button', { name: 'Open run' }).click();
-    await page.getByText('Juniper Bakery').waitFor();
+    await page.getByRole('button', { name: /^Stop 1 of 4/ }).waitFor();
     const labels = await page.locator('[aria-label^="Stop "]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
     if (labels.length !== 4 || !labels[0].startsWith('Stop 1 of 4: Pickup')) throw new Error(labels.join(' | '));
     await noSideScroll('run');

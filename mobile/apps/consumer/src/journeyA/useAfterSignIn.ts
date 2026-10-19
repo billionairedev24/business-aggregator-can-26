@@ -1,10 +1,16 @@
 import { router } from 'expo-router';
 import { useCallback } from 'react';
 
-import { useDeliveryLocation } from '../location/DeliveryLocation';
+import { defaultAddress, useDeliveryLocation } from '../location/DeliveryLocation';
 
-/** Where a sign-in lands: Home when the delivery address is already set on this phone, else the Location screen (A5). */
+/**
+ * Where a sign-in lands: Home when this phone already knows where to deliver (a saved place, or the account's default
+ * address), else the location sheet (A5) — the only screen that may ask for the phone's position, and only on a press.
+ */
 export function useAfterSignIn() {
   const { location } = useDeliveryLocation();
-  return useCallback(() => router.replace(location.status === 'saved' ? '/home' : '/location'), [location.status]);
+  return useCallback(() => {
+    if (location.status === 'saved' || location.status === 'address') return router.replace('/home');
+    void defaultAddress().then((a) => router.replace(a ? '/home' : '/location?step=address'));
+  }, [location.status]);
 }

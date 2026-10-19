@@ -38,6 +38,7 @@ const base = `http://127.0.0.1:${server.address().port}`;
 
 const browser = await chromium.launch({ executablePath: chromiumPath(), args: ['--no-sandbox'] });
 const failures = [];
+let current = null;
 const step = async (name, fn) => {
   try {
     await fn();
@@ -45,11 +46,14 @@ const step = async (name, fn) => {
   } catch (e) {
     failures.push(name);
     console.log(`FAIL ${name}: ${e.message.split('\n')[0]}`);
+    // what the screen showed when the step gave up
+    await current?.screenshot({ path: join(OUT, `_fail-${failures.length}.png`) }).catch(() => undefined);
   }
 };
 
 try {
   const page = await browser.newPage({ viewport: { width: 402, height: 874 }, locale: 'en-CA' });
+  current = page;
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(base);
@@ -61,7 +65,7 @@ try {
 
   await step('A1 welcome', async () => {
     await page.getByText('Northline · Sample Province').waitFor({ timeout: 30_000 });
-    await page.getByText('Every trusted local,').waitFor();
+    await page.getByText('Every trusted local,', { exact: false }).waitFor();
     await noSideScroll('welcome');
     await shot('01-welcome');
   });
@@ -94,14 +98,14 @@ try {
     await page.getByText('Where should we bring things?').waitFor();
   });
   await step('A5 province & address, saved', async () => {
-    await page.getByText('Live · Sampleville, Exampleton').waitFor();
-    await page.getByLabel('Street address').fill('1204 Exa');
+    await page.getByRole('button', { name: 'Sampleville, Sample Province' }).waitFor();
+    await page.getByLabel('Address or postal code').fill('1204 Exa');
     await page.getByRole('button', { name: '1204 Example Ave, Sampleville, XA' }).click();
     await page.getByText('Zone · Old Town').waitFor();
     await page.getByText('Sales tax 5%').waitFor();
     await noSideScroll('location');
     await shot('05-location');
-    await page.getByRole('button', { name: 'Save and continue' }).click();
+    await page.getByRole('button', { name: 'Deliver here' }).click();
     await page.getByTestId('home').waitFor();
   });
   // Journey B (S-99): signed in with the address just saved; the fixture backend's payment stand-in
@@ -111,11 +115,11 @@ try {
     await shot('20-home');
     await page.getByTestId('home-search').click();
     await page.getByLabel('Search the shops').fill('sourdough');
-    await page.getByText('1 result · sorted by').waitFor();
+    await page.getByText(/^2 results · sorted by/).waitFor();
     await noSideScroll('search');
     await shot('21-search');
     await page.getByRole('button', { name: /^Country sourdough/ }).click();
-    await page.getByText('Maple Lane Bakery · Master tier · ★ 4.8 (211)').waitFor();
+    await page.getByRole('heading', { name: 'Country sourdough' }).waitFor();
     await noSideScroll('product');
     await shot('22-product');
     await page.getByTestId('product-add').click();
@@ -223,12 +227,12 @@ try {
     await page.getByText('Sign in to hold this time. Your answers stay here.').filter({ visible: true }).first().waitFor();
     await page.getByRole('button', { name: 'Sign in' }).last().click();
     await page.getByRole('button', { name: 'Sign in with a passkey' }).filter({ visible: true }).first().click();
-    await page.waitForURL(/\/(home|location)$/);
-    if (page.url().endsWith('/location')) {
+    await page.waitForURL(/\/(home|location)(\?.*)?$/);
+    if (page.url().includes('/location')) {
       // a fresh page has no saved address yet: the sign-in asks for one first (S-98)
-      await page.getByLabel('Street address').filter({ visible: true }).first().fill('1204 Exa');
+      await page.getByLabel('Address or postal code').filter({ visible: true }).first().fill('1204 Exa');
       await page.getByRole('button', { name: '1204 Example Ave, Sampleville, XA' }).filter({ visible: true }).first().click();
-      await page.getByRole('button', { name: 'Save and continue' }).filter({ visible: true }).first().click();
+      await page.getByRole('button', { name: 'Deliver here' }).filter({ visible: true }).first().click();
     }
     await page.getByRole('tab', { name: 'Browse' }).filter({ visible: true }).first().click();
     await vis('category-mobile-mechanic').click();

@@ -6,17 +6,18 @@ import { Share, StyleSheet, Text, View } from 'react-native';
 import { ApiError, Icon, colors, fonts, space } from '@northline/mobile-kit';
 
 import { Body, Button, Notice, Tag } from '../ui/primitives';
-import { RoundButton, Screen } from '../ui/screen';
+import { Header, RoundButton, Screen } from '../ui/screen';
 import { EmptyState, QueryView, Skeleton, errorMessage } from '../ui/states';
 import { config } from '../config';
 import { serverMessage, shop, useAddToCart, useMarket, useShopFormat } from './common';
 import { Chip, InfoLine, Panel, ProductTile, SectionHead, Stepper, Strip, Thumb, shopStyles } from './parts';
 
 /**
- * Product (redesign spec § 2.4 → MA:222 PRODUCT): the 300 pt picture, the shop, the name (22 / 700), the rating, the
- * price (28 / 800) and unit, the facts panel (tonight's run to your place, sold by, stock, returns), the description and
- * its bullets, the options, "More from {shop}" as a rail; the sticky bottom bar is the quantity pill and Add to cart
- * (MA:529). `GET /public/shop/products/{id}?market=` (S-50; the id may be an offer's, `?offer=` picks the seller); Add
+ * Product (light & photo-first): the picture first, edge to edge (the merchant's photo, else the drawn scene of the
+ * product), Back and Share as round buttons over it; the shop, the name in the display face, the rating, the price and
+ * unit, the facts on linen (tonight's run to your place, sold by, stock, returns, payment held), the description and
+ * its bullets, the options, "More from {shop}" as a rail of cards; the sticky bottom bar is the quantity pill and
+ * "Add n · price" in the brand colour. `GET /public/shop/products/{id}?market=` (S-50; the id may be an offer's, `?offer=` picks the seller); Add
  * is `POST /cart/items` (guests too) and opens the cart. Tier labels left the byline (thrash item 13).
  */
 export function Product() {
@@ -62,9 +63,11 @@ export function Product() {
 
   return (
     <Screen
-      title={offer?.shopName ?? t('title.product')}
       testID="product"
-      action={product.data ? <RoundButton icon="export" label={t('rd.product.share')} onPress={share} testID="product-share" /> : undefined}
+      padded={false}
+      top={
+        product.data && offer ? undefined : <Header title={t('title.product')} />
+      }
       footer={
         offer && product.data?.served ? (
           <>
@@ -82,7 +85,6 @@ export function Product() {
               />
               <Button
                 label={stock <= 0 ? t('shop.product.soldOut') : t('shop.product.add', { qty, total: f.money(unitCents * qty) })}
-                tone="accent"
                 large
                 busy={add.isPending}
                 disabled={stock <= 0 || needsVariant}
@@ -105,14 +107,24 @@ export function Product() {
           </View>
         }
         isEmpty={(p) => !p || !p.served || p.offers.length === 0}
-        empty={<EmptyState message={t('shop.product.notServed', { place: product.data?.market ?? market.label ?? '' })} action={t('shop.cart.browse')} onAction={() => router.navigate('/home')} />}
+        empty={
+          <View style={styles.pad}>
+            <EmptyState art="shop" message={t('shop.product.notServed', { place: product.data?.market ?? market.label ?? '' })} action={t('shop.cart.browse')} onAction={() => router.navigate('/home')} />
+          </View>
+        }
       >
         {(p) =>
           p && offer ? (
             <View style={styles.body}>
-              <Thumb uri={variant?.images?.[0] ?? offer.images[0]} height={300} style={styles.picture} label={t('shop.product.image', { name: p.name })} />
-              <View style={styles.titleBlock}>
-                <Text style={styles.small}>{p.brand ?? offer.shopName}</Text>
+              <View>
+                <Thumb uri={variant?.images?.[0] ?? offer.images[0]} height={320} subject={p.name} style={styles.picture} label={t('shop.product.image', { name: p.name })} />
+                <View style={styles.overlay}>
+                  <RoundButton icon="caret-left" label={t('common.back')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))} onPhoto testID="header-back" />
+                  <RoundButton icon="export" label={t('rd.product.share')} onPress={share} onPhoto testID="product-share" />
+                </View>
+              </View>
+              <View style={[styles.pad, styles.titleBlock]}>
+                <Text style={styles.shop}>{p.brand ?? offer.shopName}</Text>
                 <Text accessibilityRole="header" style={styles.name}>
                   {p.name}
                 </Text>
@@ -123,6 +135,7 @@ export function Product() {
                   </View>
                 ) : null}
               </View>
+              <View style={styles.pad}>
               <View style={styles.priceRow}>
                 <Text style={shopStyles.bigPrice}>{f.money(unitCents)}</Text>
                 {p.unit ? <Text style={styles.small}>{p.unit}</Text> : null}
@@ -168,15 +181,19 @@ export function Product() {
                   </View>
                 </View>
               ) : null}
+              </View>
               {offer.more.length > 0 ? (
                 <View style={shopStyles.section}>
-                  <SectionHead title={t('shop.product.alsoFrom', { shop: offer.shopName })} />
-                  <Strip>
+                  <View style={styles.pad}>
+                    <SectionHead title={t('shop.product.alsoFrom', { shop: offer.shopName })} />
+                  </View>
+                  <Strip edge>
                     {offer.more.slice(0, 8).map((m) => (
                       <ProductTile
                         key={m.productId}
                         name={m.name}
                         price={f.money(m.priceCents)}
+                        meta={offer.shopName}
                         label={`${m.name}, ${f.money(m.priceCents)}`}
                         onPress={() => router.push({ pathname: '/product/[id]', params: { id: m.productId } })}
                       />
@@ -194,11 +211,14 @@ export function Product() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  skeleton: { gap: space[3] },
-  body: { gap: space[4] },
-  picture: { borderRadius: 12 },
+  skeleton: { gap: space[3], paddingHorizontal: space[4] },
+  pad: { paddingHorizontal: space[4], gap: space[4] },
+  body: { gap: space[4], marginTop: -space[3] },
+  picture: { borderRadius: 0 },
+  overlay: { position: 'absolute', top: space[3], left: space[4], right: space[4], flexDirection: 'row', justifyContent: 'space-between' },
   titleBlock: { gap: 6 },
-  name: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 27, color: colors.text },
+  shop: { fontFamily: fonts.semibold, fontSize: 14, color: colors.link },
+  name: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.text },
   small: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
   rating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   ratingText: { fontFamily: fonts.regular, fontSize: 13, color: colors.text },
@@ -206,7 +226,7 @@ const styles = StyleSheet.create({
   description: { lineHeight: 21 },
   bullets: { gap: 6 },
   bullet: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
-  h3: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
+  h3: { fontFamily: fonts.display, fontSize: 18, color: colors.text },
   buy: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   add: { flex: 1 },
 });

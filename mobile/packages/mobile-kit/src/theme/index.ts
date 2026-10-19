@@ -76,7 +76,19 @@ export const colors = {
   rating: c.rating,
   cartBadge: c['cart-badge'],
   overlay: mix(c.text, 'transparent', 0.45),
+  // the light direction (2026-10-19): linen for sunken areas, the 3:1 card edge, the brand-dark panel
+  sunken: c['surface-sunken'],
+  borderCard: c['border-card'],
+  inverseBg: c['inverse-bg'],
+  inverseText: c['inverse-text'],
+  inverseMuted: c['inverse-muted'],
 } as const;
+
+/**
+ * The palette's ramps (primary, accent, neutral, danger, success, warning × 50…900). Only the illustrated scenes
+ * (`Art`) use them — screens use the semantic roles — so a palette switch re-colours every picture.
+ */
+export const ramp = theme.ramp;
 
 /** Radii of brand.json (xs 4 · sm 6 · md 8 · lg 12 · pill). */
 export const radius = { ...theme.radius } as const;
@@ -114,7 +126,7 @@ export const brand = theme.brand;
 /** The smallest touch target (iOS HIG 44 pt, the redesign's `touch` size; WCAG 2.5.8 asks 24): every control is at least this tall and wide. */
 export const MIN_TARGET = theme.size.touch;
 
-export const nativeTheme = { colors, semantic, radius, space, text, shadow, fonts, brand, logo: theme.logo, MIN_TARGET } as const;
+export const nativeTheme = { colors, semantic, ramp, radius, space, text, shadow, fonts, brand, logo: theme.logo, MIN_TARGET } as const;
 export { nativeTheme as theme };
 export type Theme = typeof nativeTheme;
 export { mixOklch, toOklch, fromOklch } from './oklch';

@@ -143,16 +143,18 @@ describe('empty states', () => {
 });
 
 describe('C1 Browse services', () => {
-  it('lists the groups, names the province from the region model, narrows by text and opens a category', async () => {
+  it('lists the groups as rails of illustrated tiles (region-neutral count), narrows by text and opens a category', async () => {
     const { view } = await start({ welcomed: true, url: '/services' });
     expect(await screen.findByRole('header', { name: 'Services' })).toBeTruthy();
-    expect(await screen.findByText('4 categories live in Sample Province · every provider verified')).toBeTruthy();
-    expect(screen.getByText('Popular: Mobile mechanic')).toBeTruthy();
+    expect(await screen.findByText('4 categories live')).toBeTruthy();
+    expect(screen.queryByText(/Sample Province/)).toBeNull(); // the web's rule: no province in the count line
+    expect(screen.getByRole('header', { name: 'Popular categories' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Mobile mechanic, 4 pros' }).length).toBeGreaterThan(0);
     expect(screen.getByText('Auto')).toBeTruthy();
     expect(screen.getByText('Events & hospitality')).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('services-search'), 'plumb');
     await waitFor(() => expect(screen.queryByText('Auto')).toBeNull());
-    expect(screen.getByRole('button', { name: 'Plumber' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Plumber, 2 pros' })).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('services-search'), 'zzz');
     expect(await screen.findByText('No service matches “zzz”.')).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('services-search'), '');
@@ -165,8 +167,8 @@ describe('C1 Browse services', () => {
     getLocales.mockReturnValue([{ languageTag: 'fr-CA' }]);
     try {
       const { server } = await start({ welcomed: true, url: '/services' });
-      expect(await screen.findByText('4 catégories actives en Sample Province · chaque prestataire vérifié')).toBeTruthy();
-      expect(screen.getByText('Mécanicien mobile')).toBeTruthy();
+      expect(await screen.findByText('4 catégories actives')).toBeTruthy();
+      expect(screen.getAllByText('Mécanicien mobile').length).toBeGreaterThan(0);
       expect(screen.getByText('Maison et métiers')).toBeTruthy();
       expect(server.calls.some((c) => c.path === '/public/services' && !c.signed)).toBe(true);
     } finally {

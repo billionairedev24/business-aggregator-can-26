@@ -9487,3 +9487,74 @@ follows AfroTransact's structure and behaviour (`storefront/src/components/shell
 - `make ui-shots UI_SHOTS_WIDTHS=2560,1920,1440,390,360` photographs any widths (`<route>-<width>.png`).
 - Not done: `CLAUDE.md`'s header line still says "a menu sheet on phones" (left to the lead: agents don't edit it).
   Schema additions: none. Config additions: none (the `UI_SHOTS_WIDTHS` make/test variable only).
+
+## 2026-10-19 — Light & photo-first on the native apps (feat/ui-mobile-light)
+
+The consumer and courier apps (mobile/apps/consumer, mobile/apps/courier, mobile/packages/mobile-kit) moved from phase
+4's AfroTransact layouts with dark chrome (#183) to the owner's **light & photo-first** direction with palette
+**Evergreen**, mirroring the consumer web's phase B (#190). Every screen was looked at on 390×844 before and after.
+
+- **Look at it: `make mobile-shots`.** No macOS or Android SDK here, so the apps are photographed through their web
+  build (react-native-web, `expo export --platform web`, the in-app fixture backend `EXPO_PUBLIC_FIXTURES=1`) with
+  headless Chromium (`mobile/scripts/shots.mjs`): 54 consumer and 16 courier pictures (plus `-full` scroll pictures and
+  a French pass) into `mobile/shots-out/<app>/` (git-ignored), `_overflow.txt` for sideways scroll. Screens open in
+  place through `__nlGo(href)` and orders are seeded through `__nlSeedOrder(...)`, two globals the root layouts define
+  **only** when `config.fixtures && Platform.OS === 'web'` (never in a phone build). Documented in
+  docs/LOCAL_DEVELOPMENT.md. Chosen over Jest snapshots rendered to images: the web build runs the real fonts, SVG and
+  layout engine, and the apps already had the fixture web build for their smoke tests.
+- **Drawn pictures instead of grey boxes** (`mobile-kit` `Art`, react-native-svg): the web's `features/art` ported —
+  the same ~120 subject rules (`artSubjects.ts`; one addition: "sourdough" draws bread), the same six tones from the
+  palette's ramps, cover and contain fits. The pictograms are Phosphor *fill* path data generated into
+  `art.generated.ts` by `gen-brand.mjs` (checked by the kit's test like the icons). Using the ramps is limited to `Art`
+  (the theme now exports `ramp` for it); screens use the semantic roles. `Thumb` draws the scene of the product's or
+  shop's name when the api has no photo; tiles, empty states, covers and the courier's pickup do too. Decorative:
+  hidden from VoiceOver/TalkBack.
+- **The look.** Titles and sections in the display face (Fraunces 600, a new `fonts.display` role from
+  `gen-brand.mjs`), DM Sans for the rest; white surfaces, soft cards with the 3:1 `border-card` edge and a small
+  shadow, linen (`surface-sunken`) for panels and empty states, pill buttons in the brand colour (Add to cart is
+  primary now; the accent stays for rare highlights), radius 12 for cards and inputs. No dark panels are left: the
+  order-under-way banner, the courier card on tracking, the courier's top bar and the provider cover were dark;
+  `Panel tone="dark"` now renders the brand tint. The theme has no dark-mode tokens, so both apps stay
+  `userInterfaceStyle: 'light'`.
+- **Tab bar** (both apps): the current tab in the brand colour, filled icon, a short bar above it; 11 pt labels.
+- **Compact top bar** (Home, Browse): the brand's mark, "Deliver to" / "Near" over the place's name on one line with an
+  ellipsis (opens the location sheet), the inbox and account; one search pill with the round brand-coloured button.
+  Sub-screens: a one-line header in the display face with the round Back button.
+- **Screens.** Home: what's under way as a light card, the web's hero ("Everything local, from people you can trust")
+  with an illustrated collage and the verified badge, "Book a service" and "Shop local" rails of illustrated tiles,
+  tonight's run, photo-first product cards, the sellers' line. Browse: departments in two columns, the services band
+  ("N categories live", region-neutral — the province left the line as on the web), popular categories, a rail per
+  group with "N pros" / "Coming soon". Category: a cover, filter chips in a sideways row, provider cards (mark, seal,
+  rating, from-price, next opening). Provider: cover first with Back over it, the mark over its edge, stat cards,
+  service cards, review cards with stars. Product: picture first edge to edge with Back and Share over it, the name in
+  the display face, facts on linen. Cart: a card per shop, sums on linen. Search: pictures on every row. Tracking: a
+  light schematic map with a street grid, the courier card with the PIN on the brand tint. Booking, booked,
+  confirmation, delivered: pictures on top. Welcome: the logo and a collage. Sign-in/up: the social buttons stack when
+  they don't fit.
+- **Location, the web's model** (DECISIONS "Light foundation"). `DeliveryLocationProvider`: saved → the account's
+  default address (`GET /me/addresses`, `isDefault` else the first; new status `address`) → the fallback market; it
+  re-resolves on sign-in/out. The phone's position is **no longer read on launch** (phase 4 read it when the permission
+  was already granted); only the sheet's "Use my current location" asks, on the press. `/location` is now a bottom
+  sheet (`presentation: 'transparentModal'`) over the screen it was opened from, with the web dialog's sections and
+  words: what is shown now, use my current location, address or postal code (the same `/geo/autocomplete` +
+  `/geo/places`; zone, runs and tax tags, the unit note, "Deliver here"), the account's addresses, the live markets
+  (one tap), the waitlist outside a live market. The province grid of design 01's A5 is gone (the web dropped it too).
+  After sign-up/sign-in without an address, the sheet opens as A5 (`?step=address`, titled "Where should we bring
+  things?"); with a default address the sign-in goes home. `LocationScreen` is removed.
+- **Courier.** Today: a picture-first run card with progress and the next stop; Route: the same cards on the new
+  surfaces; Stop: a schematic map strip with the due time and **Navigate** (Apple Maps / the Android chooser as
+  before; the web build now links Google Maps directions, so demos can follow it); pickup opens on the shop's drawn
+  picture; proof of delivery keeps photo / signature / PIN (the PIN in the display face), a camera picture before
+  "Allow camera"; Profile: a head card (vehicle) and the privacy line on linen.
+- **i18n.** New strings in `i18n/{en,fr-CA}/light.ts` (consumer, `lt.*`, mostly the web's own words and French) and
+  `today.next` (courier). French copy of the new strings is ours, in the translator-review queue.
+- **Tests.** Jest updated for the new copy and layout (Home, Product, Browse, the location sheet — sources in order,
+  one-tap market, addresses, use-my-location only on press, Settings when refused, waitlist), a kit test for `Art`.
+  Both apps' Jest allow 15 s a test: the illustrated screens make a test file's cold first render slower than 5 s on
+  this machine (two courier tests and the consumer Home test timed out at 5 s).
+- **Not done / never run:** a real phone, Simulator or emulator (the shots are the web build: no native fonts
+  rendering differences, no safe-area notch, no Dynamic Type at large sizes — the type scales and the one-line bars cap
+  `maxFontSizeMultiplier`); real photography (the scenes stand in); the remaining sub-screens (quote, case, problem,
+  security, wallet, notification settings) only got the shared primitives' new look, not their own layouts.
+
+Schema additions: none. Config additions: none. No new environment variables. New make target: `mobile-shots`.

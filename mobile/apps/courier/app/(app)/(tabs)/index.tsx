@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { ApiError, Icon, NetworkError, colors, radius, semantic, space } from '@northline/mobile-kit';
+import { ApiError, Art, Icon, NetworkError, colors, radius, semantic, space } from '@northline/mobile-kit';
 
 import type { Shift } from '../../../src/api/courier';
 import { OutboxBar } from '../../../src/components/tracking';
@@ -13,6 +13,7 @@ import { useI18n, type MessageKey } from '../../../src/i18n';
 import { FeedbackButton } from '../../../src/pilot/Feedback';
 import { PushPrompt } from '../../../src/push/PhonePush';
 import { ME_KEY, RUN_KEY, SHIFTS_KEY, services } from '../../../src/services';
+import { kindKey, nextStop, stopName } from '../../../src/stops';
 
 const EARLY_START_MS = 15 * 60_000;
 
@@ -27,8 +28,9 @@ function useNow(): number {
 }
 
 /**
- * Today (redesign spec § 2.5 → AT DR:69 HOME): the courier's status, the shift (start 15 minutes early / end), the run
- * as a card with its progress — the way into Route — and the run notifications prompt.
+ * Today (redesign spec § 2.5; the light direction): the courier's status, the shift (start 15 minutes early / end), the
+ * run as a picture-first card with its progress and the next stop — the way into Route — and the run notifications
+ * prompt.
  */
 export default function ShiftScreen() {
   const { t, time, day } = useI18n();
@@ -80,6 +82,7 @@ export default function ShiftScreen() {
   const next = (shifts.data ?? []).filter((s) => s.state === 'scheduled').sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
   const startable = next && now >= Date.parse(next.startsAt) - EARLY_START_MS && now < Date.parse(next.endsAt);
   const done = run?.stops.filter((s) => s.state === 'done').length ?? 0;
+  const upNext = run ? nextStop(run) : undefined;
 
   return (
     <Screen testID="shift-screen" title={title} action={<FeedbackButton />}>
@@ -130,19 +133,34 @@ export default function ShiftScreen() {
       {error ? <Banner tone="error">{error}</Banner> : null}
 
       {run ? (
-        <Card highlight onPress={() => router.navigate('/run')} label={t('shift.openRun')} testID="open-run">
-          <Row>
-            <IconBadge name="path" tone="dark" />
-            <View style={styles.flex}>
-              <Heading level={2}>{run.label ? t('shift.run', { label: run.part > 1 ? `${run.label} · ${run.part}` : run.label }) : t('run.titleNoLabel')}</Heading>
-              <Body muted>{t('shift.runProgress', { done, total: run.stops.length })}</Body>
+        <Card highlight flush onPress={() => router.navigate('/run')} label={t('shift.openRun')} testID="open-run">
+          <Art subject="courier" tone="sage" fit="contain" style={styles.art} />
+          <View style={styles.runBody}>
+            <Row>
+              <View style={styles.flex}>
+                <Heading level={2}>{run.label ? t('shift.run', { label: run.part > 1 ? `${run.label} · ${run.part}` : run.label }) : t('run.titleNoLabel')}</Heading>
+                <Body muted>{t('shift.runProgress', { done, total: run.stops.length })}</Body>
+              </View>
+              <Icon name="caret-right" size={18} />
+            </Row>
+            <View style={styles.track} accessible={false}>
+              <View style={[styles.fill, { width: `${run.stops.length ? Math.round((done / run.stops.length) * 100) : 0}%` }]} />
             </View>
-            <Icon name="caret-right" size={18} />
-          </Row>
-          <View style={styles.track} accessible={false}>
-            <View style={[styles.fill, { width: `${run.stops.length ? Math.round((done / run.stops.length) * 100) : 0}%` }]} />
+            {upNext ? (
+              <View style={styles.next}>
+                <IconBadge name={upNext.kind === 'dropoff' ? 'map-pin' : 'storefront'} size={36} />
+                <View style={styles.flex}>
+                  <Body muted style={styles.small}>
+                    {t('today.next')}
+                  </Body>
+                  <Body strong>{`${t(kindKey(upNext))} · ${stopName(upNext)}`}</Body>
+                </View>
+              </View>
+            ) : null}
+            <Body strong style={styles.link}>
+              {t('shift.openRun')}
+            </Body>
           </View>
-          <Body strong>{t('shift.openRun')}</Body>
         </Card>
       ) : current ? (
         <Body muted>{t('shift.noRun')}</Body>
@@ -154,6 +172,11 @@ export default function ShiftScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0, gap: space[1] },
   status: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  art: { height: 130 },
+  runBody: { padding: space[4], gap: space[3] },
+  next: { flexDirection: 'row', alignItems: 'center', gap: space[3], padding: space[3], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
+  small: { fontSize: 13, lineHeight: 18 },
+  link: { color: semantic.link },
   track: { height: 6, borderRadius: radius.pill, backgroundColor: semantic['surface-muted'], overflow: 'hidden' },
   fill: { height: 6, borderRadius: radius.pill, backgroundColor: colors.actionPrimary },
 });
