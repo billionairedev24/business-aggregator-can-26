@@ -129,6 +129,29 @@ describe('ServiceEditor', () => {
     expect(calls.find(c => c.key === `POST ${base}/services`)!.body).toMatchObject({ name: 'Brake inspection', pricingMode: 'fixed', priceCents: 8900, durationMin: 60, bufferMin: 0, instantBook: true });
     expect(await screen.findAllByText('That SKU is already used by another listing.')).not.toHaveLength(0);
   });
+
+  it('uploads photos of the work and saves them with the service, the first as the main one', async () => {
+    shell.type = 'provider';
+    let n = 0;
+    const calls = stubFetch({
+      [`GET ${base}/catalogue/categories`]: CATEGORIES,
+      [`POST ${base}/media`]: () => ({ status: 201, json: { id: `MEDIA${++n}`, url: `${base}/media/MEDIA${n}`, width: 1200, height: 900, onWhite: false } }),
+      [`POST ${base}/services`]: () => ({ status: 422, json: { errors: [{ field: 'imageIds', rule: 'unknown', message: 'That image is no longer available — upload it again.' }] } }),
+    });
+    renderScreen(<ServiceEditor portal="provider" />);
+    expect(screen.getByRole('heading', { name: 'Photos of your work' })).toBeTruthy();
+    const photo = (name: string) => new File([new Uint8Array([1, 2, 3])], name, { type: 'image/jpeg' });
+    await user().upload(screen.getByTestId('service-photo-input'), [photo('a.jpg'), photo('b.jpg')]);
+    expect(await screen.findByRole('img', { name: 'Photo of your work 2' })).toBeTruthy();
+    expect(screen.getByText('Main')).toBeTruthy();
+    await user().click(screen.getByRole('button', { name: 'Move image 2 earlier' }));
+    await user().type(screen.getByLabelText('Service name'), 'Deep clean');
+    await user().type(screen.getByLabelText('Price (incl. travel)'), '180');
+    await user().click(screen.getByRole('button', { name: 'Save draft' }));
+    await waitFor(() => expect(calls.find(c => c.key === `POST ${base}/services`)).toBeTruthy());
+    expect(calls.find(c => c.key === `POST ${base}/services`)!.body).toMatchObject({ imageIds: ['MEDIA2', 'MEDIA1'] });
+    expect(await screen.findAllByText('That image is no longer available — upload it again.')).not.toHaveLength(0);
+  });
 });
 
 describe('ProductEditor', () => {

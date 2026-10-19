@@ -1,11 +1,14 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ArrowLeft, ArrowRight, ImageSquare, X } from '@phosphor-icons/react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Alert, Checkbox, Field, FormGrid, Segmented, Select, TextArea, TextInput, useFormatters, useLocale } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';
-import { categoriesQuery, useSaveService, useSubmitListing, type PricingMode, type ServiceDetail } from './api';
+import { categoriesQuery, useSaveService, useSubmitListing, useUploadImage, type PricingMode, type ServiceDetail } from './api';
+import { CatalogueThumb } from './ProductEditor';
+import { imageProblem } from './imageFile';
 import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, FeesPanel, RevetNotice, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
 import { useCatalogueT } from './messages';
 import { emptyService, permissions, serviceCompleteness, serviceFromDetail, servicePayload, validateServiceDraft, vettingChecks, type Portal, type ServiceForm } from './model';
@@ -18,7 +21,9 @@ const BUFFERS = [0, 15, 20, 30] as const;
 
 /**
  * Service editor (providers): name, category, pricing (fixed / quote / hourly), price incl. travel, duration, buffer,
- * what's included, instant book — Save draft separate from Submit for vetting, same side panels as products.
+ * what's included, instant book, photos of the work (optional; real photos 2026-10-19: customers see the first on the
+ * provider page, in search and on the category's cards) — Save draft separate from Submit for vetting, same side panels
+ * as products.
  */
 export function ServiceEditor({ detail, portal, typePicker }: { detail?: ServiceDetail; portal: Portal; typePicker?: ReactNode }) {
   const t = useCatalogueT();
@@ -135,6 +140,11 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
             <TextInput value={form.sku} maxLength={60} style={{ maxWidth: 240 }} onChange={e => update({ sku: e.target.value })} onBlur={() => touch('sku')} />
           </Field>
           </section>
+          <section className="nl-cat-card" aria-labelledby="svc-photos">
+          <h2 className="nl-cat-card-title" id="svc-photos">{t('secPhotos')}</h2>
+          <p className="nl-hint">{t('photosHint')}</p>
+          <ServicePhotos images={form.images} onChange={images => update({ images }, ['imageIds'])} error={err('imageIds')} />
+          </section>
         </fieldset>
         <Side>
           <CompletenessPanel t={t} percent={completeness.percent} items={sections} />
@@ -143,5 +153,66 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
         </Side>
       </div>
     </>
+  );
+}
+
+const PHOTOS_MAX = 9;
+
+/** Photos of the work: upload (JPG/PNG, ≥ 1000 px, as product images), reorder, remove; the first is the main one. */
+function ServicePhotos({ images, onChange, error }: { images: ServiceForm['images']; onChange: (images: ServiceForm['images']) => void; error?: string }) {
+  const t = useCatalogueT();
+  const mt = useMessageT();
+  const upload = useUploadImage(useMerchantId());
+  const input = useRef<HTMLInputElement>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= images.length) return;
+    const next = [...images]; const [m] = next.splice(from, 1); next.splice(to, 0, m!);
+    onChange(next);
+  };
+  async function onFiles(files: FileList | null) {
+    setProblem(null);
+    let next = images;
+    for (const file of Array.from(files ?? [])) {
+      if (next.length >= PHOTOS_MAX) { setProblem(t('imagesFull')); break; }
+      const bad = await imageProblem(file);
+      if (bad) { setProblem(mt(bad) ?? bad); continue; }
+      try {
+        next = [...next, await upload.mutateAsync(file)];
+        onChange(next);
+      } catch (e) {
+        setProblem(e instanceof ValidationError ? (mt(e.errors[0]?.message) ?? t('saveError')) : t('saveError'));
+      }
+    }
+    if (input.current) input.current.value = '';
+  }
+  return (
+    <div className="nl-field" role="group" aria-labelledby="svc-photos">
+      <ul className="nl-cat-images">
+        {images.map((m, i) => (
+          <li key={m.id} className="nl-cat-image">
+            <CatalogueThumb media={m} size={140} label={t('photoAlt', { n: i + 1 })} />
+            {i === 0 && <span className="tag tag-accent nl-cat-main-tag">{t('main')}</span>}
+            <div className="nl-cat-image-tools">
+              <button type="button" aria-label={t('moveLeft', { n: i + 1 })} disabled={i === 0} onClick={() => move(i, i - 1)}><ArrowLeft size={14} /></button>
+              <button type="button" aria-label={t('moveRight', { n: i + 1 })} disabled={i === images.length - 1} onClick={() => move(i, i + 1)}><ArrowRight size={14} /></button>
+              <button type="button" aria-label={t('removeImage', { n: i + 1 })} onClick={() => onChange(images.filter((_, j) => j !== i))}><X size={14} /></button>
+            </div>
+          </li>
+        ))}
+        {images.length < PHOTOS_MAX && (
+          <li className={images.length ? undefined : 'nl-cat-image-first'}>
+            <button type="button" className="nl-cat-add-image" data-empty={!images.length || undefined} onClick={() => input.current?.click()} disabled={upload.isPending}
+              onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }}
+              onDrop={e => { if (!e.dataTransfer.files.length) return; e.preventDefault(); void onFiles(e.dataTransfer.files); }}>
+              <ImageSquare size={images.length ? 24 : 32} aria-hidden />
+              {upload.isPending ? <span>{t('uploading')}</span> : <><span className="nl-cat-add-image-label">{images.length ? t('addImage') : t('addFirstPhoto')}</span><span className="nl-cat-add-image-hint">{t('addImageHint')}</span></>}
+            </button>
+            <input ref={input} type="file" accept="image/jpeg,image/png" multiple hidden aria-label={t('addFirstPhoto')} data-testid="service-photo-input" onChange={e => void onFiles(e.target.files)} />
+          </li>
+        )}
+      </ul>
+      {(problem || error) && <div role="alert" className="nl-error">{problem ?? error}</div>}
+    </div>
   );
 }
