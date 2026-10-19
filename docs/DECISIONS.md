@@ -9049,3 +9049,6 @@ Not done / left as they are:
 - Mobile (redesign in progress elsewhere): on main only `mobile/apps/consumer/src/fixtures/account.ts` (a test fixture
   with "PIPA") and the store-text lint's own list name a place; nothing to change there.
 - The /sell page still offers "Run a kitchen" with Food hidden (only the footer was asked for).
+- `ProductPageApiTest`'s 404 cases (unpublished, banned, unknown, draft offer) asked without a market and got 422 on
+  main too: since V345 no market is live, so there is no fallback market. They now pass the test's market; the
+  fallback itself is unchanged.
