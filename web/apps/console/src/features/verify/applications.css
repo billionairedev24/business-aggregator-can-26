@@ -15,3 +15,7 @@
 /* The queue tabs wrap rather than overflow at 360px (four tabs, French labels). */
 .bo-page > .nl-utabs { flex-wrap: wrap; }
 .bo-page > .nl-utabs .nl-utab { overflow-wrap: anywhere; }
+/* Two-person review: the sheet footer's actions with the reason beside them, the recommendation cards. */
+.nl-ap-footer { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.nl-ap-footer > p { margin: 0; }
+.nl-ap-recs { display: flex; flex-direction: column; gap: var(--space-2); }
