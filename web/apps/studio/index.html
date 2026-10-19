@@ -8,12 +8,6 @@
     <!-- Runtime configuration (S-14): the container answers /config.js from NL_AUTH_ORIGIN; public/config.js is the dev default.
          `defer` (S-69): it no longer blocks the first paint and still runs before the app's module script. -->
     <script src="/config.js" defer></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Fonts load without blocking the first paint (S-69): preloaded here, applied by main.tsx (a CSP without inline
-         scripts rules out the onload trick); `display=swap` shows the fallback font until they arrive. -->
-    <link rel="preload" as="style" id="nl-fonts" href="%BRAND_FONTS%" />
-    <noscript><link rel="stylesheet" href="%BRAND_FONTS%" /></noscript>
   </head>
   <body>
     <!-- S-69: painted before the app's script has run; React replaces it on its first render. -->

@@ -13,7 +13,5 @@ export interface MarkShape { el: 'rect' | 'circle' | 'path'; fill?: string; stro
 export { theme };
 /** Name, short name, legal name, domain, support email and wordmark of the product (brand.json `identity`). */
 export const brand = theme.brand;
-/** The palette's web fonts (Google Fonts stylesheet; the CSPs allow fonts.googleapis.com / fonts.gstatic.com). */
-export const fontHref = theme.font.href;
 /** `var(--color-…)` for a semantic colour. */
 export const cssVar = (name: SemanticColour | string) => `var(--color-${name})`;

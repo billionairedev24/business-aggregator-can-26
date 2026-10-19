@@ -24,6 +24,13 @@ export const PAIRS = [
   ['header-text', 'header-bg', 4.5, 'header'], ['header-muted', 'header-bg', 4.5, 'header labels ("Deliver to")'],
   ['header-text', 'header-hover-bg', 4.5, 'header items, hovered'], ['subheader-text', 'subheader-bg', 4.5, 'department bar'],
   ['subheader-text', 'subheader-hover-bg', 4.5, 'department bar, hovered'], ['footer-text', 'footer-bg', 4.5, 'footer links'], ['footer-muted', 'footer-bg', 4.5, 'footer meta'],
+  ['header-text', 'subheader-hover-bg', 4.5, 'header tabs, hovered'], ['header-muted', 'header-hover-bg', 4.5, 'header labels, hovered'],
+  ['footer-text', 'footer-bg', 4.5, 'footer headings'], ['link', 'footer-bg', 4.5, 'links in the footer'],
+  ['inverse-text', 'inverse-bg', 4.5, 'dark panels (sign-in advertorial)'], ['inverse-muted', 'inverse-bg', 4.5, 'dark panels, muted'],
+  ['inverse-text', 'inverse-hover-bg', 4.5, 'dark panels, numbered points'],
+  ['text', 'surface-sunken', 4.5, 'text on linen bands'], ['text-muted', 'surface-sunken', 4.5, 'muted text on linen bands'],
+  ['link', 'surface-sunken', 4.5, 'links on linen bands'], ['text-muted', 'surface-muted', 4.5, 'muted text on the muted surface'],
+  ['action-accent-text', 'action-accent', 4.5, 'Add / Book buttons'],
   ['nav-active-text', 'nav-active-bg', 4.5, 'current sidebar item'], ['text', 'nav-active-bg', 4.5, 'sidebar items on the brand tint'],
   // status and badges
   ['danger', 'surface', 4.5, 'inline errors'], ['danger', 'canvas', 4.5, 'inline errors on the page'], ['danger', 'danger-bg', 4.5, 'error alerts'],
@@ -35,7 +42,13 @@ export const PAIRS = [
   // non-text (1.4.11)
   ['border-control', 'surface', 3, 'input, checkbox and radio outlines'], ['border-control', 'canvas', 3, 'input outlines on the page'],
   ['focus', 'surface', 3, 'focus ring'], ['focus', 'canvas', 3, 'focus ring on the page'],
-  ['focus-on-dark', 'header-bg', 3, 'focus underline in the header'], ['header-indicator', 'subheader-bg', 3, 'current department underline'],
+  ['header-focus', 'header-bg', 3, 'focus in the header'], ['header-indicator', 'subheader-bg', 3, 'current tab underline'],
+  ['header-indicator', 'header-bg', 3, 'current tab underline in the header bar'], ['header-ring', 'header-bg', 3, 'header field and item outlines'],
+  ['focus-on-inverse', 'inverse-bg', 3, 'focus on dark panels'],
+  ['border-card', 'surface', 3, 'card and tile edges on white'], ['border-card', 'canvas', 3, 'card edges on the page'],
+  ['border-card', 'surface-sunken', 3, 'card edges on linen'], ['border-control', 'surface-sunken', 3, 'input outlines on linen'],
+  ['action-primary', 'canvas', 3, 'primary buttons on the page (shape)'],
+  ['focus', 'surface-sunken', 3, 'focus ring on linen'], ['nav-active-text', 'surface', 3, 'sidebar active bar'],
   ['danger-border', 'surface', 3, 'invalid input outline'], ['action-primary', 'surface', 3, 'checked checkbox, switch track'],
   ['surface', 'action-primary', 3, 'switch knob on the on track'], ['surface', 'border-control', 3, 'switch knob on the off track'],
 ];

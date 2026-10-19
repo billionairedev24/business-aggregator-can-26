@@ -1,11 +1,11 @@
 import { useEffect, type ReactNode } from 'react';
 import { createRootRouteWithContext, HeadContent, Outlet, Scripts, useRouter } from '@tanstack/react-router';
 import { I18nProvider, SiteLinkProvider, brand } from '@northline/ui';
-import { fontHref } from '@northline/tokens';
 import { configureAuthOrigin } from '@northline/auth-kit';
 import tokensCss from '@northline/tokens/tokens.css?url';
 import uiCss from '@northline/ui/styles.css?url';
 import shellCss from '../features/shell/shell.css?url';
+import locationCss from '../features/location/location.css?url';
 import { ConsumerLayout } from '../features/shell/ConsumerLayout';
 import { NotFound } from '../features/shell/NotFound';
 import { RouteError } from '../features/shell/RouteError';
@@ -14,9 +14,6 @@ import { publicConfig, requestLocale } from '../lib/request';
 import { RouterSiteLink } from '../lib/SiteLinkAdapter';
 import { regionsQuery } from '../features/location/regions';
 import type { RouterContext } from '../router';
-
-// The brand palette's web fonts (web/packages/tokens: brand.json → palettes/*.json); the CSP allows Google Fonts.
-const FONTS = fontHref;
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: () => ({ locale: requestLocale(), config: publicConfig() }),
@@ -29,12 +26,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     meta: [{ charSet: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1' }, { title: brand.name }],
     links: [
       { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
-      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-      { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
-      { rel: 'stylesheet', href: FONTS },
+      // the tokens carry the palette's self-hosted fonts (@font-face → /assets/*.woff2; nothing from Google)
       { rel: 'stylesheet', href: tokensCss },
       { rel: 'stylesheet', href: uiCss },
       { rel: 'stylesheet', href: shellCss },
+      { rel: 'stylesheet', href: locationCss },
     ],
   }),
   shellComponent: Document,

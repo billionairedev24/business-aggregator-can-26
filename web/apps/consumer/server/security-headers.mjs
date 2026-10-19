@@ -49,8 +49,9 @@ export function contentSecurityPolicy(env = process.env, nonce = undefined) {
   return [
     "default-src 'self'",
     `script-src 'self'${nonce ? ` 'nonce-${nonce}'` : ''} ${scripts}`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    // the brand fonts are self-hosted (@northline/tokens dist/fonts): no third-party font origin
+    "font-src 'self'",
     "img-src 'self' data: blob: https:",
     `connect-src 'self' ${auth} https://api.stripe.com`,
     'frame-src https://js.stripe.com https://hooks.stripe.com',

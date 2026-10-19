@@ -1,7 +1,8 @@
 /* Northline design tokens + component layer.
    ONE-CHANGE THEMING: edit the five base values in :root. Every ramp, tint,
    border, shadow and state below is derived from them. */
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Instrument+Sans:wght@400;500;600;700&display=swap');
+/* No web-font import (2026-10-19): the site loads nothing from Google Fonts and its CSP allows fonts from 'self'
+   only; these pages use the stacks' fallbacks (Georgia, the system sans). */
 
 :root {
   /* ── base (change these) ── */

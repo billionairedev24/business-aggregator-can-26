@@ -11,14 +11,6 @@ import { createConsoleRouter } from './router';
 import { isUnauthorized, setRequestLocale } from './lib/http';
 import './lib/auth-server'; // configures northline-auth's origin for @northline/auth-kit
 
-const fonts = document.getElementById('nl-fonts') as HTMLLinkElement | null;
-if (fonts) {
-  const sheet = document.createElement('link');
-  sheet.rel = 'stylesheet';
-  sheet.href = fonts.href;
-  document.head.append(sheet);
-}
-
 // The platform zone until the region model answers (GET /api/v1/geo/regions → platformTimeZone; S-134).
 configurePlatformTimeZone(import.meta.env.VITE_NL_PLATFORM_TIME_ZONE);
 

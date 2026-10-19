@@ -25,25 +25,30 @@ const stack = (font, fallback) => `"${font.family}", ${font.fallback ?? fallback
 const SANS_FALLBACK = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 const SERIF_FALLBACK = 'Georgia, "Times New Roman", serif';
 
-/** The Google Fonts stylesheet for the palette's families (CSP: fonts.googleapis.com / fonts.gstatic.com). */
-export function fontHref(font) {
-  const fam = f => `family=${f.family.replace(/ /g, '+')}:wght@${[...f.weights].sort((a, b) => a - b).join(';')}`;
-  return `https://fonts.googleapis.com/css2?${[font.sans, font.display].filter(Boolean).map(fam).join('&')}&display=swap`;
-}
+/**
+ * The npm package that ships a family's font files, self-hosted (no Google Fonts: nothing is fetched from a third
+ * party, and the CSPs allow fonts from 'self' only). build.mjs copies the latin + latin-ext woff2 files of the palette's
+ * weights into dist/fonts/ and writes their @font-face rules into tokens.css.
+ */
+export const fontPackage = family => `@fontsource/${family.toLowerCase().replace(/ /g, '-')}`;
 
 /** Semantic colours (layer 2) from a palette's brand colours. Keys become `--color-<key>`. */
-export function semanticColours(p) {
+export function semanticColours(p, { chrome = 'light' } = {}) {
   const c = { ...FUNCTIONAL, ...p.color };
   const primary = ramp(c.primary), accent = ramp(c.accent), neutral = neutralRamp(c.ink);
   const danger = ramp(c.danger), success = ramp(c.success), warning = ramp(c.warning);
   const surfaces = [c.surface, c.ground];
-  const headerBg = c.headerBg ?? c.primaryHover ?? primary[800];
+  // the brand's dark colour: advertorial panels, toasts, the dark button (and the header when chrome is "dark")
+  const inverseBg = c.headerBg ?? c.primaryHover ?? primary[800];
+  const light = chrome !== 'dark';
+  const headerBg = light ? c.surface : inverseBg;
   const primaryHover = c.primaryHover ?? primary[700];
   const accentHover = c.accentHover ?? mix(c.accent, BLACK, 0.1);
   const accentTint = c.accentTint ?? accent[50];
-  const subheaderBg = c.subheaderBg ?? c.primary;
-  // the gold underline of AfroTransact's header: the accent, lightened where it would not show on the dark chrome
-  const onDark = c.headerIndicator ?? readableOnAll(c.accent, [headerBg, subheaderBg], 3, WHITE);
+  const subheaderBg = light ? c.surface : c.subheaderBg ?? c.primary;
+  // the accent, lightened where it would not show on the dark colour (focus and indicators on dark panels)
+  const onDark = c.headerIndicator ?? readableOnAll(c.accent, [inverseBg, c.subheaderBg ?? c.primary], 3, WHITE);
+  const footerBg = light ? mix(c.ground, c.ink, 0.035) : headerBg;
   const status = (seed, r) => {
     const bg = r[50];
     return { fg: readableOnAll(seed, [bg, ...surfaces], 4.5), bg };
@@ -51,25 +56,42 @@ export function semanticColours(p) {
   const ok = status(c.success, success), warn = status(c.warning, warning), bad = status(c.danger, danger);
   const colours = {
     // surfaces & text
-    canvas: c.ground, surface: c.surface, 'surface-muted': c.surfaceMuted ?? mix(c.ground, c.ink, 0.025), 'surface-sunken': c.ground,
+    // light: white pages, linen for sunken areas (image wells, bands, the footer); dark: the palette's ground
+    canvas: light ? c.surface : c.ground, surface: c.surface, 'surface-muted': c.surfaceMuted ?? mix(c.ground, c.ink, 0.025), 'surface-sunken': c.ground,
     'surface-hover': mix(c.ground, c.ink, 0.04), 'surface-brand': primary[50], 'surface-accent': accentTint,
     text: c.ink, 'text-muted': c.textMuted, 'text-subtle': c.textSubtle ?? c.textMuted, 'text-inverse': WHITE,
     border: c.border, 'border-strong': c.borderStrong,
     // WCAG 1.4.11: the outline of an input, checkbox or radio needs 3:1 — the palette's hairline borders don't have it
     'border-control': readableOnAll(c.borderStrong, surfaces, 3, c.ink),
-    // chrome (AfroTransact: a dark header, a slightly lighter department bar, the footer in the header's colour)
-    'header-bg': headerBg, 'header-text': WHITE, 'header-muted': readable(mix(WHITE, headerBg, 0.3), headerBg, 4.5, WHITE),
-    'header-hover-bg': mix(headerBg, WHITE, 0.12), 'header-ring': WHITE, 'header-indicator': onDark,
-    'subheader-bg': subheaderBg, 'subheader-text': WHITE, 'subheader-hover-bg': mix(subheaderBg, WHITE, 0.14),
-    'footer-bg': headerBg, 'footer-text': WHITE, 'footer-muted': readable(mix(WHITE, headerBg, 0.25), headerBg, 4.5, WHITE),
+    // chrome. Light (brand.json "chrome", the owner's 2026-10-19 direction): a white header with ink text, the current
+    // tab underlined in the primary colour, a linen footer. Dark (AfroTransact): the brand-dark header and footer.
+    ...(light ? {
+      'header-bg': headerBg, 'header-text': c.ink, 'header-muted': c.textMuted, 'header-hover-bg': mix(c.ground, c.ink, 0.04),
+      'header-ring': readableOnAll(c.borderStrong, [headerBg], 3, c.ink), 'header-indicator': c.primary, 'header-focus': c.focus ?? c.primary,
+      'header-border': c.border,
+      'subheader-bg': subheaderBg, 'subheader-text': c.ink, 'subheader-hover-bg': mix(c.ground, c.ink, 0.04),
+      'footer-bg': footerBg, 'footer-text': c.ink, 'footer-muted': readable(c.textMuted, footerBg, 4.5), 'footer-border': c.borderStrong,
+    } : {
+      'header-bg': headerBg, 'header-text': WHITE, 'header-muted': readable(mix(WHITE, headerBg, 0.3), headerBg, 4.5, WHITE),
+      'header-hover-bg': mix(headerBg, WHITE, 0.12), 'header-ring': WHITE, 'header-indicator': onDark, 'header-focus': onDark,
+      'header-border': headerBg,
+      'subheader-bg': subheaderBg, 'subheader-text': WHITE, 'subheader-hover-bg': mix(subheaderBg, WHITE, 0.14),
+      'footer-bg': footerBg, 'footer-text': WHITE, 'footer-muted': readable(mix(WHITE, headerBg, 0.25), headerBg, 4.5, WHITE),
+      'footer-border': mix(headerBg, WHITE, 0.12),
+    }),
+    // the brand-dark panel (sign-in advertorials, the boot screen of the dark chrome, toasts)
+    'inverse-bg': inverseBg, 'inverse-text': WHITE, 'inverse-muted': readable(mix(WHITE, inverseBg, 0.3), inverseBg, 4.5, WHITE),
+    'inverse-hover-bg': mix(inverseBg, WHITE, 0.12), 'inverse-ring': mix(inverseBg, WHITE, 0.3), 'focus-on-inverse': onDark,
     // actions
     'action-primary': c.primary, 'action-primary-hover': primaryHover, 'action-primary-press': mix(primaryHover, BLACK, 0.12), 'action-primary-text': c.primaryText,
     'action-accent': c.accent, 'action-accent-hover': accentHover, 'action-accent-text': c.accentText,
     'action-neutral': c.surface, 'action-neutral-hover': mix(c.ground, c.ink, 0.04), 'action-neutral-text': c.ink, 'action-neutral-border': c.borderStrong,
-    'action-dark': headerBg, 'action-dark-hover': mix(headerBg, WHITE, 0.12), 'action-dark-text': WHITE,
+    'action-dark': inverseBg, 'action-dark-hover': mix(inverseBg, WHITE, 0.12), 'action-dark-text': WHITE,
     'action-danger': bad.fg, 'action-danger-hover': mix(bad.fg, BLACK, 0.15), 'action-danger-text': WHITE,
     link: c.link ?? c.primary, 'link-hover': c.linkHover ?? primaryHover,
     focus: c.focus ?? c.primary, 'focus-ring': primary[200], 'focus-on-dark': onDark,
+    // WCAG 1.4.11: the edge of a card, tile or panel the person acts on reads at 3:1 on the page and on linen
+    'border-card': readableOnAll(c.borderStrong, [c.surface, c.ground, footerBg], 3, c.ink),
     // commerce & status
     price: c.ink, rating: c.accent, 'rating-text': readableOnAll(c.accentInk ?? c.accent, surfaces, 4.5),
     success: ok.fg, 'success-bg': ok.bg, warning: warn.fg, 'warning-bg': warn.bg, danger: bad.fg, 'danger-bg': bad.bg, 'danger-border': c.danger,
@@ -87,7 +109,7 @@ export function semanticColours(p) {
 
 /** Everything one palette resolves to — what generated/theme.json holds and the native apps read. */
 export function resolveTheme(brand, palette, scale) {
-  const { colours, ramps } = semanticColours(palette);
+  const { colours, ramps } = semanticColours(palette, { chrome: brand.chrome });
   const ink = palette.color.ink;
   const shadow = Object.fromEntries(Object.entries(scale.shadow).map(([k, layers]) => [k, {
     css: layers.map(l => `0 ${l.y}px ${l.blur}px rgb(${channels(ink)} / ${l.alpha})`).join(', '),
@@ -95,12 +117,11 @@ export function resolveTheme(brand, palette, scale) {
   }]));
   const sans = stack(palette.font.sans, SANS_FALLBACK);
   return {
-    brand: { ...brand.identity, palette: brand.palette, paletteName: palette.name, direction: palette.direction },
+    brand: { ...brand.identity, palette: brand.palette, paletteName: palette.name, direction: palette.direction, chrome: brand.chrome ?? 'light' },
     font: {
       sans, display: palette.font.display ? stack(palette.font.display, SERIF_FALLBACK) : sans,
       heading: palette.font.display ? stack(palette.font.display, SERIF_FALLBACK) : sans,
-      families: [palette.font.sans, palette.font.display].filter(Boolean),
-      href: fontHref(palette.font),
+      families: [palette.font.sans, palette.font.display].filter(Boolean).map(f => ({ ...f, package: fontPackage(f.family) })),
     },
     color: colours,
     ramp: ramps,

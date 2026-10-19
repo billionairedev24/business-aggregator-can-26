@@ -1,5 +1,5 @@
-// Vite plugin for the SPAs' index.html (Studio, console): `%BRAND_NAME%` and `%BRAND_FONTS%` become brand.json's name
-// and its palette's Google Fonts stylesheet, so the page title, the boot screen and the fonts follow the brand.
+// Vite plugin for the SPAs' index.html (Studio, console): `%BRAND_NAME%` becomes brand.json's name, so the page title
+// and the boot screen follow the brand. The fonts are self-hosted and declared by tokens.css (dist/fonts/).
 import { readFileSync } from 'node:fs';
 
 const theme = JSON.parse(readFileSync(new URL('./generated/theme.json', import.meta.url), 'utf8'));
@@ -9,6 +9,6 @@ export function brandHtml() {
   return {
     name: 'northline-brand-html',
     // before Vite's own %ENV% replacement, which would warn about these names
-    transformIndexHtml: { order: 'pre', handler: html => html.replaceAll('%BRAND_NAME%', escape(theme.brand.name)).replaceAll('%BRAND_FONTS%', escape(theme.font.href)) },
+    transformIndexHtml: { order: 'pre', handler: html => html.replaceAll('%BRAND_NAME%', escape(theme.brand.name)) },
   };
 }
