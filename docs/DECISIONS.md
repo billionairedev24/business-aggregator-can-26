@@ -9325,3 +9325,41 @@ and after. Studio and console are untouched (another stream); `@northline/ui` ch
 Not done / open: real photography (category, department and cover photos) — the scenes are the stand-in; the
 French copy of the new strings is ours (in the translator-review queue like the rest); the Studio and console pages
 (another stream). Schema additions: none. Config additions: none. No new environment variables.
+
+## 2026-10-19 — Consumer header: compact, one search, no overscroll (fix/consumer-header-compact)
+
+Owner feedback on the redesigned consumer site at ~2000 px: "the navbar is still very bad and there is overscrolling,
+and why 2 search bars? too big navbar and badly arranged nav items. Look at our AfroTransact navbar." The header now
+follows AfroTransact's structure and behaviour (`storefront/src/components/shell/Header.tsx`), not its look.
+
+- **One compact top bar + one slim nav row** (`SiteHeader`, `site.css`): 8 px above and below 44 px controls (the
+  search field 46 px) → a 62 px bar; the nav row is the 44 px targets themselves (the project's 44 px rule, S-143,
+  rather than AfroTransact's 36 px on fine pointers) → about 107 px in all on a desktop, down from about 117 px with a
+  near-empty second row. No drop shadow, the hairline only. Both rows stay on the 1500 px page grid, so the logo and
+  the cart line up with the page's content at 1920 and 2560 px. The search grows to fill the middle (no 720 px cap).
+- **The nav row:** "All" (a sheet from the left with every service category, every department and — with
+  `VITE_NL_FULL_NAV` — every cuisine, each group headed by its section with "See all"; then Help, Sell, the language),
+  Services · Shop (· Food), a divider, five service categories and six departments from the catalogue's tiles
+  (`features/home/catalog.ts`, the seeded taxonomy — region-neutral), Help pushed to the far end. One current item: a
+  category's shortcut when the page is under it, else its section. The row scrolls sideways by itself
+  (`overscroll-behavior-x: contain`, no scrollbar drawn), never the page.
+- **Phones:** logo · place (ellipsed) · account · cart; the search on its own full-width row; the nav row scrolling.
+  The hamburger and its menu sheet went: "All" is the same sheet at every width. When the header is taller than 16%
+  of the window (phones), scrolling down tucks the first row away above the search, scrolling up or focusing into the
+  header brings it back (`useStickyOffset(ref, onHeight, tuckTo)`; the published `--nl-header-h` / `--nl-sticky-top`
+  are what is still on screen, so sticky columns and `scroll-padding-top` follow).
+- **One search per page: the header's.** The home hero's own search field went (the hero keeps the headline, two
+  calls to action — "Find a pro" → Services, "Shop local stores" → Shop — "Near {place} · Change", popular entries).
+  The header's field is on every page at every width, so the hero copy was the duplicate. `SearchBar variant="hero"`
+  stays in `@northline/ui` (unused by the consumer site now).
+- **Overscroll:** `make ui-shots` found no element and no document wider than the window on home, search, services,
+  shop, product, cart and checkout at 2560, 1920, 1440, 390 and 360 px (the page check now lifts the html/body clip
+  while measuring; before, `overflow-x: clip` hid a wide document from `scrollWidth`). What the owner saw is the page's
+  rubber-band bounce dragging the sticky header and the footer past the window: `html { overscroll-behavior-y: none }`
+  for fine pointers (touch keeps pull-to-refresh), and every sideways row, sheet, dialog, menu and suggestion list
+  contains its own overscroll so reaching its end never moves the page.
+- **Studio and console top bars:** 60 px minimum (was 64), the hairline instead of the shadow — the same height as the
+  consumer's first row.
+- `make ui-shots UI_SHOTS_WIDTHS=2560,1920,1440,390,360` photographs any widths (`<route>-<width>.png`).
+- Not done: `CLAUDE.md`'s header line still says "a menu sheet on phones" (left to the lead: agents don't edit it).
+  Schema additions: none. Config additions: none (the `UI_SHOTS_WIDTHS` make/test variable only).
