@@ -52,7 +52,7 @@ export function VerificationStep({ onboarding, onBack, onSubmitted, identityRetu
             <li key={c.id} className="nl-ob-check">
               <div><div className="nl-ob-check-name">{text.name}</div><div className="nl-ob-check-desc">{text.desc}</div></div>
               {isComplete(c)
-                ? <span className="tag tag-success">{text.done}</span>
+                ? <span className="tag tag-success">{text.done || t('rv_passed')}</span>
                 : <button type="button" className="btn btn-secondary" disabled={busy === c.id || !applicant && onboarding.status !== 'pending'} aria-busy={busy === c.id || undefined} onClick={() => run(c)}>{text.cta}</button>}
             </li>
           );

@@ -77,12 +77,13 @@ const body = key => recorded.exact[key]?.body;
 const live = (m, p, prefix) => m === 'GET' && p.split('?')[0] === prefix;
 
 // ── the Studio ───────────────────────────────────────────────────────────────────────────────────────────────────
-const weeks = Array.from({ length: 8 }, (_, i) => ({ start: new Date(Date.UTC(2026, 7, 24 + i * 7)).toISOString().slice(0, 10), servicesCents: 120000 + i * 18000 + (i % 3) * 9000, partsCents: 30000 + i * 4000 }));
+const weeks = Array.from({ length: 12 }, (_, i) => ({ start: new Date(Date.UTC(2026, 6, 27 + i * 7)).toISOString().slice(0, 10), servicesCents: 120000 + i * 18000 + (i % 3) * 9000, partsCents: 30000 + i * 4000 }));
 const DASHBOARD = {
   today: '2026-10-19',
   jobsToday: [
     { id: 'J1', startsAt: '2026-10-19T16:00:00Z', title: 'Brake pads and rotors', customerName: 'Amara O.', area: 'Beltline', access: 'Street parking', escrowHeldCents: 18900, state: 'confirmed', memberName: 'Ravi', mine: true },
     { id: 'J2', startsAt: '2026-10-19T19:30:00Z', title: 'Oil change', customerName: 'Dev P.', area: 'Mission', access: null, escrowHeldCents: 8900, state: 'confirmed', memberName: 'Ravi', mine: true },
+    { id: 'J3', startsAt: '2026-10-19T21:00:00Z', title: 'Battery test and replacement', customerName: 'Lena W.', area: 'Kensington', access: 'Driveway', escrowHeldCents: 21400, state: 'requested', memberName: 'Jas', mine: false },
   ],
   run: [],
   counts: { visitsToday: 142, quoteRequestsOpen: 3, quoteRespondBy: '2026-10-20T18:00:00Z', toPack: 0, runCutoff: null, runLabel: null, jobsThisMonth: 38, ordersThisMonth: 0, itemsThisMonth: 0 },
@@ -92,6 +93,36 @@ const DASHBOARD = {
   lowStock: [{ name: 'Brake pads (front, ceramic)', stock: 2 }],
   compliance: [{ checkType: 'insurance', registry: null, status: 'expiring', expiresAt: '2026-11-02T00:00:00Z', pausesAt: '2026-11-09T00:00:00Z' }],
   coaching: { jobs: 38, withoutPhotos: 7, nextTierReview: '2026-11-01' },
+};
+
+/** The seller's dashboard: tonight's run to pack, orders this month. */
+const SELLER_DASHBOARD = {
+  ...DASHBOARD,
+  jobsToday: [],
+  run: [
+    { orderId: 'O1', ref: 'NL-48213', runLabel: 'R-611', customerName: 'A. Osei', area: 'Beltline', items: [{ title: 'Wiper blades', qty: 2 }], packed: false },
+    { orderId: 'O2', ref: 'NL-48219', runLabel: 'R-611', customerName: 'K. Nguyen', area: 'Bridgeland', items: [{ title: 'Brake pads (front, ceramic)', qty: 1 }, { title: 'Washer fluid', qty: 2 }], packed: false },
+    { orderId: 'O3', ref: 'NL-48201', runLabel: 'R-611', customerName: 'M. Tran', area: 'Inglewood', items: [{ title: 'Cabin air filter', qty: 1 }], packed: true },
+  ],
+  counts: { ...DASHBOARD.counts, quoteRequestsOpen: 0, toPack: 2, runCutoff: '2026-10-19T23:20:00Z', runLabel: 'R-611', ordersThisMonth: 64, itemsThisMonth: 151 },
+  reputation: { ...DASHBOARD.reputation, reviews: 188 },
+  cases: [{ kind: 'refund', customerName: 'A. Osei', subject: 'Wrong size wiper blade' }],
+};
+
+/** An application at the business step (a valid ULID: the wizard drops an `m` that is not one) and one in review (the gate). */
+const ONB = '01J9ZD3V00000000000000NB01', GATE = '01J9ZD3V00000000000000GATE';
+const chk = (id, key, checkType, action, status, registry = null) => ({ id, key, checkType, action, registry, status, reference: null, document: null, expiresOn: null, updatedAt: '2026-10-17T16:00:00Z' });
+const application = (merchantId, over) => ({
+  merchantId, type: 'provider', status: 'applicant', step: 'business', province: 'AB', workEmail: null, businessTermsAccepted: true, displayName: 'Prairie Wrench', city: 'Calgary', business: null,
+  checklist: [chk('V1', 'kyc', 'kyc', 'identity', 'todo'), chk('V2', 'registry', 'registry', 'instant', 'todo'), chk('V3', 'insurance', 'insurance', 'upload', 'todo'), chk('V4', 'bank', 'bank', 'instant', 'todo'), chk('V5', 'mfa', 'mfa', 'instant', 'todo')],
+  checksComplete: 0, submittedAt: null, approvedAt: null, ...over,
+});
+const APPLICATIONS = {
+  [ONB]: application(ONB, {}),
+  [GATE]: application(GATE, {
+    status: 'pending', step: 'review', submittedAt: '2026-10-18T15:10:00Z', checksComplete: 5,
+    checklist: [chk('V1', 'kyc', 'kyc', 'identity', 'verified'), chk('V2', 'registry', 'registry', 'instant', 'verified'), chk('V3', 'insurance', 'insurance', 'upload', 'submitted'), { ...chk('V4', 'bank', 'bank', 'instant', 'verified'), reference: 'TD ··3391' }, chk('V5', 'mfa', 'mfa', 'instant', 'verified')],
+  }),
 };
 
 export const SHOTS = {
@@ -126,7 +157,8 @@ export const SHOTS = {
     } } : undefined),
   ],
   studio: [
-    (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/dashboard$/.test(p) ? { body: DASHBOARD } : undefined),
+    (m, p) => { const id = /^\/api\/v1\/merchants\/([^/]+)\/onboarding$/.exec(p)?.[1]; return m === 'GET' && APPLICATIONS[id] ? { body: APPLICATIONS[id] } : undefined; },
+    (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/dashboard$/.test(p) ? { body: p.includes('PWP1') ? SELLER_DASHBOARD : DASHBOARD } : undefined),
     // the live stream (EventSource) has nothing to say in a screenshot
     (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/live$/.test(p) ? { status: 204, body: null } : undefined),
     (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/availability\/time-off/.test(p) ? { body: { items: [] } } : undefined),

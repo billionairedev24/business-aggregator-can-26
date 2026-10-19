@@ -48,7 +48,9 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'sign-in', path: '/sign-in', signedIn: false },
     { name: 'register', path: '/register', signedIn: false },
     { name: 'onboarding', path: '/onboarding', signedIn: true },
-    { name: 'onboarding-business', path: '/onboarding/business?m=01J9ZD3V00000000000000ONB1&type=provider', signedIn: true },
+    { name: 'onboarding-business', path: '/onboarding/business?m=01J9ZD3V00000000000000NB01&type=provider', signedIn: true },
+    { name: 'onboarding-verification', path: '/onboarding/verification?m=01J9ZD3V00000000000000GATE&type=provider', signedIn: true },
+    { name: 'onboarding-gate', path: '/onboarding/review?m=01J9ZD3V00000000000000GATE&type=provider', signedIn: true },
     { name: 'identity-done', path: '/identity/done', signedIn: true },
     { name: 'invite', path: '/invite/tok', signedIn: true },
     { name: 'dashboard', path: `/b/${PROVIDER}` },
@@ -75,6 +77,7 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'kitchen-menu', path: `/b/${KITCHEN}/kitchen/menu` },
     { name: 'kitchen-combos', path: `/b/${KITCHEN}/kitchen/combos` },
     { name: 'kitchen-hours', path: `/b/${KITCHEN}/kitchen/hours` },
+    { name: 'not-found', path: '/no-such-page' },
   ],
   console: [
     { name: 'sign-in', path: '/sign-in', signedIn: false },

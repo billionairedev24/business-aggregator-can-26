@@ -47,9 +47,10 @@ export function OnboardingLayout({ step, type, onboarding, onGo, children }: Onb
   const current = STEPS.indexOf(step);
   const furthest = reachable(onboarding);
   const submitted = onboarding ? onboarding.status !== 'applicant' : false;
-  const pct = `${Math.round(((current + (submitted ? 1 : 0)) / STEPS.length) * 100)}%`;
+  // the bar shows the step being filled in as reached (step 1 of 5 = a fifth), all of it once submitted
+  const pct = `${Math.round((Math.min(current + 1, STEPS.length) / STEPS.length) * 100)}%`;
   return (
-    <div className="nl-shell">
+    <div className="nl-shell nl-ob-shell">
       <SkipLink />
       <TopBar onboarding={onboarding} />
       <div className="nl-ob">

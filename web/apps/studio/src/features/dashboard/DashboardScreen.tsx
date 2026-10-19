@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowUUpLeft, ChatCircleText, FileText, Package, ShieldWarning, Storefront, Tag, Warning } from '@phosphor-icons/react';
+import { ArrowRight, ArrowUUpLeft, ChatCircleText, FileText, Package, ShieldWarning, Storefront, Tag, Warning } from '@phosphor-icons/react';
 import { ErrorState, LineChart, PageSkeleton, StackedBarChart, useFormatters, useLocale, type Locale, timeZone, ChartCard, KpiStrip, TodoCard, BoHeader, type KpiItem, type TodoItem } from '@northline/ui';
 import { useMerchant, useMerchantId, type MerchantType } from '../shell/api';
 import { screenHref, type ScreenKey } from '../shell/nav';
-import { clock, clockWithPeriod } from '../../lib/time';
+import { clockWithPeriod } from '../../lib/time';
 import { listingsQuery } from '../catalogue/api';
 import { storefrontQuery } from '../storefront/api';
 import { dashboardQuery, type Dashboard } from './api';
@@ -61,21 +61,26 @@ export function DashboardView({ data, kind, city, merchantId, setup }: { data: D
       <BoHeader title={t('title')} sub={[longDate(data.today, locale), city].filter(Boolean).join(' · ')} />
       <KpiStrip label={t('kpis')} items={kpis(data, kind, t, f, locale, go)} />
 
-      <div className="bo-grid nl-dash-charts">
+      {/* what needs doing now first (today's work, what is waiting on the owner), then the figures over time */}
+      <div className="nl-dash-now">
+        <ChartCard id="dash-today" className="nl-dash-today"
+          actions={<a className="nl-dash-link" href={screenHref(merchantId, kind === 'seller' ? 'orders' : 'appointments')} onClick={e => { e.preventDefault(); go(kind === 'seller' ? 'orders' : 'appointments')(); }}>{t(kind === 'seller' ? 'openOrders' : 'openCalendar')}<ArrowRight size={14} aria-hidden /></a>}
+          title={kind === 'seller' ? (data.counts.runCutoff ? t('tonightRun', { time: clockWithPeriod(data.counts.runCutoff, locale) }) : t('nextRun')) : t('today')}>
+          {kind === 'seller' ? <RunList data={data} t={t} /> : <TodayList data={data} t={t} f={f} locale={locale} />}
+        </ChartCard>
+        <div className="nl-dash-side">
+          <TodoCard id="dash-needs" title={t('needsYou')} items={needsYou(data, { prov, sell, sellerOnly: kind === 'seller' }, t, f, locale, go)} empty={t('allCaughtUp')} />
+          {setup ? <SetupCard setup={setup} kind={kind} t={t} go={go} /> : null}
+        </div>
+      </div>
+
+      <div className="nl-dash-charts">
         <ChartCard id="dash-earn" title={t('earningsTitle')}>
           <StackedBarChart title={t('earningsTitle')} series={series} data={weeks} format={c => f.money(c, { whole: true })} />
         </ChartCard>
         <ChartCard id="dash-trend" title={t('trendTitle')}>
           <LineChart title={t('trendTitle')} current={totals} labels={weeks.map(w => w.label)} legend={{ current: t('trendLegend') }} format={c => f.money(c, { whole: true })} />
         </ChartCard>
-      </div>
-
-      <div className="bo-grid">
-        {setup ? <SetupCard setup={setup} kind={kind} t={t} go={go} /> : null}
-        <ChartCard id="dash-today" title={kind === 'seller' ? (data.counts.runCutoff ? t('tonightRun', { time: clockWithPeriod(data.counts.runCutoff, locale) }) : t('nextRun')) : t('today')}>
-          {kind === 'seller' ? <RunList data={data} t={t} /> : <TodayList data={data} t={t} f={f} locale={locale} />}
-        </ChartCard>
-        <TodoCard id="dash-needs" title={t('needsYou')} items={needsYou(data, { prov, sell, sellerOnly: kind === 'seller' }, t, f, locale, go)} empty={t('allCaughtUp')} />
       </div>
     </div>
   );
@@ -138,7 +143,7 @@ function TodayList({ data, t, f, locale }: { data: Dashboard; t: T; f: Fmt; loca
     <ul className="nl-dash-list">
       {data.jobsToday.map(j => (
         <li key={j.id} className="nl-dash-row">
-          <span className="nl-dash-time">{clock(j.startsAt, locale)}</span>
+          <span className="nl-dash-time">{clockWithPeriod(j.startsAt, locale)}</span>
           <span className="nl-dash-what"><strong>{j.title}</strong><span className="nl-dash-who">{[j.customerName, j.area, j.access, j.escrowHeldCents != null ? t('escrow', { money: f.money(j.escrowHeldCents) }) : null].filter(Boolean).join(' · ')}</span></span>
           {j.mine || !j.memberName
             ? <span className="tag tag-neutral nl-dash-tag">{t(`state_${j.state}` as Parameters<T>[0])}</span>

@@ -165,7 +165,7 @@ export function BusinessStep({ onboarding, part = 'categories', onBack, onNext, 
           if (f.kind === 'chips') {
             const list = Array.isArray(value) ? (value as string[]) : [];
             return (
-              <div key={f.key} className={f.span ? 'nl-field nl-span-all' : 'nl-field'} role="group" aria-label={t(f.label)}>
+              <div key={f.key} className="nl-field nl-span-all" role="group" aria-label={t(f.label)}>
                 <span className="nl-label">{t(f.label)}</span>
                 <div className="nl-chips">{f.options.map(o => <Chip key={o.value} selected={list.includes(o.value)} onClick={() => set(list.includes(o.value) ? list.filter(x => x !== o.value) : [...list, o.value])}>{t(o.label)}</Chip>)}</div>
               </div>
