@@ -3,6 +3,8 @@
 // fallback market so the location control names a place, a Studio dashboard. Test personas and test places only —
 // the same ones the apps' own tests use. Each override is `(method, path) → { status?, body } | undefined`.
 import { readFileSync } from 'node:fs';
+import { pattern } from '../scripts/reduce.mjs';
+import { state } from '../scripts/overrides.mjs';
 
 const recorded = JSON.parse(readFileSync(new URL('../fixtures/consumer.json', import.meta.url), 'utf8'));
 const studioRecorded = JSON.parse(readFileSync(new URL('../fixtures/studio.json', import.meta.url), 'utf8'));
@@ -369,6 +371,77 @@ const APPLICATIONS = {
   }),
 };
 
+
+// ---- the console: the recorded answers (the apps' tests, "as of" 2026-09-08 18:00 UTC) moved to the day the shots run,
+// so waiting times read "3 h", not "41 d", and the overview's day is today; plus demo-like rows where a list was thin.
+const consoleRecorded = JSON.parse(readFileSync(new URL('../fixtures/console.json', import.meta.url), 'utf8'));
+const RECORDED_AT = Date.parse('2026-09-08T18:00:00Z');
+const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
+const DAY_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+/** Every instant and calendar day in `body`, moved by the time since the recording (days by whole days). */
+function rebase(body) {
+  const shift = Date.now() - RECORDED_AT;
+  const days = Math.round(shift / DAY);
+  const walk = v => {
+    if (typeof v === 'string') {
+      if (INSTANT.test(v)) return new Date(Date.parse(v) + shift).toISOString();
+      if (DAY_ONLY.test(v)) return new Date(Date.parse(`${v}T12:00:00Z`) + days * DAY).toISOString().slice(0, 10);
+      return v;
+    }
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
+    return v;
+  };
+  return walk(body);
+}
+const consoleRec = (m, p) => {
+  const hit = consoleRecorded.exact[`${m} ${p}`] ?? consoleRecorded.exact[`${m} ${p.split('?')[0]}`] ?? consoleRecorded.pattern[`${m} ${pattern(p)}`];
+  return hit ? structuredClone(hit.body) : undefined;
+};
+const consoleCheck = (id, key, state, registry = null) => ({ id, key, type: key.split(':')[0], registry, status: state === 'passed' ? 'verified' : 'submitted', state, reference: null, expiresAt: null });
+/** Applications: a fuller queue — two in review, two waiting for the decision, one with info requested, one approved. */
+function applications() {
+  const b = consoleRec('GET', '/api/v1/console/verification/applications');
+  const base = b.items[0];
+  const more = [
+    { merchantId: 'M4', businessName: 'Chinook Home Care', legalName: 'Chinook Home Care Ltd.', categories: ['House cleaning'], city: 'Calgary', province: 'AB', risk: 'low', stage: 'review', submittedAt: '2026-09-08T15:10:00Z',
+      checks: [consoleCheck('c3k', 'kyc', 'passed'), consoleCheck('c3r', 'registry', 'review'), consoleCheck('c3i', 'insurance', 'passed')] },
+    { merchantId: 'M5', businessName: 'Northside Auto Care', legalName: 'Northside Auto Care Inc.', categories: ['Mobile mechanic'], city: 'Edmonton', province: 'AB', risk: 'medium', stage: 'decision', submittedAt: '2026-09-07T21:40:00Z',
+      checks: [consoleCheck('c4k', 'kyc', 'passed'), consoleCheck('c4l', 'licence:AMVIC', 'passed', 'AMVIC'), consoleCheck('c4i', 'insurance', 'passed')],
+      review: { id: 'RV5', reviewedBy: 'U9', reviewerName: 'Dev Kaur', recommendation: 'approve', reviewedAt: '2026-09-08T16:30:00Z', checkKeys: [], note: null } },
+    { merchantId: 'M6', businessName: 'Glenmore Bakery', legalName: 'Glenmore Bakery Ltd.', type: 'seller', categories: ['Bakery'], city: 'Calgary', province: 'AB', risk: 'low', status: 'applicant', decision: 'info_requested', decidedAt: '2026-09-07T18:00:00Z', stage: null, submittedAt: '2026-09-06T14:00:00Z',
+      checks: [consoleCheck('c5k', 'kyc', 'passed'), consoleCheck('c5h', 'registry', 'review')] },
+  ].map(o => ({ ...base, type: 'provider', status: 'pending', decision: null, decidedAt: null, review: null, structure: 'corp_ab', ...o }));
+  b.items = [...b.items, ...more];
+  b.pending = (b.pending ?? 2) + 2;
+  return rebase(b);
+}
+/** M1 (stage 2, Decide): its own sheet, with the first person's review — the recorded detail is M2's (stage 1, Review). */
+function applicationM1() {
+  const d = consoleRec('GET', '/api/v1/console/verification/applications/M2');
+  const app = consoleRec('GET', '/api/v1/console/verification/applications').items.find(a => a.merchantId === 'M1');
+  const review = { id: 'RV1', reviewedBy: 'U9', reviewerName: 'Dev Kaur', recommendation: 'approve', reviewedAt: '2026-09-08T16:30:00Z', checkKeys: [], note: 'Insurance certificate is on its way; the registry and identity match.', decisionId: null };
+  return rebase({ ...d, application: { ...app, stage: 'decision', review }, owners: [{ ...d.owners[0], checkId: null, principalName: 'Kim Ng', status: 'verified', nameMatch: 'match', dobMatch: 'match' }],
+    registryReviews: [], reviews: [review] });
+}
+const AUDIT = [
+  ['2026-09-08T17:52:00Z', 'Priya Natarajan', 'admin', 'region.market_stage_changed', 'market', 'red-deer', null],
+  ['2026-09-08T17:31:00Z', 'Dev Kaur', 'trust_safety', 'merchant.suspended', 'merchant', 'm4', 'Kensington Garage on Wheels'],
+  ['2026-09-08T16:30:00Z', 'Dev Kaur', 'trust_safety', 'merchant.application_reviewed', 'merchant', 'M1', 'Sable & Soda Bar Co.'],
+  ['2026-09-08T15:05:00Z', 'Marc Leblanc', 'finance', 'payments.reconciliation_resolved', 'day', '2026-09-05', null],
+  ['2026-09-08T14:40:00Z', 'Marc Leblanc', 'finance', 'support.refund_approved', 'refund_request', 'RR7', 'Bridgeland Butcher'],
+  ['2026-09-08T13:12:00Z', 'Priya Natarajan', 'admin', 'console.role_granted', 'user', 'u2', null],
+  ['2026-09-08T11:48:00Z', null, null, 'trust.flag_raised', 'flag', 'F1', 'Kensington Garage on Wheels'],
+  ['2026-09-08T10:20:00Z', 'Dev Kaur', 'trust_safety', 'catalogue.listing_rejected', 'listing', 'L5', 'Glenmore Bakery'],
+].map(([at, actorName, role, action, targetType, targetId, businessName], i) => ({ id: `au${i}`, at, actorId: actorName ? `u${i}` : 'system', actorName, role, action, targetType, targetId, businessName }));
+const LICENCES = [['LC1', 'Prairie Cellars', 'alcohol', 'AB', 'RLS-778812', 3], ['LC2', 'Kensington Corner Store', 'tobacco', 'AB', 'TP-20931', 7], ['LC3', 'Fraser Valley Cider', 'alcohol', 'BC', 'LCRB-30412', 26]];
+const REBASED = ['overview', 'reports', 'verification', 'vetting', 'disputes', 'support', 'orders', 'fulfilment', 'sellers', 'trust', 'payments', 'finance', 'oncall', 'pilot'];
+const PROMOS = [
+  { id: 'pc1', code: 'FIRSTRUN', description: 'First grocery run', kind: 'amount', amountCents: 1000, minSpendCents: 3500, startsAt: '2026-09-01T06:00:00Z', endsAt: '2026-10-31T06:00:00Z', perCustomerLimit: 1, totalLimit: 2000, fundedBy: 'northline', appliesTo: ['goods', 'food'], active: true, state: 'live', redeemed: 412, discountCents: 412000 },
+  { id: 'pc2', code: 'BRAKES15', description: null, kind: 'percent', percent: 15, maxDiscountCents: 4000, minSpendCents: 0, startsAt: '2026-09-05T06:00:00Z', endsAt: '2026-09-30T06:00:00Z', perCustomerLimit: 1, totalLimit: null, fundedBy: 'merchant', merchantId: 'm1', merchantName: 'Prairie Wrench', appliesTo: ['service'], active: true, state: 'live', redeemed: 38, discountCents: 91200 },
+  { id: 'pc3', code: 'SUMMERBBQ', description: null, kind: 'percent', percent: 10, maxDiscountCents: 2000, minSpendCents: 5000, startsAt: '2026-07-01T06:00:00Z', endsAt: '2026-08-31T06:00:00Z', perCustomerLimit: 2, totalLimit: 500, fundedBy: 'northline', appliesTo: ['goods'], active: false, state: 'ended', redeemed: 500, discountCents: 610000 },
+];
+
 export const SHOTS = {
   consumer: [
     (m, p) => (live(m, p, '/api/v1/search') ? { body: search(p) } : undefined),
@@ -465,6 +538,91 @@ export const SHOTS = {
     (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/availability\/time-off/.test(p) ? { body: { items: [] } } : undefined),
   ],
   console: [
-    (m, p) => (live(m, p, '/api/v1/console/promotions/codes') ? { body: { items: [] } } : undefined),
+    (m, p) => (live(m, p, '/api/v1/console/promotions/codes') ? { body: { items: rebase(PROMOS) } } : undefined),
+    // the signed-in person's email on My profile (the recorded session has none)
+    (m, p) => (m === 'GET' && p === '/bff/session' && state.console ? { body: { user: { id: '01J9ZD3V00000000000000PNA1', firstName: 'Priya', lastName: 'Natarajan', initials: 'PN', email: 'priya.natarajan@example.test', locale: 'en-CA' }, acr: 'mfa' } } : undefined),
+    (m, p) => (m === 'GET' && p.split('?')[0] === '/api/v1/console/verification/applications' ? { body: applications() } : undefined),
+    (m, p) => (m === 'GET' && p === '/api/v1/console/verification/applications/M1' ? { body: applicationM1() } : undefined),
+    // Applications › Licences and › Age checks (the age-restricted sales views; the a11y sweep never recorded them)
+    (m, p) => (live(m, p, '/api/v1/console/vetting/licences') ? { body: { items: LICENCES.map(([id, business, ageClass, province, number, submitted]) => ({
+      licence: { id, merchantId: `m-${id}`, ageClass, province, licenceNumber: number, documentId: `doc-${id}`, expiresOn: '2027-03-31', status: 'pending', submittedAt: new Date(Date.now() - submitted * 3600000).toISOString(), decidedAt: null, rejectReason: null, note: null },
+      businessName: business, businessProvince: province })) } } : undefined),
+    (m, p) => (live(m, p, '/api/v1/console/vetting/age-checks') ? { body: {
+      from: new Date(Date.now() - 30 * DAY).toISOString(), to: new Date().toISOString(), province: null,
+      verifications: { verified: 1284, failed: 37 }, failures: { document_expired: 21, selfie_face_mismatch: 16 }, handoffs: { passed: 1162, refused: 19 },
+      refusals: { nobody_of_age: 9, no_id: 6, mismatch: 3, underage: 1 }, byPlace: { door: 940, counter: 241 },
+      recent: [['H1', 'NL-48231', 'door', 'nobody_of_age', 2], ['H2', 'NL-48217', 'counter', 'no_id', 5], ['H3', 'NL-48190', 'door', 'mismatch', 9], ['H4', 'NL-48166', 'door', 'no_id', 26]]
+        .map(([checkId, orderId, place, reason, h]) => ({ checkId, orderId, orderType: 'goods', province: 'AB', requiredAge: 18, actorRole: place === 'door' ? 'courier' : 'seller', place, reason, at: new Date(Date.now() - h * 3600000).toISOString() })),
+    } } : undefined),
+    (m, p) => (live(m, p, '/api/v1/console/vetting/age-rules') ? { body: { items: [
+      { province: 'AB', ageClass: 'alcohol', minimumAge: 18, deliveryAllowed: true, pickupAllowed: true, deliveryFrom: '10:00:00', deliveryUntil: '02:00:00', source: 'Provincial liquor regulator', confirmed: false },
+      { province: 'AB', ageClass: 'tobacco', minimumAge: 18, deliveryAllowed: true, pickupAllowed: true, deliveryFrom: null, deliveryUntil: null, source: 'Provincial tobacco rules', confirmed: false },
+      { province: 'BC', ageClass: 'alcohol', minimumAge: 19, deliveryAllowed: true, pickupAllowed: true, deliveryFrom: '09:00:00', deliveryUntil: '23:00:00', source: 'Provincial liquor regulator', confirmed: false },
+    ] } } : undefined),
+    // sellers & providers: shops and a kitchen beside the recorded providers
+    (m, p) => {
+      if (m !== 'GET' || p.split('?')[0] !== '/api/v1/console/sellers') return undefined;
+      const b = consoleRec('GET', '/api/v1/console/sellers');
+      const cat = (id, en) => ({ id, names: { en } });
+      const row = (id, name, c, type, tier, quality, gmv, disputes, flags = [], status = 'active', province = 'AB') => ({ id, name, category: c, type, province, city: 'Calgary', tier, status, quality, gmv90Cents: gmv, disputeRate: disputes, flags });
+      b.items = [...b.items,
+        row('m5', 'Glenmore Bakery', cat('c5', 'Bakery'), 'seller', 'trusted', 88, 1460000, 0.004),
+        row('m6', 'Bridgeland Butcher', cat('c6', 'Butcher'), 'seller', 'trusted', 84, 1210000, 0.009),
+        row('m7', 'Pho Dau Bo', cat('c7', 'Vietnamese'), 'kitchen', 'registered', 81, 640000, 0.006, [{ kind: 'check_expiring', checkType: 'inspection', days: 12 }]),
+        row('m8', 'Chinook Home Care', cat('c8', 'House cleaning'), 'provider', 'registered', null, 0, null, [], 'pending'),
+        row('m9', 'Sable & Soda', cat('c9', 'Events & bar'), 'provider', 'trusted', 82, 2140000, 0.012, [], 'paused')];
+      return { body: rebase(b) };
+    },
+    // tonight's runs: the stuck one is 14 minutes past its next stop's ETA (the recording had it at the minute)
+    (m, p) => {
+      if (m !== 'GET' || p.split('?')[0] !== '/api/v1/console/fulfilment/runs') return undefined;
+      const b = rebase(consoleRec(m, p));
+      for (const r of b.items) r.nextEta = new Date(Date.now() + (r.late ? -14 : 25 + r.stopsDone * 6) * 60000).toISOString();
+      return { body: b };
+    },
+    // the support queue and the team: a few more rows than the tests needed
+    (m, p) => {
+      if (m !== 'GET' || p.split('?')[0] !== '/api/v1/console/support/tickets') return undefined;
+      const b = consoleRec(m, p);
+      const tk = (id, code, requesterType, requesterName, subject, priority, state, agentName, minutes, lang = 'en') => ({ ...b.items[0], id, code, requesterType, requesterName, subject, priority, state,
+        agentId: agentName ? 'U9' : null, agentName, lang, createdAt: new Date(RECORDED_AT - minutes * 60000).toISOString(), slaDueAt: new Date(RECORDED_AT + 60 * 60000).toISOString() });
+      b.items = [...b.items,
+        tk('T3', 'HD-4468', 'seller', 'Glenmore Bakery', 'Payout shows on hold since Friday', 'priority', 'in_progress', 'Dev K.', 95),
+        tk('T4', 'HD-4466', 'customer', 'A. Osei', 'Brake job booked twice — refund one?', 'normal', 'waiting', 'Dev K.', 180),
+        tk('T5', 'HD-4463', 'kitchen', 'Pho Dau Bo', 'Menu photo rejected, not sure why', 'normal', 'new', null, 240, 'fr'),
+        tk('T6', 'HD-4459', 'customer', 'J. Tremblay', 'Code promo refusé au paiement', 'normal', 'resolved', 'Dev K.', 420, 'fr')];
+      return { body: rebase(b) };
+    },
+    (m, p) => {
+      if (!live(m, p, '/api/v1/console/team')) return undefined;
+      const b = consoleRec(m, p);
+      b.members = [{ id: 'u0', name: 'Priya Natarajan', email: 'priya.natarajan@example.test', roles: ['admin', 'staff'] }, ...b.members,
+        { id: 'u3', name: 'Sam Okafor', email: 'sam@example.test', roles: ['dispatch', 'staff'] }, { id: 'u4', name: 'Léa Gagnon', email: 'lea@example.test', roles: ['support', 'staff'] },
+        { id: 'u5', name: 'Noor Haddad', email: 'noor@example.test', roles: ['support_lead', 'privacy', 'staff'] }];
+      b.roles = [...b.roles,
+        { role: 'trust_safety', people: 1, screens: ['overview', 'disputes', 'sellers', 'verify', 'vetting', 'trust', 'support', 'team'], actions: ['suspend', 'decide', 'verify', 'vet'] },
+        { role: 'dispatch', people: 1, screens: ['overview', 'orders', 'delivery'], actions: ['dispatch'] },
+        { role: 'support', people: 2, screens: ['overview', 'orders', 'support', 'sellers'], actions: ['support'] }];
+      return { body: b };
+    },
+    // trust & safety: the five open flags the overview counts
+    (m, p) => {
+      if (m !== 'GET' || p.split('?')[0] !== '/api/v1/console/trust/flags/queue') return undefined;
+      const b = consoleRec(m, p);
+      const flag = (id, rule, targetType, businessName, explanation, at) => ({ ...b.items[0], id, rule, targetType, businessName, explanation, createdAt: at });
+      b.items.splice(2, 0,
+        flag('F4', 'floor_breach', 'merchant', 'Bow River Mechanics', 'Quality 78 for 3 weeks · Trusted floor 80', '2026-09-08T09:00:00Z'),
+        flag('F5', 'no_show', 'customer', null, '2 no-shows in 30 days · bookings with Prairie Wrench', '2026-09-07T22:15:00Z'),
+        flag('F6', 'review_screened', 'review', 'Glenmore Bakery', 'A review with a phone number, masked before publishing', '2026-09-07T19:40:00Z'));
+      return { body: rebase(b) };
+    },
+    (m, p) => (m === 'GET' && p.split('?')[0] === '/api/v1/console/audit' ? { body: rebase({ items: AUDIT, next: null }) } : undefined),
+    // a place with nothing in it (the empty state) and a screen whose data failed (the error state): ui-shots routes
+    (m, p) => (m === 'GET' && p.startsWith('/api/v1/console/disputes?') && p.includes('province=QC') ? { body: { summary: { forAgent: 0, inSellerWindow: 0, closedThisWeek: 0 }, items: [] } } : undefined),
+    (m, p) => (m === 'GET' && p.startsWith('/api/v1/console/reports?') && p.includes('province=QC') ? { status: 503, body: { type: 'about:blank', title: 'Service Unavailable', status: 503 } } : undefined),
+    // everything else the console asks: the recorded answer, moved to today (the session and roles stay the overrides')
+    // (only the screens recorded around that day: the privacy and retention tests used dates of their own)
+    (m, p) => (m === 'GET' && REBASED.some(r => p.startsWith(`/api/v1/console/${r}`))
+      ? (b => (b === undefined ? undefined : { body: rebase(b) }))(consoleRec(m, p)) : undefined),
   ],
 };
