@@ -114,7 +114,23 @@ export interface OrderTracking {
   steps: Array<{ key: StepKey; state: StepState }>;
   deliveredAt?: string | null; deliveryProof?: 'photo' | 'signature' | 'pin' | null; confirmedAt?: string | null;
   canConfirm?: boolean; paysShopsAt?: string | null; courier?: CourierProgress | null;
+  /** S-151: cancelling (until a shop packs), what was cancelled, a missed delivery, returns. */
+  canCancel?: boolean; cancellations?: Cancellation[]; deliveryFailure?: DeliveryFailure | null;
+  returnable?: Returnable[]; returns?: OrderReturn[];
 }
+export interface Cancellation { by: string; reason: string; at: string; whole: boolean; merchantName?: string | null }
+export interface DeliveryFailure {
+  reason: string; failedAt: string; decideBy: string; attempts: number; choice?: 'redeliver' | 'refund' | 'auto_refund' | null; chosenAt?: string | null; feeCents: number;
+}
+export interface Returnable { lineId: string; merchantId: string; title: string; qty: number; amountCents: number; returnUntil: string }
+export type ReturnState = 'requested' | 'approved' | 'declined' | 'escalated' | 'collected' | 'received' | 'refunded' | 'withdrawn';
+export interface OrderReturn {
+  id: string; ref: string; orderId: string; merchantId: string; merchantName?: string | null; state: ReturnState; reason: string;
+  method?: 'pickup' | 'dropoff' | null; declineReason?: string | null; amountCents: number;
+  lines: Array<{ lineId: string; title: string; qty: number; amountCents: number }>; canWithdraw: boolean; canEscalate: boolean;
+}
+export const CANCEL_REASONS = ['changed_mind', 'ordered_by_mistake', 'delivery_too_late', 'found_elsewhere', 'other'] as const;
+export const RETURN_REASONS = ['damaged', 'wrong_item', 'not_as_described', 'missing_parts', 'no_longer_needed', 'other'] as const;
 export type ProblemStatus = 'open' | 'reported' | 'closed' | 'not_yet' | 'not_paid';
 export interface ProblemItem { ref: string; title: string; qty: number; amountCents: number; taxCents: number; merchantId: string; merchantName: string; status: ProblemStatus; reportBy?: string | null }
 export interface ProblemContext {
@@ -193,6 +209,17 @@ export const shopApi = (api: ApiClient) => ({
     const p = await api.get<{ url: string; expiresAt: string }>(`/me/orders/${id(orderId)}/proof-photo`);
     return p ? { ...p, url: new URL(p.url, api.baseUrl).toString() } : null;
   },
+  /**
+   * S-151, the customer's after-sale (the consumer web's endpoints): cancel before a shop packs, choose after a missed
+   * delivery, request a return (multipart: lineIds, reason, note?, photo — JPG / PNG / WebP ≤ 5 MB), withdraw or
+   * escalate a return. 409s carry the api's words.
+   */
+  cancelOrder: (orderId: string, body: { reason: string; note?: string }) => api.post<OrderTracking>(`/me/orders/${id(orderId)}/cancel`, { json: body }),
+  failureChoice: (orderId: string, choice: 'redeliver' | 'refund') =>
+    api.post<OrderTracking>(`/me/orders/${id(orderId)}/delivery-failure`, { json: { choice } }),
+  requestReturn: (orderId: string, form: FormData) => api.post<OrderReturn>(`/me/orders/${id(orderId)}/returns`, { form }),
+  withdrawReturn: (returnId: string) => api.post<OrderReturn>(`/me/returns/${id(returnId)}/withdraw`),
+  escalateReturn: (returnId: string, statement: string) => api.post<OrderReturn>(`/me/returns/${id(returnId)}/escalate`, { json: { statement } }),
   /** A photo for a report (`POST /me/case-uploads`, S-60): JPEG or PNG from the camera or the library. */
   uploadPhoto: (form: FormData) => api.post<{ id: string; fileName: string; contentType: string; size: number }>('/me/case-uploads', { form }),
   problem: (kind: string, refId: string) => api.get<ProblemContext>(`/me/problems/${id(kind)}/${id(refId)}`),
