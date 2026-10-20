@@ -8,6 +8,7 @@ import { profileQuery } from './settingsApi';
  * Privacy requests (S-105) — access (a copy of one's data), correction, erasure ("Delete my account"):
  *   GET  /api/v1/me/privacy-requests                     the person's requests
  *   GET  /api/v1/me/privacy-requests/correctable-fields  what staff can correct on request
+ *   GET  /api/v1/me/privacy-requests/erasure-preview     S-159: what deleting the account would affect now
  *   POST /api/v1/me/privacy-requests {type, corrections?, note?}   → awaiting_verification + a texted code
  *   POST /api/v1/me/privacy-requests/{id}/verify {code} | X-Step-Up (passkey / authenticator proof)
  *   POST /api/v1/me/privacy-requests/{id}/verification-code       a new code
@@ -22,6 +23,8 @@ export const PrivacyRequest = z.object({
   law: z.object({ code: z.string(), name: z.string(), shortName: z.string(), authority: z.string(), authorityUrl: z.string() }),
   receivedAt: z.string(), dueAt: z.string(), extendedTo: z.string().nullish(), scheduledFor: z.string().nullish(),
   completedAt: z.string().nullish(), codeSentTo: z.string().nullish(), decision: z.string().nullish(),
+  /** S-159: the code went by `sms` or (no verified mobile) by `email` */
+  codeChannel: z.enum(['sms', 'email']).nullish(),
   export: z.object({ ready: z.boolean(), expiresAt: z.string().nullish() }).nullish(),
   corrections: z.array(z.object({ field: z.string(), value: z.string() })).catch([]),
   holdsOpen: z.number().catch(0),
@@ -37,6 +40,14 @@ export const correctableQuery = queryOptions({
   queryKey: ['me', 'privacy-requests', 'fields'],
   queryFn: async () => (await http('/api/v1/me/privacy-requests/correctable-fields', {}, z.object({ items: z.array(z.string()) }))).items,
   staleTime: Infinity,
+});
+
+/** S-159: what deleting the account would affect now (Account › Delete account shows it before confirming). */
+export const Consequence = z.object({ code: z.string(), count: z.number(), amountCents: z.number(), until: z.string().nullish() });
+export type Consequence = z.infer<typeof Consequence>;
+export const erasurePreviewQuery = queryOptions({
+  queryKey: ['me', 'privacy-requests', 'erasure-preview'],
+  queryFn: async () => (await http('/api/v1/me/privacy-requests/erasure-preview', {}, z.object({ items: z.array(Consequence) }))).items,
 });
 
 const path = (id: string, action = '') => `/api/v1/me/privacy-requests/${encodeURIComponent(id)}${action}`;

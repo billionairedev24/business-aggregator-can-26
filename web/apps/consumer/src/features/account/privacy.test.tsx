@@ -82,23 +82,13 @@ describe('Your data (S-105 privacy requests)', () => {
     expect(await screen.findByText(/Ready to download until/)).toBeInTheDocument();
     expect(screen.getByText(/Your account will be deleted on/)).toBeInTheDocument();
     expect(screen.getByText(/We answer by .* \(PIPA\)\./)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete my account…' })).toBeDisabled();
+    // S-159: deletion has its own page (Account › Delete account)
+    expect(screen.getByRole('link', { name: 'Delete my account…' })).toHaveAttribute('href', '/account/delete');
 
     await userEvent.click(screen.getByRole('button', { name: 'Download' }));
     expect(await screen.findByRole('link', { name: 'Data (JSON)' })).toHaveAttribute('href', '/api/v1/public/privacy-exports/tok');
     expect(screen.getByRole('link', { name: 'Summary' })).toHaveAttribute('href', '/api/v1/public/privacy-exports/tok?part=summary');
     expect(posts('/api/v1/me/privacy-requests/R1/download-link')).toHaveLength(1);
-  });
-
-  it('deletion asks first, says what is kept, and can be cancelled before it starts', async () => {
-    opened = request({ type: 'erasure' });
-    open();
-    await userEvent.click(await screen.findByRole('button', { name: 'Delete my account…' }));
-    const dialog = await screen.findByRole('alertdialog', { name: 'Delete your account?' });
-    expect(within(dialog).getByText(/receipts, tax and payment records — stays, without your name/)).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Continue' }));
-    expect(posts('/api/v1/me/privacy-requests')[0]?.body).toEqual({ type: 'erasure' });
-    expect(await screen.findByRole('dialog', { name: 'Confirm it’s you' })).toBeInTheDocument();
   });
 
   it('a second request of the same kind says we are on it', async () => {
