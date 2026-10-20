@@ -42,7 +42,7 @@ class OversightEmailNotices {
 
     @ApplicationModuleListener
     void on(MerchantSuspended e) {
-        send(e.eventId(), e.aggregateId(), e.actionId(), Action.SUSPENDED, null, null, null, "help");
+        send(e.eventId(), e.aggregateId(), e.actionId(), Action.SUSPENDED, null, null, null, "standing");
     }
 
     @ApplicationModuleListener

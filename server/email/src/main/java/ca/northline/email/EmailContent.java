@@ -763,6 +763,61 @@ public sealed interface EmailContent {
         }
     }
 
+    /**
+     * S-156: the business's standing changed — Northline paused or resumed instant book, an appeal was decided, a
+     * coaching plan started — with the reason. Transactional: an account notice to the owners, always sent.
+     *
+     * @param subject what an appeal was about ({@code dispute}, {@code suspended}, {@code search_hidden},
+     *     {@code instant_book_off}); empty otherwise
+     * @param reference the appeal's or dispute's number; empty otherwise
+     */
+    record StandingUpdate(
+            String businessName,
+            StandingUpdate.Change change,
+            String subject,
+            String reason,
+            String reference,
+            long compensationCents,
+            URI link)
+            implements EmailContent {
+
+        public enum Change {
+            INSTANT_BOOK_PAUSED,
+            INSTANT_BOOK_RESUMED,
+            APPEAL_GRANTED,
+            APPEAL_DENIED,
+            COACHING_STARTED
+        }
+
+        @Override
+        public String template() {
+            return "standing-update";
+        }
+
+        @Override
+        public String variant() {
+            return code(change);
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("change", code(change));
+            v.put("subject", subject.isEmpty() ? "other" : subject);
+            v.put("staffReason", reason);
+            v.put("reference", reference);
+            v.put("compensation", compensationCents > 0 ? format.money(compensationCents) : "");
+            v.put("link", link.toString());
+            return v;
+        }
+    }
+
     // ── Console oversight ────────────────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -1233,6 +1288,22 @@ public sealed interface EmailContent {
                         "off_platform_payment",
                         "A message asked a customer to e-transfer you directly.",
                         URI.create(studio + "/messages")));
+        for (var change : StandingUpdate.Change.values()) {
+            var appeal =
+                    change == StandingUpdate.Change.APPEAL_GRANTED || change == StandingUpdate.Change.APPEAL_DENIED;
+            all.put(
+                    "standing-update." + code(change),
+                    new StandingUpdate(
+                            business,
+                            change,
+                            appeal ? "dispute" : "",
+                            change == StandingUpdate.Change.COACHING_STARTED
+                                    ? "Raise your rating — reply to every review within two days."
+                                    : "3 confirmed no-shows in the last 30 days.",
+                            appeal ? "DS-1188" : "",
+                            change == StandingUpdate.Change.APPEAL_GRANTED ? 12_750 : 0,
+                            URI.create(studio + "/standing")));
+        }
         for (var action : SellerOversightNotice.Action.values()) {
             all.put(
                     "seller-oversight." + code(action),
