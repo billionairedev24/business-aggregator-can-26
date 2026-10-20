@@ -60,16 +60,47 @@ final class AuthResponses {
     /**
      * Signed in (auth server session): who, and {@code acr=mfa} when a second factor was used. {@code continueTo}
      * (S-29): the authorization request of a mobile app that sent the browser to the sign-in page, to go back to
-     * instead of the Studio's BFF hand-off.
+     * instead of the Studio's BFF hand-off. {@code needsSecondFactor} (S-154): the account has no passkey and no
+     * authenticator yet — the Studio and the console enrol one before the hand-off, the consumer site offers it.
      */
     record Session(
-            User user, @Nullable String acr, @Nullable String continueTo) {
+            User user, @Nullable String acr, @Nullable String continueTo, boolean needsSecondFactor) {
         static Session of(UserAccount account, Collection<Factor> factors, ZoneId zone) {
-            return new Session(User.of(account, zone), Factor.isMfa(factors) ? UserClaimsService.MFA : null, null);
+            return new Session(
+                    User.of(account, zone), Factor.isMfa(factors) ? UserClaimsService.MFA : null, null, false);
         }
 
         Session continuingTo(@Nullable String url) {
-            return new Session(user, acr, url);
+            return new Session(user, acr, url, needsSecondFactor);
+        }
+
+        Session needingSecondFactor(boolean needed) {
+            return new Session(user, acr, continueTo, needed);
         }
     }
+
+    /** S-154: the email with the code is on its way ({@code step = verify-email}). */
+    record EmailSent(String step, String email, long resendAfterSeconds) {}
+
+    /**
+     * S-154, after email + password, the next step: "factor" (with the account's own factors), "enroll" (signed in
+     * with the password alone; set up a second factor next) or "verify-email" (the account isn't confirmed yet; a new
+     * code is on its way).
+     */
+    record PasswordStep(
+            String step,
+            @Nullable List<String> factors,
+            @Nullable Session session,
+            @Nullable String email,
+            @Nullable Long resendAfterSeconds) {}
+
+    /** S-154: the address is confirmed; {@code session} when this browser is now signed in. */
+    record EmailConfirmed(
+            String email, boolean signedIn, @Nullable Session session) {}
+
+    /** S-154: the second factor is set up; the session now has {@code acr=mfa}. The backup codes are shown once. */
+    record Enrolled(Session session, List<String> backupCodes) {}
+
+    /** S-154: the password was reset — sign in with it (the second factor is still asked). */
+    record PasswordReset(String email) {}
 }

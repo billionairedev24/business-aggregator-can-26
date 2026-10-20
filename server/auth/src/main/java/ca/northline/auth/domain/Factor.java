@@ -13,6 +13,8 @@ public enum Factor {
     TOTP("totp", "otp", true),
     BACKUP_CODE("backup_code", "otp", true),
     PHONE_OTP("phone_otp", "sms", false),
+    /** S-154: the account's password — a first factor, never {@code acr=mfa} on its own. */
+    PASSWORD("password", "pwd", false),
     FEDERATED("federated", "fed", false);
 
     public static final String AUTHORITY_PREFIX = "FACTOR_";

@@ -20,14 +20,30 @@ const RULES: Record<string, AuthKitKey> = {
   'code:locked': 'codeLocked',
   'credential:passkey': 'passkeyFailed',
   'identifier:required': 'identifierRequired',
+  // S-154
+  'password:required': 'passwordRequired',
+  'password:common': 'passwordCommon',
+  'password:email': 'passwordIsEmail',
+  'passwordConfirm:mismatch': 'passwordConfirm',
+  'currentPassword:required': 'currentPasswordRequired',
+  'currentPassword:mismatch': 'currentPasswordWrong',
+  'token:expired': 'linkExpired',
+  'token:required': 'linkExpired',
 };
+
+/** S-154: the password rule ids the server answers with that depend on the message (length: too short or too long). */
+function passwordLengthKey(message: string): AuthKitKey {
+  return /128/.test(message) ? 'passwordTooLong' : 'passwordTooShort';
+}
 
 /** 422 → { field: message }, translated where the rule is known. `mismatch` depends on the step (see callers). */
 export function fieldErrors(err: unknown, t: AuthKitT, mismatch: AuthKitKey = 'codeWrong'): Record<string, string> {
   if (!(err instanceof ValidationError)) return {};
   const out: Record<string, string> = {};
   for (const e of err.errors) {
-    const key = e.rule === 'mismatch' ? mismatch : RULES[`${e.field}:${e.rule}`];
+    const key = e.field === 'password' && e.rule === 'length' ? passwordLengthKey(e.message)
+      : e.field === 'password' && e.rule === 'mismatch' ? 'credentialsWrong'
+      : RULES[`${e.field}:${e.rule}`] ?? (e.rule === 'mismatch' ? mismatch : undefined);
     out[e.field] ??= key ? t(key) : e.message;
   }
   return out;
@@ -43,6 +59,7 @@ export function flowError(err: unknown, t: AuthKitT, sent: 'form' | 'sms' | 'voi
   if (err instanceof ApiError) {
     const code = err.body && typeof err.body === 'object' && 'code' in err.body ? String((err.body as { code: unknown }).code) : '';
     if (code === 'too_many_attempts') return t('tooMany');
+    if (code === 'already_enrolled') return t('alreadyEnrolled');
     if (code === 'sign_in_unavailable') return t('signInUnavailable');
     if (code === 'code_not_sent') return t(sent === 'voice' ? 'codeNotSentVoice' : sent === 'sms' ? 'codeNotSentSms' : 'codeNotSentForm');
     if (code === 'rate_limited') {

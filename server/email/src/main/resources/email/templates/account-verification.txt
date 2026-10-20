@@ -1,0 +1,11 @@
+[(#{account-verification.heading(${firstName})})]
+
+[(#{account-verification.body})]
+
+    [(${code})]
+
+[(#{account-verification.cta})]: [(${link})]
+
+[(#{account-verification.expires(${minutes})})]
+[(#{account-verification.ignore})]
+[# th:insert="~{footer.txt}" /]

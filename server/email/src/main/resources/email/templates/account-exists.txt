@@ -1,0 +1,9 @@
+[(#{account-exists.heading(${firstName})})]
+
+[(#{account-exists.body})]
+
+[(#{account-exists.cta})]: [(${signIn})]
+[(#{account-exists.forgot})] [(#{account-exists.reset})]: [(${resetPassword})]
+
+[(#{account-exists.ignore})]
+[# th:insert="~{footer.txt}" /]

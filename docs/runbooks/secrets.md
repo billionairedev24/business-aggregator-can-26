@@ -67,8 +67,8 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | `stripe-secret-key`, `stripe-publishable-key` | api | staging, prod | Stripe dashboard ([stripe.md](stripe.md)) |
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | `stripe-webhook-secret`, `stripe-connect-webhook-secret` | api | staging, prod | the two webhook endpoints' signing secrets ([stripe.md](stripe.md)) |
 | `EMAIL_UNSUBSCRIBE_KEY` | `email-unsubscribe-key` | api | staging, prod | operator: `openssl rand -base64 32` ([email.md](email.md)) |
-| `EMAIL_API_KEY` | `email-api-key` | api | with `sendgrid` (or `azure` with an access key) | provider console |
-| `SMTP_PASSWORD` | `smtp-password` | api, worker | with `EMAIL_PROVIDER=smtp` | relay credentials |
+| `EMAIL_API_KEY` | `email-api-key` | api, auth (S-154) | with `sendgrid` (or `azure` with an access key) | provider console |
+| `SMTP_PASSWORD` | `smtp-password` | api, worker, auth (S-154) | with `EMAIL_PROVIDER=smtp` | relay credentials |
 | `GOOGLE_CLIENT_SECRET`, `APPLE_PRIVATE_KEY` | `google-client-secret`, `apple-private-key` | auth | staging, prod (S-18) | Google Cloud console / Apple Developer `.p8` key ([federation.md](federation.md)) |
 | `REGISTRY_CORPORATIONS_CANADA_KEY`, `REGISTRY_ALBERTA_KEY`, `REGISTRY_CALGARY_APP_TOKEN` | `registry-corporations-canada-key`, `registry-alberta-key`, `registry-calgary-app-token` | api | with `api` / `opencorporates` / optional for `socrata` (S-23) | GC API Store subscription / OpenCorporates account / data.calgary.ca developer settings ([registries.md](registries.md)) |
 | `OTEL_BACKEND_AUTH` | `otel-backend-auth` | otel-collector (S-111) | with an OTLP backend that needs credentials (`observability.collector.secretEnv`) | the backend's console, e.g. Grafana Cloud access policy token ([observability.md](observability.md#any-otlp-backend)) |

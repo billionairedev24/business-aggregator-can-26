@@ -61,6 +61,7 @@ public class PhoneCodeSignInService {
                 ? null
                 : accounts.findById(attempt.userId())
                         .filter(UserAccount::active)
+                        .filter(UserAccount::phoneVerified) // S-154: never to an unconfirmed mobile
                         .map(UserAccount::phone)
                         .flatMap(PhoneNumber::parse)
                         .orElse(null);

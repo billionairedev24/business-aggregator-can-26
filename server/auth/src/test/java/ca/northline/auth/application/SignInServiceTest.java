@@ -34,6 +34,11 @@ class SignInServiceTest {
                     AttemptLimits.class,
                     invocation -> invocation.getMethod().getName().equals("failed") ? invocation.getArgument(2) : null),
             mock(FederatedLinking.class),
+            mock(Passwords.class),
+            mock(PasswordHasher.class),
+            mock(PendingAccounts.class),
+            mock(AccountService.class),
+            mock(AccountSecurity.class),
             Clock.fixed(Instant.parse("2026-09-30T12:00:00Z"), ZoneOffset.UTC));
 
     private final SignInLog.Client client = new SignInLog.Client("203.0.113.7", "test", null);

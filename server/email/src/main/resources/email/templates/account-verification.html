@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{account-verification.preheader(${minutes})}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{account-verification.heading(${firstName})}">Heading</h1>
+  <p th:style="${s.p}" th:text="#{account-verification.body}">Body</p>
+  <p th:style="${s.code}" th:text="${code}">123456</p>
+  <p th:style="${s.p}" th:text="#{account-verification.orLink}">Or use the button</p>
+  <th:block th:replace="~{button.html :: button(#{account-verification.cta}, ${link})}"/>
+  <p th:style="${s.small}" th:text="#{account-verification.expires(${minutes})}">Expires</p>
+  <p th:style="${s.small}" th:text="#{account-verification.ignore}">Ignore</p>
+</div>
+</body>
+</html>

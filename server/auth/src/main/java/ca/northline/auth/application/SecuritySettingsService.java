@@ -28,6 +28,11 @@ public class SecuritySettingsService {
     private final FlowStore flow;
     private final SecurityChanges changes;
     private final AuditTrail audit;
+    private final SecondFactors factors;
+    private final BackupCodeService backupCodes;
+    private final AttemptLimits limits;
+    private final AuthProperties props;
+    private final java.time.Clock clock;
 
     public record Overview(
             UserAccount account,
@@ -95,6 +100,62 @@ public class SecuritySettingsService {
         }
         audit.record(userId, "auth.passkey_removed", "passkey", credentialId, Map.of("label", target.label()));
         return security.passkeys(userId);
+    }
+
+    /** S-154: a new authenticator secret to scan (kept in the auth session until a code from it is confirmed). */
+    public RegistrationService.TotpSetup authenticatorSetup(String userId) {
+        var account = account(userId);
+        var secret = TotpSetups.newSecret();
+        flow.put(FlowStore.TOTP_ENROLMENT, secret);
+        return TotpSetups.of(secret, Objects.requireNonNullElse(account.email(), userId), props.totpIssuer());
+    }
+
+    /**
+     * S-154: sets up the authenticator app again (a new phone) or for the first time — a recent second factor
+     * (step-up) and a code from the new secret. The old secret stops working at once.
+     */
+    @Transactional(noRollbackFor = {InvalidInput.class, FlowRejected.class})
+    public void replaceAuthenticator(Caller caller, String code) {
+        changes.authorize(caller);
+        var userId = caller.userId();
+        var account = account(userId);
+        var secret = flow.get(FlowStore.TOTP_ENROLMENT)
+                .orElseThrow(() -> new FlowRejected(Reason.NOT_STARTED, "Scan the QR code first."));
+        var who = AttemptLimits.Subject.user(userId);
+        limits.guard(LimitedAction.TOTP_VERIFY, who);
+        var step = ca.northline.auth.domain.Totp.verify(secret, code.strip(), clock.instant(), Long.MIN_VALUE);
+        if (step.isEmpty()) {
+            throw limits.failed(
+                    LimitedAction.TOTP_VERIFY, who, InvalidInput.of("code", "mismatch", AuthMessages.CODE_WRONG));
+        }
+        limits.succeeded(LimitedAction.TOTP_VERIFY, who);
+        var replaced = security.authenticatorSince(userId) != null;
+        factors.saveTotp(userId, secret, clock.instant());
+        factors.markTotpUsed(userId, step.getAsLong());
+        flow.remove(FlowStore.TOTP_ENROLMENT);
+        if (account.mfaPrimary() == null || "sms".equals(account.mfaPrimary())) {
+            security.setMfaPrimary(userId, Factor.TOTP.code());
+        }
+        audit.record(
+                userId,
+                replaced ? "auth.authenticator_replaced" : "auth.authenticator_added",
+                "user",
+                userId,
+                Map.of("factor", Factor.TOTP.code()));
+    }
+
+    /** Ten new backup codes (the old ones stop working) — S-154: a recent second factor first (step-up). */
+    @Transactional
+    public List<String> regenerateBackupCodes(Caller caller) {
+        changes.authorize(caller);
+        var codes = backupCodes.regenerate(caller.userId());
+        audit.record(
+                caller.userId(),
+                "auth.backup_codes_regenerated",
+                "user",
+                caller.userId(),
+                Map.of("count", codes.size()));
+        return codes;
     }
 
     private UserAccount account(String userId) {

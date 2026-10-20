@@ -1152,3 +1152,18 @@ This run hasn't started: reassign the whole run.	Cette tournée n’a pas commen
 Every order on this run is already picked up.	Toutes les commandes de cette tournée sont déjà récupérées.	new
 Set up your payout account first.	Configurez d’abord votre compte de versement.	new
 No return with id %s	Aucun retour avec l’identifiant %s	new
+Enter a password.	Entrez un mot de passe.	new
+Use at least 12 characters.	Utilisez au moins 12 caractères.	new
+Use at most 128 characters.	Utilisez au plus 128 caractères.	new
+This password is too common. Choose one that's harder to guess.	Ce mot de passe est trop courant. Choisissez-en un plus difficile à deviner.	new
+Your password can't be your email address.	Votre mot de passe ne peut pas être votre adresse courriel.	new
+The passwords don't match.	Les mots de passe ne correspondent pas.	new
+That email and password don't match. Check them and try again.	Ce courriel et ce mot de passe ne correspondent pas. Vérifiez-les et réessayez.	new
+That's not your current password.	Ce n’est pas votre mot de passe actuel.	new
+Enter your current password.	Entrez votre mot de passe actuel.	new
+Send studio, consumer or console as the app.	Envoyez studio, consumer ou console comme application.	new
+This account already has a second factor. Change it in Settings › Security.	Ce compte a déjà un deuxième facteur. Modifiez-le dans Paramètres › Sécurité.	new
+That link has expired or was already used. Ask for a new email.	Ce lien a expiré ou a déjà été utilisé. Demandez un nouveau courriel.	new
+Create the account again.	Recommencez la création du compte.	new
+Ask for a new email first.	Demandez d’abord un nouveau courriel.	new
+Wait %d s before sending another email.	Attendez %d s avant d’envoyer un autre courriel.	new

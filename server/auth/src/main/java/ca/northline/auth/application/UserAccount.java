@@ -5,7 +5,11 @@ import java.util.Locale;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
-/** Read model of {@code identity.users} as the auth server needs it (claims, sign-in, session). */
+/**
+ * Read model of {@code identity.users} as the auth server needs it (claims, sign-in, session).
+ *
+ * @param phoneVerified S-154: the mobile was confirmed by an SMS code (an email account's optional mobile isn't)
+ */
 public record UserAccount(
         String id,
         @Nullable String firstName,
@@ -16,7 +20,8 @@ public record UserAccount(
         @Nullable String locale,
         @Nullable String mfaPrimary,
         String status,
-        Instant createdAt) {
+        Instant createdAt,
+        boolean phoneVerified) {
 
     /** First name; falls back to the first word of display_name for rows created before V020. */
     public String givenName() {

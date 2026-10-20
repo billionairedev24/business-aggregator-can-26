@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  addPasskey, createPasskey, passkeyOptions, PasskeyError, removePasskey, revokeOtherSessions, revokeSession, securityChangeError,
-  securityKey, securityQuery, type ActiveSession, type Security, type SecurityChangeError,
+  addPasskey, AuthenticatorSetupForm, BackupCodesStep, ChangePasswordForm, createPasskey, passkeyOptions, PasskeyError, regenerateBackupCodes, removePasskey,
+  revokeOtherSessions, revokeSession, securityChangeError, securityKey, securityQuery, useAuthKitT, type ActiveSession, type Security, type SecurityChangeError,
 } from '@northline/auth-kit';
 import { Button, Dialog, ErrorState, Field, Tag, TextInput, codeValue } from '@northline/ui';
 import { enrolPasskey, StepUpFailed, stepUpWithCode, stepUpWithPasskey } from '../cart/stepUp';
@@ -94,6 +94,11 @@ function SecurityView({ security, sid, phone }: { security: Security; sid: strin
   const [stepUp, setStepUp] = useState<() => Promise<unknown>>();
   const [confirm, setConfirm] = useState<{ title: string; body: string; run: () => Promise<unknown> }>();
   const [busy, setBusy] = useState(false);
+  // S-154: password, authenticator app and new backup codes (each behind the same step-up)
+  const kit = useAuthKitT();
+  const [editing, setEditing] = useState<'password' | 'authenticator' | null>(null);
+  const [codes, setCodes] = useState<string[] | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: securityKey }), qc.invalidateQueries({ queryKey: accountSummaryQuery.queryKey })]);
 
   /** Runs a change; 403 step_up_required asks to confirm and retries. */
@@ -136,7 +141,20 @@ function SecurityView({ security, sid, phone }: { security: Security; sid: strin
         {security.passkeys.length === 0 ? (
           <li className="nl-acct-row"><span>{t('addPasskey')}</span><Button type="button" variant="ghost" disabled={busy} onClick={() => void addKey('Passkey')}>{t('add')}</Button></li>
         ) : null}
-        <li className="nl-acct-row"><span>{t('authApp')}</span><Tag tone={security.authenticator ? 'accent' : 'neutral'}>{security.authenticator ? t('enabled') : t('notSetUp')}</Tag></li>
+        <li className="nl-acct-row">
+          <span>{kit('passwordLabel')}{notice ? <span className="nl-small nl-muted" role="status"> · {notice}</span> : null}</span>
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => { setNotice(null); setEditing('password'); }}>{security.password ? kit('changePassword') : kit('setPassword')}</Button>
+        </li>
+        <li className="nl-acct-row">
+          <span>{t('authApp')} <Tag tone={security.authenticator ? 'accent' : 'neutral'}>{security.authenticator ? t('enabled') : t('notSetUp')}</Tag></span>
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => { setNotice(null); setEditing('authenticator'); }}>{security.authenticator ? kit('authenticatorAgain') : kit('authenticatorSetUp')}</Button>
+        </li>
+        {strong ? (
+          <li className="nl-acct-row">
+            <span>{kit('backupTitle')} · {security.backupCodesRemaining}</span>
+            <Button type="button" variant="ghost" disabled={busy} onClick={() => void change(async () => setCodes((await regenerateBackupCodes()).codes))}>{kit('newBackupCodes')}</Button>
+          </li>
+        ) : null}
         {phone ? <li className="nl-acct-row"><span>{t('smsBackup', { last4: phone.replace(/\D/g, '').slice(-4) })}</span><Tag tone="neutral">{t('backup')}</Tag></li> : null}
         <li className="nl-acct-row"><span>{t('securityKey')}</span><Button type="button" variant="ghost" disabled={busy} onClick={() => void addKey('Security key')}>{t('add')}</Button></li>
         <li className="nl-acct-row"><span>{t('payRule')}</span><strong>{t('payRuleValue')}</strong></li>
@@ -163,6 +181,19 @@ function SecurityView({ security, sid, phone }: { security: Security; sid: strin
         </>}>
         <p>{confirm?.body}</p>
       </Dialog>
+      {editing ? (
+        <Dialog open onClose={() => setEditing(null)} title={editing === 'password' ? (security.password ? kit('changePassword') : kit('setPassword')) : (security.authenticator ? kit('authenticatorAgain') : kit('authenticatorSetUp'))}>
+          {editing === 'password'
+            ? <ChangePasswordForm hasPassword={security.password} current={sid} run={change} onCancel={() => setEditing(null)} onDone={() => { setEditing(null); setNotice(kit('passwordChanged')); }} />
+            : <AuthenticatorSetupForm email={security.email ?? ''} run={change} onCancel={() => setEditing(null)} onDone={() => { setEditing(null); setNotice(kit('authenticatorReplaced')); }} />}
+          {error ? <p className="nl-error" role="alert">{t(`err_${error}`)}</p> : null}
+        </Dialog>
+      ) : null}
+      {codes ? (
+        <Dialog open onClose={() => setCodes(null)} title={kit('backupTitle')}>
+          <BackupCodesStep email={security.email ?? ''} codes={codes} onContinue={() => setCodes(null)} />
+        </Dialog>
+      ) : null}
       {stepUp ? (
         <Dialog open onClose={() => setStepUp(undefined)} title={t('confirmTitle')} actions={<Button type="button" variant="ghost" onClick={() => setStepUp(undefined)}>{t('cancel')}</Button>}>
           <ConfirmItsYou onDone={() => { const retry = stepUp; setStepUp(undefined); void change(retry); }} />
