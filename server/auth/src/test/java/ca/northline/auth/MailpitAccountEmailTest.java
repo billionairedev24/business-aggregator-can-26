@@ -23,6 +23,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -38,6 +39,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@DirtiesContext // its own context (real SMTP): closed afterwards so its connections don't crowd the shared database
 class MailpitAccountEmailTest {
 
     @ServiceConnection
@@ -54,6 +56,7 @@ class MailpitAccountEmailTest {
 
     @DynamicPropertySource
     static void smtp(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.hikari.maximum-pool-size", () -> 3);
         registry.add("northline.email.provider", () -> "local");
         registry.add("northline.email.smtp.host", MAILPIT::getHost);
         registry.add("northline.email.smtp.port", () -> MAILPIT.getMappedPort(1025));
