@@ -48,7 +48,7 @@ it under the `local` profile only.
 
 | Make target | What it does |
 | --- | --- |
-| `make up SERVICES="auth api bff studio"` | real sign-in: northline-auth :9000 → studio-bff :8082 → Studio (`ravi.sandhu@example.com`, TOTP key `NORTHLINERAVIDEVTOTPSECRET234567`; README § Local sign-in) |
+| `make up SERVICES="auth api bff studio"` | real sign-in: northline-auth :9000 → studio-bff :8082 → Studio (`ravi.sandhu@example.com`, the code from `make creds WHO=ravi`) |
 | `make up SERVICES="auth api bff-consumer consumer"` | the consumer web :3000 through the consumer-bff :8081 |
 | `make up SERVICES="api consumer"` | the consumer web with dev auth as Amara Osei (no BFF, no auth server) |
 | `make up SERVICES="auth api bff-console console"` | the platform console :3200 through the console-bff :8083 (S-90; staff sign-in, README § Local sign-in) |

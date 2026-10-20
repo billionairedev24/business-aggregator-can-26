@@ -269,6 +269,7 @@ cmd_up() {
   "$ROOT/scripts/stack.sh" up $APPS || rc=$?
   cmd_status
   [ $rc = 0 ] || say "${c_bad}Some apps did not start — the table shows which; make logs SERVICES=<app>, then make up-all again${c_off}"
+  say ""; say "${c_b}Sign-in codes: make creds${c_off}"
   return $rc
 }
 
@@ -289,9 +290,9 @@ cmd_status() {
   if byo grafana; then g_url="$GRAFANA_URL"; g_note="(yours) folder Northline — make obs-grafana-provision"; else g_url="http://localhost:$GRAFANA_PORT"; g_note="(Docker) admin / admin, folder Northline"; fi
   say ""
   say "${c_b}Apps${c_off}"
-  row "Studio" "http://localhost:3100" "http://localhost:3100/" "ravi.sandhu@example.com · backup code ravis-00001"
-  row "Consumer web" "http://localhost:3000" "http://localhost:3000/" "through the consumer-bff"
-  row "Console" "http://localhost:3200" "http://localhost:3200/" "priya.natarajan@example.com · backup code priya-n-00001"
+  row "Studio" "http://localhost:3100" "http://localhost:3100/" "ravi.sandhu@example.com · code: make creds WHO=ravi"
+  row "Consumer web" "http://localhost:3000" "http://localhost:3000/" "amara.osei@example.com · code: make creds WHO=amara"
+  row "Console" "http://localhost:3200" "http://localhost:3200/" "priya.natarajan@example.com · code: make creds WHO=priya-n"
   row "api" "http://localhost:8080/api/v1" "http://localhost:8080/actuator/health"
   row "  Swagger UI" "http://localhost:8080/swagger-ui.html" "http://localhost:8080/swagger-ui.html"
   row "  Scalar" "http://localhost:8080/docs/scalar" "http://localhost:8080/docs/scalar"
