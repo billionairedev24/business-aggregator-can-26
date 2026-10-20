@@ -1,4 +1,4 @@
--- S-151 (range V385–V394): two pieces of configuration. See docs/DECISIONS.md "S-151".
+-- S-151 (range V432–V441): two pieces of configuration. See docs/DECISIONS.md "S-151".
 
 -- The couriers' pay model of a province or market (a market's own wins over its province's; neither = the platform
 -- defaults, northline.fulfilment.courier-pay.*): {"perRunCents":…, "perPickupCents":…, "perDropoffCents":…,

@@ -1,4 +1,4 @@
--- S-151 (range V385–V394): order cancellation, failed deliveries and returns. Widens CHECKs (as V344 did) and adds
+-- S-151 (range V432–V441): order cancellation, failed deliveries and returns. Widens CHECKs (as V344 did) and adds
 -- tables; no column renamed or dropped. See docs/DECISIONS.md "S-151".
 
 -- An order whose courier couldn't hand it over (customer absent, unsafe, refused): the customer chooses re-delivery

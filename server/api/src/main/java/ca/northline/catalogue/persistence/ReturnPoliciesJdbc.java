@@ -10,7 +10,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@link ReturnPolicies} (S-151, V388): an offer's return window is its product category's own
+ * {@link ReturnPolicies} (S-151, V435): an offer's return window is its product category's own
  * ({@code catalogue.category_return_windows}), else its group's (the category's parent); offers without either are
  * left out (orders applies the platform default).
  */

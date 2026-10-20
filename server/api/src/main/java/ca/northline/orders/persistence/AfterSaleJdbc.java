@@ -18,7 +18,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link AfterSaleStore} over {@code orders.*} (S-151, V385). */
+/** {@link AfterSaleStore} over {@code orders.*} (S-151, V432). */
 @Repository
 @RequiredArgsConstructor
 class AfterSaleJdbc implements AfterSaleStore {

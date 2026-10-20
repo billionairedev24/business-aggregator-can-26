@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** {@link CourierPayRules} on {@code region.regions.courier_pay} (V388): the province's row, then the market's. */
+/** {@link CourierPayRules} on {@code region.regions.courier_pay} (V435): the province's row, then the market's. */
 @Repository
 @RequiredArgsConstructor
 class CourierPayQueries implements CourierPayRules {

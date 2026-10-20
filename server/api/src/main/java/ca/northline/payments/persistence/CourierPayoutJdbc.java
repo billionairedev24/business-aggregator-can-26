@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link CourierPayoutStore} over {@code payments.courier_accounts} / {@code courier_payouts} (V387). */
+/** {@link CourierPayoutStore} over {@code payments.courier_accounts} / {@code courier_payouts} (V434). */
 @Repository
 @RequiredArgsConstructor
 class CourierPayoutJdbc implements CourierPayoutStore {

@@ -1,4 +1,4 @@
--- S-151 (range V385–V394): cancelled deliveries and runs, failed drop-offs, return pickups and couriers' earnings.
+-- S-151 (range V432–V441): cancelled deliveries and runs, failed drop-offs, return pickups and couriers' earnings.
 -- Widens CHECKs and adds tables; no column renamed or dropped. See docs/DECISIONS.md "S-151".
 
 -- A run whose every stop was cancelled is `cancelled` (its courier is free again). A courier still has at most one open

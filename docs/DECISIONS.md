@@ -9789,17 +9789,17 @@ made, returns, courier pay and payouts, and moving the rest of a stuck run. Runb
 - **No personal data in events:** `order.cancelled`, `order.delivery_failed`, `return.updated` and `delivery.failed`
   carry ids, codes and amounts only (the notes and photos stay in the api).
 
-**Schema (additive, V385–V388)**
+**Schema (additive, V432–V435)**
 
-- V385 orders: `orders.state` + `delivery_failed`, `orders.cancelled_at`; `order_lines.state` + `cancelled`,
+- V432 orders: `orders.state` + `delivery_failed`, `orders.cancelled_at`; `order_lines.state` + `cancelled`,
   `cancelled_at`, `restocked`, `return_id`; `orders.cancellations`, `orders.delivery_failures`, `orders.returns`,
   `orders.return_lines`, `orders.return_ref_seq`.
-- V386 fulfilment: `runs.state` + `cancelled` (the open-run index ignores it); `stops.state` + `cancelled`, `kind` +
+- V433 fulfilment: `runs.state` + `cancelled` (the open-run index ignores it); `stops.state` + `cancelled`, `kind` +
   `collect`, `proof_kind` + `failed`, `fail_reason`, `fail_note`, `return_id`; `deliveries.state` + `failed`,
   `attempts`; `fulfilment.return_pickups`, `fulfilment.courier_earnings`.
-- V387 payments: `payments.courier_accounts`, `payments.courier_payouts` (account id, enabled, requirements due, bank
+- V434 payments: `payments.courier_accounts`, `payments.courier_payouts` (account id, enabled, requirements due, bank
   last 4 only — never a full account number).
-- V388: `region.regions.courier_pay` (jsonb); `catalogue.category_return_windows`.
+- V435: `region.regions.courier_pay` (jsonb); `catalogue.category_return_windows`.
 - Events: `orders.order_cancelled.v1`, `orders.order_delivery_failed.v1`, `orders.return_updated.v1` (topic
   `orders.return`, new), `fulfilment.delivery_failed.v1`; `fulfilment.run_changed.v1` widened.
 - Configuration: `northline.orders.after-sale.*`, `northline.fulfilment.courier-pay.*`, `…return-join-within`,

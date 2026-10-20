@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link EarningsStore} on {@code fulfilment.courier_earnings} (V386). */
+/** {@link EarningsStore} on {@code fulfilment.courier_earnings} (V433). */
 @Repository
 @RequiredArgsConstructor
 class EarningsJdbc implements EarningsStore {

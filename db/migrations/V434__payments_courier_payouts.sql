@@ -1,4 +1,4 @@
--- S-151 (range V385–V394): couriers are paid through Stripe Connect as recipients. Their Express account
+-- S-151 (range V432–V441): couriers are paid through Stripe Connect as recipients. Their Express account
 -- (transfers capability only), and each payout: a transfer from the platform to the account, then a payout to the bank
 -- Stripe collected at onboarding. Never stores an account number: Stripe's references and the last four digits only.
 -- See docs/DECISIONS.md "S-151" and docs/runbooks/stripe.md § Courier payouts.
