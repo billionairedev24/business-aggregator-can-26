@@ -42,7 +42,7 @@ export function licenceName(code, version) {
 }
 
 /** Fetcher version: slots a run of an older version found empty are searched again. */
-export const VERSION = 2;
+export const VERSION = 3;
 
 /**
  * The searches tried for a slot, in order: its own words, then a shorter form (its first two words), then the words of
@@ -71,8 +71,9 @@ export function rank(results, slot) {
 
 export function searchUrl(query, slot, commercial) {
   // No category/size filters at the API: most photographs carry neither tag, so those filters found nothing for many
-  // slots (owner's first run). rank() drops drawings and small images instead.
-  const q = new URLSearchParams({ q: query, page_size: '40', mature: 'false', filter_dead: 'true' });
+  // slots (owner's first run). rank() drops drawings and small images instead. Anonymous clients may ask for at
+  // most 20 results a page: 40 answered 401.
+  const q = new URLSearchParams({ q: query, page_size: '20', mature: 'false', filter_dead: 'true' });
   if (commercial) q.set('license_type', 'commercial'); else q.set('license', 'cc0,pdm');
   if (WIDE.test(slot)) q.set('aspect_ratio', 'wide');
   return `${API}?${q}`;
@@ -121,15 +122,22 @@ export async function run({
   for (const s of todo) {
     try {
       let found = [];
+      let failed = null;
       search: for (const mode of commercial ? [false, true] : [false]) {
         for (const query of queriesFor(s, slots)) {
           const res = await call(searchUrl(query, s.slot, mode));
           await sleep(delayMs);
-          if (!res.ok) { log(`  ! ${s.slot}: search answered ${res.status}`); break search; }
+          if (!res.ok) { failed = res.status; break search; }
           const body = await res.json();
           found = [...found, ...rank(body.results ?? [], s.slot).filter(r => !found.some(f => f.id === r.id))];
           if (found.length >= per) break search;
         }
+      }
+      if (failed !== null) {
+        // the search itself failed (401, 403, 4xx): nothing is recorded, so the next run searches the slot again
+        log(`  ! ${s.slot}: search answered ${failed} — not recorded, searched again next run`);
+        if (failed === 401 || failed === 403) { stopped = `Openverse answered ${failed} (refused the request): fix the cause, then run make photos-fetch again`; break; }
+        continue;
       }
       const dir = join(outDir, s.slot);
       rmSync(dir, { recursive: true, force: true });

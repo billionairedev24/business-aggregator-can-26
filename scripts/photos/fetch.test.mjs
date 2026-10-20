@@ -143,3 +143,13 @@ test('tries a shorter query and the fallback slot\'s words when a slot finds too
   const r = await run({ ...base, ...second, slots: [{ slot: 'category/a.b', query: 'a' }], outDir: old, sleep: async () => {} });
   assert.equal(r.filled, 1);
 });
+
+test('a refused search (401) is not recorded as empty, and stops the run', async () => {
+  const outDir = mkdtempSync(join(tmpdir(), 'photos-fetch-'));
+  const refused = { fetchImpl: async () => ({ status: 401, ok: false, headers: new Map(), json: async () => ({}) }), calls: [] };
+  const s = await run({ ...base, ...refused, slots: [{ slot: 'category/a.b', query: 'a' }, { slot: 'category/a.c', query: 'c' }], outDir, sleep: async () => {} });
+  assert.match(s.stopped, /401/);
+  const state = JSON.parse(readFileSync(join(outDir, 'candidates.json'), 'utf8'));
+  assert.equal(state.slots['category/a.b'], undefined);
+  assert.equal(new URL(searchUrl('x', 'category/a.b', false)).searchParams.get('page_size'), '20');
+});
