@@ -49,7 +49,17 @@ class TrustPersonalData implements PersonalDataContributor {
                 section(jdbc, "trust.points", "Points", "Points", """
                         select id, delta, ref_type, ref_id, note, created_at, expires_at
                           from trust.points_ledger where user_id = :u order by created_at
-                        """, p));
+                        """, p),
+                section(
+                        jdbc,
+                        "trust.rewardCredits",
+                        "Extra points businesses paid for",
+                        "Points en prime payés par des entreprises",
+                        """
+                        select merchant_id, multiplier, points, reversed_points, created_at
+                          from trust.reward_credits where user_id = :u order by created_at
+                        """,
+                        p));
     }
 
     @Override
@@ -77,6 +87,14 @@ class TrustPersonalData implements PersonalDataContributor {
                 .query(Boolean.class)
                 .single();
         var outcome = Erasure.done().touching(merchants);
+        // S-152: what a business paid for its reward's points is its billing record (the account id only)
+        var credited = jdbc.sql("select exists (select 1 from trust.reward_credits where user_id = :u)")
+                .param("u", u)
+                .query(Boolean.class)
+                .single();
+        if (credited) {
+            outcome = outcome.retaining("trust.reward_credits", Retention.BUSINESS_RECORDS);
+        }
         return wrote ? outcome.retaining("trust.reviews.ratings", Retention.BUSINESS_RECORDS) : outcome;
     }
 

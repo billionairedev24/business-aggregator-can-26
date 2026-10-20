@@ -46,9 +46,7 @@ import org.springframework.web.bind.annotation.RestController;
  * PATCH  /api/v1/me/addresses/{id}              {label?, unit?, note?}
  * POST   /api/v1/me/addresses/{id}/default      → the book
  * DELETE /api/v1/me/addresses/{id}              → the book
- * GET    /api/v1/me/household                   members and Northline Plus
- * POST   /api/v1/me/plus                        {plan: monthly|annual} — the 30-day free trial
- * DELETE /api/v1/me/plus                        cancel Plus
+ * GET    /api/v1/me/household                   members and Northline Plus (joining Plus: loyalty, S-152)
  * </pre>
  *
  * Single-factor sessions are accepted, like every {@code /api/v1/me} endpoint. Changing the verified mobile number is
@@ -141,9 +139,6 @@ class MyAccountController {
             @Nullable @Size(max = 200, message = AccountRules.NOTE)
             String note) {}
 
-    record PlusRequest(
-            @NotBlank(message = "Choose monthly or annual.") String plan) {}
-
     @Operation(summary = "The caller's profile")
     @GetMapping("/profile")
     ResponseEntity<ProfileResponse> profile(CurrentUser user) {
@@ -203,17 +198,5 @@ class MyAccountController {
     @GetMapping("/household")
     ResponseEntity<Household> household(CurrentUser user) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(households.household(user.userId()));
-    }
-
-    @Operation(summary = "Start the Northline Plus free trial for the caller's household")
-    @PostMapping("/plus")
-    Household startPlus(CurrentUser user, @Valid @RequestBody PlusRequest body) {
-        return households.startPlus(user.userId(), body.plan());
-    }
-
-    @Operation(summary = "Cancel Northline Plus")
-    @DeleteMapping("/plus")
-    Household cancelPlus(CurrentUser user) {
-        return households.cancelPlus(user.userId());
     }
 }

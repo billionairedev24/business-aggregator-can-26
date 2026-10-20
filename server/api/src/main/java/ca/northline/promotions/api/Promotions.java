@@ -13,8 +13,9 @@ import org.jspecify.annotations.Nullable;
  *   <li>A code takes {@code discountCents} off the merchants' amounts before tax: GST/HST/PST/QST are computed on what is
  *       left ({@link Line#taxableCents()}). It is spread over the lines it applies to in proportion to their amounts;
  *       every line keeps at least $1.00 to pay by card.
- *   <li>Points pay part of what is left (at most the configured share of each line's taxable amount); they don't lower
- *       the tax — they pay like money, and Northline funds them.
+ *   <li>Points take part of what is left off too (at most the configured share of each line's amount after the code,
+ *       and every line keeps $1.00 for the card), also before tax (S-152: a discount line, like a Northline-funded
+ *       code — Northline funds them and tops the merchant up at release).
  * </ul>
  *
  * {@link #price} only checks (quotes); {@link #reserve} holds the code's use and the points while the card is
@@ -45,7 +46,7 @@ public interface Promotions {
 
     /**
      * @param fundedBy "northline" or "merchant" — who carries this line's discount; null without one
-     * @param pointsCents what points pay of this line (its amount after the discount, plus tax)
+     * @param pointsCents what points take off this line before tax (S-152)
      */
     record Line(
             String escrowRefType,
@@ -56,9 +57,9 @@ public interface Promotions {
             @Nullable String fundedBy,
             long pointsCents) {
 
-        /** What tax is computed on and the escrow holds: the amount less the code's discount. */
+        /** What tax is computed on and the escrow holds: the amount less the code's discount and the points. */
         public long taxableCents() {
-            return amountCents - discountCents;
+            return amountCents - discountCents - pointsCents;
         }
     }
 

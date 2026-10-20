@@ -24,8 +24,8 @@ public interface PaymentAuthorizations {
      * @param platformCents Northline's own charges authorized on the same card payment and captured with the escrow
      *     (S-57 food: courier fee, service fee, their tax, the courier's tip) — never transferred to the merchant; 0 for
      *     none. The matching {@link EscrowLifecycle.PlatformCharges} go with the hold.
-     * @param creditCents what points pay (mobile gaps part 2): the card is authorized for that much less; at most the
-     *     amount and its tax. The matching {@link EscrowLifecycle.Discount} goes with the hold.
+     * @param creditCents money paid otherwise than by the card: the card is authorized for that much less; at most the
+     *     amount and its tax. Since S-152 points come off {@code amountCents} before tax, so checkouts pass 0.
      */
     record Request(
             String merchantId,

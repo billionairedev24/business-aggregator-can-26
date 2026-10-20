@@ -37,7 +37,7 @@ class StockAdapter implements StockStore {
                                end as handling_days,
                                coalesce(v.image_set[1], case when o.image_source = 'shared' then cp.image_set[1] end,
                                         o.own_images[1], cp.image_set[1]) as image_id,
-                               catalogue.age_class_of(cp.category_id) as age_class
+                               catalogue.age_class_of(cp.category_id) as age_class, o.member_discount_pct
                           from catalogue.offers o
                           join catalogue.catalog_products cp on cp.id = o.product_id
                           left join catalogue.variants v on v.offer_id = o.id
@@ -59,7 +59,8 @@ class StockAdapter implements StockStore {
                         rs.getInt("stock"),
                         Sql.intOrNull(rs, "handling_days"),
                         rs.getString("image_id"),
-                        rs.getString("age_class")))
+                        rs.getString("age_class"),
+                        Sql.intOrNull(rs, "member_discount_pct")))
                 .list();
         // an offer without variants appears once with variant_id null; with variants, once per variant — all of them
         // when the item names none (the caller then asks to choose one)

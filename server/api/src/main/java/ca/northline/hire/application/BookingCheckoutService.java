@@ -202,15 +202,14 @@ class BookingCheckoutService
                 "booking:" + hold.bookingId(),
                 clientKey,
                 null,
-                0,
-                line.pointsCents()));
+                0));
         attach(hold.id(), new Draft(request, taxable, tax, started.paymentIntent()));
         return new Checkout(
                 hold.id(),
                 hold.bookingId(),
                 pricing.priceCents(),
                 tax,
-                taxable + tax - line.pointsCents(),
+                taxable + tax, // S-152: points came off before tax
                 started.status(),
                 started.paymentIntent(),
                 started.clientSecret(),
@@ -251,7 +250,7 @@ class BookingCheckoutService
                 promo.points(),
                 promo.pointsCents(),
                 promo.pointsAvailable(),
-                line.taxableCents() + tax - promo.pointsCents(),
+                line.taxableCents() + tax,
                 promo.code());
     }
 

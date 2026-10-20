@@ -28,11 +28,11 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
     public EscrowTotals escrowTotals(String merchantId, @Nullable Instant releasingBy) {
         return jdbc.sql("""
                         select coalesce(sum(amount_cents - coalesce(fee_cents, 0)
-                                            + case when discount_funded_by = 'northline' then discount_cents else 0 end)
+                                            + case when discount_funded_by = 'northline' then discount_cents else 0 end + points_cents)
                                         filter (where state = 'held'), 0) as held_net,
                                count(*) filter (where state = 'held') as held_count,
                                coalesce(sum(amount_cents - coalesce(fee_cents, 0)
-                                            + case when discount_funded_by = 'northline' then discount_cents else 0 end)
+                                            + case when discount_funded_by = 'northline' then discount_cents else 0 end + points_cents)
                                         filter (
                                    where state = 'held' and release_at is not null
                                      and cast(:by as timestamptz) is not null and release_at <= :by), 0) as releasing,
@@ -70,7 +70,7 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
                         select id, kind, label, order_number, occurred_at, customer_name, amount_cents,
                                coalesce(tax_cents, 0) as tax_cents, coalesce(fee_cents, 0) as fee_cents, state,
                                release_at, released_at,
-                               case when discount_funded_by = 'northline' then discount_cents else 0 end as top_up
+                               case when discount_funded_by = 'northline' then discount_cents else 0 end + points_cents as top_up
                           from payments.escrows where merchant_id = :m
                          order by occurred_at desc, id desc limit :limit""")
                 .param("m", merchantId)
@@ -86,7 +86,7 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
                         rs.getLong("amount_cents"),
                         rs.getLong("tax_cents"),
                         rs.getLong("fee_cents"),
-                        // mobile gaps part 2: a Northline-funded code is topped up at release
+                        // mobile gaps part 2: a Northline-funded code (and S-152 points) are topped up at release
                         rs.getLong("amount_cents") + rs.getLong("top_up") - rs.getLong("fee_cents"),
                         CodedEnum.fromCode(EscrowState.class, rs.getString("state")),
                         nullableInstant(rs, "release_at"),
@@ -98,7 +98,7 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
     public List<Released> released(String merchantId, Instant from, Instant to) {
         return jdbc.sql("""
                         select released_at, amount_cents - coalesce(fee_cents, 0)
-                               + case when discount_funded_by = 'northline' then discount_cents else 0 end as net, kind
+                               + case when discount_funded_by = 'northline' then discount_cents else 0 end + points_cents as net, kind
                           from payments.escrows
                          where merchant_id = :m and state = 'released' and released_at >= :from and released_at < :to""")
                 .param("m", merchantId)

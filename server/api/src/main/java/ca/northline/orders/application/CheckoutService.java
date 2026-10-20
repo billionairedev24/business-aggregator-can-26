@@ -259,13 +259,10 @@ class CheckoutService
                     group,
                     clientKey,
                     taxQuote.calculationId(),
-                    0,
-                    promo.pointsCents()));
+                    0));
+            // S-152: points came off the amount before tax, like the code
             intents.add(new Intent(
-                    started.paymentIntent(),
-                    started.clientSecret(),
-                    started.status(),
-                    amount + taxQuote.taxCents() - promo.pointsCents()));
+                    started.paymentIntent(), started.clientSecret(), started.status(), amount + taxQuote.taxCents()));
             lines.add(new Line(
                     lineId,
                     l.offerId(),

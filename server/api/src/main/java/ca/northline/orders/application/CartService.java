@@ -7,6 +7,7 @@ import static ca.northline.orders.domain.CheckoutMessages.QTY;
 import static ca.northline.orders.domain.CheckoutMessages.SOLD_OUT;
 import static ca.northline.orders.domain.CheckoutMessages.UNAVAILABLE;
 
+import ca.northline.loyalty.api.PlusBenefits;
 import ca.northline.merchants.api.ShopDirectory;
 import ca.northline.orders.api.SellableOffers;
 import ca.northline.orders.api.SellableOffers.Sellable;
@@ -45,11 +46,12 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
     private final CartStore carts;
     private final SellableOffers offers;
     private final ShopDirectory shops;
+    private final PlusBenefits plusBenefits;
     private final Clock clock;
 
     @Override
     public CartView view(CartOwner owner, String lang) {
-        return cartIdOf(owner).map(id -> view(id, lang)).orElseGet(CartView::empty);
+        return cartIdOf(owner).map(id -> view(id, owner.userId(), lang)).orElseGet(CartView::empty);
     }
 
     @Override
@@ -75,7 +77,7 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
         requireStock(line, already + qty);
         requireQty(already + qty, 1);
         carts.add(cartId, offerId, variantId, qty, clock.instant());
-        return view(cartId, lang);
+        return view(cartId, owner.userId(), lang);
     }
 
     @Override
@@ -88,7 +90,7 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
                 .orElseThrow(() -> new NotFound("cart item", itemId));
         if (qty == 0) {
             carts.remove(cartId, itemId, clock.instant());
-            return view(cartId, lang);
+            return view(cartId, owner.userId(), lang);
         }
         if (qty > item.qty()) {
             var line = offers.find(List.of(new SellableOffers.Item(item.offerId(), item.variantId())), lang).stream()
@@ -98,7 +100,7 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
             requireStock(line, qty);
         }
         carts.setQty(cartId, itemId, qty, clock.instant());
-        return view(cartId, lang);
+        return view(cartId, owner.userId(), lang);
     }
 
     @Override
@@ -107,7 +109,7 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
         if (!carts.remove(cartId, itemId, clock.instant())) {
             throw new NotFound("cart item", itemId);
         }
-        return view(cartId, lang);
+        return view(cartId, owner.userId(), lang);
     }
 
     /** The cart id after merging a guest's cart into the signed-in person's (when the call carries both). */
@@ -127,8 +129,9 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
         return cartIdOf(owner).orElseGet(() -> carts.ensure(owner, clock.instant()));
     }
 
-    /** The cart with every line checked, grouped by shop. */
-    CartView view(String cartId, String lang) {
+    /** The cart with every line checked, grouped by shop; a Plus member's lines at the member prices (S-152). */
+    CartView view(String cartId, @Nullable String userId, String lang) {
+        var plus = userId == null ? PlusBenefits.Benefits.NONE : plusBenefits.of(userId);
         var items = carts.items(cartId);
         if (items.isEmpty()) {
             return CartView.empty();
@@ -174,10 +177,17 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
                         0,
                         false,
                         null,
-                        null));
+                        null,
+                        0,
+                        null,
+                        false));
                 continue;
             }
             var open = names.containsKey(s.merchantId());
+            var pct = s.memberDiscountPct();
+            Long memberUnit = pct == null ? null : PlusBenefits.memberPrice(s.unitCents(), pct);
+            var applies = memberUnit != null && plus.member() && plus.memberPrices();
+            var unit = applies ? Objects.requireNonNull(memberUnit) : s.unitCents();
             var line = new CartLine(
                     item.id(),
                     s.merchantId(),
@@ -188,13 +198,16 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
                     s.option(),
                     s.unit(),
                     s.imageUrl(),
-                    s.unitCents(),
+                    unit,
                     item.qty(),
-                    s.unitCents() * item.qty(),
+                    unit * item.qty(),
                     s.stock(),
                     open && s.stock() >= item.qty(),
                     s.handlingDays(),
-                    s.ageClass());
+                    s.ageClass(),
+                    s.unitCents(),
+                    memberUnit,
+                    applies);
             groups.computeIfAbsent(s.merchantId(), _ -> new ArrayList<>()).add(line);
         }
         var shopGroups = new ArrayList<ShopGroup>();
@@ -211,7 +224,11 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
                         .filter(CartLine::available)
                         .mapToLong(CartLine::lineCents)
                         .sum(),
-                shopGroups);
+                shopGroups,
+                all.stream()
+                        .filter(l -> l.available() && l.memberPrice())
+                        .mapToLong(l -> (l.listUnitCents() - l.unitCents()) * l.qty())
+                        .sum());
     }
 
     private static void requireQty(int qty, int min) {

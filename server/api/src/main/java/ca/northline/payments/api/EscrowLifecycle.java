@@ -117,20 +117,21 @@ public interface EscrowLifecycle {
             return platform == null ? 0 : platform.totalCents();
         }
 
-        /** What the card was authorized for: the amount, its tax and Northline's charges, less what points pay. */
+        /** What the card was authorized for: the amount (after a code and points), its tax and Northline's charges. */
         public long cardCents() {
-            return amountCents + taxCents + platformTotal() - (discount == null ? 0 : discount.pointsCents());
+            return amountCents + taxCents + platformTotal();
         }
     }
 
     /**
      * Mobile gaps part 2: what a promo code and points took off this escrow. {@code amountCents} of the hold is already
-     * the amount after the code (the tax was computed on it).
+     * the amount after the code and the points (the tax was computed on it — S-152: points are a discount before tax).
      *
      * @param codeCents the promo code's discount on this line
      * @param fundedBy {@code northline} (Northline tops the merchant up at release: ledger {@code promotions}) or
      *     {@code merchant} (the business sold for less); null without a code
-     * @param pointsCents what points pay of the amount and tax (ledger {@code points_redeemed}, Northline's money)
+     * @param pointsCents what points took off the price (Northline tops the merchant up at release: ledger
+     *     {@code points_redeemed})
      */
     record Discount(long codeCents, @Nullable String fundedBy, long pointsCents) {
         public Discount {

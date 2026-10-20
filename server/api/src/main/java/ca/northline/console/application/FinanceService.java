@@ -1,8 +1,11 @@
 package ca.northline.console.application;
 
+import ca.northline.loyalty.api.LoyaltyFigures;
 import ca.northline.merchants.api.SellerDirectory;
 import ca.northline.payments.api.FinanceFigures;
 import ca.northline.region.api.Regions;
+import ca.northline.trust.api.PointsLedger;
+import ca.northline.trust.api.PointsWallet;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -25,6 +28,9 @@ class FinanceService implements ViewFinance {
     private final Regions regions;
     private final FinanceFigures figures;
     private final SellerDirectory sellers;
+    private final PointsLedger points;
+    private final PointsWallet wallet;
+    private final LoyaltyFigures loyalty;
 
     @Override
     @Transactional(readOnly = true)
@@ -60,6 +66,9 @@ class FinanceService implements ViewFinance {
         var period = today.getYear() + "-Q" + quarter;
         var quarterEnd = LocalDate.of(today.getYear(), quarter * 3, 1).with(TemporalAdjusters.lastDayOfMonth());
         var tax = figures.tax(period);
+        var rewards = figures.rewards(from, now);
+        var outstanding = points.outstanding();
+        var plus = loyalty.figures();
         return new Finance(
                 now,
                 zone.getId(),
@@ -69,12 +78,26 @@ class FinanceService implements ViewFinance {
                 inFlight.merchants(),
                 inFlight.nextArrival(),
                 revenue.total(),
-                new Mix(revenue.takeCents(), revenue.deliveryCents(), revenue.adjustmentsCents(), null, null),
+                new Mix(
+                        revenue.takeCents(),
+                        revenue.deliveryCents(),
+                        revenue.adjustmentsCents(),
+                        revenue.plusCents(),
+                        rewards.fundedCents()),
                 rows,
                 new Tax(
                         period,
                         tax.platformFeeCents(),
                         tax.facilitatorCents(),
-                        quarterEnd.plusMonths(1).with(TemporalAdjusters.lastDayOfMonth())));
+                        quarterEnd.plusMonths(1).with(TemporalAdjusters.lastDayOfMonth())),
+                new Loyalty(
+                        outstanding.points(),
+                        wallet.settings().centsOf(outstanding.points()),
+                        outstanding.holders(),
+                        rewards.fundedBalanceCents(),
+                        rewards.pointsRedeemedCents(),
+                        plus.members(),
+                        plus.trialing(),
+                        plus.pendingReferrals()));
     }
 }
