@@ -495,7 +495,7 @@ northline:
     claim-attempts-per-hour: ${LOYALTY_CLAIM_ATTEMPTS_PER_HOUR:5}
     site-origin: ${CONSUMER_ORIGIN:http://localhost:3000}
   # S-152 Northline Plus: benefits and prices as configuration; billing behind payments' MembershipBilling port —
-  # local (fake; refused under staging/prod) | stripe (Stripe Billing, STRIPE_SECRET_KEY, docs/runbooks/stripe.md § 13).
+  # local (fake; refused under staging/prod) | stripe (Stripe Billing, STRIPE_SECRET_KEY, docs/runbooks/stripe.md § 11).
   plus:
     monthly-price-cents: ${PLUS_MONTHLY_PRICE_CENTS:799}
     annual-price-cents: ${PLUS_ANNUAL_PRICE_CENTS:6900}
