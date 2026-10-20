@@ -45,6 +45,7 @@ class EscrowService implements EscrowLifecycle {
     private final TaxTransactions taxes;
     private final TaxRepository deliveryTax;
     private final CourierTipService tips;
+    private final ReleaseDelayStore delays;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -211,6 +212,7 @@ class EscrowService implements EscrowLifecycle {
         var escrow = byRef(refType, refId);
         var wasFulfilled = escrow.getFulfilledAt() != null;
         escrow.confirm(at);
+        delays.activeUntil(escrow.getId()).ifPresent(escrow::holdReleaseUntil); // S-156: a missing photo's delay
         if (!wasFulfilled) {
             capture(escrow, at);
         }

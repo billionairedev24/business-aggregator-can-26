@@ -44,6 +44,19 @@ public record LedgerEntry(
     /** S-78: the reference type of a delivery fee's postings (the order id), as on its PaymentIntent. */
     public static final String DELIVERY_FEE = "order_delivery";
 
+    /**
+     * S-156: Stripe's card-dispute fees (Northline's cost: its debit balance is what disputes cost in fees). The
+     * reference type of their postings is {@link #DISPUTE_FEE}, the id Stripe's balance transaction ({@code txn_…}).
+     */
+    public static final String DISPUTE_FEES = "dispute_fees";
+
+    public static final String DISPUTE_FEE = "dispute_fee";
+    /**
+     * S-156: what Northline paid sellers whose appeal against a dispute decision was overturned (an expense; the
+     * customer kept the refund). Reference type {@code appeal}, the appeal's id.
+     */
+    public static final String APPEAL_COMPENSATION = "appeal_compensation";
+
     public static String merchant(String merchantId) {
         return "merchant:" + merchantId;
     }
@@ -193,6 +206,28 @@ public record LedgerEntry(
                 debit(STRIPE_BALANCE, totalCents, PLUS, invoiceRowId, at),
                 credit(TAX_PAYABLE, taxCents, PLUS, invoiceRowId, at),
                 credit(REVENUE, totalCents - taxCents, PLUS, invoiceRowId, at));
+    }
+
+    /**
+     * S-156: Stripe charged (positive) or gave back (negative) a card-dispute fee on the platform balance; Northline
+     * carries it.
+     */
+    public static List<LedgerEntry> disputeFee(String balanceTransaction, long feeCents, Instant at) {
+        var cents = Math.abs(feeCents);
+        return feeCents >= 0
+                ? nonZero(
+                        debit(DISPUTE_FEES, cents, DISPUTE_FEE, balanceTransaction, at),
+                        credit(STRIPE_BALANCE, cents, DISPUTE_FEE, balanceTransaction, at))
+                : nonZero(
+                        debit(STRIPE_BALANCE, cents, DISPUTE_FEE, balanceTransaction, at),
+                        credit(DISPUTE_FEES, cents, DISPUTE_FEE, balanceTransaction, at));
+    }
+
+    /** S-156: an overturned appeal — Northline pays the seller what the dispute decision cost them. */
+    public static List<LedgerEntry> appealCompensated(String appealId, String merchantId, long cents, Instant at) {
+        return nonZero(
+                debit(APPEAL_COMPENSATION, cents, "appeal", appealId, at),
+                credit(merchant(merchantId), cents, "appeal", appealId, at));
     }
 
     /** A tip paid after the delivery: straight to the courier (no tax: a tip is not a taxable supply). */

@@ -52,6 +52,7 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
     private final PaymentGateway gateway;
     private final TaxTransactions taxes;
     private final DisputeEvidenceStorage storage;
+    private final CardDisputeService cardDisputes;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -442,6 +443,7 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
         } else {
             cases.update(dispute);
         }
+        cardDisputes.recordFromWebhook(dispute.getId(), o, now); // S-156: the issuer's deadline and Stripe's fee
         if (opened || attached) {
             escrow.putOnHold();
         }
