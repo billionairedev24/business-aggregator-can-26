@@ -9,7 +9,13 @@ import { StepUpDialog } from '../cart/StepUpDialog';
 import { signInHref, useViewer } from '../session/api';
 import { NotFound } from '../shell/NotFound';
 import { percent, rating } from '../services/format';
-import { acceptQuote, confirmAcceptance, declineQuote, quoteQuery, type Acceptance, type QuotePage as Page, type Visit } from './api';
+import { acceptancePriceQuery, acceptQuote, confirmAcceptance, declineQuote, quoteQuery, type Acceptance, type QuotePage as Page, type Visit } from './api';
+import { policyFee } from '../booking/api';
+import { SavedCardChoice } from '../booking/SavedCardChoice';
+import { ThreadPanel } from '../messages/ThreadPanel';
+import { useMessagesT } from '../messages/messages';
+import { PromoPoints } from '../promotions/PromoPoints';
+import { usePromoT } from '../promotions/messages';
 import { useQuotesT } from './messages';
 import { Crumbs } from '../pages/Crumbs';
 
@@ -87,7 +93,12 @@ function QuoteView({ page }: { page: Page }) {
                 : t('depositTerm_none', { amount: money(q.totalCents) })}</li>
             <li>{t(`warranty_${q.warranty}` as 'warranty_none')}</li>
             <li>{t('releasedAfter')}</li>
+            {page.balance && page.balance.totalCents > 0 ? <li>{t('balanceAuto', { amount: money(page.balance.totalCents), hours: page.balance.leadHours })}</li> : null}
+            {page.cancellation ? <li>{policyFee(page.cancellation, money, bps => pct(bps)) && page.cancellation.windowHours > 0
+              ? t('cancelTerms', { hours: page.cancellation.windowHours, fee: policyFee(page.cancellation, money, bps => pct(bps))! })
+              : t('cancelTermsFree')}</li> : null}
           </ul>
+          <AskQuestion page={page} />
 
           {q.versions.length > 1 ? (
             <>
@@ -111,6 +122,21 @@ function QuoteView({ page }: { page: Page }) {
   );
 }
 
+/** S-153: "Ask a question first" — the thread with this provider about the request, the one they answer in the Studio. */
+function AskQuestion({ page }: { page: Page }) {
+  const t = useQuotesT();
+  const tm = useMessagesT();
+  const [open, setOpen] = useState(false);
+  const { quote: q, provider: p } = page;
+  return (
+    <section className="nl-qt-ask" aria-labelledby="qt-ask">
+      <h2 id="qt-ask" className="nl-qt-h2">{t('askTitle')}</h2>
+      <button type="button" className="btn btn-secondary" aria-expanded={open} onClick={() => setOpen(o => !o)}>{open ? t('hideAsk') : t('ask', { name: p.name })}</button>
+      {open ? <ThreadPanel thread={{ refType: 'quote', refId: q.requestId, merchantId: q.merchantId }} name={p.name} lede={tm('askLede')} /> : null}
+    </section>
+  );
+}
+
 type Phase = { step: 'form' } | { step: 'stepUp'; mode: 'required' | 'enrol' } | { step: 'card'; acceptance: Acceptance } | { step: 'done'; booking: Confirmation };
 
 function AcceptPanel({ page }: { page: Page }) {
@@ -126,7 +152,13 @@ function AcceptPanel({ page }: { page: Page }) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const keys = useRef<{ body: string; key: string } | null>(null);
-  const held = q.depositCents > 0 ? q.depositCents : q.totalCents;
+  const [promoCode, setPromoCode] = useState<string>();
+  const [usePoints, setUsePoints] = useState(false);
+  const [card, setCard] = useState<string>();
+  const tp = usePromoT();
+  const priced = useQuery({ ...acceptancePriceQuery(q.id, { ...(promoCode ? { promoCode } : {}), usePoints }), enabled: !!viewer.user && (!!promoCode || usePoints) });
+  const promoError = priced.error instanceof ValidationError ? priced.error.byField().promoCode : fieldErrors.promoCode;
+  const held = priced.data?.heldCents ?? (q.depositCents > 0 ? q.depositCents : q.totalCents);
   const open = !q.expired && (q.state === 'sent' || q.state === 'viewed');
   const refresh = () => qc.invalidateQueries({ queryKey: ['quotes'] });
 
@@ -147,7 +179,7 @@ function AcceptPanel({ page }: { page: Page }) {
   };
   const accept = async (proof?: string) => {
     setBusy(true); setError(undefined); setFieldErrors({});
-    const body = clean(visit);
+    const body = { ...clean(visit), ...(promoCode ? { promoCode } : {}), ...(usePoints ? { usePoints } : {}), ...(card ? { paymentMethodId: card } : {}) };
     const text = JSON.stringify(body);
     if (!keys.current || keys.current.body !== text) keys.current = { body: text, key: newIdempotencyKey() };
     try {
@@ -197,7 +229,7 @@ function AcceptPanel({ page }: { page: Page }) {
       <div id="qt-accept" className="nl-qt-kicker">{t('acceptKicker')}</div>
       <dl className="nl-qt-totals nl-qt-aside-sum">
         <div><dt>{q.depositCents > 0 ? t('depositNow') : t('heldNow')}</dt><dd>{money(held)}</dd></div>
-        {q.depositCents > 0 ? <div><dt>{t('balanceLater')}</dt><dd>{money(q.totalCents - q.depositCents)}</dd></div> : null}
+        {q.depositCents > 0 ? <div><dt>{t('balanceLater')}</dt><dd>{money(page.balance?.totalCents ?? q.totalCents - q.depositCents)}</dd></div> : null}
       </dl>
       <p className="nl-qt-muted">{t('bothHeld')}</p>
       {!viewer.loading && !viewer.user ? (
@@ -211,6 +243,14 @@ function AcceptPanel({ page }: { page: Page }) {
             <Field label={t('access')} hint={t('accessPrivate')} error={fieldErrors.accessNote}><TextArea value={visit.accessNote} rows={2} maxLength={500} onChange={e => setVisit({ ...visit, accessNote: e.target.value })} /></Field>
             <Field label={t('phone')} error={fieldErrors.contactPhone}><TextInput type="tel" value={visit.contactPhone} maxLength={20} autoComplete="tel" onChange={e => setVisit({ ...visit, contactPhone: e.target.value })} /></Field>
           </fieldset>
+          <div className="nl-qt-pay">
+            <h3 className="nl-qt-h3">{tp('promoTitle')}</h3>
+            <PromoPoints code={promoCode} onCode={setPromoCode} error={promoError} discountCents={priced.data?.discountCents}
+              usePoints={usePoints} onUsePoints={setUsePoints} pointsAvailable={priced.data?.pointsAvailable}
+              pointsCents={priced.data?.pointsCents} disabled={phase.step === 'card'} />
+            {!usePoints && !priced.data ? <button type="button" className="btn btn-ghost" onClick={() => setUsePoints(true)}>{tp('pointsCheck')}</button> : null}
+            <SavedCardChoice value={card} onChange={setCard} disabled={phase.step === 'card'} />
+          </div>
           {phase.step === 'card' ? (
             <StripeCard clientSecret={phase.acceptance.clientSecret!} publishableKey={phase.acceptance.publishableKey!} label={t('acceptCta', { amount: money(phase.acceptance.totalCents) })}
               onAuthorized={() => void finish()} onError={setError} />

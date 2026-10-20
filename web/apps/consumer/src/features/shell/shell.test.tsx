@@ -173,13 +173,15 @@ describe('the account menu', () => {
     await within(menu).findByText('amara@example.ca · reliability 4.9');
     const items = within(menu).getAllByRole('menuitem');
     expect(items.map(i => i.textContent)).toEqual([
-      'Add photo', 'Orders3 active', 'Bookings', 'Saved4',
+      'Add photo', 'Orders3 active', 'Bookings', 'Quote requests', 'Messages', 'Saved4',
       'Your account', 'ProfileAmara Osei', 'Addresses2 · 2 members', 'Payment methodsVisa ··4471', 'Login & securityPasskey',
       'NotificationsQuiet 10 pm–7 am', 'FrançaisEnglish · AB',
       'Help & cases1 open', 'Sell or offer a service', 'Sign out',
     ]);
     expect(within(menu).getByRole('menuitem', { name: /^Orders/ })).toHaveAttribute('href', '/account/orders');
     expect(within(menu).getByRole('menuitem', { name: 'Bookings' })).toHaveAttribute('href', '/account/orders?tab=bookings');
+    expect(within(menu).getByRole('menuitem', { name: 'Quote requests' })).toHaveAttribute('href', '/account/orders?tab=quotes');
+    expect(within(menu).getByRole('menuitem', { name: 'Messages' })).toHaveAttribute('href', '/account/messages');
     expect(within(menu).getByRole('menuitem', { name: 'Your account' })).toHaveAttribute('href', '/account');
     expect(within(menu).queryByText('12,480 pts')).toBeNull(); // the points card waits for the wallet (later)
   });

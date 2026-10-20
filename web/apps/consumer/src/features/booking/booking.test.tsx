@@ -37,7 +37,7 @@ const facts: ProviderFacts = {
 };
 const addDays = (iso: string, n: number) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const calendar = (from: string) => ({
-  serviceId: 's1', durationMin: 60,
+  serviceId: 's1', durationMin: 60, cancellation: { windowHours: 24, feeBps: 0, feeCents: 3500 },
   days: Array.from({ length: 7 }, (_, i) => {
     const date = addDays(from, i);
     return { date, closed: null, free: 1, slots: [{ startsAt: `${date}T16:00:00Z`, free: true }, { startsAt: `${date}T17:00:00Z`, free: false }] };
@@ -136,7 +136,8 @@ describe('booking wizard (design 06 book)', () => {
     expect(hold.body).toMatchObject({ slug: 'prairie-wrench', serviceId: 's1' });
     const pay = await screen.findByRole('button', { name: 'Hold $93.45 in escrow' });
     expect(pay).toBeDisabled();
-    await u.click(screen.getByRole('checkbox', { name: /cancellation is free/ }));
+    // S-153: the provider's own terms, from its calendar: free until 24 h before, then $35
+    await u.click(screen.getByRole('checkbox', { name: /cancellation is free until 24 h before .*later cancellations are charged \$35\.00/ }));
     await u.click(screen.getByRole('checkbox', { name: /Northline terms/ }));
     await u.click(pay);
 

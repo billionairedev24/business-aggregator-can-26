@@ -4,14 +4,14 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { EmptyState, ErrorState, SiteLink, Skeleton, useFormatters, useLocale } from '@northline/ui';
 import { useZone } from '../location/regions';
 import { signInHref, useViewer } from '../session/api';
-import { activityQuery, type ActivityItem } from './api';
+import { activityQuery, myRequestsQuery, type ActivityItem } from './api';
 import { statusText, titleText, whenText, withText } from './format';
 import { Crumbs } from '../pages/Crumbs';
 import { useAccountT } from './messages';
 
 export const ORDER_VIEWS = ['active', 'past', 'cases'] as const;
 export type OrderView = (typeof ORDER_VIEWS)[number];
-export const ORDER_TABS = ['orders', 'bookings'] as const;
+export const ORDER_TABS = ['orders', 'bookings', 'quotes'] as const;
 export type OrderTab = (typeof ORDER_TABS)[number];
 
 const TONES: Record<ActivityItem['tone'], string> = { accent: 'tag-brand', neutral: 'tag-neutral', 'accent-2': 'tag-danger' };
@@ -19,7 +19,7 @@ const TONES: Record<ActivityItem['tone'], string> = { accent: 'tag-brand', neutr
 export const inView = (item: ActivityItem, view: OrderView) =>
   view === 'cases' ? !!item.caseRef : view === 'active' ? item.active : !item.active;
 /** Orders = goods and food; bookings = jobs and quote requests. */
-export const inTab = (item: ActivityItem, tab: OrderTab) => (tab === 'orders' ? item.kind === 'order' || item.kind === 'food' : item.kind === 'booking' || item.kind === 'quote');
+export const inTab = (item: ActivityItem, tab: OrderTab) => (tab === 'orders' ? item.kind === 'order' || item.kind === 'food' : tab === 'bookings' ? item.kind === 'booking' || item.kind === 'quote' : false);
 
 /**
  * Orders & bookings (redesign § 2.1, AT Shop:688 OrdersView) — reached from the account menu only (CLAUDE.md: never
@@ -32,7 +32,7 @@ export function OrdersScreen() {
   const { user, loading } = useViewer();
   const search = useSearch({ strict: false }) as { view?: unknown; tab?: unknown };
   const view: OrderView = (ORDER_VIEWS as readonly unknown[]).includes(search.view) ? search.view as OrderView : 'active';
-  const tab: OrderTab = search.tab === 'bookings' ? 'bookings' : 'orders';
+  const tab: OrderTab = search.tab === 'bookings' || search.tab === 'quotes' ? search.tab : 'orders';
   const activity = useQuery({ ...activityQuery, enabled: !!user });
   if (loading || (user && activity.isPending)) return <OrdersSkeleton />;
   if (!user) {
@@ -54,9 +54,43 @@ export function OrdersScreen() {
   return <OrdersList items={activity.data ?? []} view={view} tab={tab} />;
 }
 
+/** S-153, Account › Quote requests: every request, whatever became of it (waiting, quoted, accepted…). */
+function RequestsList() {
+  const t = useAccountT();
+  const { date, money } = useFormatters();
+  const q = useQuery(myRequestsQuery);
+  if (q.isPending) return <Skeleton height={120} radius={8} />;
+  if (q.isError) return <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} />;
+  if (q.data.length === 0) return <EmptyState action={<SiteLink href="/services" className="btn btn-primary">{t('findProvider')}</SiteLink>}>{t('requestsEmpty')}</EmptyState>;
+  return (
+    <ul className="nl-ocards" aria-label={t('tabKind_quotes', { count: q.data.length })}>
+      {q.data.map(r => (
+        <li key={r.id} className="nl-ocard">
+          <dl className="nl-ocard-head">
+            <div><dt>{t('colWhen')}</dt><dd>{date(r.createdAt, 'date')}</dd></div>
+            <div><dt>{t('colAmount')}</dt><dd>{r.lowestCents != null ? t('requestFrom', { amount: money(r.lowestCents) }) : t('noAmount')}</dd></div>
+            <div className="nl-ocard-ref"><dt>{t('colRef')}</dt><dd>{r.ref}</dd></div>
+          </dl>
+          <div className="nl-ocard-body">
+            <div className="nl-ocard-what">
+              <span className={`tag ${r.status === 'quoted' || r.status === 'accepted' ? 'tag-brand' : 'tag-neutral'}`}>{t(`request_${r.status}`)}</span>
+              <h2 className="nl-ocard-title">{r.title}</h2>
+              <span className="nl-muted nl-small">{t('requestQuotes', { quotes: r.quotes, providers: r.providers })}{r.photoCount ? ` · ${t('requestPhotos', { count: r.photoCount })}` : ''}</span>
+            </div>
+            <div className="nl-ocard-actions">
+              <SiteLink href={r.href} className="btn btn-accent btn-sm">{t(r.bookingId ? 'action_details' : 'action_view_quote')}</SiteLink>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function OrdersList({ items, view, tab }: { items: ActivityItem[]; view: OrderView; tab: OrderTab }) {
   const t = useAccountT();
   const navigate = useNavigate();
+  const requests = useQuery(myRequestsQuery);
   const mine = items.filter(i => inTab(i, tab));
   const counts = { active: mine.filter(i => i.active).length, cases: mine.filter(i => !!i.caseRef).length };
   const shown = mine.filter(i => inView(i, view));
@@ -75,12 +109,13 @@ function OrdersList({ items, view, tab }: { items: ActivityItem[]; view: OrderVi
       <div className="nl-orders-tabs" role="group" aria-label={t('tabsKind')}>
         {ORDER_TABS.map(k => (
           <button key={k} type="button" className={clsx('nl-orders-tab', k === tab && 'is-current')} aria-pressed={k === tab} onClick={() => go({ tab: k })}>
-            {t(`tabKind_${k}`, { count: items.filter(i => inTab(i, k)).length })}
+            {t(`tabKind_${k}`, { count: k === 'quotes' ? requests.data?.length ?? 0 : items.filter(i => inTab(i, k)).length })}
           </button>
         ))}
       </div>
       <div className="nl-orders-grid">
         <div className="nl-orders-main">
+          {tab === 'quotes' ? <RequestsList /> : <>
           <div className="nl-orders-views" role="group" aria-label={t('viewsLabel')}>
             {ORDER_VIEWS.map(v => (
               <button key={v} type="button" className="nl-chip" aria-pressed={v === view} onClick={() => go({ tab, view: v })}>{label(v)}</button>
@@ -95,6 +130,7 @@ function OrdersList({ items, view, tab }: { items: ActivityItem[]; view: OrderVi
               {shown.map(i => <OrderCard key={`${i.kind}:${i.id}`} item={i} />)}
             </ul>
           )}
+          </>}
         </div>
         <aside className="nl-orders-side" aria-label={t('sideLabel')}>
           <section className="nl-orders-panel" aria-labelledby="orders-help">

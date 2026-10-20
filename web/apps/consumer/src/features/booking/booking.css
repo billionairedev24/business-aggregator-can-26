@@ -119,3 +119,9 @@
 .nl-promo-applied { display: flex; gap: var(--space-2); align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .nl-promo-note { margin: 0; font-size: var(--text-sm); color: var(--color-text-muted); }
 .nl-tip-chips .nl-chip { min-height: var(--size-touch); }
+
+/* S-153: a saved card or a new one */
+.nl-cardchoice { border: 0; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.nl-cardchoice-legend { font-weight: 600; margin-bottom: 4px; }
+.nl-cardchoice-row { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.nl-cardchoice-note { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm, 0.875rem); }

@@ -13,6 +13,8 @@ import { categoryName } from '../services/taxonomy';
 import { requestQuotes, type QuoteAsk } from './api';
 import { useQuotesT } from './messages';
 import { Crumbs } from '../pages/Crumbs';
+import { PhotoPicker } from '../photos/PhotoPicker';
+import type { Photo } from '../photos/api';
 
 export type RequestStep = 'job' | 'where' | 'who';
 export const REQUEST_STEPS: readonly RequestStep[] = ['job', 'where', 'who'];
@@ -27,6 +29,8 @@ export interface RequestDraft {
   preferredDate: string;
   note: string;
   providers: string[];
+  /** S-153: photos uploaded so far (signed in only) */
+  photos?: Photo[];
 }
 
 const EMPTY: RequestDraft = { description: '', vehicle: { year: '', make: '', model: '' }, eventDate: '', guests: '', budget: '', preferredDate: '', note: '', providers: [] };
@@ -74,6 +78,7 @@ export function toAsk(d: RequestDraft, category: string, kind: string, vehicle: 
     guests: kind === 'event' && d.guests ? Number(d.guests) : undefined,
     budget: d.budget.trim() || undefined, note: d.note.trim() || undefined, area: area || undefined,
     preferredDate: kind !== 'event' ? d.preferredDate || undefined : undefined,
+    photoIds: d.photos?.length ? d.photos.map(p => p.id) : undefined,
   };
 }
 
@@ -141,6 +146,7 @@ function Job({ kind, vehicle, draft, update, onNext }: { kind: string; vehicle: 
   const t = useQuotesT();
   const b = useBookingT();
   const ok = requestComplete('job', draft, kind, vehicle);
+  const viewer = useViewer();
   const years = ['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', b('older')];
   const makes = ['Honda', 'Toyota', 'Ford', 'Chevrolet', 'Hyundai', 'Kia', 'Subaru', 'Tesla', b('other')];
   const hint = ok ? '' : kind === 'event' ? t('jobHint_event') : vehicle ? t('jobHint_vehicle') : t('jobHint');
@@ -168,6 +174,7 @@ function Job({ kind, vehicle, draft, update, onNext }: { kind: string; vehicle: 
         </div>
       ) : null}
       <Field label={t('budget')}><TextInput value={draft.budget} placeholder={t('budgetPh')} maxLength={80} onChange={e => update({ budget: e.target.value })} /></Field>
+      {viewer.user ? <PhotoPicker photos={draft.photos ?? []} onChange={photos => update({ photos })} /> : null}
       <div className="nl-qt-actions">
         <button type="button" className="btn btn-primary nl-qt-primary" disabled={!ok} onClick={onNext}>{t('jobCta')}</button>
         {hint ? <span className="nl-qt-hint" aria-live="polite">{hint}</span> : null}

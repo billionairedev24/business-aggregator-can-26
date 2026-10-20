@@ -18,7 +18,10 @@ export const useAccountT = defineMessages({
 
     // redesign § 2.1 orders & the account card grid
     crumbs: 'Breadcrumb', crumbAccount: 'Your account', colRef: 'Order #',
-    tabsKind: 'Orders or bookings', tabKind_orders: 'Orders · {count}', tabKind_bookings: 'Bookings · {count}',
+    tabsKind: 'Orders or bookings', tabKind_orders: 'Orders · {count}', tabKind_bookings: 'Bookings · {count}', tabKind_quotes: 'Quote requests · {count}',
+    requestsEmpty: 'No quote requests yet. Describe a job and get up to 3 quotes.', requestFrom: 'From {amount}',
+    requestQuotes: '{quotes, plural, one {# quote} other {# quotes}} from {providers, plural, one {# provider} other {# providers}} asked', requestPhotos: '{count, plural, one {# photo} other {# photos}}',
+    request_waiting: 'Waiting for quotes', request_quoted: 'Quote ready', request_accepted: 'Accepted', request_declined: 'Declined', request_expired: 'Closed',
     sideLabel: 'Help and ordering again', helpTitle: 'Need help?', helpCases: 'Refunds & cases', helpCentre: 'Help centre',
     againTitle: 'Order again', againEmpty: 'What you order or book shows up here, ready to do again.',
     homeTitle: 'Your account', homeLabel: 'Account sections',
@@ -89,7 +92,10 @@ export const useAccountT = defineMessages({
     backToAccount: 'Retour à votre compte',
 
     crumbs: 'Fil d’Ariane', crumbAccount: 'Votre compte', colRef: 'Commande no',
-    tabsKind: 'Commandes ou réservations', tabKind_orders: 'Commandes · {count}', tabKind_bookings: 'Réservations · {count}',
+    tabsKind: 'Commandes ou réservations', tabKind_orders: 'Commandes · {count}', tabKind_bookings: 'Réservations · {count}', tabKind_quotes: 'Demandes de devis · {count}',
+    requestsEmpty: 'Aucune demande de devis pour l’instant. Décrivez un travail et recevez jusqu’à 3 devis.', requestFrom: 'À partir de {amount}',
+    requestQuotes: '{quotes, plural, one {# devis} other {# devis}} sur {providers, plural, one {# prestataire sollicité} other {# prestataires sollicités}}', requestPhotos: '{count, plural, one {# photo} other {# photos}}',
+    request_waiting: 'En attente de devis', request_quoted: 'Devis prêt', request_accepted: 'Accepté', request_declined: 'Refusé', request_expired: 'Fermée',
     sideLabel: 'Aide et nouvelle commande', helpTitle: 'Besoin d’aide ?', helpCases: 'Remboursements et dossiers', helpCentre: 'Centre d’aide',
     againTitle: 'Commander de nouveau', againEmpty: 'Ce que vous commandez ou réservez s’affiche ici, prêt à refaire.',
     homeTitle: 'Votre compte', homeLabel: 'Sections du compte',
