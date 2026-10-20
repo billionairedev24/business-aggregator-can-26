@@ -15,14 +15,19 @@ interface AuthContextValue {
   status: AuthStatus;
   /** The sign-in ended on the server (refresh refused) rather than by the courier. */
   ended: boolean;
+  /** The system-browser sign-in (passkeys; S-29). */
   signIn(): Promise<SignInResult>;
+  /** S-159: the app's own email + password + second factor screen handed off to tokens: tell the app. */
+  signedIn(): void;
   signOut(): Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
- * Sign-in with the `courier-app` client (S-29): PKCE in the system browser (ASWebAuthenticationSession / Custom Tabs,
+ * Sign-in with the `courier-app` client (S-29). Since S-159 the sign-in screen asks the email, the password and the
+ * account's second factor itself (northline-auth's JSON API, then the kit's AppSignIn hand-off to the same DPoP
+ * tokens); the system browser stays for passkeys: PKCE in the system browser (ASWebAuthenticationSession / Custom Tabs,
  * never a WebView — RFC 8252), northline-auth's consumer sign-in page, back to `ca.northline.courier:/oauth2redirect`.
  * In fixture mode the redirect is made up and the fixture server answers the token request.
  */
@@ -69,6 +74,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const signedIn = useCallback(() => {
+    setEnded(false);
+    void PushHooks.signedIn(services().api);
+  }, []);
+
   const signOut = useCallback(async () => {
     const { session, outbox, api } = services();
     await stopTracking();
@@ -87,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const value = useMemo(() => ({ status, ended, signIn, signOut }), [status, ended, signIn, signOut]);
+  const value = useMemo(() => ({ status, ended, signIn, signedIn, signOut }), [status, ended, signIn, signedIn, signOut]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
