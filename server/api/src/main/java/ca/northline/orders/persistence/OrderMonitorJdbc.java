@@ -72,7 +72,7 @@ class OrderMonitorJdbc implements OrderMonitor {
         }
         var out = new java.util.HashMap<String, Sales>();
         jdbc.sql("""
-                        select l.merchant_id, coalesce(sum(l.qty * l.unit_cents) filter (where l.state is distinct from 'refunded'), 0) as gmv,
+                        select l.merchant_id, coalesce(sum(l.qty * l.unit_cents) filter (where coalesce(l.state, 'pending') not in ('refunded', 'cancelled')), 0) as gmv,
                                count(distinct o.id) as orders
                           from orders.order_lines l join orders.orders o on o.id = l.order_id
                          where l.merchant_id = any(:ids) and o.placed_at >= :from and o.placed_at < :to

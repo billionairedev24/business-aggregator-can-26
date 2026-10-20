@@ -50,10 +50,14 @@ public class MerchantOrder {
     public record Line(String id, LineState state, @Nullable String issueNote) {}
 
     public SellerStatus status() {
-        if (orderState == OrderState.CANCELLED) {
+        // S-151: an order cancelled, or every one of this shop's lines cancelled
+        if (orderState == OrderState.CANCELLED
+                || (!lines.isEmpty() && lines.stream().allMatch(l -> l.state() == LineState.CANCELLED))) {
             return SellerStatus.CANCELLED;
         }
         if (orderState == OrderState.REFUNDED
+                || orderState == OrderState.RETURNED
+                || orderState == OrderState.DELIVERY_FAILED
                 || lines.stream()
                         .anyMatch(l -> l.state() == LineState.SHORT
                                 || l.state() == LineState.REFUNDED
@@ -66,7 +70,9 @@ public class MerchantOrder {
         if (orderState == OrderState.PICKED_UP) {
             return SellerStatus.OUT_FOR_DELIVERY;
         }
-        return lines.stream().anyMatch(l -> l.state() == LineState.PENDING)
+        return lines.stream()
+                        .filter(l -> l.state() != LineState.CANCELLED)
+                        .anyMatch(l -> l.state() == LineState.PENDING)
                 ? SellerStatus.TO_PACK
                 : SellerStatus.AWAITING_PICKUP;
     }

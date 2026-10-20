@@ -190,7 +190,7 @@ class OrdersJdbc implements OrderQueries, OrderInsights, OfferSales, NavBadgeCon
                         select l.offer_id, sum(coalesce(l.qty, 1)) as units
                           from orders.order_lines l join orders.orders o on o.id = l.order_id
                          where l.merchant_id = :m and l.offer_id is not null
-                           and coalesce(l.state, 'pending') <> 'refunded'
+                           and coalesce(l.state, 'pending') not in ('refunded', 'cancelled')
                            and o.type = 'goods' and o.state not in ('cancelled', 'refunded')
                            and o.placed_at >= :from and o.placed_at < :to
                          group by l.offer_id

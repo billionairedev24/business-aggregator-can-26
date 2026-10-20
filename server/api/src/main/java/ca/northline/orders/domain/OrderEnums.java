@@ -16,7 +16,11 @@ public final class OrderEnums {
         DELIVERED,
         CONFIRMED,
         REFUNDED,
-        CANCELLED
+        CANCELLED,
+        /** Age-restricted items nobody of age could take (2026-10-04). */
+        RETURNED,
+        /** S-151: the courier couldn't hand it over; the customer chooses re-delivery or a refund. */
+        DELIVERY_FAILED
     }
 
     /** {@code order_lines.state}. */
@@ -24,7 +28,9 @@ public final class OrderEnums {
         PENDING,
         PACKED,
         SHORT,
-        REFUNDED
+        REFUNDED,
+        /** S-151: cancelled by the customer, the shop or Northline (its money was given back). */
+        CANCELLED
     }
 
     /**

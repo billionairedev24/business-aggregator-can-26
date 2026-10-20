@@ -34,6 +34,11 @@ public interface TrackOrder {
      * @param canConfirm the customer can confirm receipt now ({@link ConfirmDelivery}; S-78)
      * @param paysShopsAt when the shops are paid without a confirmation: 7 days after delivery (goods, S-78)
      * @param courier the courier bringing it, live (S-88); null before fulfilment has the order
+     * @param canCancel S-151: the customer may cancel it now (configuration: before any shop packed, by default)
+     * @param cancellations S-151: what was cancelled — the whole order, or one shop's lines
+     * @param deliveryFailure S-151: the courier couldn't hand it over; the customer chooses by {@code decideBy}
+     * @param returnable S-151: lines the customer may still return, with the window's end
+     * @param returns S-151: the order's returns
      */
     record OrderTracking(
             String orderId,
@@ -53,13 +58,49 @@ public interface TrackOrder {
             @Nullable Instant confirmedAt,
             boolean canConfirm,
             @Nullable Instant paysShopsAt,
-            @Nullable CourierProgress courier) {
+            @Nullable CourierProgress courier,
+            boolean canCancel,
+            List<CancellationInfo> cancellations,
+            @Nullable FailureInfo deliveryFailure,
+            List<ReturnableLine> returnable,
+            List<AfterSaleUseCases.ReturnView> returns) {
 
         public OrderTracking {
             shops = List.copyOf(shops);
             steps = List.copyOf(steps);
+            cancellations = List.copyOf(cancellations);
+            returnable = List.copyOf(returnable);
+            returns = List.copyOf(returns);
         }
     }
+
+    /**
+     * @param by {@code customer} | {@code merchant} | {@code staff} | {@code system}
+     * @param merchantName the shop whose lines were cancelled; null for the whole order
+     */
+    record CancellationInfo(
+            String by,
+            String reason,
+            Instant at,
+            boolean whole,
+            @Nullable String merchantName) {}
+
+    /**
+     * @param reason {@code absent} | {@code unsafe} | {@code refused} | {@code access} | {@code other}
+     * @param choice {@code redeliver} | {@code refund} | {@code auto_refund}, null until chosen
+     * @param feeCents what a refund keeps of the delivery fee
+     */
+    record FailureInfo(
+            String reason,
+            Instant failedAt,
+            Instant decideBy,
+            int attempts,
+            @Nullable String choice,
+            @Nullable Instant chosenAt,
+            long feeCents) {}
+
+    record ReturnableLine(
+            String lineId, String merchantId, String title, int qty, long amountCents, Instant returnUntil) {}
 
     /**
      * @param kind {@code pooled} | {@code direct} | {@code pickup}
@@ -75,7 +116,8 @@ public interface TrackOrder {
             int households,
             @Nullable Instant etaAt) {}
 
-    record ShopProgress(String merchantId, String name, int items, boolean packed) {}
+    /** @param cancelled S-151: every line of this shop was cancelled */
+    record ShopProgress(String merchantId, String name, int items, boolean packed, boolean cancelled) {}
 
     /** @param key {@code paid} | {@code packing} | {@code pickup} | {@code delivered} */
     record Step(String key, String state) {}

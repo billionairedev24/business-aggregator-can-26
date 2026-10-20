@@ -47,7 +47,7 @@ class OrderAnalyticsJdbc implements CustomerActivity, ShopFunnel {
         jdbc.sql("""
                         select l.offer_id, sum(l.qty * l.unit_cents) as cents
                           from orders.order_lines l join orders.orders o on o.id = l.order_id
-                         where l.offer_id is not null and l.state is distinct from 'refunded' and o.state <> 'cancelled'
+                         where l.offer_id is not null and coalesce(l.state, 'pending') not in ('refunded', 'cancelled') and o.state <> 'cancelled'
                            and o.placed_at >= :from and o.placed_at < :to
                            and (:everyone or l.merchant_id = any(:merchants))
                          group by l.offer_id""")
