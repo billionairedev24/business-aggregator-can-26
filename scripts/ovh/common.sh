@@ -26,8 +26,13 @@ tf_out() {
 }
 
 # env_get <KEY> — a value from the secrets file (KEY=value lines; the value is taken literally, never expanded:
-# bcrypt hashes contain $).
+# bcrypt hashes contain $). With OVH_SECRETS_SOURCE=env (the pipeline, .github/workflows/ovh.yml) the value is the
+# environment variable of that name instead, and the file is not read.
 env_get() {
+  if [ "${OVH_SECRETS_SOURCE:-file}" = env ]; then
+    case "$1" in ([A-Z]*) printf '%s\n' "${!1:-}" ;; esac
+    return 0
+  fi
   [ -f "$OVH_ENV_FILE" ] || return 0
   awk -v k="$1" 'index($0, k "=") == 1 { print substr($0, length(k) + 2); exit }' "$OVH_ENV_FILE"
 }

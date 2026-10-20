@@ -243,6 +243,7 @@ help: ## This list, and the common variables
 ##> ENV MARKET RECORD  go-live-check: environment, region market id, 1 = record the repository's results on the checklist (S-118)
 ##> ENV RESET ONLY  demo-data: local, dryrun (GCP), ovh-vps or ovh-mks; RESET=1 (live-demo leftovers) or all (every demo listing); ONLY=merchant keys (docs/runbooks/demo.md)
 ##> TARGET HOST  deploy: gcp-dryrun, ovh-vps or ovh-mks; ovh-*: ovh-vps (default) or ovh-mks; ovh-bootstrap: user@ip of the VPS
+##> TF_STATE_BUCKET MIGRATE  ovh-tf-init: the Object Storage bucket of the shared Terraform state (+ TF_STATE_ACCESS_KEY/TF_STATE_SECRET_KEY); MIGRATE=1 moves a local state there
 ##> SLOT N ALT_EN ALT_FR FOCAL PICKS COMMERCIAL GROUP LIMIT  photos-pick: the candidate to promote (or PICKS=file); photos-fetch: COMMERCIAL=1 also CC BY/BY-SA, GROUP=category|hero|…, LIMIT=n slots
 ##> STRICT  i18n-check: 1 = known gaps (legal texts, French awaiting a translator) fail too — before a French-first launch
 

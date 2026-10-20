@@ -48,6 +48,17 @@ variable "admin_cidrs" {
   }
 }
 
+variable "ci_ssh_cidr" {
+  description = "One extra SSH source for the length of a pipeline run (.github/workflows/ovh.yml sets the runner's address/32 before it connects and removes it at the end — scripts/ovh/ci.sh). Empty = no such rule. Never set it in terraform.tfvars."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.ci_ssh_cidr == "" || (can(cidrhost(var.ci_ssh_cidr, 0)) && !strcontains(var.ci_ssh_cidr, ":"))
+    error_message = "ci_ssh_cidr: empty or one IPv4 CIDR (e.g. 203.0.113.7/32)."
+  }
+}
+
 variable "dns_zone_name" {
   description = "DNS zone of the public hosts (values-dryrun.yaml urls: demo.northline.ca, studio.demo.northline.ca, …). Only used to print the records to create."
   type        = string

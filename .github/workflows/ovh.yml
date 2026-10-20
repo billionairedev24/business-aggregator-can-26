@@ -1,0 +1,361 @@
+# S-155 — provision OVHcloud and deploy Northline there: the dry-run targets ovh-vps (k3s on one VPS) and ovh-mks
+# (Managed Kubernetes + Managed PostgreSQL), both in Beauharnois. Runbook: docs/runbooks/ovh.md § Today.
+#
+# MANUAL ONLY: Actions › ovh › Run workflow (or `gh workflow run ovh.yml -f target=ovh-vps -f action=plan`). Never add
+# push, pull_request or schedule triggers: every run spends money at OVHcloud and CI minutes are scarce.
+#
+# Each target is a GitHub Environment (ovh-vps, ovh-mks) holding its secrets and variables — `make ovh-gh-setup
+# TARGET=…` creates it with you as required reviewer, so every job that touches the account (plan included: the API
+# credentials live in the environment) waits for your approval; destroy also needs confirm-destroy = the target's name.
+#
+# Actions:
+#   plan                  terraform plan (the summary lists what would change)
+#   apply                 plan + apply (ovh-vps: Object Storage + the Network Firewall; the VPS itself is ordered in the
+#                         console; ovh-mks: network, cluster, nodes, Managed PostgreSQL, Object Storage)
+#   deploy                [images] → cluster access → Secrets → both charts → rollouts → smoke test; URLs + the address
+#                         for DNS in the summary
+#   provision-and-deploy  apply, then deploy
+#   down / up             scripts/ovh/scale.sh (apps to 0 and back; ovh-mks also the node pool)
+#   destroy               releases out of the cluster, buckets emptied, terraform destroy (fake data only)
+#
+# State: an OVHcloud Object Storage bucket as the S3 backend (scripts/ovh/tf-state.sh; created by the first run). It
+# never goes into the repository, an artifact or the log; plans are made and applied inside one job.
+name: ovh
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Where (the GitHub Environment of the same name holds its secrets)
+        type: choice
+        default: ovh-vps
+        options: [ovh-vps, ovh-mks]
+      action:
+        description: What to do
+        type: choice
+        default: plan
+        options: [plan, apply, deploy, provision-and-deploy, down, up, destroy]
+      image-tag:
+        description: Image tag (empty = the short commit sha of this run)
+        type: string
+        default: ""
+      build-images:
+        description: "deploy: build and push the images first (off = they exist already for image-tag)"
+        type: boolean
+        default: true
+      confirm-destroy:
+        description: "destroy only: type the target's name (ovh-vps or ovh-mks)"
+        type: string
+        default: ""
+
+permissions: {}
+
+concurrency:
+  group: ovh-${{ inputs.target }}
+  cancel-in-progress: false # never cancel a run half-way through an apply
+
+env:
+  TERRAFORM_VERSION: "1.16.4"
+  HELM_VERSION: "v3.19.0"
+  TF_IN_AUTOMATION: "1"
+  TF_INPUT: "0"
+  TARGET: ${{ inputs.target }}
+
+jobs:
+  prepare:
+    name: inputs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      tag: ${{ steps.p.outputs.tag }}
+      registry: ${{ steps.p.outputs.registry }}
+      registry-server: ${{ steps.p.outputs.registry_server }}
+      login: ${{ steps.p.outputs.login }}
+      provision: ${{ steps.p.outputs.provision }}
+      images: ${{ steps.p.outputs.images }}
+      deploy: ${{ steps.p.outputs.deploy }}
+      scale: ${{ steps.p.outputs.scale }}
+    steps:
+      - id: p
+        env:
+          ACTION: ${{ inputs.action }}
+          TAG: ${{ inputs.image-tag }}
+          BUILD: ${{ inputs.build-images }}
+          CONFIRM: ${{ inputs.confirm-destroy }}
+          REGISTRY_VAR: ${{ vars.REGISTRY }} # repository variable: a registry other than ghcr.io (e.g. OVHcloud Managed Private Registry)
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          if [ "$ACTION" = destroy ] && [ "$CONFIRM" != "$TARGET" ]; then
+            echo "::error::destroy deletes $TARGET: type its name in confirm-destroy"; exit 1
+          fi
+          [ -n "$TAG" ] || TAG="${GITHUB_SHA::12}"
+          case "$TAG" in (*[!A-Za-z0-9._-]*) echo "::error::image-tag: letters, digits, . _ - only"; exit 1 ;; esac
+          if [ -n "$REGISTRY_VAR" ]; then registry=$REGISTRY_VAR login=password
+          else registry="ghcr.io/$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')/northline" login=ghcr
+          fi
+          provision=false images=false deploy=false scale=false
+          case "$ACTION" in
+            (plan | apply | destroy) provision=true ;;
+            (deploy) deploy=true ;;
+            (provision-and-deploy) provision=true deploy=true ;;
+            (down | up) scale=true ;;
+          esac
+          if [ "$deploy" = true ] && [ "$BUILD" = true ]; then images=true; fi
+          {
+            echo "tag=$TAG"; echo "registry=$registry"; echo "registry_server=${registry%%/*}"; echo "login=$login"
+            echo "provision=$provision"; echo "images=$images"; echo "deploy=$deploy"; echo "scale=$scale"
+          } >> "$GITHUB_OUTPUT"
+          echo "**$ACTION** on **$TARGET** · images \`$registry/<app>:$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+
+  provision:
+    name: terraform (${{ inputs.action }})
+    needs: prepare
+    if: needs.prepare.outputs.provision == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: ${{ inputs.target }}
+    permissions:
+      contents: read
+    env:
+      OVH_ENDPOINT: ${{ vars.OVH_ENDPOINT || 'ovh-ca' }}
+      OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
+      OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
+      OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
+      OVH_CLIENT_ID: ${{ secrets.OVH_CLIENT_ID }}
+      OVH_CLIENT_SECRET: ${{ secrets.OVH_CLIENT_SECRET }}
+      OVH_SERVICE_NAME: ${{ vars.OVH_SERVICE_NAME }}
+      OVH_DOMAIN: ${{ vars.OVH_DOMAIN }}
+      OVH_BUCKET_SUFFIX: ${{ vars.OVH_BUCKET_SUFFIX }}
+      OVH_TFVARS: ${{ vars.OVH_TFVARS }}
+      OVH_VPS_SERVICE_NAME: ${{ vars.OVH_VPS_SERVICE_NAME }}
+      OVH_ADMIN_CIDRS: ${{ vars.OVH_ADMIN_CIDRS }}
+      OVH_EDGE_FIREWALL: ${{ vars.OVH_EDGE_FIREWALL }}
+      OVH_API_ALLOWED_CIDRS: ${{ vars.OVH_API_ALLOWED_CIDRS }}
+      OVH_NODE_COUNT: ${{ vars.OVH_NODE_COUNT }}
+      OVH_NODE_FLAVOR: ${{ vars.OVH_NODE_FLAVOR }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }} # the S3 backend's keys (state bucket only)
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      ACTION: ${{ inputs.action }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        if: inputs.action == 'destroy'
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Check the environment
+        run: |
+          [ -n "$TF_STATE_BUCKET" ] || { echo "::error::variable TF_STATE_BUCKET is not set in the $TARGET environment (make ovh-gh-setup TARGET=$TARGET)"; exit 1; }
+          if [ -z "$OVH_APPLICATION_KEY$OVH_CLIENT_ID" ]; then
+            echo "::error::no OVHcloud API credentials in the $TARGET environment (make ovh-gh-setup TARGET=$TARGET)"; exit 1
+          fi
+      - name: Terraform variables
+        run: scripts/ovh/ci.sh tfvars "$TARGET"
+      - name: State bucket (created once)
+        run: scripts/ovh/tf-state.sh ensure
+      - name: terraform init (S3 backend on Object Storage)
+        run: scripts/ovh/tf-state.sh init "$TARGET"
+      - name: Empty the cluster and the buckets (destroy)
+        if: inputs.action == 'destroy'
+        run: scripts/ovh/ci.sh teardown "$TARGET"
+      - name: terraform plan
+        run: |
+          tf="infra/terraform/envs/ovh/${TARGET#ovh-}"
+          flags=()
+          [ "$ACTION" = destroy ] && flags=(-destroy)
+          terraform -chdir="$tf" plan -input=false ${flags[@]+"${flags[@]}"} -out="$RUNNER_TEMP/tfplan"
+          scripts/ovh/ci.sh plan-summary "$TARGET" "$RUNNER_TEMP/tfplan"
+      - name: terraform apply
+        if: inputs.action != 'plan'
+        run: |
+          tf="infra/terraform/envs/ovh/${TARGET#ovh-}"
+          terraform -chdir="$tf" apply -input=false "$RUNNER_TEMP/tfplan"
+          if [ "$ACTION" = destroy ]; then
+            {
+              echo "### $TARGET destroyed"
+              [ "$TARGET" = ovh-vps ] && echo "The VPS itself still bills: console › Bare Metal Cloud › VPS › Terminate. Then delete the DNS records and revoke the API token."
+              [ "$TARGET" = ovh-mks ] && echo "Check Public Cloud › Load Balancer and Block Storage for leftovers; delete the DNS records and revoke the API token."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            terraform -chdir="$tf" output -json dns_records | jq -r '"### DNS records\n\n```text\n" + join("\n") + "\n```"' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Remove the plan (it holds secret values)
+        if: always()
+        run: rm -f "$RUNNER_TEMP/tfplan"
+
+  images:
+    name: images
+    needs: prepare
+    if: needs.prepare.outputs.images == 'true'
+    permissions:
+      contents: read
+      packages: write # push to ghcr.io with the run's token
+    uses: ./.github/workflows/deploy.yml
+    with:
+      registry: ${{ needs.prepare.outputs.registry }}
+      image-tag: ${{ needs.prepare.outputs.tag }}
+      images: all
+      push: true
+      login: ${{ needs.prepare.outputs.login }}
+      platforms: linux/amd64 # the VPS and the b3 nodes are x86
+      chart: false
+      web-apps: '["studio","consumer","console"]' # no documentation site in the demo (values-dryrun.yaml)
+    secrets: inherit # REGISTRY_USERNAME / REGISTRY_PASSWORD (another registry), MAVEN_MIRROR_* — repository secrets
+
+  deploy:
+    name: deploy
+    needs: [prepare, provision, images]
+    if: >-
+      !cancelled() && needs.prepare.result == 'success' && needs.prepare.outputs.deploy == 'true' &&
+      (needs.provision.result == 'success' || needs.provision.result == 'skipped') &&
+      (needs.images.result == 'success' || needs.images.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    environment: ${{ inputs.target }}
+    permissions:
+      contents: read
+      packages: read # the fallback pull secret (the run's token) when REGISTRY_PULL_TOKEN is not set
+    env:
+      OVH_ENDPOINT: ${{ vars.OVH_ENDPOINT || 'ovh-ca' }}
+      OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
+      OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
+      OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
+      OVH_CLIENT_ID: ${{ secrets.OVH_CLIENT_ID }}
+      OVH_CLIENT_SECRET: ${{ secrets.OVH_CLIENT_SECRET }}
+      OVH_SERVICE_NAME: ${{ vars.OVH_SERVICE_NAME }}
+      OVH_DOMAIN: ${{ vars.OVH_DOMAIN }}
+      OVH_BUCKET_SUFFIX: ${{ vars.OVH_BUCKET_SUFFIX }}
+      OVH_TFVARS: ${{ vars.OVH_TFVARS }}
+      OVH_VPS_SERVICE_NAME: ${{ vars.OVH_VPS_SERVICE_NAME }}
+      OVH_ADMIN_CIDRS: ${{ vars.OVH_ADMIN_CIDRS }}
+      OVH_EDGE_FIREWALL: ${{ vars.OVH_EDGE_FIREWALL }}
+      OVH_API_ALLOWED_CIDRS: ${{ vars.OVH_API_ALLOWED_CIDRS }}
+      OVH_NODE_COUNT: ${{ vars.OVH_NODE_COUNT }}
+      OVH_NODE_FLAVOR: ${{ vars.OVH_NODE_FLAVOR }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      OVH_VPS_SSH_PRIVATE_KEY: ${{ secrets.OVH_VPS_SSH_PRIVATE_KEY }}
+      OVH_VPS_KNOWN_HOSTS: ${{ secrets.OVH_VPS_KNOWN_HOSTS }}
+      # scripts/ovh/secrets.sh with OVH_SECRETS_SOURCE=env: every key it writes, by name. An empty generated key is
+      # taken from (or made once in) the cluster's secret/northline-generated; an empty third-party key leaves that
+      # integration on its dev fake (Stripe, SendGrid) or off (Twilio: then no one can sign up under dev).
+      OVH_SECRETS_SOURCE: env
+      TOTP_KEY: ${{ secrets.TOTP_KEY }}
+      WEBHOOK_SECRET_KEY: ${{ secrets.WEBHOOK_SECRET_KEY }}
+      EMAIL_UNSUBSCRIBE_KEY: ${{ secrets.EMAIL_UNSUBSCRIBE_KEY }}
+      KMS_LOCAL_KEY: ${{ secrets.KMS_LOCAL_KEY }}
+      STUDIO_BFF_SECRET: ${{ secrets.STUDIO_BFF_SECRET }}
+      STUDIO_BFF_SECRET_HASH: ${{ secrets.STUDIO_BFF_SECRET_HASH }}
+      CONSUMER_BFF_SECRET: ${{ secrets.CONSUMER_BFF_SECRET }}
+      CONSUMER_BFF_SECRET_HASH: ${{ secrets.CONSUMER_BFF_SECRET_HASH }}
+      CONSOLE_BFF_SECRET: ${{ secrets.CONSOLE_BFF_SECRET }}
+      CONSOLE_BFF_SECRET_HASH: ${{ secrets.CONSOLE_BFF_SECRET_HASH }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+      MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      STRIPE_CONNECT_WEBHOOK_SECRET: ${{ secrets.STRIPE_CONNECT_WEBHOOK_SECRET }}
+      SMS_AUTH_TOKEN: ${{ secrets.SMS_AUTH_TOKEN }}
+      SMS_ACCOUNT_ID: ${{ vars.SMS_ACCOUNT_ID }}
+      SMS_FROM: ${{ vars.SMS_FROM }}
+      EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY }}
+      KAFKA_SASL_JAAS_CONFIG: ${{ secrets.KAFKA_SASL_JAAS_CONFIG }}
+      # The cluster's image pull secret (secret/northline-registry).
+      REGISTRY_SERVER: ${{ needs.prepare.outputs.registry-server }}
+      REGISTRY_USERNAME: ${{ vars.REGISTRY_PULL_USERNAME || github.actor }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PULL_TOKEN || github.token }}
+      REGISTRY: ${{ needs.prepare.outputs.registry }}
+      IMAGE_TAG: ${{ needs.prepare.outputs.tag }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Tools (htpasswd for the BFF secrets' hashes)
+        run: |
+          sudo apt-get install -y -qq apache2-utils >/dev/null
+          kubectl version --client
+      - name: Pull token
+        env:
+          PULL_TOKEN: ${{ secrets.REGISTRY_PULL_TOKEN }}
+        run: |
+          if [ -z "$PULL_TOKEN" ] && [ "${REGISTRY_SERVER}" = ghcr.io ]; then
+            echo "::warning::REGISTRY_PULL_TOKEN is not set: the cluster pulls with this run's token, which expires when the run ends — a pod that moves or restarts on a node without the image cached will fail to pull. Set a classic token with read:packages (make ovh-gh-setup)."
+          fi
+      - name: Terraform variables and state
+        run: |
+          scripts/ovh/ci.sh tfvars "$TARGET"
+          scripts/ovh/tf-state.sh init "$TARGET"
+      - name: Cluster access (ovh-vps — k3s over SSH, idempotent; ovh-mks — kubeconfig from Terraform)
+        run: scripts/ovh/ci.sh open "$TARGET" install
+      - name: Deploy (Secrets, add-ons, northline-data, northline)
+        run: make deploy TARGET="$TARGET" REGISTRY="$REGISTRY" IMAGE_TAG="$IMAGE_TAG"
+      - name: Smoke test, URLs and the address for DNS
+        run: scripts/ovh/smoke.sh "$TARGET"
+      - name: Close the runner's access
+        if: always()
+        run: scripts/ovh/ci.sh close "$TARGET"
+
+  scale:
+    name: scale (${{ inputs.action }})
+    needs: prepare
+    if: needs.prepare.outputs.scale == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ inputs.target }}
+    permissions:
+      contents: read
+    env:
+      OVH_ENDPOINT: ${{ vars.OVH_ENDPOINT || 'ovh-ca' }}
+      OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
+      OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
+      OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
+      OVH_CLIENT_ID: ${{ secrets.OVH_CLIENT_ID }}
+      OVH_CLIENT_SECRET: ${{ secrets.OVH_CLIENT_SECRET }}
+      OVH_SERVICE_NAME: ${{ vars.OVH_SERVICE_NAME }}
+      OVH_DOMAIN: ${{ vars.OVH_DOMAIN }}
+      OVH_BUCKET_SUFFIX: ${{ vars.OVH_BUCKET_SUFFIX }}
+      OVH_TFVARS: ${{ vars.OVH_TFVARS }}
+      OVH_VPS_SERVICE_NAME: ${{ vars.OVH_VPS_SERVICE_NAME }}
+      OVH_ADMIN_CIDRS: ${{ vars.OVH_ADMIN_CIDRS }}
+      OVH_EDGE_FIREWALL: ${{ vars.OVH_EDGE_FIREWALL }}
+      OVH_API_ALLOWED_CIDRS: ${{ vars.OVH_API_ALLOWED_CIDRS }}
+      OVH_NODE_COUNT: ${{ vars.OVH_NODE_COUNT }}
+      OVH_NODE_FLAVOR: ${{ vars.OVH_NODE_FLAVOR }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      OVH_VPS_SSH_PRIVATE_KEY: ${{ secrets.OVH_VPS_SSH_PRIVATE_KEY }}
+      OVH_VPS_KNOWN_HOSTS: ${{ secrets.OVH_VPS_KNOWN_HOSTS }}
+      ACTION: ${{ inputs.action }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+      - name: Terraform variables and state
+        run: |
+          scripts/ovh/ci.sh tfvars "$TARGET"
+          scripts/ovh/tf-state.sh init "$TARGET"
+      - name: Cluster access
+        run: scripts/ovh/ci.sh open "$TARGET" kubeconfig
+      - name: scripts/ovh/scale.sh
+        run: |
+          AUTO_APPROVE=1 scripts/ovh/scale.sh "$ACTION" "$TARGET"
+          scripts/ovh/scale.sh status "$TARGET"
+      - name: Close the runner's access
+        if: always()
+        run: scripts/ovh/ci.sh close "$TARGET"
