@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make photos-pick (docs/runbooks/photos.md): promotes an Openverse candidate (make photos-fetch, candidates/) into the
+// make photos-pick (docs/runbooks/photos.md): promotes a candidate (make photos-fetch or an Open Images pick, candidates/) into the
 // library — the file into source/<slot>.jpg (at most 2048 px, so git stays small) and its entry into photos.json with
 // the attribution candidates.json recorded. Then `make photos` builds its variants.
 //
@@ -21,7 +21,7 @@ export function entryOf(slot, candidate, { alt, focal = { x: 0.5, y: 0.5 }, fetc
     file: `source/${slot}.jpg`,
     alt,
     focal,
-    site: 'openverse',
+    site: candidate.site ?? 'openverse',
     source: site,
     title: candidate.title ?? undefined,
     photographer: candidate.creator?.trim() || `unknown (${site})`,

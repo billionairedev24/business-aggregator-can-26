@@ -2,7 +2,7 @@ import { credits, photoFor, type Credit } from '@northline/media';
 import { Photo, useLocale } from '@northline/ui';
 import { useCreditsT } from './messages';
 
-const SITE_NAME: Record<string, string> = { pexels: 'Pexels', unsplash: 'Unsplash', openverse: 'Openverse' };
+const SITE_NAME: Record<string, string> = { pexels: 'Pexels', unsplash: 'Unsplash', openverse: 'Openverse', openimages: 'Open Images' };
 /** Each site's own licence page (Openverse photos link their Creative Commons deed). */
 const LICENCE_PAGE: Record<string, string> = { 'Pexels License': 'https://www.pexels.com/license/', 'Unsplash License': 'https://unsplash.com/license' };
 

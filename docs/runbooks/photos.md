@@ -75,6 +75,7 @@ search engine, a competitor or social media.
 | Pexels (`pexels`) | `Pexels License` | free for commercial use, no attribution required (we credit anyway). Not allowed: selling unaltered copies, implying the people shown endorse us, showing identifiable people in a bad light, **redistributing the photos as a stock collection** |
 | Unsplash (`unsplash`) | `Unsplash License` | free for commercial use, no attribution required (we credit anyway). Not allowed: selling unaltered copies, and **compiling Unsplash photos to replicate a similar or competing service** — so the library must stay what it is (pictures on our own pages), never a browsable gallery or download of photos; don't add more Unsplash photos than the slots need |
 | Openverse (`openverse`) | `CC0 1.0` or `PDM 1.0` — and, only with `COMMERCIAL=1`, `CC BY` / `CC BY-SA` (with `licenceUrl` and `source`) | CC0 and the Public Domain Mark need nothing. CC BY needs the photographer and licence next to the work or on a credits page reachable from it — the footer's `/credits` page does that. CC BY-SA also asks that changed versions (our crops) stay under BY-SA: acceptable for a photo on a page, but prefer CC0. Never NC (non-commercial) or ND (no derivatives): our crops are derivatives |
+| Open Images (`openimages`) | `CC BY 2.0` only (with `licenceUrl` and `source: flickr`) | Google's Open Images dataset lists each photo's Flickr page, photographer and licence; we take only those it lists under CC BY 2.0 and credit them on `/credits` like Openverse's. The files come from the dataset's public bucket (`open-images-dataset.s3.amazonaws.com`, about 1024 px on the long side, so heroes are softer than a 2000 px source) — see § 9 |
 
 Also:
 
@@ -194,6 +195,17 @@ a Mac. To let an agent download candidates itself instead, the owner adds the ho
 access → allowed domains** setting (claude.ai → the environment's settings): `api.openverse.org`,
 `images.pexels.com`, `www.pexels.com`, `images.unsplash.com`, `unsplash.com`, `live.staticflickr.com`,
 `upload.wikimedia.org`, `cdn.stocksnap.io`, `images.rawpixel.com`. Then `make photos-fetch` works here too.
+
+### The Open Images route (what filled the library in October 2026)
+
+Openverse throttled the owner's Mac and the photo hosts are blocked here, but Google's Open Images dataset is
+reachable (its metadata on `storage.googleapis.com/openimages/`, its files on `open-images-dataset.s3.amazonaws.com`).
+Each slot's query was mapped to the dataset's human-verified labels (Bakery, Barber, Snowplow, …), photos with text,
+logos, drawings or black-and-white labels were left out, the top 16 per slot were laid out on contact sheets and a
+person picked one per slot by eye (or none: the slot then falls back). The picks went through `make photos-pick`
+(`candidates.json` with `site: openimages`), so every entry carries the Flickr page, photographer and deed. Replace
+any of them with a sharper Pexels or Unsplash photo later by the usual route (§ 4–5); people photos especially, since
+Flickr photos come without model releases.
 
 ## 10. Demo data
 

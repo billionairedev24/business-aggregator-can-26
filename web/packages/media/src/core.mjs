@@ -14,19 +14,25 @@ export const FORMATS = Object.freeze(['avif', 'webp', 'jpg']);
 /**
  * Where a photo may come from (docs/runbooks/photos.md): Pexels and Unsplash under their own licences, or a photo
  * found through Openverse (`make photos-fetch`) under CC0, the Public Domain Mark or — with its attribution on the
- * credits page — CC BY / CC BY-SA. `hosts` limits the photo page's address (Openverse's sources are many sites).
+ * credits page — CC BY / CC BY-SA; or from Google's Open Images dataset: Flickr photos the
+ * dataset lists under CC BY 2.0, credited the same way. `hosts` limits the photo page's address (Openverse's sources
+ * are many sites).
  */
 export const SITES = Object.freeze({
   pexels: { licences: ['Pexels License'], hosts: ['pexels.com', 'www.pexels.com', 'images.pexels.com'] },
   unsplash: { licences: ['Unsplash License'], hosts: ['unsplash.com', 'www.unsplash.com', 'images.unsplash.com'] },
   openverse: { licences: ['CC0 1.0', 'PDM 1.0', 'CC BY 2.0', 'CC BY 2.5', 'CC BY 3.0', 'CC BY 4.0', 'CC BY-SA 2.0', 'CC BY-SA 2.5', 'CC BY-SA 3.0', 'CC BY-SA 4.0'], hosts: null },
+  openimages: { licences: ['CC BY 2.0'], hosts: ['www.flickr.com', 'flickr.com'] },
 });
+
+/** Sites whose photos carry a Creative Commons deed and the site they were first published on. */
+const CC_SITES = new Set(['openverse', 'openimages']);
 
 /** Licences whose terms ask for the photographer's name next to the work (the credits page always gives it). */
 export const needsAttribution = licence => /^CC BY/.test(licence ?? '');
 
 /** Bumped when the variants change for the same source (another encoder setting): every file name changes. */
-export const PIPELINE = 1;
+export const PIPELINE = 2;
 
 const SLOT = /^[a-z]+(?:\/[a-z0-9_.-]+)+$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -56,11 +62,11 @@ export function problems(slot, e, { processed = false } = {}) {
   try { host = new URL(e.sourceUrl).hostname; } catch { /* reported below */ }
   need(!!host && (!site?.hosts || site.hosts.includes(host)), `sourceUrl must be the photo's page${site?.hosts ? ` on ${e.site}` : ''}`);
   need(!!site && site.licences.includes(e.licence), `licence must be one of: ${site?.licences.join(', ') ?? 'Pexels License, Unsplash License, CC0 1.0, …'}`);
-  if (e.site === 'openverse') {
+  if (CC_SITES.has(e.site)) {
     let licenceHost = null;
     try { licenceHost = new URL(e.licenceUrl).hostname; } catch { /* reported below */ }
     need(licenceHost === 'creativecommons.org', 'licenceUrl (the Creative Commons deed) is missing');
-    need(typeof e.source === 'string' && e.source.length > 0, 'source (the site Openverse found it on: flickr, wikimedia, …) is missing');
+    need(typeof e.source === 'string' && e.source.length > 0, 'source (the site it was published on: flickr, wikimedia, …) is missing');
   }
   need(typeof e.downloaded === 'string' && DATE.test(e.downloaded), 'downloaded (YYYY-MM-DD) is missing');
   if (processed) {

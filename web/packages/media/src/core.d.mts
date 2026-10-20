@@ -1,6 +1,6 @@
 export type Crop = 'square' | 'card' | 'wide';
 export type Format = 'avif' | 'webp' | 'jpg';
-export type Site = 'pexels' | 'unsplash' | 'openverse';
+export type Site = 'pexels' | 'unsplash' | 'openverse' | 'openimages';
 
 /** One photo of the library (photos.json): the source file, what it shows, where it came from and its licence. */
 export interface PhotoEntry {
@@ -14,9 +14,9 @@ export interface PhotoEntry {
   sourceUrl: string;
   /** 'Pexels License', 'Unsplash License', 'CC0 1.0', 'PDM 1.0', 'CC BY 4.0', … (core.mjs SITES). */
   licence: string;
-  /** openverse: the Creative Commons deed. */
+  /** openverse, openimages: the Creative Commons deed. */
   licenceUrl?: string;
-  /** openverse: the site it was found on (flickr, wikimedia, stocksnap, rawpixel…). */
+  /** openverse, openimages: the site it was published on (flickr, wikimedia, stocksnap, rawpixel…). */
   source?: string;
   /** the photo's title on its site (openverse attribution). */
   title?: string;
