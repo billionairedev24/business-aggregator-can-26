@@ -260,6 +260,54 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         await().atMost(INDEXED).until(() -> doc("listings_en", offer), Optional::isPresent);
     }
 
+    /**
+     * S-156: Northline paused the business's instant book (no-shows) or the business turned it off — its services stay
+     * searchable without instant book; resumed, they book instantly again.
+     */
+    @Test
+    void instantBookPausedOrOff_indexesTheServicesWithoutInstantBook() {
+        var fx = fx();
+        var m = fx.merchant("provider", "trusted", "Paused Instant Mechanics");
+        var service = fx.service(m, "Oil change", "Vidange", 6900, "live");
+        send("catalogue.listing", "catalogue.listing_published", listing(service, m.id(), "service"));
+        await().atMost(INDEXED)
+                .until(() -> doc("listings_en", service)
+                        .map(ListingDocument::instantBook)
+                        .orElse(false));
+
+        jdbc.sql("""
+                        insert into catalogue.instant_book_settings (merchant_id, enabled, paused_at, paused_cause,
+                          paused_reason, updated_at) values (:m, true, now(), 'provider_no_shows', '3 no-shows', now())
+                        """).param("m", m.id()).update();
+        send("catalogue.listing", "catalogue.instant_book_changed", instantBook(m.id(), false));
+        await().atMost(INDEXED)
+                .until(() ->
+                        doc("listings_en", service).map(d -> !d.instantBook()).orElse(false)
+                                && doc("listings_fr", service)
+                                        .map(d -> !d.instantBook())
+                                        .orElse(false));
+
+        jdbc.sql("""
+                        update catalogue.instant_book_settings set paused_at = null, paused_cause = null,
+                          paused_reason = null, enabled = false where merchant_id = :m
+                        """).param("m", m.id()).update();
+        send("catalogue.listing", "catalogue.instant_book_changed", instantBook(m.id(), false));
+        jdbc.sql("update catalogue.instant_book_settings set enabled = true where merchant_id = :m")
+                .param("m", m.id())
+                .update();
+        send("catalogue.listing", "catalogue.instant_book_changed", instantBook(m.id(), true));
+        await().atMost(INDEXED)
+                .until(() -> doc("listings_en", service)
+                        .map(ListingDocument::instantBook)
+                        .orElse(false));
+    }
+
+    private static String instantBook(String merchantId, boolean effective) {
+        return """
+                {"eventId":"%s","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"%s","merchantId":"%s",\
+                "effective":%s}""".formatted(Events.id(), merchantId, merchantId, effective);
+    }
+
     @Test
     void vettingRejection_removesTheListing() {
         var fx = fx();

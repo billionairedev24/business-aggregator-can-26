@@ -11,7 +11,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link ServiceOffers}: live, approved services only (what the vetting queue let through). */
+/**
+ * {@link ServiceOffers}: live, approved services only (what the vetting queue let through). A service books instantly
+ * only while its business has instant book on and Northline hasn't paused it (S-156).
+ */
 @Repository
 @RequiredArgsConstructor
 class ServiceOfferQueries implements ServiceOffers {
@@ -22,9 +25,11 @@ class ServiceOfferQueries implements ServiceOffers {
                    coalesce(t.title, s.name_i18n ->> :lang, s.name, s.name_i18n ->> 'en', s.id) as name,
                    coalesce(t.description, s.included) as included, coalesce(s.pricing_mode, 'fixed') as pricing_mode,
                    s.price_cents, coalesce(s.duration_min, 60) as duration_min, coalesce(s.buffer_min, 0) as buffer_min,
-                   coalesce(s.instant_book, false) as instant_book, s.sales_30d, s.own_images[1] as image_id
+                   (coalesce(s.instant_book, false) and coalesce(ib.enabled, true) and ib.paused_at is null)
+                     as instant_book, s.sales_30d, s.own_images[1] as image_id
               from catalogue.services s
               left join catalogue.listing_texts t on t.listing_id = s.id and t.lang = :lang
+              left join catalogue.instant_book_settings ib on ib.merchant_id = s.merchant_id
              where s.vetting = 'approved' and coalesce(s.status, 'live') = 'live'
             """;
 
