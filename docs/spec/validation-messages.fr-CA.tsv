@@ -1167,3 +1167,22 @@ That link has expired or was already used. Ask for a new email.	Ce lien a expir�
 Create the account again.	Recommencez la création du compte.	new
 Ask for a new email first.	Demandez d’abord un nouveau courriel.	new
 Wait %d s before sending another email.	Attendez %d s avant d’envoyer un autre courriel.	new
+# S-153: customer messages, photos on requests and bookings, saved cards, cancellation policies and late cancellations,
+# deposit balances.
+Write a message.	Écrivez un message.	new
+This provider wasn't asked for this quote.	Ce prestataire n’a pas reçu cette demande de devis.	new
+Choose a quote request or a booking.	Choisissez une demande de devis ou une réservation.	new
+Choose a photo to upload.	Choisissez une photo à téléverser.	new
+Add a photo (JPEG, PNG, HEIC or WebP).	Ajoutez une photo (JPEG, PNG, HEIC ou WebP).	new
+Photos can be up to 10 MB.	Les photos peuvent faire jusqu’à 10 Mo.	new
+Add up to 6 photos.	Ajoutez jusqu’à 6 photos.	new
+That photo is no longer available. Add it again.	Cette photo n’est plus disponible. Ajoutez-la de nouveau.	new
+Choose one of your saved cards.	Choisissez l’une de vos cartes enregistrées.	new
+Choose a window from 0 to %d hours.	Choisissez un délai de 0 à %d heures.	new
+Choose a fee from 0 to %d percent.	Choisissez des frais de 0 à %d pour cent.	new
+Choose a window and a fee.	Choisissez un délai et des frais.	new
+Only the customer can cancel this booking.	Seul le client peut annuler cette réservation.	new
+The job has started, so it can't be cancelled. Report a problem instead.	Les travaux ont commencé : la réservation ne peut plus être annulée. Signalez plutôt un problème.	new
+This booking's payment was already taken. Ask for a refund instead.	Le paiement de cette réservation a déjà été perçu. Demandez plutôt un remboursement.	new
+There is no balance to pay for this booking.	Il n’y a aucun solde à payer pour cette réservation.	new
+No payment with id %s	Aucun paiement avec l’identifiant %s	new

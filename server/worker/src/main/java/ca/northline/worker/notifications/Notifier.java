@@ -70,6 +70,7 @@ public final class Notifier {
     List<Notice> notices(String eventId, String type, int version, JsonNode data) {
         var all = new ArrayList<Notice>();
         Notices.of(eventId, type, version, data).ifPresent(all::add);
+        all.addAll(TeamNotices.of(eventId, type, version, data));
         all.addAll(personal.of(eventId, type, version, data));
         return all;
     }
@@ -106,7 +107,8 @@ public final class Notifier {
                 if (failure == null) {
                     continue;
                 }
-                if (notice.audience() instanceof Notice.Audience.Team) {
+                if (notice.audience() instanceof Notice.Audience.Team
+                        && !TeamNotices.DEFERRED.contains(notice.type())) {
                     outage = failure; // the other members first; the event's retry topics send it later
                 } else {
                     // customers and couriers: retried from the table (their consumer group has no retry topics)
@@ -133,6 +135,9 @@ public final class Notifier {
         for (var row : deferred.lockDue(now, limit)) {
             var notice = notices(row.eventId(), row.eventType(), row.eventVersion(), row.payload()).stream()
                     .filter(n -> DeferredNotifications.audience(n.audience()).equals(row.audience()))
+                    // S-153: one event can tell several businesses' teams (quote.requested)
+                    .filter(n -> !(n.audience() instanceof Notice.Audience.Team)
+                            || java.util.Objects.equals(n.merchantId(), row.merchantId()))
                     .findFirst()
                     .orElse(null);
             var person = notice == null ? null : person(notice.audience(), row.userId());

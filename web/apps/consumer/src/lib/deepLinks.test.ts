@@ -9,6 +9,7 @@ describe('app deep links on the web', () => {
     ['/app/quotes/qt_1', '/quotes/qt_1'],
     ['/app/bookings/B1', '/account/orders'],
     ['/app/cases/RF-2214', '/account/orders?view=cases'],
+    ['/app/messages/th_1', '/account/messages?thread=th_1'],
     ['/courier/run', '/'],
     ['/courier/payouts', '/'],
   ])('%s → %s', (path, page) => {

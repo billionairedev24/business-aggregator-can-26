@@ -15,6 +15,8 @@ const ROUTES = [
   [new RegExp(`^/app/quotes/(${ID})/?$`), id => `/quotes/${id}`],
   [new RegExp(`^/app/bookings/(${ID})/?$`), () => '/account/orders'],
   [new RegExp(`^/app/cases/(${ID})/?$`), () => '/account/orders?view=cases'],
+  // S-153: a thread with a provider → Account › Messages with it open
+  [new RegExp(`^/app/messages/(${ID})/?$`), id => `/account/messages?thread=${id}`],
   [/^\/courier\/run\/?$/, () => '/'],
   [/^\/courier\/payouts\/?$/, () => '/'],
 ];

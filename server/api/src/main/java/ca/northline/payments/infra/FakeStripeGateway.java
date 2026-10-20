@@ -34,6 +34,8 @@ class FakeStripeGateway implements PaymentGateway, PayoutGateway {
     private final Map<String, Instant> payouts = new ConcurrentHashMap<>();
     /** S-116: the receipt language set per Customer (tests read it). */
     final Map<String, String> receiptLocales = new ConcurrentHashMap<>();
+    /** S-153: what was captured of each PaymentIntent (tests read it). */
+    final Map<String, Long> captured = new ConcurrentHashMap<>();
 
     private String id(String prefix, int length) {
         var sb = new StringBuilder(prefix);
@@ -53,12 +55,22 @@ class FakeStripeGateway implements PaymentGateway, PayoutGateway {
         receiptLocales.put(stripeCustomer, locale);
     }
 
+    /**
+     * S-153: Stripe's test cards decide off-session outcomes as at Stripe — a payment method whose id contains
+     * {@code chargeDeclined} is declined (Stripe answers 402: thrown here too), {@code authenticationRequired} needs the
+     * customer ({@code requires_action}).
+     */
     @Override
     public Authorization authorize(Authorize request) {
+        var method = request.paymentMethod() == null ? "" : request.paymentMethod();
+        if (method.contains("chargeDeclined")) {
+            throw new IllegalStateException("FAKE STRIPE card_declined (" + method + ")");
+        }
         var pi = id("pi_", 24);
+        var status = method.contains("authenticationRequired") ? IntentStatus.REQUIRES_ACTION : IntentStatus.AUTHORIZED;
         var authorization = new Authorization(
                 pi,
-                IntentStatus.AUTHORIZED,
+                status,
                 request.amountCents(),
                 request.amountCents(),
                 pi + "_secret_" + id("", 24),
@@ -95,6 +107,7 @@ class FakeStripeGateway implements PaymentGateway, PayoutGateway {
     @Override
     public String capture(String stripePaymentIntent, long amountCents, String idempotencyKey) {
         log.debug("FAKE STRIPE capture {} {}¢", stripePaymentIntent, amountCents);
+        captured.put(stripePaymentIntent, amountCents);
         var known = intents.get(stripePaymentIntent);
         return known != null && known.charge() != null ? known.charge() : id("ch_", 24);
     }
@@ -102,6 +115,19 @@ class FakeStripeGateway implements PaymentGateway, PayoutGateway {
     @Override
     public void cancel(String stripePaymentIntent, String idempotencyKey) {
         log.debug("FAKE STRIPE cancel {}", stripePaymentIntent);
+        intents.computeIfPresent(
+                stripePaymentIntent,
+                (_, a) -> new Authorization(
+                        a.paymentIntent(),
+                        IntentStatus.CANCELED,
+                        a.amountCents(),
+                        0,
+                        a.clientSecret(),
+                        a.stripeCustomer(),
+                        a.paymentMethod(),
+                        a.charge(),
+                        a.captureBefore(),
+                        a.transferGroup()));
     }
 
     @Override

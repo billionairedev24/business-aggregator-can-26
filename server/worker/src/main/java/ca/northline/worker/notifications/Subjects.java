@@ -33,6 +33,9 @@ public interface Subjects {
     /** S-151: the customer who asked for a return ({@code orders.returns}). */
     Optional<String> returnCustomer(String returnId);
 
+    /** S-153: the customer of a customer thread ({@code messaging.threads.counterpart_id}). */
+    Optional<String> threadCustomer(String threadId);
+
     /** The {@code identity.users} id of a courier ({@code fulfilment.couriers}). */
     Optional<String> courierUser(String courierId);
 

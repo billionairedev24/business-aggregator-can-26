@@ -85,6 +85,29 @@ public final class PersonalNotices {
                             case "booking.booking_en_route" -> booking(eventId, type, data, id, "booking.en_route");
                             case "booking.booking_completed" -> booking(eventId, type, data, id, "booking.completed");
                             case "booking.quote_sent" -> quote(eventId, type, data, id);
+                            case "messaging.message_sent" -> message(eventId, type, data, id);
+                            case "booking.booking_balance_held" ->
+                                bookingMoney(eventId, type, data, id, "booking.balance_held", "amountCents");
+                            case "booking.booking_balance_failed" ->
+                                bookingMoney(
+                                        eventId,
+                                        type,
+                                        data,
+                                        id,
+                                        data.path("retryAt").isString()
+                                                ? "booking.balance_failed"
+                                                : "booking.balance_failed_final",
+                                        "amountCents");
+                            case "booking.booking_cancelled" ->
+                                bookingMoney(
+                                        eventId,
+                                        type,
+                                        data,
+                                        id,
+                                        data.path("feeCents").asLong() > 0
+                                                ? "booking.cancelled_fee"
+                                                : "booking.cancelled",
+                                        "feeCents");
                             case "payments.refund_case_updated", "payments.refund_issued" ->
                                 refund(eventId, type, data, id);
                             case OFFER -> offer(eventId, type, data);
@@ -246,6 +269,62 @@ public final class PersonalNotices {
                 key,
                 (f, business) -> new Object[] {business, f.money(total), validUntil == null ? "" : f.date(validUntil)},
                 new Notice.Push("/app/quotes/" + quoteId, Map.of("type", key, "quoteId", quoteId), "quote:" + quoteId));
+    }
+
+    /** S-153: the business (or Northline) wrote in one of the customer's threads; never the text itself. */
+    private @Nullable Notice message(String eventId, String type, JsonNode data, String threadId) {
+        if (!"customer".equals(data.path("threadKind").asString(""))
+                || "customer".equals(data.path("senderRole").asString(""))) {
+            return null;
+        }
+        var customer = subjects.threadCustomer(threadId).orElse(null);
+        if (customer == null) {
+            return null;
+        }
+        return customer(
+                eventId,
+                type,
+                data,
+                customer,
+                text(data, "merchantId"),
+                "quotes_messages",
+                "message.received",
+                (_, business) -> new Object[] {business},
+                new Notice.Push(
+                        "/app/messages/" + threadId,
+                        Map.of("type", "message.received", "threadId", threadId),
+                        "thread:" + threadId));
+    }
+
+    /**
+     * S-153: a deposit quote's balance held or refused, a cancellation confirmed — {0} the business, {1} the start,
+     * {2} the amount (with its tax).
+     */
+    private @Nullable Notice bookingMoney(
+            String eventId, String type, JsonNode data, String bookingId, String key, String amountField) {
+        var booking = subjects.booking(bookingId).orElse(null);
+        if (booking == null) {
+            return null;
+        }
+        var startsAt = data.path("startsAt").isString()
+                ? OffsetDateTime.parse(data.path("startsAt").asString()).toInstant()
+                : booking.startsAt();
+        var amount = data.path(amountField).asLong()
+                + data.path("amountCents".equals(amountField) ? "taxCents" : "feeTaxCents")
+                        .asLong();
+        return customer(
+                eventId,
+                type,
+                data,
+                booking.customerId(),
+                text(data, "merchantId"),
+                "booking_reminders",
+                key,
+                (f, business) -> new Object[] {business, startsAt == null ? "" : f.dateTime(startsAt), f.money(amount)},
+                new Notice.Push(
+                        "/app/bookings/" + bookingId,
+                        Map.of("type", key, "bookingId", bookingId),
+                        "booking:" + bookingId));
     }
 
     private @Nullable Notice refund(String eventId, String type, JsonNode data, String refundId) {
@@ -478,6 +557,27 @@ public final class PersonalNotices {
             Map.entry("booking.en_route.title", "Your provider is on the way"),
             Map.entry("booking.completed", "{0} marked the job done. Check the photos and sign off in the app."),
             Map.entry("booking.completed.title", "Job done — please sign off"),
+            Map.entry("message.received", "{0} sent you a message. Read and reply in the app."),
+            Map.entry("message.received.title", "New message from {0}"),
+            Map.entry("booking.balance_held", "The balance of {2} for {0} on {1} is now held in escrow."),
+            Map.entry("booking.balance_held.title", "Balance held"),
+            Map.entry(
+                    "booking.balance_failed",
+                    "We couldn’t hold the balance of {2} for {0} on {1} — pay it from the booking; we’ll try again."),
+            Map.entry("booking.balance_failed.title", "Balance not held"),
+            Map.entry(
+                    "booking.balance_failed_final",
+                    "We couldn’t hold the balance of {2} for {0} on {1} — pay it from the booking before the visit."),
+            Map.entry("booking.balance_failed_final.title", "Pay your balance"),
+            Map.entry(
+                    "booking.cancelled",
+                    "Your booking with {0} on {1} is cancelled. The hold on your card is released."),
+            Map.entry("booking.cancelled.title", "Booking cancelled"),
+            Map.entry(
+                    "booking.cancelled_fee",
+                    "Your booking with {0} on {1} is cancelled. A late-cancellation fee of {2} was charged; the rest"
+                            + " of the hold is released."),
+            Map.entry("booking.cancelled_fee.title", "Booking cancelled"),
             Map.entry("quote.sent", "{0} sent you a quote of {1}, valid until {2}."),
             Map.entry("quote.sent.title", "New quote from {0}"),
             Map.entry("quote.revised", "{0} revised their quote: {1}, valid until {2}."),
@@ -552,6 +652,29 @@ public final class PersonalNotices {
             Map.entry("booking.en_route.title", "Votre prestataire est en route"),
             Map.entry("booking.completed", "{0} a terminé les travaux. Vérifiez les photos et approuvez dans l’appli."),
             Map.entry("booking.completed.title", "Travaux terminés — à approuver"),
+            Map.entry("message.received", "{0} vous a écrit. Lisez et répondez dans l’appli."),
+            Map.entry("message.received.title", "Nouveau message de {0}"),
+            Map.entry("booking.balance_held", "Le solde de {2} pour {0} le {1} est maintenant retenu en fiducie."),
+            Map.entry("booking.balance_held.title", "Solde retenu"),
+            Map.entry(
+                    "booking.balance_failed",
+                    "Nous n’avons pas pu retenir le solde de {2} pour {0} le {1}. Payez-le depuis la réservation —"
+                            + " nous réessaierons."),
+            Map.entry("booking.balance_failed.title", "Solde non retenu"),
+            Map.entry(
+                    "booking.balance_failed_final",
+                    "Nous n’avons pas pu retenir le solde de {2} pour {0} le {1}. Payez-le depuis la réservation"
+                            + " avant la visite."),
+            Map.entry("booking.balance_failed_final.title", "Payez votre solde"),
+            Map.entry(
+                    "booking.cancelled",
+                    "Votre réservation avec {0} le {1} est annulée. Le montant retenu sur votre carte est libéré."),
+            Map.entry("booking.cancelled.title", "Réservation annulée"),
+            Map.entry(
+                    "booking.cancelled_fee",
+                    "Votre réservation avec {0} le {1} est annulée. Des frais d’annulation tardive de {2} ont été"
+                            + " facturés; le reste du montant retenu est libéré."),
+            Map.entry("booking.cancelled_fee.title", "Réservation annulée"),
             Map.entry("quote.sent", "{0} vous a envoyé un devis de {1}, valide jusqu’au {2}."),
             Map.entry("quote.sent.title", "Nouveau devis de {0}"),
             Map.entry("quote.revised", "{0} a révisé son devis : {1}, valide jusqu’au {2}."),

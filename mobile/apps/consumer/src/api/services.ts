@@ -103,7 +103,9 @@ export interface ProviderPage {
 
 export interface Slot { startsAt: string; free: boolean }
 export interface Day { date: string; closed?: string | null; free: number; slots: Slot[] }
-export interface Calendar { serviceId: string; durationMin: number; days: Day[]; timeZone: string }
+/** S-153: the provider's late-cancellation terms (Availability › Booking rules within the region's limits). */
+export interface CancellationPolicy { windowHours: number; feeBps: number; feeCents: number }
+export interface Calendar { serviceId: string; durationMin: number; days: Day[]; timeZone: string; cancellation?: CancellationPolicy | null }
 export interface Hold { holdId: string; bookingId: string; startsAt: string; endsAt: string; expiresAt: string }
 
 export type BookingState = 'requested' | 'confirmed' | 'en_route' | 'on_site' | 'completed' | 'signed_off' | 'disputed' | 'cancelled';
@@ -130,6 +132,10 @@ export interface Booking {
   report?: string | null;
   photoCount: number;
   releasesAt?: string | null;
+  /** S-153: the late-cancellation terms it was booked under, a deposit quote's balance, the cancellation. */
+  cancellation?: { windowHours: number; feeBps: number; feeCents: number } | null;
+  balance?: { state: 'none' | 'pending' | 'held' | 'failed' | 'cancelled'; cents: number; taxCents: number; dueAt?: string | null; nextAt?: string | null; attempts: number; failure?: string | null };
+  cancelled?: { at: string; feeCents: number; feeTaxCents: number } | null;
 }
 
 export type PaymentProvider = 'stripe' | 'fake';
@@ -179,6 +185,8 @@ export interface QuoteAsk {
   description: string;
   vehicle?: { year: string; make: string; model: string };
   area?: string;
+  /** S-153: photos of the job, uploaded first (`POST /me/photos`). */
+  photoIds?: string[];
 }
 export interface Requested { requestId: string; ref: string; respondBy: string; expiresAt: string; providers: number }
 

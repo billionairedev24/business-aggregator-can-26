@@ -145,6 +145,44 @@ class StudioLiveApiTest extends IntegrationTest {
         return id;
     }
 
+    /**
+     * S-153: the customer's own stream ({@code GET /me/live}) hears the business writing in their thread — ids only —
+     * and nothing of anyone else's.
+     */
+    @Test
+    void theCustomersStreamHearsTheBusinessWriting_inTheirOwnThreadsOnly() throws Exception {
+        var biz = data.business(MerchantRole.OWNER);
+        var customer = data.user("Amara Osei");
+        var thread = Ids.next();
+        jdbc.sql("""
+                        insert into messaging.threads (id, merchant_id, kind, ref_type, ref_id, ref_code, counterpart_id,
+                                                       counterpart_name, subject, participant_ids, created_at)
+                        values (?, ?, 'customer', 'booking', ?, 'BK-0153', ?, 'A. Osei', 'Live', '{}', now())
+                        """).params(thread, biz.merchantId(), Ids.next(), customer).update();
+        var mine = mvc.perform(get("/api/v1/me/live").with(TestJwt.customer(customer)))
+                .andExpect(request().asyncStarted())
+                .andReturn()
+                .getResponse();
+        var someoneElse = mvc.perform(get("/api/v1/me/live").with(TestJwt.customer(data.user("Other"))))
+                .andExpect(request().asyncStarted())
+                .andReturn()
+                .getResponse();
+        assertThat(mine.getContentAsString()).contains("event:ready");
+
+        mvc.perform(post("/api/v1/merchants/{m}/threads/{t}/messages", biz.merchantId(), thread)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"body\":\"See you at 9\"}")
+                        .with(TestJwt.member(biz.userId())))
+                .andExpect(status().isCreated());
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(20))
+                .untilAsserted(() -> assertThat(mine.getContentAsString())
+                        .contains("event:message\ndata:{\"ref\":\"" + thread + "\"}"));
+        assertThat(mine.getContentAsString()).doesNotContain("See you at 9");
+        assertThat(someoneElse.getContentAsString()).doesNotContain("event:message");
+        mvc.perform(get("/api/v1/me/live")).andExpect(status().isUnauthorized());
+    }
+
     /** S-88: a courier assigned to a kitchen's run and arriving at its counter reach the kitchen display at once. */
     @Test
     void couriersAssignedAndArrivingSignalTheKitchen() throws Exception {

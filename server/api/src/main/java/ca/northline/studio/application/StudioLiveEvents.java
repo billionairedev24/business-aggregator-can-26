@@ -7,6 +7,7 @@ import ca.northline.food.api.KitchenPaused;
 import ca.northline.food.api.KitchenResumed;
 import ca.northline.fulfilment.api.CourierArrived;
 import ca.northline.fulfilment.api.DeliveryAssigned;
+import ca.northline.messaging.api.CustomerConversations;
 import ca.northline.messaging.api.MessageSent;
 import ca.northline.orders.api.OrderCancelled;
 import ca.northline.orders.api.OrderPacked;
@@ -36,12 +37,19 @@ class StudioLiveEvents {
     static final String TICKET_DELIVERY = "northline.kds.ticket_delivery";
 
     private final StudioLive live;
+    private final CustomerConversations customers;
     private final MeterRegistry meters;
     private final Clock clock;
 
     @ApplicationModuleListener
     void on(MessageSent e) {
         live.signal(e.merchantId(), new Signal(Topic.MESSAGE, e.aggregateId()));
+        // S-153: the business (or Northline) wrote to a customer: their own stream refreshes the thread
+        if ("customer".equals(e.threadKind()) && !"customer".equals(e.senderRole())) {
+            customers
+                    .customerOf(e.aggregateId())
+                    .ifPresent(c -> live.signal(StudioLive.customerKey(c), new Signal(Topic.MESSAGE, e.aggregateId())));
+        }
     }
 
     @ApplicationModuleListener

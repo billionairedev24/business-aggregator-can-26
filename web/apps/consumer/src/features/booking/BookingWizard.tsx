@@ -10,7 +10,9 @@ import { signInHref, useViewer } from '../session/api';
 import { percent, rating, shortTime } from '../services/format';
 import { useServicesT } from '../services/messages';
 import { dyn } from '../services/text';
-import { bookingQuery, calendarQuery, confirmBooking, holdSlot, priceQuery, startCheckout, type Checkout, type Confirmation } from './api';
+import { bookingQuery, calendarQuery, confirmBooking, holdSlot, policyFee, priceQuery, startCheckout, type Checkout, type Confirmation } from './api';
+import { SavedCardChoice } from './SavedCardChoice';
+import { PhotoPicker } from '../photos/PhotoPicker';
 import { PromoPoints } from '../promotions/PromoPoints';
 import { usePromoT } from '../promotions/messages';
 import { homeHours, toRequest, useDraft, VALUES, type Draft } from './draft';
@@ -149,6 +151,7 @@ function Details({ facts, draft, update, kind, vehicle, cleaning, services, onNe
   const { locale } = useLocale();
   const { money } = useFormatters();
   const ok = complete('details', draft, kind, vehicle, cleaning);
+  const viewer = useViewer();
   const years = ['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', t('older')];
   const makes = ['Honda', 'Toyota', 'Ford', 'Chevrolet', 'Hyundai', 'Kia', 'Subaru', 'Tesla', t('other')];
   const hint = ok ? t('detailsHint_ok') : kind === 'visit' ? t(vehicle ? 'detailsHint_vehicle' : 'detailsHint_visit') : kind === 'home' ? t('detailsHint_home') : kind === 'consult' ? t('detailsHint_consult') : '';
@@ -181,6 +184,7 @@ function Details({ facts, draft, update, kind, vehicle, cleaning, services, onNe
           <TextArea value={draft.description} maxLength={500} placeholder={t('describePh')} onChange={e => update({ description: e.target.value.slice(0, 500) })} rows={4} />
         </Field>
       ) : null}
+      {(kind === 'visit' || kind === 'home') && viewer.user ? <PhotoPicker photos={draft.photos ?? []} onChange={photos => update({ photos })} /> : null}
       {kind === 'visit' || kind === 'home' ? <Chips label={t('urgency')} options={[0, 1, 2, 3].map(i => t(`urg_${i}` as 'urg_0'))} value={draft.urgency} onChange={i => update({ urgency: i })} /> : null}
       {kind === 'visit' && vehicle ? (
         <section aria-labelledby="bk-vehicle" className="nl-bk-section">
@@ -342,7 +346,7 @@ function Schedule({ slug, facts, service, draft, update, notice, onNext, onBack,
               {selectedDay ? (
                 <div className="nl-bk-slots" role="group" aria-label={t('slotsFor', { day: formatDay(selectedDay.date, locale, 'long') })}>
                   {selectedDay.slots.map(s => (
-                    <button key={s.startsAt} type="button" className="nl-chip nl-bk-slot" aria-pressed={draft.startsAt === s.startsAt} disabled={!s.free} onClick={() => update({ startsAt: s.startsAt, timeZone: calZone })}>{shortTime(new Date(s.startsAt), locale, calZone)}</button>
+                    <button key={s.startsAt} type="button" className="nl-chip nl-bk-slot" aria-pressed={draft.startsAt === s.startsAt} disabled={!s.free} onClick={() => update({ startsAt: s.startsAt, timeZone: calZone, cancellation: cal.data?.cancellation })}>{shortTime(new Date(s.startsAt), locale, calZone)}</button>
                   ))}
                 </div>
               ) : <p className="nl-bk-muted">{t('noDay')}</p>}
@@ -393,7 +397,12 @@ function Pay({ zone, facts, service, draft, update, kind, vehicle, cleaning, onB
   const street = location.status === 'saved' ? location.street?.trim() : undefined;
   const site = street && location.lat != null && location.lng != null && draft.addressLine.trim().startsWith(street)
     ? { siteLat: location.lat, siteLng: location.lng } : {};
-  const cancelBy = hold ? new Date(new Date(hold.startsAt).getTime() - 12 * 3_600_000) : null;
+  const { locale } = useLocale();
+  const [card, setCard] = useState<string>();
+  // S-153: the provider's own terms, from its calendar (the 12 h of S-55 when an older calendar didn't say)
+  const terms = draft.cancellation ?? { windowHours: 12, feeBps: 0, feeCents: 0 };
+  const cancelBy = hold ? new Date(new Date(hold.startsAt).getTime() - terms.windowHours * 3_600_000) : null;
+  const lateFee = policyFee(terms, money, bps => percent(bps / 100, locale));
 
   const finish = async (checkout: Checkout) => {
     try {
@@ -411,7 +420,7 @@ function Pay({ zone, facts, service, draft, update, kind, vehicle, cleaning, onB
   const pay = async (proof?: string) => {
     if (!hold) return;
     setBusy(true); setError(undefined); setFieldErrors({});
-    const body = { ...toRequest(draft, hold.holdId, service.id, { vehicle, kind, cleaning }), ...site, ...(promoCode ? { promoCode } : {}), ...(usePoints ? { usePoints } : {}) };
+    const body = { ...toRequest(draft, hold.holdId, service.id, { vehicle, kind, cleaning }), ...site, ...(promoCode ? { promoCode } : {}), ...(usePoints ? { usePoints } : {}), ...(card ? { paymentMethodId: card } : {}) };
     const text = JSON.stringify(body);
     if (!keys.current || keys.current.body !== text) keys.current = { body: text, key: newIdempotencyKey() };
     try {
@@ -435,7 +444,10 @@ function Pay({ zone, facts, service, draft, update, kind, vehicle, cleaning, onB
             <StripeCard clientSecret={phase.checkout.clientSecret!} publishableKey={phase.checkout.publishableKey!} label={t('confirmCard', { total: money(phase.checkout.totalCents) })}
               onAuthorized={() => void finish(phase.checkout)} onError={setError} />
           ) : (
-            <p className="nl-bk-card nl-bk-muted">{t('cardNext')}</p>
+            <>
+              <SavedCardChoice value={card} onChange={setCard} />
+              {card ? null : <p className="nl-bk-card nl-bk-muted">{t('cardNext')}</p>}
+            </>
           )}
           <h2 className="nl-bk-h2">{tp('promoTitle')}</h2>
           <PromoPoints code={promoCode} onCode={setPromoCode} error={promoError} discountCents={priced.data?.discountCents}
@@ -444,7 +456,9 @@ function Pay({ zone, facts, service, draft, update, kind, vehicle, cleaning, onB
           {!usePoints && !priced.data ? <button type="button" className="btn btn-ghost" onClick={() => setUsePoints(true)}>{tp('pointsCheck')}</button> : null}
           <h2 className="nl-bk-h2">{t('policies')}</h2>
           <div className="nl-bk-policies">
-            <label className="nl-bk-check"><input type="checkbox" checked={draft.agreePolicies} onChange={e => update({ agreePolicies: e.target.checked })} /><span>{t('agreePolicies', { cancelBy: cancelBy ? date(cancelBy, 'dateTime', zone) : '' })}</span></label>
+            <label className="nl-bk-check"><input type="checkbox" checked={draft.agreePolicies} onChange={e => update({ agreePolicies: e.target.checked })} /><span>{lateFee && terms.windowHours > 0
+              ? t('agreePolicies', { hours: terms.windowHours, cancelBy: cancelBy ? date(cancelBy, 'dateTime', zone) : '', fee: lateFee })
+              : t('agreePoliciesFree')}</span></label>
             {fieldErrors.agreePolicies ? <span className="nl-error">{fieldErrors.agreePolicies}</span> : null}
             <label className="nl-bk-check"><input type="checkbox" checked={draft.agreeTerms} onChange={e => update({ agreeTerms: e.target.checked })} /><span>{t('agreeTerms')}</span></label>
             {fieldErrors.agreeTerms ? <span className="nl-error">{fieldErrors.agreeTerms}</span> : null}

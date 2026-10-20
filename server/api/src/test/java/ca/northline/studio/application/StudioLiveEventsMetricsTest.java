@@ -17,8 +17,11 @@ class StudioLiveEventsMetricsTest {
     final SimpleMeterRegistry meters = new SimpleMeterRegistry();
     final Instant placed = Instant.parse("2026-10-02T17:00:00Z");
     final LiveBusProbeTest.Bus bus = new LiveBusProbeTest.Bus();
-    final StudioLiveEvents events =
-            new StudioLiveEvents(bus, meters, Clock.fixed(placed.plusMillis(1_200), ZoneOffset.UTC));
+    final StudioLiveEvents events = new StudioLiveEvents(
+            bus,
+            org.mockito.Mockito.mock(ca.northline.messaging.api.CustomerConversations.class),
+            meters,
+            Clock.fixed(placed.plusMillis(1_200), ZoneOffset.UTC));
 
     OrderPlaced order(String type) {
         return new OrderPlaced("e1", placed, "o1", "m1", "c1", "NL-1", type, "pickup", null, 1_000, 50, List.of());

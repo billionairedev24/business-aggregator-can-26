@@ -110,7 +110,41 @@ public interface PaymentAuthorizations {
      */
     record Started(String paymentIntent, @Nullable String clientSecret, String status) {}
 
-    Started start(Request request);
+    default Started start(Request request) {
+        return start(request, null);
+    }
+
+    /**
+     * S-153: with one of the customer's saved cards ({@code pm_…} from Account › Payment methods): the PaymentIntent is
+     * confirmed server-side with it — the customer is present (on-session), so 3-D Secure may still answer
+     * {@code requires_action} and Stripe.js finishes it with the client secret. A card that isn't the customer's is a
+     * 422 on {@code paymentMethodId}. Null = Stripe.js collects a card (the S-51 flow).
+     */
+    Started start(Request request, @Nullable String savedCard);
+
+    /**
+     * S-153: a hold the customer isn't there for — the balance of a deposit quote, 48 h before the event — on the card
+     * behind an earlier authorization of theirs ({@code fromPaymentIntent}, the deposit's), off-session. Never throws for
+     * a refusal: {@code status} is {@code authorized}, {@code requires_action} (the bank wants the customer; the attempt
+     * is canceled) or {@code failed} (declined, or no saved card), with Stripe's decline code in {@code failure}.
+     */
+    OffSession startOffSession(Request request, String fromPaymentIntent, int attempt);
+
+    /**
+     * S-153: the latest PaymentIntent opened for a reference that a newer one did not replace and that still holds or
+     * waits for the card (the balance the customer pays from the booking page), its {@code pi_…}.
+     */
+    java.util.Optional<String> latest(String refType, String refId);
+
+    /** @param failure Stripe's decline code or our reason ({@code no_saved_card}), null when authorized */
+    record OffSession(
+            @Nullable String paymentIntent,
+            String status,
+            @Nullable String failure) {
+        public boolean authorized() {
+            return "authorized".equals(status);
+        }
+    }
 
     /**
      * The merchant id of a payment for Northline's own charges — the delivery fee of a goods order (S-51), which is no

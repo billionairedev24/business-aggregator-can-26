@@ -14,6 +14,7 @@ import { Body, Button, Checkbox, Notice, Section, Tag, Title, type } from '../ui
 import { Screen } from '../ui/screen';
 import { errorMessage, Loading, QueryView, SignInPrompt, Skeleton } from '../ui/states';
 import { hoursUntil, money } from './format';
+import { BookingActions } from './BookingActions';
 import { favouritesChanged, Kicker, Mark, Panel, useServicesApi, type T } from './parts';
 
 /** The live states refresh on their own (the push says so too, S-102); the rest only on demand. */
@@ -152,7 +153,8 @@ function LiveEta({ b }: { b: Booking }) {
 /**
  * C9 Day-of ETA (design 01 `eta`): where the job is — booked, on the way, arrived, done — with the steps and their
  * times in the business's zone, who is coming and the booking. Refreshes every 30 s while the member travels or works.
- * On the way: minutes away when the member shares their position (mobile gaps part 2). The live map, vehicle and plate
+ * On the way: minutes away when the member shares their position (mobile gaps part 2). S-153: the messages with the
+ * provider, cancelling under the booking's terms and a deposit quote's balance (BookingActions). The live map, vehicle and plate
  * and access sharing need data the api doesn't have yet (DECISIONS S-100).
  */
 export function Eta({ id }: { id: string }) {
@@ -214,6 +216,7 @@ export function Eta({ id }: { id: string }) {
               ))}
             </View>
             {LIVE.has(b.state) ? <Body tone="small">{t('services.eta.pushNote')}</Body> : null}
+            <BookingActions b={b} />
           </View>
         );
       }}

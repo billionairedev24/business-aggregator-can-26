@@ -1,8 +1,11 @@
 package ca.northline.hire.application;
 
+import ca.northline.availability.api.CancellationTerms;
 import ca.northline.availability.api.ProviderSlots;
 import ca.northline.availability.api.SlotHolds;
+import ca.northline.booking.api.BookingMoney;
 import ca.northline.booking.api.CustomerBookings;
+import ca.northline.booking.api.CustomerPhotos;
 import ca.northline.catalogue.api.ServiceOffers;
 import ca.northline.catalogue.api.ServiceOffers.Offer;
 import ca.northline.hire.application.BookingCheckout.Calendar;
@@ -36,7 +39,6 @@ import ca.northline.shared.RuleViolation;
 import ca.northline.shared.crypto.SecretSealer;
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -65,9 +67,6 @@ class BookingCheckoutService
                 SignOffBooking,
                 BookingCheckout.PriceBooking {
 
-    /** Design 06: "free cancellation until 12 h before". */
-    static final Duration FREE_CANCEL = Duration.ofHours(12);
-
     static final String QUOTED = "This service is priced by quote — ask for a quote instead.";
     static final String NOT_INSTANT = "This service needs the provider's approval — ask for a quote instead.";
     static final String HOLD_GONE = "Your 10-minute hold ended. Pick the time again.";
@@ -90,6 +89,10 @@ class BookingCheckoutService
     private final RegionDefaults region;
     private final Clock clock;
     private final Promotions promotions;
+    private final CustomerPhotos photos;
+    private final CancellationTerms terms;
+    private final BookingTerms bookingTerms;
+    private final BookingMoney money;
 
     /** What travels with the hold between "Hold $…" and the card confirmation (sealed: it has the access note). */
     record Draft(
@@ -119,7 +122,8 @@ class BookingCheckoutService
                                         .map(s -> new Slot(s.startsAt(), s.free()))
                                         .toList()))
                         .toList(),
-                zone.getId());
+                zone.getId(),
+                BookingCheckout.CancellationPolicy.of(terms.of(provider.merchantId())));
     }
 
     @Override
@@ -164,8 +168,11 @@ class BookingCheckoutService
                 request.hours(),
                 taxRates.bpsFor(province(hold.merchantId())));
         request.validate(kind, vehicle(offer), pricing.free());
+        var photoIds = photos.requireOwn(customerId, request.photos());
         if (pricing.free()) {
-            var booked = book(hold, request, offer, kind, pricing.priceCents(), pricing.taxCents(), null, 0, 0);
+            book(hold, request, offer, kind, pricing.priceCents(), pricing.taxCents(), null, 0, 0);
+            photos.attachToBooking(customerId, hold.bookingId(), photoIds);
+            var booked = booking(customerId, hold.bookingId());
             holds.release(hold.id());
             return new Checkout(
                     hold.id(),
@@ -192,18 +199,20 @@ class BookingCheckoutService
         var line = promo.lines().getFirst();
         var taxable = line.taxableCents();
         var tax = Pricing.taxOn(taxable, taxRates.bpsFor(province(hold.merchantId())));
-        var started = payments.start(new PaymentAuthorizations.Request(
-                hold.merchantId(),
-                "booking",
-                hold.bookingId(),
-                customerId,
-                taxable,
-                tax,
-                "booking:" + hold.bookingId(),
-                clientKey,
-                null,
-                0,
-                line.pointsCents()));
+        var started = payments.start(
+                new PaymentAuthorizations.Request(
+                        hold.merchantId(),
+                        "booking",
+                        hold.bookingId(),
+                        customerId,
+                        taxable,
+                        tax,
+                        "booking:" + hold.bookingId(),
+                        clientKey,
+                        null,
+                        0,
+                        line.pointsCents()),
+                request.paymentMethodId());
         attach(hold.id(), new Draft(request, taxable, tax, started.paymentIntent()));
         return new Checkout(
                 hold.id(),
@@ -296,7 +305,7 @@ class BookingCheckoutService
                 null,
                 discount));
         promotions.redeem("service", hold.bookingId());
-        var booked = book(
+        book(
                 hold,
                 draft.request(),
                 offer,
@@ -306,8 +315,10 @@ class BookingCheckoutService
                 escrowId,
                 discount == null ? 0 : discount.codeCents(),
                 discount == null ? 0 : discount.pointsCents());
+        bookingTerms.keep(hold.merchantId(), hold.bookingId(), hold.startsAt(), draft.priceCents());
+        photos.attachToBooking(customerId, hold.bookingId(), draft.request().photos());
         holds.release(hold.id());
-        return booked;
+        return booking(customerId, hold.bookingId());
     }
 
     @Override
@@ -354,7 +365,7 @@ class BookingCheckoutService
                 priceCents,
                 taxCents,
                 escrowId,
-                priceCents == 0 ? null : hold.startsAt().minus(FREE_CANCEL),
+                priceCents == 0 ? null : terms.of(hold.merchantId()).freeUntil(hold.startsAt()),
                 discountCents,
                 pointsCents,
                 request.siteLat(),
@@ -373,6 +384,7 @@ class BookingCheckoutService
                 .filter(s -> "completed".equals(s.type()))
                 .map(CustomerBookings.Step::at)
                 .reduce((first, last) -> last);
+        var facts = money.facts(customerId, b.id());
         var releasesAt = b.paid() && "completed".equals(b.state())
                 ? completedAt.map(EscrowKind.SERVICE::releaseAt).orElse(null)
                 : null;
@@ -397,7 +409,16 @@ class BookingCheckoutService
                 progress.steps().stream().map(s -> new Step(s.type(), s.at())).toList(),
                 progress.report(),
                 progress.photoCount(),
-                releasesAt);
+                releasesAt,
+                photos.ofBooking(b.id()),
+                facts.map(f -> f.cancelWindowHours() == null || f.cancelFeeBps() == null
+                                ? null
+                                : new BookingCheckout.CancellationPolicy(
+                                        f.cancelWindowHours(), f.cancelFeeBps(), f.cancelFeeFixedCents()))
+                        .orElse(null),
+                facts.map(BookingMoney.Facts::balance)
+                        .orElseGet(() -> new BookingMoney.Balance("none", 0, 0, null, null, 0, null)),
+                facts.map(BookingMoney.Facts::cancellation).orElse(null));
     }
 
     private SlotHolds.Hold ownHold(String customerId, String holdId) {

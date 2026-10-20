@@ -14,6 +14,7 @@ import { useDeliveryLocation } from '../location/DeliveryLocation';
 import { Body, Button, Field, Link, Notice, Option, Title } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { errorMessage, QueryView, SignInPrompt, Skeleton } from '../ui/states';
+import { JobPhotos, useJobPhotos } from '../photos/JobPhotos';
 import { parseVehicle, useDraft } from './draft';
 import { Panel, useServicesApi, WizardSteps, type T } from './parts';
 import { servicePrice } from './Provider';
@@ -32,7 +33,8 @@ export function checkDetails(p: ProviderPage, s: ProviderService | undefined, d:
 
 /**
  * C4 Choose service (design 01 `book_service`): the fixed-price menu, the vehicle (automotive) and a note for the
- * provider — or "Ask for a quote" (quoteable categories), which sends a quote request to this provider (signed in).
+ * provider — or "Ask for a quote" (quoteable categories), which sends a quote request to this provider (signed in),
+ * with photos of the job (S-153).
  * Services the app can't book itself (hourly, events, consultations) open the provider's page on the consumer site.
  */
 export function BookService({ slug }: { slug: string }) {
@@ -56,10 +58,11 @@ function Form({ p }: { p: ProviderPage }) {
   const { location } = useDeliveryLocation();
   const api = useServicesApi();
   const [draft, update] = useDraft(p.slug);
-  const [errors, setErrors] = useState<{ vehicle?: string; note?: string }>({});
+  const [errors, setErrors] = useState<{ vehicle?: string; note?: string; photos?: string }>({});
   const chosen = p.services.find((s) => s.id === draft.serviceId) ?? p.services.find(appBookable) ?? p.services[0];
   const quoteMode = draft.quote && p.quoteable && !!p.category;
   const bookable = !!chosen && appBookable(chosen);
+  const photos = useJobPhotos();
 
   const ask = useMutation({
     mutationFn: () => {
@@ -70,10 +73,11 @@ function Form({ p }: { p: ProviderPage }) {
         description: [chosen && chosen.pricingMode === 'quote' ? chosen.name : null, draft.note.trim()].filter(Boolean).join(' — '),
         ...(p.vehicle && v ? { vehicle: { year: v.year, make: v.make, model: v.model } } : {}),
         ...(location.zone ? { area: location.zone } : {}),
+        ...(photos.ids.length ? { photoIds: photos.ids } : {}),
       });
     },
     onError: (e) => {
-      if (e instanceof ApiError && e.status === 422) setErrors({ note: e.fieldMessage('description'), vehicle: e.fieldMessage('vehicle') });
+      if (e instanceof ApiError && e.status === 422) setErrors({ note: e.fieldMessage('description'), vehicle: e.fieldMessage('vehicle'), photos: e.fieldMessage('photoIds') });
     },
   });
 
@@ -81,7 +85,10 @@ function Form({ p }: { p: ProviderPage }) {
     const found = checkDetails(p, chosen, { ...draft, quote: quoteMode }, t);
     setErrors(found);
     if (Object.keys(found).length) return;
-    if (quoteMode) return ask.mutate();
+    if (quoteMode) {
+      if (photos.uploading) return setErrors({ photos: t('shop.problem.photoUploading') });
+      return ask.mutate();
+    }
     update({ serviceId: chosen!.id });
     router.push(`/book/${p.slug}/time`);
   };
@@ -138,6 +145,8 @@ function Form({ p }: { p: ProviderPage }) {
         multiline
         testID="field-note"
       />
+      {quoteMode ? <JobPhotos state={photos} /> : null}
+      {quoteMode && errors.photos ? <Notice message={errors.photos} testID="quote-photo-error" /> : null}
       {chosen && !bookable && !quoteMode ? (
         <Panel>
           <Body>{t('services.book.onWeb', { service: chosen.name })}</Body>

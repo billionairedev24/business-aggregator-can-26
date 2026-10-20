@@ -1,6 +1,8 @@
 package ca.northline.booking.application;
 
+import ca.northline.booking.api.CustomerPhotos;
 import ca.northline.booking.api.CustomerQuotes;
+import ca.northline.booking.api.QuoteRequested;
 import ca.northline.booking.domain.Quote;
 import ca.northline.booking.domain.QuoteEnums.QuoteState;
 import ca.northline.shared.Conflict;
@@ -38,7 +40,12 @@ class CustomerQuoteService implements CustomerQuotes {
 
     static final String REVISED = "The provider revised this quote. Review the new version before accepting.";
 
+    /** {@code booking.customer_photos.ref_type} of a request's photos. */
+    static final String PHOTO_REF = "quote_request";
+
     private final CustomerQuoteStore store;
+    private final CustomerPhotos photos;
+    private final CustomerPhotoStore photoStore;
     private final QuoteRepository quotes;
     private final ApplicationEventPublisher events;
     private final Clock clock;
@@ -59,9 +66,14 @@ class CustomerQuoteService implements CustomerQuotes {
         var id = Ids.next();
         var respondBy = now.plus(RESPOND_WITHIN);
         var expiresAt = now.plus(OPEN_FOR);
+        var photoIds = photos.requireOwn(r.customerId(), r.photoIds());
         long number = store.insertRequest(
                 id, r.customerId(), r.categoryId(), details, r.merchantIds(), now, respondBy, expiresAt);
-        return new RequestRef(id, "QT-" + number, respondBy, expiresAt);
+        photoStore.attach(r.customerId(), photoIds, PHOTO_REF, id);
+        var ref = "QT-" + number;
+        events.publishEvent(new QuoteRequested(
+                Ids.next(), now, id, ref, r.merchantIds(), r.categoryId(), respondBy, expiresAt, photoIds.size()));
+        return new RequestRef(id, ref, respondBy, expiresAt);
     }
 
     @Override
@@ -85,7 +97,10 @@ class CustomerQuoteService implements CustomerQuotes {
                     r.expiresAt(),
                     r.merchantIds(),
                     store.declinedBy(r.id()),
-                    latest);
+                    latest,
+                    photoStore.of(PHOTO_REF, r.id()).stream()
+                            .map(CustomerPhotoService::view)
+                            .toList());
         });
     }
 

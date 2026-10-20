@@ -25,7 +25,10 @@ class QuoteRequestQueries implements QuoteRequests {
     private static final String SELECT = """
             select r.id, r.number, r.customer_id, r.details ->> 'title' as title, r.details ->> 'description' as body,
                    r.details ->> 'area' as area, r.details ->> 'preferredAt' as preferred_at, r.created_at, r.respond_by,
-                   r.expires_at, d.request_id is not null as declined
+                   r.expires_at, d.request_id is not null as declined,
+                   array(select p.id from booking.customer_photos p
+                          where p.ref_type = 'quote_request' and p.ref_id = r.id
+                          order by p.created_at, p.id) as photo_ids
               from booking.quote_requests r
               left join booking.quote_request_declines d on d.request_id = r.id and d.merchant_id = :merchantId
              where :merchantId = any(r.merchant_ids)
@@ -79,7 +82,8 @@ class QuoteRequestQueries implements QuoteRequests {
                 JdbcTimes.requiredInstant(rs, "created_at"),
                 JdbcTimes.instant(rs, "respond_by"),
                 JdbcTimes.instant(rs, "expires_at"),
-                rs.getBoolean("declined"));
+                rs.getBoolean("declined"),
+                List.of((String[]) rs.getArray("photo_ids").getArray()));
     }
 
     private static @Nullable Instant parse(@Nullable String iso) {

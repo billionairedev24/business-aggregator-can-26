@@ -6,6 +6,7 @@ import ca.northline.payments.application.PaymentGateway.Authorization;
 import ca.northline.payments.application.PaymentGateway.IntentStatus;
 import ca.northline.payments.domain.AuthorizationWindow;
 import ca.northline.payments.domain.Escrow;
+import ca.northline.payments.domain.EscrowState;
 import ca.northline.payments.domain.Fees;
 import ca.northline.payments.domain.LedgerEntry;
 import ca.northline.shared.Conflict;
@@ -84,6 +85,93 @@ class EscrowService implements EscrowLifecycle {
                     }
                     return escrow.getId();
                 });
+    }
+
+    static final String BOOKING = "booking";
+    static final String BALANCE = "booking_balance";
+    static final String CANCEL_FEE = "booking_cancel_fee";
+
+    @Override
+    public BookingCancellation cancelBooking(
+            String bookingId, long feeCents, long feeTaxCents, String label, Instant at) {
+        var main = escrows.findByRefForUpdate(BOOKING, bookingId).orElse(null);
+        var balance = escrows.findByRefForUpdate(BALANCE, bookingId).orElse(null);
+        long released = 0;
+        if (balance != null && balance.awaitingCapture()) {
+            released += cancelHold(balance);
+        }
+        if (main == null) {
+            return new BookingCancellation(0, 0, released, null);
+        }
+        var charged = escrows.findByRef(CANCEL_FEE, bookingId).orElse(null);
+        if (charged != null) { // a retried cancellation: the fee was taken already
+            return new BookingCancellation(charged.getAmountCents(), charged.getTaxCents(), released, charged.getId());
+        }
+        if (main.getState() == EscrowState.REFUNDED) {
+            return new BookingCancellation(0, 0, released, null);
+        }
+        if (!main.awaitingCapture()) {
+            throw new Conflict(
+                    "escrow_captured", "This booking's payment was already taken. Ask for a refund instead.");
+        }
+        var card = main.capturedCents();
+        var fee = Math.max(0, feeCents);
+        var tax = Math.max(0, feeTaxCents);
+        if (fee + tax > card) { // capped at what the card holds: the tax keeps its share
+            tax = fee + tax == 0 ? 0 : Math.round((double) tax * card / (fee + tax));
+            fee = card - tax;
+        }
+        if (fee + tax == 0) {
+            released += cancelHold(main);
+            log.info("Booking {} cancelled free: hold {} released", bookingId, main.getPaymentIntentId());
+            return new BookingCancellation(0, 0, released, null);
+        }
+        var intent = escrows.intent(Objects.requireNonNull(main.getPaymentIntentId()))
+                .orElseThrow(() -> new NotFound("payment", String.valueOf(main.getPaymentIntentId())));
+        var feeEscrow = Escrow.hold(
+                new Hold(
+                        main.getMerchantId(),
+                        main.getKind(),
+                        CANCEL_FEE,
+                        bookingId,
+                        fee,
+                        tax,
+                        Objects.requireNonNullElse(main.getCustomerId(), ""),
+                        Objects.requireNonNullElse(main.getCustomerName(), "Customer"),
+                        label,
+                        main.getOrderNumber(),
+                        main.getListingId(),
+                        main.getListingName(),
+                        main.getSource(),
+                        intent.stripePaymentIntent(),
+                        at),
+                main.getTakeRateBps(),
+                intent.id(),
+                clock.instant());
+        feeEscrow.fulfil(at); // captured now, released on the services clock
+        escrows.insert(feeEscrow);
+        capture(feeEscrow, at); // the fee only: Stripe releases the rest of the authorization
+        main.refundInFull();
+        escrows.update(main);
+        log.info("Booking {} cancelled late: fee {} + tax {} captured from {}", bookingId, fee, tax, intent.id());
+        return new BookingCancellation(fee, tax, released + card - fee - tax, feeEscrow.getId());
+    }
+
+    /** Releases a hold that was never captured: the authorization is canceled at Stripe; no ledger entry was made. */
+    private long cancelHold(Escrow escrow) {
+        var intentId = escrow.getPaymentIntentId();
+        if (intentId != null) {
+            escrows.intent(intentId).ifPresent(intent -> {
+                if (intent.state() == IntentStatus.AUTHORIZED || intent.state() == IntentStatus.REQUIRES_ACTION) {
+                    gateway.cancel(
+                            intent.stripePaymentIntent(), StripeIdempotencyKeys.of("cancel-booking", intent.id()));
+                    escrows.markPaymentIntent(intent.id(), IntentStatus.CANCELED);
+                }
+            });
+        }
+        escrow.refundInFull();
+        escrows.update(escrow);
+        return escrow.capturedCents();
     }
 
     /** Only money Stripe really holds for us becomes escrow. */

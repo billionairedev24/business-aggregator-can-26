@@ -22,6 +22,7 @@ import { Route as SellRouteImport } from './routes/sell'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AccountIndexRouteImport } from './routes/account/index'
+import { Route as AccountMessagesRouteImport } from './routes/account/messages'
 import { Route as AccountOrdersRouteImport } from './routes/account/orders'
 import { Route as BookingsBookingIdRouteImport } from './routes/bookings/$bookingId'
 import { Route as CheckoutIndexRouteImport } from './routes/checkout/index'
@@ -107,6 +108,11 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
 const AccountIndexRoute = AccountIndexRouteImport.update({
   id: '/account/',
   path: '/account/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountMessagesRoute = AccountMessagesRouteImport.update({
+  id: '/account/messages',
+  path: '/account/messages',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountOrdersRoute = AccountOrdersRouteImport.update({
@@ -229,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/sell': typeof SellRoute
   '/sign-in': typeof SignInRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/account/messages': typeof AccountMessagesRoute
   '/account/orders': typeof AccountOrdersRoute
   '/bookings/$bookingId': typeof BookingsBookingIdRoute
   '/checkout/complete': typeof CheckoutCompleteRoute
@@ -265,6 +272,7 @@ export interface FileRoutesByTo {
   '/sell': typeof SellRoute
   '/sign-in': typeof SignInRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/account/messages': typeof AccountMessagesRoute
   '/account/orders': typeof AccountOrdersRoute
   '/bookings/$bookingId': typeof BookingsBookingIdRoute
   '/checkout/complete': typeof CheckoutCompleteRoute
@@ -302,6 +310,7 @@ export interface FileRoutesById {
   '/sell': typeof SellRoute
   '/sign-in': typeof SignInRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/account/messages': typeof AccountMessagesRoute
   '/account/orders': typeof AccountOrdersRoute
   '/bookings/$bookingId': typeof BookingsBookingIdRoute
   '/checkout/complete': typeof CheckoutCompleteRoute
@@ -340,6 +349,7 @@ export interface FileRouteTypes {
     | '/sell'
     | '/sign-in'
     | '/verify-email'
+    | '/account/messages'
     | '/account/orders'
     | '/bookings/$bookingId'
     | '/checkout/complete'
@@ -376,6 +386,7 @@ export interface FileRouteTypes {
     | '/sell'
     | '/sign-in'
     | '/verify-email'
+    | '/account/messages'
     | '/account/orders'
     | '/bookings/$bookingId'
     | '/checkout/complete'
@@ -412,6 +423,7 @@ export interface FileRouteTypes {
     | '/sell'
     | '/sign-in'
     | '/verify-email'
+    | '/account/messages'
     | '/account/orders'
     | '/bookings/$bookingId'
     | '/checkout/complete'
@@ -449,6 +461,7 @@ export interface RootRouteChildren {
   SellRoute: typeof SellRoute
   SignInRoute: typeof SignInRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  AccountMessagesRoute: typeof AccountMessagesRoute
   AccountOrdersRoute: typeof AccountOrdersRoute
   BookingsBookingIdRoute: typeof BookingsBookingIdRoute
   CheckoutCompleteRoute: typeof CheckoutCompleteRoute
@@ -564,6 +577,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account/'
       preLoaderRoute: typeof AccountIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/messages': {
+      id: '/account/messages'
+      path: '/account/messages'
+      fullPath: '/account/messages'
+      preLoaderRoute: typeof AccountMessagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/orders': {
@@ -729,6 +749,7 @@ const rootRouteChildren: RootRouteChildren = {
   SellRoute: SellRoute,
   SignInRoute: SignInRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  AccountMessagesRoute: AccountMessagesRoute,
   AccountOrdersRoute: AccountOrdersRoute,
   BookingsBookingIdRoute: BookingsBookingIdRoute,
   CheckoutCompleteRoute: CheckoutCompleteRoute,
