@@ -26,7 +26,7 @@ setup('Northline staff sign in to the console with a second factor', async ({ pa
   await page.context().storageState({ path: statePath('staff') });
 });
 
-setup(isLocal ? 'a new customer signs up with a phone code and a passkey' : 'the customer signs in with their passkey', async ({ browser }) => {
+setup(isLocal ? 'a new customer signs up with email + password, the email code and a passkey' : 'the customer signs in with their passkey', async ({ browser }) => {
   const context = await browser.newContext(consumerOptions());
   const page = await context.newPage();
   const authenticator = await VirtualAuthenticator.attach(page);

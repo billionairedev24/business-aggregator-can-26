@@ -575,6 +575,8 @@ apps:
       GOOGLE_CLIENT_SECRET: false   # S-18; required (true) in staging/prod
       APPLE_PRIVATE_KEY: false      # S-18; required (true) in staging/prod
       SMS_AUTH_TOKEN: false
+      EMAIL_API_KEY: false          # S-154 account emails: sendgrid, or azure with an access key (the api's)
+      SMTP_PASSWORD: false          # S-154: EMAIL_PROVIDER=smtp
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }

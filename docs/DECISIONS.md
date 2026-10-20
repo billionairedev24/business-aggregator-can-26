@@ -9739,6 +9739,94 @@ until it restarts, so even a later `pnpm install` didn't help, and `make up` sai
 - **Not done**: web/e2e/data/local.json still signs the console in with backup codes (e2e runs on a fresh database).
   `make up-all` itself was not run end to end here (shared machine); the reset ran against a throwaway Postgres.
 
+## 2026-09-30 — S-154 Proper account creation: email + password, email verification, MFA enrolment
+
+The owner could not open a business account: the Studio's sign-in asked "Second factor required for <email>" of an
+account that never had one (identifier-first sign-in offers every factor so it never reveals an account). Accounts are
+now email + password, the email is confirmed by a code or link (Mailpit locally), and a second factor is enrolled right
+after — required for the Studio and the console, offered on the consumer site. Security notes:
+`docs/security/s-154-passwords.md`.
+
+- **API (northline-auth `/api/auth/**`):** `POST /accounts` (form → 202 `verify-email`, the same for every address),
+  `/accounts/resend`, `/accounts/verify` {code} (→ 201 session, signed in with the password: `amr pwd`, no `acr`),
+  `/accounts/verify-link` {token}; `POST /sign-in/password` {email, password} → `factor` (the account's own factors) |
+  `enroll` (signed in, no factor yet) | `verify-email` (still pending: a new code); `/enroll/totp`, `/enroll/totp/verify`,
+  `/enroll/passkey/options`, `/enroll/passkey` (→ session with `acr=mfa` + ten backup codes); `/password/forgot`,
+  `/password/reset` {code | token, password}; `/security/password`, `/security/authenticator[/verify]`. Sessions carry
+  `needsSecondFactor`. `app` (`studio` | `consumer` | `console`, default studio) picks the email links' origin (the
+  origin of that app's configured sign-in page — no client-supplied URLs) and whether enrolment is required.
+- **Pending accounts are not users:** the form writes `auth.pending_accounts`; `identity.users` gets the row (with
+  `email_verified_at`) only when the code or link is used, so the api, the console and every module never see an
+  unconfirmed account and `identity.users.status` keeps its values. Registering the same address again replaces the
+  pending row (keeps its id). Forgotten after `ACCOUNT_PENDING_TTL` (7 d) by the existing five-minute auth job.
+- **No enumeration:** an address that has an account gets the `account-exists` email (sign in / reset links) instead of
+  a code; the same 202; its codes are always wrong. Sign-in failures are one message for unknown email, no password and
+  wrong password, after the same Argon2 work. Forgot password sends nothing for an unknown address. A mobile number
+  already in use is silently not stored (rather than a "number taken" error).
+- **Hashing:** Argon2id via Spring Security's `Argon2PasswordEncoder` — BouncyCastle (`bcprov-jdk18on` 1.85.2) added to
+  auth (it wasn't on the classpath; bcrypt was not needed). OWASP 2024 cost (19 MiB, t=2, p=1), `PASSWORD_HASH_*`
+  overridable; the test profile uses 1 MiB / t=1 for speed. Passwords are NFKC-normalised.
+- **Password policy:** 12–128 code points, no composition rules, not in the bundled list (`auth/common-passwords.txt`:
+  the 12+ character entries of SecLists' NCSC top-100k and 10k lists, MIT; plus `northline-dev-password` so the dev
+  password can't be chosen for a real account), not the email or its local part, not one repeated character. Messages
+  (new, en in `AuthMessages`, fr in validation-messages.fr-CA.tsv and auth-kit): "Enter a password.", "Use at least 12
+  characters.", "Use at most 128 characters.", "This password is too common. Choose one that's harder to guess.", "Your
+  password can't be your email address.", "The passwords don't match.", "That email and password don't match. Check
+  them and try again.", "That's not your current password.", "Enter your current password.", "That link has expired or
+  was already used. Ask for a new email.", "This account already has a second factor. Change it in Settings ›
+  Security.", "Send studio, consumer or console as the app.". Rule ids: `common`, `email`, `mismatch`, `expired`.
+- **Email codes:** 6 digits + 32-byte link token, SHA-256 at rest, constant-time compare, 15 min, single use, 5 wrong
+  tries, a new email retires the previous code, 60 s resend cool-down (429 `otp_throttled`, like phone codes). The link
+  signs in only the browser that sent the form (an intercepted link must not let someone enrol their own factor);
+  elsewhere it confirms the address and asks to sign in.
+- **Enrolment:** allowed only for an account with no passkey and no authenticator (409 `already_enrolled`), for any
+  signed-in auth session. Backup codes are issued with the first factor and shown once (copy, download .txt, "I saved
+  them" required to continue). Backup codes alone don't count as a factor (they recover one). The TOTP URI is labelled
+  `Northline:<email>` with `issuer=Northline` (registration's set-up now shares `TotpSetups`).
+- **Existing accounts:** an account without a second factor that signs in with its password goes to enrolment, never
+  to the factor step. One without a password (phone registrations, S-62) uses Forgot password to set one (the reset
+  also marks the email verified), then enrols. Identifier-first sign-in stays for the mobile apps and the consumer
+  phone code, but an account that has a password can't use its TOTP / backup code without it (the same "didn't work"
+  answer; nothing is used up); passkey-first still works for everyone. `identity.sessions.method` gains `password`.
+- **Forgot / change password:** reset ends every session (`revoke_reason = password_reset`) and still asks for the second
+  factor at the next sign-in. Change needs a step-up (10 min) and the current password when there is one ("Set a
+  password" otherwise) and ends every other session (`password_changed`). New backup codes and a new authenticator
+  (`/security/authenticator`) now need a step-up too — `POST /api/auth/backup-codes` changed from "any MFA session" to
+  step-up; the Studio and consumer Security tabs run it through their step-up dialogs.
+- **Rate limits:** new actions `password-verify` (failures; 10 / 15 min per account, 30 per IP, 10 per session),
+  `email-send` (every call; 5 / h per address, 20 per IP, 5 per session) and `email-code-verify` (failures; 10 / h, 50,
+  10); all guard secrets (fail closed in staging/prod without Valkey). A success resets the account and session counters.
+- **Emails:** three new transactional templates in the shared library (`account-verification`, `password-reset`,
+  `account-exists`, en/fr, CASL footer) sent by auth through the `Mailer` after commit, off the request thread
+  (`northline.auth.accounts.send-async`, false in the test suite). Auth now needs `EMAIL_*` / `SMTP_*` like the api
+  (Helm: `apps.auth.env` per cloud overlay, `EMAIL_FROM` in staging/prod, `EMAIL_API_KEY` / `SMTP_PASSWORD` optional
+  secrets; staging/prod `northline.required-env.email`). Under `local` the codes are also in auth's dev outbox
+  (`/api/auth/dev/outbox?to=<email>`) for the e2e suite.
+- **Optional mobile:** stored unverified (`phone_verified_at` NULL). V415 marks every older phone verified (they were
+  all confirmed by SMS at registration); phone sign-in codes go only to verified numbers; an SMS-verified registration
+  takes over a number another account holds unverified.
+- **Apps:** Studio (Create account tab and the sell / provide / food entry points, sign-in, `/forgot-password`,
+  `/verify-email`, `/reset-password`, Settings › Security password + authenticator + backup codes, "Confirm it's you"
+  asks the password), consumer web (register, sign-in with password — phone code and passkey kept, enrolment offered
+  and skippable, the same three routes, Account › Security), console (work email + password, own factors, required
+  enrolment, forgot password). The shared steps live in `@northline/auth-kit` (`account.tsx`, `securityForms.tsx`).
+- **Schema (V415):** `auth.passwords`, `auth.pending_accounts`, `auth.email_codes`, `identity.users.email_verified_at`,
+  the `identity.sessions` method / revoke-reason checks widened. **Dev seed V416:** `northline-dev-password` (Argon2id)
+  for every active `@example.com` persona, emails marked verified; `scripts/dev/personas.json` (S-150) carries it, so
+  `make creds` and README § Local sign-in show it (`SeededPersonaSignInTest` signs every persona in with it).
+- **Tests:** `AccountSignUpApiTest` (26: the whole journey, link in another / the same browser, enumeration, expired /
+  used / locked codes, throttled resend, validation messages en/fr, optional mobile, pending sign-in, re-registration,
+  identifier-first can't skip the password, lockout + audit without PII, 401 / 409, session id rotation, change
+  password with step-up, authenticator replacement, backup codes, an older account without password or factor),
+  `MailpitAccountEmailTest` (real SMTP to the compose Mailpit image, French email read back through Mailpit's API, its
+  code creates the account), `PasswordPolicyTest`, `PasswordHashingTest` (incl. the dev seed hash), the updated
+  `SeededPersonaSignInTest`, `SignInServiceTest`, `AttemptLimitsTest`; vitest for the Studio / consumer / console
+  screens and both Security tabs; e2e: the setup's consumer sign-up and the seeded sign-ins use email + password, new
+  journey `6-business-account.spec.ts`.
+- **Not done / follow-ups:** the native mobile apps' own sign-in screens still use the phone-code flows (unchanged and
+  working; email + password there is a follow-up); no breached-password API (bundled list only); no "your password was
+  changed" notification email; the e2e suite (`make e2e`) was not run end to end here (typechecked only; shared
+  machine). Nothing new talks to a third party beyond the existing email providers.
 ## 2026-09-30 — S-153 Quotes and bookings: messaging, deposit balance, photos, late-cancellation fees, hold sweeper
 
 Customers and providers talk about a quote request or a booking; providers hear about quote requests; customers add
@@ -9767,7 +9855,7 @@ consumer web, the consumer app and the Studio. Runbooks: [stripe.md § Bookings]
   Customer messages tell owners (row `customer_message`), business messages tell the customer (row `quotes_messages`,
   deep link `/app/messages/<threadId>`; the web redirects it to `/account/messages?thread=`). Team notices for these
   types are held through a provider outage like the deferred customer ones.
-- **Photos** (schema: V406 `booking.customer_photos`): `POST /me/photos` (multipart, at most 10 MB, JPEG/PNG/HEIC/HEIF/
+- **Photos** (schema: V418 `booking.customer_photos`): `POST /me/photos` (multipart, at most 10 MB, JPEG/PNG/HEIC/HEIF/
   WebP by declared type **and** signature, the platform's `VirusScanner` hook before storing; the apps send no EXIF),
   the object store port (`within("booking")`; 409 `storage_unavailable` without a store). A photo is the
   uploader's until attached to one request or booking (6 at most; "That photo is no longer available. Add it again."
@@ -9775,18 +9863,18 @@ consumer web, the consumer app and the Studio. Runbooks: [stripe.md § Bookings]
   sent to or the booking's business (`GET /merchants/{m}/customer-photos/{id}`, Studio with MFA) — no public URL,
   `Cache-Control: no-store`. The Studio shows them on the request card and the job panel.
 - **Late-cancellation terms come from Availability › Booking rules**, which already had them (`reschedule_free_min`,
-  `late_cancel_fee_cents` / `_bps`): no new provider table. The region caps them (V408 `region.regions.cancel_*`: a
+  `late_cancel_fee_cents` / `_bps`): no new provider table. The region caps them (V420 `region.regions.cancel_*`: a
   market's NULL = its province's, a province's NULL = `REGION_CANCEL_*`); the Studio offers only options within the cap
   and the api refuses others ("Choose a window from 0 to %d hours." / "Choose a fee from 0 to %d percent."). A fixed fee
-  is capped at the region's percentage of the price. The booking **keeps the terms it was made under** (V407 columns on
+  is capped at the region's percentage of the price. The booking **keeps the terms it was made under** (V419 columns on
   `booking.bookings`), shown on the booking review (web and app), the quote and the booking page.
 - **Cancelling** (`GET /me/bookings/{id}/cancellation` then `POST …/cancel`, Idempotency-Key): requested, confirmed or
   en route only (not once on site). Inside the window the fee (+ GST/HST at the booking's rate — **accountant to
   confirm** that a cancellation fee carries the service's tax) is captured from the booking's hold into an escrow of
-  its own, `booking_cancel_fee` (V409), split per the escrow rules and released after 48 h; the rest of the hold and
+  its own, `booking_cancel_fee` (V421), split per the escrow rules and released after 48 h; the rest of the hold and
   any balance hold are released. Points spent come back and a code's use is released. `booking.cancelled`
   (`booking.booking_cancelled.v1`) tells the business (row `new_booking`) and the customer.
-- **Deposit balance** (V407 `balance_*` columns): accepting a quote with a deposit schedules its balance
+- **Deposit balance** (V419 `balance_*` columns): accepting a quote with a deposit schedules its balance
   `BOOKING_BALANCE_LEAD` before the start. `BalanceHoldScheduler` (every `BOOKING_BALANCE_JOB_INTERVAL`, 50 at a time,
   not under test) holds it off-session (`PaymentAuthorizations.startOffSession`, the deposit's card) as escrow
   `booking_balance`; failure → retry every `BOOKING_BALANCE_RETRY_EVERY` up to `BOOKING_BALANCE_ATTEMPTS`, each failure
@@ -9802,9 +9890,9 @@ consumer web, the consumer app and the Studio. Runbooks: [stripe.md § Bookings]
 - **Lists**: `GET /me/bookings` and `GET /me/quote-requests` (status waiting / quoted / accepted / declined / expired,
   quotes count, lowest, photo count). Web: Account › Orders "Quote requests" tab and Account › Messages; app: Orders
   "Quote requests" view and You › Messages.
-- **Schema additions (V405–V409; V410–V414 unused)**: V405 `messaging.threads.customer_read_at`, customer index and a
-  unique (merchant, ref) for customer threads; V406 `booking.customer_photos`; V407 `booking.bookings` balance,
-  terms and cancellation columns + due-balance index; V408 `region.regions.cancel_*`; V409 payments `ref_type`s
+- **Schema additions (V417–V421; renumbered from V405–V409 when merging after S-154)**: V417 `messaging.threads.customer_read_at`, customer index and a
+  unique (merchant, ref) for customer threads; V418 `booking.customer_photos`; V419 `booking.bookings` balance,
+  terms and cancellation columns + due-balance index; V420 `region.regions.cancel_*`; V421 payments `ref_type`s
   `booking_balance`, `booking_cancel_fee` and the unheld-intents index. All additive.
 - **Config**: `BOOKING_BALANCE_LEAD|RETRY_EVERY|ATTEMPTS|JOB_INTERVAL`, `PAYMENTS_UNHELD_BOOKING_GRACE`,
   `REGION_CANCEL_WINDOW_HOURS|FEE_BPS|MAX_WINDOW_HOURS|MAX_FEE_BPS` — none secret; runbooks and `server/.env.example`.

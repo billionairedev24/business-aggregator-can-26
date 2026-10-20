@@ -112,6 +112,17 @@ northline:
       idle-timeout: 12h                         # = server.servlet.session.timeout: listed as active while seen since
       step-up-max-age: ${SESSION_STEP_UP_MAX_AGE:10m}   # revoke / remove passkey need a second factor this recent
       touch-interval: 1m                        # "last seen" is written at most this often
+    # S-154 email + password accounts (docs/DECISIONS.md § S-154): the email code and its link work once, for code-ttl;
+    # another email after resend-after; an account whose email is never confirmed is forgotten after pending-ttl.
+    accounts:
+      code-ttl: ${ACCOUNT_EMAIL_CODE_TTL:15m}
+      resend-after: ${ACCOUNT_EMAIL_RESEND_AFTER:60s}
+      code-max-attempts: 5
+      pending-ttl: ${ACCOUNT_PENDING_TTL:7d}
+      password-hash:                          # Argon2id (OWASP 2024: m ≥ 19 MiB, t ≥ 2, p = 1)
+        memory-kib: ${PASSWORD_HASH_MEMORY_KIB:19456}
+        iterations: ${PASSWORD_HASH_ITERATIONS:2}
+        parallelism: 1
     # S-9 rate limits (docs/runbooks/README.md § Rate limits). A REQUESTS action (otp-send, sign-in-lookup) allows `max`
     # calls per sliding `window`; a FAILURES action locks at the `max`-th failure. Each lockout of the same subject
     # doubles (lockout × 2^(n-1), up to max-lockout) while earlier ones are remembered (backoff-memory). Successes reset
@@ -157,6 +168,18 @@ northline:
           account: { max: 20, window: 1h, lockout: 15m }
           ip: { max: 60, window: 1h, lockout: 15m }
           session: { max: 20, window: 1h, lockout: 15m }
+        password-verify:                        # S-154: wrong passwords (sign in, change password)
+          account: { max: 10, window: 15m, lockout: 15m }
+          ip: { max: 30, window: 15m, lockout: 15m }
+          session: { max: 10, window: 15m, lockout: 15m }
+        email-send:                             # S-154: account emails (create account, resend, forgot password)
+          account: { max: 5, window: 1h, lockout: 1h }
+          ip: { max: 20, window: 1h, lockout: 1h }
+          session: { max: 5, window: 1h, lockout: 1h }
+        email-code-verify:                      # S-154: wrong email codes, unknown links
+          account: { max: 10, window: 1h, lockout: 15m }
+          ip: { max: 50, window: 1h, lockout: 15m }
+          session: { max: 10, window: 1h, lockout: 15m }
         partner-token:                          # S-30: access tokens issued per partner (account = the partner)
           account: { max: 60, window: 1h, lockout: 15m }
           ip: { max: 600, window: 1h, lockout: 15m }
@@ -274,6 +297,23 @@ northline:
     rotate-every: ${SIGNING_KEYS_ROTATE_EVERY:}    # local: automatic rotation, e.g. 90d (empty = by command only)
     region: ${KMS_REGION:}             # AWS only; empty = AWS_REGION / the SDK default chain
     endpoint: ${KMS_ENDPOINT:}         # AWS only; e.g. LocalStack
+  # S-154: account emails through the shared email library (docs/runbooks/email.md) — the api's settings: local (SMTP to
+  # Mailpit on localhost:1025, http://localhost:8025; only logged when Mailpit isn't running; refused under staging/prod)
+  # | smtp | ses | sendgrid | azure.
+  email:
+    provider: ${EMAIL_PROVIDER:local}
+    from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}
+    reply-to: ${EMAIL_REPLY_TO:}
+    legal-name: ${EMAIL_LEGAL_NAME:Northline Marketplace Inc.}
+    mailing-address: ${EMAIL_MAILING_ADDRESS:Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada}
+    contact: ${EMAIL_CONTACT:support@northline.ca}
+    time-zone: ${EMAIL_TIME_ZONE:${REGION_PLATFORM_ZONE:America/Edmonton}}
+    region: ${EMAIL_REGION:}
+    endpoint: ${EMAIL_ENDPOINT:}
+    api-key: ${EMAIL_API_KEY:}
+    configuration-set: ${EMAIL_CONFIGURATION_SET:}
+    smtp: { host: "${SMTP_HOST:localhost}", port: "${SMTP_PORT:1025}", username: "${SMTP_USERNAME:}", password: "${SMTP_PASSWORD:}", starttls: "${SMTP_STARTTLS:false}" }
+    retry: { attempts: "${EMAIL_RETRY_ATTEMPTS:3}", backoff: "${EMAIL_RETRY_BACKOFF:2s}" }
   sms:                                 # phone codes (S-8, docs/runbooks/README.md § SMS and voice codes)
     provider: ${SMS_PROVIDER:local}    # local (logged) | twilio | aws; staging/prod refuse local
     from: ${SMS_FROM:}                 # +1… sender number (twilio: or a Messaging Service MG…; aws: number id/ARN or pool)

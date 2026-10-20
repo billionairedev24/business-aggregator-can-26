@@ -106,6 +106,8 @@ apps:
       MEILISEARCH_API_KEY: true
   auth:
     env:
+      EMAIL_PROVIDER: local          # S-154: account emails logged like the api's until a provider exists
+      EMAIL_FROM: "Northline demo <no-reply@demo.northline.ca>"
       OAUTH_CLIENTS_SYNC_ON_STARTUP: "true"
       DB_POOL_SIZE: "5"
     resources:

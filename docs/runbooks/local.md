@@ -149,10 +149,21 @@ cd server
 ```
 
 Leave `NL_DEV_USER` empty in `web/apps/studio/.env` and run `cd web && pnpm dev`. Open http://localhost:3100 →
-**Sign in** → `ravi.sandhu@example.com` → Authenticator app → the code from
-`make creds WHO=ravi` (or a backup code `ravis-00001` … `ravis-00010`, single use — `make backup-codes-reset`).
-Every other persona and factor: `make creds`. "Create account" works end to end: the 6-digit phone code is
-printed in the auth log (`Verification code for …`). Passkeys work on `localhost` (not `127.0.0.1`).
+**Sign in** → `ravi.sandhu@example.com` + password `northline-dev-password` (every seeded persona, S-154; dev seed
+V416) → Authenticator app → the code from `make creds WHO=ravi` (or a backup code `ravis-00001` … `ravis-00010`,
+single use — `make backup-codes-reset`). Every other persona and factor: `make creds`. Passkeys work on `localhost`
+(not `127.0.0.1`).
+
+**Open a business account locally (S-154):** start Mailpit (`docker compose --profile mail up -d`, or `make up` with the
+`mail` stand-in), then http://localhost:3100 → **Create account** (or a "Sell / Provide / Food" entry point) → name,
+email, a password of 12+ characters → **check http://localhost:8025** for the email with the 6-digit code and the
+"Confirm my email" button → enter the code → **enroll** the authenticator app (scan the QR code, or type the key into
+the app; issuer `Northline`, account = your email) or a passkey → save the ten backup codes → onboarding. Without
+Mailpit the email is only logged; the code is also in auth's local outbox (`GET http://localhost:9000/api/auth/dev/outbox?to=<email>`).
+**Forgot password?** on the sign-in page works the same way (code + link by email, every session ends; the second
+factor is still asked). An older account without a password (e.g. created with a mobile number) sets one with Forgot
+password, then enrolls a second factor at its next sign-in. The phone-code flows (S-62, the mobile apps) still work;
+their SMS codes are printed in the auth log (`Verification code for …`).
 
 **OAuth clients:** auth registers `studio-bff`, `consumer-bff`, `console-bff` (S-90), `mobile-consumer` and `courier-app` in
 its database at every start (local values in `application-local.yml`); `./gradlew :auth:oauthClients --args='list'`
@@ -285,7 +296,7 @@ everything except `tools` (`make kafka-ui`, `make kibana`).
 | `events` | Kafka 4 (KRaft) + one-shot topic creation (`scripts/topics.sh` from `deploy/kafka/topics.yaml`, ~1 min the first time, seconds after) | `KAFKA_BOOTSTRAP=localhost:9092` | worker; api without `local` |
 | `search` | Elasticsearch 9 (security off) | `ES_URIS=http://localhost:9200` (+ `SEARCH_PROVIDER=elasticsearch` for the api under `local`) | worker; the api's search |
 | `search-meili` | Meilisearch v1.28 (master key `northline-local-meili-master-key`, `MEILISEARCH_MASTER_KEY` in `.env`); not in `all` | `SEARCH_PROVIDER=meilisearch`, `MEILISEARCH_URL=http://localhost:7700`, `MEILISEARCH_API_KEY=northline-local-meili-master-key` (api and worker) | worker and the api's search instead of Elasticsearch ([search.md § Meilisearch](search.md#11-meilisearch-provider-meilisearch)) |
-| `mail` | Mailpit — inbox at http://localhost:8025 | `SMTP_HOST=localhost`, `SMTP_PORT=1025` (the defaults) | api email (`EMAIL_PROVIDER=local`, S-13) |
+| `mail` | Mailpit — inbox at http://localhost:8025 | `SMTP_HOST=localhost`, `SMTP_PORT=1025` (the defaults) | api email (`EMAIL_PROVIDER=local`, S-13); auth's account emails — verification code, password reset (S-154) |
 | `storage` | S3-compatible storage (RustFS) + bucket `northline-local`; console http://localhost:9101 | `STORAGE_ENDPOINT=http://localhost:9100`, `STORAGE_ACCESS_KEY=northline`, `STORAGE_SECRET_KEY=northline-dev-secret`, `STORAGE_PATH_STYLE=true` | api with `STORAGE_PROVIDER=s3` (S-10) |
 | `payments` | stripe-mock | `STRIPE_SECRET_KEY=sk_test_123`, `STRIPE_API_BASE=http://localhost:12111` (+ `TAX_PROVIDER=stripe` for Stripe Tax, S-21) | api payments + Stripe Connect (+ Stripe Tax) instead of the fakes |
 | `tools` | Kafka UI :8190, Kibana :5601 | — | you |

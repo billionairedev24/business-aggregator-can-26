@@ -7,7 +7,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@link CancellationRules} over {@code region.regions.cancel_*} (V408): each value the market's, else its province's,
+ * {@link CancellationRules} over {@code region.regions.cancel_*} (V420): each value the market's, else its province's,
  * else the platform configuration's — like {@code KitchenVisitRuleQueries}.
  */
 @Repository

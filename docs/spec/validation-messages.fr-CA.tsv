@@ -1118,6 +1118,21 @@ No licence with id %s	Aucun permis avec l’identifiant %s	new
 BC incorporation number is BC + 7 digits (e.g. BC0999999).	Le numéro de constitution de la C.-B. est BC + 7 chiffres (p. ex. BC0999999).	new
 BC registration number is FM + 7 digits (e.g. FM1016176).	Le numéro d'enregistrement de la C.-B. est FM + 7 chiffres (p. ex. FM1016176).	new
 The NEQ is 10 digits.	Le NEQ compte 10 chiffres.	new
+Enter a password.	Entrez un mot de passe.	new
+Use at least 12 characters.	Utilisez au moins 12 caractères.	new
+Use at most 128 characters.	Utilisez au plus 128 caractères.	new
+This password is too common. Choose one that's harder to guess.	Ce mot de passe est trop courant. Choisissez-en un plus difficile à deviner.	new
+Your password can't be your email address.	Votre mot de passe ne peut pas être votre adresse courriel.	new
+The passwords don't match.	Les mots de passe ne correspondent pas.	new
+That email and password don't match. Check them and try again.	Ce courriel et ce mot de passe ne correspondent pas. Vérifiez-les et réessayez.	new
+That's not your current password.	Ce n’est pas votre mot de passe actuel.	new
+Enter your current password.	Entrez votre mot de passe actuel.	new
+Send studio, consumer or console as the app.	Envoyez studio, consumer ou console comme application.	new
+This account already has a second factor. Change it in Settings › Security.	Ce compte a déjà un deuxième facteur. Modifiez-le dans Paramètres › Sécurité.	new
+That link has expired or was already used. Ask for a new email.	Ce lien a expiré ou a déjà été utilisé. Demandez un nouveau courriel.	new
+Create the account again.	Recommencez la création du compte.	new
+Ask for a new email first.	Demandez d’abord un nouveau courriel.	new
+Wait %d s before sending another email.	Attendez %d s avant d’envoyer un autre courriel.	new
 # S-153: customer messages, photos on requests and bookings, saved cards, cancellation policies and late cancellations,
 # deposit balances.
 Write a message.	Écrivez un message.	new

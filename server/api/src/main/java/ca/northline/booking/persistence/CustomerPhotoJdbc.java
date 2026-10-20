@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link CustomerPhotoStore} over {@code booking.customer_photos} (V406). */
+/** {@link CustomerPhotoStore} over {@code booking.customer_photos} (V418). */
 @Repository
 @RequiredArgsConstructor
 class CustomerPhotoJdbc implements CustomerPhotoStore {

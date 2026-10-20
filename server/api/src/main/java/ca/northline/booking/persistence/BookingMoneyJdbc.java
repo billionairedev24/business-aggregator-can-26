@@ -21,7 +21,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link BookingMoneyStore} over the S-153 columns of {@code booking.bookings} (V407). */
+/** {@link BookingMoneyStore} over the S-153 columns of {@code booking.bookings} (V419). */
 @Repository
 @RequiredArgsConstructor
 class BookingMoneyJdbc implements BookingMoneyStore {

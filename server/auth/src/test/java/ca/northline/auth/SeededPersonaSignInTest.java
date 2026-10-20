@@ -29,7 +29,8 @@ import org.springframework.test.web.servlet.ResultActions;
 
 /**
  * S-150: the dev seed's personas sign in with the authenticator keys and backup codes of {@code
- * scripts/dev/personas.json} — what {@code make creds} prints. The seed is applied to a database of its own (in the
+ * scripts/dev/personas.json} — what {@code make creds} prints. S-154: after their email and the dev password (seed
+ * V416), as every account with a password must. The seed is applied to a database of its own (in the
  * shared container), as the {@code local} profile does, so the other suites keep their unseeded one.
  */
 @SpringBootTest
@@ -81,10 +82,15 @@ class SeededPersonaSignInTest {
                 .content(json));
     }
 
-    private MockHttpSession startedFor(String identifier) throws Exception {
+    /** Email + the persona's dev password (S-154) → the factor step. */
+    private MockHttpSession startedFor(String key) throws Exception {
         var session = new MockHttpSession();
-        postJson("/api/auth/sign-in", session, "{\"identifier\":\"" + identifier + "\"}")
-                .andExpect(status().isOk());
+        postJson(
+                        "/api/auth/sign-in/password",
+                        session,
+                        "{\"email\":\"" + field(key, "email") + "\",\"password\":\"" + field(key, "password") + "\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.step").value("factor"));
         return session;
     }
 
@@ -94,7 +100,7 @@ class SeededPersonaSignInTest {
 
     @Test
     void amara_signsInWithTheSeededAuthenticatorKey() throws Exception {
-        var session = startedFor(field("amara", "email"));
+        var session = startedFor("amara");
         postJson("/api/auth/sign-in/totp", session, "{\"code\":\"" + codeNow(field("amara", "totpSecret")) + "\"}")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.id").value(field("amara", "id")))
@@ -102,13 +108,13 @@ class SeededPersonaSignInTest {
     }
 
     @Test
-    void everyPersona_signsInWithTheCodeMakeCredsShows_byMobileToo() throws Exception {
+    void everyPersona_signsInWithTheDevPasswordAndTheCodeMakeCredsShows() throws Exception {
         List<Map<String, Object>> all = JsonPath.read(PERSONAS, "$.personas[*]");
         for (var p : all) {
             if (p.get("key").equals("amara")) {
                 continue; // the other test uses this step's code (replay protection)
             }
-            var session = startedFor((String) p.get("phone"));
+            var session = startedFor((String) p.get("key"));
             postJson("/api/auth/sign-in/totp", session, "{\"code\":\"" + codeNow((String) p.get("totpSecret")) + "\"}")
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.user.id").value(p.get("id")));
@@ -118,10 +124,10 @@ class SeededPersonaSignInTest {
     @Test
     void aSeededBackupCode_worksOnce() throws Exception {
         var code = field("sam", "backupCodePrefix") + "-00003";
-        postJson("/api/auth/sign-in/backup-code", startedFor(field("sam", "email")), "{\"code\":\"" + code + "\"}")
+        postJson("/api/auth/sign-in/backup-code", startedFor("sam"), "{\"code\":\"" + code + "\"}")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.id").value(field("sam", "id")));
-        postJson("/api/auth/sign-in/backup-code", startedFor(field("sam", "email")), "{\"code\":\"" + code + "\"}")
+        postJson("/api/auth/sign-in/backup-code", startedFor("sam"), "{\"code\":\"" + code + "\"}")
                 .andExpect(status().isUnprocessableContent());
     }
 }

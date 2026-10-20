@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, DataTable, Dialog, Drawer, ErrorState, Field, PageSkeleton, Tag, TextInput, useFormatters, codeValue, type DataTableColumn } from '@northline/ui';
 import { useSession } from '../../lib/session';
-import { authApi, createPasskey, getPasskey, PasskeyError } from '@northline/auth-kit';
+import { authApi, AuthenticatorSetupForm, ChangePasswordForm, createPasskey, getPasskey, PasskeyError, PasswordField, regenerateBackupCodes, useAuthKitT } from '@northline/auth-kit';
 import { useMerchantId, useRole } from '../shell/api';
 import { StepUpFailed, stepUpWithCode, stepUpWithPasskey } from '../finance/stepUp';
 import {
   addPasskey, auditLogQuery, passkeyOptions, removePasskey, revokeOtherSessions, revokeSession, securityChangeError, securityKey, securityQuery,
-  useNewBackupCodes, type ActiveSession, type AuditEntry, type Security, type SecurityChangeError,
+  type ActiveSession, type AuditEntry, type Security, type SecurityChangeError,
 } from './api';
 import { useSettingsT, type SettingsT } from './messages';
 import { PersonalData } from './PersonalData';
@@ -49,9 +49,11 @@ function Factors({ security }: { security: Security }) {
   const qc = useQueryClient();
   const role = useRole();
   const sid = useSession().data?.sid ?? null;
-  const codes = useNewBackupCodes();
+  const kit = useAuthKitT();
   const change = useSecurityChange();
   const [shownCodes, setShownCodes] = useState<string[] | null>(null);
+  const [editing, setEditing] = useState<'password' | 'authenticator' | null>(null);
+  const [factorMessage, setFactorMessage] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [keyMessage, setKeyMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [removing, setRemoving] = useState<Security['passkeys'][number] | null>(null);
@@ -78,6 +80,18 @@ function Factors({ security }: { security: Security }) {
     }
   };
 
+  // S-154: new backup codes, a new password and a new authenticator need a recent second factor too (step-up).
+  const newCodes = () => change.run(async () => {
+    const r = await regenerateBackupCodes();
+    setShownCodes(r.codes);
+    await qc.invalidateQueries({ queryKey: securityKey });
+  });
+  const changed = async (message: string) => {
+    setEditing(null);
+    setFactorMessage(message);
+    await qc.invalidateQueries({ queryKey: securityKey });
+  };
+
   const remove = (id: string) => change.run(async () => {
     await removePasskey(id);
     setRemoving(null);
@@ -100,14 +114,24 @@ function Factors({ security }: { security: Security }) {
           </li>
         ))}
         {lastFactor && security.passkeys.length > 0 && <li className="nl-set-note"><span className="nl-set-sub">{t('err_last_factor')}</span></li>}
-        <li><span>{t('authenticator')}</span><Tag tone={security.authenticator ? 'accent' : 'neutral'}>{security.authenticator ? t('enabled') : t('notSetUp')}</Tag></li>
+        <li>
+          <span>{kit('passwordLabel')}{factorMessage && <span role="status" className="nl-set-sub">{factorMessage}</span>}</span>
+          <Button variant="ghost" onClick={() => { change.reset(); setFactorMessage(null); setEditing('password'); }}>{security.password ? kit('changePassword') : kit('setPassword')}</Button>
+        </li>
+        <li>
+          <span>{t('authenticator')}</span>
+          <span className="nl-set-rowside">
+            <Tag tone={security.authenticator ? 'accent' : 'neutral'}>{security.authenticator ? t('enabled') : t('notSetUp')}</Tag>
+            <Button variant="ghost" onClick={() => { change.reset(); setFactorMessage(null); setEditing('authenticator'); }}>{security.authenticator ? kit('authenticatorAgain') : kit('authenticatorSetUp')}</Button>
+          </span>
+        </li>
         <li>
           <span>{t('securityKey')}{keyMessage && <span role={keyMessage.error ? 'alert' : 'status'} className={keyMessage.error ? 'nl-error' : 'nl-set-sub'}>{keyMessage.text}</span>}</span>
           <Button variant="ghost" onClick={() => void addKey()} disabled={adding}>{adding ? t('adding') : t('add')}</Button>
         </li>
         <li>
-          <span>{t('backupCodes', { n: security.backupCodesRemaining })}{codes.isError && <span role="alert" className="nl-error">{t('codesError')}</span>}</span>
-          <Button variant="ghost" disabled={codes.isPending} onClick={() => codes.mutate(undefined, { onSuccess: r => { setShownCodes(r.codes); void qc.invalidateQueries({ queryKey: securityKey }); } })}>{t('newCodes')}</Button>
+          <span>{t('backupCodes', { n: security.backupCodesRemaining })}{change.error && !editing && !removing && <span role="alert" className="nl-error">{t('codesError')}</span>}</span>
+          <Button variant="ghost" disabled={change.busy} onClick={() => void newCodes()}>{t('newCodes')}</Button>
         </li>
         <li><span>{t('payoutReauth')}</span><Tag tone="accent">{t('on')}</Tag></li>
         <li><span>{security.email ? t('loginAlerts', { email: security.email }) : t('loginAlertsNone')}</span><Tag tone="accent">{t('on')}</Tag></li>
@@ -123,6 +147,21 @@ function Factors({ security }: { security: Security }) {
         <Dialog open onClose={() => setShownCodes(null)} title={t('codesTitle')} actions={<Button onClick={() => setShownCodes(null)}>{t('done')}</Button>}>
           <p className="nl-small">{t('codesNote')}</p>
           <ul className="nl-set-codes">{shownCodes.map(c => <li key={c}><code>{c}</code></li>)}</ul>
+        </Dialog>
+      )}
+      {/* kept open under the step-up dialog, so the form keeps what was typed and shows the retried answer */}
+      {editing === 'password' && (
+        <Dialog open onClose={() => setEditing(null)} title={security.password ? kit('changePassword') : kit('setPassword')}>
+          <ChangePasswordForm hasPassword={security.password} current={sid} run={change.run} onCancel={() => setEditing(null)}
+            onDone={() => void changed(kit('passwordChanged'))} />
+          {change.error && <Alert tone="error" role="alert">{t(`err_${change.error}`)}</Alert>}
+        </Dialog>
+      )}
+      {editing === 'authenticator' && (
+        <Dialog open onClose={() => setEditing(null)} title={security.authenticator ? kit('authenticatorAgain') : kit('authenticatorSetUp')}>
+          <AuthenticatorSetupForm email={security.email ?? ''} run={change.run} onCancel={() => setEditing(null)}
+            onDone={() => void changed(kit('authenticatorReplaced'))} />
+          {change.error && <Alert tone="error" role="alert">{t(`err_${change.error}`)}</Alert>}
         </Dialog>
       )}
       {removing && !change.stepUp && (
@@ -318,6 +357,8 @@ function ConfirmItsYou() {
   const qc = useQueryClient();
   const session = useSession();
   const identifier = session.data?.user.email ?? session.data?.user.phone ?? '';
+  const kit = useAuthKitT();
+  const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -325,7 +366,11 @@ function ConfirmItsYou() {
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
     setError(null);
-    try { await authApi.startSignIn(identifier); await fn(); await done(); } catch (e) { setError(e instanceof PasskeyError && e.reason === 'cancelled' ? null : t('confirmError')); } finally { setBusy(false); }
+    // S-154: an account with a password gives it first; one without (older accounts) confirms with the factor alone.
+    try {
+      if (password) await authApi.signInWithPassword(identifier, password); else await authApi.startSignIn(identifier);
+      await fn(); await done();
+    } catch (e) { setError(e instanceof PasskeyError && e.reason === 'cancelled' ? null : t('confirmError')); } finally { setBusy(false); }
   };
   const passkey = () => run(async () => { const options = await authApi.passkeySignInOptions(); await authApi.signInPasskey(await getPasskey(options)); });
   const totp = (e: React.FormEvent) => {
@@ -337,6 +382,7 @@ function ConfirmItsYou() {
     <section className="nl-set-confirm" aria-labelledby="set-confirm">
       <h2 id="set-confirm" className="nl-set-h3">{t('confirmTitle')}</h2>
       <p className="nl-small nl-muted">{t('confirmBody')}</p>
+      <PasswordField label={kit('passwordLabel')} value={password} onChange={setPassword} />
       <div className="nl-set-confirmrow">
         <Button onClick={() => void passkey()} disabled={busy || !identifier}>{t('usePasskey')}</Button>
         <form onSubmit={totp} className="nl-set-confirmcode" noValidate>

@@ -39,6 +39,10 @@ apps:
     env:
       # S-27: the notifications consumer emails payout.failed with the same provider as the api.
       EMAIL_PROVIDER: azure
+  auth:
+    env:
+      # S-154: account emails with the same provider as the api (EMAIL_ENDPOINT in the operator's configEnv).
+      EMAIL_PROVIDER: azure
 
 # S-111 (docs/runbooks/observability.md § Azure): traces, metrics and logs → Azure Monitor (Application Insights in
 # Canada Central) with its connection string from Key Vault (applicationinsights-connection-string).

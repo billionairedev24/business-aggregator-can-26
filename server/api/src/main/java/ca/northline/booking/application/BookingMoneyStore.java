@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
-/** Outbound port (S-153): the balance and cancellation columns of {@code booking.bookings} (V407). */
+/** Outbound port (S-153): the balance and cancellation columns of {@code booking.bookings} (V419). */
 public interface BookingMoneyStore {
 
     Optional<Facts> facts(String bookingId);

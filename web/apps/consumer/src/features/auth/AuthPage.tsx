@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import { Alert, formatZonedHours, SiteLink, useLocale } from '@northline/ui';
 import { appAuthorizationUrl, bffLoginUrl, safeNext, type AuthSession } from '@northline/auth-kit';
@@ -42,7 +42,13 @@ const SUPPORT_HOURS = ['07:00', '23:00'] as const;
  * goes to the consumer-bff's hand-off (`/bff/login?next=`) — a new account to the Location screen, a sign-in back to
  * where the person was — or, for a mobile app's authorization request (S-29), back to it.
  */
-export function AuthPage({ mode, search, navigate = url => window.location.assign(url) }: { mode: AuthMode; search: AuthSearch; navigate?: (url: string) => void }) {
+export function AuthPage({ mode, search, navigate = url => window.location.assign(url), forgot, panel }: {
+  mode: AuthMode; search: AuthSearch; navigate?: (url: string) => void;
+  /** S-154: `/forgot-password`. */
+  forgot?: boolean;
+  /** S-154: an email link's page (`/verify-email`, `/reset-password`): its title and content instead of the flow. */
+  panel?: { title: string; content: ReactNode };
+}) {
   const t = useAuthT();
   const { locale } = useLocale();
   const regions = useRegions();
@@ -53,7 +59,7 @@ export function AuthPage({ mode, search, navigate = url => window.location.assig
   const register = mode === 'register';
 
   // Already signed in: nothing to do here.
-  useEffect(() => { if (user) void router.navigate({ href: back, replace: true }); }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (user && !panel) void router.navigate({ href: back, replace: true }); }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const provider = search.link ?? search.provider;
   const federated = provider === 'google' || provider === 'apple' ? PROVIDERS[provider] : undefined;
@@ -82,7 +88,7 @@ export function AuthPage({ mode, search, navigate = url => window.location.assig
       </div>
       <section className="nl-auth-card" aria-labelledby="nl-auth-title">
         <div className="nl-auth-head">
-          <h2 className="nl-auth-title" id="nl-auth-title">{t(register ? 'createAccount' : 'signIn')}</h2>
+          <h2 className="nl-auth-title" id="nl-auth-title">{panel ? panel.title : t(register ? 'createAccount' : 'signIn')}</h2>
           <SiteLink href={back} className="btn btn-ghost nl-auth-cancel">{t('cancel')}</SiteLink>
         </div>
         {search.error && <Alert tone="error">{t(ERRORS[search.error] ?? 'federationFailed')}</Alert>}
@@ -92,10 +98,10 @@ export function AuthPage({ mode, search, navigate = url => window.location.assig
             {register && search.relay === '1' ? <> {t('federationRelay')}</> : null}
           </Alert>
         )}
-        {register
+        {panel ? panel.content : register
           ? <RegisterFlow prefill={{ firstName: search.firstName, lastName: search.lastName, email: search.email }} onSignIn={() => switchTo('signin')}
               onFinished={s => handOff(s, '/location')} />
-          : <SignInFlow resumeIdentifier={search.step === 'factor' ? search.identifier : undefined} onRegister={() => switchTo('register')}
+          : <SignInFlow resumeIdentifier={search.step === 'factor' || search.step === 'password' ? search.identifier : undefined} forgotOnLoad={forgot} onRegister={() => switchTo('register')}
               onFinished={s => handOff(s, back)} />}
         <p className="nl-auth-legal">
           {register

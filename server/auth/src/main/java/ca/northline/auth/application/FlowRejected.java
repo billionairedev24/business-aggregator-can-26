@@ -33,7 +33,9 @@ public final class FlowRejected extends RuntimeException {
          * S-20: the rate-limit store is unreachable and codes / second factors fail closed → 503 with
          * retryAfterSeconds.
          */
-        UNAVAILABLE("sign_in_unavailable");
+        UNAVAILABLE("sign_in_unavailable"),
+        /** S-154: enrolment is for an account without a second factor (the others use Settings › Security) → 409. */
+        ALREADY_ENROLLED("already_enrolled");
 
         private final String code;
 
