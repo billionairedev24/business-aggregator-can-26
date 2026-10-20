@@ -1,8 +1,8 @@
 package ca.northline.auth.web;
 
 import ca.northline.auth.application.AuthProperties;
-import ca.northline.auth.application.BackupCodeService;
 import ca.northline.auth.application.FlowRejected;
+import ca.northline.auth.application.SecuritySettingsService;
 import ca.northline.auth.application.SessionAuthentication;
 import ca.northline.auth.application.SessionService;
 import ca.northline.auth.application.UserAccounts;
@@ -29,7 +29,8 @@ import org.springframework.web.bind.annotation.RestController;
  * <pre>
  * GET  /api/auth/session        → 200 {user, acr} | 401
  * POST /api/auth/sign-out       → 204 (ends the auth session so "Not you?" can't silently sign back in)
- * POST /api/auth/backup-codes   → {codes:[10]} — replaces the previous set; needs a second-factor session
+ * POST /api/auth/backup-codes   → {codes:[10]} — replaces the previous set; needs a second-factor session and (S-154)
+ *                                a second factor from the last few minutes (403 step_up_required)
  * </pre>
  */
 @RestController
@@ -38,10 +39,11 @@ import org.springframework.web.bind.annotation.RestController;
 class SessionController {
 
     private final UserAccounts accounts;
-    private final BackupCodeService backupCodes;
+    private final SecuritySettingsService settings;
     private final SessionSignIn sessions;
     private final SessionService sessionService;
     private final AuthProperties props;
+    private final ca.northline.auth.application.EnrollmentService enrollment;
 
     @GetMapping("/session")
     ResponseEntity<AuthResponses.Session> session(
@@ -50,8 +52,11 @@ class SessionController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         return accounts.findById(user.getName())
-                .map(a -> ResponseEntity.ok(
-                        AuthResponses.Session.of(a, UserClaimsService.factorsOf(user), props.platformZone())))
+                .map(a -> {
+                    var factors = UserClaimsService.factorsOf(user);
+                    return ResponseEntity.ok(AuthResponses.Session.of(a, factors, props.platformZone())
+                            .needingSecondFactor(!Factor.isMfa(factors) && enrollment.needsSecondFactor(a.id())));
+                })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 
@@ -74,6 +79,6 @@ class SessionController {
                 || !Factor.isMfa(UserClaimsService.factorsOf(user))) {
             throw new FlowRejected(FlowRejected.Reason.UNAUTHENTICATED, "Sign in with a second factor first.");
         }
-        return new AuthResponses.BackupCodes(backupCodes.regenerate(user.getName()));
+        return new AuthResponses.BackupCodes(settings.regenerateBackupCodes(SessionAuthentication.caller(user)));
     }
 }

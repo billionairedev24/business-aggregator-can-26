@@ -1,5 +1,6 @@
 package ca.northline.auth.web;
 
+import static ca.northline.auth.domain.AuthMessages.APP_UNKNOWN;
 import static ca.northline.auth.domain.AuthMessages.BACKUP_CODE_REQUIRED;
 import static ca.northline.auth.domain.AuthMessages.BACKUP_CODE_WRONG;
 import static ca.northline.auth.domain.AuthMessages.CODE_FORMAT;
@@ -9,6 +10,8 @@ import static ca.northline.auth.domain.AuthMessages.EMAIL_REQUIRED;
 import static ca.northline.auth.domain.AuthMessages.FIRST_NAME_REQUIRED;
 import static ca.northline.auth.domain.AuthMessages.IDENTIFIER_REQUIRED;
 import static ca.northline.auth.domain.AuthMessages.LAST_NAME_REQUIRED;
+import static ca.northline.auth.domain.AuthMessages.LINK_EXPIRED;
+import static ca.northline.auth.domain.AuthMessages.PASSWORD_REQUIRED;
 import static ca.northline.auth.domain.AuthMessages.PHONE_FORMAT;
 import static ca.northline.auth.domain.AuthMessages.PHONE_REQUIRED;
 import static ca.northline.auth.domain.AuthMessages.SIX_DIGITS;
@@ -18,6 +21,7 @@ import static ca.northline.auth.domain.AuthMessages.TERMS_REQUIRED;
 import ca.northline.auth.domain.PhoneNumber;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -87,6 +91,106 @@ final class AuthRequests {
     record Identifier(
             @NotBlank(message = IDENTIFIER_REQUIRED) @Size(max = 320, message = IDENTIFIER_REQUIRED) @Nullable
             String identifier) {}
+
+    static final String APPS = "^(studio|consumer|console)$";
+
+    /**
+     * S-154, Create account with email + password. {@code app}: where the person is ({@code studio} by default) — the
+     * email's links open there, and the Studio and the console then require a second factor. {@code phone} is
+     * optional. The password is not trimmed (spaces count); {@code passwordConfirm}, when sent, must match.
+     */
+    record CreateAccount(
+            @NotBlank(message = FIRST_NAME_REQUIRED) @Size(max = 80, message = FIRST_NAME_REQUIRED) @Nullable
+            String firstName,
+
+            @NotBlank(message = LAST_NAME_REQUIRED) @Size(max = 80, message = LAST_NAME_REQUIRED) @Nullable
+            String lastName,
+
+            @NotBlank(message = EMAIL_REQUIRED)
+            @Pattern(regexp = EMAIL, message = EMAIL_FORMAT)
+            @Size(max = 320, message = EMAIL_FORMAT)
+            @Nullable
+            String email,
+
+            @NotEmpty(message = PASSWORD_REQUIRED) @Nullable String password,
+            @Nullable String passwordConfirm,
+
+            @Pattern(regexp = PhoneNumber.PATTERN, message = PHONE_FORMAT) @Nullable
+            String phone,
+
+            @NotNull(message = TERMS_REQUIRED) @AssertTrue(message = TERMS_REQUIRED)
+            Boolean terms,
+
+            @Pattern(regexp = "^(en|fr)$", message = TERMS_LANGUAGE) @Nullable
+            String termsLanguage,
+
+            @Nullable Boolean termsEnglishRequested,
+
+            @Pattern(regexp = APPS, message = APP_UNKNOWN) @Nullable
+            String app) {
+
+        CreateAccount {
+            firstName = trim(firstName);
+            lastName = trim(lastName);
+            email = trim(email);
+            phone = phone == null || phone.isBlank() ? null : phone.trim();
+        }
+    }
+
+    /** S-154, sign in step 1: email + password. */
+    record EmailPassword(
+            @NotBlank(message = EMAIL_REQUIRED) @Size(max = 320, message = EMAIL_FORMAT) @Nullable
+            String email,
+
+            @NotEmpty(message = PASSWORD_REQUIRED) @Size(max = 1024, message = PASSWORD_REQUIRED) @Nullable
+            String password) {
+        EmailPassword {
+            email = trim(email);
+        }
+    }
+
+    /** S-154: the link of an account email ({@code ?token=}). */
+    record Token(
+            @NotBlank(message = LINK_EXPIRED) @Size(max = 128, message = LINK_EXPIRED) @Nullable
+            String token) {}
+
+    /** S-154: Forgot password. */
+    record Forgot(
+            @NotBlank(message = EMAIL_REQUIRED)
+            @Pattern(regexp = EMAIL, message = EMAIL_FORMAT)
+            @Size(max = 320, message = EMAIL_FORMAT)
+            @Nullable
+            String email,
+
+            @Pattern(regexp = APPS, message = APP_UNKNOWN) @Nullable
+            String app) {
+        Forgot {
+            email = trim(email);
+        }
+    }
+
+    /** S-154: the new password, with the email's code (this browser) or its link's token (any browser). */
+    record ResetPassword(
+            @Pattern(regexp = SIX_DIGITS, message = CODE_FORMAT) @Nullable
+            String code,
+
+            @Size(max = 128, message = LINK_EXPIRED) @Nullable
+            String token,
+
+            @NotEmpty(message = PASSWORD_REQUIRED) @Nullable String password,
+            @Nullable String passwordConfirm) {
+        ResetPassword {
+            code = trim(code);
+            token = trim(token);
+        }
+    }
+
+    /** S-154, Settings › Security: change (or set a first) password. */
+    record ChangePassword(
+            @Nullable String currentPassword,
+            @NotEmpty(message = PASSWORD_REQUIRED) @Nullable String password,
+            @Nullable String passwordConfirm,
+            @Nullable String current) {}
 
     /** A WebAuthn credential as produced by {@code PublicKeyCredential.toJSON()}. */
     record Passkey(@NotNull JsonNode credential, @Nullable String label) {}

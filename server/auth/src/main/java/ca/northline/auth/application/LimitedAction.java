@@ -23,6 +23,12 @@ public enum LimitedAction {
     STEP_UP(Kind.FAILURES, true),
     /** S-19: revoking sessions or removing a passkey (Settings › Security) — every call counts. */
     SECURITY_CHANGE(Kind.REQUESTS, false),
+    /** S-154: a wrong password at sign-in or in Settings › Security (change password). */
+    PASSWORD_VERIFY(Kind.FAILURES, true),
+    /** S-154: an account email sent (Create account, resend, Forgot password) — every call counts. */
+    EMAIL_SEND(Kind.REQUESTS, true),
+    /** S-154: a wrong email code (confirm the address, reset the password) or an unknown link. */
+    EMAIL_CODE_VERIFY(Kind.FAILURES, true),
     /** S-30: an access token issued to a partner (client credentials) — account scope = the partner. */
     PARTNER_TOKEN(Kind.REQUESTS, false);
 

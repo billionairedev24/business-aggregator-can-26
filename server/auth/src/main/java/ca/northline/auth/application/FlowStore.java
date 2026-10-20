@@ -3,7 +3,9 @@ package ca.northline.auth.application;
 import ca.northline.auth.domain.OtpChallenge;
 import ca.northline.auth.domain.PendingFederation;
 import ca.northline.auth.domain.PendingRegistration;
+import ca.northline.auth.domain.ResetRequest;
 import ca.northline.auth.domain.SignInAttempt;
+import ca.northline.auth.domain.SignUp;
 import java.io.Serializable;
 import java.util.Optional;
 import org.springframework.security.web.webauthn.api.PublicKeyCredentialCreationOptions;
@@ -32,6 +34,15 @@ public interface FlowStore {
 
     /** S-18: a Google / Apple account waiting for the second factor (existing account) or the new account. */
     Key<PendingFederation> FEDERATION = new Key<>("nl.auth.federation", PendingFederation.class);
+
+    /** S-154: Create account with email + password, waiting for the email code. */
+    Key<SignUp> SIGN_UP = new Key<>("nl.auth.sign-up", SignUp.class);
+
+    /** S-154: "Forgot password", waiting for the email code and the new password. */
+    Key<ResetRequest> RESET = new Key<>("nl.auth.password-reset", ResetRequest.class);
+
+    /** S-154: an authenticator secret shown for enrolment or replacement, until a code from it is confirmed. */
+    Key<String> TOTP_ENROLMENT = new Key<>("nl.auth.totp-enrolment", String.class);
 
     <T extends Serializable> Optional<T> get(Key<T> key);
 
