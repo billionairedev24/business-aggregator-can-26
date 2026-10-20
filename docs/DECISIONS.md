@@ -9699,6 +9699,46 @@ until it restarts, so even a later `pnpm install` didn't help, and `make up` sai
   public launch; about 15 slots had no usable candidate (e.g. pharmacy, notary, web design, pressure washing, drywall)
   and fall back.
 
+## 2026-09-30 — S-150 Local dev testing that just works, with proper credentials
+
+- **Why `make byo_arg=db,grafana,cache up-all` failed**: `byo_arg` / `services_arg` are the Makefile's recipe prefixes
+  (`BYO="…"` before a script); a command-line variable of the same name replaced one, so the recipe ran
+  `db,grafana,cache` as a command (Error 127). The Makefile now reads what you typed **once, at the top, with `:=`**,
+  from any of `BYO`, `byo`, `byo_arg`, `BYO_SERVICES` (command line or environment; the first one given, in that order,
+  wins) and `SERVICES`, `services`, `services_arg`; the helpers are `override`. `make down` / `make logs` still treat
+  only a command-line `SERVICES` (any spelling) as "just these apps". make/observability.mk uses the same helpers;
+  no other include defines or reads them.
+- **`make -n up-all` started the stack**: GNU make runs a recipe line that names `$(MAKE)` even under `-n`, and the
+  up-all line passed `MAKE="$(MAKE)"` to local-all.sh. It now goes through `this_make`, so `make -n` only prints.
+- **Credentials**: `scripts/dev/personas.json` is the one list (20 personas: Ravi, Jas, Priya Sandhu; the consumers of
+  V103, V108 and V163; the couriers Priya Nair and Sam Okafor; console staff Priya Natarajan and Marc Bélanger). There
+  is no separate kitchen-staff persona in the seed: Ravi owns Pho Dau Bo and runs its KDS (Switch business); not added.
+  Each has a reusable authenticator key `NORTHLINE<NAME>DEVTOTPSECRET…` (32 base32 characters) and ten backup codes
+  `<prefix>-00001 … -00010`. An optional `password` field per persona is printed by `make creds` and adds a column to
+  the README table when present (for S-154; no passwords are added here).
+- **Schema / seed**: `db/seed-dev/V381__dev_persona_authenticators.sql` (local profile only — `db/seed-dev` is applied
+  only under `local`/`test`, DevSeedGuard and DbTool refuse it elsewhere, and it is not in the jars or images). It
+  stores the keys exactly as V101 does: AES-256-GCM with the dev-only `northline.auth.totp-key`, a fixed 12-byte IV
+  per persona (reproducible seed), `key_id` `v1`; fills `first_name` / `last_name` / `phone_verified_at` /
+  `terms_*` where the older seed left them empty. Ravi and Jas keep V101's keys; Ravi, Priya Sandhu and Priya
+  Natarajan keep their V101/V191 codes. No change to `db/migrations`.
+- **`make creds` (alias `make logins`)**: pure Node (RFC 6238 SHA-1, 30 s, 6 digits, reusing scripts/demo/lib/totp.mjs),
+  grouped by app with seconds left, backup codes, the latest `Verification code for …` per mobile from
+  `.run/logs/auth.log` (`AUTH_LOG` overrides), and the demo accounts of `.demo/local.json` when `make demo-data` ran.
+  `WHO=` matches a key exactly, else part of a name, email or mobile (accents ignored).
+- **`make backup-codes-reset`** also restores each persona's seeded authenticator key (and clears its replay step), in
+  case Settings › Security replaced it — otherwise `make creds` would show codes that no longer work. It deletes the
+  personas' backup codes (seeded or regenerated) and inserts the seeded ones; refuses a non-local DB_URL host; runs
+  through the compose postgres container when it serves PG_PORT, else psql.
+- **Seeded consumers now have a second factor**, so "paying asks you to add a second factor" is no longer shown for
+  Amara; a freshly created account still shows it (mobile-local.md says so).
+- **make demo-data** (local) signs the console reviewer in with her seeded key instead of spending her backup codes.
+- **Tests**: `scripts/dev/personas.test.mjs` (`make creds-test`) decrypts every seeded key and hashes every code against
+  db/seed-dev and checks the README table; `SeededPersonaSignInTest` (auth) applies the dev seed to its own database
+  and signs every persona in with the code from personas.json (and a backup code once).
+- **Not done**: web/e2e/data/local.json still signs the console in with backup codes (e2e runs on a fresh database).
+  `make up-all` itself was not run end to end here (shared machine); the reset ran against a throwaway Postgres.
+
 ## 2026-09-30 — S-151 Cancellations, failed deliveries, returns and courier pay
 
 Closes what S-51, S-78, S-81, S-86, S-87 and S-88 left "Not done": cancelling an order, a delivery that can't be
