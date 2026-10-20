@@ -9905,3 +9905,69 @@ consumer web, the consumer app and the Studio. Runbooks: [stripe.md § Bookings]
   (S-74 sync) isn't removed by this story; the app pays a failed balance
   on the website (no card sheet for it yet); messages have no attachments or read receipts for the business side;
   the Studio's reschedule button still opens Messages generically.
+
+## 2026-10-20 — S-155 Pipeline to provision OVHcloud and deploy Northline there
+
+Runbook: [ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo). **Nothing here has run
+against a real OVHcloud account or a real GitHub Environment**: the workflow passed actionlint (with shellcheck), the
+scripts bash 3.2 parsing, shellcheck and runs against stubbed `kubectl`/`terraform`/`gh`/`htpasswd`; Terraform
+`terraform test` with the mocked provider; the charts `helm template | kubeconform`.
+
+- **`.github/workflows/ovh.yml`, manual only.** Inputs `target`, `action` (plan, apply, deploy, provision-and-deploy,
+  down, up, destroy), `image-tag`, `build-images`, `confirm-destroy`. Jobs `prepare` (no permissions), `provision`,
+  `images` (calls `deploy.yml`), `deploy`, `scale`; each job that touches OVHcloud runs in the GitHub Environment of the
+  target, so the required reviewer gates **every** such job — `plan` included, because the API credentials live in the
+  environment (a separate unprotected "plan" environment would duplicate every secret). Actions pinned by commit SHA
+  (checkout v5.1.0, setup-terraform v3.1.2, setup-helm v4.3.1 — the same majors as the other workflows, which still use
+  tags; they were not changed). Concurrency `ovh-<target>`, never cancelled.
+- **Plans never leave the job**: plan and apply run in one job from a plan file in `$RUNNER_TEMP`, deleted at the end;
+  the summary shows only addresses and actions (`terraform show -json` through jq), no values.
+- **State**: S3 backend on OVHcloud Object Storage, written at run time as `backend_override.tf` (git-ignored) by
+  `scripts/ovh/tf-state.sh`, so the roots keep local state by default (the runbook's single-Mac path is unchanged).
+  The bucket is created by the first run (`ensure`, aws CLI, versioning on) with the keys of an S3 user the owner makes
+  in the console (`TF_STATE_ACCESS_KEY/SECRET_KEY`) — creating that user through the OVHcloud API from a script was
+  left out (request signing untested; three console clicks). **No state locking** (OVHcloud's support for S3
+  conditional writes is unverified): the concurrency group serialises runs per target; Mac and pipeline must not run
+  Terraform on the same target at once.
+- **Terraform variables from the environment**: `scripts/ovh/ci.sh tfvars` maps the environment's variables to
+  `TF_VAR_*`; `OVH_TFVARS` (free HCL) becomes a runtime `ci.auto.tfvars` (git-ignored) for anything else. No tfvars in
+  git.
+- **Reaching the VPS from runners** (new addresses every run): new variable `ci_ssh_cidr` of the
+  `ovh-vps` root adds one Network Firewall rule (sequence 9, SSH from the runner/32) opened by a targeted apply at the
+  start of the job and removed at the end (`if: always()`). Because the host firewall (ufw) would then still block
+  the runner, the pipeline bootstraps with `SSH_FROM_ANYWHERE=1`: ufw rate-limits SSH from any address and the
+  Network Firewall decides who; `bootstrap-k3s.sh` now also turns password and root logins off (keys only). With
+  `edge_firewall = false` SSH is then open to every address (keys only) — the workflow warns. The pipeline uses its
+  own deploy key (made and installed by `gh-setup.sh`), never the owner's; `known_hosts` comes from a secret
+  (strict checking), else first-sight trust with a warning. **ovh-mks**: when `api_allowed_cidrs` is set, the
+  runner's /32 is added to the cluster's IP restriction for the run the same way.
+- **Secrets from the environment** (`OVH_SECRETS_SOURCE=env` in `secrets.sh`/`common.sh`): every key the file holds,
+  by name. Generated keys missing there are read from `secret/northline-generated` or generated **once** and stored
+  there (a BFF hash is recomputed only when its secret changes; a kubectl error never triggers regeneration). Masked
+  with `::add-mask::`. Pipeline settings (`OVH_*`, `TF_STATE_*`, `REGISTRY*`) in a `.ovh/<target>.env` are never
+  copied into `northline-secrets`.
+- **Stripe optional** on the OVHcloud targets (story: "optional for a first demo"): without `STRIPE_SECRET_KEY`,
+  `deploy.sh` sets `IDENTITY_PROVIDER`/`AGE_VERIFICATION_PROVIDER=local` (otherwise the api refuses to start:
+  `IDENTITY_PROVIDER=stripe needs STRIPE_SECRET_KEY`) and marks every empty Stripe key optional. Consequence, stated in
+  the runbook: owners can't finish identity verification (the fake's outcome page is `local`-only). Without Twilio no
+  one can sign up under `dev` (unchanged; S-112).
+- **`OVH_DOMAIN`**: `deploy.sh` moves every host (and `webauthnRpId`, the senders) under another zone — the owner may
+  not control `northline.ca`. Terraform's `dns_zone_name` follows it in the pipeline.
+- **Images**: `deploy.yml` gained `workflow_call` (same inputs + `web-apps`; concurrency group per calling run so
+  callers don't cancel each other; dispatch behaviour unchanged). The pipeline builds amd64 only, without the docs
+  images, to `ghcr.io/<owner>/northline` with the run's token; repository variable `REGISTRY` switches to another
+  registry (repository secrets `REGISTRY_USERNAME/PASSWORD`, since a called workflow's jobs have no environment). The
+  cluster's pull secret uses `REGISTRY_PULL_TOKEN` (classic, `read:packages`), else the run's token with a warning (it
+  expires with the run).
+- **Smoke test** `scripts/ovh/smoke.sh` (`make ovh-smoke`): the runbook's `kubectl exec … wget` readiness check could
+  never work (the images are distroless) — replaced by "every Spring app's pods Ready", which is the readiness probe on
+  `/actuator/health/readiness`. HTTPS checks run once the zone resolves to the address, retried while certificates
+  issue; before DNS exists they report *pending*, not failure.
+- **destroy** first removes the releases (on MKS the load balancer and volumes belong to Kubernetes, not Terraform) and
+  empties the buckets with their own users' keys, then `terraform destroy`; it needs `confirm-destroy` = the target.
+- **`scripts/ovh/gh-setup.sh`** (`make ovh-gh-setup`): environment with the owner as required reviewer and branch
+  policies `develop`, `main`; if GitHub refuses reviewers (plan), the environment is created without them and a
+  warning says apply is then gated only by write access. Environments on a private repository need a paid GitHub plan
+  — unverified for this repository; the runbook's local alternative covers that and depleted Actions minutes.
+- **Not done**: no OVHcloud API automation for the state user; no Toronto; no `smoke` action of its own (re-run
+  `deploy` with `build-images` off); prices and console menu names still unverified.

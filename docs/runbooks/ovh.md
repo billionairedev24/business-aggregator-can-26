@@ -16,14 +16,223 @@ and what was left open: [DECISIONS.md § 2026-10-19](../DECISIONS.md). Compariso
 > (`infra/terraform/envs/ovh/vps`, `infra/terraform/envs/ovh/mks`) pass `terraform validate`, `tflint` and an offline
 > plan against a mocked `ovh/ovh` provider (2.22, built from source here); both charts render and validate offline with
 > the OVHcloud values (`deploy/helm/validate.sh`); the scripts parse with bash 3.2 and were run against stubs only.
+> The `ovh` pipeline (S-155, [§ Today](#today-from-a-new-ovh-account-to-a-running-demo)) has never run either.
 > **Every price below is unverified** (from search-engine excerpts; the vendor sites were unreachable) — check each in
 > the OVHcloud console before ordering.
 
 Other environments: [dryrun-gcp](dryrun-gcp.md), [dev](dev.md), [staging](staging.md), [prod](prod.md) ·
 [overview](README.md)
 
+## Today: from a new OVH account to a running demo
+
+The shortest path, through the **`ovh` pipeline** (`.github/workflows/ovh.yml`, S-155): you click in the OVHcloud
+console, run one set-up command on your Mac, then start the pipeline from GitHub. `ovh-vps` is the target for a first
+demo (≈ $25–30 for the month); `ovh-mks` works the same way with the differences noted. About an hour end to end, most
+of it waiting.
+
+> **Never run against a real account yet.** The pipeline, `scripts/ovh/gh-setup.sh`, the state bucket bootstrap and
+> the runner's firewall rule were checked offline only (actionlint, bash 3.2 parsing, shellcheck, stubbed runs of the
+> scripts, `terraform test` with a mocked provider, `helm template | kubeconform`). Expect to fix small things on the
+> first run; each step below says where it reports problems.
+
+### 1. Account and project (console)
+
+1. Open **ca.ovhcloud.com** (the Canadian site: prices in CA$, Canadian taxes, the `ovh-ca` API) › *Create an
+   account* (or log in) › *Billing* › *Payment methods*: add a card.
+2. **Public Cloud** › *Create a project* › name `northline-dryrun`, no voucher, accept the terms. Copy the project's
+   id (32 hex characters, under the project's name, top left): this is `OVH_SERVICE_NAME`.
+3. In the project: **Object Storage** › *S3 users* (or *Users & Roles*) › *Add user* › description `terraform-state`,
+   role **ObjectStore operator**. Copy its **access key** and **secret key** when they are shown (the secret is shown
+   once): `TF_STATE_ACCESS_KEY` / `TF_STATE_SECRET_KEY`. The pipeline creates the state bucket with them on its first
+   run (versioning on); nothing else uses this user.
+
+### 2. API token (browser)
+
+Open this address while signed in (it pre-fills the rights; pick a validity covering the demo period, e.g. 30 days,
+and no IP restriction — the pipeline's runners have new addresses every run):
+
+```text
+https://ca.api.ovh.com/createToken/?GET=/cloud/*&POST=/cloud/*&PUT=/cloud/*&DELETE=/cloud/*&GET=/vps/*&GET=/ip/*&POST=/ip/*&PUT=/ip/*&DELETE=/ip/*
+```
+
+`/cloud/*`: Object Storage, its users, and for `ovh-mks` the cluster, node pool, private network and database;
+`GET /vps/*`: read the VPS; `/ip/*`: the Network Firewall in front of the VPS. It returns three values —
+**application key**, **application secret**, **consumer key** (`OVH_APPLICATION_KEY`, `OVH_APPLICATION_SECRET`,
+`OVH_CONSUMER_KEY`). Revoke them at teardown (§ 8).
+
+### 3. The VPS (`ovh-vps` only; console)
+
+1. On your Mac, a key if you have none: `ssh-keygen -t ed25519` (Enter three times), then `cat ~/.ssh/id_ed25519.pub`.
+2. **Bare Metal Cloud** › *Virtual Private Servers* › *Order*. Choose by the specs, not the name (it changes between
+   ranges): **8 vCores, 24 GB RAM, 200 GB NVMe**. Location **Beauharnois (BHS), Canada**. Image **Ubuntu 24.04**.
+   Paste the public key from step 1 in *SSH key*. No options. Monthly, no commitment. Pay.
+3. When it is delivered (minutes; an email): note its **service name** (`vps-xxxxxxxx.vps.ovh.ca`, the VPS's page) —
+   `OVH_VPS_SERVICE_NAME` — and its **IPv4**. Check that `ssh ubuntu@IPv4` works from your Mac.
+
+`ovh-mks` orders nothing by hand: the pipeline's `apply` creates the cluster, nodes and database.
+
+### 4. GitHub set-up (your Mac, once per target)
+
+Needs the GitHub CLI signed in with admin rights on the repository (`brew install gh`, `gh auth login`). Environments
+on a private repository need a paid GitHub plan; if the command says GitHub refused the environment, use
+[the local alternative](#the-local-alternative-no-github-actions).
+
+```sh
+make ovh-gh-setup TARGET=ovh-vps
+```
+
+It creates the **Environment** `ovh-vps` (Settings › Environments) with **you as required reviewer** and deployments
+allowed from `develop` and `main` only, then sets every secret and variable the pipeline reads. It asks for each
+required one (secrets are typed hidden) — or takes them from `.ovh/ovh-vps.env` if you put them there (`KEY=value`
+lines; the file is git-ignored). For `ovh-vps` it also makes a **deploy key** for the pipeline
+(`.ovh/ovh-vps-deploy-key`), installs it on the VPS over your own SSH access, and records the VPS's host key
+(compare the fingerprint it prints with the console's KVM if you want to be thorough). Re-run it to change a value.
+
+What ends up where ([§ Pipeline secrets and variables](#pipeline-secrets-and-variables) has the full list):
+
+| you have | goes into (environment `ovh-vps` / `ovh-mks`) |
+|---|---|
+| project id | variable `OVH_SERVICE_NAME` (and `OVH_ENDPOINT` = `ovh-ca`) |
+| the three API values | secrets `OVH_APPLICATION_KEY`, `OVH_APPLICATION_SECRET`, `OVH_CONSUMER_KEY` |
+| the state user's keys | secrets `TF_STATE_ACCESS_KEY`, `TF_STATE_SECRET_KEY`; variable `TF_STATE_BUCKET` (proposed: `northline-tfstate-` + the project id's first 8 characters) |
+| the VPS's service name, your IP | variables `OVH_VPS_SERVICE_NAME`, `OVH_ADMIN_CIDRS` (proposed: your current address/32) |
+| the domain of the demo | variable `OVH_DOMAIN` (`demo.northline.ca` by default; any zone you control — every host moves under it) |
+| a GitHub classic token with **read:packages** only (Settings › Developer settings › Tokens (classic)) | secret `REGISTRY_PULL_TOKEN` — the cluster pulls the images from ghcr.io with it. Without it the pipeline uses the run's own token, which expires when the run ends (a restarted pod on a node without the image then can't pull) |
+| Stripe test keys, Twilio (optional, § 6) | secrets `STRIPE_*`, `SMS_AUTH_TOKEN`; variables `SMS_ACCOUNT_ID`, `SMS_FROM` |
+
+The app's own secrets (`TOTP_KEY`, `KMS_LOCAL_KEY`, the BFF secrets, the data-service passwords) need nothing from
+you: the first deploy generates them **once** and keeps them in the cluster (`secret/northline-generated`); later runs
+reuse them. Back them up after the first deploy:
+`kubectl -n northline-dryrun get secret northline-generated -o yaml > .ovh/ovh-vps-generated.yaml`.
+
+### 5. Run the pipeline (GitHub)
+
+**Actions** › **ovh** › **Run workflow** › branch `develop`, then, in order:
+
+| run | target | action | other inputs | what happens |
+|---|---|---|---|---|
+| 1 | `ovh-vps` | `plan` | — | approve the run (*Review deployments* › `ovh-vps` › Approve); the summary lists what would be created: 2 buckets, 2 S3 users, the Network Firewall and its rules |
+| 2 | `ovh-vps` | `provision-and-deploy` | `build-images` on | approve; Terraform applies, the seven images are built and pushed to `ghcr.io/<owner>/northline` (≈ 20 min, in parallel), then the deploy job: the runner's address is let through the Network Firewall for this run only, k3s is installed over SSH (idempotent), the Secrets, cert-manager, Envoy Gateway, CloudNativePG, `northline-data` and `northline` are installed (≈ 15 min the first time), rollouts are waited for and the smoke test runs; the runner's firewall rule is removed at the end |
+
+The deploy job's summary prints the **public address** (the VPS's IPv4; on `ovh-mks` the load balancer's), the DNS
+records to create and the URLs. The HTTPS part of the smoke test shows *pending* until the records exist (§ 7);
+after creating them, run **`deploy`** again with `build-images` off (≈ 5 min): it then checks auth's OpenID
+configuration, the Studio's and the consumer's sign-in pages, the consumer home and the console over HTTPS. A
+failing step names what failed; the logs of a pod: run the [local alternative](#the-local-alternative-no-github-actions)'s
+`kubectl` commands from your Mac.
+
+Later: `deploy` after each change (the images are tagged with the commit's short sha; `image-tag` + `build-images`
+off redeploys an existing tag), `down` / `up` between demos (§ [Between demos](#between-demos)), `plan` / `apply`
+after changing a variable. `ovh-mks` is the same with `target = ovh-mks` (its `apply` takes ≈ 15–25 minutes).
+
+Every job that touches the account — `plan` included, because the API credentials live in the environment — waits
+for your approval; a run of one target never overlaps another run of the same target. The repository's other
+workflows are manual too, and **GitHub Actions minutes may be depleted**: the image build is the expensive part (≈ 20
+runner-minutes). Without minutes, use the local alternative below.
+
+### 6. Stripe and Twilio — optional for a first demo
+
+Under the `dev` profile:
+
+- **Without Stripe** (no `STRIPE_SECRET_KEY`): the api uses its fake payment gateway, and the deploy switches
+  identity and age checks to the local fakes. Everything starts; but the fakes' outcome pages exist only under
+  `local`, so **an owner can't finish identity verification** (onboarding stops there) and age-restricted items
+  can't be bought. Add the test keys later ([§ Stripe and Twilio](#stripe-and-twilio)), re-run `make ovh-gh-setup`,
+  then `deploy`.
+- **Without Twilio**: **no one can sign up** — every registration verifies a phone, and under `dev` the stand-in
+  withholds the code ([demo.md § 2](demo.md#2-before-the-first-run-on-the-dry-run)). The sites, the sign-in pages and
+  the (empty) catalogue load; that is a deployment check, not a demo. A Twilio trial account (verified numbers only)
+  is enough: `SMS_AUTH_TOKEN` (secret), `SMS_ACCOUNT_ID`, `SMS_FROM` (variables).
+- Emails are written to the api's log without SendGrid (`EMAIL_API_KEY`).
+
+Then the first console admin and the demo data: [§ Demo data](#demo-data).
+
+### 7. DNS
+
+At whoever hosts the zone (`OVH_DOMAIN`), the records from the deploy summary:
+
+```text
+demo.northline.ca.    300 IN A   IP
+*.demo.northline.ca.  300 IN A   IP
+demo.northline.ca.        IN CAA 0 issue "letsencrypt.org"
+```
+
+(with your domain and the printed address). Let's Encrypt issues each host's certificate a few minutes after the
+records resolve; then `deploy` again for the HTTPS smoke test.
+
+### 8. Teardown
+
+1. **Pause** between demos: action `down` (`ovh-mks`: also the nodes → 0; `ovh-vps` saves nothing — monthly billing).
+2. **Delete**: action `destroy` with `confirm-destroy` = the target's name. It removes the releases (on `ovh-mks` the
+   load balancer and volumes with them), empties the buckets (fake data) and runs `terraform destroy`.
+3. `ovh-vps`: console › Bare Metal Cloud › the VPS › **Terminate** (billing stops at the end of the paid month).
+4. Remove the DNS records; revoke the API token (*ca.api.ovh.com* › the token, or the console's API keys page);
+   delete the state user and bucket and the Public Cloud project if nothing else lives there; delete the GitHub
+   Environment (Settings › Environments) and the `.ovh/` files; check the next invoice.
+
+### The local alternative (no GitHub Actions)
+
+The same steps from your Mac with `make` — the pipeline only wraps them. Tools: [§ What you need](#what-you-need).
+
+```sh
+make ovh-secrets-init TARGET=ovh-vps            # .ovh/ovh-vps.env: generated secrets; add Stripe/Twilio if you have them
+export OVH_ENDPOINT=ovh-ca OVH_APPLICATION_KEY=… OVH_APPLICATION_SECRET=… OVH_CONSUMER_KEY=…
+# Optional: the pipeline's shared state instead of a local one (MIGRATE=1 moves an existing local state there).
+export TF_STATE_BUCKET=… TF_STATE_ACCESS_KEY=… TF_STATE_SECRET_KEY=…
+export AWS_ACCESS_KEY_ID=$TF_STATE_ACCESS_KEY AWS_SECRET_ACCESS_KEY=$TF_STATE_SECRET_KEY
+make ovh-tf-init TARGET=ovh-vps
+cp infra/terraform/envs/ovh/vps/terraform.tfvars.example infra/terraform/envs/ovh/vps/terraform.tfvars   # fill it in
+terraform -chdir=infra/terraform/envs/ovh/vps apply
+make ovh-bootstrap                               # k3s over SSH, kubeconfig + tunnel
+export KUBECONFIG=~/.kube/northline-ovh-vps
+# images: § Images (docker login ghcr.io, Jib + buildx), then
+export REGISTRY=ghcr.io/ORG/northline IMAGE_TAG=$(git rev-parse --short=12 HEAD)
+make deploy TARGET=ovh-vps                       # OVH_DOMAIN=… for a domain other than demo.northline.ca
+make ovh-smoke TARGET=ovh-vps
+```
+
+Use one or the other for a given target, not both at once (one state, no locking). A deploy from the Mac uses the
+file's generated secrets: if the pipeline deployed first, copy them from `secret/northline-generated` into the file
+(or set the same values in the environment) so the two don't fight over `TOTP_KEY` and `KMS_LOCAL_KEY`.
+
+### Pipeline secrets and variables
+
+Per environment (`ovh-vps`, `ovh-mks`); `make ovh-gh-setup` sets them. **R** = required, **O** = optional.
+
+| name | kind | | targets | what |
+|---|---|---|---|---|
+| `OVH_ENDPOINT` | variable | O | both | `ovh-ca` (default) |
+| `OVH_SERVICE_NAME` | variable | R | both | Public Cloud project id |
+| `OVH_APPLICATION_KEY`, `OVH_APPLICATION_SECRET`, `OVH_CONSUMER_KEY` | secrets | R (or the next row) | both | the API token |
+| `OVH_CLIENT_ID`, `OVH_CLIENT_SECRET` | secrets | instead of the token | both | an OAuth2 service account |
+| `TF_STATE_BUCKET` | variable | R | both | the state bucket (created by the first run) |
+| `TF_STATE_ACCESS_KEY`, `TF_STATE_SECRET_KEY` | secrets | R | both | its S3 user's keys |
+| `OVH_DOMAIN` | variable | O | both | zone of the public hosts (default `demo.northline.ca`) |
+| `OVH_BUCKET_SUFFIX` | variable | O | both | if the bucket names are taken |
+| `OVH_TFVARS` | variable | O | both | extra Terraform variables as HCL (e.g. `data_services`, `managed_postgres`) |
+| `OVH_VPS_SERVICE_NAME` | variable | R | ovh-vps | the VPS (`vps-….vps.ovh.ca`) |
+| `OVH_ADMIN_CIDRS` | variable | R | ovh-vps | who may SSH besides the pipeline (≤ 3, space-separated) |
+| `OVH_EDGE_FIREWALL` | variable | O | ovh-vps | `true` (default) / `false` |
+| `OVH_VPS_SSH_PRIVATE_KEY` | secret | R | ovh-vps | the pipeline's deploy key (made by gh-setup) |
+| `OVH_VPS_KNOWN_HOSTS` | secret | R | ovh-vps | the VPS's host key line (gh-setup; without it the run trusts the key on first sight, with a warning) |
+| `OVH_API_ALLOWED_CIDRS` | variable | O | ovh-mks | who may reach the Kubernetes API (the runner is added for each run) |
+| `OVH_NODE_COUNT`, `OVH_NODE_FLAVOR` | variables | O | ovh-mks | `2`, `b3-16` |
+| `REGISTRY_PULL_TOKEN` | secret | O (recommended) | both | classic token, `read:packages` |
+| `REGISTRY_PULL_USERNAME` | variable | O | both | that token's owner (default: the run's actor) |
+| `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | secrets | O | both | Stripe **test** mode |
+| `SMS_AUTH_TOKEN` | secret | O | both | Twilio |
+| `SMS_ACCOUNT_ID`, `SMS_FROM` | variables | O | both | Twilio |
+| `EMAIL_API_KEY`, `KAFKA_SASL_JAAS_CONFIG` | secrets | O | both | SendGrid; an external Kafka |
+| `TOTP_KEY`, `WEBHOOK_SECRET_KEY`, `EMAIL_UNSUBSCRIBE_KEY`, `KMS_LOCAL_KEY`, `STUDIO_/CONSUMER_/CONSOLE_BFF_SECRET` (+ `_HASH`), `DB_PASSWORD`, `REDIS_PASSWORD`, `MEILISEARCH_API_KEY` | secrets | O | both | only to impose values; otherwise generated once in the cluster |
+
+Repository level (not per environment; the image build job has no environment): variable `REGISTRY` (a registry
+other than ghcr.io, e.g. an OVHcloud Managed Private Registry) with secrets `REGISTRY_USERNAME` / `REGISTRY_PASSWORD`
+to push; `MAVEN_MIRROR_*` as for [deploy.yml](deploy.md).
+
 ## Contents
 
+- [Today: from a new OVH account to a running demo](#today-from-a-new-ovh-account-to-a-running-demo) — the pipeline
+  ([secrets and variables](#pipeline-secrets-and-variables), [local alternative](#the-local-alternative-no-github-actions))
 - [The two shapes](#the-two-shapes)
 - [Cost estimate](#cost-estimate)
 - [What you need](#what-you-need)
@@ -102,7 +311,8 @@ Between demos `make ovh-down TARGET=ovh-mks` scales the nodes to 0 (the rest kee
 ## What you need
 
 - `terraform` 1.9+, `kubectl`, `helm` 3.14+, `jq`, `ssh`, `openssl`, `htpasswd` (or Docker for it), Docker with buildx
-  and Java 25 (the images), Node 22 (`make demo-data`).
+  and Java 25 (the images), Node 22 (`make demo-data`). For the pipeline only the GitHub CLI `gh` (`make ovh-gh-setup`);
+  the shared state from a Mac also needs the `aws` CLI (`make ovh-tf-init` creates the bucket with it).
 - An **OVHcloud Canada** account with a payment method ([§ Account](#account-and-api-credentials)).
 - Control of DNS for `northline.ca` (records under `demo.northline.ca`).
 - A Stripe account in **test mode** ([stripe.md](stripe.md)) and a Twilio account ([README § SMS](README.md#sms-and-voice-codes-s-8)):
@@ -229,7 +439,7 @@ curl -sI https://studio.demo.northline.ca | head -1     # 200, with strict-trans
 curl -s https://auth.demo.northline.ca/.well-known/openid-configuration | jq -r .issuer
 for h in studio console; do curl -s -o /dev/null -w "%{http_code} $h\n" "https://$h.demo.northline.ca"; done
 curl -s -o /dev/null -w "%{http_code} consumer\n" https://demo.northline.ca
-kubectl -n northline-dryrun exec deploy/northline-api -- wget -qO- localhost:8080/actuator/health/readiness
+make ovh-smoke TARGET=ovh-vps                          # rollouts, every Spring app Ready (= readiness UP; the images are distroless, no wget), HTTPS once DNS resolves
 kubectl -n northline-dryrun get jobs                   # migrate, kafka-topics, search-indices, oauth-clients Complete
 kubectl -n northline-dryrun get backups.postgresql.cnpg.io   # the first base backup completed (Object Storage)
 ```
@@ -307,14 +517,23 @@ OVHcloud has no secrets manager External Secrets could read, so the secrets live
 | command | does |
 |---|---|
 | `make ovh-secrets-init TARGET=…` | creates the file: `TOTP_KEY`, `WEBHOOK_SECRET_KEY`, `EMAIL_UNSUBSCRIBE_KEY`, `KMS_LOCAL_KEY`, the three BFF secrets and their bcrypt hashes, `DB_PASSWORD`, `REDIS_PASSWORD`, `MEILISEARCH_API_KEY` generated; Stripe, Twilio, SendGrid, registry empty |
-| `scripts/ovh/secrets.sh check …` | names the required keys still empty (never prints a value); refuses a live Stripe key |
+| `scripts/ovh/secrets.sh check …` | names the required keys still empty (never prints a value); refuses a live Stripe key, and a secret key without its publishable key |
 | `make ovh-secrets TARGET=…` | writes `northline-secrets` (every app key with a value + `STORAGE_ACCESS_KEY`/`STORAGE_SECRET_KEY` from Terraform, and `DB_PASSWORD` from Terraform with Managed PostgreSQL), `northline-pg-app`, `northline-valkey`, `northline-meilisearch`, `northline-pg-backup-s3` (in-cluster services) and `northline-registry`; `make deploy` runs it too |
 
-Required before deploying: the generated ones and the four Stripe test values (`STRIPE_SECRET_KEY` `sk_test_…`,
-`STRIPE_PUBLISHABLE_KEY` `pk_test_…`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` — put `whsec_REPLACE`
-until [§ Stripe](#stripe-and-twilio)). Optional: `SMS_AUTH_TOKEN` + `SMS_ACCOUNT_ID` + `SMS_FROM` (all three switch
+Required before deploying: the generated ones. Stripe test values (`STRIPE_SECRET_KEY` `sk_test_…` with
+`STRIPE_PUBLISHABLE_KEY` `pk_test_…`; `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` after
+[§ Stripe](#stripe-and-twilio) — an empty one is left out of the api's environment) are optional since S-155 (without
+them: the fake payment gateway, identity and age checks on the local fakes). Optional too: `SMS_AUTH_TOKEN` + `SMS_ACCOUNT_ID` + `SMS_FROM` (all three switch
 `SMS_PROVIDER=twilio` on for northline-auth), `EMAIL_API_KEY` (SendGrid; otherwise emails are logged),
 `KAFKA_SASL_JAAS_CONFIG` (an external Kafka), `REGISTRY_SERVER`/`_USERNAME`/`_PASSWORD`.
+
+**From the pipeline** the same script reads every key from environment variables instead
+(`OVH_SECRETS_SOURCE=env`: the GitHub environment's secrets and variables, [§ Today](#pipeline-secrets-and-variables)).
+A generated key without a value there is taken from the cluster's `secret/northline-generated`, or generated once and
+kept there, so redeploys never change it; each generated value is masked in the log. Stripe is optional in both modes
+(without `STRIPE_SECRET_KEY`: the fake payment gateway, identity and age checks on the local fakes — [§ 6](#6-stripe-and-twilio--optional-for-a-first-demo)).
+Pipeline settings in the same file (`OVH_*`, `TF_STATE_*`, `REGISTRY*`) are read by `make ovh-gh-setup` and never
+copied into `northline-secrets`.
 
 Keep a copy of the file somewhere safe (a password manager): losing it loses `TOTP_KEY` (every enrolled authenticator
 must re-enrol) and `KMS_LOCAL_KEY` (sealed calendar tokens can't be opened). Change one: edit, `make ovh-secrets`,

@@ -233,6 +233,13 @@ fill in the third-party keys, `make ovh-secrets TARGET=…`. OVHcloud-only keys 
 api seals with this key, allowed under `dev` only). Rotation: edit the file, `make ovh-secrets`, then
 `kubectl -n northline-dryrun rollout restart deploy`.
 
+**From the `ovh` pipeline** (S-155, [ovh.md § Today](ovh.md#pipeline-secrets-and-variables)) the same script reads the
+keys from the GitHub Environment `ovh-vps` / `ovh-mks` (`OVH_SECRETS_SOURCE=env`) instead of the file. The generated
+keys need no secret there: the first deploy generates them and keeps them in `secret/northline-generated` in the
+namespace, which every later run reuses (never regenerated per run; masked in the log). Back it up after the first
+deploy; rotating one: set the new value as an environment secret (it wins over the stored one), `deploy`, then the
+rollout restart. Stripe is optional on these targets (the fake gateway and local identity fakes without it).
+
 ## Local development and kind
 
 - **Local (Gradle, Vite):** `server/.env` (git-ignored, from `server/.env.example`) — no secrets manager.
