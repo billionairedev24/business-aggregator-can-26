@@ -10,6 +10,7 @@
 //
 // Variants already on disk are kept (the name holds the source's hash), so a re-run only does new photos.
 import { createHash } from 'node:crypto';
+import { availableParallelism } from 'node:os';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,7 +28,7 @@ export function hashOf(bytes, focal) {
 }
 
 const ENCODE = {
-  avif: s => s.avif({ quality: 50, effort: 4 }),
+  avif: s => s.avif({ quality: 50, effort: 2 }), // effort 4 took ~10 s a photo; 2 looks the same at these sizes
   webp: s => s.webp({ quality: 72 }),
   jpg: s => s.jpeg({ quality: 76, progressive: true, mozjpeg: true }),
 };
@@ -60,7 +61,12 @@ async function main(args) {
   const wanted = new Set();
   let written = 0;
   let changed = false;
-  for (const [slot, e] of entries) {
+  // a few photos at a time: AVIF encoding dominates, and the first build of a fresh clone does every photo
+  const queue = [...entries];
+  const work = async () => {
+    for (let next = queue.shift(); next; next = queue.shift()) await buildOne(...next);
+  };
+  async function buildOne(slot, e) {
     const bytes = readFileSync(join(HERE, e.file));
     const hash = hashOf(bytes, e.focal);
     const upright = () => sharp(bytes).rotate(); // EXIF orientation applied
@@ -82,6 +88,7 @@ async function main(args) {
     }
     process.stdout.write(`  ${slot}\n`);
   }
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(4, availableParallelism() - 1)) }, work));
   if (changed) writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
   let pruned = 0;
   const walk = dir => {

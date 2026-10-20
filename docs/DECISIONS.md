@@ -9681,3 +9681,20 @@ until it restarts, so even a later `pnpm install` didn't help, and `make up` sai
   assets the error page can't name); nginx in front of the Studio/console images still has its own 50x pages for the
   BFF routes in the cloud (the ingress); `make shell-compat` could not run here (no Docker) — the script was read for
   bash 3.2.
+
+## 2026-10-20 — Real photos from Open Images
+
+- **Why**: `make photos-fetch` on the owner's Mac kept hitting Openverse's rate limit (429), Pexels key issuance is
+  paused, and this environment blocks the photo hosts. Google's Open Images dataset (Flickr photos with their
+  licence, photographer and page, human-verified labels) is reachable from here.
+- **What**: 201 of the 270 slots have a photo (every hero, banner, sell and empty-state slot, most categories, all
+  cuisines, the demo shops and almost all their listings); the rest fall back to their parent's photo as before.
+  All are **CC BY 2.0**, credited on `/credits`. Picked by eye from contact sheets of the top 16 candidates per slot.
+- **Schema**: `SITES.openimages` in `@northline/media` (`CC BY 2.0`, page on flickr.com, deed + source required like
+  Openverse's); `pick.mjs` takes the candidate's `site`; the credits page names it "Open Images".
+- **Build**: AVIF at effort 2 (was 4; ~10 s a photo) and up to 4 photos at a time, so a fresh clone's first
+  `make dev` builds the variants in a few minutes; `PIPELINE` 2 (the AVIF bytes changed).
+- **Not done / caveats**: sources are about 1024 px on the long side (the 1440 px variants aren't built; heroes are a
+  little soft on wide screens); people in the photos gave no model release — fine for a demo, replace them before a
+  public launch; about 15 slots had no usable candidate (e.g. pharmacy, notary, web design, pressure washing, drywall)
+  and fall back.

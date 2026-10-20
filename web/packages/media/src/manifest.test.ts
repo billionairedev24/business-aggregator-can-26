@@ -48,6 +48,11 @@ describe('the photo library (photos.json)', () => {
     const ov = { ...GOOD, site: 'openverse' as const, sourceUrl: 'https://www.flickr.com/photos/x/1', licence: 'CC BY 2.0' };
     expect(problems('category/x.y', ov).join()).toMatch(/licenceUrl.*source|source/);
     expect(problems('category/x.y', { ...ov, licenceUrl: 'https://creativecommons.org/licenses/by/2.0/', source: 'flickr' })).toEqual([]);
+    // Open Images: Flickr photos under CC BY 2.0 only, credited like Openverse's
+    const oi = { ...ov, site: 'openimages' as const, licenceUrl: 'https://creativecommons.org/licenses/by/2.0/', source: 'flickr' };
+    expect(problems('category/x.y', oi)).toEqual([]);
+    expect(problems('category/x.y', { ...oi, licence: 'CC BY-SA 2.0' }).join()).toMatch(/licence/);
+    expect(problems('category/x.y', { ...oi, sourceUrl: 'https://example.com/x' }).join()).toMatch(/sourceUrl/);
     expect(problems('category/x.y', { ...ov, licence: 'CC BY-NC 2.0', licenceUrl: 'https://creativecommons.org/licenses/by-nc/2.0/', source: 'flickr' }).join()).toMatch(/licence/);
     // what make photos writes is required before the site links the variants
     expect(problems('category/x.y', { ...GOOD, hash: undefined }, { processed: true }).join()).toMatch(/make photos/);
