@@ -20,6 +20,10 @@ export const JobDetail = Job.extend({
   escrowMoney: z.object({ state: z.string(), heldCents: z.number(), taxCents: z.number(), feeCents: z.number(), netCents: z.number() }).nullish(),
   timeline: z.array(z.object({ type: z.string(), at: z.string(), actorName: z.string().nullish(), note: z.string().nullish(), mediaId: z.string().nullish() })),
   approvals: z.array(Approval),
+  // S-153: the customer's photos of the job, a deposit quote's balance, a cancellation and its fee
+  customerPhotoIds: z.array(z.string()).optional(),
+  balance: z.object({ state: z.enum(['none', 'pending', 'held', 'failed', 'cancelled']).catch('none'), cents: z.number(), taxCents: z.number(), dueAt: z.string().nullish(), attempts: z.number(), failure: z.string().nullish() }).optional(),
+  cancellation: z.object({ at: z.string(), feeCents: z.number(), feeTaxCents: z.number() }).nullish(),
 });
 export type JobDetail = z.infer<typeof JobDetail>;
 
@@ -44,6 +48,8 @@ export type Quote = z.infer<typeof Quote>;
 export const QuoteRequest = z.object({
   id: z.string(), ref: z.string(), title: z.string(), customerName: z.string().nullish(), reliability: z.number().nullish(), area: z.string().nullish(), body: z.string().nullish(),
   preferredAt: z.string().nullish(), createdAt: z.string(), respondBy: z.string().nullish(), expiresAt: z.string().nullish(), quote: Quote.nullish(),
+  /** S-153: the customer's photos (read with `customerPhotoUrl`) */
+  photoIds: z.array(z.string()).optional(),
 });
 export type QuoteRequest = z.infer<typeof QuoteRequest>;
 
@@ -141,3 +147,11 @@ export function useDeclineRequest(m: string) {
     onSettled: () => inv(),
   });
 }
+
+/**
+ * S-153: "Ask a question" / "Message" — opens (or finds) the customer thread of a quote request or a job (the one the
+ * customer sees), then Messages shows it (`?thread=`). The customer's photos are read through the business's own scope.
+ */
+export const openCustomerThread = (m: string, kind: 'quote-requests' | 'jobs', id: string) =>
+  http(`${base(m)}/${kind}/${encodeURIComponent(id)}/thread`, { method: 'POST' }, z.object({ threadId: z.string() }));
+export const customerPhotoUrl = (m: string, photoId: string) => `${base(m)}/customer-photos/${encodeURIComponent(photoId)}`;

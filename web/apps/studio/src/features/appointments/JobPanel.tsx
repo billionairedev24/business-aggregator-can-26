@@ -8,7 +8,8 @@ import { screenHref } from '../shell/nav';
 import { ValidationError } from '../../lib/http';
 import { useSession } from '../../lib/session';
 import { clock } from '../../lib/time';
-import { jobQuery, useAdvanceJob, useRequestApproval, useUploadMedia, type JobDetail, type Media, type Step } from './api';
+import { jobQuery, openCustomerThread, useAdvanceJob, useRequestApproval, useUploadMedia, type JobDetail, type Media, type Step } from './api';
+import { CustomerPhotos } from './QuoteRequests';
 import { useAppointmentsT } from './messages';
 import { LiveShare } from './LiveShare';
 import { APPROVAL_MESSAGES, QUOTE_MESSAGES_FR } from './quote';
@@ -74,6 +75,15 @@ function JobCard({ job: j }: { job: JobDetail }) {
     advance.mutate({ id: j.id, step: st.step, body: pos ?? {} });
   };
   const toMessages = () => void nav({ to: screenHref(merchantId, 'messages') });
+  // S-153: the job's own customer thread (the one the customer reads), opened on demand
+  const [threadError, setThreadError] = useState(false);
+  const message = async () => {
+    setThreadError(false);
+    try {
+      const { threadId } = await openCustomerThread(merchantId, 'jobs', j.id);
+      void nav({ to: screenHref(merchantId, 'messages'), search: { thread: threadId } as never });
+    } catch { setThreadError(true); }
+  };
   return (
     <section aria-labelledby="appt-job">
       <h2 id="appt-job" className="nl-h2 nl-appt-h2">{title}{j.memberName && j.memberUserId !== me ? <span className="nl-muted"> ({j.memberName})</span> : null}</h2>
@@ -82,7 +92,11 @@ function JobCard({ job: j }: { job: JobDetail }) {
         {j.addressLine || j.access ? <><dt>{t('where')}</dt><dd>{[j.addressLine, j.access].filter(Boolean).join(' · ')}</dd></> : null}
         {j.vehicle ? <><dt>{t('vehicle')}</dt><dd>{j.vehicle}</dd></> : null}
         <dt>{t('escrow')}</dt><dd><EscrowFact j={j} /></dd>
+        {j.balance && j.balance.state !== 'none' ? <><dt>{t('balance')}</dt><dd>{t(`balance_${j.balance.state}`, { money: f.money(j.balance.cents + j.balance.taxCents), date: j.balance.dueAt ? f.date(j.balance.dueAt, 'dateTime') : '—', attempts: j.balance.attempts })}</dd></> : null}
+        {j.cancellation ? <><dt>{t('cancelledOn')}</dt><dd>{j.cancellation.feeCents > 0 ? t('cancelledLate', { date: f.date(j.cancellation.at, 'dateTime'), money: f.money(j.cancellation.feeCents + j.cancellation.feeTaxCents) }) : t('cancelledFree', { date: f.date(j.cancellation.at, 'dateTime') })}</dd></> : null}
       </dl>
+      {j.customerPhotoIds?.length ? <CustomerPhotos merchantId={merchantId} ids={j.customerPhotoIds} /> : null}
+      {threadError ? <div role="alert" className="nl-error">{t('threadError')}</div> : null}
       {j.customerNote ? <div className="nl-appt-quote">“{j.customerNote}”</div> : null}
       {j.approvals.length > 0 ? (
         <div className="nl-appt-approvals">
@@ -93,7 +107,7 @@ function JobCard({ job: j }: { job: JobDetail }) {
       {canOperate ? (
         <div className="nl-appt-actions nl-appt-jobactions">
           <button type="button" className="btn btn-primary" disabled={!st.step || advance.isPending} onClick={() => void go()}>{st.cta}</button>
-          <button type="button" className="btn btn-secondary" onClick={toMessages}>{t('message')}</button>
+          <button type="button" className="btn btn-secondary" onClick={() => void message()}>{t('message')}</button>
           {['confirmed', 'en_route', 'on_site'].includes(j.state) ? <button type="button" className="btn btn-secondary" onClick={() => setApproving(true)}>{t('extraParts')}</button> : null}
           <button type="button" className="btn btn-ghost" onClick={toMessages}>{t('reschedule')}</button>
         </div>

@@ -4,7 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { Dialog, ErrorState, Skeleton, useFormatters } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { screenHref } from '../shell/nav';
-import { quoteRequestsQuery, useDeclineRequest, type Quote, type QuoteRequest } from './api';
+import { customerPhotoUrl, openCustomerThread, quoteRequestsQuery, useDeclineRequest, type Quote, type QuoteRequest } from './api';
 import { useAppointmentsT } from './messages';
 import { QuoteComposer } from './QuoteComposer';
 
@@ -39,6 +39,15 @@ function RequestCard({ request: r, composing, onCompose, onClose }: { request: Q
   const role = useRole();
   const nav = useNavigate();
   const decline = useDeclineRequest(merchantId);
+  const [asking, setAsking] = useState(false);
+  const [askError, setAskError] = useState(false);
+  const ask = async () => {
+    setAsking(true); setAskError(false);
+    try {
+      const { threadId } = await openCustomerThread(merchantId, 'quote-requests', r.id);
+      void nav({ to: screenHref(merchantId, 'messages'), search: { thread: threadId } as never });
+    } catch { setAskError(true); } finally { setAsking(false); }
+  };
   const [customerView, setCustomerView] = useState(false);
   const canEdit = role !== 'bookkeeper';
   const sent = r.quote && r.quote.state !== 'draft' ? r.quote : null;
@@ -47,6 +56,8 @@ function RequestCard({ request: r, composing, onCompose, onClose }: { request: Q
     <article className="nl-appt-request" aria-label={r.title}>
       <div className="nl-appt-request-head"><strong>{r.title}</strong><span className="nl-muted nl-small">{who}</span></div>
       {r.body ? <div className="nl-appt-body">“{r.body}”</div> : null}
+      {r.photoIds?.length ? <CustomerPhotos merchantId={merchantId} ids={r.photoIds} /> : null}
+      {askError ? <div role="alert" className="nl-error">{t('threadError')}</div> : null}
       {composing ? (
         <QuoteComposer request={r} revising={composing.revising} onDone={onClose} onCancel={onClose} />
       ) : sent ? (
@@ -61,7 +72,7 @@ function RequestCard({ request: r, composing, onCompose, onClose }: { request: Q
       ) : canEdit ? (
         <div className="nl-appt-actions">
           <button type="button" className="btn btn-primary" onClick={() => onCompose()}>{r.quote ? t('continueDraft') : t('writeQuote')}</button>
-          <button type="button" className="btn btn-secondary" onClick={() => void nav({ to: screenHref(merchantId, 'messages') })}>{t('askQuestion')}</button>
+          <button type="button" className="btn btn-secondary" disabled={asking} onClick={() => void ask()}>{t('askQuestion')}</button>
           <button type="button" className="btn btn-ghost" disabled={decline.isPending} onClick={() => decline.mutate(r.id)}>{t('decline')}</button>
         </div>
       ) : null}
@@ -100,5 +111,19 @@ export function CustomerView({ open, onClose, request, quote: q }: { open: boole
         {q.attachments.length ? <li>{t('attachments')} · {q.attachments.map(a => a.fileName).join(', ')}</li> : null}
       </ul>
     </Dialog>
+  );
+}
+
+/** S-153: the customer's photos of the job (a quote request's or a booking's), only those the business may see. */
+export function CustomerPhotos({ merchantId, ids }: { merchantId: string; ids: string[] }) {
+  const t = useAppointmentsT();
+  return (
+    <ul className="nl-appt-photos" aria-label={t('customerPhotos')}>
+      {ids.map((id, i) => (
+        <li key={id}><a href={customerPhotoUrl(merchantId, id)} target="_blank" rel="noreferrer">
+          <img src={customerPhotoUrl(merchantId, id)} alt={t('customerPhoto', { n: i + 1 })} width={72} height={72} loading="lazy" />
+        </a></li>
+      ))}
+    </ul>
   );
 }
