@@ -2,6 +2,7 @@ import { defineConfig, loadEnv, type Plugin, type ProxyOptions } from 'vite';
 import react from '@vitejs/plugin-react';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import { brandHtml } from '@northline/tokens/vite';
+import { proxyErrors } from '@northline/ui/error-page';
 
 /**
  * Local "dev auth" (as the Studio's): with NL_DEV_USER set (a seeded staff member's identity.users id) /api goes
@@ -29,10 +30,11 @@ export default defineConfig(({ mode }) => {
   const bff = env.NL_BFF ?? 'http://localhost:8083';
   // S-117: keep the browser's Host (Vite's string shorthand rewrites it to the target), so the BFF builds its OAuth
   // redirect URI and its post-login redirect on this origin instead of sending the browser to the BFF's own port.
-  const toBff: ProxyOptions = { target: bff, changeOrigin: false };
+  // A BFF that is not running: the branded page (Sign in is a page load) or JSON, not Vite's empty 500.
+  const toBff: ProxyOptions = { target: bff, changeOrigin: false, configure: proxyErrors({ audience: 'app', service: 'The console-bff' }) };
   // `^/api/` and not `/api`: a client route may start with "api" (docs/CONSOLE_PLAN.md § Routes).
   const proxy: Record<string, string | ProxyOptions> = dev
-    ? { '^/api/': { target: env.NL_API ?? 'http://localhost:8080', headers: { 'X-Dev-User': env.NL_DEV_USER! } } }
+    ? { '^/api/': { target: env.NL_API ?? 'http://localhost:8080', configure: proxyErrors({ audience: 'app', service: 'The api' }), headers: { 'X-Dev-User': env.NL_DEV_USER! } } }
     : { '^/api/': toBff, '^/bff/': toBff, '^/oauth2/': toBff, '^/login/': toBff };
   return {
     plugins: [tanstackRouter({

@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import { legalPages } from '@northline/legal/vite';
 import { brandHtml } from '@northline/tokens/vite';
+import { proxyErrors } from '@northline/ui/error-page';
 
 /**
  * Local "dev auth": when NL_DEV_USER is set (a seeded identity.users id), /api calls go straight to the api with
@@ -59,9 +60,10 @@ export default defineConfig(({ mode }) => {
   const bff = env.NL_BFF ?? 'http://localhost:8082';
   // S-117: keep the browser's Host (Vite's string shorthand rewrites it to the target), so the BFF builds its OAuth
   // redirect URI and its post-login redirect on this origin instead of sending the browser to the BFF's own port.
-  const toBff: ProxyOptions = { target: bff, changeOrigin: false };
+  // A BFF that is not running: the branded page (Sign in is a page load) or JSON, not Vite's empty 500.
+  const toBff: ProxyOptions = { target: bff, changeOrigin: false, configure: proxyErrors({ audience: 'app', service: 'The studio-bff' }) };
   const proxy: Record<string, string | ProxyOptions> = dev
-    ? { '/api': { target: env.NL_API ?? 'http://localhost:8080', headers: { 'X-Dev-User': env.NL_DEV_USER! } } }
+    ? { '/api': { target: env.NL_API ?? 'http://localhost:8080', configure: proxyErrors({ audience: 'app', service: 'The api' }), headers: { 'X-Dev-User': env.NL_DEV_USER! } } }
     : { '/api': toBff, '/bff': toBff, '/oauth2': toBff, '/login': toBff };
   return {
     // /legal/terms.html, /legal/privacy.html: design 09/10 verbatim, shared with the consumer app (S-63)

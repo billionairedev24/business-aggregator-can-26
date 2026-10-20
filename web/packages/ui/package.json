@@ -46,6 +46,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./styles.css": "./src/styles/index.css",
-    "./DataTable.css": "./src/DataTable/DataTable.css"
+    "./DataTable.css": "./src/DataTable/DataTable.css",
+    "./error-page": { "types": "./src/server/error-page.d.mts", "default": "./src/server/error-page.mjs" }
   }
 }

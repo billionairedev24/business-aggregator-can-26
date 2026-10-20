@@ -33,7 +33,7 @@ export default defineConfig({
     { command: 'node scripts/mock-api.mjs consumer 4603', url: 'http://127.0.0.1:4603/__mock/health', reuseExistingServer: reuse },
     {
       command: 'node server/node-server.mjs', cwd: `${web}apps/consumer`, url: 'http://127.0.0.1:4630/healthz', reuseExistingServer: reuse, timeout: 60_000,
-      env: { PORT: '4630', HOST: '127.0.0.1', NL_BFF_URL: 'http://127.0.0.1:4603', NL_SITE_ORIGIN: 'http://127.0.0.1:4630' },
+      env: { PORT: '4630', HOST: '127.0.0.1', NL_BFF_URL: 'http://127.0.0.1:4603', NL_SITE_ORIGIN: 'http://127.0.0.1:4630', NL_ERROR_PREVIEW: '1' },
     },
   ],
   // journeys.spec.ts (S-148, ARIA snapshots) runs in each app's project and skips the other apps' screens

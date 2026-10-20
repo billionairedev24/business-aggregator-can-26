@@ -298,7 +298,10 @@ the site. Both optional, set by the chart. S-61: `NL_STUDIO_ORIGIN` (= `urls.stu
 `NL_SUPPORT_EMAIL` (optional, no default) — the support mailbox the Help page (`/help`, in every page's footer) names;
 unset, Help sends people to Help & cases only. Real photos (2026-10-19): `NL_PHOTOS_BASE_URL` (optional, no default)
 — where the stock photos' variants are served (a CDN); unset, the site's own `/photos/`, built into the image by
-`make photos` (photos.md).
+`make photos` (photos.md). Error pages (2026-10-20): every failure the consumer server answers itself is the branded
+page (or JSON for `/api`, `/bff` and `Accept: application/json`), its status kept, with a reference that is also in the
+log line `web.request_failed` (JSON; search the logs by `ref`); `NL_ERROR_PREVIEW` (a test switch for the sweep and
+`make ui-shots`) stays unset in every environment.
 
 ## Consumer BFF (S-45)
 

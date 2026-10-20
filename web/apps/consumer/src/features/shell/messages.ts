@@ -27,6 +27,8 @@ export const useShellT = defineMessages({
     pendingKicker: 'Design 06 · {state}', pendingBody: 'This screen is being built ({story}).', backHome: 'Back to home',
     notFoundTitle: 'We couldn’t find that page.', notFoundBody: 'The link may be old, or the page has moved.',
     errorTitle: 'Something went wrong on our side.', retry: 'Retry',
+    unreachableTitle: 'We can’t reach the shop right now.',
+    unreachableBody: 'Our servers aren’t answering at the moment. It’s not you — we’ll keep trying.',
   },
   fr: {
     services: 'Services', shop: 'Boutique', food: 'Restaurants',
@@ -49,6 +51,8 @@ export const useShellT = defineMessages({
     pendingKicker: 'Maquette 06 · {state}', pendingBody: "Cet écran est en cours de construction ({story}).", backHome: "Retour à l'accueil",
     notFoundTitle: 'Page introuvable.', notFoundBody: 'Le lien est peut-être ancien, ou la page a été déplacée.',
     errorTitle: 'Un problème est survenu de notre côté.', retry: 'Réessayer',
+    unreachableTitle: 'Impossible de joindre la boutique pour le moment.',
+    unreachableBody: 'Nos serveurs ne répondent pas en ce moment. Le problème ne vient pas de vous — nous réessayons.',
   },
 });
 

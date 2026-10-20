@@ -9628,3 +9628,56 @@ hosts are blocked here; none was generated or invented). Runbook: [photos.md](ru
 - **Demo data**: `scripts/demo/data/marketplace.json` gives each business and listing a `photo` slot; `make demo-data`
   uploads the library's photo through the product when the slot has one (products, services, logos), else draws as
   before (services: none).
+
+## 2026-10-20 — Error pages: no raw 500 JSON (fix/consumer-error-pages)
+
+Owner's report: http://localhost:3000 showed `{"status":500,"unhandled":true,"message":"HTTPError"}`. Cause (the
+owner's consumer.log, reproduced here): `Cannot find module '@northline/media' imported from web/packages/ui/src/Photo.tsx`
+— PR #199 added the workspace package; the consumer dev server ran across the `git pull`, so the package was never
+linked and Vite's module runner failed on every request. TanStack Start imports the router (and every route) inside its
+request handler, so the import error escaped to h3, whose default answer is that JSON. Vite keeps the failed import
+until it restarts, so even a later `pnpm install` didn't help, and `make up` said "already running".
+
+- **Global server error handler** (`web/apps/consumer/src/server.ts`, `src/lib/serverErrors.ts`): wraps Start's
+  handler. A thrown error, or h3's own error JSON, becomes the branded page from `@northline/ui/error-page` (plain HTML,
+  light Evergreen from `theme.json`, en/fr by `?lang=` → `nl.locale` cookie → Accept-Language, status kept, Try again =
+  a link to the same address, Go to home, support mailto with the reference). h3 answers with JSON and logs the error
+  with `console.error`; the handler takes that call over for the request (AsyncLocalStorage, on `globalThis` so Vite's
+  re-runs share it) to get the error itself and logs one JSON line `web.request_failed` (ref, status, method, path
+  without the query, name/message/stack — no headers, cookies or bodies). JSON only for `/api`, `/bff`,
+  `/_serverFn` and an Accept with JSON and not HTML. Development (`import.meta.env.DEV`) adds name, message, stack and
+  the likely cause (BFF/api port not answering → the `make up` line; `Cannot find module '@northline/…'` → "A
+  workspace package is missing — run `pnpm install` in web/ (or `make dev` again), then restart"); a production build
+  never shows it. A browser that went away gets an empty 499, not a log line.
+- **Upstream failures during SSR**: route errors render inside the shell. `failureKind()` (`@northline/client`) says
+  what an error means; the BFF/api unreachable, a 5xx, a timeout or an unreadable answer (ZodError, HTML instead of
+  JSON) is "We can't reach the shop right now" with an automatic retry in the browser (2, 4, 8, 16, 30 s, then the
+  visitor decides) and the response is 503 (`upstreamStatus`; route errors logged with a ref, header `x-nl-error-ref`).
+  The server no longer retries failed queries (a down BFF cost ~3 s per query) and BFF calls time out after 10 s
+  (`setHttpBase(…, { timeoutMs })`; a hanging BFF held the page forever). Errors keep their kind across hydration via
+  serialization adapters in `src/start.ts` (an ApiError keeps its status; other upstream failures arrive as a 503
+  ApiError; a bug's message is dropped in production builds). `start.ts` declares Start's CSRF middleware for server
+  functions again (declaring options replaces Start's default) and imports `zodJitless` first (the CSP sweep caught
+  the eval probe otherwise).
+- **Raw messages gone**: the consumer's RouteError showed `error.message` ("Internal Server Error", a zod issue list);
+  the Studio's and console's root errorComponents did too. All use `FailureScreen` (`@northline/ui`, with a story);
+  whole-app failures use `FailurePage` (the logo above it); the SPAs get an `AppErrorBoundary` around the router
+  (a chunk removed by a deploy → "A new version is available", Reload).
+- **404 at the server level**: `/api/*`, `/bff/*` reaching the consumer server answer JSON 404; page hosts with no
+  business page (node-server.mjs) answer the branded 404 / 503 instead of plain text; node-server's own catch is the
+  branded 500.
+- **Dev proxies** (consumer, Studio, console `vite.config.ts`): a BFF that isn't running answered Vite's empty 500 —
+  Sign in (`/oauth2/authorization/…`) showed a blank page. Now a branded 502 with the service to start (JSON for API calls).
+- **`make up` / `make dev`** (`scripts/stack.sh`): reinstall also when any web `package.json` is newer than the last
+  install or a workspace dependency isn't linked into its dependant's node_modules; after an install, the web dev
+  servers that were running restart (started ones by `start_one`, others with their saved command).
+- **New variable** `NL_ERROR_PREVIEW` (consumer; test switch, unset everywhere): `/__nl/error?status=…` serves the page
+  (countdown shown, no reload) for the a11y sweep and `make ui-shots`. The mock api has a `down` state (`?down=503`).
+- **Other causes checked** (none gave the raw JSON here): the BFF down / answering 500 / HTML / a body the schema
+  rejects / hanging (each rendered an error state; hanging hung — fixed by the timeout); a malformed `nl.locale` cookie
+  or Accept-Language (ignored); `publicConfig` with no env (fallbacks); a malformed URL (h3's 400); `Accept: text/plain`
+  (TanStack's 406 JSON, left as is: not a browser page load).
+- **Not done**: the static page uses the palette's font stacks' fallbacks (the self-hosted font files are hashed build
+  assets the error page can't name); nginx in front of the Studio/console images still has its own 50x pages for the
+  BFF routes in the cloud (the ingress); `make shell-compat` could not run here (no Docker) — the script was read for
+  bash 3.2.

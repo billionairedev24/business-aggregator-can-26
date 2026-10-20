@@ -11,16 +11,21 @@ import { cspNonce, publicConfig } from './lib/request';
 
 export interface RouterContext { queryClient: QueryClient }
 
+/** A server-side call to the consumer-bff that has no answer by then fails (the page renders its unreachable state). */
+const SSR_TIMEOUT_MS = 10_000;
+
 /**
  * One router + QueryClient per request on the server, one per page in the browser (TanStack Start calls this).
  * Loaders `ensureQueryData(...)`; screens `useSuspenseQuery(...)` the same options; the SSR integration dehydrates
  * what the server fetched and hydrates it in the browser (docs/CONSUMER_WEB_PLAN.md § Data loading).
  */
 export function getRouter() {
-  if (import.meta.env.SSR) setHttpBase(process.env.NL_BFF_URL ?? 'http://localhost:8081');
+  if (import.meta.env.SSR) setHttpBase(process.env.NL_BFF_URL ?? 'http://localhost:8081', { timeoutMs: SSR_TIMEOUT_MS });
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { staleTime: 30_000, retry: (n, e) => !isUnauthorized(e) && !isNotFound(e) && n < 2 },
+      // On the server a failed call is not tried again: the page renders its error state at once (a BFF that is down
+      // cost three tries and three seconds per query before) and the browser tries again with a backoff.
+      queries: { staleTime: 30_000, retry: (n, e) => !import.meta.env.SSR && !isUnauthorized(e) && !isNotFound(e) && n < 2 },
       mutations: { retry: false },
     },
   });

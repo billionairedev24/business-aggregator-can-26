@@ -17,3 +17,9 @@ test('booking detail', async ({ page }) => sweep(page, 'consumer', 'booking-deta
 test('account', async ({ page }) => sweep(page, 'consumer', 'account', '/account', { signedIn: true }));
 test('orders & bookings', async ({ page }) => sweep(page, 'consumer', 'orders', '/account/orders', { signedIn: true }));
 test('sign-in', async ({ page }) => sweep(page, 'consumer', 'sign-in', '/sign-in', { signedIn: false }));
+// the error pages: the server's own (src/server.ts, NL_ERROR_PREVIEW=1 serves it at /__nl/error) and the shell's
+// "We can't reach the shop right now" with the consumer-bff answering 503 to everything
+test('server error page · 500', async ({ page }) => sweep(page, 'consumer', 'error-500', '/__nl/error?status=500', { signedIn: false }));
+test('server error page · 503', async ({ page }) => sweep(page, 'consumer', 'error-503', '/__nl/error?status=503', { signedIn: false }));
+test('server error page · 404', async ({ page }) => sweep(page, 'consumer', 'error-404', '/__nl/error?status=404', { signedIn: false }));
+test('shop unreachable (BFF down)', async ({ page }) => sweep(page, 'consumer', 'unreachable', '/services', { signedIn: false, down: 503 }));

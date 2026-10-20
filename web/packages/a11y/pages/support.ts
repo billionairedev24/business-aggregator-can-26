@@ -17,18 +17,22 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-prac
 const WCAG = /^wcag2/;
 
 /** Answers /api and /bff (any origin: northline-auth too) from the mock api; fonts are not fetched. Returns the misses. */
-export async function mockApi(page: Page, app: App, { signedIn }: { signedIn?: boolean } = {}): Promise<string[]> {
+export async function mockApi(page: Page, app: App, { signedIn, down = 0 }: { signedIn?: boolean; down?: number } = {}): Promise<string[]> {
+  // the mock api behind the consumer's server-side rendering (4603; `make ui-shots` runs its own on 4643)
+  const mock = process.env.NL_A11Y_MOCK_URL ?? 'http://127.0.0.1:4603';
   if (signedIn !== undefined) {
     setSignedIn(app, signedIn);
-    // the mock api behind the consumer's server-side rendering (4603; `make ui-shots` runs its own on 4643)
-    if (app === 'consumer') await fetch(`${process.env.NL_A11Y_MOCK_URL ?? 'http://127.0.0.1:4603'}/__mock/state?signedIn=${signedIn}`, { method: 'POST' });
+    if (app === 'consumer') await fetch(`${mock}/__mock/state?signedIn=${signedIn}`, { method: 'POST' });
   }
+  // `down`: the BFF or the api answering that status to everything (the error states), on the server and in the browser
+  if (app === 'consumer') await fetch(`${mock}/__mock/state?down=${down}`, { method: 'POST' });
   const answer = responder(app) as (m: string, u: string) => { status: number; body: unknown; missing?: boolean };
   const missing: string[] = [];
   await page.route(url => /^\/(api|bff|oauth2)\//.test(url.pathname) || url.hostname.endsWith('fonts.googleapis.com') || url.hostname.endsWith('fonts.gstatic.com'), async route => {
     const req = route.request();
     const url = new URL(req.url());
     if (url.hostname.includes('fonts.g')) return route.abort();
+    if (down) return route.fulfill({ status: down, contentType: 'application/json', body: JSON.stringify({ status: down }) });
     const res = answer(req.method(), url.pathname + url.search);
     if (res.missing) missing.push(`${req.method()} ${url.pathname}${url.search}`);
     return route.fulfill({ status: res.status, contentType: 'application/json', body: res.body === undefined || res.body === null ? '' : JSON.stringify(res.body) });
@@ -198,8 +202,8 @@ export function expectNoBlockers(report: PageReport, expectedLang: string) {
 }
 
 /** One journey screen: desktop in English, then a 320 px phone in French. */
-export async function sweep(page: Page, app: App, name: string, path: string, opts: { ready?: string; signedIn?: boolean } = {}) {
-  const missing = await mockApi(page, app, { signedIn: opts.signedIn });
+export async function sweep(page: Page, app: App, name: string, path: string, opts: { ready?: string; signedIn?: boolean; down?: number } = {}) {
+  const missing = await mockApi(page, app, { signedIn: opts.signedIn, down: opts.down });
   await page.setViewportSize({ width: 1280, height: 900 });
   await open(page, app, path, 'en', opts.ready);
   expectNoBlockers(await check(page, `${app}-${name}-en-1280`, path, 'en', missing), 'en-CA');

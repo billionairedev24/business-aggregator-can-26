@@ -3,10 +3,11 @@
  * `name` is the file name under ui-shots/<app>/ (`-d` desktop 1440×900, `-m` phone 390×844); `signedIn` picks the
  * mock session; `ready` is what to wait for before the shot (default: the page's h1, or 8 s without one); `click` is
  * pressed once the page is ready (a Playwright selector: open a detail sheet or an editor step), then the shot is taken (the window only: a sheet is fixed to it);
- * `sheet` photographs the window only for a sheet the address opens (`?application=`).
+ * `sheet` photographs the window only for a sheet the address opens (`?application=`); `down` makes the mock api answer
+ * that status to everything (the BFF or the api down: the error states).
  * A new route goes here too: shots.spec.ts photographs whatever this lists.
  */
-export interface ShotRoute { name: string; path: string; signedIn?: boolean; ready?: string; click?: string; sheet?: boolean }
+export interface ShotRoute { name: string; path: string; signedIn?: boolean; ready?: string; click?: string; sheet?: boolean; down?: number }
 
 const PROVIDER = '01J9ZD3V00000000000000PWM1', SELLER = '01J9ZD3V00000000000000PWP1', KITCHEN = '01J9ZD3V00000000000000PDB1';
 
@@ -48,6 +49,11 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'sign-in', path: '/sign-in' },
     { name: 'register', path: '/register' },
     { name: 'not-found', path: '/no-such-page' },
+    // the error pages: the server's own (NL_ERROR_PREVIEW=1) and the shell's state with the consumer-bff answering 503
+    { name: 'error-500', path: '/__nl/error?status=500' },
+    { name: 'error-503', path: '/__nl/error?status=503' },
+    { name: 'error-404', path: '/__nl/error?status=404' },
+    { name: 'unreachable', path: '/services', down: 503 },
   ],
   studio: [
     { name: 'sign-in', path: '/sign-in', signedIn: false },
@@ -94,6 +100,7 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'kitchen-combos', path: `/b/${KITCHEN}/kitchen/combos` },
     { name: 'kitchen-hours', path: `/b/${KITCHEN}/kitchen/hours` },
     { name: 'not-found', path: '/no-such-page' },
+    { name: 'unreachable', path: `/b/${PROVIDER}`, down: 503, ready: '.nl-failure-title' },
   ],
   console: [
     { name: 'sign-in', path: '/sign-in', signedIn: false },
@@ -128,6 +135,7 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'profile-audit', path: '/profile?tab=audit' },
     { name: 'reports-error', path: '/reports?province=QC', ready: '.nl-errorstate' },
     { name: 'not-found', path: '/no-such-screen' },
+    { name: 'unreachable', path: '/', down: 503, ready: '.nl-failure-title' },
     { name: 'pilot', path: '/pilot' },
     { name: 'uat', path: '/uat' },
     { name: 'go-live', path: '/go-live' },

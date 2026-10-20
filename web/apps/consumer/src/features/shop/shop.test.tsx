@@ -154,13 +154,14 @@ describe('Shop landing (design 06 shop)', () => {
     expect(await screen.findByText('Loading the Shop…')).toBeInTheDocument();
   });
 
-  it('shows an error with Retry', async () => {
+  it('the api failing: "We can\u2019t reach the shop right now" (never its raw message), then Try again', async () => {
     let fail = true;
     api = () => (fail ? { status: 500, body: { detail: 'Boom' } } : { body: LANDING });
     open('/shop');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Boom');
+    expect(await screen.findByRole('heading', { level: 1, name: 'We can’t reach the shop right now.' })).toBeInTheDocument();
+    expect(screen.queryByText('Boom')).toBeNull();
     fail = false;
-    await userEvent.setup({ delay: null }).click(screen.getByRole('button', { name: 'Retry' }));
+    await userEvent.setup({ delay: null }).click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Tonight’s pooled run leaves 6:00 p.m.' })).toBeInTheDocument();
   });
 });
