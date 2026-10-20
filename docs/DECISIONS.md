@@ -9827,3 +9827,81 @@ after — required for the Studio and the console, offered on the consumer site.
   working; email + password there is a follow-up); no breached-password API (bundled list only); no "your password was
   changed" notification email; the e2e suite (`make e2e`) was not run end to end here (typechecked only; shared
   machine). Nothing new talks to a third party beyond the existing email providers.
+## 2026-09-30 — S-153 Quotes and bookings: messaging, deposit balance, photos, late-cancellation fees, hold sweeper
+
+Customers and providers talk about a quote request or a booking; providers hear about quote requests; customers add
+photos; a deposit quote's balance is held automatically before the visit; late cancellations cost what the provider's
+terms say, taken from the hold; stray card holds are cancelled; customers list their quote requests and bookings —
+consumer web, the consumer app and the Studio. Runbooks: [stripe.md § Bookings](runbooks/stripe.md#bookings-balance-and-late-cancellation-s-153),
+[notifications.md](runbooks/notifications.md), [push.md](runbooks/push.md), [regions.md](runbooks/regions.md).
+
+- **Messages reuse the Studio's threads** (`messaging.threads`, kind `customer`) — one thread per business and quote
+  request (`ref_type = quote`, `ref_id` = the request; several quotes of one business stay in one conversation) or
+  booking (`ref_type = booking`). The business answers from Studio › Messages as before; the Studio's "Ask a question"
+  (quote requests) and "Message" (a job) open that thread (`POST …/quote-requests/{id}/thread`, `…/jobs/{id}/thread`,
+  operate permission). Customers: `GET|POST /me/threads`, `GET /me/threads/{id}`, `POST …/messages`, `POST …/read`.
+  A business can only open a thread for a request sent to it; a customer only for their own request (and a business it
+  went to) or booking. The open-thread service lives in `hire` (booking → messaging would close a module cycle).
+- **Text only**, masked like the Studio's (phone numbers and emails) and checked against S-93's off-platform phrases:
+  a flagged message is stored masked with `flagged`, trust opens its `off_platform_payment` flag from the
+  `message_sent` event (as for the Studio's), and the customer sees "Contact details and outside
+  payment requests are hidden." No attachments in messages: photos belong to the request or the job.
+- **Live updates**: the Studio's SSE bus (S-68) gets a customer key (`customer:<userId>`); `GET /api/v1/me/live` streams
+  `message` events with the thread id only, the web refreshes the thread; the phone polls every 15 s (no EventSource in
+  React Native) and gets a push. Events carry ids, never words: `messaging.message_sent` gained nothing personal.
+- **`quote.requested`** (topic `booking.quote_request`, schema `booking.quote_requested.v1`): the request's ref,
+  businesses asked, category, respond-by, expiry and **photo count** — no description, address or customer. The worker
+  tells each business's owners and technicians (row `quote_request`, email `team-update`/SMS/push → Appointments).
+  Customer messages tell owners (row `customer_message`), business messages tell the customer (row `quotes_messages`,
+  deep link `/app/messages/<threadId>`; the web redirects it to `/account/messages?thread=`). Team notices for these
+  types are held through a provider outage like the deferred customer ones.
+- **Photos** (schema: V418 `booking.customer_photos`): `POST /me/photos` (multipart, at most 10 MB, JPEG/PNG/HEIC/HEIF/
+  WebP by declared type **and** signature, the platform's `VirusScanner` hook before storing; the apps send no EXIF),
+  the object store port (`within("booking")`; 409 `storage_unavailable` without a store). A photo is the
+  uploader's until attached to one request or booking (6 at most; "That photo is no longer available. Add it again."
+  for a reused or someone else's photo). Reads: the owner (`GET /me/photos/{id}`), and the businesses the request was
+  sent to or the booking's business (`GET /merchants/{m}/customer-photos/{id}`, Studio with MFA) — no public URL,
+  `Cache-Control: no-store`. The Studio shows them on the request card and the job panel.
+- **Late-cancellation terms come from Availability › Booking rules**, which already had them (`reschedule_free_min`,
+  `late_cancel_fee_cents` / `_bps`): no new provider table. The region caps them (V420 `region.regions.cancel_*`: a
+  market's NULL = its province's, a province's NULL = `REGION_CANCEL_*`); the Studio offers only options within the cap
+  and the api refuses others ("Choose a window from 0 to %d hours." / "Choose a fee from 0 to %d percent."). A fixed fee
+  is capped at the region's percentage of the price. The booking **keeps the terms it was made under** (V419 columns on
+  `booking.bookings`), shown on the booking review (web and app), the quote and the booking page.
+- **Cancelling** (`GET /me/bookings/{id}/cancellation` then `POST …/cancel`, Idempotency-Key): requested, confirmed or
+  en route only (not once on site). Inside the window the fee (+ GST/HST at the booking's rate — **accountant to
+  confirm** that a cancellation fee carries the service's tax) is captured from the booking's hold into an escrow of
+  its own, `booking_cancel_fee` (V421), split per the escrow rules and released after 48 h; the rest of the hold and
+  any balance hold are released. Points spent come back and a code's use is released. `booking.cancelled`
+  (`booking.booking_cancelled.v1`) tells the business (row `new_booking`) and the customer.
+- **Deposit balance** (V419 `balance_*` columns): accepting a quote with a deposit schedules its balance
+  `BOOKING_BALANCE_LEAD` before the start. `BalanceHoldScheduler` (every `BOOKING_BALANCE_JOB_INTERVAL`, 50 at a time,
+  not under test) holds it off-session (`PaymentAuthorizations.startOffSession`, the deposit's card) as escrow
+  `booking_balance`; failure → retry every `BOOKING_BALANCE_RETRY_EVERY` up to `BOOKING_BALANCE_ATTEMPTS`, each failure
+  tells the customer and the owners (`booking.balance_failed`, the last one says so); the customer may pay it by hand
+  meanwhile (`POST /me/bookings/{id}/balance` + `/confirm`, step-up; the app sends them to the website for it). Held →
+  `booking.balance_held`. Both escrows release together at sign-off.
+- **Codes, points and saved cards on bookings**: the booking review and quote acceptance take a saved card
+  (`paymentMethodId`, 422 "Choose one of your saved cards." when it isn't the person's), a promo code and points (the
+  S-59 ledger with redemption exists). On a deposit quote the code and points apply to the **deposit only** (the
+  balance is charged in full later); they are reserved for 30 minutes while the card is confirmed.
+- **Hold sweeper**: a booking's or balance's PaymentIntent never confirmed by the customer is cancelled after
+  `PAYMENTS_UNHELD_BOOKING_GRACE` (30 min, payments job), and its hold released.
+- **Lists**: `GET /me/bookings` and `GET /me/quote-requests` (status waiting / quoted / accepted / declined / expired,
+  quotes count, lowest, photo count). Web: Account › Orders "Quote requests" tab and Account › Messages; app: Orders
+  "Quote requests" view and You › Messages.
+- **Schema additions (V417–V421; renumbered from V405–V409 when merging after S-154)**: V417 `messaging.threads.customer_read_at`, customer index and a
+  unique (merchant, ref) for customer threads; V418 `booking.customer_photos`; V419 `booking.bookings` balance,
+  terms and cancellation columns + due-balance index; V420 `region.regions.cancel_*`; V421 payments `ref_type`s
+  `booking_balance`, `booking_cancel_fee` and the unheld-intents index. All additive.
+- **Config**: `BOOKING_BALANCE_LEAD|RETRY_EVERY|ATTEMPTS|JOB_INTERVAL`, `PAYMENTS_UNHELD_BOOKING_GRACE`,
+  `REGION_CANCEL_WINDOW_HOURS|FEE_BPS|MAX_WINDOW_HOURS|MAX_FEE_BPS` — none secret; runbooks and `server/.env.example`.
+- **Never run against a real Stripe account**: the off-session balance confirmation, a saved card confirmed on-session,
+  the partial capture of a cancellation fee from a booking hold, and the sweeper's cancels — written from Stripe's API
+  reference, tested with `FakeStripeGateway` only (a payment method id containing `chargeDeclined` declines,
+  `authenticationRequired` needs the customer).
+- **Not done**: the provider's public page still says the generic "free cancellation until 12 h before"; providers
+  can't cancel a booking from the Studio (customers only); a cancelled booking's event in a connected calendar
+  (S-74 sync) isn't removed by this story; the app pays a failed balance
+  on the website (no card sheet for it yet); messages have no attachments or read receipts for the business side;
+  the Studio's reschedule button still opens Messages generically.

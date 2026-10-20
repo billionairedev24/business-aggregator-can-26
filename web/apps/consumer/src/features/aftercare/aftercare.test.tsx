@@ -64,7 +64,7 @@ describe('The visit’s live ETA (design 01 C9 on the web)', () => {
     expect(within(details).getByRole('link', { name: 'Sample Wrench' })).toHaveAttribute('href', '/providers/sample-wrench');
     expect(details).toHaveTextContent('Where1 Sample St');
     expect(details).toHaveTextContent('Held in escrow$93.45');
-    expect(screen.getByRole('region', { name: 'Cancellation policy' })).toHaveTextContent('The provider’s cancellation policy applies.');
+    expect(screen.getByRole('region', { name: 'Cancellation policy' })).toHaveTextContent('You can cancel for free until the visit.');
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Your account › Bookings › BK-7801');
   });
 

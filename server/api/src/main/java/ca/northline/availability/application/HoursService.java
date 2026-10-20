@@ -15,6 +15,7 @@ import ca.northline.availability.domain.SlotPlanner;
 import ca.northline.availability.domain.WeeklyHours;
 import ca.northline.catalogue.api.CatalogueFacts;
 import ca.northline.catalogue.api.CatalogueFacts.ServiceDuration;
+import ca.northline.region.api.CancellationRules;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
@@ -48,6 +49,12 @@ class HoursService implements ViewHours, SaveHours, PreviewSlots, ListPreviewSer
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final MarketZones zones;
+    private final CancellationRules cancellations;
+
+    /** S-153: the region's limits on the late-cancellation terms (region.regions.cancel_max_*). */
+    static final String WINDOW_LIMIT = "Choose a window from 0 to %d hours.";
+
+    static final String FEE_LIMIT = "Choose a fee from 0 to %d percent.";
 
     @Override
     public HoursView view(String merchantId) {
@@ -111,18 +118,30 @@ class HoursService implements ViewHours, SaveHours, PreviewSlots, ListPreviewSer
 
     @Override
     public RulesView rules(String merchantId) {
-        var market = team.place(merchantId).marketId();
+        var place = team.place(merchantId);
+        var market = place.marketId();
+        var limits = cancellations.of(place.province(), market);
         return new RulesView(
                 hours.rules(merchantId)
                         .orElseGet(() -> BookingRules.defaults().withServiceAreas(zones.defaults(market))),
                 zones.offered(market),
-                hours.lastSaved(merchantId).orElse(null));
+                hours.lastSaved(merchantId).orElse(null),
+                limits.maxWindowHours(),
+                limits.maxFeeBps());
     }
 
     @Override
     @Transactional
     public RulesView saveRules(String merchantId, String actorId, BookingRules rules) {
-        BookingRules.offeredIn(zones.offered(team.place(merchantId).marketId()), () -> rules, rules.serviceAreas());
+        var place = team.place(merchantId);
+        BookingRules.offeredIn(zones.offered(place.marketId()), () -> rules, rules.serviceAreas());
+        var limits = cancellations.of(place.province(), place.marketId());
+        if (rules.rescheduleFreeMin() / 60 > limits.maxWindowHours()) {
+            throw RuleViolation.of("rescheduleFreeMin", "range", WINDOW_LIMIT.formatted(limits.maxWindowHours()));
+        }
+        if (rules.lateCancelFeeBps() != null && rules.lateCancelFeeBps() > limits.maxFeeBps()) {
+            throw RuleViolation.of("lateCancelFee", "range", FEE_LIMIT.formatted(limits.maxFeeBps() / 100));
+        }
         var at = clock.instant();
         hours.saveRules(merchantId, rules, at);
         events.publishEvent(new AvailabilityChanged(Ids.next(), at, merchantId, actorId, "rules"));

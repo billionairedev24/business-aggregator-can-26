@@ -200,6 +200,7 @@ northline:
     stripe-webhook-tolerance: ${STRIPE_WEBHOOK_TOLERANCE:PT5M} # oldest signed delivery accepted (replay protection)
     webhook-rate-limit: ${STRIPE_WEBHOOK_RATE_LIMIT:600}       # deliveries per minute and client address
     reconcile-cron: ${PAYMENTS_RECONCILE_CRON:0 41 4 * * *}   # S-85 Stripe ↔ ledger, yesterday, platform zone
+    unheld-booking-grace: ${PAYMENTS_UNHELD_BOOKING_GRACE:PT30M}  # S-153: a booking's card hold never confirmed → canceled
   stripe:                                                      # Stripe Connect (merchants) outside local/test
     secret-key: ${STRIPE_SECRET_KEY:}
     api-base: ${STRIPE_API_BASE:}
@@ -490,6 +491,19 @@ northline:
     minutes-per-km: ${BOOKING_ETA_MINUTES_PER_KM:2.0}              # straight-line estimate (≈ 30 km/h)
     share-interval: PT5S
     ttl: PT5M
+  # S-153: the balance of a deposit quote is held this long before the event (off-session, the deposit's card), retried
+  # every retry-every up to attempts times (the customer and the provider are told of each failure); the job runs every
+  # interval (not under test). Late cancellations: region data (region.regions.cancel_*) over these platform defaults.
+  booking.balance:
+    lead: ${BOOKING_BALANCE_LEAD:PT48H}
+    retry-every: ${BOOKING_BALANCE_RETRY_EVERY:PT6H}
+    attempts: ${BOOKING_BALANCE_ATTEMPTS:3}
+    interval: ${BOOKING_BALANCE_JOB_INTERVAL:PT5M}
+  region.cancellation:
+    window-hours: ${REGION_CANCEL_WINDOW_HOURS:12}                 # free cancellation until this long before the start
+    fee-bps: ${REGION_CANCEL_FEE_BPS:0}                            # a provider's default late-cancellation fee (0 = none)
+    max-window-hours: ${REGION_CANCEL_MAX_WINDOW_HOURS:72}         # the longest window a provider may set
+    max-fee-bps: ${REGION_CANCEL_MAX_FEE_BPS:5000}                 # the highest fee a provider may set (50 %)
   # S-91 console overview, "System health": PromQL over the S-111 metrics (docs/runbooks/observability.md § Console
   # health). `none` = every signal unknown (local, test, or no metrics store yet).
   # S-81 delivery ops map: an XYZ raster basemap under the zones and couriers (docs/runbooks/README.md § Console map).

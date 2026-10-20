@@ -112,3 +112,16 @@ export function useFavourite() {
     ]),
   });
 }
+
+/** S-153, Account › Quote requests: every request with what became of it (`GET /api/v1/me/quote-requests`). */
+export const RequestRow = z.object({
+  id: z.string(), ref: z.string(), title: z.string(), createdAt: z.string(), expiresAt: z.string().nullish(),
+  providers: z.number().int(), quotes: z.number().int(), lowestCents: z.number().nullish(),
+  status: z.enum(['waiting', 'quoted', 'accepted', 'declined', 'expired']).catch('waiting'),
+  bookingId: z.string().nullish(), photoCount: z.number().int(), href: z.string(),
+});
+export type RequestRow = z.infer<typeof RequestRow>;
+export const myRequestsQuery = queryOptions({
+  queryKey: ['me', 'quote-requests'],
+  queryFn: async () => (await http('/api/v1/me/quote-requests', {}, z.object({ items: z.array(RequestRow) }))).items,
+});

@@ -29,6 +29,7 @@ class PaymentsScheduler {
         step("release escrow", "payments.release_escrow", jobs::releaseDueEscrows);
         step("stripe events", "payments.stripe_events", jobs::processStripeEvents);
         step("renew card holds", "payments.renew_holds", jobs::renewAuthorizations);
+        step("unheld booking payments", "payments.unheld_booking_payments", jobs::cancelUnheldBookingPayments);
         step("lapse cases", "payments.lapse_cases", jobs::lapseCases);
         step("refund queue", "payments.refund_queue", jobs::payRefundQueue);
         step("stripe tax", "payments.stripe_tax", jobs::syncTax);

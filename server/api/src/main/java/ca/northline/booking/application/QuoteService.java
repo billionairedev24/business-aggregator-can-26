@@ -71,7 +71,8 @@ class QuoteService implements ListQuoteRequests, SendQuote, ReviseQuote, Decline
                             r.createdAt(),
                             r.respondBy(),
                             r.expiresAt(),
-                            quote == null ? null : withAttachments(quote));
+                            quote == null ? null : withAttachments(quote),
+                            r.photoIds());
                 })
                 .toList();
     }

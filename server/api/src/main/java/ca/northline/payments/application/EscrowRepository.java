@@ -80,6 +80,12 @@ public interface EscrowRepository {
 
     Optional<Intent> intentByStripeId(String stripePaymentIntent);
 
+    /**
+     * S-153: a booking's PaymentIntents (and balance attempts) still holding or waiting for the card but never recorded
+     * as escrow, created before {@code createdBefore} — locked, skipping rows another replica holds.
+     */
+    List<Intent> unheldBookingIntents(Instant createdBefore, int limit);
+
     /** The current (not replaced) PaymentIntent of a reference, locked for the rest of the transaction. */
     Optional<Intent> currentIntentForUpdate(String refType, String refId);
 

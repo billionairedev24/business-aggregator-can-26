@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:booking.booking_balance_held:1",
+  "description": "booking.balance_held (S-153) — the balance of an accepted deposit quote is held in escrow before the event. Topic booking.booking, key = booking id.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "customerId",
+    "amountCents",
+    "taxCents",
+    "startsAt"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "booking.bookings.id"
+    },
+    "merchantId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    },
+    "customerId": {
+      "type": "string",
+      "description": "identity.users.id of the customer"
+    },
+    "amountCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "taxCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "startsAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

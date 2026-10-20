@@ -1,4 +1,4 @@
-import { Bell, CalendarCheck, CreditCard, Heart, Leaf, Lifebuoy, MapPinLine, Receipt, ShieldCheck, SignOut, Star, Storefront, Translate, User, UserCircle, Wallet } from '@phosphor-icons/react';
+import { Bell, CalendarCheck, ChatCircleText, ClipboardText, CreditCard, Heart, Leaf, Lifebuoy, MapPinLine, Receipt, ShieldCheck, SignOut, Star, Storefront, Translate, User, UserCircle, Wallet } from '@phosphor-icons/react';
 import { AccountMenu, formatMoney, formatNumber, fullNavEnabled, useLocale, type AccountMenuSection } from '@northline/ui';
 import { useAccountSummary, type AccountSummary } from '../account/api';
 import type { SessionUser } from '../session/api';
@@ -8,6 +8,8 @@ import { useShellT } from './messages';
 export const ACCOUNT_LINKS = {
   orders: '/account/orders',
   bookings: '/account/orders?tab=bookings',
+  quoteRequests: '/account/orders?tab=quotes',
+  messages: '/account/messages',
   account: '/account',
   favourites: '/account?tab=favourites',
   wallet: '/account?tab=wallet',
@@ -34,7 +36,7 @@ export function AccountArea({ user, onSignOut, onToggleLocale }: { user: Session
   // redesign § 3.6: Wallet & points, Dietary and Plus are hidden for the demo (VITE_NL_FULL_NAV brings them back)
   const full = fullNavEnabled();
   const sections: AccountMenuSection[] = [
-    { heading: t('activity'), items: [item('orders', Receipt, v.orders), item('bookings', CalendarCheck), item('favourites', Heart, v.favourites), ...(full ? [item('wallet', Wallet, v.wallet)] : [])] },
+    { heading: t('activity'), items: [item('orders', Receipt, v.orders), item('bookings', CalendarCheck), item('quoteRequests', ClipboardText), item('messages', ChatCircleText), item('favourites', Heart, v.favourites), ...(full ? [item('wallet', Wallet, v.wallet)] : [])] },
     { heading: t('account'), items: [item('account', UserCircle), item('profile', User, name), item('addresses', MapPinLine, v.addresses), item('payments', CreditCard, v.payments), item('security', ShieldCheck, v.security)] },
     // redesign § 3.3: the FR/EN switch lives here and in the footer (it left the header)
     { heading: t('preferences'), items: [item('notifications', Bell, v.quiet), { key: 'language', label: t('langSwitch'), lang: locale === 'fr' ? 'en-CA' : 'fr-CA', icon: Translate, value: v.language, onSelect: onToggleLocale }, ...(full ? [item('dietary', Leaf, v.dietary), item('plus', Star, v.plus)] : [])] },

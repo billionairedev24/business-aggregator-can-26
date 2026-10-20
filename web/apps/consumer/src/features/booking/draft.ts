@@ -29,6 +29,10 @@ export interface Draft {
   agreePolicies: boolean;
   agreeTerms: boolean;
   hold?: { holdId: string; bookingId: string; startsAt: string; expiresAt: string };
+  /** S-153: the provider's late-cancellation terms, from its calendar (shown before paying) */
+  cancellation?: { windowHours: number; feeBps: number; feeCents: number };
+  /** S-153: photos of the job, uploaded first (signed in) */
+  photos?: { id: string; fileName: string; contentType: string; byteSize: number }[];
 }
 
 export const EMPTY: Draft = {
@@ -108,5 +112,6 @@ export function toRequest(d: Draft, holdId: string, serviceId: string, opts: { v
     contactPhone: d.contactPhone.trim() || undefined, contactPreference: VALUES.contactPref[d.contactPref],
     flexibility: pick(VALUES.flexibility, d.flexibility),
     agreePolicies: d.agreePolicies, agreeTerms: d.agreeTerms,
+    photoIds: d.photos?.length ? d.photos.map(p => p.id) : undefined,
   };
 }

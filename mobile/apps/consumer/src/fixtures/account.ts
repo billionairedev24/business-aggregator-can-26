@@ -186,6 +186,7 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       },
       provider: { merchantId: 'm-sable', slug: 'sable-and-soda', name: 'Sable & Soda', tier: 'master', rating: 4.9, reviewCount: 44, onTimePct: 0.98, disputePct: 0.01, verifiedFacts: ['Licensed server'] },
       title: 'Mocktail bar · 40 guests', area: 'Sampleville', bookingId: q.booking ?? null, others: [],
+      cancellation: { windowHours: 48, feeBps: 0, feeCents: 5000 },
     };
   };
   const caseRow = (c: AccountFixtureState['cases'][number]) => ({

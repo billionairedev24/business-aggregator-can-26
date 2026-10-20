@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:booking.booking_balance_failed:1",
+  "description": "booking.balance_failed (S-153) — the card couldn't hold the balance of an accepted deposit quote; retryAt = the next attempt, null after the last one. Topic booking.booking, key = booking id.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "customerId",
+    "amountCents",
+    "taxCents",
+    "startsAt",
+    "attempt",
+    "reason"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "booking.bookings.id"
+    },
+    "merchantId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    },
+    "customerId": {
+      "type": "string",
+      "description": "identity.users.id of the customer"
+    },
+    "amountCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "taxCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "startsAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "declined",
+        "authentication_required",
+        "no_saved_card"
+      ]
+    },
+    "retryAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  }
+}

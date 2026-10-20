@@ -267,7 +267,7 @@ S-98's temporary You screen (`src/journeyA/You.tsx`) is gone. What S-101 decided
   area's, `/me/favourites` the services area's, the step-up the auth area's; facts both journeys show (the inbox's
   bookings, the quiet hours, favourites) live in one state.
 - **Not drawn, for lack of an api:** the wallet's "Provider-funded rewards near you" and points "Activity", "Invite a
-  neighbour", the quote's "Ask a question", the security centre's "Require Face ID for payments over $100" (§ API gaps).
+  neighbour", the security centre's "Require Face ID for payments over $100" (§ API gaps).
 
 Until its story builds it, each route renders `<Stub screen="…" />`: the design's header or name, the story and the
 api above; personal stubs already show guests the sign-in prompt.
@@ -348,7 +348,11 @@ Areas: `shop` (S-99), `services` (S-100), `account` (S-101). Don't edit another 
   straight-line estimate while the Studio member shares their position on the way; never the position). Still no
   map, member photo, vehicle or plate, in-app call, or time-boxed access-code sharing; completion photos can't be
   downloaded by the customer.
-- **Messages (C3 "Message"):** no consumer messaging endpoint; the provider page offers favourites instead.
+- **Messages (S-153):** the quote's "Ask a question" and the booking's "Message …" open the request's or the booking's
+  thread (`/messages/<id>`, the push's `/app/messages/<id>`; list under You › Messages), read every 15 s while open —
+  no live stream on the phone (no EventSource). The provider page's "Message" still needs a request or a booking
+  first. Photos go on quote requests (JPEG/PNG from the phone); the booking's "Cancel" shows the terms and the fee first;
+  a deposit quote's balance that couldn't be held is paid on the website (the app has no card sheet for it yet).
 - **SSE on React Native:** `GET /me/orders/{id}/events` needs an EventSource; React Native has none built in (S-99
   polls every 15 s).
 - **Payments:** S-99 added Stripe's React Native SDK (no config plugin needed for cards; the publishable key comes

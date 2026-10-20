@@ -6,6 +6,7 @@
  *   https://<consumer host>/app/bookings/<id>      ca.northline.app://bookings/<id>        → the booking (ETA, sign-off)
  *   https://<consumer host>/app/quotes/<id>        ca.northline.app://quotes/<id>          → the quote received
  *   https://<consumer host>/app/cases/<number>     ca.northline.app://cases/<number>       → the refund case
+ *   https://<consumer host>/app/messages/<id>      ca.northline.app://messages/<id>        → a thread with a provider (S-153)
  *   https://<consumer host>/courier/run            ca.northline.courier://run              → the courier's run
  *
  * The https links are universal links / App Links: the consumer host's association files (S-97) give `/app/*` to the
@@ -17,6 +18,7 @@ export type DeepLink =
   | { screen: 'booking'; bookingId: string }
   | { screen: 'quote'; quoteId: string }
   | { screen: 'case'; caseNumber: string }
+  | { screen: 'thread'; threadId: string }
   | { screen: 'courierRun' };
 
 export const CONSUMER_SCHEME = 'ca.northline.app';
@@ -83,6 +85,10 @@ export function parseDeepLink(link: string, hosts: readonly string[]): DeepLink 
       const caseNumber = id(second, 2);
       return caseNumber ? { screen: 'case', caseNumber } : null;
     }
+    case 'messages': {
+      const threadId = id(second, 2);
+      return threadId ? { screen: 'thread', threadId } : null;
+    }
     case 'courier':
       return second === 'run' && segments.length === 2 ? { screen: 'courierRun' } : null;
     default:
@@ -101,6 +107,8 @@ export function routeOf(link: DeepLink): string {
       return `/quotes/${encodeURIComponent(link.quoteId)}`;
     case 'case':
       return `/cases/${encodeURIComponent(link.caseNumber)}`;
+    case 'thread':
+      return `/messages/${encodeURIComponent(link.threadId)}`;
     case 'courierRun':
       return '/run';
   }

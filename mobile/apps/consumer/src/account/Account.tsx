@@ -220,6 +220,7 @@ export function Account() {
         {fullNav() ? (
           <SettingsRow icon="list-checks" name={t('account.you.preferences')} value={value(s?.dietary?.length ? s.dietary.join(', ') : null)} onPress={() => router.push('/account/preferences')} testID="row-preferences" />
         ) : null}
+        <SettingsRow icon="chat-circle" name={t('hire.messages.row')} onPress={() => router.push('/messages' as never)} testID="row-messages" />
         <SettingsRow icon="heart" name={t('rd.account.saved')} value={value(s?.favourites != null ? String(s.favourites) : null)} onPress={() => router.push('/account/favourites')} testID="row-favourites" />
       </SettingsGroup>
       <SettingsGroup title={t('rd.account.groupHelp')}>
