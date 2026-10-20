@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
  * Projects catalogue, food, merchant, storefront, trust and availability events into Elasticsearch (S-43): each event
  * names a scope — a listing, a dish or a whole merchant — which {@link SearchProjection} re-reads from Postgres and
  * writes to {@code listings_en} and {@code listings_fr} (visible documents indexed, the rest deleted, versioned).
- * Retries after 10 s, 60 s and 5 min on
+ * Retries after 10 s and 5 min (S-152: was 10 s, 60 s, 5 min — re-indexing is idempotent) on
  * {@code <topic>.search-indexer.retry-<n>}, then {@code <topic>.dlq} — the policy of consumer {@code search-indexer}
  * in deploy/kafka/topics.yaml (TopicCatalogueTest keeps them equal; the topics are provisioned, never auto-created).
  * Parsing, schema validation, dedupe and metrics: {@link EventProcessing}.
@@ -33,12 +33,12 @@ class SearchIndexer {
     private final SearchProjection projection;
 
     @RetryableTopic(
-            attempts = "4",
-            // 10 s, 60 s, 5 min; tests shorten them (the topic suffixes don't depend on the delays)
+            attempts = "3",
+            // 10 s, 5 min; tests shorten them (the topic suffixes don't depend on the delays)
             backOff =
                     @BackOff(
                             delayString = "${northline.search.retry.delay:10000}",
-                            multiplierString = "${northline.search.retry.multiplier:6}",
+                            multiplierString = "${northline.search.retry.multiplier:30}",
                             maxDelayString = "${northline.search.retry.max-delay:300000}"),
             retryTopicSuffix = ".search-indexer.retry",
             dltTopicSuffix = ".dlq",

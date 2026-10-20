@@ -9962,6 +9962,14 @@ fr-CA. Runbooks: [loyalty.md](runbooks/loyalty.md) (new), [stripe.md § 11–12]
 - **Account navigation:** the consumer web's Wallet & points / Plus tabs and the app's wallet card were hidden in
   2026-10 (nothing real behind them); they are shown again now that they are real.
 
+- **Topic budget (lead's call, after merging S-153):** S-153's `booking.quote_request` and `messaging.message` with
+  S-152's `loyalty.points` made 101 topics, one over an Event Hubs Premium processing unit (100, `TopicCatalogueTest`).
+  Consumer `search-indexer`'s retry delays went from `[10, 60, 300]` to `[10, 300]` s (`attempts` 4 → 3, multiplier 6
+  → 30): 7 fewer retry topics, **94 in all, 6 to spare**. It's safe because the indexer's work is idempotent
+  re-indexing (it re-reads the scope from Postgres, documents are versioned) and failures still end in the `.dlq` after
+  5 min. Rejected: a second processing unit in every Azure environment (cost), or no topic for points (the worker
+  sends every notice). [infrastructure.md § 5.3](runbooks/infrastructure.md#53-kafka-topics-and-credentials) keeps the count.
+
 **Schema (additive, V422–V431** — first assigned V395–V404, moved above S-154's V415/V416 and S-153's V417–V421 by the ordering rule**):** V422 `region.loyalty_rules`; V423 `trust.points_ledger` unique `(user_id, ref_type, ref_id)` for
 earning kinds and an expiry index, `trust.merchant_rewards.budget_cents/spent_cents/listing_ids/started_at/exhausted_at`,
 `trust.reward_credits`; V424 schema `loyalty` (`earnings`, `referral_codes`, `referrals`, `referral_attempts`,
