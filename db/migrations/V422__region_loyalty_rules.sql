@@ -1,4 +1,4 @@
--- S-152 Loyalty points, provider-funded rewards and Plus (range V425–V434). Additive only.
+-- S-152 Loyalty points, provider-funded rewards and Plus (range V422–V431). Additive only.
 -- See docs/DECISIONS.md "S-152" and docs/runbooks/loyalty.md.
 --
 -- The earning rules are region data: how many points a dollar of a completed sale earns, when points expire and what a

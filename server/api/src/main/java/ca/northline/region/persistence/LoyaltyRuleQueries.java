@@ -17,7 +17,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@link LoyaltyRules} over {@code region.loyalty_rules} (V425): the market's row, else its province's (the market's
+ * {@link LoyaltyRules} over {@code region.loyalty_rules} (V422): the market's row, else its province's (the market's
  * parent, or the province by code), else the default row. Read on each call: a release or a checkout asks once.
  */
 @Repository

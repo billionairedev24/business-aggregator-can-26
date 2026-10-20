@@ -9884,11 +9884,11 @@ fr-CA. Runbooks: [loyalty.md](runbooks/loyalty.md) (new), [stripe.md § 11–12]
 - **Account navigation:** the consumer web's Wallet & points / Plus tabs and the app's wallet card were hidden in
   2026-10 (nothing real behind them); they are shown again now that they are real.
 
-**Schema (additive, V425–V434** — first assigned V395–V404, moved above S-154's V415–V424 by the ordering rule**):** V425 `region.loyalty_rules`; V426 `trust.points_ledger` unique `(user_id, ref_type, ref_id)` for
+**Schema (additive, V422–V431** — first assigned V395–V404, moved above S-154's V415/V416 and S-153's V417–V421 by the ordering rule**):** V422 `region.loyalty_rules`; V423 `trust.points_ledger` unique `(user_id, ref_type, ref_id)` for
 earning kinds and an expiry index, `trust.merchant_rewards.budget_cents/spent_cents/listing_ids/started_at/exhausted_at`,
-`trust.reward_credits`; V427 schema `loyalty` (`earnings`, `referral_codes`, `referrals`, `referral_attempts`,
-`memberships`); V428 `catalogue.offers.member_discount_pct`; V429 `payments.plus_invoices`, `payments.reward_charges`;
-dev seed V434 (a 2× reward with a $50 budget for Prairie Wrench, a 10 % member price, Amara's code `AMARAK26`).
+`trust.reward_credits`; V424 schema `loyalty` (`earnings`, `referral_codes`, `referrals`, `referral_attempts`,
+`memberships`); V425 `catalogue.offers.member_discount_pct`; V426 `payments.plus_invoices`, `payments.reward_charges`;
+dev seed V431 (a 2× reward with a $50 budget for Prairie Wrench, a 10 % member price, Amara's code `AMARAK26`).
 Configuration: `PLUS_BILLING_PROVIDER`, `STRIPE_PLUS_MONTHLY_PRICE`, `STRIPE_PLUS_ANNUAL_PRICE`, `PLUS_AUTOMATIC_TAX`,
 `PLUS_*` benefits and prices, `LOYALTY_*` jobs and limits (no new secrets). Topic `loyalty.points`.
 

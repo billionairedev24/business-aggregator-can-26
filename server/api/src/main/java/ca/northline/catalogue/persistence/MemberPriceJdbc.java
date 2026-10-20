@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link MemberPriceStore} over {@code catalogue.offers} (V428). */
+/** {@link MemberPriceStore} over {@code catalogue.offers} (V425). */
 @Repository
 @RequiredArgsConstructor
 class MemberPriceJdbc implements MemberPriceStore {
