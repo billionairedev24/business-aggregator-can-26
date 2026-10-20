@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { forwardRef, useImperativeHandle } from 'react';
-import { Linking, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { View } from 'react-native';
 import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
 import { memorySecureStorage } from '@northline/mobile-kit';
@@ -122,7 +123,9 @@ describe('earnings and payouts (S-151)', () => {
     expect(screen.getByText('Not paid out yet: $19.00')).toBeTruthy();
     expect(screen.getByText(/2 pickups · 2 drop-offs · 0 failed/)).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Set up payouts' }));
-    await waitFor(() => expect(Linking.openURL).toHaveBeenCalledWith('https://connect.stripe.example/setup/fixture'));
+    await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://connect.stripe.example/setup/fixture'));
+    // closing the browser reads the account again: asked for once, now "finish"
+    expect(await screen.findByRole('button', { name: 'Finish payout setup' })).toBeTruthy();
     expect(server.payout.onboardingLinks).toBe(1);
   });
 

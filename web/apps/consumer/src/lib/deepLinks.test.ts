@@ -10,6 +10,7 @@ describe('app deep links on the web', () => {
     ['/app/bookings/B1', '/account/orders'],
     ['/app/cases/RF-2214', '/account/orders?view=cases'],
     ['/courier/run', '/'],
+    ['/courier/payouts', '/'],
   ])('%s → %s', (path, page) => {
     expect(webPageOf(path)).toBe(page);
     expect(deepLinkAnswer({ kind: 'site' }, path)).toEqual({ status: 302, headers: { location: page, 'cache-control': 'no-store' } });

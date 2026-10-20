@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
 
@@ -27,7 +28,11 @@ export default function EarningsScreen() {
   const q = useQuery<Earnings>({ queryKey: EARNINGS_KEY, queryFn: () => services().courier.earnings() });
   const onboarding = useMutation({
     mutationFn: () => services().courier.payoutOnboarding(),
-    onSuccess: (link) => void Linking.openURL(link.url),
+    // the in-app browser: Stripe's pages, then its return page; closing it reads the account again
+    onSuccess: async (link) => {
+      await WebBrowser.openBrowserAsync(link.url);
+      await q.refetch();
+    },
   });
   const m = (c: number) => money(c, locale);
 
