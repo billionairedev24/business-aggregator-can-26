@@ -256,6 +256,7 @@ include $(ROOT)/make/mobile-consumer.mk
 include $(ROOT)/make/mobile-release.mk
 include $(ROOT)/make/mobile-dev.mk
 include $(ROOT)/make/db.mk
+include $(ROOT)/make/creds.mk
 include $(ROOT)/make/kafka.mk
 include $(ROOT)/make/search.mk
 include $(ROOT)/make/docs.mk

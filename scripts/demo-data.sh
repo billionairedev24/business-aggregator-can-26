@@ -67,12 +67,14 @@ case "$env_name" in
     : "${DEMO_STUDIO_URL:=http://localhost:3100}" "${DEMO_CONSUMER_URL:=http://localhost:3000}"
     : "${DEMO_CONSOLE_URL:=http://localhost:3200}" "${DEMO_AUTH_URL:=http://localhost:9000}"
     if [ -z "${DEMO_STAFF_IDENTIFIER:-}" ]; then
-      # the dev seed's console reviewer (local databases only — DevSeedGuard keeps the seed out of every other one)
+      # the dev seed's console reviewer (local databases only — DevSeedGuard keeps the seed out of every other one), with
+      # her seeded authenticator key (S-150, scripts/dev/personas.json) so the demo run spends no backup codes
       eval "$(node -e '
         const s = require(process.argv[1]).personas.staff;
-        console.log(`DEMO_STAFF_IDENTIFIER=${JSON.stringify(s.identifier)} DEMO_STAFF_BACKUP_CODES=${JSON.stringify((s.backupCodes ?? []).join(","))}`);
-      ' "$repo/web/e2e/data/local.json")"
-      export DEMO_STAFF_IDENTIFIER DEMO_STAFF_BACKUP_CODES
+        const key = require(process.argv[2]).personas.find(p => p.email === s.identifier)?.totpSecret ?? "";
+        console.log(`DEMO_STAFF_IDENTIFIER=${JSON.stringify(s.identifier)} DEMO_STAFF_BACKUP_CODES=${JSON.stringify((s.backupCodes ?? []).join(","))} DEMO_STAFF_TOTP_SECRET=${JSON.stringify(key)}`);
+      ' "$repo/web/e2e/data/local.json" "$repo/scripts/dev/personas.json")"
+      export DEMO_STAFF_IDENTIFIER DEMO_STAFF_BACKUP_CODES DEMO_STAFF_TOTP_SECRET
     fi
     ;;
   gcp-dryrun | dryrun | ovh-vps | ovh-mks)
