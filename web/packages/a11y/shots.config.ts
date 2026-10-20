@@ -33,7 +33,7 @@ export default defineConfig({
       { command: 'node scripts/mock-api.mjs consumer 4643', url: 'http://127.0.0.1:4643/__mock/health', env: { NL_MOCK_SHOTS: '1' }, reuseExistingServer: false },
       {
         command: 'node server/node-server.mjs', cwd: `${web}apps/consumer`, url: 'http://127.0.0.1:4644/healthz', reuseExistingServer: false, timeout: 60_000,
-        env: { PORT: '4644', HOST: '127.0.0.1', NL_BFF_URL: 'http://127.0.0.1:4643', NL_SITE_ORIGIN: 'http://127.0.0.1:4644' },
+        env: { PORT: '4644', HOST: '127.0.0.1', NL_BFF_URL: 'http://127.0.0.1:4643', NL_SITE_ORIGIN: 'http://127.0.0.1:4644', NL_ERROR_PREVIEW: '1' },
       },
     ] : []),
   ],
