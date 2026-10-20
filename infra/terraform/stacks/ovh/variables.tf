@@ -12,14 +12,14 @@ variable "service_name" {
   }
 }
 
-variable "region" {
-  description = "OVHcloud Public Cloud region. Canadian data residency: BHS5 (Beauharnois, Québec) only — Toronto is added once its services (Object Storage, Managed Kubernetes, Managed PostgreSQL) are confirmed there."
+variable "location" {
+  description = "Where everything of the target lives (locations.json, S-160): us-east-va (Vint Hill, OVHcloud US — the default for now), us-west-or (Hillsboro, OVHcloud US) or ca-bhs (Beauharnois, OVHcloud Canada). It decides the API endpoint, the Public Cloud region, Object Storage's S3 endpoint and region, the Managed Databases region and the VPS datacentre. Data residency: a US location is for fake demo data under the dev profile only — the northline chart refuses it with staging or prod (global.hostingCountry, docs/runbooks/ovh.md § Data residency)."
   type        = string
-  default     = "BHS5"
+  default     = "us-east-va"
 
   validation {
-    condition     = contains(["BHS5"], var.region)
-    error_message = "Canadian data residency: region must be an OVHcloud Canadian region (BHS5, Beauharnois)."
+    condition     = contains(keys(jsondecode(file("${path.module}/locations.json"))), var.location)
+    error_message = "location must be one of locations.json: us-east-va, us-west-or (OVHcloud US) or ca-bhs (OVHcloud Canada)."
   }
 }
 
