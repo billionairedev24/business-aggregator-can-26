@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:orders.return_updated:1",
+  "description": "return.updated (S-151) \u2014 topic orders.return, key = return id. A customer's return moved on (requested, approved, declined, escalated, collected, received, refunded, withdrawn). Ids, codes and the amount only.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "returnRef",
+    "orderId",
+    "merchantId",
+    "state",
+    "amountCents"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "orders.returns.id"
+    },
+    "returnRef": {
+      "type": "string",
+      "description": "RT-\u2026"
+    },
+    "orderId": {
+      "type": "string",
+      "description": "orders.orders.id"
+    },
+    "merchantId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    },
+    "state": {
+      "enum": [
+        "requested",
+        "approved",
+        "declined",
+        "escalated",
+        "collected",
+        "received",
+        "refunded",
+        "withdrawn"
+      ]
+    },
+    "method": {
+      "enum": [
+        "pickup",
+        "dropoff",
+        null
+      ]
+    },
+    "amountCents": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

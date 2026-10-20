@@ -5,16 +5,21 @@ import type { Run, Stop } from './api/courier';
  * the name an age-restricted order's photo ID must show, on the drop-off screen).
  */
 export function stopName(stop: Stop): string {
-  if (stop.kind !== 'dropoff') return stop.place?.name ?? stop.orderRef ?? '';
+  if (!atDoor(stop)) return stop.place?.name ?? stop.orderRef ?? '';
   return stop.dropoff?.street ?? stop.orderRef ?? '';
 }
 
+/** A customer's door (a drop-off, or a return collected there — S-151) rather than a business. */
+export const atDoor = (stop: Stop) => stop.kind === 'dropoff' || stop.kind === 'collect';
+
 /** The stop's kind as the app names it. */
-export const kindKey = (stop: Stop) => (stop.kind === 'pickup' ? 'stop.pickup' : stop.kind === 'return' ? 'stop.return' : 'stop.dropoff') as 'stop.pickup' | 'stop.return' | 'stop.dropoff';
+export const kindKey = (stop: Stop) =>
+  (stop.kind === 'pickup' ? 'stop.pickup' : stop.kind === 'return' ? 'stop.return' : stop.kind === 'collect' ? 'stop.collect' : 'stop.dropoff') as
+    'stop.pickup' | 'stop.return' | 'stop.collect' | 'stop.dropoff';
 
 /** The full address line(s) to show and to search in maps. */
 export function stopAddress(stop: Stop): string {
-  if (stop.kind !== 'dropoff') return stop.place?.address ?? '';
+  if (!atDoor(stop)) return stop.place?.address ?? '';
   const d = stop.dropoff;
   if (!d) return '';
   return [d.street, [d.city, d.postal].filter(Boolean).join(' ')].filter(Boolean).join(', ');
@@ -36,15 +41,15 @@ export function pickedUp(run: Run, stop: Stop): boolean {
 }
 
 function coordsOrAddress(stop: Stop): string {
-  const lat = stop.kind !== 'dropoff' ? stop.place?.lat : stop.dropoff?.lat;
-  const lng = stop.kind !== 'dropoff' ? stop.place?.lng : stop.dropoff?.lng;
+  const lat = !atDoor(stop) ? stop.place?.lat : stop.dropoff?.lat;
+  const lng = !atDoor(stop) ? stop.place?.lng : stop.dropoff?.lng;
   return lat != null && lng != null ? `${lat},${lng}` : stopAddress(stop);
 }
 
 /** A maps link for the platform's own maps app: coordinates when known, else the address. */
 export function mapsUrl(stop: Stop, os: string): string | null {
-  const lat = stop.kind !== 'dropoff' ? stop.place?.lat : stop.dropoff?.lat;
-  const lng = stop.kind !== 'dropoff' ? stop.place?.lng : stop.dropoff?.lng;
+  const lat = !atDoor(stop) ? stop.place?.lat : stop.dropoff?.lat;
+  const lng = !atDoor(stop) ? stop.place?.lng : stop.dropoff?.lng;
   const q = lat != null && lng != null ? `${lat},${lng}` : stopAddress(stop);
   if (!q) return null;
   const query = encodeURIComponent(q);
@@ -63,8 +68,8 @@ export function navigationUrl(stop: Stop, os: string): string | null {
     return q ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}` : null;
   }
   if (os !== 'ios') return mapsUrl(stop, os);
-  const lat = stop.kind !== 'dropoff' ? stop.place?.lat : stop.dropoff?.lat;
-  const lng = stop.kind !== 'dropoff' ? stop.place?.lng : stop.dropoff?.lng;
+  const lat = !atDoor(stop) ? stop.place?.lat : stop.dropoff?.lat;
+  const lng = !atDoor(stop) ? stop.place?.lng : stop.dropoff?.lng;
   const q = lat != null && lng != null ? `${lat},${lng}` : stopAddress(stop);
   return q ? `maps:?daddr=${encodeURIComponent(q)}&dirflg=d` : null;
 }

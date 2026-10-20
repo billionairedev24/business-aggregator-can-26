@@ -35,4 +35,10 @@ public interface PaymentsJobs {
 
     /** Scheduled payouts due today, and payouts that arrived. */
     int runPayouts();
+
+    /** S-151: the weekly courier payout run (pay and tips owed), and courier payouts that arrived. */
+    int payCouriers();
+
+    /** S-151: courier payouts that arrived (every minute; their webhook may never come). */
+    int settleCourierPayouts();
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AfterSalePanel } from './AfterSalePanel';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
@@ -16,12 +17,12 @@ export interface OrdersSearch { view?: View; q?: string; province?: string; mark
 
 /** The sheet's status tag: issues in danger, finished in success, the rest neutral. */
 const SHEET_TONE: Record<Status, TagTone> = {
-  new: 'neutral', live: 'neutral', escrow: 'neutral', escrow_48h: 'warning', late: 'danger', stuck: 'danger', issue: 'danger', delivered: 'success', done: 'success', cancelled: 'neutral',
+  new: 'neutral', live: 'neutral', escrow: 'neutral', escrow_48h: 'warning', late: 'danger', stuck: 'danger', issue: 'danger', delivered: 'success', done: 'success', cancelled: 'neutral', delivery_failed: 'danger',
 };
 
 const TONE: Record<Status, DataTableTone> = {
   new: 'tag-neutral', live: 'tag-neutral', escrow: 'tag-neutral', escrow_48h: 'tag-neutral', late: 'tag-accent-2', stuck: 'tag-accent-2',
-  issue: 'tag-accent-2', delivered: 'tag-accent', done: 'tag-accent', cancelled: 'tag-neutral',
+  issue: 'tag-accent-2', delivered: 'tag-accent', done: 'tag-accent', cancelled: 'tag-neutral', delivery_failed: 'tag-accent-2',
 };
 
 /** "12 min", "2 h", "3.0 d" between two instants. */
@@ -40,6 +41,7 @@ export function issueText(r: Row, asOf: string, t: OrdersT, locale: Locale): str
     case 'stuck': return t('i_stuck');
     case 'issue': return t(r.kind === 'booking' ? 'i_issue_booking' : 'i_issue_order');
     case 'escrow_48h': return t('i_escrow', { age });
+    case 'delivery_failed': return t('i_failed');
     default: return t('none');
   }
 }
@@ -91,7 +93,7 @@ function MonitorView({ data, filter, head, onFilter }: { data: Monitor; filter: 
     { key: 'ref', label: t('c_id'), primary: true }, { key: 'type', label: t('c_type'), filter: 'facet' }, { key: 'who', label: t('c_who') },
     { key: 'amount', label: t('c_amount'), type: 'money' }, { key: 'state', label: t('c_state'), type: 'tag' }, { key: 'issue', label: t('c_issue') },
   ];
-  const kpi = (v: Exclude<View, 'all'>) => ({ key: v, label: t(`k_${v}`), value: formatNumber(data.counts[v], locale), onClick: () => onFilter({ view: v }) });
+  const kpi = (v: Exclude<View, 'all' | 'failed'>) => ({ key: v, label: t(`k_${v}`), value: formatNumber(data.counts[v], locale), onClick: () => onFilter({ view: v }) });
   return (
     <div className="bo-page">
       {head(t('sub', { week: formatNumber(data.week, locale), attention: formatNumber(data.counts.attention, locale) }))}
@@ -131,6 +133,7 @@ function RowDrawer({ row, asOf, onClose, fmt }: { row: Row; asOf: string; onClos
         ]} />
       </SheetSection>
       {row.kind === 'order' ? <DeliveryPanel query={delivery} fmt={fmt} /> : null}
+      {row.kind === 'order' ? <AfterSalePanel orderId={row.id} /> : null}
     </Drawer>
   );
 }

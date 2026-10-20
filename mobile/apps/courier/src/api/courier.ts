@@ -4,8 +4,11 @@ import type { ApiClient } from '@northline/mobile-kit';
 
 export type CourierStatus = 'offline' | 'available' | 'on_run';
 export type ShiftState = 'scheduled' | 'on' | 'done';
-/** `return`: a refused age-restricted order going back to the business (2026-10-04). */
-export type StopKind = 'pickup' | 'dropoff' | 'return';
+/**
+ * `return`: an order going back to the business — refused at an ID check (2026-10-04), a failed drop-off or a
+ * customer's return (S-151). `collect` (S-151): a customer's return collected at their door.
+ */
+export type StopKind = 'pickup' | 'dropoff' | 'return' | 'collect';
 export type StopState = 'pending' | 'arrived' | 'done';
 export type ProofKind = 'photo' | 'signature' | 'pin';
 
@@ -61,6 +64,10 @@ export interface IdCheckAnswer {
 export const REFUSE_REASONS = ['no_id', 'underage', 'mismatch', 'nobody_of_age', 'intoxicated', 'other'] as const;
 export type RefuseReason = (typeof REFUSE_REASONS)[number];
 
+/** S-151: why a drop-off couldn't be made (the api's list); `other` needs a note. */
+export const FAIL_REASONS = ['absent', 'unsafe', 'refused', 'access', 'other'] as const;
+export type FailReason = (typeof FAIL_REASONS)[number];
+
 export interface Stop {
   id: string;
   seq: number;
@@ -77,6 +84,21 @@ export interface Stop {
   proofKind: string | null;
   /** Age-restricted drop-off (2026-10-04); absent from older servers. */
   idCheck?: IdCheck | null;
+  /** S-151: why a failed drop-off failed; the return's reference on a collect or a return stop. */
+  failReason?: string | null;
+  returnRef?: string | null;
+}
+
+/** S-151: the courier's pay — today, this week (the market's zone), each run; the balance and the payout account. */
+export interface Totals { payCents: number; tipsCents: number; runs: number; stops: number }
+export interface RunEarning {
+  runId: string; label: string | null; earnedAt: string; payCents: number; tipsCents: number;
+  pickups: number; dropoffs: number; failed: number; collects: number; returns: number;
+}
+export interface PayoutAccount { payoutsEnabled: boolean; requirementsDue: number; bankLast4: string | null }
+export interface Payout { id: string; amountCents: number; state: string; createdAt: string; arrivesAt: string | null }
+export interface Earnings {
+  zone: string; today: Totals; week: Totals; runs: RunEarning[]; balanceCents: number; payoutAccount: PayoutAccount | null; payouts: Payout[];
 }
 
 export interface Run {
@@ -169,6 +191,26 @@ export class CourierApi {
   /** The refused order is back at the business. */
   async returned(stopId: string, idempotencyKey: string): Promise<Run> {
     return (await this.api.post<Run>(`/courier/stops/${encodeURIComponent(stopId)}/returned`, { idempotencyKey }))!;
+  }
+
+  /** S-151: the drop-off can't be made (after the door photo): the order goes back to the business. */
+  async fail(stopId: string, reason: FailReason, note: string | undefined, idempotencyKey: string): Promise<Run> {
+    return (await this.api.post<Run>(`/courier/stops/${encodeURIComponent(stopId)}/fail`, { json: { reason, ...(note ? { note } : {}) }, idempotencyKey }))!;
+  }
+
+  /** S-151: a customer's return collected at their door. */
+  async collect(stopId: string, idempotencyKey: string): Promise<Run> {
+    return (await this.api.post<Run>(`/courier/stops/${encodeURIComponent(stopId)}/collect`, { idempotencyKey }))!;
+  }
+
+  /** S-151: what the courier earned. */
+  async earnings(): Promise<Earnings> {
+    return (await this.api.get<Earnings>('/courier/earnings'))!;
+  }
+
+  /** S-151: Stripe's onboarding for payouts (the api picks where it returns). */
+  async payoutOnboarding(): Promise<{ url: string }> {
+    return (await this.api.post<{ url: string }>('/courier/payout-account/onboarding', { json: {} }))!;
   }
 
   async ping(lat: number, lng: number, heading?: number | null): Promise<Ping> {

@@ -44,7 +44,8 @@ class OrdersMonitorService implements MonitorOrders {
 
     static final int ROWS = 300;
 
-    private static final Set<Status> ATTENTION = EnumSet.of(Status.ISSUE, Status.LATE, Status.STUCK, Status.ESCROW_48H);
+    private static final Set<Status> ATTENTION =
+            EnumSet.of(Status.ISSUE, Status.LATE, Status.STUCK, Status.ESCROW_48H, Status.DELIVERY_FAILED);
     private static final Set<Status> LIVE = EnumSet.of(Status.NEW, Status.LIVE, Status.LATE, Status.STUCK);
     private static final Set<Status> LATE = EnumSet.of(Status.LATE, Status.STUCK);
 
@@ -94,6 +95,7 @@ class OrdersMonitorService implements MonitorOrders {
                 rows.stream().filter(r -> LIVE.contains(r.status())).count(),
                 rows.stream().filter(r -> r.status() == Status.ESCROW_48H).count(),
                 rows.stream().filter(r -> LATE.contains(r.status())).count(),
+                rows.stream().filter(r -> r.status() == Status.DELIVERY_FAILED).count(),
                 rows.size());
         var shown = rows.stream().filter(r -> in(query.view(), r.status())).toList();
         var week = orderFigures.placed(place.scope(), since, now) + bookingFigures.made(place.scope(), since, now);
@@ -111,12 +113,14 @@ class OrdersMonitorService implements MonitorOrders {
             case LIVE -> LIVE.contains(status);
             case ESCROW -> status == Status.ESCROW_48H;
             case LATE -> LATE.contains(status);
+            case FAILED -> status == Status.DELIVERY_FAILED;
             case ALL -> true;
         };
     }
 
     private static boolean open(String orderState) {
-        return !Set.of("delivered", "confirmed", "refunded", "cancelled").contains(orderState);
+        return !Set.of("delivered", "confirmed", "refunded", "cancelled", "returned", "delivery_failed")
+                .contains(orderState);
     }
 
     private Row row(
@@ -129,6 +133,8 @@ class OrdersMonitorService implements MonitorOrders {
         Instant since = null;
         if (o.state().equals("cancelled")) {
             status = Status.CANCELLED;
+        } else if (o.state().equals("delivery_failed")) {
+            status = Status.DELIVERY_FAILED;
         } else if (o.issue()) {
             status = Status.ISSUE;
         } else if (stuck) {
@@ -142,7 +148,7 @@ class OrdersMonitorService implements MonitorOrders {
             status = switch (o.state()) {
                 case "placed" -> Status.NEW;
                 case "delivered" -> Status.DELIVERED;
-                case "confirmed", "refunded" -> Status.DONE;
+                case "confirmed", "refunded", "returned" -> Status.DONE;
                 default -> Status.LIVE;
             };
         }

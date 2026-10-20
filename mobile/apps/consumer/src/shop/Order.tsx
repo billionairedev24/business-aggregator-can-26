@@ -6,6 +6,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { Icon, colors, fonts, radius, semantic, shadow, space, Scene } from '@northline/mobile-kit';
 
+import { CancelOrder, Cancellations, FailedDelivery, Returns } from '../aftercare/AfterSale';
 import { CourierTip } from '../aftercare/CourierTip';
 import { ReviewPanel } from '../aftercare/Review';
 import type { OrderTracking } from '../api/shop';
@@ -191,6 +192,9 @@ export function Track() {
               </Body>
               <Tag label={t(`shop.state.${o.state}` as MessageKey)} tone="accent" />
             </View>
+            <Cancellations order={o} />
+            <FailedDelivery order={o} />
+            <CancelOrder order={o} />
             <Ladder steps={steps(o)} />
             <View style={styles.courier} testID="track-courier">
               <View style={styles.courierRow}>
@@ -273,6 +277,7 @@ export function Delivered() {
                 </View>
               </>
             )}
+            <Returns order={o} />
             <CourierTip orderId={o.orderId} />
             <ReviewPanel kind="order" id={o.orderId} />
           </View>

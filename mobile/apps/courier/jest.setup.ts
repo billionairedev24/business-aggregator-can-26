@@ -41,6 +41,8 @@ jest.mock('expo-web-browser', () => ({
     return { type: 'success', url: `${redirect}?code=from-browser&state=${state}` };
   }),
   maybeCompleteAuthSession: jest.fn(() => ({ type: 'failed' })),
+  // S-151: Stripe's payout onboarding in the in-app browser; the courier closes it
+  openBrowserAsync: jest.fn(async () => ({ type: 'dismiss' })),
 }));
 jest.mock('expo-task-manager', () => ({
   isTaskDefined: jest.fn(() => false),

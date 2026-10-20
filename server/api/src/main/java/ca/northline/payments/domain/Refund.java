@@ -186,6 +186,36 @@ public class Refund {
     }
 
     /**
+     * S-151: the whole of an escrow goes back at once — an order cancelled, refunded after a failed delivery, or a
+     * return the shop received. Approved when it is made (the shop, the customer within the rules or Northline decided;
+     * nobody reviews it) and paid on the spot by the refund queue's steps.
+     *
+     * @param reason {@code order_cancelled} | {@code delivery_failed} | {@code returned}
+     */
+    public static Refund immediate(String caseNumber, Escrow escrow, String what, String reason, Instant now) {
+        return Refund.builder()
+                .id(Ids.next())
+                .paymentIntentId(escrow.getPaymentIntentId())
+                .merchantId(escrow.getMerchantId())
+                .escrowId(escrow.getId())
+                .caseNumber(caseNumber)
+                .what(what)
+                .customerName(escrow.getCustomerName())
+                .amountCents(escrow.getAmountCents())
+                .taxCents(escrow.getTaxCents())
+                .pointsCents(escrow.getPointsCents())
+                .promoReturnCents(escrow.northlineDiscountCents())
+                .reason(reason)
+                .chargedTo(ChargedTo.MERCHANT)
+                .kind(Kind.REFUND)
+                .auto(false)
+                .state(State.APPROVED)
+                .createdAt(now)
+                .decidedAt(now)
+                .build();
+    }
+
+    /**
      * What goes back to the customer's card: the amount plus the tax on it (the points' share goes back to the wallet
      * as well). A credit gives back no tax.
      */

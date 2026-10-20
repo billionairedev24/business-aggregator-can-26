@@ -164,6 +164,8 @@ northline:
   studio.base-url: ${STUDIO_ORIGIN:http://localhost:3100}      # invitation links, Stripe return URLs
   # S-76: the consumer site that serves the website embed script (<site>/embed.js) shown in the Studio's snippet
   developer.embed.site-origin: ${CONSUMER_ORIGIN:http://localhost:3000}
+  # S-151: Stripe's payout onboarding sends couriers back here (the courier app's App Link on the consumer site)
+  fulfilment.courier-payout-return: ${CONSUMER_ORIGIN:http://localhost:3000}/courier/payouts
   # The region model (S-134, docs/runbooks/regions.md): provinces and markets are rows in region.regions (V130/V131,
   # edited by the console later); this is the configuration on top. Code never names a province, city or zone.
   region:
@@ -200,6 +202,7 @@ northline:
     stripe-webhook-tolerance: ${STRIPE_WEBHOOK_TOLERANCE:PT5M} # oldest signed delivery accepted (replay protection)
     webhook-rate-limit: ${STRIPE_WEBHOOK_RATE_LIMIT:600}       # deliveries per minute and client address
     reconcile-cron: ${PAYMENTS_RECONCILE_CRON:0 41 4 * * *}   # S-85 Stripe ↔ ledger, yesterday, platform zone
+    courier-payouts-cron: ${COURIER_PAYOUTS_CRON:0 41 6 * * MON}  # S-151 weekly courier payouts, platform zone
     unheld-booking-grace: ${PAYMENTS_UNHELD_BOOKING_GRACE:PT30M}  # S-153: a booking's card hold never confirmed → canceled
   stripe:                                                      # Stripe Connect (merchants) outside local/test
     secret-key: ${STRIPE_SECRET_KEY:}

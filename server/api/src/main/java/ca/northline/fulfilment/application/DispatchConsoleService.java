@@ -1,6 +1,7 @@
 package ca.northline.fulfilment.application;
 
 import ca.northline.developer.api.AuditTrail;
+import ca.northline.fulfilment.api.RunChanged;
 import ca.northline.fulfilment.application.CourierStore.Courier;
 import ca.northline.fulfilment.application.CourierStore.Shift;
 import ca.northline.fulfilment.application.DispatchUseCases.AssignCouriers;
@@ -31,6 +32,7 @@ import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +60,9 @@ class DispatchConsoleService implements DispatchConsole {
     private final Clock clock;
     private final AuditTrail auditTrail;
     private final LivePositions live;
+    private final RunLifecycle lifecycle;
+    private final ReturnPickupStore returnPickups;
+    private final ApplicationEventPublisher events;
 
     @Override
     @Transactional(readOnly = true)
@@ -210,6 +215,112 @@ class DispatchConsoleService implements DispatchConsole {
                 previous == null ? null : Map.of("courierId", previous),
                 Map.of("courierId", courierId));
         return views.summary(runs.find(runId).orElseThrow(), runs.stops(runId));
+    }
+
+    /**
+     * S-151: a started run is stuck (the courier is late, off sick, out of battery). The orders none of whose pickups
+     * are done yet, and the returns not collected yet, move with their stops to a new run for {@code courierId} — a
+     * further part of the same window. What the first courier carries stays on their run.
+     */
+    @Override
+    public RunSummary moveRemaining(String runId, String courierId, Actor actor) {
+        var now = clock.instant();
+        var run = runs.lock(runId).orElseThrow(() -> new NotFound("run", runId));
+        var courier = couriers.find(courierId).orElseThrow(() -> new NotFound("courier", courierId));
+        if (run.state().equals("planned")) {
+            throw new Conflict("run_not_started", DeliveryRules.RUN_NOT_STARTED);
+        }
+        if (!run.state().equals("loading") && !run.state().equals("en_route")) {
+            throw new Conflict("run_ended", DeliveryRules.NOTHING_TO_MOVE);
+        }
+        if (courierId.equals(run.courierId())) {
+            throw new Conflict("courier_busy", DeliveryRules.COURIER_BUSY);
+        }
+        var stops = runs.stops(runId);
+        var byOrder = new HashMap<String, List<Stop>>();
+        stops.stream()
+                .filter(s -> s.returnId() == null)
+                .forEach(s -> byOrder.computeIfAbsent(s.orderId(), _ -> new java.util.ArrayList<>())
+                        .add(s));
+        var orders = byOrder.entrySet().stream()
+                .filter(e -> e.getValue().stream()
+                        .filter(s -> s.kind().equals("pickup"))
+                        .noneMatch(s -> s.state().equals("done")))
+                .filter(e -> e.getValue().stream()
+                        .anyMatch(s -> s.kind().equals("dropoff") && !s.state().equals("done")))
+                .map(Map.Entry::getKey)
+                .sorted()
+                .toList();
+        var byReturn = new HashMap<String, List<Stop>>();
+        stops.stream()
+                .filter(s -> s.returnId() != null)
+                .forEach(s -> byReturn.computeIfAbsent(
+                                Objects.requireNonNull(s.returnId()), _ -> new java.util.ArrayList<>())
+                        .add(s));
+        var pickupsLeft = byReturn.entrySet().stream()
+                .filter(e -> e.getValue().stream()
+                        .filter(s -> s.kind().equals("collect"))
+                        .noneMatch(s -> s.state().equals("done")))
+                .map(Map.Entry::getKey)
+                .sorted()
+                .toList();
+        var moving = stops.stream()
+                .filter(s -> (s.returnId() == null && orders.contains(s.orderId()))
+                        || (s.returnId() != null && pickupsLeft.contains(s.returnId())))
+                .map(Stop::id)
+                .toList();
+        if (moving.isEmpty()) {
+            throw new Conflict("nothing_to_move", DeliveryRules.NOTHING_TO_MOVE);
+        }
+        if (!courier.active() || !couriers.claim(courierId, now)) {
+            throw new Conflict("courier_busy", DeliveryRules.COURIER_BUSY);
+        }
+        var windowId = run.windowId();
+        var split = new RunStore.Run(
+                Ids.next(),
+                run.market(),
+                run.kind(),
+                "planned",
+                windowId,
+                run.label(),
+                windowId == null ? 1 : runs.nextPart(windowId),
+                now,
+                run.endsAt(),
+                run.packBy(),
+                null,
+                now,
+                null,
+                null,
+                null,
+                run.heuristic());
+        runs.insert(split, List.of());
+        runs.moveStops(moving, split.id());
+        deliveries.attach(orders, split.id(), now);
+        pickupsLeft.forEach(r -> returnPickups.attach(r, split.id(), now));
+        dispatch.give(split, courierId, now);
+        var previous = run.courierId();
+        if (previous != null) {
+            events.publishEvent(new RunChanged(Ids.next(), now, runId, previous, "stops_moved"));
+        }
+        lifecycle.settle(runs.find(runId).orElseThrow(), now);
+        audit(
+                actor,
+                "fulfilment.run_split",
+                "run",
+                runId,
+                previous == null ? null : Map.of("courierId", previous),
+                Map.of(
+                        "runId",
+                        split.id(),
+                        "courierId",
+                        courierId,
+                        "orders",
+                        orders.size(),
+                        "returns",
+                        pickupsLeft.size(),
+                        "stops",
+                        moving.size()));
+        return views.summary(runs.find(split.id()).orElseThrow(), runs.stops(split.id()));
     }
 
     @Override

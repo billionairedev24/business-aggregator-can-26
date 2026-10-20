@@ -8,7 +8,7 @@ import { Icon, colors, fonts, radius, semantic, shadow, space } from '@northline
  * The stop's map strip (light direction): a quiet schematic of streets with the stop's pin — the app draws no real map
  * (no map SDK; the phone's own maps app navigates, through `action`) — and when it's due on a white pill.
  */
-export function MapStrip({ label, kind, action }: { label: string; kind: 'pickup' | 'dropoff' | 'return'; action?: ReactNode }) {
+export function MapStrip({ label, kind, action }: { label: string; kind: 'pickup' | 'dropoff' | 'return' | 'collect'; action?: ReactNode }) {
   return (
     <View style={styles.box} testID="map-strip">
       <View style={styles.map} accessible={false} importantForAccessibility="no-hide-descendants">

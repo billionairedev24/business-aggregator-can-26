@@ -87,7 +87,7 @@ class OrderDeliveriesJdbc implements OrderDeliveries {
     public List<String> escrowLines(String orderId) {
         return jdbc.sql("""
                         select id from orders.order_lines
-                         where order_id = :id and coalesce(state, 'pending') <> 'refunded'
+                         where order_id = :id and coalesce(state, 'pending') not in ('refunded', 'cancelled')
                          order by id
                         """)
                 .param("id", orderId)

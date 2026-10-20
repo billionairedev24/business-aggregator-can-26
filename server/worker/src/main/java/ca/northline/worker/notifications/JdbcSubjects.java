@@ -54,6 +54,14 @@ public final class JdbcSubjects implements Subjects {
     }
 
     @Override
+    public Optional<String> returnCustomer(String returnId) {
+        return jdbc.sql("select customer_id from orders.returns where id = :id")
+                .param("id", returnId)
+                .query(String.class)
+                .optional();
+    }
+
+    @Override
     public Optional<String> refundCustomer(String refundId) {
         return jdbc.sql("""
                         select coalesce(e.customer_id, b.customer_id)

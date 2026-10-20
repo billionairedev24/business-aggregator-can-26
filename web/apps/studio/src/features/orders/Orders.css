@@ -12,3 +12,8 @@
 .nl-orders-line-price { font-variant-numeric: tabular-nums; }
 .nl-orders-total { grid-template-columns: minmax(0, 1fr) auto !important; background: var(--color-surface-sunken); }
 .nl-orders-note { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); }
+/* S-151: cancelling and returns */
+.nl-orders-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-3); }
+.nl-orders-returns { display: flex; flex-direction: column; gap: var(--space-3); }
+.nl-orders-h2 { margin: 0; font-size: var(--text-lg); }
+.nl-orders-return-photo { display: block; max-width: 100%; max-height: 320px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); }

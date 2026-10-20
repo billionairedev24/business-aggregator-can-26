@@ -37,6 +37,7 @@ export default function AppLayout() {
         <Stack.Screen name="stops/[id]/pickup" />
         <Stack.Screen name="stops/[id]/dropoff" />
         <Stack.Screen name="feedback" />
+        <Stack.Screen name="earnings" />
       </Stack>
     </TrackingContext.Provider>
   );
