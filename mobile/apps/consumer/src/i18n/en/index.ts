@@ -1,6 +1,7 @@
 import { account } from './account';
 import { aftercare } from './aftercare';
 import { common } from './common';
+import { hire } from './hire';
 import { journeyA } from './journeyA';
 import { light } from './light';
 import { loyalty } from './loyalty';
@@ -15,5 +16,5 @@ import { shop } from './shop';
  * Design 01's words where it has them (exactly), ours otherwise; fr-CA has exactly these keys (a test checks). Place
  * names, times, prices and counts are parameters (region-neutral).
  */
-export const en = { ...common, ...screens, ...journeyA, ...shop, ...services, ...account, ...pilot, ...aftercare, ...redesign, ...light, ...loyalty };
+export const en = { ...common, ...screens, ...journeyA, ...shop, ...services, ...account, ...pilot, ...aftercare, ...redesign, ...light, ...loyalty, ...hire };
 export type MessageKey = keyof typeof en;

@@ -172,6 +172,33 @@ public interface EscrowLifecycle {
     /** Records the hold; returns the escrow id (the existing one when already held). */
     String hold(Hold hold);
 
+    /**
+     * S-153: what a booking's cancellation did to its money.
+     *
+     * @param feeCents / {@code feeTaxCents} the late-cancellation fee captured from the hold (0 = free cancellation)
+     * @param releasedCents what went back to the customer's card (holds released, never captured)
+     * @param feeEscrowId the escrow of the fee ({@code booking_cancel_fee}), released to the business on the services
+     *     clock like any job; null when free
+     */
+    record BookingCancellation(
+            long feeCents,
+            long feeTaxCents,
+            long releasedCents,
+            @Nullable String feeEscrowId) {}
+
+    /**
+     * S-153: the customer cancelled a booking before the work started. Every hold of it ({@code booking}, and the
+     * balance {@code booking_balance} of a deposit quote) is released at Stripe — except the late-cancellation fee,
+     * captured from the booking's hold (Stripe releases the rest of the authorization) into an escrow of its own,
+     * {@code booking_cancel_fee}, split per the escrow rules (the business's take rate fixed at the hold) and released
+     * 48 h later. The fee is capped at what the card holds for the booking (points spent on it are the promotions
+     * module's to give back).
+     * Idempotent per booking; 409 {@code escrow_captured} when the money was already captured (the job was done).
+     *
+     * @param label the Studio ledger's line for the fee ("Late cancellation · Alternator replacement")
+     */
+    BookingCancellation cancelBooking(String bookingId, long feeCents, long feeTaxCents, String label, Instant at);
+
     /** The work was completed / delivered / handed off: starts the release clock of the escrow's kind. */
     void fulfilled(String refType, String refId, Instant at);
 

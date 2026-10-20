@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:booking.booking_cancelled:1",
+  "description": "booking.cancelled (S-153) — the customer cancelled before the work started; late = inside the policy's window, feeCents (+ tax) taken from the hold. Topic booking.booking, key = booking id. Ids, times and amounts only.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "customerId",
+    "startsAt",
+    "late",
+    "feeCents",
+    "feeTaxCents"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "booking.bookings.id"
+    },
+    "merchantId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    },
+    "customerId": {
+      "type": "string",
+      "description": "identity.users.id of the customer"
+    },
+    "memberUserId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "identity.users.id of the team member doing the job"
+    },
+    "startsAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "late": {
+      "type": "boolean"
+    },
+    "feeCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "feeTaxCents": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

@@ -867,6 +867,42 @@ public sealed interface EmailContent {
         }
     }
 
+    /**
+     * S-153: an operational alert for a business's team — a new quote request, a customer's message, a booking
+     * cancelled, a balance that couldn't be held — sent by the notifications worker when the member's Settings ›
+     * Notifications row has email on. Links into the Studio; carries the row's unsubscribe link.
+     *
+     * @param heading the heading (and the subject, with the business), already in the reader's language
+     * @param body the line, already in the reader's language: ids, amounts and times only, never the customer's details
+     */
+    record TeamUpdate(String businessName, String heading, String body, URI link) implements EmailContent {
+
+        @Override
+        public String template() {
+            return "team-update";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.NOTIFICATION;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of("businessName", businessName, "heading", heading, "body", body, "link", link.toString());
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(heading, businessName);
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
     // ── Account (S-154, northline-auth) ──────────────────────────────────────────────────────────────────────────
 
     /**
@@ -1222,6 +1258,13 @@ public sealed interface EmailContent {
                         "Free delivery this weekend",
                         "Order from any shop on Northline before Sunday night and delivery is on us.",
                         URI.create("http://localhost:3000/shop")));
+        all.put(
+                "team-update",
+                new TeamUpdate(
+                        business,
+                        "New quote request QT-3104",
+                        "A customer asked Prairie Wrench for a quote. Answer by 11:00 a.m. in Studio › Appointments.",
+                        URI.create(studio + "/appointments")));
         all.put(
                 "account-verification",
                 new AccountVerification(

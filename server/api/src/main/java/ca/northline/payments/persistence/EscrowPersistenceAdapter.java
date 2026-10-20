@@ -143,6 +143,24 @@ class EscrowPersistenceAdapter implements EscrowRepository {
     }
 
     @Override
+    public List<Intent> unheldBookingIntents(Instant createdBefore, int limit) {
+        return jdbc.sql("select " + INTENT_COLUMNS + """
+                         from payments.payment_intents pi
+                        where pi.ref_type in ('booking', 'booking_balance')
+                          and pi.state in ('requires_action', 'authorized')
+                          and pi.created_at < :before
+                          and pi.replaced_by is null
+                          and not exists (select 1 from payments.escrows e where e.payment_intent_id = pi.id)
+                        order by pi.created_at
+                        limit :limit
+                        for update of pi skip locked""")
+                .param("before", ts(createdBefore))
+                .param("limit", limit)
+                .query(EscrowPersistenceAdapter::intent)
+                .list();
+    }
+
+    @Override
     public Optional<Intent> currentIntentForUpdate(String refType, String refId) {
         return jdbc.sql("select " + INTENT_COLUMNS + """
                          from payments.payment_intents

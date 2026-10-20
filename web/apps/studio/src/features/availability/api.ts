@@ -26,6 +26,8 @@ export const Rules = z.object({
   acceptMode: AcceptMode, rescheduleFreeMin: z.number(), lateCancelFeeCents: z.number().nullish(), lateCancelFeeBps: z.number().nullish(),
   emergencyPremiumCents: z.number().nullish(), emergencyPremiumBps: z.number().nullish(), holidayPremiumCents: z.number(), serviceAreas: z.array(z.string()),
   zones: z.array(z.string()), lastSavedAt: z.string().nullish(),
+  // S-153: the region's limits on the cancellation terms (window in hours, percentage fee)
+  maxCancelWindowHours: z.number().nullish(), maxCancelFeeBps: z.number().nullish(),
 });
 export type Rules = z.infer<typeof Rules>;
 
@@ -91,7 +93,7 @@ export function useSaveHours(m: string) {
   });
 }
 
-export type RulesInput = Omit<Rules, 'zones' | 'lastSavedAt'>;
+export type RulesInput = Omit<Rules, 'zones' | 'lastSavedAt' | 'maxCancelWindowHours' | 'maxCancelFeeBps'>;
 export function useSaveRules(m: string) {
   const qc = useQueryClient();
   const inv = useInvalidate(m);

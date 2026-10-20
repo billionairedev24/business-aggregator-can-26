@@ -247,6 +247,27 @@ describe('quote (design 06 quote)', () => {
   });
 });
 
+describe('S-153 on the quote page', () => {
+  it('asks the provider a question in the request’s thread, and says when the balance is held and what cancelling costs', async () => {
+    const calls = mockFetch(api(true, c => {
+      if (c.url.split('?')[0] === '/api/v1/me/quotes/q1') return { body: page({ cancellation: { windowHours: 24, feeBps: 5000, feeCents: 0 }, balance: { cents: 32625, taxCents: 1631, totalCents: 34256, leadHours: 48 } }) };
+      if (c.url === '/api/v1/me/threads' && c.method === 'POST') return { body: { thread: { id: 'T1', refType: 'quote', refId: 'r1', refCode: 'QT-3310', subject: null, businessName: 'Quote Wrench', businessSlug: 'p1', href: '/quotes/requests/r1', lastMessageAt: null, lastMessage: null, unread: false }, messages: [] } };
+      if (c.url === '/api/v1/me/threads/T1') return { body: { thread: { id: 'T1', refType: 'quote', refId: 'r1', refCode: 'QT-3310', subject: null, businessName: 'Quote Wrench', businessSlug: 'p1', href: '/quotes/requests/r1', lastMessageAt: null, lastMessage: null, unread: false }, messages: [] } };
+      if (c.url === '/api/v1/me/payment-methods') return { body: { provider: 'fake', items: [{ id: 'pm_1', brand: 'visa', last4: '4242', expMonth: 9, expYear: 2028, isDefault: true, addedAt: '2026-05-01T00:00:00Z' }] } };
+      return undefined;
+    }));
+    renderApp('/quotes/q1', { routes });
+    const u = user();
+    expect(await screen.findByText('The balance of $342.56 is held automatically 48 hours before the job, on the same card.')).toBeInTheDocument();
+    expect(screen.getByText('Free cancellation until 24 hours before the job; after that, 50% of the deposit is kept.')).toBeInTheDocument();
+    await u.click(screen.getByRole('button', { name: 'Ask Quote Wrench a question' }));
+    expect(await screen.findByText('No messages yet.')).toBeInTheDocument();
+    expect(calls.find(c => c.url === '/api/v1/me/threads' && c.method === 'POST')?.body).toEqual({ refType: 'quote', refId: 'r1', merchantId: 'm1' });
+    expect(await screen.findByRole('radio', { name: /Visa ··4242/ })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
+  });
+});
+
 describe('quote rules', () => {
   it('needs the description, the vehicle for a mechanic and the date and guests for an event', () => {
     expect(requestComplete('job', { ...filled, description: 'short' }, 'visit', true)).toBe(false);

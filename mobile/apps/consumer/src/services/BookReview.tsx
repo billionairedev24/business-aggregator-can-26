@@ -6,6 +6,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { ApiError, colors, randomId, space } from '@northline/mobile-kit';
 
+import { percent } from '../account/common';
 import { PromoPoints } from '../aftercare/PromoPoints';
 import { aftercare } from '../aftercare/Review';
 import type { Booking, BookingRequest, Checkout, ProviderPage, SavedCard } from '../api/services';
@@ -132,7 +133,12 @@ function Pay({ p, draft }: { p: ProviderPage; draft: BookingDraft }) {
   const tax = checkout?.taxCents ?? priced?.taxCents ?? Math.round(((subtotal - discount) * p.taxBps) / 10_000);
   const total = checkout?.totalCents ?? priced?.totalCents ?? subtotal - discount + tax - pointsCents;
   const when = `${day(hold.startsAt, p.timeZone)} · ${time(hold.startsAt, p.timeZone)}`;
-  const cancelBy = new Date(Date.parse(hold.startsAt) - 12 * 3_600_000).toISOString();
+  // S-153: the provider's own terms, from the calendar the time was picked on (cached), shown before booking
+  const calendar = useQuery({ queryKey: ['services', 'slots', p.slug, service.id], queryFn: () => api.slots(p.slug, service.id), staleTime: 60_000 });
+  const policy = calendar.data?.cancellation ?? null;
+  const windowHours = policy?.windowHours ?? 12;
+  const lateFee = policy ? (policy.feeCents > 0 ? money(policy.feeCents, locale) : policy.feeBps > 0 ? percent(policy.feeBps, locale) : null) : null;
+  const cancelBy = new Date(Date.parse(hold.startsAt) - windowHours * 3_600_000).toISOString();
   const provider = cards.data?.provider ?? 'fake';
 
   const done = (b: Booking) => {
@@ -270,9 +276,13 @@ function Pay({ p, draft }: { p: ProviderPage; draft: BookingDraft }) {
           <Option selected={chosenCard === 'new'} title={t('services.book.newCard')} description={t('services.book.newCardNote')} onPress={() => setMethod('new')} testID="card-new" />
         </View>
       )}
-      <Body tone="small">{t('services.book.cancelUntil', { when: `${day(cancelBy, p.timeZone)} ${time(cancelBy, p.timeZone)}` })}</Body>
-      <Checkbox checked={agree.policies} onChange={(v) => setAgree((a) => ({ ...a, policies: v }))} label={t('services.book.agreePolicies')} error={errors.policies} testID="agree-policies">
-        <Body tone="small">{t('services.book.agreePolicies')}</Body>
+      <Body tone="small">
+        {windowHours === 0
+          ? t('hire.booking.freeAlways')
+          : [t('services.book.cancelUntil', { when: `${day(cancelBy, p.timeZone)} ${time(cancelBy, p.timeZone)}` }), lateFee ? t('hire.book.lateFee', { fee: lateFee }) : null].filter(Boolean).join(' · ')}
+      </Body>
+      <Checkbox checked={agree.policies} onChange={(v) => setAgree((a) => ({ ...a, policies: v }))} label={t('services.book.agreePolicies', { hours: windowHours })} error={errors.policies} testID="agree-policies">
+        <Body tone="small">{t('services.book.agreePolicies', { hours: windowHours })}</Body>
       </Checkbox>
       <Checkbox checked={agree.terms} onChange={(v) => setAgree((a) => ({ ...a, terms: v }))} label={t('services.book.agreeTerms')} error={errors.terms} testID="agree-terms">
         <Body tone="small">{t('services.book.agreeTerms')}</Body>

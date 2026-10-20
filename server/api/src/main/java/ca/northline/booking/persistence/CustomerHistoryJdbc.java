@@ -123,6 +123,75 @@ class CustomerHistoryJdbc implements CustomerHistory {
                 .list();
     }
 
+    @Override
+    public List<RequestRow> requests(String customerId, int limit) {
+        return jdbc.sql("""
+                        with latest as (
+                          select distinct on (q.request_id, q.merchant_id)
+                                 q.request_id, q.merchant_id, q.id, q.state, q.total_cents, q.valid_until
+                            from booking.quotes q
+                            join booking.quote_requests r on r.id = q.request_id and r.customer_id = :c
+                           where q.state <> 'draft'
+                           order by q.request_id, q.merchant_id, q.version desc
+                        )
+                        select r.id, r.number, coalesce(r.details ->> 'title', 'Quote request') as title, r.created_at,
+                               r.expires_at, coalesce(cardinality(r.merchant_ids), 0) as providers,
+                               (select count(*) from latest l where l.request_id = r.id) as quotes,
+                               (select min(l.total_cents) from latest l
+                                 where l.request_id = r.id and l.state in ('sent', 'viewed')
+                                   and (l.valid_until is null or l.valid_until > :now)) as lowest,
+                               (select l.id from latest l where l.request_id = r.id and l.state = 'accepted' limit 1)
+                                 as accepted,
+                               (select a.booking_id from booking.quote_acceptances a
+                                  join booking.quotes q on q.id = a.quote_id
+                                 where q.request_id = r.id and a.accepted_at is not null limit 1) as booking_id,
+                               exists (select 1 from latest l where l.request_id = r.id)
+                                 and not exists (select 1 from latest l where l.request_id = r.id
+                                                  and l.state <> 'declined') as declined,
+                               (select count(*) from booking.customer_photos p
+                                 where p.ref_type = 'quote_request' and p.ref_id = r.id) as photos
+                          from booking.quote_requests r
+                         where r.customer_id = :c
+                         order by r.created_at desc, r.id desc
+                         limit :limit
+                        """)
+                .param("c", customerId)
+                .param("now", JdbcTimes.ts(clock.instant()))
+                .param("limit", limit)
+                .query((rs, _) -> {
+                    var lowest = rs.getObject("lowest") == null ? null : rs.getLong("lowest");
+                    var accepted = rs.getString("accepted");
+                    var expiresAt = JdbcTimes.instant(rs, "expires_at");
+                    var quotes = rs.getInt("quotes");
+                    String status;
+                    if (accepted != null) {
+                        status = "accepted";
+                    } else if (lowest != null) {
+                        status = "quoted";
+                    } else if (rs.getBoolean("declined")) {
+                        status = "declined";
+                    } else if (quotes > 0 || (expiresAt != null && !expiresAt.isAfter(clock.instant()))) {
+                        status = "expired";
+                    } else {
+                        status = "waiting";
+                    }
+                    return new RequestRow(
+                            rs.getString("id"),
+                            "QT-" + rs.getLong("number"),
+                            rs.getString("title"),
+                            JdbcTimes.requiredInstant(rs, "created_at"),
+                            expiresAt,
+                            rs.getInt("providers"),
+                            quotes,
+                            lowest,
+                            status,
+                            accepted,
+                            rs.getString("booking_id"),
+                            rs.getInt("photos"));
+                })
+                .list();
+    }
+
     private static List<OpenQuote> openQuotes(List<String> ids, List<String> merchants) {
         return IntStream.range(0, Math.min(ids.size(), merchants.size()))
                 .mapToObj(i -> new OpenQuote(ids.get(i), merchants.get(i)))

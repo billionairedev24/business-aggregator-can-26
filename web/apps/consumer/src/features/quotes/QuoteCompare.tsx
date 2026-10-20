@@ -7,6 +7,7 @@ import { percent, rating } from '../services/format';
 import { comparisonQuery, type Offer } from './api';
 import { useQuotesT } from './messages';
 import { Crumbs } from '../pages/Crumbs';
+import { PhotoStrip } from '../photos/PhotoPicker';
 
 /** design 06 `book` quote mode, "N quotes received": every provider asked, cheapest quote first, then the waiting ones. */
 export function QuoteCompare({ requestId }: { requestId: string }) {
@@ -31,6 +32,7 @@ export function QuoteCompare({ requestId }: { requestId: string }) {
           <tbody>{c.offers.map(o => <Row key={o.provider.merchantId} offer={o} />)}</tbody>
         </table>
       </div>
+      <PhotoStrip ids={(c.photos ?? []).map(ph => ph.id)} />
     </div>
   );
 }

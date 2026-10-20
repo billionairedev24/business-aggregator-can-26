@@ -64,6 +64,13 @@ public final class JdbcSubjects implements Subjects {
     }
 
     @Override
+    public Optional<String> threadCustomer(String threadId) {
+        return jdbc.sql("""
+                        select counterpart_id from messaging.threads
+                         where id = :id and kind = 'customer' and counterpart_id is not null""").param("id", threadId).query(String.class).optional();
+    }
+
+    @Override
     public Optional<String> courierUser(String courierId) {
         return jdbc.sql("select user_id from fulfilment.couriers where id = :id and user_id is not null")
                 .param("id", courierId)

@@ -19,6 +19,7 @@ public interface CustomerQuotes {
      * @param title what the job is ("Alternator replacement", "Mocktail bar · 40 guests")
      * @param area the zone or city the work is in (a neighbourhood): never a street address
      * @param details the answers the providers need (vehicle, event date, guests…): no access codes or phone numbers
+     * @param photoIds S-153: the customer's own photos ({@link CustomerPhotos}), attached to the request
      */
     record NewRequest(
             String customerId,
@@ -28,17 +29,22 @@ public interface CustomerQuotes {
             String description,
             @Nullable String area,
             @Nullable Instant preferredAt,
-            Map<String, Object> details) {
+            Map<String, Object> details,
+            List<String> photoIds) {
         public NewRequest {
             merchantIds = List.copyOf(merchantIds);
             details = Map.copyOf(details);
+            photoIds = List.copyOf(photoIds);
         }
     }
 
     /** @param ref the reference both sides see ({@code QT-3104}) */
     record RequestRef(String id, String ref, Instant respondBy, Instant expiresAt) {}
 
-    /** Stores the request; the providers find it in their Studio "Quote requests" column. */
+    /**
+     * Stores the request and publishes {@code quote.requested} ({@link QuoteRequested}): the providers are told and
+     * find it in their Studio "Quote requests" column.
+     */
     RequestRef request(NewRequest request);
 
     /** One line as the provider wrote it; {@code amountCents} is negative for a discount. */
@@ -122,11 +128,13 @@ public interface CustomerQuotes {
             @Nullable Instant expiresAt,
             List<String> merchantIds,
             List<String> declinedBy,
-            List<CustomerQuote> quotes) {
+            List<CustomerQuote> quotes,
+            List<CustomerPhotos.Photo> photos) {
         public CustomerRequest {
             merchantIds = List.copyOf(merchantIds);
             declinedBy = List.copyOf(declinedBy);
             quotes = List.copyOf(quotes);
+            photos = List.copyOf(photos);
         }
     }
 

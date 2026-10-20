@@ -374,6 +374,30 @@ midnight): run the next day, then mark the day **resolved** with a note. Tables 
   match. **Never run against a real Stripe account:** the balance-transaction call was written from Stripe's API
   reference and tested against stripe-mock only. The restricted key needs `Balance transactions: read`.
 
+## Bookings: balance and late cancellation (S-153)
+
+- **Deposit quotes.** Accepting a quote with a deposit holds the deposit (escrow `booking`); the balance is held
+  automatically `BOOKING_BALANCE_LEAD` (48 h) before the visit as its own escrow (`ref_type = booking_balance`): an
+  **off-session** PaymentIntent with manual capture on the card the deposit was paid with (`off_session=true`,
+  `confirm=true`, the deposit's customer and payment method). A decline or `authentication_required` marks the balance
+  pending again with the next try `BOOKING_BALANCE_RETRY_EVERY` later, up to `BOOKING_BALANCE_ATTEMPTS`; each failure
+  tells the customer (push/email/SMS, `booking_reminders`; pay it from the booking page) and the provider's owners
+  (`new_booking`). After the last attempt the balance is **failed** and the provider decides whether to go. Paying by
+  hand (`POST /me/bookings/{id}/balance`, step-up like any checkout) replaces a pending try. Both escrows are captured
+  and released together at sign-off.
+- **Late cancellation.** The booking keeps the terms in force when it was made (Availability › Booking rules within the
+  region's limits; shown on the booking review, the quote and the booking page). Cancelling inside the window charges
+  the fee from the hold: a fee escrow (`ref_type = booking_cancel_fee`) is captured from the booking's PaymentIntent
+  (partial capture, the rest released) and released to the provider after the usual 48 h, split by the escrow rules
+  (platform fee on the fee, tax at the booking's rate); a balance hold is cancelled. Outside the window everything is
+  released. Points spent on the deposit come back; a promo code's use is released.
+- **Unconfirmed holds.** A booking or balance PaymentIntent the customer never confirmed is cancelled after
+  `PAYMENTS_UNHELD_BOOKING_GRACE` (30 min) by the payments job, so no card keeps a stray authorization.
+- **Never run against a real Stripe account:** the off-session confirmation, the saved-card on-session confirmation,
+  the partial capture of a cancellation fee and the unheld-hold sweeper were written from Stripe's API reference and
+  tested with the payments stand-in (`FakeStripeGateway`) only. Try them in test mode with the `4000 0000 0000 3220`
+  (authentication) and `4000 0000 0000 9995` (decline) cards before a pilot takes deposit quotes.
+
 ## 11. Northline Plus — Stripe Billing (S-152)
 
 Plus is a household membership ($7.99/month or $69/year by default, `PLUS_MONTHLY_PRICE_CENTS` /

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:booking.quote_requested:1",
+  "description": "quote.requested — topic booking.quote_request, key = quote request id. A customer asked 1–3 providers for a quote. Ids, counts and times only (no description, area or name).",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "quoteRef",
+    "merchantIds",
+    "categoryId",
+    "respondBy",
+    "expiresAt",
+    "photoCount"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "booking.quote_requests.id"
+    },
+    "quoteRef": {
+      "type": "string",
+      "description": "QT-<number>, shown to both sides"
+    },
+    "merchantIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "merchants.merchants.id"
+      },
+      "description": "the providers asked (1 to 3)"
+    },
+    "categoryId": {
+      "type": "string"
+    },
+    "respondBy": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "photoCount": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

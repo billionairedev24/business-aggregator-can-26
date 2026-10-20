@@ -129,7 +129,7 @@ export const services = {
   'services.book.newCardNote': 'Entered on Stripe’s secure form. Card details go to Stripe only — never {brand}.',
   'services.book.fakePayments': 'Test payments · nothing is charged. Stripe isn’t configured here, so a stand-in approves every payment.',
   'services.book.cancelUntil': 'Cancellation: free until {when}',
-  'services.book.agreePolicies': 'I understand extra parts or work beyond the price need my approval in the app, and that cancellation is free until 12 h before.',
+  'services.book.agreePolicies': 'I understand extra parts or work beyond the price need my approval in the app, and that cancellation is free until {hours} h before.',
   'services.book.agreeTerms': 'I agree to the {brand} terms and the escrow release rules.',
   'services.book.hold': 'Hold {total} in escrow',
   'services.book.cardFailed': 'The card was declined. Try another card.',

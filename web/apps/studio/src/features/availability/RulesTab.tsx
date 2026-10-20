@@ -31,6 +31,8 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
   const set = (patch: Partial<RulesInput>) => setForm(f => f && { ...f, ...patch });
   const money = (c: number) => formatMoney(c, locale, { whole: true });
   const serverErrors = save.error instanceof ValidationError ? save.error.byField() : {};
+  const maxWindowMin = q.data?.maxCancelWindowHours == null ? null : q.data.maxCancelWindowHours * 60;
+  const pctAllowed = q.data?.maxCancelFeeBps == null || q.data.maxCancelFeeBps >= 5000;
   const sel = (label: string, value: string, options: { value: string; label: string }[], onChange: (v: string) => void, hint?: string, err?: string) => (
     <Field label={label} hint={hint} error={err}>
       <Select value={value} disabled={!canEdit} options={options} onChange={e => onChange(e.target.value)} />
@@ -60,10 +62,12 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
               ))}
             </RadioGroup>
           </div>
-          {sel(t('reschedule'), String(form.rescheduleFreeMin), [180, 720, 1440].map(v => ({ value: String(v), label: t(`reschedule${v}` as Parameters<T>[0]) })), v => set({ rescheduleFreeMin: Number(v) }))}
+          {/* S-153: the region caps the window and the percentage fee; the options past them aren't offered */}
+          {sel(t('reschedule'), String(form.rescheduleFreeMin), [180, 720, 1440].filter(v => v === form.rescheduleFreeMin || maxWindowMin == null || v <= maxWindowMin).map(v => ({ value: String(v), label: t(`reschedule${v}` as Parameters<T>[0]) })), v => set({ rescheduleFreeMin: Number(v) }), undefined, serverErrors.rescheduleFreeMin)}
           {sel(t('lateFee'), lateValue(form), [
-            { value: '0', label: money(0) }, { value: '2500', label: money(2500) }, { value: '3500', label: money(3500) }, { value: 'pct', label: t('lateFeePct') },
-          ], v => set(v === 'pct' ? { lateCancelFeeBps: 5000, lateCancelFeeCents: null } : { lateCancelFeeCents: Number(v), lateCancelFeeBps: null }), undefined, serverErrors.lateCancelFee)}
+            { value: '0', label: money(0) }, { value: '2500', label: money(2500) }, { value: '3500', label: money(3500) },
+            ...(pctAllowed || form.lateCancelFeeBps ? [{ value: 'pct', label: t('lateFeePct') }] : []),
+          ], v => set(v === 'pct' ? { lateCancelFeeBps: 5000, lateCancelFeeCents: null } : { lateCancelFeeCents: Number(v), lateCancelFeeBps: null }), t('lateFeeHint'), serverErrors.lateCancelFee)}
           {sel(t('premium'), premiumValue(form), [
             { value: 'off', label: t('premiumOff') }, { value: '2500', label: `+${money(2500)}` }, { value: '5000', label: `+${money(5000)}` }, { value: 'pct', label: t('premiumPct') },
           ], v => set(v === 'off' ? { emergencyPremiumCents: null, emergencyPremiumBps: null } : v === 'pct' ? { emergencyPremiumBps: 2500, emergencyPremiumCents: null } : { emergencyPremiumCents: Number(v), emergencyPremiumBps: null }), undefined, serverErrors.emergencyPremium)}
@@ -88,6 +92,6 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
 }
 
 function strip(r: Rules): RulesInput {
-  const { zones: _z, lastSavedAt: _l, ...rest } = r;
+  const { zones: _z, lastSavedAt: _l, maxCancelWindowHours: _w, maxCancelFeeBps: _f, ...rest } = r;
   return { ...rest, serviceAreas: [...rest.serviceAreas].sort(), sameDayCutoffMin: rest.sameDayCutoffMin ?? null, lateCancelFeeCents: rest.lateCancelFeeCents ?? null, lateCancelFeeBps: rest.lateCancelFeeBps ?? null, emergencyPremiumCents: rest.emergencyPremiumCents ?? null, emergencyPremiumBps: rest.emergencyPremiumBps ?? null };
 }

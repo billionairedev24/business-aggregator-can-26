@@ -115,6 +115,29 @@ public class Booking {
         return entry(BookingState.SIGNED_OFF.code(), customerId, at, null, null, null);
     }
 
+    /** S-153: the states a customer can still cancel from (before the provider is on site). */
+    public static final java.util.Set<BookingState> CANCELLABLE =
+            java.util.EnumSet.of(BookingState.REQUESTED, BookingState.CONFIRMED, BookingState.EN_ROUTE);
+
+    /**
+     * S-153: the customer cancels before the work starts (on site, done or signed off is too late: a refund case then).
+     * Cancelling again is a no-op ({@code null}).
+     */
+    public @Nullable BookingLogEntry cancelByCustomer(String customerId, Instant at) {
+        if (!customerId.equals(this.customerId)) {
+            throw new Conflict("not_customer", "Only the customer can cancel this booking.");
+        }
+        if (state == BookingState.CANCELLED) {
+            return null;
+        }
+        if (!CANCELLABLE.contains(state)) {
+            throw new Conflict("job_state", "The job has started, so it can't be cancelled. Report a problem instead.");
+        }
+        state = BookingState.CANCELLED;
+        updatedAt = at;
+        return entry(BookingState.CANCELLED.code(), customerId, at, null, null, null);
+    }
+
     private void move(BookingState from, BookingState to, Instant at) {
         if (state != from) {
             throw new Conflict(

@@ -110,7 +110,9 @@ final class AvailabilityDtos {
             long holidayPremiumCents,
             List<String> serviceAreas,
             List<String> zones,
-            @Nullable Instant lastSavedAt) {}
+            @Nullable Instant lastSavedAt,
+            int maxCancelWindowHours,
+            int maxCancelFeeBps) {}
 
     // ── time off ──
     record TimeOffBody(

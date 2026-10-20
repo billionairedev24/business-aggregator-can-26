@@ -31,5 +31,10 @@ public final class QuoteViews {
             Instant createdAt,
             @Nullable Instant respondBy,
             @Nullable Instant expiresAt,
-            @Nullable QuoteView quote) {}
+            @Nullable QuoteView quote,
+            List<String> photoIds) {
+        public QuoteRequestCard {
+            photoIds = List.copyOf(photoIds);
+        }
+    }
 }

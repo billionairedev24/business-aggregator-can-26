@@ -43,7 +43,22 @@ final class JobResponses {
             @Nullable String escrow,
             @Nullable EscrowMoneyResponse escrowMoney,
             List<TimelineResponse> timeline,
-            List<ApprovalResponse> approvals) {}
+            List<ApprovalResponse> approvals,
+            List<String> customerPhotoIds,
+            BalanceResponse balance,
+            @Nullable CancellationResponse cancellation) {}
+
+    /** S-153: the balance of a deposit quote ({@code none | pending | held | failed | cancelled}). */
+    record BalanceResponse(
+            String state,
+            long cents,
+            long taxCents,
+            @Nullable Instant dueAt,
+            int attempts,
+            @Nullable String failure) {}
+
+    /** S-153: the customer cancelled; {@code feeCents} (+ tax) was taken from the hold when late. */
+    record CancellationResponse(Instant at, long feeCents, long feeTaxCents) {}
 
     /**
      * The job's escrow as the payments ledger has it: {@code heldCents} is what the customer was charged (price plus

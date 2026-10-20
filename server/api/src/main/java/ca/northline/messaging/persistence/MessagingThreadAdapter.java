@@ -97,6 +97,7 @@ class MessagingThreadAdapter implements ThreadStore {
                                                        counterpart_name, subject, assignee_id, participant_ids, created_at)
                         values (:id, :m, :kind, :refType, :refId, :refCode, :cpId, :cpName, :subject, :assignee,
                                 :participants, :at)
+                        on conflict do nothing
                         """)
                 .param("id", t.id())
                 .param("m", t.merchantId())
@@ -162,7 +163,10 @@ class MessagingThreadAdapter implements ThreadStore {
                            set last_message_at = greatest(coalesce(last_message_at, :at), :at),
                                merchant_read_at = case when :role = 'merchant'
                                                        then greatest(coalesce(merchant_read_at, :at), :at)
-                                                       else merchant_read_at end
+                                                       else merchant_read_at end,
+                               customer_read_at = case when :role = 'customer'
+                                                       then greatest(coalesce(customer_read_at, :at), :at)
+                                                       else customer_read_at end
                          where id = :t
                         """)
                 .param("t", m.threadId())

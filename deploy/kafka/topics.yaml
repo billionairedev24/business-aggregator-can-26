@@ -80,6 +80,8 @@ topics:
     owner: trust
   - name: trust.review
     owner: trust
+  - name: booking.quote_request   # S-153: quote.requested
+    owner: booking
   - name: messaging.message
     owner: messaging
   - name: messaging.ticket
@@ -98,8 +100,8 @@ consumers:
   - group: notifications        # S-27 team money notices; S-102 also customers' refund cases (payments.refund)
     topics: [payments.payout, payments.payout_account, payments.dispute, payments.refund]
     retryDelaysSeconds: [10, 60, 300]
-  - group: personal-notifications  # S-102: customers' orders/bookings/quotes, couriers' runs; outages retried from the DB
-    topics: [orders.order, fulfilment.delivery, fulfilment.run, booking.booking, booking.quote, loyalty.points]
+  - group: personal-notifications  # S-102: customers' orders/bookings/quotes, couriers' runs; S-153: messages, quote requests (team too); S-152: points credited; outages retried from the DB
+    topics: [orders.order, fulfilment.delivery, fulfilment.run, booking.booking, booking.quote, booking.quote_request, messaging.message, loyalty.points]
     retryDelaysSeconds: []       # no retry topics (Event Hubs: 100 per processing unit); deferred_notifications retries
   - group: webhooks            # S-33: queues partner webhook deliveries (the dispatcher sends them per endpoint)
     topics: [booking.booking, payments.escrow, payments.refund, orders.order]

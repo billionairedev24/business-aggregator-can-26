@@ -14,6 +14,7 @@ class PaymentsJobsService implements PaymentsJobs {
     private final PayoutService payouts;
     private final StripeEventProcessor stripeEvents;
     private final TaxSyncService tax;
+    private final UnheldPaymentSweeper unheld;
 
     @Override
     public int releaseDueEscrows() {
@@ -23,6 +24,11 @@ class PaymentsJobsService implements PaymentsJobs {
     @Override
     public int renewAuthorizations() {
         return escrows.renewAuthorizations();
+    }
+
+    @Override
+    public int cancelUnheldBookingPayments() {
+        return unheld.sweep();
     }
 
     @Override

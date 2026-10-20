@@ -82,4 +82,29 @@ public interface CustomerHistory {
 
     /** The customer's quote requests without an accepted quote, newest first (at most {@code limit}). */
     List<RequestSummary> openRequests(String customerId, int limit);
+
+    /**
+     * S-153, Account › Quote requests: one of the customer's requests, whatever became of it.
+     *
+     * @param status {@code waiting} (no quote yet), "quoted" (an open quote to read), {@code accepted},
+     *     {@code declined} (every quote declined) or {@code expired} (closed without an open quote)
+     * @param quotes how many providers sent a quote
+     * @param bookingId the booking an accepted quote made
+     */
+    record RequestRow(
+            String id,
+            String ref,
+            String title,
+            Instant createdAt,
+            @Nullable Instant expiresAt,
+            int providers,
+            int quotes,
+            @Nullable Long lowestCents,
+            String status,
+            @Nullable String acceptedQuoteId,
+            @Nullable String bookingId,
+            int photoCount) {}
+
+    /** Every quote request of the customer's, newest first (at most {@code limit}). */
+    List<RequestRow> requests(String customerId, int limit);
 }

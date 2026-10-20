@@ -3,6 +3,7 @@ import { aftercareFixtures, newAftercareState } from './aftercare';
 import { FIXTURE_TOTP, authFixtures, newAuthState, type AuthFixtureState } from './auth';
 import { lower, type FixtureArea, type FixtureContext, type FixtureRequest } from './context';
 import { geoFixtures } from './geo';
+import { hireFixtures, newHireState } from './hire';
 import { newServicesState, servicesFixtures } from './services';
 import { newShopState, shopFixtures } from './shop';
 
@@ -33,6 +34,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
   const shop = newShopState();
   const servicesState = newServicesState(now);
   const aftercare = newAftercareState();
+  const hire = newHireState(now());
   const account = newAccountState({
     shop,
     services: servicesState,
@@ -45,6 +47,8 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     accountFixtures(ctx, account),
     authFixtures(ctx, auth),
     geoFixtures(ctx, geo),
+    // S-153: threads, photos, cancelling — before the services area, which owns the rest of /me/bookings
+    hireFixtures(ctx, hire, servicesState),
     // before the shop's and services' own areas: reviews, tips (shop's /me/orders/…) are this one's
     aftercareFixtures(ctx, aftercare, shop, servicesState),
     shopFixtures(ctx, shop),
@@ -79,6 +83,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     account,
     services: servicesState,
     aftercare,
+    hire,
     calls,
   };
 }

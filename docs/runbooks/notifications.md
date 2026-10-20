@@ -25,10 +25,15 @@ the provider is called — the api's S-13 `Mailer` and the worker use the same c
 | a trust & safety warning from a flag (in-process `TrustWarningNotice`, S-93) | — account notice | owners | **email** (template `trust-warning`), whatever the matrix | — |
 | a webhook endpoint turned off after 3 days of failures (worker dispatcher, not a Kafka event — S-33, [webhooks.md](webhooks.md)) | — service notice | owners | — | **email** (template `webhook-disabled`), whatever the matrix; claimed per owner under the endpoint's `disable_notice_id`, retried every minute for 2 days while the provider is down |
 
+| `quote.requested` (`booking.quote_request`, S-153): a customer asked for quotes — ref, respond-by, photo count only | `quote_request` | owners and technicians of each business asked | — | **email** (template `team-update`), SMS, push → Studio Appointments; held through an outage like the deferred rows |
+| a customer's message on a quote request or booking (`messaging.message_sent`, `threadKind = customer`, `senderRole = customer`; S-153) | `customer_message` | owners | — | email (`team-update`), SMS, push → Studio Messages (`?thread=`); never the message's words |
+| `booking.cancelled` (`booking.booking`, S-153): a customer cancelled; with a late fee its amount | `new_booking` | owners | — | email (`team-update`), SMS, push |
+| `booking.balance_failed` (`booking.booking`, S-153): a deposit quote's balance couldn't be held (each attempt; the last says so) | `new_booking` | owners | — | email (`team-update`), SMS, push |
+
 The emails S-13 built stay in the api (they're tested there and send right after commit); the worker adds what S-13
 left open: the SMS and push channels, and the `payout.failed` email. Technicians and cooks get no money notices. Rows
-without events yet (`new_booking`, `quote_request`, `customer_message`, `low_stock`, `quality`) are not wired: their
-events aren't published to Kafka yet.
+without events yet (`low_stock`, `quality`) are not wired: their events aren't published to Kafka yet; `new_booking`
+carries only S-153's cancellations and failed balances so far.
 
 ## 2. Preferences and quiet hours
 
