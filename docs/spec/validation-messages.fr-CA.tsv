@@ -1136,3 +1136,4 @@ Only the customer can cancel this booking.	Seul le client peut annuler cette ré
 The job has started, so it can't be cancelled. Report a problem instead.	Les travaux ont commencé : la réservation ne peut plus être annulée. Signalez plutôt un problème.	new
 This booking's payment was already taken. Ask for a refund instead.	Le paiement de cette réservation a déjà été perçu. Demandez plutôt un remboursement.	new
 There is no balance to pay for this booking.	Il n’y a aucun solde à payer pour cette réservation.	new
+No payment with id %s	Aucun paiement avec l’identifiant %s	new
