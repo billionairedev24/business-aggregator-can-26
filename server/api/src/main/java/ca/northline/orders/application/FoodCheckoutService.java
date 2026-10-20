@@ -351,9 +351,11 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
     /**
      * A split-bill group order goes to the kitchen: priced again (the kitchen must still be open, every dish still
      * orderable at the price the shares were paid at), written as a placed food checkout without a card payment of its
-     * own — each share holds its own escrow — and entered like any food order.
+     * own — each share holds its own escrow; {@code hostPaymentIntent} is the host's share's (its escrow's id is the
+     * order's) — and entered like any food order.
      */
-    Placed placeGroup(String hostId, String orderId, String ref, Order order, GroupAmounts amounts) {
+    Placed placeGroup(
+            String hostId, String orderId, String ref, Order order, GroupAmounts amounts, String hostPaymentIntent) {
         if (store.find(orderId).filter(r -> r.state().equals("placed")).isPresent()) {
             return new Placed(orderId, ref);
         }
@@ -388,7 +390,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 amounts.totalCents(),
                 p.province(),
                 null,
-                null,
+                hostPaymentIntent,
                 order.delivery() == null ? null : json.writeValueAsString(order.delivery()),
                 now,
                 null,

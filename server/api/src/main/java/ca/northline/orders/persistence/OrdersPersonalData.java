@@ -108,4 +108,13 @@ class OrdersPersonalData implements PersonalDataContributor {
         var outcome = Erasure.done().retaining("orders.orders", Retention.TAX_RECORDS);
         return open > 0 ? outcome.holding("orders.orders", Hold.OPEN_ORDER) : outcome;
     }
+
+    @Override
+    public List<Consequence> consequences(Subject subject) {
+        var open = jdbc.sql("select count(*) from orders.orders where customer_id = :u and state in " + OPEN)
+                .param("u", subject.userId())
+                .query(Long.class)
+                .single();
+        return open > 0 ? List.of(Consequence.of("open_orders", open)) : List.of();
+    }
 }

@@ -149,7 +149,7 @@ class GroupOrderService
 
     @Override
     @Transactional(readOnly = true)
-    public Preview preview(String code) {
+    public Preview preview(String userId, String code) {
         var g = byCode(code);
         var host = people.people(List.of(g.hostId())).get(g.hostId());
         return new Preview(
@@ -159,7 +159,8 @@ class GroupOrderService
                 host == null ? "" : host.firstName(),
                 g.state(),
                 g.members().size(),
-                g.groupMax());
+                g.groupMax(),
+                g.member(userId) ? g.id() : null);
     }
 
     @Override
@@ -421,7 +422,15 @@ class GroupOrderService
                 sum(shares, ShareRow::tipCents));
         var orderId = Objects.requireNonNull(g.orderId());
         var ref = Objects.requireNonNull(g.orderRef());
-        food.placeGroup(hostId, orderId, ref, order(g, store.items(groupId)), amounts);
+        var hostShare =
+                shares.stream().filter(s -> s.id().equals(orderId)).findFirst().orElseThrow();
+        food.placeGroup(
+                hostId,
+                orderId,
+                ref,
+                order(g, store.items(groupId)),
+                amounts,
+                Objects.requireNonNull(hostShare.paymentIntent()));
         return placed(g, orderId, ref);
     }
 

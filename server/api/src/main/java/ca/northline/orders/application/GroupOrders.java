@@ -20,8 +20,11 @@ public final class GroupOrders {
     }
 
     public interface JoinGroupOrder {
-        /** The join page before joining: the kitchen and the host's first name only. 404 for an unknown code. */
-        Preview preview(String code);
+        /**
+         * The join page: the kitchen and the host's first name only, and the group's id when the caller is already in
+         * it (the page then opens the group). 404 for an unknown code.
+         */
+        Preview preview(String userId, String code);
 
         /** Idempotent for a member; 409 {@code group_full} / {@code group_locked} / {@code group_closed}. */
         GroupView join(String userId, String code);
@@ -115,7 +118,8 @@ public final class GroupOrders {
             String hostFirstName,
             String state,
             int people,
-            int groupMax) {}
+            int groupMax,
+            @Nullable String groupId) {}
 
     /**
      * @param area where it goes: the delivery address's zone or city (guests don't see the host's street), null for

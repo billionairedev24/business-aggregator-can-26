@@ -114,7 +114,7 @@ class GroupOrderController {
 
     @GetMapping("/join/{code}")
     Preview preview(@PathVariable String code, CurrentUser user) {
-        return joining.preview(code);
+        return joining.preview(user.userId(), code);
     }
 
     @PostMapping("/join")
