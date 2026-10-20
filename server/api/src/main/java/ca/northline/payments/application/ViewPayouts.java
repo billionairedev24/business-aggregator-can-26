@@ -14,6 +14,8 @@ public interface ViewPayouts {
      * @param availableCents released balance minus money held for open refund cases ("Available now")
      * @param payableCents what a payout may take now: available minus the reserve
      * @param pausedUntil end of the 24 h hold after a bank account change
+     * @param returned S-157: the latest payout, when the bank returned it to the account still in use — the Studio's
+     *     notice ("update your bank details"); gone once the details change or a later payout goes out
      */
     record Overview(
             long availableCents,
@@ -24,7 +26,11 @@ public interface ViewPayouts {
             @Nullable PayoutAccount account,
             @Nullable PayoutAccount pendingAccount,
             @Nullable Instant pausedUntil,
-            boolean instantEligible) {}
+            boolean instantEligible,
+            @Nullable Returned returned) {}
+
+    /** S-157: a payout the bank sent back, and Stripe's reason ({@code account_closed}, …; null = none given). */
+    record Returned(String payoutId, long amountCents, @Nullable String failureCode, Instant sentAt) {}
 
     record Preview(@Nullable Instant nextPayoutAt, long amountCents) {}
 
