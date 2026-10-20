@@ -2107,6 +2107,190 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - go-live-controller
+  /api/v1/console/loyalty/rules:
+    get:
+      operationId: consoleLoyaltyList
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RulesView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - console-loyalty-controller
+  /api/v1/console/loyalty/rules/{region}:
+    delete:
+      operationId: consoleLoyaltyRemove
+      parameters:
+      - in: path
+        name: region
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - console-loyalty-controller
+    put:
+      operationId: consoleLoyaltySave
+      parameters:
+      - in: path
+        name: region
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Rule"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - console-loyalty-controller
   /api/v1/console/me:
     get:
       operationId: staffProfileMe
@@ -11813,6 +11997,8 @@ components:
         escrowItems:
           type: integer
           format: int64
+        loyalty:
+          $ref: "#/components/schemas/Loyalty"
         mix:
           $ref: "#/components/schemas/Mix"
         nextPayoutArrival:
@@ -12501,6 +12687,36 @@ components:
         providersOnJobs:
           type: integer
           format: int64
+    Loyalty:
+      type: object
+      properties:
+        pendingReferrals:
+          type: integer
+          format: int64
+        plusMembers:
+          type: integer
+          format: int64
+        plusTrialing:
+          type: integer
+          format: int64
+        pointHolders:
+          type: integer
+          format: int64
+        pointsOutstanding:
+          type: integer
+          format: int64
+        pointsOutstandingCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        pointsRedeemedWeekCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        rewardsFundedCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
     Macro:
       type: object
       properties:
@@ -13443,6 +13659,17 @@ components:
           minLength: 0
       required:
       - amountCents
+    RegionChoice:
+      type: object
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+        name:
+          type: string
+        province:
+          type: string
     RegulateRequest:
       type: object
       properties:
@@ -13915,6 +14142,39 @@ components:
         sellers:
           type: integer
           format: int64
+    Rule:
+      type: object
+      properties:
+        expiryMonths:
+          type: integer
+          format: int32
+        id:
+          type: string
+        kinds:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        pointsPerDollar:
+          type: integer
+          format: int32
+        referralMinOrderCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        referralMonthlyCap:
+          type: integer
+          format: int32
+        referralPoints:
+          type: integer
+          format: int32
+        regionId:
+          type: string
+        regionName:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
     RuleRequest:
       type: object
       properties:
@@ -13943,6 +14203,17 @@ components:
         value:
           type: object
           additionalProperties: {}
+    RulesView:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rule"
+        regions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegionChoice"
     RunBody:
       type: object
       properties:

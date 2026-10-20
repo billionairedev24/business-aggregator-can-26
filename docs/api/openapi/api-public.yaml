@@ -4736,13 +4736,13 @@ paths:
       - pilot-feedback-controller
   /api/v1/me/plus:
     delete:
-      operationId: myAccountCancelPlus
+      operationId: myLoyaltyCancel
       responses:
         "200":
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Household"
+                $ref: "#/components/schemas/PlusView"
           description: OK
         "401":
           content:
@@ -4772,23 +4772,69 @@ paths:
               schema:
                 $ref: "#/components/schemas/Problem"
           description: Your sign-in doesn't allow this.
-      summary: Cancel Northline Plus
+      summary: Cancel Plus at the end of the period
       tags:
-      - my-account-controller
-    post:
-      operationId: myAccountStartPlus
+      - my-loyalty-controller
+    get:
+      operationId: myLoyaltyPlus
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PlusView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      summary: The caller's household's Northline Plus
+      tags:
+      - my-loyalty-controller
+    patch:
+      operationId: myLoyaltyChange
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PlusRequest"
+              $ref: "#/components/schemas/PlanRequest"
         required: true
       responses:
         "200":
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Household"
+                type: string
           description: OK
         "401":
           content:
@@ -4831,9 +4877,164 @@ paths:
               schema:
                 $ref: "#/components/schemas/ValidationErrors"
           description: "Validation failed: one error per field with the exact message."
-      summary: Start the Northline Plus free trial for the caller's household
+      summary: Switch the Plus plan
       tags:
-      - my-account-controller
+      - my-loyalty-controller
+    post:
+      operationId: myLoyaltyJoin
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlanRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      summary: Join Northline Plus (monthly or annual)
+      tags:
+      - my-loyalty-controller
+  /api/v1/me/plus/resume:
+    post:
+      operationId: myLoyaltyResume
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PlusView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      summary: Keep Plus renewing
+      tags:
+      - my-loyalty-controller
+  /api/v1/me/points:
+    get:
+      operationId: myLoyaltyPoints
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 50
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MyPoints"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      summary: "The caller's points: balance, expiry, rules and activity"
+      tags:
+      - my-loyalty-controller
   /api/v1/me/preferences:
     get:
       operationId: myPreferencesGet
@@ -6052,6 +6253,107 @@ paths:
           description: Not found.
       tags:
       - my-quotes-controller
+  /api/v1/me/referral:
+    get:
+      operationId: myLoyaltyReferral
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReferralView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      summary: The caller's Invite a neighbour code and how it went
+      tags:
+      - my-loyalty-controller
+  /api/v1/me/referral/claim:
+    post:
+      operationId: myLoyaltyClaim
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReferralView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      summary: Use a neighbour's invite code
+      tags:
+      - my-loyalty-controller
   /api/v1/me/reviews:
     post:
       operationId: myReviewsPost
@@ -6529,6 +6831,29 @@ paths:
       security: []
       tags:
       - reward-controller
+  /api/v1/public/plus-prices:
+    get:
+      operationId: memberPriceLive
+      parameters:
+      - in: query
+        name: offers
+        required: false
+        schema:
+          type: string
+          default: ""
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+                  format: int32
+          description: OK
+      security: []
+      tags:
+      - member-price-controller
   /api/v1/public/privacy-exports/{token}:
     get:
       operationId: privacyExportDownload
@@ -6710,6 +7035,44 @@ paths:
       security: []
       tags:
       - my-bookings-controller
+  /api/v1/public/rewards:
+    get:
+      operationId: publicRewardsNear
+      parameters:
+      - in: query
+        name: city
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: lat
+        required: false
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: lng
+        required: false
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 8
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseNearbyReward"
+          description: OK
+      security: []
+      tags:
+      - public-rewards-controller
   /api/v1/public/services:
     get:
       operationId: publicServicesLanding
@@ -7616,6 +7979,26 @@ paths:
       - public-storefront-controller
 components:
   schemas:
+    Activity:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        fundedBy:
+          type: string
+        id:
+          type: string
+        note:
+          type: string
+        points:
+          type: integer
+          format: int64
+        type:
+          type: string
     ActivityResponse:
       type: object
       properties:
@@ -7830,6 +8213,18 @@ components:
           type: string
         id:
           type: string
+    Benefits:
+      type: object
+      properties:
+        member:
+          type: boolean
+        memberPrices:
+          type: boolean
+        pointsMultiplierPct:
+          type: integer
+          format: int32
+        serviceFeeWaived:
+          type: boolean
     Body:
       type: object
       properties:
@@ -8000,6 +8395,16 @@ components:
           type: integer
           format: int64
           description: Cents of Canadian dollars (CAD).
+        listUnitCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        memberPrice:
+          type: boolean
+        memberUnitCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
         merchantId:
           type: string
         name:
@@ -8034,6 +8439,10 @@ components:
         itemCount:
           type: integer
           format: int32
+        plusSavingsCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
         shopCount:
           type: integer
           format: int32
@@ -8168,6 +8577,23 @@ components:
         usePoints:
           type: boolean
         windowId:
+          type: string
+    ClaimRequest:
+      type: object
+      properties:
+        code:
+          type: string
+    Claimed:
+      type: object
+      properties:
+        claimedAt:
+          type: string
+          format: date-time
+        code:
+          type: string
+        reason:
+          type: string
+        state:
           type: string
     Combo:
       type: object
@@ -9327,6 +9753,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Mine"
+    ListResponseNearbyReward:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/NearbyReward"
     ListResponsePayment:
       type: object
       properties:
@@ -9526,6 +9959,60 @@ components:
           format: int64
           description: Cents of Canadian dollars (CAD).
         productId:
+          type: string
+    MyPoints:
+      type: object
+      properties:
+        activity:
+          type: array
+          items:
+            $ref: "#/components/schemas/Activity"
+        balance:
+          type: integer
+          format: int64
+        expiryMonths:
+          type: integer
+          format: int32
+        nextExpiryAt:
+          type: string
+          format: date-time
+        nextExpiryPoints:
+          type: integer
+          format: int64
+        plusMultiplierPct:
+          type: integer
+          format: int32
+        pointsPerDollarSpent:
+          type: integer
+          format: int32
+        redeemPointsPerDollar:
+          type: integer
+          format: int32
+        valueCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+    NearbyReward:
+      type: object
+      properties:
+        businessName:
+          type: string
+        distanceKm:
+          type: number
+          format: double
+        endsOn:
+          type: string
+          format: date
+        label:
+          type: string
+        merchantId:
+          type: string
+        multiplier:
+          type: integer
+          format: int32
+        slug:
+          type: string
+        type:
           type: string
     Note:
       type: object
@@ -9769,6 +10256,11 @@ components:
           type: string
         name:
           type: string
+    PlanRequest:
+      type: object
+      properties:
+        plan:
+          type: string
     Plus:
       type: object
       properties:
@@ -9783,14 +10275,47 @@ components:
         since:
           type: string
           format: date-time
-    PlusRequest:
+    PlusView:
       type: object
       properties:
+        annualPriceCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        benefits:
+          $ref: "#/components/schemas/Benefits"
+        cancelAtPeriodEnd:
+          type: boolean
+        clientSecret:
+          type: string
+        currentPeriodEnd:
+          type: string
+          format: date-time
+        members:
+          type: integer
+          format: int32
+        monthlyPriceCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        payer:
+          type: boolean
         plan:
           type: string
-          minLength: 1
-      required:
-      - plan
+        provider:
+          type: string
+        publishableKey:
+          type: string
+        since:
+          type: string
+          format: date-time
+        status:
+          type: string
+        trialAvailable:
+          type: boolean
+        trialDays:
+          type: integer
+          format: int32
     Points:
       type: object
       properties:
@@ -10583,6 +11108,33 @@ components:
         contactPhone:
           type: string
         unit:
+          type: string
+    ReferralView:
+      type: object
+      properties:
+        canClaim:
+          type: boolean
+        claimed:
+          $ref: "#/components/schemas/Claimed"
+        code:
+          type: string
+        minOrderCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        pending:
+          type: integer
+          format: int64
+        pointsEach:
+          type: integer
+          format: int64
+        pointsEarned:
+          type: integer
+          format: int64
+        rewarded:
+          type: integer
+          format: int64
+        shareUrl:
           type: string
     RefuseRequest:
       type: object
@@ -11540,6 +12092,8 @@ components:
             $ref: "#/components/schemas/Line"
         mode:
           type: string
+        plusServiceFee:
+          type: boolean
         points:
           type: integer
           format: int64
