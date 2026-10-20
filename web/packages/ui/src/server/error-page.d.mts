@@ -14,13 +14,13 @@ export declare function errorDetail(error: unknown): ErrorDetail;
 export declare function logError(entry: { ref: string; status: number; method?: string; url?: string; error: unknown; source?: string }, log?: (line: string) => void): void;
 export declare function renderErrorPage(opts?: {
   status?: number; locale?: ErrorLocale; ref?: string; url?: string; audience?: ErrorAudience; detail?: ErrorDetail;
-  nonce?: string; supportEmail?: string | null; homeHref?: string;
+  nonce?: string; supportEmail?: string | null; homeHref?: string; reload?: boolean;
 }): string;
 type HeaderBag = { get(name: string): string | null } | Record<string, string | string[] | undefined>;
 export interface ErrorAnswer { status: number; headers: Record<string, string>; body: string; ref: string }
 export declare function errorResponseParts(opts: {
   status: number; error?: unknown; request?: { url?: string; method?: string; headers?: HeaderBag }; dev?: boolean;
-  audience?: ErrorAudience; nonce?: string; supportEmail?: string | null; ref?: string; log?: (line: string) => void; source?: string;
+  audience?: ErrorAudience; nonce?: string; supportEmail?: string | null; ref?: string; log?: (line: string) => void; source?: string; reload?: boolean;
 }): ErrorAnswer;
 /** For Vite's `server.proxy[path].configure`. */
 export declare function proxyErrors(opts?: { audience?: ErrorAudience; service?: string }): (proxy: object, options?: { target?: unknown }) => void;

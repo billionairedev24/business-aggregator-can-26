@@ -1,6 +1,7 @@
 import { Component, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from 'react';
 import { ArrowClockwise, CloudSlash, Compass, LockKey, Warning } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
+import { Logo } from './Logo';
 import { SiteLink } from './SiteLink';
 
 /** What failed (`failureKind()` of @northline/client): the screen's copy and actions follow it. */
@@ -120,12 +121,22 @@ export function FailureScreen({ kind, onRetry, autoRetry = false, retryKey, home
   );
 }
 
+/** A failure that replaces the whole app (no shell around it): the brand's logo above the {@link FailureScreen}. */
+export function FailurePage({ product, ...props }: FailureScreenProps & { product?: string }) {
+  return (
+    <main id="main" className="nl-failure-page">
+      <div className="nl-failure-brand"><Logo size={30} product={product} /></div>
+      <FailureScreen {...props} />
+    </main>
+  );
+}
+
 /**
  * The last line of defence of a single-page app (around its RouterProvider): an error no route caught — a provider
  * failing, a chunk that a new deploy removed — shows the branded {@link FailureScreen} instead of a blank page.
  * `kindOf` maps the error (the apps pass @northline/client's failureKind).
  */
-export class AppErrorBoundary extends Component<{ children: ReactNode; kindOf: (error: unknown) => FailureScreenKind; homeHref?: string; supportHref?: string; dev?: boolean }, { error: unknown }> {
+export class AppErrorBoundary extends Component<{ children: ReactNode; kindOf: (error: unknown) => FailureScreenKind; homeHref?: string; supportHref?: string; dev?: boolean; product?: string }, { error: unknown }> {
   state = { error: undefined as unknown };
   static getDerivedStateFromError(error: unknown) { return { error }; }
   componentDidCatch(error: unknown, info: ErrorInfo) { console.error('[app] unhandled error', error, info.componentStack); }
@@ -134,10 +145,8 @@ export class AppErrorBoundary extends Component<{ children: ReactNode; kindOf: (
     if (error === undefined) return this.props.children;
     const e = error instanceof Error ? error : new Error(String(error));
     return (
-      <main id="main" className="nl-failure-page">
-        <FailureScreen kind={this.props.kindOf(error)} onRetry={() => window.location.reload()} homeHref={this.props.homeHref} supportHref={this.props.supportHref}
-          detail={this.props.dev ? { name: e.name, message: e.message, stack: e.stack } : null} />
-      </main>
+      <FailurePage kind={this.props.kindOf(error)} onRetry={() => window.location.reload()} homeHref={this.props.homeHref} supportHref={this.props.supportHref}
+        product={this.props.product} detail={this.props.dev ? { name: e.name, message: e.message, stack: e.stack } : null} />
     );
   }
 }

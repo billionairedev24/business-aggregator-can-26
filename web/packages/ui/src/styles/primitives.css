@@ -111,7 +111,8 @@
 .nl-empty-title { display: block; color: var(--color-text); font-family: var(--font-heading); font-size: var(--text-xl); font-weight: var(--weight-semibold); }
 .nl-errorstate { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-danger-bg); color: var(--color-danger); display: flex; gap: var(--space-3); align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: var(--text-md); }
 /* A whole screen that could not be shown (FailureScreen): picture, heading, one sentence, Try again / Go to home. */
-.nl-failure-page { min-height: 100vh; display: flex; justify-content: center; padding: var(--space-10) var(--space-4); background: var(--color-canvas); }
+.nl-failure-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: var(--space-6) var(--space-4) var(--space-10); background: var(--color-canvas); }
+.nl-failure-brand { align-self: stretch; display: flex; padding-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
 .nl-failure { width: 100%; max-width: 640px; margin: 0 auto; padding-top: var(--space-8); text-align: center; display: flex; flex-direction: column; align-items: center; }
 .nl-failure-art { display: flex; justify-content: center; width: 100%; margin-bottom: var(--space-6); }
 .nl-failure-icon { display: grid; place-items: center; width: 112px; height: 112px; border-radius: 50%; background: var(--color-surface-brand); color: var(--color-action-primary); }

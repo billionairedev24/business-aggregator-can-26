@@ -27,8 +27,8 @@ export const ERROR_MESSAGES = {
     goHome: 'Go to home',
     retrying: 'Trying again in {seconds} seconds…',
     gaveUp: 'Still not answering. Try again in a few minutes.',
-    support: 'Still stuck? Contact support',
-    supportBody: 'and quote this reference so we can find what happened.',
+    support: 'Contact support',
+    supportBody: 'Still stuck? Quote this reference when you write to us, so we can find what happened.',
     reference: 'Reference',
     status: 'Error {status}',
     pageTitle: 'Error {status} · {brand}',
@@ -47,8 +47,8 @@ export const ERROR_MESSAGES = {
     goHome: 'Aller à l’accueil',
     retrying: 'Nouvel essai dans {seconds} secondes…',
     gaveUp: 'Toujours pas de réponse. Réessayez dans quelques minutes.',
-    support: 'Toujours bloqué? Contactez le soutien',
-    supportBody: 'en indiquant ce numéro de référence pour que nous puissions retrouver ce qui s’est passé.',
+    support: 'Contacter le soutien',
+    supportBody: 'Toujours bloqué? Indiquez cette référence en nous écrivant, pour que nous puissions retrouver ce qui s’est passé.',
     reference: 'Référence',
     status: 'Erreur {status}',
     pageTitle: 'Erreur {status} · {brand}',
@@ -231,15 +231,16 @@ h1{margin:0;font:700 clamp(28px,5vw,40px)/1.15 var(--font-display);letter-spacin
 .btn-secondary:hover{background:var(--color-action-neutral-hover)}
 .btn:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
 .help{margin:32px auto 0;padding:16px 20px;max-width:34em;border-radius:16px;background:var(--color-surface-sunken);border:1px solid var(--color-border);color:var(--color-text-muted);font-size:15px}
-.help a{display:inline-block;padding:10px 0;font-weight:600}
-.ref{display:block;margin-top:4px;color:var(--color-text);font:600 15px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em}
-.dev{margin:40px auto 0;max-width:900px;text-align:left;padding:20px;border-radius:16px;border:1px solid var(--color-danger);background:var(--color-danger-bg)}
+.help p{margin:0}
+.help a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:4px;font-weight:600}
+.ref{margin-top:6px!important;color:var(--color-text);font:600 15px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em}
+.dev{width:calc(100% - 32px);max-width:900px;min-width:0;margin:0 auto 48px;text-align:left;padding:20px;border-radius:16px;border:1px solid var(--color-danger);background:var(--color-danger-bg)}
 .dev h2{margin:0 0 8px;font-size:18px}
 .dev h3{margin:16px 0 4px;font-size:15px}
 .dev p{margin:0;white-space:pre-wrap;word-break:break-word}
 .dev ul{margin:0;padding-left:20px}
 .dev li{margin:4px 0}
-.dev pre{margin:12px 0 0;padding:12px;max-height:420px;overflow:auto;border-radius:8px;background:var(--color-surface);border:1px solid var(--color-border);font-size:12px;line-height:1.5;white-space:pre}
+.dev pre{margin:12px 0 0;padding:12px;max-width:100%;max-height:420px;overflow:auto;border-radius:8px;background:var(--color-surface);border:1px solid var(--color-border);font-size:12px;line-height:1.5;white-space:pre}
 footer{padding:24px;background:var(--color-footer-bg);border-top:1px solid var(--color-border);color:var(--color-text-muted);font-size:14px;text-align:center}
 @media (max-width:599.98px){main{padding:32px 16px 48px}.top{padding:0 16px}.actions{flex-direction:column;align-items:stretch}.body{font-size:17px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -253,7 +254,7 @@ const ICONS = {
 };
 
 // 502/503/504: reload with a backoff (2, 4, 8, 16, 30 s), five times per address within ten minutes, then stop.
-const RETRY_SCRIPT = `(function(){var k='nl.retry:'+location.pathname+location.search,s={n:0,t:0};try{s=JSON.parse(sessionStorage.getItem(k)||'{}')||s}catch(e){}if(!s.t||Date.now()-s.t>6e5)s={n:0,t:Date.now()};var el=document.getElementById('nl-retry');if(!el)return;var d=[2,4,8,16,30][s.n];if(d===undefined){el.textContent=el.getAttribute('data-gave-up');return}el.textContent=el.getAttribute('data-wait').replace('{seconds}',d);setTimeout(function(){s.n++;try{sessionStorage.setItem(k,JSON.stringify(s))}catch(e){}location.reload()},d*1000)})();`;
+const RETRY_SCRIPT = `(function(){var k='nl.retry:'+location.pathname+location.search,s={n:0,t:0};try{s=JSON.parse(sessionStorage.getItem(k)||'{}')||s}catch(e){}if(!s.t||Date.now()-s.t>6e5)s={n:0,t:Date.now()};var el=document.getElementById('nl-retry');if(!el)return;var d=[2,4,8,16,30][s.n];if(d===undefined){el.textContent=el.getAttribute('data-gave-up');return}el.textContent=el.getAttribute('data-wait').replace('{seconds}',d);if(el.getAttribute('data-reload')==='0')return;setTimeout(function(){s.n++;try{sessionStorage.setItem(k,JSON.stringify(s))}catch(e){}location.reload()},d*1000)})();`;
 
 /**
  * The error page's HTML.
@@ -265,8 +266,9 @@ const RETRY_SCRIPT = `(function(){var k='nl.retry:'+location.pathname+location.s
  *  detail   development only: errorDetail(error) — name, message, stack, hints
  *  nonce    the page's CSP nonce (the retry script); without one in production the page simply doesn't retry
  *  supportEmail  the support mailbox (NL_SUPPORT_EMAIL), else the brand's
+ *  reload   false: show the countdown but never reload (the preview page)
  */
-export function renderErrorPage({ status = 500, locale = 'en', ref, url = '/', audience = 'site', detail, nonce, supportEmail, homeHref = '/' } = {}) {
+export function renderErrorPage({ status = 500, locale = 'en', ref, url = '/', audience = 'site', detail, nonce, supportEmail, homeHref = '/', reload = true } = {}) {
   const m = ERROR_MESSAGES[locale === 'fr' ? 'fr' : 'en'];
   const kind = errorKind(status);
   const brandName = theme.brand.name;
@@ -290,7 +292,7 @@ export function renderErrorPage({ status = 500, locale = 'en', ref, url = '/', a
   ${detail.stack ? `<pre tabindex="0" aria-label="Stack">${escape(detail.stack)}</pre>` : ''}
 </section>` : '';
   const retry = kind === 'unreachable'
-    ? `<p class="retry" id="nl-retry" role="status" data-wait="${escape(m.retrying)}" data-gave-up="${escape(m.gaveUp)}"></p><script${nonce ? ` nonce="${escape(nonce)}"` : ''}>${RETRY_SCRIPT}</script>`
+    ? `<p class="retry" id="nl-retry" role="status" data-wait="${escape(m.retrying)}" data-gave-up="${escape(m.gaveUp)}"${reload ? '' : ' data-reload="0"'}></p><script${nonce ? ` nonce="${escape(nonce)}"` : ''}>${RETRY_SCRIPT}</script>`
     : '';
   return `<!DOCTYPE html>
 <html lang="${lang}">
@@ -312,7 +314,7 @@ export function renderErrorPage({ status = 500, locale = 'en', ref, url = '/', a
     <p class="body">${escape(body)}</p>
     ${retry}
     <div class="actions">${actions}</div>
-    <p class="help"><a href="mailto:${escape(mail)}?subject=${subject}">${escape(m.support)}</a> ${escape(m.supportBody)}${ref ? `<span class="ref">${escape(m.reference)} ${escape(ref)}</span>` : ''}</p>
+    <div class="help"><p>${escape(m.supportBody)}</p>${ref ? `<p class="ref">${escape(m.reference)} ${escape(ref)}</p>` : ''}<a href="mailto:${escape(mail)}?subject=${subject}">${escape(m.support)}</a></div>
   </div>
 </main>
 ${dev}
@@ -325,7 +327,7 @@ ${dev}
  * The whole answer for a failed request: the page (or JSON for an API caller) with `status`, no caching, the
  * reference in `x-nl-error-ref`; and the log line. `request` is a Request or { url, method, headers }.
  */
-export function errorResponseParts({ status, error, request, dev = false, audience = 'site', nonce, supportEmail, ref = errorReference(), log = console.error, source }) {
+export function errorResponseParts({ status, error, request, dev = false, audience = 'site', nonce, supportEmail, ref = errorReference(), log = console.error, source, reload = true }) {
   const headers = request?.headers;
   const header = name => (typeof headers?.get === 'function' ? headers.get(name) : headers?.[name]) ?? undefined;
   const url = request?.url ?? '/';
@@ -337,7 +339,7 @@ export function errorResponseParts({ status, error, request, dev = false, audien
     return { status, headers: { ...common, 'content-type': 'application/json; charset=utf-8' }, body: errorJson(status, ref), ref };
   }
   const locale = errorLocale({ url, cookie: header('cookie'), acceptLanguage: header('accept-language') });
-  const body = renderErrorPage({ status, locale, ref, url, audience, nonce, supportEmail, detail: dev && error !== undefined ? errorDetail(error) : undefined });
+  const body = renderErrorPage({ status, locale, ref, url, audience, nonce, supportEmail, reload, detail: dev && error !== undefined ? errorDetail(error) : undefined });
   return { status, headers: { ...common, 'content-type': 'text/html; charset=utf-8', 'content-language': locale === 'fr' ? 'fr-CA' : 'en-CA' }, body, ref };
 }
 

@@ -94,9 +94,9 @@ describe('the server-side timeout', () => {
     vi.useFakeTimers();
     vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => new Promise((_, reject) => init.signal!.addEventListener('abort', () => reject(init.signal!.reason)))));
     setHttpBase('http://bff.test', { timeoutMs: 1000 });
-    const pending = http('/api/v1/x').catch(e => e);
+    const pending = http('/api/v1/x').catch((e: unknown) => e as Error);
     await vi.advanceTimersByTimeAsync(1001);
-    const err = await pending;
+    const err = (await pending) as Error;
     expect(err.name).toBe('TimeoutError');
     expect(failureKind(err)).toBe('unreachable');
     vi.useRealTimers();

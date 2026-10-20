@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router';
 import { brand } from '@northline/tokens';
-import { FailureScreen, PageSkeleton, PageState } from '@northline/ui';
+import { FailurePage, PageSkeleton, PageState } from '@northline/ui';
 import { failureKind } from '../lib/http';
 import { ConsoleLayout, DeniedBanner } from '../features/shell/ConsoleLayout';
 import { loadStaff, requireSession } from '../features/shell/guards';
@@ -16,7 +16,7 @@ export const Route = createFileRoute('/_console')({
   errorComponent: function ConsoleError({ error, reset }) {
     const t = useShellT();
     const kind = failureKind(error);
-    return <PageState title={`${brand.name} ${t('console')}`}><FailureScreen kind={kind} onRetry={reset} autoRetry retryKey={error} title={kind === 'error' ? t('loadError') : undefined} /></PageState>;
+    return <FailurePage product={t('console')} kind={kind} onRetry={reset} autoRetry retryKey={error} title={kind === 'error' ? t('loadError') : undefined} />;
   },
   component: () => <ConsoleLayout denied={<><DeniedBanner /><Overview /></>}><Outlet /></ConsoleLayout>,
 });

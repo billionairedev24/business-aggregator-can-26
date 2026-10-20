@@ -1,7 +1,7 @@
 import { createFileRoute, Navigate, Outlet, useRouterState } from '@tanstack/react-router';
 import { brand } from '@northline/tokens';
 import { useQuery } from '@tanstack/react-query';
-import { FailureScreen, PageSkeleton, PageState, useLocale } from '@northline/ui';
+import { FailurePage, PageSkeleton, PageState, useLocale } from '@northline/ui';
 import { ApiError, failureKind } from '../lib/http';
 import { merchantQuery } from '../features/shell/api';
 import { requireSession } from '../features/shell/guards';
@@ -56,8 +56,6 @@ function MerchantError({ error, reset }: { error: unknown; reset: () => void }) 
   const kind = missing ? 'forbidden' : failureKind(error);
   // not this person's business → its own words; the studio-bff down → tried again on its own; else "couldn't load"
   return (
-    <PageState title={`${brand.name} ${t('studio')}`}>
-      <FailureScreen kind={kind} onRetry={reset} autoRetry retryKey={error} title={missing ? t('notFound') : kind === 'error' ? t('loadError') : undefined} />
-    </PageState>
+    <FailurePage product={t('studio')} kind={kind} onRetry={reset} autoRetry retryKey={error} title={missing ? t('notFound') : kind === 'error' ? t('loadError') : undefined} />
   );
 }
