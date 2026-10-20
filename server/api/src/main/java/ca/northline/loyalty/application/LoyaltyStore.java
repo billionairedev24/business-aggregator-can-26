@@ -28,7 +28,13 @@ public interface LoyaltyStore {
             long reversedCents,
             long reversedPoints,
             @Nullable Instant expiresAt,
-            Instant createdAt) {}
+            Instant createdAt,
+            List<String> excludedRefundIds) {
+
+        public EarningRow {
+            excludedRefundIds = List.copyOf(excludedRefundIds);
+        }
+    }
 
     /** @return false when the escrow already earned (a retried listener) */
     boolean insert(EarningRow earning);

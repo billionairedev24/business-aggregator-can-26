@@ -81,7 +81,9 @@ class ReferralService implements Referrals {
                         .isEmpty();
     }
 
+    /** A refused code still counts as a try: the refusal doesn't roll the try back (nothing else is written first). */
     @Override
+    @Transactional(noRollbackFor = RuleViolation.class)
     public ReferralView claim(String userId, @org.jspecify.annotations.Nullable String typed) {
         var now = clock.instant();
         var code = ReferralCode.normalise(typed);

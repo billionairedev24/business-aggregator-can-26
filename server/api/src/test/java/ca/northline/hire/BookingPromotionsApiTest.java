@@ -220,8 +220,8 @@ class BookingPromotionsApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.pointsAvailable").value(10_000))
                 .andExpect(jsonPath("$.pointsCents").value(4450)) // 50 % of $89
                 .andExpect(jsonPath("$.points").value(4450))
-                .andExpect(jsonPath("$.taxCents").value(445)) // the tax stays on the full price
-                .andExpect(jsonPath("$.totalCents").value(8900 + 445 - 4450));
+                .andExpect(jsonPath("$.taxCents").value(223)) // S-152: points come off before tax (5 % of $44.50)
+                .andExpect(jsonPath("$.totalCents").value(8900 - 4450 + 223));
 
         flow.checkout(customer, holdId, Map.of("usePoints", true)).andExpect(status().isOk());
         assertThat(wallet(customer)).isEqualTo(10_000); // held, not yet spent
@@ -253,11 +253,19 @@ class BookingPromotionsApiTest extends IntegrationTest {
                         .params(escrowId)
                         .query(Boolean.class)
                         .single());
-        // half of the $89 back: half of the $20 of points back to the wallet
-        var refund = cases.requestReview(escrowId, customer, 4_450, "Half the job");
+        // half of the $69 the card paid back (S-152: the $20 of points came off before tax): half of the points too
+        var refund = cases.requestReview(escrowId, customer, 3_450, "Half the job");
         decisions.decideRefund(refund, true, "agent-" + Ids.next());
         jobs.payRefundQueue();
-        org.awaitility.Awaitility.await().atMost(Duration.ofSeconds(10)).until(() -> wallet(customer) == 1_000);
+        // (the partial refund releases the rest, which earns points of its own — S-152 — so count the give-back alone)
+        org.awaitility.Awaitility.await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() -> jdbc.sql("select coalesce(sum(delta), 0) from trust.points_ledger where user_id = ?"
+                                        + " and ref_type = 'refund_return'")
+                                .params(customer)
+                                .query(Long.class)
+                                .single()
+                        == 1_000);
         assertThat(jdbc.sql("select points_cents from payments.refunds where id = ?")
                         .params(refund)
                         .query(Long.class)

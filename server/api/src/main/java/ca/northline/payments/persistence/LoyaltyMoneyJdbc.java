@@ -30,8 +30,11 @@ class LoyaltyMoneyJdbc implements SaleFacts, RewardChargeStore, PlusInvoiceStore
                                e.ref_id, coalesce(e.amount_cents, 0) as amount, e.listing_id, e.order_number,
                                coalesce(e.label, '') as label, coalesce(e.occurred_at, e.created_at) as held_at,
                                coalesce((select sum(r.amount_cents) from payments.refunds r
-                                          where r.escrow_id = e.id and r.state = 'paid'
-                                            and r.charged_to = 'merchant'), 0) as refunded
+                                          where r.escrow_id = e.id and r.state in ('approved', 'paid')
+                                            and r.charged_to = 'merchant'), 0) as refunded,
+                               array(select r.id from payments.refunds r
+                                      where r.escrow_id = e.id and r.state in ('approved', 'paid')
+                                        and r.charged_to = 'merchant' order by r.id) as refund_ids
                           from payments.escrows e where e.id = :id
                         """)
                 .param("id", escrowId)
@@ -44,6 +47,8 @@ class LoyaltyMoneyJdbc implements SaleFacts, RewardChargeStore, PlusInvoiceStore
                         rs.getString("ref_id"),
                         rs.getLong("amount"),
                         rs.getLong("refunded"),
+                        java.util.Arrays.asList(
+                                (String[]) rs.getArray("refund_ids").getArray()),
                         rs.getString("listing_id"),
                         rs.getString("order_number"),
                         rs.getString("label"),

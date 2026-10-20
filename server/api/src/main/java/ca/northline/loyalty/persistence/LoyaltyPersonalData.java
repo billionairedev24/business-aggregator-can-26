@@ -41,27 +41,34 @@ class LoyaltyPersonalData implements PersonalDataContributor {
                                (select r.state from loyalty.referrals r where r.invitee_id = :u) as code_you_used_state
                           from (select :u as u) one left join loyalty.referral_codes c on c.user_id = one.u
                         """, p),
-                section(jdbc, "loyalty.memberships", "Northline Plus you pay for", "Northline Plus que vous payez", """
+                section(
+                        jdbc,
+                        "loyalty.memberships",
+                        "Northline Plus you pay for",
+                        "Northline Plus que vous payez",
+                        """
                         select plan, status, provider, current_period_end, cancel_at_period_end, started_at, canceled_at
                           from loyalty.memberships where payer_id = :u
-                        """, p));
+                        """,
+                        p));
     }
 
     @Override
     public Erasure erase(Subject subject) {
         var u = subject.userId();
-        jdbc.sql("delete from loyalty.referral_codes where user_id = :u").param("u", u).update();
-        jdbc.sql("delete from loyalty.referral_attempts where user_id = :u").param("u", u).update();
+        jdbc.sql("delete from loyalty.referral_codes where user_id = :u")
+                .param("u", u)
+                .update();
+        jdbc.sql("delete from loyalty.referral_attempts where user_id = :u")
+                .param("u", u)
+                .update();
         jdbc.sql("delete from loyalty.referrals where invitee_id = :u or referrer_id = :u")
                 .param("u", u)
                 .update();
         var kept = jdbc.sql("""
                         select exists (select 1 from loyalty.earnings where customer_id = :u)
                             or exists (select 1 from loyalty.memberships where payer_id = :u)
-                        """)
-                .param("u", u)
-                .query(Boolean.class)
-                .single();
+                        """).param("u", u).query(Boolean.class).single();
         return kept ? Erasure.done().retaining("loyalty.earnings", Retention.TAX_RECORDS) : Erasure.done();
     }
 }

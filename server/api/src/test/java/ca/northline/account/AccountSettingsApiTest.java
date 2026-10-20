@@ -176,31 +176,31 @@ class AccountSettingsApiTest extends IntegrationTest {
         }
     }
 
+    /** S-152 moved joining Plus to the loyalty module (billing); the household and the wallet show it as before. */
     @Test
-    void plusTrial_startAndCancel() throws Exception {
+    void plus_showsOnTheHouseholdAndTheWallet() throws Exception {
         mvc.perform(get("/api/v1/me/household").with(TestJwt.customer(amara)))
                 .andExpect(jsonPath("$.plan").value("none"))
                 .andExpect(jsonPath("$.members", hasSize(0)));
         mvc.perform(post("/api/v1/me/plus")
                         .with(TestJwt.customer(amara))
+                        .header("Idempotency-Key", ca.northline.shared.Ids.next())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"plan\":\"monthly\"}"))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.plan").value("monthly"));
+        mvc.perform(get("/api/v1/me/household").with(TestJwt.customer(amara)))
                 .andExpect(jsonPath("$.plan").value("monthly"))
                 .andExpect(jsonPath("$.renewsAt").exists())
                 .andExpect(jsonPath("$.members[0].you").value(true))
                 .andExpect(jsonPath("$.members[0].role").value("owner"));
-        mvc.perform(post("/api/v1/me/plus")
-                        .with(TestJwt.customer(amara))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"plan\":\"annual\"}"))
-                .andExpect(status().isConflict());
         mvc.perform(get("/api/v1/me/wallet").with(TestJwt.customer(amara)))
                 .andExpect(jsonPath("$.plus.plan").value("monthly"));
+        // cancelling ends it at the end of what was paid for (the trial here)
         mvc.perform(delete("/api/v1/me/plus").with(TestJwt.customer(amara)))
-                .andExpect(jsonPath("$.plan").value("none"));
+                .andExpect(jsonPath("$.cancelAtPeriodEnd").value(true));
         mvc.perform(get("/api/v1/me/wallet").with(TestJwt.customer(amara)))
-                .andExpect(jsonPath("$.plus").doesNotExist());
+                .andExpect(jsonPath("$.plus.plan").value("monthly"));
     }
 
     @Nested

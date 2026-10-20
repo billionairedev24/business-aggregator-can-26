@@ -20,6 +20,8 @@ CREATE TABLE loyalty.earnings (
   reward_points        integer NOT NULL DEFAULT 0 CHECK (reward_points >= 0),
   reversed_cents       bigint  NOT NULL DEFAULT 0 CHECK (reversed_cents >= 0),
   reversed_points      integer NOT NULL DEFAULT 0 CHECK (reversed_points >= 0),
+  -- refunds the earning already left out (approved before the release): their refund.issued takes nothing back
+  excluded_refund_ids  text[]  NOT NULL DEFAULT '{}',
   expires_at           timestamptz,
   created_at           timestamptz NOT NULL,
   CONSTRAINT chk_earnings_reversed CHECK (reversed_points <= points AND reversed_cents <= amount_cents)

@@ -1,6 +1,7 @@
 package ca.northline.payments.api;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
@@ -13,7 +14,8 @@ public interface SaleFacts {
 
     /**
      * @param amountCents the merchant's amount the customer paid (after a promo code and points, before tax)
-     * @param refundedCents what refunds charged to the business have given back of it so far
+     * @param refundedCents what refunds charged to the business have given back of it, or are about to (approved)
+     * @param refundIds those refunds
      * @param listingId what was sold (offer, menu item or service), when known
      * @param heldAt when the money was held: the sale's time
      */
@@ -26,6 +28,7 @@ public interface SaleFacts {
             String refId,
             long amountCents,
             long refundedCents,
+            List<String> refundIds,
             @Nullable String listingId,
             @Nullable String orderNumber,
             String label,

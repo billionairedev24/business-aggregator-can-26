@@ -27,9 +27,9 @@ class LoyaltyJdbc implements LoyaltyStore {
         return jdbc.sql("""
                         insert into loyalty.earnings (escrow_id, customer_id, merchant_id, kind, ref_type, ref_id,
                                amount_cents, rule_id, points_per_dollar, plus_multiplier_pct, points, reward_points,
-                               expires_at, created_at)
+                               expires_at, created_at, excluded_refund_ids)
                         values (:escrow, :customer, :merchant, :kind, :refType, :refId, :amount, :rule, :ppd, :plus,
-                                :points, :reward, :expires, :at)
+                                :points, :reward, :expires, :at, :excluded)
                         on conflict (escrow_id) do nothing
                         """)
                         .param("escrow", e.escrowId())
@@ -46,6 +46,7 @@ class LoyaltyJdbc implements LoyaltyStore {
                         .param("reward", Math.toIntExact(e.rewardPoints()))
                         .param("expires", JdbcTimes.ts(e.expiresAt()))
                         .param("at", JdbcTimes.ts(e.createdAt()))
+                        .param("excluded", e.excludedRefundIds().toArray(String[]::new))
                         .update()
                 == 1;
     }
@@ -70,7 +71,9 @@ class LoyaltyJdbc implements LoyaltyStore {
                         rs.getLong("reversed_cents"),
                         rs.getLong("reversed_points"),
                         JdbcTimes.instant(rs, "expires_at"),
-                        JdbcTimes.requiredInstant(rs, "created_at")))
+                        JdbcTimes.requiredInstant(rs, "created_at"),
+                        java.util.Arrays.asList(
+                                (String[]) rs.getArray("excluded_refund_ids").getArray())))
                 .optional();
     }
 

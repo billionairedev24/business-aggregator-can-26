@@ -88,7 +88,8 @@ class EarningService {
                 0,
                 0,
                 expires,
-                now));
+                now,
+                fact.refundIds()));
         if (!inserted) {
             return; // a retried listener: this escrow already earned
         }
@@ -121,8 +122,8 @@ class EarningService {
     @Transactional
     public void reverse(String escrowId, String refundId, long refundedCents) {
         var earning = store.lockEarning(escrowId).orElse(null);
-        if (earning == null) {
-            return; // refunded before release: the release earns on what is left
+        if (earning == null || earning.excludedRefundIds().contains(refundId)) {
+            return; // refunded before (or as part of) the release: the release earned on what was left
         }
         var left = earning.points() - earning.reversedPoints();
         var points = Math.min(left, Earning.reversal(earning.points(), refundedCents, earning.amountCents()));
@@ -132,6 +133,6 @@ class EarningService {
         }
         store.reversed(escrowId, refundedCents, points);
         rewards.takeBack(escrowId, refundId, refundedCents, earning.amountCents())
-                .ifPresent(t -> charges.refund(t.creditId() + ":" + refundId, t.merchantId(), escrowId, t.cents()));
+                .ifPresent(t -> charges.refund(t.creditId() + "-" + refundId, t.merchantId(), escrowId, t.cents()));
     }
 }
