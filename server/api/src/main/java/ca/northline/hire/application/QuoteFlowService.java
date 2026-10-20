@@ -1,6 +1,8 @@
 package ca.northline.hire.application;
 
 import ca.northline.availability.api.ProviderSlots;
+import ca.northline.booking.api.BookingMoney;
+import ca.northline.booking.api.CancellationPolicies;
 import ca.northline.booking.api.CustomerBookings;
 import ca.northline.booking.api.CustomerQuotes;
 import ca.northline.booking.api.CustomerQuotes.CustomerQuote;
@@ -9,6 +11,8 @@ import ca.northline.catalogue.api.ServiceOffers;
 import ca.northline.hire.application.BookingCheckout.Confirmation;
 import ca.northline.hire.application.BookingCheckout.ViewBooking;
 import ca.northline.hire.application.QuoteFlow.Acceptance;
+import ca.northline.hire.application.QuoteFlow.AcceptancePrice;
+import ca.northline.hire.application.QuoteFlow.Balance;
 import ca.northline.hire.application.QuoteFlow.CompareQuotes;
 import ca.northline.hire.application.QuoteFlow.Comparison;
 import ca.northline.hire.application.QuoteFlow.ConfirmAcceptance;
@@ -21,6 +25,7 @@ import ca.northline.hire.application.QuoteFlow.RequestQuotes;
 import ca.northline.hire.application.QuoteFlow.Requested;
 import ca.northline.hire.application.QuoteFlow.StartAcceptance;
 import ca.northline.hire.application.QuoteFlow.ViewQuote;
+import ca.northline.hire.domain.Pricing;
 import ca.northline.hire.domain.QuoteAsk;
 import ca.northline.hire.domain.QuoteVisit;
 import ca.northline.hire.domain.ServiceKind;
@@ -30,6 +35,7 @@ import ca.northline.payments.api.EscrowKind;
 import ca.northline.payments.api.EscrowLifecycle;
 import ca.northline.payments.api.PaymentAuthorizations;
 import ca.northline.payments.api.PaymentSettings;
+import ca.northline.promotions.api.Promotions;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
@@ -39,6 +45,7 @@ import ca.northline.trust.api.RatingQuery;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -51,6 +58,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,8 +70,15 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @RequiredArgsConstructor
+@EnableConfigurationProperties(BalanceProperties.class)
 class QuoteFlowService
-        implements RequestQuotes, CompareQuotes, ViewQuote, DeclineQuote, StartAcceptance, ConfirmAcceptance {
+        implements RequestQuotes,
+                CompareQuotes,
+                ViewQuote,
+                DeclineQuote,
+                StartAcceptance,
+                ConfirmAcceptance,
+                QuoteFlow.PriceAcceptance {
 
     /** A requested date means "from 9 am" to the provider (the Studio card shows a time). */
     static final LocalTime PREFERRED_TIME = LocalTime.of(9, 0);
@@ -75,6 +90,12 @@ class QuoteFlowService
     static final String EXPIRED = "This quote has expired. Ask for an updated quote.";
     static final String NOT_STARTED = "Start the payment first.";
     static final int DEFAULT_DURATION_MIN = 60;
+
+    /** S-153: a promo code or points reserved for an acceptance stay reserved this long (the unheld-payment sweep). */
+    static final Duration RESERVE_FOR = Duration.ofMinutes(30);
+
+    /** The promotions basket kind of every booking, quotes included. */
+    static final String SERVICE = "service";
 
     private final BrowseServices.ViewCategory categories;
     private final PublicProviders providers;
@@ -92,6 +113,10 @@ class QuoteFlowService
     private final PersonDirectory people;
     private final RegionDefaults region;
     private final Clock clock;
+    private final Promotions promotions;
+    private final CancellationPolicies policies;
+    private final BookingMoney money;
+    private final BalanceProperties balances;
 
     @Override
     public Requested request(String customerId, QuoteAsk ask) {
@@ -161,7 +186,8 @@ class QuoteFlowService
                 r.createdAt(),
                 r.respondBy(),
                 r.expiresAt(),
-                rows);
+                rows,
+                r.photos());
     }
 
     @Override
@@ -188,7 +214,15 @@ class QuoteFlowService
                 .filter(a -> a.acceptedAt() != null)
                 .map(CustomerQuotes.Acceptance::bookingId)
                 .orElse(null);
-        return new QuotePage(q, provider, r.title(), r.area(), acceptance, others);
+        return new QuotePage(
+                q,
+                provider,
+                r.title(),
+                r.area(),
+                acceptance,
+                others,
+                policies.of(q.merchantId()),
+                split(q).balance(balances.leadHours()));
     }
 
     @Override
@@ -210,31 +244,99 @@ class QuoteFlowService
         visit.validate(kind(r).comesToCustomer());
         startsAt(q, r);
         gate.require(customerId, mfa, stepUpProof);
-        long held = q.depositCents() > 0 ? q.depositCents() : q.totalCents();
+        var split = split(q);
+        var bookingId = quotes.acceptance(customerId, quoteId)
+                .map(CustomerQuotes.Acceptance::bookingId)
+                .orElseGet(Ids::next);
+        // S-153: a promo code and points come off what is held now (the deposit, or the whole quote)
+        var promo = promotions.reserve(
+                bookingId,
+                clock.instant().plus(RESERVE_FOR),
+                basket(customerId, bookingId, q.merchantId(), split.amountCents()),
+                new Promotions.Ask(visit.promoCode(), Boolean.TRUE.equals(visit.usePoints())));
+        var line = promo.lines().getFirst();
+        var amount = line.taxableCents();
+        var tax = promo.discountCents() == 0 ? split.taxCents() : Pricing.taxOn(amount, q.taxBps());
+        var started = payments.start(
+                new PaymentAuthorizations.Request(
+                        q.merchantId(),
+                        "booking",
+                        bookingId,
+                        customerId,
+                        amount,
+                        tax,
+                        "booking:" + bookingId,
+                        clientKey,
+                        null,
+                        0,
+                        line.pointsCents()),
+                visit.paymentMethodId());
+        quotes.prepareAcceptance(new CustomerQuotes.Acceptance(
+                quoteId, customerId, bookingId, started.paymentIntent(), amount, tax, null));
+        return new Acceptance(
+                quoteId,
+                bookingId,
+                amount,
+                tax,
+                amount + tax - line.pointsCents(),
+                started.status(),
+                started.paymentIntent(),
+                started.clientSecret(),
+                paymentSettings.provider(),
+                paymentSettings.publishableKey(),
+                promo.discountCents(),
+                promo.pointsCents(),
+                promo.code(),
+                split.balance(balances.leadHours()));
+    }
+
+    @Override
+    public AcceptancePrice price(String customerId, String quoteId, @Nullable String promoCode, boolean usePoints) {
+        var q = ownQuote(customerId, quoteId);
+        var split = split(q);
+        var promo = promotions.price(
+                basket(customerId, "price:" + quoteId, q.merchantId(), split.amountCents()),
+                new Promotions.Ask(promoCode, usePoints));
+        var line = promo.lines().getFirst();
+        var tax = promo.discountCents() == 0 ? split.taxCents() : Pricing.taxOn(line.taxableCents(), q.taxBps());
+        return new AcceptancePrice(
+                line.taxableCents(),
+                promo.discountCents(),
+                tax,
+                promo.points(),
+                promo.pointsCents(),
+                promo.pointsAvailable(),
+                line.taxableCents() + tax - promo.pointsCents(),
+                promo.code(),
+                split.balance(balances.leadHours()));
+    }
+
+    /**
+     * What accepting holds now (the deposit, or the whole quote when it asks for none) — its tax being the deposit's
+     * share of the quote's — and what is left for the balance.
+     */
+    record Split(long amountCents, long taxCents, long balanceCents, long balanceTaxCents) {
+        Balance balance(int leadHours) {
+            return new Balance(balanceCents, balanceTaxCents, balanceCents + balanceTaxCents, leadHours);
+        }
+    }
+
+    static Split split(CustomerQuote q) {
+        long held = q.depositCents() > 0 ? Math.min(q.depositCents(), q.totalCents()) : q.totalCents();
         long tax = q.totalCents() == 0
                 ? 0
                 : BigDecimal.valueOf(held)
                         .multiply(BigDecimal.valueOf(q.taxCents()))
                         .divide(BigDecimal.valueOf(q.totalCents()), 0, RoundingMode.HALF_UP)
                         .longValueExact();
-        var bookingId = quotes.acceptance(customerId, quoteId)
-                .map(CustomerQuotes.Acceptance::bookingId)
-                .orElseGet(Ids::next);
-        var started = payments.start(new PaymentAuthorizations.Request(
-                q.merchantId(), "booking", bookingId, customerId, held - tax, tax, "booking:" + bookingId, clientKey));
-        quotes.prepareAcceptance(new CustomerQuotes.Acceptance(
-                quoteId, customerId, bookingId, started.paymentIntent(), held - tax, tax, null));
-        return new Acceptance(
-                quoteId,
-                bookingId,
-                held - tax,
-                tax,
-                held,
-                started.status(),
-                started.paymentIntent(),
-                started.clientSecret(),
-                paymentSettings.provider(),
-                paymentSettings.publishableKey());
+        long balanceTax = q.taxCents() - tax;
+        long balance = q.totalCents() - held - balanceTax;
+        return new Split(held - tax, tax, Math.max(0, balance), Math.max(0, balanceTax));
+    }
+
+    private static Promotions.Basket basket(String customerId, String bookingId, String merchantId, long cents) {
+        return new Promotions.Basket(
+                customerId, SERVICE, List.of(new Promotions.Item("booking", bookingId, merchantId, cents)));
     }
 
     @Override
@@ -254,6 +356,9 @@ class QuoteFlowService
         var member = slots.freeMember(q.merchantId(), startsAt, duration, customerId)
                 .orElseThrow(() -> new Conflict("slot_taken", NOT_FREE));
         var customer = people.people(List.of(customerId)).get(customerId);
+        var promo = promotions.reserved(SERVICE, a.bookingId()).line("booking", a.bookingId());
+        var discount = promo.map(l -> new EscrowLifecycle.Discount(l.discountCents(), l.fundedBy(), l.pointsCents()))
+                .orElse(null);
         var escrowId = escrow.hold(new EscrowLifecycle.Hold(
                 q.merchantId(),
                 EscrowKind.SERVICE,
@@ -269,7 +374,10 @@ class QuoteFlowService
                 null,
                 "search",
                 a.paymentIntent(),
-                clock.instant()));
+                clock.instant(),
+                null,
+                discount));
+        promotions.redeem(SERVICE, a.bookingId());
         quotes.accept(customerId, quoteId);
         var booked = bookings.book(new CustomerBookings.NewBooking(
                 a.bookingId(),
@@ -291,7 +399,21 @@ class QuoteFlowService
                 a.amountCents(),
                 q.taxCents(),
                 escrowId,
+                policies.of(q.merchantId()).freeUntil(startsAt),
+                discount == null ? 0 : discount.codeCents(),
+                discount == null ? 0 : discount.pointsCents(),
+                null,
                 null));
+        // S-153: a deposit quote's balance is held automatically before the event (BalanceHoldService)
+        var split = split(q);
+        if (split.balanceCents() + split.balanceTaxCents() > 0) {
+            var due = startsAt.minus(balances.lead());
+            money.scheduleBalance(
+                    booked.id(),
+                    split.balanceCents(),
+                    split.balanceTaxCents(),
+                    due.isBefore(clock.instant()) ? clock.instant() : due);
+        }
         return held(bookingViews.booking(customerId, booked.id()), a);
     }
 
@@ -318,7 +440,11 @@ class QuoteFlowService
                 c.steps(),
                 c.report(),
                 c.photoCount(),
-                c.releasesAt());
+                c.releasesAt(),
+                c.photos(),
+                c.cancellation(),
+                c.balance(),
+                c.cancelled());
     }
 
     private static void requireOpen(CustomerQuote q) {

@@ -104,6 +104,6 @@ class MyQuotesController {
     }
 
     private static QuoteVisit visit(@Nullable QuoteVisit body) {
-        return Objects.requireNonNullElseGet(body, () -> new QuoteVisit(null, null, null, null));
+        return Objects.requireNonNullElseGet(body, QuoteVisit::none);
     }
 }

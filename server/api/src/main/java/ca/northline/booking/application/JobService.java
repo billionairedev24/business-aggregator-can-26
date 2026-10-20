@@ -1,5 +1,6 @@
 package ca.northline.booking.application;
 
+import ca.northline.booking.api.BookingMoney;
 import ca.northline.booking.api.JobEscrows;
 import ca.northline.booking.application.JobQueries.JobRow;
 import ca.northline.booking.application.JobViews.Customer;
@@ -47,6 +48,8 @@ class JobService implements ListJobs, ViewJob, AdvanceJob, RequestApproval {
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final ProviderPositions positions;
+    private final CustomerPhotoStore photos;
+    private final BookingMoneyStore moneyStore;
 
     @Override
     public List<JobSummary> list(ListJobs.Query query) {
@@ -77,6 +80,7 @@ class JobService implements ListJobs, ViewJob, AdvanceJob, RequestApproval {
         var money = card.paid()
                 ? escrows.of(viewer.merchantId(), List.of(bookingId)).get(bookingId)
                 : null;
+        var facts = moneyStore.facts(bookingId);
         var customerPerson = job.customerId() == null ? null : names.get(job.customerId());
         var customer = customerPerson == null
                 ? null
@@ -106,7 +110,13 @@ class JobService implements ListJobs, ViewJob, AdvanceJob, RequestApproval {
                         .map(l -> new TimelineEntry(
                                 l.type(), l.at(), firstName(names, l.actorId()), l.note(), l.mediaId()))
                         .toList(),
-                queries.approvals(bookingId));
+                queries.approvals(bookingId),
+                photos.of("booking", bookingId).stream()
+                        .map(CustomerPhotoStore.StoredPhoto::id)
+                        .toList(),
+                facts.map(BookingMoney.Facts::balance)
+                        .orElseGet(() -> new BookingMoney.Balance("none", 0, 0, null, null, 0, null)),
+                facts.map(BookingMoney.Facts::cancellation).orElse(null));
     }
 
     @Override

@@ -1,5 +1,7 @@
 package ca.northline.hire.application;
 
+import ca.northline.booking.api.CancellationPolicies;
+import ca.northline.booking.api.CustomerPhotos;
 import ca.northline.booking.api.CustomerQuotes.CustomerQuote;
 import ca.northline.hire.application.BookingCheckout.Confirmation;
 import ca.northline.hire.domain.QuoteAsk;
@@ -91,7 +93,8 @@ public final class QuoteFlow {
             Instant createdAt,
             @Nullable Instant respondBy,
             @Nullable Instant expiresAt,
-            List<Offer> offers) {}
+            List<Offer> offers,
+            List<CustomerPhotos.Photo> photos) {}
 
     /** @param others the other providers' latest quotes for the same request (compare link) */
     public record QuotePage(
@@ -100,7 +103,34 @@ public final class QuoteFlow {
             String title,
             @Nullable String area,
             @Nullable String bookingId,
-            List<Other> others) {}
+            List<Other> others,
+            CancellationPolicies.Policy cancellation,
+            Balance balance) {}
+
+    /**
+     * S-153: what a deposit quote leaves to pay — held automatically {@code leadHours} before the event (the deposit's
+     * card), none for a quote held whole.
+     */
+    public record Balance(long cents, long taxCents, long totalCents, int leadHours) {}
+
+    /** S-153: the "Accept" step's price with a promo code and points (checks the code; holds nothing). */
+    public interface PriceAcceptance {
+        AcceptancePrice price(String customerId, String quoteId, @Nullable String promoCode, boolean usePoints);
+    }
+
+    /**
+     * @param heldCents what the card is asked for now: the deposit (or whole quote) less the code, its tax, less points
+     */
+    public record AcceptancePrice(
+            long amountCents,
+            long discountCents,
+            long taxCents,
+            long points,
+            long pointsCents,
+            long pointsAvailable,
+            long heldCents,
+            @Nullable String promoCode,
+            Balance balance) {}
 
     public record Other(String quoteId, String providerName, long totalCents, String state) {}
 
@@ -118,5 +148,9 @@ public final class QuoteFlow {
             @Nullable String paymentIntent,
             @Nullable String clientSecret,
             String provider,
-            @Nullable String publishableKey) {}
+            @Nullable String publishableKey,
+            long discountCents,
+            long pointsCents,
+            @Nullable String promoCode,
+            Balance balance) {}
 }

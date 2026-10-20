@@ -35,4 +35,13 @@ public interface CustomerPhotos {
      * (422 on {@code photoIds}); returns them de-duplicated in order.
      */
     List<String> requireOwn(String customerId, List<String> photoIds);
+
+    /** Attaches the customer's checked photos to their booking's job details (the business sees them on the job). */
+    void attachToBooking(String customerId, String bookingId, List<String> photoIds);
+
+    /** The photos of a booking (the caller checked it is the customer's own). */
+    List<Photo> ofBooking(String bookingId);
+
+    /** The photos of a quote request (the caller checked it is the customer's own). */
+    List<Photo> ofRequest(String requestId);
 }

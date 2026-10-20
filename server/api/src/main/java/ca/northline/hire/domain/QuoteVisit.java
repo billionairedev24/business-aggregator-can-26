@@ -14,7 +14,15 @@ public record QuoteVisit(
         @Nullable String addressLine,
         @Nullable String unit,
         @Nullable String accessNote,
-        @Nullable String contactPhone) {
+        @Nullable String contactPhone,
+        @Nullable String promoCode,
+        @Nullable Boolean usePoints,
+        @Nullable String paymentMethodId) {
+
+    /** No address, code, points or saved card (an empty body). */
+    public static QuoteVisit none() {
+        return new QuoteVisit(null, null, null, null, null, null, null);
+    }
 
     /** @param comesToCustomer the provider travels to the customer (visits, home services, events) */
     public QuoteVisit validate(boolean comesToCustomer) {

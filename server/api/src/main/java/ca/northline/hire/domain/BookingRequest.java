@@ -42,7 +42,14 @@ public record BookingRequest(
         @Nullable String promoCode,
         @Nullable Boolean usePoints,
         @Nullable Double siteLat,
-        @Nullable Double siteLng) {
+        @Nullable Double siteLng,
+        @Nullable List<String> photoIds,
+        @Nullable String paymentMethodId) {
+
+    /** S-153: the job's photos (uploaded first, {@code /me/photos}); none when left out. */
+    public List<String> photos() {
+        return photoIds == null ? List.of() : photoIds;
+    }
 
     public static final String SITE = "Pick the address on the map again.";
 

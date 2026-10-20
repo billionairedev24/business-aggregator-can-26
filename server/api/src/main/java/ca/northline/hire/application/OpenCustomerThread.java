@@ -1,9 +1,9 @@
-package ca.northline.booking.application;
+package ca.northline.hire.application;
 
 /**
  * S-153: the business writes to the customer first — about a quote request (before quoting: "Which year is the
- * car?") or about a job. Opens (or finds) the same thread the customer's "Ask a question" opens; the Studio then
- * shows it in Messages ({@code ?thread=<id>}).
+ * car?") or about a job. Opens (or finds) the same thread the customer's "Ask a question" opens; the Studio then shows
+ * it in Messages ({@code ?thread=<id>}).
  */
 public interface OpenCustomerThread {
 

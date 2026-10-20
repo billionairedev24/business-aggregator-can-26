@@ -1,5 +1,6 @@
 package ca.northline.booking.application;
 
+import ca.northline.booking.api.BookingMoney;
 import ca.northline.booking.api.JobEscrows;
 import ca.northline.booking.domain.Approval;
 import ca.northline.booking.domain.BookingState;
@@ -48,7 +49,11 @@ public final class JobViews {
             // what was charged and is held, its GST/HST, Northline's fee and the merchant's net; null without payment
             JobEscrows.@Nullable Held escrowMoney,
             List<TimelineEntry> timeline,
-            List<Approval> approvals) {}
+            List<Approval> approvals,
+            // S-153: the customer's photos of the job, the balance of a deposit quote, a cancellation's fee
+            List<String> customerPhotoIds,
+            BookingMoney.Balance balance,
+            BookingMoney.@Nullable Cancellation cancellation) {}
 
     public record Customer(String name, @Nullable BigDecimal reliability, long pastJobs) {}
 

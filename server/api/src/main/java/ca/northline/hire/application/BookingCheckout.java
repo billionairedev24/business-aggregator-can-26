@@ -1,5 +1,8 @@
 package ca.northline.hire.application;
 
+import ca.northline.booking.api.BookingMoney;
+import ca.northline.booking.api.CancellationPolicies;
+import ca.northline.booking.api.CustomerPhotos;
 import ca.northline.hire.domain.BookingRequest;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -88,8 +91,16 @@ public final class BookingCheckout {
         Confirmation signOff(String customerId, String bookingId);
     }
 
-    /** @param timeZone the business's time zone (its province's, from the region model): days and times are read in it */
-    public record Calendar(String serviceId, int durationMin, List<Day> days, String timeZone) {}
+    /**
+     * @param timeZone the business's time zone (its province's, from the region model): days and times are read in it
+     * @param cancellation S-153: the provider's late-cancellation policy, shown before booking
+     */
+    public record Calendar(
+            String serviceId,
+            int durationMin,
+            List<Day> days,
+            String timeZone,
+            CancellationPolicies.Policy cancellation) {}
 
     public record Day(LocalDate date, @Nullable String closed, int free, List<Slot> slots) {}
 
@@ -127,6 +138,10 @@ public final class BookingCheckout {
      * @param report the member's written report at completion
      * @param photoCount completion photos the member took
      * @param releasesAt when the escrow releases by itself (48 h after completion) while the customer hasn't signed off
+     * @param photos S-153: the customer's photos of the job
+     * @param cancellation the late-cancellation policy it was booked under (null: free cancellation, before S-153)
+     * @param balance the balance of a deposit quote ({@code none} for everything else)
+     * @param cancelled the cancellation, once cancelled
      */
     public record Confirmation(
             String bookingId,
@@ -149,7 +164,11 @@ public final class BookingCheckout {
             List<Step> steps,
             @Nullable String report,
             int photoCount,
-            @Nullable Instant releasesAt) {}
+            @Nullable Instant releasesAt,
+            List<CustomerPhotos.Photo> photos,
+            CancellationPolicies.@Nullable Policy cancellation,
+            BookingMoney.Balance balance,
+            BookingMoney.@Nullable Cancellation cancelled) {}
 
     /** @param type {@code en_route | on_site | completed | signed_off} */
     public record Step(String type, Instant at) {}

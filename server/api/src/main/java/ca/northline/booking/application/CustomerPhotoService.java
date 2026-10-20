@@ -85,6 +85,26 @@ class CustomerPhotoService implements CustomerPhotos, ViewCustomerPhoto {
     }
 
     @Override
+    @Transactional
+    public void attachToBooking(String customerId, String bookingId, List<String> photoIds) {
+        store.attach(customerId, requireOwn(customerId, photoIds), "booking", bookingId);
+    }
+
+    @Override
+    public List<Photo> ofBooking(String bookingId) {
+        return store.of("booking", bookingId).stream()
+                .map(CustomerPhotoService::view)
+                .toList();
+    }
+
+    @Override
+    public List<Photo> ofRequest(String requestId) {
+        return store.of("quote_request", requestId).stream()
+                .map(CustomerPhotoService::view)
+                .toList();
+    }
+
+    @Override
     public Optional<Content> forMerchant(String merchantId, String photoId) {
         return store.visibleTo(merchantId, photoId).flatMap(this::content);
     }
