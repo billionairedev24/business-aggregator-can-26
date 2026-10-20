@@ -66,6 +66,9 @@ export interface Quote {
 export interface QuoteProvider { merchantId: string; slug: string; name: string; tier: string; rating: number; reviewCount: number; onTimePct?: number | null; disputePct?: number | null; verifiedFacts: string[] }
 export interface QuotePage {
   quote: Quote; provider: QuoteProvider; title: string; area?: string | null; bookingId?: string | null;
+  /** S-153: the late-cancellation terms the booking will keep; a deposit quote's balance, held automatically before. */
+  cancellation?: { windowHours: number; feeBps: number; feeCents: number } | null;
+  balance?: { cents: number; taxCents: number; totalCents: number; leadHours: number } | null;
   others: Array<{ quoteId: string; providerName: string; totalCents: number; state: string }>;
 }
 /** Where the job happens — given to the chosen provider only when accepting (S-56). */

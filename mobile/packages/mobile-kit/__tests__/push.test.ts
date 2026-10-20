@@ -196,6 +196,7 @@ describe('deep links', () => {
     ['https://staging.northline.ca/app/food/orders/O1', { screen: 'order', orderId: 'O1', food: true }, '/food/orders/O1'],
     ['https://northline.ca/app/bookings/B1', { screen: 'booking', bookingId: 'B1' }, '/bookings/B1'],
     ['https://northline.ca/app/quotes/qt_1', { screen: 'quote', quoteId: 'qt_1' }, '/quotes/qt_1'],
+    ['https://northline.ca/app/messages/th_1', { screen: 'thread', threadId: 'th_1' }, '/messages/th_1'],
     ['https://northline.ca/app/cases/RF-2214', { screen: 'case', caseNumber: 'RF-2214' }, '/cases/RF-2214'],
     ['https://northline.ca/courier/run', { screen: 'courierRun' }, '/run'],
     ['ca.northline.app://orders/O1', { screen: 'order', orderId: 'O1', food: false }, '/orders/O1'],

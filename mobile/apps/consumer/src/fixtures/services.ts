@@ -109,6 +109,7 @@ const fixtureBooking = (id: string, state: BookingState, at: number, extra: Part
   report: null,
   photoCount: 0,
   releasesAt: null,
+  cancellation: { windowHours: 24, feeBps: 5000, feeCents: 0 },
   customer: 'fixture-user',
   ...extra,
 });
@@ -256,7 +257,7 @@ export function servicesFixtures(ctx: FixtureContext, state: ServicesFixtureStat
     }
     if (req.method === 'GET' && (r = m(/^\/public\/providers\/([^/]+)\/slots$/))) {
       const serviceId = req.url.searchParams.get('serviceId') ?? '';
-      return ctx.answer(200, { serviceId, durationMin: 45, days: calendarDays(ctx.now(), serviceId, state.taken).map(({ serviceId: _s, ...d }) => d), timeZone: BUSINESS_ZONE });
+      return ctx.answer(200, { serviceId, durationMin: 45, days: calendarDays(ctx.now(), serviceId, state.taken).map(({ serviceId: _s, ...d }) => d), timeZone: BUSINESS_ZONE, cancellation: { windowHours: 24, feeBps: 5000, feeCents: 0 } });
     }
 
     // GET /me/activity and /me/notifications are the account area's (S-101: one owner per endpoint; the inbox's

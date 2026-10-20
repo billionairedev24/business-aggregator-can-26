@@ -125,7 +125,7 @@ export const services: { [k in keyof typeof en]: string } = {
   'services.book.newCardNote': 'Saisie dans le formulaire sécurisé de Stripe. Les données de carte vont à Stripe seulement — jamais à {brand}.',
   'services.book.fakePayments': 'Paiements de test · rien n’est facturé. Stripe n’est pas configuré ici; un substitut approuve chaque paiement.',
   'services.book.cancelUntil': 'Annulation : gratuite jusqu’à {when}',
-  'services.book.agreePolicies': 'Je comprends que les pièces ou travaux hors prix exigent mon approbation dans l’application, et que l’annulation est gratuite jusqu’à 12 h avant.',
+  'services.book.agreePolicies': 'Je comprends que les pièces ou travaux hors prix exigent mon approbation dans l’application, et que l’annulation est gratuite jusqu’à {hours} h avant.',
   'services.book.agreeTerms': 'J’accepte les conditions de {brand} et les règles de versement de la fiducie.',
   'services.book.hold': 'Retenir {total} en fiducie',
   'services.book.cardFailed': 'La carte a été refusée. Essayez une autre carte.',

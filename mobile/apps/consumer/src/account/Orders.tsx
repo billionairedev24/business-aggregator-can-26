@@ -7,6 +7,9 @@ import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { Icon, colors, radius, semantic, space, type IconName } from '@northline/mobile-kit';
 
 import type { ActivityItem } from '../api/account';
+import type { RequestRow } from '../api/hire';
+import { config } from '../config';
+import { hire } from '../messages/Messages';
 import { useAuth } from '../auth/AuthProvider';
 import { useShopFormat } from '../shop/common';
 import { Chip } from '../shop/parts';
@@ -14,17 +17,18 @@ import { Tag, Title, type } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { EmptyState, LoadingList, QueryView, SignInPrompt } from '../ui/states';
 import { KEYS, account, worded } from './common';
-import { targetOf } from './routes';
+import { targetOf, type Target } from './routes';
 
-export type OrdersView = 'active' | 'past' | 'refunds';
-const VIEWS: readonly OrdersView[] = ['active', 'past', 'refunds'];
+export type OrdersView = 'active' | 'past' | 'refunds' | 'quotes';
+const VIEWS: readonly OrdersView[] = ['active', 'past', 'refunds', 'quotes'];
 const inView = (i: ActivityItem, v: OrdersView) => (v === 'refunds' ? !!i.caseRef : v === 'active' ? i.active : !i.active);
 
 /**
  * Activity tab (redesign spec § 2.4: Home · Browse · Activity · Cart · Account — orders and bookings live here and in
  * Account, never in a top nav; MA:268 ORDERS cards). D1 Orders & bookings (design 01 `orders`; signed in): every order, food order, booking and open
  * quote request in one list (`GET /me/activity`, active first), filtered "Active · n" / "Past" / "Refunds" (rows with
- * a refund case or dispute). A row opens the other journeys' screens by route (`targetOf`); pull to refresh.
+ * a refund case or dispute). A row opens the other journeys' screens by route (`targetOf`); pull to refresh. S-153:
+ * "Quote requests" lists every request with what became of it (`GET /me/quote-requests`).
  */
 export function Orders() {
   const f = useShopFormat();
@@ -43,6 +47,16 @@ export function Orders() {
     );
   }
 
+  if (view === 'quotes') {
+    return (
+      <Screen testID="orders">
+        <Title>{t('account.orders.title')}</Title>
+        <Views view={view} setView={setView} label={(v) => (v === 'active' ? t('account.orders.active', { n: (list.data ?? []).filter((i) => i.active).length }) : t(`account.orders.${v}`))} />
+        <QuoteRequests />
+      </Screen>
+    );
+  }
+
   const items = list.data ?? [];
   const active = items.filter((i) => i.active).length;
   const label = (v: OrdersView) => (v === 'active' ? t('account.orders.active', { n: active }) : t(`account.orders.${v}`));
@@ -51,11 +65,7 @@ export function Orders() {
   return (
     <Screen testID="orders" refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}>
       <Title>{t('account.orders.title')}</Title>
-      <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel={t('account.orders.show')}>
-        {VIEWS.map((v) => (
-          <Chip key={v} role="radio" label={label(v)} on={view === v} onPress={() => setView(v)} testID={`orders-${v}`} />
-        ))}
-      </View>
+      <Views view={view} setView={setView} label={label} />
       <QueryView
         query={list}
         skeleton={<LoadingList rows={5} height={56} />}
@@ -123,6 +133,69 @@ function Row({ item, f }: { item: ActivityItem; f: ReturnType<typeof useShopForm
       </View>
       <Text style={[type.body, type.strong]}>{amount}</Text>
     </Pressable>
+  );
+}
+
+function Views({ view, setView, label }: { view: OrdersView; setView: (v: OrdersView) => void; label: (v: OrdersView) => string }) {
+  const { t } = useShopFormat();
+  return (
+    <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel={t('account.orders.show')}>
+      {VIEWS.map((v) => (
+        <Chip key={v} role="radio" label={label(v)} on={view === v} onPress={() => setView(v)} testID={`orders-${v}`} />
+      ))}
+    </View>
+  );
+}
+
+/** Where a quote request opens: its one quote in the app, else the comparison on the consumer site. */
+export function requestTarget(r: RequestRow): Exclude<Target, null> {
+  const quote = /^\/quotes\/(?!requests\/)([^/?]+)$/.exec(r.href)?.[1];
+  if (r.bookingId) return { route: `/bookings/${encodeURIComponent(r.bookingId)}/eta` };
+  if (quote) return { route: `/quotes/${quote}` };
+  return { site: `${config.siteOrigin}${r.href}` };
+}
+
+function QuoteRequests() {
+  const f = useShopFormat();
+  const { t } = f;
+  const list = useQuery({ queryKey: ['hire', 'quote-requests'], queryFn: () => hire().requests(), staleTime: 30_000 });
+  return (
+    <QueryView
+      query={list}
+      skeleton={<LoadingList rows={4} height={56} />}
+      isEmpty={(items) => items.length === 0}
+      empty={<EmptyState draw={{ main: 'Wrench', side: 'CalendarCheck' }} message={t('hire.requests.empty')} action={t('hire.requests.browse')} onAction={() => router.navigate('/services')} />}
+    >
+      {(items) => (
+        <View accessibilityRole="list" style={styles.list}>
+          {items.map((r) => {
+            const target = requestTarget(r);
+            const sub = [r.ref, f.date(r.createdAt), t('hire.requests.providers', { n: r.providers }), r.photoCount > 0 ? t('hire.requests.photos', { n: r.photoCount }) : null].filter(Boolean).join(' · ');
+            const state = t(`hire.requests.status.${r.status}`, { n: r.quotes });
+            const amount = r.lowestCents != null ? t('hire.requests.from', { amount: f.money(r.lowestCents) }) : '';
+            return (
+              <Pressable
+                key={r.id}
+                accessibilityRole={'site' in target ? 'link' : 'button'}
+                accessibilityLabel={[r.title, sub, state, amount].filter(Boolean).join(', ')}
+                accessibilityHint={'site' in target ? t('common.opensInBrowser') : undefined}
+                onPress={() => ('route' in target ? router.push(target.route as never) : void Linking.openURL(target.site))}
+                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                testID={`request-${r.id}`}
+              >
+                <Icon name="clipboard-text" size={24} color={r.status === 'quoted' || r.status === 'waiting' ? colors.link : colors.textMuted} />
+                <View style={styles.text}>
+                  <Text style={[type.body, type.strong]}>{r.title}</Text>
+                  <Text style={type.small}>{sub}</Text>
+                  <Tag label={state} tone={r.status === 'quoted' ? 'accent2' : r.status === 'accepted' ? 'accent' : 'neutral'} small />
+                </View>
+                {amount ? <Text style={[type.body, type.strong]}>{amount}</Text> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+    </QueryView>
   );
 }
 
