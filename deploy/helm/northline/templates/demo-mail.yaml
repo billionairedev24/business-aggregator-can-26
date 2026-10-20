@@ -1,0 +1,104 @@
+{{- /*
+S-155b: the demo inbox (values demoMail; docs/runbooks/ovh.md § Email) — Mailpit, one replica, messages in memory.
+SMTP on 1025 for this release's apps only (no auth, no TLS: it never leaves the namespace), the web inbox on 8025 for
+the edge only, behind HTTP basic auth (MP_UI_AUTH_FILE from the Secret demoMail.authSecret, key htpasswd). The route
+and certificate come with the other hosts (templates/ingress.yaml, templates/edge.yaml).
+*/ -}}
+{{- $m := .Values.demoMail }}
+{{- if $m.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: northline-mailpit
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "mailpit") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "northline.selectorLabels" (dict "root" . "app" "mailpit") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "northline.selectorLabels" (dict "root" . "app" "mailpit") | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: mailpit
+          image: "{{ $m.image.repository }}:{{ $m.image.tag }}"
+          env:
+            - { name: MP_UI_AUTH_FILE, value: /auth/htpasswd }
+            - { name: MP_MAX_MESSAGES, value: {{ $m.maxMessages | quote }} }
+            - { name: MP_SMTP_DISABLE_RDNS, value: "true" }
+          ports:
+            - { name: http, containerPort: 8025, protocol: TCP }
+            - { name: smtp, containerPort: 1025, protocol: TCP }
+          readinessProbe:
+            tcpSocket: { port: smtp }
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 20
+          resources:
+            {{- toYaml $m.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: auth, mountPath: /auth, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: auth
+          secret:
+            secretName: {{ $m.authSecret }}
+        - name: tmp
+          emptyDir: { sizeLimit: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: northline-mailpit
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "mailpit") | nindent 4 }}
+spec:
+  selector:
+    {{- include "northline.selectorLabels" (dict "root" . "app" "mailpit") | nindent 4 }}
+  ports:
+    - { name: http, port: 8025, targetPort: http, protocol: TCP }
+    - { name: smtp, port: 1025, targetPort: smtp, protocol: TCP }
+{{- if .Values.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: northline-mailpit
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "mailpit") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "northline.selectorLabels" (dict "root" . "app" "mailpit") | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    # The inbox: only the edge (the same peers as the public apps).
+    - from:
+        {{- toYaml .Values.networkPolicy.ingressFrom | nindent 8 }}
+      ports:
+        - { port: 8025, protocol: TCP }
+    # SMTP: only this release's apps (api, auth, worker send the emails).
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: northline
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - { port: 1025, protocol: TCP }
+{{- end }}
+{{- end }}
