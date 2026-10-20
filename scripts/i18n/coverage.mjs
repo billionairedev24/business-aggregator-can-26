@@ -281,11 +281,17 @@ function surface(name, strings, gaps, notes = []) {
   return result;
 }
 
+const WEB_MJS_ROOTS = ['web/packages/ui/src/server'];
 const WEB_ROOTS = ['web/apps/consumer/src', 'web/apps/studio/src', 'web/apps/console/src', 'web/apps/docs/src', 'web/packages/ui/src', 'web/packages/auth-kit/src', 'web/packages/client/src'];
 
 export function webBundles() {
   const strings = []; const gaps = [];
   for (const r of WEB_ROOTS) for (const f of walk(join(ROOT, r), ['.ts', '.tsx'])) {
+    const res = catalogueFindings(f);
+    strings.push(...res.strings); gaps.push(...res.gaps);
+  }
+  // the servers' own pages in plain ES modules (the static error page, @northline/ui/error-page)
+  for (const r of WEB_MJS_ROOTS) for (const f of walk(join(ROOT, r), ['.mjs'])) {
     const res = catalogueFindings(f);
     strings.push(...res.strings); gaps.push(...res.gaps);
   }
