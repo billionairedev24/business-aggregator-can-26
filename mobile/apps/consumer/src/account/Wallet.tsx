@@ -1,25 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { colors, fonts, radius, space } from '@northline/mobile-kit';
+import { colors, fonts, space } from '@northline/mobile-kit';
 
 import type { Wallet as WalletData } from '../api/account';
 import { useAuth } from '../auth/AuthProvider';
 import { useShopFormat } from '../shop/common';
-import { Body, Button, Notice, Option, type } from '../ui/primitives';
+import { Body, type } from '../ui/primitives';
 import { Screen } from '../ui/screen';
-import { QueryView, SignInPrompt, Skeleton, errorMessage } from '../ui/states';
-import { KEYS, account, count, useAccountMutation } from './common';
+import { QueryView, SignInPrompt, Skeleton } from '../ui/states';
+import { KEYS, account, count } from './common';
 import { SettingsRow } from './parts';
+import { PlusCard } from './PlusCard';
 
 /**
  * D5 Wallet & points (design 01 `wallet`; signed in): the balance and what it is worth (100 points = $1), the points
- * earned in each of the last 8 weeks (`GET /me/wallet`), Northline Plus ("Try free" starts the household's 30-day
- * trial, `POST /me/plus`; "Manage" shows the renewal and cancels, `DELETE /me/plus`) and the payment methods
- * (`GET /me/payment-methods` → Payment methods). The design's "Provider-funded rewards near you" and points "Activity"
- * have no consumer api yet (MOBILE_PLAN § API gaps) and are not drawn.
+ * earned in each of the last 8 weeks (`GET /me/wallet`), the points activity and Invite a neighbour (S-152's own
+ * screens), Northline Plus (S-152, PlusCard) and the payment methods (`GET /me/payment-methods` → Payment methods).
+ * Provider-funded rewards near you are on Home.
  */
 export function Wallet() {
   const f = useShopFormat();
@@ -93,55 +92,14 @@ function Points({ wallet, f }: { wallet: WalletData; f: ReturnType<typeof useSho
       </View>
       <Text style={type.small}>{t('account.wallet.chart')}</Text>
       {points.balance === 0 && points.weekly.every((p) => p === 0) ? <Body tone="muted">{t('account.wallet.noPoints')}</Body> : null}
-      <Plus wallet={wallet} f={f} />
+      <View style={styles.rows}>
+        <SettingsRow icon="clock-counter-clockwise" name={t('loyalty.activityLink')} onPress={() => router.push('/account/points')} testID="wallet-activity" />
+        <SettingsRow icon="hand-coins" name={t('loyalty.inviteRow')} onPress={() => router.push('/account/invite')} testID="wallet-invite" />
+      </View>
+      <PlusCard />
     </>
   );
 }
-
-/** Northline Plus: "Try free" (monthly or annual) or "Manage" (renewal, cancel). */
-function Plus({ wallet, f }: { wallet: WalletData; f: ReturnType<typeof useShopFormat> }) {
-  const { t } = f;
-  const plus = wallet.plus;
-  const [open, setOpen] = useState(false);
-  const [plan, setPlan] = useState<'monthly' | 'annual'>('monthly');
-  const refresh = [KEYS.wallet, KEYS.household];
-  const start = useAccountMutation((p: 'monthly' | 'annual') => account().startPlus(p), { set: KEYS.household, refresh });
-  const cancel = useAccountMutation(() => account().cancelPlus(), { set: KEYS.household, refresh });
-  const failed = start.error ?? cancel.error;
-
-  return (
-    <View style={styles.plus} testID="plus">
-      <View style={styles.plusHead}>
-        <View style={styles.flex}>
-          <Text style={[type.body, type.strong]}>{t(plus ? 'account.wallet.plusOn' : 'account.wallet.plusOff')}</Text>
-          <Text style={type.small}>{t(plus ? 'account.wallet.plusSubOn' : 'account.wallet.plusSubOff')}</Text>
-        </View>
-        <Button label={t(plus ? 'account.wallet.manage' : 'account.wallet.tryFree')} tone="ghost" onPress={() => setOpen((o) => !o)} testID="plus-cta" />
-      </View>
-      {open && plus ? (
-        <View style={styles.plusBody}>
-          <Body tone="small">
-            {plus.renewsAt
-              ? t('account.wallet.renews', { plan: t(`account.wallet.plan.${plus.plan}`), date: f.date(plus.renewsAt), members: plus.members })
-              : t('account.wallet.planOnly', { plan: t(`account.wallet.plan.${plus.plan}`), members: plus.members })}
-          </Body>
-          <Button label={t('account.wallet.cancelPlus')} tone="danger" busy={cancel.isPending} onPress={() => cancel.mutate(undefined, { onSuccess: () => setOpen(false) })} testID="plus-cancel" />
-        </View>
-      ) : null}
-      {open && !plus ? (
-        <View style={styles.plusBody} accessibilityRole="radiogroup">
-          {(['monthly', 'annual'] as const).map((p) => (
-            <Option key={p} selected={plan === p} onPress={() => setPlan(p)} title={t(`account.wallet.plan.${p}`)} description={t(`account.wallet.price.${p}`)} testID={`plan-${p}`} />
-          ))}
-          <Body tone="small">{t('account.wallet.trialNote')}</Body>
-          <Button label={t('account.wallet.startTrial')} busy={start.isPending} onPress={() => start.mutate(plan, { onSuccess: () => setOpen(false) })} testID="plus-start" />
-        </View>
-      ) : null}
-      {failed ? <Notice message={errorMessage(failed, t)} /> : null}
-    </View>
-  );
-}
-
 
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
@@ -152,7 +110,5 @@ const styles = StyleSheet.create({
   bars: { flexDirection: 'row', gap: 4, height: 60, marginTop: space[2] },
   bar: { flex: 1, height: 60, justifyContent: 'flex-end', backgroundColor: colors.neutral200, borderRadius: 2, overflow: 'hidden' },
   fill: { backgroundColor: colors.accent },
-  plus: { marginTop: space[4], padding: space[4], borderRadius: radius.md, backgroundColor: colors.surface, gap: space[2] },
-  plusHead: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  plusBody: { gap: space[2] },
+  rows: { marginTop: space[4] },
 });

@@ -241,37 +241,6 @@ class AccountSettingsJdbc implements AccountSettingsStore {
             @Nullable Instant since,
             @Nullable Instant renewsAt) {}
 
-    @Override
-    public String ensureHousehold(String userId) {
-        var existing = jdbc.sql("select household_id from identity.household_members where user_id = :u limit 1")
-                .param("u", userId)
-                .query(String.class)
-                .optional();
-        if (existing.isPresent()) {
-            return existing.get();
-        }
-        var id = Ids.next();
-        jdbc.sql("insert into identity.households (id, name, plus_plan) values (:id, 'Home', 'none')")
-                .param("id", id)
-                .update();
-        jdbc.sql("insert into identity.household_members (household_id, user_id, role) values (:h, :u, 'owner')")
-                .param("h", id)
-                .param("u", userId)
-                .update();
-        return id;
-    }
-
-    @Override
-    public void plus(String householdId, String plan, @Nullable Instant since, @Nullable Instant renewsAt) {
-        jdbc.sql(
-                        "update identity.households set plus_plan = :plan, plus_since = :since, renews_at = :renews where id = :h")
-                .param("plan", plan)
-                .param("since", ts(since))
-                .param("renews", ts(renewsAt))
-                .param("h", householdId)
-                .update();
-    }
-
     private static Address address(ResultSet rs) throws SQLException {
         return new Address(
                 rs.getString("id"),

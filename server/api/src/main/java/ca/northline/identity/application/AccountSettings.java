@@ -102,15 +102,8 @@ public final class AccountSettings {
     }
 
     public interface ManageHousehold {
+        /** Members and the plan; joining, changing and cancelling Plus is the loyalty module's (S-152). */
         Household household(String userId);
-
-        /**
-         * "Start 30-day free trial": the person's household (created when they have none) gets the plan with the
-         * trial's end as its renewal. No billing exists yet (DECISIONS S-59).
-         */
-        Household startPlus(String userId, String plan);
-
-        Household cancelPlus(String userId);
     }
 
     /** Outbound port. */
@@ -135,10 +128,5 @@ public final class AccountSettings {
         void removeAddress(String userId, String addressId, Instant at);
 
         Household household(String userId);
-
-        /** The person's household id, creating one (they own it) when they have none. */
-        String ensureHousehold(String userId);
-
-        void plus(String householdId, String plan, @Nullable Instant since, @Nullable Instant renewsAt);
     }
 }

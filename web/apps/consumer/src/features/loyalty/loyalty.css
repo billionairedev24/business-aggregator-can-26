@@ -1,0 +1,18 @@
+/* S-152 points, Invite a neighbour, Plus, rewards near you — semantic tokens only. */
+.nl-loyal-expiry { color: var(--color-warning); margin: 8px 0 0; }
+.nl-loyal-how ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; }
+.nl-loyal-activity { list-style: none; margin: 8px 0 24px; padding: 0; border-top: 1px solid var(--color-border); max-width: 640px; }
+.nl-loyal-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--color-border); }
+.nl-loyal-row-what { display: grid; gap: 2px; min-width: 0; }
+.nl-loyal-pts { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--color-success); white-space: nowrap; }
+.nl-loyal-pts-out { color: var(--color-text-muted); }
+.nl-loyal-code { display: grid; gap: 6px; max-width: 520px; }
+.nl-loyal-code-value { font-size: 1.75rem; letter-spacing: 0.12em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.nl-loyal-link { overflow-wrap: anywhere; }
+.nl-loyal-claim { display: grid; gap: 10px; max-width: 420px; margin-top: 16px; }
+.nl-loyal-near { margin: 32px 0; }
+.nl-loyal-near-list { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.nl-loyal-near-link { display: flex; gap: 12px; align-items: center; min-height: 44px; padding: 12px 14px; border: 1px solid var(--color-border-card); border-radius: 12px; background: var(--color-surface); color: var(--color-text); text-decoration: none; }
+.nl-loyal-near-link:hover { border-color: var(--color-border-control); }
+.nl-loyal-near-mult { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 999px; background: var(--color-action-accent); color: var(--color-action-accent-text); font-weight: 700; }
+.nl-loyal-near-text { display: grid; gap: 2px; min-width: 0; }

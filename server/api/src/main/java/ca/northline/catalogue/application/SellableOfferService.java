@@ -56,7 +56,8 @@ class SellableOfferService implements SellableOffers {
                         r.imageId() != null && approved.contains(r.imageId())
                                 ? ShopBrowsingService.MEDIA_URL + r.imageId()
                                 : null,
-                        r.ageClass()))
+                        r.ageClass(),
+                        r.memberDiscountPct()))
                 .filter(s -> s.ageClass() == null || licensed(s.merchantId(), s.ageClass()))
                 .toList();
     }

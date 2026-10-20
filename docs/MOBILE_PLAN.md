@@ -214,7 +214,7 @@ additions — is in [§ Journey C as built](#journey-c-as-built-s-100).
 | `quote` | `/quotes/[id]` (where S-102's quote links land) | ✓ | `GET /me/quotes/{id}?lang`, `POST /me/quotes/{id}/accept` (Idempotency-Key, X-Step-Up), `/accept/confirm` (Idempotency-Key), `/decline`; `GET /me/payment-methods`; `POST /api/auth/step-up/totp` |
 | `account` | `/account` (tab) | | `GET /me/account-summary`, `GET /me/profile`, `PATCH /me/preferences` (the language); sign-out |
 | `security` | `/security` | ✓ | northline-auth `GET /api/auth/security`, `POST /api/auth/security/sessions/{id}/revoke`, `/revoke-others` (auth session), `POST /api/auth/step-up/totp`; `GET /me/profile`; "Download my data" opens Your data (S-105) |
-| `wallet` | `/wallet` | ✓ | `GET /me/wallet`, `POST`/`DELETE /me/plus`, `GET /me/payment-methods` |
+| `wallet` | `/wallet` | ✓ | `GET /me/wallet`, `GET`/`POST`/`PATCH`/`DELETE /me/plus`, `POST /me/plus/resume`, `GET /me/payment-methods` |
 
 The You tab's rows open screens of the account area that design 01 draws only as rows (routes of our own, under
 `/account/…`, plus the case S-102 links to):
@@ -266,8 +266,11 @@ S-98's temporary You screen (`src/journeyA/You.tsx`) is gone. What S-101 decided
 - **Fixtures:** one owner per endpoint (DECISIONS § S-101): `/me/activity` and `/me/notifications` are the account
   area's, `/me/favourites` the services area's, the step-up the auth area's; facts both journeys show (the inbox's
   bookings, the quiet hours, favourites) live in one state.
-- **Not drawn, for lack of an api:** the wallet's "Provider-funded rewards near you" and points "Activity", "Invite a
-  neighbour", the security centre's "Require Face ID for payments over $100" (§ API gaps).
+- **Loyalty (S-152):** the wallet's points "Activity" (`/account/points`, also the points push's link), "Invite a
+  neighbour" (`/account/invite`, You and the wallet; the phone's share sheet), Northline Plus in the wallet
+  (`/me/plus`: join, switch, cancel at the period end, keep it; 3-D Secure through Stripe's SDK, `plusPayment.ts`) and
+  "Rewards near you" on Home (`GET /public/rewards`). The wallet is back on You for everyone.
+- **Not drawn, for lack of an api:** the security centre's "Require Face ID for payments over $100" (§ API gaps).
 
 Until its story builds it, each route renders `<Stub screen="…" />`: the design's header or name, the story and the
 api above; personal stubs already show guests the sign-in prompt.
@@ -361,9 +364,8 @@ Areas: `shop` (S-99), `services` (S-100), `account` (S-101). Don't edit another 
 - **Shop (S-99):** closed in mobile gaps part 2 — promo codes and points at checkout (`promoCode`, `usePoints` on the
   quote and checkout), the courier's tip at checkout (`tip`) or after delivery (`/me/orders/{id}/tips`). (Closed in mobile gaps part 1: the proof-of-delivery photo — `GET /me/orders/{id}/proof-photo`,
   a 5-minute signed URL, never after an ID check; photos on a report — `expo-image-picker`, up to 3, seen by support.)
-- **Account (S-101):** no consumer api for points activity (the ledger has no earning rules yet, DECISIONS S-58),
-  provider-funded rewards near a person, referrals ("Invite a neighbour"), messages to a provider about a quote ("Ask a
-  question"), or a payment step-up threshold ("Require Face ID for payments over $100"). (Closed in the phase 4
+- **Account (S-101):** no consumer api for a payment step-up threshold ("Require Face ID for payments over $100"). (Closed by S-152: points
+  activity, rewards near a person, "Invite a neighbour", Plus; by S-153: the quote's "Ask a question".) (Closed in the phase 4
   follow-ups: `PATCH /me/preferences` with `province: ""` goes back to "follow my location".) The data export has no file to save without a file-system module: it goes through the share sheet.
 - **Passkeys in the app:** creating or using a passkey natively needs a native module (none in Expo); the app sends
   people to the consumer site in the system browser for passkeys, Google and Apple (S-98).

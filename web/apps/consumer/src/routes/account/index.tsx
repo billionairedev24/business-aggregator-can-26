@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import dataTableCss from '@northline/ui/DataTable.css?url';
 import accountCss from '../../features/account/account.css?url';
+import loyaltyCss from '../../features/loyalty/loyalty.css?url';
 import { AccountScreen } from '../../features/account/AccountScreen';
 import { ACCOUNT_TABS } from '../../features/account/tabs';
 import { pageTitle } from '../../features/shell/messages';
@@ -15,7 +16,7 @@ export const Route = createFileRoute('/account/')({
   validateSearch: AccountParams,
   head: ({ match }) => ({
     meta: [{ title: pageTitle(match.context.locale, 'account') }, { name: 'robots', content: 'noindex' }],
-    links: [{ rel: 'stylesheet', href: accountCss }, { rel: 'stylesheet', href: dataTableCss }],
+    links: [{ rel: 'stylesheet', href: accountCss }, { rel: 'stylesheet', href: dataTableCss }, { rel: 'stylesheet', href: loyaltyCss }],
   }),
   component: AccountScreen,
 });

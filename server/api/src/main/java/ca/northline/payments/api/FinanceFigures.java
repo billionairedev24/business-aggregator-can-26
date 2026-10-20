@@ -15,9 +15,19 @@ public interface FinanceFigures {
 
     /**
      * Northline's revenue in [from, to) by source: fees taken at escrow ({@code take}), delivery fees
-     * ({@code delivery}), and give-backs on refunds and disputes ({@code adjustments}, negative).
+     * ({@code delivery}), Northline Plus invoices net of tax ({@code plus}, S-152) and give-backs on refunds and
+     * disputes ({@code adjustments}, negative).
      */
     Revenue revenue(Instant from, Instant to);
+
+    /**
+     * S-152 provider-funded rewards: what businesses paid for their rewards' points in [from, to) net of refunds (a
+     * pass-through, not revenue), what they have paid and Northline still holds in all ({@code rewards_funded}), and
+     * what points took off sales in [from, to) (Northline's cost, {@code points_redeemed}).
+     */
+    Rewards rewards(Instant from, Instant to);
+
+    record Rewards(long fundedCents, long fundedBalanceCents, long pointsRedeemedCents) {}
 
     /** Money held in [from, to) per business (escrows by creation, any state): GMV through Northline's checkout. */
     Map<String, Long> heldByMerchant(Instant from, Instant to);
@@ -35,9 +45,9 @@ public interface FinanceFigures {
 
     record InFlight(long cents, long merchants, @Nullable Instant nextArrival) {}
 
-    record Revenue(long takeCents, long deliveryCents, long adjustmentsCents) {
+    record Revenue(long takeCents, long deliveryCents, long adjustmentsCents, long plusCents) {
         public long total() {
-            return takeCents + deliveryCents + adjustmentsCents;
+            return takeCents + deliveryCents + adjustmentsCents + plusCents;
         }
     }
 

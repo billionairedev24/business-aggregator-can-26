@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { ErrorState, SiteLink, Skeleton, useFormatters } from '@northline/ui';
 import { walletQuery } from './api';
+import { PointsPanel } from '../loyalty/PointsPanel';
 import { useAccountT } from './messages';
 import { tabHref } from './tabs';
 
 /**
  * Wallet & points (design 06 `at.wallet`): the balance and what it's worth (100 points = $1), eight weeks of earning,
- * Northline Plus, then the payment methods (S-59 fills that section; until then a link to the tab).
+ * S-152's rules, next expiry and activity, Northline Plus, then the payment methods.
  */
 export function WalletTab({ cards }: { cards?: React.ReactNode }) {
   const t = useAccountT();
@@ -32,6 +33,7 @@ export function WalletTab({ cards }: { cards?: React.ReactNode }) {
       {points.balance === 0 && points.weekly.every(p => p === 0)
         ? <p className="nl-muted">{t('noPoints')} <SiteLink href="/shop">{t('startShopping')}</SiteLink></p>
         : null}
+      <PointsPanel />
       <div className="nl-acct-panel nl-wallet-plus">
         <div>
           <div className="nl-acct-strong">{t(plus ? 'plusHeadlineOn' : 'plusHeadlineOff')}</div>

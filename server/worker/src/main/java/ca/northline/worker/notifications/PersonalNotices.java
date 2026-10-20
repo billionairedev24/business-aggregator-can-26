@@ -30,6 +30,8 @@ import tools.jackson.databind.JsonNode;
  *   <tr><td>booking.completed</td><td>customer</td><td>sign_off</td><td>/app/bookings/{id}</td></tr>
  *   <tr><td>quote.sent</td><td>customer</td><td>quotes_messages</td><td>/app/quotes/{id}</td></tr>
  *   <tr><td>refund.case_updated, refund.issued</td><td>customer</td><td>refunds_cases</td><td>/app/cases/{caseNumber}</td></tr>
+ *   <tr><td>points.credited (S-152: a completed sale, a referral)</td><td>customer</td><td>order_updates</td>
+ *       <td>/app/account/points</td></tr>
  *   <tr><td>delivery.assigned, run.changed</td><td>courier</td><td>— (always, push only)</td><td>/courier/run</td></tr>
  *   <tr><td>{@value #OFFER} (S-108; no producer yet)</td><td>customer</td><td>offers — commercial: the person's
  *       consent per channel, checked at send time</td><td>the offer's page</td></tr>
@@ -104,6 +106,7 @@ public final class PersonalNotices {
                             case "payments.refund_case_updated", "payments.refund_issued" ->
                                 refund(eventId, type, data, id);
                             case OFFER -> offer(eventId, type, data);
+                            case "loyalty.points_credited" -> points(eventId, type, data);
                             case "fulfilment.delivery_assigned" -> courier(eventId, type, data, id, "run.assigned");
                             case "fulfilment.run_changed" ->
                                 courier(
@@ -270,6 +273,27 @@ public final class PersonalNotices {
                         "/app/cases/" + caseNumber,
                         Map.of("type", key, "caseNumber", caseNumber),
                         "case:" + caseNumber));
+    }
+
+    /** S-152: points a completed sale or a referral credited. */
+    private static @Nullable Notice points(String eventId, String type, JsonNode data) {
+        var customer = data.path("customerId").asString("");
+        var points = data.path("points").asLong();
+        if (customer.isEmpty() || points <= 0) {
+            return null;
+        }
+        var referral = "referral".equals(data.path("reason").asString(""));
+        var key = referral ? "points.referral" : "points.earned";
+        return customer(
+                eventId,
+                type,
+                data,
+                customer,
+                referral ? null : text(data, "merchantId"),
+                "order_updates",
+                key,
+                (_, business) -> new Object[] {points, business},
+                new Notice.Push("/app/account/points", Map.of("type", key), "points:" + eventId));
     }
 
     private static @Nullable Notice offer(String eventId, String type, JsonNode data) {
@@ -487,7 +511,11 @@ public final class PersonalNotices {
             Map.entry("run.assigned", "You have a new run: {0,choice,1#1 order|1<{0} orders}. Open it to start."),
             Map.entry("run.assigned.title", "New run"),
             Map.entry("run.unassigned", "Dispatch gave your run to another courier. You’re free for the next one."),
-            Map.entry("run.unassigned.title", "Run changed"));
+            Map.entry("run.unassigned.title", "Run changed"),
+            Map.entry("points.earned", "You earned {0,number,integer} points from {1}."),
+            Map.entry("points.earned.title", "Points earned"),
+            Map.entry("points.referral", "A neighbour’s first order earned you {0,number,integer} points."),
+            Map.entry("points.referral.title", "Thanks for inviting a neighbour"));
 
     static final Map<String, String> FR = Map.ofEntries(
             Map.entry(
@@ -555,5 +583,9 @@ public final class PersonalNotices {
             Map.entry(
                     "run.unassigned",
                     "La répartition a confié votre tournée à un autre livreur. Vous êtes libre pour la suivante."),
-            Map.entry("run.unassigned.title", "Tournée modifiée"));
+            Map.entry("run.unassigned.title", "Tournée modifiée"),
+            Map.entry("points.earned", "Vous avez gagné {0,number,integer} points chez {1}."),
+            Map.entry("points.earned.title", "Points gagnés"),
+            Map.entry("points.referral", "La première commande d’un voisin vous a rapporté {0,number,integer} points."),
+            Map.entry("points.referral.title", "Merci d’avoir invité un voisin"));
 }

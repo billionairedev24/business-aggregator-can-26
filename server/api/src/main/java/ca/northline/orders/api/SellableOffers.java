@@ -36,6 +36,7 @@ public interface SellableOffers {
      * @param handlingDays 0 same day, 1 next day, 2; null when it doesn't go on pooled runs
      * @param imageUrl an approved image, or null
      * @param ageClass the age-restriction class its category carries ({@code alcohol | tobacco | cannabis}), or null
+     * @param memberDiscountPct S-152: the shop's Northline Plus member price, % off, or null (no member price)
      */
     record Sellable(
             String offerId,
@@ -50,5 +51,6 @@ public interface SellableOffers {
             int stock,
             @Nullable Integer handlingDays,
             @Nullable String imageUrl,
-            @Nullable String ageClass) {}
+            @Nullable String ageClass,
+            @Nullable Integer memberDiscountPct) {}
 }

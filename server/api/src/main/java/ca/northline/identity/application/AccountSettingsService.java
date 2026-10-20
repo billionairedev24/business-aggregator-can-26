@@ -13,11 +13,9 @@ import ca.northline.identity.application.AccountSettings.ProfileChange;
 import ca.northline.identity.domain.AccountRules;
 import ca.northline.region.api.ProvinceProfile;
 import ca.northline.region.api.Regions;
-import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import java.time.Clock;
-import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -34,9 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 class AccountSettingsService implements ManageProfile, ManageAddresses, ManageHousehold {
 
     /** Design 06: "Start 30-day free trial". */
-    static final Duration TRIAL = Duration.ofDays(30);
-
     private final AccountSettingsStore store;
+
     private final Regions regions;
     private final Clock clock;
 
@@ -141,29 +138,6 @@ class AccountSettingsService implements ManageProfile, ManageAddresses, ManageHo
     @Override
     @Transactional(readOnly = true)
     public Household household(String userId) {
-        return store.household(userId);
-    }
-
-    @Override
-    public Household startPlus(String userId, String plan) {
-        if (!"monthly".equals(plan) && !"annual".equals(plan)) {
-            throw RuleViolation.of("plan", "allowed", "Choose monthly or annual.");
-        }
-        var current = store.household(userId);
-        if (!"none".equals(current.plan())) {
-            throw new Conflict("plus_active", "Northline Plus is already active for your household.");
-        }
-        var now = clock.instant();
-        store.plus(store.ensureHousehold(userId), plan, now, now.plus(TRIAL));
-        return store.household(userId);
-    }
-
-    @Override
-    public Household cancelPlus(String userId) {
-        var current = store.household(userId);
-        if (current.id() != null && !"none".equals(current.plan())) {
-            store.plus(current.id(), "none", null, null);
-        }
         return store.household(userId);
     }
 }
