@@ -88,6 +88,10 @@ S-17 adds TLS (cert-manager), DNS (external-dns reads these hostnames) and the e
 {{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.console) "paths" (list (dict "path" "/" "app" "console"))) -}}
 {{- end -}}
 {{- end -}}
+{{- /* S-155b: the demo inbox (Mailpit; templates/demo-mail.yaml) on its own host, behind its basic auth. */ -}}
+{{- if and $v.demoMail.enabled $v.demoMail.url -}}
+{{- $routes = append $routes (dict "host" (include "northline.host" $v.demoMail.url) "paths" (list (dict "path" "/" "app" "mailpit" "port" 8025))) -}}
+{{- end -}}
 {{- toYaml (dict "routes" $routes) -}}
 {{- end }}
 {{- $routes := (include "northline.routes" . | fromYaml).routes }}
@@ -176,7 +180,7 @@ spec:
       {{- end }}
       backendRefs:
         - name: {{ include "northline.appName" .app }}
-          port: {{ (get $.Values.apps .app).port }}
+          port: {{ if .port }}{{ .port }}{{ else }}{{ (get $.Values.apps .app).port }}{{ end }}
     {{- end }}
 {{- end }}
 {{- end }}

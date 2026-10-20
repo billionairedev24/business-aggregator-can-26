@@ -49,6 +49,13 @@ STRIPE_CONNECT_WEBHOOK_SECRET|secret|opt|both||whsec_… of the Connect webhook
 SMS_AUTH_TOKEN|secret|opt|both||Twilio auth token (needed for anyone to sign up under dev)
 SMS_ACCOUNT_ID|var|opt|both||Twilio account SID AC…
 SMS_FROM|var|opt|both||Twilio sender: +1… number or a Messaging Service MG…
+SMTP_HOST|var|opt|both||SMTP relay for every email, sign-up codes included (e.g. smtp-relay.brevo.com, smtp.gmail.com, ssl0.ovh.net — docs/runbooks/ovh.md § Email)
+SMTP_PORT|var|opt|both|587|SMTP port (587 with STARTTLS; 465 is not supported)
+SMTP_USERNAME|var|opt|both||SMTP login
+SMTP_PASSWORD|secret|opt|both||SMTP password, SMTP key or app password
+SMTP_STARTTLS|var|opt|both|true|STARTTLS (true whenever there is a login)
+EMAIL_FROM|var|opt|both||sender the relay accepts, e.g. Northline demo <you@example.com> (no commas)
+OVH_DEMO_MAILPIT|var|opt|both|false|true = the demo inbox at mail.<domain> instead of delivering email (private demos)
 EMAIL_API_KEY|secret|opt|both||SendGrid API key (empty = emails are logged)
 KAFKA_SASL_JAAS_CONFIG|secret|opt|both||external Kafka with SASL only: the whole JAAS line
 TOTP_KEY|secret|gen|both||
@@ -63,7 +70,8 @@ CONSOLE_BFF_SECRET|secret|gen|both||
 CONSOLE_BFF_SECRET_HASH|secret|gen|both||
 DB_PASSWORD|secret|gen|both||
 REDIS_PASSWORD|secret|gen|both||
-MEILISEARCH_API_KEY|secret|gen|both||'
+MEILISEARCH_API_KEY|secret|gen|both||
+MAILPIT_PASSWORD|secret|gen|both||'
 
 # ---- helpers ---------------------------------------------------------------------------------------------------------
 ask() {          # ask <prompt> <default> [secret] → the answer on stdout (from the terminal, not the catalogue)
@@ -169,6 +177,20 @@ while IFS='|' read -r name kind need scope default help <&3; do
 done 3<<EOF
 $CATALOGUE
 EOF
+
+# ---- 3b. the demo inbox's password: made here so you know it (user demo) ----------------------------------------
+mp=$(from_file OVH_DEMO_MAILPIT)
+[ -n "$mp" ] || mp=$(gh variable get OVH_DEMO_MAILPIT --env "$T" --repo "$REPO" 2>/dev/null || true)
+if [ "$mp" = true ]; then
+  pw=$(from_file MAILPIT_PASSWORD)
+  if [ -n "$pw" ]; then put secret MAILPIT_PASSWORD "$pw"
+  elif ! is_set MAILPIT_PASSWORD; then
+    need openssl
+    pw=$(openssl rand -hex 12)
+    put secret MAILPIT_PASSWORD "$pw"
+    echo "   the demo inbox https://mail.<your domain>: user demo, password $pw (shown once — keep it)"
+  fi
+fi
 
 # ---- 4. ovh-vps: the pipeline's own SSH key, installed on the VPS, and the VPS's host key ----------------------------
 if [ "$T" = ovh-vps ]; then

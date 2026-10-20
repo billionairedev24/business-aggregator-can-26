@@ -262,6 +262,22 @@ if grep -q 'IDENTITY_PROVIDER: "local"' <<<"$out" && grep -A4 'key: STRIPE_SECRE
     && grep -q 'https://studio.demo.example' <<<"$out" && ! grep -q 'demo.northline.ca' <<<"$out"; then
   echo "ok   dryrun × ovh-vps without Stripe: local identity, Stripe keys optional, hosts under the operator's domain"
 else echo "FAIL dryrun × ovh-vps without Stripe / own domain"; failed=1; fi
+# S-155b: email on OVHcloud — an SMTP relay for api, auth and worker (SMTP_PASSWORD from the plain Secret), and the
+# demo inbox (Mailpit behind basic auth on its own host, SMTP only from this release's pods; refused in staging/prod).
+smtp=(--set apps.api.env.EMAIL_PROVIDER=smtp --set apps.auth.env.EMAIL_PROVIDER=smtp --set apps.worker.env.EMAIL_PROVIDER=smtp
+  --set apps.auth.env.SMTP_HOST=smtp-relay.example --set apps.auth.env.SMTP_USERNAME=demo --set-string apps.auth.env.SMTP_STARTTLS=true
+  --set apps.api.secretEnv.SMTP_PASSWORD=true --set apps.auth.secretEnv.SMTP_PASSWORD=true --set apps.worker.secretEnv.SMTP_PASSWORD=true)
+check "dryrun × ovh-vps, SMTP relay" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml "${smtp[@]}"
+mailpit=(--set demoMail.enabled=true --set demoMail.url=https://mail.demo.northline.ca)
+check "dryrun × ovh-vps, demo inbox" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml "${mailpit[@]}"
+out=$(helm template northline "$CHART" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml "${mailpit[@]}")
+if grep -q 'hostname: "mail.demo.northline.ca"' <<<"$out" && grep -q 'name: MP_UI_AUTH_FILE' <<<"$out" \
+    && grep -q 'secretName: northline-demo-mail-auth' <<<"$out" && grep -A2 -- '- name: northline-mailpit' <<<"$out" | grep -q 'port: 8025' \
+    && [[ $(grep -c -- '- { port: 1025, protocol: TCP }' <<<"$out") == 1 ]]; then
+  echo "ok   dryrun × ovh-vps demo inbox: own host + certificate, basic auth file, inbox through the edge only, SMTP only from the release"
+else echo "FAIL dryrun × ovh-vps demo inbox"; failed=1; fi
+refuse "demo inbox in staging" -f "$CHART/values-staging.yaml" -f "$CHART/values-gcp.yaml" -f test-values/infra-dryrun.yaml "${mailpit[@]}"
+refuse "demo inbox without its host" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml --set demoMail.enabled=true
 if [[ $(helm template northline "$CHART" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-mks.yaml" -f test-values/infra-ovh-mks.yaml \
     | awk '/^kind: Deployment$/{d=1} d && /^  name: northline-api$/{a=1} a && /^  replicas:/{print $2; exit}') == 2 ]]; then
   echo "ok   dryrun × ovh-mks: two replicas of the stateless apps"

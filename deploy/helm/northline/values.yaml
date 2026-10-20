@@ -876,5 +876,22 @@ apps:
     affinity: {}
 
 # Seconds a pod keeps serving after it is removed from the endpoints (lets load balancers catch up). 0 = none.
+# S-155b: a demo inbox — Mailpit in the namespace, for a PRIVATE demo without an email provider (docs/runbooks/ovh.md
+# § Email). The apps send every email to it over SMTP (EMAIL_PROVIDER=smtp, SMTP_HOST=northline-mailpit, port 1025,
+# set by scripts/ovh/deploy.sh); nothing is delivered anywhere; its web inbox is published at `url` behind HTTP basic
+# auth (an htpasswd line in the Secret authSecret, key htpasswd — scripts/ovh/secrets.sh writes it). Only the apps of
+# this release reach its SMTP port; only the edge reaches its inbox. Refused in staging and prod (templates/validate.yaml).
+demoMail:
+  enabled: false
+  url: ""                         # e.g. https://mail.demo.northline.ca — a host under the edge's zone
+  image:
+    repository: axllent/mailpit
+    tag: v1.31.3
+  authSecret: northline-demo-mail-auth
+  maxMessages: 1000               # the oldest go first; kept in memory only (a restart empties the inbox)
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 128Mi }
+
 preStopSleepSeconds: 5
 terminationGracePeriodSeconds: 45

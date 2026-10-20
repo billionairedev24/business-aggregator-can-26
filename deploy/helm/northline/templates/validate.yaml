@@ -12,6 +12,14 @@
 {{- if and (has .Values.global.environment (list "staging" "prod" "dryrun")) (not (hasPrefix "https://" .Values.urls.auth)) }}
 {{- fail "urls.* must be https:// in staging, prod and dryrun" }}
 {{- end }}
+{{- if .Values.demoMail.enabled }}
+{{- if has .Values.global.environment (list "staging" "prod") }}
+{{- fail "demoMail (Mailpit, S-155b) captures every email and is not allowed in staging or prod" }}
+{{- end }}
+{{- if not (hasPrefix "https://" .Values.demoMail.url) }}
+{{- fail "demoMail.enabled needs demoMail.url (https://mail.<zone>): the inbox is only reachable through the edge, behind basic auth" }}
+{{- end }}
+{{- end }}
 {{- if and .Values.apps.api.docsRoutes (eq .Values.global.environment "prod") }}
 {{- fail "apps.api.docsRoutes exposes the API documentation and is not allowed in prod (S-125: prod publishes no spec; the docs site carries the public ones)" }}
 {{- end }}
