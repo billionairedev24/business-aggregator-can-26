@@ -1,5 +1,6 @@
-# ovh-mks — OVHcloud Managed Kubernetes (free control plane) in Public Cloud region BHS5 (Beauharnois), two nodes
-# (docs/runbooks/ovh.md, DECISIONS 2026-10-19). Production-shaped: Postgres at OVHcloud Managed PostgreSQL (or in the
+# ovh-mks — OVHcloud Managed Kubernetes (free control plane) in the Public Cloud region of Terraform's ovh_location
+# (S-160: US-EAST-VA-1 by default, US-WEST-OR-1 or BHS5; global.hostingCountry from Terraform — outside Canada the chart
+# refuses staging/prod), two nodes (docs/runbooks/ovh.md, DECISIONS 2026-10-19). Production-shaped: Postgres at OVHcloud Managed PostgreSQL (or in the
 # cluster, Terraform variable postgres_mode), Valkey, Meilisearch and Kafka in the cluster (deploy/helm/northline-data),
 # a public OVHcloud load balancer in front of Envoy Gateway. Still the `dev` profile of the dry run (values-dryrun.yaml):
 # KMS_PROVIDER=local has no OVHcloud key service behind it, which staging/prod refuse. Layer after values-dryrun.yaml

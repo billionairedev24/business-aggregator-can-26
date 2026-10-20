@@ -126,8 +126,8 @@ echo "environment $T: deployments from ${OVH_GH_BRANCHES:-develop main}"
 # ---- 2. where: the location (S-160) — it decides the API endpoint, the regions and the token page --------------------
 echo "== location"
 loc=$(from_file OVH_LOCATION)
-[ -n "$loc" ] || loc=$(gh variable get OVH_LOCATION --env "$T" --repo "$REPO" 2>/dev/null || true)
 if [ -z "$loc" ]; then
+  current=$(gh variable get OVH_LOCATION --env "$T" --repo "$REPO" 2>/dev/null || true)
   cat >/dev/tty <<'TXT'
    Where Northline runs (OVH_LOCATION):
      us-east-va  Vint Hill, Virginia   — OVHcloud US (us.ovhcloud.com), the default for now
@@ -137,7 +137,11 @@ if [ -z "$loc" ]; then
    API token and the project below must come from the account of the location you pick.
    A US location holds fake demo data only (dev profile): real Canadian customer data must be on ca-bhs before launch.
 TXT
-  loc=$(ask "OVH_LOCATION" us-east-va)
+  loc=$(ask "OVH_LOCATION" "${current:-us-east-va}")
+  if [ -n "$current" ] && [ "$loc" != "$current" ]; then
+    echo "   moving $T from $current to $loc: destroy the $current deployment first (its state is in the old bucket) and give the new account's values below — docs/runbooks/ovh.md § Canada later" >&2
+    yes_no "Continue with $loc?" || die "stopped; nothing changed for the location"
+  fi
 fi
 ovh_location "$loc"
 put var OVH_LOCATION "$OVH_LOCATION"
