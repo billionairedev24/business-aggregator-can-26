@@ -36,6 +36,8 @@ class AuthExceptionHandler extends ResponseEntityExceptionHandler {
             "required",
             "NotBlank",
             "required",
+            "NotEmpty",
+            "required",
             "AssertTrue",
             "required",
             "Pattern",
@@ -73,7 +75,7 @@ class AuthExceptionHandler extends ResponseEntityExceptionHandler {
             case THROTTLED, LOCKED, RATE_LIMITED -> HttpStatus.TOO_MANY_REQUESTS;
             case UNAUTHENTICATED -> HttpStatus.UNAUTHORIZED;
             case STEP_UP_REQUIRED -> HttpStatus.FORBIDDEN;
-            case LAST_FACTOR, CURRENT_SESSION -> HttpStatus.CONFLICT;
+            case LAST_FACTOR, CURRENT_SESSION, ALREADY_ENROLLED -> HttpStatus.CONFLICT;
             case GONE -> HttpStatus.NOT_FOUND;
             case CODE_NOT_SENT, UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
         };

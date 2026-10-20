@@ -3,6 +3,8 @@ dependencies {
     // S-104: Client ID Metadata Documents are fetched under the platform egress rules (EgressDnsResolver, HttpClient 5)
     implementation("org.apache.httpcomponents.client5:httpclient5")
     implementation(project(":sms")) // SMS / voice adapters shared with the api and the worker (S-27)
+    implementation(project(":email")) // S-154: verification and password-reset emails (Mailpit under local)
+    implementation(libs.bouncycastle.prov) // S-154: Argon2id password hashes (Spring Security's Argon2PasswordEncoder)
     implementation(project(":openapi")) // S-125: the JSON API and the OAuth endpoints as OpenAPI 3.1
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -43,6 +45,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testImplementation("org.testcontainers:testcontainers-kafka")
     testImplementation(libs.wiremock)
+    testImplementation(libs.greenmail.junit5) // S-154: the verification email over real SMTP
     testImplementation(testFixtures(project(":platform"))) // S-111: OtlpReceiver
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

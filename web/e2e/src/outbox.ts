@@ -33,6 +33,11 @@ export async function smsCode(phone: string, since: Date): Promise<string> {
   return code!;
 }
 
+/** S-154: the newest code northline-auth emailed to `address` (verification, password reset) after `since`. */
+export async function emailCode(address: string, since: Date): Promise<string> {
+  return smsCode(address, since); // the same local outbox; an email address matches as typed (case-insensitive)
+}
+
 /** The newest email from the api to `address` with the template `tag` (e.g. `payout-sent`), sent after `since`. */
 export async function email(address: string, tag: string, since: Date): Promise<Message> {
   if (env.mode !== 'local' || !env.urls.api) localOnly('reading an email');

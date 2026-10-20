@@ -19,6 +19,223 @@ servers:
 security:
 - authSession: []
 paths:
+  /api/auth/accounts:
+    post:
+      operationId: accountCreate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAccount"
+        required: true
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailSent"
+          description: Accepted
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - account-controller
+  /api/auth/accounts/resend:
+    post:
+      operationId: accountResend
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailSent"
+          description: Accepted
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - account-controller
+  /api/auth/accounts/verify:
+    post:
+      operationId: accountVerify
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Code"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - account-controller
+  /api/auth/accounts/verify-link:
+    post:
+      operationId: accountVerifyLink
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Token"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailConfirmed"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - account-controller
   /api/auth/backup-codes:
     post:
       operationId: sessionRegenerate
@@ -59,6 +276,322 @@ paths:
           description: Your sign-in doesn't allow this.
       tags:
       - session-controller
+  /api/auth/enroll/passkey:
+    post:
+      operationId: enrollmentPasskey
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Passkey"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrolled"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - enrollment-controller
+  /api/auth/enroll/passkey/options:
+    post:
+      operationId: enrollmentPasskeyOptions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - enrollment-controller
+  /api/auth/enroll/totp:
+    post:
+      operationId: enrollmentTotp
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TotpSetup"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - enrollment-controller
+  /api/auth/enroll/totp/verify:
+    post:
+      operationId: enrollmentTotpVerify
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Code"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrolled"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - enrollment-controller
+  /api/auth/password/forgot:
+    post:
+      operationId: passwordForgot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Forgot"
+        required: true
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailSent"
+          description: Accepted
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - password-controller
+  /api/auth/password/reset:
+    post:
+      operationId: passwordReset
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPassword"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PasswordReset"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - password-controller
   /api/auth/register:
     post:
       operationId: registrationStart
@@ -304,6 +837,105 @@ paths:
           description: Your sign-in doesn't allow this.
       tags:
       - security-controller
+  /api/auth/security/authenticator:
+    post:
+      operationId: securityAuthenticatorSetup
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TotpSetup"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - security-controller
+  /api/auth/security/authenticator/verify:
+    post:
+      operationId: securityAuthenticatorVerify
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Code"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatorSet"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - security-controller
   /api/auth/security/passkeys:
     post:
       operationId: securityAddPasskey
@@ -461,6 +1093,61 @@ paths:
               schema:
                 $ref: "#/components/schemas/Problem"
           description: Not found.
+      tags:
+      - security-controller
+  /api/auth/security/password:
+    post:
+      operationId: securityChangePassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePassword"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
       tags:
       - security-controller
   /api/auth/security/sessions/revoke-others:
@@ -811,6 +1498,38 @@ paths:
       security: []
       tags:
       - sign-in-controller
+  /api/auth/sign-in/password:
+    post:
+      operationId: signInPassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailPassword"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PasswordStep"
+          description: OK
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      security: []
+      tags:
+      - sign-in-controller
   /api/auth/sign-in/totp:
     post:
       operationId: signInTotp
@@ -1138,6 +1857,11 @@ paths:
       - step-up-controller
 components:
   schemas:
+    AuthenticatorSet:
+      type: object
+      properties:
+        authenticator:
+          type: boolean
     BackupCode:
       type: object
       properties:
@@ -1154,6 +1878,20 @@ components:
           type: array
           items:
             type: string
+    ChangePassword:
+      type: object
+      properties:
+        current:
+          type: string
+        currentPassword:
+          type: string
+        password:
+          type: string
+          minLength: 1
+        passwordConfirm:
+          type: string
+      required:
+      - password
     Code:
       type: object
       properties:
@@ -1171,11 +1909,106 @@ components:
         resendAfterSeconds:
           type: integer
           format: int64
+    CreateAccount:
+      type: object
+      properties:
+        app:
+          type: string
+          pattern: ^(studio|consumer|console)$
+        email:
+          type: string
+          maxLength: 320
+          minLength: 0
+          pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$"
+        firstName:
+          type: string
+          maxLength: 80
+          minLength: 0
+        lastName:
+          type: string
+          maxLength: 80
+          minLength: 0
+        password:
+          type: string
+          minLength: 1
+        passwordConfirm:
+          type: string
+        phone:
+          type: string
+          pattern: "^\\+?1?[\\s.-]?\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}$"
+        terms:
+          type: boolean
+        termsEnglishRequested:
+          type: boolean
+        termsLanguage:
+          type: string
+          pattern: ^(en|fr)$
+      required:
+      - email
+      - firstName
+      - lastName
+      - password
+      - terms
     CurrentSession:
       type: object
       properties:
         current:
           type: string
+    EmailConfirmed:
+      type: object
+      properties:
+        email:
+          type: string
+        session:
+          $ref: "#/components/schemas/Session"
+        signedIn:
+          type: boolean
+    EmailPassword:
+      type: object
+      properties:
+        email:
+          type: string
+          maxLength: 320
+          minLength: 0
+        password:
+          type: string
+          maxLength: 1024
+          minLength: 0
+      required:
+      - email
+      - password
+    EmailSent:
+      type: object
+      properties:
+        email:
+          type: string
+        resendAfterSeconds:
+          type: integer
+          format: int64
+        step:
+          type: string
+    Enrolled:
+      type: object
+      properties:
+        backupCodes:
+          type: array
+          items:
+            type: string
+        session:
+          $ref: "#/components/schemas/Session"
+    Forgot:
+      type: object
+      properties:
+        app:
+          type: string
+          pattern: ^(studio|consumer|console)$
+        email:
+          type: string
+          maxLength: 320
+          minLength: 0
+          pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$"
+      required:
+      - email
     Identifier:
       type: object
       properties:
@@ -1269,6 +2102,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PasskeyView"
+        password:
+          type: boolean
         sessions:
           type: array
           items:
@@ -1306,6 +2141,27 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PasskeyView"
+    PasswordReset:
+      type: object
+      properties:
+        email:
+          type: string
+    PasswordStep:
+      type: object
+      properties:
+        email:
+          type: string
+        factors:
+          type: array
+          items:
+            type: string
+        resendAfterSeconds:
+          type: integer
+          format: int64
+        session:
+          $ref: "#/components/schemas/Session"
+        step:
+          type: string
     Problem:
       type: object
       description: RFC 9457 problem details. 403 and 409 carry a machine-readable
@@ -1384,6 +2240,23 @@ components:
       properties:
         channel:
           type: string
+    ResetPassword:
+      type: object
+      properties:
+        code:
+          type: string
+          pattern: "^\\d{6}$"
+        password:
+          type: string
+          minLength: 1
+        passwordConfirm:
+          type: string
+        token:
+          type: string
+          maxLength: 128
+          minLength: 0
+      required:
+      - password
     Revoked:
       type: object
       properties:
@@ -1397,6 +2270,8 @@ components:
           type: string
         continueTo:
           type: string
+        needsSecondFactor:
+          type: boolean
         user:
           $ref: "#/components/schemas/User"
     SessionView:
@@ -1465,6 +2340,15 @@ components:
           format: date-time
         proof:
           type: string
+    Token:
+      type: object
+      properties:
+        token:
+          type: string
+          maxLength: 128
+          minLength: 0
+      required:
+      - token
     TotpSetup:
       type: object
       properties:

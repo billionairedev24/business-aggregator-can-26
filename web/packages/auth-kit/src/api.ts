@@ -27,6 +27,38 @@ export const registerSchema = (t: AuthKitT) => z.object({
   terms: z.boolean().refine(v => v, t('termsRequired')),
 });
 
+// ── S-154: email + password accounts (NIST 800-63B: 12–128 characters, no composition rules; the server also refuses
+// common / breached passwords and the email address) ───────────────────────────────────────────────────────────────
+
+export const PASSWORD_MIN = 12;
+export const PASSWORD_MAX = 128;
+/** Length in characters as a person counts them (code points, after NFKC) — the server's rule. */
+export const passwordLength = (p: string) => [...p.normalize('NFKC')].length;
+export const passwordSchema = (t: AuthKitT) => z.string()
+  .refine(p => p.length > 0, t('passwordRequired'))
+  .refine(p => p.length === 0 || passwordLength(p) >= PASSWORD_MIN, t('passwordTooShort'))
+  .refine(p => passwordLength(p) <= PASSWORD_MAX, t('passwordTooLong'));
+
+export type AccountApp = 'studio' | 'consumer' | 'console';
+export interface CreateAccountValues {
+  firstName: string; lastName: string; email: string; password: string; passwordConfirm: string; phone: string; terms: boolean;
+  termsLanguage?: 'en' | 'fr'; termsEnglishRequested?: boolean;
+}
+export const CREATE_ACCOUNT_FIELDS = ['firstName', 'lastName', 'email', 'password', 'passwordConfirm', 'phone', 'terms'] as const;
+
+export const createAccountSchema = (t: AuthKitT) => z.object({
+  firstName: z.string().trim().min(1, t('firstNameRequired')),
+  lastName: z.string().trim().min(1, t('lastNameRequired')),
+  email: z.string().trim().min(1, t('emailRequired')).regex(EMAIL_PATTERN, t('emailFormat')),
+  password: passwordSchema(t),
+  passwordConfirm: z.string(),
+  phone: z.string().trim().refine(p => p === '' || PHONE_PATTERN.test(p), t('phoneFormat')),
+  terms: z.boolean().refine(v => v, t('termsRequired')),
+}).superRefine((v, ctx) => {
+  if (v.password && v.passwordConfirm !== v.password) ctx.addIssue({ code: 'custom', path: ['passwordConfirm'], message: t('passwordConfirm') });
+  if (v.password && v.email && v.password.trim().toLowerCase() === v.email.trim().toLowerCase()) ctx.addIssue({ code: 'custom', path: ['password'], message: t('passwordIsEmail') });
+});
+
 /** A 6-digit code (phone verification, authenticator app). */
 export const codeSchema = (t: AuthKitT) => z.string().trim().min(1, t('codeRequired')).regex(/^\d{6}$/, t('codeFormat'));
 export const backupCodeSchema = (t: AuthKitT) => z.string().trim().min(1, t('backupRequired'));
@@ -42,14 +74,33 @@ export function firstIssue(schema: z.ZodType, value: unknown): string | undefine
 export const RegistrationStep = z.object({ step: z.enum(['otp', 'mfa']), phone: z.string(), resendAfterSeconds: z.number(), channel: z.enum(['sms', 'voice']) });
 export type RegistrationStep = z.infer<typeof RegistrationStep>;
 export const SignInStarted = z.object({ identifier: z.string(), factors: z.array(z.string()) });
-/** `continueTo` (S-29): a mobile app's authorization request that sent the browser here, to go back to. */
-export const AuthSession = z.object({ user: AuthUser, acr: z.string().nullish(), continueTo: z.string().nullish() });
+/**
+ * `continueTo` (S-29): a mobile app's authorization request that sent the browser here, to go back to.
+ * `needsSecondFactor` (S-154): the account has no passkey and no authenticator yet — enrol one before the hand-off.
+ */
+export const AuthSession = z.object({ user: AuthUser, acr: z.string().nullish(), continueTo: z.string().nullish(), needsSecondFactor: z.boolean().optional() });
 export type AuthSession = z.infer<typeof AuthSession>;
 /** S-62: a sign-in code is on its way (the same answer whether or not an account matched). */
 export const CodeSent = z.object({ resendAfterSeconds: z.number(), channel: z.enum(['sms', 'voice']) });
 export type CodeSent = z.infer<typeof CodeSent>;
 export const TotpSetup = z.object({ secret: z.string(), otpauthUri: z.string(), qrCode: z.string() });
 export type TotpSetup = z.infer<typeof TotpSetup>;
+/** S-154: an account email is on its way (the same answer whether or not the address has an account). */
+export const EmailSent = z.object({ step: z.literal('verify-email'), email: z.string(), resendAfterSeconds: z.number() });
+export type EmailSent = z.infer<typeof EmailSent>;
+/** S-154: after email + password — the account's own factors, enrolment (signed in), or its email still to confirm. */
+export const PasswordStep = z.object({
+  step: z.enum(['factor', 'enroll', 'verify-email']), factors: z.array(z.string()).nullish(), session: AuthSession.nullish(),
+  email: z.string().nullish(), resendAfterSeconds: z.number().nullish(),
+});
+export type PasswordStep = z.infer<typeof PasswordStep>;
+export const EmailConfirmed = z.object({ email: z.string(), signedIn: z.boolean(), session: AuthSession.nullish() });
+export type EmailConfirmed = z.infer<typeof EmailConfirmed>;
+/** S-154: the second factor is set up (acr=mfa); the ten backup codes are shown once. */
+export const Enrolled = z.object({ session: AuthSession, backupCodes: z.array(z.string()) });
+export type Enrolled = z.infer<typeof Enrolled>;
+export const PasswordReset = z.object({ email: z.string() });
+
 /** WebAuthn options exactly as Spring Security serialises them (base64url bytes). */
 export const PasskeyOptions = z.record(z.string(), z.unknown());
 
@@ -76,6 +127,21 @@ export const authApi = {
   sendSignInCode: (channel: 'sms' | 'voice' = 'sms', locale = 'en') => post('/api/auth/sign-in/code', CodeSent, { channel }, language(locale)),
   signInWithCode: (code: string) => post('/api/auth/sign-in/code/verify', AuthSession, { code: code.trim() }),
   completeWithoutSecondFactor: () => post('/api/auth/register/complete', AuthSession),
+  // S-154: email + password, the email code / link, enrolment, forgot password.
+  createAccount: (v: CreateAccountValues, app: AccountApp, locale = 'en') => post('/api/auth/accounts', EmailSent, {
+    firstName: v.firstName.trim(), lastName: v.lastName.trim(), email: v.email.trim(), password: v.password, passwordConfirm: v.passwordConfirm,
+    phone: v.phone.trim() || null, terms: v.terms, termsLanguage: v.termsLanguage, termsEnglishRequested: v.termsEnglishRequested, app,
+  }, language(locale)),
+  resendVerification: (locale = 'en') => post('/api/auth/accounts/resend', EmailSent, {}, language(locale)),
+  verifyEmail: (code: string) => post('/api/auth/accounts/verify', AuthSession, { code: code.trim() }),
+  verifyEmailLink: (token: string) => post('/api/auth/accounts/verify-link', EmailConfirmed, { token }),
+  signInWithPassword: (email: string, password: string, locale = 'en') => post('/api/auth/sign-in/password', PasswordStep, { email: email.trim(), password }, language(locale)),
+  enrolTotpSetup: () => post('/api/auth/enroll/totp', TotpSetup),
+  enrolTotp: (code: string) => post('/api/auth/enroll/totp/verify', Enrolled, { code: code.trim() }),
+  enrolPasskeyOptions: () => post('/api/auth/enroll/passkey/options', PasskeyOptions),
+  enrolPasskey: (credential: unknown) => post('/api/auth/enroll/passkey', Enrolled, { credential, label: 'Passkey' }),
+  forgotPassword: (email: string, app: AccountApp, locale = 'en') => post('/api/auth/password/forgot', EmailSent, { email: email.trim(), app }, language(locale)),
+  resetPassword: (v: { code?: string; token?: string; password: string; passwordConfirm?: string }) => post('/api/auth/password/reset', PasswordReset, v),
 };
 
 export const useAuthMutation = <A, R>(fn: (a: A) => Promise<R>) => useMutation({ mutationFn: fn });
