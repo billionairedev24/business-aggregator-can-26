@@ -9738,3 +9738,92 @@ until it restarts, so even a later `pnpm install` didn't help, and `make up` sai
   and signs every persona in with the code from personas.json (and a backup code once).
 - **Not done**: web/e2e/data/local.json still signs the console in with backup codes (e2e runs on a fresh database).
   `make up-all` itself was not run end to end here (shared machine); the reset ran against a throwaway Postgres.
+
+## 2026-09-30 — S-154 Proper account creation: email + password, email verification, MFA enrolment
+
+The owner could not open a business account: the Studio's sign-in asked "Second factor required for <email>" of an
+account that never had one (identifier-first sign-in offers every factor so it never reveals an account). Accounts are
+now email + password, the email is confirmed by a code or link (Mailpit locally), and a second factor is enrolled right
+after — required for the Studio and the console, offered on the consumer site. Security notes:
+`docs/security/s-154-passwords.md`.
+
+- **API (northline-auth `/api/auth/**`):** `POST /accounts` (form → 202 `verify-email`, the same for every address),
+  `/accounts/resend`, `/accounts/verify` {code} (→ 201 session, signed in with the password: `amr pwd`, no `acr`),
+  `/accounts/verify-link` {token}; `POST /sign-in/password` {email, password} → `factor` (the account's own factors) |
+  `enroll` (signed in, no factor yet) | `verify-email` (still pending: a new code); `/enroll/totp`, `/enroll/totp/verify`,
+  `/enroll/passkey/options`, `/enroll/passkey` (→ session with `acr=mfa` + ten backup codes); `/password/forgot`,
+  `/password/reset` {code | token, password}; `/security/password`, `/security/authenticator[/verify]`. Sessions carry
+  `needsSecondFactor`. `app` (`studio` | `consumer` | `console`, default studio) picks the email links' origin (the
+  origin of that app's configured sign-in page — no client-supplied URLs) and whether enrolment is required.
+- **Pending accounts are not users:** the form writes `auth.pending_accounts`; `identity.users` gets the row (with
+  `email_verified_at`) only when the code or link is used, so the api, the console and every module never see an
+  unconfirmed account and `identity.users.status` keeps its values. Registering the same address again replaces the
+  pending row (keeps its id). Forgotten after `ACCOUNT_PENDING_TTL` (7 d) by the existing five-minute auth job.
+- **No enumeration:** an address that has an account gets the `account-exists` email (sign in / reset links) instead of
+  a code; the same 202; its codes are always wrong. Sign-in failures are one message for unknown email, no password and
+  wrong password, after the same Argon2 work. Forgot password sends nothing for an unknown address. A mobile number
+  already in use is silently not stored (rather than a "number taken" error).
+- **Hashing:** Argon2id via Spring Security's `Argon2PasswordEncoder` — BouncyCastle (`bcprov-jdk18on` 1.85.2) added to
+  auth (it wasn't on the classpath; bcrypt was not needed). OWASP 2024 cost (19 MiB, t=2, p=1), `PASSWORD_HASH_*`
+  overridable; the test profile uses 1 MiB / t=1 for speed. Passwords are NFKC-normalised.
+- **Password policy:** 12–128 code points, no composition rules, not in the bundled list (`auth/common-passwords.txt`:
+  the 12+ character entries of SecLists' NCSC top-100k and 10k lists, MIT; plus `northline-dev-password` so the dev
+  password can't be chosen for a real account), not the email or its local part, not one repeated character. Messages
+  (new, en in `AuthMessages`, fr in validation-messages.fr-CA.tsv and auth-kit): "Enter a password.", "Use at least 12
+  characters.", "Use at most 128 characters.", "This password is too common. Choose one that's harder to guess.", "Your
+  password can't be your email address.", "The passwords don't match.", "That email and password don't match. Check
+  them and try again.", "That's not your current password.", "Enter your current password.", "That link has expired or
+  was already used. Ask for a new email.", "This account already has a second factor. Change it in Settings ›
+  Security.", "Send studio, consumer or console as the app.". Rule ids: `common`, `email`, `mismatch`, `expired`.
+- **Email codes:** 6 digits + 32-byte link token, SHA-256 at rest, constant-time compare, 15 min, single use, 5 wrong
+  tries, a new email retires the previous code, 60 s resend cool-down (429 `otp_throttled`, like phone codes). The link
+  signs in only the browser that sent the form (an intercepted link must not let someone enrol their own factor);
+  elsewhere it confirms the address and asks to sign in.
+- **Enrolment:** allowed only for an account with no passkey and no authenticator (409 `already_enrolled`), for any
+  signed-in auth session. Backup codes are issued with the first factor and shown once (copy, download .txt, "I saved
+  them" required to continue). Backup codes alone don't count as a factor (they recover one). The TOTP URI is labelled
+  `Northline:<email>` with `issuer=Northline` (registration's set-up now shares `TotpSetups`).
+- **Existing accounts:** an account without a second factor that signs in with its password goes to enrolment, never
+  to the factor step. One without a password (phone registrations, S-62) uses Forgot password to set one (the reset
+  also marks the email verified), then enrols. Identifier-first sign-in stays for the mobile apps and the consumer
+  phone code, but an account that has a password can't use its TOTP / backup code without it (the same "didn't work"
+  answer; nothing is used up); passkey-first still works for everyone. `identity.sessions.method` gains `password`.
+- **Forgot / change password:** reset ends every session (`revoke_reason = password_reset`) and still asks for the second
+  factor at the next sign-in. Change needs a step-up (10 min) and the current password when there is one ("Set a
+  password" otherwise) and ends every other session (`password_changed`). New backup codes and a new authenticator
+  (`/security/authenticator`) now need a step-up too — `POST /api/auth/backup-codes` changed from "any MFA session" to
+  step-up; the Studio and consumer Security tabs run it through their step-up dialogs.
+- **Rate limits:** new actions `password-verify` (failures; 10 / 15 min per account, 30 per IP, 10 per session),
+  `email-send` (every call; 5 / h per address, 20 per IP, 5 per session) and `email-code-verify` (failures; 10 / h, 50,
+  10); all guard secrets (fail closed in staging/prod without Valkey). A success resets the account and session counters.
+- **Emails:** three new transactional templates in the shared library (`account-verification`, `password-reset`,
+  `account-exists`, en/fr, CASL footer) sent by auth through the `Mailer` after commit, off the request thread
+  (`northline.auth.accounts.send-async`, false in the test suite). Auth now needs `EMAIL_*` / `SMTP_*` like the api
+  (Helm: `apps.auth.env` per cloud overlay, `EMAIL_FROM` in staging/prod, `EMAIL_API_KEY` / `SMTP_PASSWORD` optional
+  secrets; staging/prod `northline.required-env.email`). Under `local` the codes are also in auth's dev outbox
+  (`/api/auth/dev/outbox?to=<email>`) for the e2e suite.
+- **Optional mobile:** stored unverified (`phone_verified_at` NULL). V415 marks every older phone verified (they were
+  all confirmed by SMS at registration); phone sign-in codes go only to verified numbers; an SMS-verified registration
+  takes over a number another account holds unverified.
+- **Apps:** Studio (Create account tab and the sell / provide / food entry points, sign-in, `/forgot-password`,
+  `/verify-email`, `/reset-password`, Settings › Security password + authenticator + backup codes, "Confirm it's you"
+  asks the password), consumer web (register, sign-in with password — phone code and passkey kept, enrolment offered
+  and skippable, the same three routes, Account › Security), console (work email + password, own factors, required
+  enrolment, forgot password). The shared steps live in `@northline/auth-kit` (`account.tsx`, `securityForms.tsx`).
+- **Schema (V415):** `auth.passwords`, `auth.pending_accounts`, `auth.email_codes`, `identity.users.email_verified_at`,
+  the `identity.sessions` method / revoke-reason checks widened. **Dev seed V416:** `northline-dev-password` (Argon2id)
+  for every active `@example.com` persona, emails marked verified; `scripts/dev/personas.json` (S-150) carries it, so
+  `make creds` and README § Local sign-in show it (`SeededPersonaSignInTest` signs every persona in with it).
+- **Tests:** `AccountSignUpApiTest` (26: the whole journey, link in another / the same browser, enumeration, expired /
+  used / locked codes, throttled resend, validation messages en/fr, optional mobile, pending sign-in, re-registration,
+  identifier-first can't skip the password, lockout + audit without PII, 401 / 409, session id rotation, change
+  password with step-up, authenticator replacement, backup codes, an older account without password or factor),
+  `MailpitAccountEmailTest` (real SMTP to the compose Mailpit image, French email read back through Mailpit's API, its
+  code creates the account), `PasswordPolicyTest`, `PasswordHashingTest` (incl. the dev seed hash), the updated
+  `SeededPersonaSignInTest`, `SignInServiceTest`, `AttemptLimitsTest`; vitest for the Studio / consumer / console
+  screens and both Security tabs; e2e: the setup's consumer sign-up and the seeded sign-ins use email + password, new
+  journey `6-business-account.spec.ts`.
+- **Not done / follow-ups:** the native mobile apps' own sign-in screens still use the phone-code flows (unchanged and
+  working; email + password there is a follow-up); no breached-password API (bundled list only); no "your password was
+  changed" notification email; the e2e suite (`make e2e`) was not run end to end here (typechecked only; shared
+  machine). Nothing new talks to a third party beyond the existing email providers.

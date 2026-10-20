@@ -122,8 +122,12 @@ make up SERVICES="auth api bff studio"
 = northline-auth :9000 (`:auth:bootRun`, migrates + seeds the DB too; SMS codes are in `.run/logs/auth.log`), api :8080,
 studio-bff :8082 (in-memory session, no Redis) and the Studio on http://localhost:3100 without `NL_DEV_USER` (it goes
 through the BFF).
-Open http://localhost:3100 → Sign in. **`make creds`** prints every seeded persona with the authenticator code for
-right now (`make creds WHO=ravi` for one). The personas (`scripts/dev/personas.json`, seeded by `db/seed-dev` —
+Open http://localhost:3100 → Sign in with the persona's email and the dev-only password **`northline-dev-password`**
+(every seeded persona, S-154: dev seed V416), then the second factor. **`make creds`** prints every seeded persona with
+its password and the authenticator code for right now (`make creds WHO=ravi` for one). **Open a new business account:**
+Create account → name, email, a 12+ character password → the code from the email at **http://localhost:8025** (Mailpit,
+`docker compose --profile mail up -d`) → enroll an authenticator app or passkey → save the backup codes
+([local.md § 5](docs/runbooks/local.md#5-studio-with-real-sign-in-auth--api--bff-still-postgres-only)). The personas (`scripts/dev/personas.json`, seeded by `db/seed-dev` —
 V101, V191, V381 — local only; `make creds-test` keeps this table, the JSON and the seed equal):
 
 | WHO= | persona | app | email · mobile | password | authenticator key | backup codes |

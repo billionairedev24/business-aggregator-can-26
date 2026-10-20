@@ -17,6 +17,11 @@ variables, CASL and operations. Decisions and trade-offs: `docs/DECISIONS.md` §
 - [CASL: sender identification and unsubscribe](#casl-sender-identification-and-unsubscribe)
 - [Operations](#operations)
 
+
+**S-154:** northline-auth sends the account emails through the same library and settings (`EMAIL_*`, `SMTP_*` on the
+auth Deployment too): `account-verification` (the 6-digit code and the "Confirm my email" link), `password-reset`, and
+`account-exists` (sent instead of a code when someone registers an address that already has an account, so the form
+never reveals it). All three are transactional (CASL s. 6(6)), en/fr, valid 15 minutes, and appear in Mailpit locally.
 ## How it works
 
 | piece | where |
