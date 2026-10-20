@@ -12,6 +12,7 @@ import { RoundButton, Screen } from '../ui/screen';
 import { ErrorState, Skeleton } from '../ui/states';
 import { appRoute, shop, useMarket, useShopFormat } from './common';
 import { ProductTile, SectionHead, Strip, Tile } from './parts';
+import { RewardsNear } from './RewardsNear';
 
 /** The service categories Home offers as illustrated tiles (category slugs of the S-100 pages). */
 const SERVICE_TILES: ReadonlyArray<[MessageKey, string]> = [
@@ -38,7 +39,8 @@ const nullOn404 = async <T,>(call: () => Promise<T | null>): Promise<T | null> =
  * from (opens the location sheet), the inbox and the account — and the one search pill; what's under way
  * (`GET /me/upcoming`'s first item that has a screen) as a light card; the hero (the display face, an illustrated
  * collage, "every pro and shop verified"); "Book a service" and "Shop local" as rails of illustrated tiles; tonight's
- * pooled run (`GET /public/shop` → `run`); "Popular near you" as photo-first product cards; the sellers' line.
+ * pooled run (`GET /public/shop` → `run`); S-152's rewards near you; "Popular near you" as photo-first product cards;
+ * the sellers' line.
  */
 export function Home() {
   const f = useShopFormat();
@@ -193,6 +195,8 @@ export function Home() {
             {landing.data && !landing.data.served ? <Body tone="muted">{t('shop.home.notServed', { place: landing.data.market })}</Body> : null}
             {landing.data && landing.data.departments.length === 0 ? <Body tone="muted">{t('shop.home.noShops')}</Body> : null}
           </View>
+
+          <RewardsNear />
 
           {landing.data?.popular.length ? (
             <View style={styles.section} testID="home-popular">

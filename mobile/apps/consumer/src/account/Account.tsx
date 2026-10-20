@@ -22,13 +22,13 @@ import { targetOf } from './routes';
 /**
  * Account tab (redesign spec § 2.4 → MA:296 ACCOUNT): the 56 pt avatar with "Hi, {first}" and the email, "Your orders"
  * (the two latest of `GET /me/activity`, See all → Activity), then the settings in bordered groups (account, preferences,
- * help), the language, Sign out and the legal links. Wallet & points and the dietary preferences are behind the full
- * navigation flag (EXPO_PUBLIC_FULL_NAV, thrash item 6); Favourites is "Saved". D3 Profile (design 01 `account`): who you are (name, reliability, member since, where you are), the
+ * help), the language, Sign out and the legal links. The dietary preferences are behind the full navigation flag
+ * (EXPO_PUBLIC_FULL_NAV, thrash item 6); Wallet & points is back for everyone with S-152's points and Plus; Favourites is "Saved". D3 Profile (design 01 `account`): who you are (name, reliability, member since, where you are), the
  * wallet up top (points and Plus, → Wallet), then the design's rows, each leading somewhere real (`GET
  * /me/account-summary` gives their values): personal details, addresses & household, payment methods, security &
  * sign-in, notifications, dietary & accessibility, favourite providers, refunds & help, "Language / Langue" (here, in
  * place — the account's language follows, `PATCH /me/preferences`), becoming a seller (the website), sign-out and the
- * legal links. "Invite a neighbour" has no api yet (MOBILE_PLAN § API gaps) and is left out. Guests get the sign-in
+ * legal links, and S-152's Invite a neighbour. Guests get the sign-in
  * prompt, the language and the legal links.
  */
 export function Account() {
@@ -186,27 +186,25 @@ export function Account() {
         )}
       </View>
 
-      {fullNav() ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={[t('account.you.wallet'), s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatMoney(s.points.valueCents, locale) }) : '', s ? t(s.plus ? 'account.you.plus' : 'account.you.standard') : ''].filter(Boolean).join(', ')}
-          onPress={() => router.push('/wallet')}
-          style={({ pressed }) => [styles.wallet, pressed && styles.walletPressed]}
-          testID="you-wallet"
-        >
-          <View style={styles.headText}>
-            <Text style={styles.walletKicker}>{t('account.you.wallet')}</Text>
-            {summary.isPending ? (
-              <Skeleton height={22} width="60%" />
-            ) : (
-              <Text style={styles.walletPoints}>
-                {s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatMoney(s.points.valueCents, locale) }) : t('account.you.walletOpen')}
-              </Text>
-            )}
-          </View>
-          {s ? <Tag label={t(s.plus ? 'account.you.plus' : 'account.you.standard')} tone="accent2" /> : null}
-        </Pressable>
-      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={[t('account.you.wallet'), s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatMoney(s.points.valueCents, locale) }) : '', s ? t(s.plus ? 'account.you.plus' : 'account.you.standard') : ''].filter(Boolean).join(', ')}
+        onPress={() => router.push('/wallet')}
+        style={({ pressed }) => [styles.wallet, pressed && styles.walletPressed]}
+        testID="you-wallet"
+      >
+        <View style={styles.headText}>
+          <Text style={styles.walletKicker}>{t('account.you.wallet')}</Text>
+          {summary.isPending ? (
+            <Skeleton height={22} width="60%" />
+          ) : (
+            <Text style={styles.walletPoints}>
+              {s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatMoney(s.points.valueCents, locale) }) : t('account.you.walletOpen')}
+            </Text>
+          )}
+        </View>
+        {s ? <Tag label={t(s.plus ? 'account.you.plus' : 'account.you.standard')} tone="accent2" /> : null}
+      </Pressable>
       {summary.isError ? <ErrorState error={summary.error} onRetry={() => void summary.refetch()} /> : null}
 
       <SettingsGroup title={t('rd.account.groupAccount')}>
@@ -220,6 +218,7 @@ export function Account() {
         {fullNav() ? (
           <SettingsRow icon="list-checks" name={t('account.you.preferences')} value={value(s?.dietary?.length ? s.dietary.join(', ') : null)} onPress={() => router.push('/account/preferences')} testID="row-preferences" />
         ) : null}
+        <SettingsRow icon="hand-coins" name={t('loyalty.inviteRow')} onPress={() => router.push('/account/invite')} testID="row-invite" />
         <SettingsRow icon="heart" name={t('rd.account.saved')} value={value(s?.favourites != null ? String(s.favourites) : null)} onPress={() => router.push('/account/favourites')} testID="row-favourites" />
       </SettingsGroup>
       <SettingsGroup title={t('rd.account.groupHelp')}>
