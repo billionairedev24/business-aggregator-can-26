@@ -1,5 +1,33 @@
 # Local runbook — from clone to a signed-in Studio
 
+## Test it locally (start here)
+
+```sh
+make setup        # once: toolchain check, the .env files (cp .env.example .env, …), pnpm install
+                  # your own Postgres / Valkey / Grafana? BYO_SERVICES=db,cache,grafana in .env
+make up-all       # every app + every stand-in you don't bring, migrated and seeded; prints every URL
+make demo-data    # optional: a demo marketplace (shops, listings, orders) made through the product
+make creds        # who to sign in as, and each persona's 6-digit code for right now
+make down         # stops the apps and the stand-ins (never your own services)
+```
+
+| app | URL | sign in as (`make creds WHO=…`) |
+|---|---|---|
+| Studio | http://localhost:3100 | `ravi` (owner of all three businesses, kitchen included), `jas` (technician), `priya` (bookkeeper) |
+| Consumer web | http://localhost:3000 | `amara` (bookings, quotes, orders); `sophie` / `luc` in French |
+| Console | http://localhost:3200 | `priya-n` (every console role); `marc` (the second admin) |
+| Phone apps | `make mobile-dev APP=consumer` / `APP=courier` | `amara` / `priya-nair` ([mobile-local.md](mobile-local.md)) |
+
+Sign in with the email or mobile → **Authenticator app** → the code `make creds` shows (a new one every 30 s, as
+often as you like; no `oathtool` needed). Backup codes are single use: `make backup-codes-reset` makes them work again.
+"Create account" works too: `make creds` also shows the latest phone code from the auth log.
+
+Your own services for one run: `make up-all BYO=db,cache,grafana` (`byo=`, `byo_arg=` and `BYO_SERVICES=` mean the
+same); `make up-all-check BYO=db,cache,grafana` only checks them (your Grafana must not be on :3000, the consumer
+app's port). Lighter: `make up` (auth, api, Studio BFF and Studio only).
+
+The personas, their keys and codes: `make creds`, and the table in the repository's README.md § Local sign-in (both from `scripts/dev/personas.json`).
+
 Everything runs on your machine. You can use **your own Postgres and Valkey** or start **Docker stand-ins** for
 anything you don't have, one service at a time (compose profiles). The Spring profile `local` needs only Postgres.
 
@@ -19,7 +47,7 @@ Gradle/pnpm/compose commands still work and are shown next to each target.
 | PostgreSQL | **17** with **PostGIS 3.5** | yours, or Docker (`--profile db`). Extensions used: `postgis`, `citext`, `pgcrypto`. |
 | Valkey or Redis | Valkey 8 / Redis 7+ | optional: only for `local,valkey` (sessions in Valkey) and the worker. Yours, or Docker (`--profile cache`). |
 | Docker + Compose v2.20+ | | only for the stand-ins you don't run yourself (Kafka, Elasticsearch, Mailpit, S3 storage, stripe-mock). |
-| An authenticator app or `oathtool` | | to sign in as a seeded persona with real auth (step 5). |
+| (nothing for sign-in codes) | | `make creds` computes every seeded persona's authenticator code; an authenticator app works too. |
 | GNU make | 3.81+ | every `make` target (macOS's `/usr/bin/make` is 3.81). `make doctor` checks all of the above. |
 
 Ports used by default: api **8080**, northline-auth **9000**, studio-bff **8082**, Studio **3100**, Postgres 5432,
@@ -122,8 +150,8 @@ cd server
 
 Leave `NL_DEV_USER` empty in `web/apps/studio/.env` and run `cd web && pnpm dev`. Open http://localhost:3100 →
 **Sign in** → `ravi.sandhu@example.com` → Authenticator app → the code from
-`oathtool --totp -b NORTHLINERAVIDEVTOTPSECRET234567` (or backup code `ravis-00001` … `ravis-00010`, single use).
-Other personas and factors: README § Local sign-in. "Create account" works end to end: the 6-digit phone code is
+`make creds WHO=ravi` (or a backup code `ravis-00001` … `ravis-00010`, single use — `make backup-codes-reset`).
+Every other persona and factor: `make creds`. "Create account" works end to end: the 6-digit phone code is
 printed in the auth log (`Verification code for …`). Passkeys work on `localhost` (not `127.0.0.1`).
 
 **OAuth clients:** auth registers `studio-bff`, `consumer-bff`, `console-bff` (S-90), `mobile-consumer` and `courier-app` in
@@ -232,8 +260,8 @@ cd server
 cd ../web && pnpm dev:console                                              # http://localhost:3200
 ```
 
-Sign in at http://localhost:3200/sign-in as `priya.natarajan@example.com` with a backup code `priya-n-00001` …
-`priya-n-00010` (single use; `db/seed-dev/V191__console_staff.sql`). Anyone without the `staff` role, or without a
+Sign in at http://localhost:3200/sign-in as `priya.natarajan@example.com` with the code from `make creds WHO=priya-n`
+(or a backup code `priya-n-00001` … `priya-n-00010`, single use). Anyone without the `staff` role, or without a
 second factor, is sent back with "This is for Northline staff only." / "Sign in with your second factor to do this.".
 Without the bff and auth: `NL_DEV_USER=01J9ZD3V00000000000000PNA1` in `web/apps/console/.env` (see `.env.example`) —
 `/api` then goes to the api with `X-Dev-User`, whose token carries the person's `identity.platform_roles`. The account
