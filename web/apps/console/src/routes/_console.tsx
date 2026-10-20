@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router';
 import { brand } from '@northline/tokens';
-import { ErrorState, PageSkeleton, PageState } from '@northline/ui';
+import { FailureScreen, PageSkeleton, PageState } from '@northline/ui';
+import { failureKind } from '../lib/http';
 import { ConsoleLayout, DeniedBanner } from '../features/shell/ConsoleLayout';
 import { loadStaff, requireSession } from '../features/shell/guards';
 import { useShellT } from '../features/shell/messages';
@@ -12,9 +13,10 @@ export const Route = createFileRoute('/_console')({
   beforeLoad: ({ context, location }) => requireSession(context.queryClient, location.href),
   loader: ({ context }) => loadStaff(context.queryClient),
   pendingComponent: function ConsolePending() { const t = useShellT(); return <PageState title={`${brand.name} ${t('console')}`}><PageSkeleton /></PageState>; },
-  errorComponent: function ConsoleError({ reset }) {
+  errorComponent: function ConsoleError({ error, reset }) {
     const t = useShellT();
-    return <PageState title={`${brand.name} ${t('console')}`}><ErrorState message={t('loadError')} onRetry={reset} /></PageState>;
+    const kind = failureKind(error);
+    return <PageState title={`${brand.name} ${t('console')}`}><FailureScreen kind={kind} onRetry={reset} autoRetry retryKey={error} title={kind === 'error' ? t('loadError') : undefined} /></PageState>;
   },
   component: () => <ConsoleLayout denied={<><DeniedBanner /><Overview /></>}><Outlet /></ConsoleLayout>,
 });

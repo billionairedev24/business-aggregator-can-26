@@ -3,12 +3,12 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
-import { configurePlatformTimeZone, I18nProvider } from '@northline/ui';
+import { AppErrorBoundary, configurePlatformTimeZone, I18nProvider } from '@northline/ui';
 import '@northline/tokens/tokens.css';
 import '@northline/ui/styles.css';
 import './studio.css';
 import { createStudioRouter } from './router';
-import { isUnauthorized, setRequestLocale } from './lib/http';
+import { failureKind, isUnauthorized, setRequestLocale } from './lib/http';
 import { initialLocale, LOCALE_KEY } from './lib/locale';
 import './lib/auth-server'; // configures northline-auth's origin for @northline/auth-kit
 
@@ -31,9 +31,12 @@ const router = createStudioRouter(queryClient);
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <I18nProvider initial={locale} onChange={l => { setRequestLocale(l); try { localStorage.setItem(LOCALE_KEY, l); } catch { /* ignore */ } }}>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
+      {/* the last line of defence: an error no route caught shows the branded screen, not a blank page */}
+      <AppErrorBoundary kindOf={failureKind} dev={import.meta.env.DEV}>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </AppErrorBoundary>
     </I18nProvider>
   </StrictMode>,
 );

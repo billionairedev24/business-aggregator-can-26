@@ -1,8 +1,8 @@
 import { createFileRoute, Navigate, Outlet, useRouterState } from '@tanstack/react-router';
 import { brand } from '@northline/tokens';
 import { useQuery } from '@tanstack/react-query';
-import { ErrorState, PageSkeleton, PageState, useLocale } from '@northline/ui';
-import { ApiError } from '../lib/http';
+import { FailureScreen, PageSkeleton, PageState, useLocale } from '@northline/ui';
+import { ApiError, failureKind } from '../lib/http';
 import { merchantQuery } from '../features/shell/api';
 import { requireSession } from '../features/shell/guards';
 import { useShellT } from '../features/shell/messages';
@@ -53,5 +53,11 @@ function StudioRoute() {
 function MerchantError({ error, reset }: { error: unknown; reset: () => void }) {
   const t = useShellT();
   const missing = error instanceof ApiError && (error.status === 403 || error.status === 404);
-  return <PageState title={`${brand.name} ${t('studio')}`}><ErrorState message={missing ? t('notFound') : t('loadError')} onRetry={missing ? undefined : reset} /></PageState>;
+  const kind = missing ? 'forbidden' : failureKind(error);
+  // not this person's business → its own words; the studio-bff down → tried again on its own; else "couldn't load"
+  return (
+    <PageState title={`${brand.name} ${t('studio')}`}>
+      <FailureScreen kind={kind} onRetry={reset} autoRetry retryKey={error} title={missing ? t('notFound') : kind === 'error' ? t('loadError') : undefined} />
+    </PageState>
+  );
 }
