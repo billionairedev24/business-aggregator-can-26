@@ -13,6 +13,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  *   EXPO_PUBLIC_AUTH_ISSUER  https://auth.<zone>
  *   EXPO_PUBLIC_FIXTURES     1 = the in-app fixture backend (web smoke test, demos); refused for production
  *   EXPO_PUBLIC_PHOTOS_BASE_URL  the stock photos' variants: https://<zone>/photos or a CDN (docs/runbooks/photos.md)
+ *   EXPO_PUBLIC_SITE_ORIGIN  https://<zone>: the consumer site, whose /courier/oauth2redirect ends the in-app sign-in (S-159)
  *   EAS_PROJECT_ID, EAS_OWNER  the Expo project (from `eas init`)
  *   GOOGLE_SERVICES_JSON     path of the environment's google-services.json (FCM); an EAS file variable, never committed
  */
