@@ -66,7 +66,7 @@ test('a shop order is packed, dispatched and delivered by a courier', async ({ b
   let courierUserId = env.personas.courier?.userId ?? '';
   await test.step('courier: signs in to the courier app', async () => {
     if (isLocal) {
-      // A new courier every run (sign-up with a phone code and a passkey), so no run left over from an earlier attempt
+      // A new courier every run (sign-up with email + password and a passkey), so no run left over from an earlier attempt
       // keeps them busy.
       await VirtualAuthenticator.attach(courierPage).then(a => consumerRegister(courierPage, newConsumer('Kai'), a));
       courierUserId = ((await (await courierPage.request.get(`${env.urls.consumer}/bff/session`)).json()) as { user: { id: string } }).user.id;

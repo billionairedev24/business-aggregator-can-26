@@ -4,6 +4,7 @@ import ca.northline.auth.application.AccountEmails;
 import ca.northline.auth.application.AccountProperties;
 import ca.northline.auth.application.AuthProperties;
 import ca.northline.auth.domain.App;
+import ca.northline.auth.sms.DevOutbox;
 import ca.northline.email.EmailAddress;
 import ca.northline.email.EmailContent;
 import ca.northline.email.Mailer;
@@ -13,6 +14,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
@@ -33,19 +36,23 @@ class MailerAccountEmails implements AccountEmails {
     private final Mailer mailer;
     private final AuthProperties props;
     private final TaskExecutor executor;
+    private final @Nullable DevOutbox outbox;
 
     MailerAccountEmails(
             Mailer mailer,
             AuthProperties props,
             AccountProperties accounts,
-            @Qualifier("applicationTaskExecutor") TaskExecutor executor) {
+            @Qualifier("applicationTaskExecutor") TaskExecutor executor,
+            ObjectProvider<DevOutbox> outbox) {
         this.mailer = mailer;
         this.props = props;
         this.executor = accounts.sendAsync() ? executor : Runnable::run;
+        this.outbox = outbox.getIfAvailable(); // local profile only (S-117): the end-to-end suite reads codes there
     }
 
     @Override
     public void verification(Recipient to, String code, String token, long validMinutes) {
+        devCode(to, code);
         send(
                 to,
                 new EmailContent.AccountVerification(
@@ -58,6 +65,7 @@ class MailerAccountEmails implements AccountEmails {
 
     @Override
     public void passwordReset(Recipient to, String code, String token, long validMinutes) {
+        devCode(to, code);
         send(
                 to,
                 new EmailContent.PasswordReset(
@@ -110,6 +118,12 @@ class MailerAccountEmails implements AccountEmails {
             });
         } else {
             executor.execute(task);
+        }
+    }
+
+    private void devCode(Recipient to, String code) {
+        if (outbox != null) {
+            outbox.recordEmail(to.to(), code);
         }
     }
 
