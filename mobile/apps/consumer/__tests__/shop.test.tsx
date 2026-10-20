@@ -77,7 +77,10 @@ describe('B1 Home', () => {
     expect(screen.getByText(/^Delivery \$2\.99 · order by 5:19 p\.m\. · 5 neighbours$/)).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Everything local, from people you can trust' })).toBeTruthy();
     expect(screen.getByText('Every pro and shop verified')).toBeTruthy();
-    expect(screen.getAllByTestId('art', { includeHiddenElements: true }).length).toBeGreaterThan(6); // no photos in the fixtures: every tile is a drawn scene
+    // every tile is a picture: the library's photo for its slot, else the drawn scene
+    const pictures = ['photo', 'art'].flatMap((id) => screen.queryAllByTestId(id, { includeHiddenElements: true }));
+    expect(pictures.length).toBeGreaterThan(6);
+    expect(screen.queryAllByTestId('photo', { includeHiddenElements: true }).length).toBeGreaterThan(0); // the library has photos
     for (const circle of ['Bakery', 'Butcher', 'Produce', 'Mechanic', 'Cleaning', 'Events & bar', 'Realtor']) expect(screen.getByRole('button', { name: circle })).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Popular near you' })).toBeTruthy();
     expect(server.calls.find((c) => c.path === '/public/shop')).toMatchObject({ signed: false });
