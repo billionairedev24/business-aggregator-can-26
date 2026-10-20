@@ -28,8 +28,6 @@ class StripePaymentSettings implements PaymentSettings {
 
     @Override
     public Wallets wallets() {
-        return publishableKey() == null
-                ? Wallets.NONE
-                : new Wallets(properties.applePay(), properties.googlePay());
+        return publishableKey() == null ? Wallets.NONE : new Wallets(properties.applePay(), properties.googlePay());
     }
 }

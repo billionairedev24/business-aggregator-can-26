@@ -93,7 +93,10 @@ interface PaymentsWebMapper {
                 returned == null
                         ? null
                         : new PayoutResponses.Returned(
-                                returned.payoutId(), returned.amountCents(), returned.failureCode(), returned.sentAt()));
+                                returned.payoutId(),
+                                returned.amountCents(),
+                                returned.failureCode(),
+                                returned.sentAt()));
     }
 
     default CaseResponses.Overview toResponse(RespondToCases.Overview o) {

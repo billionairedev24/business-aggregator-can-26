@@ -11,8 +11,8 @@ class StripePaymentSettingsTest {
 
     private static StripePaymentSettings settings(
             @Nullable String secret, @Nullable String publishable, boolean applePay, boolean googlePay) {
-        return new StripePaymentSettings(new PaymentsProperties(
-                secret, publishable, null, null, null, null, null, null, applePay, googlePay));
+        return new StripePaymentSettings(
+                new PaymentsProperties(secret, publishable, null, null, null, null, null, null, applePay, googlePay));
     }
 
     @Test

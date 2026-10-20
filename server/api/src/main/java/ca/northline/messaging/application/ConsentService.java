@@ -235,10 +235,6 @@ class ConsentService implements ManageConsents, ConsentDesk, ConsentRetention, C
 
     /** "Northline Marketplace Inc. · <address> · support@…": who asks for consent (CASL regulations s. 4). */
     private String requester() {
-        var address =
-                email.mailingAddress() == null ? "" : email.mailingAddress().strip();
-        var name = legalName();
-        var who = address.contains(name) ? address : name + " · " + address;
-        return who + " · " + email.contact();
+        return ca.northline.email.ConsentWordings.requester(legalName(), email.mailingAddress(), email.contact());
     }
 }

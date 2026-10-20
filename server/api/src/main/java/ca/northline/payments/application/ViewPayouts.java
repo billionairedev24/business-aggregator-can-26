@@ -30,7 +30,8 @@ public interface ViewPayouts {
             @Nullable Returned returned) {}
 
     /** S-157: a payout the bank sent back, and Stripe's reason ({@code account_closed}, …; null = none given). */
-    record Returned(String payoutId, long amountCents, @Nullable String failureCode, Instant sentAt) {}
+    record Returned(
+            String payoutId, long amountCents, @Nullable String failureCode, Instant sentAt) {}
 
     record Preview(@Nullable Instant nextPayoutAt, long amountCents) {}
 

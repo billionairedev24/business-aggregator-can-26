@@ -96,13 +96,16 @@ class EmailTemplatesTest {
                         "Why: the bank account is closed.",
                         "Update your bank details in Payouts › Bank account.",
                         "Stripe’s code, for support: account_closed");
-        assertThat(fr.text()).contains("Motif : le compte bancaire est fermé.", "Mettez à jour vos coordonnées bancaires");
+        assertThat(fr.text())
+                .contains("Motif : le compte bancaire est fermé.", "Mettez à jour vos coordonnées bancaires");
         assertThat(en.html()).contains("Update bank details");
         // every code Stripe documents has words in both languages; an unknown one gets the general reason
         for (var code : EmailContent.PayoutFailed.REASONS) {
             for (var locale : new Locale[] {Locale.CANADA, Locale.CANADA_FRENCH}) {
                 var email = TEMPLATES.render(
-                        new EmailContent.PayoutFailed("Prairie Wrench", 100, "failed", code, link), locale, UNSUBSCRIBE);
+                        new EmailContent.PayoutFailed("Prairie Wrench", 100, "failed", code, link),
+                        locale,
+                        UNSUBSCRIBE);
                 assertThat(email.text()).doesNotContain("??").containsAnyOf("Why: ", "Motif : ");
             }
         }

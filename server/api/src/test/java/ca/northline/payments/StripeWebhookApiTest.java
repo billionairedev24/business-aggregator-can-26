@@ -299,8 +299,7 @@ class StripeWebhookApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.returned.amountCents").value(10_000))
                 .andExpect(jsonPath("$.returned.failureCode").value("account_closed"));
         // the next payout reached the bank: nothing to fix any more
-        var next =
-                move.instant(new MovePayouts.InstantCommand(shop.merchantId(), 5_000, shop.ownerId(), Ids.next()));
+        var next = move.instant(new MovePayouts.InstantCommand(shop.merchantId(), 5_000, shop.ownerId(), Ids.next()));
         assertThat(next.getId()).isNotEqualTo(payout.getId());
         mvc.perform(get("/api/v1/merchants/{id}/payouts/overview", shop.merchantId())
                         .with(TestJwt.member(shop.ownerId())))

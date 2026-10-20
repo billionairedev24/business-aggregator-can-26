@@ -47,7 +47,8 @@ final class PayoutResponses {
             @Nullable Returned returned) {}
 
     /** S-157: the bank returned the latest payout (Studio notice: the reason and "Update bank details"). */
-    record Returned(String payoutId, long amountCents, @Nullable String failureCode, Instant sentAt) {}
+    record Returned(
+            String payoutId, long amountCents, @Nullable String failureCode, Instant sentAt) {}
 
     /** A payout; {@code reference} = Stripe's payout id ("po_9Kx2"). */
     record PayoutLine(
