@@ -38,7 +38,8 @@ import org.springframework.web.bind.annotation.RestController;
  * POST   /api/v1/console/partners/{id}/rotate {jwkSetUrl?}         PartnerRow
  * POST   /api/v1/console/partners/{id}/disable | /enable           PartnerRow
  * POST   /api/v1/console/partners/{id}/businesses {merchantIds}    PartnerRow (asks them for consent)
- * DELETE /api/v1/console/partners/{id}/businesses/{merchantId}     PartnerRow
+ * DELETE /api/v1/console/partners/{id}/businesses/{businessId}     PartnerRow   (not {merchantId}: that name means
+ *        a Studio handler to MerchantAccessInterceptor)
  * </pre>
  */
 @RestController
@@ -132,10 +133,10 @@ class PartnerController {
         return row(partners.request(id, known(body.merchantIds()), staff.userId(), staff.roleCodes()));
     }
 
-    @DeleteMapping("/{id}/businesses/{merchantId}")
+    @DeleteMapping("/{id}/businesses/{businessId}")
     @RequiresConsole(value = ConsoleScreen.API, actions = ConsoleAction.KEYS)
-    PartnerRow remove(@PathVariable String id, @PathVariable String merchantId, CurrentStaff staff) {
-        return row(partners.remove(id, merchantId, staff.userId(), staff.roleCodes()));
+    PartnerRow remove(@PathVariable String id, @PathVariable String businessId, CurrentStaff staff) {
+        return row(partners.remove(id, businessId, staff.userId(), staff.roleCodes()));
     }
 
     /** The businesses must exist (422 otherwise); an empty list is the use case's own 422. */

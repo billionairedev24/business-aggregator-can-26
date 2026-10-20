@@ -273,40 +273,48 @@ class SwitchboardService implements Switchboard {
                 languageSettings(row, markets));
     }
 
-    /** S-158: stored rules down the chain market → province → none; the configuration's French-first places on top. */
+    /**
+     * S-158: the stored rules and what applies — RegionCatalogue's rule (a market's own value, else its province's;
+     * REGION_FRENCH_FIRST wins; a French-first place always requires French listing text).
+     */
     private List<LanguageSetting> languageSettings(ProvinceRow row, List<RegionEditor.Market> markets) {
         var stored = new java.util.HashMap<String, RegionEditor.LanguageRow>();
         store.languageRows(row.id()).forEach(r -> stored.put(r.regionId(), r));
         var own = stored.get(row.id());
         var provinceFirst = own == null ? null : own.frenchFirst();
         var provinceListings = own == null ? null : own.frenchListings();
+        var provinceConfigured =
+                regions.languageRules(row.code(), null).frenchFirst() && !Boolean.TRUE.equals(provinceFirst);
+        var effectiveProvinceFirst = Boolean.TRUE.equals(provinceFirst) || provinceConfigured;
+        var effectiveProvinceListings =
+                effectiveProvinceFirst ? "require" : provinceListings == null ? "off" : provinceListings;
         var out = new java.util.ArrayList<LanguageSetting>();
-        var configured = regions.languageRules(row.code(), null).frenchFirst();
-        var chainFirst = Boolean.TRUE.equals(provinceFirst);
         out.add(new LanguageSetting(
                 row.id(),
                 "province",
                 null,
                 provinceFirst,
                 provinceListings,
-                chainFirst || configured,
-                provinceListings == null ? "off" : provinceListings,
-                configured && !chainFirst));
+                effectiveProvinceFirst,
+                effectiveProvinceListings,
+                provinceConfigured));
         for (var m : markets) {
             var r = stored.get(m.id());
             var first = r == null ? null : r.frenchFirst();
             var listings = r == null ? null : r.frenchListings();
-            var effectiveFirst = first != null ? first : chainFirst;
-            var marketConfigured = regions.languageRules(row.code(), m.id()).frenchFirst();
+            var chainFirst = first != null ? first : effectiveProvinceFirst;
+            var configured =
+                    !chainFirst && regions.languageRules(row.code(), m.id()).frenchFirst();
+            var effectiveFirst = chainFirst || configured;
             out.add(new LanguageSetting(
                     m.id(),
                     "market",
                     m.city(),
                     first,
                     listings,
-                    effectiveFirst || marketConfigured,
-                    listings != null ? listings : provinceListings == null ? "off" : provinceListings,
-                    marketConfigured && !effectiveFirst));
+                    effectiveFirst,
+                    effectiveFirst ? "require" : listings != null ? listings : effectiveProvinceListings,
+                    configured));
         }
         return out;
     }

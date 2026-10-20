@@ -34,7 +34,7 @@ import tools.jackson.databind.JsonNode;
  * HMAC-SHA256 of the body with {@link #WEBHOOK_SECRET}) to try the webhook path by hand.
  *
  * <p>S-158 two-way stock: the fake Shopify has two locations ("Main store", "Warehouse") so the location choice shows;
- * Square and Lightspeed have one. Adjustments are kept in memory per variant (lost on restart) and show in the next
+ * Square and Lightspeed have one. Adjustments are kept in memory per account and variant (lost on restart) and show in the next
  * read, so a Northline sale is visible on the "platform"; a variant id ending in {@code -gone} answers
  * {@code not_found}.
  */
@@ -110,7 +110,11 @@ class FakeCatalogSource implements CommerceCatalogSource {
 
     @Override
     public Page products(Credentials credentials, @Nullable String cursor) {
-        return new Page(fixture.stream().map(this::withHourlyStock).toList(), null);
+        return new Page(
+                fixture.stream()
+                        .map(p -> withHourlyStock(p, credentials.account()))
+                        .toList(),
+                null);
     }
 
     @Override
@@ -118,10 +122,10 @@ class FakeCatalogSource implements CommerceCatalogSource {
         return fixture.stream()
                 .filter(p -> p.id().equals(externalId))
                 .findFirst()
-                .map(this::withHourlyStock);
+                .map(p -> withHourlyStock(p, credentials.account()));
     }
 
-    private ExternalProduct withHourlyStock(ExternalProduct p) {
+    private ExternalProduct withHourlyStock(ExternalProduct p, String account) {
         var bump = (int) (clock.millis() / Duration.ofHours(1).toMillis() % 3);
         return new ExternalProduct(
                 p.id(),
@@ -137,7 +141,7 @@ class FakeCatalogSource implements CommerceCatalogSource {
                                 v.title(),
                                 v.options(),
                                 v.priceCents(),
-                                v.stock() + bump + adjusted.getOrDefault(v.id(), 0),
+                                v.stock() + bump + adjusted.getOrDefault(account + "|" + v.id(), 0),
                                 v.stockRef()))
                         .toList(),
                 p.updatedAt());
@@ -171,7 +175,8 @@ class FakeCatalogSource implements CommerceCatalogSource {
                 .mapToInt(ExternalVariant::stock)
                 .findFirst()
                 .orElse(0);
-        var total = adjusted.merge(adjustment.variantId(), adjustment.delta(), Integer::sum);
+        var total =
+                adjusted.merge(credentials.account() + "|" + adjustment.variantId(), adjustment.delta(), Integer::sum);
         return new Adjusted.Applied(base + total);
     }
 

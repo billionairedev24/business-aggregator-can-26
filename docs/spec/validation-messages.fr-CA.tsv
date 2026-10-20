@@ -1211,3 +1211,27 @@ Choose a province or market of the region model.	Choisissez une province ou un m
 The default rule can be changed, not removed.	La règle par défaut peut être modifiée, pas supprimée.	new
 Choose a member price between 1% and 50% off, or none.	Choisissez un prix membre de 1 % à 50 % de rabais, ou aucun.	new
 Add a card in Payment methods first: Plus renews on it.	Ajoutez d’abord une carte dans Modes de paiement : Plus se renouvelle avec elle.	new
+Choose one of the store's locations.	Choisissez l’un des emplacements de la boutique.	new
+This change already reached the platform; it can only be dismissed.	Ce changement a déjà atteint la plateforme; vous pouvez seulement l’ignorer.	new
+This change is no longer waiting for you.	Ce changement ne vous attend plus.	new
+Reconnect the store first.	Reconnectez d’abord la boutique.	new
+There is no number to look up for this check.	Il n’y a aucun numéro à rechercher pour cette vérification.	new
+Use 1 to 50 lower-case letters, digits or dashes, starting with a letter or a digit.	Utilisez de 1 à 50 lettres minuscules, chiffres ou tirets, en commençant par une lettre ou un chiffre.	new
+Enter the partner's name, 1 to 80 characters.	Entrez le nom du partenaire, de 1 à 80 caractères.	new
+Enter the HTTPS address of the partner's JWK Set.	Entrez l’adresse HTTPS du JWK Set du partenaire.	new
+Choose api.read, api.write or both.	Choisissez api.read, api.write ou les deux.	new
+Choose at least one business.	Choisissez au moins une entreprise.	new
+Choose a token lifetime between 1 and 60 minutes.	Choisissez une durée de jeton de 1 à 60 minutes.	new
+Choose approve, decline or revoke.	Choisissez d’approuver, de refuser ou de révoquer.	new
+A partner with this name already exists.	Un partenaire porte déjà ce nom.	new
+This partner hasn't asked to access your business.	Ce partenaire n’a pas demandé l’accès à votre entreprise.	new
+You already answered this request.	Vous avez déjà répondu à cette demande.	new
+Only approved access can be revoked.	Seul un accès approuvé peut être révoqué.	new
+No business with this id.	Aucune entreprise avec cet identifiant.	new
+Choose off, warn or require.	Choisissez désactivé, avertir ou exiger.	new
+Only a listing, a review or a message can be hidden.	Seuls une annonce, un avis ou un message peuvent être masqués.	new
+No stock change with id %s	Aucun changement de stock avec l’identifiant %s	new
+No partner with id %s	Aucun partenaire avec l’identifiant %s	new
+No partner business with id %s	Aucune entreprise partenaire avec l’identifiant %s	new
+No region with id %s	Aucune région avec l’identifiant %s	new
+No flagged item with id %s	Aucun élément signalé avec l’identifiant %s	new

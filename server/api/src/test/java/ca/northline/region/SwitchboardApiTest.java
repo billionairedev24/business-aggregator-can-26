@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ca.northline.region.api.FrenchListings;
 import ca.northline.region.api.LaunchStatus;
 import ca.northline.region.api.Regions;
 import ca.northline.shared.security.StaffRole;
@@ -326,5 +327,71 @@ class SwitchboardApiTest extends IntegrationTest {
 
     static String quote(String json) {
         return "\"" + json.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+    }
+
+    /** S-158: S-116's language toggles from the switchboard — a province's own, a market following or overriding it. */
+    @Test
+    void languageTogglesPerProvinceAndMarket() throws Exception {
+        var before = jdbc.sql("select french_first, french_listings from region.regions where id = 'prov-pe'")
+                .query()
+                .singleRow();
+        try {
+            var market = market("Summerside");
+            mvc.perform(json(
+                                    put("/api/v1/console/regions/prov-pe/languages"),
+                                    "{\"frenchFirst\":true,\"frenchListings\":\"warn\"}")
+                            .with(TestJwt.staff(admin, StaffRole.ADMIN)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.languageRules[0].kind").value("province"))
+                    .andExpect(jsonPath("$.languageRules[0].frenchFirst").value(true))
+                    .andExpect(jsonPath("$.languageRules[0].frenchListings").value("warn"))
+                    // the market has no rule of its own: it follows the province
+                    .andExpect(jsonPath("$.languageRules[1].regionId").value(market))
+                    .andExpect(jsonPath("$.languageRules[1].frenchFirst").doesNotExist())
+                    .andExpect(
+                            jsonPath("$.languageRules[1].effectiveFrenchFirst").value(true))
+                    .andExpect(jsonPath("$.languageRules[1].effectiveFrenchListings")
+                            .value("warn"));
+            assertThat(audited("region.languages_changed", "prov-pe")).isEqualTo(1);
+            assertThat(regions.languageRules(PE, null).frenchFirst()).isTrue();
+            assertThat(regions.languageRules(PE, null).frenchListings()).isEqualTo(FrenchListings.WARN);
+
+            // the market overrides; then goes back to following
+            mvc.perform(json(
+                                    put("/api/v1/console/regions/{id}/languages", market),
+                                    "{\"frenchFirst\":false,\"frenchListings\":\"require\"}")
+                            .with(TestJwt.staff(admin, StaffRole.ADMIN)))
+                    .andExpect(
+                            jsonPath("$.languageRules[1].effectiveFrenchFirst").value(false))
+                    .andExpect(jsonPath("$.languageRules[1].effectiveFrenchListings")
+                            .value("require"));
+            assertThat(regions.languageRules(PE, market).frenchListings()).isEqualTo(FrenchListings.REQUIRE);
+            mvc.perform(json(put("/api/v1/console/regions/{id}/languages", market), "{}")
+                            .with(TestJwt.staff(admin, StaffRole.ADMIN)))
+                    .andExpect(jsonPath("$.languageRules[1].frenchListings").doesNotExist())
+                    .andExpect(jsonPath("$.languageRules[1].effectiveFrenchListings")
+                            .value("warn"));
+            // the same values again: no change, no audit row
+            mvc.perform(json(put("/api/v1/console/regions/{id}/languages", market), "{}")
+                            .with(TestJwt.staff(admin, StaffRole.ADMIN)))
+                    .andExpect(status().isOk());
+            assertThat(audited("region.languages_changed", market)).isEqualTo(2);
+
+            mvc.perform(json(put("/api/v1/console/regions/prov-pe/languages"), "{\"frenchListings\":\"always\"}")
+                            .with(TestJwt.staff(admin, StaffRole.ADMIN)))
+                    .andExpect(status().isUnprocessableContent())
+                    .andExpect(jsonPath("$.errors[0].message").value("Choose off, warn or require."));
+            mvc.perform(json(put("/api/v1/console/regions/prov-pe/languages"), "{}")
+                            .with(TestJwt.staff(admin, StaffRole.TRUST_SAFETY)))
+                    .andExpect(status().isForbidden());
+            mvc.perform(json(put("/api/v1/console/regions/nowhere/languages"), "{}")
+                            .with(TestJwt.staff(admin, StaffRole.ADMIN)))
+                    .andExpect(status().isNotFound());
+        } finally {
+            jdbc.sql("update region.regions set french_first = ?, french_listings = ? where id = 'prov-pe'")
+                    .params(before.get("french_first"), before.get("french_listings"))
+                    .update();
+            regions.refresh();
+        }
     }
 }
