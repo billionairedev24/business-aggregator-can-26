@@ -118,6 +118,8 @@ export const Connection = z.object({
   accountLabel: z.string().nullish(), connectedAt: z.string().nullish(), lastSyncAt: z.string().nullish(), lastSyncCount: z.number().nullish(),
   createdCount: z.number().optional(), hiddenCount: z.number().optional(), syncStatus: z.enum(['importing', 'ok', 'failed']).nullish(),
   updates: z.enum(['webhooks', 'hourly']).optional(), errors: z.array(z.object({ externalId: z.string(), title: z.string(), error: z.string() })).optional(),
+  // S-158: the platform location Northline sells from
+  locationId: z.string().nullish(), locationName: z.string().nullish(),
 });
 export const ConnectStart = z.object({ authorizationUrl: z.string() });
 export type Connection = z.infer<typeof Connection>;

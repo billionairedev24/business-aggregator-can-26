@@ -12,11 +12,20 @@ const Zone = z.object({ id: z.string(), marketId: z.string(), name: z.string(), 
   feePlusCents: z.number().nullish(), minBasketCents: z.number().nullish(), areaKm2: z.number().nullish() });
 export type Zone = z.infer<typeof Zone>;
 
+/** S-158: a place's language rules (S-116) as stored (null = not set) and as they apply (api `Switchboard.LanguageSetting`). */
+export const LanguageSetting = z.object({
+  regionId: z.string(), kind: z.enum(['province', 'market']), city: z.string().nullish(), frenchFirst: z.boolean().nullish(),
+  frenchListings: z.enum(['off', 'warn', 'require']).nullish(), effectiveFrenchFirst: z.boolean(), effectiveFrenchListings: z.enum(['off', 'warn', 'require']),
+  fromConfiguration: z.boolean(),
+});
+export type LanguageSetting = z.infer<typeof LanguageSetting>;
+
 /** One province of `GET /api/v1/console/regions` (S-84; api `Switchboard.Province`). */
 export const Province = z.object({
   id: z.string(), code: z.string(), names: z.record(z.string(), z.string()), stage: Stage, languages: z.array(z.string()), courierModel: z.string().nullish(),
   tax: z.record(z.string(), z.number()), timeZones: z.array(z.string()), holidays: z.array(z.string()), privacyLaw: z.string().nullish(),
   registries: z.array(z.string()), waitlist: z.number(), markets: z.array(Market), zones: z.array(Zone), checklist: z.record(z.string(), z.boolean()),
+  languageRules: z.array(LanguageSetting).optional(),
 });
 export type Province = z.infer<typeof Province>;
 
@@ -33,7 +42,8 @@ type Change =
   | { kind: 'marketStage'; marketId: string; stage: Stage; confirm: string }
   | { kind: 'addMarket'; province: string; city: string; lat: number; lng: number; radiusKm: number }
   | { kind: 'saveZone'; zoneId?: string; zone: ZoneInput }
-  | { kind: 'removeZone'; zoneId: string };
+  | { kind: 'removeZone'; zoneId: string }
+  | { kind: 'languages'; regionId: string; frenchFirst: boolean | null; frenchListings: 'off' | 'warn' | 'require' | null };
 
 const BASE = '/api/v1/console/regions';
 const call = (c: Change) => {
@@ -44,6 +54,7 @@ const call = (c: Change) => {
     case 'addMarket': return http(`${BASE}/markets`, { method: 'POST', body: { province: c.province, city: c.city, lat: c.lat, lng: c.lng, radiusKm: c.radiusKm } }, Province);
     case 'saveZone': return http(c.zoneId ? `${BASE}/zones/${encodeURIComponent(c.zoneId)}` : `${BASE}/zones`, { method: c.zoneId ? 'PUT' : 'POST', body: c.zone }, Province);
     case 'removeZone': return http(`${BASE}/zones/${encodeURIComponent(c.zoneId)}`, { method: 'DELETE' }, Province);
+    case 'languages': return http(`${BASE}/${encodeURIComponent(c.regionId)}/languages`, { method: 'PUT', body: { frenchFirst: c.frenchFirst, frenchListings: c.frenchListings } }, Province);
   }
 };
 

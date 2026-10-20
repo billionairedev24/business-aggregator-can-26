@@ -8,6 +8,7 @@ import { SCREEN_PATH } from '../shell/screens';
 import { boardQuery, STAGES, useSwitchboard, type Market, type Province, type Stage, type Zone } from './api';
 import { useRegionsT, type RegionsKey, type RegionsT } from './messages';
 import './regions.css';
+import { LanguageToggles } from './LanguageToggles';
 
 const TONE: Record<Stage, 'neutral' | 'accent-2' | 'accent'> = { off: 'neutral', waitlist: 'neutral', pilot: 'accent-2', live: 'accent' };
 const CHECKS = ['taxProfile', 'holidays', 'registries', 'marketWithZones'] as const;
@@ -102,6 +103,7 @@ function ProvincePanel({ province: p }: { province: Province }) {
         </div>
       </div>
       </ChartCard>
+        <LanguageToggles province={p} name={name} allowed={allowed} />
         <Markets province={p} name={name} allowed={allowed} onStage={(market, s) => setConfirming({ kind: 'market', market, stage: s })} />
         <Zones province={p} name={name} allowed={allowed} />
         <ChartCard id={`rg-rollout-${p.code}`} title={t('rollout')}>
