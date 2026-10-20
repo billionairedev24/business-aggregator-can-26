@@ -46,4 +46,9 @@ public interface TipStore {
     void canceled(String id);
 
     void refunded(String id, String reason, String staffId, @Nullable String stripeRefund, Instant at);
+
+    /** S-151: tips owed to a courier ({@code allocated}) whose allocation fell in [{@code from}, {@code to}). */
+    List<Allocated> allocatedTo(String courierUserId, Instant from, Instant to);
+
+    record Allocated(String id, String orderId, long amountCents, Instant at) {}
 }

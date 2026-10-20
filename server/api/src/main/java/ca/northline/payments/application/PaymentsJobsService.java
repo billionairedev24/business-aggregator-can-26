@@ -14,6 +14,7 @@ class PaymentsJobsService implements PaymentsJobs {
     private final PayoutService payouts;
     private final StripeEventProcessor stripeEvents;
     private final TaxSyncService tax;
+    private final CourierPayoutService couriers;
 
     @Override
     public int releaseDueEscrows() {
@@ -58,5 +59,15 @@ class PaymentsJobsService implements PaymentsJobs {
     @Override
     public int runPayouts() {
         return payouts.runScheduled() + payouts.settle();
+    }
+
+    @Override
+    public int payCouriers() {
+        return couriers.payAll();
+    }
+
+    @Override
+    public int settleCourierPayouts() {
+        return couriers.settle();
     }
 }

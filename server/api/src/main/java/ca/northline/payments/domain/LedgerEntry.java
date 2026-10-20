@@ -34,6 +34,12 @@ public record LedgerEntry(
     public static final String TIP = "courier_tip";
     /** S-78: the reference type of a delivery fee's postings (the order id), as on its PaymentIntent. */
     public static final String DELIVERY_FEE = "order_delivery";
+    /** S-151: couriers' pay per run (Northline's cost; its debit balance is what courier pay cost). */
+    public static final String COURIER_PAY = "courier_pay";
+    /** S-151: the reference type of a run's pay posting (the run id). */
+    public static final String COURIER_RUN = "courier_run";
+    /** S-151: the reference type of a courier payout's postings. */
+    public static final String COURIER_PAYOUT = "courier_payout";
 
     public static String merchant(String merchantId) {
         return "merchant:" + merchantId;
@@ -153,6 +159,28 @@ public record LedgerEntry(
                 credit(STRIPE_BALANCE, r.cardCents(), "refund", r.getId(), at),
                 credit(POINTS, r.getPointsCents(), "refund", r.getId(), at),
                 credit(PROMOTIONS, promoReturn, "refund", r.getId(), at));
+    }
+
+    /** S-151: a courier's pay for a finished run — Northline's cost ({@code courier_pay}), owed to the courier. */
+    public static List<LedgerEntry> courierPayEarned(String runId, String courierUserId, long cents, Instant at) {
+        return nonZero(
+                debit(COURIER_PAY, cents, COURIER_RUN, runId, at),
+                credit(courier(courierUserId), cents, COURIER_RUN, runId, at));
+    }
+
+    /** S-151: what a courier was owed leaves for their connected account (a transfer, then their bank). */
+    public static List<LedgerEntry> courierPaidOut(String payoutId, String courierUserId, long cents, Instant at) {
+        return nonZero(
+                debit(courier(courierUserId), cents, COURIER_PAYOUT, payoutId, at),
+                credit(STRIPE_BALANCE, cents, COURIER_PAYOUT, payoutId, at));
+    }
+
+    /** S-151: a courier payout came back (failed or canceled): the exact reverse of {@link #courierPaidOut}. */
+    public static List<LedgerEntry> courierPayoutReturned(
+            String payoutId, String courierUserId, long cents, Instant at) {
+        return nonZero(
+                debit(STRIPE_BALANCE, cents, COURIER_PAYOUT, payoutId, at),
+                credit(courier(courierUserId), cents, COURIER_PAYOUT, payoutId, at));
     }
 
     /** A tip paid after the delivery: straight to the courier (no tax: a tip is not a taxable supply). */

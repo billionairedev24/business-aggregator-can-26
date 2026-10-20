@@ -165,6 +165,43 @@ class EscrowService implements EscrowLifecycle {
         return true;
     }
 
+    /**
+     * S-151: an order closes undelivered. Its delivery fee's hold keeps {@code keepCents} (captured: the failed-delivery
+     * fee, tax included, never more than the fee itself) and releases the rest; a checkout tip waiting on the same
+     * PaymentIntent is canceled with it. A fee already captured or canceled is left alone.
+     */
+    void settleDeliveryFee(String orderId, long keepCents, Instant at) {
+        var intent = escrows.currentIntentForUpdate(LedgerEntry.DELIVERY_FEE, orderId)
+                .filter(i -> i.state() == IntentStatus.AUTHORIZED)
+                .orElse(null);
+        if (intent == null) {
+            return;
+        }
+        var fee = intent.amountCents() - Math.min(intent.amountCents(), tips.checkoutTipCents(orderId));
+        var keep = Math.max(0, Math.min(keepCents, fee));
+        if (keep == 0) {
+            gateway.cancel(
+                    intent.stripePaymentIntent(), StripeIdempotencyKeys.of("cancel-delivery", orderId, intent.id()));
+            escrows.markPaymentIntent(intent.id(), IntentStatus.CANCELED);
+            log.info("Order {}: delivery fee hold released", orderId);
+        } else {
+            // a partial capture: Stripe releases the rest of the authorization
+            var charge = gateway.capture(
+                    intent.stripePaymentIntent(),
+                    keep,
+                    StripeIdempotencyKeys.of("capture-delivery-kept", orderId, intent.id()));
+            escrows.recordCapture(intent.id(), charge);
+            var feeTax = deliveryTax
+                    .calculationFor(LedgerEntry.DELIVERY_FEE, orderId)
+                    .map(TaxRepository.Calculation::taxCents)
+                    .orElse(0L);
+            var tax = fee == 0 ? 0 : Math.round((double) feeTax * keep / fee);
+            ledger.post(LedgerEntry.deliveryFeeCaptured(orderId, keep, Math.min(tax, keep), 0, at));
+            log.info("Order {}: {} cents of the delivery fee kept", orderId, keep);
+        }
+        tips.canceledWithOrder(orderId);
+    }
+
     /** Releases every due escrow (the release job). */
     int releaseDue() {
         var due = escrows.releasable(clock.instant(), BATCH);

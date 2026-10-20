@@ -3,6 +3,7 @@ package ca.northline.payments.application;
 import ca.northline.payments.api.CustomerCases;
 import ca.northline.payments.api.DisputeDecided;
 import ca.northline.payments.api.DisputeDecisions;
+import ca.northline.payments.api.OrderRefunds;
 import ca.northline.payments.api.PointsReturned;
 import ca.northline.payments.application.PaymentGateway.IntentStatus;
 import ca.northline.payments.domain.CaseMessages;
@@ -39,7 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisions {
+class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisions, OrderRefunds {
 
     private static final int HISTORY = 200;
 
@@ -274,49 +275,96 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
      * already been transferred to the merchant, the merchant-funded part is reversed from that transfer.
      */
     int payQueue() {
-        var now = clock.instant();
         var queue = cases.approvedRefunds(100);
         for (var refund : queue) {
-            var escrow = refund.getEscrowId() == null
-                    ? null
-                    : escrows.findById(refund.getEscrowId()).orElse(null);
-            boolean fromReleased = true;
-            if (escrow != null && refund.getDisputeId() == null) {
-                if (!escrow.released() && escrow.getState() != EscrowState.REFUNDED) {
-                    if (refund.getAmountCents() >= escrow.getAmountCents()) {
-                        escrow.refundInFull();
-                        escrows.update(escrow);
-                        fromReleased = false;
-                    } else {
-                        escrowService.releaseAfterCase(escrow);
-                    }
-                }
-            } else if (escrow != null) {
-                fromReleased = escrow.released();
-            }
-            var paid = payAtStripe(refund, escrow, fromReleased);
-            var issued = refund.paid(paid.refund(), paid.reversal(), paid.reversedCents(), now);
+            pay(refund);
             cases.update(refund);
-            if (!paid.holdCanceled()) {
-                ledger.post(LedgerEntry.refunded(refund, fromReleased, now));
-                if (refund.getKind() == Refund.Kind.REFUND) {
-                    taxes.refunded(refund, now); // the GST/HST given back is reversed at Stripe Tax (S-21)
-                }
-            }
-            events.publishEvent(issued);
-            var customer = escrow == null ? null : escrow.getCustomerId();
-            if (escrow != null && customer != null && refund.getPointsCents() > 0) {
-                events.publishEvent(new PointsReturned(
-                        Ids.next(),
-                        now,
-                        refund.getId(),
-                        customer,
-                        escrow.getRefType(),
-                        escrow.getRefId(),
-                        refund.getPointsCents()));
-            }
         }
         return queue.size();
+    }
+
+    /**
+     * Pays one approved refund (the queue's steps; the caller stores the refund afterwards): the escrow is refunded
+     * in full or released for a partial refund, Stripe voids the hold / refunds the card / reverses the transfer, the
+     * ledger and Stripe Tax follow, and {@code refund.issued} goes out (the customer is told).
+     */
+    private void pay(Refund refund) {
+        var now = clock.instant();
+        var escrow = refund.getEscrowId() == null
+                ? null
+                : escrows.findById(refund.getEscrowId()).orElse(null);
+        boolean fromReleased = true;
+        if (escrow != null && refund.getDisputeId() == null) {
+            if (!escrow.released() && escrow.getState() != EscrowState.REFUNDED) {
+                if (refund.getAmountCents() >= escrow.getAmountCents()) {
+                    escrow.refundInFull();
+                    escrows.update(escrow);
+                    fromReleased = false;
+                } else {
+                    escrowService.releaseAfterCase(escrow);
+                }
+            }
+        } else if (escrow != null) {
+            fromReleased = escrow.released();
+        }
+        var paid = payAtStripe(refund, escrow, fromReleased);
+        var issued = refund.paid(paid.refund(), paid.reversal(), paid.reversedCents(), now);
+        if (!paid.holdCanceled()) {
+            ledger.post(LedgerEntry.refunded(refund, fromReleased, now));
+            if (refund.getKind() == Refund.Kind.REFUND) {
+                taxes.refunded(refund, now); // the GST/HST given back is reversed at Stripe Tax (S-21)
+            }
+        }
+        events.publishEvent(issued);
+        var customer = escrow == null ? null : escrow.getCustomerId();
+        if (escrow != null && customer != null && refund.getPointsCents() > 0) {
+            events.publishEvent(new PointsReturned(
+                    Ids.next(),
+                    now,
+                    refund.getId(),
+                    customer,
+                    escrow.getRefType(),
+                    escrow.getRefId(),
+                    refund.getPointsCents()));
+        }
+    }
+
+    // ── S-151: cancelled, failed and returned orders ──────────────────────────────────────────────────────────────
+
+    @Override
+    public Optional<String> refundNow(String refType, String refId, String reason, String what) {
+        var escrow = escrows.findByRefForUpdate(refType, refId).orElse(null);
+        if (escrow == null || escrow.getState() == EscrowState.REFUNDED) {
+            return Optional.empty();
+        }
+        var refund = Refund.immediate(cases.nextCaseNumber("RF"), escrow, what, reason, clock.instant());
+        pay(refund);
+        cases.insert(refund); // inserted once, already paid (a new row can't be saved twice)
+        log.info("Refund {} paid at once for {} {} ({})", refund.getCaseNumber(), refType, refId, reason);
+        return Optional.of(refund.getId());
+    }
+
+    @Override
+    public void hold(String refType, String refId) {
+        escrows.findByRefForUpdate(refType, refId).ifPresent(escrow -> {
+            escrow.putOnHold();
+            escrows.update(escrow);
+        });
+    }
+
+    @Override
+    public void resume(String refType, String refId) {
+        escrows.findByRefForUpdate(refType, refId).ifPresent(escrow -> {
+            if (cases.openDisputeOn(escrow.getId()).isEmpty()) {
+                escrow.resume();
+                escrows.update(escrow);
+            }
+        });
+    }
+
+    @Override
+    public void settleDeliveryFee(String orderId, long keepCents, java.time.Instant at) {
+        escrowService.settleDeliveryFee(orderId, keepCents, at);
     }
 
     /** What the refund queue did at Stripe. */
