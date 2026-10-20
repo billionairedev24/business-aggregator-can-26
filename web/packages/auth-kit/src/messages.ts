@@ -117,6 +117,7 @@ export const KIT_MESSAGES = {
     authenticatorAgain: 'Set up again',
     authenticatorReplaced: 'Authenticator app set up. Codes from an older one no longer work.',
     cancelChange: 'Cancel',
+    newBackupCodes: 'New codes',
   },
   fr: {
     firstNameRequired: 'Le prénom est obligatoire.',
@@ -229,6 +230,7 @@ export const KIT_MESSAGES = {
     authenticatorAgain: 'Configurer de nouveau',
     authenticatorReplaced: 'Application d’authentification configurée. Les codes d’une ancienne application ne fonctionnent plus.',
     cancelChange: 'Annuler',
+    newBackupCodes: 'Nouveaux codes',
   },
 };
 
