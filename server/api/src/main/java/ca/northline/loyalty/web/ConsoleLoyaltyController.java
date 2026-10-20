@@ -2,11 +2,11 @@ package ca.northline.loyalty.web;
 
 import ca.northline.loyalty.application.LoyaltyUseCases.ManageLoyaltyRules;
 import ca.northline.region.api.LoyaltyRules;
-import ca.northline.shared.ListResponse;
 import ca.northline.shared.security.ConsoleAction;
 import ca.northline.shared.security.ConsoleScreen;
 import ca.northline.shared.security.CurrentStaff;
 import ca.northline.shared.security.RequiresConsole;
+import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
  * points are money). {@code {region}} is a province or market id of the region model, or {@code default}.
  *
  * <pre>
- * GET    /api/v1/console/loyalty/rules             {items: [Rule]} — the default first
+ * GET    /api/v1/console/loyalty/rules             {items: [Rule], regions: [RegionChoice]} — the default first
  * PUT    /api/v1/console/loyalty/rules/{region}    {pointsPerDollar?, kinds?, expiryMonths?, neverExpire?, referralPoints?,
  *                                                  referralMonthlyCap?, referralMinOrderCents?} → Rule
  * DELETE /api/v1/console/loyalty/rules/{region}    a province's or market's own row (falls back to its parent) → 204
@@ -47,10 +47,13 @@ class ConsoleLoyaltyController {
             @Nullable Integer referralMonthlyCap,
             @Nullable Long referralMinOrderCents) {}
 
+    /** @param regions the provinces and markets a rule can belong to */
+    record RulesView(List<LoyaltyRules.Rule> items, List<LoyaltyRules.RegionChoice> regions) {}
+
     @GetMapping
     @RequiresConsole(ConsoleScreen.FINANCE)
-    ListResponse<LoyaltyRules.Rule> list() {
-        return new ListResponse<>(rules.rules());
+    RulesView list() {
+        return new RulesView(rules.rules(), rules.regions());
     }
 
     @PutMapping("/{region}")

@@ -497,8 +497,8 @@ northline:
   # S-152 Northline Plus: benefits and prices as configuration; billing behind payments' MembershipBilling port —
   # local (fake; refused under staging/prod) | stripe (Stripe Billing, STRIPE_SECRET_KEY, docs/runbooks/stripe.md § 13).
   plus:
-    monthly-price-cents: ${PLUS_MONTHLY_PRICE_CENTS:999}
-    annual-price-cents: ${PLUS_ANNUAL_PRICE_CENTS:9900}
+    monthly-price-cents: ${PLUS_MONTHLY_PRICE_CENTS:799}
+    annual-price-cents: ${PLUS_ANNUAL_PRICE_CENTS:6900}
     trial-days: ${PLUS_TRIAL_DAYS:30}
     service-fee-waived: ${PLUS_SERVICE_FEE_WAIVED:true}
     member-prices: ${PLUS_MEMBER_PRICES:true}

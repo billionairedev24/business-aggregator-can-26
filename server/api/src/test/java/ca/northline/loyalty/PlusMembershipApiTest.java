@@ -73,8 +73,8 @@ class PlusMembershipApiTest extends IntegrationTest {
         mvc.perform(get("/api/v1/me/plus").with(TestJwt.customer(user)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("none"))
-                .andExpect(jsonPath("$.monthlyPriceCents").value(999))
-                .andExpect(jsonPath("$.annualPriceCents").value(9900))
+                .andExpect(jsonPath("$.monthlyPriceCents").value(799))
+                .andExpect(jsonPath("$.annualPriceCents").value(6900))
                 .andExpect(jsonPath("$.trialDays").value(30))
                 .andExpect(jsonPath("$.trialAvailable").value(true))
                 .andExpect(jsonPath("$.provider").value("local"))
@@ -206,11 +206,11 @@ class PlusMembershipApiTest extends IntegrationTest {
                         .params(household)
                         .query(Long.class)
                         .single())
-                .isEqualTo(999);
+                .isEqualTo(799);
         assertThat(jdbc.sql("""
                         select coalesce(sum(credit_cents), 0) from payments.ledger_entries
                          where account = 'revenue' and ref_type = 'plus_invoice'
-                           and ref_id = (select id from payments.plus_invoices where household_id = ?)""").params(household).query(Long.class).single()).isEqualTo(999);
+                           and ref_id = (select id from payments.plus_invoices where household_id = ?)""").params(household).query(Long.class).single()).isEqualTo(799);
         mvc.perform(get("/api/v1/me/plus").with(TestJwt.customer(ending)))
                 .andExpect(jsonPath("$.status").value("none"));
         assertThat(benefits.of(ending).member()).isFalse();

@@ -18,8 +18,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  */
 @ConfigurationProperties("northline.plus")
 public record PlusProperties(
-        @DefaultValue("999") long monthlyPriceCents,
-        @DefaultValue("9900") long annualPriceCents,
+        @DefaultValue("799") long monthlyPriceCents,
+        @DefaultValue("6900") long annualPriceCents,
         @DefaultValue("30") int trialDays,
         @DefaultValue("true") boolean serviceFeeWaived,
         @DefaultValue("true") boolean memberPrices,

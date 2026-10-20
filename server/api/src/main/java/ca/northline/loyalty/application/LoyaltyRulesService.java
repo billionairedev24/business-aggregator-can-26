@@ -47,6 +47,12 @@ class LoyaltyRulesService implements ManageLoyaltyRules {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<LoyaltyRules.RegionChoice> regions() {
+        return rules.regions();
+    }
+
+    @Override
     public LoyaltyRules.Rule save(@Nullable String regionId, RuleChange c, String staffId, String role) {
         if (regionId != null && !rules.regionExists(regionId)) {
             throw RuleViolation.of("regionId", "allowed", REGION);

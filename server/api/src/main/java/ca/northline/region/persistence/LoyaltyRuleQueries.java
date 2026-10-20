@@ -77,6 +77,18 @@ class LoyaltyRuleQueries implements LoyaltyRules {
     }
 
     @Override
+    public List<RegionChoice> regions() {
+        return jdbc.sql("""
+                        select id, kind, coalesce(name_i18n ->> 'en', city, province, id) as name, province
+                          from region.regions where kind in ('province', 'market')
+                         order by kind desc, province, sort nulls last, name
+                        """)
+                .query((rs, _) -> new RegionChoice(
+                        rs.getString("id"), rs.getString("kind"), rs.getString("name"), rs.getString("province")))
+                .list();
+    }
+
+    @Override
     public Rule save(@Nullable String regionId, Change c, String actorId, Instant at) {
         var params = new java.util.HashMap<String, Object>();
         params.put("id", regionId == null ? "loyalty-default" : Ids.next());

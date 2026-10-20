@@ -58,6 +58,13 @@ public interface LoyaltyRules {
     /** Whether {@code regionId} names a province or market of the region model. */
     boolean regionExists(String regionId);
 
+    /** A province or market a rule can belong to ({@code kind} {@code province | market}). */
+    record RegionChoice(
+            String id, String kind, String name, @Nullable String province) {}
+
+    /** Every province and market, provinces first, by the region model's order. */
+    List<RegionChoice> regions();
+
     /**
      * Inserts or replaces the region's row ({@code regionId} null = the default).
      *

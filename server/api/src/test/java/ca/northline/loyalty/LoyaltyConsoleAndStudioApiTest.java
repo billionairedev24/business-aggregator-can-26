@@ -43,7 +43,9 @@ class LoyaltyConsoleAndStudioApiTest extends IntegrationTest {
         mvc.perform(get(RULES).with(TestJwt.staff(fin, StaffRole.FINANCE)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].regionId").doesNotExist())
-                .andExpect(jsonPath("$.items[0].pointsPerDollar").isNumber());
+                .andExpect(jsonPath("$.items[0].pointsPerDollar").isNumber())
+                .andExpect(jsonPath("$.regions[?(@.id == 'prov-nb')].kind").value("province"))
+                .andExpect(jsonPath("$.regions[?(@.id == 'mkt-calgary')].kind").value("market"));
         try {
             rule("prov-nb", fin, StaffRole.FINANCE, """
                             {"pointsPerDollar":4,"kinds":["goods","service"],"neverExpire":true,"referralPoints":500}""")

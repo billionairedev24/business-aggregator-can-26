@@ -149,6 +149,8 @@ public final class LoyaltyUseCases {
 
         List<ca.northline.region.api.LoyaltyRules.Rule> rules();
 
+        List<ca.northline.region.api.LoyaltyRules.RegionChoice> regions();
+
         /** @param regionId a province or market of the region model; null = the default */
         ca.northline.region.api.LoyaltyRules.Rule save(
                 @Nullable String regionId, RuleChange change, String staffId, String role);
