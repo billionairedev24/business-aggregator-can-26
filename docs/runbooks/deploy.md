@@ -59,7 +59,9 @@ Other runbooks: [dev](dev.md) · [staging](staging.md) · [prod](prod.md) · [in
 
 - **GitHub:** Actions › **deploy** › Run workflow — `registry`, `image-tag` (empty = short sha), `images`
   (`all`/`java`/`web`/`none`), `push`, `login` (`password` → secrets `REGISTRY_USERNAME`/`REGISTRY_PASSWORD`; `ghcr`
-  → the workflow token), `platforms`, `chart` (Helm checks). `gh workflow run deploy.yml -f registry=… -f image-tag=…`.
+  → the workflow token), `platforms`, `chart` (Helm checks). `gh workflow run deploy.yml -f registry=… -f image-tag=…`. It is also a reusable workflow (`workflow_call`, the same
+inputs plus `web-apps`, a JSON list of the web images): `ovh.yml` builds the OVHcloud targets' images through it
+(S-155, [ovh.md § Today](ovh.md#today-from-a-new-ovh-account-to-a-running-demo)).
   The run summary lists each Java image's digest.
 - **GitLab:** Run pipeline with `PIPELINE_PART=images` and `IMAGE_REGISTRY` (empty = the project's registry),
   `IMAGE_TAG`, `IMAGE_APPS`, `IMAGE_PLATFORMS`; credentials `REGISTRY_USER` / `REGISTRY_PASSWORD` (default: the job

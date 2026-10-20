@@ -370,6 +370,77 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
     }
 
     @Test
+    void afterSale_cancellationsAFailedDeliveryAndReturns_reachTheCustomer_andRunChangesTheCourier() throws Exception {
+        var amara = customer("en-CA");
+        var merchant = merchant();
+        var whole = order(amara, "goods");
+        var part = order(amara, "goods");
+        var failedOrder = order(amara, "goods");
+        var returned = order(amara, "goods");
+        var returnId = returnOf(amara, returned, merchant);
+        var cancelled = Events.id();
+        var partly = Events.id();
+        var failed = Events.id();
+        var refunded = Events.id();
+
+        publish(
+                "orders.order",
+                cancelled,
+                "orders.order_cancelled",
+                orderCancelled(cancelled, whole, true, merchant, "cancelled"));
+        publish(
+                "orders.order",
+                partly,
+                "orders.order_cancelled",
+                orderCancelled(partly, part, false, merchant, "placed"));
+        publish("orders.order", failed, "orders.order_delivery_failed", """
+                {"eventId":"%s","occurredAt":"2026-09-30T15:00:00Z","aggregateId":"%s","reason":"absent",\
+                "decideBy":"2026-10-02T15:00:00Z","feeCents":0,"attempt":1}""".formatted(failed, failedOrder));
+        publish("orders.return", refunded, "orders.return_updated", """
+                {"eventId":"%s","occurredAt":"2026-09-30T15:00:00Z","aggregateId":"%s","returnRef":"RT-10001",\
+                "orderId":"%s","merchantId":"%s","state":"refunded","method":"dropoff","amountCents":4500}""".formatted(
+                        refunded, returnId, returned, merchant));
+
+        await().atMost(Duration.ofSeconds(30))
+                .untilAsserted(() -> assertThat(pushes.to(amara.id())).hasSize(4));
+        var byType = pushes.to(amara.id()).stream()
+                .collect(java.util.stream.Collectors.toMap(p -> p.data().get("type"), p -> p));
+        assertThat(byType.get("order.cancelled").title()).isEqualTo("Order cancelled");
+        assertThat(byType.get("order.cancelled").link())
+                .isEqualTo(URI.create("http://localhost:3000/app/orders/" + whole));
+        assertThat(byType.get("order.part_cancelled").body())
+                .isEqualTo(
+                        merchantName(merchant)
+                                + " cancelled its part of your order. That part goes back to your card; the rest is still coming.");
+        assertThat(spaces(byType.get("order.delivery_failed").body()))
+                .startsWith(
+                        "The courier couldn’t hand your order over. Choose re-delivery or a refund by Friday, October 2");
+        assertThat(byType.get("return.refunded").title()).isEqualTo("Return RT-10001 refunded");
+        assertThat(byType.get("return.refunded").body()).contains("$45.00 plus tax");
+        assertThat(byType.get("return.refunded").link())
+                .isEqualTo(URI.create("http://localhost:3000/app/orders/" + returned));
+        awaitProcessed(refunded);
+        // nothing about the customer goes to the push provider
+        assertThat(byType.values()).allSatisfy(p -> assertThat(p.toString()).doesNotContain(amara.email(), "Amara"));
+
+        // the courier hears that a cancelled order left their run
+        var kai = customer("en-CA");
+        var courier = courier(kai);
+        var removed = Events.id();
+        publish("fulfilment.run", removed, "fulfilment.run_changed", """
+                {"eventId":"%s","occurredAt":"2026-09-30T15:00:00Z","aggregateId":"run_2","courierId":"%s",\
+                "change":"stops_removed"}""".formatted(removed, courier));
+        await().atMost(Duration.ofSeconds(30))
+                .untilAsserted(() -> assertThat(pushes.to(kai.id()))
+                        .singleElement()
+                        .satisfies(p -> {
+                            assertThat(p.title()).isEqualTo("Run changed");
+                            assertThat(p.body())
+                                    .isEqualTo("An order on your run was cancelled. Its stops are gone from your run.");
+                        }));
+    }
+
+    @Test
     void theEveningBeforeReminder_goesOutOnce_after18hInTheCustomersZone() {
         var amara = customer("en-CA");
         var merchant = merchant();
@@ -506,6 +577,28 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
                 .param("u", person.id())
                 .update();
         return id;
+    }
+
+    String returnOf(Member customer, String order, String merchant) {
+        var id = "rt_" + Events.id();
+        jdbc.sql("""
+                        insert into orders.returns (id, ref, order_id, merchant_id, customer_id, reason, amount_cents, state,
+                               created_at, updated_at)
+                        values (:id, :ref, :o, :m, :c, 'damaged', 4500, 'refunded', now(), now())""")
+                .param("id", id)
+                .param("ref", "RT-" + id.substring(18))
+                .param("o", order)
+                .param("m", merchant)
+                .param("c", customer.id())
+                .update();
+        return id;
+    }
+
+    static String orderCancelled(String id, String order, boolean whole, String merchant, String state) {
+        return """
+                {"eventId":"%s","occurredAt":"2026-09-30T15:00:00Z","aggregateId":"%s","orderType":"goods",\
+                "by":"merchant","reason":"out_of_stock","whole":%s,"merchantIds":["%s"],"lineIds":["l_1"],\
+                "state":"%s","cancellationId":"c_1"}""".formatted(id, order, whole, merchant, state);
     }
 
     static void publish(String topic, String id, String type, String json) throws Exception {

@@ -2,6 +2,8 @@
 #
 # MANUAL ONLY: runs only from Actions › deploy › Run workflow (or `gh workflow run deploy.yml -f registry=… `).
 # Nothing here deploys to a cluster (Argo CD, S-15). Runbook: docs/runbooks/deploy.md
+# Also a reusable workflow (workflow_call): .github/workflows/ovh.yml builds the OVHcloud targets' images through it
+# (S-155). Called, it takes the same inputs as strings/booleans plus web-apps; dispatched by hand nothing changes.
 #
 # Registry credentials (Settings › Secrets and variables › Actions):
 #   login = password → secrets REGISTRY_USERNAME / REGISTRY_PASSWORD: GitLab/Harbor/any registry user + token;
@@ -43,13 +45,32 @@ on:
         description: helm lint + helm template | kubeconform for every environment × cloud
         type: boolean
         default: true
+  workflow_call:
+    inputs:
+      registry: { type: string, default: "" }
+      image-tag: { type: string, default: "" }
+      images: { type: string, default: all, description: "all, java, web or none" }
+      push: { type: boolean, default: true }
+      login: { type: string, default: password, description: "password or ghcr" }
+      platforms: { type: string, default: "linux/amd64,linux/arm64" }
+      chart: { type: boolean, default: true }
+      web-apps:
+        description: JSON list of the web images to build (default all five)
+        type: string
+        default: '["studio","consumer","console","docs","docs-internal"]'
+    outputs:
+      tag:
+        description: The image tag that was built
+        value: ${{ jobs.prepare.outputs.tag }}
 
 permissions:
   contents: read
   packages: write # only used with login = ghcr
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  # Dispatched: one run per ref, a newer one cancels the older. Called (github.workflow is the caller's): one group per
+  # calling run, so the caller's own concurrency decides.
+  group: ${{ github.workflow == 'deploy' && format('deploy-{0}', github.ref) || format('deploy-call-{0}', github.run_id) }}
   cancel-in-progress: true
 
 env:
@@ -126,7 +147,7 @@ jobs:
     timeout-minutes: 30
     strategy:
       matrix:
-        app: [studio, consumer, console, docs, docs-internal]
+        app: ${{ fromJSON(inputs.web-apps || '["studio","consumer","console","docs","docs-internal"]') }}
     steps:
       - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v3

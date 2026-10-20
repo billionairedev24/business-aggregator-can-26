@@ -6,7 +6,7 @@ own them (merchants: suspension and search hiding; catalogue: instant book; paym
 customer's no-show restriction). The rules and their numbers are S-93's trust rules (console › Trust & safety › Rules,
 `trust.rules`); this page is how they behave and how staff work them.
 
-Card-dispute evidence to Stripe, also S-156, is in [stripe.md § 13](stripe.md#13-card-disputes--evidence-to-stripe-s-156).
+Card-dispute evidence to Stripe, also S-156, is in [stripe.md § 14](stripe.md#14-card-disputes--evidence-to-stripe-s-156).
 
 ## 1. The consequences
 
@@ -56,7 +56,7 @@ A customer's restriction is lifted with the same endpoint (`POST /api/v1/console
 
 - **Who files:** an owner or manager (`manage`) in Studio › Standing, **once per decision**: each suspension, search
   hiding and instant-book pause, and each dispute an agent decided against the business (not card chargebacks, which
-  the bank decides — those are answered with evidence, [stripe.md § 13](stripe.md#13-card-disputes--evidence-to-stripe-s-156)).
+  the bank decides — those are answered with evidence, [stripe.md § 14](stripe.md#14-card-disputes--evidence-to-stripe-s-156)).
   Within **14 days**, a statement (up to 2,000 characters) and up to 5 files (JPG, PNG, HEIC or PDF, 10 MB each), stored
   in object storage under the `standing/` prefix.
 - **Queue:** console › Trust & safety › **Appeals** (`/api/v1/console/appeals`, the trust screen). An agent with

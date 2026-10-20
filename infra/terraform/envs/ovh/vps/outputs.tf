@@ -10,7 +10,12 @@ output "config_env" {
 # Holds no secret (the secrets are in the Secret northline-secrets, scripts/ovh/secrets.sh).
 output "helm_values" {
   description = "Values for deploy/helm/northline: configEnv (layered after values-dryrun.yaml and values-ovh-vps.yaml)."
-  value       = { configEnv = module.ovh.config_env }
+  value       = { configEnv = module.ovh.config_env, global = { hostingCountry = local.loc.country } }
+}
+
+output "location" {
+  description = "The location (S-160) and what it derived: country (data residency), API endpoint, token page, Object Storage endpoint and region, the VPS datacentre to order in, whether the Network Firewall is used."
+  value       = merge(module.ovh.location, { edge_firewall_used = local.edge_firewall })
 }
 
 output "data_values" {

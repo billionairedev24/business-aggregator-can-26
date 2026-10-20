@@ -9994,6 +9994,252 @@ the first invoice (Stripe.js `confirmCardPayment` on the web, `handleNextAction`
 that charge reward costs and the transfers that give them back on refunds. stripe.md § 11–12 lists the test-mode
 checks to run before launch.
 
+## 2026-10-20 — S-155 Pipeline to provision OVHcloud and deploy Northline there
+
+Runbook: [ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo). **Nothing here has run
+against a real OVHcloud account or a real GitHub Environment**: the workflow passed actionlint (with shellcheck), the
+scripts bash 3.2 parsing, shellcheck and runs against stubbed `kubectl`/`terraform`/`gh`/`htpasswd`; Terraform
+`terraform test` with the mocked provider; the charts `helm template | kubeconform`.
+
+- **`.github/workflows/ovh.yml`, manual only.** Inputs `target`, `action` (plan, apply, deploy, provision-and-deploy,
+  down, up, destroy), `image-tag`, `build-images`, `confirm-destroy`. Jobs `prepare` (no permissions), `provision`,
+  `images` (calls `deploy.yml`), `deploy`, `scale`; each job that touches OVHcloud runs in the GitHub Environment of the
+  target, so the required reviewer gates **every** such job — `plan` included, because the API credentials live in the
+  environment (a separate unprotected "plan" environment would duplicate every secret). Actions pinned by commit SHA
+  (checkout v5.1.0, setup-terraform v3.1.2, setup-helm v4.3.1 — the same majors as the other workflows, which still use
+  tags; they were not changed). Concurrency `ovh-<target>`, never cancelled.
+- **Plans never leave the job**: plan and apply run in one job from a plan file in `$RUNNER_TEMP`, deleted at the end;
+  the summary shows only addresses and actions (`terraform show -json` through jq), no values.
+- **State**: S3 backend on OVHcloud Object Storage, written at run time as `backend_override.tf` (git-ignored) by
+  `scripts/ovh/tf-state.sh`, so the roots keep local state by default (the runbook's single-Mac path is unchanged).
+  The bucket is created by the first run (`ensure`, aws CLI, versioning on) with the keys of an S3 user the owner makes
+  in the console (`TF_STATE_ACCESS_KEY/SECRET_KEY`) — creating that user through the OVHcloud API from a script was
+  left out (request signing untested; three console clicks). **No state locking** (OVHcloud's support for S3
+  conditional writes is unverified): the concurrency group serialises runs per target; Mac and pipeline must not run
+  Terraform on the same target at once.
+- **Terraform variables from the environment**: `scripts/ovh/ci.sh tfvars` maps the environment's variables to
+  `TF_VAR_*`; `OVH_TFVARS` (free HCL) becomes a runtime `ci.auto.tfvars` (git-ignored) for anything else. No tfvars in
+  git.
+- **Reaching the VPS from runners** (new addresses every run): new variable `ci_ssh_cidr` of the
+  `ovh-vps` root adds one Network Firewall rule (sequence 9, SSH from the runner/32) opened by a targeted apply at the
+  start of the job and removed at the end (`if: always()`). Because the host firewall (ufw) would then still block
+  the runner, the pipeline bootstraps with `SSH_FROM_ANYWHERE=1`: ufw rate-limits SSH from any address and the
+  Network Firewall decides who; `bootstrap-k3s.sh` now also turns password and root logins off (keys only). With
+  `edge_firewall = false` SSH is then open to every address (keys only) — the workflow warns. The pipeline uses its
+  own deploy key (made and installed by `gh-setup.sh`), never the owner's; `known_hosts` comes from a secret
+  (strict checking), else first-sight trust with a warning. **ovh-mks**: when `api_allowed_cidrs` is set, the
+  runner's /32 is added to the cluster's IP restriction for the run the same way.
+- **Secrets from the environment** (`OVH_SECRETS_SOURCE=env` in `secrets.sh`/`common.sh`): every key the file holds,
+  by name. Generated keys missing there are read from `secret/northline-generated` or generated **once** and stored
+  there (a BFF hash is recomputed only when its secret changes; a kubectl error never triggers regeneration). Masked
+  with `::add-mask::`. Pipeline settings (`OVH_*`, `TF_STATE_*`, `REGISTRY*`) in a `.ovh/<target>.env` are never
+  copied into `northline-secrets`.
+- **Stripe optional** on the OVHcloud targets (story: "optional for a first demo"): without `STRIPE_SECRET_KEY`,
+  `deploy.sh` sets `IDENTITY_PROVIDER`/`AGE_VERIFICATION_PROVIDER=local` (otherwise the api refuses to start:
+  `IDENTITY_PROVIDER=stripe needs STRIPE_SECRET_KEY`) and marks every empty Stripe key optional. Consequence, stated in
+  the runbook: owners can't finish identity verification (the fake's outcome page is `local`-only). Without Twilio no
+  one can sign up under `dev` (unchanged; S-112).
+- **`OVH_DOMAIN`**: `deploy.sh` moves every host (and `webauthnRpId`, the senders) under another zone — the owner may
+  not control `northline.ca`. Terraform's `dns_zone_name` follows it in the pipeline.
+- **Images**: `deploy.yml` gained `workflow_call` (same inputs + `web-apps`; concurrency group per calling run so
+  callers don't cancel each other; dispatch behaviour unchanged). The pipeline builds amd64 only, without the docs
+  images, to `ghcr.io/<owner>/northline` with the run's token; repository variable `REGISTRY` switches to another
+  registry (repository secrets `REGISTRY_USERNAME/PASSWORD`, since a called workflow's jobs have no environment). The
+  cluster's pull secret uses `REGISTRY_PULL_TOKEN` (classic, `read:packages`), else the run's token with a warning (it
+  expires with the run).
+- **Smoke test** `scripts/ovh/smoke.sh` (`make ovh-smoke`): the runbook's `kubectl exec … wget` readiness check could
+  never work (the images are distroless) — replaced by "every Spring app's pods Ready", which is the readiness probe on
+  `/actuator/health/readiness`. HTTPS checks run once the zone resolves to the address, retried while certificates
+  issue; before DNS exists they report *pending*, not failure.
+- **destroy** first removes the releases (on MKS the load balancer and volumes belong to Kubernetes, not Terraform) and
+  empties the buckets with their own users' keys, then `terraform destroy`; it needs `confirm-destroy` = the target.
+- **`scripts/ovh/gh-setup.sh`** (`make ovh-gh-setup`): environment with the owner as required reviewer and branch
+  policies `develop`, `main`; if GitHub refuses reviewers (plan), the environment is created without them and a
+  warning says apply is then gated only by write access. Environments on a private repository need a paid GitHub plan
+  — unverified for this repository; the runbook's local alternative covers that and depleted Actions minutes.
+- **Not done**: no OVHcloud API automation for the state user; no Toronto; no `smoke` action of its own (re-run
+  `deploy` with `build-images` off); prices and console menu names still unverified.
+
+## 2026-09-30 — S-151 Cancellations, failed deliveries, returns and courier pay
+
+Closes what S-51, S-78, S-81, S-86, S-87 and S-88 left "Not done": cancelling an order, a delivery that can't be
+made, returns, courier pay and payouts, and moving the rest of a stuck run. Runbooks:
+[fulfilment.md § Cancelling, failed deliveries and returns](runbooks/fulfilment.md#cancelling-failed-deliveries-and-returns-s-151),
+[§ Courier earnings and payouts](runbooks/fulfilment.md#courier-earnings-and-payouts-s-151),
+[stripe.md § 13](runbooks/stripe.md#13-courier-payouts-s-151), [courier-app.md](runbooks/courier-app.md).
+
+**Decisions**
+
+- **Who may cancel, until when, is configuration** (`northline.orders.after-sale`): the customer until any shop packs,
+  a shop its own lines until the courier has them, Northline staff (console orders screen + the `support` action,
+  audited `orders.order_cancelled` with codes only) until delivery. After delivery it is a return or a refund, not a
+  cancellation. Food orders keep the kitchen flow (409 `not_cancellable`).
+- **Money goes through the refund queue, not around it.** Orders' listeners call `payments.api.OrderRefunds`: each
+  shop's lines become an immediate `Refund` charged to that shop (the hold voided when uncaptured — no ledger entry —
+  else refunded, with the usual ledger entries and `taxes.refunded` reversing the tax through the `TaxGateway`). The
+  delivery fee hold is voided, or partly captured when a missed-delivery fee is kept (with its proportional tax).
+  Courier tips on a cancelled order are cancelled with it.
+- **Stock comes back** through `SellableOffers.giveBack` (restock on by default for shops and staff; a shop's return
+  approval asks).
+- **Fulfilment stays below orders:** orders tells fulfilment through `DeliveryRequests.cancel / dropPickup /
+  redeliver` and `ReturnPickups`; fulfilment publishes `DeliveryFailed`, `ReturnCollected`, `ReturnDelivered`. A run
+  left with no stops is `cancelled` and its courier freed; `RunChanged` gains `cancelled`, `stops_removed`,
+  `stops_moved` (schema widened, additive). A race between "placed" and "cancelled" hand-overs is settled by checking
+  the order again before a delivery is made.
+- **Failed delivery:** the courier's photo at the door is required (proof kind `failed`); every shop of the order gets
+  a return stop. The customer has `failed-delivery-decide-within` (48 h) to choose re-delivery (next run, counted in
+  `attempts`, no extra charge) or a refund keeping `failed-delivery-fee-cents` (0); after that a job refunds it.
+- **Returns:** one shop per request, a reason and one photo (object storage, `orders/returns/`); the window is the
+  category's (`catalogue.category_return_windows`, 0 = not returnable; food and restricted items are 0) else 30 days.
+  The shop approves (pickup by a courier, or drop-off) or declines with a reason the customer sees; a declined return
+  can be escalated to the existing disputes queue (`CustomerCases.openDispute`). The refund happens when the shop has
+  the goods (marked received, or delivered back by the courier).
+- **Return pickups ride the pooled runs:** a `collect` stop and a `return` stop join the market's planned pooled run
+  starting within 24 h, else a run of their own after 24 h (both configuration).
+- **Courier pay is region configuration:** `region.regions.courier_pay` (jsonb, province then market overriding the
+  platform defaults: $4.00 a run, $1.00 a shop, $3.00 a door, $3.00 a failed door, $3.00 a collect, $1.00 a return).
+  A finished run is paid once, with the model it was paid under, onto the courier's ledger account (`courier_pay` →
+  `courier:<userId>`). Days and weeks on the courier's earnings are in the market's zone.
+- **Payouts through the payouts port:** couriers are Stripe Connect **Express recipients** (transfers only, manual
+  payouts). A weekly job transfers the balance (≥ $1.00) and pays it out; failed payouts return to the balance. A fake
+  gateway under `local`/`test`. The onboarding return page is `/courier/payouts` on the consumer host (claimed by the
+  courier app; on the web it redirects home); the app opens onboarding in the in-app browser.
+- **Moving a stuck run:** console › Delivery ops › "Move remaining stops" (dispatch action) splits a `loading` /
+  `en_route` run: the orders not picked up yet go to a free courier as a new part of the same window (audited
+  `fulfilment.run_split`). A run that hasn't started is still reassigned whole (S-86).
+- **No personal data in events:** `order.cancelled`, `order.delivery_failed`, `return.updated` and `delivery.failed`
+  carry ids, codes and amounts only (the notes and photos stay in the api).
+
+**Schema (additive, V432–V435)**
+
+- V432 orders: `orders.state` + `delivery_failed`, `orders.cancelled_at`; `order_lines.state` + `cancelled`,
+  `cancelled_at`, `restocked`, `return_id`; `orders.cancellations`, `orders.delivery_failures`, `orders.returns`,
+  `orders.return_lines`, `orders.return_ref_seq`.
+- V433 fulfilment: `runs.state` + `cancelled` (the open-run index ignores it); `stops.state` + `cancelled`, `kind` +
+  `collect`, `proof_kind` + `failed`, `fail_reason`, `fail_note`, `return_id`; `deliveries.state` + `failed`,
+  `attempts`; `fulfilment.return_pickups`, `fulfilment.courier_earnings`.
+- V434 payments: `payments.courier_accounts`, `payments.courier_payouts` (account id, enabled, requirements due, bank
+  last 4 only — never a full account number).
+- V435: `region.regions.courier_pay` (jsonb); `catalogue.category_return_windows`.
+- Events: `orders.order_cancelled.v1`, `orders.order_delivery_failed.v1`, `orders.return_updated.v1` (topic
+  `orders.return`, new), `fulfilment.delivery_failed.v1`; `fulfilment.run_changed.v1` widened.
+- Configuration: `northline.orders.after-sale.*`, `northline.fulfilment.courier-pay.*`, `…return-join-within`,
+  `…return-direct-after`, `…courier-payout-return`; one new environment variable, `COURIER_PAYOUTS_CRON`.
+
+**Not done**
+
+- Promo codes are not released on a cancellation (releasing would hand points back a second time, since the refund
+  already returns the points share); the code's use still counts for that customer.
+- Partner webhooks: no `order.cancelled` / `return.*` events for partners yet (`DeveloperRules.EVENTS` unchanged).
+- Shops cancel all of their lines on an order, staff the whole order; no single-line cancel. A return is one shop at a
+  time with one photo.
+- Staff can see an order's returns in the console but don't approve or decline them there (escalations go to the
+  disputes queue as before).
+- Re-delivery is free; there is no customer-chosen window for it (the next run in the market).
+- The web has no page of its own at `/courier/payouts` (it redirects home).
+- **Never ran against real Stripe:** courier Connect accounts, account links, account reads, transfers and payouts were
+  tested against stripe-mock only (request shapes, pinned version, Idempotency-Keys); stripe-mock keeps no state, so
+  Express onboarding, real transfers and payouts, a bank refusing a payout and the Connect webhooks for courier
+  accounts have not run. The refunds, voids and partial captures reuse the S-12/S-78 gateway calls (stripe-mock tested,
+  not live). Stripe Tax's reversal for these refunds ran only against the local tax fake.
+- **Mobile:** neither app has run on a device or simulator for these screens (Jest + RNTL against the in-app fixture
+  backends only); the camera on the failed-delivery screen and the in-app browser onboarding are untested on phones.
+
+## 2026-10-20 — S-155b Email on the OVHcloud targets (SMTP relay, demo inbox)
+
+Follow-up of S-155 (lead's request). Never run against a real cluster, relay or Mailpit; checked offline (helm
+template | kubeconform, actionlint, bash 3.2, shellcheck, stubbed runs).
+
+- **Correction:** the S-155 runbook said "without Twilio no one can sign up". Since S-154 the sites' sign-up
+  (Studio and consumer `RegisterFlow` → `POST /api/auth/accounts`) is email + password with a 6-digit **email** code;
+  the mobile number is optional and the Studio/console second factor is an authenticator or a passkey. Twilio is still
+  needed for phone-code sign-in, confirming a mobile, and `make demo-data`, whose script still registers through the
+  phone path (`/api/auth/register` + SMS code) — not changed here.
+- **What `EMAIL_PROVIDER=local` does under `dev` (checked in `EmailAutoConfiguration` / `SmtpEmailSender`):** SMTP to
+  `SMTP_HOST:SMTP_PORT` (default `localhost:1025`) in lenient mode; with nothing listening (a pod) it logs the whole
+  plain-text email at WARN ("No SMTP server took the email…") — the code is in the subject and the body, the link in
+  the body. It does **not** withhold codes the way the SMS stand-in does (S-112); auth's dev outbox endpoint is
+  `local`-profile only. Left as is (staging/prod refuse `local`; on OVHcloud the pod log goes nowhere else), stated in
+  the runbook; a candidate for the S-112 rule if the team wants email codes withheld under `dev` too.
+- **Selection in `scripts/ovh/deploy.sh`, first match:** `OVH_DEMO_MAILPIT=true` → the demo inbox; `SMTP_HOST` →
+  `EMAIL_PROVIDER=smtp` for **api, auth and worker** (SMTP_PORT default 587, SMTP_STARTTLS default true,
+  `secretEnv.SMTP_PASSWORD` when there is a login); `EMAIL_API_KEY` → SendGrid (now for auth too, it was api and
+  worker only); else `local`. `EMAIL_FROM` overrides the sender of the three. The chart already mapped
+  `SMTP_PASSWORD` (optional) on the three apps; no change there. `secrets.sh check` requires `SMTP_PASSWORD` with
+  `SMTP_USERNAME`; the SMTP settings and `EMAIL_FROM` are settings (never copied into `northline-secrets`).
+- **Demo inbox:** new chart value `demoMail` (`templates/demo-mail.yaml`): Mailpit `axllent/mailpit:v1.31.3` (pinned;
+  the compose file uses v1.29 locally), one replica, messages in memory (`MP_MAX_MESSAGES` 1000), non-root, read-only
+  root filesystem; UI basic auth with `MP_UI_AUTH_FILE` from the Secret `northline-demo-mail-auth` (bcrypt line for
+  user `demo`, written by `secrets.sh` from `MAILPIT_PASSWORD`); its host `demoMail.url` (`https://mail.<domain>`)
+  joins the chart's routes, so it gets its own listener, Let's Encrypt certificate and HSTS like every host (the
+  route helper gained an optional per-path `port` for a backend that isn't an app). NetworkPolicy: 8025 from the edge
+  peers only, 1025 from this release's pods only. Refused in staging/prod and without a `https://` url. Basic auth is
+  Mailpit's own, not Envoy's (Envoy Gateway's basic auth takes SHA-1 htpasswd only). TCP probes (whether Mailpit's
+  health endpoints sit behind the UI auth was not checked).
+- **Passwords:** `MAILPIT_PASSWORD` is a generated key (file `init`, or once in `secret/northline-generated`), but
+  `make ovh-gh-setup` generates it when `OVH_DEMO_MAILPIT=true` and **shows it once**, so the owner can open the inbox
+  without kubectl. Older `.ovh` files get one appended on the first apply with the inbox on.
+- **Smoke test:** with the inbox, `https://mail.<domain>` must answer 401 without credentials; the summary says where
+  the codes are (inbox, or the auth log with `local`).
+- **Relays documented** (settings from their documentation, menus and limits unverified): Brevo
+  (`smtp-relay.brevo.com`, SMTP login + SMTP key, confirmed sender), Gmail with an app password (`smtp.gmail.com`),
+  OVHcloud email (MX Plan `ssl0.ovh.net`, Email Pro `pro1.mail.ovh.net`); port 587 + STARTTLS only (the SMTP adapter
+  has no implicit TLS — 465 doesn't work). All three keep mail outside Canada: demo data only.
+
+## 2026-10-20 — S-160 OVHcloud in the United States for now (Vint Hill), Canada kept as an option
+
+Owner: "for ovh, I am in the US right now, lets deploy there for now". Runbook: [ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo),
+[§ Data residency](runbooks/ovh.md#data-residency), [§ Locations](runbooks/ovh.md#locations),
+[§ Canada later](runbooks/ovh.md#canada-later). **Nothing here has run against a real OVHcloud account, US or
+Canadian**: checked offline only (`terraform test` with the mocked provider for each location, `helm template |
+kubeconform` and the chart's refusals, actionlint, bash 3.2 parsing, shellcheck, stubbed runs of `ci.sh tfvars`,
+`tf-state.sh init` and `deploy.sh`'s pre-check). `gh-setup.sh` was only parsed and linted (it reads the terminal).
+
+- **Data residency — owner's decision, 2026-10-20: demo in the US for now.** The platform's rule stays Canadian data
+  residency for production. A US location is allowed for the **dry run only: fake demo data, the `dev` profile**.
+  **Real Canadian customer data must move to `ca-bhs` before launch**, and nothing real is entered in a US deployment
+  meanwhile. Enforced in the chart: new value `global.hostingCountry` (Terraform's `helm_values`: `US` / `CA`; empty =
+  not declared, as on the three clouds); any country other than `CA` refuses `global.environment` staging/prod and the
+  staging/prod Spring profiles. `scripts/ovh/deploy.sh` renders the chart with the same values first, so a refusal
+  stops the deploy before Secrets or `northline-data` are touched (new `OVH_EXTRA_VALUES` layers one more file, in the
+  check too).
+- **One location setting** — `infra/terraform/stacks/ovh/locations.json` (Terraform `jsondecode(file())`, scripts `jq`):
+  `us-east-va` (default), `us-west-or`, `ca-bhs` → country, site, API endpoint (`ovh-us` / `ovh-ca`), token page,
+  Public Cloud region, Object Storage region and S3 endpoint/region, Managed Databases region, VPS datacentre, and
+  what the region offers. Terraform: the roots' `ovh_endpoint` and `region` variables are **replaced** by
+  `ovh_location` (the provider's endpoint comes from it; the Canada-only validation and the `canadian_region_only`
+  tests are gone; a test per location + an unknown-location refusal in each root); the stack's `region` became
+  `location`; new output `location` in both roots. The default changed from Canada to `us-east-va` — acceptable
+  because nothing was ever applied (S-155 merged today); an old `terraform.tfvars` with `region = "BHS5"` gets an
+  undeclared-variable warning and must set `ovh_location = "ca-bhs"` to stay in Canada.
+- **Pipeline**: environment variable `OVH_LOCATION` (default `us-east-va`), **not** a workflow input — an environment's
+  credentials, project and state bucket belong to one OVHcloud account, so a per-run choice could only point them at
+  the wrong one. S-155's `OVH_ENDPOINT` variable is now only checked: one that contradicts the location stops
+  `ci.sh tfvars` (`gh-setup.sh` deletes it). `gh-setup.sh` asks the location first (current value as the default;
+  confirming a change), explains that US and Canada accounts are separate, prints that entity's token page with the
+  rights pre-filled. `tf-state.sh` puts the state bucket in the location (`ensure [TARGET]` reads it from
+  `.ovh/<target>.env` on a Mac). `ci.sh teardown` empties buckets with the location's S3 region (was `bhs`).
+  `secrets.sh init` writes `OVH_LOCATION=` into the file. The smoke test checks the api's `STORAGE_ENDPOINT` against
+  the location and shows the location in the summary.
+- **What was verified about the US regions** (search-engine excerpts of OVHcloud US/OVHcloud docs; the vendor sites
+  were unreachable from here): `ovh-us` → `https://api.us.ovhcloud.com/1.0` (in the provider binary); S3 region
+  `us-east-va`, endpoint `https://s3.us-east-va.io.cloud.ovh.us`, Hillsboro = `us-west-or`; MKS free plan (1-AZ) in
+  `US-EAST-VA-1` and `US-WEST-OR-1`; Managed Databases in all 1-AZ regions, `US-EAST-VA` used in OVHcloud US's
+  Terraform guide; VPS in Vint Hill and Hillsboro; the Edge Network Firewall guide on the US support site.
+  **Unverified**: the `us-west-or` S3 endpoint written out (pattern only), Object Storage `region_name`
+  `US-EAST-VA`/`US-WEST-OR` (by analogy with `BHS`), `US-WEST-OR` for databases, PostGIS on PostgreSQL 17 in the US,
+  the Network Firewall API on `ovh-us`, the US VPS service-name suffix, the VPS-4 spec and price (third-party
+  listings: 8 vCores / 24 GB / 200 GB, ≈ $27.50 a month, ≈ $23.37 with 12 months).
+- **Fallbacks per location** (flags in `locations.json`, all `true` today on that evidence): no Managed PostgreSQL →
+  `ovh-mks` puts Postgres in the cluster (output `postgres.fallback`); no Network Firewall → `ovh-vps` keeps ufw only
+  (output `location.edge_firewall_used`); no Managed Kubernetes → `ovh-mks` refuses to plan (use `ovh-vps`). Not
+  testable with the mocked provider without editing the file, so no test of the fallback paths.
+- **Canada later** is a new account and a fresh deployment (destroy the US one first — its state is in the US
+  bucket), with an optional `pg_dump` + bucket sync + the generated secrets carried over; the simplest move is
+  `make demo-data` again. Documented, not scripted.
+- **Not done**: no migration tool between the two OVHcloud entities; no Toronto or US Local Zones; no OVHcloud KMS
+  adapter (staging/prod on OVHcloud still impossible under `KMS_PROVIDER=local`, whatever the location).
+
 ## 2026-09-30 — S-156 Trust & safety: appeals, automatic consequences, dispute evidence to Stripe
 
 S-82 and S-93 defined the trust rules and the console's enforcement but left most consequences unenforced ("no
@@ -10053,7 +10299,7 @@ subject_id)`, `appeal_files`, `coaching_plans` one active per business, `coachin
 `identity.users.no_show_count/no_show_restricted_at`, index `trust.flags ix_flags_no_shows`. V446–V451 unused; no dev
 seed. Configuration: `DISPUTE_EVIDENCE_PROVIDER` (required in staging and prod, the Helm values set `stripe`),
 `STANDING_ENFORCEMENT_CRON`. No new secrets, no new Kafka topic (still 94). Runbooks: [standing.md](runbooks/standing.md),
-[stripe.md § 13](runbooks/stripe.md#13-card-disputes--evidence-to-stripe-s-156).
+[stripe.md § 14](runbooks/stripe.md#14-card-disputes--evidence-to-stripe-s-156).
 
 **Not done**
 
@@ -10065,5 +10311,5 @@ seed. Configuration: `DISPUTE_EVIDENCE_PROVIDER` (required in staging and prod, 
 
 **Never run against the real Stripe API** (stripe-mock and signed test events only): the Files upload with
 `purpose=dispute_evidence`, the dispute update with `submit=true`, the dispute-fee balance transactions from real
-`charge.dispute.*` events, and the compensation transfer on a granted dispute appeal. stripe.md § 13 lists the
+`charge.dispute.*` events, and the compensation transfer on a granted dispute appeal. stripe.md § 14 lists the
 test-mode checks to run before launch.

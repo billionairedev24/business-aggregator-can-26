@@ -28,7 +28,7 @@ public interface RunStore {
 
     Optional<Run> find(String runId);
 
-    /** The courier's run that isn't done. */
+    /** The courier's run that isn't done (or cancelled). */
     Optional<Run> openRunOf(String courierId);
 
     void assign(String runId, String courierId, Instant at);
@@ -38,12 +38,17 @@ public interface RunStore {
 
     void moveState(String runId, String state, Instant at);
 
+    /** The run's stops, by sequence; stops taken off the run ({@code cancelled}, S-151) are left out. */
     List<Stop> stops(String runId);
 
-    /** Stops of several runs (ops view). */
+    /** Stops of several runs (ops view), cancelled ones left out. */
     List<Stop> stops(Collection<String> runIds);
 
+    /** One stop, whatever its state (a cancelled one too: the app may replay an action on it). */
     Optional<Stop> stop(String stopId);
+
+    /** S-151: every stop of the order on any run, cancelled ones left out. */
+    List<Stop> stopsOfOrder(String orderId);
 
     void arrived(String stopId, Instant at);
 
@@ -51,16 +56,41 @@ public interface RunStore {
 
     void proofStored(String stopId, String kind, String key);
 
-    void droppedOff(String stopId, String proofKind, Instant at);
+    /** The stop is done; {@code proofKind} is the drop-off's proof, null for a stop that needs none. */
+    void droppedOff(String stopId, @Nullable String proofKind, Instant at);
+
+    /** S-151: a drop-off the courier couldn't hand over (done, proof {@code failed}) with the reason and their note. */
+    void failed(String stopId, String reason, @Nullable String note, Instant at);
+
+    /** S-151: the stops leave their run ({@code cancelled}). */
+    void cancelStops(Collection<String> stopIds);
+
+    /** S-151: the stops move to another run, after its own (dispatch split a stuck run). */
+    void moveStops(Collection<String> stopIds, String toRunId);
+
+    /** S-151: planned pooled runs of the market starting in [{@code from}, {@code to}), soonest first. */
+    List<Run> plannedPooled(String market, Instant from, Instant to);
 
     /**
-     * The storage key of the photo a courier left as an order's proof of delivery: a done drop-off whose proof is a
-     * photo still kept (S-107 retention clears it). Empty for a PIN or signature, before the drop-off, after retention,
+     * The storage key of the photo a courier left as an order's proof of delivery — or, S-151, at the door of a failed
+     * drop-off: a done drop-off whose proof is a photo still kept (S-107 retention clears it). Empty for a PIN or signature, before the drop-off, after retention,
      * and always for a delivery with an ID check at the door (2026-10-04).
      */
     Optional<String> proofPhotoKey(String orderId);
     /** Age-restricted items: a stop back at the business after a refused drop-off; returns its id. */
     String addReturnStop(String runId, String orderId, String merchantId, Instant at);
+
+    /**
+     * S-151: a stop added at the end of the run — {@code return} (goods back to a shop) or {@code collect} (a customer's
+     * return at their door), tied to the return when {@code returnId} is set; returns its id.
+     */
+    String addStop(
+            String runId,
+            String orderId,
+            String kind,
+            @Nullable String merchantId,
+            @Nullable String returnId,
+            Instant eta);
 
     /** Runs of a market starting in [{@code from}, {@code to}), by start (ops view). */
     List<Run> runs(@Nullable String market, Instant from, Instant to);
@@ -89,9 +119,11 @@ public interface RunStore {
             String heuristic) {}
 
     /**
-     * @param kind {@code pickup} | {@code dropoff}
-     * @param state {@code pending} | {@code arrived} | {@code done}
+     * @param kind {@code pickup} | {@code dropoff} | {@code return} | {@code collect} (S-151)
+     * @param state {@code pending} | {@code arrived} | {@code done} | {@code cancelled} (S-151)
      * @param proofKey the object key of the photo / signature
+     * @param returnId S-151: the customer's return a {@code collect} / {@code return} stop carries
+     * @param failReason S-151: why a failed drop-off wasn't handed over
      */
     record Stop(
             String id,
@@ -106,5 +138,7 @@ public interface RunStore {
             @Nullable Instant doneAt,
             @Nullable String proofKind,
             @Nullable String proofKey,
-            @Nullable Boolean scanOk) {}
+            @Nullable Boolean scanOk,
+            @Nullable String returnId,
+            @Nullable String failReason) {}
 }

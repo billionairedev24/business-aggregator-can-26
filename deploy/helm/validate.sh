@@ -239,7 +239,7 @@ for t in vps mks; do
   if grep -q 'SPRING_PROFILES_ACTIVE: "dev"' <<<"$out" && ! grep -qE '^kind: (ExternalSecret|SecretStore|Secret)$' <<<"$out" \
       && grep -q 'name: northline-secrets' <<<"$out" && ! grep -q 'northline-.*-secrets$' <<<"$out" \
       && grep -q 'key: STORAGE_ACCESS_KEY' <<<"$out" && grep -q 'key: KMS_LOCAL_KEY' <<<"$out" \
-      && grep -q 'STORAGE_ENDPOINT: "https://s3.bhs.io.cloud.ovh.net"' <<<"$out" && grep -q 'KMS_PROVIDER: "local"' <<<"$out" \
+      && grep -q 'STORAGE_ENDPOINT: "https://s3.us-east-va.io.cloud.ovh.us"' <<<"$out" && grep -q 'KMS_PROVIDER: "local"' <<<"$out" \
       && grep -q 'type: Recreate' <<<"$auth" && grep -q 'claimName: northline-auth-signing-keys' <<<"$auth" \
       && grep -q -- '- name: northline-registry' <<<"$out" && ! grep -q 'googlecloud' <<<"$out" && ! grep -q 'redis-ca' <<<"$out"; then
     echo "ok   dryrun × ovh-$t: dev profile, one plain Secret (no External Secrets), S3 keys and local KMS key mapped, auth Recreate on its key volume"
@@ -247,6 +247,44 @@ for t in vps mks; do
   check "dryrun × ovh-$t + Collector (flag)" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-$t.yaml" -f "test-values/infra-ovh-$t.yaml" \
     --set observability.collector.enabled=true
 done
+# S-160: Canadian data residency — a US location (global.hostingCountry from Terraform) runs the dev profile only.
+refuse "US location × staging values (data residency)" -f "$CHART/values-staging.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml
+refuse "US location × prod values (data residency)" -f "$CHART/values-prod.yaml" -f "$CHART/values-ovh-mks.yaml" -f test-values/infra-ovh-mks.yaml
+refuse "US location × dryrun on the prod profile (data residency)" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml --set global.springProfiles=prod
+refuse "US location × dryrun on the staging profile (data residency)" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml --set global.springProfiles=staging
+check "ca-bhs × staging values (Canadian location allowed)" -f "$CHART/values-staging.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml \
+  --set global.hostingCountry=CA --set-string configEnv.STORAGE_ENDPOINT=https://s3.bhs.io.cloud.ovh.net --set-string configEnv.STORAGE_REGION=bhs
+# S-155: what scripts/ovh/deploy.sh adds for a first demo without Stripe on the operator's own domain (OVH_DOMAIN):
+# identity and age checks on the local fakes, the Stripe keys optional, every host under that domain.
+nostripe=(--set apps.api.env.IDENTITY_PROVIDER=local --set apps.api.env.AGE_VERIFICATION_PROVIDER=local
+  --set apps.api.secretEnv.STRIPE_SECRET_KEY=false --set apps.api.secretEnv.STRIPE_PUBLISHABLE_KEY=false
+  --set apps.api.secretEnv.STRIPE_WEBHOOK_SECRET=false --set apps.api.secretEnv.STRIPE_CONNECT_WEBHOOK_SECRET=false
+  --set urls.auth=https://auth.demo.example --set urls.api=https://api.demo.example --set urls.studio=https://studio.demo.example
+  --set urls.consumer=https://demo.example --set urls.console=https://console.demo.example --set urls.pages=https://pages.demo.example
+  --set urls.webauthnRpId=demo.example --set-string "apps.api.env.EMAIL_FROM=Demo <no-reply@demo.example>"
+  --set-string "apps.auth.env.EMAIL_FROM=Demo <no-reply@demo.example>" --set-string "apps.worker.env.EMAIL_FROM=Demo <no-reply@demo.example>")
+check "dryrun × ovh-vps, no Stripe, own domain" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml "${nostripe[@]}"
+out=$(helm template northline "$CHART" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml "${nostripe[@]}")
+if grep -q 'IDENTITY_PROVIDER: "local"' <<<"$out" && grep -A4 'key: STRIPE_SECRET_KEY' <<<"$out" | grep -q 'optional: true' \
+    && grep -q 'https://studio.demo.example' <<<"$out" && ! grep -q 'demo.northline.ca' <<<"$out"; then
+  echo "ok   dryrun × ovh-vps without Stripe: local identity, Stripe keys optional, hosts under the operator's domain"
+else echo "FAIL dryrun × ovh-vps without Stripe / own domain"; failed=1; fi
+# S-155b: email on OVHcloud — an SMTP relay for api, auth and worker (SMTP_PASSWORD from the plain Secret), and the
+# demo inbox (Mailpit behind basic auth on its own host, SMTP only from this release's pods; refused in staging/prod).
+smtp=(--set apps.api.env.EMAIL_PROVIDER=smtp --set apps.auth.env.EMAIL_PROVIDER=smtp --set apps.worker.env.EMAIL_PROVIDER=smtp
+  --set apps.auth.env.SMTP_HOST=smtp-relay.example --set apps.auth.env.SMTP_USERNAME=demo --set-string apps.auth.env.SMTP_STARTTLS=true
+  --set apps.api.secretEnv.SMTP_PASSWORD=true --set apps.auth.secretEnv.SMTP_PASSWORD=true --set apps.worker.secretEnv.SMTP_PASSWORD=true)
+check "dryrun × ovh-vps, SMTP relay" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml "${smtp[@]}"
+mailpit=(--set demoMail.enabled=true --set demoMail.url=https://mail.demo.northline.ca)
+check "dryrun × ovh-vps, demo inbox" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml "${mailpit[@]}"
+out=$(helm template northline "$CHART" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml "${mailpit[@]}")
+if grep -q 'hostname: "mail.demo.northline.ca"' <<<"$out" && grep -q 'name: MP_UI_AUTH_FILE' <<<"$out" \
+    && grep -q 'secretName: northline-demo-mail-auth' <<<"$out" && grep -A2 -- '- name: northline-mailpit' <<<"$out" | grep -q 'port: 8025' \
+    && [[ $(grep -c -- '- { port: 1025, protocol: TCP }' <<<"$out") == 1 ]]; then
+  echo "ok   dryrun × ovh-vps demo inbox: own host + certificate, basic auth file, inbox through the edge only, SMTP only from the release"
+else echo "FAIL dryrun × ovh-vps demo inbox"; failed=1; fi
+refuse "demo inbox in staging" -f "$CHART/values-staging.yaml" -f "$CHART/values-gcp.yaml" -f test-values/infra-dryrun.yaml "${mailpit[@]}"
+refuse "demo inbox without its host" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml --set demoMail.enabled=true
 if [[ $(helm template northline "$CHART" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-mks.yaml" -f test-values/infra-ovh-mks.yaml \
     | awk '/^kind: Deployment$/{d=1} d && /^  name: northline-api$/{a=1} a && /^  replicas:/{print $2; exit}') == 2 ]]; then
   echo "ok   dryrun × ovh-mks: two replicas of the stateless apps"
@@ -290,7 +328,7 @@ check_data "northline-data: ovh-vps (everything on the VPS, S3 backups)" -f test
 check_data "northline-data: ovh-mks (Managed PostgreSQL)" -f test-values/data-ovh-mks.yaml
 data_out=$(helm template northline-data "$DATA" --namespace northline-dryrun -f test-values/data-ovh-vps.yaml)
 if ! grep -q 'topology.kubernetes.io/zone' <<<"$data_out" && ! grep -qE '^kind: (ExternalSecret|SecretStore|Secret)$' <<<"$data_out" \
-    && grep -q 'destinationPath: s3://northline-ovh-vps-pg-backups/' <<<"$data_out" && grep -q 'endpointURL: https://s3.bhs.io.cloud.ovh.net' <<<"$data_out" \
+    && grep -q 'destinationPath: s3://northline-ovh-vps-pg-backups/' <<<"$data_out" && grep -q 'endpointURL: https://s3.us-east-va.io.cloud.ovh.us' <<<"$data_out" \
     && grep -q 'name: northline-pg-backup-s3, key: ACCESS_KEY_ID' <<<"$data_out" && ! grep -q 'serviceAccountTemplate' <<<"$data_out" \
     && grep -q '^kind: PersistentVolumeClaim$' <<<"$data_out" && grep -q '^  name: northline-auth-signing-keys$' <<<"$data_out" && grep -q 'storageClassName: local-path' <<<"$data_out"; then
   echo "ok   northline-data ovh-vps: no zone pinning, no External Secrets, S3 backups with the script's keys, auth key volume"

@@ -27,7 +27,9 @@ public enum ActivityStatus implements CodedEnum {
     REFUNDED,
     CANCELLED,
     /** A refund case or dispute is open on it ("Case RF-2201"). */
-    CASE;
+    CASE,
+    /** S-151: the courier couldn't hand the order over; the customer chooses re-delivery or a refund. */
+    DELIVERY_FAILED;
 
     /** Shop order states ({@code orders.orders.state}). */
     public static ActivityStatus ofOrder(String state) {
@@ -36,8 +38,9 @@ public enum ActivityStatus implements CodedEnum {
             case "picked_up" -> ON_THE_WAY;
             case "delivered" -> DELIVERED;
             case "confirmed" -> DONE;
-            case "refunded" -> REFUNDED;
+            case "refunded", "returned" -> REFUNDED;
             case "cancelled" -> CANCELLED;
+            case "delivery_failed" -> DELIVERY_FAILED;
             default -> PACKING;
         };
     }
@@ -76,7 +79,7 @@ public enum ActivityStatus implements CodedEnum {
     public String tone() {
         return switch (this) {
             case PACKING, READY, ON_THE_WAY, PAID, COOKING, ON_SITE -> "accent";
-            case QUOTE_READY, CASE, COMPLETED -> "accent-2";
+            case QUOTE_READY, CASE, COMPLETED, DELIVERY_FAILED -> "accent-2";
             default -> "neutral";
         };
     }

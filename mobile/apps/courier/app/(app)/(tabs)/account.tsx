@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 
 import { StyleSheet, View } from 'react-native';
@@ -22,6 +23,7 @@ export default function AccountScreen() {
   const { pending } = useOutbox();
   const [confirming, setConfirming] = useState(false);
   const me = useMe();
+  const router = useRouter();
 
   const out = () => {
     if (pending.length > 0 && !confirming) return setConfirming(true);
@@ -39,6 +41,7 @@ export default function AccountScreen() {
           </View>
         </View>
       </Card>
+      <Button tone="secondary" icon="receipt" label={t('earnings.open')} onPress={() => router.push('/earnings')} testID="open-earnings" />
       <LanguageSwitch />
       <ThisPhone />
       <View style={styles.sunken}>

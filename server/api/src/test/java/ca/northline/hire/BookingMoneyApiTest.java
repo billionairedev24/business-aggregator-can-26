@@ -63,11 +63,13 @@ class BookingMoneyApiTest extends IntegrationTest {
         customer = data.user("Amara Osei");
     }
 
-    /** A free slot {@code hours} from now (on the half hour; the fixture is open 00:00–23:30 every day). */
+    /**
+     * A free slot about {@code hours} from now, on the hour. The fixture is open 00:00–23:30 every day and the service
+     * takes an hour, so a 23:00 start doesn't fit: that one moves to 00:00 (the test failed for an hour a day before).
+     */
     static Instant inHours(int hours) {
         var at = Instant.now().plus(Duration.ofHours(hours)).truncatedTo(ChronoUnit.HOURS);
-        var local = at.atZone(ZONE).toLocalTime();
-        return local.getHour() == 23 && local.getMinute() >= 30 ? at.plus(Duration.ofHours(1)) : at;
+        return at.atZone(ZONE).toLocalTime().getHour() == 23 ? at.plus(Duration.ofHours(1)) : at;
     }
 
     void rules(int rescheduleFreeMin, Long feeCents, Integer feeBps) {

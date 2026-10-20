@@ -1,11 +1,11 @@
-variable "ovh_endpoint" {
-  description = "OVHcloud API endpoint of the account: ovh-ca for an OVHcloud Canada account (ca.ovh.com), ovh-eu for a European one. Credentials come from the environment (OVH_APPLICATION_KEY, OVH_APPLICATION_SECRET, OVH_CONSUMER_KEY, or OVH_CLIENT_ID / OVH_CLIENT_SECRET) — docs/runbooks/ovh.md § API credentials."
+variable "ovh_location" {
+  description = "Where the target lives (infra/terraform/stacks/ovh/locations.json, S-160): us-east-va (Vint Hill, Virginia — OVHcloud US, the default for now), us-west-or (Hillsboro, Oregon — OVHcloud US) or ca-bhs (Beauharnois, Québec — OVHcloud Canada). Decides the API endpoint (ovh-us / ovh-ca), the Public Cloud region, Object Storage, the database region and the VPS datacentre (the VPS is ordered there in the console). The account must belong to that OVHcloud entity: us.ovhcloud.com and ca.ovhcloud.com accounts are separate. Credentials come from the environment (OVH_APPLICATION_KEY, OVH_APPLICATION_SECRET, OVH_CONSUMER_KEY, or OVH_CLIENT_ID / OVH_CLIENT_SECRET) — docs/runbooks/ovh.md § Today. A US location holds fake demo data only (dev profile): Canadian data residency applies to real customer data, which must be on ca-bhs before launch (DECISIONS 2026-10-20, S-160)."
   type        = string
-  default     = "ovh-ca"
+  default     = "us-east-va"
 
   validation {
-    condition     = contains(["ovh-ca", "ovh-eu"], var.ovh_endpoint)
-    error_message = "ovh_endpoint must be ovh-ca (OVHcloud Canada) or ovh-eu."
+    condition     = contains(["us-east-va", "us-west-or", "ca-bhs"], var.ovh_location)
+    error_message = "ovh_location must be us-east-va or us-west-or (OVHcloud US, demo data only) or ca-bhs (OVHcloud Canada)."
   }
 }
 
@@ -14,25 +14,14 @@ variable "service_name" {
   type        = string
 }
 
-variable "region" {
-  description = "OVHcloud Public Cloud region of Object Storage. Canadian data residency: BHS5 (Beauharnois), the VPS's datacentre too."
-  type        = string
-  default     = "BHS5"
-
-  validation {
-    condition     = contains(["BHS5"], var.region)
-    error_message = "Canadian data residency: region must be BHS5 (Beauharnois) — the VPS is ordered in Beauharnois as well."
-  }
-}
-
 variable "vps_service_name" {
-  description = "The VPS's service name once ordered in the console (e.g. vps-1a2b3c4d.vps.ovh.ca; Bare Metal Cloud › VPS). Empty = no VPS yet: only Object Storage is planned, no firewall."
+  description = "The VPS's service name once ordered in the console (Bare Metal Cloud › VPS, e.g. vps-1a2b3c4d.vps.ovh.us in the US, vps-1a2b3c4d.vps.ovh.ca in Canada). Empty = no VPS yet: only Object Storage is planned, no firewall."
   type        = string
   default     = ""
 }
 
 variable "edge_firewall" {
-  description = "OVHcloud Network Firewall on the VPS's IPv4 (in front of the VPS, before any packet reaches it): only SSH from admin_cidrs, HTTP and HTTPS, plus replies to the VPS's own connections. scripts/ovh/bootstrap-k3s.sh adds the same rules on the host (ufw)."
+  description = "OVHcloud Network Firewall on the VPS's IPv4 (in front of the VPS, before any packet reaches it): only SSH from admin_cidrs, HTTP and HTTPS, plus replies to the VPS's own connections. scripts/ovh/bootstrap-k3s.sh adds the same rules on the host (ufw). Ignored where the location has no Network Firewall (locations.json edge_firewall = false): ufw alone then."
   type        = bool
   default     = true
 }
@@ -45,6 +34,17 @@ variable "admin_cidrs" {
   validation {
     condition     = length(var.admin_cidrs) <= 3 && alltrue([for c in var.admin_cidrs : can(cidrhost(c, 0)) && !strcontains(c, ":")])
     error_message = "admin_cidrs: at most 3 IPv4 CIDRs (e.g. 203.0.113.7/32)."
+  }
+}
+
+variable "ci_ssh_cidr" {
+  description = "One extra SSH source for the length of a pipeline run (.github/workflows/ovh.yml sets the runner's address/32 before it connects and removes it at the end — scripts/ovh/ci.sh). Empty = no such rule. Never set it in terraform.tfvars."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.ci_ssh_cidr == "" || (can(cidrhost(var.ci_ssh_cidr, 0)) && !strcontains(var.ci_ssh_cidr, ":"))
+    error_message = "ci_ssh_cidr: empty or one IPv4 CIDR (e.g. 203.0.113.7/32)."
   }
 }
 

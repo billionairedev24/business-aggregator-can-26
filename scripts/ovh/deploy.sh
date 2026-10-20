@@ -13,7 +13,13 @@
 #
 # Environment: REGISTRY, IMAGE_TAG (required: where the images are and their tag — docs/runbooks/ovh.md § Images),
 # ADDONS=0 skips step 2, RESTART=1 restarts every app afterwards (after a secret changed: Helm can't see Secrets).
-# Twilio and SendGrid are switched on here when their keys are in the secrets file.
+# Twilio and the email provider (SMTP relay, demo inbox or SendGrid — below) are switched on from the secrets file; without STRIPE_SECRET_KEY the api
+# runs on its fake payment gateway with identity and age checks on the local fakes (a first demo without Stripe).
+# OVH_DOMAIN [demo.northline.ca]: the zone of the public hosts (values-dryrun.yaml's urls) — another domain the operator
+# controls moves every host under it (OVH_DOMAIN itself is the consumer site, auth./api./studio./… below it).
+# OVH_SECRETS_SOURCE=env: every secret from environment variables (the pipeline, scripts/ovh/secrets.sh).
+# OVH_EXTRA_VALUES: one more values file layered last (and in the data-residency pre-check: a US location refuses
+# staging/prod values — S-160, docs/runbooks/ovh.md § Data residency).
 set -euo pipefail
 . "$(dirname "$0")/common.sh"
 ovh_target "${1:-}"
@@ -32,6 +38,19 @@ work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 tf_out helm_values >"$work/values.json"
 tf_out data_values >"$work/data.json"
 in_pg=$(tf_out in_cluster .postgres)
+
+# Where (S-160, Terraform's ovh_location) and Canadian data residency: outside Canada only the dev profile with fake
+# demo data. The chart refuses staging/prod there (global.hostingCountry); render it first with the same values so a
+# refusal stops the deploy before anything is installed.
+loc=$(tf_out location .name 2>/dev/null || true)
+country=$(jq -r '.global.hostingCountry // ""' "$work/values.json")
+echo "   location ${loc:-not in the state yet (terraform apply)}, country ${country:-not declared}"
+helm template northline "$H/northline" -n "$NS" -f "$H/northline/values-dryrun.yaml" -f "$H/northline/values-$OVH_TARGET.yaml" \
+  -f "$work/values.json" ${OVH_EXTRA_VALUES:+-f "$OVH_EXTRA_VALUES"} --set global.image.registry="$REGISTRY" --set global.image.tag="$IMAGE_TAG" >/dev/null \
+  || die "the northline chart refuses these values (above) — nothing was changed. Outside Canada (OVH_LOCATION=${loc:-?}) only the dev profile runs: docs/runbooks/ovh.md § Data residency"
+if [ -n "$country" ] && [ "$country" != CA ]; then
+  echo "   outside Canada ($country): fake demo data only — real customer data goes to ca-bhs (docs/runbooks/ovh.md § Data residency)"
+fi
 
 echo "== 1. secrets"
 "$(dirname "$0")/secrets.sh" apply "$OVH_TARGET"
@@ -80,17 +99,67 @@ if [ -n "$(env_get SMS_AUTH_TOKEN)" ] && [ -n "$(env_get SMS_ACCOUNT_ID)" ] && [
     --set-string "apps.auth.env.SMS_ACCOUNT_ID=$(env_get SMS_ACCOUNT_ID)" --set apps.auth.secretEnv.SMS_AUTH_TOKEN=true)
   echo "   SMS codes through Twilio"
 fi
-if [ -n "$(env_get EMAIL_API_KEY)" ]; then
-  extra+=(--set apps.api.env.EMAIL_PROVIDER=sendgrid --set apps.worker.env.EMAIL_PROVIDER=sendgrid
-    --set apps.api.secretEnv.EMAIL_API_KEY=true --set apps.worker.secretEnv.EMAIL_API_KEY=true)
+# Email for api, auth (account codes, S-154) and worker — the first that applies (docs/runbooks/ovh.md § Email):
+#   OVH_DEMO_MAILPIT=true  the demo inbox in the namespace (chart demoMail): every email lands there, nothing is
+#                          delivered; the inbox is https://mail.<domain> behind basic auth (user demo, MAILPIT_PASSWORD)
+#   SMTP_HOST              any SMTP relay on port 587 with STARTTLS (OVHcloud email, Brevo, Gmail, SendGrid SMTP…)
+#   EMAIL_API_KEY          SendGrid's API
+#   none                   EMAIL_PROVIDER=local: no SMTP server answers in the cluster, so each email's text — the
+#                          6-digit sign-up codes included — is written to that app's log at WARN (kubectl logs)
+domain=${OVH_DOMAIN:-demo.northline.ca}
+mail_apps="api auth worker"
+mailpit=${OVH_DEMO_MAILPIT:-$(env_get OVH_DEMO_MAILPIT)}
+if [ "$mailpit" = true ]; then
+  extra+=(--set demoMail.enabled=true --set-string "demoMail.url=https://mail.$domain")
+  for a in $mail_apps; do
+    extra+=(--set "apps.$a.env.EMAIL_PROVIDER=smtp" --set-string "apps.$a.env.SMTP_HOST=northline-mailpit"
+      --set-string "apps.$a.env.SMTP_PORT=1025" --set-string "apps.$a.env.SMTP_STARTTLS=false")
+  done
+  [ -z "$(env_get SMTP_HOST)" ] || echo "   warning: OVH_DEMO_MAILPIT=true wins over SMTP_HOST — nothing is delivered"
+  echo "   emails into the demo inbox https://mail.$domain (user demo)"
+elif [ -n "$(env_get SMTP_HOST)" ]; then
+  for a in $mail_apps; do
+    extra+=(--set "apps.$a.env.EMAIL_PROVIDER=smtp" --set-string "apps.$a.env.SMTP_HOST=$(env_get SMTP_HOST)"
+      --set-string "apps.$a.env.SMTP_PORT=$(env_get SMTP_PORT | sed 's/^$/587/')"
+      --set-string "apps.$a.env.SMTP_STARTTLS=$(env_get SMTP_STARTTLS | sed 's/^$/true/')")
+    if [ -n "$(env_get SMTP_USERNAME)" ]; then
+      extra+=(--set-string "apps.$a.env.SMTP_USERNAME=$(env_get SMTP_USERNAME)" --set "apps.$a.secretEnv.SMTP_PASSWORD=true")
+    fi
+  done
+  echo "   emails through SMTP $(env_get SMTP_HOST)"
+elif [ -n "$(env_get EMAIL_API_KEY)" ]; then
+  for a in $mail_apps; do
+    extra+=(--set "apps.$a.env.EMAIL_PROVIDER=sendgrid" --set "apps.$a.secretEnv.EMAIL_API_KEY=true")
+  done
   echo "   emails through SendGrid"
+else
+  echo "   no email provider: emails (sign-up codes included) only in the apps' logs — kubectl -n $NS logs deploy/northline-auth"
+fi
+if [ -n "$(env_get EMAIL_FROM)" ]; then
+  for a in $mail_apps; do extra+=(--set-string "apps.$a.env.EMAIL_FROM=$(env_get EMAIL_FROM)"); done
 fi
 if [ -n "$(env_get KAFKA_SASL_JAAS_CONFIG)" ]; then
   extra+=(--set apps.api.secretEnv.KAFKA_SASL_JAAS_CONFIG=true --set apps.auth.secretEnv.KAFKA_SASL_JAAS_CONFIG=true
     --set apps.worker.secretEnv.KAFKA_SASL_JAAS_CONFIG=true)
 fi
+if [ -z "$(env_get STRIPE_SECRET_KEY)" ]; then
+  extra+=(--set apps.api.env.IDENTITY_PROVIDER=local --set apps.api.env.AGE_VERIFICATION_PROVIDER=local)
+  echo "   no Stripe key: fake payment gateway, identity and age checks on the local fakes"
+fi
+for k in STRIPE_SECRET_KEY STRIPE_PUBLISHABLE_KEY STRIPE_WEBHOOK_SECRET STRIPE_CONNECT_WEBHOOK_SECRET; do
+  [ -n "$(env_get "$k")" ] || extra+=(--set "apps.api.secretEnv.$k=false")   # optional key: the pod starts without it
+done
+if [ "$domain" != demo.northline.ca ]; then
+  jq -n --arg d "$domain" '{urls: {auth: "https://auth.\($d)", api: "https://api.\($d)", studio: "https://studio.\($d)",
+      consumer: "https://\($d)", console: "https://console.\($d)", pages: "https://pages.\($d)", webauthnRpId: $d},
+    apps: ({api: {env: {EMAIL_FROM: "Northline demo <no-reply@\($d)>"}}, auth: {env: {EMAIL_FROM: "Northline demo <no-reply@\($d)>"}},
+      worker: {env: {EMAIL_FROM: "Northline demo <no-reply@\($d)>"}}})}' >"$work/domain.json"
+  extra+=(-f "$work/domain.json")
+  echo "   hosts under $domain"
+fi
 helm upgrade --install northline "$H/northline" -n "$NS" \
   -f "$H/northline/values-dryrun.yaml" -f "$H/northline/values-$OVH_TARGET.yaml" -f "$work/values.json" \
+  ${OVH_EXTRA_VALUES:+-f "$OVH_EXTRA_VALUES"} \
   --set global.image.registry="$REGISTRY" --set global.image.tag="$IMAGE_TAG" ${extra[@]+"${extra[@]}"} --wait --timeout 20m
 
 if [ "${RESTART:-0}" = 1 ]; then kubectl -n "$NS" rollout restart deployment -l app.kubernetes.io/part-of=northline; fi

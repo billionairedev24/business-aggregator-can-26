@@ -31,6 +31,7 @@ class RunViews {
     static final Duration LATE = Duration.ofMinutes(15);
 
     private final DeliveryStore deliveries;
+    private final ReturnPickupStore returnPickups;
     private final CourierStore couriers;
     private final PublicDirectory directory;
     private final PersonDirectory people;
@@ -60,6 +61,11 @@ class RunViews {
         var packed = s.kind().equals("pickup")
                 && d != null
                 && d.pickups().stream().anyMatch(p -> p.merchantId().equals(merchantId) && p.packedAt() != null);
+        var returnId = s.returnId();
+        var pickup = returnId == null ? null : returnPickups.find(returnId).orElse(null);
+        var address = s.kind().equals("dropoff") && d != null
+                ? d.dropoff()
+                : s.kind().equals("collect") && pickup != null ? pickup.collectFrom() : null;
         return new StopView(
                 s.id(),
                 s.seq(),
@@ -71,10 +77,12 @@ class RunViews {
                 s.arrivedAt(),
                 s.doneAt(),
                 place,
-                s.kind().equals("dropoff") && d != null ? d.dropoff() : null,
+                address,
                 packed,
                 s.proofKind(),
-                idCheck(s));
+                idCheck(s),
+                s.failReason(),
+                pickup == null ? null : pickup.returnRef());
     }
 
     /** Age-restricted drop-offs: the age to check and the account holder's name the ID must show. */

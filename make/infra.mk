@@ -74,6 +74,19 @@ ovh-up: ## Back from ovh-down: ovh-mks nodes from terraform.tfvars, apps to thei
 ovh-status: ## Nodes, Deployments and StatefulSets of the OVHcloud target (TARGET=ovh-vps|ovh-mks)
 	$(ROOT)/scripts/ovh/scale.sh status $(or $(TARGET),ovh-vps)
 
+.PHONY: ovh-smoke
+ovh-smoke: ## Smoke test after a deploy: rollouts, health, the public address, HTTPS once DNS points at it (TARGET=ovh-vps|ovh-mks)
+	$(ROOT)/scripts/ovh/smoke.sh $(or $(TARGET),ovh-vps)
+
+.PHONY: ovh-gh-setup
+ovh-gh-setup: ## Once per target, on your Mac: the GitHub Environment + every secret/variable of the ovh pipeline (gh CLI; TARGET=ovh-vps|ovh-mks)
+	$(ROOT)/scripts/ovh/gh-setup.sh $(or $(TARGET),ovh-vps)
+
+.PHONY: ovh-tf-init
+ovh-tf-init: ## terraform init of the target's root; with TF_STATE_BUCKET (+ TF_STATE_ACCESS_KEY/SECRET_KEY) on the shared Object Storage state (MIGRATE=1 moves a local state there)
+	$(ROOT)/scripts/ovh/tf-state.sh ensure $(or $(TARGET),ovh-vps)
+	$(ROOT)/scripts/ovh/tf-state.sh init $(or $(TARGET),ovh-vps)
+
 .PHONY: demo-data
 demo-data: ## Demo marketplace through the product (ENV=local|dryrun|ovh-vps|ovh-mks; RESET=1 / RESET=all; ONLY=bakery,wine) — docs/runbooks/demo.md
 	$(ROOT)/scripts/demo-data.sh --env $(or $(ENV),local) $(if $(filter all,$(RESET)),--reset-all,$(if $(RESET),--reset)) $(if $(ONLY),--only $(ONLY))

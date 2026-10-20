@@ -14,7 +14,7 @@ say where a step is still manual or missing.
 | [staging.md](staging.md) | pre-production: prod shape, Stripe test mode |
 | [prod.md](prod.md) | production (Calgary launch) |
 | [dryrun-gcp.md](dryrun-gcp.md) | the GCP dry run: a short-lived demo environment on one zonal GKE cluster (fake data only, a $300 free-trial credit) — Postgres + PostGIS, Valkey, Meilisearch and Kafka in the cluster or at an external provider, cost estimate, step by step from an empty project to teardown |
-| [ovh.md](ovh.md) | the dry run on OVHcloud, everything in Beauharnois (BHS): `ovh-vps` (one VPS with k3s, ≈ $25–30/month) or `ovh-mks` (Managed Kubernetes + Managed PostgreSQL, ≈ $150–215/month) — account and API credentials, ordering, step by step for both, secrets from a local file, demo data, backups and restore, cost, teardown; [Google vs OVH](#google-vs-ovh) compares them with the GCP dry run |
+| [ovh.md](ovh.md) | the dry run on OVHcloud, everything in one location (`OVH_LOCATION`, S-160: Vint Hill on OVHcloud US for now — demo data only —, Hillsboro, or Beauharnois on OVHcloud Canada): `ovh-vps` (one VPS with k3s, ≈ $25–30/month) or `ovh-mks` (Managed Kubernetes + Managed PostgreSQL, ≈ $150–215/month) — **§ Today: from a new OVH account to a running demo through the manual `ovh` pipeline (S-155)**, account and API credentials, ordering, step by step for both, secrets from a local file, demo data, backups and restore, cost, teardown; [Google vs OVH](#google-vs-ovh) compares them with the GCP dry run |
 | [photos.md](photos.md) | real photos: the photo library (`web/packages/media`), every slot and its fallback, licences (Pexels, Unsplash, Openverse CC0), the owner's three commands on a Mac (`make photos-fetch`, `make photos-push`), picking, `make photos`, serving from the site or a CDN, the merchants' own photos |
 | [demo.md](demo.md) | the client demo on the dry run: `make demo-data` (a demo marketplace made through the product — businesses approved by staff, listings with pictures, customers with orders, bookings and reviews), the accounts, the 15-minute script, reset between demos, what to avoid, the pre-demo checklist |
 | [backups-dr.md](backups-dr.md) | backups, point-in-time restore and disaster recovery: RPO/RTO per data store and cloud, copies in the other Canadian region, restore scripts, the masked prod → staging refresh, verification, the local drill and the quarterly drill schedule (S-114) |
@@ -143,7 +143,7 @@ say where a step is still manual or missing.
   | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
   | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#8-identity-s-22)) |
   | `northline.age-verification.provider` | `AGE_VERIFICATION_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity, document + selfie) | **done** (2026-10-04, the customer's age check — [age-restricted.md](age-restricted.md)) |
-  | `northline.payments.dispute-evidence.provider` | `DISPUTE_EVIDENCE_PROVIDER` | `local` (in-process fake) · `stripe` (Files + Disputes APIs) | **done** (S-156, card-dispute evidence — [stripe.md § 13](stripe.md#13-card-disputes--evidence-to-stripe-s-156)) |
+  | `northline.payments.dispute-evidence.provider` | `DISPUTE_EVIDENCE_PROVIDER` | `local` (in-process fake) · `stripe` (Files + Disputes APIs) | **done** (S-156, card-dispute evidence — [stripe.md § 14](stripe.md#14-card-disputes--evidence-to-stripe-s-156)) |
   | `northline.plus.billing.provider` | `PLUS_BILLING_PROVIDER` | `local` (fake subscriptions and invoices) · `stripe` (Stripe Billing) | **done** (S-152, Northline Plus — [stripe.md § 11](stripe.md#11-northline-plus--stripe-billing-s-152), [loyalty.md](loyalty.md)) |
   | `northline.registries.<source>.provider` | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | `fixtures` · `manual` · `api` (Corporations Canada) / `opencorporates` (Alberta) / `socrata` (Calgary) | **done** (S-23, business registry lookups — [registries.md](registries.md)) |
   | `northline.push.provider` | `PUSH_PROVIDER` | `local` (the worker log) · `native` (APNs + FCM) | **done** (S-102, worker push — [push.md](push.md)) |
@@ -198,9 +198,10 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | ✓ | | | | staging and prod (S-12; [stripe.md](stripe.md#5-webhooks-s-12)) |
 | `TAX_PROVIDER` | ✓ | | | | staging and prod: `stripe` (`local` refused there — S-21, [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
 | `TAX_CODE_SERVICE`, `TAX_CODE_GOODS`, `TAX_CODE_FOOD`, `TAX_RECONCILE_CRON` | ✓ | | | | no (Stripe's general service / goods / prepared-food codes; 03:17 in the platform zone) |
+| `COURIER_PAYOUTS_CRON` | ✓ | | | | no (`0 41 6 * * MON`, platform zone: the weekly courier payouts — S-151, [stripe.md § 13](stripe.md#13-courier-payouts-s-151)) |
 | `IDENTITY_PROVIDER` | ✓ | | | | staging and prod (`stripe`; `local` refused there — S-22, [stripe.md § Identity](stripe.md#8-identity-s-22)) |
 | `AGE_VERIFICATION_PROVIDER`, `AGE_VERIFICATION_APP_RETURN_URL`, `RESTRICTED_LICENCE_CRON` | ✓ | | | | `AGE_VERIFICATION_PROVIDER` in staging and prod (`stripe`; `local` refused there — 2026-10-04, [age-restricted.md](age-restricted.md)); the others optional |
-| `DISPUTE_EVIDENCE_PROVIDER`, `STANDING_ENFORCEMENT_CRON` | ✓ | | | | `DISPUTE_EVIDENCE_PROVIDER` in staging and prod (`stripe`; `local` refused there — S-156, [stripe.md § 13](stripe.md#13-card-disputes--evidence-to-stripe-s-156)); the cron optional ([standing.md](standing.md)) |
+| `DISPUTE_EVIDENCE_PROVIDER`, `STANDING_ENFORCEMENT_CRON` | ✓ | | | | `DISPUTE_EVIDENCE_PROVIDER` in staging and prod (`stripe`; `local` refused there — S-156, [stripe.md § 14](stripe.md#14-card-disputes--evidence-to-stripe-s-156)); the cron optional ([standing.md](standing.md)) |
 | `PLUS_BILLING_PROVIDER`, `STRIPE_PLUS_MONTHLY_PRICE`, `STRIPE_PLUS_ANNUAL_PRICE` | ✓ | | | | staging and prod (`stripe` with both Stripe Price ids; `local` refused there — S-152, [stripe.md § 11](stripe.md#11-northline-plus--stripe-billing-s-152)) |
 | `PLUS_AUTOMATIC_TAX`, `PLUS_MONTHLY_PRICE_CENTS`, `PLUS_ANNUAL_PRICE_CENTS`, `PLUS_TRIAL_DAYS`, `PLUS_SERVICE_FEE_WAIVED`, `PLUS_MEMBER_PRICES`, `PLUS_POINTS_MULTIPLIER_PCT`, `PLUS_GRACE_DAYS`, `LOYALTY_JOBS_CRON`, `LOYALTY_REFERRAL_WINDOW`, `LOYALTY_NEW_ACCOUNT_WINDOW`, `LOYALTY_CLAIM_ATTEMPTS_PER_HOUR` | ✓ | | | | no (S-152, [loyalty.md](loyalty.md)) |
 | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | ✓ | | | | staging and prod (`fixtures` refused there — S-23, [registries.md](registries.md)) |
@@ -708,11 +709,11 @@ each provider's calculator or console before ordering.
 
 | | `gcp-dryrun` (Google Cloud) | `ovh-vps` (OVHcloud) | `ovh-mks` (OVHcloud) |
 |---|---|---|---|
-| Where | Montréal `northamerica-northeast1`, one zone | Beauharnois (BHS), one VPS | Beauharnois, Public Cloud BHS5 |
+| Where | Montréal `northamerica-northeast1`, one zone | `OVH_LOCATION`: Vint Hill (OVHcloud US, for now; demo data only) or Beauharnois, one VPS | `US-EAST-VA-1` (for now) or `BHS5` |
 | Compute | zonal GKE, 2 × `e2-standard-4` Spot | one VPS 8 vCore / 24 GB / 200 GB NVMe, k3s | free MKS control plane, 2 × `b3-16` |
 | Postgres + PostGIS | CloudNativePG in the cluster (or external) | CloudNativePG on the VPS | Managed PostgreSQL 17 Essential (or in the cluster) |
 | Valkey, Meilisearch, Kafka | in the cluster (or external) | on the VPS | in the cluster |
-| Object storage | Cloud Storage (CMEK) | Object Storage BHS (S3 API) | Object Storage BHS (S3 API) |
+| Object storage | Cloud Storage (CMEK) | Object Storage in the location (S3 API) | Object Storage in the location (S3 API) |
 | Secrets | Secret Manager + External Secrets | plain Secrets from `.ovh/ovh-vps.env` | plain Secrets from `.ovh/ovh-mks.env` |
 | Keys (signing, sealing) | Cloud KMS | local (a key file, `KMS_LOCAL_KEY`): `dev` only | local, as `ovh-vps` |
 | Edge | Envoy Gateway behind a regional network LB, external-dns | Envoy Gateway on the VPS's ports 80/443, DNS by hand | Envoy Gateway behind an OVHcloud LB, DNS by hand |

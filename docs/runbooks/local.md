@@ -308,6 +308,10 @@ Notes:
   RustFS under `<module>/<merchantId>/…` ([object-storage.md](object-storage.md#local-rustfs)). MinIO no longer
   publishes images on Docker Hub, so the `storage` profile runs RustFS (same S3 API); an existing MinIO or any
   S3-compatible server works the same way through `STORAGE_ENDPOINT`.
+- **Courier payouts (S-151):** without a Stripe key the api pays couriers through a fake: asking for the payout
+  onboarding link (courier app › Profile › Earnings) enables the courier's account at once, and the weekly run
+  (`COURIER_PAYOUTS_CRON`, Mondays) pays the next business morning. With `payments` (stripe-mock) the Connect calls go
+  to stripe-mock instead ([stripe.md § 13](stripe.md#13-courier-payouts-s-151)).
 - **Mail:** the api emails team invitations and money notices to Mailpit (`EMAIL_PROVIDER=local`, the default); without
   Mailpit each email's text is logged instead. Template previews: http://localhost:8080/api/v1/dev/emails
   ([email.md](email.md#local-mailpit)).

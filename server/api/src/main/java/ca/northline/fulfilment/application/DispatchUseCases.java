@@ -61,8 +61,18 @@ public final class DispatchUseCases {
          */
         RunView refuse(String userId, String stopId, String reason);
 
-        /** The refused order is back at the business ({@code return} stop). */
+        /** The goods are back at the business ({@code return} stop): a refused order, a failed one, or a return. */
         RunView returned(String userId, String stopId);
+
+        /**
+         * S-151: the courier couldn't hand the order over ({@code reason} one of {@code DeliveryRules.FAIL_REASONS};
+         * the note is required for {@code other}). A photo at the door must be uploaded first ({@link #proof}). The
+         * goods go back to their shops (a {@code return} stop each) and {@code delivery.failed} is published.
+         */
+        RunView fail(String userId, String stopId, String reason, @Nullable String note);
+
+        /** S-151: the courier collected a customer's return at their door ({@code collect} stop). */
+        RunView collect(String userId, String stopId);
 
         /**
          * S-88: the phone's position while on shift — kept only as the latest one, in Valkey; at most one per
@@ -70,6 +80,55 @@ public final class DispatchUseCases {
          */
         Ping ping(String userId, double lat, double lng, @Nullable Double heading);
     }
+
+    /**
+     * S-151: the courier app's earnings — per run and in the market's today and this week (Monday to Sunday), tips
+     * included — and their payout account.
+     */
+    public interface CourierEarnings {
+
+        EarningsView earnings(String userId);
+
+        /** Stripe's onboarding for the courier's payout account; they come back to {@code returnUrl}. */
+        String payoutOnboarding(String userId, String returnUrl);
+    }
+
+    /**
+     * @param zone the market's time zone the days and weeks are in
+     * @param runs this week's and last week's paid runs, latest first
+     */
+    public record EarningsView(
+            String zone,
+            Totals today,
+            Totals week,
+            List<RunEarning> runs,
+            long balanceCents,
+            ca.northline.payments.api.CourierPay.@Nullable Account payoutAccount,
+            List<ca.northline.payments.api.CourierPay.Payout> payouts) {
+
+        public EarningsView {
+            runs = List.copyOf(runs);
+            payouts = List.copyOf(payouts);
+        }
+    }
+
+    public record Totals(long payCents, long tipsCents, int runs, int stops) {
+        public long totalCents() {
+            return payCents + tipsCents;
+        }
+    }
+
+    public record RunEarning(
+            String runId,
+            @Nullable String label,
+            Instant earnedAt,
+            long payCents,
+            long tipsCents,
+            int pickups,
+            int dropoffs,
+            int failed,
+            int collects,
+            int returns) {}
 
     /** What the courier confirmed at the door of an age-restricted delivery (never the ID itself). */
     public record IdCheckAnswer(boolean idChecked, boolean recipientMatches, boolean ofAge) {}
@@ -99,6 +158,13 @@ public final class DispatchUseCases {
         ShiftView addShift(String courierId, Instant startsAt, Instant endsAt, Actor actor);
 
         RunSummary assign(String runId, String courierId, Actor actor);
+
+        /**
+         * S-151: a started run is stuck — the orders not picked up yet (every one of their pickups still to do), and the
+         * returns not collected yet, move to a new run for {@code courierId}; what the first courier already carries
+         * stays with them. Returns the new run.
+         */
+        RunSummary moveRemaining(String runId, String courierId, Actor actor);
 
         /**
          * S-81: stops giving the courier new runs (a run they have stays theirs; reassign it to move it), with the
@@ -161,6 +227,8 @@ public final class DispatchUseCases {
      * @param packed a pickup's shop has packed this order
      * @param proofKind the proof given ({@code photo} | {@code signature} | {@code pin} | {@code id_refused}) or uploaded so far
      * @param idCheck the ID check an age-restricted drop-off needs; null otherwise
+     * @param failReason S-151: why a failed drop-off wasn't handed over
+     * @param returnRef S-151: the customer's return a {@code collect} / {@code return} stop carries ({@code RT-…})
      */
     public record StopView(
             String id,
@@ -176,7 +244,9 @@ public final class DispatchUseCases {
             @Nullable Dropoff dropoff,
             boolean packed,
             @Nullable String proofKind,
-            @Nullable IdCheckView idCheck) {}
+            @Nullable IdCheckView idCheck,
+            @Nullable String failReason,
+            @Nullable String returnRef) {}
 
     public record Place(
             String merchantId,
