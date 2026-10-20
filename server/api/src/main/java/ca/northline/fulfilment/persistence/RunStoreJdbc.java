@@ -191,8 +191,9 @@ class RunStoreJdbc implements RunStore {
         if (runIds.isEmpty()) {
             return List.of();
         }
-        return jdbc.sql("select " + STOP + """
-                         from fulfilment.stops where run_id in (:r) and state <> 'cancelled' order by run_id, seq, id""")
+        return jdbc.sql(
+                        "select " + STOP
+                                + " from fulfilment.stops where run_id in (:r) and state <> 'cancelled' order by run_id, seq, id")
                 .param("r", List.copyOf(runIds))
                 .query(RunStoreJdbc::stop)
                 .list();
