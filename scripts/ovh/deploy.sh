@@ -13,7 +13,11 @@
 #
 # Environment: REGISTRY, IMAGE_TAG (required: where the images are and their tag — docs/runbooks/ovh.md § Images),
 # ADDONS=0 skips step 2, RESTART=1 restarts every app afterwards (after a secret changed: Helm can't see Secrets).
-# Twilio and SendGrid are switched on here when their keys are in the secrets file.
+# Twilio and SendGrid are switched on here when their keys are in the secrets file; without STRIPE_SECRET_KEY the api
+# runs on its fake payment gateway with identity and age checks on the local fakes (a first demo without Stripe).
+# OVH_DOMAIN [demo.northline.ca]: the zone of the public hosts (values-dryrun.yaml's urls) — another domain the operator
+# controls moves every host under it (OVH_DOMAIN itself is the consumer site, auth./api./studio./… below it).
+# OVH_SECRETS_SOURCE=env: every secret from environment variables (the pipeline, scripts/ovh/secrets.sh).
 set -euo pipefail
 . "$(dirname "$0")/common.sh"
 ovh_target "${1:-}"
@@ -88,6 +92,22 @@ fi
 if [ -n "$(env_get KAFKA_SASL_JAAS_CONFIG)" ]; then
   extra+=(--set apps.api.secretEnv.KAFKA_SASL_JAAS_CONFIG=true --set apps.auth.secretEnv.KAFKA_SASL_JAAS_CONFIG=true
     --set apps.worker.secretEnv.KAFKA_SASL_JAAS_CONFIG=true)
+fi
+if [ -z "$(env_get STRIPE_SECRET_KEY)" ]; then
+  extra+=(--set apps.api.env.IDENTITY_PROVIDER=local --set apps.api.env.AGE_VERIFICATION_PROVIDER=local)
+  echo "   no Stripe key: fake payment gateway, identity and age checks on the local fakes"
+fi
+for k in STRIPE_SECRET_KEY STRIPE_PUBLISHABLE_KEY STRIPE_WEBHOOK_SECRET STRIPE_CONNECT_WEBHOOK_SECRET; do
+  [ -n "$(env_get "$k")" ] || extra+=(--set "apps.api.secretEnv.$k=false")   # optional key: the pod starts without it
+done
+domain=${OVH_DOMAIN:-demo.northline.ca}
+if [ "$domain" != demo.northline.ca ]; then
+  jq -n --arg d "$domain" '{urls: {auth: "https://auth.\($d)", api: "https://api.\($d)", studio: "https://studio.\($d)",
+      consumer: "https://\($d)", console: "https://console.\($d)", pages: "https://pages.\($d)", webauthnRpId: $d},
+    apps: ({api: {env: {EMAIL_FROM: "Northline demo <no-reply@\($d)>"}}, auth: {env: {EMAIL_FROM: "Northline demo <no-reply@\($d)>"}},
+      worker: {env: {EMAIL_FROM: "Northline demo <no-reply@\($d)>"}}})}' >"$work/domain.json"
+  extra+=(-f "$work/domain.json")
+  echo "   hosts under $domain"
 fi
 helm upgrade --install northline "$H/northline" -n "$NS" \
   -f "$H/northline/values-dryrun.yaml" -f "$H/northline/values-$OVH_TARGET.yaml" -f "$work/values.json" \
