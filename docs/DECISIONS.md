@@ -10282,7 +10282,7 @@ Branch `feat/s157-wallets-consent`. Runbooks: [stripe.md § 14](runbooks/stripe.
   `Deliveries.commercialSms`).
 - **Tests:** api `PaymentOptionsApiTest`, `StripePaymentSettingsTest`, `StripeWebhookApiTest` +1 (the returned-payout
   notice), `SmsWebhookApiTest` (STOP once, French, START only after STOP, HELP / unknown number, statuses, 400s),
-  `SmsWebhookSignatureTest` (Twilio-signed context: missing / tampered / valid), `ConsoleOffersApiTest` (preview,
+  `SmsWebhookSignatureTest` (standalone MockMvc, no extra Spring context: missing / tampered / valid signature, 503 for AWS), `ConsoleOffersApiTest` (preview,
   exact audience, payload without PII, audit, test send, 403s, 422s en/fr, 409), `ConsentWordingsTest` (+ the keyword
   wording's hash), `ConsoleRolesApiTest`; auth `SignupConsentApiTest` (wordings en/fr per app, recorded with evidence
   only on creation, nothing when unticked, Studio wording, 422s, the app's registration); email `EmailTemplatesTest` +1
