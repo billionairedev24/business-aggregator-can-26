@@ -13,7 +13,7 @@
 #
 # Environment: REGISTRY, IMAGE_TAG (required: where the images are and their tag — docs/runbooks/ovh.md § Images),
 # ADDONS=0 skips step 2, RESTART=1 restarts every app afterwards (after a secret changed: Helm can't see Secrets).
-# Twilio and SendGrid are switched on here when their keys are in the secrets file; without STRIPE_SECRET_KEY the api
+# Twilio and the email provider (SMTP relay, demo inbox or SendGrid — below) are switched on from the secrets file; without STRIPE_SECRET_KEY the api
 # runs on its fake payment gateway with identity and age checks on the local fakes (a first demo without Stripe).
 # OVH_DOMAIN [demo.northline.ca]: the zone of the public hosts (values-dryrun.yaml's urls) — another domain the operator
 # controls moves every host under it (OVH_DOMAIN itself is the consumer site, auth./api./studio./… below it).
@@ -84,10 +84,44 @@ if [ -n "$(env_get SMS_AUTH_TOKEN)" ] && [ -n "$(env_get SMS_ACCOUNT_ID)" ] && [
     --set-string "apps.auth.env.SMS_ACCOUNT_ID=$(env_get SMS_ACCOUNT_ID)" --set apps.auth.secretEnv.SMS_AUTH_TOKEN=true)
   echo "   SMS codes through Twilio"
 fi
-if [ -n "$(env_get EMAIL_API_KEY)" ]; then
-  extra+=(--set apps.api.env.EMAIL_PROVIDER=sendgrid --set apps.worker.env.EMAIL_PROVIDER=sendgrid
-    --set apps.api.secretEnv.EMAIL_API_KEY=true --set apps.worker.secretEnv.EMAIL_API_KEY=true)
+# Email for api, auth (account codes, S-154) and worker — the first that applies (docs/runbooks/ovh.md § Email):
+#   OVH_DEMO_MAILPIT=true  the demo inbox in the namespace (chart demoMail): every email lands there, nothing is
+#                          delivered; the inbox is https://mail.<domain> behind basic auth (user demo, MAILPIT_PASSWORD)
+#   SMTP_HOST              any SMTP relay on port 587 with STARTTLS (OVHcloud email, Brevo, Gmail, SendGrid SMTP…)
+#   EMAIL_API_KEY          SendGrid's API
+#   none                   EMAIL_PROVIDER=local: no SMTP server answers in the cluster, so each email's text — the
+#                          6-digit sign-up codes included — is written to that app's log at WARN (kubectl logs)
+domain=${OVH_DOMAIN:-demo.northline.ca}
+mail_apps="api auth worker"
+mailpit=${OVH_DEMO_MAILPIT:-$(env_get OVH_DEMO_MAILPIT)}
+if [ "$mailpit" = true ]; then
+  extra+=(--set demoMail.enabled=true --set-string "demoMail.url=https://mail.$domain")
+  for a in $mail_apps; do
+    extra+=(--set "apps.$a.env.EMAIL_PROVIDER=smtp" --set-string "apps.$a.env.SMTP_HOST=northline-mailpit"
+      --set-string "apps.$a.env.SMTP_PORT=1025" --set-string "apps.$a.env.SMTP_STARTTLS=false")
+  done
+  [ -z "$(env_get SMTP_HOST)" ] || echo "   warning: OVH_DEMO_MAILPIT=true wins over SMTP_HOST — nothing is delivered"
+  echo "   emails into the demo inbox https://mail.$domain (user demo)"
+elif [ -n "$(env_get SMTP_HOST)" ]; then
+  for a in $mail_apps; do
+    extra+=(--set "apps.$a.env.EMAIL_PROVIDER=smtp" --set-string "apps.$a.env.SMTP_HOST=$(env_get SMTP_HOST)"
+      --set-string "apps.$a.env.SMTP_PORT=$(env_get SMTP_PORT | sed 's/^$/587/')"
+      --set-string "apps.$a.env.SMTP_STARTTLS=$(env_get SMTP_STARTTLS | sed 's/^$/true/')")
+    if [ -n "$(env_get SMTP_USERNAME)" ]; then
+      extra+=(--set-string "apps.$a.env.SMTP_USERNAME=$(env_get SMTP_USERNAME)" --set "apps.$a.secretEnv.SMTP_PASSWORD=true")
+    fi
+  done
+  echo "   emails through SMTP $(env_get SMTP_HOST)"
+elif [ -n "$(env_get EMAIL_API_KEY)" ]; then
+  for a in $mail_apps; do
+    extra+=(--set "apps.$a.env.EMAIL_PROVIDER=sendgrid" --set "apps.$a.secretEnv.EMAIL_API_KEY=true")
+  done
   echo "   emails through SendGrid"
+else
+  echo "   no email provider: emails (sign-up codes included) only in the apps' logs — kubectl -n $NS logs deploy/northline-auth"
+fi
+if [ -n "$(env_get EMAIL_FROM)" ]; then
+  for a in $mail_apps; do extra+=(--set-string "apps.$a.env.EMAIL_FROM=$(env_get EMAIL_FROM)"); done
 fi
 if [ -n "$(env_get KAFKA_SASL_JAAS_CONFIG)" ]; then
   extra+=(--set apps.api.secretEnv.KAFKA_SASL_JAAS_CONFIG=true --set apps.auth.secretEnv.KAFKA_SASL_JAAS_CONFIG=true
@@ -100,7 +134,6 @@ fi
 for k in STRIPE_SECRET_KEY STRIPE_PUBLISHABLE_KEY STRIPE_WEBHOOK_SECRET STRIPE_CONNECT_WEBHOOK_SECRET; do
   [ -n "$(env_get "$k")" ] || extra+=(--set "apps.api.secretEnv.$k=false")   # optional key: the pod starts without it
 done
-domain=${OVH_DOMAIN:-demo.northline.ca}
 if [ "$domain" != demo.northline.ca ]; then
   jq -n --arg d "$domain" '{urls: {auth: "https://auth.\($d)", api: "https://api.\($d)", studio: "https://studio.\($d)",
       consumer: "https://\($d)", console: "https://console.\($d)", pages: "https://pages.\($d)", webauthnRpId: $d},

@@ -9,7 +9,8 @@
 #   3. the public address: ovh-vps the VPS's IPv4 (Terraform), ovh-mks the load balancer of Envoy's Service
 #   4. once the zone's records point at that address: over HTTPS — the issuer of auth's OpenID configuration, the
 #      Studio's and the consumer site's sign-in pages, the consumer home, the console (retried while Let's Encrypt issues
-#      the certificates). Before the records exist this step is reported as pending, not failed (SMOKE_STRICT=1 fails).
+#      the certificates), and with the demo inbox that https://mail.<domain> refuses a request without credentials.
+#      Before the records exist this step is reported as pending, not failed (SMOKE_STRICT=1 fails).
 #
 # Environment: OVH_DOMAIN [demo.northline.ca], SMOKE_STRICT [0], ROLLOUT_TIMEOUT [10m], CERT_WAIT [600] seconds.
 # Writes a Markdown summary to $GITHUB_STEP_SUMMARY when set (the URLs, the address, the records to create).
@@ -84,6 +85,11 @@ if [ "$(resolve "$D")" = "$ip" ] && [ "$(resolve "studio.$D")" = "$ip" ]; then
   check "consumer home" "https://$D/"
   check "consumer sign-in" "https://$D/sign-in"
   check "console" "https://console.$D/"
+  if kubectl -n "$NS" get deploy northline-mailpit >/dev/null 2>&1; then
+    # The demo inbox must answer only with credentials.
+    code=$(curl -s -o /dev/null --max-time 15 -w '%{http_code}' "https://mail.$D/" || true)
+    if [ "$code" = 401 ]; then ok "demo inbox https://mail.$D asks for a password"; else bad "demo inbox https://mail.$D answered $code without credentials (expected 401)"; fi
+  fi
   [ "$fail" = 1 ] && https=failed || https=ok
 else
   echo "pending: $D and studio.$D don't resolve to $ip yet — create the records below, then re-run the deploy (or make ovh-smoke)"
@@ -108,6 +114,12 @@ fi
   echo '```'
   echo
   echo "**URLs:** consumer https://$D · studio https://studio.$D · console https://console.$D · auth https://auth.$D · api https://api.$D"
+  echo
+  if kubectl -n "$NS" get deploy northline-mailpit >/dev/null 2>&1; then
+    echo "**Emails** (sign-up codes): the demo inbox https://mail.$D — user \`demo\`, the password MAILPIT_PASSWORD (docs/runbooks/ovh.md § Email)."
+  else
+    echo "**Emails** (sign-up codes): EMAIL_PROVIDER=\`$(kubectl -n "$NS" get configmap northline-auth -o jsonpath='{.data.EMAIL_PROVIDER}' 2>/dev/null)\` — with \`local\` they are only in \`kubectl -n $NS logs deploy/northline-auth\` (docs/runbooks/ovh.md § Email)."
+  fi
 } | tee -a "$summary"
 
 exit $fail
