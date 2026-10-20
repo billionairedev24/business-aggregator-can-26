@@ -9698,3 +9698,88 @@ until it restarts, so even a later `pnpm install` didn't help, and `make up` sai
   little soft on wide screens); people in the photos gave no model release — fine for a demo, replace them before a
   public launch; about 15 slots had no usable candidate (e.g. pharmacy, notary, web design, pressure washing, drywall)
   and fall back.
+
+## 2026-09-30 — S-151 Cancellations, failed deliveries, returns and courier pay
+
+Closes what S-51, S-78, S-81, S-86, S-87 and S-88 left "Not done": cancelling an order, a delivery that can't be
+made, returns, courier pay and payouts, and moving the rest of a stuck run. Runbooks:
+[fulfilment.md § Cancelling, failed deliveries and returns](runbooks/fulfilment.md#cancelling-failed-deliveries-and-returns-s-151),
+[§ Courier earnings and payouts](runbooks/fulfilment.md#courier-earnings-and-payouts-s-151),
+[stripe.md § 11](runbooks/stripe.md#11-courier-payouts-s-151), [courier-app.md](runbooks/courier-app.md).
+
+**Decisions**
+
+- **Who may cancel, until when, is configuration** (`northline.orders.after-sale`): the customer until any shop packs,
+  a shop its own lines until the courier has them, Northline staff (console orders screen + the `support` action,
+  audited `orders.order_cancelled` with codes only) until delivery. After delivery it is a return or a refund, not a
+  cancellation. Food orders keep the kitchen flow (409 `not_cancellable`).
+- **Money goes through the refund queue, not around it.** Orders' listeners call `payments.api.OrderRefunds`: each
+  shop's lines become an immediate `Refund` charged to that shop (the hold voided when uncaptured — no ledger entry —
+  else refunded, with the usual ledger entries and `taxes.refunded` reversing the tax through the `TaxGateway`). The
+  delivery fee hold is voided, or partly captured when a missed-delivery fee is kept (with its proportional tax).
+  Courier tips on a cancelled order are cancelled with it.
+- **Stock comes back** through `SellableOffers.giveBack` (restock on by default for shops and staff; a shop's return
+  approval asks).
+- **Fulfilment stays below orders:** orders tells fulfilment through `DeliveryRequests.cancel / dropPickup /
+  redeliver` and `ReturnPickups`; fulfilment publishes `DeliveryFailed`, `ReturnCollected`, `ReturnDelivered`. A run
+  left with no stops is `cancelled` and its courier freed; `RunChanged` gains `cancelled`, `stops_removed`,
+  `stops_moved` (schema widened, additive). A race between "placed" and "cancelled" hand-overs is settled by checking
+  the order again before a delivery is made.
+- **Failed delivery:** the courier's photo at the door is required (proof kind `failed`); every shop of the order gets
+  a return stop. The customer has `failed-delivery-decide-within` (48 h) to choose re-delivery (next run, counted in
+  `attempts`, no extra charge) or a refund keeping `failed-delivery-fee-cents` (0); after that a job refunds it.
+- **Returns:** one shop per request, a reason and one photo (object storage, `orders/returns/`); the window is the
+  category's (`catalogue.category_return_windows`, 0 = not returnable; food and restricted items are 0) else 30 days.
+  The shop approves (pickup by a courier, or drop-off) or declines with a reason the customer sees; a declined return
+  can be escalated to the existing disputes queue (`CustomerCases.openDispute`). The refund happens when the shop has
+  the goods (marked received, or delivered back by the courier).
+- **Return pickups ride the pooled runs:** a `collect` stop and a `return` stop join the market's planned pooled run
+  starting within 24 h, else a run of their own after 24 h (both configuration).
+- **Courier pay is region configuration:** `region.regions.courier_pay` (jsonb, province then market overriding the
+  platform defaults: $4.00 a run, $1.00 a shop, $3.00 a door, $3.00 a failed door, $3.00 a collect, $1.00 a return).
+  A finished run is paid once, with the model it was paid under, onto the courier's ledger account (`courier_pay` →
+  `courier:<userId>`). Days and weeks on the courier's earnings are in the market's zone.
+- **Payouts through the payouts port:** couriers are Stripe Connect **Express recipients** (transfers only, manual
+  payouts). A weekly job transfers the balance (≥ $1.00) and pays it out; failed payouts return to the balance. A fake
+  gateway under `local`/`test`. The onboarding return page is `/courier/payouts` on the consumer host (claimed by the
+  courier app; on the web it redirects home); the app opens onboarding in the in-app browser.
+- **Moving a stuck run:** console › Delivery ops › "Move remaining stops" (dispatch action) splits a `loading` /
+  `en_route` run: the orders not picked up yet go to a free courier as a new part of the same window (audited
+  `fulfilment.run_split`). A run that hasn't started is still reassigned whole (S-86).
+- **No personal data in events:** `order.cancelled`, `order.delivery_failed`, `return.updated` and `delivery.failed`
+  carry ids, codes and amounts only (the notes and photos stay in the api).
+
+**Schema (additive, V385–V388)**
+
+- V385 orders: `orders.state` + `delivery_failed`, `orders.cancelled_at`; `order_lines.state` + `cancelled`,
+  `cancelled_at`, `restocked`, `return_id`; `orders.cancellations`, `orders.delivery_failures`, `orders.returns`,
+  `orders.return_lines`, `orders.return_ref_seq`.
+- V386 fulfilment: `runs.state` + `cancelled` (the open-run index ignores it); `stops.state` + `cancelled`, `kind` +
+  `collect`, `proof_kind` + `failed`, `fail_reason`, `fail_note`, `return_id`; `deliveries.state` + `failed`,
+  `attempts`; `fulfilment.return_pickups`, `fulfilment.courier_earnings`.
+- V387 payments: `payments.courier_accounts`, `payments.courier_payouts` (account id, enabled, requirements due, bank
+  last 4 only — never a full account number).
+- V388: `region.regions.courier_pay` (jsonb); `catalogue.category_return_windows`.
+- Events: `orders.order_cancelled.v1`, `orders.order_delivery_failed.v1`, `orders.return_updated.v1` (topic
+  `orders.return`, new), `fulfilment.delivery_failed.v1`; `fulfilment.run_changed.v1` widened.
+- Configuration: `northline.orders.after-sale.*`, `northline.fulfilment.courier-pay.*`, `…return-join-within`,
+  `…return-direct-after`, `…courier-payout-return`; one new environment variable, `COURIER_PAYOUTS_CRON`.
+
+**Not done**
+
+- Promo codes are not released on a cancellation (releasing would hand points back a second time, since the refund
+  already returns the points share); the code's use still counts for that customer.
+- Partner webhooks: no `order.cancelled` / `return.*` events for partners yet (`DeveloperRules.EVENTS` unchanged).
+- Shops cancel all of their lines on an order, staff the whole order; no single-line cancel. A return is one shop at a
+  time with one photo.
+- Staff can see an order's returns in the console but don't approve or decline them there (escalations go to the
+  disputes queue as before).
+- Re-delivery is free; there is no customer-chosen window for it (the next run in the market).
+- The web has no page of its own at `/courier/payouts` (it redirects home).
+- **Never ran against real Stripe:** courier Connect accounts, account links, account reads, transfers and payouts were
+  tested against stripe-mock only (request shapes, pinned version, Idempotency-Keys); stripe-mock keeps no state, so
+  Express onboarding, real transfers and payouts, a bank refusing a payout and the Connect webhooks for courier
+  accounts have not run. The refunds, voids and partial captures reuse the S-12/S-78 gateway calls (stripe-mock tested,
+  not live). Stripe Tax's reversal for these refunds ran only against the local tax fake.
+- **Mobile:** neither app has run on a device or simulator for these screens (Jest + RNTL against the in-app fixture
+  backends only); the camera on the failed-delivery screen and the in-app browser onboarding are untested on phones.
