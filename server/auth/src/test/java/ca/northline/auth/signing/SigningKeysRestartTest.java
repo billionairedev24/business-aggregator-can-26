@@ -37,6 +37,8 @@ class SigningKeysRestartTest {
                         "--spring.datasource.url=" + pg.getJdbcUrl(),
                         "--spring.datasource.username=" + pg.getUsername(),
                         "--spring.datasource.password=" + pg.getPassword(),
+                        // several instances on the shared container next to the suite's cached contexts (S-154)
+                        "--spring.datasource.hikari.maximum-pool-size=2",
                         "--northline.auth.signing.local-dir=" + dir,
                         "--logging.level.root=warn");
     }
