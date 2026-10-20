@@ -22,6 +22,12 @@ public interface TrustRuleStore {
     /** S-82: each business with at least {@code minReviews} reviews since {@code since}: its average and count. */
     java.util.List<ca.northline.trust.api.TrustConsequences.Below> averages(Instant since, int minReviews);
 
+    /**
+     * S-156: confirmed no-show flags of {@code rule} decided since {@code since}, counted per business
+     * ({@code no_show}) or per customer ({@code customer_no_show}, from the flag's evidence).
+     */
+    Map<String, Integer> confirmedNoShows(String rule, Instant since);
+
     /** S-82: businesses with an open off-platform payment flag raised after one of theirs was warned since {@code since}. */
     java.util.List<String> warnedAgain(Instant since);
 }

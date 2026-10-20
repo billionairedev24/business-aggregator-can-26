@@ -65,6 +65,7 @@ class QuoteService implements ListQuoteRequests, SendQuote, ReviseQuote, Decline
                             r.title(),
                             customer == null ? null : customer.shortName(),
                             customer == null ? null : customer.reliabilityScore(),
+                            customer == null ? 0 : customer.noShows(),
                             r.area(),
                             r.body(),
                             r.preferredAt(),
