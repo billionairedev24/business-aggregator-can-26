@@ -247,6 +247,21 @@ for t in vps mks; do
   check "dryrun × ovh-$t + Collector (flag)" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-$t.yaml" -f "test-values/infra-ovh-$t.yaml" \
     --set observability.collector.enabled=true
 done
+# S-155: what scripts/ovh/deploy.sh adds for a first demo without Stripe on the operator's own domain (OVH_DOMAIN):
+# identity and age checks on the local fakes, the Stripe keys optional, every host under that domain.
+nostripe=(--set apps.api.env.IDENTITY_PROVIDER=local --set apps.api.env.AGE_VERIFICATION_PROVIDER=local
+  --set apps.api.secretEnv.STRIPE_SECRET_KEY=false --set apps.api.secretEnv.STRIPE_PUBLISHABLE_KEY=false
+  --set apps.api.secretEnv.STRIPE_WEBHOOK_SECRET=false --set apps.api.secretEnv.STRIPE_CONNECT_WEBHOOK_SECRET=false
+  --set urls.auth=https://auth.demo.example --set urls.api=https://api.demo.example --set urls.studio=https://studio.demo.example
+  --set urls.consumer=https://demo.example --set urls.console=https://console.demo.example --set urls.pages=https://pages.demo.example
+  --set urls.webauthnRpId=demo.example --set-string "apps.api.env.EMAIL_FROM=Demo <no-reply@demo.example>"
+  --set-string "apps.auth.env.EMAIL_FROM=Demo <no-reply@demo.example>" --set-string "apps.worker.env.EMAIL_FROM=Demo <no-reply@demo.example>")
+check "dryrun × ovh-vps, no Stripe, own domain" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml "${nostripe[@]}"
+out=$(helm template northline "$CHART" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml "${nostripe[@]}")
+if grep -q 'IDENTITY_PROVIDER: "local"' <<<"$out" && grep -A4 'key: STRIPE_SECRET_KEY' <<<"$out" | grep -q 'optional: true' \
+    && grep -q 'https://studio.demo.example' <<<"$out" && ! grep -q 'demo.northline.ca' <<<"$out"; then
+  echo "ok   dryrun × ovh-vps without Stripe: local identity, Stripe keys optional, hosts under the operator's domain"
+else echo "FAIL dryrun × ovh-vps without Stripe / own domain"; failed=1; fi
 if [[ $(helm template northline "$CHART" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-mks.yaml" -f test-values/infra-ovh-mks.yaml \
     | awk '/^kind: Deployment$/{d=1} d && /^  name: northline-api$/{a=1} a && /^  replicas:/{print $2; exit}') == 2 ]]; then
   echo "ok   dryrun × ovh-mks: two replicas of the stateless apps"
