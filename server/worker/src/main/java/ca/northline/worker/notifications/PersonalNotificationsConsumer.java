@@ -37,7 +37,14 @@ class PersonalNotificationsConsumer {
             exclude = PoisonEventException.class,
             traversingCauses = "true")
     @KafkaListener(
-            topics = {"orders.order", "fulfilment.delivery", "fulfilment.run", "booking.booking", "booking.quote"},
+            topics = {
+                "orders.order",
+                "orders.return",
+                "fulfilment.delivery",
+                "fulfilment.run",
+                "booking.booking",
+                "booking.quote"
+            },
             groupId = GROUP)
     void on(ConsumerRecord<String, byte[]> record) {
         events.process(GROUP, record, notifier::on);

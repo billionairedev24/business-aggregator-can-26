@@ -204,17 +204,27 @@ class OrdersJdbc implements OrderQueries, OrderInsights, OfferSales, NavBadgeCon
                 .collect(java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    /** "4 to pack" / « 4 à emballer ». */
+    /** "4 to pack" / « 4 à emballer »; S-151: "· 1 return" / « · 1 retour » for returns waiting for the shop. */
     @Override
     public Map<String, String> badges(NavBadgeContributor.Context context) {
         var merchantId = context.merchantId();
-        var locale = context.locale();
+        var fr = "fr".equals(context.locale().getLanguage());
         int toPack = packing(merchantId, clock.instant()).toPack();
-        if (toPack == 0) {
-            return Map.of();
+        int returns = jdbc.sql("select count(*) from orders.returns where merchant_id = :m and state = 'requested'")
+                .param("m", merchantId)
+                .query(Integer.class)
+                .single();
+        var parts = new ArrayList<String>();
+        if (toPack > 0) {
+            parts.add((fr ? "%d à emballer" : "%d to pack").formatted(toPack));
         }
-        var text = "fr".equals(locale.getLanguage()) ? "%d à emballer" : "%d to pack";
-        return Map.of("orders", text.formatted(toPack));
+        if (returns > 0) {
+            parts.add(
+                    returns == 1
+                            ? (fr ? "1 retour" : "1 return")
+                            : (fr ? "%d retours" : "%d returns").formatted(returns));
+        }
+        return parts.isEmpty() ? Map.of() : Map.of("orders", String.join(" · ", parts));
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────────

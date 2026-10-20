@@ -37,7 +37,7 @@ class OrderMonitorJdbc implements OrderMonitor {
                           from orders.orders o
                           left join orders.delivery_windows w on w.id = o.window_id
                          where (o.placed_at >= :since
-                                or o.state not in ('delivered', 'confirmed', 'refunded', 'cancelled'))
+                                or o.state not in ('delivered', 'confirmed', 'refunded', 'cancelled', 'returned'))
                            and (:ref = '' or upper(o.ref) like :ref || '%')
                            and (:everyone or exists (select 1 from orders.order_lines sl
                                                       where sl.order_id = o.id and sl.merchant_id = any(:merchants)))

@@ -1118,3 +1118,37 @@ No licence with id %s	Aucun permis avec l’identifiant %s	new
 BC incorporation number is BC + 7 digits (e.g. BC0999999).	Le numéro de constitution de la C.-B. est BC + 7 chiffres (p. ex. BC0999999).	new
 BC registration number is FM + 7 digits (e.g. FM1016176).	Le numéro d'enregistrement de la C.-B. est FM + 7 chiffres (p. ex. FM1016176).	new
 The NEQ is 10 digits.	Le NEQ compte 10 chiffres.	new
+# S-151: cancellations, failed deliveries, returns, courier earnings
+Add a note for the reason “other”.	Ajoutez une note pour la raison « autre ».	new
+A shop has started packing this order, so it can't be cancelled now. You can return it after delivery.	Un commerce a commencé à emballer cette commande : elle ne peut plus être annulée. Vous pourrez la retourner après la livraison.	new
+The courier has picked this order up, so it can't be cancelled now.	Le livreur a récupéré cette commande : elle ne peut plus être annulée.	new
+This order was delivered: start a return instead.	Cette commande a été livrée : faites plutôt un retour.	new
+This order is already cancelled or refunded.	Cette commande est déjà annulée ou remboursée.	new
+Only shop orders can be cancelled here.	Seules les commandes de boutique peuvent être annulées ici.	new
+This shop has nothing left on the order to cancel.	Ce commerce n’a plus rien à annuler dans cette commande.	new
+Choose re-delivery or a refund.	Choisissez une nouvelle livraison ou un remboursement.	new
+This order's delivery hasn't failed.	La livraison de cette commande n’a pas échoué.	new
+You've already chosen what happens to this order.	Vous avez déjà choisi ce qu’il advient de cette commande.	new
+There's no delivery run to send it on right now. Choose a refund, or try later.	Aucune tournée n’est offerte pour l’instant. Choisissez un remboursement ou réessayez plus tard.	new
+Choose why you're returning it.	Choisissez pourquoi vous le retournez.	new
+Choose what you're returning.	Choisissez ce que vous retournez.	new
+Add a photo of the item.	Ajoutez une photo de l’article.	new
+You can return items once the order is delivered.	Vous pourrez retourner des articles une fois la commande livrée.	new
+The return window for this item has closed.	Le délai de retour de cet article est passé.	new
+This item can't be returned.	Cet article ne peut pas être retourné.	new
+This item is already being returned.	Cet article est déjà en cours de retour.	new
+Return items from one shop at a time.	Retournez les articles d’un seul commerce à la fois.	new
+Choose pickup or drop-off.	Choisissez la collecte ou le dépôt.	new
+Say why the return is declined.	Dites pourquoi le retour est refusé.	new
+This return can't change that way now.	Ce retour ne peut pas changer ainsi maintenant.	new
+Only a declined return can go to a Northline agent.	Seul un retour refusé peut être confié à un agent Northline.	new
+Tell the agent why the return should be accepted.	Dites à l’agent pourquoi le retour devrait être accepté.	new
+Photos can't be stored right now. Try again later.	Les photos ne peuvent pas être enregistrées pour l’instant. Réessayez plus tard.	new
+Choose why the order couldn't be handed over.	Choisissez pourquoi la commande n’a pas pu être remise.	new
+Take a photo at the door first.	Prenez d’abord une photo à la porte.	new
+Add a note saying what happened.	Ajoutez une note qui explique ce qui s’est passé.	new
+This stop was taken off your run.	Cet arrêt a été retiré de votre tournée.	new
+This run hasn't started: reassign the whole run.	Cette tournée n’a pas commencé : réattribuez la tournée au complet.	new
+Every order on this run is already picked up.	Toutes les commandes de cette tournée sont déjà récupérées.	new
+Set up your payout account first.	Configurez d’abord votre compte de versement.	new
+No return with id %s	Aucun retour avec l’identifiant %s	new

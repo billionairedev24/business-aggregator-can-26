@@ -49,7 +49,13 @@ class ConsoleOrderController {
             @Nullable @Size(max = AfterSale.MAX_NOTE, message = AfterSale.NOTE_LENGTH)
             String note,
 
-            boolean restock) {}
+            @Nullable Boolean restock) {
+
+        /** Absent: the units go back on sale (the goods never left the shop). */
+        boolean restocked() {
+            return restock == null ? true : restock;
+        }
+    }
 
     @GetMapping("/api/v1/console/orders/{orderId}/after-sale")
     @RequiresConsole(ConsoleScreen.ORDERS)
@@ -60,6 +66,6 @@ class ConsoleOrderController {
     @PostMapping("/api/v1/console/orders/{orderId}/cancel")
     @RequiresConsole(value = ConsoleScreen.ORDERS, actions = ConsoleAction.SUPPORT)
     Cancelled cancel(@PathVariable String orderId, @Valid @RequestBody CancelRequest body, CurrentStaff staff) {
-        return cancel.byStaff(orderId, staff.userId(), staff.roleCodes(), body.reason(), body.note(), body.restock());
+        return cancel.byStaff(orderId, staff.userId(), staff.roleCodes(), body.reason(), body.note(), body.restocked());
     }
 }

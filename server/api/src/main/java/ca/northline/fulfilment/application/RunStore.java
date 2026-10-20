@@ -72,8 +72,8 @@ public interface RunStore {
     List<Run> plannedPooled(String market, Instant from, Instant to);
 
     /**
-     * The storage key of the photo a courier left as an order's proof of delivery: a done drop-off whose proof is a
-     * photo still kept (S-107 retention clears it). Empty for a PIN or signature, before the drop-off, after retention,
+     * The storage key of the photo a courier left as an order's proof of delivery — or, S-151, at the door of a failed
+     * drop-off: a done drop-off whose proof is a photo still kept (S-107 retention clears it). Empty for a PIN or signature, before the drop-off, after retention,
      * and always for a delivery with an ID check at the door (2026-10-04).
      */
     Optional<String> proofPhotoKey(String orderId);

@@ -252,7 +252,9 @@ class RunStoreJdbc implements RunStore {
     public Optional<String> proofPhotoKey(String orderId) {
         return jdbc.sql("""
                         select s.proof_media_id from fulfilment.stops s
-                         where s.order_id = :o and s.kind = 'dropoff' and s.state = 'done' and s.proof_kind = 'photo'
+                         where s.order_id = :o and s.kind = 'dropoff' and s.state = 'done'
+                           -- S-151: a failed drop-off's photo at the door is shown too
+                           and s.proof_kind in ('photo', 'failed')
                            and s.proof_media_id is not null
                            -- 2026-10-04: a handoff with an ID check never shows a photo (it could show the ID)
                            and not exists (select 1 from fulfilment.deliveries d

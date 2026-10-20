@@ -51,7 +51,13 @@ class OrderController {
             @Nullable @Size(max = AfterSale.MAX_NOTE, message = AfterSale.NOTE_LENGTH)
             String note,
 
-            boolean restock) {}
+            @Nullable Boolean restock) {
+
+        /** Absent: the units go back on sale (the goods never left the shop). */
+        boolean restocked() {
+            return restock == null ? true : restock;
+        }
+    }
 
     @GetMapping
     @RequiresMerchant(VIEW)
@@ -79,7 +85,7 @@ class OrderController {
             @PathVariable String orderId,
             @Valid @RequestBody CancelRequest body,
             CurrentMember member) {
-        cancelOrders.bySeller(merchantId, orderId, member.userId(), body.reason(), body.note(), body.restock());
+        cancelOrders.bySeller(merchantId, orderId, member.userId(), body.reason(), body.note(), body.restocked());
         return mapper.toResponse(viewOrder.view(merchantId, orderId));
     }
 }

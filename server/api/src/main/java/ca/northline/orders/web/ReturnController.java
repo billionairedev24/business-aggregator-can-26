@@ -15,6 +15,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -49,7 +50,13 @@ class ReturnController {
             @Pattern(regexp = "pickup|dropoff", message = AfterSale.RETURN_METHOD)
             String method,
 
-            boolean restock) {}
+            @Nullable Boolean restock) {
+
+        /** Absent: not restocked. */
+        boolean restocked() {
+            return restock == null ? false : restock;
+        }
+    }
 
     record DeclineRequest(
             @NotBlank(message = AfterSale.DECLINE_REASON)
@@ -86,7 +93,7 @@ class ReturnController {
             @PathVariable String returnId,
             @Valid @RequestBody ApproveRequest body,
             CurrentMember member) {
-        return returns.approve(merchantId, returnId, member.userId(), body.method(), body.restock());
+        return returns.approve(merchantId, returnId, member.userId(), body.method(), body.restocked());
     }
 
     @PostMapping("/{returnId}/decline")
