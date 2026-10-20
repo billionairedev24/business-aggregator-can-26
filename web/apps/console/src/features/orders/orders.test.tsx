@@ -15,7 +15,7 @@ const monitor = (items = [
   row({ id: 'b1', ref: 'BK-7690', kind: 'booking', type: 'service', customer: 'L. Cardinal', sellers: ['Bow River Mechanics'], amountCents: 24000, state: 'confirmed', status: 'late', since: '2026-09-08T17:26:00Z' }),
   row({ id: 'o2', ref: 'NL-48102', customer: 'R. Diaz', sellers: ['A', 'B', 'C'], amountCents: 8840, state: 'picked_up', status: 'stuck' }),
   row({ id: 'b2', ref: 'BK-7655', kind: 'booking', type: 'service', customer: 'K. Ng', sellers: ['Sable & Soda'], amountCents: 64000, state: 'completed', status: 'escrow_48h', since: '2026-09-05T18:00:00Z' }),
-]): Monitor => ({ asOf: AS_OF, week: 6812, counts: { attention: 14, live: 431, escrow: 6, late: 9, all: 2000 }, items, truncated: false });
+]): Monitor => ({ asOf: AS_OF, week: 6812, counts: { attention: 14, live: 431, escrow: 6, late: 9, failed: 2, all: 2000 }, items, truncated: false });
 
 describe('orders & bookings (S-81, design 03)', () => {
   it('shows the week, what needs attention and the design’s chips', async () => {
