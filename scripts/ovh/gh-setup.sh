@@ -6,8 +6,11 @@
 #
 #   scripts/ovh/gh-setup.sh ovh-vps|ovh-mks          (make ovh-gh-setup TARGET=…)
 #
-# Needs the GitHub CLI (brew install gh; gh auth login — an account with admin rights on the repository), and for
-# ovh-vps ssh, ssh-keygen and ssh-keyscan (macOS has them). bash 3.2 compatible.
+# Needs the GitHub CLI (brew install gh; gh auth login — an account with admin rights on the repository), jq (macOS 15
+# has it; else brew install jq), and for ovh-vps ssh, ssh-keygen and ssh-keyscan (macOS has them). bash 3.2 compatible.
+#
+# It asks first for the location (OVH_LOCATION, S-160: us-east-va — the default —, us-west-or or ca-bhs) and shows the
+# token page of that location's OVHcloud entity (US and Canada accounts are separate).
 #
 # Environment: GH_REPO [the repository of this checkout], OVH_GH_BRANCHES ["develop main"] (branches allowed to deploy),
 # OVH_GH_REVIEWER [you] (GitHub login of the required reviewer), ASK_OPTIONAL=0 skips the optional questions.
@@ -26,13 +29,12 @@ gh auth status >/dev/null 2>&1 || die "gh is not signed in: gh auth login"
 echo "== $REPO, environment $T"
 
 # ---- the catalogue: name|secret or var|req, opt or gen|both, vps or mks|default|what it is ---------------------------
-CATALOGUE='OVH_ENDPOINT|var|req|both|ovh-ca|OVHcloud API endpoint (ovh-ca: an OVHcloud Canada account)
-OVH_SERVICE_NAME|var|req|both||Public Cloud project id (32 hex characters, top left of the project page)
+CATALOGUE='OVH_SERVICE_NAME|var|req|both||Public Cloud project id (32 hex characters, top left of the project page)
 TF_STATE_BUCKET|var|req|both||Object Storage bucket for the Terraform state (created by the pipeline if missing)
 TF_STATE_ACCESS_KEY|secret|req|both||S3 access key of the Object Storage user for the state (Object Storage › Users)
 TF_STATE_SECRET_KEY|secret|req|both||S3 secret key of that user
 OVH_DOMAIN|var|req|both|demo.northline.ca|DNS zone of the public hosts (you create its A records)
-OVH_VPS_SERVICE_NAME|var|req|vps||the VPS service name (vps-xxxxxxxx.vps.ovh.ca, Bare Metal Cloud › VPS)
+OVH_VPS_SERVICE_NAME|var|req|vps||the VPS service name (its page under Bare Metal Cloud › VPS, e.g. vps-xxxxxxxx.vps.ovh.us; .vps.ovh.ca in Canada)
 OVH_ADMIN_CIDRS|var|req|vps||who may SSH to the VPS besides the pipeline (your IP/32; up to 3, space-separated)
 OVH_EDGE_FIREWALL|var|opt|vps|true|OVHcloud Network Firewall in front of the VPS (true or false)
 OVH_API_ALLOWED_CIDRS|var|opt|mks||who may reach the Kubernetes API (your IP/32; empty = anyone with the kubeconfig)
@@ -121,13 +123,42 @@ for b in ${OVH_GH_BRANCHES:-develop main}; do
 done
 echo "environment $T: deployments from ${OVH_GH_BRANCHES:-develop main}"
 
-# ---- 2. OVHcloud API credentials (one of the two kinds) -------------------------------------------------------------
-echo "== OVHcloud API credentials"
+# ---- 2. where: the location (S-160) — it decides the API endpoint, the regions and the token page --------------------
+echo "== location"
+loc=$(from_file OVH_LOCATION)
+[ -n "$loc" ] || loc=$(gh variable get OVH_LOCATION --env "$T" --repo "$REPO" 2>/dev/null || true)
+if [ -z "$loc" ]; then
+  cat >/dev/tty <<'TXT'
+   Where Northline runs (OVH_LOCATION):
+     us-east-va  Vint Hill, Virginia   — OVHcloud US (us.ovhcloud.com), the default for now
+     us-west-or  Hillsboro, Oregon     — OVHcloud US
+     ca-bhs      Beauharnois, Québec   — OVHcloud Canada (ca.ovhcloud.com)
+   OVHcloud US and OVHcloud Canada are separate companies: separate accounts, logins, API endpoints and tokens. The
+   API token and the project below must come from the account of the location you pick.
+   A US location holds fake demo data only (dev profile): real Canadian customer data must be on ca-bhs before launch.
+TXT
+  loc=$(ask "OVH_LOCATION" us-east-va)
+fi
+ovh_location "$loc"
+put var OVH_LOCATION "$OVH_LOCATION"
+echo "   $OVH_LOCATION: $(loc_get label) — account at $(loc_get site), API $(loc_get api_endpoint)"
+if is_set OVH_ENDPOINT; then   # the S-155 setting: the location decides the endpoint now
+  gh variable delete OVH_ENDPOINT --env "$T" --repo "$REPO" >/dev/null && echo "   removed the old variable OVH_ENDPOINT (the location decides it)"
+fi
+if [ "$(loc_get country)" != CA ]; then
+  echo "   note: outside Canada — demo data only; the deploy refuses staging/prod values there (docs/runbooks/ovh.md § Data residency)"
+fi
+
+# ---- 3. OVHcloud API credentials (one of the two kinds) -------------------------------------------------------------
+echo "== OVHcloud API credentials ($(loc_get site) account)"
+token_url="$(loc_get token_url)?GET=/cloud/*&POST=/cloud/*&PUT=/cloud/*&DELETE=/cloud/*&GET=/vps/*&GET=/ip/*&POST=/ip/*&PUT=/ip/*&DELETE=/ip/*"
 ak=$(from_file OVH_APPLICATION_KEY); cid=$(from_file OVH_CLIENT_ID)
 if [ -n "$ak" ]; then kind=a
 elif [ -n "$cid" ]; then kind=s
 elif is_set OVH_APPLICATION_KEY || is_set OVH_CLIENT_ID; then kind=keep
-else kind=$(ask "Application key set from ca.api.ovh.com/createToken (a) or service account (s)" a)
+else
+  echo "   token page (signed in to $(loc_get site), rights pre-filled): $token_url"
+  kind=$(ask "Application key set from that page (a) or service account (s)" a)
 fi
 case "$kind" in
   (a)
@@ -144,7 +175,7 @@ case "$kind" in
   (*) die "a or s" ;;
 esac
 
-# ---- 3. the catalogue ------------------------------------------------------------------------------------------------
+# ---- 4. the catalogue ------------------------------------------------------------------------------------------------
 echo "== variables and secrets"
 my_ip=$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || true)
 pid=$(from_file OVH_SERVICE_NAME)
@@ -178,7 +209,7 @@ done 3<<EOF
 $CATALOGUE
 EOF
 
-# ---- 3b. the demo inbox's password: made here so you know it (user demo) ----------------------------------------
+# ---- 4b. the demo inbox's password: made here so you know it (user demo) ----------------------------------------
 mp=$(from_file OVH_DEMO_MAILPIT)
 [ -n "$mp" ] || mp=$(gh variable get OVH_DEMO_MAILPIT --env "$T" --repo "$REPO" 2>/dev/null || true)
 if [ "$mp" = true ]; then
@@ -192,7 +223,7 @@ if [ "$mp" = true ]; then
   fi
 fi
 
-# ---- 4. ovh-vps: the pipeline's own SSH key, installed on the VPS, and the VPS's host key ----------------------------
+# ---- 5. ovh-vps: the pipeline's own SSH key, installed on the VPS, and the VPS's host key ----------------------------
 if [ "$T" = ovh-vps ]; then
   echo "== SSH for the pipeline"
   need ssh ssh-keygen ssh-keyscan
@@ -202,7 +233,7 @@ if [ "$T" = ovh-vps ]; then
     ssh-keygen -q -t ed25519 -N '' -C "northline-ovh-pipeline" -f "$keyfile"
     echo "   new deploy key $keyfile (+ .pub)"
   fi
-  ip=$(ask "The VPS's IPv4 (its page in the console)" "")
+  ip=$(ask "The VPS's IPv4 (its page in the console; ordered in $(loc_get vps_datacenter))" "")
   [ -n "$ip" ] || die "the VPS's IPv4 is needed for its host key"
   if yes_no "Install the deploy key on ubuntu@$ip now (uses your own SSH access)?"; then
     ssh -o StrictHostKeyChecking=accept-new "ubuntu@$ip" \
@@ -218,7 +249,7 @@ if [ "$T" = ovh-vps ]; then
   put secret OVH_VPS_KNOWN_HOSTS "$kh"
 fi
 
-# ---- 5. a private registry instead of ghcr.io (repository-level: the image build job has no environment) ------------
+# ---- 6. a private registry instead of ghcr.io (repository-level: the image build job has no environment) ------------
 reg=$(from_file REGISTRY)
 if [ -n "$reg" ]; then
   gh variable set REGISTRY --repo "$REPO" --body "$reg" >/dev/null && echo "   set repository variable REGISTRY"
@@ -226,4 +257,4 @@ if [ -n "$reg" ]; then
 fi
 
 echo
-echo "Done. Next: Actions › ovh › Run workflow — target $T, action plan, then provision-and-deploy (docs/runbooks/ovh.md § Today)."
+echo "Done ($T in $OVH_LOCATION). Next: Actions › ovh › Run workflow — target $T, action plan, then provision-and-deploy (docs/runbooks/ovh.md § Today)."
