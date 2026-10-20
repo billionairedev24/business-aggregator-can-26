@@ -18,6 +18,7 @@ Docker executor that allows `docker:dind` (GitLab), plus public images and packa
 | infra | `infra.yml` › `tflint` (on by default) | `infra:tflint` (on by default) | tflint 0.64 with the terraform, aws, google and azurerm rulesets (`infra/terraform/.tflint.hcl`). |
 | deploy | `deploy.yml` › `java`, `web` (images) | `images:java`, `images:web` (`PIPELINE_PART=images` only, never in `all`) | S-14: build and push `api`, `auth`, `bff`, `worker` with Jib and `studio`, `consumer` with `web/Dockerfile` (buildx, amd64 + arm64) to the registry given as input; digests in the run summary / `image-digests.txt` ([deploy.md](deploy.md#build-and-push)) |
 | deploy | `deploy.yml` › `chart` | `chart:validate` (`PIPELINE_PART=chart` or `all`) | S-14: `deploy/helm/validate.sh` — `helm lint --strict` + `helm template \| kubeconform -strict` for dev/staging/prod × aws/gcp/azure, kind and Gateway API |
+| ovh | `ovh.yml` › `provision`, `images`, `deploy`, `scale` (input `action`) | — (GitHub only) | S-155: the OVHcloud dry-run targets ([ovh.md § Today](ovh.md#today-from-a-new-ovh-account-to-a-running-demo)) — `terraform plan`/`apply`/`destroy` on a state in OVHcloud Object Storage, the images through `deploy.yml` (called as a reusable workflow, amd64, ghcr.io), k3s over SSH or the MKS kubeconfig, the Secrets from the GitHub Environment `ovh-vps` / `ovh-mks`, both charts, the smoke test, `down`/`up`. Every job waits for the environment's required reviewer; it spends money at OVHcloud. |
 | gitops | `gitops.yml` › `validate` (`action=validate`) | `gitops:validate` (`PIPELINE_PART=gitops` or `all`) | S-15: `deploy/argocd/validate.sh` — the app of apps for dev/staging/prod × aws/gcp/azure \| `kubeconform -strict` against the Argo CD CRDs, the sync policy (only dev automated), the chart as each Application renders it, the Argo CD install kustomization ([gitops.md](gitops.md#checks-no-cluster)) |
 | gitops | `gitops.yml` › `promote` (`action=promote`) | `gitops:promote` (`PIPELINE_PART=promote` only) | S-15: `deploy/argocd/promote.sh` writes `deploy/argocd/envs/<env>/images.yaml` (digests looked up in the registry, or copied from another environment) and opens the promotion PR / merge request ([gitops.md § Promotion](gitops.md#promotion-build--digest--pr--sync)) |
 | events | `event-schemas.yml` › `event schemas` | `events:schemas` (`PIPELINE_PART=events` or `all`) | S-34: `./gradlew :event-contracts:eventSchemas` with the base branch (input `base` / `EVENT_SCHEMAS_BASE`, default `main`, fetched in full): schemas valid for the worker's validator, every `@Externalized` event ↔ a schema, sample payloads validate, no breaking change against the merge base without a version bump — required base (exit 2 without it). `server build` runs the first three and check 4 when the base is there ([events.md § Schema checks](events.md#7-schema-checks-s-34)). |
@@ -59,6 +60,7 @@ Expected durations (hosted runners; first run in brackets, before caches are war
   or `gh workflow run e2e.yml --ref <branch> [-f environment=staging] [-f grep=@smoke]`,
   or `gh workflow run infra.yml --ref <branch> [-f cloud=aws] [-f tflint=false]`,
   or `gh workflow run deploy.yml --ref <branch> -f registry=<registry/path> [-f image-tag=…] [-f images=java] [-f push=false] [-f login=ghcr]`,
+  or `gh workflow run ovh.yml -f target=ovh-vps -f action=plan` (S-155; then approve it under the run's *Review deployments*),
   or `gh workflow run gitops.yml -f action=validate` / `-f action=promote -f environment=staging -f from=dev`; follow with `gh run watch`.
 
 | Workflow | Input | Default | Meaning |
@@ -77,6 +79,11 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 | deploy | `login` | `password` | `password` (secrets `REGISTRY_USERNAME` / `REGISTRY_PASSWORD`) or `ghcr` (the workflow token) |
 | deploy | `platforms` | `linux/amd64,linux/arm64` | image platforms |
 | deploy | `chart` | `true` | run `deploy/helm/validate.sh` |
+| ovh | `target` | `ovh-vps` | `ovh-vps` or `ovh-mks` (the GitHub Environment of the same name) |
+| ovh | `action` | `plan` | `plan`, `apply`, `deploy`, `provision-and-deploy`, `down`, `up` or `destroy` |
+| ovh | `image-tag` | short sha | the images' tag |
+| ovh | `build-images` | `true` | `deploy`: build and push the images first |
+| ovh | `confirm-destroy` | — | `destroy` only: the target's name |
 | gitops | `action` | `validate` | `validate` or `promote` |
 | gitops | `environment` | `dev` | promote: target environment |
 | gitops | `from` | — | promote: copy the digests `dev` or `staging` runs |
@@ -84,7 +91,8 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 | gitops | `login` | `password` | promote: registry login for the lookup (`password`, `ghcr`, `none`) |
 | event-schemas | `base` | `main` | the branch the schemas are compared with |
 
-A new run on the same branch cancels the previous one of the same workflow (concurrency group per workflow and ref).
+A new run on the same branch cancels the previous one of the same workflow (concurrency group per workflow and ref) —
+except `ovh`: one run per target at a time, queued, never cancelled (an apply must not stop half-way).
 
 ### GitLab CI
 - **UI:** project › *Build › Pipelines* › *Run pipeline* › choose the branch, adjust the variables › *Run pipeline*.
