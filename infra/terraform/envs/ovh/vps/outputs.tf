@@ -35,9 +35,11 @@ output "s3_credentials" {
 }
 
 output "vps" {
-  description = "The VPS: service name, IPv4 (the DNS records' target and the SSH host), whether the Network Firewall is on, who may SSH (read by scripts/ovh/bootstrap-k3s.sh)."
+  description = "The server (an instance or a VPS — the name stays vps for the scripts): kind, service name or instance id, flavor, IPv4 (the DNS records' target and the SSH host), whether the Network Firewall is on, who may SSH (read by scripts/ovh/bootstrap-k3s.sh and ci.sh)."
   value = {
-    service_name  = var.vps_service_name
+    server        = var.server
+    service_name  = local.instance ? ovh_cloud_project_instance.box[0].id : var.vps_service_name
+    flavor        = local.instance ? var.instance_flavor : null
     ipv4          = local.vps_ipv4
     edge_firewall = length(ovh_ip_firewall.box) > 0
     ssh           = local.vps_ipv4 == null ? null : "ubuntu@${local.vps_ipv4}"
