@@ -1,0 +1,11 @@
+[(#{privacy-code.heading(${firstName})})]
+
+[(#{privacy-code.body})]
+
+    [(${code})]
+
+[(#{privacy-code.cta})]: [(${link})]
+
+[(#{privacy-code.expires(${minutes})})]
+[(#{privacy-code.ignore})]
+[# th:insert="~{footer.txt}" /]

@@ -130,4 +130,19 @@ class MerchantsPersonalData implements PersonalDataContributor {
         p.put("phone", subject.phone());
         return p;
     }
+
+    @Override
+    public List<Consequence> consequences(Subject subject) {
+        var sole = jdbc.sql("""
+                        select count(*) from merchants.merchant_members mm
+                          join merchants.merchants m on m.id = mm.merchant_id
+                         where mm.user_id = :u and mm.role = 'owner' and m.status in %s
+                           and not exists (select 1 from merchants.merchant_members o
+                                            where o.merchant_id = mm.merchant_id and o.role = 'owner' and o.user_id <> :u)
+                        """.formatted(OPEN_BUSINESS))
+                .param("u", subject.userId())
+                .query(Long.class)
+                .single();
+        return sole > 0 ? List.of(Consequence.of("sole_owner", sole)) : List.of();
+    }
 }

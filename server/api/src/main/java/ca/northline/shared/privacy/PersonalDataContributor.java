@@ -1,6 +1,7 @@
 package ca.northline.shared.privacy;
 
 import ca.northline.shared.CodedEnum;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -41,6 +42,33 @@ public interface PersonalDataContributor {
 
     /** Erases or pseudonymises the person's data; see the class comment. */
     Erasure erase(Subject subject);
+
+    /**
+     * S-159: what deleting the account would affect in this module right now, for the person to read before they
+     * confirm (Account › Delete account). Reads only; an empty list when nothing is affected.
+     */
+    default List<Consequence> consequences(Subject subject) {
+        return List.of();
+    }
+
+    /**
+     * One thing deleting the account affects.
+     *
+     * @param code {@code open_orders} · {@code upcoming_bookings} · {@code held_payments} · {@code open_refunds} ·
+     *     {@code open_disputes} · {@code points} · {@code plus} · {@code sole_owner}
+     * @param count how many (points: the balance)
+     * @param amountCents money involved, 0 when none
+     * @param until a date that goes with it (Plus: the end of the paid period), null when none
+     */
+    record Consequence(
+            String code,
+            long count,
+            long amountCents,
+            @Nullable Instant until) {
+        public static Consequence of(String code, long count) {
+            return new Consequence(code, count, 0, null);
+        }
+    }
 
     /** Field codes this module corrects on request ({@code phone}, {@code reviewName}). */
     default Set<String> correctable() {

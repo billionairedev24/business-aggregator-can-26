@@ -27,6 +27,7 @@ class TrustPersonalData implements PersonalDataContributor {
     static final String NAME_LENGTH = "Enter the name as it should appear, up to 80 characters.";
 
     private final JdbcClient jdbc;
+    private final ca.northline.trust.api.PointsWallet points;
 
     @Override
     public String module() {
@@ -117,5 +118,11 @@ class TrustPersonalData implements PersonalDataContributor {
                 .param("name", name)
                 .param("u", subject.userId())
                 .update();
+    }
+
+    @Override
+    public List<Consequence> consequences(Subject subject) {
+        var balance = points.balance(subject.userId());
+        return balance > 0 ? List.of(Consequence.of("points", balance)) : List.of();
     }
 }

@@ -75,6 +75,12 @@ public final class PrivacyRules {
         return "PR-" + number;
     }
 
+    /** {@code a•••@example.ca}: enough for the person to recognise their address (S-159). */
+    public static String maskedEmail(String email) {
+        var at = email.indexOf('@');
+        return at <= 0 ? "•••" : email.charAt(0) + "•••" + email.substring(at);
+    }
+
     /** "•••• 0148": the last four digits of a mobile number. */
     public static String maskedPhone(String phone) {
         return "•••• " + phone.substring(Math.max(0, phone.length() - 4));

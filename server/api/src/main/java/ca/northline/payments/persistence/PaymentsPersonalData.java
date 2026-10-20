@@ -157,4 +157,34 @@ class PaymentsPersonalData implements PersonalDataContributor {
     private int count(String sql, String userId) {
         return jdbc.sql(sql).param("u", userId).query(Integer.class).single();
     }
+
+    @Override
+    public List<Consequence> consequences(Subject subject) {
+        var u = subject.userId();
+        var out = new java.util.ArrayList<Consequence>();
+        jdbc.sql("""
+                        select count(*) as n, coalesce(sum(amount_cents + tax_cents), 0) as cents
+                          from payments.escrows where customer_id = :u and state = 'held'
+                        """)
+                .param("u", u)
+                .query((rs, _) -> new Consequence("held_payments", rs.getLong("n"), rs.getLong("cents"), null))
+                .optional()
+                .filter(c -> c.count() > 0)
+                .ifPresent(out::add);
+        var refunds = count("""
+                        select count(*) from payments.refunds r join payments.escrows e on e.id = r.escrow_id
+                         where e.customer_id = :u and r.state not in ('denied', 'paid')
+                        """, u);
+        if (refunds > 0) {
+            out.add(Consequence.of("open_refunds", refunds));
+        }
+        var disputes = count("""
+                        select count(*) from payments.disputes d join payments.escrows e on e.id = d.ref_id
+                         where e.customer_id = :u and d.state <> 'decided'
+                        """, u);
+        if (disputes > 0) {
+            out.add(Consequence.of("open_disputes", disputes));
+        }
+        return List.copyOf(out);
+    }
 }

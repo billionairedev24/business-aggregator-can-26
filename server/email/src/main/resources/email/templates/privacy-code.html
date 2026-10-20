@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{privacy-code.preheader(${minutes})}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{privacy-code.heading(${firstName})}">Heading</h1>
+  <p th:style="${s.p}" th:text="#{privacy-code.body}">Body</p>
+  <p th:style="${s.code}" th:text="${code}">123456</p>
+  <th:block th:replace="~{button.html :: button(#{privacy-code.cta}, ${link})}"/>
+  <p th:style="${s.small}" th:text="#{privacy-code.expires(${minutes})}">Expires</p>
+  <p th:style="${s.warning}" th:text="#{privacy-code.ignore}">Ignore</p>
+</div>
+</body>
+</html>

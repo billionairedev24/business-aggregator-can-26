@@ -37,7 +37,9 @@ public interface PrivacyAccounts {
             @Nullable String phone,
             String locale,
             String status,
-            @Nullable Instant erasureRequestedAt) {
+            @Nullable Instant erasureRequestedAt,
+            boolean phoneVerified,
+            boolean emailVerified) {
 
         public boolean erased() {
             return "erased".equals(status);
