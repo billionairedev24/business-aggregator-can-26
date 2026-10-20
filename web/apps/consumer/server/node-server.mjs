@@ -20,6 +20,9 @@ import { createPageRouter, PAGE_HEADERS } from './page-hosts.mjs';
 import { createSeo, isSeoPath } from './seo.mjs';
 import { appLinkAnswer, appLinksConfig, isAppLinkPath } from './app-links.mjs';
 import { CSP_REPORT_MAX_BODY, createCspReporter, createNonce, isCspReportPath, NONCE_HEADER, securityHeaders as createSecurityHeaders } from './security-headers.mjs';
+// The brand's error page (bilingual, the status kept, a reference in the log line): what this server answers itself
+// when it fails or has no page for a host. The app's own errors are handled in src/server.ts the same way.
+import { errorResponseParts } from '@northline/ui/error-page';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const clientDir = join(root, 'dist', 'client');
@@ -104,6 +107,18 @@ function toRequest(req, page, nonce) {
   });
 }
 
+/** This server's own error answer: the branded page (JSON for API callers) with its nonce'd retry script. */
+function sendError(req, res, status, error) {
+  const nonce = createNonce();
+  const answer = errorResponseParts({
+    status, error, nonce, source: 'consumer-node', supportEmail: process.env.NL_SUPPORT_EMAIL?.trim() || null,
+    request: { url: req.url, method: req.method, headers: req.headers },
+  });
+  if (res.headersSent) { res.destroy(); return; }
+  res.writeHead(answer.status, { ...createSecurityHeaders(process.env, nonce), ...answer.headers });
+  res.end(req.method === 'HEAD' ? undefined : answer.body);
+}
+
 async function send(res, response, head, nonce) {
   const headers = {};
   response.headers.forEach((value, key) => { if (key !== 'set-cookie') headers[key] = value; });
@@ -172,16 +187,14 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (route.type === 'notFound' || route.type === 'unavailable') {
-      res.writeHead(route.type === 'notFound' ? 404 : 503, { ...securityHeaders, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
-      res.end(route.type === 'notFound' ? 'No Northline page is connected to this domain.' : 'Try again in a moment.');
+      // no business page is connected to this host (404), or the lookup could not ask the consumer-bff (503)
+      sendError(req, res, route.type === 'notFound' ? 404 : 503, route.type === 'unavailable' ? new Error(`page host lookup failed for ${publicHost(req)}`) : undefined);
       return;
     }
     const nonce = createNonce();
     await send(res, await app.fetch(toRequest(req, route.page, nonce)), req.method === 'HEAD', nonce);
   } catch (error) {
-    console.error(`${req.method} ${req.url} failed`, error);
-    if (!res.headersSent) res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end('Internal Server Error');
+    sendError(req, res, 500, error); // logged with its reference (no query string, no headers)
   }
 });
 
