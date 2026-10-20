@@ -18,6 +18,7 @@ import { Route as ConsoleDisputesRouteImport } from './routes/_console/disputes'
 import { Route as ConsoleFinanceRouteImport } from './routes/_console/finance'
 import { Route as ConsoleGoLiveRouteImport } from './routes/_console/go-live'
 import { Route as ConsoleIntegrationsRouteImport } from './routes/_console/integrations'
+import { Route as ConsoleOffersRouteImport } from './routes/_console/offers'
 import { Route as ConsoleOnCallRouteImport } from './routes/_console/on-call'
 import { Route as ConsoleOrdersRouteImport } from './routes/_console/orders'
 import { Route as ConsolePilotRouteImport } from './routes/_console/pilot'
@@ -76,6 +77,11 @@ const ConsoleGoLiveRoute = ConsoleGoLiveRouteImport.update({
 const ConsoleIntegrationsRoute = ConsoleIntegrationsRouteImport.update({
   id: '/integrations',
   path: '/integrations',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleOffersRoute = ConsoleOffersRouteImport.update({
+  id: '/offers',
+  path: '/offers',
   getParentRoute: () => ConsoleRoute,
 } as any)
 const ConsoleOnCallRoute = ConsoleOnCallRouteImport.update({
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/finance': typeof ConsoleFinanceRoute
   '/go-live': typeof ConsoleGoLiveRoute
   '/integrations': typeof ConsoleIntegrationsRoute
+  '/offers': typeof ConsoleOffersRoute
   '/on-call': typeof ConsoleOnCallRoute
   '/orders': typeof ConsoleOrdersRoute
   '/pilot': typeof ConsolePilotRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/finance': typeof ConsoleFinanceRoute
   '/go-live': typeof ConsoleGoLiveRoute
   '/integrations': typeof ConsoleIntegrationsRoute
+  '/offers': typeof ConsoleOffersRoute
   '/on-call': typeof ConsoleOnCallRoute
   '/orders': typeof ConsoleOrdersRoute
   '/pilot': typeof ConsolePilotRoute
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/_console/finance': typeof ConsoleFinanceRoute
   '/_console/go-live': typeof ConsoleGoLiveRoute
   '/_console/integrations': typeof ConsoleIntegrationsRoute
+  '/_console/offers': typeof ConsoleOffersRoute
   '/_console/on-call': typeof ConsoleOnCallRoute
   '/_console/orders': typeof ConsoleOrdersRoute
   '/_console/pilot': typeof ConsolePilotRoute
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/go-live'
     | '/integrations'
+    | '/offers'
     | '/on-call'
     | '/orders'
     | '/pilot'
@@ -266,6 +276,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/go-live'
     | '/integrations'
+    | '/offers'
     | '/on-call'
     | '/orders'
     | '/pilot'
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/_console/finance'
     | '/_console/go-live'
     | '/_console/integrations'
+    | '/_console/offers'
     | '/_console/on-call'
     | '/_console/orders'
     | '/_console/pilot'
@@ -378,6 +390,13 @@ declare module '@tanstack/react-router' {
       path: '/integrations'
       fullPath: '/integrations'
       preLoaderRoute: typeof ConsoleIntegrationsRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/offers': {
+      id: '/_console/offers'
+      path: '/offers'
+      fullPath: '/offers'
+      preLoaderRoute: typeof ConsoleOffersRouteImport
       parentRoute: typeof ConsoleRoute
     }
     '/_console/on-call': {
@@ -495,6 +514,7 @@ interface ConsoleRouteChildren {
   ConsoleFinanceRoute: typeof ConsoleFinanceRoute
   ConsoleGoLiveRoute: typeof ConsoleGoLiveRoute
   ConsoleIntegrationsRoute: typeof ConsoleIntegrationsRoute
+  ConsoleOffersRoute: typeof ConsoleOffersRoute
   ConsoleOnCallRoute: typeof ConsoleOnCallRoute
   ConsoleOrdersRoute: typeof ConsoleOrdersRoute
   ConsolePilotRoute: typeof ConsolePilotRoute
@@ -520,6 +540,7 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleFinanceRoute: ConsoleFinanceRoute,
   ConsoleGoLiveRoute: ConsoleGoLiveRoute,
   ConsoleIntegrationsRoute: ConsoleIntegrationsRoute,
+  ConsoleOffersRoute: ConsoleOffersRoute,
   ConsoleOnCallRoute: ConsoleOnCallRoute,
   ConsoleOrdersRoute: ConsoleOrdersRoute,
   ConsolePilotRoute: ConsolePilotRoute,

@@ -82,7 +82,7 @@ describe('console shell (S-90, design 03)', () => {
     await user.click(screen.getByRole('button', { name: 'Account menu' }));
     await user.click(screen.getByRole('menuitem', { name: /Switch role view/ }));
     const finance = screen.getByRole('menuitemradio', { name: /^Finance/ });
-    expect(finance.textContent).toContain('6 views · refund, payouts, record go-live gates');
+    expect(finance.textContent).toContain('7 views · refund, payouts, record go-live gates'); // S-157: + offers
     expect(screen.getByText('You hold these roles; switching narrows what you see and can do. Logged.')).toBeTruthy();
     expect(screen.queryByRole('menuitemradio', { name: /^Admin/ })).toBeNull();
     await user.click(finance);

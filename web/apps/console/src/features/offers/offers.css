@@ -1,0 +1,13 @@
+/* S-157: the console's offers screen. Tokens only. */
+.nl-of-compose form { display: flex; flex-direction: column; gap: var(--space-3, 12px); }
+.nl-of-actions { display: flex; flex-wrap: wrap; gap: var(--space-2, 8px); }
+.nl-of-notice { margin: var(--space-3, 12px) 0 0; color: var(--color-success); }
+.nl-of-preview { display: flex; flex-direction: column; gap: var(--space-3, 12px); margin-top: var(--space-4, 16px); padding-top: var(--space-3, 12px); border-top: 1px solid var(--color-border); }
+.nl-of-h3 { margin: 0; font-size: var(--text-md, 1rem); color: var(--color-text); }
+.nl-of-audience { margin: 0; font-weight: 600; color: var(--color-text); }
+.nl-of-langs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--space-3, 12px); }
+.nl-of-rendered { min-width: 0; padding: var(--space-3, 12px); border: 1px solid var(--color-border); border-radius: var(--radius-md, 12px); background: var(--color-canvas); }
+.nl-of-lang { margin: 0 0 var(--space-2, 8px); font-size: var(--text-sm, 0.875rem); color: var(--color-text-muted); }
+.nl-of-subject { margin: 0 0 var(--space-2, 8px); font-weight: 600; color: var(--color-text); overflow-wrap: anywhere; }
+.nl-of-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: var(--text-sm, 0.875rem); color: var(--color-text); }
+.nl-of-tablewrap { overflow-x: auto; }
