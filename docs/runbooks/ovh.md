@@ -98,6 +98,7 @@ What ends up where ([§ Pipeline secrets and variables](#pipeline-secrets-and-va
 | the VPS's service name, your IP | variables `OVH_VPS_SERVICE_NAME`, `OVH_ADMIN_CIDRS` (proposed: your current address/32) |
 | the domain of the demo | variable `OVH_DOMAIN` (`demo.northline.ca` by default; any zone you control — every host moves under it) |
 | a GitHub classic token with **read:packages** only (Settings › Developer settings › Tokens (classic)) | secret `REGISTRY_PULL_TOKEN` — the cluster pulls the images from ghcr.io with it. Without it the pipeline uses the run's own token, which expires when the run ends (a restarted pod on a node without the image then can't pull) |
+| an SMTP relay's settings, or "demo inbox" (§ 6 — sign-ups need one) | variables `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_STARTTLS`, `EMAIL_FROM`, secret `SMTP_PASSWORD` — or variable `OVH_DEMO_MAILPIT=true` |
 | Stripe test keys, Twilio (optional, § 6) | secrets `STRIPE_*`, `SMS_AUTH_TOKEN`; variables `SMS_ACCOUNT_ID`, `SMS_FROM` |
 
 The app's own secrets (`TOTP_KEY`, `KMS_LOCAL_KEY`, the BFF secrets, the data-service passwords) need nothing from
@@ -130,20 +131,31 @@ for your approval; a run of one target never overlaps another run of the same ta
 workflows are manual too, and **GitHub Actions minutes may be depleted**: the image build is the expensive part (≈ 20
 runner-minutes). Without minutes, use the local alternative below.
 
-### 6. Stripe and Twilio — optional for a first demo
+### 6. Email (needed), Stripe and Twilio (optional)
 
-Under the `dev` profile:
+Since S-154 an account is **email + password**, confirmed with a **6-digit code sent by email**; the mobile number is
+optional and the Studio's and console's second factor is an authenticator app or a passkey. So **sign-ups need
+email, not Twilio** — pick one of these before inviting anyone ([§ Email](#email) has the exact settings):
+
+| choice | set (environment variables / secrets, or `.ovh/<target>.env`) | who can sign up |
+|---|---|---|
+| an SMTP relay — Brevo, Gmail with an app password, or OVHcloud's own email | `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USERNAME`, secret `SMTP_PASSWORD`, `SMTP_STARTTLS` (true), `EMAIL_FROM` | anyone: the codes reach their inbox |
+| the **demo inbox** (Mailpit in the cluster) for a private demo | `OVH_DEMO_MAILPIT=true` (gh-setup then makes and shows the inbox password, secret `MAILPIT_PASSWORD`) | the people you show `https://mail.<domain>` to: every email lands there, nothing is delivered |
+| nothing | — | only you, reading the code in the log: under `dev`, `EMAIL_PROVIDER=local` finds no mail server in the cluster and writes each email's text — the code and the link included — to the app's log at WARN (`kubectl -n northline-dryrun logs deploy/northline-auth \| grep -A12 'No SMTP server took the email'`) |
+
+Unlike SMS codes (withheld under `dev`, S-112), email codes are not withheld when no provider is configured — they
+are in the auth pod's log, which on OVHcloud goes nowhere else. `api` and `worker` (invitations, notifications) use
+the same settings as `auth`.
 
 - **Without Stripe** (no `STRIPE_SECRET_KEY`): the api uses its fake payment gateway, and the deploy switches
   identity and age checks to the local fakes. Everything starts; but the fakes' outcome pages exist only under
   `local`, so **an owner can't finish identity verification** (onboarding stops there) and age-restricted items
   can't be bought. Add the test keys later ([§ Stripe and Twilio](#stripe-and-twilio)), re-run `make ovh-gh-setup`,
   then `deploy`.
-- **Without Twilio**: **no one can sign up** — every registration verifies a phone, and under `dev` the stand-in
-  withholds the code ([demo.md § 2](demo.md#2-before-the-first-run-on-the-dry-run)). The sites, the sign-in pages and
-  the (empty) catalogue load; that is a deployment check, not a demo. A Twilio trial account (verified numbers only)
-  is enough: `SMS_AUTH_TOKEN` (secret), `SMS_ACCOUNT_ID`, `SMS_FROM` (variables).
-- Emails are written to the api's log without SendGrid (`EMAIL_API_KEY`).
+- **Without Twilio**: sign-ups by email work. What needs it: signing in to the consumer site **with a phone code**,
+  confirming a mobile number, and `make demo-data`, which still registers its accounts through the phone path (six
+  phones that receive SMS, [demo.md § 2](demo.md#2-before-the-first-run-on-the-dry-run)). A Twilio trial account
+  (verified numbers only) is enough: `SMS_AUTH_TOKEN` (secret), `SMS_ACCOUNT_ID`, `SMS_FROM` (variables).
 
 Then the first console admin and the demo data: [§ Demo data](#demo-data).
 
@@ -222,7 +234,11 @@ Per environment (`ovh-vps`, `ovh-mks`); `make ovh-gh-setup` sets them. **R** = r
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | secrets | O | both | Stripe **test** mode |
 | `SMS_AUTH_TOKEN` | secret | O | both | Twilio |
 | `SMS_ACCOUNT_ID`, `SMS_FROM` | variables | O | both | Twilio |
-| `EMAIL_API_KEY`, `KAFKA_SASL_JAAS_CONFIG` | secrets | O | both | SendGrid; an external Kafka |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_STARTTLS`, `EMAIL_FROM` | variables | O (an email way is needed for sign-ups) | both | an SMTP relay ([§ Email](#email)) |
+| `SMTP_PASSWORD` | secret | with `SMTP_USERNAME` | both | the relay's password / key |
+| `OVH_DEMO_MAILPIT` | variable | O | both | `true` = the demo inbox at `mail.<domain>` instead of delivering |
+| `MAILPIT_PASSWORD` | secret | O | both | the inbox password (user `demo`; gh-setup makes it) |
+| `EMAIL_API_KEY`, `KAFKA_SASL_JAAS_CONFIG` | secrets | O | both | SendGrid's API; an external Kafka |
 | `TOTP_KEY`, `WEBHOOK_SECRET_KEY`, `EMAIL_UNSUBSCRIBE_KEY`, `KMS_LOCAL_KEY`, `STUDIO_/CONSUMER_/CONSOLE_BFF_SECRET` (+ `_HASH`), `DB_PASSWORD`, `REDIS_PASSWORD`, `MEILISEARCH_API_KEY` | secrets | O | both | only to impose values; otherwise generated once in the cluster |
 
 Repository level (not per environment; the image build job has no environment): variable `REGISTRY` (a registry
@@ -242,6 +258,7 @@ to push; `MAVEN_MIRROR_*` as for [deploy.yml](deploy.md).
 - [Secrets](#secrets)
 - [Images](#images)
 - [DNS](#dns)
+- [Email](#email) — SMTP relays (Brevo, Gmail, OVHcloud email), the demo inbox, and what happens with none
 - [Stripe and Twilio](#stripe-and-twilio)
 - [Demo data](#demo-data)
 - [Between demos](#between-demos)
@@ -315,8 +332,10 @@ Between demos `make ovh-down TARGET=ovh-mks` scales the nodes to 0 (the rest kee
   the shared state from a Mac also needs the `aws` CLI (`make ovh-tf-init` creates the bucket with it).
 - An **OVHcloud Canada** account with a payment method ([§ Account](#account-and-api-credentials)).
 - Control of DNS for `northline.ca` (records under `demo.northline.ca`).
-- A Stripe account in **test mode** ([stripe.md](stripe.md)) and a Twilio account ([README § SMS](README.md#sms-and-voice-codes-s-8)):
-  under `dev` no one can register without real SMS codes ([demo.md § 2](demo.md#2-before-the-first-run-on-the-dry-run)).
+- A way to deliver email ([§ Email](#email): an SMTP relay, or the demo inbox): accounts are confirmed with an email
+  code (S-154). A Stripe account in **test mode** ([stripe.md](stripe.md)) and a Twilio account
+  ([README § SMS](README.md#sms-and-voice-codes-s-8)) are optional for a first demo
+  ([§ 6](#6-email-needed-stripe-and-twilio-optional)); `make demo-data` needs Twilio (it registers by phone).
 - An image registry the cluster can pull from ([§ Images](#images)).
 
 Everything below runs from the repository root.
@@ -524,14 +543,15 @@ Required before deploying: the generated ones. Stripe test values (`STRIPE_SECRE
 `STRIPE_PUBLISHABLE_KEY` `pk_test_…`; `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` after
 [§ Stripe](#stripe-and-twilio) — an empty one is left out of the api's environment) are optional since S-155 (without
 them: the fake payment gateway, identity and age checks on the local fakes). Optional too: `SMS_AUTH_TOKEN` + `SMS_ACCOUNT_ID` + `SMS_FROM` (all three switch
-`SMS_PROVIDER=twilio` on for northline-auth), `EMAIL_API_KEY` (SendGrid; otherwise emails are logged),
+`SMS_PROVIDER=twilio` on for northline-auth), the email settings of [§ Email](#email) (`SMTP_*` + `EMAIL_FROM`, `OVH_DEMO_MAILPIT` + `MAILPIT_PASSWORD`, or
+`EMAIL_API_KEY` for SendGrid; with none, emails — codes included — are only in the apps' logs),
 `KAFKA_SASL_JAAS_CONFIG` (an external Kafka), `REGISTRY_SERVER`/`_USERNAME`/`_PASSWORD`.
 
 **From the pipeline** the same script reads every key from environment variables instead
 (`OVH_SECRETS_SOURCE=env`: the GitHub environment's secrets and variables, [§ Today](#pipeline-secrets-and-variables)).
 A generated key without a value there is taken from the cluster's `secret/northline-generated`, or generated once and
 kept there, so redeploys never change it; each generated value is masked in the log. Stripe is optional in both modes
-(without `STRIPE_SECRET_KEY`: the fake payment gateway, identity and age checks on the local fakes — [§ 6](#6-stripe-and-twilio--optional-for-a-first-demo)).
+(without `STRIPE_SECRET_KEY`: the fake payment gateway, identity and age checks on the local fakes — [§ 6](#6-email-needed-stripe-and-twilio-optional)).
 Pipeline settings in the same file (`OVH_*`, `TF_STATE_*`, `REGISTRY*`) are read by `make ovh-gh-setup` and never
 copied into `northline-secrets`.
 
@@ -579,6 +599,55 @@ demo.northline.ca.        IN CAA 0 issue "letsencrypt.org"
 If the zone is at OVHcloud (Web Cloud › Domain names › DNS zone) the same records go there. Let's Encrypt validates
 each host over HTTP-01 through the Gateway once the records resolve; `kubectl -n northline-dryrun get certificates`.
 Switching a demo from Google Cloud to OVHcloud (or back) is changing these records — the hosts are the same.
+
+## Email
+
+Every email of the platform — the **sign-up and password-reset codes** (northline-auth, S-154), invitations and
+notifications (api, worker) — goes out the same way, chosen by `scripts/ovh/deploy.sh` from the settings (pipeline:
+the environment's variables and secrets; Mac: `.ovh/<target>.env`), first match wins:
+
+1. `OVH_DEMO_MAILPIT=true` — the demo inbox (below); nothing is delivered.
+2. `SMTP_HOST` set — `EMAIL_PROVIDER=smtp` for api, auth and worker with `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
+   `SMTP_PASSWORD` (secret), `SMTP_STARTTLS`.
+3. `EMAIL_API_KEY` set — SendGrid's API ([email.md](email.md)).
+4. none — `EMAIL_PROVIDER=local`: the text of each email, codes included, in the sending app's log (§ 6).
+
+`EMAIL_FROM` (e.g. `Northline demo <you@example.com>`, no commas) must be an address the relay lets you send from;
+without it the sender is `no-reply@<OVH_DOMAIN>`, which a relay will usually refuse or spam-folder. Only **port 587
+with STARTTLS** is supported (no implicit TLS on 465); with a login, STARTTLS is required. Settings change: update
+them, then `deploy` (pipeline) or `make deploy` + `RESTART=1`.
+
+The three easiest relays (exact settings as their documentation gave them; menu names and limits **unverified** —
+check them when you sign up). Each one stores and sends mail outside Canada: fine for fake demo data, not a decision
+for production ([email.md](email.md) covers that).
+
+| | **Brevo** (free: 300 emails a day) | **Gmail** with an app password | **OVHcloud email** (MX Plan with a domain at OVHcloud, or Email Pro) |
+|---|---|---|---|
+| sign-up | brevo.com account; *Senders, domains* › add and confirm the sender address (or authenticate your domain) | a Google account with **2-Step Verification on**; *Google Account › Security › App passwords* › create one (16 characters) | Web Cloud › Emails › the offer › create the mailbox |
+| `SMTP_HOST` | `smtp-relay.brevo.com` | `smtp.gmail.com` | MX Plan `ssl0.ovh.net`; Email Pro `pro1.mail.ovh.net` (the offer's *General information* shows yours) |
+| `SMTP_PORT` / `SMTP_STARTTLS` | `587` / `true` | `587` / `true` | `587` / `true` |
+| `SMTP_USERNAME` | the SMTP **login** on *SMTP & API › SMTP* (looks like `…@smtp-brevo.com`, not your account email) | your full Gmail address | the full mailbox address |
+| `SMTP_PASSWORD` | an **SMTP key** made on the same page | the app password (no spaces) | the mailbox password |
+| `EMAIL_FROM` | `Northline demo <the confirmed sender>` | `Northline demo <your Gmail address>` (Gmail rewrites any other From) | `Northline demo <the mailbox>` |
+| good for | a demo with real sign-ups | a quick test (≈ 500 a day; looks personal) | when the domain is already at OVHcloud |
+
+Others work the same way: SendGrid SMTP (`smtp.sendgrid.net`, user `apikey`, password = an API key, a verified
+sender), Mailgun (`smtp.mailgun.org`, `postmaster@<your domain>`). For mail that lands in inboxes rather than spam, send
+from your own domain and add the SPF/DKIM records the relay shows.
+
+### The demo inbox (private demos)
+
+`OVH_DEMO_MAILPIT=true` installs **Mailpit** in the namespace (chart value `demoMail`, image `axllent/mailpit`): api,
+auth and worker send every email to it over SMTP, and **nothing leaves the cluster**. Its inbox is at
+`https://mail.<OVH_DOMAIN>` (the wildcard record already covers it; Let's Encrypt issues its certificate like the
+others) behind HTTP basic auth — user `demo`, password `MAILPIT_PASSWORD` (`make ovh-gh-setup` generates it and
+shows it once; from a Mac it is in `.ovh/<target>.env`). Only the edge reaches the inbox and only this release's apps
+reach its SMTP port (NetworkPolicy). Messages live in memory (the latest 1000; a restart empties it).
+
+For a demo where you sit with the people signing up: they register with any address (real or not), you open the
+inbox and read out — or show — the 6-digit code. Anyone with the inbox password reads **every** email, so share it
+only with the demo's audience, and switch to a relay (unset `OVH_DEMO_MAILPIT`, set `SMTP_*`, `deploy`) before real
+people use their own addresses. The chart refuses it in staging and prod.
 
 ## Stripe and Twilio
 

@@ -238,7 +238,11 @@ keys from the GitHub Environment `ovh-vps` / `ovh-mks` (`OVH_SECRETS_SOURCE=env`
 keys need no secret there: the first deploy generates them and keeps them in `secret/northline-generated` in the
 namespace, which every later run reuses (never regenerated per run; masked in the log). Back it up after the first
 deploy; rotating one: set the new value as an environment secret (it wins over the stored one), `deploy`, then the
-rollout restart. Stripe is optional on these targets (the fake gateway and local identity fakes without it).
+rollout restart. Stripe is optional on these targets (the fake gateway and local identity fakes without it). Email (S-155b,
+[ovh.md § Email](ovh.md#email)): `SMTP_PASSWORD` goes into `northline-secrets` (api, auth and worker map it when
+`SMTP_USERNAME` is set); `SMTP_HOST`/`PORT`/`USERNAME`/`STARTTLS` and `EMAIL_FROM` are settings, not secrets; the demo
+inbox's password `MAILPIT_PASSWORD` becomes the basic-auth line of `northline-demo-mail-auth` (user `demo`), never an
+app variable.
 
 ## Local development and kind
 

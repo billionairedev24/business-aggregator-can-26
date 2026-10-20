@@ -10059,3 +10059,44 @@ scripts bash 3.2 parsing, shellcheck and runs against stubbed `kubectl`/`terrafo
   — unverified for this repository; the runbook's local alternative covers that and depleted Actions minutes.
 - **Not done**: no OVHcloud API automation for the state user; no Toronto; no `smoke` action of its own (re-run
   `deploy` with `build-images` off); prices and console menu names still unverified.
+
+## 2026-10-20 — S-155b Email on the OVHcloud targets (SMTP relay, demo inbox)
+
+Follow-up of S-155 (lead's request). Never run against a real cluster, relay or Mailpit; checked offline (helm
+template | kubeconform, actionlint, bash 3.2, shellcheck, stubbed runs).
+
+- **Correction:** the S-155 runbook said "without Twilio no one can sign up". Since S-154 the sites' sign-up
+  (Studio and consumer `RegisterFlow` → `POST /api/auth/accounts`) is email + password with a 6-digit **email** code;
+  the mobile number is optional and the Studio/console second factor is an authenticator or a passkey. Twilio is still
+  needed for phone-code sign-in, confirming a mobile, and `make demo-data`, whose script still registers through the
+  phone path (`/api/auth/register` + SMS code) — not changed here.
+- **What `EMAIL_PROVIDER=local` does under `dev` (checked in `EmailAutoConfiguration` / `SmtpEmailSender`):** SMTP to
+  `SMTP_HOST:SMTP_PORT` (default `localhost:1025`) in lenient mode; with nothing listening (a pod) it logs the whole
+  plain-text email at WARN ("No SMTP server took the email…") — the code is in the subject and the body, the link in
+  the body. It does **not** withhold codes the way the SMS stand-in does (S-112); auth's dev outbox endpoint is
+  `local`-profile only. Left as is (staging/prod refuse `local`; on OVHcloud the pod log goes nowhere else), stated in
+  the runbook; a candidate for the S-112 rule if the team wants email codes withheld under `dev` too.
+- **Selection in `scripts/ovh/deploy.sh`, first match:** `OVH_DEMO_MAILPIT=true` → the demo inbox; `SMTP_HOST` →
+  `EMAIL_PROVIDER=smtp` for **api, auth and worker** (SMTP_PORT default 587, SMTP_STARTTLS default true,
+  `secretEnv.SMTP_PASSWORD` when there is a login); `EMAIL_API_KEY` → SendGrid (now for auth too, it was api and
+  worker only); else `local`. `EMAIL_FROM` overrides the sender of the three. The chart already mapped
+  `SMTP_PASSWORD` (optional) on the three apps; no change there. `secrets.sh check` requires `SMTP_PASSWORD` with
+  `SMTP_USERNAME`; the SMTP settings and `EMAIL_FROM` are settings (never copied into `northline-secrets`).
+- **Demo inbox:** new chart value `demoMail` (`templates/demo-mail.yaml`): Mailpit `axllent/mailpit:v1.31.3` (pinned;
+  the compose file uses v1.29 locally), one replica, messages in memory (`MP_MAX_MESSAGES` 1000), non-root, read-only
+  root filesystem; UI basic auth with `MP_UI_AUTH_FILE` from the Secret `northline-demo-mail-auth` (bcrypt line for
+  user `demo`, written by `secrets.sh` from `MAILPIT_PASSWORD`); its host `demoMail.url` (`https://mail.<domain>`)
+  joins the chart's routes, so it gets its own listener, Let's Encrypt certificate and HSTS like every host (the
+  route helper gained an optional per-path `port` for a backend that isn't an app). NetworkPolicy: 8025 from the edge
+  peers only, 1025 from this release's pods only. Refused in staging/prod and without a `https://` url. Basic auth is
+  Mailpit's own, not Envoy's (Envoy Gateway's basic auth takes SHA-1 htpasswd only). TCP probes (whether Mailpit's
+  health endpoints sit behind the UI auth was not checked).
+- **Passwords:** `MAILPIT_PASSWORD` is a generated key (file `init`, or once in `secret/northline-generated`), but
+  `make ovh-gh-setup` generates it when `OVH_DEMO_MAILPIT=true` and **shows it once**, so the owner can open the inbox
+  without kubectl. Older `.ovh` files get one appended on the first apply with the inbox on.
+- **Smoke test:** with the inbox, `https://mail.<domain>` must answer 401 without credentials; the summary says where
+  the codes are (inbox, or the auth log with `local`).
+- **Relays documented** (settings from their documentation, menus and limits unverified): Brevo
+  (`smtp-relay.brevo.com`, SMTP login + SMTP key, confirmed sender), Gmail with an app password (`smtp.gmail.com`),
+  OVHcloud email (MX Plan `ssl0.ovh.net`, Email Pro `pro1.mail.ovh.net`); port 587 + STARTTLS only (the SMTP adapter
+  has no implicit TLS — 465 doesn't work). All three keep mail outside Canada: demo data only.
