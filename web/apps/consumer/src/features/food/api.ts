@@ -84,6 +84,7 @@ export const Totals = z.object({
   // mobile gaps part 2: the promo code and points on the dishes
   promoCode: z.string().nullish(), discountCents: z.number().int().optional().default(0), points: z.number().int().optional().default(0),
   pointsCents: z.number().int().optional().default(0), pointsAvailable: z.number().int().optional().default(0),
+  plusServiceFee: z.boolean().optional().default(false), // S-152: Plus waived the service fee
 });
 export type Totals = z.infer<typeof Totals>;
 export const FoodStarted = z.object({

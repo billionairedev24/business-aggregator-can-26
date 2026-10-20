@@ -15,6 +15,7 @@ export function CartPage() {
   const t = useCartT();
   const { user, loading } = useViewer();
   const cart = useQuery(cartQuery);
+  const moneyFormat = useFormatters();
   if (cart.isPending || loading) return <CartSkeleton />;
   // S-142: the loading and error states keep the page's h1
   if (cart.isError) return <div className="nl-page cart-page"><h1 className="cart-title">{t('cartTitle')}</h1><ErrorState message={t('loadError')} onRetry={() => void cart.refetch()} /></div>;
@@ -29,6 +30,7 @@ export function CartPage() {
     );
   }
   const view = cart.data;
+  const { money } = moneyFormat;
   const blocked = view.groups.some(g => g.items.some(i => !i.available));
   return (
     <div className="nl-page cart-page">
@@ -43,6 +45,7 @@ export function CartPage() {
         </div>
         <aside className="cart-summary" aria-label={t('summary')}>
           <p className="cart-subtotal cart-subtotal-aside">{t('subtotalItems', { count: view.itemCount })} <strong><Price cents={view.subtotalCents} size="md" /></strong></p>
+          {view.plusSavingsCents > 0 ? <p className="cart-note cart-plus" role="note">{t('plusSaved', { amount: money(view.plusSavingsCents) })}</p> : null}
           <p className="cart-note">{t('taxAtCheckout')}</p>
           {blocked ? <p className="cart-note cart-note-warn" role="note">{t('fixLines')}</p> : null}
           {user
@@ -83,6 +86,9 @@ function CartItem({ item, readOnly }: { item: CartLine; readOnly?: boolean }) {
       <span className="cart-line-body">
         {item.productId ? <SiteLink href={`/products/${item.productId}`} className="cart-line-name">{name}</SiteLink> : <span className="cart-line-name">{name}</span>}
         {meta ? <span className="cart-line-meta">{meta}</span> : null}
+        {item.memberPrice && item.listUnitCents != null
+          ? <span className="cart-line-plus">{t('plusPriceLine', { price: money(item.unitCents), was: money(item.listUnitCents) })}</span>
+          : item.memberUnitCents != null ? <span className="cart-line-plus">{t('plusOffer', { price: money(item.memberUnitCents) })}</span> : null}
         {problem ? <span className="cart-line-problem" role="note">{problem}</span> : item.stock <= 3 ? <span className="cart-line-low">{t('onlyLeft', { count: item.stock })}</span> : <span className="cart-line-stock">{t('inStock')}</span>}
         {readOnly ? <span className="cart-line-meta">{t('qtyValue', { qty: item.qty })}</span> : (
           <span className="cart-line-actions">
