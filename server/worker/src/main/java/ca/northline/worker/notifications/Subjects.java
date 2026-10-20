@@ -30,6 +30,9 @@ public interface Subjects {
     /** The customer of a refund case (its escrow's, else its booking's). */
     Optional<String> refundCustomer(String refundId);
 
+    /** S-151: the customer who asked for a return ({@code orders.returns}). */
+    Optional<String> returnCustomer(String returnId);
+
     /** S-153: the customer of a customer thread ({@code messaging.threads.counterpart_id}). */
     Optional<String> threadCustomer(String threadId);
 

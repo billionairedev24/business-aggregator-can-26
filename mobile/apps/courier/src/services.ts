@@ -80,6 +80,10 @@ export function createServices(options: ServiceOptions = {}): Services {
         return courier.refuse(a.stopId, a.reason, a.id);
       case 'returned':
         return courier.returned(a.stopId, a.id);
+      case 'fail':
+        return courier.fail(a.stopId, a.reason, a.note, a.id);
+      case 'collect':
+        return courier.collect(a.stopId, a.id);
     }
   };
   const outbox = new Outbox({

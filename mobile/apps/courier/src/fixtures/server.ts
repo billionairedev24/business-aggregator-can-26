@@ -22,6 +22,10 @@ export interface FixtureOptions {
   pilot?: boolean;
   /** 2026-10-04: the first order has age-restricted items (its drop-off needs the ID check). */
   idCheck?: boolean;
+  /** S-151: the run also collects a customer's return (a collect stop, then its return to the shop). */
+  withReturn?: boolean;
+  /** S-151: the courier has set up payouts (default false). */
+  payoutsEnabled?: boolean;
 }
 
 export function createFixtureServer(options: FixtureOptions = {}) {
@@ -71,6 +75,14 @@ export function createFixtureServer(options: FixtureOptions = {}) {
               ...(options.idCheck ? { idCheck: { age: 19, recipient: 'Sam Example' } } : {}) }),
             stop({ id: 'st-4', seq: 4, kind: 'dropoff', orderId: 'ord-b', orderRef: 'NL-48107', eta: iso(t0 + 40 * 60_000),
               dropoff: { street: '57 Sample Street', unit: null, city: 'Sampleville', postal: 'A1B 2C3', note: null, lat: null, lng: null } }),
+            ...(options.withReturn
+              ? [
+                  stop({ id: 'st-5', seq: 5, kind: 'collect', orderId: 'ord-c', orderRef: 'NL-48001', returnRef: 'RT-1201', eta: iso(t0 + 50 * 60_000),
+                    dropoff: { street: '9 Example Court', unit: null, city: 'Sampleville', postal: 'A1C 3D4', note: null, lat: null, lng: null } }),
+                  stop({ id: 'st-6', seq: 6, kind: 'return', orderId: 'ord-c', orderRef: 'NL-48001', returnRef: 'RT-1201', eta: iso(t0 + 60 * 60_000),
+                    place: { merchantId: 'm-1', name: 'Juniper Bakery', address: '12 Market Lane', lat: null, lng: null } }),
+                ]
+              : []),
           ],
         };
   if (!run) courier.status = shift.state === 'on' ? 'available' : 'offline';
@@ -82,6 +94,9 @@ export function createFixtureServer(options: FixtureOptions = {}) {
   /** What the ID checks recorded (the api keeps these three answers or the reason; never the ID). */
   const idChecks: Array<{ stopId: string; outcome: 'passed' | 'refused'; reason?: string }> = [];
   const calls: Array<{ method: string; path: string; idempotencyKey?: string }> = [];
+  /** S-151: failed drop-offs (reason and note) and the courier's payout account. */
+  const failures: Array<{ stopId: string; reason: string; note?: string }> = [];
+  const payout = { enabled: !!options.payoutsEnabled, onboardingLinks: 0 };
 
   const answer = (status: number, body?: unknown, headers: Record<string, string> = {}) =>
     new Response(body === undefined ? null : JSON.stringify(body), {
@@ -153,7 +168,23 @@ export function createFixtureServer(options: FixtureOptions = {}) {
       pings.push({ lat: Number(body.lat), lng: Number(body.lng) });
       return answer(200, { acceptedAt: iso(now()), nextAfterMs: 2000 });
     }
-    const m = /^\/courier\/stops\/([^/]+)\/(arrive|pickup|proof|dropoff|refuse|returned)$/.exec(path);
+    if (method === 'GET' && path === '/courier/earnings') {
+      const totals = { payCents: 1600, tipsCents: 300, runs: 1, stops: 4 };
+      return answer(200, {
+        zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        today: totals,
+        week: { payCents: 4200, tipsCents: 700, runs: 3, stops: 11 },
+        runs: [{ runId: 'run-0', label: 'R-699', earnedAt: iso(now() - 3 * 3600_000), payCents: 1600, tipsCents: 300, pickups: 2, dropoffs: 2, failed: 0, collects: 0, returns: 0 }],
+        balanceCents: 1900,
+        payoutAccount: payout.enabled ? { payoutsEnabled: true, requirementsDue: 0, bankLast4: '6789' } : payout.onboardingLinks ? { payoutsEnabled: false, requirementsDue: 2, bankLast4: null } : null,
+        payouts: payout.enabled ? [{ id: 'po-1', amountCents: 2300, state: 'paid', createdAt: iso(now() - 6 * 86_400_000), arrivesAt: iso(now() - 5 * 86_400_000) }] : [],
+      });
+    }
+    if (method === 'POST' && path === '/courier/payout-account/onboarding') {
+      payout.onboardingLinks++;
+      return answer(200, { url: 'https://connect.stripe.example/setup/fixture' });
+    }
+    const m = /^\/courier\/stops\/([^/]+)\/(arrive|pickup|proof|dropoff|refuse|returned|fail|collect)$/.exec(path);
     if (method === 'POST' && m) {
       const s = stopOf(m[1]!);
       if (!s) {
@@ -208,6 +239,22 @@ export function createFixtureServer(options: FixtureOptions = {}) {
         s.idCheck = null;
         const shop = run!.stops.find((p) => p.kind === 'pickup' && p.orderId === s.orderId)?.place ?? null;
         run!.stops.push(stop({ id: `st-r-${s.id}`, seq: run!.stops.length + 1, kind: 'return', orderId: s.orderId, orderRef: s.orderRef, place: shop }));
+      } else if (action === 'fail' && s.state !== 'done') {
+        // S-151: after the door photo; the order goes back to the shops it came from
+        if (s.kind !== 'dropoff') return conflict('not_a_dropoff', 'This stop is not on your run.');
+        if (s.proofKind !== 'photo') return conflict('proof_missing', 'Take a photo at the door first.');
+        if (body.reason === 'other' && !body.note) return answer(422, { errors: [{ field: 'note', message: 'Add a note saying what happened.' }] });
+        failures.push({ stopId: s.id, reason: String(body.reason), ...(body.note ? { note: String(body.note) } : {}) });
+        s.state = 'done';
+        s.doneAt = iso(now());
+        s.proofKind = 'failed';
+        s.failReason = String(body.reason);
+        const shop = run!.stops.find((p) => p.kind === 'pickup' && p.orderId === s.orderId)?.place ?? null;
+        run!.stops.push(stop({ id: `st-r-${s.id}`, seq: run!.stops.length + 1, kind: 'return', orderId: s.orderId, orderRef: s.orderRef, place: shop }));
+      } else if (action === 'collect' && s.state !== 'done') {
+        if (s.kind !== 'collect') return conflict('not_a_collect', 'This stop is not on your run.');
+        s.state = 'done';
+        s.doneAt = iso(now());
       } else if (action === 'returned' && s.state !== 'done') {
         if (s.kind !== 'return') return conflict('not_a_return', 'This stop is not on your run.');
         s.state = 'done';
@@ -252,6 +299,8 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     devices,
     feedback,
     idChecks,
+    failures,
+    payout,
     shift,
     get run() {
       return run;

@@ -1,5 +1,6 @@
 package ca.northline.fulfilment.application;
 
+import ca.northline.fulfilment.api.DeliveryRequests;
 import ca.northline.fulfilment.api.DeliveryRequests.Dropoff;
 import java.time.Instant;
 import java.util.Collection;
@@ -43,11 +44,24 @@ public interface DeliveryStore {
 
     record IdCheck(int age, @Nullable String province) {}
 
+    /** S-151: a shop whose lines were cancelled is no longer collected from. */
+    void removePickup(String orderId, String merchantId);
+
+    /**
+     * S-151: a failed delivery goes out again — back to {@code waiting} without a run, one more attempt, on the window
+     * given (pooled) or as a direct delivery ({@code window} null).
+     */
+    void redeliver(String orderId, DeliveryRequests.@Nullable Window window, Instant at);
+
+    /** S-151: the attempt the delivery is on (1 first, 2 after one re-delivery, …). */
+    int attempts(String orderId);
+
     /** Clears drop-off addresses of deliveries that ended before {@code before}; returns how many. */
     int forgetAddresses(Instant before);
 
     /**
-     * @param state {@code waiting} | {@code planned} | {@code picked_up} | {@code delivered} | {@code cancelled}
+     * @param state {@code waiting} | {@code planned} | {@code picked_up} | {@code delivered} | {@code cancelled} |
+     *     {@code returning} | {@code returned} (age check) | {@code failed} (S-151)
      * @param pickups the shops to collect from, with their packing time
      */
     record Delivery(

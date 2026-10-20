@@ -37,7 +37,7 @@ class OrderMonitorJdbc implements OrderMonitor {
                           from orders.orders o
                           left join orders.delivery_windows w on w.id = o.window_id
                          where (o.placed_at >= :since
-                                or o.state not in ('delivered', 'confirmed', 'refunded', 'cancelled'))
+                                or o.state not in ('delivered', 'confirmed', 'refunded', 'cancelled', 'returned'))
                            and (:ref = '' or upper(o.ref) like :ref || '%')
                            and (:everyone or exists (select 1 from orders.order_lines sl
                                                       where sl.order_id = o.id and sl.merchant_id = any(:merchants)))
@@ -72,7 +72,7 @@ class OrderMonitorJdbc implements OrderMonitor {
         }
         var out = new java.util.HashMap<String, Sales>();
         jdbc.sql("""
-                        select l.merchant_id, coalesce(sum(l.qty * l.unit_cents) filter (where l.state is distinct from 'refunded'), 0) as gmv,
+                        select l.merchant_id, coalesce(sum(l.qty * l.unit_cents) filter (where coalesce(l.state, 'pending') not in ('refunded', 'cancelled')), 0) as gmv,
                                count(distinct o.id) as orders
                           from orders.order_lines l join orders.orders o on o.id = l.order_id
                          where l.merchant_id = any(:ids) and o.placed_at >= :from and o.placed_at < :to

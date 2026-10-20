@@ -3,6 +3,8 @@ package ca.northline.orders.application;
 import ca.northline.fulfilment.api.DeliveryProofPhotos;
 import ca.northline.merchants.api.BusinessNames;
 import ca.northline.orders.api.DeliveryRuns;
+import ca.northline.orders.api.ReturnPolicies;
+import ca.northline.orders.domain.AfterSale;
 import ca.northline.orders.domain.OrderDelivery;
 import ca.northline.payments.api.EscrowKind;
 import ca.northline.shared.NotFound;
@@ -29,7 +31,7 @@ class OrderTrackingService implements TrackOrder {
 
     static final List<String> FLOW =
             List.of("placed", "accepted", "packing", "ready", "picked_up", "delivered", "confirmed");
-    static final Set<String> ENDED = Set.of("cancelled", "refunded");
+    static final Set<String> ENDED = Set.of("cancelled", "refunded", "returned");
 
     private final TrackingStore orders;
     private final DeliveryRuns runs;
@@ -37,6 +39,10 @@ class OrderTrackingService implements TrackOrder {
     private final Clock clock;
     private final CourierProgressReader couriers;
     private final DeliveryProofPhotos photos;
+    private final AfterSaleStore afterSale;
+    private final ReturnPolicies policies;
+    private final AfterSaleProperties rules;
+    private final ReturnService returns;
 
     @Override
     public ProofPhoto proofPhoto(String customerId, String orderId) {
@@ -65,7 +71,8 @@ class OrderTrackingService implements TrackOrder {
                         e.getValue().stream()
                                 .mapToInt(TrackingStore.LineState::qty)
                                 .sum(),
-                        e.getValue().stream().noneMatch(l -> "pending".equals(l.state()))))
+                        e.getValue().stream().noneMatch(l -> "pending".equals(l.state())),
+                        e.getValue().stream().allMatch(l -> "cancelled".equals(l.state()))))
                 .toList();
         return new OrderTracking(
                 o.id(),
@@ -87,7 +94,80 @@ class OrderTrackingService implements TrackOrder {
                 "goods".equals(o.type()) && o.deliveredAt() != null && o.confirmedAt() == null
                         ? EscrowKind.GOODS.releaseAt(o.deliveredAt())
                         : null,
-                couriers.of(o.id()));
+                couriers.of(o.id()),
+                canCancel(o),
+                afterSale.cancellations(o.id()).stream()
+                        .map(c -> new CancellationInfo(
+                                c.actorRole(),
+                                c.reason(),
+                                c.at(),
+                                c.whole(),
+                                c.merchantId() == null
+                                        ? null
+                                        : names.displayName(c.merchantId()).orElse(null)))
+                        .toList(),
+                afterSale
+                        .failure(o.id())
+                        .filter(f -> o.state().equals("delivery_failed") || f.choice() != null)
+                        .map(f -> new FailureInfo(
+                                f.reason(),
+                                f.failedAt(),
+                                f.decideBy(),
+                                f.attempts(),
+                                f.choice(),
+                                f.chosenAt(),
+                                f.feeCents()))
+                        .orElse(null),
+                returnable(o),
+                "goods".equals(o.type()) ? returns.ofCustomer(customerId, o.id()) : List.of());
+    }
+
+    /** S-151: the customer's own rule (before any shop packed, by default). */
+    private boolean canCancel(TrackingStore.Header o) {
+        if (!"goods".equals(o.type())) {
+            return false;
+        }
+        var open = afterSale.lines(o.id()).stream()
+                .filter(AfterSaleStore.LineFacts::open)
+                .toList();
+        return !open.isEmpty()
+                && rules.customerCancelUntil()
+                        .allows(
+                                o.state(),
+                                open.stream().anyMatch(l -> !l.state().equals("pending")),
+                                o.state().equals("picked_up"));
+    }
+
+    /** S-151: delivered lines still in their return window and in no return. */
+    private List<ReturnableLine> returnable(TrackingStore.Header o) {
+        var delivered = o.deliveredAt();
+        if (!"goods".equals(o.type())
+                || delivered == null
+                || !Set.of("delivered", "confirmed").contains(o.state())) {
+            return List.of();
+        }
+        var lines = afterSale.lines(o.id()).stream()
+                .filter(l -> l.open() && l.returnId() == null)
+                .toList();
+        var days = policies.days(lines.stream()
+                .map(AfterSaleStore.LineFacts::offerId)
+                .filter(java.util.Objects::nonNull)
+                .toList());
+        var now = clock.instant();
+        var out = new ArrayList<ReturnableLine>();
+        for (var l : lines) {
+            var window = l.offerId() == null ? rules.returnDays() : days.getOrDefault(l.offerId(), rules.returnDays());
+            if (AfterSale.returnable(delivered, window, now)) {
+                out.add(new ReturnableLine(
+                        l.id(),
+                        l.merchantId(),
+                        l.title(),
+                        l.qty(),
+                        l.amountCents(),
+                        delivered.plus(java.time.Duration.ofDays(window))));
+            }
+        }
+        return out;
     }
 
     private Delivery delivery(TrackingStore.Header o) {
@@ -112,6 +192,14 @@ class OrderTrackingService implements TrackOrder {
     static List<Step> steps(String state) {
         if (ENDED.contains(state)) {
             return List.of(new Step("paid", "done"));
+        }
+        if (state.equals("delivery_failed")) {
+            // S-151: picked up, not handed over — the delivery step is where it stopped
+            return List.of(
+                    new Step("paid", "done"),
+                    new Step("packing", "done"),
+                    new Step("pickup", "done"),
+                    new Step("delivered", "current"));
         }
         var at = Math.max(0, FLOW.indexOf(state));
         // index of the current step: placed/accepted/packing → packing (1), ready → pickup (2), picked_up → delivered

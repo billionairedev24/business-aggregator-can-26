@@ -42,4 +42,13 @@ class LedgerJdbcAdapter implements LedgerRepository {
                         select coalesce(sum(credit_cents - debit_cents), 0)
                           from payments.ledger_entries where account = :account""").param("account", account).query(Long.class).single();
     }
+
+    @Override
+    public boolean posted(String refType, String refId) {
+        return jdbc.sql("select exists (select 1 from payments.ledger_entries where ref_type = :t and ref_id = :id)")
+                .param("t", refType)
+                .param("id", refId)
+                .query(Boolean.class)
+                .single();
+    }
 }

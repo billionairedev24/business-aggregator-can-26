@@ -50,6 +50,11 @@ class QuotesAndMessagesNoticesTest {
         }
 
         @Override
+        public Optional<String> returnCustomer(String returnId) {
+            return Optional.empty();
+        }
+
+        @Override
         public Optional<String> threadCustomer(String threadId) {
             return Optional.of("u_customer");
         }

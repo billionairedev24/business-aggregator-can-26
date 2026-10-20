@@ -24,7 +24,7 @@ class DeliveryAlertsJdbc implements DeliveryAlerts {
         }
         return Set.copyOf(jdbc.sql("""
                         select d.order_id from fulfilment.deliveries d join fulfilment.runs r on r.id = d.run_id
-                         where d.order_id = any(:orders) and r.state <> 'done'
+                         where d.order_id = any(:orders) and r.state not in ('done', 'cancelled')
                            and exists (select 1 from fulfilment.stops st
                                         where st.run_id = r.id and st.state = 'pending' and st.eta < :late)
                         """)

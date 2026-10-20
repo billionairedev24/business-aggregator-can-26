@@ -149,6 +149,9 @@ Two endpoints, each with its own signing secret:
   state; disputes and accounts ignore an event older than the last one applied. Unknown types are stored as `ignored`.
   The endpoints need no session or token (and have no CSRF); the signature is the authentication; 600 requests/min per
   address (`STRIPE_WEBHOOK_RATE_LIMIT`), then 429.
+- **Couriers (S-151):** the Connect endpoint's `account.updated`, `payout.paid`, `payout.failed` and `payout.canceled`
+  for a courier's account (`payments.courier_accounts`) settle the courier's payout instead of a merchant's; no new
+  event type to register. See [§ 13](#13-courier-payouts-s-151).
 - **Effects:** `payout.paid` → paid; `payout.failed` / `canceled` → returned to the merchant's balance (+ instant fee
   back, `payout.failed` event); `charge.dispute.*` → a card-dispute case in Refunds & disputes (escrow on hold,
   `dispute.updated` "opened" email; merchant answers with response + evidence, can't refund or offer goodwill), closed
@@ -455,3 +458,36 @@ payout deduction. A refund of the sale gives the unspent share back with a new t
 - **Never run against the real Stripe API:** the reversal and the refund transfer were tested against stripe-mock only.
   Before launch: a test-mode sale with a reward running, released; check the reversal on the connected account's
   transfer, the business's payout and the Finance screen's "held from businesses' rewards".
+
+## 13. Courier payouts (S-151)
+
+Couriers are paid through the same payouts port as merchants (`CourierAccountGateway` for their accounts, the Connect
+gateway for transfers and payouts). The pay model and what a courier earns: [fulfilment.md § Courier earnings and
+payouts](fulfilment.md#courier-earnings-and-payouts-s-151).
+
+- **Account:** an **Express** connected account per courier, country `CA`, business type `individual`, capability
+  `transfers` only, payouts on a **manual** schedule (Northline pays weekly), created on the first request for an
+  onboarding link (Idempotency-Key `courier-account:<userId>`). The courier app asks
+  `POST /api/v1/courier/payout-account/onboarding` and opens Stripe's Account Link (a fresh key per link,
+  `courier-account-link:<account>:<id>`) in the in-app browser; the bank details go to Stripe only. Northline keeps the
+  account id, whether payouts are enabled, how many requirements are due and the bank's last 4 digits (from
+  `account.updated` or a read of the account when the courier opens Earnings).
+- **Weekly run:** `COURIER_PAYOUTS_CRON` (default `0 41 6 * * MON`, platform zone). For each courier with payouts
+  enabled and a ledger balance (`courier:<userId>`: run pay + tips) of at least $1.00: a **transfer** from the
+  platform balance to the courier's account (transfer group `courier:<userId>`), then a **payout** of that amount to
+  their bank (`payments.courier_payouts`, ledger `courier_paid_out`). A failed or canceled payout puts the amount back
+  on the courier's balance (`courier_payout_returned`) for the next run. A settle job every minute (and the webhooks)
+  moves in-transit payouts to paid.
+- **Local / test:** `FakeCourierAccounts` — asking for the onboarding link enables the account at once (bank
+  `ba_fake_…`, last 4 `6789`); payouts arrive the next business morning.
+- **Variables:** `COURIER_PAYOUTS_CRON` (new, optional); the existing `STRIPE_SECRET_KEY`,
+  `STRIPE_CONNECT_WEBHOOK_SECRET` and `CONSUMER_ORIGIN` (the return page `/courier/payouts`, which the courier app
+  claims).
+- **Reconciliation:** transfers to couriers stay at Stripe like merchants' and are left out of § 10's comparison.
+
+**Never run against a real Stripe account.** The account, account-link, account read, transfer and payout calls were
+written from Stripe's API reference and tested against **stripe-mock** only (`StripeCourierAccountsStripeMockTest`:
+the request shapes, the pinned `Stripe-Version` and an `Idempotency-Key` on every mutating call). stripe-mock keeps no
+state, so Express onboarding itself, `account.updated` for an individual courier, a real transfer and payout, a bank
+that rejects a payout, and the Connect webhooks for courier accounts have not been exercised. Before couriers are paid
+for real: onboard a test courier in test mode, run `payCouriers` by hand, and watch the payout's webhooks arrive.

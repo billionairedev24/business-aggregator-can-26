@@ -11,4 +11,7 @@ public interface LedgerRepository {
 
     /** Credit balance of an account (credits − debits). */
     long balance(String account);
+
+    /** S-151: whether anything was posted for the reference yet (one posting per run's pay). */
+    boolean posted(String refType, String refId);
 }

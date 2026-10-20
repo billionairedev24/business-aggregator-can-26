@@ -34,8 +34,8 @@ class CourierPickupsJdbc implements CourierPickups {
             return out;
         }
         jdbc.sql(SELECT + """
-                         where st.order_id in (:ids) and st.kind = 'pickup'
-                         order by st.order_id, st.seq nulls last
+                         where st.order_id in (:ids) and st.kind = 'pickup' and st.state <> 'cancelled'
+                         order by st.order_id, r.planned_at desc nulls last, st.seq nulls last
                         """).param("ids", List.copyOf(orderIds)).query(rs -> {
             out.put(rs.getString("order_id"), pickup(rs));
         });
@@ -50,7 +50,8 @@ class CourierPickupsJdbc implements CourierPickups {
         }
         jdbc.sql(SELECT + """
                          where st.order_id in (:ids) and st.kind = 'pickup' and st.merchant_id = :m
-                         order by st.order_id, st.seq nulls last
+                           and st.state <> 'cancelled'
+                         order by st.order_id, r.planned_at desc nulls last, st.seq nulls last
                         """)
                 .param("ids", List.copyOf(orderIds))
                 .param("m", merchantId)

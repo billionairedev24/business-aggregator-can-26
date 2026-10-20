@@ -89,6 +89,29 @@ describe('delivery ops (S-81, design 03)', () => {
     expect(await within(dialog).findByText("This run has started; it can't be reassigned.")).toBeTruthy();
   });
 
+  it('moves the stops not picked up yet from a started run to a free courier (S-151)', async () => {
+    let refuse = true;
+    const calls = api(['dispatch'], c => {
+      if (c.method !== 'POST' || !c.url.endsWith('/runs/r2/move-remaining')) return undefined;
+      return refuse ? { status: 409, body: { code: 'nothing_to_move', detail: 'Every order on this run has been picked up.' } }
+        : { body: run({ id: 'r9', label: 'R-608', part: 2, state: 'planned', courier: { id: 'c4', userId: 'u4', name: 'Maya' }, stopsDone: 0, stopsTotal: 2 }) };
+    });
+    const user = userEvent.setup({ delay: null });
+    renderConsole('/delivery');
+    await screenReady();
+    // only a started run offers it
+    expect(within(card('R-615')).queryByRole('button', { name: 'Move remaining stops' })).toBeNull();
+    await user.click(within(card('R-608')).getByRole('button', { name: 'Move remaining stops' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Move what’s left of R-608' });
+    expect(dialog.textContent).toContain('What the current courier carries stays with them.');
+    await user.click(within(dialog).getByRole('button', { name: 'Move remaining stops' }));
+    expect(await within(dialog).findByText('Every order on this run has been picked up.')).toBeTruthy();
+    refuse = false;
+    await user.click(within(dialog).getByRole('button', { name: 'Move remaining stops' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Move what’s left of R-608' })).toBeNull());
+    expect(calls.filter(c => c.url.endsWith('/runs/r2/move-remaining')).at(-1)?.body).toEqual({ courierId: 'c4' });
+  });
+
   it('pauses a courier with a reason and resumes a paused one', async () => {
     const paused = { ...COURIERS[3], active: false };
     const calls = api(['dispatch'], c => {

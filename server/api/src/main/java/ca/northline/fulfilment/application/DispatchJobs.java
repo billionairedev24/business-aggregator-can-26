@@ -24,6 +24,7 @@ class DispatchJobs {
     private final PlanRuns plan;
     private final AssignCouriers assign;
     private final DeliveryStore deliveries;
+    private final ReturnPickupStore returnPickups;
     private final FulfilmentProperties props;
     private final Clock clock;
 
@@ -43,7 +44,8 @@ class DispatchJobs {
     @Scheduled(fixedDelayString = "PT1H", initialDelayString = "PT5M")
     @Transactional
     void forgetAddresses() {
-        var n = deliveries.forgetAddresses(clock.instant().minus(props.addressRetention()));
+        var before = clock.instant().minus(props.addressRetention());
+        var n = deliveries.forgetAddresses(before) + returnPickups.forgetAddresses(before);
         if (n > 0) {
             log.info("Cleared {} drop-off address(es) past retention", n);
         }

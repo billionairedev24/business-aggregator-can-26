@@ -13,12 +13,13 @@ public interface MonitorOrders {
 
     Monitor monitor(Query query);
 
-    /** The design's chips: Needs attention · Live · Escrow &gt; 48 h · Late · All. */
+    /** The design's chips: Needs attention · Live · Escrow &gt; 48 h · Late · All; S-151: Failed deliveries. */
     enum View implements CodedEnum {
         ATTENTION,
         LIVE,
         ESCROW,
         LATE,
+        FAILED,
         ALL
     }
 
@@ -50,7 +51,9 @@ public interface MonitorOrders {
         ISSUE,
         DELIVERED,
         DONE,
-        CANCELLED
+        CANCELLED,
+        /** S-151: the courier couldn't hand it over; the customer is choosing re-delivery or a refund */
+        DELIVERY_FAILED
     }
 
     /**
@@ -92,5 +95,6 @@ public interface MonitorOrders {
         }
     }
 
-    record Counts(long attention, long live, long escrow, long late, long all) {}
+    /** @param failed S-151: deliveries that failed and wait for the customer's choice */
+    record Counts(long attention, long live, long escrow, long late, long failed, long all) {}
 }

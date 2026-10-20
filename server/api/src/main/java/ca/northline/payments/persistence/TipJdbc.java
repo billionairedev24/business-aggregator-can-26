@@ -116,6 +116,25 @@ class TipJdbc implements TipStore {
                 .update();
     }
 
+    @Override
+    public List<Allocated> allocatedTo(String courierUserId, Instant from, Instant to) {
+        return jdbc.sql("""
+                        select id, order_id, amount_cents, allocated_at from payments.courier_tips
+                         where courier_user_id = :c and state = 'allocated'
+                           and allocated_at >= :from and allocated_at < :to
+                         order by allocated_at, id
+                        """)
+                .param("c", courierUserId)
+                .param("from", JdbcTimes.ts(from))
+                .param("to", JdbcTimes.ts(to))
+                .query((rs, _) -> new Allocated(
+                        rs.getString("id"),
+                        rs.getString("order_id"),
+                        rs.getLong("amount_cents"),
+                        JdbcTimes.requiredInstant(rs, "allocated_at")))
+                .list();
+    }
+
     private static StoredTip tip(ResultSet rs) throws SQLException {
         return new StoredTip(
                 rs.getString("id"),

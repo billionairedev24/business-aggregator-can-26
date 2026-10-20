@@ -57,7 +57,7 @@ export const useAccountT = defineMessages({
     status_cooking: 'Cooking', status_requested: 'Requested', status_booked: 'Booked', status_escrow: 'Escrow', status_deposit_held: 'Deposit held',
     status_on_site: 'On site', status_completed: 'Completed', status_done: 'Done', status_waiting: 'Waiting for quotes', status_quote_ready: 'Quote ready',
     status_declined: 'Declined', status_expired: 'Expired', status_refunded: 'Refunded', status_cancelled: 'Cancelled',
-    status_case: 'Case {number}',
+    status_case: 'Case {number}', status_delivery_failed: 'Delivery missed',
     noAmount: '—',
 
     // Wallet & points (design 06 at.wallet)
@@ -133,7 +133,7 @@ export const useAccountT = defineMessages({
     status_cooking: 'En cuisine', status_requested: 'Demandée', status_booked: 'Réservé', status_escrow: 'Fiducie', status_deposit_held: 'Acompte retenu',
     status_on_site: 'Sur place', status_completed: 'Terminé', status_done: 'Terminé', status_waiting: 'En attente de devis', status_quote_ready: 'Devis prêt',
     status_declined: 'Refusé', status_expired: 'Expiré', status_refunded: 'Remboursée', status_cancelled: 'Annulée',
-    status_case: 'Dossier {number}',
+    status_case: 'Dossier {number}', status_delivery_failed: 'Livraison manquée',
     noAmount: '—',
 
     walletTitle: 'Portefeuille et points',

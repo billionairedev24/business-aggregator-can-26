@@ -24,6 +24,26 @@ public interface DeliveryRequests {
     void readyBy(String orderId, Instant readyBy);
 
     /**
+     * S-151: the order was cancelled. Its stops still to do leave the run (a run left with none is cancelled and its
+     * courier freed); goods already picked up go back to their shops (a {@code return} stop each). The courier hears of
+     * it ({@code run.changed}). A no-op once delivered or cancelled.
+     */
+    void cancel(String orderId, Instant at);
+
+    /**
+     * S-151: one shop's lines of the order were cancelled (the others go on): that shop's pickup leaves the delivery and
+     * its run. A no-op once that pickup was done.
+     */
+    void dropPickup(String orderId, String merchantId, Instant at);
+
+    /**
+     * S-151: a failed delivery goes out again — on the pooled run of {@code window}, or as a direct delivery when null.
+     * The shops still have it packed (the courier brought it back), so it is picked up again. A no-op unless the
+     * delivery failed.
+     */
+    void redeliver(String orderId, @Nullable Window window, Instant at);
+
+    /**
      * @param orderType {@code goods} | {@code food}
      * @param kind {@code pooled} (a run's window) | {@code direct} (its own courier: the direct goods courier, a hot food
      *     delivery)

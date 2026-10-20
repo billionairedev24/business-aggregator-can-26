@@ -195,6 +195,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | ✓ | | | | staging and prod (S-12; [stripe.md](stripe.md#5-webhooks-s-12)) |
 | `TAX_PROVIDER` | ✓ | | | | staging and prod: `stripe` (`local` refused there — S-21, [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
 | `TAX_CODE_SERVICE`, `TAX_CODE_GOODS`, `TAX_CODE_FOOD`, `TAX_RECONCILE_CRON` | ✓ | | | | no (Stripe's general service / goods / prepared-food codes; 03:17 in the platform zone) |
+| `COURIER_PAYOUTS_CRON` | ✓ | | | | no (`0 41 6 * * MON`, platform zone: the weekly courier payouts — S-151, [stripe.md § 13](stripe.md#13-courier-payouts-s-151)) |
 | `IDENTITY_PROVIDER` | ✓ | | | | staging and prod (`stripe`; `local` refused there — S-22, [stripe.md § Identity](stripe.md#8-identity-s-22)) |
 | `AGE_VERIFICATION_PROVIDER`, `AGE_VERIFICATION_APP_RETURN_URL`, `RESTRICTED_LICENCE_CRON` | ✓ | | | | `AGE_VERIFICATION_PROVIDER` in staging and prod (`stripe`; `local` refused there — 2026-10-04, [age-restricted.md](age-restricted.md)); the others optional |
 | `PLUS_BILLING_PROVIDER`, `STRIPE_PLUS_MONTHLY_PRICE`, `STRIPE_PLUS_ANNUAL_PRICE` | ✓ | | | | staging and prod (`stripe` with both Stripe Price ids; `local` refused there — S-152, [stripe.md § 11](stripe.md#11-northline-plus--stripe-billing-s-152)) |
