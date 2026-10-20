@@ -438,6 +438,8 @@ northline:
     auth-token: ${SMS_AUTH_TOKEN:}
     region: ${SMS_REGION:}
     endpoint: ${SMS_ENDPOINT:}
+    webhook-base-url: ${API_PUBLIC_URL:http://localhost:8080}  # S-157: the URL Twilio signs (inbound + status webhooks)
+    status-callback-url: ${SMS_STATUS_CALLBACK_URL:}          # S-157: …/api/v1/webhooks/sms/status; empty = no callbacks
   # AI (S-129, ca.northline.ai; docs/runbooks/ai.md): the LlmClient port. fake (deterministic, no network or key;
   # refused under staging/prod) | openrouter (OpenRouter's OpenAI-compatible API; blank key = every AI feature 503).
   ai:

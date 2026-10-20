@@ -195,12 +195,16 @@ public final class Deliveries {
     /**
      * CASL s. 6(2) in a text: the legal sender and an opt-out link that withdraws the SMS consent at once; the page
      * behind it names the mailing address and contact (regulations s. 3(2): a link where it isn't practicable inline).
+     * S-157: a STOP reply works too (the api's inbound SMS webhook), so the text says so.
      */
     private String commercialSms(String text, Recipient to) {
         var optOut = links.unsubscribe(
                 unsubscribe.issue(to.userId(), "consent." + ConsentCategory.MARKETING_SMS.code(), to.locale()));
         var french = "fr".equals(to.locale().getLanguage());
-        var tail = " — " + legalName + (french ? " · Désabonnement : " : " · Opt out: ") + optOut;
+        var tail = " — " + legalName
+                + (french
+                        ? " · Désabonnement : " + optOut + " ou répondez ARRET"
+                        : " · Opt out: " + optOut + " or reply STOP");
         return CommercialMessageCheck.sms(text + tail, legalName, optOut);
     }
 

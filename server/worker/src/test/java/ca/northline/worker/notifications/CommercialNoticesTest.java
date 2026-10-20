@@ -91,11 +91,11 @@ class CommercialNoticesTest extends WorkerIntegrationTest {
         });
         assertThat(texts.to(amara.phone()))
                 .singleElement()
-                .satisfies(
-                        t -> assertThat(t.body())
-                                .startsWith("Northline : Livraison gratuite ce week-end.")
-                                .contains(
-                                        "— Northline Marketplace Inc. · Désabonnement : http://localhost:8080/api/v1/email/unsubscribe?t="));
+                .satisfies(t -> assertThat(t.body())
+                        .startsWith("Northline : Livraison gratuite ce week-end.")
+                        .contains(
+                                "— Northline Marketplace Inc. · Désabonnement : http://localhost:8080/api/v1/email/unsubscribe?t=")
+                        .endsWith(" ou répondez ARRET")); // S-157: the STOP keyword works too
         EmailMessage email = emails.to(amara.email()).getFirst();
         assertThat(email.subject()).isEqualTo("Livraison gratuite ce week-end — Northline");
         assertThat(email.headers())
