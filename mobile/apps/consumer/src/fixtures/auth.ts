@@ -8,15 +8,26 @@ import type { FixtureArea, FixtureContext, FixtureRequest } from './context';
  *   tokens, revocation at sign-out (which ends the cookie session too — single sign-out);
  * - `/oauth2/authorize` in the app's cookie session: kept while signed out (the answer "lands" on the consumer site's
  *   sign-in page), a code on the https redirect once signed in — `Response.url` as fetch reports a followed redirect;
- * - the JSON sign-in API of S-62: register → verify → totp | complete, sign-in → code → verify, with `continueTo`.
- * Codes: SMS / voice {@link FIXTURE_CODE}, authenticator {@link FIXTURE_TOTP}. An account exists for
- * {@link FIXTURE_ACCOUNT} (made-up person and number).
+ * - S-154's accounts (S-159): `accounts` → `accounts/verify` (the email code), `sign-in/password` → `factor` | `enroll` |
+ *   `verify-email`, `sign-in/totp` | `backup-code`, `enroll/totp` + `verify` (ten backup codes), `password/forgot` +
+ *   `reset`; S-62's phone code: sign-in → code → verify — every signed-in answer with `continueTo`.
+ * Codes: SMS / voice / email {@link FIXTURE_CODE}, authenticator {@link FIXTURE_TOTP}, backup {@link FIXTURE_BACKUP}.
+ * An account exists for {@link FIXTURE_ACCOUNT} (made-up person and number), with a password and an authenticator.
  */
 export const FIXTURE_CODE = '246810';
 /** The step-up proof the fixture api accepts as `X-Step-Up`. */
 export const STEP_UP_PROOF = 'fixture-proof';
 export const FIXTURE_TOTP = '135790';
 export const FIXTURE_ACCOUNT = { phone: '+1 555 555 0100', email: 'ada@example.com', firstName: 'Ada', lastName: 'Example' };
+/** S-159: the fixture account's password (made up) and one of its backup codes. */
+export const FIXTURE_PASSWORD = 'fixture password for ada';
+export const FIXTURE_BACKUP = 'abcd-efgh-ij';
+const BACKUP_CODES = Array.from({ length: 10 }, (_, i) => (i === 0 ? FIXTURE_BACKUP : `code-${String(i).padStart(2, '0')}-fx`));
+const TOTP_SETUP = {
+  secret: 'JBSWY3DPEHPK3PXP',
+  otpauthUri: 'otpauth://totp/Northline:ada?secret=JBSWY3DPEHPK3PXP&issuer=Northline',
+  qrCode: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+};
 const SIGN_IN_PAGE = 'https://site.fixtures.invalid/sign-in';
 const RESEND_AFTER = 45;
 
@@ -26,6 +37,9 @@ interface Account {
   lastName: string;
   email: string;
   phone: string;
+  password?: string;
+  /** `totp`, `backup_code` (S-154: the account's own factors) */
+  factors?: string[];
 }
 
 export interface AuthFixtureState {
@@ -40,6 +54,11 @@ export interface AuthFixtureState {
     signedIn: Account | null;
     registration: { account: Account; verified: boolean; sentAt: number; tries: number } | null;
     signIn: { account: Account | null; sentAt: number } | null;
+    /** S-154: email + password passed, the factor still to come */
+    password: Account | null;
+    /** S-154: the pending account (its email code still to enter) */
+    pending: { account: Account; sentAt: number } | null;
+    reset: { email: string } | null;
   };
   accounts: Account[];
   /** Every JSON API call: path and body (tests read what the screens sent). */
@@ -52,8 +71,8 @@ export function newAuthState(): AuthFixtureState {
     revoked: [],
     live: new Set(),
     nonce: null,
-    session: { saved: null, signedIn: null, registration: null, signIn: null },
-    accounts: [{ id: 'acct-ada', ...FIXTURE_ACCOUNT }],
+    session: { saved: null, signedIn: null, registration: null, signIn: null, password: null, pending: null, reset: null },
+    accounts: [{ id: 'acct-ada', ...FIXTURE_ACCOUNT, password: FIXTURE_PASSWORD, factors: ['totp', 'backup_code'] }],
     api: [],
   };
 }
@@ -74,15 +93,19 @@ export function authFixtures(ctx: FixtureContext, state: AuthFixtureState): Fixt
   const s = state.session;
   const user = (a: Account) => ({ id: a.id, firstName: a.firstName, lastName: a.lastName, email: a.email, phone: a.phone, initials: `${a.firstName[0]}${a.lastName[0]}` });
   let lastSignedIn: string | null = null;
-  const signedIn = (a: Account, acr: string | null, status = 200) => {
+  const session = (a: Account, acr: string | null) => {
     s.signedIn = a;
     lastSignedIn = a.id;
     s.registration = null;
     s.signIn = null;
+    s.password = null;
+    s.pending = null;
     const continueTo = s.saved;
     s.saved = null; // AppAuthorizationResume hands it out once
-    return ctx.answer(status, { user: user(a), acr, continueTo });
+    return { user: user(a), acr, continueTo, needsSecondFactor: !(a.factors ?? []).includes('totp') };
   };
+  const signedIn = (a: Account, acr: string | null, status = 200) => ctx.answer(status, session(a, acr));
+  const emailSent = (email: string) => ctx.answer(202, { step: 'verify-email', email, resendAfterSeconds: RESEND_AFTER });
   const invalid = (field: string, rule: string, message: string) => ctx.answer(422, { errors: [{ field, rule, message }] });
   const notStarted = () => ctx.answer(409, { code: 'flow_not_started', detail: 'Start again.' });
   const throttled = (sentAt: number) => {
@@ -118,6 +141,75 @@ export function authFixtures(ctx: FixtureContext, state: AuthFixtureState): Fixt
     state.api.push({ path, body: req.body, language: req.headers['accept-language'] });
 
     switch (path) {
+      // ── S-154: email + password ──
+      case '/api/auth/accounts': {
+        const b = req.body as Record<string, string | boolean | null>;
+        if (String(b.password ?? '').length < 12) return invalid('password', 'length', 'Use at least 12 characters.');
+        if (b.password === 'password1234') return invalid('password', 'common', "This password is too common. Choose one that's harder to guess.");
+        const email = String(b.email).toLowerCase();
+        const account: Account = { id: `acct-${state.accounts.length + 1}`, firstName: String(b.firstName), lastName: String(b.lastName), email, phone: String(b.phone ?? ''), password: String(b.password), factors: [] };
+        // the same answer when the address has an account (no enumeration): no code is sent then
+        if (!state.accounts.some((a) => a.email === email)) s.pending = { account, sentAt: ctx.now() };
+        return emailSent(email);
+      }
+      case '/api/auth/accounts/resend': {
+        if (!s.pending) return notStarted();
+        const wait = throttled(s.pending.sentAt);
+        if (wait) return wait;
+        s.pending.sentAt = ctx.now();
+        return emailSent(s.pending.account.email);
+      }
+      case '/api/auth/accounts/verify': {
+        if (!s.pending) return invalid('code', 'mismatch', "That code doesn't match. Check it and try again.");
+        if (code(req) !== FIXTURE_CODE) return invalid('code', 'mismatch', "That code doesn't match. Check it and try again.");
+        const a = s.pending.account;
+        state.accounts.push(a);
+        return signedIn(a, null, 201);
+      }
+      case '/api/auth/sign-in/password': {
+        const email = String(req.body.email ?? '').trim().toLowerCase();
+        const a = state.accounts.find((x) => x.email === email);
+        if (s.pending && s.pending.account.email === email && s.pending.account.password === req.body.password) {
+          s.pending.sentAt = ctx.now();
+          return ctx.answer(200, { step: 'verify-email', email, resendAfterSeconds: RESEND_AFTER });
+        }
+        if (!a || !a.password || a.password !== req.body.password) return invalid('password', 'mismatch', "That email and password don't match. Check them and try again.");
+        if ((a.factors ?? []).length === 0) return ctx.answer(200, { step: 'enroll', session: session(a, null) });
+        s.password = a;
+        return ctx.answer(200, { step: 'factor', factors: a.factors, email });
+      }
+      case '/api/auth/sign-in/totp':
+        if (!s.password) return notStarted();
+        if (code(req) !== FIXTURE_TOTP) return invalid('code', 'mismatch', "That code didn't work. Check it and try again.");
+        return signedIn(s.password, 'mfa');
+      case '/api/auth/sign-in/backup-code':
+        if (!s.password) return notStarted();
+        if (code(req) !== FIXTURE_BACKUP) return invalid('code', 'mismatch', "That code didn't work. Check it and try again.");
+        return signedIn(s.password, 'mfa');
+      case '/api/auth/enroll/totp':
+        if (!s.signedIn) return ctx.answer(401, { code: 'not_signed_in' });
+        return ctx.answer(200, TOTP_SETUP);
+      case '/api/auth/enroll/totp/verify': {
+        if (!s.signedIn) return ctx.answer(401, { code: 'not_signed_in' });
+        if (code(req) !== FIXTURE_TOTP) return invalid('code', 'mismatch', "That code doesn't match. Check it and try again.");
+        const a = s.signedIn;
+        a.factors = ['totp', 'backup_code'];
+        return ctx.answer(200, { session: session(a, 'mfa'), backupCodes: BACKUP_CODES });
+      }
+      case '/api/auth/password/forgot': {
+        const email = String(req.body.email ?? '').trim().toLowerCase();
+        s.reset = state.accounts.some((a) => a.email === email) ? { email } : null;
+        return emailSent(email);
+      }
+      case '/api/auth/password/reset': {
+        if (!s.reset || code(req) !== FIXTURE_CODE) return invalid('code', 'mismatch', "That code doesn't match. Check it and try again.");
+        if (req.body.password !== req.body.passwordConfirm) return invalid('passwordConfirm', 'mismatch', "The passwords don't match.");
+        const a = state.accounts.find((x) => x.email === s.reset!.email)!;
+        a.password = String(req.body.password);
+        s.reset = null;
+        return ctx.answer(200, { email: a.email });
+      }
+      // ── S-62 / S-98 (the phone) ──
       case '/api/auth/register': {
         const b = req.body as Record<string, string | boolean>;
         if (state.accounts.some((a) => digits(a.phone) === digits(String(b.phone)))) return invalid('phone', 'unique', 'An account already uses this mobile number. Sign in instead.');
@@ -144,11 +236,7 @@ export function authFixtures(ctx: FixtureContext, state: AuthFixtureState): Fixt
       }
       case '/api/auth/register/totp':
         if (!s.registration?.verified) return notStarted();
-        return ctx.answer(200, {
-          secret: 'JBSWY3DPEHPK3PXP',
-          otpauthUri: 'otpauth://totp/Northline:ada?secret=JBSWY3DPEHPK3PXP&issuer=Northline',
-          qrCode: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-        });
+        return ctx.answer(200, TOTP_SETUP);
       case '/api/auth/register/totp/verify': {
         if (!s.registration?.verified) return notStarted();
         if (code(req) !== FIXTURE_TOTP) return invalid('code', 'mismatch', "That code doesn't match. Check it and try again.");

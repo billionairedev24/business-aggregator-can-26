@@ -15,18 +15,43 @@ export interface AuthUser {
   phone?: string | null;
   initials: string;
 }
-export interface RegistrationStep {
-  step: 'otp' | 'mfa';
-  /** The number as the server formats it ("+1 (555) 555-0148"). */
-  phone: string;
-  resendAfterSeconds: number;
-  channel: 'sms' | 'voice';
-}
-/** A signed-in auth session; `continueTo` = the app's authorization request to go back to (S-29). */
+/**
+ * A signed-in auth session; `continueTo` = the app's authorization request to go back to (S-29); `needsSecondFactor`
+ * (S-154) = the account has no passkey and no authenticator yet (enrolment is offered, never required, for customers).
+ */
 export interface AuthSessionAnswer {
   user: AuthUser;
   acr?: string | null;
   continueTo?: string | null;
+  needsSecondFactor?: boolean;
+}
+/** S-154: an account email is on its way (the same answer whether or not the address has an account). */
+export interface EmailSent {
+  step: 'verify-email';
+  email: string;
+  resendAfterSeconds: number;
+}
+/** S-154: after email + password — the account's own factors, enrolment (signed in), or its email still to confirm. */
+export interface PasswordStep {
+  step: 'factor' | 'enroll' | 'verify-email';
+  factors?: string[] | null;
+  session?: AuthSessionAnswer | null;
+  email?: string | null;
+  resendAfterSeconds?: number | null;
+}
+/** S-154: the authenticator is set up (acr=mfa); the ten backup codes are shown once. */
+export interface Enrolled {
+  session: AuthSessionAnswer;
+  backupCodes: string[];
+}
+export interface CreateAccountValues {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  passwordConfirm: string;
+  phone: string;
+  terms: boolean;
 }
 export interface CodeSent {
   resendAfterSeconds: number;
@@ -38,14 +63,6 @@ export interface TotpSetup {
   /** A PNG data URI of the otpauth:// URI. */
   qrCode: string;
 }
-export interface RegisterValues {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  terms: boolean;
-}
-
 export class AuthApi {
   constructor(
     private readonly issuer: string,
@@ -62,7 +79,7 @@ export class AuthApi {
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          // the SMS / voice code is worded in it (S-8)
+          // the SMS / voice code and the emails are worded in it (S-8, S-154)
           'Accept-Language': this.language() === 'fr-CA' ? 'fr-CA' : 'en-CA',
         },
         body: JSON.stringify(body),
@@ -75,31 +92,49 @@ export class AuthApi {
     return (text ? JSON.parse(text) : {}) as T;
   }
 
-  register(v: RegisterValues) {
-    return this.post<RegistrationStep>('/api/auth/register', {
+  // ── S-154: email + password accounts (the consumer site's API, `app: consumer` for the emails' links) ─────────────
+  createAccount(v: CreateAccountValues) {
+    return this.post<EmailSent>('/api/auth/accounts', {
       firstName: v.firstName.trim(),
       lastName: v.lastName.trim(),
-      phone: v.phone.trim(),
       email: v.email.trim(),
+      password: v.password,
+      passwordConfirm: v.passwordConfirm,
+      phone: v.phone.trim() || null,
       terms: v.terms,
+      termsLanguage: this.language() === 'fr-CA' ? 'fr' : 'en',
+      app: 'consumer',
     });
   }
-  resend(channel: 'sms' | 'voice') {
-    return this.post<RegistrationStep>('/api/auth/register/resend', { channel });
+  resendVerification() {
+    return this.post<EmailSent>('/api/auth/accounts/resend');
   }
-  verifyPhone(code: string) {
-    return this.post<RegistrationStep>('/api/auth/register/verify', { code: code.trim() });
+  verifyEmail(code: string) {
+    return this.post<AuthSessionAnswer>('/api/auth/accounts/verify', { code: code.trim() });
   }
-  totpSetup() {
-    return this.post<TotpSetup>('/api/auth/register/totp');
+  signInWithPassword(email: string, password: string) {
+    return this.post<PasswordStep>('/api/auth/sign-in/password', { email: email.trim(), password });
   }
-  registerTotp(code: string) {
-    return this.post<AuthSessionAnswer>('/api/auth/register/totp/verify', { code: code.trim() });
+  signInTotp(code: string) {
+    return this.post<AuthSessionAnswer>('/api/auth/sign-in/totp', { code: code.trim() });
   }
-  /** S-62: the account without a second factor (design "SMS code · backup only"). */
-  completeWithoutSecondFactor() {
-    return this.post<AuthSessionAnswer>('/api/auth/register/complete');
+  signInBackupCode(code: string) {
+    return this.post<AuthSessionAnswer>('/api/auth/sign-in/backup-code', { code: code.trim() });
   }
+  enrolTotpSetup() {
+    return this.post<TotpSetup>('/api/auth/enroll/totp');
+  }
+  enrolTotp(code: string) {
+    return this.post<Enrolled>('/api/auth/enroll/totp/verify', { code: code.trim() });
+  }
+  forgotPassword(email: string, app: 'consumer' = 'consumer') {
+    return this.post<EmailSent>('/api/auth/password/forgot', { email: email.trim(), app });
+  }
+  resetPassword(code: string, password: string, passwordConfirm: string) {
+    return this.post<{ email: string }>('/api/auth/password/reset', { code: code.trim(), password, passwordConfirm });
+  }
+
+  // ── the phone code (S-62): sign-in stays as an option ────────────────────────────────────────────────────────────
   startSignIn(identifier: string) {
     return this.post<{ identifier: string; factors: string[] }>('/api/auth/sign-in', { identifier: identifier.trim() });
   }

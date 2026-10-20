@@ -79,9 +79,7 @@ class AccountDeletionApiTest extends IntegrationTest {
         assertThat(emails.to(email)).singleElement().satisfies(mail -> {
             // in the language the request was made in (the site's); the deletion emails follow the profile's
             assertThat(mail.subject()).endsWith("is your code to confirm your request");
-            assertThat(mail.text())
-                    .contains("Confirm it’s you, Nadia")
-                    .contains("/account/delete");
+            assertThat(mail.text()).contains("Confirm it’s you, Nadia").contains("/account/delete");
         });
         assertThat(texts.to(email)).isEmpty();
 

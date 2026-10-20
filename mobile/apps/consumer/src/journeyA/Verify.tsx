@@ -15,9 +15,9 @@ import { useCountdown } from '../ui/useCountdown';
 import { useAfterSignIn } from './useAfterSignIn';
 
 /**
- * A3 Verify phone: the 6-digit code (filled from the SMS by iOS / Android), "Resend in 0:42" then "Resend code",
- * "Call me instead" (a voice call for landlines), Verify. Six digits typed or filled submit once by themselves. A
- * registration moves on to the second factor; a sign-in is done.
+ * A3 Verify phone, for signing in by phone (S-62's code; since S-159 accounts are created by email): the 6-digit code
+ * (filled from the SMS by iOS / Android), "Resend in 0:42" then "Resend code", "Call me instead" (a voice call for
+ * landlines), Verify. Six digits typed or filled submit once by themselves.
  */
 export function Verify() {
   const { t } = useI18n();
@@ -43,18 +43,17 @@ export function Verify() {
     setBusy(true);
     setError(null);
     try {
-      const next = await flow.verify(value);
-      if (next === 'mfa') router.replace('/second-factor');
-      else afterSignIn();
+      await flow.verify(value);
+      afterSignIn();
     } catch (e) {
       if (e instanceof HandoffError) setHandoffFailed(true);
-      const fields = fieldErrors(e, t, flow.mode === 'register' ? 'authErr.codeWrong' : 'authErr.signInCodeWrong');
+      const fields = fieldErrors(e, t, 'authErr.signInCodeWrong');
       if (fields.code) setError(fields.code);
       const other = flowError(e, t);
       if (other) setMessage({ text: other, tone: 'error' });
       if (isRestart(e)) {
         flow.reset();
-        router.replace(flow.mode === 'register' ? '/sign-up' : '/sign-in');
+        router.replace('/sign-in-phone');
       }
     } finally {
       setBusy(false);
@@ -106,7 +105,7 @@ export function Verify() {
     );
   }
 
-  const edit = () => router.replace(flow.mode === 'register' ? '/sign-up' : '/sign-in');
+  const edit = () => router.replace('/sign-in-phone');
 
   return (
     <Screen
@@ -120,17 +119,10 @@ export function Verify() {
       }
     >
       <Title>{t('otp.title')}</Title>
-      {flow.mode === 'register' && flow.phone ? (
-        <Row wrap>
-          <Body tone="muted">{t('otp.sentTo', { phone: flow.phone })} ·</Body>
-          <Link label={t('otp.edit')} onPress={edit} testID="otp-edit" />
-        </Row>
-      ) : (
-        <Row wrap>
-          <Body tone="muted">{t('otp.toAccount')}</Body>
-          <Link label={t('otp.edit')} onPress={edit} testID="otp-edit" />
-        </Row>
-      )}
+      <Row wrap>
+        <Body tone="muted">{t('otp.toAccount')}</Body>
+        <Link label={t('otp.edit')} onPress={edit} testID="otp-edit" />
+      </Row>
       <View style={styles.code}>
         <CodeInput value={code} onChange={setCode} label={t('otp.code')} error={error} autoFocus />
       </View>
