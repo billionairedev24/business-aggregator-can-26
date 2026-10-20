@@ -3,6 +3,7 @@ import { defineMessages } from '@northline/ui';
 /** Trust & safety (design 03 lines 347–372). en = the design's copy; keyword lists, rule editing and flag wording for the api's codes are ours (DECISIONS S-93). */
 export const useTrustT = defineMessages({
   en: {
+    appeals: 'Appeals', w_customer_no_show: 'Customer no-show',
     title: 'Trust & safety',
     lede: 'Scores are computed nightly in ClickHouse from completed jobs only. Floors trigger automatic consequences; humans handle appeals.',
     tierRules: 'Tier rules', colTier: 'Tier', colRequires: 'Requires', colUnlocks: 'Unlocks', tierEntity: 'tier rule', tierPlural: 'tier rules',
@@ -44,6 +45,7 @@ export const useTrustT = defineMessages({
     badFilter: 'That province or market is no longer offered.',
   },
   fr: {
+    appeals: 'Appels', w_customer_no_show: 'Absence du client',
     title: 'Confiance et sécurité',
     lede: 'Les notes sont calculées chaque nuit dans ClickHouse à partir des travaux terminés seulement. Les seuils déclenchent des conséquences automatiques; les humains traitent les appels.',
     tierRules: 'Règles des niveaux', colTier: 'Niveau', colRequires: 'Exige', colUnlocks: 'Débloque', tierEntity: 'règle de niveau', tierPlural: 'règles de niveau',
