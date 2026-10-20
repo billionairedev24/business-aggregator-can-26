@@ -93,7 +93,7 @@ export const useSettingsT = defineMessages({
     act_granted: 'Given', act_withdrawn: 'Withdrawn',
     src_web_signup: 'Sign-up (web)', src_app_signup: 'Sign-up (app)', src_web_settings: 'Account settings (web)', src_app_settings: 'Account settings (app)',
     src_checkout: 'Checkout', src_studio: 'Studio', src_import: 'Imported with your earlier consent', src_unsubscribe_link: 'Unsubscribe link',
-    src_list_unsubscribe: 'Your mailbox’s unsubscribe button', src_sms_keyword: 'STOP reply', src_console: '{brand} support, at your request', src_erasure: 'Account deleted',
+    src_list_unsubscribe: 'Your mailbox’s unsubscribe button', src_sms_keyword: 'Text reply (STOP or START)', src_console: '{brand} support, at your request', src_erasure: 'Account deleted',
 
     // Language & region
     langTitle: 'Language / Langue & region', appLanguage: 'App language',
@@ -213,7 +213,7 @@ export const useSettingsT = defineMessages({
     act_granted: 'Donné', act_withdrawn: 'Retiré',
     src_web_signup: 'Inscription (Web)', src_app_signup: 'Inscription (appli)', src_web_settings: 'Paramètres du compte (Web)', src_app_settings: 'Paramètres du compte (appli)',
     src_checkout: 'Paiement', src_studio: 'Studio', src_import: 'Importé avec votre consentement antérieur', src_unsubscribe_link: 'Lien de désabonnement',
-    src_list_unsubscribe: 'Bouton de désabonnement de votre messagerie', src_sms_keyword: 'Réponse ARRET', src_console: 'Soutien {brand}, à votre demande', src_erasure: 'Compte supprimé',
+    src_list_unsubscribe: 'Bouton de désabonnement de votre messagerie', src_sms_keyword: 'Réponse par texto (ARRET ou START)', src_console: 'Soutien {brand}, à votre demande', src_erasure: 'Compte supprimé',
 
     langTitle: 'Langue / Language et région', appLanguage: 'Langue de l’application',
     l_en: 'English', l_en_sub: 'Interface, receipts, notifications', l_fr: 'Français', l_fr_sub: 'Interface, reçus, notifications', l_fr_required: 'requis {places}',

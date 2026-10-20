@@ -331,7 +331,7 @@ export const account = {
   'account.notif.consent.src.import': 'Imported with your earlier consent',
   'account.notif.consent.src.unsubscribe_link': 'Unsubscribe link',
   'account.notif.consent.src.list_unsubscribe': 'Your mailbox’s unsubscribe button',
-  'account.notif.consent.src.sms_keyword': 'STOP reply',
+  'account.notif.consent.src.sms_keyword': 'Text reply (STOP or START)',
   'account.notif.consent.src.console': '{brand} support, at your request',
   'account.notif.consent.src.erasure': 'Account deleted',
 

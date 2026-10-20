@@ -321,7 +321,7 @@ export const account: { [k in keyof typeof en]: string } = {
   'account.notif.consent.src.import': 'Importé avec votre consentement antérieur',
   'account.notif.consent.src.unsubscribe_link': 'Lien de désabonnement',
   'account.notif.consent.src.list_unsubscribe': 'Bouton de désabonnement de votre messagerie',
-  'account.notif.consent.src.sms_keyword': 'Réponse ARRET',
+  'account.notif.consent.src.sms_keyword': 'Réponse par texto (ARRET ou START)',
   'account.notif.consent.src.console': 'Soutien {brand}, à votre demande',
   'account.notif.consent.src.erasure': 'Compte supprimé',
 
