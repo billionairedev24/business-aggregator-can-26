@@ -36,6 +36,8 @@ locals {
   firewall_rules = var.vps_service_name == "" || !var.edge_firewall ? {} : merge(
     { "0-tcp-established" = { sequence = 0, protocol = "tcp", tcp_option = "established", source = null, destination_port = null, source_port = null, action = "permit" } },
     { for i, cidr in var.admin_cidrs : "${i + 1}-ssh-${cidr}" => { sequence = i + 1, protocol = "tcp", tcp_option = null, source = cidr, destination_port = 22, source_port = null, action = "permit" } },
+    # The pipeline's runner, for one run only (ci_ssh_cidr; .github/workflows/ovh.yml).
+    var.ci_ssh_cidr == "" ? {} : { "9-ssh-ci" = { sequence = 9, protocol = "tcp", tcp_option = null, source = var.ci_ssh_cidr, destination_port = 22, source_port = null, action = "permit" } },
     {
       "4-http"       = { sequence = 4, protocol = "tcp", tcp_option = null, source = null, destination_port = 80, source_port = null, action = "permit" }
       "5-https"      = { sequence = 5, protocol = "tcp", tcp_option = null, source = null, destination_port = 443, source_port = null, action = "permit" }

@@ -59,6 +59,15 @@ interface Order {
   /** The courier's proof (default photo); an order with an ID check at the door never has a photo to show. */
   proof?: 'photo' | 'pin';
   idCheck?: boolean;
+  /** S-151: what was cancelled, a missed delivery, returns. */
+  cancellations?: Array<{ by: string; reason: string; at: string; whole: boolean; merchantName: string | null }>;
+  failure?: { reason: string; failedAt: number; choice: 'redeliver' | 'refund' | null };
+  returns?: FixtureReturn[];
+}
+export interface FixtureReturn {
+  id: string; ref: string; orderId: string; merchantId: string; merchantName: string; state: string; reason: string; note: string | null;
+  method: string | null; declineReason: string | null; amountCents: number; lines: Array<{ lineId: string; title: string; qty: number; amountCents: number }>;
+  canWithdraw: boolean; canEscalate: boolean; photo: boolean;
 }
 
 export interface ShopFixtureState {
@@ -247,6 +256,16 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
       deliveryProof: o.deliveredAt ? (o.proof ?? 'photo') : null,
       confirmedAt: o.confirmedAt ? new Date(o.confirmedAt).toISOString() : null,
       canConfirm: !!o.deliveredAt && !o.confirmedAt,
+      canCancel: o.state === 'placed',
+      cancellations: o.cancellations ?? [],
+      deliveryFailure: o.failure
+        ? { reason: o.failure.reason, failedAt: new Date(o.failure.failedAt).toISOString(), decideBy: new Date(o.failure.failedAt + 2 * DAY).toISOString(), attempts: 1, choice: o.failure.choice, chosenAt: null, feeCents: 0 }
+        : null,
+      returnable: o.deliveredAt
+        ? o.lines.filter((l) => !(o.returns ?? []).some((r) => r.state !== 'withdrawn' && r.lines.some((x) => x.lineId === l.itemId)))
+            .map((l) => ({ lineId: l.itemId, merchantId: l.merchantId, title: l.name, qty: l.qty, amountCents: l.unitCents * l.qty, returnUntil: new Date(o.deliveredAt! + 30 * DAY).toISOString() }))
+        : [],
+      returns: (o.returns ?? []).map(({ photo: _, ...r }) => r),
       paysShopsAt: o.deliveredAt ? new Date(o.deliveredAt + 7 * DAY).toISOString() : null,
       courier: o.courier ? { state: 'en_route', runLabel: null, courierName: o.courier.courierName, eta: new Date(midnight() + 18 * HOUR + 52 * 60_000).toISOString(), stopsBefore: o.courier.stopsBefore, lat: null, lng: null, positionAt: null, pin: o.courier.pin } : null,
     };
@@ -389,7 +408,7 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
 
     // ── signed-in only from here ─────────────────────────────────────────────────────────────────────────────────
     if (!path.startsWith('/me/')) return undefined;
-    const known = ['/me/upcoming', '/me/checkout', '/me/checkout/quote', '/me/checkouts', '/me/payment-methods', '/me/age-verification'].includes(path) || /^\/me\/(checkouts|orders|problems|case-uploads|devices)\b/.test(path);
+    const known = ['/me/upcoming', '/me/checkout', '/me/checkout/quote', '/me/checkouts', '/me/payment-methods', '/me/age-verification'].includes(path) || /^\/me\/(checkouts|orders|problems|case-uploads|devices|returns)\b/.test(path);
     if (!known) return undefined;
     if (!signedIn(req)) return unauthorized();
     ownerOf(req);
@@ -482,6 +501,61 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
       }
       return ctx.answer(201, { orderId: c.order.orderId, ref: c.order.ref });
     }
+    // S-151: cancel, the missed delivery's choice, returns
+    m = /^\/me\/orders\/([^/]+)\/(cancel|delivery-failure|returns)$/.exec(path);
+    if (m && method === 'POST') {
+      const o = state.orders.get(decodeURIComponent(m[1]!));
+      if (!o) return ctx.answer(404, { code: 'not_found', detail: 'We couldn’t find this order.' });
+      if (m[2] === 'cancel') {
+        if (o.state !== 'placed') return ctx.answer(409, { code: 'too_late', detail: 'A shop has already packed this order.' });
+        o.state = 'cancelled';
+        (o.cancellations ??= []).push({ by: 'customer', reason: String(req.body.reason), at: new Date(ctx.now()).toISOString(), whole: true, merchantName: null });
+        return ctx.answer(200, tracking(o));
+      }
+      if (m[2] === 'delivery-failure') {
+        if (!o.failure || o.failure.choice) return ctx.answer(409, { code: 'not_failed', detail: 'There is nothing to choose for this order.' });
+        const choice = req.body.choice === 'refund' ? 'refund' : 'redeliver';
+        o.failure.choice = choice;
+        if (choice === 'refund') {
+          o.state = 'cancelled';
+          (o.cancellations ??= []).push({ by: 'customer', reason: 'delivery_failed', at: new Date(ctx.now()).toISOString(), whole: true, merchantName: null });
+        } else {
+          o.state = 'placed';
+        }
+        return ctx.answer(200, tracking(o));
+      }
+      const lineIds = (req.body.lineIds as string[] | undefined) ?? [];
+      const lines = o.lines.filter((l) => lineIds.includes(l.itemId));
+      if (!lines.length || !req.body.reason || !req.body.photo) {
+        return ctx.answer(422, { code: 'validation', errors: [{ field: lines.length ? 'photo' : 'lineIds', rule: 'required', message: lines.length ? 'Add a photo of the item.' : 'Choose what you’re returning.' }] });
+      }
+      const merchantId = lines[0]!.merchantId;
+      const r: FixtureReturn = {
+        id: `ret-${state.next}`, ref: `RT-${state.next++}`, orderId: o.orderId, merchantId, merchantName: shopOf(merchantId).name, state: 'requested',
+        reason: String(req.body.reason), note: (req.body.note as string | undefined) ?? null, method: null, declineReason: null,
+        amountCents: lines.reduce((n, l) => n + l.unitCents * l.qty, 0), lines: lines.map((l) => ({ lineId: l.itemId, title: l.name, qty: l.qty, amountCents: l.unitCents * l.qty })),
+        canWithdraw: true, canEscalate: false, photo: true,
+      };
+      (o.returns ??= []).push(r);
+      const { photo: _, ...view } = r;
+      return ctx.answer(201, view);
+    }
+    m = /^\/me\/returns\/([^/]+)\/(withdraw|escalate)$/.exec(path);
+    if (m && method === 'POST') {
+      const r = [...state.orders.values()].flatMap((o) => o.returns ?? []).find((x) => x.id === decodeURIComponent(m![1]!));
+      if (!r) return ctx.answer(404, { code: 'not_found', detail: 'No such return.' });
+      if (m[2] === 'withdraw') {
+        if (!r.canWithdraw) return ctx.answer(409, { code: 'return_closed', detail: 'This return can’t be withdrawn any more.' });
+        r.state = 'withdrawn';
+      } else {
+        if (!r.canEscalate) return ctx.answer(409, { code: 'not_declined', detail: 'Only a declined return goes to an agent.' });
+        r.state = 'escalated';
+      }
+      r.canWithdraw = false;
+      r.canEscalate = false;
+      const { photo: _, ...view } = r;
+      return ctx.answer(200, view);
+    }
     m = /^\/me\/orders\/([^/]+)(\/confirm)?$/.exec(path);
     if (m) {
       const o = state.orders.get(decodeURIComponent(m[1]!));
@@ -552,9 +626,9 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
 export function seedOrder(
   state: ShopFixtureState,
   now: number,
-  orderState: 'placed' | 'packing' | 'picked_up' | 'delivered',
+  orderState: 'placed' | 'packing' | 'picked_up' | 'delivered' | 'delivery_failed',
   id = 'ord-1001',
-  extra: Pick<Order, 'proof' | 'idCheck'> = {},
+  extra: Pick<Order, 'proof' | 'idCheck' | 'failure' | 'returns' | 'cancellations'> = {},
 ): string {
   const p = PRODUCTS[0]!;
   const k = PRODUCTS[5]!;

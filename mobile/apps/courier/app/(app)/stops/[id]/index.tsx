@@ -48,6 +48,7 @@ export default function StopScreen() {
   const ready = stop.kind === 'pickup' || pickedUp(run, stop);
   const arrive = () => void services().outbox.enqueue({ kind: 'arrive', stopId: stop.id });
   const returned = () => void services().outbox.enqueue({ kind: 'returned', stopId: stop.id });
+  const collected = () => void services().outbox.enqueue({ kind: 'collect', stopId: stop.id });
   const open = stop.state !== 'done';
 
   const footer = open ? (
@@ -63,6 +64,7 @@ export default function StopScreen() {
         </>
       ) : null}
       {stop.kind === 'return' ? <Button label={t('stop.returned')} large onPress={returned} testID="returned" /> : null}
+      {stop.kind === 'collect' ? <Button label={t('stop.collected')} large icon="package" onPress={collected} testID="collected" /> : null}
     </>
   ) : undefined;
 
@@ -80,6 +82,8 @@ export default function StopScreen() {
         <Row>
           <Chip tone={unsent.has(stop.id) ? 'warn' : stop.state === 'done' ? 'done' : 'neutral'} label={unsent.has(stop.id) ? t('stop.unsent') : t(`stop.state.${stop.state}` as MessageKey)} />
           {stop.orderRef ? <Body muted>{t('stop.order', { ref: stop.orderRef })}</Body> : null}
+          {stop.returnRef ? <Body muted>{t('stop.returnRef', { ref: stop.returnRef })}</Body> : null}
+          {stop.failReason ? <Chip tone="warn" label={t('stop.failed')} /> : null}
         </Row>
       </View>
       <Card>
@@ -99,6 +103,11 @@ export default function StopScreen() {
         </View>
       ) : null}
       {stop.idCheck && open ? <Chip tone="warn" label={t('stop.idCheck', { age: stop.idCheck.age })} /> : null}
+      {stop.kind === 'collect' && open ? (
+        <Banner tone="info" role="text">
+          {t('stop.collectHint', { ref: stop.returnRef ?? stop.orderRef ?? '' })}
+        </Banner>
+      ) : null}
       {stop.kind === 'return' && open ? (
         <Banner tone="warn" role="text">
           {t('stop.returnHint')}

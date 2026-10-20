@@ -33,7 +33,7 @@ class MarketplaceOrdersJdbc implements MarketplaceOrders {
                                 and o.placed_at <  :start + (g.i + 1) * make_interval(secs => :seconds)
                                 and o.state is distinct from 'cancelled'
                           left join orders.order_lines l
-                                 on l.order_id = o.id and l.state is distinct from 'refunded'
+                                 on l.order_id = o.id and coalesce(l.state, 'pending') not in ('refunded', 'cancelled')
                                 and (:everyone or l.merchant_id = any(:merchants))
                          group by g.i order by g.i
                         """)

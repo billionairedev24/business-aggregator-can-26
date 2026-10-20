@@ -63,6 +63,21 @@ run "firewall_in_front_of_the_vps" {
   }
 }
 
+run "pipeline_runner_ssh_for_one_run" {
+  command = plan
+
+  variables {
+    vps_service_name = "vps-1a2b3c4d.vps.ovh.ca"
+    admin_cidrs      = ["198.51.100.7/32"]
+    ci_ssh_cidr      = "192.0.2.44/32"
+  }
+
+  assert {
+    condition     = length(ovh_ip_firewall_rule.box) == 9 && local.firewall_rules["9-ssh-ci"].source == "192.0.2.44/32" && local.firewall_rules["9-ssh-ci"].destination_port == 22 && local.firewall_rules["9-ssh-ci"].sequence < local.firewall_rules["19-deny-rest"].sequence
+    error_message = "ci_ssh_cidr adds one SSH rule before the final deny."
+  }
+}
+
 run "firewall_needs_an_admin_cidr" {
   command = plan
 

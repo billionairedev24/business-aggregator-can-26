@@ -6,7 +6,7 @@ import { ApiError, ValidationError } from '../../lib/http';
 import { useRegions, type Regions } from '../shell/api';
 import { useGrant } from '../shell/grant';
 import { SCREEN_PATH } from '../shell/screens';
-import { couriersQuery, mapQuery, runsQuery, useAssignRun, usePauseCourier, useResumeCourier, type Courier, type DeliveryMap, type Run } from './api';
+import { couriersQuery, mapQuery, runsQuery, useAssignRun, useMoveRemaining, usePauseCourier, useResumeCourier, type Courier, type DeliveryMap, type Run } from './api';
 import { OpsMap, stuck } from './OpsMap';
 import { useDeliveryT, type DeliveryKey, type DeliveryT } from './messages';
 import './delivery.css';
@@ -82,7 +82,7 @@ function OpsView({ head, runs, couriers, map }: { head: (sub: string) => React.R
   );
 }
 
-interface RunRow { id: string; run: string; zone: string; stops: number; courier: string; eta: string; state: string; src: Run }
+interface RunRow { id: string; run: string; zone: string; stops: number; courier: string; eta: string; state: string; phase: Run['state']; src: Run }
 
 function runState(r: Run, t: DeliveryT, locale: 'en' | 'fr'): { text: string; tone: DataTableTone } {
   if (r.state === 'done') return { text: t('r_done'), tone: 'tag-neutral' };
@@ -101,10 +101,10 @@ function RunsTable({ runs, couriers }: { runs: Run[]; couriers: Courier[] }) {
   const { locale } = useLocale();
   const fmt = useFormatters();
   const { can, roleName } = useGrant();
-  const [moving, setMoving] = useState<Run | null>(null);
+  const [moving, setMoving] = useState<{ run: Run; mode: 'assign' | 'move' } | null>(null);
   const rows: RunRow[] = runs.map(r => ({
     id: r.id, run: r.label ? (r.part > 1 ? `${r.label}·${r.part}` : r.label) : r.id.slice(-6), zone: r.market, stops: r.stopsTotal,
-    courier: r.courier?.name ?? t('none'), eta: r.nextEta ? fmt.date(r.nextEta, 'time') : t('none'), state: runState(r, t, locale).text, src: r,
+    courier: r.courier?.name ?? t('none'), eta: r.nextEta ? fmt.date(r.nextEta, 'time') : t('none'), state: runState(r, t, locale).text, phase: r.state, src: r,
   }));
   const columns: DataTableColumn<RunRow>[] = [
     { key: 'run', label: t('c_run'), primary: true }, { key: 'zone', label: t('c_zone') }, { key: 'stops', label: t('c_stops'), type: 'num' },
@@ -115,24 +115,31 @@ function RunsTable({ runs, couriers }: { runs: Run[]; couriers: Courier[] }) {
       <DataTable<RunRow> entity={t('runEntity')} plural={t('runPlural')} columns={columns} rows={rows} pageSize={5}
         rowTones={r => ({ state: runState(r.src, t, locale).tone })} roleName={roleName}
         can={{ create: false, update: can('dispatch'), delete: false }}
-        actions={[{ id: 'reassign', label: t('reassign'), perm: 'update', inline: true, bulk: false }]}
-        onAction={(_, picked) => { setMoving(picked[0]?.src ?? null); return false; }} />
-      {moving ? <ReassignDialog run={moving} couriers={couriers} onClose={() => setMoving(null)} /> : null}
+        actions={[
+          { id: 'reassign', label: t('reassign'), perm: 'update', inline: true, bulk: false },
+          // S-151: a started run that is stuck — the stops not picked up yet go to another courier
+          { id: 'move', label: t('moveRest'), perm: 'update', inline: true, bulk: false, when: { key: 'phase', in: ['loading', 'en_route'] } },
+        ]}
+        onAction={(a, picked) => { const run = picked[0]?.src; setMoving(run ? { run, mode: a.id === 'move' ? 'move' : 'assign' } : null); return false; }} />
+      {moving ? <ReassignDialog run={moving.run} mode={moving.mode} couriers={couriers} onClose={() => setMoving(null)} /> : null}
     </>
   );
 }
 
-function ReassignDialog({ run, couriers, onClose }: { run: Run; couriers: Courier[]; onClose: () => void }) {
+function ReassignDialog({ run, mode, couriers, onClose }: { run: Run; mode: 'assign' | 'move'; couriers: Courier[]; onClose: () => void }) {
   const t = useDeliveryT();
-  const assign = useAssignRun();
+  const assignRun = useAssignRun();
+  const moveRest = useMoveRemaining();
+  const assign = mode === 'move' ? moveRest : assignRun;
+  const move = mode === 'move';
   const free = couriers.filter(c => c.active && c.status === 'available' && !c.runId && c.id !== run.courier?.id);
   const [courierId, setCourierId] = useState(free[0]?.id ?? '');
   const error = assign.error ? errorText(assign.error) : undefined;
   return (
-    <Dialog open onClose={onClose} title={t('reassignTitle', { run: run.label ?? run.id })}
+    <Dialog open onClose={onClose} title={t(move ? 'moveTitle' : 'reassignTitle', { run: run.label ?? run.id })}
       actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
-        <Button disabled={!courierId || assign.isPending} onClick={() => assign.mutate({ runId: run.id, courierId }, { onSuccess: onClose })}>{t('reassign')}</Button></>}>
-      <p className="nl-dl-note">{t('reassignNote')}</p>
+        <Button disabled={!courierId || assign.isPending} onClick={() => assign.mutate({ runId: run.id, courierId }, { onSuccess: onClose })}>{t(move ? 'moveRest' : 'reassign')}</Button></>}>
+      <p className="nl-dl-note">{t(move ? 'moveNote' : 'reassignNote')}</p>
       {free.length ? (
         <Field label={t('reassignTo')} error={error}>
           <Select value={courierId} onChange={e => setCourierId(e.target.value)} options={free.map(c => ({ value: c.id, label: c.name ?? c.id }))} />

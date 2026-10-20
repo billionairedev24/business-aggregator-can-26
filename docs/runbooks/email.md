@@ -155,7 +155,9 @@ secrets manager), `SMTP_HOST=email-smtp.ca-central-1.amazonaws.com`, `SMTP_PORT=
 `EMAIL_PROVIDER=smtp` with `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_STARTTLS=true`
 (required whenever credentials are set). Works with SES SMTP, SendGrid SMTP (`smtp.sendgrid.net`, user `apikey`),
 Azure Communication Services SMTP, Mailgun, Postmark or Postfix. SMTP 5xx on a recipient = rejected; 4xx, TLS,
-authentication and connection problems = unavailable.
+authentication and connection problems = unavailable. STARTTLS only: a relay that offers implicit TLS on 465 alone
+can't be used. Brevo, Gmail (app password) and OVHcloud email step by step, and the demo inbox (Mailpit) for a
+private demo: [ovh.md § Email](ovh.md#email) (S-155b).
 
 ## DNS: SPF, DKIM, DMARC
 

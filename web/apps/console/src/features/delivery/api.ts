@@ -60,6 +60,12 @@ function useDeliveryMutation<V>(fn: (v: V) => Promise<unknown>) {
 /** Reassign a run that hasn't started (409 `courier_busy` / `run_started`; audit `fulfilment.run_assigned`). */
 export const useAssignRun = () => useDeliveryMutation(({ runId, courierId }: { runId: string; courierId: string }) =>
   http(`/api/v1/console/fulfilment/runs/${encodeURIComponent(runId)}/assign`, { method: 'POST', body: { courierId } }, Run));
+/**
+ * S-151: a started run is stuck — the stops not picked up yet move to another courier as a new part of the same window
+ * (409 `run_not_started` / `run_ended` / `nothing_to_move` / `courier_busy`; audit `fulfilment.run_split`).
+ */
+export const useMoveRemaining = () => useDeliveryMutation(({ runId, courierId }: { runId: string; courierId: string }) =>
+  http(`/api/v1/console/fulfilment/runs/${encodeURIComponent(runId)}/move-remaining`, { method: 'POST', body: { courierId } }, Run));
 /** Pause a courier: no new runs (audit `fulfilment.courier_paused` with the reason). */
 export const usePauseCourier = () => useDeliveryMutation(({ courierId, reason }: { courierId: string; reason: string }) =>
   http(`/api/v1/console/fulfilment/couriers/${encodeURIComponent(courierId)}/pause`, { method: 'POST', body: { reason } }, Courier));

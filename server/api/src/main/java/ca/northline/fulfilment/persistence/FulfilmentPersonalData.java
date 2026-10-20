@@ -20,7 +20,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 class FulfilmentPersonalData implements PersonalDataContributor {
 
-    static final String ACTIVE = "('waiting', 'planned', 'picked_up', 'returning')";
+    static final String ACTIVE = "('waiting', 'planned', 'picked_up', 'returning', 'failed')";
+    /** S-151: a return pickup the courier hasn't finished. */
+    static final String PICKUP_ACTIVE = "('waiting', 'planned', 'collected')";
 
     private final JdbcClient jdbc;
 
@@ -37,6 +39,14 @@ class FulfilmentPersonalData implements PersonalDataContributor {
                         select order_id, order_ref, order_type, kind, market, state, starts_at, ends_at, dropoff,
                                created_at
                           from fulfilment.deliveries where customer_id = :u order by created_at
+                        """, p),
+                section(jdbc, "fulfilment.returnPickups", "Return pickups", "Collectes de retours", """
+                        select return_id, return_ref, order_id, market, state, collect_from, created_at
+                          from fulfilment.return_pickups where customer_id = :u order by created_at
+                        """, p),
+                section(jdbc, "fulfilment.courierEarnings", "Courier earnings", "Gains de livreur", """
+                        select run_id, market, pickups, dropoffs, failed, collects, returns, total_cents, earned_at
+                          from fulfilment.courier_earnings where courier_user_id = :u order by earned_at
                         """, p),
                 section(jdbc, "fulfilment.courier", "Courier profile", "Profil de livreur", """
                         select id, vehicle, status, rating, market, active, created_at
@@ -61,6 +71,16 @@ class FulfilmentPersonalData implements PersonalDataContributor {
                         update fulfilment.deliveries set dropoff = null, updated_at = now()
                          where customer_id = :u and dropoff is not null and state not in
                         """ + ACTIVE).param("u", u).update();
+        var pickupsActive = jdbc.sql(
+                        "select count(*) from fulfilment.return_pickups where customer_id = :u and state in "
+                                + PICKUP_ACTIVE)
+                .param("u", u)
+                .query(Integer.class)
+                .single();
+        jdbc.sql("""
+                        update fulfilment.return_pickups set collect_from = null, updated_at = now()
+                         where customer_id = :u and collect_from is not null and state not in
+                        """ + PICKUP_ACTIVE).param("u", u).update();
         var courier = jdbc.sql("""
                         update fulfilment.couriers set active = false, status = 'offline' where user_id = :u
                         """).param("u", u).update();
@@ -75,6 +95,6 @@ class FulfilmentPersonalData implements PersonalDataContributor {
         if (courier > 0) {
             outcome = outcome.retaining("fulfilment.courierRuns", Retention.BUSINESS_RECORDS);
         }
-        return active > 0 ? outcome.holding("fulfilment.deliveries", Hold.ACTIVE_DELIVERY) : outcome;
+        return active + pickupsActive > 0 ? outcome.holding("fulfilment.deliveries", Hold.ACTIVE_DELIVERY) : outcome;
     }
 }

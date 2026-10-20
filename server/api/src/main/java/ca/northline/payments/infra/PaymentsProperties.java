@@ -17,7 +17,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param stripeWebhookTolerance how old a signed delivery may be (replay protection); default 5 minutes
  * @param webhookRateLimit webhook deliveries accepted per minute and client address; default 600
  * @param applePay S-157: offer Apple Pay in the Payment Element / PaymentSheet (Stripe only; needs the domain
- *     registered and, in the app, the merchant id — stripe.md § 13)
+ *     registered and, in the app, the merchant id — stripe.md § 14)
  * @param googlePay S-157: offer Google Pay (Stripe only; Google Pay on in the Stripe Dashboard)
  */
 @ConfigurationProperties("northline.payments")

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # S-157: register a consumer web domain for Apple Pay / Google Pay with Stripe's payment method domains API
-# (docs/runbooks/stripe.md § 13). Run once per domain and mode (test for dev/staging, live for prod), after the
+# (docs/runbooks/stripe.md § 14). Run once per domain and mode (test for dev/staging, live for prod), after the
 # consumer web serves /.well-known/apple-developer-merchantid-domain-association (NL_APPLE_PAY_DOMAIN_ASSOCIATION).
 #
 #   STRIPE_SECRET_KEY=sk_test_… scripts/stripe/payment-method-domain.sh register staging.northline.ca

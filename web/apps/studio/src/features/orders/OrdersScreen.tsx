@@ -6,6 +6,7 @@ import { useMerchantId, useRole } from '../shell/api';
 import { addDays, clockWithPeriod, localDate, today } from '../../lib/time';
 import { ordersQuery, usePackOrder, type Order, type OrderBoard } from './api';
 import { useOrdersT } from './messages';
+import { CancelOrderPanel, ReturnsPanel } from './AfterSale';
 import './Orders.css';
 
 type T = ReturnType<typeof useOrdersT>;
@@ -101,6 +102,7 @@ export function OrdersScreen() {
         emptyText={t('empty')}
       />
       <p className="nl-orders-foot">{t('footer')}</p>
+      <ReturnsPanel merchantId={merchantId} canDecide={role !== 'bookkeeper'} roleName={roleName} />
       <Drawer open={!!detail} onClose={() => setOpen(null)} title={detail ? t('detailTitle', { ref: detail.ref ?? '' }) : ''}
         footer={detail?.status === 'to_pack' && role !== 'bookkeeper' ? <button type="button" className="btn btn-primary" disabled={pack.isPending} onClick={() => pack.mutate(detail.id, { onSuccess: () => setOpen(null) })}>{t('markPacked')}</button> : undefined}>
         {detail ? <>
@@ -131,6 +133,7 @@ export function OrdersScreen() {
             ]} />
             <p className="nl-orders-note">{t('statusNote')}</p>
           </SheetSection>
+          {role !== 'bookkeeper' ? <CancelOrderPanel key={detail.id} merchantId={merchantId} order={detail} onDone={() => setOpen(null)} /> : null}
         </> : null}
       </Drawer>
     </div>

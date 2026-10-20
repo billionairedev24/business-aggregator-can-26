@@ -35,6 +35,7 @@ class StripeEventProcessor {
     private final PayoutService payouts;
     private final RefundCaseService cases;
     private final ConnectedAccountService accounts;
+    private final CourierPayoutService couriers;
     private final StripeChargeSync charges;
     private final ApplicationEventPublisher events;
     private final BankAccountService bankAccounts;
@@ -48,6 +49,7 @@ class StripeEventProcessor {
             PayoutService payouts,
             RefundCaseService cases,
             ConnectedAccountService accounts,
+            CourierPayoutService couriers,
             StripeChargeSync charges,
             ApplicationEventPublisher events,
             BankAccountService bankAccounts,
@@ -59,6 +61,7 @@ class StripeEventProcessor {
         this.payouts = payouts;
         this.cases = cases;
         this.accounts = accounts;
+        this.couriers = couriers;
         this.charges = charges;
         this.events = events;
         this.bankAccounts = bankAccounts;
@@ -115,15 +118,19 @@ class StripeEventProcessor {
     private boolean apply(StripeEvent event) {
         var o = event.object();
         return switch (event.type()) {
-            case "payout.paid" -> payouts.stripePayout(event, Payout.State.PAID);
-            case "payout.failed" -> payouts.stripePayout(event, Payout.State.FAILED);
-            case "payout.canceled" -> payouts.stripePayout(event, Payout.State.CANCELED);
+            // S-151: a courier's payout or account first, else a merchant's
+            case "payout.paid" ->
+                couriers.stripePayout(event, "paid") || payouts.stripePayout(event, Payout.State.PAID);
+            case "payout.failed" ->
+                couriers.stripePayout(event, "failed") || payouts.stripePayout(event, Payout.State.FAILED);
+            case "payout.canceled" ->
+                couriers.stripePayout(event, "canceled") || payouts.stripePayout(event, Payout.State.CANCELED);
             case "charge.dispute.created",
                     "charge.dispute.updated",
                     "charge.dispute.closed",
                     "charge.dispute.funds_withdrawn",
                     "charge.dispute.funds_reinstated" -> cases.chargeback(event);
-            case "account.updated" -> accounts.stripeAccountUpdated(event);
+            case "account.updated" -> couriers.accountUpdated(event) || accounts.stripeAccountUpdated(event);
             case "payment_intent.amount_capturable_updated",
                     "payment_intent.succeeded",
                     "payment_intent.payment_failed",

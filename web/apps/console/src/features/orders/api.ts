@@ -1,11 +1,11 @@
-import { keepPreviousData, queryOptions } from '@tanstack/react-query';
+import { keepPreviousData, queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { http } from '../../lib/http';
 
-export const VIEWS = ['attention', 'live', 'escrow', 'late', 'all'] as const;
+export const VIEWS = ['attention', 'live', 'escrow', 'late', 'failed', 'all'] as const;
 export type View = (typeof VIEWS)[number];
 
-export const STATUSES = ['new', 'live', 'escrow', 'escrow_48h', 'late', 'stuck', 'issue', 'delivered', 'done', 'cancelled'] as const;
+export const STATUSES = ['new', 'live', 'escrow', 'escrow_48h', 'late', 'stuck', 'issue', 'delivered', 'done', 'cancelled', 'delivery_failed'] as const;
 export const Status = z.enum(STATUSES);
 export type Status = z.infer<typeof Status>;
 
@@ -19,7 +19,7 @@ export type Row = z.infer<typeof Row>;
 
 export const Monitor = z.object({
   asOf: z.string(), week: z.number(),
-  counts: z.object({ attention: z.number(), live: z.number(), escrow: z.number(), late: z.number(), all: z.number() }),
+  counts: z.object({ attention: z.number(), live: z.number(), escrow: z.number(), late: z.number(), failed: z.number().default(0), all: z.number() }),
   items: z.array(Row), truncated: z.boolean(),
 });
 export type Monitor = z.infer<typeof Monitor>;
@@ -55,3 +55,33 @@ export const deliveryQuery = (orderId: string) => queryOptions({
   queryFn: () => http(`/api/v1/console/fulfilment/orders/${encodeURIComponent(orderId)}`, {}, Delivery),
   retry: false,
 });
+
+/** S-151, `GET /api/v1/console/orders/{orderId}/after-sale`: the order's cancellations, failed delivery and returns. */
+export const AfterSale = z.object({
+  orderId: z.string(), state: z.string(),
+  cancellations: z.array(z.object({
+    id: z.string(), merchantId: z.string().nullish(), merchantName: z.string().nullish(), by: z.string(), actorId: z.string().nullish(),
+    reason: z.string(), note: z.string().nullish(), restock: z.boolean(), whole: z.boolean(), lines: z.number(), at: z.string(),
+  })),
+  deliveryFailure: z.object({
+    reason: z.string(), failedAt: z.string(), decideBy: z.string(), attempts: z.number(), choice: z.string().nullish(), chosenAt: z.string().nullish(), feeCents: z.number(),
+  }).nullish(),
+  returns: z.array(z.object({ id: z.string(), ref: z.string(), merchantName: z.string().nullish(), state: z.string(), amountCents: z.number() })),
+});
+export type AfterSale = z.infer<typeof AfterSale>;
+export const afterSaleQuery = (orderId: string) => queryOptions({
+  queryKey: ['console', 'orders', 'after-sale', orderId],
+  queryFn: () => http(`/api/v1/console/orders/${encodeURIComponent(orderId)}/after-sale`, {}, AfterSale),
+  retry: false,
+});
+
+export const STAFF_CANCEL_REASONS = ['customer_request', 'merchant_request', 'fraud', 'payment_issue', 'delivery_issue', 'other'] as const;
+/** S-151, `POST /api/v1/console/orders/{orderId}/cancel` (orders screen + the support action; audited). */
+export function useStaffCancel(orderId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { reason: string; note?: string; restock: boolean }) =>
+      http(`/api/v1/console/orders/${encodeURIComponent(orderId)}/cancel`, { method: 'POST', body }),
+    onSettled: () => { void qc.invalidateQueries({ queryKey: ['console', 'orders'] }); },
+  });
+}

@@ -43,6 +43,9 @@ import org.springframework.web.bind.annotation.RestController;
  * GET  /api/v1/console/fulfilment/runs?market=&amp;from=&amp;to=     {items: [RunSummary]} (default: today ± 1 day)
  * GET  /api/v1/console/fulfilment/runs/{runId}                    RunDetail (the stops as the courier sees them)
  * POST /api/v1/console/fulfilment/runs/{runId}/assign {courierId}   RunSummary; 409 courier_busy / run_started
+ * POST /api/v1/console/fulfilment/runs/{runId}/move-remaining {courierId}  S-151: a stuck run's stops not picked up yet
+ *                                                                  → a new run for the courier; RunSummary of it; 409
+ *                                                                  run_not_started / nothing_to_move / courier_busy
  * GET  /api/v1/console/fulfilment/orders/{orderId}                 DeliveryView
  * GET  /api/v1/console/fulfilment/couriers?market=                 {items: [CourierSummary]}
  * POST /api/v1/console/fulfilment/couriers {userId, market, vehicle}            201 CourierSummary
@@ -108,6 +111,12 @@ class DispatchConsoleController {
     @RequiresConsole(value = ConsoleScreen.DELIVERY, actions = ConsoleAction.DISPATCH)
     RunSummary assign(@PathVariable String runId, @Valid @RequestBody AssignRequest body, CurrentStaff staff) {
         return console.assign(runId, body.courierId(), actor(staff));
+    }
+
+    @PostMapping("/runs/{runId}/move-remaining")
+    @RequiresConsole(value = ConsoleScreen.DELIVERY, actions = ConsoleAction.DISPATCH)
+    RunSummary moveRemaining(@PathVariable String runId, @Valid @RequestBody AssignRequest body, CurrentStaff staff) {
+        return console.moveRemaining(runId, body.courierId(), actor(staff));
     }
 
     @GetMapping("/orders/{orderId}")

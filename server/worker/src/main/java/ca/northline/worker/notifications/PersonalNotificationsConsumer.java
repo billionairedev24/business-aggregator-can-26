@@ -40,6 +40,7 @@ class PersonalNotificationsConsumer {
     @KafkaListener(
             topics = {
                 "orders.order",
+                "orders.return",
                 "fulfilment.delivery",
                 "fulfilment.run",
                 "booking.booking",

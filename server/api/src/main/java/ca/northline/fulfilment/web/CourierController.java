@@ -1,7 +1,9 @@
 package ca.northline.fulfilment.web;
 
 import ca.northline.fulfilment.application.DispatchUseCases.CourierApp;
+import ca.northline.fulfilment.application.DispatchUseCases.CourierEarnings;
 import ca.northline.fulfilment.application.DispatchUseCases.CourierView;
+import ca.northline.fulfilment.application.DispatchUseCases.EarningsView;
 import ca.northline.fulfilment.application.DispatchUseCases.IdCheckAnswer;
 import ca.northline.fulfilment.application.DispatchUseCases.Ping;
 import ca.northline.fulfilment.application.DispatchUseCases.RunView;
@@ -17,9 +19,11 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,7 +52,12 @@ import org.springframework.web.multipart.MultipartFile;
  *                                                ofAge}}; 409 not_picked_up / proof_missing; 422 idCheck (age-restricted)
  * POST /api/v1/courier/stops/{id}/refuse         {reason: no_id|underage|mismatch|nobody_of_age|intoxicated|other}
  *                                                age-restricted: not handed over → a return stop at the business
- * POST /api/v1/courier/stops/{id}/returned       the refused order is back at the business
+ * POST /api/v1/courier/stops/{id}/returned       the goods are back at the business (refused, failed, a return)
+ * POST /api/v1/courier/stops/{id}/fail           S-151 {reason: absent|unsafe|refused|access|other, note?} after a photo
+ *                                                (proof kind=photo); 409 proof_missing → return stops to the shops
+ * POST /api/v1/courier/stops/{id}/collect        S-151 a customer's return collected at their door
+ * GET  /api/v1/courier/earnings                  S-151 today, this week, per run (pay + tips), balance, payout account
+ * POST /api/v1/courier/payout-account/onboarding S-151 {returnUrl?} → {url}: Stripe's onboarding for payouts
  * POST /api/v1/courier/location                  S-88 {lat, lng, heading?} while on shift → {acceptedAt, nextAfterMs};
  *                                                429 too_many_pings (Retry-After) faster than every 2 s
  * </pre>
@@ -59,6 +68,20 @@ import org.springframework.web.multipart.MultipartFile;
 class CourierController {
 
     private final CourierApp app;
+    private final CourierEarnings earnings;
+    private final CourierPayoutLinks links;
+
+    record FailRequest(
+            @NotBlank(message = DeliveryRules.FAIL_REASON)
+            @Pattern(regexp = "absent|unsafe|refused|access|other", message = DeliveryRules.FAIL_REASON)
+            String reason,
+
+            @Nullable @Size(max = DeliveryRules.MAX_NOTE, message = DeliveryRules.FAIL_NOTE_LENGTH)
+            String note) {}
+
+    record OnboardingRequest(@Nullable String returnUrl) {}
+
+    record OnboardingLink(String url) {}
 
     record PickupRequest(boolean scanOk) {}
 
@@ -161,5 +184,26 @@ class CourierController {
     @PostMapping("/stops/{stopId}/returned")
     RunView returned(CurrentUser user, @PathVariable String stopId) {
         return app.returned(user.userId(), stopId);
+    }
+
+    @PostMapping("/stops/{stopId}/fail")
+    RunView fail(CurrentUser user, @PathVariable String stopId, @Valid @RequestBody FailRequest body) {
+        return app.fail(user.userId(), stopId, body.reason(), body.note());
+    }
+
+    @PostMapping("/stops/{stopId}/collect")
+    RunView collect(CurrentUser user, @PathVariable String stopId) {
+        return app.collect(user.userId(), stopId);
+    }
+
+    @GetMapping("/earnings")
+    ResponseEntity<EarningsView> earnings(CurrentUser user) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(earnings.earnings(user.userId()));
+    }
+
+    @PostMapping("/payout-account/onboarding")
+    OnboardingLink onboarding(CurrentUser user, @RequestBody(required = false) @Nullable OnboardingRequest body) {
+        return new OnboardingLink(
+                earnings.payoutOnboarding(user.userId(), links.returnUrl(body == null ? null : body.returnUrl())));
     }
 }

@@ -2,6 +2,7 @@ package ca.northline.catalogue.application;
 
 import ca.northline.booking.api.BookingProgressed;
 import ca.northline.booking.api.QuoteAccepted;
+import ca.northline.orders.api.OrderCancelled;
 import ca.northline.orders.api.OrderPacked;
 import ca.northline.orders.api.OrderPlaced;
 import ca.northline.payments.api.RefundIssued;
@@ -38,6 +39,12 @@ class SalesListener {
     @ApplicationModuleListener
     void on(QuoteAccepted event) {
         sales.recount(event.merchantId());
+    }
+
+    /** S-151: cancelled lines no longer count. */
+    @ApplicationModuleListener
+    void on(OrderCancelled event) {
+        event.merchantIds().forEach(sales::recount);
     }
 
     @ApplicationModuleListener

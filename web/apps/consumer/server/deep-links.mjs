@@ -6,6 +6,7 @@
 //   /app/orders/<id>        → /orders/<id>            /app/food/orders/<id> → /food/orders/<id>
 //   /app/quotes/<id>        → /quotes/<id>            /app/bookings/<id>    → /account/orders (bookings are listed there)
 //   /app/cases/<number>     → /account/orders?view=cases                     /courier/run          → /
+//   /courier/payouts        → /  (S-151: Stripe's payout onboarding returns here; the courier app claims it)
 // (/app/oauth2redirect and /courier/oauth2redirect are the OAuth redirects, not deep links: app-links, S-97.)
 const ID = '[A-Za-z0-9_-]{1,64}';
 const ROUTES = [
@@ -17,6 +18,7 @@ const ROUTES = [
   // S-153: a thread with a provider → Account › Messages with it open
   [new RegExp(`^/app/messages/(${ID})/?$`), id => `/account/messages?thread=${id}`],
   [/^\/courier\/run\/?$/, () => '/'],
+  [/^\/courier\/payouts\/?$/, () => '/'],
 ];
 
 /** The web page of an app deep link, or null when the path isn't one. */

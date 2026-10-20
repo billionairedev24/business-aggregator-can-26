@@ -34,6 +34,20 @@ public final class DeliveryRules {
     public static final String PAUSE_REASON = "Say why the courier is paused.";
     public static final String PAUSE_REASON_LENGTH = "Keep the reason under 500 characters.";
 
+    // S-151: failed drop-offs, return pickups, stops taken off a run, a stuck run's remaining stops
+    public static final String FAIL_REASON = "Choose why the order couldn't be handed over.";
+    public static final String FAIL_PHOTO = "Take a photo at the door first.";
+    public static final String FAIL_NOTE = "Add a note saying what happened.";
+    public static final String FAIL_NOTE_LENGTH = "Keep the note under 500 characters.";
+    public static final String STOP_REMOVED = "This stop was taken off your run.";
+    public static final String RUN_NOT_STARTED = "This run hasn't started: reassign the whole run.";
+    public static final String NOTHING_TO_MOVE = "Every order on this run is already picked up.";
+
+    /** S-151: why a courier couldn't hand an order over. */
+    public static final Set<String> FAIL_REASONS = Set.of("absent", "unsafe", "refused", "access", "other");
+
+    public static final int MAX_NOTE = 500;
+
     public static final Set<String> PROOFS = Set.of("photo", "signature", "pin");
     public static final Set<String> VEHICLES = Set.of("bike", "ebike", "car", "van");
     public static final long MAX_PROOF_BYTES = 5L * 1024 * 1024;
