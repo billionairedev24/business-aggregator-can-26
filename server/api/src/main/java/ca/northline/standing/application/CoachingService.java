@@ -102,7 +102,7 @@ class CoachingService implements ManageStanding, TickCoachingTask {
     @Override
     public CoachingView closeCoaching(
             String planId, boolean completed, @Nullable String reason, String staffId, String role) {
-        var plan = store.find(planId).orElseThrow(() -> new NotFound("coaching_plan", planId));
+        var plan = store.find(planId).orElseThrow(() -> new NotFound("coaching plan", planId));
         if (!"active".equals(plan.state())) {
             throw new Conflict("plan_closed", CoachingRules.CLOSED);
         }
@@ -124,12 +124,12 @@ class CoachingService implements ManageStanding, TickCoachingTask {
     public CoachingView tick(String merchantId, String planId, String taskId, boolean done, String userId) {
         var plan = store.find(planId)
                 .filter(p -> p.merchantId().equals(merchantId))
-                .orElseThrow(() -> new NotFound("coaching_plan", planId));
+                .orElseThrow(() -> new NotFound("coaching plan", planId));
         if (!"active".equals(plan.state())) {
             throw new Conflict("plan_closed", CoachingRules.CLOSED);
         }
         if (!store.tick(planId, taskId, done, userId, clock.instant())) {
-            throw new NotFound("task", taskId);
+            throw new NotFound("coaching task", taskId);
         }
         return StandingViewService.view(store.find(planId).orElseThrow());
     }

@@ -1216,3 +1216,7 @@ This business already has a coaching plan.	Cette entreprise a déjà un plan d�
 This coaching plan is closed.	Ce plan d’accompagnement est fermé.	new
 Choose done or not done.	Choisissez fait ou pas fait.	new
 Choose completed or cancelled.	Choisissez terminé ou annulé.	new
+No appeal with id %s	Aucun appel avec l’identifiant %s	new
+No coaching plan with id %s	Aucun plan d’accompagnement avec l’identifiant %s	new
+No coaching task with id %s	Aucune tâche d’accompagnement avec l’identifiant %s	new
+No consequence with id %s	Aucune mesure avec l’identifiant %s	new

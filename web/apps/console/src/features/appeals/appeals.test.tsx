@@ -9,7 +9,7 @@ const appeal = (o: Record<string, unknown> = {}) => ({
   statement: 'We never asked anyone to pay outside Northline.', state: 'open', filedAt: '2026-10-19T18:00:00Z', decidedAt: null,
   decisionReason: null, compensationCents: 0, files: [{ id: 'F1', name: 'message log.pdf', contentType: 'application/pdf', size: 12 }], ...o,
 });
-const item = (o: Record<string, unknown> = {}) => ({ appeal: appeal(o), merchantId: 'M1', businessName: 'Standing Mechanics', province: 'AB', assigneeId: null, assigneeName: null });
+const item = (o: Record<string, unknown> = {}) => ({ appeal: appeal(o), merchantId: 'M1', businessName: 'Standing Mechanics', province: 'AB', assigneeId: null as string | null, assigneeName: null as string | null });
 const DISPUTE = { appeal: appeal({ id: 'A2', number: 'AP-1002', subjectType: 'dispute', subjectId: 'D1', subjectKind: 'full_refund', subjectLabel: 'DS-1188', files: [] }), merchantId: 'M2', businessName: 'Prairie Wrench', province: 'AB', assigneeId: null, assigneeName: null };
 const detail = (i: ReturnType<typeof item>) => ({
   item: i, consequence: { id: 'C1', kind: 'suspended', cause: 'staff', reason: 'Customers report payments outside Northline.', startedAt: '2026-10-18T18:00:00Z', endsAt: null, active: true, liftedAt: null, liftReason: null },

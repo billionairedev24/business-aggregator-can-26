@@ -31,7 +31,7 @@ export const useAppealsT = defineMessages({
     entity: 'appel', plural: 'appels', open: 'Ouvrir', empty: 'Aucun appel en attente.',
     c_appeal: 'Appel', c_business: 'Entreprise', c_about: 'Objet', c_filed: 'Déposé', c_owner: 'Chez', c_state: 'État',
     st_open: 'En attente', st_in_review: 'En examen', st_granted: 'Accueilli', st_denied: 'Rejeté',
-    about_dispute: 'Litige {label}', about_suspended: 'Suspension', about_search_hidden: 'Masquée dans la recherche', about_instant_book_off: 'Réservation instantanée suspendue',
+    about_dispute: 'Litige {label}', about_suspended: 'Compte suspendu', about_search_hidden: 'Masquée dans la recherche', about_instant_book_off: 'Réservation instantanée suspendue',
     filed: 'il y a {age}', nobody: '—',
     secStatement: 'L’entreprise affirme', secSubject: 'Ce qui a été décidé', secDecision: 'Décision', secFiles: 'Preuves',
     noFiles: 'Aucun fichier.',

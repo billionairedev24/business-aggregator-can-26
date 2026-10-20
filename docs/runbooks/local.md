@@ -332,6 +332,13 @@ Notes:
   billing (`PLUS_BILLING_PROVIDER=local`: no card, no tax); to try Stripe Billing set `PLUS_BILLING_PROVIDER=stripe`,
   `STRIPE_PLUS_MONTHLY_PRICE` / `STRIPE_PLUS_ANNUAL_PRICE` (test-mode prices) and a test `STRIPE_SECRET_KEY`, and forward
   `customer.subscription.*` and `invoice.paid` with `stripe listen` ([stripe.md § 11](stripe.md#11-northline-plus--stripe-billing-s-152)).
+- **Standing, appeals and card disputes (S-156, [standing.md](standing.md)):** nothing to set. Report a customer
+  no-show from Studio › Appointments (15 min after the start) or a provider no-show from the customer's "Something's
+  wrong"; confirm the flags in the console's Trust & safety; `EnforceStanding.run()` (nightly at
+  `STANDING_ENFORCEMENT_CRON`, not under `test`) pauses instant book after 3 in 30 days. Studio › Standing shows the
+  consequences and takes appeals; the console's Trust & safety › Appeals decides them. Card-dispute evidence goes to
+  the local fake (`DISPUTE_EVIDENCE_PROVIDER=local`; a Stripe dispute id containing `rejectEvidence` is refused, to try
+  the error path); set `stripe` with a test key and `stripe trigger charge.dispute.created` to try Stripe.
 - **Business registries (S-23):** the three sources answer from `server/api/src/main/resources/registries/fixtures.json`
   (e.g. Alberta `2021456789` = Prairie Wrench, Calgary `BL 22-118840` = Pho Dau Bo); unknown numbers go to the manual
   review queue (`GET /api/v1/console/registry-reviews`, staff). To try Calgary's real dataset:
