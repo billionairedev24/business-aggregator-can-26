@@ -33,5 +33,7 @@ public enum ConsoleAction implements CodedEnum {
      * Two-person review (2026-10-18): decide a merchant application someone else reviewed (stage 2). Stage 1, the
      * review, is {@link #VERIFY}.
      */
-    APPROVE
+    APPROVE,
+    /** S-157: send an offer (and a test of it) to the consenting customers of a market (finance, admins). */
+    OFFERS
 }
