@@ -1,0 +1,41 @@
+import { defineMessages } from '@northline/ui';
+
+/** S-152 on the Finance screen: loyalty liabilities, Plus, and the points earning rules (region data). */
+export const useLoyaltyT = defineMessages({
+  en: {
+    liabTitle: 'Points, rewards and Plus',
+    liabSub: 'Points customers hold are a liability until they’re spent or expire; businesses’ reward money is held to cover theirs.',
+    outstanding: 'Points outstanding', outstandingValue: '{points} points · {value} off at checkout · {holders, plural, one {# customer} other {# customers}}',
+    funded: 'Held from businesses’ rewards', redeemed: 'Points taken off sales · week',
+    plusMembers: 'Plus households', plusMembersValue: '{members} · {trialing} in their trial',
+    referrals: 'Referrals waiting',
+    rulesTitle: 'Points earning rules',
+    rulesSub: 'Region data: a market’s rule, else its province’s, else the default. What a dollar of a completed sale earns, when points expire and what a referral pays.',
+    c_region: 'Applies to', c_ppd: 'Points per $', c_kinds: 'Sales that earn', c_expiry: 'Expiry', c_referral: 'Referral (each side)', c_cap: 'Referrals / 30 days', c_min: 'First order at least',
+    defaultRule: 'Default (everywhere else)', never: 'Never', months: '{n, plural, one {# month} other {# months}}',
+    kind_goods: 'Goods', kind_food: 'Food', kind_service: 'Services',
+    edit: 'Edit', add: 'Add a rule for a province or market', save: 'Save rule', cancel: 'Cancel', remove: 'Remove',
+    f_region: 'Province or market', f_ppd: 'Points per dollar', f_expiry: 'Expire after (months)', f_never: 'Points never expire',
+    f_referral: 'Referral points (each side)', f_cap: 'Rewarded referrals per referrer in 30 days', f_min: 'Invitee’s first order at least ($)',
+    rulesError: 'The rules couldn’t load. Try again.', saveError: 'That couldn’t be saved. Try again.',
+    readOnly: 'Finance and admins with promotions rights change these.',
+  },
+  fr: {
+    liabTitle: 'Points, récompenses et Plus',
+    liabSub: 'Les points détenus par les clients sont un passif jusqu’à leur utilisation ou leur expiration; l’argent des récompenses des entreprises est retenu pour couvrir les leurs.',
+    outstanding: 'Points en circulation', outstandingValue: '{points} points · {value} de rabais au paiement · {holders, plural, one {# client} other {# clients}}',
+    funded: 'Retenu des récompenses des entreprises', redeemed: 'Points déduits des ventes · semaine',
+    plusMembers: 'Foyers Plus', plusMembersValue: '{members} · {trialing} en essai',
+    referrals: 'Parrainages en attente',
+    rulesTitle: 'Règles d’obtention des points',
+    rulesSub: 'Données régionales : la règle du marché, sinon celle de sa province, sinon celle par défaut. Ce que rapporte un dollar d’une vente terminée, l’expiration des points et ce que rapporte un parrainage.',
+    c_region: 'S’applique à', c_ppd: 'Points par $', c_kinds: 'Ventes admissibles', c_expiry: 'Expiration', c_referral: 'Parrainage (chacun)', c_cap: 'Parrainages / 30 jours', c_min: 'Première commande d’au moins',
+    defaultRule: 'Par défaut (partout ailleurs)', never: 'Jamais', months: '{n, plural, one {# mois} other {# mois}}',
+    kind_goods: 'Produits', kind_food: 'Repas', kind_service: 'Services',
+    edit: 'Modifier', add: 'Ajouter une règle pour une province ou un marché', save: 'Enregistrer la règle', cancel: 'Annuler', remove: 'Retirer',
+    f_region: 'Province ou marché', f_ppd: 'Points par dollar', f_expiry: 'Expiration après (mois)', f_never: 'Les points n’expirent jamais',
+    f_referral: 'Points de parrainage (chacun)', f_cap: 'Parrainages récompensés par parrain en 30 jours', f_min: 'Première commande de l’invité d’au moins ($)',
+    rulesError: 'Les règles n’ont pas pu être chargées. Réessayez.', saveError: 'L’enregistrement a échoué. Réessayez.',
+    readOnly: 'Les finances et les administrateurs ayant le droit promotions les modifient.',
+  },
+});
