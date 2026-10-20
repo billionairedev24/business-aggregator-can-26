@@ -6,6 +6,7 @@ import { common } from './common';
 import { hire } from './hire';
 import { journeyA } from './journeyA';
 import { light } from './light';
+import { loyalty } from './loyalty';
 import { pilot } from './pilot';
 import { redesign } from './redesign';
 import { screens } from './screens';
@@ -13,4 +14,4 @@ import { services } from './services';
 import { shop } from './shop';
 
 /** Canadian French: design/i18n-fr.js's wording where it has the phrase, ours otherwise. */
-export const frCA: { [k in keyof typeof en]: string } = { ...common, ...screens, ...journeyA, ...shop, ...services, ...account, ...pilot, ...aftercare, ...afterSale, ...redesign, ...light, ...hire };
+export const frCA: { [k in keyof typeof en]: string } = { ...common, ...screens, ...journeyA, ...shop, ...services, ...account, ...pilot, ...aftercare, ...afterSale, ...redesign, ...light, ...loyalty, ...hire };

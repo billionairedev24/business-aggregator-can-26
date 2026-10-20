@@ -16,7 +16,9 @@ export const usePromoT = defineMessages({
     tipTitle: 'Tip the courier · 100% goes to them',
     noTip: 'No tip',
     tip: 'Tip',
-    taxNote: 'Tax is on the price after the promo code. Points pay like money.',
+    taxNote: 'Tax is on the price after the promo code and points.',
+    plusSavings: 'Plus member prices',
+    plusFee: '$0 · Plus',
   },
   fr: {
     promoTitle: 'Code promo et points',
@@ -32,6 +34,8 @@ export const usePromoT = defineMessages({
     tipTitle: 'Pourboire au livreur · 100 % lui revient',
     noTip: 'Aucun',
     tip: 'Pourboire',
-    taxNote: 'Les taxes s’appliquent au prix après le code promo. Les points paient comme de l’argent.',
+    taxNote: 'Les taxes s’appliquent au prix après le code promo et les points.',
+    plusSavings: 'Prix membres Plus',
+    plusFee: '0 $ · Plus',
   },
 });

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useSearch } from '@tanstack/react-router';
-import { Bell, CalendarCheck, CreditCard, Heart, Lifebuoy, MapPinLine, Package, ShieldCheck, Storefront, User } from '@phosphor-icons/react';
+import { Bell, CalendarCheck, Coins, CreditCard, Crown, Gift, Heart, Lifebuoy, MapPinLine, Package, ShieldCheck, Storefront, User } from '@phosphor-icons/react';
 import { EmptyState, SiteLink, Skeleton, fullNavEnabled } from '@northline/ui';
 import { signInHref, useViewer } from '../session/api';
 import { useAccountT } from './messages';
@@ -12,7 +12,8 @@ import { HelpTab } from './HelpTab';
 import { LanguageTab } from './LanguageTab';
 import { NotificationsTab } from './NotificationsTab';
 import { CardList, PaymentsTab } from './PaymentsTab';
-import { PlusTab } from './PlusTab';
+import { PlusTab } from '../loyalty/PlusTab';
+import { InviteTab } from '../loyalty/InviteTab';
 import { ProfileTab } from './ProfileTab';
 import { SecurityTab } from './SecurityTab';
 import { Crumbs } from '../pages/Crumbs';
@@ -32,11 +33,15 @@ const TABS: Partial<Record<AccountTab, () => ReactNode>> = {
   language: () => <LanguageTab />,
   dietary: () => <DietaryTab />,
   plus: () => <PlusTab />,
+  invite: () => <InviteTab />,
   help: () => <HelpTab />,
 };
 
-/** The account's sections hidden for the demo (redesign § 3.6): Wallet & points, Dietary, Plus and Language. */
-export const LATER_TABS: readonly AccountTab[] = ['wallet', 'dietary', 'plus', 'language'];
+/**
+ * The account's sections hidden for the demo (redesign § 3.6): Dietary and Language. Wallet & points and Plus came
+ * back with S-152 (points earn, Plus bills).
+ */
+export const LATER_TABS: readonly AccountTab[] = ['dietary', 'language'];
 const visible = (tab: AccountTab) => fullNavEnabled() || !LATER_TABS.includes(tab);
 
 /**
@@ -75,6 +80,9 @@ const CARDS = [
   { key: 'security', href: tabHref('security'), icon: ShieldCheck },
   { key: 'notifications', href: tabHref('notifications'), icon: Bell },
   { key: 'favourites', href: tabHref('favourites'), icon: Heart },
+  { key: 'points', href: tabHref('wallet'), icon: Coins },
+  { key: 'plus', href: tabHref('plus'), icon: Crown },
+  { key: 'invite', href: tabHref('invite'), icon: Gift },
   { key: 'profile', href: tabHref('profile'), icon: User },
   { key: 'help', href: tabHref('help'), icon: Lifebuoy },
   { key: 'sell', href: '/sell', icon: Storefront },
@@ -110,7 +118,7 @@ export function AccountLayout({ tab, children }: { tab: AccountTab; children: Re
     <div className="nl-page nl-acct">
       <Crumbs label={t('crumbs')} items={[{ label: t('crumbAccount'), href: '/account' }, { label: t(`tab_${tab}`) }]} />
       <div className="nl-acct-split">
-        <AccountSide current={tab} />
+        <AccountSide current={tab === 'wallet' ? 'points' : tab} />
         <section className="nl-acct-body" aria-labelledby="acct-title">{children}</section>
       </div>
     </div>

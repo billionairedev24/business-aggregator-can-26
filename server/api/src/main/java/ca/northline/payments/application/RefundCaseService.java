@@ -402,7 +402,9 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
             return new StripeRefund(stripeRefund, null, 0, false);
         }
         var reverse = Fees.transferReversalCents(
-                refund.getAmountCents() + refund.getPromoReturnCents(), transfer.netCents(), transfer.reversedCents());
+                refund.getAmountCents() + refund.getPromoReturnCents() + refund.getPointsCents(),
+                transfer.netCents(),
+                transfer.reversedCents());
         if (reverse == 0) {
             return new StripeRefund(stripeRefund, null, 0, false);
         }

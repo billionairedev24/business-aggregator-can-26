@@ -14,12 +14,12 @@ run "derives_topics_dlq_and_retry_topics" {
   }
 
   assert {
-    condition     = output.topics["catalogue.listing.search-indexer.retry-2"] == { partitions = 6, retention_hours = 24, cleanup_policy = "delete" }
+    condition     = output.topics["catalogue.listing.search-indexer.retry-1"] == { partitions = 6, retention_hours = 24, cleanup_policy = "delete" }
     error_message = "Consumers get <topic>.<group>.retry-<n>, one per delay, with the source topic's partitions."
   }
 
   assert {
-    condition     = !contains(keys(output.topics), "catalogue.listing.search-indexer.retry-3")
+    condition     = !contains(keys(output.topics), "catalogue.listing.search-indexer.retry-2")
     error_message = "One retry topic per delay, no more."
   }
 

@@ -39,7 +39,15 @@ export interface AccountFixtureState {
   };
   labels: Map<string, string>;
   points: { balance: number; weekly: number[] };
-  plus: { plan: 'monthly' | 'annual'; since: string } | null;
+  plus: { plan: 'monthly' | 'annual'; since: string; status?: 'trialing' | 'active'; cancelAtPeriodEnd?: boolean; payer?: boolean } | null;
+  /** S-152: whether the household already had its free trial; `card` makes a join answer 409 card_required (Stripe Billing). */
+  plusTrialUsed: boolean;
+  plusNeedsCard: boolean;
+  /** S-152: the points ledger (newest first) and Invite a neighbour. */
+  pointsActivity: Array<{ id: string; type: string; points: number; note?: string | null; at: string; expiresAt?: string | null }>;
+  referral: { code: string; pending: number; rewarded: number; claimed: { code: string; state: 'pending' | 'rewarded' | 'refused'; claimedAt: string } | null; canClaim: boolean };
+  /** S-152: provider-funded rewards running near the place (public). */
+  rewards: Array<{ merchantId: string; businessName: string; type: string; slug: string | null; multiplier: number; label: string | null; endsOn: string; distanceKm: number | null }>;
   /** The matrix, language and marketing; the quiet hours are `services.quiet`. */
   notifications: { matrix: Matrix; language: string; marketing: string };
   /** S-108: grants and withdrawals of the marketing consents, newest first (the offers row and marketing are them). */
@@ -84,6 +92,17 @@ export function newAccountState(o: {
     labels: new Map(),
     points: { balance: 1240, weekly: [0, 120, 80, 0, 260, 140, 320, 180] },
     plus: null,
+    plusTrialUsed: false,
+    plusNeedsCard: false,
+    pointsActivity: [
+      { id: 'pl-3', type: 'redemption', points: -500, note: null, at: new Date(now - 2 * DAY).toISOString() },
+      { id: 'pl-2', type: 'reward', points: 320, note: 'Sample Garage', at: new Date(now - 6 * DAY).toISOString(), expiresAt: new Date(now + 540 * DAY).toISOString() },
+      { id: 'pl-1', type: 'earn', points: 1420, note: 'Sample Garage', at: new Date(now - 6 * DAY).toISOString(), expiresAt: new Date(now + 20 * DAY).toISOString() },
+    ],
+    referral: { code: 'ADAK7Q2M', pending: 1, rewarded: 0, claimed: null, canClaim: true },
+    rewards: [
+      { merchantId: 'mer-garage', businessName: 'Sample Garage', type: 'provider', slug: 'prairie-wrench', multiplier: 2, label: 'Brake service', endsOn: '2026-12-31', distanceKm: 1.2 },
+    ],
     notifications: {
       matrix: {
         booking_reminders: { push: true, sms: true, email: false },
@@ -220,6 +239,27 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
     points: { balance: state.points.balance, valueCents: state.points.balance, weekly: state.points.weekly },
     plus: state.plus ? { plan: state.plus.plan, since: state.plus.since, renewsAt: iso(Date.parse(state.plus.since) + 30 * DAY), members: 2 } : null,
   });
+  const plusView = () => {
+    const p = state.plus;
+    const end = p ? iso(Date.parse(p.since) + 30 * DAY) : null;
+    return {
+      status: p ? (p.status ?? 'trialing') : 'none', plan: p?.plan ?? null, provider: 'local', since: p?.since ?? null, currentPeriodEnd: end,
+      cancelAtPeriodEnd: !!p?.cancelAtPeriodEnd, payer: p ? p.payer !== false : true, members: 2, monthlyPriceCents: 799, annualPriceCents: 6900,
+      trialDays: 30, trialAvailable: !state.plusTrialUsed,
+      benefits: { member: !!p, serviceFeeWaived: !!p, memberPrices: !!p, pointsMultiplierPct: p ? 200 : 100 },
+      clientSecret: null, publishableKey: null,
+    };
+  };
+  const myPoints = () => ({
+    balance: state.points.balance, valueCents: state.points.balance, nextExpiryAt: state.pointsActivity.find((a) => a.id === 'pl-1')?.expiresAt ?? null,
+    nextExpiryPoints: state.pointsActivity.some((a) => a.id === 'pl-1') ? 1420 : 0, pointsPerDollarSpent: 2, redeemPointsPerDollar: 100, expiryMonths: 18,
+    plusMultiplierPct: state.plus ? 200 : 100, activity: state.pointsActivity,
+  });
+  const referral = () => ({
+    code: state.referral.code, shareUrl: `https://example.invalid/?invite=${state.referral.code}`, pointsEach: 1000, minOrderCents: 2000,
+    pending: state.referral.pending, rewarded: state.referral.rewarded, pointsEarned: state.referral.rewarded * 1000,
+    claimed: state.referral.claimed, canClaim: state.referral.canClaim,
+  });
   const summary = () => {
     const def = shop.cards.find((c) => c.isDefault) ?? shop.cards[0];
     const q = state.services.quiet;
@@ -290,13 +330,15 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       return notFound();
     }
 
+    if (method === 'GET' && path === '/public/rewards') return ctx.answer(200, { items: state.rewards });
+
     if (method === 'GET' && path === '/public/privacy-exports/fixture-token') {
       return ctx.answer(200, { format: 'northline.privacy-export/v1', sections: { 'identity.account': [{ first_name: state.profile.firstName, email: state.profile.email }], 'identity.addresses': addresses().items } });
     }
 
     // ── the api: personal ─────────────────────────────────────────────────────────────────────────────────────────
     const mine =
-      ['/me/account-summary', '/me/activity', '/me/profile', '/me/addresses', '/me/household', '/me/plus', '/me/wallet', '/me/notifications', '/me/consents', '/me/preferences', '/me/privacy-requests', '/me/cases'].includes(path) ||
+      ['/me/account-summary', '/me/activity', '/me/profile', '/me/addresses', '/me/household', '/me/plus', '/me/plus/resume', '/me/points', '/me/referral', '/me/referral/claim', '/me/wallet', '/me/notifications', '/me/consents', '/me/preferences', '/me/privacy-requests', '/me/cases'].includes(path) ||
       /^\/me\/(quotes|addresses|cases|privacy-requests)\//.test(path) ||
       (path.startsWith('/me/payment-methods') && !(method === 'GET' && path === '/me/payment-methods'));
     if (!mine) return undefined;
@@ -427,12 +469,33 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       return ctx.answer(200, addresses());
     }
     if (method === 'GET' && path === '/me/household') return ctx.answer(200, household());
-    if (path === '/me/plus') {
-      if (method === 'POST') {
-        if (req.body.plan !== 'monthly' && req.body.plan !== 'annual') return invalid('plan', 'Choose monthly or annual.');
-        state.plus = { plan: req.body.plan, since: iso(ctx.now()) };
-      } else if (method === 'DELETE') state.plus = null;
-      return ctx.answer(200, household());
+    // S-152 Plus (the local billing's shapes: no card, no tax)
+    if (path === '/me/plus' || path === '/me/plus/resume') {
+      const plan = req.body.plan;
+      if ((method === 'POST' && path === '/me/plus') || method === 'PATCH') {
+        if (plan !== 'monthly' && plan !== 'annual') return invalid('plan', 'Choose monthly or annual.');
+      }
+      if (method === 'POST' && path === '/me/plus') {
+        if (state.plus) return ctx.answer(409, { code: 'plus_member', detail: 'Your household is already a Plus member.' });
+        if (state.plusNeedsCard) return ctx.answer(409, { code: 'card_required', detail: 'Add a card in Payment methods first: Plus renews on your default card.' });
+        state.plus = { plan: plan as 'monthly' | 'annual', since: iso(ctx.now()), status: state.plusTrialUsed ? 'active' : 'trialing' };
+        state.plusTrialUsed = true;
+      } else if (method === 'PATCH' && state.plus) state.plus.plan = plan as 'monthly' | 'annual';
+      else if (method === 'DELETE' && state.plus) state.plus.cancelAtPeriodEnd = true;
+      else if (method === 'POST' && state.plus) state.plus.cancelAtPeriodEnd = false;
+      else if (method !== 'GET') return ctx.answer(409, { code: 'not_member', detail: 'Your household isn’t a Plus member.' });
+      return ctx.answer(200, plusView());
+    }
+    if (method === 'GET' && path === '/me/points') return ctx.answer(200, myPoints());
+    if (method === 'GET' && path === '/me/referral') return ctx.answer(200, referral());
+    if (method === 'POST' && path === '/me/referral/claim') {
+      const code = String(req.body.code ?? '').trim().toUpperCase();
+      if (!code) return invalid('code', 'Enter an invite code.');
+      if (code === state.referral.code) return invalid('code', 'That’s your own invite code: share it with a neighbour instead.');
+      if (code !== 'NEIGHBR2') return invalid('code', 'We don’t know that invite code. Check it with the neighbour who sent it.');
+      state.referral.claimed = { code, state: 'pending', claimedAt: iso(ctx.now()) };
+      state.referral.canClaim = false;
+      return ctx.answer(200, referral());
     }
     if (method === 'GET' && path === '/me/wallet') return ctx.answer(200, wallet());
 

@@ -39,6 +39,7 @@ class StripeEventProcessor {
     private final StripeChargeSync charges;
     private final ApplicationEventPublisher events;
     private final BankAccountService bankAccounts;
+    private final PlusBillingService plus;
     private final TransactionTemplate transactions;
     private final Clock clock;
 
@@ -52,6 +53,7 @@ class StripeEventProcessor {
             StripeChargeSync charges,
             ApplicationEventPublisher events,
             BankAccountService bankAccounts,
+            PlusBillingService plus,
             PlatformTransactionManager transactionManager,
             Clock clock) {
         this.store = store;
@@ -63,6 +65,7 @@ class StripeEventProcessor {
         this.charges = charges;
         this.events = events;
         this.bankAccounts = bankAccounts;
+        this.plus = plus;
         this.clock = clock;
         // each event in its own transaction, also when called from the listener's
         this.transactions = new TransactionTemplate(transactionManager);
@@ -142,6 +145,10 @@ class StripeEventProcessor {
                     "identity.verification_session.canceled" -> identitySession(event);
             case "financial_connections.account.disconnected", "financial_connections.account.deactivated" ->
                 bankAccounts.connectionEnded(event);
+            // S-152: Northline Plus on Stripe Billing (platform endpoint only)
+            case "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted" ->
+                event.endpoint() == StripeEvent.Endpoint.PLATFORM && plus.subscriptionEvent(event);
+            case "invoice.paid" -> event.endpoint() == StripeEvent.Endpoint.PLATFORM && plus.invoicePaidEvent(event);
             default -> false;
         };
     }

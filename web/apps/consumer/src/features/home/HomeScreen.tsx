@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { MapPin } from '@phosphor-icons/react';
+import { useRouterState } from '@tanstack/react-router';
 import { EmptyState, ErrorState, SiteLink, Skeleton, useLocale } from '@northline/ui';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { marketOf, railQuery, type Place, type SearchPage } from '../search/api';
@@ -11,6 +12,8 @@ import { RailSection, RailTrack } from '../pages/Rail';
 import { Tile } from '../pages/Tile';
 import { DEPARTMENTS, SERVICE_CATEGORIES, type Tile as CatalogTile } from './catalog';
 import { useHomeT } from './messages';
+import { rememberInvite } from '../loyalty/api';
+import { RewardsNearYou } from '../loyalty/RewardsNearYou';
 
 type T = ReturnType<typeof useHomeT>;
 
@@ -38,6 +41,9 @@ export function HomeScreen() {
   const city = location.label?.split(',')[0]?.trim() || location.city;
   const empty = products.data?.items.length === 0 && services.data?.items.length === 0;
   const name = (tile: CatalogTile) => (locale === 'fr' ? tile.fr : tile.en);
+  // S-152: an invite link (/?invite=CODE) is kept until the person uses it in their account
+  const searchStr = useRouterState({ select: s => s.location.searchStr });
+  useEffect(() => { rememberInvite(searchStr); }, [searchStr]);
   const pick = <X extends CatalogTile>(all: readonly X[], keys: string[]) => keys.map(k => all.find(x => x.key === k)).filter((x): x is X => !!x);
 
   return (
@@ -88,6 +94,7 @@ export function HomeScreen() {
         <>
           <Rail t={t} id="home-products" title={city ? t('productsNear', { city }) : t('productsAnywhere')} more={{ href: '/shop' }} query={products} loading={place === null} kind="product" />
           <Rail t={t} id="home-services-rail" title={city ? t('servicesNear', { city }) : t('servicesAnywhere')} more={{ href: '/services' }} query={services} loading={place === null} kind="service" />
+          {place !== null ? <RewardsNearYou city={location.city ?? city} lat={location.lat} lng={location.lng} /> : null}
         </>
       )}
 

@@ -9906,6 +9906,94 @@ consumer web, the consumer app and the Studio. Runbooks: [stripe.md § Bookings]
   on the website (no card sheet for it yet); messages have no attachments or read receipts for the business side;
   the Studio's reschedule button still opens Messages generically.
 
+## 2026-09-30 — S-152 Loyalty points, provider-funded rewards, and the Plus membership
+
+Built end to end: api (new module `loyalty`, changes in region, trust, payments, catalogue, orders, food, hire,
+promotions, identity, console), worker (the points notice), consumer web, the consumer app, Studio and console, en and
+fr-CA. Runbooks: [loyalty.md](runbooks/loyalty.md) (new), [stripe.md § 11–12](runbooks/stripe.md).
+
+**Decisions the spec didn't make**
+
+- **Module boundaries.** A new module `loyalty` decides who earns what (earnings, referrals, memberships). Points stay
+  in trust's `points_ledger` (trust already owned it, S-58/S-75), money stays in payments (ledger, Stripe), the rules
+  are region data (`region.loyalty_rules`). Loyalty listens to `EscrowReleased` and `RefundIssued` (own transaction,
+  outbox) and publishes `loyalty.points_credited` on a new topic `loyalty.points` (ids and counts only, no PII); the
+  worker turns it into an in-app notice and a push to `/app/account/points`.
+- **Earning moment and base.** Points are earned when the escrow is **released**, on what the business was paid
+  (amount after discounts, points included, before tax, without tips and delivery fees), per whole dollar, × the Plus
+  multiplier. One `loyalty.earnings` row per escrow is the idempotency key. A refund charged to the business takes back
+  its share; a refund approved before release is left out of the earning (its id is kept so its later
+  `refund.issued` takes nothing back). Refunds the platform absorbs (goodwill) don't take points back.
+- **Rule precedence:** the market's row, else its province's, else the default (seeded: 2 points/$, all kinds, 18
+  months, 1,000 referral points each, 5 per referrer per 30 days, first order ≥ $20). Edited in the console's Finance
+  screen: viewing with the finance screen, changing with the `promotions` action, audit-logged.
+- **Expiry:** per earning lot, first-to-expire spent first (`PointsBalance`); the hourly job writes one `expiry` line
+  per lot under an advisory lock. A reversal larger than what's left becomes a debt that the next earnings pay off.
+- **Points are a discount before tax** (changed from S-58/mobile gaps part 2, where points paid part of the card
+  total after tax): the points line lowers the taxable amount the TaxGateway sees; the card is charged amount + tax;
+  the business is paid on the full sale and the platform tops up the points at release (ledger account `points`).
+  At most the line less $1 can be paid with points. **The accountant should confirm** that points are a
+  platform-funded price reduction for GST/HST (as promo codes are) rather than a payment.
+- **Provider-funded rewards (S-75):** a running reward now needs a budget ($10–$10,000); it applies only to sales
+  made after it started (`started_at`) and before its end date in the business's zone, to all listings or up to 50
+  chosen ones. Cost = bonus points ÷ redeem rate, rounded up to the cent; when the budget runs short the last sale gets
+  a partial bonus and the reward is marked exhausted. The business is charged by a **transfer reversal** on the sale's
+  transfer (a payout deduction), recorded in `payments.reward_charges` and the ledger (`rewards_funded`); a refund
+  gives the unspent share back by a new transfer. "Rewards near you" lists running rewards in the person's city or
+  within 25 km.
+- **Invite a neighbour:** 8-character codes without look-alike characters, made on first view; the invitee claims
+  the code in the account (the web remembers `?invite=` links, the app takes `?code=`); abuse limits: not your own,
+  not your household, accounts younger than 30 days only, once, 5 wrong codes an hour (the attempt is recorded even
+  though the claim is refused — `noRollbackFor`), the first completed order within 90 days and at least the rule's
+  minimum, at most the rule's monthly cap of rewarded referrals per referrer (the rest are `refused`, with the reason).
+- **Plus:** one membership per household (identity's households, up to 4 people), paid and managed by the person who
+  joined (others see it). Prices $7.99/month and $69/year (the design's), 30-day trial once per household, benefits as
+  configuration ($0 food service fee, member prices, 2× points). Billing behind payments' `MembershipBilling`
+  port: `local` (stateless fake, refused under staging/prod) and Stripe Billing (`default_incomplete`, the default
+  card, 409 `card_required` without one, 3-D Secure through the returned client secret). Cancel = at the end of the
+  paid period; "Keep Plus" undoes it. Webhooks `customer.subscription.*` and `invoice.paid` on the platform endpoint,
+  verified and deduplicated by the existing pipeline, ordered by event time (`last_event_at`). Benefits continue while
+  `past_due`. The membership is mirrored onto `identity.households.plus_plan` so the account area keeps reading it.
+  S-59's free trials (no billing) run to their end and can't be renewed; the old `POST/DELETE /me/plus` trial
+  endpoints were replaced by the new ones.
+- **Member prices** are a % off per offer (1–50 %, Studio › product), read through a public batch endpoint
+  (`GET /api/v1/public/plus-prices?offers=`) rather than added to the search documents, and applied in the cart for
+  members (`plusSavingsCents`).
+- **Account navigation:** the consumer web's Wallet & points / Plus tabs and the app's wallet card were hidden in
+  2026-10 (nothing real behind them); they are shown again now that they are real.
+
+- **Topic budget (lead's call, after merging S-153):** S-153's `booking.quote_request` and `messaging.message` with
+  S-152's `loyalty.points` made 101 topics, one over an Event Hubs Premium processing unit (100, `TopicCatalogueTest`).
+  Consumer `search-indexer`'s retry delays went from `[10, 60, 300]` to `[10, 300]` s (`attempts` 4 → 3, multiplier 6
+  → 30): 7 fewer retry topics, **94 in all, 6 to spare**. It's safe because the indexer's work is idempotent
+  re-indexing (it re-reads the scope from Postgres, documents are versioned) and failures still end in the `.dlq` after
+  5 min. Rejected: a second processing unit in every Azure environment (cost), or no topic for points (the worker
+  sends every notice). [infrastructure.md § 5.3](runbooks/infrastructure.md#53-kafka-topics-and-credentials) keeps the count.
+
+**Schema (additive, V422–V431** — first assigned V395–V404, moved above S-154's V415/V416 and S-153's V417–V421 by the ordering rule**):** V422 `region.loyalty_rules`; V423 `trust.points_ledger` unique `(user_id, ref_type, ref_id)` for
+earning kinds and an expiry index, `trust.merchant_rewards.budget_cents/spent_cents/listing_ids/started_at/exhausted_at`,
+`trust.reward_credits`; V424 schema `loyalty` (`earnings`, `referral_codes`, `referrals`, `referral_attempts`,
+`memberships`); V425 `catalogue.offers.member_discount_pct`; V426 `payments.plus_invoices`, `payments.reward_charges`;
+dev seed V431 (a 2× reward with a $50 budget for Prairie Wrench, a 10 % member price, Amara's code `AMARAK26`).
+Configuration: `PLUS_BILLING_PROVIDER`, `STRIPE_PLUS_MONTHLY_PRICE`, `STRIPE_PLUS_ANNUAL_PRICE`, `PLUS_AUTOMATIC_TAX`,
+`PLUS_*` benefits and prices, `LOYALTY_*` jobs and limits (no new secrets). Topic `loyalty.points`.
+
+**Not done**
+
+- There is no order-cancelled event, so nothing reverses on cancellation — points are only earned at release, so a
+  cancelled order never earned any.
+- A referral already rewarded is not taken back when the invitee's first order is refunded later.
+- The local fake computes no tax on Plus; Stripe's `automatic_tax` needs the customer's address and is off by default.
+- The app's ICU messages don't group thousands inside plural `#` ("1000 points").
+- `B1 Home` in the app's shop tests fails on develop since the real photos (fewer drawn scenes than it expects); not
+  touched here.
+
+**Never run against the real Stripe API** (stripe-mock, WireMock-style fixtures and signed test events only): creating,
+changing and cancelling Plus subscriptions; the `customer.subscription.*` and `invoice.paid` webhooks; 3-D Secure on
+the first invoice (Stripe.js `confirmCardPayment` on the web, `handleNextAction` in the app); the transfer reversals
+that charge reward costs and the transfers that give them back on refunds. stripe.md § 11–12 lists the test-mode
+checks to run before launch.
+
 
 ## 2026-09-30 — S-151 Cancellations, failed deliveries, returns and courier pay
 
@@ -9913,7 +10001,7 @@ Closes what S-51, S-78, S-81, S-86, S-87 and S-88 left "Not done": cancelling an
 made, returns, courier pay and payouts, and moving the rest of a stuck run. Runbooks:
 [fulfilment.md § Cancelling, failed deliveries and returns](runbooks/fulfilment.md#cancelling-failed-deliveries-and-returns-s-151),
 [§ Courier earnings and payouts](runbooks/fulfilment.md#courier-earnings-and-payouts-s-151),
-[stripe.md § 11](runbooks/stripe.md#11-courier-payouts-s-151), [courier-app.md](runbooks/courier-app.md).
+[stripe.md § 13](runbooks/stripe.md#13-courier-payouts-s-151), [courier-app.md](runbooks/courier-app.md).
 
 **Decisions**
 

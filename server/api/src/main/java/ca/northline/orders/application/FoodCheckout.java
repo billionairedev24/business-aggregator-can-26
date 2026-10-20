@@ -141,7 +141,9 @@ public final class FoodCheckout {
      *
      * @param etaFromMin minutes until it arrives / is ready (as soon as possible), null when scheduled
      * @param discountCents the promo code's discount on the dishes ({@code taxCents} is on what's left)
-     * @param pointsCents what points pay ({@code points} of them); {@code pointsAvailable} for the switch
+     * @param pointsCents what points take off the dishes before tax ({@code points} of them, S-152);
+     *     {@code pointsAvailable} for the switch
+     * @param plusServiceFee S-152: the buyer's Northline Plus waived the service fee ({@code serviceFeeCents} is 0)
      */
     public record Totals(
             String kitchen,
@@ -163,7 +165,8 @@ public final class FoodCheckout {
             long discountCents,
             long points,
             long pointsCents,
-            long pointsAvailable) {
+            long pointsAvailable,
+            boolean plusServiceFee) {
         public Totals {
             lines = List.copyOf(lines);
         }

@@ -12,6 +12,7 @@ import { departmentSlot } from '@northline/media';
 import { Scene } from '../art/Scene';
 import { PlaceButton } from '../pages/PlaceButton';
 import { useProductT } from './messages';
+import { usePlusBadge } from '../loyalty/PlusBadge';
 
 /**
  * Product detail (redesign § 1.3 "PDP", AT Shop:342–423; S-50 behaviour): thumbnails | the sticky image | the info
@@ -68,6 +69,7 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
   const variant = offer.variants.find(v => v.variantId === variantId);
   const stock = variant ? variant.stock : offer.stock;
   const price = variant ? variant.priceCents : offer.priceCents;
+  const plus = usePlusBadge(offer.offerId, price); // S-152: the shop's Plus member price
   const [qty, setQty] = useState(1);
   useEffect(() => { setQty(q => Math.max(1, Math.min(q, Math.max(1, stock)))); }, [stock]);
   const [image, setImage] = useState(0);
@@ -117,6 +119,7 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
         <div className="product-price">
           <Price cents={price} compareAtCents={offer.compareAtCents} size="xl" />
           <span className="product-price-note">{data.unit ? t('priceNote', { unit: data.unit }) : t('priceNoteNoUnit')}</span>
+          {plus ? <span className="tag tag-accent product-plus">{plus}</span> : null}
         </div>
         {run && stock > 0 ? <span className="tag tag-brand product-run">{t(`tag_${runWhen(run, zone)}`, { weekday: weekday(run.startsAt, locale, zone) })}</span> : null}
 

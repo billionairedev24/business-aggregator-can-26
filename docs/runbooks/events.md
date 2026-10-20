@@ -34,7 +34,7 @@ alerted, and how to replay a dead-lettered event. Topics and their provisioning:
      is skipped; a handler exception rolls the row back with the handler's own writes, so the retry runs it again;
    - **log** with `[consumer|type|eventId|traceId]` on every line and **count** the outcome.
 4. **Retries** (non-blocking): the record goes to `<topic>.<group>.retry-0`, `-1`, … with the group's delays
-   (search indexer: 10 s, 60 s, 5 min), then to **`<topic>.dlq`**. Each group has its own retry topics; the DLQ is
+   (search indexer: 10 s, 5 min), then to **`<topic>.dlq`**. Each group has its own retry topics; the DLQ is
    shared, and the header `kafka_dlt-original-consumer-group` says which group gave up.
 
 `events.processed_events` is also where the api's S-13 `Mailer` and the S-27 notifications claim

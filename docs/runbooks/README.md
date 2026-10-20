@@ -26,6 +26,7 @@ say where a step is still manual or missing.
 | [google-maps.md](google-maps.md) | addresses on the consumer site: Google Maps Platform project, Places API (New) and Geocoding API, the server key and its restrictions, billing and quotas, local fixtures, operations (S-47) |
 | [registries.md](registries.md) | business registry lookups: Corporations Canada API, Alberta Corporate Registry (search service or registry-agent searches), City of Calgary licences (Socrata), manual review queue, re-checks (S-23) |
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11), webhooks (S-12), Stripe Tax (S-21) |
+| [loyalty.md](loyalty.md) | points, provider-funded rewards, Invite a neighbour and Northline Plus (S-152): earning rules as region data, expiry, referral abuse limits, Plus billing (local fake or Stripe Billing), what finance sees |
 | [stripe-incidents.md](stripe-incidents.md) | Stripe incidents: an outage (checkout degrades to 503, what queues), a webhook backlog or replay, Stripe vs ledger mismatches, a dispute spike, leaked keys — decision trees, commands, comms (S-115) |
 | [age-restricted.md](age-restricted.md) | age-restricted purchases (2026-10-04): restricted categories and the region model's minimum ages, hours and delivery rules (sources, counsel), sellers' licences and the console queue, the customer's ID check (Stripe Identity), the ID check at the door and counter, refusals and returns with their refunds, the report, store policies |
 | [key-rotation.md](key-rotation.md) | rotating every key and secret: auth signing keys (JWKS rollover), KMS data keys and the envelope re-wrap job, merchants' webhook secrets, Stripe keys, DB / Kafka / push / OpenRouter / on-call credentials, External Secrets commands per cloud (S-7, S-115) |
@@ -88,6 +89,7 @@ say where a step is still manual or missing.
 | AI (`AI_PROVIDER`, S-129) | `fake`: deterministic answers, no key | `fake`, or `openrouter` with the dev key | **`openrouter`** (`fake` refused; no key yet = AI answers 503) | same |
 | Identity verification (`IDENTITY_PROVIDER`) | `local`: pick the outcome on a page | `local` (owners can't finish) or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
 | Age verification (`AGE_VERIFICATION_PROVIDER`, 2026-10-04) | `local`: pick the outcome on a page | `local` or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
+| Plus billing (`PLUS_BILLING_PROVIDER`, S-152) | `local`: fake subscriptions, no card | `local`, or `stripe` with test prices | **`stripe`**, test mode (`local` refused) | **`stripe`**, live mode |
 | SMS / email | logged | *no provider yet (S-8, S-13)* | same | same |
 | Required variables checked at start-up | none | yes | yes (+ Stripe, storage) | yes (+ Stripe, storage) |
 | Log level `ca.northline` | debug | debug | info | info |
@@ -139,6 +141,7 @@ say where a step is still manual or missing.
   | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
   | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#8-identity-s-22)) |
   | `northline.age-verification.provider` | `AGE_VERIFICATION_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity, document + selfie) | **done** (2026-10-04, the customer's age check — [age-restricted.md](age-restricted.md)) |
+  | `northline.plus.billing.provider` | `PLUS_BILLING_PROVIDER` | `local` (fake subscriptions and invoices) · `stripe` (Stripe Billing) | **done** (S-152, Northline Plus — [stripe.md § 11](stripe.md#11-northline-plus--stripe-billing-s-152), [loyalty.md](loyalty.md)) |
   | `northline.registries.<source>.provider` | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | `fixtures` · `manual` · `api` (Corporations Canada) / `opencorporates` (Alberta) / `socrata` (Calgary) | **done** (S-23, business registry lookups — [registries.md](registries.md)) |
   | `northline.push.provider` | `PUSH_PROVIDER` | `local` (the worker log) · `native` (APNs + FCM) | **done** (S-102, worker push — [push.md](push.md)) |
   | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `aws` (End User Messaging SMS and voice) · `azure` (reserved) | **done** (S-8, auth phone codes — [SMS and voice codes](#sms-and-voice-codes-s-8); S-27: shared library `server/sms`, also api invitations and worker notifications — [notifications.md](notifications.md)) |
@@ -192,9 +195,11 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | ✓ | | | | staging and prod (S-12; [stripe.md](stripe.md#5-webhooks-s-12)) |
 | `TAX_PROVIDER` | ✓ | | | | staging and prod: `stripe` (`local` refused there — S-21, [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
 | `TAX_CODE_SERVICE`, `TAX_CODE_GOODS`, `TAX_CODE_FOOD`, `TAX_RECONCILE_CRON` | ✓ | | | | no (Stripe's general service / goods / prepared-food codes; 03:17 in the platform zone) |
-| `COURIER_PAYOUTS_CRON` | ✓ | | | | no (`0 41 6 * * MON`, platform zone: the weekly courier payouts — S-151, [stripe.md § 11](stripe.md#11-courier-payouts-s-151)) |
+| `COURIER_PAYOUTS_CRON` | ✓ | | | | no (`0 41 6 * * MON`, platform zone: the weekly courier payouts — S-151, [stripe.md § 13](stripe.md#13-courier-payouts-s-151)) |
 | `IDENTITY_PROVIDER` | ✓ | | | | staging and prod (`stripe`; `local` refused there — S-22, [stripe.md § Identity](stripe.md#8-identity-s-22)) |
 | `AGE_VERIFICATION_PROVIDER`, `AGE_VERIFICATION_APP_RETURN_URL`, `RESTRICTED_LICENCE_CRON` | ✓ | | | | `AGE_VERIFICATION_PROVIDER` in staging and prod (`stripe`; `local` refused there — 2026-10-04, [age-restricted.md](age-restricted.md)); the others optional |
+| `PLUS_BILLING_PROVIDER`, `STRIPE_PLUS_MONTHLY_PRICE`, `STRIPE_PLUS_ANNUAL_PRICE` | ✓ | | | | staging and prod (`stripe` with both Stripe Price ids; `local` refused there — S-152, [stripe.md § 11](stripe.md#11-northline-plus--stripe-billing-s-152)) |
+| `PLUS_AUTOMATIC_TAX`, `PLUS_MONTHLY_PRICE_CENTS`, `PLUS_ANNUAL_PRICE_CENTS`, `PLUS_TRIAL_DAYS`, `PLUS_SERVICE_FEE_WAIVED`, `PLUS_MEMBER_PRICES`, `PLUS_POINTS_MULTIPLIER_PCT`, `PLUS_GRACE_DAYS`, `LOYALTY_JOBS_CRON`, `LOYALTY_REFERRAL_WINDOW`, `LOYALTY_NEW_ACCOUNT_WINDOW`, `LOYALTY_CLAIM_ATTEMPTS_PER_HOUR` | ✓ | | | | no (S-152, [loyalty.md](loyalty.md)) |
 | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | ✓ | | | | staging and prod (`fixtures` refused there — S-23, [registries.md](registries.md)) |
 | `REGISTRY_CORPORATIONS_CANADA_URL`/`_KEY`/`_KEY_HEADER`, `REGISTRY_ALBERTA_URL`/`_KEY`, `REGISTRY_CALGARY_URL`/`_DATASET`/`_APP_TOKEN`, `REGISTRY_RECHECK_AFTER`, `REGISTRY_RECHECK_CRON` | ✓ | | | | per provider ([registries.md](registries.md#set-up-per-environment)) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | ✓ | yes (the same value in both: the api encrypts partner webhook secrets, the worker decrypts them to sign — S-33) |

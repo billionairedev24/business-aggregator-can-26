@@ -7,6 +7,7 @@ import { dayQuery, daysQuery, exportUrl, financeQuery, ledgerExportUrl, useRecon
 import { useFinanceT, type FinanceKey } from './messages';
 import { RefundRequests } from './RefundRequests';
 import { PromoCodes } from './PromoCodes';
+import { LoyaltyFigures, LoyaltyRules } from './Loyalty';
 import './finance.css';
 
 const STATUS_TONE: Record<Day['status'], DataTableTone> = { matched: 'tag-accent', mismatch: 'tag-accent-2', resolved: 'tag-neutral' };
@@ -19,7 +20,8 @@ const dayLabel = (day: string, locale: Locale) => new Intl.DateTimeFormat(locale
 /**
  * Finance (S-85, design 03 `finance`): escrow held, payouts in flight, the week's net revenue and its mix, take rate by
  * tier, the daily Stripe ↔ ledger reconciliation with drill-down, resolution and export, and the quarter's tax with S-21's
- * Stripe Tax reconciliation, and support's refund requests waiting for finance. Admin and finance; changes need
+ * Stripe Tax reconciliation, support's refund requests waiting for finance, and (S-152) Plus revenue, the points and rewards
+ * liabilities and the points earning rules. Admin and finance; changes need
  * `payouts`, refund decisions `refund`.
  */
 export function FinanceScreen() {
@@ -51,7 +53,8 @@ function FinanceView({ data, days }: { data: Finance; days: Day[] }) {
         { key: 'escrow', label: t('k_escrow', { n: data.escrowItems }), value: fmt.money(data.escrowHeldCents, { whole: true }) },
         { key: 'payouts', label: t('k_payouts', { n: data.payoutsInFlightSellers }), value: fmt.money(data.payoutsInFlightCents, { whole: true }) },
         { key: 'revenue', label: t('k_revenue'), value: fmt.money(data.revenueWeekCents, { whole: true }) },
-        { key: 'plus', label: t('k_plus'), value: t('notRecorded') },
+        { key: 'plus', label: t('k_plus'), value: data.mix.plusCents == null ? t('notRecorded') : fmt.money(data.mix.plusCents, { whole: true }),
+          delta: data.loyalty ? t('k_plusHouseholds', { n: data.loyalty.plusMembers }) : undefined, trend: 'flat' },
         { key: 'variance', label: latest ? t('k_variance') : t('k_varianceNone'), value: latest ? fmt.money(latest.varianceCents) : t('notRecorded'),
           delta: latest ? (variance === 0 ? t('k_varianceOk', { day: dayLabel(latest.day, locale) }) : t('k_varianceOff', { day: dayLabel(latest.day, locale) })) : undefined,
           trend: variance == null ? 'flat' : variance === 0 ? 'up' : 'down' },
@@ -77,7 +80,9 @@ function FinanceView({ data, days }: { data: Finance; days: Day[] }) {
         <RefundRequests />
       </ChartCard>
       <ChartCard id="fi-tiers" title={t('tiersTitle')}><Tiers data={data} /></ChartCard>
+      <LoyaltyFigures data={data} />
       <PromoCodes />
+      <LoyaltyRules />
     </div>
   );
 }

@@ -316,5 +316,5 @@ courier already carries stays with them. Audited `fulfilment.run_split`.
   balance of at least $1.00 through the payouts port: a transfer to their Stripe Connect account (Express, Canada,
   transfers only, manual payouts) then a payout to its bank. Webhooks `payout.*` and `account.updated` settle them.
   Under `local`/`test` the fake gateway enables the account when the onboarding link is asked for and pays the next
-  business morning. Details and what never ran against Stripe: [stripe.md § Courier payouts](stripe.md#11-courier-payouts-s-151).
+  business morning. Details and what never ran against Stripe: [stripe.md § Courier payouts](stripe.md#13-courier-payouts-s-151).
 - **The courier app:** Profile › Earnings and payouts ([courier-app.md](courier-app.md)).

@@ -5,6 +5,7 @@ import ca.northline.food.api.FoodMenuPricing;
 import ca.northline.food.api.KitchenProgress;
 import ca.northline.identity.api.PersonDirectory;
 import ca.northline.identity.api.SecondFactors;
+import ca.northline.loyalty.api.PlusBenefits;
 import ca.northline.orders.api.OrderPlaced;
 import ca.northline.orders.application.FoodCheckout.Line;
 import ca.northline.orders.application.FoodCheckout.Order;
@@ -85,6 +86,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
     private final CourierProgressReader couriers;
     private final AgeGate ageGate;
     private final Promotions promotions;
+    private final PlusBenefits plusBenefits;
     private final JsonMapper json = JsonMapper.builder().build();
 
     FoodCheckoutService(
@@ -105,7 +107,8 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             Markets markets,
             CourierProgressReader couriers,
             AgeGate ageGate,
-            Promotions promotions) {
+            Promotions promotions,
+            PlusBenefits plusBenefits) {
         this.pricing = pricing;
         this.kitchens = kitchens;
         this.progress = progress;
@@ -124,6 +127,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
         this.couriers = couriers;
         this.ageGate = ageGate;
         this.promotions = promotions;
+        this.plusBenefits = plusBenefits;
     }
 
     /** Everything decided before any money moves: the kitchen, the priced lines, fees, tip, place of supply. */
@@ -137,12 +141,13 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             long tipCents,
             @Nullable Integer etaFromMin,
             @Nullable Integer etaToMin,
-            AgeRules.@Nullable Requirement age) {}
+            AgeRules.@Nullable Requirement age,
+            boolean plusServiceFee) {}
 
     @Override
     @Transactional(readOnly = true)
     public Totals quote(String customerId, Order order) {
-        var p = price(order);
+        var p = price(customerId, order);
         var promo = promotions.price(basket(customerId, p, "quote"), ask(order));
         var taxable = promo.lines().getFirst().taxableCents();
         var tax = Math.round(taxable * rates.bpsFor(p.province()) / 10_000.0);
@@ -164,7 +169,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                     ? new StepUpNeeded("step_up_required", CheckoutMessages.STEP_UP)
                     : new StepUpNeeded("second_factor_required", CheckoutMessages.ENROL);
         }
-        var p = price(order);
+        var p = price(customerId, order);
         var age = p.age();
         if (age != null) {
             ageGate.requireVerified(customerId, age);
@@ -218,8 +223,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 "order:" + id,
                 clientKey,
                 quote.calculationId(),
-                p.deliveryFeeCents() + p.serviceFeeCents() + p.feeTaxCents() + p.tipCents(),
-                line.pointsCents()));
+                p.deliveryFeeCents() + p.serviceFeeCents() + p.feeTaxCents() + p.tipCents()));
         store.paymentStarted(id, started.paymentIntent());
         return new Started(
                 id,
@@ -250,7 +254,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 EscrowKind.FOOD,
                 REF_TYPE,
                 row.id(),
-                row.subtotalCents() - row.discountCents(),
+                row.subtotalCents() - row.discountCents() - row.pointsCents(), // S-152: points come off before tax
                 row.taxCents(),
                 customerId,
                 name == null ? "Customer" : name.shortName(),
@@ -340,7 +344,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
 
     // ── pricing ────────────────────────────────────────────────────────────────────────────────────────────
 
-    private Priced price(Order order) {
+    private Priced price(String customerId, Order order) {
         var isDelivery = order.mode().equals("delivery");
         if (!isDelivery && !order.mode().equals("pickup")) {
             throw RuleViolation.of("mode", "required", FoodOrderRules.MODE);
@@ -404,7 +408,11 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             throw RuleViolation.of("delivery.province", "format", FoodOrderRules.PROVINCE_FORMAT);
         }
         var deliveryFee = isDelivery ? kitchen.deliveryFeeCents() : 0;
-        var serviceFee = Math.round(dishes.subtotalCents() * kitchen.serviceFeeBps() / 10_000.0);
+        // S-152: Northline Plus members pay no service fee (configuration: PLUS_SERVICE_FEE_WAIVED)
+        var plus = plusBenefits.of(customerId);
+        var serviceFee = plus.member() && plus.serviceFeeWaived()
+                ? 0
+                : Math.round(dishes.subtotalCents() * kitchen.serviceFeeBps() / 10_000.0);
         var feeTax = Math.round((deliveryFee + serviceFee) * rates.bpsFor(province) / 10_000.0);
         var tip = isDelivery
                 ? FoodOrderRules.tipCents(order.tip().kind(), order.tip().value(), dishes.subtotalCents())
@@ -433,7 +441,18 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             var zone = markets.zone(province);
             ageGate.checkTimes(age, !isDelivery, List.of(handover), zone);
         }
-        return new Priced(kitchen, dishes, province, deliveryFee, serviceFee, feeTax, tip, from, to, age);
+        return new Priced(
+                kitchen,
+                dishes,
+                province,
+                deliveryFee,
+                serviceFee,
+                feeTax,
+                tip,
+                from,
+                to,
+                age,
+                plus.member() && plus.serviceFeeWaived());
     }
 
     private static Promotions.Basket basket(String customerId, Priced p, String id) {
@@ -502,7 +521,8 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 promo.discountCents(),
                 promo.points(),
                 promo.pointsCents(),
-                promo.pointsAvailable());
+                promo.pointsAvailable(),
+                p.plusServiceFee());
     }
 
     /** Pickup: when the customer is expected at the counter (ready time); delivery: none (the courier's). */

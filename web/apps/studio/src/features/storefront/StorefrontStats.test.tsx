@@ -50,8 +50,9 @@ describe('Storefront stats and reward (S-75)', () => {
     await user.type(screen.getByLabelText('On'), 'brake jobs');
     await user.clear(screen.getByLabelText('Until'));
     await user.type(screen.getByLabelText('Until'), '2026-10-31');
+    await user.type(screen.getByLabelText(/^Budget/), '75');
     await user.click(screen.getByRole('switch', { name: 'Reward on' }));
-    await waitFor(() => expect(calls.find(c => c.method === 'PUT')?.body).toEqual({ active: true, multiplier: 3, label: 'brake jobs', endsOn: '2026-10-31' }));
+    await waitFor(() => expect(calls.find(c => c.method === 'PUT')?.body).toEqual({ active: true, multiplier: 3, label: 'brake jobs', endsOn: '2026-10-31', budgetCents: 7500 }));
     expect(await screen.findByText('Running · 3× points until Oct 31, 2026')).toBeTruthy();
   });
 
@@ -70,5 +71,23 @@ describe('Storefront stats and reward (S-75)', () => {
     expect((screen.getByRole('switch', { name: 'Récompense active' }) as HTMLInputElement).disabled).toBe(true);
     expect(screen.getByText(/Seul le propriétaire peut financer des récompenses\./)).toBeTruthy();
     expect(await screen.findByText(/^1 204 visites ces 30 derniers jours · 8,6 % ont réservé\./)).toBeTruthy();
+  });
+
+  it('S-152: shows what the budget paid for, and when it ran out', async () => {
+    serve({ reward: { ...running, budgetCents: 5000, spentCents: 1200, pointsCredited: 1200, salesCredited: 3 } });
+    renderWithProviders(<StorefrontScreen />);
+    expect((await screen.findByRole('status', { name: 'What the reward has paid for' })).textContent).toBe('$12.00 of $50.00 spent · 1,200 extra points on 3 sales');
+    expect((screen.getByLabelText(/^Budget/) as HTMLInputElement).value).toBe('50');
+  });
+
+  it('S-152: a spent budget says so; the budget’s message shows next to the field', async () => {
+    serve({
+      reward: { ...running, running: false, budgetCents: 1000, spentCents: 1000, exhausted: true },
+      put: () => ({ status: 422, body: { errors: [{ field: 'budgetCents', message: 'Choose a budget between $10 and $10,000.' }] } }),
+    });
+    renderWithProviders(<StorefrontScreen />);
+    expect(await screen.findByText('Budget spent — raise it to keep going')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Save reward' }));
+    expect(await screen.findByText('Choose a budget between $10 and $10,000.')).toBeTruthy();
   });
 });

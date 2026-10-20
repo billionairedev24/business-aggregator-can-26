@@ -127,7 +127,7 @@ CI: `.github/workflows/courier.yml` and `ci/gitlab/courier.yml`, **manual only**
 - **Earnings (S-151):** Profile › Earnings and payouts — today and this week (in the market's zone), each paid run
   (pay + tips, its stops), what isn't paid out yet and the weekly payouts. "Set up payouts" opens Stripe's onboarding
   in the in-app browser (`expo-web-browser`); the bank details go to Stripe, never to the app. Closing the browser reads
-  the account again. Never run with a real Stripe account ([stripe.md § 11](stripe.md#11-courier-payouts-s-151)).
+  the account again. Never run with a real Stripe account ([stripe.md § 13](stripe.md#13-courier-payouts-s-151)).
 
 ## Variants and build variables
 

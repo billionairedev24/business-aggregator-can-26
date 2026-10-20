@@ -93,7 +93,8 @@ const tomorrowPlus = (days: number) => new Date(Date.now() + days * 86_400_000).
 
 /**
  * S-75 "Provider-funded reward" (design 02): on/off, 2× or 3× points, on what ("brake jobs"; empty = everything) and
- * until when. The owner funds it (MANAGE); other roles see it.
+ * until when. The owner funds it (MANAGE); other roles see it. S-152: its budget (what the extra points may cost in
+ * all; it stops when that runs out) and what it has paid for — the cost comes out of the business's payouts.
  */
 function RewardField({ merchantId, canEdit }: { merchantId: string; canEdit: boolean }) {
   const t = useStorefrontT();
@@ -102,15 +103,19 @@ function RewardField({ merchantId, canEdit }: { merchantId: string; canEdit: boo
   const day = (d: string) => formatDate(`${d}T12:00:00Z`, locale, 'full', 'UTC');
   const q = useQuery(rewardQuery(merchantId));
   const save = useSaveReward(merchantId);
-  const [draft, setDraft] = useState<{ multiplier: 2 | 3; label: string; endsOn: string } | null>(null);
+  const { money, number } = useFormatters();
+  const [draft, setDraft] = useState<{ multiplier: 2 | 3; label: string; endsOn: string; budget: string } | null>(null);
   const current: Reward | null | undefined = q.data;
   useEffect(() => {
-    if (q.isSuccess) setDraft({ multiplier: current?.multiplier === 3 ? 3 : 2, label: current?.label ?? '', endsOn: current?.endsOn ?? tomorrowPlus(14) });
+    if (q.isSuccess) setDraft({ multiplier: current?.multiplier === 3 ? 3 : 2, label: current?.label ?? '', endsOn: current?.endsOn ?? tomorrowPlus(14),
+      budget: current?.budgetCents != null ? String(current.budgetCents / 100) : '' });
   }, [q.isSuccess, current]);
   if (!draft) return <Field label={t('reward')} hint={t('rewardNote')}><TextInput disabled aria-busy="true" /></Field>;
   const errorOf = (field: string) => serverError(save.error, field);
-  const submit = (active: boolean) => save.mutate({ active, multiplier: draft.multiplier, label: draft.label.trim() || null, endsOn: draft.endsOn || null });
+  const budgetCents = draft.budget.trim() === '' || Number.isNaN(Number(draft.budget)) ? null : Math.round(Number(draft.budget) * 100);
+  const submit = (active: boolean) => save.mutate({ active, multiplier: draft.multiplier, label: draft.label.trim() || null, endsOn: draft.endsOn || null, budgetCents });
   const status = !current ? t('rewardStopped')
+    : current.exhausted ? t('rewardExhausted')
     : current.running ? t('rewardRunning', { n: current.multiplier, date: day(current.endsOn) })
     : current.active ? t('rewardEnded', { date: day(current.endsOn) }) : t('rewardStopped');
   return (
@@ -133,10 +138,18 @@ function RewardField({ merchantId, canEdit }: { merchantId: string; canEdit: boo
         <Field label={t('rewardUntil')} error={errorOf('endsOn')}>
           <TextInput type="date" value={draft.endsOn} disabled={!canEdit} onChange={e => setDraft({ ...draft, endsOn: e.target.value })} />
         </Field>
+        <Field label={t('rewardBudget')} hint={t('rewardBudgetHint')} error={errorOf('budgetCents')}>
+          <TextInput inputMode="decimal" value={draft.budget} disabled={!canEdit} placeholder="50" onChange={e => setDraft({ ...draft, budget: e.target.value })} />
+        </Field>
       </FormGrid>
+      {current && current.budgetCents != null ? (
+        <div className="nl-small" role="status" aria-label={t('rewardSpentLabel')}>
+          {t('rewardSpent', { spent: money(current.spentCents), budget: money(current.budgetCents), points: number(current.pointsCredited), sales: current.salesCredited })}
+        </div>
+      ) : null}
       <div className="nl-hint">{t('rewardNote')}{canEdit ? '' : ` ${t('rewardOwnerOnly')}`}</div>
       {canEdit && current?.active ? <div><button type="button" className="btn btn-secondary" disabled={save.isPending} onClick={() => submit(true)}>{t('rewardSave')}</button></div> : null}
-      {save.isError && !errorOf('multiplier') && !errorOf('label') && !errorOf('endsOn') ? <Alert tone="error">{t('saveError')}</Alert> : null}
+      {save.isError && !errorOf('multiplier') && !errorOf('label') && !errorOf('endsOn') && !errorOf('budgetCents') ? <Alert tone="error">{t('saveError')}</Alert> : null}
     </div>
   );
 }
