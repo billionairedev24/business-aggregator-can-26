@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, http, setHttpBase, setRequestLocale, traceparent, ValidationError, xsrfToken } from './http';
+import { ApiError, failureKind, http, setHttpBase, setRequestLocale, traceparent, ValidationError, xsrfToken } from './http';
 
 afterEach(() => { vi.unstubAllGlobals(); setHttpBase(''); setRequestLocale(undefined); });
 
@@ -65,5 +65,49 @@ describe('http', () => {
     const ids = new Set(Array.from({ length: 50 }, () => traceparent().split('-')[1]));
     expect(ids.size).toBe(50);
     expect(ids.has('0'.repeat(32))).toBe(false);
+  });
+});
+
+describe('failureKind (the error screens)', () => {
+  it('tells the BFF or the api not answering from a missing page, a refusal, a new deploy and a bug', () => {
+    expect(failureKind(new TypeError('fetch failed'))).toBe('unreachable'); // Node (server-side rendering)
+    expect(failureKind(new TypeError('Failed to fetch'))).toBe('unreachable'); // Chrome
+    expect(failureKind(new TypeError('NetworkError when attempting to fetch resource.'))).toBe('unreachable'); // Firefox
+    expect(failureKind(new TypeError('Load failed'))).toBe('unreachable'); // Safari
+    expect(failureKind(new DOMException('The operation timed out.', 'TimeoutError'))).toBe('unreachable');
+    expect(failureKind(new ApiError(502, 'Bad Gateway'))).toBe('unreachable');
+    expect(failureKind(new ApiError(500, 'Internal Server Error'))).toBe('unreachable');
+    expect(failureKind(Object.assign(new Error('[{"code":"invalid_type"}]'), { name: 'ZodError' }))).toBe('unreachable');
+    expect(failureKind(new SyntaxError('Unexpected token < in JSON at position 0'))).toBe('unreachable');
+    expect(failureKind(new ApiError(404, 'x'))).toBe('notFound');
+    expect(failureKind(new ApiError(403, 'x'))).toBe('forbidden');
+    expect(failureKind(new ApiError(401, 'x'))).toBe('unauthorized');
+    expect(failureKind(new ApiError(409, 'x'))).toBe('error');
+    expect(failureKind(new TypeError('Failed to fetch dynamically imported module: https://x/assets/a.js'))).toBe('updated');
+    expect(failureKind(new TypeError("Cannot read properties of undefined (reading 'id')"))).toBe('error');
+    expect(failureKind('nope')).toBe('error');
+  });
+});
+
+describe('the server-side timeout', () => {
+  it('a BFF that never answers fails the call after timeoutMs instead of holding the page', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => new Promise((_, reject) => init.signal!.addEventListener('abort', () => reject(init.signal!.reason)))));
+    setHttpBase('http://bff.test', { timeoutMs: 1000 });
+    const pending = http('/api/v1/x').catch(e => e);
+    await vi.advanceTimersByTimeAsync(1001);
+    const err = await pending;
+    expect(err.name).toBe('TimeoutError');
+    expect(failureKind(err)).toBe('unreachable');
+    vi.useRealTimers();
+  });
+
+  it('no timeout unless set, and none for another origin', async () => {
+    const fetch = respond(200, {});
+    vi.stubGlobal('fetch', fetch);
+    await http('/api/v1/x');
+    setHttpBase('http://bff.test', { timeoutMs: 1000 });
+    await http('https://elsewhere.test/x');
+    expect(fetch.mock.calls.map(c => ((c as unknown[])[1] as RequestInit).signal)).toEqual([undefined, undefined]);
   });
 });
