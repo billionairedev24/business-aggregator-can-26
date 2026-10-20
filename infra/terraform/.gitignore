@@ -10,4 +10,6 @@ tfplan
 terraform.tfvars
 *.auto.tfvars
 backend.hcl
+# scripts/ovh/tf-state.sh writes the S3 backend block at run time (OVHcloud targets).
+backend_override.tf
 # .terraform.lock.hcl IS committed once generated for every platform (README § Provider lock files).
