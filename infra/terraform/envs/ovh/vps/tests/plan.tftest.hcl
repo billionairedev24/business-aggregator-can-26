@@ -4,10 +4,75 @@ mock_provider "ovh" {
   mock_data "ovh_vps" {
     defaults = { ips = ["203.0.113.20", "2001:db8::20"] }
   }
+  mock_resource "ovh_cloud_project_instance" {
+    defaults = {
+      id        = "11111111-2222-3333-4444-555555555555"
+      addresses = [{ ip = "2001:db8::30", version = 6 }, { ip = "203.0.113.30", version = 4 }]
+    }
+  }
 }
 
+# The flavor and image lookups (data sources returning nested sets) can't be mocked by terraform test (1.16: "expected
+# object type, found tuple"), so the instance runs pass the ids the lookups would find.
+# The S-155/S-160 runs below are about the console-ordered VPS (server = vps); the S-161 instance runs set their own.
 variables {
   service_name = "0123456789abcdef0123456789abcdef"
+  server       = "vps"
+}
+
+# S-161: the default server — a Public Cloud instance made by Terraform, nothing in the console.
+run "instance_by_default" {
+  command = apply
+
+  variables {
+    server             = "instance"
+    instance_flavor_id = "flv-b3-32"
+    instance_image_id  = "img-2404"
+    ssh_public_key     = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFakeFakeFakeFakeFakeFakeFakeFakeFakeFakeFake northline-ovh-pipeline"
+  }
+
+  assert {
+    condition = (
+      length(ovh_cloud_project_instance.box) == 1 && ovh_cloud_project_instance.box[0].region == "US-EAST-VA-1" &&
+      ovh_cloud_project_instance.box[0].billing_period == "hourly" &&
+      one(ovh_cloud_project_instance.box[0].flavor).flavor_id == "flv-b3-32" && one(ovh_cloud_project_instance.box[0].boot_from).image_id == "img-2404" &&
+      startswith(one(ovh_cloud_project_instance.box[0].ssh_key_create).public_key, "ssh-ed25519 ") &&
+      one(ovh_cloud_project_instance.box[0].network).public
+    )
+    error_message = "server = instance: Ubuntu 24.04 on b3-32 (Linux) in Vint Hill, hourly, the pipeline's key, a public address."
+  }
+
+  assert {
+    condition     = output.vps.server == "instance" && output.vps.ipv4 == "203.0.113.30" && output.vps.ssh == "ubuntu@203.0.113.30" && output.dns_records[0] == "demo.northline.ca. 300 IN A 203.0.113.30"
+    error_message = "The instance's public IPv4 is the SSH host and every public host's target."
+  }
+
+  assert {
+    condition     = length(ovh_ip_firewall.box) == 0 && !output.vps.edge_firewall && !output.location.edge_firewall_used && length(data.ovh_vps.box) == 0
+    error_message = "No Network Firewall on an instance (unverified there): ufw on the host; no VPS read."
+  }
+}
+
+run "instance_needs_the_ssh_key" {
+  command = plan
+
+  variables {
+    server             = "instance"
+    instance_flavor_id = "flv-b3-32"
+    instance_image_id  = "img-2404"
+  }
+
+  expect_failures = [ovh_cloud_project_instance.box]
+}
+
+run "unknown_server_refused" {
+  command = plan
+
+  variables {
+    server = "dedicated"
+  }
+
+  expect_failures = [var.server]
 }
 
 run "storage_only_before_the_vps_is_ordered" {
