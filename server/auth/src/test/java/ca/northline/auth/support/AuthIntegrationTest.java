@@ -8,6 +8,8 @@ import ca.northline.auth.application.SmsSender;
 import ca.northline.auth.domain.OtpChallenge.Channel;
 import ca.northline.auth.domain.PhoneNumber;
 import ca.northline.auth.domain.Totp;
+import ca.northline.email.EmailMessage;
+import ca.northline.email.EmailSender;
 import com.jayway.jsonpath.JsonPath;
 import java.time.Clock;
 import java.time.Instant;
@@ -19,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,6 +64,9 @@ public abstract class AuthIntegrationTest {
 
     @Autowired
     protected JdbcClient jdbc;
+
+    @Autowired
+    protected RecordingEmails emails;
 
     @BeforeEach
     void resetClock() {
@@ -164,6 +170,68 @@ public abstract class AuthIntegrationTest {
         @Primary
         RecordingSms recordingSms() {
             return new RecordingSms();
+        }
+
+        @Bean
+        @Primary
+        RecordingEmails recordingEmails() {
+            return new RecordingEmails();
+        }
+    }
+
+    /**
+     * S-154: every account email "sent" (the real Mailer renders it; this replaces the SMTP adapter). Emails go out
+     * after commit on another thread, so readers wait a little.
+     */
+    public static final class RecordingEmails implements EmailSender {
+        private static final Pattern CODE = Pattern.compile("(?m)^\\s*(\\d{6})\\s*$");
+        private static final Pattern TOKEN = Pattern.compile("token=([A-Za-z0-9_%-]+)");
+        private final List<EmailMessage> sent = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        @Override
+        public void send(EmailMessage message) {
+            sent.add(message);
+        }
+
+        /** Every email to this address so far (waits up to 5 s for at least {@code atLeast}). */
+        public List<EmailMessage> to(String address, int atLeast) {
+            var deadline = System.nanoTime() + java.time.Duration.ofSeconds(5).toNanos();
+            while (true) {
+                var mine = sent.stream()
+                        .filter(m -> m.to().address().equalsIgnoreCase(address))
+                        .toList();
+                if (mine.size() >= atLeast || System.nanoTime() > deadline) {
+                    return mine;
+                }
+                java.util.concurrent.locks.LockSupport.parkNanos(20_000_000);
+            }
+        }
+
+        /** The newest email to this address (fails when none arrives). */
+        public EmailMessage last(String address) {
+            var mine = to(address, 1);
+            if (mine.isEmpty()) {
+                throw new AssertionError("No email to " + address);
+            }
+            return mine.getLast();
+        }
+
+        /** The newest email's 6-digit code (its own line in the text part). */
+        public String codeTo(String address) {
+            var m = CODE.matcher(last(address).text());
+            if (!m.find()) {
+                throw new AssertionError("No code in the email to " + address);
+            }
+            return m.group(1);
+        }
+
+        /** The newest email's link token. */
+        public String tokenTo(String address) {
+            var m = TOKEN.matcher(last(address).text());
+            if (!m.find()) {
+                throw new AssertionError("No link in the email to " + address);
+            }
+            return java.net.URLDecoder.decode(m.group(1), java.nio.charset.StandardCharsets.UTF_8);
         }
     }
 

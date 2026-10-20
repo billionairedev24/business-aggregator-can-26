@@ -23,6 +23,8 @@ class JdbcErasedAccounts implements ErasedAccounts {
                              OR EXISTS (SELECT 1 FROM auth.user_entities e WHERE e.name = u.id)
                              OR EXISTS (SELECT 1 FROM auth.totp_secrets t WHERE t.user_id = u.id)
                              OR EXISTS (SELECT 1 FROM auth.backup_codes b WHERE b.user_id = u.id)
+                             OR EXISTS (SELECT 1 FROM auth.passwords p WHERE p.user_id = u.id)
+                             OR EXISTS (SELECT 1 FROM auth.email_codes c WHERE c.subject_id = u.id)
                              OR EXISTS (SELECT 1 FROM auth.federated_identities f WHERE f.user_id = u.id)
                              OR EXISTS (SELECT 1 FROM auth.oauth2_authorization_consent c WHERE c.principal_name = u.id))
                          LIMIT :limit
@@ -41,6 +43,8 @@ class JdbcErasedAccounts implements ErasedAccounts {
             "DELETE FROM auth.user_entities WHERE name IN (:ids)",
             "DELETE FROM auth.totp_secrets WHERE user_id IN (:ids)",
             "DELETE FROM auth.backup_codes WHERE user_id IN (:ids)",
+            "DELETE FROM auth.passwords WHERE user_id IN (:ids)", // S-154
+            "DELETE FROM auth.email_codes WHERE subject_id IN (:ids)",
             "DELETE FROM auth.federated_identities WHERE user_id IN (:ids)"
         }) {
             jdbc.sql(sql).param("ids", ids).update();

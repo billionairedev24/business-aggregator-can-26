@@ -97,6 +97,25 @@ public class SessionService {
     }
 
     /**
+     * S-154: a password change ends every other session of the caller (no step-up here: the change itself was
+     * authorized). Returns how many ended.
+     */
+    @Transactional
+    public int endOthers(Caller caller, @Nullable String alsoCurrent, EndReason reason) {
+        var ended = sessions.endAllExcept(caller.userId(), currentIds(caller, alsoCurrent), reason, clock.instant());
+        ended.forEach(id -> audit.record(caller.userId(), REVOKED, "session", id, Map.of("reason", reason.code())));
+        return ended.size();
+    }
+
+    /** S-154: a password reset by email ends every session of the account. Returns how many ended. */
+    @Transactional
+    public int endAll(String userId, EndReason reason) {
+        var ended = sessions.endAllExcept(userId, Set.of(), reason, clock.instant());
+        ended.forEach(id -> audit.record(userId, REVOKED, "session", id, Map.of("reason", reason.code())));
+        return ended.size();
+    }
+
+    /**
      * For every auth-server request with a signed-in session: false once the session has ended (the caller drops the
      * HTTP session). Also records "last seen", at most once per {@code touch-interval}.
      */

@@ -3,6 +3,7 @@
 | document | what |
 |---|---|
 | [s-20-auth-review.md](s-20-auth-review.md) | S-20: the JSON sign-in flow and the BFF hand-off (2026-09-30) |
+| [s-154-passwords.md](s-154-passwords.md) | S-154: email + password accounts — hashing, the password policy, email codes, enumeration, lockouts, enrolment, sessions (2026-10-20) |
 | [findings.md](findings.md) | S-104: the internal review before the external penetration test — every finding, its severity, status and test |
 | [pentest-scope.md](pentest-scope.md) | S-104: the testers' packet — environments, accounts, scope, rules of engagement, threat model |
 

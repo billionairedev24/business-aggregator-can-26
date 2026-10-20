@@ -1,6 +1,7 @@
 package ca.northline.auth.web;
 
 import ca.northline.auth.application.AuthProperties;
+import ca.northline.auth.application.EnrollmentService;
 import ca.northline.auth.application.PhoneCodeSignInService;
 import ca.northline.auth.application.SignInService;
 import ca.northline.auth.domain.Factor;
@@ -8,7 +9,6 @@ import ca.northline.auth.domain.OtpChallenge.Channel;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +30,17 @@ import org.springframework.web.bind.annotation.RestController;
  * POST /api/auth/sign-in/backup-code       {code}        → session (the code is used up)
  * </pre>
  *
+ * <p>S-154, email + password first (the Studio, the console, the consumer site):
+ *
+ * <pre>
+ * POST /api/auth/sign-in/password      {email, password} → {step:"factor", factors:[the account's own]}
+ *                                                          | {step:"enroll", session} (no second factor yet)
+ *                                                          | {step:"verify-email", email, resendAfterSeconds}
+ * </pre>
+ *
+ * then the factor endpoints above; the session holds the password and the factor ({@code amr: pwd + otp|hwk}). An
+ * account with a password can't skip it: its authenticator or backup code counts only after it.
+ *
  * <p>S-62, the consumer site: after {@code POST /api/auth/sign-in}, a code to the account's phone instead of a second
  * factor (a single-factor sign-in: no {@code acr=mfa}):
  *
@@ -48,6 +59,25 @@ class SignInController {
     private final SessionSignIn sessions;
     private final AppAuthorizationResume apps;
     private final AuthProperties props;
+    private final EnrollmentService enrollment;
+
+    @PostMapping("/password")
+    AuthResponses.PasswordStep password(
+            @Valid @RequestBody AuthRequests.EmailPassword body,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        var outcome = signIn.startWithPassword(
+                Objects.requireNonNull(body.email()), Objects.requireNonNull(body.password()), Clients.of(request));
+        return switch (outcome) {
+            case SignInService.PasswordOutcome.SecondFactor(var identifier, var factors) ->
+                new AuthResponses.PasswordStep(
+                        "factor", factors.stream().map(Factor::code).toList(), null, identifier, null);
+            case SignInService.PasswordOutcome.Enrol(var done) ->
+                new AuthResponses.PasswordStep("enroll", null, establish(done, request, response), null, null);
+            case SignInService.PasswordOutcome.ConfirmEmail(var email, var wait) ->
+                new AuthResponses.PasswordStep(AccountController.VERIFY_EMAIL, null, null, email, wait);
+        };
+    }
 
     @PostMapping
     AuthResponses.SignInStarted start(@Valid @RequestBody AuthRequests.Identifier body) {
@@ -106,9 +136,11 @@ class SignInController {
 
     private AuthResponses.Session establish(
             SignInService.SignedIn done, HttpServletRequest request, HttpServletResponse response) {
-        var factors = List.of(done.factor());
+        var factors = done.factors();
         sessions.signIn(done.account().id(), factors, done.sessionId(), request, response);
         return AuthResponses.Session.of(done.account(), factors, props.platformZone())
+                .needingSecondFactor(!Factor.isMfa(factors)
+                        && enrollment.needsSecondFactor(done.account().id()))
                 .continuingTo(apps.resume(request));
     }
 }

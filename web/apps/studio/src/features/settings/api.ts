@@ -102,11 +102,6 @@ export {
   ActiveSession, Passkey, Security, securityKey, securityQuery, passkeyOptions, addPasskey, removePasskey, revokeSession,
   revokeOtherSessions, securityChangeError, type SecurityChangeError,
 } from '@northline/auth-kit';
-export function useNewBackupCodes() {
-  return useMutation({
-    mutationFn: () => http(authUrl('/api/auth/backup-codes'), { method: 'POST', body: {} }, z.object({ codes: z.array(z.string()) })),
-  });
-}
 
 // ── Notifications ───────────────────────────────────────────────────────────────────────────────────────────────────
 export const NOTIFICATION_EVENTS = ['new_booking', 'quote_request', 'customer_message', 'payout', 'dispute', 'low_stock', 'quality'] as const;

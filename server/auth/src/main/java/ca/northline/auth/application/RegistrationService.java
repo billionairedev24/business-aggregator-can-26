@@ -14,11 +14,6 @@ import ca.northline.auth.domain.PendingRegistration;
 import ca.northline.auth.domain.PhoneNumber;
 import ca.northline.auth.domain.Totp;
 import com.github.f4b6a3.ulid.UlidCreator;
-import dev.samstevens.totp.exceptions.QrGenerationException;
-import dev.samstevens.totp.qr.QrData;
-import dev.samstevens.totp.qr.ZxingPngQrGenerator;
-import dev.samstevens.totp.secret.DefaultSecretGenerator;
-import dev.samstevens.totp.util.Utils;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Locale;
@@ -41,8 +36,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class RegistrationService {
-
-    private static final DefaultSecretGenerator SECRETS = new DefaultSecretGenerator(32);
 
     private final UserAccounts accounts;
     private final SecondFactors factors;
@@ -194,22 +187,9 @@ public class RegistrationService {
     /** Step 3b: a fresh authenticator secret (kept until confirmed). */
     public TotpSetup totpSetup() {
         var registration = verifiedRegistration();
-        var secret = SECRETS.generate();
+        var secret = TotpSetups.newSecret();
         flow.put(FlowStore.REGISTRATION, registration.withTotpSecret(secret));
-        var data = new QrData.Builder()
-                .label(registration.email())
-                .secret(secret)
-                .issuer(props.totpIssuer())
-                .digits(Totp.DIGITS)
-                .period(Totp.PERIOD_SECONDS)
-                .build();
-        try {
-            var png = new ZxingPngQrGenerator();
-            return new TotpSetup(
-                    secret, data.getUri(), Utils.getDataUriForImage(png.generate(data), png.getImageMimeType()));
-        } catch (QrGenerationException e) {
-            throw new IllegalStateException("QR generation failed", e);
-        }
+        return TotpSetups.of(secret, registration.email(), props.totpIssuer());
     }
 
     /** Step 3b: the first code from the authenticator app — account created. */
@@ -242,6 +222,8 @@ public class RegistrationService {
             throw new FlowRejected(Reason.NOT_STARTED, AuthMessages.EMAIL_TAKEN);
         }
         var now = clock.instant();
+        // S-154: an email account may hold this number unverified (its optional mobile); this person proved it by SMS.
+        accounts.releaseUnverifiedPhone(registration.phone().e164());
         accounts.create(new UserAccounts.NewAccount(
                 registration.userId(),
                 registration.firstName(),

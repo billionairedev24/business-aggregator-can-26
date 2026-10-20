@@ -21,7 +21,7 @@ import org.springframework.stereotype.Repository;
 
 /**
  * {@link LoyaltyPoints}, {@link PointsWallet} and {@link PointsLedger} over {@code trust.points_ledger} (V160 added
- * {@code created_at} and the user index; V360 and V396 one row per reference). Balances are computed from the person's
+ * {@code created_at} and the user index; V360 and V426 one row per reference). Balances are computed from the person's
  * rows by {@link PointsBalance} (first-to-expire spent first); the expiry job writes what expired as {@code expiry}
  * rows so the activity shows it and Σ delta matches the balance.
  */
@@ -32,7 +32,7 @@ class LoyaltyPointsJdbc implements LoyaltyPoints, PointsWallet, PointsLedger {
 
     static final int WEEKS = 8;
 
-    /** Reference types written at most once per person and reference (V360 and V396's unique indexes). */
+    /** Reference types written at most once per person and reference (V360 and V426's unique indexes). */
     private static final Set<String> ONCE = Set.of(
             "redemption",
             "redemption_return",
@@ -128,7 +128,7 @@ class LoyaltyPointsJdbc implements LoyaltyPoints, PointsWallet, PointsLedger {
         if (!ONCE.contains(refType)) {
             throw new IllegalArgumentException("unknown points reference type: " + refType);
         }
-        // the conflict target names no index: V360's and V396's partial unique indexes both cover their types
+        // the conflict target names no index: V360's and V426's partial unique indexes both cover their types
         return jdbc.sql("""
                         insert into trust.points_ledger (id, user_id, delta, ref_type, ref_id, note, created_at,
                                                          expires_at, funded_by_merchant_id)

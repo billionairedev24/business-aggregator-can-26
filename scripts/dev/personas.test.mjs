@@ -52,6 +52,15 @@ test("each persona's ten backup codes are the ones the seed stores", () => {
   }
 });
 
+test('S-154: every persona signs in with the dev password the seed hashes (db/seed-dev/V416)', () => {
+  const seed = readFileSync(join(ROOT, 'db/seed-dev/V416__dev_passwords.sql'), 'utf8');
+  for (const p of PERSONAS) {
+    assert.equal(p.password, 'northline-dev-password', `${p.key}: password`);
+    assert.ok(p.email.endsWith('@example.com'), `${p.key}: the seed sets passwords for @example.com accounts`);
+  }
+  assert.ok(seed.includes('northline-dev-password'));
+});
+
 test('README.md carries the generated table', () => {
   const readme = readFileSync(join(ROOT, 'README.md'), 'utf8');
   assert.ok(readme.includes(markdownTable()), 'README.md § Local sign-in: paste the output of node scripts/dev/creds.mjs --markdown');

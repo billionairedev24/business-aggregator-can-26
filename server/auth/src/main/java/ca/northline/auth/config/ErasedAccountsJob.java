@@ -1,6 +1,8 @@
 package ca.northline.auth.config;
 
 import ca.northline.auth.application.ErasedAccounts;
+import ca.northline.auth.application.PendingAccounts;
+import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
@@ -11,7 +13,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 /**
  * S-105: every five minutes, forgets the passkeys, authenticator secrets, backup codes, linked identities and OAuth
  * authorizations of accounts the api's privacy pipeline has erased. Tokens are refused from the moment the account is
- * closed ({@code UserClaimsService.requireNotErased}); this removes the rows. Not under {@code test}.
+ * closed ({@code UserClaimsService.requireNotErased}); this removes the rows. S-154: also forgets accounts whose email
+ * was never confirmed and email codes past their expiry. Not under {@code test}.
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
@@ -23,6 +26,8 @@ class ErasedAccountsJob {
     static final int BATCH = 100;
 
     private final ErasedAccounts accounts;
+    private final PendingAccounts pending;
+    private final Clock clock;
 
     @Scheduled(initialDelayString = "PT1M", fixedDelayString = "PT5M")
     void purge() {
@@ -33,6 +38,14 @@ class ErasedAccountsJob {
             }
         } catch (RuntimeException e) {
             log.error("Removing erased accounts' auth data failed; retrying in five minutes", e);
+        }
+        try {
+            var expired = pending.purgeExpired(clock.instant());
+            if (expired > 0) {
+                log.info("{} unconfirmed account(s) past their expiry forgotten", expired);
+            }
+        } catch (RuntimeException e) {
+            log.error("Forgetting unconfirmed accounts failed; retrying in five minutes", e);
         }
     }
 }

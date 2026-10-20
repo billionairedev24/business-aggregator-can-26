@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Alert, Logo, UnderlineTabs } from '@northline/ui';
 import type { RegisterValues } from '@northline/auth-kit';
 import { appAuthorizationUrl, bffLoginUrl } from '../../lib/auth-server';
@@ -28,6 +28,10 @@ export interface SignedOutPageProps {
   federation?: FederationContext;
   /** Navigates to the BFF hand-off (tests replace it). */
   navigate?: (url: string) => void;
+  /** S-154: `/forgot-password` opens the sign-in tab on Forgot password. */
+  forgotOnLoad?: boolean;
+  /** S-154: an email link's page (`/verify-email`, `/reset-password`): its title and content instead of the tabs. */
+  panel?: { title: string; content: ReactNode };
 }
 
 /**
@@ -42,7 +46,7 @@ const ERRORS: Record<string, AuthKey> = {
 };
 const PROVIDER_NAMES = { google: 'Google', apple: 'Apple' } as const;
 
-export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeIdentifier, prefill, error, federation, navigate = url => window.location.assign(url) }: SignedOutPageProps) {
+export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeIdentifier, prefill, error, federation, navigate = url => window.location.assign(url), forgotOnLoad, panel }: SignedOutPageProps) {
   const t = useAuthT();
   const [recover, setRecover] = useState(recoverOnLoad ? 1 : 0);
   const onboarding = (next ?? '').startsWith('/onboarding');
@@ -69,6 +73,7 @@ export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeI
           <div className="nl-auth-support">{t('support')}</div>
         </div>
         <section className="nl-auth-card" aria-labelledby="nl-auth-title">
+          {panel ? (<><h2 className="nl-auth-title" id="nl-auth-title">{panel.title}</h2>{panel.content}</>) : (<>
           <UnderlineTabs aria-label={t('tabs')} value={mode} onChange={onModeChange}
             options={[{ value: 'signin', label: t('tabSignIn') }, { value: 'register', label: t('tabRegister') }]} />
           <h2 className="nl-auth-title" id="nl-auth-title">{title}</h2>
@@ -81,13 +86,14 @@ export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeI
           )}
           {mode === 'register'
             ? <RegisterFlow prefill={prefill} onSignIn={() => onModeChange('signin')} onFinished={s => navigate(appAuthorizationUrl(s.continueTo) ?? bffLoginUrl(onboarding && next ? next : '/onboarding'))} />
-            : <SignInFlow onboarding={onboarding} resumeIdentifier={resumeIdentifier} recover={recover}
+            : <SignInFlow onboarding={onboarding} resumeIdentifier={resumeIdentifier} recover={recover} forgotOnLoad={forgotOnLoad}
                 onRegister={() => onModeChange('register')} onFinished={s => navigate(appAuthorizationUrl(s.continueTo) ?? bffLoginUrl(next ?? '/'))} />}
           <p className="nl-auth-footer">
             {t('footerTrouble')}
             <button type="button" className="nl-auth-link" onClick={() => (mode === 'signin' ? setRecover(r => r + 1) : onModeChange('signin', { recover: true }))}>{t('footerRecover')}</button>
             {t('footerRest')}
           </p>
+          </>)}
         </section>
       </main>
     </div>

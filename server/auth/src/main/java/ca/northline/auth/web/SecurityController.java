@@ -3,6 +3,7 @@ package ca.northline.auth.web;
 import ca.northline.auth.application.AccountSecurity;
 import ca.northline.auth.application.Caller;
 import ca.northline.auth.application.FlowRejected;
+import ca.northline.auth.application.PasswordService;
 import ca.northline.auth.application.SecuritySettingsService;
 import ca.northline.auth.application.SessionAuthentication;
 import ca.northline.auth.application.SessionService;
@@ -42,6 +43,10 @@ import org.springframework.web.bind.annotation.RestController;
  * DELETE /api/auth/security/passkeys/{id}          → {passkeys}; 409 last_factor
  * POST   /api/auth/security/sessions/{id}/revoke   {current?} → {sessions}; 409 current_session, 404 not_found
  * POST   /api/auth/security/sessions/revoke-others {current?} → {revoked: n}
+ * POST   /api/auth/security/password               {currentPassword?, password, passwordConfirm?, current?} → 204
+ *                                                  (S-154; every other session ends)
+ * POST   /api/auth/security/authenticator          → {secret, otpauthUri, qrCode} (S-154: a new authenticator)
+ * POST   /api/auth/security/authenticator/verify   {code} → {authenticator: true} (replaces the old one)
  * </pre>
  *
  * The three changes (S-19) need a second factor used in this session in the last 10 minutes — else 403
@@ -55,6 +60,7 @@ class SecurityController {
 
     private final SecuritySettingsService settings;
     private final SessionService sessions;
+    private final PasswordService passwords;
 
     record PasskeyView(
             String id,
@@ -77,6 +83,7 @@ class SecurityController {
     record Overview(
             @Nullable String email,
             @Nullable String mfaPrimary,
+            boolean password,
             List<PasskeyView> passkeys,
             boolean authenticator,
             @Nullable Instant authenticatorSince,
@@ -127,6 +134,7 @@ class SecurityController {
         return new Overview(
                 o.account().email(),
                 o.account().mfaPrimary(),
+                passwords.hasPassword(caller.userId()),
                 o.passkeys().stream().map(PasskeyView::of).toList(),
                 o.authenticatorSince() != null,
                 o.authenticatorSince(),
@@ -178,6 +186,33 @@ class SecurityController {
             @RequestBody(required = false) @Nullable CurrentSession body,
             @CurrentSecurityContext(expression = "authentication") @Nullable Authentication authentication) {
         return new Revoked(sessions.revokeOthers(caller(authentication), body == null ? null : body.current()));
+    }
+
+    @PostMapping("/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void changePassword(
+            @Valid @RequestBody AuthRequests.ChangePassword body,
+            @CurrentSecurityContext(expression = "authentication") @Nullable Authentication authentication) {
+        var password = Objects.requireNonNull(body.password());
+        AccountController.requireConfirmed(password, body.passwordConfirm());
+        passwords.change(caller(authentication), body.currentPassword(), password, body.current());
+    }
+
+    record AuthenticatorSet(boolean authenticator) {}
+
+    @PostMapping("/authenticator")
+    AuthResponses.TotpSetup authenticatorSetup(
+            @CurrentSecurityContext(expression = "authentication") @Nullable Authentication authentication) {
+        var setup = settings.authenticatorSetup(mfaUser(authentication));
+        return new AuthResponses.TotpSetup(setup.secret(), setup.otpauthUri(), setup.qrCode());
+    }
+
+    @PostMapping("/authenticator/verify")
+    AuthenticatorSet authenticatorVerify(
+            @Valid @RequestBody AuthRequests.Code body,
+            @CurrentSecurityContext(expression = "authentication") @Nullable Authentication authentication) {
+        settings.replaceAuthenticator(caller(authentication), Objects.requireNonNull(body.code()));
+        return new AuthenticatorSet(true);
     }
 
     private static String mfaUser(@Nullable Authentication authentication) {

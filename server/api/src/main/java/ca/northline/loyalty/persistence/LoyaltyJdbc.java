@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link LoyaltyStore} over schema {@code loyalty} (V397). */
+/** {@link LoyaltyStore} over schema {@code loyalty} (V427). */
 @Repository
 @RequiredArgsConstructor
 class LoyaltyJdbc implements LoyaltyStore {

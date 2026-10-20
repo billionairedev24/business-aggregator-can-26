@@ -19,7 +19,11 @@ public interface SignInSessions {
         REVOKED_OTHERS("revoked_others"),
         SIGNED_OUT("signed_out"),
         /** S-29: a rotated refresh token of the sign-in was presented again (possible theft). */
-        REFRESH_TOKEN_REUSED("refresh_token_reused");
+        REFRESH_TOKEN_REUSED("refresh_token_reused"),
+        /** S-154: the password was reset by email — every session of the account ends. */
+        PASSWORD_RESET("password_reset"),
+        /** S-154: the password was changed in Settings › Security — every other session ends. */
+        PASSWORD_CHANGED("password_changed");
 
         private final String code;
 

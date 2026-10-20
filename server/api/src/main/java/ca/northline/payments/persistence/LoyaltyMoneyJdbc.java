@@ -15,7 +15,7 @@ import org.springframework.stereotype.Repository;
 
 /**
  * S-152: {@link SaleFacts} over {@code payments.escrows} and its refunds, {@link RewardChargeStore} over
- * {@code payments.reward_charges} and {@link PlusInvoiceStore} over {@code payments.plus_invoices} (V399).
+ * {@code payments.reward_charges} and {@link PlusInvoiceStore} over {@code payments.plus_invoices} (V429).
  */
 @Repository
 @RequiredArgsConstructor

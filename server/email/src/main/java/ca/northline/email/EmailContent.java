@@ -867,6 +867,134 @@ public sealed interface EmailContent {
         }
     }
 
+    // ── Account (S-154, northline-auth) ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Create account: the 6-digit code and the link that confirm this address (single use, short-lived). Transactional
+     * (the person asked for it; an account notice).
+     *
+     * @param firstName as typed on the form
+     * @param settingsPlace {@code studio} (a business account) or {@code account} (a customer)
+     */
+    record AccountVerification(String firstName, String code, URI link, long validMinutes, String settingsPlace)
+            implements EmailContent {
+
+        @Override
+        public String template() {
+            return "account-verification";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public String businessName() {
+            return "";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of(
+                    "firstName", firstName,
+                    "code", code,
+                    "link", link.toString(),
+                    "minutes", validMinutes);
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(code);
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
+    /**
+     * Forgot password: the code and the link that set a new password (single use, short-lived). Transactional (a
+     * security notice the person asked for).
+     */
+    record PasswordReset(String firstName, String code, URI link, long validMinutes, String settingsPlace)
+            implements EmailContent {
+
+        @Override
+        public String template() {
+            return "password-reset";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public String businessName() {
+            return "";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of(
+                    "firstName", firstName,
+                    "code", code,
+                    "link", link.toString(),
+                    "minutes", validMinutes);
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(code);
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
+    /**
+     * Someone tried to create an account with an address that already has one. Sent instead of a verification code, so
+     * the form's answer never tells whether the address is registered (S-154). Transactional (a security notice).
+     */
+    record AccountExists(String firstName, URI signIn, URI resetPassword, String settingsPlace)
+            implements EmailContent {
+
+        @Override
+        public String template() {
+            return "account-exists";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public String businessName() {
+            return "";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of(
+                    "firstName", firstName, "signIn", signIn.toString(), "resetPassword", resetPassword.toString());
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of();
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
     // ── Commercial (S-108) ───────────────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -1094,6 +1222,29 @@ public sealed interface EmailContent {
                         "Free delivery this weekend",
                         "Order from any shop on Northline before Sunday night and delivery is on us.",
                         URI.create("http://localhost:3000/shop")));
+        all.put(
+                "account-verification",
+                new AccountVerification(
+                        "Amara",
+                        "482913",
+                        URI.create("http://localhost:3100/verify-email?token=sample"),
+                        15,
+                        "studio"));
+        all.put(
+                "password-reset",
+                new PasswordReset(
+                        "Amara",
+                        "730215",
+                        URI.create("http://localhost:3100/reset-password?token=sample"),
+                        15,
+                        "studio"));
+        all.put(
+                "account-exists",
+                new AccountExists(
+                        "Amara",
+                        URI.create("http://localhost:3100/sign-in"),
+                        URI.create("http://localhost:3100/forgot-password"),
+                        "studio"));
         return java.util.Collections.unmodifiableMap(all);
     }
 

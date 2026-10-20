@@ -232,6 +232,26 @@ describe('Security & sign-in (design 06 security)', () => {
     expect(await screen.findByRole('dialog', { name: 'Confirm it’s you' })).toBeInTheDocument();
   });
 
+  it('S-154: changes the password (the current one first) and gets new backup codes', async () => {
+    (security as { body: Record<string, unknown> }).body.password = true;
+    calls = mockFetch(c => {
+      if (c.url.endsWith('/security/password')) return { body: {} };
+      if (c.url.endsWith('/api/auth/backup-codes')) return { body: { codes: ['abcde-fghij', 'bcdef-ghijk'] } };
+      return server(c);
+    });
+    renderApp('/account?tab=security', { routes: { account: () => <AccountScreen /> } });
+    await userEvent.click(await screen.findByRole('button', { name: 'Change password' }));
+    const dialog = screen.getByRole('dialog', { name: 'Change password' });
+    await userEvent.type(within(dialog).getByLabelText('Current password'), 'old password here');
+    await userEvent.type(within(dialog).getByLabelText('New password'), 'Maple syrup on fresh snow 42');
+    await userEvent.type(within(dialog).getByLabelText('Confirm password'), 'Maple syrup on fresh snow 42');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save password' }));
+    expect(await screen.findByText(/Password changed\. Your other devices were signed out\./)).toBeInTheDocument();
+    expect(calls.find(c => c.url.endsWith('/security/password'))!.body).toEqual({ currentPassword: 'old password here', password: 'Maple syrup on fresh snow 42', passwordConfirm: 'Maple syrup on fresh snow 42', current: 'S1' });
+    await userEvent.click(screen.getByRole('button', { name: 'New codes' }));
+    expect(await screen.findByText('abcde-fghij')).toBeInTheDocument();
+  });
+
   it('without a second-factor session: confirm it’s you first', async () => {
     security = { status: 401, body: {} };
     open('security');

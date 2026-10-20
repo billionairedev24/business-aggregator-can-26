@@ -46,6 +46,11 @@ public final class EmailBrand {
                     "margin:0 0 12px;font-family:" + FONT_HEADING + ";font-size:26px;font-weight:500;line-height:1.2;"
                             + "color:" + TEXT),
             Map.entry("p", "margin:0 0 12px;font-size:15px;line-height:1.5;color:" + TEXT),
+            Map.entry(
+                    "code",
+                    "margin:4px 0 16px;padding:12px 16px;background:" + BG + ";border:1px solid " + DIVIDER
+                            + ";border-radius:8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:28px;"
+                            + "font-weight:600;letter-spacing:6px;text-align:center;color:" + TEXT),
             Map.entry("small", "margin:0 0 8px;font-size:13px;line-height:1.5;color:" + MUTED),
             Map.entry(
                     "facts",
