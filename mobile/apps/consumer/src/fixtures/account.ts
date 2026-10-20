@@ -401,6 +401,10 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       return ctx.answer(200, profile());
     }
 
+    // S-159: what deleting the account would affect (the fixture account has its points and Plus)
+    if (path === '/me/privacy-requests/erasure-preview' && method === 'GET') {
+      return ctx.answer(200, { items: [{ code: 'points', count: 340, amountCents: 0, until: null }, { code: 'plus', count: 1, amountCents: 0, until: iso(ctx.now() + 20 * DAY) }] });
+    }
     // privacy requests (S-105): verified at once with a step-up proof, else a code is "texted"
     if (path === '/me/privacy-requests') {
       if (method === 'GET') return ctx.answer(200, { items: state.privacy });
@@ -415,7 +419,7 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
         id: `pr-${state.privacy.length + 1}`, reference: `PR-${1001 + state.privacy.length}`, type: String(b.type), state: 'awaiting_verification',
         law: { code: 'ab_pipa', name: 'Personal Information Protection Act', shortName: 'PIPA', authority: 'the Information and Privacy Commissioner', authorityUrl: 'https://example.ca/privacy-commissioner' },
         receivedAt: iso(ctx.now()), dueAt: iso(ctx.now() + 45 * DAY), extendedTo: null, scheduledFor: null, completedAt: null,
-        codeSentTo: proven ? null : `•••• ${state.profile.phone.slice(-4)}`, decision: null, export: null, corrections: b.corrections ?? [], holdsOpen: 0,
+        codeSentTo: proven ? null : `•••• ${state.profile.phone.slice(-4)}`, codeChannel: proven ? null : 'sms', decision: null, export: null, corrections: b.corrections ?? [], holdsOpen: 0,
       };
       state.privacy.unshift(r);
       if (proven) verified(r);

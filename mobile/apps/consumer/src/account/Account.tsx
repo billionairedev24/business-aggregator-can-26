@@ -225,6 +225,8 @@ export function Account() {
       <SettingsGroup title={t('rd.account.groupHelp')}>
         <SettingsRow icon="question" name={t('account.you.help')} value={value(s?.openCases ? t('account.you.cases', { n: s.openCases }) : null)} onPress={() => router.push('/account/help')} testID="row-help" />
         <SettingsRow icon="storefront" name={t('account.you.sell')} hint={t('common.opensInBrowser')} onPress={() => void Linking.openURL(`${config.siteOrigin}/sell`)} testID="row-sell" />
+        {/* S-159: deleting the account is one tap from Account (App Store 5.1.1(v)) */}
+        <SettingsRow icon="trash" name={t('delete.row')} tone="danger" onPress={() => router.push('/account/delete')} testID="row-delete" />
       </SettingsGroup>
 
       {language}

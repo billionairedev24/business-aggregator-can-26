@@ -71,6 +71,7 @@ export const s159 = {
   // Account › Delete account (S-105's erasure; App Store 5.1.1(v))
   'title.deleteAccount': 'Delete account',
   'delete.row': 'Delete account',
+  'delete.whatTitle': 'What happens',
   'delete.lede': 'Deleting your account closes it and erases your personal information.',
   'delete.what1': 'You’re signed out everywhere, on this phone and on the site.',
   'delete.what2': 'Your profile, addresses, saved cards, favourites, messages and points are erased.',

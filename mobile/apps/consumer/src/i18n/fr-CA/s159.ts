@@ -61,6 +61,7 @@ export const s159: { [k in keyof typeof en]: string } = {
   'authErr.backupRequired': 'Entrez un de vos codes de secours.',
   'title.deleteAccount': 'Supprimer le compte',
   'delete.row': 'Supprimer le compte',
+  'delete.whatTitle': 'Ce qui se passe',
   'delete.lede': 'Supprimer votre compte le ferme et efface vos renseignements personnels.',
   'delete.what1': 'Vous êtes déconnecté partout, sur ce téléphone et sur le site.',
   'delete.what2': 'Votre profil, vos adresses, vos cartes, vos favoris, vos messages et vos points sont effacés.',
