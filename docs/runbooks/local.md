@@ -310,6 +310,12 @@ Notes:
   Studio member on the way to share their position (`POST /api/v1/merchants/{id}/jobs/{id}/position`) and a job site
   picked on the map; positions sit in memory (`LIVE_BUS=memory`) or Valkey (`redis`), 5 minutes, never in Postgres.
   [fulfilment.md](fulfilment.md#promo-codes-points-and-tips-mobile-gaps-part-2)
+- **Quotes and bookings (S-153):** nothing to set. Customer messages use the Studio's threads and live stream
+  (`GET /api/v1/me/live`); photos go to the object store (`OBJECT_STORE=local` writes under the local folder) through
+  the scanner hook. The deposit-balance job runs every 5 minutes (`BOOKING_BALANCE_*`) against the payments stand-in:
+  a saved card whose id contains `chargeDeclined` fails the off-session hold, `authenticationRequired` asks the
+  customer to confirm. Late-cancellation terms come from Studio › Availability › Booking rules within the region's
+  `cancel_*` limits (`REGION_CANCEL_*` when the region row has none). [stripe.md](stripe.md#bookings-balance-and-late-cancellation-s-153)
 - **Privacy requests (S-105):** Account › Profile › Your data (consumer site), You › Personal details › Your data
   (app) and Studio › Settings › Security ask for a copy, a correction or deletion. Without northline-auth the step-up
   proof is `dev` (`VITE_NL_DEV_STEP_UP=1`); with real auth the code to confirm is texted to the account's mobile and

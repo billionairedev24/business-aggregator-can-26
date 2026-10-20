@@ -81,6 +81,9 @@ domain event (Kafka) ──► worker: notifications / personal-notifications co
 | `booking.en_route` — the ETA (`booking.booking`) | customer | `booking_reminders` | Your provider is on the way | `/app/bookings/<id>` |
 | `booking.completed` (`booking.booking`) | customer | `sign_off` | Job done — please sign off | `/app/bookings/<id>` |
 | `quote.sent` (`booking.quote`; version > 1 = revised) | customer | `quotes_messages` | New quote from <business> | `/app/quotes/<id>` |
+| a business's message on a quote request or booking (`messaging.message`, S-153) | customer | `quotes_messages` | New message from <business> | `/app/messages/<threadId>` |
+| `booking.balance_held` / `booking.balance_failed` (`booking.booking`, S-153) | customer | `booking_reminders` | Balance held / Balance not held — pay it from the booking | `/app/bookings/<id>` |
+| `booking.cancelled` (`booking.booking`, S-153; the late fee when there is one) | customer | `booking_reminders` | Booking cancelled | `/app/bookings/<id>` |
 | `refund.case_updated`, `refund.issued` (`payments.refund`) | customer | `refunds_cases` | Refund request RF-… / Refund RF-… paid | `/app/cases/<number>` |
 | `delivery.assigned` (`fulfilment.run`) | courier | — always, push only | New run | `/courier/run` |
 | `run.changed` (`fulfilment.run`, new in S-102: dispatch gave the run to another courier) | the courier who lost it | — always, push only | Run changed | `/courier/run` |
@@ -97,7 +100,7 @@ domain event (Kafka) ──► worker: notifications / personal-notifications co
 - **Who:** the order's, booking's or quote request's customer and the refund's (its escrow's, else its booking's) are
   read from the api's tables when the event arrives (events carry ids only); an inactive account gets nothing.
 - **Not built:** "order shipped" by a parcel carrier (Northline's couriers deliver: "packed and ready to ship" is the
-  closest step), messages from providers (`quotes_messages` — no message event yet), the live ETA's minutes in the
+  closest step), the live ETA's minutes in the
   push (the app shows it), customer support cases other than refund cases (no case-updated event).
 
 ## 4. Failures and back-off
@@ -131,6 +134,7 @@ domain event (Kafka) ──► worker: notifications / personal-notifications co
 | `https://<zone>/app/bookings/<id>` | `ca.northline.app://bookings/<id>` | the booking (ETA, sign-off) | `/account/orders` |
 | `https://<zone>/app/quotes/<id>` | `ca.northline.app://quotes/<id>` | the quote received | `/quotes/<id>` |
 | `https://<zone>/app/cases/<number>` | `ca.northline.app://cases/<number>` | the refund case | `/account/orders?view=cases` |
+| `https://<zone>/app/messages/<id>` | `ca.northline.app://messages/<id>` | a thread with a provider (S-153) | `/account/messages?thread=<id>` |
 | `https://<zone>/courier/run` | `ca.northline.courier://run` | the courier's run | `/` |
 
 - **Universal links / App Links:** the consumer host's `/.well-known/apple-app-site-association` and
