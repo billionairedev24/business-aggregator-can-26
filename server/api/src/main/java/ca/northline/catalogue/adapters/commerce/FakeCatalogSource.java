@@ -19,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.ClassPathResource;
 import tools.jackson.databind.JsonNode;
@@ -31,6 +32,11 @@ import tools.jackson.databind.JsonNode;
  * the hourly sync visibly updates it. Images come from {@code fixtures.northline.invalid}, drawn by the local image
  * fetcher. Webhooks are not registered (the laptop polls) but the fake verifies {@code X-Fake-Signature} (base64
  * HMAC-SHA256 of the body with {@link #WEBHOOK_SECRET}) to try the webhook path by hand.
+ *
+ * <p>S-158 two-way stock: the fake Shopify has two locations ("Main store", "Warehouse") so the location choice shows;
+ * Square and Lightspeed have one. Adjustments are kept in memory per variant (lost on restart) and show in the next
+ * read, so a Northline sale is visible on the "platform"; a variant id ending in {@code -gone} answers
+ * {@code not_found}.
  */
 class FakeCatalogSource implements CommerceCatalogSource {
 
@@ -40,6 +46,7 @@ class FakeCatalogSource implements CommerceCatalogSource {
     private final CommerceProvider provider;
     private final Clock clock;
     private final List<ExternalProduct> fixture;
+    private final Map<String, Integer> adjusted = new ConcurrentHashMap<>();
 
     FakeCatalogSource(CommerceProvider provider, Clock clock) {
         this.provider = provider;
@@ -130,7 +137,7 @@ class FakeCatalogSource implements CommerceCatalogSource {
                                 v.title(),
                                 v.options(),
                                 v.priceCents(),
-                                v.stock() + bump,
+                                v.stock() + bump + adjusted.getOrDefault(v.id(), 0),
                                 v.stockRef()))
                         .toList(),
                 p.updatedAt());
@@ -139,6 +146,33 @@ class FakeCatalogSource implements CommerceCatalogSource {
     @Override
     public boolean subscribe(Credentials credentials, URI callbackUrl) {
         return false;
+    }
+
+    @Override
+    public List<Location> locations(Credentials credentials) {
+        return switch (provider) {
+            case SHOPIFY ->
+                List.of(
+                        new Location("gid://shopify/Location/1001", "Main store"),
+                        new Location("gid://shopify/Location/1002", "Warehouse"));
+            case SQUARE -> List.of(new Location("FAKE-SQUARE-LOCATION", "Main location"));
+            case LIGHTSPEED -> List.of(new Location("fake-outlet-1", "Main outlet"));
+        };
+    }
+
+    @Override
+    public Adjusted adjust(Credentials credentials, Adjustment adjustment) {
+        if (adjustment.variantId().endsWith("-gone")) {
+            return new Adjusted.Refused("not_found", "fake: no such variant");
+        }
+        var base = fixture.stream()
+                .flatMap(p -> p.variants().stream())
+                .filter(v -> v.id().equals(adjustment.variantId()))
+                .mapToInt(ExternalVariant::stock)
+                .findFirst()
+                .orElse(0);
+        var total = adjusted.merge(adjustment.variantId(), adjustment.delta(), Integer::sum);
+        return new Adjusted.Applied(base + total);
     }
 
     @Override

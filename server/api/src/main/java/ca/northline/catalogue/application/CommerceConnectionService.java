@@ -49,6 +49,7 @@ class CommerceConnectionService implements CompleteCommerceConnection {
     private final CommerceCredentials credentials;
     private final CommerceSettings settings;
     private final MerchantMemberships memberships;
+    private final CommerceStockPushStore stockPushes;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -141,6 +142,8 @@ class CommerceConnectionService implements CompleteCommerceConnection {
                 .withWebhooks(Webhooks.NONE)
                 .withLastError(null);
         integrations.saveGrant(connection, credentials.seal(grant.credentials(), id));
+        // S-158: stock changes refused for want of access go again with the new grant
+        stockPushes.requeueConflicts(id, CommerceStockService.AFTER_RECONNECT, now);
         events.publishEvent(new CommerceConnected(id));
         return new Completion(merchantId, provider, Outcome.CONNECTED);
     }

@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 class SellableOfferService implements SellableOffers {
 
     private final StockStore stock;
+    private final StockSync.RecordStockChanges platformStock;
     private final MediaRepository media;
     private final RestrictedLicences licences;
 
@@ -72,5 +73,32 @@ class SellableOfferService implements SellableOffers {
     @Transactional
     public void giveBack(List<Take> takes) {
         takes.forEach(stock::giveBack);
+    }
+
+    @Override
+    @Transactional
+    public void restock(List<Take> takes, String reason, String sourceRef) {
+        takes.forEach(stock::giveBack);
+        // one push per offer / variant of the source (two lines of the same variant add up)
+        var merged = new java.util.LinkedHashMap<String, Take>();
+        takes.forEach(t -> merged.merge(
+                t.offerId() + "/" + t.variantId(),
+                t,
+                (a, b) -> new Take(a.offerId(), a.variantId(), a.qty() + b.qty())));
+        for (var t : merged.values()) {
+            var merchant = stock.merchantOf(t.offerId()).orElse(null);
+            if (merchant == null || t.qty() <= 0) {
+                continue;
+            }
+            platformStock.record(new StockSync.RecordStockChanges.Change(
+                    merchant,
+                    t.offerId(),
+                    t.variantId(),
+                    t.qty(),
+                    reason,
+                    sourceRef,
+                    reason + ":" + sourceRef + ":" + t.offerId() + ":"
+                            + java.util.Objects.requireNonNullElse(t.variantId(), "-")));
+        }
     }
 }

@@ -3,6 +3,7 @@ package ca.northline.catalogue.adapters.commerce;
 import ca.northline.catalogue.application.CommerceCatalogSource;
 import ca.northline.catalogue.application.CommerceSettings;
 import ca.northline.catalogue.application.ImageFetcher;
+import ca.northline.catalogue.application.StockPushSettings;
 import ca.northline.catalogue.domain.CommerceProvider;
 import ca.northline.shared.integration.Backoff;
 import java.time.Clock;
@@ -27,6 +28,13 @@ class CommerceConfig {
     @Bean
     CommerceSettings commerceSettings(CommerceProperties p) {
         return new CommerceSettings(p.apiUrl(), p.studioUrl(), p.pollInterval(), p.reconcileInterval());
+    }
+
+    @Bean
+    StockPushSettings stockPushSettings(CommerceProperties p) {
+        var s = p.stockPush();
+        return new StockPushSettings(
+                s.firstRetry(), s.maxRetry(), Math.max(1, s.maxAttempts()), Math.max(1, s.batch()));
     }
 
     /** Not a bean: each integration module keeps its own retry settings. */

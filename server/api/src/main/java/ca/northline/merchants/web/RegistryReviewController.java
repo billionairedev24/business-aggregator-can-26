@@ -3,6 +3,7 @@ package ca.northline.merchants.web;
 import ca.northline.merchants.application.RegistryReviews;
 import ca.northline.merchants.application.RegistryReviews.DecideReview;
 import ca.northline.merchants.application.RegistryReviews.ListReviews;
+import ca.northline.merchants.application.RegistryReviews.RecheckReview;
 import ca.northline.merchants.application.RegistryReviews.ReviewView;
 import ca.northline.shared.ListResponse;
 import ca.northline.shared.security.ConsoleAction;
@@ -34,6 +35,8 @@ import org.springframework.web.bind.annotation.RestController;
  * <pre>
  * GET  /api/v1/console/registry-reviews[?limit=50]                                      {items: [ReviewView]}
  * POST /api/v1/console/registry-reviews/{id}/decision {decision: approve|reject, reference?, expiresOn?, note?}
+ * POST /api/v1/console/registry-reviews/{id}/recheck   {verificationStatus, checks: [ReviewView]}   S-158; 409
+ *                                                       review_closed | nothing_to_look_up
  * </pre>
  */
 @RestController
@@ -43,6 +46,7 @@ class RegistryReviewController {
 
     private final ListReviews reviews;
     private final DecideReview decide;
+    private final RecheckReview recheck;
 
     record DecisionRequest(
             @NotBlank(message = RegistryReviews.DECISION_REQUIRED)
@@ -74,5 +78,12 @@ class RegistryReviewController {
                 body.note(),
                 body.reference(),
                 body.expiresOn()));
+    }
+
+    /** S-158: run the lookup again (audit-logged); its open review is replaced by the new outcome. */
+    @PostMapping("/{id}/recheck")
+    @RequiresConsole(value = ConsoleScreen.VERIFY, actions = ConsoleAction.VERIFY)
+    RecheckReview.Rechecked recheck(@PathVariable String id, CurrentStaff staff) {
+        return recheck.recheck(id, staff.userId(), staff.roleCodes());
     }
 }

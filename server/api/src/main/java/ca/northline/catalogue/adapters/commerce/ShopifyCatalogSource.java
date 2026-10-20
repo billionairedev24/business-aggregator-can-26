@@ -17,7 +17,9 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -35,7 +37,7 @@ import tools.jackson.databind.JsonNode;
  *
  * <ul>
  *   <li><b>Install:</b> {@code https://{shop}/admin/oauth/authorize} (offline access token, scopes
- *       {@code read_products,read_inventory}); the callback's {@code hmac} (HMAC-SHA256 hex of the other parameters,
+ *       {@code read_products,read_inventory,write_inventory,read_locations} — the last two since S-158); the callback's {@code hmac} (HMAC-SHA256 hex of the other parameters,
  *       sorted, with the app secret) and {@code shop} are checked before {@code POST /admin/oauth/access_token}.
  *   <li><b>Reads:</b> {@code products(first: 50, query: "status:active")} with variants (SKU, barcode, price, total
  *       {@code inventoryQuantity}, inventory item) and up to 9 images. Cost-based throttling: a {@code THROTTLED}
@@ -45,6 +47,12 @@ import tools.jackson.databind.JsonNode;
  *       uninstall; deliveries carry {@code X-Shopify-Hmac-Sha256} (base64 HMAC-SHA256 of the raw body with the app
  *       secret) and are deduplicated on {@code X-Shopify-Event-Id}. The mandatory compliance topics are answered:
  *       Northline keeps no Shopify customer data, and {@code shop/redact} forgets the shop's links.
+ *   <li><b>Two-way stock (S-158):</b> {@code locations} lists the shop's active locations; with one chosen, reads take
+ *       that location's {@code available} quantity ({@code inventoryLevel(locationId:)}) instead of the total, and
+ *       Northline's sales and restocks go out as {@code inventoryAdjustQuantities} (name {@code available}, reason
+ *       {@code other} for a sale and {@code restock} for a cancellation or return, the Northline order as
+ *       {@code referenceDocumentUri}) under the {@code @idempotent(key:)} directive with the push's own key, so a
+ *       retried request is applied once. {@code ACCESS_DENIED} → the grant lacks {@code write_inventory}.
  * </ul>
  */
 @Slf4j
@@ -60,6 +68,31 @@ class ShopifyCatalogSource implements CommerceCatalogSource {
               media(first: 9) { nodes { ... on MediaImage { image { url } } } }
               variants(first: 100) {
                 nodes { id sku barcode title price inventoryQuantity inventoryItem { id } selectedOptions { name value } }
+              }
+            }""";
+    /** The same fields, with one location's {@code available} quantity (S-158). */
+    private static final String PRODUCT_FIELDS_AT = PRODUCT_FIELDS.replace(
+            "inventoryItem { id }",
+            "inventoryItem { id inventoryLevel(locationId: $loc) { quantities(names: [\"available\"]) { name quantity } } }");
+
+    static final String PRODUCTS_AT_QUERY = """
+            query ProductsAt($cursor: String, $loc: ID!) {
+              products(first: 50, after: $cursor, query: "status:active") {
+                pageInfo { hasNextPage endCursor }
+                nodes { ...P }
+              }
+            }
+            """ + PRODUCT_FIELDS_AT;
+    static final String PRODUCT_AT_QUERY = """
+            query ProductAt($id: ID!, $loc: ID!) { product(id: $id) { ...P } }
+            """ + PRODUCT_FIELDS_AT;
+    static final String LOCATIONS_QUERY = """
+            query Locations { locations(first: 50) { nodes { id name isActive } } }""";
+    static final String ADJUST = """
+            mutation Adjust($input: InventoryAdjustQuantitiesInput!, $key: String!) {
+              inventoryAdjustQuantities(input: $input) @idempotent(key: $key) {
+                inventoryAdjustmentGroup { reason changes { name delta quantityAfterChange } }
+                userErrors { field message code }
               }
             }""";
     static final String PRODUCTS_QUERY = """
@@ -186,14 +219,23 @@ class ShopifyCatalogSource implements CommerceCatalogSource {
 
     @Override
     public Page products(Credentials c, @Nullable String cursor) {
+        return products(c, cursor, null);
+    }
+
+    @Override
+    public Page products(Credentials c, @Nullable String cursor, @Nullable String locationId) {
         var vars = new LinkedHashMap<String, Object>();
         if (cursor != null) {
             vars.put("cursor", cursor);
         }
-        var products = graphql(c, PRODUCTS_QUERY, vars).path("products");
+        if (locationId != null) {
+            vars.put("loc", locationId);
+        }
+        var products = graphql(c, locationId == null ? PRODUCTS_QUERY : PRODUCTS_AT_QUERY, vars)
+                .path("products");
         var items = new ArrayList<ExternalProduct>();
         for (var node : products.path("nodes")) {
-            items.add(product(node));
+            items.add(product(node, locationId != null));
         }
         var info = products.path("pageInfo");
         return new Page(items, info.path("hasNextPage").asBoolean(false) ? text(info, "endCursor") : null);
@@ -201,14 +243,39 @@ class ShopifyCatalogSource implements CommerceCatalogSource {
 
     @Override
     public Optional<ExternalProduct> product(Credentials c, String externalId) {
-        var node = graphql(c, PRODUCT_QUERY, Map.of("id", externalId)).path("product");
+        return product(c, externalId, null);
+    }
+
+    @Override
+    public Optional<ExternalProduct> product(Credentials c, String externalId, @Nullable String locationId) {
+        var vars = new LinkedHashMap<String, Object>();
+        vars.put("id", externalId);
+        if (locationId != null) {
+            vars.put("loc", locationId);
+        }
+        var node = graphql(c, locationId == null ? PRODUCT_QUERY : PRODUCT_AT_QUERY, vars)
+                .path("product");
         if (node.isMissingNode() || node.isNull() || !"ACTIVE".equals(text(node, "status"))) {
             return Optional.empty();
         }
-        return Optional.of(product(node));
+        return Optional.of(product(node, locationId != null));
     }
 
     static ExternalProduct product(JsonNode n) {
+        return product(n, false);
+    }
+
+    /** The {@code available} quantity at the queried location; 0 when the item isn't stocked there. */
+    static int availableAt(JsonNode variant) {
+        for (var q : variant.path("inventoryItem").path("inventoryLevel").path("quantities")) {
+            if ("available".equals(text(q, "name"))) {
+                return q.path("quantity").asInt(0);
+            }
+        }
+        return 0;
+    }
+
+    static ExternalProduct product(JsonNode n, boolean atLocation) {
         var images = new ArrayList<URI>();
         for (var m : n.path("media").path("nodes")) {
             var url = text(m.path("image"), "url");
@@ -234,7 +301,7 @@ class ShopifyCatalogSource implements CommerceCatalogSource {
                     String.valueOf(text(v, "title")),
                     options,
                     CommerceHttp.cents(v.path("price")),
-                    v.path("inventoryQuantity").asInt(0),
+                    atLocation ? availableAt(v) : v.path("inventoryQuantity").asInt(0),
                     text(v.path("inventoryItem"), "id")));
         }
         var updated = text(n, "updatedAt");
@@ -263,6 +330,67 @@ class ShopifyCatalogSource implements CommerceCatalogSource {
             }
         }
         return ok;
+    }
+
+    @Override
+    public List<Location> locations(Credentials c) {
+        var out = new ArrayList<Location>();
+        for (var node : graphql(c, LOCATIONS_QUERY, Map.of()).path("locations").path("nodes")) {
+            var id = text(node, "id");
+            if (id != null && node.path("isActive").asBoolean(true)) {
+                out.add(new Location(id, Objects.requireNonNullElse(text(node, "name"), id)));
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public boolean canWriteStock(Set<String> grantedScopes) {
+        return grantedScopes.contains("write_inventory");
+    }
+
+    @Override
+    public Adjusted adjust(Credentials c, Adjustment a) {
+        if (a.stockRef() == null) {
+            return new Adjusted.Refused("not_found", "no inventory item for variant " + a.variantId());
+        }
+        var change = new LinkedHashMap<String, @Nullable Object>();
+        change.put("delta", a.delta());
+        change.put("inventoryItemId", a.stockRef());
+        change.put("locationId", a.locationId());
+        change.put("changeFromQuantity", null); // an adjustment, not a compare-and-set
+        var input = new LinkedHashMap<String, Object>();
+        input.put("reason", "sale".equals(a.reason()) ? "other" : "restock");
+        input.put("name", "available");
+        input.put("referenceDocumentUri", "gid://northline/" + a.reason() + "/" + a.sourceRef());
+        input.put("changes", List.of(change));
+        JsonNode result;
+        try {
+            result = graphql(c, ADJUST, Map.of("input", input, "key", a.idempotencyKey()))
+                    .path("inventoryAdjustQuantities");
+        } catch (AccessDenied e) {
+            return new Adjusted.Refused("scope_missing", String.valueOf(e.getMessage()));
+        }
+        for (var error : result.path("userErrors")) {
+            var code = String.valueOf(text(error, "code"));
+            var message = String.valueOf(text(error, "message"));
+            return new Adjusted.Refused(
+                    code.contains("NOT_FOUND") || code.contains("NOT_STOCKED") ? "not_found" : "rejected",
+                    code + ": " + message);
+        }
+        for (var ch : result.path("inventoryAdjustmentGroup").path("changes")) {
+            if ("available".equals(text(ch, "name")) && ch.has("quantityAfterChange")) {
+                return new Adjusted.Applied(ch.path("quantityAfterChange").asInt());
+            }
+        }
+        return new Adjusted.Applied(null);
+    }
+
+    /** Shopify answers a missing scope as a GraphQL error {@code ACCESS_DENIED}. */
+    static final class AccessDenied extends RuntimeException {
+        AccessDenied(String message) {
+            super(message);
+        }
     }
 
     @Override
@@ -328,6 +456,9 @@ class ShopifyCatalogSource implements CommerceCatalogSource {
                 continue;
             }
             if (errors.isArray() && !errors.isEmpty()) {
+                if ("ACCESS_DENIED".equals(text(errors.get(0).path("extensions"), "code"))) {
+                    throw new AccessDenied("Shopify: " + text(errors.get(0), "message"));
+                }
                 throw new IllegalStateException("Shopify GraphQL error: " + text(errors.get(0), "message"));
             }
             var pace = waitFor(cost);
