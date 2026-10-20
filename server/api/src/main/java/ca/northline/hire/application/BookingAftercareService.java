@@ -70,9 +70,12 @@ class BookingAftercareService implements BookingAftercare {
                 fee.feeTaxCents(),
                 fee.totalCents(),
                 Math.max(0, held + balance - fee.totalCents()),
-                f.cancelFeeBps() == null || f.cancelFeeBps() == 0 ? null : f.freeCancelUntil(),
+                (f.cancelFeeBps() == null || f.cancelFeeBps() == 0) && f.cancelFeeFixedCents() == 0
+                        ? null
+                        : f.freeCancelUntil(),
                 f.cancelWindowHours() == null ? 0 : f.cancelWindowHours(),
-                f.cancelFeeBps() == null ? 0 : f.cancelFeeBps());
+                f.cancelFeeBps() == null ? 0 : f.cancelFeeBps(),
+                f.cancelFeeFixedCents());
     }
 
     @Override
@@ -230,6 +233,7 @@ class BookingAftercareService implements BookingAftercare {
     private LateCancellation fee(BookingMoney.Facts f) {
         return LateCancellation.of(
                 f.cancelFeeBps(),
+                f.cancelFeeFixedCents(),
                 f.freeCancelUntil(),
                 f.priceCents(),
                 f.taxCents(),

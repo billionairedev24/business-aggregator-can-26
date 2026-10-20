@@ -1,7 +1,7 @@
 package ca.northline.hire.application;
 
+import ca.northline.availability.api.CancellationTerms;
 import ca.northline.booking.api.BookingMoney;
-import ca.northline.booking.api.CancellationPolicies;
 import ca.northline.booking.api.CustomerPhotos;
 import ca.northline.hire.domain.BookingRequest;
 import java.math.BigDecimal;
@@ -96,11 +96,19 @@ public final class BookingCheckout {
      * @param cancellation S-153: the provider's late-cancellation policy, shown before booking
      */
     public record Calendar(
-            String serviceId,
-            int durationMin,
-            List<Day> days,
-            String timeZone,
-            CancellationPolicies.Policy cancellation) {}
+            String serviceId, int durationMin, List<Day> days, String timeZone, CancellationPolicy cancellation) {}
+
+    /**
+     * S-153: the late-cancellation terms shown before booking and kept with it.
+     *
+     * @param windowHours free until this long before the start
+     * @param feeBps the fee as a share of the price (basis points), or {@code feeCents} a fixed fee
+     */
+    public record CancellationPolicy(int windowHours, int feeBps, long feeCents) {
+        public static CancellationPolicy of(CancellationTerms.Policy p) {
+            return new CancellationPolicy(p.windowHours(), p.feeBps(), p.feeCents());
+        }
+    }
 
     public record Day(LocalDate date, @Nullable String closed, int free, List<Slot> slots) {}
 
@@ -166,7 +174,7 @@ public final class BookingCheckout {
             int photoCount,
             @Nullable Instant releasesAt,
             List<CustomerPhotos.Photo> photos,
-            CancellationPolicies.@Nullable Policy cancellation,
+            @Nullable CancellationPolicy cancellation,
             BookingMoney.Balance balance,
             BookingMoney.@Nullable Cancellation cancelled) {}
 

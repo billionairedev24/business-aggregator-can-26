@@ -35,7 +35,8 @@ public interface BookingMoney {
      * A customer's booking with its money facts.
      *
      * @param depositCents what the booking's hold covers before tax (the deposit of a deposit quote)
-     * @param cancelWindowHours / {@code cancelFeeBps} the policy shown when it was booked (null before S-153: free)
+     * @param cancelWindowHours / {@code cancelFeeBps} / {@code cancelFeeFixedCents}: the late-cancellation terms shown
+     *     when it was booked (null before S-153: free)
      */
     record Facts(
             String id,
@@ -52,12 +53,21 @@ public interface BookingMoney {
             @Nullable String quoteId,
             @Nullable Integer cancelWindowHours,
             @Nullable Integer cancelFeeBps,
+            long cancelFeeFixedCents,
             @Nullable Instant freeCancelUntil,
             Balance balance,
             @Nullable Cancellation cancellation) {}
 
     /** The customer's own booking; empty for anyone else's. */
     Optional<Facts> facts(String customerId, String bookingId);
+
+    /**
+     * The late-cancellation terms the customer was shown, kept with the booking (the provider changing them later
+     * doesn't change this booking's).
+     *
+     * @param feeFixedCents a fixed fee, already capped at {@code maxFeeBps} of the booking's price (0 = a share)
+     */
+    void terms(String bookingId, int windowHours, int feeBps, long feeFixedCents, Instant freeCancelUntil);
 
     /** The accepted deposit quote still owes {@code cents} + {@code taxCents}, to hold at {@code dueAt}. */
     void scheduleBalance(String bookingId, long cents, long taxCents, Instant dueAt);

@@ -6,8 +6,9 @@ import java.time.Instant;
 import org.jspecify.annotations.Nullable;
 
 /**
- * S-153: what cancelling a booking now costs under the policy it was booked under. Inside the window ({@code now} at
- * or after {@code freeUntil}) the fee is {@code feeBps} of the booking's price before tax, never more than what its
+ * S-153: what cancelling a booking now costs under the terms it was booked under. Inside the window ({@code now} at
+ * or after {@code freeUntil}) the fee is the fixed fee, else {@code feeBps} of the booking's price before tax, never
+ * more than what its
  * hold covers ({@code heldCents}, the deposit of a deposit quote), and carries the booking's own tax rate (a
  * cancellation fee is consideration for the supply — K-series note in DECISIONS). Outside it, or without a policy, it
  * is free.
@@ -25,21 +26,25 @@ public record LateCancellation(boolean late, long feeCents, long feeTaxCents) {
      */
     public static LateCancellation of(
             @Nullable Integer feeBps,
+            long feeFixedCents,
             @Nullable Instant freeUntil,
             long priceCents,
             long taxCents,
             long heldCents,
             boolean paid,
             Instant now) {
-        if (!paid || feeBps == null || feeBps <= 0 || freeUntil == null || now.isBefore(freeUntil)) {
+        var share = feeBps == null ? 0 : feeBps;
+        if (!paid || (share <= 0 && feeFixedCents <= 0) || freeUntil == null || now.isBefore(freeUntil)) {
             return FREE;
         }
         var fee = Math.min(
                 heldCents,
-                BigDecimal.valueOf(priceCents)
-                        .multiply(BigDecimal.valueOf(feeBps))
-                        .divide(BigDecimal.valueOf(10_000), 0, RoundingMode.HALF_UP)
-                        .longValueExact());
+                feeFixedCents > 0
+                        ? feeFixedCents
+                        : BigDecimal.valueOf(priceCents)
+                                .multiply(BigDecimal.valueOf(share))
+                                .divide(BigDecimal.valueOf(10_000), 0, RoundingMode.HALF_UP)
+                                .longValueExact());
         var tax = priceCents <= 0
                 ? 0
                 : BigDecimal.valueOf(fee)

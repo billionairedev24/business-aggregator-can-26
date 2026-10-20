@@ -30,7 +30,8 @@ class BookingMoneyJdbc implements BookingMoneyStore {
             select b.id, coalesce(b.ref, '') as ref, b.merchant_id, b.customer_id, b.state, coalesce(b.title, 'Job') as title,
                    b.starts_at, coalesce(b.price_cents, 0) as price, coalesce(b.deposit_cents, 0) as deposit,
                    coalesce(b.tax_cents, 0) as tax, b.escrow_id is not null as paid, b.quote_id,
-                   b.cancel_window_hours, b.cancel_fee_bps, b.free_cancel_until,
+                   b.cancel_window_hours, b.cancel_fee_bps, coalesce(b.cancel_fee_fixed_cents, 0) as fee_fixed,
+                   b.free_cancel_until,
                    b.balance_state, b.balance_cents, b.balance_tax_cents, b.balance_due_at, b.balance_next_at,
                    b.balance_attempts, b.balance_failure,
                    b.cancelled_at, b.cancelled_by, coalesce(b.cancel_fee_cents, 0) as fee,
@@ -149,15 +150,17 @@ class BookingMoneyJdbc implements BookingMoneyStore {
     }
 
     @Override
-    public void policy(String bookingId, int windowHours, int feeBps, Instant freeCancelUntil) {
+    public void policy(String bookingId, int windowHours, int feeBps, long feeFixedCents, Instant freeCancelUntil) {
         jdbc.sql("""
                         update booking.bookings
-                           set cancel_window_hours = :w, cancel_fee_bps = :f, free_cancel_until = :until
+                           set cancel_window_hours = :w, cancel_fee_bps = :f, cancel_fee_fixed_cents = :fixed,
+                               free_cancel_until = :until
                          where id = :id
                         """)
                 .param("id", bookingId)
                 .param("w", windowHours)
                 .param("f", feeBps)
+                .param("fixed", feeFixedCents)
                 .param("until", ts(freeCancelUntil))
                 .update();
     }
@@ -180,6 +183,7 @@ class BookingMoneyJdbc implements BookingMoneyStore {
                 rs.getString("quote_id"),
                 rs.getObject("cancel_window_hours", Integer.class),
                 rs.getObject("cancel_fee_bps", Integer.class),
+                rs.getLong("fee_fixed"),
                 instant(rs, "free_cancel_until"),
                 new Balance(
                         rs.getString("balance_state"),

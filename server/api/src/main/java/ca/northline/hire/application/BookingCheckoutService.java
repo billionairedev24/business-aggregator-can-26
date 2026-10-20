@@ -1,9 +1,9 @@
 package ca.northline.hire.application;
 
+import ca.northline.availability.api.CancellationTerms;
 import ca.northline.availability.api.ProviderSlots;
 import ca.northline.availability.api.SlotHolds;
 import ca.northline.booking.api.BookingMoney;
-import ca.northline.booking.api.CancellationPolicies;
 import ca.northline.booking.api.CustomerBookings;
 import ca.northline.booking.api.CustomerPhotos;
 import ca.northline.catalogue.api.ServiceOffers;
@@ -90,7 +90,8 @@ class BookingCheckoutService
     private final Clock clock;
     private final Promotions promotions;
     private final CustomerPhotos photos;
-    private final CancellationPolicies policies;
+    private final CancellationTerms terms;
+    private final BookingTerms bookingTerms;
     private final BookingMoney money;
 
     /** What travels with the hold between "Hold $…" and the card confirmation (sealed: it has the access note). */
@@ -122,7 +123,7 @@ class BookingCheckoutService
                                         .toList()))
                         .toList(),
                 zone.getId(),
-                policies.of(provider.merchantId()));
+                BookingCheckout.CancellationPolicy.of(terms.of(provider.merchantId())));
     }
 
     @Override
@@ -314,6 +315,7 @@ class BookingCheckoutService
                 escrowId,
                 discount == null ? 0 : discount.codeCents(),
                 discount == null ? 0 : discount.pointsCents());
+        bookingTerms.keep(hold.merchantId(), hold.bookingId(), hold.startsAt(), draft.priceCents());
         photos.attachToBooking(customerId, hold.bookingId(), draft.request().photos());
         holds.release(hold.id());
         return booking(customerId, hold.bookingId());
@@ -363,7 +365,7 @@ class BookingCheckoutService
                 priceCents,
                 taxCents,
                 escrowId,
-                priceCents == 0 ? null : policies.of(hold.merchantId()).freeUntil(hold.startsAt()),
+                priceCents == 0 ? null : terms.of(hold.merchantId()).freeUntil(hold.startsAt()),
                 discountCents,
                 pointsCents,
                 request.siteLat(),
@@ -411,7 +413,8 @@ class BookingCheckoutService
                 photos.ofBooking(b.id()),
                 facts.map(f -> f.cancelWindowHours() == null || f.cancelFeeBps() == null
                                 ? null
-                                : new CancellationPolicies.Policy(f.cancelWindowHours(), f.cancelFeeBps()))
+                                : new BookingCheckout.CancellationPolicy(
+                                        f.cancelWindowHours(), f.cancelFeeBps(), f.cancelFeeFixedCents()))
                         .orElse(null),
                 facts.map(BookingMoney.Facts::balance)
                         .orElseGet(() -> new BookingMoney.Balance("none", 0, 0, null, null, 0, null)),

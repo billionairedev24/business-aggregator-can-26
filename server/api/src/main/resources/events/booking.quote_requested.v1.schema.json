@@ -38,8 +38,7 @@
         "type": "string",
         "description": "merchants.merchants.id"
       },
-      "minItems": 1,
-      "maxItems": 3
+      "description": "the providers asked (1 to 3)"
     },
     "categoryId": {
       "type": "string"

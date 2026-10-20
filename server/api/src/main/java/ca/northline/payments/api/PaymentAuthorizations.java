@@ -131,8 +131,8 @@ public interface PaymentAuthorizations {
     OffSession startOffSession(Request request, String fromPaymentIntent, int attempt);
 
     /**
-     * S-153: the latest PaymentIntent opened for a reference that a newer one did not replace (the balance the customer
-     * pays from the booking page), its {@code pi_…}.
+     * S-153: the latest PaymentIntent opened for a reference that a newer one did not replace and that still holds or
+     * waits for the card (the balance the customer pays from the booking page), its {@code pi_…}.
      */
     java.util.Optional<String> latest(String refType, String refId);
 

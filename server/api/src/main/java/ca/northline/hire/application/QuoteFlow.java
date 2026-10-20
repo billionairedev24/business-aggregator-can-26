@@ -1,6 +1,5 @@
 package ca.northline.hire.application;
 
-import ca.northline.booking.api.CancellationPolicies;
 import ca.northline.booking.api.CustomerPhotos;
 import ca.northline.booking.api.CustomerQuotes.CustomerQuote;
 import ca.northline.hire.application.BookingCheckout.Confirmation;
@@ -104,7 +103,7 @@ public final class QuoteFlow {
             @Nullable String area,
             @Nullable String bookingId,
             List<Other> others,
-            CancellationPolicies.Policy cancellation,
+            BookingCheckout.CancellationPolicy cancellation,
             Balance balance) {}
 
     /**

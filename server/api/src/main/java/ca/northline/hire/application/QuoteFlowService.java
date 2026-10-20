@@ -1,8 +1,8 @@
 package ca.northline.hire.application;
 
+import ca.northline.availability.api.CancellationTerms;
 import ca.northline.availability.api.ProviderSlots;
 import ca.northline.booking.api.BookingMoney;
-import ca.northline.booking.api.CancellationPolicies;
 import ca.northline.booking.api.CustomerBookings;
 import ca.northline.booking.api.CustomerQuotes;
 import ca.northline.booking.api.CustomerQuotes.CustomerQuote;
@@ -114,7 +114,8 @@ class QuoteFlowService
     private final RegionDefaults region;
     private final Clock clock;
     private final Promotions promotions;
-    private final CancellationPolicies policies;
+    private final CancellationTerms terms;
+    private final BookingTerms bookingTerms;
     private final BookingMoney money;
     private final BalanceProperties balances;
 
@@ -221,7 +222,7 @@ class QuoteFlowService
                 r.area(),
                 acceptance,
                 others,
-                policies.of(q.merchantId()),
+                BookingCheckout.CancellationPolicy.of(terms.of(q.merchantId())),
                 split(q).balance(balances.leadHours()));
     }
 
@@ -399,11 +400,12 @@ class QuoteFlowService
                 a.amountCents(),
                 q.taxCents(),
                 escrowId,
-                policies.of(q.merchantId()).freeUntil(startsAt),
+                terms.of(q.merchantId()).freeUntil(startsAt),
                 discount == null ? 0 : discount.codeCents(),
                 discount == null ? 0 : discount.pointsCents(),
                 null,
                 null));
+        bookingTerms.keep(q.merchantId(), booked.id(), startsAt, q.subtotalCents());
         // S-153: a deposit quote's balance is held automatically before the event (BalanceHoldService)
         var split = split(q);
         if (split.balanceCents() + split.balanceTaxCents() > 0) {

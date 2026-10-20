@@ -43,6 +43,11 @@ class BookingMoneyService implements BookingMoney {
     }
 
     @Override
+    public void terms(String bookingId, int windowHours, int feeBps, long feeFixedCents, Instant freeCancelUntil) {
+        store.policy(bookingId, windowHours, feeBps, feeFixedCents, freeCancelUntil);
+    }
+
+    @Override
     public void scheduleBalance(String bookingId, long cents, long taxCents, Instant dueAt) {
         if (cents + taxCents > 0) {
             store.scheduleBalance(bookingId, cents, taxCents, dueAt);

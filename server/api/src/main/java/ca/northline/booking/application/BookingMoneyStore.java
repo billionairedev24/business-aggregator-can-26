@@ -28,5 +28,5 @@ public interface BookingMoneyStore {
     void cancelled(String bookingId, String byUserId, long feeCents, long feeTaxCents, Instant at);
 
     /** The policy snapshot taken when the booking was written (S-153). */
-    void policy(String bookingId, int windowHours, int feeBps, Instant freeCancelUntil);
+    void policy(String bookingId, int windowHours, int feeBps, long feeFixedCents, Instant freeCancelUntil);
 }

@@ -28,7 +28,8 @@ public interface BookingAftercare {
             long releasedCents,
             @Nullable Instant freeUntil,
             int windowHours,
-            int feeBps) {}
+            int feeBps,
+            long feeFixedCents) {}
 
     CancelTerms cancellation(String customerId, String bookingId);
 

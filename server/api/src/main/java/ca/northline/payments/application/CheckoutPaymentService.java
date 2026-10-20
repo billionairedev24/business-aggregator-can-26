@@ -134,7 +134,9 @@ class CheckoutPaymentService implements PaymentAuthorizations {
 
     @Override
     public java.util.Optional<String> latest(String refType, String refId) {
-        return escrows.currentIntentForUpdate(refType, refId).map(EscrowRepository.Intent::stripePaymentIntent);
+        return escrows.currentIntentForUpdate(refType, refId)
+                .filter(i -> i.state() == IntentStatus.AUTHORIZED || i.state() == IntentStatus.REQUIRES_ACTION)
+                .map(EscrowRepository.Intent::stripePaymentIntent);
     }
 
     private static long total(Request request) {

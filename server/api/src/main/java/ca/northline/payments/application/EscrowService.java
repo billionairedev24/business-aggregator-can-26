@@ -148,12 +148,11 @@ class EscrowService implements EscrowLifecycle {
                 main.getTakeRateBps(),
                 intent.id(),
                 clock.instant());
+        feeEscrow.fulfil(at); // captured now, released on the services clock
         escrows.insert(feeEscrow);
-        feeEscrow.fulfil(at);
         capture(feeEscrow, at); // the fee only: Stripe releases the rest of the authorization
         main.refundInFull();
         escrows.update(main);
-        escrows.update(feeEscrow);
         log.info("Booking {} cancelled late: fee {} + tax {} captured from {}", bookingId, fee, tax, intent.id());
         return new BookingCancellation(fee, tax, released + card - fee - tax, feeEscrow.getId());
     }

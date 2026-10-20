@@ -2,7 +2,6 @@ package ca.northline.booking.application;
 
 import ca.northline.booking.api.BookingConfirmed;
 import ca.northline.booking.api.BookingSignedOff;
-import ca.northline.booking.api.CancellationPolicies;
 import ca.northline.booking.api.CustomerBookings;
 import ca.northline.booking.domain.BookingLogEntry;
 import ca.northline.booking.domain.BookingState;
@@ -42,8 +41,6 @@ class CustomerBookingService implements CustomerBookings {
             BookingState.SIGNED_OFF.code());
 
     private final CustomerBookingStore store;
-    private final CancellationPolicies policies;
-    private final BookingMoneyStore money;
     private final JobQueries jobs;
     private final BookingRepository bookings;
     private final SecretSealer sealer;
@@ -61,11 +58,6 @@ class CustomerBookingService implements CustomerBookings {
         }
         var now = clock.instant();
         store.insert(booking, now);
-        if (booking.escrowId() != null) { // S-153: the policy the customer was shown is the one that applies
-            var policy = policies.of(booking.merchantId());
-            money.policy(
-                    booking.bookingId(), policy.windowHours(), policy.feeBps(), policy.freeUntil(booking.startsAt()));
-        }
         if (booking.accessNote() != null || booking.contactPhone() != null) {
             var note = new LinkedHashMap<String, String>();
             if (booking.accessNote() != null) {
