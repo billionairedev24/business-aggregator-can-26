@@ -24,7 +24,8 @@ public record QuoteAsk(
         @Nullable String budget,
         @Nullable String note,
         @Nullable String area,
-        @Nullable LocalDate preferredDate) {
+        @Nullable LocalDate preferredDate,
+        List<String> photoIds) {
 
     public static final int MAX_PROVIDERS = 3;
     public static final String PROVIDERS = "Choose 1 to 3 providers.";
@@ -44,6 +45,7 @@ public record QuoteAsk(
 
     public QuoteAsk {
         providers = providers == null ? List.of() : List.copyOf(providers);
+        photoIds = photoIds == null ? List.of() : List.copyOf(photoIds); // S-153: optional in the JSON
     }
 
     /**

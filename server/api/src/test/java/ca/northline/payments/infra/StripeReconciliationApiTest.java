@@ -266,7 +266,12 @@ class StripeReconciliationApiTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.escrowHeldCents").isNumber())
                 .andExpect(jsonPath("$.mix.takeCents").isNumber())
-                .andExpect(jsonPath("$.mix.plusCents").doesNotExist())
+                .andExpect(jsonPath("$.mix.plusCents").isNumber()) // S-152: Plus invoices and reward charges
+                .andExpect(jsonPath("$.mix.rewardsCents").isNumber())
+                .andExpect(jsonPath("$.loyalty.pointsOutstanding").isNumber())
+                .andExpect(jsonPath("$.loyalty.pointsOutstandingCents").isNumber())
+                .andExpect(jsonPath("$.loyalty.rewardsFundedCents").isNumber())
+                .andExpect(jsonPath("$.loyalty.plusMembers").isNumber())
                 .andExpect(jsonPath("$.tiers", hasSize(3)))
                 .andExpect(jsonPath("$.tiers[0].tier").value("master"))
                 .andExpect(jsonPath("$.tiers[0].rateBps").value(900))

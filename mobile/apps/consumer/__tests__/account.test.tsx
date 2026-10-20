@@ -285,14 +285,15 @@ describe('D3 Profile (You)', () => {
     expect(screen.getByRole('button', { name: 'Notifications, Quiet 10 p.m.–7 a.m.' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Saved, 0' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Refunds & help, 1 case' })).toBeTruthy();
-    // thrash item 6: Wallet & points and the dietary preferences only with the full navigation
-    expect(screen.queryByTestId('you-wallet')).toBeNull();
+    // thrash item 6: the dietary preferences only with the full navigation; S-152 brings Wallet & points back for everyone
+    expect(screen.getByTestId('you-wallet')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Invite a neighbour' })).toBeTruthy();
     expect(screen.queryByTestId('row-preferences')).toBeNull();
     fireEvent.press(screen.getByTestId('you-orders-all'));
     await waitFor(() => expect(view.getPathname()).toBe('/orders'));
   });
 
-  it('with EXPO_PUBLIC_FULL_NAV=1 shows the wallet and the dietary preferences again', async () => {
+  it('with EXPO_PUBLIC_FULL_NAV=1 shows the dietary preferences again (and the wallet, as always)', async () => {
     process.env.EXPO_PUBLIC_FULL_NAV = '1';
     try {
       const { view } = await signedIn('/account');
@@ -392,25 +393,16 @@ describe('D4 Security centre', () => {
 });
 
 describe('D5 Wallet & points', () => {
-  it('shows the balance, the 8-week chart and payment methods; starts and cancels Plus', async () => {
-    const rec = recorder();
-    const { server } = await signedIn('/wallet', { wrap: rec.wrap });
+  it('shows the balance, the 8-week chart, the points rows, Plus and payment methods', async () => {
+    const { view } = await signedIn('/wallet');
     expect(await screen.findByText('Northline points')).toBeTruthy();
     expect(screen.getByTestId('points-balance')).toHaveTextContent('1,240');
     expect(screen.getByText('= $12.40 off anything')).toBeTruthy();
     expect(screen.getByTestId('points-chart').props.accessibilityLabel).toMatch(/^Points earned, last 8 weeks: 0 pts, 7 weeks ago, .* 180 pts, this week$/);
     expect(await screen.findByRole('button', { name: 'Payment methods, Visa ··4471' })).toBeTruthy();
-    fireEvent.press(screen.getByTestId('plus-cta'));
-    fireEvent.press(screen.getByTestId('plan-annual'));
-    fireEvent.press(screen.getByTestId('plus-start'));
-    expect(await screen.findByText('Northline Plus · active')).toBeTruthy();
-    expect(rec.sent.find((s) => s.method === 'POST' && s.url.endsWith('/me/plus'))!.body).toEqual({ plan: 'annual' });
-    expect(server.account.plus?.plan).toBe('annual');
-    fireEvent.press(screen.getByTestId('plus-cta'));
-    expect(await screen.findByText(/^Annual · renews .* · 2 members$/)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('plus-cancel'));
-    expect(await screen.findByText('Try free')).toBeTruthy();
-    expect(server.account.plus).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Start 30-day free trial' })).toBeTruthy();
+    fireEvent.press(screen.getByTestId('wallet-activity'));
+    await waitFor(() => expect(view.getPathname()).toBe('/account/points'));
   });
 
   it('empty: no points yet', async () => {

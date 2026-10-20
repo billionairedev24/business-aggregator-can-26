@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:orders.order_delivery_failed:1",
+  "description": "order.delivery_failed (S-151) \u2014 topic orders.order, key = order id. The courier couldn't hand the order over; the customer chooses re-delivery or a refund by decideBy, after which it is refunded. Ids and codes only.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "reason",
+    "decideBy",
+    "feeCents",
+    "attempt"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "orders.orders.id"
+    },
+    "reason": {
+      "enum": [
+        "absent",
+        "unsafe",
+        "refused",
+        "access",
+        "other"
+      ]
+    },
+    "decideBy": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "feeCents": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "what a refund keeps of the delivery fee"
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}

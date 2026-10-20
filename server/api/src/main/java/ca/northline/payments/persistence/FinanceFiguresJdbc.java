@@ -42,13 +42,33 @@ class FinanceFiguresJdbc implements FinanceFigures {
         return jdbc.sql("""
                         select coalesce(sum(credit_cents - debit_cents) filter (where ref_type = 'escrow'), 0) as take,
                                coalesce(sum(credit_cents - debit_cents) filter (where ref_type = 'order_delivery'), 0) as delivery,
+                               coalesce(sum(credit_cents - debit_cents) filter (where ref_type = 'plus_invoice'), 0) as plus,
                                coalesce(sum(credit_cents - debit_cents)
-                                        filter (where ref_type not in ('escrow', 'order_delivery')), 0) as adjustments
+                                        filter (where ref_type not in ('escrow', 'order_delivery', 'plus_invoice')), 0)
+                                   as adjustments
                           from payments.ledger_entries
                          where account = 'revenue' and at >= :from and at < :to""")
                 .param("from", JdbcTimes.ts(from))
                 .param("to", JdbcTimes.ts(to))
-                .query((rs, _) -> new Revenue(rs.getLong("take"), rs.getLong("delivery"), rs.getLong("adjustments")))
+                .query((rs, _) -> new Revenue(
+                        rs.getLong("take"), rs.getLong("delivery"), rs.getLong("adjustments"), rs.getLong("plus")))
+                .single();
+    }
+
+    @Override
+    public Rewards rewards(Instant from, Instant to) {
+        return jdbc.sql("""
+                        select coalesce(sum(credit_cents - debit_cents)
+                                        filter (where account = 'rewards_funded' and at >= :from and at < :to), 0) as funded,
+                               coalesce(sum(credit_cents - debit_cents) filter (where account = 'rewards_funded'), 0)
+                                   as balance,
+                               coalesce(sum(debit_cents - credit_cents)
+                                        filter (where account = 'points_redeemed' and at >= :from and at < :to), 0)
+                                   as redeemed
+                          from payments.ledger_entries where account in ('rewards_funded', 'points_redeemed')""")
+                .param("from", JdbcTimes.ts(from))
+                .param("to", JdbcTimes.ts(to))
+                .query((rs, _) -> new Rewards(rs.getLong("funded"), rs.getLong("balance"), rs.getLong("redeemed")))
                 .single();
     }
 

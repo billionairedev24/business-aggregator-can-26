@@ -7,11 +7,13 @@ import ca.northline.shared.security.CurrentMember;
 import ca.northline.shared.security.RequiresMerchant;
 import ca.northline.trust.api.ActiveRewards;
 import ca.northline.trust.application.ManageReward;
+import ca.northline.trust.application.RewardStore;
 import ca.northline.trust.domain.MerchantReward;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.ResponseEntity;
@@ -25,8 +27,9 @@ import org.springframework.web.bind.annotation.RestController;
  * S-75 provider-funded reward.
  *
  * <pre>
- * GET /api/v1/merchants/{merchantId}/reward          the business's reward, 204 when it never set one (VIEW)
- * PUT /api/v1/merchants/{merchantId}/reward          switch on (with its terms) or off (MANAGE: the owner pays)
+ * GET /api/v1/merchants/{merchantId}/reward          the business's reward, 204 when it never set one (VIEW);
+ *                                                    S-152: budget, spent, what it paid for, listings
+ * PUT /api/v1/merchants/{merchantId}/reward          switch on (with its terms and budget) or off (MANAGE: the owner pays)
  * GET /api/v1/public/merchants/{id}/reward           what runs today, for the public page; 204 when none
  * </pre>
  */
@@ -46,17 +49,38 @@ class RewardController {
             @Nullable @Size(max = MerchantReward.LABEL_MAX, message = MerchantReward.LABEL_TOO_LONG)
             String label,
 
-            @Nullable LocalDate endsOn) {}
+            @Nullable LocalDate endsOn,
 
+            @Nullable Long budgetCents,
+
+            @Nullable @Size(max = MerchantReward.LISTINGS_MAX, message = MerchantReward.LISTINGS_TOO_MANY)
+            List<String> listingIds) {}
+
+    /**
+     * @param spentCents what the extra points have cost so far (net of refunds)
+     * @param exhausted the budget ran out (the reward stopped crediting)
+     * @param pointsCredited / {@code salesCredited}: extra points paid out, on how many sales
+     */
     record RewardResponse(
-            boolean active, int multiplier, @Nullable String label, LocalDate endsOn, boolean running) {}
+            boolean active,
+            int multiplier,
+            @Nullable String label,
+            LocalDate endsOn,
+            boolean running,
+            @Nullable Long budgetCents,
+            long spentCents,
+            boolean exhausted,
+            List<String> listingIds,
+            long pointsCredited,
+            long salesCredited) {}
 
     @GetMapping("/api/v1/merchants/{merchantId}/reward")
     @RequiresMerchant(VIEW)
     ResponseEntity<RewardResponse> get(@PathVariable String merchantId) {
         var isRunning = running.running(merchantId).isPresent();
+        var totals = manage.totals(merchantId);
         return manage.of(merchantId)
-                .map(r -> ResponseEntity.ok(response(r, isRunning)))
+                .map(r -> ResponseEntity.ok(response(r, isRunning, totals)))
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
@@ -70,8 +94,10 @@ class RewardController {
                 body.active(),
                 body.multiplier() == null ? 0 : body.multiplier(),
                 body.label(),
-                body.endsOn()));
-        return response(saved, running.running(merchantId).isPresent());
+                body.endsOn(),
+                body.budgetCents(),
+                body.listingIds()));
+        return response(saved, running.running(merchantId).isPresent(), manage.totals(merchantId));
     }
 
     // `{id}`, not `{merchantId}`: a `{merchantId}` path is a member endpoint (MerchantAccessInterceptor)
@@ -82,7 +108,18 @@ class RewardController {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
-    private static RewardResponse response(MerchantReward r, boolean isRunning) {
-        return new RewardResponse(r.active(), r.multiplier(), r.label(), r.endsOn(), isRunning);
+    private static RewardResponse response(MerchantReward r, boolean isRunning, RewardStore.Totals totals) {
+        return new RewardResponse(
+                r.active(),
+                r.multiplier(),
+                r.label(),
+                r.endsOn(),
+                isRunning,
+                r.budgetCents(),
+                r.spentCents(),
+                r.exhaustedAt() != null,
+                r.listingIds(),
+                totals.points(),
+                totals.sales());
     }
 }

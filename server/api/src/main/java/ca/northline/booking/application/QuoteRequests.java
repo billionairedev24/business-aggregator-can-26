@@ -29,7 +29,12 @@ public interface QuoteRequests {
             Instant createdAt,
             @Nullable Instant respondBy,
             @Nullable Instant expiresAt,
-            boolean declined) {
+            boolean declined,
+            List<String> photoIds) {
+
+        public Request {
+            photoIds = List.copyOf(photoIds);
+        }
 
         /** Reference shown to both sides and kept by every version: {@code QT-3104}. */
         public String quoteRef() {

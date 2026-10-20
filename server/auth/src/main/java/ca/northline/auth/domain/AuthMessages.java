@@ -59,6 +59,25 @@ public final class AuthMessages {
     public static final String SIGN_IN_UNAVAILABLE =
             "Signing in is paused for a few minutes while we fix a problem on our side. Try again shortly.";
 
+    // S-154: email + password accounts (not in the spec; DECISIONS.md § S-154). NIST 800-63B: a length rule and a list
+    // of common passwords, no composition rules.
+    public static final String PASSWORD_REQUIRED = "Enter a password.";
+    public static final String PASSWORD_TOO_SHORT = "Use at least 12 characters.";
+    public static final String PASSWORD_TOO_LONG = "Use at most 128 characters.";
+    public static final String PASSWORD_COMMON = "This password is too common. Choose one that's harder to guess.";
+    public static final String PASSWORD_IS_EMAIL = "Your password can't be your email address.";
+    public static final String PASSWORD_CONFIRM = "The passwords don't match.";
+    /** Sign in: wrong email or password — the same answer for an unknown email (no account enumeration). */
+    public static final String CREDENTIALS_WRONG = "That email and password don't match. Check them and try again.";
+
+    public static final String LINK_EXPIRED = "That link has expired or was already used. Ask for a new email.";
+    public static final String CURRENT_PASSWORD_WRONG = "That's not your current password.";
+    public static final String CURRENT_PASSWORD_REQUIRED = "Enter your current password.";
+    public static final String APP_UNKNOWN = "Send studio, consumer or console as the app.";
+    /** Enrolment is for accounts without a second factor; the others change theirs in Settings › Security. */
+    public static final String ALREADY_ENROLLED =
+            "This account already has a second factor. Change it in Settings › Security.";
+
     public static final String SIX_DIGITS = "^\\d{6}$";
 
     private AuthMessages() {}

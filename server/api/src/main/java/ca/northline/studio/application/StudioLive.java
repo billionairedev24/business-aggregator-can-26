@@ -14,6 +14,14 @@ public interface StudioLive {
 
     void signal(String merchantId, Signal signal);
 
+    /**
+     * S-153: the key of a customer's own stream ({@code GET /me/live}) on the same bus. Merchant ids are ULIDs, so the
+     * prefix can never collide with one.
+     */
+    static String customerKey(String userId) {
+        return "customer:" + userId;
+    }
+
     /** Calls {@code listener} for every signal of the merchant until the subscription is closed. */
     Subscription subscribe(String merchantId, Consumer<Signal> listener);
 

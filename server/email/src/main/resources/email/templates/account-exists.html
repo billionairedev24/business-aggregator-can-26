@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{account-exists.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{account-exists.heading(${firstName})}">You already have an account</h1>
+  <p th:style="${s.p}" th:text="#{account-exists.body}">Body</p>
+  <th:block th:replace="~{button.html :: button(#{account-exists.cta}, ${signIn})}"/>
+  <p th:style="${s.p}"><span th:text="#{account-exists.forgot}">Forgot your password?</span>
+    <a th:href="${resetPassword}" th:style="${s.link}" th:text="#{account-exists.reset}">Reset it</a></p>
+  <p th:style="${s.small}" th:text="#{account-exists.ignore}">Ignore</p>
+</div>
+</body>
+</html>

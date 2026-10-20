@@ -72,6 +72,19 @@ class CourierTipService implements CourierTips {
         });
     }
 
+    /**
+     * S-151: the order closed without a delivery — its checkout tip, still waiting on the order's authorization, is
+     * canceled with it (nothing was charged). A tip already charged stays (its refund is the console's, defined cases).
+     */
+    void canceledWithOrder(String orderId) {
+        tips.checkoutTip(orderId).filter(t -> "pending".equals(t.state())).ifPresent(t -> tips.canceled(t.id()));
+    }
+
+    /** S-151: tips owed to a courier, allocated in [from, to). */
+    List<TipStore.Allocated> allocatedTo(String courierUserId, Instant from, Instant to) {
+        return tips.allocatedTo(courierUserId, from, to);
+    }
+
     /** The checkout tip that will be captured with this order's charge (0 when none). */
     long checkoutTipCents(String orderId) {
         return tips.checkoutTip(orderId)

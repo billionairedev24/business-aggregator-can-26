@@ -7,6 +7,7 @@ import { imageUrl, itemHref, type SearchItem } from './api';
 import { useSearchT } from './messages';
 import { categorySlot } from '@northline/media';
 import { Scene } from '../art/Scene';
+import { usePlusBadge } from '../loyalty/PlusBadge';
 
 /**
  * One search item as a card (redesign § 1.3): products and dishes as ProductCards (results grid or home rail), services
@@ -45,6 +46,8 @@ function ProductItemCard({ item, href, image, km, variant, level }: { item: Sear
   const lines = (cart.data?.groups ?? []).flatMap(g => g.items).filter(l => l.offerId === item.id);
   const inCart = lines.reduce((n, l) => n + l.qty, 0);
   const line = lines.length === 1 ? lines[0] : undefined;
+  // S-152: a shop's Plus member price shows on its products' cards
+  const plus = usePlusBadge(product ? item.id : null, item.priceCents);
   const eta = item.onTonightsRun ? <>{t('getIt')} <strong>{t('tonight')}</strong></>
     : item.kind === 'food' && item.openNow ? <strong>{t('tag_open')}</strong> : undefined;
   return (
@@ -52,6 +55,7 @@ function ProductItemCard({ item, href, image, km, variant, level }: { item: Sear
       priceCents={item.priceCents ?? null} priceText={item.priceCents == null ? t('quote') : undefined}
       meta={[item.merchant.name, item.category?.name, km].filter(Boolean).join(' · ')}
       rating={item.rating} reviewCount={item.reviewCount} eta={eta} soldOut={!!item.soldOut}
+      badges={plus ? [{ label: plus, tone: 'accent' }] : undefined}
       inCart={product ? inCart : 0} busy={add.isPending || change.isPending}
       onAdd={product ? () => add.mutate({ offerId: item.id, qty: 1 }, { onError: () => void navigate({ href }) }) : undefined}
       // several lines of one offer (different options) are changed in the cart, where each has its own stepper

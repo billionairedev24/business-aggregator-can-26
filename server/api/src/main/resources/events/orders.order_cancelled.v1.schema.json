@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:orders.order_cancelled:1",
+  "description": "order.cancelled (S-151) \u2014 topic orders.order, key = order id. A goods order, or one shop's part of it, was cancelled (customer before packing, a shop for its lines, Northline staff, or a failed delivery refunded): the lines' card holds are voided or refunded and the delivery leaves its run. Ids and codes only: no note, no customer.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "orderType",
+    "by",
+    "reason",
+    "whole",
+    "merchantIds",
+    "lineIds",
+    "state",
+    "cancellationId"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "orders.orders.id"
+    },
+    "orderType": {
+      "enum": [
+        "goods"
+      ]
+    },
+    "by": {
+      "enum": [
+        "customer",
+        "merchant",
+        "staff",
+        "system"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "description": "a reason code (customer: changed_mind | ordered_by_mistake | delivery_too_late | found_elsewhere | other; merchant: out_of_stock | cannot_fulfil | customer_request | suspected_fraud | other; staff: customer_request | merchant_request | fraud | payment_issue | delivery_issue | other; delivery_failed)"
+    },
+    "whole": {
+      "type": "boolean",
+      "description": "the whole order is closed, else only merchantIds' lines"
+    },
+    "merchantIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "merchants.merchants.id of the shops whose lines were cancelled"
+    },
+    "lineIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "orders.order_lines.id of the cancelled lines"
+    },
+    "state": {
+      "type": "string",
+      "description": "the order's state now: cancelled | refunded (a failed delivery) | its state when only part of it was cancelled"
+    },
+    "cancellationId": {
+      "type": "string",
+      "description": "orders.cancellations.id"
+    }
+  }
+}

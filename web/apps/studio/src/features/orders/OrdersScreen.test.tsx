@@ -23,6 +23,7 @@ describe('Orders · products', () => {
   it('lists the packing list with chips, and Mark packed moves the row to Awaiting pickup', async () => {
     let packed = false;
     const calls = mockFetch({
+      'GET /api/v1/merchants/m1/returns': () => ({ items: [] }),
       'GET /api/v1/merchants/m1/orders': () => { const b = board(); if (packed) b.items[0] = order('o1', 'NL-48213', 'awaiting_pickup'); return b; },
       'POST /api/v1/merchants/m1/orders/o1/pack': () => { packed = true; return order('o1', 'NL-48213', 'awaiting_pickup'); },
     });
@@ -45,14 +46,15 @@ describe('Orders · products', () => {
 
   it('bookkeepers see the list without the action', async () => {
     role = 'bookkeeper';
-    mockFetch({ 'GET /api/v1/merchants/m1/orders': () => board() });
+    mockFetch({ 'GET /api/v1/merchants/m1/returns': () => ({ items: [] }),
+      'GET /api/v1/merchants/m1/orders': () => board() });
     renderWithProviders(<OrdersScreen />);
     expect(await screen.findByRole('list', { name: 'Order figures' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Mark packed/ })).toBeNull();
   });
 
   it('shows an error with retry', async () => {
-    mockFetch({});
+    mockFetch({ 'GET /api/v1/merchants/m1/returns': () => ({ items: [] }) });
     renderWithProviders(<OrdersScreen />);
     expect(await screen.findByText("We couldn't load your orders.")).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
@@ -60,7 +62,8 @@ describe('Orders · products', () => {
 
   it('the order shows its pack-by time and the courier’s pickup at the shop (S-86)', async () => {
     const pickup = { courierAssigned: true, runLabel: 'R-611', eta: inHours(3), arrivedAt: null, pickedUpAt: null };
-    mockFetch({ 'GET /api/v1/merchants/m1/orders': () => ({ ...board(), items: [order('o1', 'NL-48213', 'awaiting_pickup', { courierPickup: pickup })] }) });
+    mockFetch({ 'GET /api/v1/merchants/m1/returns': () => ({ items: [] }),
+      'GET /api/v1/merchants/m1/orders': () => ({ ...board(), items: [order('o1', 'NL-48213', 'awaiting_pickup', { courierPickup: pickup })] }) });
     const user = userEvent.setup({ delay: null });
     renderWithProviders(<OrdersScreen />);
     await user.click(await screen.findByText('NL-48213'));

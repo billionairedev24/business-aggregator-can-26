@@ -190,7 +190,7 @@ class OrdersJdbc implements OrderQueries, OrderInsights, OfferSales, NavBadgeCon
                         select l.offer_id, sum(coalesce(l.qty, 1)) as units
                           from orders.order_lines l join orders.orders o on o.id = l.order_id
                          where l.merchant_id = :m and l.offer_id is not null
-                           and coalesce(l.state, 'pending') <> 'refunded'
+                           and coalesce(l.state, 'pending') not in ('refunded', 'cancelled')
                            and o.type = 'goods' and o.state not in ('cancelled', 'refunded')
                            and o.placed_at >= :from and o.placed_at < :to
                          group by l.offer_id
@@ -204,17 +204,27 @@ class OrdersJdbc implements OrderQueries, OrderInsights, OfferSales, NavBadgeCon
                 .collect(java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    /** "4 to pack" / « 4 à emballer ». */
+    /** "4 to pack" / « 4 à emballer »; S-151: "· 1 return" / « · 1 retour » for returns waiting for the shop. */
     @Override
     public Map<String, String> badges(NavBadgeContributor.Context context) {
         var merchantId = context.merchantId();
-        var locale = context.locale();
+        var fr = "fr".equals(context.locale().getLanguage());
         int toPack = packing(merchantId, clock.instant()).toPack();
-        if (toPack == 0) {
-            return Map.of();
+        int returns = jdbc.sql("select count(*) from orders.returns where merchant_id = :m and state = 'requested'")
+                .param("m", merchantId)
+                .query(Integer.class)
+                .single();
+        var parts = new ArrayList<String>();
+        if (toPack > 0) {
+            parts.add((fr ? "%d à emballer" : "%d to pack").formatted(toPack));
         }
-        var text = "fr".equals(locale.getLanguage()) ? "%d à emballer" : "%d to pack";
-        return Map.of("orders", text.formatted(toPack));
+        if (returns > 0) {
+            parts.add(
+                    returns == 1
+                            ? (fr ? "1 retour" : "1 return")
+                            : (fr ? "%d retours" : "%d returns").formatted(returns));
+        }
+        return parts.isEmpty() ? Map.of() : Map.of("orders", String.join(" · ", parts));
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────────

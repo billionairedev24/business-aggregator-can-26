@@ -2,6 +2,34 @@
 
 Implementation scaffold generated from the design project. Read `CLAUDE.md` first if you are an agent.
 
+## Test it locally
+
+```sh
+make setup        # once: toolchain check, the .env files (cp .env.example .env, …), pnpm install
+                  # your own Postgres / Valkey / Grafana? BYO_SERVICES=db,cache,grafana in .env
+make up-all       # every app + every stand-in you don't bring, migrated and seeded; prints every URL
+make demo-data    # optional: a demo marketplace (shops, listings, orders) made through the product
+make creds        # who to sign in as, and each persona's 6-digit code for right now
+make down         # stops the apps and the stand-ins (never your own services)
+```
+
+| app | URL | sign in as (`make creds WHO=…`) |
+|---|---|---|
+| Studio | http://localhost:3100 | `ravi` (owner of all three businesses, kitchen included), `jas` (technician), `priya` (bookkeeper) |
+| Consumer web | http://localhost:3000 | `amara` (bookings, quotes, orders); `sophie` / `luc` in French |
+| Console | http://localhost:3200 | `priya-n` (every console role); `marc` (the second admin) |
+| Phone apps | `make mobile-dev APP=consumer` / `APP=courier` | `amara` / `priya-nair` ([mobile-local.md](docs/runbooks/mobile-local.md)) |
+
+Sign in with the email or mobile → **Authenticator app** → the code `make creds` shows (a new one every 30 s, as
+often as you like; no `oathtool` needed). Backup codes are single use: `make backup-codes-reset` makes them work again.
+"Create account" works too: `make creds` also shows the latest phone code from the auth log.
+
+Your own services for one run: `make up-all BYO=db,cache,grafana` (`byo=`, `byo_arg=` and `BYO_SERVICES=` mean the
+same); `make up-all-check BYO=db,cache,grafana` only checks them (your Grafana must not be on :3000, the consumer
+app's port). Lighter: `make up` (auth, api, Studio BFF and Studio only).
+
+Step by step, configuration and troubleshooting: [`docs/runbooks/local.md`](docs/runbooks/local.md).
+
 ## What's here
 ```
 CLAUDE.md                     agent instructions — spec precedence, stack, non-negotiables
@@ -94,14 +122,39 @@ make up SERVICES="auth api bff studio"
 = northline-auth :9000 (`:auth:bootRun`, migrates + seeds the DB too; SMS codes are in `.run/logs/auth.log`), api :8080,
 studio-bff :8082 (in-memory session, no Redis) and the Studio on http://localhost:3100 without `NL_DEV_USER` (it goes
 through the BFF).
-Open http://localhost:3100 → Sign in. Seeded credentials (`db/seed-dev/V101__auth.sql`, local only):
+Open http://localhost:3100 → Sign in with the persona's email and the dev-only password **`northline-dev-password`**
+(every seeded persona, S-154: dev seed V416), then the second factor. **`make creds`** prints every seeded persona with
+its password and the authenticator code for right now (`make creds WHO=ravi` for one). **Open a new business account:**
+Create account → name, email, a 12+ character password → the code from the email at **http://localhost:8025** (Mailpit,
+`docker compose --profile mail up -d`) → enroll an authenticator app or passkey → save the backup codes
+([local.md § 5](docs/runbooks/local.md#5-studio-with-real-sign-in-auth--api--bff-still-postgres-only)). The personas (`scripts/dev/personas.json`, seeded by `db/seed-dev` —
+V101, V191, V381 — local only; `make creds-test` keeps this table, the JSON and the seed equal):
 
-| persona | email / mobile | second factor |
-|---|---|---|
-| Ravi Sandhu (owner, all three businesses) | `ravi.sandhu@example.com` · `+1 403 555 0148` | authenticator key `NORTHLINERAVIDEVTOTPSECRET234567` (add it to any authenticator app, or `oathtool --totp -b <key>`), or backup codes `ravis-00001` … `ravis-00010` (single use) |
-| Jas Gill (technician) | `jas.gill@example.com` · `+1 403 555 0172` | authenticator key `NORTHLINEJASDEVTOTPSECRET2345672` |
-| Priya Sandhu (bookkeeper) | `priya.sandhu@example.com` · `+1 403 555 0191` | backup codes `priya-00001` … `priya-00010` |
-| Priya Natarajan (Northline staff, every console role — S-90; sign in on the console, http://localhost:3200) | `priya.natarajan@example.com` · `+1 403 555 0123` | backup codes `priya-n-00001` … `priya-n-00010` (`db/seed-dev/V191__console_staff.sql`) |
+| WHO= | persona | app | email · mobile | password | authenticator key | backup codes |
+|---|---|---|---|---|---|---|
+| `ravi` | Ravi Sandhu: Business owner: Prairie Wrench (services), Prairie Wrench Parts (shop) and Pho Dau Bo (kitchen; Switch business for its KDS) | Studio | `ravi.sandhu@example.com` · `+1 403 555 0148` | `northline-dev-password` | `NORTHLINERAVIDEVTOTPSECRET234567` | `ravis-00001` … `-00010` |
+| `jas` | Jas Gill: Technician at Prairie Wrench; also pays as a customer | Studio, Consumer web, Consumer app (phone) | `jas.gill@example.com` · `+1 403 555 0172` | `northline-dev-password` | `NORTHLINEJASDEVTOTPSECRET2345672` | `jas-00001` … `-00010` |
+| `priya` | Priya Sandhu: Bookkeeper at Prairie Wrench and Prairie Wrench Parts | Studio | `priya.sandhu@example.com` · `+1 403 555 0191` | `northline-dev-password` | `NORTHLINEPRIYADEVTOTPSECRET23456` | `priya-00001` … `-00010` |
+| `amara` | Amara Osei: Customer: bookings, quotes and orders (the default consumer persona) | Consumer web, Consumer app (phone) | `amara.osei@example.com` · `+1 403 555 0201` | `northline-dev-password` | `NORTHLINEAMARADEVTOTPSECRET23456` | `amara-00001` … `-00010` |
+| `sophie` | Sophie Bouchard: Customer, French (fr-CA) | Consumer web, Consumer app (phone) | `sophie.bouchard@example.com` · `+1 403 555 0202` | `northline-dev-password` | `NORTHLINESOPHIEDEVTOTPSECRET2345` | `sophie-00001` … `-00010` |
+| `minh` | Minh Tran: Customer | Consumer web, Consumer app (phone) | `minh.tran@example.com` · `+1 403 555 0203` | `northline-dev-password` | `NORTHLINEMINHDEVTOTPSECRET234567` | `minh-00001` … `-00010` |
+| `jordan` | Jordan Whitford: Customer | Consumer web, Consumer app (phone) | `jordan.whitford@example.com` · `+1 403 555 0204` | `northline-dev-password` | `NORTHLINEJORDANDEVTOTPSECRET2345` | `jordan-00001` … `-00010` |
+| `dana` | Dana Kowalski: Customer | Consumer web, Consumer app (phone) | `dana.kowalski@example.com` · `+1 403 555 0205` | `northline-dev-password` | `NORTHLINEDANADEVTOTPSECRET234567` | `dana-00001` … `-00010` |
+| `kevin` | Kevin Ng: Customer | Consumer web, Consumer app (phone) | `kevin.ng@example.com` · `+1 403 555 0206` | `northline-dev-password` | `NORTHLINEKEVINDEVTOTPSECRET23456` | `kevin-00001` … `-00010` |
+| `rosa` | Rosa Diaz: Customer | Consumer web, Consumer app (phone) | `rosa.diaz@example.com` · `+1 403 555 0207` | `northline-dev-password` | `NORTHLINEROSADEVTOTPSECRET234567` | `rosa-00001` … `-00010` |
+| `luc` | Luc Cardinal: Customer, French (fr-CA) | Consumer web, Consumer app (phone) | `luc.cardinal@example.com` · `+1 403 555 0208` | `northline-dev-password` | `NORTHLINELUCDEVTOTPSECRET2345672` | `luc-00001` … `-00010` |
+| `phuong` | Phuong Nguyen: Customer | Consumer web, Consumer app (phone) | `phuong.nguyen@example.com` · `+1 403 555 0209` | `northline-dev-password` | `NORTHLINEPHUONGDEVTOTPSECRET2345` | `phuong-00001` … `-00010` |
+| `kofi-osei` | Kofi Osei: Customer with a Plus household (account settings) | Consumer web, Consumer app (phone) | `kofi.osei@example.com` · `+1 403 555 0211` | `northline-dev-password` | `NORTHLINEKOFIOSEIDEVTOTPSECRET23` | `kofi-o-00001` … `-00010` |
+| `kofi-mensah` | Kofi Mensah: Customer: hosts tonight's group order at Pho Dau Bo | Consumer web, Consumer app (phone) | `kofi.mensah@example.com` · `+1 403 555 0301` | `northline-dev-password` | `NORTHLINEKOFIMENSAHDEVTOTPSECRET` | `kofi-m-00001` … `-00010` |
+| `ama` | Ama Boateng: Customer: member of the group order | Consumer web, Consumer app (phone) | `ama.boateng@example.com` · `+1 403 555 0302` | `northline-dev-password` | `NORTHLINEAMADEVTOTPSECRET2345672` | `ama-00001` … `-00010` |
+| `yaw` | Yaw Darko: Customer: member of the group order | Consumer web, Consumer app (phone) | `yaw.darko@example.com` · `+1 403 555 0303` | `northline-dev-password` | `NORTHLINEYAWDEVTOTPSECRET2345672` | `yaw-00001` … `-00010` |
+| `priya-nair` | Priya Nair: Courier (e-bike, on a run) | Courier app (phone) | `priya.nair@example.com` · `+1 403 555 0311` | `northline-dev-password` | `NORTHLINEPRIYANAIRDEVTOTPSECRET2` | `priya-nair-00001` … `-00010` |
+| `sam` | Sam Okafor: Courier (car and bike) | Courier app (phone) | `sam.okafor@example.com` · `+1 403 555 0312` | `northline-dev-password` | `NORTHLINESAMDEVTOTPSECRET2345672` | `sam-00001` … `-00010` |
+| `priya-n` | Priya Natarajan: Northline staff with every console role | Console | `priya.natarajan@example.com` · `+1 403 555 0123` | `northline-dev-password` | `NORTHLINEPRIYANATDEVTOTPSECRET23` | `priya-n-00001` … `-00010` |
+| `marc` | Marc Bélanger: Second console admin (the go-live two-person approval), French (fr-CA) | Console | `marc.belanger@example.com` · `+1 555 555 0188` | `northline-dev-password` | `NORTHLINEMARCDEVTOTPSECRET234567` | `marc-00001` … `-00010` |
+
+Every persona has a reusable authenticator key (add it to any authenticator app as a time-based key, or just read the
+code from `make creds`) and ten single-use backup codes; `make backup-codes-reset` makes used codes work again.
 
 "Create account" works end to end: the 6-digit code is printed in the auth server's log (`Verification code for …`),
 passkeys work in any browser on `localhost` (WebAuthn RP id `localhost`). Google/Apple need real client registrations

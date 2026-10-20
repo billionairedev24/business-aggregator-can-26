@@ -15,7 +15,7 @@ function SignInRoute() {
     <SignedOutPage
       mode="signin"
       next={safeNext(search.next)}
-      resumeIdentifier={search.step === 'factor' ? search.identifier : undefined}
+      resumeIdentifier={search.step === 'factor' || search.step === 'password' ? search.identifier : undefined}
       recoverOnLoad={search.recover === '1'}
       error={search.error}
       federation={federationContext(search)}

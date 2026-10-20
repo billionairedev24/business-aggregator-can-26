@@ -12,6 +12,9 @@ public interface PaymentsJobs {
     /** Card holds about to lapse at Stripe are renewed (see {@code AuthorizationWindow}). */
     int renewAuthorizations();
 
+    /** S-153: booking payments that never became escrow (a lapsed slot hold) are canceled at Stripe. */
+    int cancelUnheldBookingPayments();
+
     /** Stripe webhook events not processed yet (or failed), and the purge of old ones. */
     int processStripeEvents();
 
@@ -32,4 +35,10 @@ public interface PaymentsJobs {
 
     /** Scheduled payouts due today, and payouts that arrived. */
     int runPayouts();
+
+    /** S-151: the weekly courier payout run (pay and tips owed), and courier payouts that arrived. */
+    int payCouriers();
+
+    /** S-151: courier payouts that arrived (every minute; their webhook may never come). */
+    int settleCourierPayouts();
 }

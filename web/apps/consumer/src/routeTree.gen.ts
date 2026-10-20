@@ -12,13 +12,17 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as CreditsRouteImport } from './routes/credits'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as LocationRouteImport } from './routes/location'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SellRouteImport } from './routes/sell'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AccountIndexRouteImport } from './routes/account/index'
+import { Route as AccountMessagesRouteImport } from './routes/account/messages'
 import { Route as AccountOrdersRouteImport } from './routes/account/orders'
 import { Route as BookingsBookingIdRouteImport } from './routes/bookings/$bookingId'
 import { Route as CheckoutIndexRouteImport } from './routes/checkout/index'
@@ -56,6 +60,11 @@ const CreditsRoute = CreditsRouteImport.update({
   path: '/credits',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HelpRoute = HelpRouteImport.update({
   id: '/help',
   path: '/help',
@@ -69,6 +78,11 @@ const LocationRoute = LocationRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -86,9 +100,19 @@ const SignInRoute = SignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountIndexRoute = AccountIndexRouteImport.update({
   id: '/account/',
   path: '/account/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountMessagesRoute = AccountMessagesRouteImport.update({
+  id: '/account/messages',
+  path: '/account/messages',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountOrdersRoute = AccountOrdersRouteImport.update({
@@ -202,12 +226,16 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cart': typeof CartRoute
   '/credits': typeof CreditsRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/help': typeof HelpRoute
   '/location': typeof LocationRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sell': typeof SellRoute
   '/sign-in': typeof SignInRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/account/messages': typeof AccountMessagesRoute
   '/account/orders': typeof AccountOrdersRoute
   '/bookings/$bookingId': typeof BookingsBookingIdRoute
   '/checkout/complete': typeof CheckoutCompleteRoute
@@ -235,12 +263,16 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cart': typeof CartRoute
   '/credits': typeof CreditsRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/help': typeof HelpRoute
   '/location': typeof LocationRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sell': typeof SellRoute
   '/sign-in': typeof SignInRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/account/messages': typeof AccountMessagesRoute
   '/account/orders': typeof AccountOrdersRoute
   '/bookings/$bookingId': typeof BookingsBookingIdRoute
   '/checkout/complete': typeof CheckoutCompleteRoute
@@ -269,12 +301,16 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/cart': typeof CartRoute
   '/credits': typeof CreditsRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/help': typeof HelpRoute
   '/location': typeof LocationRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sell': typeof SellRoute
   '/sign-in': typeof SignInRoute
+  '/verify-email': typeof VerifyEmailRoute
+  '/account/messages': typeof AccountMessagesRoute
   '/account/orders': typeof AccountOrdersRoute
   '/bookings/$bookingId': typeof BookingsBookingIdRoute
   '/checkout/complete': typeof CheckoutCompleteRoute
@@ -304,12 +340,16 @@ export interface FileRouteTypes {
     | '/'
     | '/cart'
     | '/credits'
+    | '/forgot-password'
     | '/help'
     | '/location'
     | '/register'
+    | '/reset-password'
     | '/search'
     | '/sell'
     | '/sign-in'
+    | '/verify-email'
+    | '/account/messages'
     | '/account/orders'
     | '/bookings/$bookingId'
     | '/checkout/complete'
@@ -337,12 +377,16 @@ export interface FileRouteTypes {
     | '/'
     | '/cart'
     | '/credits'
+    | '/forgot-password'
     | '/help'
     | '/location'
     | '/register'
+    | '/reset-password'
     | '/search'
     | '/sell'
     | '/sign-in'
+    | '/verify-email'
+    | '/account/messages'
     | '/account/orders'
     | '/bookings/$bookingId'
     | '/checkout/complete'
@@ -370,12 +414,16 @@ export interface FileRouteTypes {
     | '/'
     | '/cart'
     | '/credits'
+    | '/forgot-password'
     | '/help'
     | '/location'
     | '/register'
+    | '/reset-password'
     | '/search'
     | '/sell'
     | '/sign-in'
+    | '/verify-email'
+    | '/account/messages'
     | '/account/orders'
     | '/bookings/$bookingId'
     | '/checkout/complete'
@@ -404,12 +452,16 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CartRoute: typeof CartRoute
   CreditsRoute: typeof CreditsRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   HelpRoute: typeof HelpRoute
   LocationRoute: typeof LocationRoute
   RegisterRoute: typeof RegisterRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   SellRoute: typeof SellRoute
   SignInRoute: typeof SignInRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
+  AccountMessagesRoute: typeof AccountMessagesRoute
   AccountOrdersRoute: typeof AccountOrdersRoute
   BookingsBookingIdRoute: typeof BookingsBookingIdRoute
   CheckoutCompleteRoute: typeof CheckoutCompleteRoute
@@ -457,6 +509,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreditsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/help': {
       id: '/help'
       path: '/help'
@@ -476,6 +535,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/search': {
@@ -499,11 +565,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account/': {
       id: '/account/'
       path: '/account'
       fullPath: '/account/'
       preLoaderRoute: typeof AccountIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/messages': {
+      id: '/account/messages'
+      path: '/account/messages'
+      fullPath: '/account/messages'
+      preLoaderRoute: typeof AccountMessagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/orders': {
@@ -660,12 +740,16 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CartRoute: CartRoute,
   CreditsRoute: CreditsRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   HelpRoute: HelpRoute,
   LocationRoute: LocationRoute,
   RegisterRoute: RegisterRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   SellRoute: SellRoute,
   SignInRoute: SignInRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
+  AccountMessagesRoute: AccountMessagesRoute,
   AccountOrdersRoute: AccountOrdersRoute,
   BookingsBookingIdRoute: BookingsBookingIdRoute,
   CheckoutCompleteRoute: CheckoutCompleteRoute,

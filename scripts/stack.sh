@@ -300,17 +300,16 @@ cmd_status() {
     if grep -q NL_DEV_USER "$RUN_DIR/studio.cmd" 2>/dev/null; then
       say "  Studio     http://localhost:3100 — signed in as Ravi Sandhu (dev auth)"
     else
-      say "  Studio     http://localhost:3100 — sign in: ravi.sandhu@example.com, authenticator key NORTHLINERAVIDEVTOTPSECRET234567"
-      say "             (oathtool --totp -b <key>) or backup code ravis-00001 (README § Local sign-in)"
+      say "  Studio     http://localhost:3100 — sign in: ravi.sandhu@example.com, then the code from make creds WHO=ravi"
     fi
   fi
   if running consumer; then
     if grep -q NL_DEV_USER "$RUN_DIR/consumer.cmd" 2>/dev/null; then say "  Consumer   http://localhost:3000 — as Amara Osei (dev auth)"
-    else say "  Consumer   http://localhost:3000 (through the consumer-bff)"; fi
+    else say "  Consumer   http://localhost:3000 — sign in: amara.osei@example.com, then the code from make creds WHO=amara"; fi
   fi
   if running console; then
     if grep -q NL_DEV_USER "$RUN_DIR/console.cmd" 2>/dev/null; then say "  Console    http://localhost:3200 — as Priya Natarajan, every console role (dev auth)"
-    else say "  Console    http://localhost:3200 — sign in: priya.natarajan@example.com, backup code priya-n-00001 (README § Local sign-in)"; fi
+    else say "  Console    http://localhost:3200 — sign in: priya.natarajan@example.com, then the code from make creds WHO=priya-n"; fi
   fi
   running auth && say "  Auth       http://localhost:9000/.well-known/openid-configuration  (SMS codes: grep 'Verification code' .run/logs/auth.log)"
   running storybook && say "  Storybook  http://localhost:6006"

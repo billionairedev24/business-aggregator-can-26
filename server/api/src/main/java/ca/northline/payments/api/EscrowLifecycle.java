@@ -117,20 +117,21 @@ public interface EscrowLifecycle {
             return platform == null ? 0 : platform.totalCents();
         }
 
-        /** What the card was authorized for: the amount, its tax and Northline's charges, less what points pay. */
+        /** What the card was authorized for: the amount (after a code and points), its tax and Northline's charges. */
         public long cardCents() {
-            return amountCents + taxCents + platformTotal() - (discount == null ? 0 : discount.pointsCents());
+            return amountCents + taxCents + platformTotal();
         }
     }
 
     /**
      * Mobile gaps part 2: what a promo code and points took off this escrow. {@code amountCents} of the hold is already
-     * the amount after the code (the tax was computed on it).
+     * the amount after the code and the points (the tax was computed on it — S-152: points are a discount before tax).
      *
      * @param codeCents the promo code's discount on this line
      * @param fundedBy {@code northline} (Northline tops the merchant up at release: ledger {@code promotions}) or
      *     {@code merchant} (the business sold for less); null without a code
-     * @param pointsCents what points pay of the amount and tax (ledger {@code points_redeemed}, Northline's money)
+     * @param pointsCents what points took off the price (Northline tops the merchant up at release: ledger
+     *     {@code points_redeemed})
      */
     record Discount(long codeCents, @Nullable String fundedBy, long pointsCents) {
         public Discount {
@@ -170,6 +171,33 @@ public interface EscrowLifecycle {
 
     /** Records the hold; returns the escrow id (the existing one when already held). */
     String hold(Hold hold);
+
+    /**
+     * S-153: what a booking's cancellation did to its money.
+     *
+     * @param feeCents / {@code feeTaxCents} the late-cancellation fee captured from the hold (0 = free cancellation)
+     * @param releasedCents what went back to the customer's card (holds released, never captured)
+     * @param feeEscrowId the escrow of the fee ({@code booking_cancel_fee}), released to the business on the services
+     *     clock like any job; null when free
+     */
+    record BookingCancellation(
+            long feeCents,
+            long feeTaxCents,
+            long releasedCents,
+            @Nullable String feeEscrowId) {}
+
+    /**
+     * S-153: the customer cancelled a booking before the work started. Every hold of it ({@code booking}, and the
+     * balance {@code booking_balance} of a deposit quote) is released at Stripe — except the late-cancellation fee,
+     * captured from the booking's hold (Stripe releases the rest of the authorization) into an escrow of its own,
+     * {@code booking_cancel_fee}, split per the escrow rules (the business's take rate fixed at the hold) and released
+     * 48 h later. The fee is capped at what the card holds for the booking (points spent on it are the promotions
+     * module's to give back).
+     * Idempotent per booking; 409 {@code escrow_captured} when the money was already captured (the job was done).
+     *
+     * @param label the Studio ledger's line for the fee ("Late cancellation · Alternator replacement")
+     */
+    BookingCancellation cancelBooking(String bookingId, long feeCents, long feeTaxCents, String label, Instant at);
 
     /** The work was completed / delivered / handed off: starts the release clock of the escrow's kind. */
     void fulfilled(String refType, String refId, Instant at);

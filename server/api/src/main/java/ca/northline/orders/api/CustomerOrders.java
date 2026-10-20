@@ -45,7 +45,8 @@ public interface CustomerOrders {
         /** Still on its way to the customer. */
         public boolean active() {
             return switch (state) {
-                case "placed", "accepted", "packing", "ready", "picked_up" -> true;
+                // S-151: a failed delivery waits for the customer's choice
+                case "placed", "accepted", "packing", "ready", "picked_up", "delivery_failed" -> true;
                 default -> false;
             };
         }

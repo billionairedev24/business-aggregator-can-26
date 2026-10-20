@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { expect, type Page } from '@playwright/test';
 import { env, type Persona } from './env';
 import { hydrated } from './hydration';
-import { smsCode } from './outbox';
+import { emailCode } from './outbox';
 import { VirtualAuthenticator } from './passkey';
 import { freshTotp } from './totp';
 
@@ -31,11 +31,15 @@ function markBackupCodeUsed(code: string) {
  */
 async function secondFactor(page: Page, persona: Persona) {
   if (persona.totpSecret) {
-    await page.getByRole('radio', { name: /Authenticator app/ }).click();
+    const app = page.getByRole('radio', { name: /Authenticator app/ });
+    if ((await app.getAttribute('aria-checked')) !== 'true') await app.click();
     await page.getByLabel('6-digit code').fill(await totpFor(persona));
     await page.getByRole('button', { name: 'Verify code' }).click();
     return;
   }
+  // the Studio shows the account's main factor first; the others are behind "Use another method"
+  const another = page.getByRole('button', { name: 'Use another method' });
+  if (await another.isVisible()) await another.click();
   await page.getByRole('radio', { name: /Backup code/ }).click();
   for (const code of (persona.backupCodes ?? []).filter(c => !usedBackupCodes().includes(c))) {
     await page.getByLabel('Backup code').fill(code);
@@ -48,11 +52,17 @@ async function secondFactor(page: Page, persona: Persona) {
   throw new Error(`${persona.identifier}: no unused backup code left (give the persona an authenticator key)`);
 }
 
-/** Studio sign-in (design 02): identifier → second factor → "Continue" → the Studio. */
+function passwordOf(persona: Persona): string {
+  if (!persona.password) throw new Error(`${persona.identifier} has no password (E2E_*_PASSWORD; locally northline-dev-password)`);
+  return persona.password;
+}
+
+/** Studio sign-in (S-154): email + password → the account's second factor → "Continue" → the Studio. */
 export async function studioSignIn(page: Page, persona: Persona) {
   await page.goto(`${env.urls.studio}/sign-in`);
-  await page.getByLabel('Email or mobile').fill(persona.identifier);
-  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByLabel('Email', { exact: true }).fill(persona.identifier);
+  await page.getByLabel('Password', { exact: true }).fill(passwordOf(persona));
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await secondFactor(page, persona);
   await expect(page.getByText('Signed in.')).toBeVisible();
   await page.getByRole('button', { name: /^Continue/ }).click();
@@ -62,7 +72,8 @@ export async function studioSignIn(page: Page, persona: Persona) {
 /** Console sign-in (S-90): staff with a second factor. */
 export async function consoleSignIn(page: Page, persona: Persona) {
   await page.goto(`${env.urls.console}/sign-in`);
-  await page.getByLabel('Work email or mobile').fill(persona.identifier);
+  await page.getByLabel('Email', { exact: true }).fill(persona.identifier);
+  await page.getByLabel('Password', { exact: true }).fill(passwordOf(persona));
   await page.getByRole('button', { name: 'Continue' }).click();
   await secondFactor(page, persona);
   await expect(page.getByText('Signed in.')).toBeVisible();
@@ -80,24 +91,31 @@ export function newConsumer(firstName: 'Erin' | 'Kai' = 'Erin'): NewConsumer {
   return { firstName, lastName: `E2e ${env.runId}`, phone: `+1 587 ${exchange} ${env.runId.slice(-4)}`, email: `${handle}.e2e+${env.runId}@example.test` };
 }
 
+/** S-154: new accounts' password (passes the policy: 12+ characters, not a common one). */
+export const NEW_PASSWORD = 'e2e maple syrup on fresh snow';
+
 /**
- * Consumer sign-up (design 06): name, mobile, email, terms → the 6-digit code from the local SMS outbox → a passkey
- * (virtual authenticator) → "Account created". Then the consumer-bff session. Local only: a deployed environment
- * texts a real phone.
+ * Consumer sign-up (S-154): name, email, password, mobile, terms → the 6-digit code from the local outbox (the email is
+ * in Mailpit) → a passkey (virtual authenticator) → the backup codes → "Account created". Then the consumer-bff
+ * session. Local only: a deployed environment emails a real inbox.
  */
 export async function consumerRegister(page: Page, person: NewConsumer, authenticator: VirtualAuthenticator) {
   await page.goto(`${env.urls.consumer}/register`, { waitUntil: 'networkidle' });
   await hydrated(page.getByLabel('Full name'));
   await page.getByLabel('Full name').fill(`${person.firstName} ${person.lastName}`);
-  await page.getByLabel('Mobile number').fill(person.phone);
-  await page.getByLabel('Email (receipts)').fill(person.email);
+  await page.getByLabel('Email', { exact: true }).fill(person.email);
+  await page.getByLabel('Password', { exact: true }).fill(NEW_PASSWORD);
+  await page.getByLabel('Confirm password', { exact: true }).fill(NEW_PASSWORD);
+  await page.getByLabel(/Mobile number/).fill(person.phone);
   await page.locator('label.nl-check:has(input[name=terms]) .nl-box').click();
   const sent = new Date();
-  await page.getByRole('button', { name: 'Send code' }).click();
-  await page.getByRole('textbox', { name: /6-digit code sent to/ }).fill(await smsCode(person.phone, sent));
-  await page.getByRole('button', { name: 'Verify', exact: true }).click();
+  await page.getByRole('button', { name: 'Create account', exact: true }).click();
+  await page.getByLabel('Code from the email').fill(await emailCode(person.email, sent));
+  await page.getByRole('button', { name: 'Confirm email' }).click();
   await page.getByRole('radio', { name: /Passkey/ }).click();
-  await page.getByRole('button', { name: 'Create passkey' }).click();
+  await page.getByRole('button', { name: 'Create a passkey' }).click();
+  await page.locator('label.nl-check:has(input[name=saved]) .nl-box').click();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByText('Account created.')).toBeVisible();
   expect(await authenticator.credentials()).toHaveLength(1);
   await consumerSession(page);

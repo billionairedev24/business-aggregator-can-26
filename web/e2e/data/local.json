@@ -36,7 +36,8 @@
     "owner": {
       "identifier": "ravi.sandhu@example.com",
       "firstName": "Ravi",
-      "totpSecret": "NORTHLINERAVIDEVTOTPSECRET234567"
+      "totpSecret": "NORTHLINERAVIDEVTOTPSECRET234567",
+      "password": "northline-dev-password"
     },
     "staff": {
       "identifier": "priya.natarajan@example.com",
@@ -52,7 +53,8 @@
         "priya-n-00008",
         "priya-n-00009",
         "priya-n-00010"
-      ]
+      ],
+      "password": "northline-dev-password"
     }
   }
 }

@@ -19,6 +19,7 @@ zones; the rest is SQL (a migration for every environment, or by hand for one).
 | names | `region.regions.name_i18n` (`en`, `fr`, and `fr_in` / `fr_of`: "au Québec", "du Québec") | every message that names a place (`{province}`, `{provinceIn}`, `{provinceOf}`) |
 | markets | `region.regions` rows with `kind = 'market'`: city, centre, radius, status | delivery markets, the shop's fallback market, a business's zone |
 | service zones | `availability.service_zones` with `market_id`, `sort`, `default_on` | the zones a provider of the market can pick (Booking rules), the ones it starts with |
+| late cancellation (S-153) | `region.regions.cancel_window_hours`, `cancel_fee_bps` (the default a provider starts with) and `cancel_max_window_hours`, `cancel_max_fee_bps` (the most one may set); a market's `NULL` = its province's, a province's `NULL` = `REGION_CANCEL_*` (V420) | Availability › Booking rules (options past the limits aren't offered, the api refuses them), the terms a booking keeps, the late fee charged from the hold — a place whose consumer law caps such fees sets the max here, never in code |
 
 V130 fills every province and territory (zones, holidays, privacy law, tax, French forms); V131 makes **Alberta**
 live with its Calgary, Edmonton and Airdrie markets, the Calgary licence registry and Calgary's service zones — the
@@ -40,6 +41,7 @@ platform audit log (`region.*`) and is served at once by the instance that made 
 | `REGION_PROVINCES` | (none) | extra served provinces on top of the live rows, `CODE[=Zone/Id],…`; a zone here replaces the row's. S-44's `SEARCH_MARKETS` is read when unset |
 | `REGION_DEFAULT_PROVINCE` | `AB` | the province used when nothing is known (a business without a province, the shop's fallback market, the default on forms). `SEARCH_DEFAULT_MARKET` is read when unset |
 | `REGION_PLATFORM_ZONE` | `America/Edmonton` | work that belongs to no market: nightly jobs (`@Scheduled` zones), support hours, account "member since", tax reporting quarters. api, worker and auth |
+| `REGION_CANCEL_WINDOW_HOURS`, `REGION_CANCEL_FEE_BPS`, `REGION_CANCEL_MAX_WINDOW_HOURS`, `REGION_CANCEL_MAX_FEE_BPS` | `12`, `0`, `72`, `5000` | S-153: late-cancellation default and limits where the region rows have none (§ 1) |
 | `REGION_CACHE_TTL` | `60s` | how long each api instance keeps the rows before reading them again |
 | `EMAIL_TIME_ZONE` | `REGION_PLATFORM_ZONE` | dates and times in emails |
 | `REGION_FRENCH_FIRST` | (none) | S-116: province codes or market ids that are French-first with French listing text required, on top of the rows' `french_first` / `french_listings` (V315) — [i18n.md](i18n.md) |

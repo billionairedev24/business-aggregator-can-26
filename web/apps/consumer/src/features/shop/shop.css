@@ -19,3 +19,4 @@
 
 /* an age-restricted product on its card (demo rehearsal 2026-10-19): said before the checkout's ID check */
 .nl-age-chip { display: block; margin-top: var(--space-1); color: var(--color-text); font-weight: var(--weight-semibold); }
+.nl-plus-chip { display: block; margin-top: var(--space-1); color: var(--color-link); font-weight: var(--weight-semibold); }

@@ -98,6 +98,10 @@ class AttemptLimitsTest {
                         LimitedAction.TOTP_VERIFY,
                         LimitedAction.BACKUP_CODE_VERIFY,
                         LimitedAction.PASSKEY_ASSERTION,
-                        LimitedAction.STEP_UP);
+                        LimitedAction.STEP_UP,
+                        // S-154: a password, an account email (it carries a code), an email code
+                        LimitedAction.PASSWORD_VERIFY,
+                        LimitedAction.EMAIL_SEND,
+                        LimitedAction.EMAIL_CODE_VERIFY);
     }
 }

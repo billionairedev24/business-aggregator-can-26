@@ -17,6 +17,8 @@ export const Passkey = z.object({ id: z.string(), label: z.string(), createdAt: 
 export type Passkey = z.infer<typeof Passkey>;
 export const Security = z.object({
   email: z.string().nullish(), mfaPrimary: z.string().nullish(),
+  /** S-154: the account has a password (else "Set a password"). */
+  password: z.boolean().default(false),
   passkeys: z.array(Passkey),
   authenticator: z.boolean(), authenticatorSince: z.string().nullish(), backupCodesRemaining: z.number(), backupCodesIssuedAt: z.string().nullish(),
   signIns: z.array(z.object({ id: z.string(), device: z.string().nullish(), city: z.string().nullish(), method: z.string().nullish(), at: z.string(), lastSeenAt: z.string().nullish() })),
@@ -50,6 +52,20 @@ export const revokeSession = (id: string, current?: string | null) =>
   http(authUrl(`/api/auth/security/sessions/${encodeURIComponent(id)}/revoke`), { method: 'POST', body: { current: current ?? null } }, z.object({ sessions: z.array(ActiveSession) }));
 export const revokeOtherSessions = (current?: string | null) =>
   http(authUrl('/api/auth/security/sessions/revoke-others'), { method: 'POST', body: { current: current ?? null } }, z.object({ revoked: z.number() }));
+
+/**
+ * S-154 changes, same step-up rule: change (or set a first) password — the current one when there is one; every other
+ * session ends — and set up the authenticator app again (scan, then a code from the new secret).
+ */
+export const changePassword = (v: { currentPassword?: string; password: string; passwordConfirm?: string }, current?: string | null) =>
+  http(authUrl('/api/auth/security/password'), { method: 'POST', body: { ...v, current: current ?? null } });
+export const authenticatorSetup = () =>
+  http(authUrl('/api/auth/security/authenticator'), { method: 'POST', body: {} }, z.object({ secret: z.string(), otpauthUri: z.string(), qrCode: z.string() }));
+export const replaceAuthenticator = (code: string) =>
+  http(authUrl('/api/auth/security/authenticator/verify'), { method: 'POST', body: { code: code.trim() } }, z.object({ authenticator: z.boolean() }));
+/** Ten new backup codes (step-up since S-154); the old ones stop working. */
+export const regenerateBackupCodes = () =>
+  http(authUrl('/api/auth/backup-codes'), { method: 'POST', body: {} }, z.object({ codes: z.array(z.string()) }));
 
 /** Why a security change was refused, from the auth server's ProblemDetail `code`. */
 export type SecurityChangeError = 'step_up_required' | 'last_factor' | 'current_session' | 'not_found' | 'rate_limited' | 'signed_out' | 'failed';

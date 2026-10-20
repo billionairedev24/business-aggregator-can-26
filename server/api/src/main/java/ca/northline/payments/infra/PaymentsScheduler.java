@@ -29,11 +29,24 @@ class PaymentsScheduler {
         step("release escrow", "payments.release_escrow", jobs::releaseDueEscrows);
         step("stripe events", "payments.stripe_events", jobs::processStripeEvents);
         step("renew card holds", "payments.renew_holds", jobs::renewAuthorizations);
+        step("unheld booking payments", "payments.unheld_booking_payments", jobs::cancelUnheldBookingPayments);
         step("lapse cases", "payments.lapse_cases", jobs::lapseCases);
         step("refund queue", "payments.refund_queue", jobs::payRefundQueue);
         step("stripe tax", "payments.stripe_tax", jobs::syncTax);
         step("payout accounts", "payments.payout_accounts", jobs::activatePayoutAccounts);
         step("payouts", JobRuns.PAYOUTS, jobs::runPayouts);
+        step("courier payouts arrived", "payments.courier_payouts_settle", jobs::settleCourierPayouts);
+    }
+
+    /**
+     * S-151: couriers are paid weekly — Mondays at 06:41 in the platform zone by default
+     * ({@code COURIER_PAYOUTS_CRON}).
+     */
+    @Scheduled(
+            cron = "${northline.payments.courier-payouts-cron:0 41 6 * * MON}",
+            zone = "${northline.region.platform-zone}")
+    void payCouriers() {
+        step("courier payouts", "payments.courier_payouts", jobs::payCouriers);
     }
 
     /** Nightly at 03:17 in the platform zone (REGION_PLATFORM_ZONE): the Stripe Tax reconciliation (S-21). */

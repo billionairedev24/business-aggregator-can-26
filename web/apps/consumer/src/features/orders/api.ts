@@ -8,6 +8,31 @@ import { CourierProgress } from '../tracking/courier';
  * The customer's order (S-52): `GET /api/v1/me/orders/{id}` and its live stream `…/events` (text/event-stream, event
  * `order` with the same JSON on every change). Personal data: loaded in the browser only.
  */
+/** S-151: what was cancelled — the whole order, or one shop's part (`merchantName`). */
+export const Cancellation = z.object({ by: z.string(), reason: z.string(), at: z.string(), whole: z.boolean(), merchantName: z.string().nullish() });
+export type Cancellation = z.infer<typeof Cancellation>;
+/** S-151: the courier couldn't hand it over; the customer chooses by `decideBy` (else it is refunded). */
+export const DeliveryFailure = z.object({
+  reason: z.string(), failedAt: z.string(), decideBy: z.string(), attempts: z.number().int(),
+  choice: z.enum(['redeliver', 'refund', 'auto_refund']).nullish(), chosenAt: z.string().nullish(), feeCents: z.number().int(),
+});
+export type DeliveryFailure = z.infer<typeof DeliveryFailure>;
+/** S-151: a delivered line still in its return window. */
+export const Returnable = z.object({
+  lineId: z.string(), merchantId: z.string(), title: z.string(), qty: z.number().int(), amountCents: z.number().int(), returnUntil: z.string(),
+});
+export type Returnable = z.infer<typeof Returnable>;
+export const ReturnView = z.object({
+  id: z.string(), ref: z.string(), orderId: z.string(), orderRef: z.string().nullish(), merchantId: z.string(), merchantName: z.string().nullish(),
+  state: z.enum(['requested', 'approved', 'declined', 'escalated', 'collected', 'received', 'refunded', 'withdrawn']),
+  reason: z.string(), note: z.string().nullish(), hasPhoto: z.boolean(), method: z.enum(['pickup', 'dropoff']).nullish(),
+  restock: z.boolean(), declineReason: z.string().nullish(), amountCents: z.number().int(),
+  lines: z.array(z.object({ lineId: z.string(), title: z.string(), qty: z.number().int(), amountCents: z.number().int() })),
+  createdAt: z.string(), decidedAt: z.string().nullish(), collectedAt: z.string().nullish(), receivedAt: z.string().nullish(),
+  refundedAt: z.string().nullish(), canWithdraw: z.boolean(), canEscalate: z.boolean(),
+});
+export type ReturnView = z.infer<typeof ReturnView>;
+
 export const Step = z.object({ key: z.enum(['paid', 'packing', 'pickup', 'delivered']), state: z.enum(['done', 'current', 'todo']) });
 export const OrderTracking = z.object({
   orderId: z.string(), ref: z.string().nullish(), type: z.string(), state: z.string(), placedAt: z.string(),
@@ -16,7 +41,7 @@ export const OrderTracking = z.object({
     kind: z.enum(['pooled', 'direct', 'pickup']), runLabel: z.string().nullish(), day: z.enum(['today', 'tomorrow', 'later']).nullish(),
     startsAt: z.string().nullish(), endsAt: z.string().nullish(), households: z.number().int(), etaAt: z.string().nullish(),
   }),
-  shops: z.array(z.object({ merchantId: z.string(), name: z.string(), items: z.number().int(), packed: z.boolean() })),
+  shops: z.array(z.object({ merchantId: z.string(), name: z.string(), items: z.number().int(), packed: z.boolean(), cancelled: z.boolean().optional() })),
   steps: z.array(Step),
   deliveredAt: z.string().nullish(),
   // S-78: the courier's proof, the customer's confirmation and when the shops are paid without it
@@ -26,6 +51,12 @@ export const OrderTracking = z.object({
   paysShopsAt: z.string().nullish(),
   // S-88: the courier bringing it, live
   courier: CourierProgress.nullish(),
+  // S-151: cancelling, a failed delivery's choice, returns
+  canCancel: z.boolean().optional(),
+  cancellations: z.array(Cancellation).optional(),
+  deliveryFailure: DeliveryFailure.nullish(),
+  returnable: z.array(Returnable).optional(),
+  returns: z.array(ReturnView).optional(),
 });
 export type OrderTracking = z.infer<typeof OrderTracking>;
 
@@ -77,5 +108,56 @@ export function useConfirmDelivery(orderId: string) {
   return useMutation({
     mutationFn: () => http(`/api/v1/me/orders/${encodeURIComponent(orderId)}/confirm`, { method: 'POST' }, OrderTracking),
     onSuccess: data => qc.setQueryData(orderQuery(orderId).queryKey, data),
+  });
+}
+
+/**
+ * S-151, the customer's after-sale:
+ *   POST /api/v1/me/orders/{id}/cancel            {reason, note?} → the order (before any shop packed)
+ *   POST /api/v1/me/orders/{id}/delivery-failure  {choice: redeliver | refund} → the order
+ *   POST /api/v1/me/orders/{id}/returns           multipart lineIds, reason, note?, photo → the return
+ *   POST /api/v1/me/returns/{id}/withdraw | escalate {statement}
+ * Each answer refreshes the order.
+ */
+export function useCancelOrder(orderId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { reason: string; note?: string }) =>
+      http(`/api/v1/me/orders/${encodeURIComponent(orderId)}/cancel`, { method: 'POST', body }, OrderTracking),
+    onSuccess: data => qc.setQueryData(orderQuery(orderId).queryKey, data),
+  });
+}
+
+export function useFailureChoice(orderId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (choice: 'redeliver' | 'refund') =>
+      http(`/api/v1/me/orders/${encodeURIComponent(orderId)}/delivery-failure`, { method: 'POST', body: { choice } }, OrderTracking),
+    onSuccess: data => qc.setQueryData(orderQuery(orderId).queryKey, data),
+  });
+}
+
+export function useRequestReturn(orderId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (r: { lineIds: string[]; reason: string; note?: string; photo?: File }) => {
+      const form = new FormData();
+      r.lineIds.forEach(l => form.append('lineIds', l));
+      form.append('reason', r.reason);
+      if (r.note) form.append('note', r.note);
+      if (r.photo) form.append('photo', r.photo);
+      return http(`/api/v1/me/orders/${encodeURIComponent(orderId)}/returns`, { method: 'POST', body: form }, ReturnView);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: orderQuery(orderId).queryKey }),
+  });
+}
+
+export function useReturnAction(orderId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (a: { returnId: string; action: 'withdraw' } | { returnId: string; action: 'escalate'; statement: string }) =>
+      http(`/api/v1/me/returns/${encodeURIComponent(a.returnId)}/${a.action}`,
+        { method: 'POST', ...(a.action === 'escalate' ? { body: { statement: a.statement } } : {}) }, ReturnView),
+    onSuccess: () => qc.invalidateQueries({ queryKey: orderQuery(orderId).queryKey }),
   });
 }

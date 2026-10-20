@@ -50,3 +50,58 @@ export function usePackOrder(merchantId: string) {
     },
   });
 }
+
+/**
+ * S-151: the seller cancels its part of an order until the courier picks it up — a reason, an optional note, and
+ * whether the units go back on sale. 409 `too_late` / `nothing_to_cancel` / `order_closed` carry the server's words.
+ */
+export const SELLER_CANCEL_REASONS = ['out_of_stock', 'cannot_fulfil', 'customer_request', 'suspected_fraud', 'other'] as const;
+export function useCancelOrder(merchantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, ...body }: { orderId: string; reason: string; note?: string; restock: boolean }) =>
+      http(`${base(merchantId)}/${encodeURIComponent(orderId)}/cancel`, { method: 'POST', body }, Order),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ordersQuery(merchantId).queryKey });
+      void qc.invalidateQueries({ queryKey: ['merchant', merchantId, 'nav-badges'] });
+      void qc.invalidateQueries({ queryKey: ['merchant', merchantId, 'dashboard'] });
+    },
+  });
+}
+
+/** S-151: a customer's return of this shop's items — the shop approves (pickup or drop-off) or declines it. */
+export const SellerReturn = z.object({
+  id: z.string(), ref: z.string(), orderId: z.string(), orderRef: z.string().nullish(), merchantId: z.string(), merchantName: z.string().nullish(),
+  state: z.enum(['requested', 'approved', 'declined', 'escalated', 'collected', 'received', 'refunded', 'withdrawn']),
+  reason: z.string(), note: z.string().nullish(), hasPhoto: z.boolean(), method: z.enum(['pickup', 'dropoff']).nullish(),
+  restock: z.boolean(), declineReason: z.string().nullish(), amountCents: z.number().int(),
+  lines: z.array(z.object({ lineId: z.string(), title: z.string(), qty: z.number().int(), amountCents: z.number().int() })),
+  createdAt: z.string(), decidedAt: z.string().nullish(), collectedAt: z.string().nullish(), receivedAt: z.string().nullish(),
+  refundedAt: z.string().nullish(),
+});
+export type SellerReturn = z.infer<typeof SellerReturn>;
+const returnsBase = (merchantId: string) => `/api/v1/merchants/${merchantId}/returns`;
+export const returnsQuery = (merchantId: string) => queryOptions({
+  queryKey: ['merchant', merchantId, 'returns'],
+  queryFn: () => http(returnsBase(merchantId), {}, z.object({ items: z.array(SellerReturn) })).then(r => r.items),
+});
+export const returnPhotoUrl = (merchantId: string, returnId: string) => `${returnsBase(merchantId)}/${encodeURIComponent(returnId)}/photo`;
+
+export type ReturnDecision =
+  | { returnId: string; action: 'approve'; method: 'pickup' | 'dropoff'; restock: boolean }
+  | { returnId: string; action: 'decline'; reason: string }
+  | { returnId: string; action: 'received' };
+export function useReturnDecision(merchantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: ReturnDecision) => {
+      const url = `${returnsBase(merchantId)}/${encodeURIComponent(d.returnId)}/${d.action}`;
+      const body = d.action === 'approve' ? { method: d.method, restock: d.restock } : d.action === 'decline' ? { reason: d.reason } : undefined;
+      return http(url, { method: 'POST', ...(body ? { body } : {}) }, SellerReturn);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: returnsQuery(merchantId).queryKey });
+      void qc.invalidateQueries({ queryKey: ordersQuery(merchantId).queryKey });
+    },
+  });
+}

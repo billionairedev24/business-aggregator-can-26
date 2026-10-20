@@ -79,10 +79,13 @@ public final class AvailabilityUseCases {
 
     // ── Booking rules ────────────────────────────────────────────────────────────
 
+    /** @param maxCancelWindowHours / {@code maxCancelFeeBps} S-153: the region's limits on the late-cancellation terms */
     public record RulesView(
             BookingRules rules,
             List<String> zones,
-            @Nullable Instant lastSavedAt) {}
+            @Nullable Instant lastSavedAt,
+            int maxCancelWindowHours,
+            int maxCancelFeeBps) {}
 
     public interface ViewRules {
         RulesView rules(String merchantId);

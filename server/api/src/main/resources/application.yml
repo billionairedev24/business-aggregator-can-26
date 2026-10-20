@@ -164,6 +164,8 @@ northline:
   studio.base-url: ${STUDIO_ORIGIN:http://localhost:3100}      # invitation links, Stripe return URLs
   # S-76: the consumer site that serves the website embed script (<site>/embed.js) shown in the Studio's snippet
   developer.embed.site-origin: ${CONSUMER_ORIGIN:http://localhost:3000}
+  # S-151: Stripe's payout onboarding sends couriers back here (the courier app's App Link on the consumer site)
+  fulfilment.courier-payout-return: ${CONSUMER_ORIGIN:http://localhost:3000}/courier/payouts
   # The region model (S-134, docs/runbooks/regions.md): provinces and markets are rows in region.regions (V130/V131,
   # edited by the console later); this is the configuration on top. Code never names a province, city or zone.
   region:
@@ -200,6 +202,8 @@ northline:
     stripe-webhook-tolerance: ${STRIPE_WEBHOOK_TOLERANCE:PT5M} # oldest signed delivery accepted (replay protection)
     webhook-rate-limit: ${STRIPE_WEBHOOK_RATE_LIMIT:600}       # deliveries per minute and client address
     reconcile-cron: ${PAYMENTS_RECONCILE_CRON:0 41 4 * * *}   # S-85 Stripe ↔ ledger, yesterday, platform zone
+    courier-payouts-cron: ${COURIER_PAYOUTS_CRON:0 41 6 * * MON}  # S-151 weekly courier payouts, platform zone
+    unheld-booking-grace: ${PAYMENTS_UNHELD_BOOKING_GRACE:PT30M}  # S-153: a booking's card hold never confirmed → canceled
   stripe:                                                      # Stripe Connect (merchants) outside local/test
     secret-key: ${STRIPE_SECRET_KEY:}
     api-base: ${STRIPE_API_BASE:}
@@ -486,10 +490,46 @@ northline:
     points-per-dollar: ${NORTHLINE_POINTS_PER_DOLLAR:100}           # 100 = 1 point is 1 cent
     max-order-percent: ${NORTHLINE_POINTS_MAX_ORDER_PERCENT:50}     # at most this share of an order paid with points
     min-redeem: ${NORTHLINE_POINTS_MIN_REDEEM:100}
+  # S-152 loyalty (docs/runbooks/loyalty.md): the earning rules are region data (region.loyalty_rules, the console's
+  # finance screen); these are the jobs and the referral limits.
+  loyalty:
+    jobs-cron: ${LOYALTY_JOBS_CRON:0 7 * * * *}                    # expiry, referral windows, local Plus renewals
+    referral-window: ${LOYALTY_REFERRAL_WINDOW:P90D}                # the invitee's first completed order within this
+    new-account-window: ${LOYALTY_NEW_ACCOUNT_WINDOW:P30D}          # only accounts this new may use a code
+    claim-attempts-per-hour: ${LOYALTY_CLAIM_ATTEMPTS_PER_HOUR:5}
+    site-origin: ${CONSUMER_ORIGIN:http://localhost:3000}
+  # S-152 Northline Plus: benefits and prices as configuration; billing behind payments' MembershipBilling port —
+  # local (fake; refused under staging/prod) | stripe (Stripe Billing, STRIPE_SECRET_KEY, docs/runbooks/stripe.md § 11).
+  plus:
+    monthly-price-cents: ${PLUS_MONTHLY_PRICE_CENTS:799}
+    annual-price-cents: ${PLUS_ANNUAL_PRICE_CENTS:6900}
+    trial-days: ${PLUS_TRIAL_DAYS:30}
+    service-fee-waived: ${PLUS_SERVICE_FEE_WAIVED:true}
+    member-prices: ${PLUS_MEMBER_PRICES:true}
+    points-multiplier-pct: ${PLUS_POINTS_MULTIPLIER_PCT:200}
+    grace-days: ${PLUS_GRACE_DAYS:7}
+    billing:
+      provider: ${PLUS_BILLING_PROVIDER:local}
+      monthly-price: ${STRIPE_PLUS_MONTHLY_PRICE:}
+      annual-price: ${STRIPE_PLUS_ANNUAL_PRICE:}
+      automatic-tax: ${PLUS_AUTOMATIC_TAX:false}
   booking.eta:
     minutes-per-km: ${BOOKING_ETA_MINUTES_PER_KM:2.0}              # straight-line estimate (≈ 30 km/h)
     share-interval: PT5S
     ttl: PT5M
+  # S-153: the balance of a deposit quote is held this long before the event (off-session, the deposit's card), retried
+  # every retry-every up to attempts times (the customer and the provider are told of each failure); the job runs every
+  # interval (not under test). Late cancellations: region data (region.regions.cancel_*) over these platform defaults.
+  booking.balance:
+    lead: ${BOOKING_BALANCE_LEAD:PT48H}
+    retry-every: ${BOOKING_BALANCE_RETRY_EVERY:PT6H}
+    attempts: ${BOOKING_BALANCE_ATTEMPTS:3}
+    interval: ${BOOKING_BALANCE_JOB_INTERVAL:PT5M}
+  region.cancellation:
+    window-hours: ${REGION_CANCEL_WINDOW_HOURS:12}                 # free cancellation until this long before the start
+    fee-bps: ${REGION_CANCEL_FEE_BPS:0}                            # a provider's default late-cancellation fee (0 = none)
+    max-window-hours: ${REGION_CANCEL_MAX_WINDOW_HOURS:72}         # the longest window a provider may set
+    max-fee-bps: ${REGION_CANCEL_MAX_FEE_BPS:5000}                 # the highest fee a provider may set (50 %)
   # S-91 console overview, "System health": PromQL over the S-111 metrics (docs/runbooks/observability.md § Console
   # health). `none` = every signal unknown (local, test, or no metrics store yet).
   # S-81 delivery ops map: an XYZ raster basemap under the zones and couriers (docs/runbooks/README.md § Console map).

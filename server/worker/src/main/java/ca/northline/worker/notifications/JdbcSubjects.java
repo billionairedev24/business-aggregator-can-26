@@ -54,6 +54,14 @@ public final class JdbcSubjects implements Subjects {
     }
 
     @Override
+    public Optional<String> returnCustomer(String returnId) {
+        return jdbc.sql("select customer_id from orders.returns where id = :id")
+                .param("id", returnId)
+                .query(String.class)
+                .optional();
+    }
+
+    @Override
     public Optional<String> refundCustomer(String refundId) {
         return jdbc.sql("""
                         select coalesce(e.customer_id, b.customer_id)
@@ -61,6 +69,13 @@ public final class JdbcSubjects implements Subjects {
                           left join payments.escrows e on e.id = r.escrow_id
                           left join booking.bookings b on b.id = r.booking_id
                          where r.id = :id""").param("id", refundId).query(String.class).optional();
+    }
+
+    @Override
+    public Optional<String> threadCustomer(String threadId) {
+        return jdbc.sql("""
+                        select counterpart_id from messaging.threads
+                         where id = :id and kind = 'customer' and counterpart_id is not null""").param("id", threadId).query(String.class).optional();
     }
 
     @Override

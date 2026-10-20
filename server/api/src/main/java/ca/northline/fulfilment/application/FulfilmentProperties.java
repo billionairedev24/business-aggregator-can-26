@@ -16,6 +16,10 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param proofDir where proofs go under {@code local}/{@code test} (default {@code $TMPDIR/northline-proofs})
  * @param pingInterval S-88: the fastest a courier's app may send its position (customers see updates ≤ 5 s apart)
  * @param positionTtl S-88: how long the latest position is kept in Valkey (no history)
+ * @param courierPay S-151: the platform's courier pay model, under every province's and market's own
+ *     ({@code region.regions.courier_pay}); ours, see DECISIONS "S-151"
+ * @param returnJoinWithin S-151: a return pickup rides on the market's planned pooled run starting this soon
+ * @param returnDirectAfter S-151: a return pickup no pooled run took gets a run of its own after this long
  */
 @ConfigurationProperties("northline.fulfilment")
 public record FulfilmentProperties(
@@ -29,4 +33,32 @@ public record FulfilmentProperties(
         @DefaultValue("30d") Duration addressRetention,
         @Nullable Path proofDir,
         @DefaultValue("2s") Duration pingInterval,
-        @DefaultValue("5m") Duration positionTtl) {}
+        @DefaultValue("5m") Duration positionTtl,
+        @DefaultValue CourierPay courierPay,
+        @DefaultValue("24h") Duration returnJoinWithin,
+        @DefaultValue("24h") Duration returnDirectAfter) {
+
+    /**
+     * What a courier earns for a finished run: a base per run, plus per shop picked up from, per door delivered, per
+     * failed attempt at a door (they still went), per return collected and per shop a return went back to.
+     */
+    public record CourierPay(
+            @DefaultValue("400") long perRunCents,
+            @DefaultValue("100") long perPickupCents,
+            @DefaultValue("300") long perDropoffCents,
+            @DefaultValue("300") long perFailedCents,
+            @DefaultValue("300") long perCollectCents,
+            @DefaultValue("100") long perReturnCents) {
+
+        /** These defaults overlaid by {@code values} (the region model's keys). */
+        public CourierPay with(java.util.Map<String, Long> values) {
+            return new CourierPay(
+                    values.getOrDefault("perRunCents", perRunCents),
+                    values.getOrDefault("perPickupCents", perPickupCents),
+                    values.getOrDefault("perDropoffCents", perDropoffCents),
+                    values.getOrDefault("perFailedCents", perFailedCents),
+                    values.getOrDefault("perCollectCents", perCollectCents),
+                    values.getOrDefault("perReturnCents", perReturnCents));
+        }
+    }
+}

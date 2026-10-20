@@ -171,10 +171,10 @@ if [ "$FIXTURES" != 1 ]; then
   say "  site  $SITE_URL"
 fi
 case "$APP" in
-  consumer) say "  sign in: amara.osei@example.com (browse, orders) or jas.gill@example.com (pays: authenticator key NORTHLINEJASDEVTOTPSECRET2345672);" ;;
+  consumer) say "  sign in: amara.osei@example.com (browse, orders) or jas.gill@example.com (pays);" ;;
   courier) say "  sign in: priya.nair@example.com (a seeded courier with a run);" ;;
 esac
-say "  the 6-digit code is in the auth log: grep 'Verification code' $ROOT/.run/logs/auth.log | tail -1"
+say "  every code (authenticator, backup, the latest phone code from the auth log): make creds"
 say ""
 
 cd "$DIR"

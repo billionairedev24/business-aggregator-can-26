@@ -182,7 +182,8 @@ class PromotionService implements Promotions, ManagePromoCodes {
             for (int i = 0; i < items.size(); i++) {
                 var taxable = items.get(i).amountCents() - discounts.get(i);
                 weights.add(taxable);
-                caps.add(taxable * settings.maxOrderPercent() / 100);
+                // every line keeps the card's floor, as with a code
+                caps.add(Math.max(0, Math.min(taxable * settings.maxOrderPercent() / 100, taxable - LINE_FLOOR_CENTS)));
             }
             var wanted = Math.min(
                     settings.centsOf(available),

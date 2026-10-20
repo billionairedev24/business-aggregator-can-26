@@ -36,7 +36,7 @@ Other runbooks: [fulfilment.md](fulfilment.md) (the courier API, runs, proof) ·
 ```
 mobile/                         a pnpm workspace of its own (not web/): Expo pins its own React, Metro and Jest
 ├── apps/courier/               @northline/courier — the app
-│   ├── app/                    expo-router routes: sign-in, oauth2redirect, (app)/{index (shift), run, stops/[id]/{index,pickup,dropoff}, account}
+│   ├── app/                    expo-router routes: sign-in, oauth2redirect, (app)/{index (shift), run, stops/[id]/{index,pickup,dropoff}, account, earnings}
 │   ├── src/                    api client of the courier API, outbox, location (pinger + background task), signature PNG, fixtures, i18n (en, fr-CA)
 │   ├── __tests__/              Jest + RNTL
 │   ├── e2e/smoke.mjs           the web build in headless Chromium
@@ -117,6 +117,17 @@ CI: `.github/workflows/courier.yml` and `ci/gitlab/courier.yml`, **manual only**
   409 `not_on_shift` stops the updates. The api keeps the latest position only (S-88).
 - **Proof:** photo (expo-camera, scaled to 1600 px JPEG), signature (strokes rasterised to a PNG in JS — no screenshot
   module), or the 4-digit PIN (checked on the phone for the format, by the api for the value).
+- **Couldn't deliver (S-151):** on the drop-off screen, "Couldn't deliver": a reason (nobody answered, unsafe, refused,
+  couldn't get in, another reason with a note) and a photo at the door (required). The photo upload and the failure go
+  into the outbox together; the order then shows a return stop back to each shop ("It's back at the business"). The
+  customer is told and chooses another delivery or a refund.
+- **Returns on the run (S-151):** a `collect` stop at a customer's door shows the return's reference ("Collected"),
+  then a `return` stop at the shop. A stop taken off the run (the order was cancelled, or dispatch moved it) answers
+  409 `stop_removed`; the outbox drops the action and says so.
+- **Earnings (S-151):** Profile › Earnings and payouts — today and this week (in the market's zone), each paid run
+  (pay + tips, its stops), what isn't paid out yet and the weekly payouts. "Set up payouts" opens Stripe's onboarding
+  in the in-app browser (`expo-web-browser`); the bank details go to Stripe, never to the app. Closing the browser reads
+  the account again. Never run with a real Stripe account ([stripe.md § 13](stripe.md#13-courier-payouts-s-151)).
 
 ## Variants and build variables
 

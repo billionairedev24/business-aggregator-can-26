@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nProvider } from '@northline/ui';
@@ -14,19 +14,25 @@ let routes: Record<string, Handler>;
 let calls: { path: string; body: Record<string, unknown>; headers: Record<string, string> }[];
 
 const user = { id: '01J9ZD3V00000000000000RAV1', firstName: 'Ravi', lastName: 'Sandhu', email: 'ravi@prairiewrench.ca', phone: '+14035550148', initials: 'RS', locale: 'en-CA', memberSince: '2026-01-05' };
+const amara = { ...user, id: '01KAMARA000000000000000001', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', initials: 'AO' };
 const ok = (body: unknown): Reply => ({ status: 200, body });
 const invalid = (field: string, rule: string, message: string): Reply => ({ status: 422, body: { errors: [{ field, rule, message }] } });
+const CODES = ['abcde-fghij', 'bcdef-ghijk', 'cdefg-hijkm', 'defgh-ijkmn', 'efghi-jkmnp', 'fghij-kmnpq', 'ghijk-mnpqr', 'hijkm-npqrs', 'ijkmn-pqrst', 'jkmnp-qrstu'];
+const PASSWORD = 'correct horse battery staple';
 
 beforeEach(() => {
   calls = [];
   routes = {
-    '/api/auth/register': () => ok({ step: 'otp', phone: '+1 403 555 0148', resendAfterSeconds: 45, channel: 'sms' }),
-    '/api/auth/register/verify': b => (b.code === '123456' ? ok({ step: 'mfa', phone: '+1 403 555 0148', resendAfterSeconds: 0, channel: 'sms' }) : invalid('code', 'mismatch', "That code doesn't match. Check it and try again.")),
-    '/api/auth/register/totp': () => ok({ secret: 'ABCDEFGHIJKLMNOP', otpauthUri: 'otpauth://totp/Northline:a?secret=ABCDEFGHIJKLMNOP', qrCode: 'data:image/png;base64,AAAA' }),
-    '/api/auth/register/totp/verify': () => ({ status: 201, body: { user: { ...user, firstName: 'Amara', lastName: 'Osei', initials: 'AO' }, acr: 'mfa' } }),
-    '/api/auth/sign-in': b => ok({ identifier: b.identifier, factors: ['passkey', 'totp', 'backup_code'] }),
+    '/api/auth/accounts': () => ({ status: 202, body: { step: 'verify-email', email: 'amara@example.ca', resendAfterSeconds: 60 } }),
+    '/api/auth/accounts/resend': () => ({ status: 202, body: { step: 'verify-email', email: 'amara@example.ca', resendAfterSeconds: 60 } }),
+    '/api/auth/accounts/verify': b => (b.code === '482913' ? { status: 201, body: { user: amara, acr: null, needsSecondFactor: true } } : invalid('code', 'mismatch', "That code doesn't match. Check it and try again.")),
+    '/api/auth/enroll/totp': () => ok({ secret: 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP', otpauthUri: 'otpauth://totp/Northline:amara@example.ca?secret=JBSW&issuer=Northline', qrCode: 'data:image/png;base64,AAAA' }),
+    '/api/auth/enroll/totp/verify': b => (b.code === '111222' ? ok({ session: { user: amara, acr: 'mfa', needsSecondFactor: false }, backupCodes: CODES }) : invalid('code', 'mismatch', "That code doesn't match. Check it and try again.")),
+    '/api/auth/sign-in/password': b => (b.password === PASSWORD ? ok({ step: 'factor', factors: ['totp', 'backup_code'], email: b.email }) : invalid('password', 'mismatch', "That email and password don't match. Check them and try again.")),
     '/api/auth/sign-in/totp': b => (b.code === '654321' ? ok({ user, acr: 'mfa' }) : invalid('code', 'mismatch', "That code didn't work. Check it and try again.")),
     '/api/auth/sign-in/backup-code': () => invalid('code', 'mismatch', "That backup code didn't work, or it was already used."),
+    '/api/auth/password/forgot': b => ({ status: 202, body: { step: 'verify-email', email: b.email, resendAfterSeconds: 60 } }),
+    '/api/auth/password/reset': b => (b.code === '730215' ? ok({ email: 'ravi@prairiewrench.ca' }) : invalid('code', 'mismatch', "That code doesn't match. Check it and try again.")),
   };
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     const path = new URL(url, 'http://localhost').pathname;
@@ -39,75 +45,93 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-function renderPage(props: { mode?: AuthMode; next?: string; locale?: 'en' | 'fr' } = {}) {
+function renderPage(props: { mode?: AuthMode; next?: string; locale?: 'en' | 'fr'; forgotOnLoad?: boolean } = {}) {
   const navigate = vi.fn();
   const onModeChange = vi.fn();
   const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   render(
     <I18nProvider initial={props.locale ?? 'en'}>
       <QueryClientProvider client={qc}>
-        <SignedOutPage mode={props.mode ?? 'register'} next={props.next} onModeChange={onModeChange} navigate={navigate} />
+        <SignedOutPage mode={props.mode ?? 'register'} next={props.next} forgotOnLoad={props.forgotOnLoad} onModeChange={onModeChange} navigate={navigate} />
       </QueryClientProvider>
     </I18nProvider>,
   );
   return { navigate, onModeChange, ui: userEvent.setup({ delay: null }) };
 }
 
-async function fillRegistration(ui: ReturnType<typeof userEvent.setup>) {
+type UI = ReturnType<typeof userEvent.setup>;
+async function fillRegistration(ui: UI, password = PASSWORD) {
   await ui.type(screen.getByLabelText('First name'), 'Amara');
   await ui.type(screen.getByLabelText('Last name'), 'Osei');
-  await ui.type(screen.getByLabelText('Mobile number'), '+1 403 555 0148');
   await ui.type(screen.getByLabelText('Email'), 'amara@example.ca');
+  await ui.type(screen.getByLabelText('Password'), password);
+  await ui.type(screen.getByLabelText('Confirm password'), password);
   await ui.click(screen.getByRole('checkbox'));
+}
+async function signInWithPassword(ui: UI, email = 'ravi@prairiewrench.ca', password = PASSWORD) {
+  await ui.type(screen.getByLabelText('Email'), email);
+  await ui.type(screen.getByLabelText('Password'), password);
+  await ui.click(screen.getByRole('button', { name: 'Sign in' }));
 }
 
 // ── Create account ────────────────────────────────────────────────────────────────────────────────────────────────
 
-describe('Create account — validation (validation-rules.md § Registration)', () => {
+describe('Create account — validation', () => {
   it('shows nothing before touch, then every required message and the summary on submit', async () => {
     const { ui } = renderPage();
     expect(screen.getByRole('heading', { name: 'Create your account' })).toBeTruthy();
     expect(screen.queryAllByRole('alert')).toHaveLength(0);
 
-    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
+    await ui.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(await screen.findByText('First name is required.')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Last name is required.')).toBeTruthy();
-    expect(screen.getByText('Mobile number is required for verification.')).toBeTruthy();
     expect(screen.getByText('Email is required.')).toBeTruthy();
+    expect(screen.getByText('Enter a password.')).toBeTruthy();
     expect(screen.getByText('You need to accept the Terms and Privacy Policy.')).toBeTruthy();
     expect(screen.getByText('5 things need attention.')).toBeTruthy();
+    // the mobile is optional
+    expect(screen.queryByText('Mobile number is required for verification.')).toBeNull();
     expect(calls).toHaveLength(0);
   });
 
-  it('validates a field once it is touched', async () => {
+  it('password rules: 12 characters, the confirmation, not the email (no composition rules)', async () => {
     const { ui } = renderPage();
-    const first = screen.getByLabelText('First name');
-    await ui.type(first, 'A');
-    await ui.clear(first);
-    expect(await screen.findByText('First name is required.')).toBeTruthy();
-    expect((first).getAttribute('aria-invalid')).toBe('true');
-    // untouched fields stay quiet
-    expect(screen.queryByText('Email is required.')).toBeNull();
+    await ui.type(screen.getByLabelText('Email'), 'amara@example.ca');
+    await ui.type(screen.getByLabelText('Password'), 'short one');
+    expect(await screen.findByText('Use at least 12 characters.')).toBeTruthy();
+    await ui.clear(screen.getByLabelText('Password'));
+    await ui.type(screen.getByLabelText('Password'), 'amara@example.ca');
+    expect(await screen.findByText("Your password can't be your email address.")).toBeTruthy();
+    await ui.clear(screen.getByLabelText('Password'));
+    await ui.type(screen.getByLabelText('Password'), 'all lower case words');
+    await ui.type(screen.getByLabelText('Confirm password'), 'all lower case word');
+    expect(await screen.findByText("The passwords don't match.")).toBeTruthy();
+    expect(screen.queryByText('Use at least 12 characters.')).toBeNull();
   });
 
-  it('shows the format messages for phone and email', async () => {
+  it('shows and hides the password', async () => {
     const { ui } = renderPage();
-    await ui.type(screen.getByLabelText('Mobile number'), '555-01');
-    await ui.type(screen.getByLabelText('Email'), 'not-an-email');
-    expect(await screen.findByText('Enter a valid Canadian mobile, e.g. +1 403 555 0148.')).toBeTruthy();
-    expect(screen.getByText("That doesn't look like an email address.")).toBeTruthy();
+    const field = screen.getByLabelText('Password') as HTMLInputElement;
+    expect(field.type).toBe('password');
+    await ui.click(screen.getAllByRole('button', { name: 'Show password' })[0]!);
+    expect(field.type).toBe('text');
+    expect(screen.getAllByRole('button', { name: 'Hide password' })[0]!.getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('maps a server 422 (email taken) onto the email field', async () => {
-    routes['/api/auth/register'] = () => invalid('email', 'unique', 'An account already uses this email. Sign in instead.');
-    const { ui } = renderPage();
-    await fillRegistration(ui);
-    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
-    const email = screen.getByLabelText('Email');
-    expect(await screen.findByText('An account already uses this email. Sign in instead.')).toBeTruthy();
-    expect((email).getAttribute('aria-invalid')).toBe('true');
+  it('maps a server 422 (common password) onto the password field, in French too', async () => {
+    routes['/api/auth/accounts'] = () => invalid('password', 'common', "This password is too common. Choose one that's harder to guess.");
+    const { ui } = renderPage({ locale: 'fr' });
+    await ui.type(screen.getByLabelText('Prénom'), 'Amara');
+    await ui.type(screen.getByLabelText('Nom'), 'Osei');
+    await ui.type(screen.getByLabelText('Courriel'), 'amara@example.ca');
+    await ui.type(screen.getByLabelText('Mot de passe'), '123456789012');
+    await ui.type(screen.getByLabelText('Confirmez le mot de passe'), '123456789012');
+    await ui.click(screen.getByRole('checkbox'));
+    await ui.click(screen.getByRole('button', { name: 'Créer le compte' }));
+    expect(await screen.findByText('Ce mot de passe est trop courant. Choisissez-en un plus difficile à deviner.')).toBeTruthy();
+    expect(screen.getByLabelText('Mot de passe').getAttribute('aria-invalid')).toBe('true');
   });
 
   it('links the Terms and Privacy Policy in a new tab', () => {
@@ -118,151 +142,105 @@ describe('Create account — validation (validation-rules.md § Registration)', 
   });
 });
 
-describe('Create account — steps', () => {
-  it('form → code → authenticator app → account created → onboarding hand-off', async () => {
+describe('Create account — email code → second factor → backup codes', () => {
+  it('form → code from the email → authenticator app → backup codes → onboarding hand-off', async () => {
     const { ui, navigate } = renderPage();
     await fillRegistration(ui);
-    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
+    await ui.type(screen.getByLabelText(/Mobile number/), '+1 403 555 0148');
+    await ui.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByLabelText('Enter the 6-digit code sent to +1 403 555 0148')).toBeTruthy();
-    expect(screen.getByText(/^Resend in 0:4\d$/)).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'Call me instead' }) as HTMLButtonElement).disabled).toBe(false);
-    expect(calls[0]).toMatchObject({ path: '/api/auth/register', body: { firstName: 'Amara', lastName: 'Osei', phone: '+1 403 555 0148', email: 'amara@example.ca', terms: true } });
+    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeTruthy();
+    expect(screen.getByText(/We sent a 6-digit code to amara@example\.ca/)).toBeTruthy();
+    expect(screen.getByText(/^New code in (1:00|0:5\d)$/)).toBeTruthy();
+    expect(screen.getByText(/Mailpit: http:\/\/localhost:8025/)).toBeTruthy(); // jsdom runs on localhost
+    expect(calls[0]).toMatchObject({ path: '/api/auth/accounts', body: { firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', password: PASSWORD, phone: '+1 403 555 0148', terms: true, app: 'studio' } });
 
-    // wrong length (client), then wrong code (server), then the right one
-    await ui.type(screen.getByLabelText(/Enter the 6-digit code/), '12');
-    await ui.click(screen.getByRole('button', { name: 'Verify' }));
-    expect(await screen.findByText('The code is 6 digits.')).toBeTruthy();
-    await ui.clear(screen.getByLabelText(/Enter the 6-digit code/));
-    await ui.type(screen.getByLabelText(/Enter the 6-digit code/), '000000');
-    await ui.click(screen.getByRole('button', { name: 'Verify' }));
+    await ui.type(screen.getByLabelText('Code from the email'), '000000');
+    await ui.click(screen.getByRole('button', { name: 'Confirm email' }));
     expect(await screen.findByText("That code doesn't match. Check it and try again.")).toBeTruthy();
-    // S-109 (WCAG 3.3.8): the code pastes as the SMS shows it ("123 456"), not cut to "123 45" by a 6-character limit
-    await ui.clear(screen.getByLabelText(/Enter the 6-digit code/));
-    await ui.click(screen.getByLabelText(/Enter the 6-digit code/));
-    await ui.paste('123 456');
-    expect((screen.getByLabelText(/Enter the 6-digit code/) as HTMLInputElement).value).toBe('123456');
-    await ui.click(screen.getByRole('button', { name: 'Verify' }));
+    await ui.clear(screen.getByLabelText('Code from the email'));
+    await ui.type(screen.getByLabelText('Code from the email'), '482 913');
+    await ui.click(screen.getByRole('button', { name: 'Confirm email' }));
 
-    expect(await screen.findByText('Second factor · required for business accounts')).toBeTruthy();
-    expect(screen.getByText('SMS is a backup only — not accepted as the primary factor.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Create passkey' })).toBeTruthy();
-    await ui.click(screen.getByRole('radio', { name: /Authenticator app/ }));
-    await ui.click(screen.getByRole('button', { name: 'Scan QR code' }));
+    // Business accounts can't skip the second factor.
+    expect(await screen.findByRole('heading', { name: 'Set up your second factor' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Skip for now' })).toBeNull();
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByAltText('QR code to add Northline to your authenticator app')).toBeTruthy();
+    expect(screen.getByText('JBSW Y3DP EHPK 3PXP JBSW Y3DP EHPK 3PXP')).toBeTruthy();
+    expect(screen.getByText('Account: amara@example.ca · Issuer: Northline')).toBeTruthy();
+    await ui.type(screen.getByLabelText('6-digit code from the app'), '111222');
+    await ui.click(screen.getByRole('button', { name: 'Confirm code' }));
 
-    expect((await screen.findByRole('img', { name: 'QR code for your authenticator app' })).getAttribute('src')).toBe('data:image/png;base64,AAAA');
-    await expectNoAxeViolations(document.body); // S-109
-    await ui.type(screen.getByLabelText('6-digit code'), '111111');
-    await ui.click(screen.getByRole('button', { name: 'Verify code' }));
+    expect(await screen.findByRole('heading', { name: 'Save your backup codes' })).toBeTruthy();
+    expect(screen.getAllByRole('listitem').filter(li => li.textContent && CODES.includes(li.textContent))).toHaveLength(10);
+    await expectNoAxeViolations(document.body);
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByText('Confirm that you saved your backup codes.')).toBeTruthy();
+    await ui.click(screen.getByRole('checkbox', { name: 'I saved my backup codes somewhere safe' }));
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
 
-    const done = await screen.findByRole('status');
-    expect(within(done).getByText('Account created.')).toBeTruthy();
-    expect((done).textContent).toContain('Amara Osei · +1 403 555 0148 verified · second factor registered. This login also works for shopping.');
+    expect((await screen.findByRole('status')).textContent).toContain('Amara Osei · email confirmed · second factor set up.');
     await ui.click(screen.getByRole('button', { name: 'Continue to business onboarding' }));
     expect(navigate).toHaveBeenCalledWith('/bff/login?next=%2Fonboarding');
+  });
+
+  it('a new code after the cool-down; a throttled one shows the wait', async () => {
+    routes['/api/auth/accounts'] = () => ({ status: 202, body: { step: 'verify-email', email: 'amara@example.ca', resendAfterSeconds: 0 } });
+    routes['/api/auth/accounts/resend'] = () => ({ status: 429, body: { code: 'otp_throttled', retryAfterSeconds: 42 } });
+    const { ui } = renderPage();
+    await fillRegistration(ui);
+    await ui.click(screen.getByRole('button', { name: 'Create account' }));
+    await ui.click(await screen.findByRole('button', { name: 'Send a new code' }));
+    expect(await screen.findByText('New code in 0:42')).toBeTruthy();
   });
 
   it('passkey needs WebAuthn — explains when the browser has none', async () => {
     const { ui } = renderPage();
     await fillRegistration(ui);
-    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
-    await ui.type(await screen.findByLabelText(/Enter the 6-digit code/), '123456');
-    await ui.click(screen.getByRole('button', { name: 'Verify' }));
-    await ui.click(await screen.findByRole('button', { name: 'Create passkey' }));
+    await ui.click(screen.getByRole('button', { name: 'Create account' }));
+    await ui.type(await screen.findByLabelText('Code from the email'), '482913');
+    await ui.click(screen.getByRole('button', { name: 'Confirm email' }));
+    await ui.click(await screen.findByRole('radio', { name: /Passkey/ }));
+    await ui.click(screen.getByRole('button', { name: 'Create a passkey' }));
     expect(await screen.findByText("This browser can't use passkeys. Choose another method.")).toBeTruthy();
   });
 
-  it('a throttled resend shows the wait', async () => {
-    routes['/api/auth/register/resend'] = () => ({ status: 429, body: { code: 'otp_throttled', retryAfterSeconds: 30, detail: 'Wait 30 s before sending another code.' } });
+  it('the second-factor picker: one Tab stop, arrow keys (S-140)', async () => {
     const { ui } = renderPage();
     await fillRegistration(ui);
-    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
-    await ui.click(await screen.findByRole('button', { name: 'Call me instead' }));
-    expect(await screen.findByText('Resend in 0:30')).toBeTruthy();
+    await ui.click(screen.getByRole('button', { name: 'Create account' }));
+    await ui.type(await screen.findByLabelText('Code from the email'), '482913');
+    await ui.click(screen.getByRole('button', { name: 'Confirm email' }));
+    const app = await screen.findByRole('radio', { name: /Authenticator app/ });
+    expect(screen.getAllByRole('radio').filter(r => r.getAttribute('tabindex') === '0')).toEqual([app]);
+    app.focus();
+    await ui.keyboard('{ArrowRight}');
+    expect(screen.getByRole('radio', { name: /Passkey/ }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Create a passkey' })).toBeTruthy();
   });
 });
 
 // ── Sign in ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
-describe('Create account — code delivery (S-8)', () => {
-  it('sends the UI language, so the code is worded in it', async () => {
-    const { ui } = renderPage();
-    await fillRegistration(ui);
-    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
-    await screen.findByLabelText(/code/i);
-    expect(calls.find(c => c.path === '/api/auth/register')?.headers['accept-language']).toBe('en-CA');
-  });
-
-  it('the provider could not send the first code: says so, the form stays', async () => {
-    routes['/api/auth/register'] = () => ({ status: 503, body: { code: 'code_not_sent', detail: 'x' } });
-    const { ui } = renderPage();
-    await fillRegistration(ui);
-    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
-    expect(await screen.findByText("We couldn't send a code to this number right now. Try again in a moment.")).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Send verification code' })).toBeTruthy();
-  });
-
-  it('a call that could not be placed offers the text message instead', async () => {
-    routes['/api/auth/register/resend'] = () => ({ status: 503, body: { code: 'code_not_sent', detail: 'x' } });
-    const { ui } = renderPage();
-    await fillRegistration(ui);
-    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
-    await ui.click(await screen.findByRole('button', { name: 'Call me instead' }));
-    expect(await screen.findByText("We couldn't call this number. Try again in a moment, or resend the code by text.")).toBeTruthy();
-  });
-});
-
-describe('Second-factor pickers: one Tab stop, arrow keys (S-140)', () => {
-  const tabStops = () => screen.getAllByRole('radio').filter(r => r.getAttribute('tabindex') === '0');
-
-  it('sign-in: the checked factor is the Tab stop; ↓ and End move and select', async () => {
-    const { ui } = renderPage({ mode: 'signin' });
-    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
-    await ui.click(screen.getByRole('button', { name: 'Continue' }));
-    const passkey = await screen.findByRole('radio', { name: /Passkey/ });
-    expect(tabStops()).toEqual([passkey]);
-    passkey.focus();
-    await ui.keyboard('{ArrowDown}');
-    const app = screen.getByRole('radio', { name: /Authenticator app/ });
-    expect(document.activeElement).toBe(app);
-    expect(app.getAttribute('aria-checked')).toBe('true');
-    expect(screen.getByLabelText('6-digit code')).toBeTruthy();
-    expect(tabStops()).toEqual([app]);
-    await ui.keyboard('{End}');
-    expect(screen.getByRole('radio', { name: /Backup code/ }).getAttribute('aria-checked')).toBe('true');
-  });
-
-  it('registration: ← and → switch between passkey and authenticator app', async () => {
-    const { ui } = renderPage();
-    await fillRegistration(ui);
-    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
-    await ui.type(await screen.findByLabelText(/Enter the 6-digit code/), '123456');
-    await ui.click(screen.getByRole('button', { name: 'Verify' }));
-    const passkey = await screen.findByRole('radio', { name: /Passkey/ });
-    expect(tabStops()).toEqual([passkey]);
-    passkey.focus();
-    await ui.keyboard('{ArrowRight}');
-    expect(screen.getByRole('radio', { name: /Authenticator app/ }).getAttribute('aria-checked')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Scan QR code' })).toBeTruthy();
-    await ui.keyboard('{ArrowLeft}');
-    expect(passkey.getAttribute('aria-checked')).toBe('true');
-    expect(document.activeElement).toBe(passkey);
-  });
-});
-
 describe('Sign in', () => {
-  it('email → authenticator code → signed in → hand-off to next', async () => {
+  it('email + password → the account’s own factors → authenticator code → hand-off to next', async () => {
     const { ui, navigate } = renderPage({ mode: 'signin', next: '/b/01J9ZD3V00000000000000PWM1/orders' });
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeTruthy();
-    const cont = screen.getByRole('button', { name: 'Continue' });
-    expect((cont as HTMLButtonElement).disabled).toBe(true);
-    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
-    await ui.click(cont);
+    expect((screen.getByRole('button', { name: 'Sign in' }) as HTMLButtonElement).disabled).toBe(true);
+    await signInWithPassword(ui, 'ravi@prairiewrench.ca', 'wrong password!!');
+    expect(await screen.findByText("That email and password don't match. Check them and try again.")).toBeTruthy();
+    expect(screen.getByText(/Use “Forgot password\?” to set one by email/)).toBeTruthy();
+    await ui.clear(screen.getByLabelText('Password'));
+    await ui.type(screen.getByLabelText('Password'), PASSWORD);
+    await ui.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(await screen.findByText('Second factor required for ravi@prairiewrench.ca.')).toBeTruthy();
-    expect((screen.getByRole('radio', { name: /Passkey/ })).getAttribute('aria-checked')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Use passkey' })).toBeTruthy();
-    await ui.click(screen.getByRole('radio', { name: /Authenticator app/ }));
+    expect(await screen.findByText('Confirm it’s you, ravi@prairiewrench.ca.')).toBeTruthy();
+    // Only the factors the account has; the authenticator first, others behind "Use another method".
+    expect(screen.getAllByRole('radio')).toHaveLength(1);
+    expect(screen.queryByRole('radio', { name: /Passkey/ })).toBeNull();
+    await ui.click(screen.getByRole('button', { name: 'Use another method' }));
+    expect(screen.getAllByRole('radio').map(r => r.textContent)).toEqual([expect.stringContaining('Authenticator app'), expect.stringContaining('Backup code')]);
     await ui.type(screen.getByLabelText('6-digit code'), '000000');
     await ui.click(screen.getByRole('button', { name: 'Verify code' }));
     expect(await screen.findByText("That code didn't work. Check it and try again.")).toBeTruthy();
@@ -270,20 +248,42 @@ describe('Sign in', () => {
     await ui.type(screen.getByLabelText('6-digit code'), '654321');
     await ui.click(screen.getByRole('button', { name: 'Verify code' }));
 
-    const done = await screen.findByRole('status');
-    expect((done).textContent).toContain('Signed in. Welcome back, Ravi.');
+    expect((await screen.findByRole('status')).textContent).toContain('Signed in. Welcome back, Ravi.');
     await ui.click(screen.getByRole('button', { name: 'Continue' }));
     expect(navigate).toHaveBeenCalledWith('/bff/login?next=%2Fb%2F01J9ZD3V00000000000000PWM1%2Forders');
+    expect(calls.filter(c => c.path === '/api/auth/sign-in/password').at(-1)?.body).toEqual({ email: 'ravi@prairiewrench.ca', password: PASSWORD });
+  });
+
+  it('an account without a second factor goes to enrolment — never to a dead end', async () => {
+    routes['/api/auth/sign-in/password'] = () => ok({ step: 'enroll', session: { user: amara, acr: null, needsSecondFactor: true } });
+    const { ui } = renderPage({ mode: 'signin', next: '/onboarding?type=provider' });
+    await signInWithPassword(ui, 'amara@example.ca');
+    expect(await screen.findByRole('heading', { name: 'Set up your second factor' })).toBeTruthy();
+    expect(screen.queryByText(/Confirm it’s you/)).toBeNull();
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    await ui.type(await screen.findByLabelText('6-digit code from the app'), '111222');
+    await ui.click(screen.getByRole('button', { name: 'Confirm code' }));
+    await ui.click(await screen.findByRole('checkbox', { name: 'I saved my backup codes somewhere safe' }));
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    expect((await screen.findByRole('status')).textContent).toContain('Welcome back, Amara.');
+  });
+
+  it('an account whose email is not confirmed yet gets a new code', async () => {
+    routes['/api/auth/sign-in/password'] = () => ok({ step: 'verify-email', email: 'amara@example.ca', resendAfterSeconds: 60 });
+    const { ui } = renderPage({ mode: 'signin' });
+    await signInWithPassword(ui, 'amara@example.ca');
+    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeTruthy();
+    await ui.type(screen.getByLabelText('Code from the email'), '482913');
+    await ui.click(screen.getByRole('button', { name: 'Confirm email' }));
+    expect(await screen.findByRole('heading', { name: 'Set up your second factor' })).toBeTruthy();
   });
 
   it('a mobile app sent the browser here (S-29): goes back to its authorization request, not to the BFF', async () => {
     const authorize = 'http://localhost:9000/oauth2/authorize?response_type=code&client_id=mobile-consumer&state=s29&continue';
     routes['/api/auth/sign-in/totp'] = () => ok({ user, acr: 'mfa', continueTo: authorize });
     const { ui, navigate } = renderPage({ mode: 'signin' });
-    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
-    await ui.click(screen.getByRole('button', { name: 'Continue' }));
-    await ui.click(await screen.findByRole('radio', { name: /Authenticator app/ }));
-    await ui.type(screen.getByLabelText('6-digit code'), '654321');
+    await signInWithPassword(ui);
+    await ui.type(await screen.findByLabelText('6-digit code'), '654321');
     await ui.click(screen.getByRole('button', { name: 'Verify code' }));
     await screen.findByRole('status');
     await ui.click(screen.getByRole('button', { name: 'Continue' }));
@@ -293,10 +293,8 @@ describe('Sign in', () => {
   it('never follows a continueTo that is not an authorization request on northline-auth', async () => {
     routes['/api/auth/sign-in/totp'] = () => ok({ user, acr: 'mfa', continueTo: 'https://evil.example/oauth2/authorize?x' });
     const { ui, navigate } = renderPage({ mode: 'signin' });
-    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
-    await ui.click(screen.getByRole('button', { name: 'Continue' }));
-    await ui.click(await screen.findByRole('radio', { name: /Authenticator app/ }));
-    await ui.type(screen.getByLabelText('6-digit code'), '654321');
+    await signInWithPassword(ui);
+    await ui.type(await screen.findByLabelText('6-digit code'), '654321');
     await ui.click(screen.getByRole('button', { name: 'Verify code' }));
     await screen.findByRole('status');
     await ui.click(screen.getByRole('button', { name: 'Continue' }));
@@ -306,34 +304,24 @@ describe('Sign in', () => {
   it('coming from onboarding uses the onboarding copy', async () => {
     const { ui, navigate } = renderPage({ mode: 'signin', next: '/onboarding' });
     expect(screen.getByRole('heading', { name: 'Sign in to start onboarding' })).toBeTruthy();
-    await ui.type(screen.getByLabelText('Email or mobile'), '403 555 0148');
-    await ui.click(screen.getByRole('button', { name: 'Continue' }));
-    await ui.click(await screen.findByRole('radio', { name: /Authenticator app/ }));
-    await ui.type(screen.getByLabelText('6-digit code'), '654321');
+    await signInWithPassword(ui);
+    await ui.type(await screen.findByLabelText('6-digit code'), '654321');
     await ui.click(screen.getByRole('button', { name: 'Verify code' }));
     expect((await screen.findByRole('status')).textContent).toContain('Welcome back, Ravi. Your existing login and passkey carry over to the business.');
     await ui.click(screen.getByRole('button', { name: 'Continue to onboarding' }));
     expect(navigate).toHaveBeenCalledWith('/bff/login?next=%2Fonboarding');
   });
 
-  it('backup code: required, then the server message for a used code', async () => {
+  it('"Recover with a backup code" opens the backup-code factor after the password', async () => {
     const { ui } = renderPage({ mode: 'signin' });
-    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
-    await ui.click(screen.getByRole('button', { name: 'Continue' }));
-    await ui.click(await screen.findByRole('radio', { name: /Backup code/ }));
+    await ui.click(screen.getByRole('button', { name: 'Recover with a backup code' }));
+    await signInWithPassword(ui);
+    expect((await screen.findByRole('radio', { name: /Backup code/ })).getAttribute('aria-checked')).toBe('true');
     await ui.click(screen.getByRole('button', { name: 'Verify backup code' }));
     expect(await screen.findByText('Enter one of your backup codes.')).toBeTruthy();
     await ui.type(screen.getByLabelText('Backup code'), 'ravis-00001');
     await ui.click(screen.getByRole('button', { name: 'Verify backup code' }));
     expect(await screen.findByText("That backup code didn't work, or it was already used.")).toBeTruthy();
-  });
-
-  it('"Recover with a backup code" goes to the backup-code factor', async () => {
-    const { ui } = renderPage({ mode: 'signin' });
-    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
-    await ui.click(screen.getByRole('button', { name: 'Recover with a backup code' }));
-    expect((await screen.findByRole('radio', { name: /Backup code/ })).getAttribute('aria-checked')).toBe('true');
-    expect(screen.getByLabelText('Backup code')).toBeTruthy();
   });
 
   it('switches tabs through the route', async () => {
@@ -349,66 +337,75 @@ describe('Sign in', () => {
   });
 });
 
+describe('Forgot password', () => {
+  it('email → code + new password → sign in again', async () => {
+    const { ui } = renderPage({ mode: 'signin' });
+    await ui.click(screen.getByRole('button', { name: 'Forgot password?' }));
+    expect(await screen.findByRole('heading', { name: 'Reset your password' })).toBeTruthy();
+    await ui.type(screen.getByLabelText('Email'), 'ravi@prairiewrench.ca');
+    await ui.click(screen.getByRole('button', { name: 'Send code' }));
+    expect(calls.at(-1)).toMatchObject({ path: '/api/auth/password/forgot', body: { email: 'ravi@prairiewrench.ca', app: 'studio' } });
+    await ui.type(await screen.findByLabelText('Code from the email'), '730215');
+    await ui.type(screen.getByLabelText('New password'), 'short');
+    await ui.click(screen.getByRole('button', { name: 'Set new password' }));
+    expect(await screen.findByText('Use at least 12 characters.')).toBeTruthy();
+    await ui.clear(screen.getByLabelText('New password'));
+    await ui.type(screen.getByLabelText('New password'), 'Maple syrup on fresh snow 42');
+    await ui.type(screen.getByLabelText('Confirm password'), 'Maple syrup on fresh snow 42');
+    await ui.click(screen.getByRole('button', { name: 'Set new password' }));
+    expect((await screen.findByRole('status')).textContent).toContain('Password changed.');
+    await ui.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('ravi@prairiewrench.ca');
+  });
+
+  it('opens on /forgot-password', () => {
+    renderPage({ mode: 'signin', forgotOnLoad: true });
+    expect(screen.getByRole('heading', { name: 'Reset your password' })).toBeTruthy();
+  });
+});
+
 // ── S-9 rate limits: 429 rate_limited + Retry-After ─────────────────────────────────────────────────────────────────
 
 const limited = (seconds: number): Reply => ({ status: 429, body: { code: 'rate_limited', retryAfterSeconds: seconds, detail: 'Too many attempts. Wait a moment and try again.' } });
 
 describe('Rate limits (429 rate_limited)', () => {
-  it('sign-in: the identifier step shows the wait and blocks Continue until it is over', async () => {
-    routes['/api/auth/sign-in'] = () => limited(90);
+  it('sign-in: too many wrong passwords show the wait and block Sign in until it is over', async () => {
+    routes['/api/auth/sign-in/password'] = () => limited(90);
     const { ui } = renderPage({ mode: 'signin' });
-    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
-    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    await signInWithPassword(ui);
     const alert = await screen.findByText(/^Too many attempts\. Try again in 1:(30|29)\.$/);
     expect(alert.closest('[role="alert"]')).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'Continue' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.queryByText('Second factor required for ravi@prairiewrench.ca.')).toBeNull();
+    expect((screen.getByRole('button', { name: 'Sign in' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('sign-in: a locked factor counts down, then lets the person try again', async () => {
     routes['/api/auth/sign-in/totp'] = () => limited(1);
     const { ui } = renderPage({ mode: 'signin' });
-    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
-    await ui.click(screen.getByRole('button', { name: 'Continue' }));
-    await ui.click(await screen.findByRole('radio', { name: /Authenticator app/ }));
-    await ui.type(screen.getByLabelText('6-digit code'), '654321');
+    await signInWithPassword(ui);
+    await ui.type(await screen.findByLabelText('6-digit code'), '654321');
     await ui.click(screen.getByRole('button', { name: 'Verify code' }));
     expect(await screen.findByText('Too many attempts. Try again in 0:01.')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Verify code' }) as HTMLButtonElement).disabled).toBe(true);
-    // The 1 s countdown runs on real time; the wait is setup.ts's asyncUtilTimeout.
     await waitFor(() => expect(screen.queryByText(/Too many attempts/)).toBeNull());
     expect((screen.getByRole('button', { name: 'Verify code' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('sign-in in French', async () => {
-    routes['/api/auth/sign-in'] = () => limited(300);
+    routes['/api/auth/sign-in/password'] = () => limited(300);
     const { ui } = renderPage({ mode: 'signin', locale: 'fr' });
-    await ui.type(screen.getByLabelText('Courriel ou mobile'), 'ravi@prairiewrench.ca');
-    await ui.click(screen.getByRole('button', { name: 'Continuer' }));
+    await ui.type(screen.getByLabelText('Courriel'), 'ravi@prairiewrench.ca');
+    await ui.type(screen.getByLabelText('Mot de passe'), PASSWORD);
+    await ui.click(screen.getByRole('button', { name: 'Se connecter' }));
     expect(await screen.findByText(/^Trop de tentatives\. Réessayez dans (5:00|4:59)\.$/)).toBeTruthy();
   });
 
-  it('register: sending the code is refused with the wait', async () => {
-    routes['/api/auth/register'] = () => limited(3600);
+  it('register: creating the account is refused with the wait', async () => {
+    routes['/api/auth/accounts'] = () => limited(3600);
     const { ui } = renderPage();
     await fillRegistration(ui);
-    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
+    await ui.click(screen.getByRole('button', { name: 'Create account' }));
     expect(await screen.findByText(/^Too many attempts\. Try again in (60:00|59:5\d)\.$/)).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'Send verification code' }) as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('register: wrong phone codes and resends that hit the limit show the wait', async () => {
-    routes['/api/auth/register/verify'] = () => limited(900);
-    routes['/api/auth/register/resend'] = () => limited(900);
-    const { ui } = renderPage({ locale: 'fr' });
-    await ui.type(screen.getByLabelText('Prénom'), 'Amara');
-    await ui.type(screen.getByLabelText('Nom'), 'Osei');
-    await ui.type(screen.getByLabelText('Numéro de mobile'), '+1 403 555 0148');
-    await ui.type(screen.getByLabelText('Courriel'), 'amara@example.ca');
-    await ui.click(screen.getByRole('checkbox'));
-    await ui.click(screen.getByRole('button', { name: 'Envoyer le code de vérification' }));
-    await ui.click(await screen.findByRole('button', { name: 'M’appeler plutôt' }));
-    expect(await screen.findByText(/^Trop de tentatives\. Réessayez dans 1[45]:\d\d\.$/)).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Create account' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('a federated sign-in refused by the limits explains it', () => {
@@ -442,20 +439,21 @@ describe('Google and Apple (S-18)', () => {
     expect(screen.getByText('La connexion avec Google ou Apple n’est pas offerte pour le moment. Utilisez plutôt votre courriel ou votre mobile.')).toBeTruthy();
   });
 
-  it('asks for the second factor before linking an existing account, and signs in with it', async () => {
+  it('linking an existing account: the email is filled in, the password and the factor follow', async () => {
     const ui = userEvent.setup({ delay: null });
     page({ mode: 'signin', resumeIdentifier: 'ravi@prairiewrench.ca', federation: { provider: 'google', linking: true, relay: false } });
-    expect(screen.getByText('Confirm it’s you with your passkey, authenticator app or a backup code to link your Google account.')).toBeTruthy();
-    await waitFor(() => expect(calls.some(c => c.path === '/api/auth/sign-in' && c.body.identifier === 'ravi@prairiewrench.ca')).toBe(true));
-    await ui.click(await screen.findByText('Authenticator app'));
+    expect(screen.getByText('Sign in with your password and your passkey, authenticator app or a backup code to link your Google account.')).toBeTruthy();
+    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('ravi@prairiewrench.ca');
+    await ui.type(screen.getByLabelText('Password'), PASSWORD);
+    await ui.click(screen.getByRole('button', { name: 'Sign in' }));
     await ui.type(await screen.findByLabelText('6-digit code'), '654321');
-    await ui.click(screen.getByRole('button', { name: /verify/i }));
+    await ui.click(screen.getByRole('button', { name: 'Verify code' }));
     await waitFor(() => expect(calls.some(c => c.path === '/api/auth/sign-in/totp')).toBe(true));
   });
 
   it('continues a new Apple account with the private relay email pre-filled', () => {
     page({ mode: 'register', prefill: { firstName: 'Élodie', lastName: 'Tremblay', email: 'x1y2@privaterelay.appleid.com' }, federation: { provider: 'apple', linking: false, relay: true } });
-    expect(screen.getByText(/You’re signed in with Apple\. Add your mobile number and a second factor/)).toBeTruthy();
+    expect(screen.getByText(/You’re signed in with Apple\. Choose a password, confirm your email and add a second factor/)).toBeTruthy();
     expect(screen.getByText(/Hide My Email/)).toBeTruthy();
     expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('x1y2@privaterelay.appleid.com');
     expect((screen.getByLabelText('First name') as HTMLInputElement).value).toBe('Élodie');
@@ -476,24 +474,23 @@ describe('Sign-in paused (503 sign_in_unavailable)', () => {
   it('the factor step explains the pause', async () => {
     routes['/api/auth/sign-in/totp'] = () => paused;
     const { ui, navigate } = renderPage({ mode: 'signin' });
-    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
-    await ui.click(screen.getByRole('button', { name: 'Continue' }));
-    await ui.click(await screen.findByRole('radio', { name: /Authenticator app/ }));
-    await ui.type(screen.getByLabelText('6-digit code'), '654321');
+    await signInWithPassword(ui);
+    await ui.type(await screen.findByLabelText('6-digit code'), '654321');
     await ui.click(screen.getByRole('button', { name: 'Verify code' }));
     expect(await screen.findByText('Signing in is paused for a few minutes while we fix a problem on our side. Try again shortly.')).toBeTruthy();
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('sending the phone code explains the pause, in French too', async () => {
-    routes['/api/auth/register'] = () => paused;
+  it('creating the account explains the pause, in French too', async () => {
+    routes['/api/auth/accounts'] = () => paused;
     const { ui } = renderPage({ locale: 'fr' });
     await ui.type(screen.getByLabelText('Prénom'), 'Amara');
     await ui.type(screen.getByLabelText('Nom'), 'Osei');
-    await ui.type(screen.getByLabelText('Numéro de mobile'), '+1 403 555 0148');
     await ui.type(screen.getByLabelText('Courriel'), 'amara@example.ca');
+    await ui.type(screen.getByLabelText('Mot de passe'), PASSWORD);
+    await ui.type(screen.getByLabelText('Confirmez le mot de passe'), PASSWORD);
     await ui.click(screen.getByRole('checkbox'));
-    await ui.click(screen.getByRole('button', { name: 'Envoyer le code de vérification' }));
+    await ui.click(screen.getByRole('button', { name: 'Créer le compte' }));
     expect(await screen.findByText('La connexion est suspendue quelques minutes, le temps de régler un problème de notre côté. Réessayez sous peu.')).toBeTruthy();
   });
 });

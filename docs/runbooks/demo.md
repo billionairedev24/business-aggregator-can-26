@@ -56,8 +56,10 @@ site and the console do:
 Once per environment, after [dryrun-gcp.md](dryrun-gcp.md) steps 1–14 (OVHcloud: [ovh.md](ovh.md) up to its smoke
 test; Twilio and Stripe go into `.ovh/<target>.env` instead of Secret Manager, [ovh.md § Secrets](ovh.md#secrets)):
 
-1. **SMS codes — blocker.** Every sign-up verifies a phone by SMS, and under the `dev` profile the local SMS stand-in
-   **withholds** the code (S-112: no code reaches a shipped log; there is deliberately no switch). Configure Twilio for
+1. **SMS codes — blocker for this script.** People signing up on the sites use email + password with an email code
+   (S-154 — the environment needs a way to deliver email: [ovh.md § Email](ovh.md#email) on OVHcloud). This script,
+   though, registers its accounts through the phone path, and under the `dev` profile the local SMS stand-in
+   **withholds** phone codes (S-112: no code reaches a shipped log; there is deliberately no switch). Configure Twilio for
    northline-auth ([README § SMS and voice codes](README.md#sms-and-voice-codes-s-8)): put the auth token in Secret
    Manager (`sms-auth-token`) and add to the step 10 command
    `--set apps.auth.env.SMS_PROVIDER=twilio --set apps.auth.env.SMS_FROM=+1… --set apps.auth.env.SMS_ACCOUNT_ID=AC… --set apps.auth.secretEnv.SMS_AUTH_TOKEN=true`.

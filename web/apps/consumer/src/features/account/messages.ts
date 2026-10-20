@@ -9,7 +9,7 @@ export const useAccountT = defineMessages({
     // the account's tabs (design 06 acctTabs)
     tab_wallet: 'Wallet & points', tab_payments: 'Payment methods', tab_profile: 'Profile', tab_addresses: 'Addresses & household',
     tab_favourites: 'Saved', tab_security: 'Security & sign-in', tab_notifications: 'Notifications', tab_language: 'Language & region',
-    tab_dietary: 'Dietary & accessibility', tab_plus: '{brand} Plus', tab_help: 'Help & cases', tab_sell: 'Sell or offer a service',
+    tab_dietary: 'Dietary & accessibility', tab_plus: '{brand} Plus', tab_invite: 'Invite a neighbour', tab_help: 'Help & cases', tab_sell: 'Sell or offer a service',
     tabsLabel: 'Your account',
     signIn: 'Sign in to see your account.', signInOrders: 'Sign in to see your orders and bookings.', signInAction: 'Sign in',
     loading: 'Loading…', loadError: 'We couldn’t load this. Check your connection and try again.',
@@ -18,7 +18,10 @@ export const useAccountT = defineMessages({
 
     // redesign § 2.1 orders & the account card grid
     crumbs: 'Breadcrumb', crumbAccount: 'Your account', colRef: 'Order #',
-    tabsKind: 'Orders or bookings', tabKind_orders: 'Orders · {count}', tabKind_bookings: 'Bookings · {count}',
+    tabsKind: 'Orders or bookings', tabKind_orders: 'Orders · {count}', tabKind_bookings: 'Bookings · {count}', tabKind_quotes: 'Quote requests · {count}',
+    requestsEmpty: 'No quote requests yet. Describe a job and get up to 3 quotes.', requestFrom: 'From {amount}',
+    requestQuotes: '{quotes, plural, one {# quote} other {# quotes}} from {providers, plural, one {# provider} other {# providers}} asked', requestPhotos: '{count, plural, one {# photo} other {# photos}}',
+    request_waiting: 'Waiting for quotes', request_quoted: 'Quote ready', request_accepted: 'Accepted', request_declined: 'Declined', request_expired: 'Closed',
     sideLabel: 'Help and ordering again', helpTitle: 'Need help?', helpCases: 'Refunds & cases', helpCentre: 'Help centre',
     againTitle: 'Order again', againEmpty: 'What you order or book shows up here, ready to do again.',
     homeTitle: 'Your account', homeLabel: 'Account sections',
@@ -29,6 +32,9 @@ export const useAccountT = defineMessages({
     card_security: 'Login & security', card_security_desc: 'Passkeys, codes and where you’re signed in',
     card_notifications: 'Notifications', card_notifications_desc: 'What we tell you, how and when',
     card_favourites: 'Saved', card_favourites_desc: 'Shops and pros you keep coming back to',
+    card_points: 'Points & rewards', card_points_desc: 'Your balance, what you earned and what expires',
+    card_plus: '{brand} Plus', card_plus_desc: 'No service fee on food, member prices, more points',
+    card_invite: 'Invite a neighbour', card_invite_desc: 'Share your code — you both get points',
     card_profile: 'Profile', card_profile_desc: 'Your name, phone and email',
     card_help: 'Help & cases', card_help_desc: 'Refunds, problems and your open cases',
     card_sell: 'Sell or offer services', card_sell_desc: 'Open a shop or take bookings',
@@ -51,7 +57,7 @@ export const useAccountT = defineMessages({
     status_cooking: 'Cooking', status_requested: 'Requested', status_booked: 'Booked', status_escrow: 'Escrow', status_deposit_held: 'Deposit held',
     status_on_site: 'On site', status_completed: 'Completed', status_done: 'Done', status_waiting: 'Waiting for quotes', status_quote_ready: 'Quote ready',
     status_declined: 'Declined', status_expired: 'Expired', status_refunded: 'Refunded', status_cancelled: 'Cancelled',
-    status_case: 'Case {number}',
+    status_case: 'Case {number}', status_delivery_failed: 'Delivery missed',
     noAmount: '—',
 
     // Wallet & points (design 06 at.wallet)
@@ -61,8 +67,8 @@ export const useAccountT = defineMessages({
     pointsChart: 'Points earned, last 8 weeks', pointsWeek: '{count} pts, {weeks, plural, =0 {this week} one {# week ago} other {# weeks ago}}',
     noPoints: 'No points yet — they’re added after each order and job.',
     plusHeadlineOn: '{brand} Plus · active', plusHeadlineOff: '{brand} Plus',
-    plusSubOn: 'Free pooled delivery · 2× points · priority windows',
-    plusSubOff: 'Free pooled delivery, 2× points, priority windows · $7.99/mo per household',
+    plusSubOn: '$0 service fee on food · member prices · 2× points',
+    plusSubOff: '$0 service fee on food, member prices, 2× points · one membership per household',
     plusCtaOn: 'Manage', plusCtaOff: 'Try free',
     paymentMethods: 'Payment methods', managePayments: 'Add card',
 
@@ -81,7 +87,7 @@ export const useAccountT = defineMessages({
   fr: {
     tab_wallet: 'Portefeuille et points', tab_payments: 'Modes de paiement', tab_profile: 'Profil', tab_addresses: 'Adresses et foyer',
     tab_favourites: 'Enregistrés', tab_security: 'Sécurité et connexion', tab_notifications: 'Notifications', tab_language: 'Langue et région',
-    tab_dietary: 'Alimentation et accessibilité', tab_plus: '{brand} Plus', tab_help: 'Aide et dossiers', tab_sell: 'Vendre ou offrir un service',
+    tab_dietary: 'Alimentation et accessibilité', tab_plus: '{brand} Plus', tab_invite: 'Inviter un voisin', tab_help: 'Aide et dossiers', tab_sell: 'Vendre ou offrir un service',
     tabsLabel: 'Votre compte',
     signIn: 'Connectez-vous pour voir votre compte.', signInOrders: 'Connectez-vous pour voir vos commandes et réservations.', signInAction: 'Se connecter',
     loading: 'Chargement…', loadError: 'Impossible de charger cette page. Vérifiez votre connexion et réessayez.',
@@ -89,7 +95,10 @@ export const useAccountT = defineMessages({
     backToAccount: 'Retour à votre compte',
 
     crumbs: 'Fil d’Ariane', crumbAccount: 'Votre compte', colRef: 'Commande no',
-    tabsKind: 'Commandes ou réservations', tabKind_orders: 'Commandes · {count}', tabKind_bookings: 'Réservations · {count}',
+    tabsKind: 'Commandes ou réservations', tabKind_orders: 'Commandes · {count}', tabKind_bookings: 'Réservations · {count}', tabKind_quotes: 'Demandes de devis · {count}',
+    requestsEmpty: 'Aucune demande de devis pour l’instant. Décrivez un travail et recevez jusqu’à 3 devis.', requestFrom: 'À partir de {amount}',
+    requestQuotes: '{quotes, plural, one {# devis} other {# devis}} sur {providers, plural, one {# prestataire sollicité} other {# prestataires sollicités}}', requestPhotos: '{count, plural, one {# photo} other {# photos}}',
+    request_waiting: 'En attente de devis', request_quoted: 'Devis prêt', request_accepted: 'Accepté', request_declined: 'Refusé', request_expired: 'Fermée',
     sideLabel: 'Aide et nouvelle commande', helpTitle: 'Besoin d’aide ?', helpCases: 'Remboursements et dossiers', helpCentre: 'Centre d’aide',
     againTitle: 'Commander de nouveau', againEmpty: 'Ce que vous commandez ou réservez s’affiche ici, prêt à refaire.',
     homeTitle: 'Votre compte', homeLabel: 'Sections du compte',
@@ -100,6 +109,9 @@ export const useAccountT = defineMessages({
     card_security: 'Connexion et sécurité', card_security_desc: 'Clés d’accès, codes et appareils connectés',
     card_notifications: 'Notifications', card_notifications_desc: 'Ce que nous vous disons, comment et quand',
     card_favourites: 'Enregistrés', card_favourites_desc: 'Les commerces et pros auxquels vous revenez',
+    card_points: 'Points et récompenses', card_points_desc: 'Votre solde, vos gains et ce qui expire',
+    card_plus: '{brand} Plus', card_plus_desc: 'Aucuns frais de service sur les repas, prix membres, plus de points',
+    card_invite: 'Inviter un voisin', card_invite_desc: 'Partagez votre code — vous recevez chacun des points',
     card_profile: 'Profil', card_profile_desc: 'Votre nom, téléphone et courriel',
     card_help: 'Aide et dossiers', card_help_desc: 'Remboursements, problèmes et dossiers ouverts',
     card_sell: 'Vendre ou offrir des services', card_sell_desc: 'Ouvrir une boutique ou prendre des réservations',
@@ -121,7 +133,7 @@ export const useAccountT = defineMessages({
     status_cooking: 'En cuisine', status_requested: 'Demandée', status_booked: 'Réservé', status_escrow: 'Fiducie', status_deposit_held: 'Acompte retenu',
     status_on_site: 'Sur place', status_completed: 'Terminé', status_done: 'Terminé', status_waiting: 'En attente de devis', status_quote_ready: 'Devis prêt',
     status_declined: 'Refusé', status_expired: 'Expiré', status_refunded: 'Remboursée', status_cancelled: 'Annulée',
-    status_case: 'Dossier {number}',
+    status_case: 'Dossier {number}', status_delivery_failed: 'Livraison manquée',
     noAmount: '—',
 
     walletTitle: 'Portefeuille et points',
@@ -130,8 +142,8 @@ export const useAccountT = defineMessages({
     pointsChart: 'Points gagnés, 8 dernières semaines', pointsWeek: '{count} pts, {weeks, plural, =0 {cette semaine} one {il y a # semaine} other {il y a # semaines}}',
     noPoints: 'Pas encore de points — ils s’ajoutent après chaque commande et chaque travail.',
     plusHeadlineOn: '{brand} Plus · actif', plusHeadlineOff: '{brand} Plus',
-    plusSubOn: 'Livraison groupée gratuite · points ×2 · plages prioritaires',
-    plusSubOff: 'Livraison groupée gratuite, points ×2, plages prioritaires · 7,99 $/mois par foyer',
+    plusSubOn: 'Aucuns frais de service sur les repas · prix membres · points ×2',
+    plusSubOff: 'Aucuns frais de service sur les repas, prix membres, points ×2 · un abonnement par foyer',
     plusCtaOn: 'Gérer', plusCtaOff: 'Essai gratuit',
     paymentMethods: 'Modes de paiement', managePayments: 'Ajouter une carte',
 

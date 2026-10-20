@@ -62,6 +62,19 @@ class PaymentsGatewayConfig {
         return new FakeBankLinking();
     }
 
+    /** S-151: couriers' Express accounts (recipients: transfers only). */
+    @Bean
+    @ConditionalOnExpression(HAS_KEY)
+    StripeCourierAccounts stripeCourierAccounts(PaymentsProperties props) {
+        return new StripeCourierAccounts(client(props));
+    }
+
+    @Bean
+    @ConditionalOnExpression(NO_KEY)
+    FakeCourierAccounts fakeCourierAccounts() {
+        return new FakeCourierAccounts();
+    }
+
     /** S-85: the platform account's balance transactions for the daily reconciliation. */
     @Bean
     @ConditionalOnExpression(HAS_KEY)

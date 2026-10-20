@@ -69,7 +69,6 @@ const server = (c: Call): Reply => {
   if (u === '/api/v1/me/addresses' && c.method === 'GET') return { body: ADDRESSES };
   if (u === '/api/v1/me/addresses' && c.method === 'POST') return { status: 201, body: { id: 'A3', ...(c.body as object), isDefault: false } };
   if (u === '/api/v1/me/household') return { body: HOUSEHOLD };
-  if (u === '/api/v1/me/plus' && c.method === 'POST') return { body: { ...HOUSEHOLD, plan: 'monthly', plusSince: '2026-10-01T00:00:00Z', renewsAt: '2026-10-31T00:00:00Z' } };
   if (u === '/api/v1/me/notifications' && c.method === 'GET') return { body: NOTIF };
   if (u === '/api/v1/me/consents') return { body: CONSENTS };
   if (u === '/api/v1/me/notifications' && c.method === 'PUT') return { body: { ...NOTIF, ...(c.body as object), matrix: MATRIX } };
@@ -233,6 +232,26 @@ describe('Security & sign-in (design 06 security)', () => {
     expect(await screen.findByRole('dialog', { name: 'Confirm it’s you' })).toBeInTheDocument();
   });
 
+  it('S-154: changes the password (the current one first) and gets new backup codes', async () => {
+    (security as { body: Record<string, unknown> }).body.password = true;
+    calls = mockFetch(c => {
+      if (c.url.endsWith('/security/password')) return { body: {} };
+      if (c.url.endsWith('/api/auth/backup-codes')) return { body: { codes: ['abcde-fghij', 'bcdef-ghijk'] } };
+      return server(c);
+    });
+    renderApp('/account?tab=security', { routes: { account: () => <AccountScreen /> } });
+    await userEvent.click(await screen.findByRole('button', { name: 'Change password' }));
+    const dialog = screen.getByRole('dialog', { name: 'Change password' });
+    await userEvent.type(within(dialog).getByLabelText('Current password'), 'old password here');
+    await userEvent.type(within(dialog).getByLabelText('New password'), 'Maple syrup on fresh snow 42');
+    await userEvent.type(within(dialog).getByLabelText('Confirm password'), 'Maple syrup on fresh snow 42');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save password' }));
+    expect(await screen.findByText(/Password changed\. Your other devices were signed out\./)).toBeInTheDocument();
+    expect(calls.find(c => c.url.endsWith('/security/password'))!.body).toEqual({ currentPassword: 'old password here', password: 'Maple syrup on fresh snow 42', passwordConfirm: 'Maple syrup on fresh snow 42', current: 'S1' });
+    await userEvent.click(screen.getByRole('button', { name: 'New codes' }));
+    expect(await screen.findByText('abcde-fghij')).toBeInTheDocument();
+  });
+
   it('without a second-factor session: confirm it’s you first', async () => {
     security = { status: 401, body: {} };
     open('security');
@@ -288,7 +307,7 @@ describe('Notifications (design 06 notifications)', () => {
   });
 });
 
-describe('Language & region, Dietary & accessibility, Plus (behind the full navigation, § 3.6)', () => {
+describe('Language & region, Dietary & accessibility (behind the full navigation, § 3.6; Plus: loyalty.test.tsx)', () => {
   beforeEach(() => { vi.stubEnv('VITE_NL_FULL_NAV', '1'); });
   afterEach(() => { vi.unstubAllEnvs(); });
 
@@ -341,15 +360,5 @@ describe('Language & region, Dietary & accessibility, Plus (behind the full navi
     await userEvent.type(screen.getByLabelText('Notes for providers visiting your home'), 'Service dog on site');
     await userEvent.click(screen.getByRole('button', { name: 'Save preferences' }));
     await waitFor(() => expect(body('PATCH', '/api/v1/me/preferences')).toEqual([{ dietary: ['halal', 'vegan'], allergies: '', accessibility: ['step_free'], accessNotes: 'Service dog on site', display: [] }]));
-  });
-
-  it('Plus: start the free trial', async () => {
-    open('plus');
-    expect(await screen.findByText('Free pooled delivery on every run (saves ~$18/month for a weekly shopper)')).toBeInTheDocument();
-    await userEvent.click(await screen.findByRole('button', { name: /^Annual · \$69/ }));
-    expect(screen.getByText(/^Then \$69\/year · cancel any time/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Start 30-day free trial' }));
-    expect(await screen.findByRole('button', { name: 'Cancel Plus' })).toBeInTheDocument();
-    expect(body('POST', '/api/v1/me/plus')).toEqual([{ plan: 'annual' }]);
   });
 });

@@ -83,8 +83,10 @@ public class Refund {
     private @Nullable String stripeRefund;
     private @Nullable String stripeTransferReversal;
     private long reversedCents;
-    // Mobile gaps part 2: the refunded share of what points paid (back to the wallet, not the card), and of a
-    // Northline-funded code's top-up (taken back from the merchant when the escrow had been released, so topped up).
+    // Mobile gaps part 2: the refunded share of what points took off (back to the wallet, on top of the card's money;
+    // S-152: points are a discount before tax) and of a Northline-funded code's top-up (both taken back from the
+    // merchant
+    // when the escrow had been released, so topped up).
     private final long pointsCents;
 
     private final long promoReturnCents;
@@ -184,11 +186,41 @@ public class Refund {
     }
 
     /**
-     * What goes back to the customer's card: the amount plus the tax on it, less the share points paid (that goes back
-     * to the wallet). A credit gives back no tax.
+     * S-151: the whole of an escrow goes back at once — an order cancelled, refunded after a failed delivery, or a
+     * return the shop received. Approved when it is made (the shop, the customer within the rules or Northline decided;
+     * nobody reviews it) and paid on the spot by the refund queue's steps.
+     *
+     * @param reason {@code order_cancelled} | {@code delivery_failed} | {@code returned}
+     */
+    public static Refund immediate(String caseNumber, Escrow escrow, String what, String reason, Instant now) {
+        return Refund.builder()
+                .id(Ids.next())
+                .paymentIntentId(escrow.getPaymentIntentId())
+                .merchantId(escrow.getMerchantId())
+                .escrowId(escrow.getId())
+                .caseNumber(caseNumber)
+                .what(what)
+                .customerName(escrow.getCustomerName())
+                .amountCents(escrow.getAmountCents())
+                .taxCents(escrow.getTaxCents())
+                .pointsCents(escrow.getPointsCents())
+                .promoReturnCents(escrow.northlineDiscountCents())
+                .reason(reason)
+                .chargedTo(ChargedTo.MERCHANT)
+                .kind(Kind.REFUND)
+                .auto(false)
+                .state(State.APPROVED)
+                .createdAt(now)
+                .decidedAt(now)
+                .build();
+    }
+
+    /**
+     * What goes back to the customer's card: the amount plus the tax on it (the points' share goes back to the wallet
+     * as well). A credit gives back no tax.
      */
     public long cardCents() {
-        return amountCents + taxCents - pointsCents;
+        return amountCents + taxCents;
     }
 
     /** The share of the points an escrow's refund of {@code amountCents} gives back (all of them for the whole). */

@@ -9,11 +9,13 @@ import ca.northline.fulfilment.api.DeliveryRequests.Dropoff;
 import ca.northline.fulfilment.api.DeliveryRequests.Window;
 import ca.northline.identity.api.DeliveryAddresses;
 import ca.northline.orders.api.DeliveryRuns;
+import ca.northline.orders.api.OrderCancelled;
 import ca.northline.orders.api.OrderPacked;
 import ca.northline.orders.api.OrderPlaced;
 import ca.northline.region.api.MerchantPlaces;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -32,7 +34,8 @@ import tools.jackson.databind.json.JsonMapper;
  *   <li>{@code order.packed} → that shop has packed; the kitchen's {@code order.ready} → the food is ready;
  *   <li>the kitchen's {@code order.accepted} → the food's ready-by time (the courier is sent to arrive then);
  *   <li>fulfilment's {@code delivery.picked_up} → the order is {@code picked_up}; {@code delivery.assigned} and
- *       {@code delivery.picked_up} also wake the customer's tracking stream.
+ *       {@code delivery.picked_up} also wake the customer's tracking stream;
+ *   <li>S-151: {@code order.cancelled} → the whole delivery leaves its run, or one shop's pickup does.
  * </ul>
  */
 @Slf4j
@@ -48,6 +51,7 @@ class DispatchHandover {
     private final DeliveryAddresses addresses;
     private final MerchantPlaces places;
     private final TrackingBus bus;
+    private final AfterSaleStore afterSale;
 
     @ApplicationModuleListener
     void on(OrderPlaced e) {
@@ -62,6 +66,28 @@ class DispatchHandover {
         var request = e.orderType().equals("food") ? food(e, f) : goods(e, f);
         if (request != null) {
             requests.request(request);
+            cancelledMeanwhile(e);
+        }
+    }
+
+    /**
+     * S-151: a cancellation may have been handled before this hand-over (listeners run in any order): the delivery,
+     * or this shop's pickup, leaves again at once.
+     */
+    private void cancelledMeanwhile(OrderPlaced e) {
+        var order = afterSale.find(e.aggregateId()).orElse(null);
+        if (order == null) {
+            return;
+        }
+        if (Set.of("cancelled", "refunded").contains(order.state())) {
+            requests.cancel(e.aggregateId(), e.occurredAt());
+            return;
+        }
+        var shop = afterSale.lines(e.aggregateId()).stream()
+                .filter(l -> l.merchantId().equals(e.merchantId()))
+                .toList();
+        if (!shop.isEmpty() && shop.stream().allMatch(l -> l.state().equals("cancelled"))) {
+            requests.dropPickup(e.aggregateId(), e.merchantId(), e.occurredAt());
         }
     }
 
@@ -164,6 +190,16 @@ class DispatchHandover {
     @ApplicationModuleListener
     void on(DeliveryPickedUp e) {
         facts.pickedUp(e.aggregateId());
+        bus.changed(e.aggregateId());
+    }
+
+    @ApplicationModuleListener
+    void on(OrderCancelled e) {
+        if (e.whole()) {
+            requests.cancel(e.aggregateId(), e.occurredAt());
+        } else {
+            e.merchantIds().forEach(m -> requests.dropPickup(e.aggregateId(), m, e.occurredAt()));
+        }
         bus.changed(e.aggregateId());
     }
 

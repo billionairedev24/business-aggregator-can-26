@@ -11,8 +11,8 @@ import java.util.List;
  * credit balance is what the Studio calls "released").
  *
  * <p>Mobile gaps part 2: {@code promotions} (Northline-funded promo codes: Northline's cost, debited when it tops the
- * merchant up at release), {@code points_redeemed} (what points paid, Northline's money, debited at capture and
- * credited back with refunds), {@code courier:<user id>} (tips owed to a courier; {@code courier_tips} holds a tip
+ * merchant up at release), {@code points_redeemed} (S-152: what points took off the price before tax, Northline's
+ * money, debited when it tops the merchant up at release and credited back with refunds after it), {@code courier:<user id>} (tips owed to a courier; {@code courier_tips} holds a tip
  * until its delivery names the courier). A merchant-funded code shows in the merchant's own account: credited the full
  * price, debited the discount.
  */
@@ -32,8 +32,23 @@ public record LedgerEntry(
     public static final String POINTS = "points_redeemed";
     /** The reference type of a courier tip's own postings (after delivery, allocation, refund). */
     public static final String TIP = "courier_tip";
+    /**
+     * S-152: what businesses paid for their provider-funded rewards' points (a pass-through: its credit balance is what
+     * Northline holds to cover them).
+     */
+    public static final String REWARDS_FUNDED = "rewards_funded";
+    /** S-152: the reference type of a reward charge's postings ({@code payments.reward_charges.id}). */
+    public static final String REWARD = "reward_charge";
+    /** S-152: the reference type of a Plus invoice's postings ({@code payments.plus_invoices.id}). */
+    public static final String PLUS = "plus_invoice";
     /** S-78: the reference type of a delivery fee's postings (the order id), as on its PaymentIntent. */
     public static final String DELIVERY_FEE = "order_delivery";
+    /** S-151: couriers' pay per run (Northline's cost; its debit balance is what courier pay cost). */
+    public static final String COURIER_PAY = "courier_pay";
+    /** S-151: the reference type of a run's pay posting (the run id). */
+    public static final String COURIER_RUN = "courier_run";
+    /** S-151: the reference type of a courier payout's postings. */
+    public static final String COURIER_PAYOUT = "courier_payout";
 
     public static String merchant(String merchantId) {
         return "merchant:" + merchantId;
@@ -58,11 +73,10 @@ public record LedgerEntry(
                 .toList();
     }
 
-    /** The customer's payment is captured into escrow (tax is owed to the CRA); points pay their part. */
+    /** The customer's payment is captured into escrow (tax is owed to the CRA). */
     public static List<LedgerEntry> captured(Escrow e, Instant at) {
         return nonZero(
                 debit(STRIPE_BALANCE, e.capturedCents(), "escrow", e.getId(), at),
-                debit(POINTS, e.getPointsCents(), "escrow", e.getId(), at),
                 credit(ESCROW, e.getAmountCents(), "escrow", e.getId(), at),
                 credit(TAX_PAYABLE, e.getTaxCents() + e.getPlatformTaxCents(), "escrow", e.getId(), at),
                 credit(REVENUE, e.getPlatformFeeCents(), "escrow", e.getId(), at),
@@ -84,14 +98,16 @@ public record LedgerEntry(
 
     /**
      * Escrow → merchant balance (net) + Northline's fee. A Northline-funded code: Northline tops the merchant up from
-     * {@code promotions}, so the merchant gets the full price less the fee. A merchant-funded code: the merchant's
-     * account shows the full price and the discount it funded.
+     * {@code promotions}, so the merchant gets the full price less the fee; points the same from
+     * {@code points_redeemed} (S-152). A merchant-funded code: the merchant's account shows the full price and the
+     * discount it funded.
      */
     public static List<LedgerEntry> released(Escrow e, Instant at) {
         var merchant = merchant(e.getMerchantId());
         return nonZero(
                 debit(ESCROW, e.getAmountCents(), "escrow", e.getId(), at),
                 debit(PROMOTIONS, e.northlineDiscountCents(), "escrow", e.getId(), at),
+                debit(POINTS, e.pointsTopUpCents(), "escrow", e.getId(), at),
                 debit(merchant, e.merchantDiscountCents(), "escrow", e.getId(), at),
                 credit(merchant, e.netCents() + e.merchantDiscountCents(), "escrow", e.getId(), at),
                 credit(REVENUE, e.getFeeCents(), "escrow", e.getId(), at));
@@ -132,9 +148,9 @@ public record LedgerEntry(
     /**
      * A refund is paid back to the customer. Who funds it: the platform (goodwill credits), the escrow (money that never
      * reached the merchant) or the merchant's balance (money already released). The GST/HST on the refunded part goes
-     * back too and is no longer owed to the CRA ({@code tax_payable}, S-21). Points' share goes back to the wallet, not
-     * the card ({@code points_redeemed}); after a release, the refunded share of a Northline top-up comes back from the
-     * merchant ({@code promotions}).
+     * back too and is no longer owed to the CRA ({@code tax_payable}, S-21). Points' share goes back to the wallet
+     * (the promotions module); after a release, the refunded share of Northline's top-ups comes back from the merchant
+     * ({@code promotions} for a code, {@code points_redeemed} for points, S-152).
      */
     public static List<LedgerEntry> refunded(Refund r, boolean escrowReleased, Instant at) {
         String from;
@@ -145,14 +161,66 @@ public record LedgerEntry(
         } else {
             from = ESCROW;
         }
-        var promoReturn = escrowReleased && r.getChargedTo() == ChargedTo.MERCHANT ? r.getPromoReturnCents() : 0;
+        var toppedUp = escrowReleased && r.getChargedTo() == ChargedTo.MERCHANT;
+        var promoReturn = toppedUp ? r.getPromoReturnCents() : 0;
+        var pointsReturn = toppedUp ? r.getPointsCents() : 0;
         return nonZero(
                 debit(from, r.getAmountCents(), "refund", r.getId(), at),
                 debit(TAX_PAYABLE, r.getTaxCents(), "refund", r.getId(), at),
-                debit(merchant(r.getMerchantId()), promoReturn, "refund", r.getId(), at),
+                debit(merchant(r.getMerchantId()), promoReturn + pointsReturn, "refund", r.getId(), at),
                 credit(STRIPE_BALANCE, r.cardCents(), "refund", r.getId(), at),
-                credit(POINTS, r.getPointsCents(), "refund", r.getId(), at),
+                credit(POINTS, pointsReturn, "refund", r.getId(), at),
                 credit(PROMOTIONS, promoReturn, "refund", r.getId(), at));
+    }
+
+    /** S-151: a courier's pay for a finished run — Northline's cost ({@code courier_pay}), owed to the courier. */
+    public static List<LedgerEntry> courierPayEarned(String runId, String courierUserId, long cents, Instant at) {
+        return nonZero(
+                debit(COURIER_PAY, cents, COURIER_RUN, runId, at),
+                credit(courier(courierUserId), cents, COURIER_RUN, runId, at));
+    }
+
+    /** S-151: what a courier was owed leaves for their connected account (a transfer, then their bank). */
+    public static List<LedgerEntry> courierPaidOut(String payoutId, String courierUserId, long cents, Instant at) {
+        return nonZero(
+                debit(courier(courierUserId), cents, COURIER_PAYOUT, payoutId, at),
+                credit(STRIPE_BALANCE, cents, COURIER_PAYOUT, payoutId, at));
+    }
+
+    /** S-151: a courier payout came back (failed or canceled): the exact reverse of {@link #courierPaidOut}. */
+    public static List<LedgerEntry> courierPayoutReturned(
+            String payoutId, String courierUserId, long cents, Instant at) {
+        return nonZero(
+                debit(STRIPE_BALANCE, cents, COURIER_PAYOUT, payoutId, at),
+                credit(courier(courierUserId), cents, COURIER_PAYOUT, payoutId, at));
+    }
+
+    /**
+     * S-152: what the business pays for its provider-funded reward's points — from its balance to
+     * {@code rewards_funded} (Northline routes the points to the customer: pass-through, not revenue).
+     */
+    public static List<LedgerEntry> rewardCharged(String chargeId, String merchantId, long cents, Instant at) {
+        return nonZero(
+                debit(merchant(merchantId), cents, REWARD, chargeId, at),
+                credit(REWARDS_FUNDED, cents, REWARD, chargeId, at));
+    }
+
+    /** S-152: a refunded sale's share of the reward's charge goes back to the business. */
+    public static List<LedgerEntry> rewardRefunded(String chargeId, String merchantId, long cents, Instant at) {
+        return nonZero(
+                debit(REWARDS_FUNDED, cents, REWARD, chargeId, at),
+                credit(merchant(merchantId), cents, REWARD, chargeId, at));
+    }
+
+    /**
+     * S-152: a Northline Plus invoice was paid — the card's money is Northline's revenue, less the tax on it (owed to
+     * the CRA).
+     */
+    public static List<LedgerEntry> plusInvoicePaid(String invoiceRowId, long totalCents, long taxCents, Instant at) {
+        return nonZero(
+                debit(STRIPE_BALANCE, totalCents, PLUS, invoiceRowId, at),
+                credit(TAX_PAYABLE, taxCents, PLUS, invoiceRowId, at),
+                credit(REVENUE, totalCents - taxCents, PLUS, invoiceRowId, at));
     }
 
     /** A tip paid after the delivery: straight to the courier (no tax: a tip is not a taxable supply). */

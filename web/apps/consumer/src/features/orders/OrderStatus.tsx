@@ -10,6 +10,8 @@ import { CourierStatus } from '../tracking/CourierStatus';
 import { Crumbs } from '../pages/Crumbs';
 import { Scene } from '../art/Scene';
 import { CourierTip, ReviewPanel } from '../aftercare/Aftercare';
+import { CancelOrder, Cancellations, FailedDelivery, Returns } from './AfterSale';
+import { useAfterSaleT } from './afterSaleMessages';
 
 /**
  * Order detail and tracking (S-52; redesign § 2.1, AT Shop:688 / OrderDetailView): the head row (placed, total, shops,
@@ -44,6 +46,7 @@ export function OrderStatus({ orderId }: { orderId: string }) {
 
 function OrderView({ order }: { order: OrderTracking }) {
   const t = useOrderT();
+  const ta = useAfterSaleT();
   const { locale } = useLocale();
   const zone = useZone();
   const { money } = useFormatters();
@@ -53,7 +56,8 @@ function OrderView({ order }: { order: OrderTracking }) {
     : d.etaAt ? t('whenDirect', { time: clock(d.etaAt, locale, zone) }) : t('whenSoon');
   // "… 6–9 p.m." already ends the sentence
   const title = (order.state === 'cancelled' ? t('cancelled')
-    : order.state === 'refunded' ? t('refunded')
+    : order.state === 'refunded' || order.state === 'returned' ? t('refunded')
+    : order.state === 'delivery_failed' ? ta('failedTitle')
       : order.state === 'delivered' || order.state === 'confirmed' ? t('delivered')
         : order.state === 'picked_up' ? t('onTheWay', { when })
           : t('placed', { when })).replace(/\.\.$/, '.');
@@ -64,7 +68,7 @@ function OrderView({ order }: { order: OrderTracking }) {
   const sub = ['placed', 'accepted', 'packing'].includes(order.state)
     ? (packed === 0 ? t('sub', { ref, total, shops }) : t('subPacked', { ref, total, packed, shops }))
     : t('subDone', { ref, total });
-  const done = order.state === 'cancelled' || order.state === 'refunded';
+  const done = order.state === 'cancelled' || order.state === 'refunded' || order.state === 'returned';
   const confirm = useConfirmDelivery(order.orderId);
   const paysOn = order.paysShopsAt ? new Intl.DateTimeFormat(locale, { weekday: 'long', month: 'long', day: 'numeric', timeZone: zone }).format(new Date(order.paysShopsAt)) : null;
 
@@ -87,6 +91,7 @@ function OrderView({ order }: { order: OrderTracking }) {
           <section className="order-card order-status" aria-labelledby="order-title">
             <h1 id="order-title" className="order-title">{title}</h1>
             <p className="order-sub">{sub}</p>
+            <Cancellations order={order} />
             {!done ? (
               <ol className="order-steps" aria-live="polite">
                 {order.steps.map(s => (
@@ -111,6 +116,8 @@ function OrderView({ order }: { order: OrderTracking }) {
                 : null}
             </div>
           </section>
+          <FailedDelivery order={order} />
+          <CancelOrder order={order} />
           <section className="order-card" aria-labelledby="order-shops">
             <h2 id="order-shops" className="order-h2">{t('shopsTitle')}</h2>
             <ul className="order-shops">
@@ -119,11 +126,13 @@ function OrderView({ order }: { order: OrderTracking }) {
                   <span className="order-shop-pic" aria-hidden><Scene slot="banner/shop" subject={s.name} crop="square" sizes="64px" /></span>
                   <span className="order-shop-name">{s.name}</span>
                   <span className="order-shop-meta">{t('shopItems', { count: s.items })}</span>
-                  {!done ? <span className={`tag ${s.packed ? 'tag-success' : 'tag-neutral'}`}>{s.packed ? t('shopPacked') : t('shopPacking')}</span> : null}
+                  {s.cancelled ? <span className="tag tag-neutral">{ta('shopCancelled')}</span>
+                    : !done ? <span className={`tag ${s.packed ? 'tag-success' : 'tag-neutral'}`}>{s.packed ? t('shopPacked') : t('shopPacking')}</span> : null}
                 </li>
               ))}
             </ul>
           </section>
+          <Returns order={order} />
           {order.state === 'delivered' || order.state === 'confirmed' ? (
             <>
               <CourierTip orderId={order.orderId} />

@@ -15,6 +15,8 @@ export type Mode = 'local' | 'target';
 export interface Persona {
   /** Email or mobile, as typed on the sign-in page. */
   identifier: string;
+  /** S-154: the account's password (email + password sign-in). */
+  password?: string;
   firstName?: string;
   /** Authenticator-app key (base32). */
   totpSecret?: string;
@@ -60,10 +62,11 @@ function required(env: NodeJS.ProcessEnv, name: string): string {
 function personaFromEnv(env: NodeJS.ProcessEnv, prefix: string, base: Persona | undefined): Persona | undefined {
   const identifier = env[`${prefix}_IDENTIFIER`];
   const totpSecret = env[`${prefix}_TOTP_SECRET`];
+  const password = env[`${prefix}_PASSWORD`];
   const userId = env[`${prefix}_USER_ID`];
   const backupCodes = env[`${prefix}_BACKUP_CODES`]?.split(',').map(s => s.trim()).filter(Boolean);
   if (!identifier && !base) return undefined;
-  return { ...base, ...(identifier ? { identifier } : {}), ...(totpSecret ? { totpSecret } : {}), ...(userId ? { userId } : {}), ...(backupCodes ? { backupCodes } : {}) } as Persona;
+  return { ...base, ...(identifier ? { identifier } : {}), ...(totpSecret ? { totpSecret } : {}), ...(password ? { password } : {}), ...(userId ? { userId } : {}), ...(backupCodes ? { backupCodes } : {}) } as Persona;
 }
 
 export function loadEnv(env: NodeJS.ProcessEnv = process.env) {

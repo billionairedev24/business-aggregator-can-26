@@ -30,5 +30,6 @@ public interface StockStore {
             int stock,
             @Nullable Integer handlingDays,
             @Nullable String imageId,
-            @Nullable String ageClass) {}
+            @Nullable String ageClass,
+            @Nullable Integer memberDiscountPct) {}
 }

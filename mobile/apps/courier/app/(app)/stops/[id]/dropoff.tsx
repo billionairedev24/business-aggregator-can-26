@@ -6,7 +6,7 @@ import { Image, Linking, StyleSheet, TextInput, View } from 'react-native';
 
 import { MIN_TARGET, colors, fonts, radius, randomId, space, semantic, Scene } from '@northline/mobile-kit';
 
-import { REFUSE_REASONS, type IdCheckAnswer, type ProofKind, type RefuseReason } from '../../../../src/api/courier';
+import { FAIL_REASONS, REFUSE_REASONS, type FailReason, type IdCheckAnswer, type ProofKind, type RefuseReason } from '../../../../src/api/courier';
 import { SignaturePad } from '../../../../src/components/SignaturePad';
 import { Banner, Body, Button, Card, Check, Heading, Row, Screen, Segmented } from '../../../../src/components/ui';
 import { useRun } from '../../../../src/hooks';
@@ -26,6 +26,10 @@ const PHOTO_WIDTH = 1600;
  * 2026-10-04 age-restricted orders: before the proof, the courier confirms they checked government photo ID, that it
  * is the person who ordered (the name the api gives) and that they are of age — three yes/no answers, never the ID
  * itself. Can't hand it over (a reason) → the order goes back to the business: a return stop on the run.
+ *
+ * S-151: "Couldn't deliver" — nobody answered, unsafe, refused, no way in, or another reason (with a note) — after a
+ * photo at the door: the photo upload and the failure go into the outbox together; the order goes back to the business
+ * and the customer chooses another delivery or a refund.
  */
 export default function DropoffScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -44,6 +48,9 @@ export default function DropoffScreen() {
   const [answers, setAnswers] = useState<IdCheckAnswer>({ idChecked: false, recipientMatches: false, ofAge: false });
   const [refusing, setRefusing] = useState(false);
   const [reason, setReason] = useState<RefuseReason | null>(null);
+  const [failing, setFailing] = useState(false);
+  const [failReason, setFailReason] = useState<FailReason | null>(null);
+  const [failNote, setFailNote] = useState('');
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/run'));
@@ -92,6 +99,82 @@ export default function DropoffScreen() {
     setBusy(false);
     router.dismissTo('/run');
   };
+
+  const fail = async () => {
+    setError(null);
+    if (!failReason) return setError(t('fail.chooseReason'));
+    if (failReason === 'other' && !failNote.trim()) return setError(t('fail.noteMissing'));
+    if (!photo) return setError(t('fail.photoMissing'));
+    setBusy(true);
+    const file = await keepPhoto(photo, randomId());
+    await services().outbox.enqueue(
+      { kind: 'proof', stopId: stop.id, proofKind: 'photo', file },
+      { kind: 'fail', stopId: stop.id, reason: failReason, ...(failNote.trim() ? { note: failNote.trim() } : {}) },
+    );
+    setBusy(false);
+    router.dismissTo('/run');
+  };
+
+  const photoBlock = (hint: string) => (
+    <>
+      <Body muted>{hint}</Body>
+      {photo ? (
+        <>
+          <Image source={{ uri: photo }} style={styles.preview} accessibilityLabel={t('dropoff.photoTaken')} />
+          <Button tone="secondary" label={t('dropoff.retake')} onPress={() => setPhoto(null)} />
+        </>
+      ) : permission?.granted ? (
+        <>
+          <View style={styles.preview}>
+            <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" accessibilityLabel={t('dropoff.cameraLabel')} />
+          </View>
+          <Button tone="secondary" label={t('dropoff.takePhoto')} onPress={() => void takePhoto()} testID="take-photo" />
+        </>
+      ) : permission && !permission.canAskAgain ? (
+        <Banner tone="warn" action={<Button tone="ghost" label={t('dropoff.openSettings')} onPress={() => void Linking.openSettings()} />}>
+          {t('dropoff.cameraDenied')}
+        </Banner>
+      ) : (
+        <>
+          <Scene slot="empty/proof-photo" subject="photo" draw={{ main: 'Camera', side: 'House' }} tone="sage" fit="contain" style={styles.cameraArt} />
+          <Button tone="secondary" label={t('dropoff.allowCamera')} onPress={() => void requestPermission()} testID="allow-camera" />
+        </>
+      )}
+    </>
+  );
+
+  if (failing) {
+    return (
+      <Screen
+        testID="fail-screen"
+        title={t('dropoff.title')}
+        back
+        onBack={back}
+        footer={<Button tone="danger" large label={t('fail.confirm')} onPress={() => void fail()} busy={busy} testID="confirm-fail" />}
+      >
+        <Heading>{t('fail.title')}</Heading>
+        <View accessibilityRole="radiogroup" accessibilityLabel={t('fail.title')} style={styles.list}>
+          {FAIL_REASONS.map((r) => (
+            <Check key={r} role="radio" label={t(`fail.reason.${r}`)} on={failReason === r} onPress={() => { setFailReason(r); setError(null); }} testID={`fail-${r}`} />
+          ))}
+        </View>
+        <Body strong>{t('fail.note')}</Body>
+        <TextInput
+          value={failNote}
+          onChangeText={setFailNote}
+          multiline
+          maxLength={500}
+          accessibilityLabel={t('fail.note')}
+          style={styles.note}
+          testID="fail-note"
+        />
+        {photoBlock(t('fail.photoHint'))}
+        <Body muted>{t('fail.explain')}</Body>
+        {error ? <Banner tone="error">{error}</Banner> : null}
+        <Button tone="ghost" label={t('idcheck.cancel')} onPress={() => { setFailing(false); setError(null); }} />
+      </Screen>
+    );
+  }
 
   const complete = async () => {
     setError(null);
@@ -172,33 +255,7 @@ export default function DropoffScreen() {
         ]}
       />
 
-      {mode === 'photo' ? (
-        <>
-          <Body muted>{t('dropoff.photoHint')}</Body>
-          {photo ? (
-            <>
-              <Image source={{ uri: photo }} style={styles.preview} accessibilityLabel={t('dropoff.photoTaken')} />
-              <Button tone="secondary" label={t('dropoff.retake')} onPress={() => setPhoto(null)} />
-            </>
-          ) : permission?.granted ? (
-            <>
-              <View style={styles.preview}>
-                <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" accessibilityLabel={t('dropoff.cameraLabel')} />
-              </View>
-              <Button tone="secondary" label={t('dropoff.takePhoto')} onPress={() => void takePhoto()} testID="take-photo" />
-            </>
-          ) : permission && !permission.canAskAgain ? (
-            <Banner tone="warn" action={<Button tone="ghost" label={t('dropoff.openSettings')} onPress={() => void Linking.openSettings()} />}>
-              {t('dropoff.cameraDenied')}
-            </Banner>
-          ) : (
-            <>
-              <Scene slot="empty/proof-photo" subject="photo" draw={{ main: 'Camera', side: 'House' }} tone="sage" fit="contain" style={styles.cameraArt} />
-              <Button tone="secondary" label={t('dropoff.allowCamera')} onPress={() => void requestPermission()} testID="allow-camera" />
-            </>
-          )}
-        </>
-      ) : null}
+      {mode === 'photo' ? photoBlock(t('dropoff.photoHint')) : null}
 
       {mode === 'signature' ? (
         <>
@@ -234,6 +291,7 @@ export default function DropoffScreen() {
           {error}
         </Banner>
       ) : null}
+      <Button tone="ghost" label={t('stop.failed')} onPress={() => { setFailing(true); setError(null); }} testID="fail" />
     </Screen>
   );
 }
@@ -255,5 +313,17 @@ const styles = StyleSheet.create({
   },
   pinError: { borderColor: semantic['danger-border'], borderWidth: 2 },
   list: { gap: space[2] },
+  note: {
+    minHeight: 96,
+    borderWidth: 1,
+    borderColor: colors.borderControl,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    fontFamily: fonts.regular,
+    fontSize: 16,
+    color: colors.text,
+    padding: space[3],
+    textAlignVertical: 'top',
+  },
   cameraArt: { height: 170, borderRadius: radius.lg },
 });

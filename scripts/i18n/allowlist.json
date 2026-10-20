@@ -284,7 +284,9 @@
     "{app} · {route} · version {version} · {locale} · {platform}",
     "Interface, reçus, notifications",
     "requis {places}",
-    "Source"
+    "Source",
+    "{count, plural, one {# photo} other {# photos}}",
+    "{n, plural, one {# photo} other {# photos}}"
   ],
   "jsx": {
     "web/apps/consumer/src/features/cart/Payment.tsx": [

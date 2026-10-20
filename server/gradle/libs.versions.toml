@@ -34,6 +34,8 @@ gcp-storage = "2.74.0"
 azure-storage-blob = "12.35.1"
 wiremock = "3.13.2"
 greenmail = "2.1.14"
+# S-154: Argon2id password hashing (Spring Security's Argon2PasswordEncoder runs on BouncyCastle's Argon2 generator)
+bouncycastle = "1.85.2"
 otel-proto = "1.10.0-alpha"
 pdfbox = "3.0.8"
 datasource-micrometer = "2.3.0"
@@ -62,6 +64,7 @@ gcp-storage = { module = "com.google.cloud:google-cloud-storage", version.ref = 
 azure-storage-blob = { module = "com.azure:azure-storage-blob", version.ref = "azure-storage-blob" }
 aws-sesv2 = { module = "software.amazon.awssdk:sesv2", version.ref = "aws-sdk" }
 aws-sms-voice = { module = "software.amazon.awssdk:pinpointsmsvoicev2", version.ref = "aws-sdk" }
+bouncycastle-prov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 greenmail-junit5 = { module = "com.icegreen:greenmail-junit5", version.ref = "greenmail" }
 datasource-micrometer = { module = "net.ttddyy.observation:datasource-micrometer-spring-boot", version.ref = "datasource-micrometer" } # S-111: JDBC spans
 pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" } # S-41: tax documents as PDF

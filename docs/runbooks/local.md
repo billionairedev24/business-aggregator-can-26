@@ -1,5 +1,33 @@
 # Local runbook — from clone to a signed-in Studio
 
+## Test it locally (start here)
+
+```sh
+make setup        # once: toolchain check, the .env files (cp .env.example .env, …), pnpm install
+                  # your own Postgres / Valkey / Grafana? BYO_SERVICES=db,cache,grafana in .env
+make up-all       # every app + every stand-in you don't bring, migrated and seeded; prints every URL
+make demo-data    # optional: a demo marketplace (shops, listings, orders) made through the product
+make creds        # who to sign in as, and each persona's 6-digit code for right now
+make down         # stops the apps and the stand-ins (never your own services)
+```
+
+| app | URL | sign in as (`make creds WHO=…`) |
+|---|---|---|
+| Studio | http://localhost:3100 | `ravi` (owner of all three businesses, kitchen included), `jas` (technician), `priya` (bookkeeper) |
+| Consumer web | http://localhost:3000 | `amara` (bookings, quotes, orders); `sophie` / `luc` in French |
+| Console | http://localhost:3200 | `priya-n` (every console role); `marc` (the second admin) |
+| Phone apps | `make mobile-dev APP=consumer` / `APP=courier` | `amara` / `priya-nair` ([mobile-local.md](mobile-local.md)) |
+
+Sign in with the email or mobile → **Authenticator app** → the code `make creds` shows (a new one every 30 s, as
+often as you like; no `oathtool` needed). Backup codes are single use: `make backup-codes-reset` makes them work again.
+"Create account" works too: `make creds` also shows the latest phone code from the auth log.
+
+Your own services for one run: `make up-all BYO=db,cache,grafana` (`byo=`, `byo_arg=` and `BYO_SERVICES=` mean the
+same); `make up-all-check BYO=db,cache,grafana` only checks them (your Grafana must not be on :3000, the consumer
+app's port). Lighter: `make up` (auth, api, Studio BFF and Studio only).
+
+The personas, their keys and codes: `make creds`, and the table in the repository's README.md § Local sign-in (both from `scripts/dev/personas.json`).
+
 Everything runs on your machine. You can use **your own Postgres and Valkey** or start **Docker stand-ins** for
 anything you don't have, one service at a time (compose profiles). The Spring profile `local` needs only Postgres.
 
@@ -19,7 +47,7 @@ Gradle/pnpm/compose commands still work and are shown next to each target.
 | PostgreSQL | **17** with **PostGIS 3.5** | yours, or Docker (`--profile db`). Extensions used: `postgis`, `citext`, `pgcrypto`. |
 | Valkey or Redis | Valkey 8 / Redis 7+ | optional: only for `local,valkey` (sessions in Valkey) and the worker. Yours, or Docker (`--profile cache`). |
 | Docker + Compose v2.20+ | | only for the stand-ins you don't run yourself (Kafka, Elasticsearch, Mailpit, S3 storage, stripe-mock). |
-| An authenticator app or `oathtool` | | to sign in as a seeded persona with real auth (step 5). |
+| (nothing for sign-in codes) | | `make creds` computes every seeded persona's authenticator code; an authenticator app works too. |
 | GNU make | 3.81+ | every `make` target (macOS's `/usr/bin/make` is 3.81). `make doctor` checks all of the above. |
 
 Ports used by default: api **8080**, northline-auth **9000**, studio-bff **8082**, Studio **3100**, Postgres 5432,
@@ -121,10 +149,21 @@ cd server
 ```
 
 Leave `NL_DEV_USER` empty in `web/apps/studio/.env` and run `cd web && pnpm dev`. Open http://localhost:3100 →
-**Sign in** → `ravi.sandhu@example.com` → Authenticator app → the code from
-`oathtool --totp -b NORTHLINERAVIDEVTOTPSECRET234567` (or backup code `ravis-00001` … `ravis-00010`, single use).
-Other personas and factors: README § Local sign-in. "Create account" works end to end: the 6-digit phone code is
-printed in the auth log (`Verification code for …`). Passkeys work on `localhost` (not `127.0.0.1`).
+**Sign in** → `ravi.sandhu@example.com` + password `northline-dev-password` (every seeded persona, S-154; dev seed
+V416) → Authenticator app → the code from `make creds WHO=ravi` (or a backup code `ravis-00001` … `ravis-00010`,
+single use — `make backup-codes-reset`). Every other persona and factor: `make creds`. Passkeys work on `localhost`
+(not `127.0.0.1`).
+
+**Open a business account locally (S-154):** start Mailpit (`docker compose --profile mail up -d`, or `make up` with the
+`mail` stand-in), then http://localhost:3100 → **Create account** (or a "Sell / Provide / Food" entry point) → name,
+email, a password of 12+ characters → **check http://localhost:8025** for the email with the 6-digit code and the
+"Confirm my email" button → enter the code → **enroll** the authenticator app (scan the QR code, or type the key into
+the app; issuer `Northline`, account = your email) or a passkey → save the ten backup codes → onboarding. Without
+Mailpit the email is only logged; the code is also in auth's local outbox (`GET http://localhost:9000/api/auth/dev/outbox?to=<email>`).
+**Forgot password?** on the sign-in page works the same way (code + link by email, every session ends; the second
+factor is still asked). An older account without a password (e.g. created with a mobile number) sets one with Forgot
+password, then enrolls a second factor at its next sign-in. The phone-code flows (S-62, the mobile apps) still work;
+their SMS codes are printed in the auth log (`Verification code for …`).
 
 **OAuth clients:** auth registers `studio-bff`, `consumer-bff`, `console-bff` (S-90), `mobile-consumer` and `courier-app` in
 its database at every start (local values in `application-local.yml`); `./gradlew :auth:oauthClients --args='list'`
@@ -232,8 +271,8 @@ cd server
 cd ../web && pnpm dev:console                                              # http://localhost:3200
 ```
 
-Sign in at http://localhost:3200/sign-in as `priya.natarajan@example.com` with a backup code `priya-n-00001` …
-`priya-n-00010` (single use; `db/seed-dev/V191__console_staff.sql`). Anyone without the `staff` role, or without a
+Sign in at http://localhost:3200/sign-in as `priya.natarajan@example.com` with the code from `make creds WHO=priya-n`
+(or a backup code `priya-n-00001` … `priya-n-00010`, single use). Anyone without the `staff` role, or without a
 second factor, is sent back with "This is for Northline staff only." / "Sign in with your second factor to do this.".
 Without the bff and auth: `NL_DEV_USER=01J9ZD3V00000000000000PNA1` in `web/apps/console/.env` (see `.env.example`) —
 `/api` then goes to the api with `X-Dev-User`, whose token carries the person's `identity.platform_roles`. The account
@@ -257,7 +296,7 @@ everything except `tools` (`make kafka-ui`, `make kibana`).
 | `events` | Kafka 4 (KRaft) + one-shot topic creation (`scripts/topics.sh` from `deploy/kafka/topics.yaml`, ~1 min the first time, seconds after) | `KAFKA_BOOTSTRAP=localhost:9092` | worker; api without `local` |
 | `search` | Elasticsearch 9 (security off) | `ES_URIS=http://localhost:9200` (+ `SEARCH_PROVIDER=elasticsearch` for the api under `local`) | worker; the api's search |
 | `search-meili` | Meilisearch v1.28 (master key `northline-local-meili-master-key`, `MEILISEARCH_MASTER_KEY` in `.env`); not in `all` | `SEARCH_PROVIDER=meilisearch`, `MEILISEARCH_URL=http://localhost:7700`, `MEILISEARCH_API_KEY=northline-local-meili-master-key` (api and worker) | worker and the api's search instead of Elasticsearch ([search.md § Meilisearch](search.md#11-meilisearch-provider-meilisearch)) |
-| `mail` | Mailpit — inbox at http://localhost:8025 | `SMTP_HOST=localhost`, `SMTP_PORT=1025` (the defaults) | api email (`EMAIL_PROVIDER=local`, S-13) |
+| `mail` | Mailpit — inbox at http://localhost:8025 | `SMTP_HOST=localhost`, `SMTP_PORT=1025` (the defaults) | api email (`EMAIL_PROVIDER=local`, S-13); auth's account emails — verification code, password reset (S-154) |
 | `storage` | S3-compatible storage (RustFS) + bucket `northline-local`; console http://localhost:9101 | `STORAGE_ENDPOINT=http://localhost:9100`, `STORAGE_ACCESS_KEY=northline`, `STORAGE_SECRET_KEY=northline-dev-secret`, `STORAGE_PATH_STYLE=true` | api with `STORAGE_PROVIDER=s3` (S-10) |
 | `payments` | stripe-mock | `STRIPE_SECRET_KEY=sk_test_123`, `STRIPE_API_BASE=http://localhost:12111` (+ `TAX_PROVIDER=stripe` for Stripe Tax, S-21) | api payments + Stripe Connect (+ Stripe Tax) instead of the fakes |
 | `tools` | Kafka UI :8190, Kibana :5601 | — | you |
@@ -269,6 +308,10 @@ Notes:
   RustFS under `<module>/<merchantId>/…` ([object-storage.md](object-storage.md#local-rustfs)). MinIO no longer
   publishes images on Docker Hub, so the `storage` profile runs RustFS (same S3 API); an existing MinIO or any
   S3-compatible server works the same way through `STORAGE_ENDPOINT`.
+- **Courier payouts (S-151):** without a Stripe key the api pays couriers through a fake: asking for the payout
+  onboarding link (courier app › Profile › Earnings) enables the courier's account at once, and the weekly run
+  (`COURIER_PAYOUTS_CRON`, Mondays) pays the next business morning. With `payments` (stripe-mock) the Connect calls go
+  to stripe-mock instead ([stripe.md § 13](stripe.md#13-courier-payouts-s-151)).
 - **Mail:** the api emails team invitations and money notices to Mailpit (`EMAIL_PROVIDER=local`, the default); without
   Mailpit each email's text is logged instead. Template previews: http://localhost:8080/api/v1/dev/emails
   ([email.md](email.md#local-mailpit)).
@@ -287,6 +330,12 @@ Notes:
   expired ID, unreadable ID, selfie mismatch, cancelled) and come back to the cart (`CONSUMER_ORIGIN`). Licences:
   Studio › Compliance › Restricted licences; the console's Listing vetting › Licences approves them. The nightly job
   (`RESTRICTED_LICENCE_CRON`, `0 17 0 * * *`) expires licences and sends the 30-day reminders.
+- **Points, rewards, referrals and Plus (S-152, [loyalty.md](loyalty.md)):** nothing to set. Points arrive when an
+  escrow is released (complete Amara's booking or confirm a delivery); the dev seed gives Prairie Wrench a 2× reward
+  with a $50 budget, a 10 % Plus member price on one product and Amara the invite code `AMARAK26`. Plus uses the fake
+  billing (`PLUS_BILLING_PROVIDER=local`: no card, no tax); to try Stripe Billing set `PLUS_BILLING_PROVIDER=stripe`,
+  `STRIPE_PLUS_MONTHLY_PRICE` / `STRIPE_PLUS_ANNUAL_PRICE` (test-mode prices) and a test `STRIPE_SECRET_KEY`, and forward
+  `customer.subscription.*` and `invoice.paid` with `stripe listen` ([stripe.md § 11](stripe.md#11-northline-plus--stripe-billing-s-152)).
 - **Business registries (S-23):** the three sources answer from `server/api/src/main/resources/registries/fixtures.json`
   (e.g. Alberta `2021456789` = Prairie Wrench, Calgary `BL 22-118840` = Pho Dau Bo); unknown numbers go to the manual
   review queue (`GET /api/v1/console/registry-reviews`, staff). To try Calgary's real dataset:
@@ -310,6 +359,12 @@ Notes:
   Studio member on the way to share their position (`POST /api/v1/merchants/{id}/jobs/{id}/position`) and a job site
   picked on the map; positions sit in memory (`LIVE_BUS=memory`) or Valkey (`redis`), 5 minutes, never in Postgres.
   [fulfilment.md](fulfilment.md#promo-codes-points-and-tips-mobile-gaps-part-2)
+- **Quotes and bookings (S-153):** nothing to set. Customer messages use the Studio's threads and live stream
+  (`GET /api/v1/me/live`); photos go to the object store (`OBJECT_STORE=local` writes under the local folder) through
+  the scanner hook. The deposit-balance job runs every 5 minutes (`BOOKING_BALANCE_*`) against the payments stand-in:
+  a saved card whose id contains `chargeDeclined` fails the off-session hold, `authenticationRequired` asks the
+  customer to confirm. Late-cancellation terms come from Studio › Availability › Booking rules within the region's
+  `cancel_*` limits (`REGION_CANCEL_*` when the region row has none). [stripe.md](stripe.md#bookings-balance-and-late-cancellation-s-153)
 - **Privacy requests (S-105):** Account › Profile › Your data (consumer site), You › Personal details › Your data
   (app) and Studio › Settings › Security ask for a copy, a correction or deletion. Without northline-auth the step-up
   proof is `dev` (`VITE_NL_DEV_STEP_UP=1`); with real auth the code to confirm is texted to the account's mobile and

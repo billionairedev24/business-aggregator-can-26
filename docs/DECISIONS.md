@@ -9698,3 +9698,490 @@ until it restarts, so even a later `pnpm install` didn't help, and `make up` sai
   little soft on wide screens); people in the photos gave no model release — fine for a demo, replace them before a
   public launch; about 15 slots had no usable candidate (e.g. pharmacy, notary, web design, pressure washing, drywall)
   and fall back.
+
+## 2026-09-30 — S-150 Local dev testing that just works, with proper credentials
+
+- **Why `make byo_arg=db,grafana,cache up-all` failed**: `byo_arg` / `services_arg` are the Makefile's recipe prefixes
+  (`BYO="…"` before a script); a command-line variable of the same name replaced one, so the recipe ran
+  `db,grafana,cache` as a command (Error 127). The Makefile now reads what you typed **once, at the top, with `:=`**,
+  from any of `BYO`, `byo`, `byo_arg`, `BYO_SERVICES` (command line or environment; the first one given, in that order,
+  wins) and `SERVICES`, `services`, `services_arg`; the helpers are `override`. `make down` / `make logs` still treat
+  only a command-line `SERVICES` (any spelling) as "just these apps". make/observability.mk uses the same helpers;
+  no other include defines or reads them.
+- **`make -n up-all` started the stack**: GNU make runs a recipe line that names `$(MAKE)` even under `-n`, and the
+  up-all line passed `MAKE="$(MAKE)"` to local-all.sh. It now goes through `this_make`, so `make -n` only prints.
+- **Credentials**: `scripts/dev/personas.json` is the one list (20 personas: Ravi, Jas, Priya Sandhu; the consumers of
+  V103, V108 and V163; the couriers Priya Nair and Sam Okafor; console staff Priya Natarajan and Marc Bélanger). There
+  is no separate kitchen-staff persona in the seed: Ravi owns Pho Dau Bo and runs its KDS (Switch business); not added.
+  Each has a reusable authenticator key `NORTHLINE<NAME>DEVTOTPSECRET…` (32 base32 characters) and ten backup codes
+  `<prefix>-00001 … -00010`. An optional `password` field per persona is printed by `make creds` and adds a column to
+  the README table when present (for S-154; no passwords are added here).
+- **Schema / seed**: `db/seed-dev/V381__dev_persona_authenticators.sql` (local profile only — `db/seed-dev` is applied
+  only under `local`/`test`, DevSeedGuard and DbTool refuse it elsewhere, and it is not in the jars or images). It
+  stores the keys exactly as V101 does: AES-256-GCM with the dev-only `northline.auth.totp-key`, a fixed 12-byte IV
+  per persona (reproducible seed), `key_id` `v1`; fills `first_name` / `last_name` / `phone_verified_at` /
+  `terms_*` where the older seed left them empty. Ravi and Jas keep V101's keys; Ravi, Priya Sandhu and Priya
+  Natarajan keep their V101/V191 codes. No change to `db/migrations`.
+- **`make creds` (alias `make logins`)**: pure Node (RFC 6238 SHA-1, 30 s, 6 digits, reusing scripts/demo/lib/totp.mjs),
+  grouped by app with seconds left, backup codes, the latest `Verification code for …` per mobile from
+  `.run/logs/auth.log` (`AUTH_LOG` overrides), and the demo accounts of `.demo/local.json` when `make demo-data` ran.
+  `WHO=` matches a key exactly, else part of a name, email or mobile (accents ignored).
+- **`make backup-codes-reset`** also restores each persona's seeded authenticator key (and clears its replay step), in
+  case Settings › Security replaced it — otherwise `make creds` would show codes that no longer work. It deletes the
+  personas' backup codes (seeded or regenerated) and inserts the seeded ones; refuses a non-local DB_URL host; runs
+  through the compose postgres container when it serves PG_PORT, else psql.
+- **Seeded consumers now have a second factor**, so "paying asks you to add a second factor" is no longer shown for
+  Amara; a freshly created account still shows it (mobile-local.md says so).
+- **make demo-data** (local) signs the console reviewer in with her seeded key instead of spending her backup codes.
+- **Tests**: `scripts/dev/personas.test.mjs` (`make creds-test`) decrypts every seeded key and hashes every code against
+  db/seed-dev and checks the README table; `SeededPersonaSignInTest` (auth) applies the dev seed to its own database
+  and signs every persona in with the code from personas.json (and a backup code once).
+- **Not done**: web/e2e/data/local.json still signs the console in with backup codes (e2e runs on a fresh database).
+  `make up-all` itself was not run end to end here (shared machine); the reset ran against a throwaway Postgres.
+
+## 2026-09-30 — S-154 Proper account creation: email + password, email verification, MFA enrolment
+
+The owner could not open a business account: the Studio's sign-in asked "Second factor required for <email>" of an
+account that never had one (identifier-first sign-in offers every factor so it never reveals an account). Accounts are
+now email + password, the email is confirmed by a code or link (Mailpit locally), and a second factor is enrolled right
+after — required for the Studio and the console, offered on the consumer site. Security notes:
+`docs/security/s-154-passwords.md`.
+
+- **API (northline-auth `/api/auth/**`):** `POST /accounts` (form → 202 `verify-email`, the same for every address),
+  `/accounts/resend`, `/accounts/verify` {code} (→ 201 session, signed in with the password: `amr pwd`, no `acr`),
+  `/accounts/verify-link` {token}; `POST /sign-in/password` {email, password} → `factor` (the account's own factors) |
+  `enroll` (signed in, no factor yet) | `verify-email` (still pending: a new code); `/enroll/totp`, `/enroll/totp/verify`,
+  `/enroll/passkey/options`, `/enroll/passkey` (→ session with `acr=mfa` + ten backup codes); `/password/forgot`,
+  `/password/reset` {code | token, password}; `/security/password`, `/security/authenticator[/verify]`. Sessions carry
+  `needsSecondFactor`. `app` (`studio` | `consumer` | `console`, default studio) picks the email links' origin (the
+  origin of that app's configured sign-in page — no client-supplied URLs) and whether enrolment is required.
+- **Pending accounts are not users:** the form writes `auth.pending_accounts`; `identity.users` gets the row (with
+  `email_verified_at`) only when the code or link is used, so the api, the console and every module never see an
+  unconfirmed account and `identity.users.status` keeps its values. Registering the same address again replaces the
+  pending row (keeps its id). Forgotten after `ACCOUNT_PENDING_TTL` (7 d) by the existing five-minute auth job.
+- **No enumeration:** an address that has an account gets the `account-exists` email (sign in / reset links) instead of
+  a code; the same 202; its codes are always wrong. Sign-in failures are one message for unknown email, no password and
+  wrong password, after the same Argon2 work. Forgot password sends nothing for an unknown address. A mobile number
+  already in use is silently not stored (rather than a "number taken" error).
+- **Hashing:** Argon2id via Spring Security's `Argon2PasswordEncoder` — BouncyCastle (`bcprov-jdk18on` 1.85.2) added to
+  auth (it wasn't on the classpath; bcrypt was not needed). OWASP 2024 cost (19 MiB, t=2, p=1), `PASSWORD_HASH_*`
+  overridable; the test profile uses 1 MiB / t=1 for speed. Passwords are NFKC-normalised.
+- **Password policy:** 12–128 code points, no composition rules, not in the bundled list (`auth/common-passwords.txt`:
+  the 12+ character entries of SecLists' NCSC top-100k and 10k lists, MIT; plus `northline-dev-password` so the dev
+  password can't be chosen for a real account), not the email or its local part, not one repeated character. Messages
+  (new, en in `AuthMessages`, fr in validation-messages.fr-CA.tsv and auth-kit): "Enter a password.", "Use at least 12
+  characters.", "Use at most 128 characters.", "This password is too common. Choose one that's harder to guess.", "Your
+  password can't be your email address.", "The passwords don't match.", "That email and password don't match. Check
+  them and try again.", "That's not your current password.", "Enter your current password.", "That link has expired or
+  was already used. Ask for a new email.", "This account already has a second factor. Change it in Settings ›
+  Security.", "Send studio, consumer or console as the app.". Rule ids: `common`, `email`, `mismatch`, `expired`.
+- **Email codes:** 6 digits + 32-byte link token, SHA-256 at rest, constant-time compare, 15 min, single use, 5 wrong
+  tries, a new email retires the previous code, 60 s resend cool-down (429 `otp_throttled`, like phone codes). The link
+  signs in only the browser that sent the form (an intercepted link must not let someone enrol their own factor);
+  elsewhere it confirms the address and asks to sign in.
+- **Enrolment:** allowed only for an account with no passkey and no authenticator (409 `already_enrolled`), for any
+  signed-in auth session. Backup codes are issued with the first factor and shown once (copy, download .txt, "I saved
+  them" required to continue). Backup codes alone don't count as a factor (they recover one). The TOTP URI is labelled
+  `Northline:<email>` with `issuer=Northline` (registration's set-up now shares `TotpSetups`).
+- **Existing accounts:** an account without a second factor that signs in with its password goes to enrolment, never
+  to the factor step. One without a password (phone registrations, S-62) uses Forgot password to set one (the reset
+  also marks the email verified), then enrols. Identifier-first sign-in stays for the mobile apps and the consumer
+  phone code, but an account that has a password can't use its TOTP / backup code without it (the same "didn't work"
+  answer; nothing is used up); passkey-first still works for everyone. `identity.sessions.method` gains `password`.
+- **Forgot / change password:** reset ends every session (`revoke_reason = password_reset`) and still asks for the second
+  factor at the next sign-in. Change needs a step-up (10 min) and the current password when there is one ("Set a
+  password" otherwise) and ends every other session (`password_changed`). New backup codes and a new authenticator
+  (`/security/authenticator`) now need a step-up too — `POST /api/auth/backup-codes` changed from "any MFA session" to
+  step-up; the Studio and consumer Security tabs run it through their step-up dialogs.
+- **Rate limits:** new actions `password-verify` (failures; 10 / 15 min per account, 30 per IP, 10 per session),
+  `email-send` (every call; 5 / h per address, 20 per IP, 5 per session) and `email-code-verify` (failures; 10 / h, 50,
+  10); all guard secrets (fail closed in staging/prod without Valkey). A success resets the account and session counters.
+- **Emails:** three new transactional templates in the shared library (`account-verification`, `password-reset`,
+  `account-exists`, en/fr, CASL footer) sent by auth through the `Mailer` after commit, off the request thread
+  (`northline.auth.accounts.send-async`, false in the test suite). Auth now needs `EMAIL_*` / `SMTP_*` like the api
+  (Helm: `apps.auth.env` per cloud overlay, `EMAIL_FROM` in staging/prod, `EMAIL_API_KEY` / `SMTP_PASSWORD` optional
+  secrets; staging/prod `northline.required-env.email`). Under `local` the codes are also in auth's dev outbox
+  (`/api/auth/dev/outbox?to=<email>`) for the e2e suite.
+- **Optional mobile:** stored unverified (`phone_verified_at` NULL). V415 marks every older phone verified (they were
+  all confirmed by SMS at registration); phone sign-in codes go only to verified numbers; an SMS-verified registration
+  takes over a number another account holds unverified.
+- **Apps:** Studio (Create account tab and the sell / provide / food entry points, sign-in, `/forgot-password`,
+  `/verify-email`, `/reset-password`, Settings › Security password + authenticator + backup codes, "Confirm it's you"
+  asks the password), consumer web (register, sign-in with password — phone code and passkey kept, enrolment offered
+  and skippable, the same three routes, Account › Security), console (work email + password, own factors, required
+  enrolment, forgot password). The shared steps live in `@northline/auth-kit` (`account.tsx`, `securityForms.tsx`).
+- **Schema (V415):** `auth.passwords`, `auth.pending_accounts`, `auth.email_codes`, `identity.users.email_verified_at`,
+  the `identity.sessions` method / revoke-reason checks widened. **Dev seed V416:** `northline-dev-password` (Argon2id)
+  for every active `@example.com` persona, emails marked verified; `scripts/dev/personas.json` (S-150) carries it, so
+  `make creds` and README § Local sign-in show it (`SeededPersonaSignInTest` signs every persona in with it).
+- **Tests:** `AccountSignUpApiTest` (26: the whole journey, link in another / the same browser, enumeration, expired /
+  used / locked codes, throttled resend, validation messages en/fr, optional mobile, pending sign-in, re-registration,
+  identifier-first can't skip the password, lockout + audit without PII, 401 / 409, session id rotation, change
+  password with step-up, authenticator replacement, backup codes, an older account without password or factor),
+  `MailpitAccountEmailTest` (real SMTP to the compose Mailpit image, French email read back through Mailpit's API, its
+  code creates the account), `PasswordPolicyTest`, `PasswordHashingTest` (incl. the dev seed hash), the updated
+  `SeededPersonaSignInTest`, `SignInServiceTest`, `AttemptLimitsTest`; vitest for the Studio / consumer / console
+  screens and both Security tabs; e2e: the setup's consumer sign-up and the seeded sign-ins use email + password, new
+  journey `6-business-account.spec.ts`.
+- **Not done / follow-ups:** the native mobile apps' own sign-in screens still use the phone-code flows (unchanged and
+  working; email + password there is a follow-up); no breached-password API (bundled list only); no "your password was
+  changed" notification email; the e2e suite (`make e2e`) was not run end to end here (typechecked only; shared
+  machine). Nothing new talks to a third party beyond the existing email providers.
+## 2026-09-30 — S-153 Quotes and bookings: messaging, deposit balance, photos, late-cancellation fees, hold sweeper
+
+Customers and providers talk about a quote request or a booking; providers hear about quote requests; customers add
+photos; a deposit quote's balance is held automatically before the visit; late cancellations cost what the provider's
+terms say, taken from the hold; stray card holds are cancelled; customers list their quote requests and bookings —
+consumer web, the consumer app and the Studio. Runbooks: [stripe.md § Bookings](runbooks/stripe.md#bookings-balance-and-late-cancellation-s-153),
+[notifications.md](runbooks/notifications.md), [push.md](runbooks/push.md), [regions.md](runbooks/regions.md).
+
+- **Messages reuse the Studio's threads** (`messaging.threads`, kind `customer`) — one thread per business and quote
+  request (`ref_type = quote`, `ref_id` = the request; several quotes of one business stay in one conversation) or
+  booking (`ref_type = booking`). The business answers from Studio › Messages as before; the Studio's "Ask a question"
+  (quote requests) and "Message" (a job) open that thread (`POST …/quote-requests/{id}/thread`, `…/jobs/{id}/thread`,
+  operate permission). Customers: `GET|POST /me/threads`, `GET /me/threads/{id}`, `POST …/messages`, `POST …/read`.
+  A business can only open a thread for a request sent to it; a customer only for their own request (and a business it
+  went to) or booking. The open-thread service lives in `hire` (booking → messaging would close a module cycle).
+- **Text only**, masked like the Studio's (phone numbers and emails) and checked against S-93's off-platform phrases:
+  a flagged message is stored masked with `flagged`, trust opens its `off_platform_payment` flag from the
+  `message_sent` event (as for the Studio's), and the customer sees "Contact details and outside
+  payment requests are hidden." No attachments in messages: photos belong to the request or the job.
+- **Live updates**: the Studio's SSE bus (S-68) gets a customer key (`customer:<userId>`); `GET /api/v1/me/live` streams
+  `message` events with the thread id only, the web refreshes the thread; the phone polls every 15 s (no EventSource in
+  React Native) and gets a push. Events carry ids, never words: `messaging.message_sent` gained nothing personal.
+- **`quote.requested`** (topic `booking.quote_request`, schema `booking.quote_requested.v1`): the request's ref,
+  businesses asked, category, respond-by, expiry and **photo count** — no description, address or customer. The worker
+  tells each business's owners and technicians (row `quote_request`, email `team-update`/SMS/push → Appointments).
+  Customer messages tell owners (row `customer_message`), business messages tell the customer (row `quotes_messages`,
+  deep link `/app/messages/<threadId>`; the web redirects it to `/account/messages?thread=`). Team notices for these
+  types are held through a provider outage like the deferred customer ones.
+- **Photos** (schema: V418 `booking.customer_photos`): `POST /me/photos` (multipart, at most 10 MB, JPEG/PNG/HEIC/HEIF/
+  WebP by declared type **and** signature, the platform's `VirusScanner` hook before storing; the apps send no EXIF),
+  the object store port (`within("booking")`; 409 `storage_unavailable` without a store). A photo is the
+  uploader's until attached to one request or booking (6 at most; "That photo is no longer available. Add it again."
+  for a reused or someone else's photo). Reads: the owner (`GET /me/photos/{id}`), and the businesses the request was
+  sent to or the booking's business (`GET /merchants/{m}/customer-photos/{id}`, Studio with MFA) — no public URL,
+  `Cache-Control: no-store`. The Studio shows them on the request card and the job panel.
+- **Late-cancellation terms come from Availability › Booking rules**, which already had them (`reschedule_free_min`,
+  `late_cancel_fee_cents` / `_bps`): no new provider table. The region caps them (V420 `region.regions.cancel_*`: a
+  market's NULL = its province's, a province's NULL = `REGION_CANCEL_*`); the Studio offers only options within the cap
+  and the api refuses others ("Choose a window from 0 to %d hours." / "Choose a fee from 0 to %d percent."). A fixed fee
+  is capped at the region's percentage of the price. The booking **keeps the terms it was made under** (V419 columns on
+  `booking.bookings`), shown on the booking review (web and app), the quote and the booking page.
+- **Cancelling** (`GET /me/bookings/{id}/cancellation` then `POST …/cancel`, Idempotency-Key): requested, confirmed or
+  en route only (not once on site). Inside the window the fee (+ GST/HST at the booking's rate — **accountant to
+  confirm** that a cancellation fee carries the service's tax) is captured from the booking's hold into an escrow of
+  its own, `booking_cancel_fee` (V421), split per the escrow rules and released after 48 h; the rest of the hold and
+  any balance hold are released. Points spent come back and a code's use is released. `booking.cancelled`
+  (`booking.booking_cancelled.v1`) tells the business (row `new_booking`) and the customer.
+- **Deposit balance** (V419 `balance_*` columns): accepting a quote with a deposit schedules its balance
+  `BOOKING_BALANCE_LEAD` before the start. `BalanceHoldScheduler` (every `BOOKING_BALANCE_JOB_INTERVAL`, 50 at a time,
+  not under test) holds it off-session (`PaymentAuthorizations.startOffSession`, the deposit's card) as escrow
+  `booking_balance`; failure → retry every `BOOKING_BALANCE_RETRY_EVERY` up to `BOOKING_BALANCE_ATTEMPTS`, each failure
+  tells the customer and the owners (`booking.balance_failed`, the last one says so); the customer may pay it by hand
+  meanwhile (`POST /me/bookings/{id}/balance` + `/confirm`, step-up; the app sends them to the website for it). Held →
+  `booking.balance_held`. Both escrows release together at sign-off.
+- **Codes, points and saved cards on bookings**: the booking review and quote acceptance take a saved card
+  (`paymentMethodId`, 422 "Choose one of your saved cards." when it isn't the person's), a promo code and points (the
+  S-59 ledger with redemption exists). On a deposit quote the code and points apply to the **deposit only** (the
+  balance is charged in full later); they are reserved for 30 minutes while the card is confirmed.
+- **Hold sweeper**: a booking's or balance's PaymentIntent never confirmed by the customer is cancelled after
+  `PAYMENTS_UNHELD_BOOKING_GRACE` (30 min, payments job), and its hold released.
+- **Lists**: `GET /me/bookings` and `GET /me/quote-requests` (status waiting / quoted / accepted / declined / expired,
+  quotes count, lowest, photo count). Web: Account › Orders "Quote requests" tab and Account › Messages; app: Orders
+  "Quote requests" view and You › Messages.
+- **Schema additions (V417–V421; renumbered from V405–V409 when merging after S-154)**: V417 `messaging.threads.customer_read_at`, customer index and a
+  unique (merchant, ref) for customer threads; V418 `booking.customer_photos`; V419 `booking.bookings` balance,
+  terms and cancellation columns + due-balance index; V420 `region.regions.cancel_*`; V421 payments `ref_type`s
+  `booking_balance`, `booking_cancel_fee` and the unheld-intents index. All additive.
+- **Config**: `BOOKING_BALANCE_LEAD|RETRY_EVERY|ATTEMPTS|JOB_INTERVAL`, `PAYMENTS_UNHELD_BOOKING_GRACE`,
+  `REGION_CANCEL_WINDOW_HOURS|FEE_BPS|MAX_WINDOW_HOURS|MAX_FEE_BPS` — none secret; runbooks and `server/.env.example`.
+- **Never run against a real Stripe account**: the off-session balance confirmation, a saved card confirmed on-session,
+  the partial capture of a cancellation fee from a booking hold, and the sweeper's cancels — written from Stripe's API
+  reference, tested with `FakeStripeGateway` only (a payment method id containing `chargeDeclined` declines,
+  `authenticationRequired` needs the customer).
+- **Not done**: the provider's public page still says the generic "free cancellation until 12 h before"; providers
+  can't cancel a booking from the Studio (customers only); a cancelled booking's event in a connected calendar
+  (S-74 sync) isn't removed by this story; the app pays a failed balance
+  on the website (no card sheet for it yet); messages have no attachments or read receipts for the business side;
+  the Studio's reschedule button still opens Messages generically.
+
+## 2026-09-30 — S-152 Loyalty points, provider-funded rewards, and the Plus membership
+
+Built end to end: api (new module `loyalty`, changes in region, trust, payments, catalogue, orders, food, hire,
+promotions, identity, console), worker (the points notice), consumer web, the consumer app, Studio and console, en and
+fr-CA. Runbooks: [loyalty.md](runbooks/loyalty.md) (new), [stripe.md § 11–12](runbooks/stripe.md).
+
+**Decisions the spec didn't make**
+
+- **Module boundaries.** A new module `loyalty` decides who earns what (earnings, referrals, memberships). Points stay
+  in trust's `points_ledger` (trust already owned it, S-58/S-75), money stays in payments (ledger, Stripe), the rules
+  are region data (`region.loyalty_rules`). Loyalty listens to `EscrowReleased` and `RefundIssued` (own transaction,
+  outbox) and publishes `loyalty.points_credited` on a new topic `loyalty.points` (ids and counts only, no PII); the
+  worker turns it into an in-app notice and a push to `/app/account/points`.
+- **Earning moment and base.** Points are earned when the escrow is **released**, on what the business was paid
+  (amount after discounts, points included, before tax, without tips and delivery fees), per whole dollar, × the Plus
+  multiplier. One `loyalty.earnings` row per escrow is the idempotency key. A refund charged to the business takes back
+  its share; a refund approved before release is left out of the earning (its id is kept so its later
+  `refund.issued` takes nothing back). Refunds the platform absorbs (goodwill) don't take points back.
+- **Rule precedence:** the market's row, else its province's, else the default (seeded: 2 points/$, all kinds, 18
+  months, 1,000 referral points each, 5 per referrer per 30 days, first order ≥ $20). Edited in the console's Finance
+  screen: viewing with the finance screen, changing with the `promotions` action, audit-logged.
+- **Expiry:** per earning lot, first-to-expire spent first (`PointsBalance`); the hourly job writes one `expiry` line
+  per lot under an advisory lock. A reversal larger than what's left becomes a debt that the next earnings pay off.
+- **Points are a discount before tax** (changed from S-58/mobile gaps part 2, where points paid part of the card
+  total after tax): the points line lowers the taxable amount the TaxGateway sees; the card is charged amount + tax;
+  the business is paid on the full sale and the platform tops up the points at release (ledger account `points`).
+  At most the line less $1 can be paid with points. **The accountant should confirm** that points are a
+  platform-funded price reduction for GST/HST (as promo codes are) rather than a payment.
+- **Provider-funded rewards (S-75):** a running reward now needs a budget ($10–$10,000); it applies only to sales
+  made after it started (`started_at`) and before its end date in the business's zone, to all listings or up to 50
+  chosen ones. Cost = bonus points ÷ redeem rate, rounded up to the cent; when the budget runs short the last sale gets
+  a partial bonus and the reward is marked exhausted. The business is charged by a **transfer reversal** on the sale's
+  transfer (a payout deduction), recorded in `payments.reward_charges` and the ledger (`rewards_funded`); a refund
+  gives the unspent share back by a new transfer. "Rewards near you" lists running rewards in the person's city or
+  within 25 km.
+- **Invite a neighbour:** 8-character codes without look-alike characters, made on first view; the invitee claims
+  the code in the account (the web remembers `?invite=` links, the app takes `?code=`); abuse limits: not your own,
+  not your household, accounts younger than 30 days only, once, 5 wrong codes an hour (the attempt is recorded even
+  though the claim is refused — `noRollbackFor`), the first completed order within 90 days and at least the rule's
+  minimum, at most the rule's monthly cap of rewarded referrals per referrer (the rest are `refused`, with the reason).
+- **Plus:** one membership per household (identity's households, up to 4 people), paid and managed by the person who
+  joined (others see it). Prices $7.99/month and $69/year (the design's), 30-day trial once per household, benefits as
+  configuration ($0 food service fee, member prices, 2× points). Billing behind payments' `MembershipBilling`
+  port: `local` (stateless fake, refused under staging/prod) and Stripe Billing (`default_incomplete`, the default
+  card, 409 `card_required` without one, 3-D Secure through the returned client secret). Cancel = at the end of the
+  paid period; "Keep Plus" undoes it. Webhooks `customer.subscription.*` and `invoice.paid` on the platform endpoint,
+  verified and deduplicated by the existing pipeline, ordered by event time (`last_event_at`). Benefits continue while
+  `past_due`. The membership is mirrored onto `identity.households.plus_plan` so the account area keeps reading it.
+  S-59's free trials (no billing) run to their end and can't be renewed; the old `POST/DELETE /me/plus` trial
+  endpoints were replaced by the new ones.
+- **Member prices** are a % off per offer (1–50 %, Studio › product), read through a public batch endpoint
+  (`GET /api/v1/public/plus-prices?offers=`) rather than added to the search documents, and applied in the cart for
+  members (`plusSavingsCents`).
+- **Account navigation:** the consumer web's Wallet & points / Plus tabs and the app's wallet card were hidden in
+  2026-10 (nothing real behind them); they are shown again now that they are real.
+
+- **Topic budget (lead's call, after merging S-153):** S-153's `booking.quote_request` and `messaging.message` with
+  S-152's `loyalty.points` made 101 topics, one over an Event Hubs Premium processing unit (100, `TopicCatalogueTest`).
+  Consumer `search-indexer`'s retry delays went from `[10, 60, 300]` to `[10, 300]` s (`attempts` 4 → 3, multiplier 6
+  → 30): 7 fewer retry topics, **94 in all, 6 to spare**. It's safe because the indexer's work is idempotent
+  re-indexing (it re-reads the scope from Postgres, documents are versioned) and failures still end in the `.dlq` after
+  5 min. Rejected: a second processing unit in every Azure environment (cost), or no topic for points (the worker
+  sends every notice). [infrastructure.md § 5.3](runbooks/infrastructure.md#53-kafka-topics-and-credentials) keeps the count.
+
+**Schema (additive, V422–V431** — first assigned V395–V404, moved above S-154's V415/V416 and S-153's V417–V421 by the ordering rule**):** V422 `region.loyalty_rules`; V423 `trust.points_ledger` unique `(user_id, ref_type, ref_id)` for
+earning kinds and an expiry index, `trust.merchant_rewards.budget_cents/spent_cents/listing_ids/started_at/exhausted_at`,
+`trust.reward_credits`; V424 schema `loyalty` (`earnings`, `referral_codes`, `referrals`, `referral_attempts`,
+`memberships`); V425 `catalogue.offers.member_discount_pct`; V426 `payments.plus_invoices`, `payments.reward_charges`;
+dev seed V431 (a 2× reward with a $50 budget for Prairie Wrench, a 10 % member price, Amara's code `AMARAK26`).
+Configuration: `PLUS_BILLING_PROVIDER`, `STRIPE_PLUS_MONTHLY_PRICE`, `STRIPE_PLUS_ANNUAL_PRICE`, `PLUS_AUTOMATIC_TAX`,
+`PLUS_*` benefits and prices, `LOYALTY_*` jobs and limits (no new secrets). Topic `loyalty.points`.
+
+**Not done**
+
+- There is no order-cancelled event, so nothing reverses on cancellation — points are only earned at release, so a
+  cancelled order never earned any.
+- A referral already rewarded is not taken back when the invitee's first order is refunded later.
+- The local fake computes no tax on Plus; Stripe's `automatic_tax` needs the customer's address and is off by default.
+- The app's ICU messages don't group thousands inside plural `#` ("1000 points").
+- `B1 Home` in the app's shop tests fails on develop since the real photos (fewer drawn scenes than it expects); not
+  touched here.
+
+**Never run against the real Stripe API** (stripe-mock, WireMock-style fixtures and signed test events only): creating,
+changing and cancelling Plus subscriptions; the `customer.subscription.*` and `invoice.paid` webhooks; 3-D Secure on
+the first invoice (Stripe.js `confirmCardPayment` on the web, `handleNextAction` in the app); the transfer reversals
+that charge reward costs and the transfers that give them back on refunds. stripe.md § 11–12 lists the test-mode
+checks to run before launch.
+
+## 2026-10-20 — S-155 Pipeline to provision OVHcloud and deploy Northline there
+
+Runbook: [ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo). **Nothing here has run
+against a real OVHcloud account or a real GitHub Environment**: the workflow passed actionlint (with shellcheck), the
+scripts bash 3.2 parsing, shellcheck and runs against stubbed `kubectl`/`terraform`/`gh`/`htpasswd`; Terraform
+`terraform test` with the mocked provider; the charts `helm template | kubeconform`.
+
+- **`.github/workflows/ovh.yml`, manual only.** Inputs `target`, `action` (plan, apply, deploy, provision-and-deploy,
+  down, up, destroy), `image-tag`, `build-images`, `confirm-destroy`. Jobs `prepare` (no permissions), `provision`,
+  `images` (calls `deploy.yml`), `deploy`, `scale`; each job that touches OVHcloud runs in the GitHub Environment of the
+  target, so the required reviewer gates **every** such job — `plan` included, because the API credentials live in the
+  environment (a separate unprotected "plan" environment would duplicate every secret). Actions pinned by commit SHA
+  (checkout v5.1.0, setup-terraform v3.1.2, setup-helm v4.3.1 — the same majors as the other workflows, which still use
+  tags; they were not changed). Concurrency `ovh-<target>`, never cancelled.
+- **Plans never leave the job**: plan and apply run in one job from a plan file in `$RUNNER_TEMP`, deleted at the end;
+  the summary shows only addresses and actions (`terraform show -json` through jq), no values.
+- **State**: S3 backend on OVHcloud Object Storage, written at run time as `backend_override.tf` (git-ignored) by
+  `scripts/ovh/tf-state.sh`, so the roots keep local state by default (the runbook's single-Mac path is unchanged).
+  The bucket is created by the first run (`ensure`, aws CLI, versioning on) with the keys of an S3 user the owner makes
+  in the console (`TF_STATE_ACCESS_KEY/SECRET_KEY`) — creating that user through the OVHcloud API from a script was
+  left out (request signing untested; three console clicks). **No state locking** (OVHcloud's support for S3
+  conditional writes is unverified): the concurrency group serialises runs per target; Mac and pipeline must not run
+  Terraform on the same target at once.
+- **Terraform variables from the environment**: `scripts/ovh/ci.sh tfvars` maps the environment's variables to
+  `TF_VAR_*`; `OVH_TFVARS` (free HCL) becomes a runtime `ci.auto.tfvars` (git-ignored) for anything else. No tfvars in
+  git.
+- **Reaching the VPS from runners** (new addresses every run): new variable `ci_ssh_cidr` of the
+  `ovh-vps` root adds one Network Firewall rule (sequence 9, SSH from the runner/32) opened by a targeted apply at the
+  start of the job and removed at the end (`if: always()`). Because the host firewall (ufw) would then still block
+  the runner, the pipeline bootstraps with `SSH_FROM_ANYWHERE=1`: ufw rate-limits SSH from any address and the
+  Network Firewall decides who; `bootstrap-k3s.sh` now also turns password and root logins off (keys only). With
+  `edge_firewall = false` SSH is then open to every address (keys only) — the workflow warns. The pipeline uses its
+  own deploy key (made and installed by `gh-setup.sh`), never the owner's; `known_hosts` comes from a secret
+  (strict checking), else first-sight trust with a warning. **ovh-mks**: when `api_allowed_cidrs` is set, the
+  runner's /32 is added to the cluster's IP restriction for the run the same way.
+- **Secrets from the environment** (`OVH_SECRETS_SOURCE=env` in `secrets.sh`/`common.sh`): every key the file holds,
+  by name. Generated keys missing there are read from `secret/northline-generated` or generated **once** and stored
+  there (a BFF hash is recomputed only when its secret changes; a kubectl error never triggers regeneration). Masked
+  with `::add-mask::`. Pipeline settings (`OVH_*`, `TF_STATE_*`, `REGISTRY*`) in a `.ovh/<target>.env` are never
+  copied into `northline-secrets`.
+- **Stripe optional** on the OVHcloud targets (story: "optional for a first demo"): without `STRIPE_SECRET_KEY`,
+  `deploy.sh` sets `IDENTITY_PROVIDER`/`AGE_VERIFICATION_PROVIDER=local` (otherwise the api refuses to start:
+  `IDENTITY_PROVIDER=stripe needs STRIPE_SECRET_KEY`) and marks every empty Stripe key optional. Consequence, stated in
+  the runbook: owners can't finish identity verification (the fake's outcome page is `local`-only). Without Twilio no
+  one can sign up under `dev` (unchanged; S-112).
+- **`OVH_DOMAIN`**: `deploy.sh` moves every host (and `webauthnRpId`, the senders) under another zone — the owner may
+  not control `northline.ca`. Terraform's `dns_zone_name` follows it in the pipeline.
+- **Images**: `deploy.yml` gained `workflow_call` (same inputs + `web-apps`; concurrency group per calling run so
+  callers don't cancel each other; dispatch behaviour unchanged). The pipeline builds amd64 only, without the docs
+  images, to `ghcr.io/<owner>/northline` with the run's token; repository variable `REGISTRY` switches to another
+  registry (repository secrets `REGISTRY_USERNAME/PASSWORD`, since a called workflow's jobs have no environment). The
+  cluster's pull secret uses `REGISTRY_PULL_TOKEN` (classic, `read:packages`), else the run's token with a warning (it
+  expires with the run).
+- **Smoke test** `scripts/ovh/smoke.sh` (`make ovh-smoke`): the runbook's `kubectl exec … wget` readiness check could
+  never work (the images are distroless) — replaced by "every Spring app's pods Ready", which is the readiness probe on
+  `/actuator/health/readiness`. HTTPS checks run once the zone resolves to the address, retried while certificates
+  issue; before DNS exists they report *pending*, not failure.
+- **destroy** first removes the releases (on MKS the load balancer and volumes belong to Kubernetes, not Terraform) and
+  empties the buckets with their own users' keys, then `terraform destroy`; it needs `confirm-destroy` = the target.
+- **`scripts/ovh/gh-setup.sh`** (`make ovh-gh-setup`): environment with the owner as required reviewer and branch
+  policies `develop`, `main`; if GitHub refuses reviewers (plan), the environment is created without them and a
+  warning says apply is then gated only by write access. Environments on a private repository need a paid GitHub plan
+  — unverified for this repository; the runbook's local alternative covers that and depleted Actions minutes.
+- **Not done**: no OVHcloud API automation for the state user; no Toronto; no `smoke` action of its own (re-run
+  `deploy` with `build-images` off); prices and console menu names still unverified.
+
+## 2026-09-30 — S-151 Cancellations, failed deliveries, returns and courier pay
+
+Closes what S-51, S-78, S-81, S-86, S-87 and S-88 left "Not done": cancelling an order, a delivery that can't be
+made, returns, courier pay and payouts, and moving the rest of a stuck run. Runbooks:
+[fulfilment.md § Cancelling, failed deliveries and returns](runbooks/fulfilment.md#cancelling-failed-deliveries-and-returns-s-151),
+[§ Courier earnings and payouts](runbooks/fulfilment.md#courier-earnings-and-payouts-s-151),
+[stripe.md § 13](runbooks/stripe.md#13-courier-payouts-s-151), [courier-app.md](runbooks/courier-app.md).
+
+**Decisions**
+
+- **Who may cancel, until when, is configuration** (`northline.orders.after-sale`): the customer until any shop packs,
+  a shop its own lines until the courier has them, Northline staff (console orders screen + the `support` action,
+  audited `orders.order_cancelled` with codes only) until delivery. After delivery it is a return or a refund, not a
+  cancellation. Food orders keep the kitchen flow (409 `not_cancellable`).
+- **Money goes through the refund queue, not around it.** Orders' listeners call `payments.api.OrderRefunds`: each
+  shop's lines become an immediate `Refund` charged to that shop (the hold voided when uncaptured — no ledger entry —
+  else refunded, with the usual ledger entries and `taxes.refunded` reversing the tax through the `TaxGateway`). The
+  delivery fee hold is voided, or partly captured when a missed-delivery fee is kept (with its proportional tax).
+  Courier tips on a cancelled order are cancelled with it.
+- **Stock comes back** through `SellableOffers.giveBack` (restock on by default for shops and staff; a shop's return
+  approval asks).
+- **Fulfilment stays below orders:** orders tells fulfilment through `DeliveryRequests.cancel / dropPickup /
+  redeliver` and `ReturnPickups`; fulfilment publishes `DeliveryFailed`, `ReturnCollected`, `ReturnDelivered`. A run
+  left with no stops is `cancelled` and its courier freed; `RunChanged` gains `cancelled`, `stops_removed`,
+  `stops_moved` (schema widened, additive). A race between "placed" and "cancelled" hand-overs is settled by checking
+  the order again before a delivery is made.
+- **Failed delivery:** the courier's photo at the door is required (proof kind `failed`); every shop of the order gets
+  a return stop. The customer has `failed-delivery-decide-within` (48 h) to choose re-delivery (next run, counted in
+  `attempts`, no extra charge) or a refund keeping `failed-delivery-fee-cents` (0); after that a job refunds it.
+- **Returns:** one shop per request, a reason and one photo (object storage, `orders/returns/`); the window is the
+  category's (`catalogue.category_return_windows`, 0 = not returnable; food and restricted items are 0) else 30 days.
+  The shop approves (pickup by a courier, or drop-off) or declines with a reason the customer sees; a declined return
+  can be escalated to the existing disputes queue (`CustomerCases.openDispute`). The refund happens when the shop has
+  the goods (marked received, or delivered back by the courier).
+- **Return pickups ride the pooled runs:** a `collect` stop and a `return` stop join the market's planned pooled run
+  starting within 24 h, else a run of their own after 24 h (both configuration).
+- **Courier pay is region configuration:** `region.regions.courier_pay` (jsonb, province then market overriding the
+  platform defaults: $4.00 a run, $1.00 a shop, $3.00 a door, $3.00 a failed door, $3.00 a collect, $1.00 a return).
+  A finished run is paid once, with the model it was paid under, onto the courier's ledger account (`courier_pay` →
+  `courier:<userId>`). Days and weeks on the courier's earnings are in the market's zone.
+- **Payouts through the payouts port:** couriers are Stripe Connect **Express recipients** (transfers only, manual
+  payouts). A weekly job transfers the balance (≥ $1.00) and pays it out; failed payouts return to the balance. A fake
+  gateway under `local`/`test`. The onboarding return page is `/courier/payouts` on the consumer host (claimed by the
+  courier app; on the web it redirects home); the app opens onboarding in the in-app browser.
+- **Moving a stuck run:** console › Delivery ops › "Move remaining stops" (dispatch action) splits a `loading` /
+  `en_route` run: the orders not picked up yet go to a free courier as a new part of the same window (audited
+  `fulfilment.run_split`). A run that hasn't started is still reassigned whole (S-86).
+- **No personal data in events:** `order.cancelled`, `order.delivery_failed`, `return.updated` and `delivery.failed`
+  carry ids, codes and amounts only (the notes and photos stay in the api).
+
+**Schema (additive, V432–V435)**
+
+- V432 orders: `orders.state` + `delivery_failed`, `orders.cancelled_at`; `order_lines.state` + `cancelled`,
+  `cancelled_at`, `restocked`, `return_id`; `orders.cancellations`, `orders.delivery_failures`, `orders.returns`,
+  `orders.return_lines`, `orders.return_ref_seq`.
+- V433 fulfilment: `runs.state` + `cancelled` (the open-run index ignores it); `stops.state` + `cancelled`, `kind` +
+  `collect`, `proof_kind` + `failed`, `fail_reason`, `fail_note`, `return_id`; `deliveries.state` + `failed`,
+  `attempts`; `fulfilment.return_pickups`, `fulfilment.courier_earnings`.
+- V434 payments: `payments.courier_accounts`, `payments.courier_payouts` (account id, enabled, requirements due, bank
+  last 4 only — never a full account number).
+- V435: `region.regions.courier_pay` (jsonb); `catalogue.category_return_windows`.
+- Events: `orders.order_cancelled.v1`, `orders.order_delivery_failed.v1`, `orders.return_updated.v1` (topic
+  `orders.return`, new), `fulfilment.delivery_failed.v1`; `fulfilment.run_changed.v1` widened.
+- Configuration: `northline.orders.after-sale.*`, `northline.fulfilment.courier-pay.*`, `…return-join-within`,
+  `…return-direct-after`, `…courier-payout-return`; one new environment variable, `COURIER_PAYOUTS_CRON`.
+
+**Not done**
+
+- Promo codes are not released on a cancellation (releasing would hand points back a second time, since the refund
+  already returns the points share); the code's use still counts for that customer.
+- Partner webhooks: no `order.cancelled` / `return.*` events for partners yet (`DeveloperRules.EVENTS` unchanged).
+- Shops cancel all of their lines on an order, staff the whole order; no single-line cancel. A return is one shop at a
+  time with one photo.
+- Staff can see an order's returns in the console but don't approve or decline them there (escalations go to the
+  disputes queue as before).
+- Re-delivery is free; there is no customer-chosen window for it (the next run in the market).
+- The web has no page of its own at `/courier/payouts` (it redirects home).
+- **Never ran against real Stripe:** courier Connect accounts, account links, account reads, transfers and payouts were
+  tested against stripe-mock only (request shapes, pinned version, Idempotency-Keys); stripe-mock keeps no state, so
+  Express onboarding, real transfers and payouts, a bank refusing a payout and the Connect webhooks for courier
+  accounts have not run. The refunds, voids and partial captures reuse the S-12/S-78 gateway calls (stripe-mock tested,
+  not live). Stripe Tax's reversal for these refunds ran only against the local tax fake.
+- **Mobile:** neither app has run on a device or simulator for these screens (Jest + RNTL against the in-app fixture
+  backends only); the camera on the failed-delivery screen and the in-app browser onboarding are untested on phones.
+
+## 2026-10-20 — S-155b Email on the OVHcloud targets (SMTP relay, demo inbox)
+
+Follow-up of S-155 (lead's request). Never run against a real cluster, relay or Mailpit; checked offline (helm
+template | kubeconform, actionlint, bash 3.2, shellcheck, stubbed runs).
+
+- **Correction:** the S-155 runbook said "without Twilio no one can sign up". Since S-154 the sites' sign-up
+  (Studio and consumer `RegisterFlow` → `POST /api/auth/accounts`) is email + password with a 6-digit **email** code;
+  the mobile number is optional and the Studio/console second factor is an authenticator or a passkey. Twilio is still
+  needed for phone-code sign-in, confirming a mobile, and `make demo-data`, whose script still registers through the
+  phone path (`/api/auth/register` + SMS code) — not changed here.
+- **What `EMAIL_PROVIDER=local` does under `dev` (checked in `EmailAutoConfiguration` / `SmtpEmailSender`):** SMTP to
+  `SMTP_HOST:SMTP_PORT` (default `localhost:1025`) in lenient mode; with nothing listening (a pod) it logs the whole
+  plain-text email at WARN ("No SMTP server took the email…") — the code is in the subject and the body, the link in
+  the body. It does **not** withhold codes the way the SMS stand-in does (S-112); auth's dev outbox endpoint is
+  `local`-profile only. Left as is (staging/prod refuse `local`; on OVHcloud the pod log goes nowhere else), stated in
+  the runbook; a candidate for the S-112 rule if the team wants email codes withheld under `dev` too.
+- **Selection in `scripts/ovh/deploy.sh`, first match:** `OVH_DEMO_MAILPIT=true` → the demo inbox; `SMTP_HOST` →
+  `EMAIL_PROVIDER=smtp` for **api, auth and worker** (SMTP_PORT default 587, SMTP_STARTTLS default true,
+  `secretEnv.SMTP_PASSWORD` when there is a login); `EMAIL_API_KEY` → SendGrid (now for auth too, it was api and
+  worker only); else `local`. `EMAIL_FROM` overrides the sender of the three. The chart already mapped
+  `SMTP_PASSWORD` (optional) on the three apps; no change there. `secrets.sh check` requires `SMTP_PASSWORD` with
+  `SMTP_USERNAME`; the SMTP settings and `EMAIL_FROM` are settings (never copied into `northline-secrets`).
+- **Demo inbox:** new chart value `demoMail` (`templates/demo-mail.yaml`): Mailpit `axllent/mailpit:v1.31.3` (pinned;
+  the compose file uses v1.29 locally), one replica, messages in memory (`MP_MAX_MESSAGES` 1000), non-root, read-only
+  root filesystem; UI basic auth with `MP_UI_AUTH_FILE` from the Secret `northline-demo-mail-auth` (bcrypt line for
+  user `demo`, written by `secrets.sh` from `MAILPIT_PASSWORD`); its host `demoMail.url` (`https://mail.<domain>`)
+  joins the chart's routes, so it gets its own listener, Let's Encrypt certificate and HSTS like every host (the
+  route helper gained an optional per-path `port` for a backend that isn't an app). NetworkPolicy: 8025 from the edge
+  peers only, 1025 from this release's pods only. Refused in staging/prod and without a `https://` url. Basic auth is
+  Mailpit's own, not Envoy's (Envoy Gateway's basic auth takes SHA-1 htpasswd only). TCP probes (whether Mailpit's
+  health endpoints sit behind the UI auth was not checked).
+- **Passwords:** `MAILPIT_PASSWORD` is a generated key (file `init`, or once in `secret/northline-generated`), but
+  `make ovh-gh-setup` generates it when `OVH_DEMO_MAILPIT=true` and **shows it once**, so the owner can open the inbox
+  without kubectl. Older `.ovh` files get one appended on the first apply with the inbox on.
+- **Smoke test:** with the inbox, `https://mail.<domain>` must answer 401 without credentials; the summary says where
+  the codes are (inbox, or the auth log with `local`).
+- **Relays documented** (settings from their documentation, menus and limits unverified): Brevo
+  (`smtp-relay.brevo.com`, SMTP login + SMTP key, confirmed sender), Gmail with an app password (`smtp.gmail.com`),
+  OVHcloud email (MX Plan `ssl0.ovh.net`, Email Pro `pro1.mail.ovh.net`); port 587 + STARTTLS only (the SMTP adapter
+  has no implicit TLS — 465 doesn't work). All three keep mail outside Canada: demo data only.

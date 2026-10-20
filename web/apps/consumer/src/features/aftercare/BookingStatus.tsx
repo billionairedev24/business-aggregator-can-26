@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { ShieldCheck } from '@phosphor-icons/react';
 import { EmptyState, ErrorState, SiteLink, Skeleton, useFormatters } from '@northline/ui';
 import { isNotFound } from '@northline/client';
 import { bookingQuery } from '../booking/api';
 import { signInHref, useViewer } from '../session/api';
 import { ReviewPanel, VisitEta } from './Aftercare';
+import { BookingActions } from './BookingActions';
 import { Crumbs } from '../pages/Crumbs';
 import { Scene } from '../art/Scene';
 import { useAftercareT } from './messages';
@@ -67,11 +67,7 @@ export function BookingStatus({ bookingId }: { bookingId: string }) {
               <div className="nl-bkd-total"><dt>{b.heldCents > 0 ? t('factHeld') : t('factTotal')}</dt><dd>{money(b.heldCents)}</dd></div>
             </dl>
           </section>
-          <section className="nl-bkd-card nl-bkd-policy" aria-labelledby="bkd-policy">
-            <h2 id="bkd-policy" className="nl-bkd-h2"><ShieldCheck size={20} aria-hidden /> {t('policyTitle')}</h2>
-            <p className="nl-after-muted">{b.freeCancelUntil ? t('freeCancel', { time: date(b.freeCancelUntil, 'dateTime') }) : t('noFreeCancel')}</p>
-            <p className="nl-after-muted">{t('escrowNote')}</p>
-          </section>
+          <BookingActions booking={b} />
           <section className="nl-bkd-card" aria-labelledby="bkd-help">
             <h2 id="bkd-help" className="nl-bkd-h2">{t('helpTitle')}</h2>
             {done ? <SiteLink href={`/account/problem/booking/${encodeURIComponent(b.bookingId)}`} className="nl-bkd-link">{t('somethingWrong')}</SiteLink> : null}

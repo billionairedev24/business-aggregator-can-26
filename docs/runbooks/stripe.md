@@ -149,6 +149,9 @@ Two endpoints, each with its own signing secret:
   state; disputes and accounts ignore an event older than the last one applied. Unknown types are stored as `ignored`.
   The endpoints need no session or token (and have no CSRF); the signature is the authentication; 600 requests/min per
   address (`STRIPE_WEBHOOK_RATE_LIMIT`), then 429.
+- **Couriers (S-151):** the Connect endpoint's `account.updated`, `payout.paid`, `payout.failed` and `payout.canceled`
+  for a courier's account (`payments.courier_accounts`) settle the courier's payout instead of a merchant's; no new
+  event type to register. See [§ 13](#13-courier-payouts-s-151).
 - **Effects:** `payout.paid` → paid; `payout.failed` / `canceled` → returned to the merchant's balance (+ instant fee
   back, `payout.failed` event); `charge.dispute.*` → a card-dispute case in Refunds & disputes (escrow on hold,
   `dispute.updated` "opened" email; merchant answers with response + evidence, can't refund or offer goodwill), closed
@@ -373,3 +376,118 @@ midnight): run the next day, then mark the day **resolved** with a note. Tables 
 - **Without a Stripe key** (local, test) the balance transactions come from a fake that mirrors the ledger, so days
   match. **Never run against a real Stripe account:** the balance-transaction call was written from Stripe's API
   reference and tested against stripe-mock only. The restricted key needs `Balance transactions: read`.
+
+## Bookings: balance and late cancellation (S-153)
+
+- **Deposit quotes.** Accepting a quote with a deposit holds the deposit (escrow `booking`); the balance is held
+  automatically `BOOKING_BALANCE_LEAD` (48 h) before the visit as its own escrow (`ref_type = booking_balance`): an
+  **off-session** PaymentIntent with manual capture on the card the deposit was paid with (`off_session=true`,
+  `confirm=true`, the deposit's customer and payment method). A decline or `authentication_required` marks the balance
+  pending again with the next try `BOOKING_BALANCE_RETRY_EVERY` later, up to `BOOKING_BALANCE_ATTEMPTS`; each failure
+  tells the customer (push/email/SMS, `booking_reminders`; pay it from the booking page) and the provider's owners
+  (`new_booking`). After the last attempt the balance is **failed** and the provider decides whether to go. Paying by
+  hand (`POST /me/bookings/{id}/balance`, step-up like any checkout) replaces a pending try. Both escrows are captured
+  and released together at sign-off.
+- **Late cancellation.** The booking keeps the terms in force when it was made (Availability › Booking rules within the
+  region's limits; shown on the booking review, the quote and the booking page). Cancelling inside the window charges
+  the fee from the hold: a fee escrow (`ref_type = booking_cancel_fee`) is captured from the booking's PaymentIntent
+  (partial capture, the rest released) and released to the provider after the usual 48 h, split by the escrow rules
+  (platform fee on the fee, tax at the booking's rate); a balance hold is cancelled. Outside the window everything is
+  released. Points spent on the deposit come back; a promo code's use is released.
+- **Unconfirmed holds.** A booking or balance PaymentIntent the customer never confirmed is cancelled after
+  `PAYMENTS_UNHELD_BOOKING_GRACE` (30 min) by the payments job, so no card keeps a stray authorization.
+- **Never run against a real Stripe account:** the off-session confirmation, the saved-card on-session confirmation,
+  the partial capture of a cancellation fee and the unheld-hold sweeper were written from Stripe's API reference and
+  tested with the payments stand-in (`FakeStripeGateway`) only. Try them in test mode with the `4000 0000 0000 3220`
+  (authentication) and `4000 0000 0000 9995` (decline) cards before a pilot takes deposit quotes.
+
+## 11. Northline Plus — Stripe Billing (S-152)
+
+Plus is a household membership ($7.99/month or $69/year by default, `PLUS_MONTHLY_PRICE_CENTS` /
+`PLUS_ANNUAL_PRICE_CENTS`, with a free trial the first time, `PLUS_TRIAL_DAYS`). It is billed behind the payments
+module's `MembershipBilling` port, chosen by `northline.plus.billing.provider` (`PLUS_BILLING_PROVIDER`):
+
+| provider | what it does | needs |
+|---|---|---|
+| `local` (default; refused under `staging`/`prod`) | a fake: subscriptions `sub_local_…`, invoices `in_local_…`, no card, no tax. Renewals are made by the loyalty job (`LOYALTY_JOBS_CRON`). | nothing |
+| `stripe` | Stripe Billing on the **platform account**: a Subscription on the person's Stripe Customer (the one checkout and saved cards use), `payment_behavior=default_incomplete`, the default card from Account › Payment methods, `trial_period_days` the first time, metadata `northline_kind=plus`, `northline_household`, `northline_plan`, `northline_user`. When the first invoice needs 3-D Secure the api returns its PaymentIntent's client secret and the consumer site (Stripe.js `confirmCardPayment`) or the app (the React Native SDK's `handleNextAction`) asks the bank. | `STRIPE_SECRET_KEY`, `STRIPE_PLUS_MONTHLY_PRICE`, `STRIPE_PLUS_ANNUAL_PRICE` (start-up refuses `stripe` without them) |
+
+### Set-up (once per mode: test for dev/staging, live for prod)
+
+1. **Products → Add product** "Northline Plus", two **recurring** prices in CAD: monthly at the monthly price, yearly
+   at the annual price (the amounts must match `PLUS_MONTHLY_PRICE_CENTS` / `PLUS_ANNUAL_PRICE_CENTS`: the account
+   shows those, Stripe charges its own). Copy the two `price_…` ids into the operator's `configEnv` as
+   `STRIPE_PLUS_MONTHLY_PRICE` / `STRIPE_PLUS_ANNUAL_PRICE` (not secrets).
+2. **Tax:** with Stripe Tax on (§ 6) set `PLUS_AUTOMATIC_TAX=true` so subscriptions use `automatic_tax`; the price's
+   tax code is "Software as a service / memberships" (txcd_10103000 or what the accountant picks). Stripe Tax needs a
+   customer address: people without a saved address get an invoice Stripe can't tax — leave it `false` until checked.
+3. **Webhooks:** add to the **platform** endpoint (§ 5, `STRIPE_WEBHOOK_SECRET`) the events
+   `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted` and
+   `invoice.paid`. They are verified and deduplicated by event id like every other Stripe event; the Connect endpoint
+   ignores them. Events of subscriptions without `northline_kind=plus` are ignored.
+4. **Customer portal / dunning:** Settings → Billing → Subscriptions and emails: turn on Smart Retries and "cancel the
+   subscription if all retries fail". Northline keeps the benefits while the subscription is `past_due` and shows
+   "update your card"; Stripe's `customer.subscription.deleted` ends them.
+
+### What Northline keeps
+
+`loyalty.memberships` (one row per household: plan, status, `current_period_end`, `cancel_at_period_end`,
+`last_event_at` — an older webhook never overwrites a newer state) and `payments.plus_invoices` (the invoice id, the
+amount, tax and when it was paid) with a `plus_invoice` ledger entry; the console's Finance screen sums them as Plus
+revenue. Cancel = `cancel_at_period_end` (the household keeps Plus to the end of what it paid for); "Keep Plus" undoes
+it. Only the person who started it (the payer) can change it.
+
+### Never run against the real Stripe API
+
+`StripeMembershipBilling` and the webhook handling were written from Stripe's API reference (API version pinned, § 1;
+`current_period_end` lives on the subscription item, the invoice's subscription on `parent.subscription_details`) and
+tested against **stripe-mock** and signed fixture events only. Before launch, in test mode: join with a card, with the
+3-D Secure card `4000 0025 0000 3155`, and with `4000 0000 0000 0341` (fails after attaching) to see `past_due`;
+switch plan (proration), cancel, resume; check the four events arrive and the Finance screen's Plus revenue.
+
+## 12. Provider-funded rewards — charging the business (S-152)
+
+A business's "extra points" reward (Studio › Storefront, S-75) has a budget. When a sale it covers is released, the
+loyalty module credits the bonus points and draws the cost (bonus points ÷ the redeem rate, rounded up to the cent)
+from the budget; the reward stops when the budget is spent. The cost is charged to the business in the payments module
+(`payments.reward_charges`, ledger account `rewards_funded`): a **transfer reversal** on the sale's transfer to the
+business's connected account (`POST /v1/transfers/{id}/reversals`, one idempotency key per charge), i.e. a
+payout deduction. A refund of the sale gives the unspent share back with a new transfer to the business.
+
+- **Nothing new to configure:** the platform key and Connect (§ 2). Without a key the fake gateway records the reversal.
+- **Never run against the real Stripe API:** the reversal and the refund transfer were tested against stripe-mock only.
+  Before launch: a test-mode sale with a reward running, released; check the reversal on the connected account's
+  transfer, the business's payout and the Finance screen's "held from businesses' rewards".
+
+## 13. Courier payouts (S-151)
+
+Couriers are paid through the same payouts port as merchants (`CourierAccountGateway` for their accounts, the Connect
+gateway for transfers and payouts). The pay model and what a courier earns: [fulfilment.md § Courier earnings and
+payouts](fulfilment.md#courier-earnings-and-payouts-s-151).
+
+- **Account:** an **Express** connected account per courier, country `CA`, business type `individual`, capability
+  `transfers` only, payouts on a **manual** schedule (Northline pays weekly), created on the first request for an
+  onboarding link (Idempotency-Key `courier-account:<userId>`). The courier app asks
+  `POST /api/v1/courier/payout-account/onboarding` and opens Stripe's Account Link (a fresh key per link,
+  `courier-account-link:<account>:<id>`) in the in-app browser; the bank details go to Stripe only. Northline keeps the
+  account id, whether payouts are enabled, how many requirements are due and the bank's last 4 digits (from
+  `account.updated` or a read of the account when the courier opens Earnings).
+- **Weekly run:** `COURIER_PAYOUTS_CRON` (default `0 41 6 * * MON`, platform zone). For each courier with payouts
+  enabled and a ledger balance (`courier:<userId>`: run pay + tips) of at least $1.00: a **transfer** from the
+  platform balance to the courier's account (transfer group `courier:<userId>`), then a **payout** of that amount to
+  their bank (`payments.courier_payouts`, ledger `courier_paid_out`). A failed or canceled payout puts the amount back
+  on the courier's balance (`courier_payout_returned`) for the next run. A settle job every minute (and the webhooks)
+  moves in-transit payouts to paid.
+- **Local / test:** `FakeCourierAccounts` — asking for the onboarding link enables the account at once (bank
+  `ba_fake_…`, last 4 `6789`); payouts arrive the next business morning.
+- **Variables:** `COURIER_PAYOUTS_CRON` (new, optional); the existing `STRIPE_SECRET_KEY`,
+  `STRIPE_CONNECT_WEBHOOK_SECRET` and `CONSUMER_ORIGIN` (the return page `/courier/payouts`, which the courier app
+  claims).
+- **Reconciliation:** transfers to couriers stay at Stripe like merchants' and are left out of § 10's comparison.
+
+**Never run against a real Stripe account.** The account, account-link, account read, transfer and payout calls were
+written from Stripe's API reference and tested against **stripe-mock** only (`StripeCourierAccountsStripeMockTest`:
+the request shapes, the pinned `Stripe-Version` and an `Idempotency-Key` on every mutating call). stripe-mock keeps no
+state, so Express onboarding itself, `account.updated` for an individual courier, a real transfer and payout, a bank
+that rejects a payout, and the Connect webhooks for courier accounts have not been exercised. Before couriers are paid
+for real: onboard a test courier in test mode, run `payCouriers` by hand, and watch the payout's webhooks arrive.

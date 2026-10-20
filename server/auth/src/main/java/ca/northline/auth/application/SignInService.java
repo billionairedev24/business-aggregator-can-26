@@ -9,7 +9,9 @@ import ca.northline.auth.domain.PhoneNumber;
 import ca.northline.auth.domain.SignInAttempt;
 import ca.northline.auth.domain.Totp;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -42,10 +44,103 @@ public class SignInService {
     private final SignInLog signIns;
     private final AttemptLimits limits;
     private final FederatedLinking federation;
+    private final Passwords passwords;
+    private final PasswordHasher hasher;
+    private final PendingAccounts pending;
+    private final AccountService signUps;
+    private final AccountSecurity security;
     private final Clock clock;
 
-    /** Signed in: who, with which second factor, and the new session's id ({@code identity.sessions}). */
-    public record SignedIn(UserAccount account, Factor factor, String sessionId) {}
+    /**
+     * Signed in: who, with which factor, and the new session's id ({@code identity.sessions}). {@code withPassword}
+     * (S-154): the password was given first in this attempt — the session then holds both factors.
+     */
+    public record SignedIn(UserAccount account, Factor factor, String sessionId, boolean withPassword) {
+
+        public SignedIn(UserAccount account, Factor factor, String sessionId) {
+            this(account, factor, sessionId, false);
+        }
+
+        /** The session's factors, in the order they were used. */
+        public List<Factor> factors() {
+            return withPassword && factor != Factor.PASSWORD ? List.of(Factor.PASSWORD, factor) : List.of(factor);
+        }
+    }
+
+    /** S-154: what comes after a correct email + password. */
+    public sealed interface PasswordOutcome {
+        /** The account's second factors (the ones it actually has) — the factor step. */
+        record SecondFactor(String identifier, List<Factor> factors) implements PasswordOutcome {}
+
+        /** No second factor yet: signed in with the password alone; the app enrols one (required for business). */
+        record Enrol(SignedIn signedIn) implements PasswordOutcome {}
+
+        /** The account is still pending: a new email code is on its way. */
+        record ConfirmEmail(String email, long resendAfterSeconds) implements PasswordOutcome {}
+    }
+
+    /**
+     * S-154, step 1 of signing in: email + password. Wrong email and wrong password get the same answer (and the same
+     * work: an Argon2 check against a decoy when there is no password), counted per account, IP and session.
+     */
+    @Transactional(noRollbackFor = {InvalidInput.class, FlowRejected.class})
+    public PasswordOutcome startWithPassword(String email, String password, Client client) {
+        var id = email.strip();
+        limits.consume(LimitedAction.SIGN_IN_LOOKUP, AttemptLimits.Subject.identifier(id, null));
+        var account = accounts.findByEmail(id).filter(UserAccount::active);
+        var userId = account.map(UserAccount::id).orElse(null);
+        var who = AttemptLimits.Subject.identifier(id, userId);
+        limits.guard(LimitedAction.PASSWORD_VERIFY, who);
+        var stored = account.flatMap(a -> passwords.hashOf(a.id()));
+        var waiting = account.isEmpty()
+                ? pending.findByEmail(id).filter(p -> !p.expired(clock.instant()))
+                : Optional.<PendingAccounts.PendingAccount>empty();
+        var hash = stored.or(() -> waiting.map(PendingAccounts.PendingAccount::passwordHash))
+                .orElse(hasher.decoy());
+        var matches = hasher.matches(PasswordPolicy.normalise(password), hash);
+        if (!matches || (stored.isEmpty() && waiting.isEmpty())) {
+            signIns.failed(userId, Factor.PASSWORD, "mismatch", client);
+            throw limits.failed(
+                    LimitedAction.PASSWORD_VERIFY,
+                    who,
+                    InvalidInput.of("password", "mismatch", AuthMessages.CREDENTIALS_WRONG));
+        }
+        limits.succeeded(LimitedAction.PASSWORD_VERIFY, who);
+        flow.remove(FlowStore.PASSKEY_REQUEST);
+        flow.remove(FlowStore.SIGN_IN_CODE);
+        if (waiting.isPresent()) {
+            flow.remove(FlowStore.SIGN_IN);
+            var sent = signUps.resendFor(waiting.get());
+            return new PasswordOutcome.ConfirmEmail(sent.email(), sent.resendAfterSeconds());
+        }
+        var factors = secondFactorsOf(Objects.requireNonNull(userId));
+        if (factors.isEmpty()) {
+            flow.remove(FlowStore.SIGN_IN);
+            return new PasswordOutcome.Enrol(succeed(account.get(), Factor.PASSWORD, client, false));
+        }
+        flow.put(FlowStore.SIGN_IN, new SignInAttempt(id, userId, 0, true));
+        return new PasswordOutcome.SecondFactor(id, factors);
+    }
+
+    /** The second factors the account has set up: passkey and/or authenticator, then backup codes when any are left. */
+    List<Factor> secondFactorsOf(String userId) {
+        var passkey = !security.passkeys(userId).isEmpty();
+        var authenticator = security.authenticatorSince(userId) != null;
+        if (!passkey && !authenticator) {
+            return List.of(); // backup codes alone are no way in: they recover a factor
+        }
+        var factors = new ArrayList<Factor>(3);
+        if (passkey) {
+            factors.add(Factor.PASSKEY);
+        }
+        if (authenticator) {
+            factors.add(Factor.TOTP);
+        }
+        if (security.backupCodes(userId).remaining() > 0) {
+            factors.add(Factor.BACKUP_CODE);
+        }
+        return List.copyOf(factors);
+    }
 
     public SignInAttempt start(String identifier) {
         var id = identifier.trim();
@@ -101,7 +196,7 @@ public class SignInService {
                     failure(attempt, userId, Factor.PASSKEY, passkeyMismatch(), client));
         }
         limits.succeeded(LimitedAction.PASSKEY_ASSERTION, who);
-        return succeed(account.get(), Factor.PASSKEY, client);
+        return succeed(account.get(), Factor.PASSKEY, client, attempt != null && attempt.passwordVerified());
     }
 
     @Transactional
@@ -117,7 +212,10 @@ public class SignInService {
         var verified = Totp.verify(checked.secret(), code.trim(), clock.instant(), checked.lastUsedStep());
         var step =
                 stored.isPresent() && verified.isPresent() ? Optional.of(verified.getAsLong()) : Optional.<Long>empty();
-        if (userId == null || step.isEmpty() || !factors.markTotpUsed(userId, step.get())) {
+        if (userId == null
+                || step.isEmpty()
+                || passwordMissing(attempt, userId)
+                || !factors.markTotpUsed(userId, step.get())) {
             throw limits.failed(
                     LimitedAction.TOTP_VERIFY,
                     who,
@@ -129,7 +227,7 @@ public class SignInService {
                             client));
         }
         limits.succeeded(LimitedAction.TOTP_VERIFY, who);
-        return succeed(accounts.findById(userId).orElseThrow(), Factor.TOTP, client);
+        return succeed(accounts.findById(userId).orElseThrow(), Factor.TOTP, client, attempt.passwordVerified());
     }
 
     @Transactional
@@ -139,9 +237,10 @@ public class SignInService {
         limits.guard(LimitedAction.BACKUP_CODE_VERIFY, who);
         var userId = attempt.userId();
         // S-20: the same query for an unknown account (it matches nothing), so timing doesn't reveal the account.
-        var consumed = factors.consumeBackupCode(
-                userId == null ? NO_ACCOUNT : userId, BackupCodes.hash(code), clock.instant());
-        if (userId == null || !consumed) {
+        // S-154: an account with a password needs it first (identifier-first can't skip it); nothing is used up then.
+        var subject = userId != null && !passwordMissing(attempt, userId) ? userId : NO_ACCOUNT;
+        var consumed = factors.consumeBackupCode(subject, BackupCodes.hash(code), clock.instant());
+        if (userId == null || NO_ACCOUNT.equals(subject) || !consumed) {
             throw limits.failed(
                     LimitedAction.BACKUP_CODE_VERIFY,
                     who,
@@ -153,7 +252,7 @@ public class SignInService {
                             client));
         }
         limits.succeeded(LimitedAction.BACKUP_CODE_VERIFY, who);
-        return succeed(accounts.findById(userId).orElseThrow(), Factor.BACKUP_CODE, client);
+        return succeed(accounts.findById(userId).orElseThrow(), Factor.BACKUP_CODE, client, attempt.passwordVerified());
     }
 
     private Optional<UserAccount> lookup(String identifier) {
@@ -191,14 +290,22 @@ public class SignInService {
         return next.locked() ? new FlowRejected(Reason.LOCKED, AuthMessages.TOO_MANY_ATTEMPTS) : error;
     }
 
-    private SignedIn succeed(UserAccount account, Factor factor, Client client) {
+    /**
+     * S-154: identifier-first sign-in (kept for the apps that still use it) can't skip a password the account has: the
+     * authenticator and backup code then count only after the password in the same attempt. Passkeys may come first.
+     */
+    private boolean passwordMissing(SignInAttempt attempt, String userId) {
+        return !attempt.passwordVerified() && passwords.hashOf(userId).isPresent();
+    }
+
+    private SignedIn succeed(UserAccount account, Factor factor, Client client, boolean withPassword) {
         if (account.erased()) {
             throw new FlowRejected(Reason.UNAUTHENTICATED, AuthMessages.ACCOUNT_DELETED);
         }
         flow.remove(FlowStore.SIGN_IN);
         var sessionId = signIns.succeeded(account.id(), factor.code(), factor.isSecondFactor(), client);
         federation.complete(account.id(), false); // S-18: "Continue with Google/Apple" waiting for this factor
-        return new SignedIn(account, factor, sessionId);
+        return new SignedIn(account, factor, sessionId, withPassword);
     }
 
     /** The account as typed on the form (unknown accounts count the same); nobody for a passkey without a form. */

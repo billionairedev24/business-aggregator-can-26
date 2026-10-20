@@ -18,6 +18,7 @@ import { cardPaymentsFor } from '../shop/payments';
 import { StepUpFailed, stepUpWithCode } from '../shop/stepUp';
 import { Body, Button, Field, Notice, Tag, Title, type } from '../ui/primitives';
 import { Screen } from '../ui/screen';
+import { useOpenThread } from '../messages/Messages';
 import { LoadingList, QueryView, SignInPrompt, errorMessage } from '../ui/states';
 import { KEYS, account, decimal, percent, worded } from './common';
 import { Heading } from './parts';
@@ -33,8 +34,9 @@ const KNOWN = ['quote_revised', 'quote_expired', 'slot_taken', 'quote_no_time'];
  * promise. "Accept · pay … to escrow": where the job is (the address goes to this provider only), then
  * `POST /me/quotes/{id}/accept` (Idempotency-Key kept for every retry; `X-Step-Up` when the api asks — the
  * authenticator code, as Journey B's payment), the card (Stripe's PaymentSheet through S-99's payments port, or the
- * api's stand-in) and `POST /me/quotes/{id}/accept/confirm` → the booking. "Decline" tells the provider. The design's
- * "Ask a question" needs consumer messaging the api doesn't have (MOBILE_PLAN § API gaps).
+ * api's stand-in) and `POST /me/quotes/{id}/accept/confirm` → the booking. "Decline" tells the provider. "Ask a
+ * question" (S-153) opens the request's thread with this provider; the late-cancellation terms and a deposit quote's
+ * balance (held automatically before the visit) are shown before accepting.
  */
 export function Quote() {
   const f = useShopFormat();
@@ -65,6 +67,7 @@ export function Quote() {
 function QuoteView({ page, f, title }: { page: QuotePage; f: Format; title: string }) {
   const { t, locale } = f;
   const qc = useQueryClient();
+  const askThread = useOpenThread();
   const { location } = useDeliveryLocation();
   const { quote: q, provider: p } = page;
   const state = q.expired ? 'expired' : q.state;
@@ -286,6 +289,10 @@ function QuoteView({ page, f, title }: { page: QuotePage; f: Format; title: stri
         <Tag label={open ? validity : worded(t, 'account.quote.state', state)} tone={tone} />
       </View>
       <Text style={type.small}>{meta}</Text>
+      {state !== 'declined' ? (
+        <Button label={t('hire.quote.ask')} tone="secondary" busy={askThread.isPending} onPress={() => askThread.mutate({ refType: 'quote', refId: q.requestId, merchantId: p.merchantId })} testID="quote-ask" />
+      ) : null}
+      {askThread.isError ? <Notice message={t('hire.messages.openError')} /> : null}
       {q.state === 'superseded' ? (
         <Button label={t('account.quote.seeNewest')} tone="ghost" onPress={() => router.replace(`/quotes/${encodeURIComponent(q.currentQuoteId)}` as never)} testID="quote-newest" />
       ) : null}
@@ -329,6 +336,19 @@ function QuoteView({ page, f, title }: { page: QuotePage; f: Format; title: stri
           <Text style={type.small}>{q.proposedAt ? `${f.date(q.proposedAt)} ${f.time(q.proposedAt)}` : t('account.quote.noTime')}</Text>
         </View>
       </View>
+
+      {page.cancellation || page.balance ? (
+        <View style={styles.term} testID="quote-terms">
+          {page.cancellation ? (
+            <Text style={type.small}>
+              {page.cancellation.windowHours === 0 || (page.cancellation.feeCents === 0 && page.cancellation.feeBps === 0)
+                ? t('hire.booking.freeAlways')
+                : t('hire.booking.terms', { hours: page.cancellation.windowHours, fee: page.cancellation.feeCents > 0 ? f.money(page.cancellation.feeCents) : percent(page.cancellation.feeBps, locale) })}
+            </Text>
+          ) : null}
+          {page.balance && page.balance.totalCents > 0 ? <Text style={type.small}>{t('hire.quote.balance', { amount: f.money(page.balance.totalCents), hours: page.balance.leadHours })}</Text> : null}
+        </View>
+      ) : null}
 
       <View style={styles.protected}>
         <Text style={[type.small, styles.protectedText]}>

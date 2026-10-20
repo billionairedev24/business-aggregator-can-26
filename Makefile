@@ -26,6 +26,23 @@ ROOT := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 MAKEFLAGS += --no-print-directory
 
 STACK := $(ROOT)/scripts/stack.sh
+
+# S-150: what you typed, read once, before anything below can shadow it. `byo_arg` and `services_arg` are recipe
+# prefixes (BYO="…" / SERVICES="…" for the scripts): a command-line `byo_arg=db,cache` used to replace one and run
+# "db,cache" as a command. Now BYO=…, byo=…, byo_arg=… and BYO_SERVICES=… are the same setting (the first one given
+# wins), as are SERVICES=…, services=… and services_arg=…; the helpers are `override`, so nothing can clobber them.
+# $(call given,NAMES,ORIGINS): the first of NAMES set with one of ORIGINS ("command line", "environment"), else empty.
+given = $(firstword $(foreach v,$(1),$(if $(filter $(2),$(origin $(v))),$(v))))
+override byo_from := $(call given,BYO byo byo_arg BYO_SERVICES,command line environment)
+override BYO_VALUE := $(if $(byo_from),$($(byo_from)))
+override services_from := $(call given,SERVICES services services_arg,command line environment)
+override services_cli := $(call given,SERVICES services services_arg,command line)
+override SERVICES_VALUE := $(if $(services_from),$($(services_from)))
+override byo_arg := $(if $(byo_from),BYO="$(BYO_VALUE)")
+override services_arg := $(if $(services_from),SERVICES="$(SERVICES_VALUE)")
+ifneq ($(services_from),)
+override SERVICES := $(SERVICES_VALUE)
+endif
 SERVICES ?= auth api bff studio
 # Compose profiles for up/down; empty = COMPOSE_PROFILES in .env (db). PROFILES=none starts no stand-in (your own Postgres).
 PROFILES ?=
@@ -88,14 +105,17 @@ up: standins-up ## Stand-ins (PROFILES) + migrate + seed, then SERVICES in the b
 	@if [ -z "$(SKIP_DB)" ]; then $(MAKE) db-migrate db-seed; fi
 	@if [ "$(OBS)" = 1 ]; then $(byo_arg) $(ROOT)/scripts/observability.sh up; fi
 	@$(STACK) up $(SERVICES)
+	@printf '\nSign-in codes: make creds\n'
 
-# Everything, with the services you run yourself (docs/runbooks/local.md § 6a): BYO_SERVICES in .env, or BYO=… once.
-byo_arg = $(if $(filter command line environment,$(origin BYO)),BYO="$(BYO)")
-services_arg = $(if $(filter command line environment,$(origin SERVICES)),SERVICES="$(SERVICES)")
+# Everything, with the services you run yourself (docs/runbooks/local.md § 6a): BYO_SERVICES in .env, or BYO=… once
+# (byo_arg / services_arg: the prefixes defined at the top, from BYO / byo / byo_arg / BYO_SERVICES and SERVICES / …).
+# this_make: the make binary for the script, named indirectly — a recipe line that says $(MAKE) runs even under
+# `make -n`, which made `make -n up-all` start the whole stack instead of printing what it would do.
+this_make = $(MAKE)
 
 .PHONY: up-all
 up-all: ## Every app + every stand-in you don't bring (BYO=db,cache,grafana) + observability and alerting; checks yours, migrates, prints every URL
-	@$(byo_arg) $(services_arg) $(if $(filter file,$(origin SPRING_PROFILE)),SPRING_PROFILE=) MAKE="$(MAKE)" $(ROOT)/scripts/local-all.sh up
+	@$(byo_arg) $(services_arg) $(if $(filter file,$(origin SPRING_PROFILE)),SPRING_PROFILE=) MAKE="$(this_make)" $(ROOT)/scripts/local-all.sh up
 
 .PHONY: up-all-check
 up-all-check: ## Only check your own Postgres (PostGIS, version), Valkey and Grafana, and the ports the stand-ins need
@@ -115,8 +135,8 @@ dev: run ## Alias of make run
 
 .PHONY: down
 down: ## Stop every app make started and the stand-ins (SERVICES=… stops only those apps; VOLUMES=1 deletes stand-in data)
-	@$(STACK) down $(if $(filter command line,$(origin SERVICES)),$(SERVICES))
-	@$(if $(filter command line,$(origin SERVICES)),,$(MAKE) standins-down)
+	@$(STACK) down $(if $(services_cli),$(SERVICES))
+	@$(if $(services_cli),,$(MAKE) standins-down)
 
 .PHONY: restart
 restart: ## Restart SERVICES
@@ -129,7 +149,7 @@ status: ## What runs, on which port, whether it answers, the useful URLs; then t
 
 .PHONY: logs
 logs: ## Follow the app logs (.run/logs; SERVICES=api for one); make standins-logs for the containers
-	@$(STACK) logs $(if $(filter command line,$(origin SERVICES)),$(SERVICES))
+	@$(STACK) logs $(if $(services_cli),$(SERVICES))
 
 # One-shot compose jobs (they exit when done, which up --wait reports as a failure): run to completion after the servers
 ONESHOT_JOBS := kafka-topics|storage-bucket
@@ -210,7 +230,8 @@ help: ## This list, and the common variables
 ##> SPRING_PROFILE  Spring profile(s) of the apps (default local)
 ##> SKIP_DB  1 = make up doesn't migrate or seed
 ##> OBS  1 = make up/run also start the observability stack and the apps export to it (S-111)
-##> BYO  up-all / obs-*: the stand-ins you run yourself, e.g. db,cache,grafana (default: BYO_SERVICES in .env)
+##> BYO  up-all / obs-*: the stand-ins you run yourself, e.g. db,cache,grafana (default: BYO_SERVICES in .env); byo=, byo_arg=, BYO_SERVICES= mean the same
+##> WHO  creds: one persona (ravi, amara, priya-n, … or part of a name or email)
 ##> GRAFANA_URL  obs-grafana-provision / up-all: your Grafana; GRAFANA_TOKEN (service account) or GRAFANA_USER + _PASSWORD
 ##> PROJECT TESTS  server-build/server-test: one Gradle project (api, auth, bff, worker), a test filter
 ##> DB_URL DB_USER DB_PASSWORD  database for db-* and the apps (default: server/.env, then localhost:5432/northline)
@@ -222,6 +243,7 @@ help: ## This list, and the common variables
 ##> ENV MARKET RECORD  go-live-check: environment, region market id, 1 = record the repository's results on the checklist (S-118)
 ##> ENV RESET ONLY  demo-data: local, dryrun (GCP), ovh-vps or ovh-mks; RESET=1 (live-demo leftovers) or all (every demo listing); ONLY=merchant keys (docs/runbooks/demo.md)
 ##> TARGET HOST  deploy: gcp-dryrun, ovh-vps or ovh-mks; ovh-*: ovh-vps (default) or ovh-mks; ovh-bootstrap: user@ip of the VPS
+##> TF_STATE_BUCKET MIGRATE  ovh-tf-init: the Object Storage bucket of the shared Terraform state (+ TF_STATE_ACCESS_KEY/TF_STATE_SECRET_KEY); MIGRATE=1 moves a local state there
 ##> SLOT N ALT_EN ALT_FR FOCAL PICKS COMMERCIAL GROUP LIMIT  photos-pick: the candidate to promote (or PICKS=file); photos-fetch: COMMERCIAL=1 also CC BY/BY-SA, GROUP=category|hero|…, LIMIT=n slots
 ##> STRICT  i18n-check: 1 = known gaps (legal texts, French awaiting a translator) fail too — before a French-first launch
 
@@ -235,6 +257,7 @@ include $(ROOT)/make/mobile-consumer.mk
 include $(ROOT)/make/mobile-release.mk
 include $(ROOT)/make/mobile-dev.mk
 include $(ROOT)/make/db.mk
+include $(ROOT)/make/creds.mk
 include $(ROOT)/make/kafka.mk
 include $(ROOT)/make/search.mk
 include $(ROOT)/make/docs.mk

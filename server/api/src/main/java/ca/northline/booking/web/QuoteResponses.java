@@ -67,5 +67,6 @@ final class QuoteResponses {
             Instant createdAt,
             @Nullable Instant respondBy,
             @Nullable Instant expiresAt,
-            @Nullable QuoteResponse quote) {}
+            @Nullable QuoteResponse quote,
+            List<String> photoIds) {}
 }

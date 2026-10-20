@@ -2,7 +2,7 @@ import { queryOptions } from '@tanstack/react-query';
 import { z } from 'zod';
 import { http } from '@northline/client';
 import type { Locale } from '@northline/ui';
-import { Confirmation } from '../booking/api';
+import { CancellationPolicy, Confirmation } from '../booking/api';
 
 /**
  * Quotes on the consumer side (S-56, module `hire`):
@@ -43,12 +43,16 @@ export const Comparison = z.object({
   requestId: z.string(), ref: z.string(), categorySlug: z.string().nullish(), title: z.string(), description: z.string().nullish(),
   area: z.string().nullish(), preferredAt: z.string().nullish(), createdAt: z.string(), respondBy: z.string().nullish(), expiresAt: z.string().nullish(),
   offers: z.array(Offer),
+  photos: z.array(z.object({ id: z.string(), fileName: z.string() })).optional(),
 });
 export type Comparison = z.infer<typeof Comparison>;
 
 export const QuotePage = z.object({
   quote: Quote, provider: ProviderSummary, title: z.string(), area: z.string().nullish(), bookingId: z.string().nullish(),
   others: z.array(z.object({ quoteId: z.string(), providerName: z.string(), totalCents: z.number(), state: z.string() })),
+  // S-153: the terms the booking will keep, and the balance held automatically before the event
+  cancellation: CancellationPolicy.optional(),
+  balance: z.object({ cents: z.number(), taxCents: z.number(), totalCents: z.number(), leadHours: z.number().int() }).optional(),
 });
 export type QuotePage = z.infer<typeof QuotePage>;
 
@@ -57,6 +61,7 @@ export const Requested = z.object({ requestId: z.string(), ref: z.string(), resp
 export const Acceptance = z.object({
   quoteId: z.string(), bookingId: z.string(), amountCents: z.number(), taxCents: z.number(), totalCents: z.number(), status: z.string(),
   paymentIntent: z.string().nullish(), clientSecret: z.string().nullish(), provider: z.enum(['stripe', 'fake']).catch('fake'), publishableKey: z.string().nullish(),
+  discountCents: z.number().optional(), pointsCents: z.number().optional(), promoCode: z.string().nullish(),
 });
 export type Acceptance = z.infer<typeof Acceptance>;
 
@@ -64,9 +69,28 @@ export interface QuoteAsk {
   category: string; providers: string[]; description: string;
   vehicle?: { year: string; make: string; model: string };
   eventDate?: string; guests?: number; budget?: string; note?: string; area?: string; preferredDate?: string;
+  /** S-153: the customer's photos (uploaded first, `/api/v1/me/photos`) */
+  photoIds?: string[];
 }
 
-export interface Visit { addressLine?: string; unit?: string; accessNote?: string; contactPhone?: string }
+export interface Visit {
+  addressLine?: string; unit?: string; accessNote?: string; contactPhone?: string;
+  /** S-153: a promo code and points off what is held now; one of the customer's saved cards */
+  promoCode?: string; usePoints?: boolean; paymentMethodId?: string;
+}
+
+/** S-153: the "Accept" step's price with a code and points (`POST /api/v1/me/quotes/{id}/price`; 422 on promoCode). */
+export const AcceptancePrice = z.object({
+  amountCents: z.number(), discountCents: z.number(), taxCents: z.number(), points: z.number(), pointsCents: z.number(),
+  pointsAvailable: z.number(), heldCents: z.number(), promoCode: z.string().nullish(),
+});
+export type AcceptancePrice = z.infer<typeof AcceptancePrice>;
+export const acceptancePriceQuery = (quoteId: string, body: { promoCode?: string; usePoints: boolean }) => queryOptions({
+  queryKey: ['quotes', 'price', quoteId, body],
+  queryFn: () => http(`/api/v1/me/quotes/${encodeURIComponent(quoteId)}/price`, { method: 'POST', body }, AcceptancePrice),
+  retry: false,
+  staleTime: 30_000,
+});
 
 export const comparisonQuery = (requestId: string, locale: Locale) => queryOptions({
   queryKey: ['quotes', 'request', requestId, locale],

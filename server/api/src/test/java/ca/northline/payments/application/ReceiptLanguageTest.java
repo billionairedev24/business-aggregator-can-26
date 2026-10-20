@@ -41,7 +41,8 @@ class ReceiptLanguageTest {
             Clock.fixed(java.time.Instant.parse("2026-10-02T12:00:00Z"), ZoneOffset.UTC),
             new PaymentMetrics(new SimpleMeterRegistry()),
             places,
-            regions);
+            regions,
+            mock(PaymentMethods.SavedCardStore.class));
 
     @AfterEach
     void reset() {

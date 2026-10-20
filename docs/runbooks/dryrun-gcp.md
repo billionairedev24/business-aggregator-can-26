@@ -33,7 +33,7 @@ Lean on purpose (target: at most ≈ $100 of credit for three weeks):
 | Region / zone | `northamerica-northeast1` (Montréal), zone `northamerica-northeast1-a` — Terraform variables `region`, `zone` (Canadian regions only); everything in that one zone | regional, multi-zone |
 | Kubernetes | GKE Standard, **one zonal cluster** (its management fee is covered by GKE's free tier), **one node pool** `general`: 2 × `e2-standard-4` **Spot** (`node_count`, `spot_nodes`), 30 GB pd-balanced boot disks, Workload Identity, Dataplane V2 | regional, HA pools |
 | Network | **no Cloud NAT**: the nodes are public (an ephemeral external IP each) and reach the internet (images, Let's Encrypt, Stripe) directly; no Private Service Access or PSC policy (no managed data stores) | private nodes behind Cloud NAT |
-| Spring profile | `dev` (`global.springProfiles`, chart environment `dryrun`): required variables checked, Kafka externalization on, no dev seed; local fakes where no third-party account exists (registries, calendar, POS, places, AI, emails logged); SMS codes are **withheld** under `dev` (S-112), so sign-ups need Twilio ([demo.md § 2](demo.md#2-before-the-first-run-on-the-dry-run)) | `prod` |
+| Spring profile | `dev` (`global.springProfiles`, chart environment `dryrun`): required variables checked, Kafka externalization on, no dev seed; local fakes where no third-party account exists (registries, calendar, POS, places, AI, emails logged); SMS codes are **withheld** under `dev` (S-112): sign-ups on the sites confirm an email instead (S-154; emails logged until a provider is set), phone-code sign-in and `make demo-data` need Twilio ([demo.md § 2](demo.md#2-before-the-first-run-on-the-dry-run)) | `prod` |
 | Replicas and JVMs | 1 of everything; memory limits sized so two nodes hold it all with room (the images give the heap 75 % of the limit, `-XX:MaxRAMPercentage=75`; `JAVA_TOOL_OPTIONS` adds serial GC, a smaller code cache and thread stacks, C1 only) | 2+ with HPAs |
 | PostgreSQL 17 + PostGIS | **in the cluster**: CloudNativePG, 1 instance, 10 GB pd-balanced, daily base backup + WAL to the GCS bucket `northline-dryrun-pg-backups` (7 days) | Cloud SQL |
 | Valkey | **in the cluster**: 1 pod, append-only file on 1 GB, password | Memorystore |
@@ -349,8 +349,11 @@ fake people and businesses:
    (owner identity, Connect onboarding: Stripe's documented test values) are listed for a person to open. The demo
    storyline, the accounts and the reset between demos are in [demo.md](demo.md).
 
-Phone codes: under `dev` the local SMS stand-in **withholds** them (S-112 — never in a log), so registering anyone,
-the first admin included, needs Twilio configured for northline-auth ([demo.md § 2](demo.md#2-before-the-first-run-on-the-dry-run)).
+Phone codes: under `dev` the local SMS stand-in **withholds** them (S-112 — never in a log). Registering on the sites
+(the first admin included) is email + password with an emailed code since S-154: with `EMAIL_PROVIDER=local` (the
+default here) the email's text, code included, is in the auth pod's log (`No SMTP server took the email`); set a
+provider ([email.md](email.md)) before anyone else signs up. Phone-code sign-in and `make demo-data` (it registers by
+phone) need Twilio configured for northline-auth ([demo.md § 2](demo.md#2-before-the-first-run-on-the-dry-run)).
 Emails appear in the api/worker logs until SendGrid is configured.
 
 ### 14. Smoke test

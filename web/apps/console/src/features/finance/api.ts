@@ -10,6 +10,11 @@ export const Finance = z.object({
   mix: z.object({ takeCents: z.number(), deliveryCents: z.number(), adjustmentsCents: z.number(), plusCents: z.number().nullish(), rewardsCents: z.number().nullish() }),
   tiers: z.array(z.object({ tier: z.enum(['registered', 'trusted', 'master']), sellers: z.number(), rateBps: z.number(), gmvShare: z.number().nullish() })),
   tax: z.object({ period: z.string(), platformFeeCents: z.number(), facilitatorCents: z.number(), nextFiling: z.string() }),
+  /** S-152: points liability, provider-funded rewards, points redeemed this week, Plus households, referrals waiting. */
+  loyalty: z.object({
+    pointsOutstanding: z.number(), pointsOutstandingCents: z.number(), pointHolders: z.number(), rewardsFundedCents: z.number(),
+    pointsRedeemedWeekCents: z.number(), plusMembers: z.number(), plusTrialing: z.number(), pendingReferrals: z.number(),
+  }).nullish(),
 });
 export type Finance = z.infer<typeof Finance>;
 

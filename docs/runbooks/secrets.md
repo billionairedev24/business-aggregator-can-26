@@ -67,8 +67,8 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | `stripe-secret-key`, `stripe-publishable-key` | api | staging, prod | Stripe dashboard ([stripe.md](stripe.md)) |
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | `stripe-webhook-secret`, `stripe-connect-webhook-secret` | api | staging, prod | the two webhook endpoints' signing secrets ([stripe.md](stripe.md)) |
 | `EMAIL_UNSUBSCRIBE_KEY` | `email-unsubscribe-key` | api | staging, prod | operator: `openssl rand -base64 32` ([email.md](email.md)) |
-| `EMAIL_API_KEY` | `email-api-key` | api | with `sendgrid` (or `azure` with an access key) | provider console |
-| `SMTP_PASSWORD` | `smtp-password` | api, worker | with `EMAIL_PROVIDER=smtp` | relay credentials |
+| `EMAIL_API_KEY` | `email-api-key` | api, auth (S-154) | with `sendgrid` (or `azure` with an access key) | provider console |
+| `SMTP_PASSWORD` | `smtp-password` | api, worker, auth (S-154) | with `EMAIL_PROVIDER=smtp` | relay credentials |
 | `GOOGLE_CLIENT_SECRET`, `APPLE_PRIVATE_KEY` | `google-client-secret`, `apple-private-key` | auth | staging, prod (S-18) | Google Cloud console / Apple Developer `.p8` key ([federation.md](federation.md)) |
 | `REGISTRY_CORPORATIONS_CANADA_KEY`, `REGISTRY_ALBERTA_KEY`, `REGISTRY_CALGARY_APP_TOKEN` | `registry-corporations-canada-key`, `registry-alberta-key`, `registry-calgary-app-token` | api | with `api` / `opencorporates` / optional for `socrata` (S-23) | GC API Store subscription / OpenCorporates account / data.calgary.ca developer settings ([registries.md](registries.md)) |
 | `OTEL_BACKEND_AUTH` | `otel-backend-auth` | otel-collector (S-111) | with an OTLP backend that needs credentials (`observability.collector.secretEnv`) | the backend's console, e.g. Grafana Cloud access policy token ([observability.md](observability.md#any-otlp-backend)) |
@@ -232,6 +232,17 @@ fill in the third-party keys, `make ovh-secrets TARGET=…`. OVHcloud-only keys 
 `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` (the uploads bucket's S3 user) and `KMS_LOCAL_KEY` (no key service: the
 api seals with this key, allowed under `dev` only). Rotation: edit the file, `make ovh-secrets`, then
 `kubectl -n northline-dryrun rollout restart deploy`.
+
+**From the `ovh` pipeline** (S-155, [ovh.md § Today](ovh.md#pipeline-secrets-and-variables)) the same script reads the
+keys from the GitHub Environment `ovh-vps` / `ovh-mks` (`OVH_SECRETS_SOURCE=env`) instead of the file. The generated
+keys need no secret there: the first deploy generates them and keeps them in `secret/northline-generated` in the
+namespace, which every later run reuses (never regenerated per run; masked in the log). Back it up after the first
+deploy; rotating one: set the new value as an environment secret (it wins over the stored one), `deploy`, then the
+rollout restart. Stripe is optional on these targets (the fake gateway and local identity fakes without it). Email (S-155b,
+[ovh.md § Email](ovh.md#email)): `SMTP_PASSWORD` goes into `northline-secrets` (api, auth and worker map it when
+`SMTP_USERNAME` is set); `SMTP_HOST`/`PORT`/`USERNAME`/`STARTTLS` and `EMAIL_FROM` are settings, not secrets; the demo
+inbox's password `MAILPIT_PASSWORD` becomes the basic-auth line of `northline-demo-mail-auth` (user `demo`), never an
+app variable.
 
 ## Local development and kind
 

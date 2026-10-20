@@ -41,8 +41,8 @@ class TopicCatalogueTest {
                 .contains(
                         "catalogue.listing.search-indexer.retry-0",
                         "catalogue.listing.search-indexer.retry-1",
-                        "catalogue.listing.search-indexer.retry-2")
-                .doesNotContain("catalogue.listing.search-indexer.retry-3");
+                        "payments.payout.notifications.retry-2")
+                .doesNotContain("catalogue.listing.search-indexer.retry-2", "payments.payout.notifications.retry-3");
         var retry = spec("food.menu.search-indexer.retry-0");
         assertThat(retry.partitions()).isEqualTo(spec("food.menu").partitions());
         assertThat(retry.configs()).containsEntry("retention.ms", "86400000");

@@ -1115,6 +1115,99 @@ No promo code with id %s	Aucun code promo avec l’identifiant %s	new
 No tip with id %s	Aucun pourboire avec l’identifiant %s	new
 No age session with id %s	Aucune session de vérification d’âge avec l’identifiant %s	new
 No licence with id %s	Aucun permis avec l’identifiant %s	new
+No loyalty rule with id %s	Aucune règle de points avec l’identifiant %s	new
 BC incorporation number is BC + 7 digits (e.g. BC0999999).	Le numéro de constitution de la C.-B. est BC + 7 chiffres (p. ex. BC0999999).	new
 BC registration number is FM + 7 digits (e.g. FM1016176).	Le numéro d'enregistrement de la C.-B. est FM + 7 chiffres (p. ex. FM1016176).	new
 The NEQ is 10 digits.	Le NEQ compte 10 chiffres.	new
+# S-151: cancellations, failed deliveries, returns, courier earnings
+Add a note for the reason “other”.	Ajoutez une note pour la raison « autre ».	new
+A shop has started packing this order, so it can't be cancelled now. You can return it after delivery.	Un commerce a commencé à emballer cette commande : elle ne peut plus être annulée. Vous pourrez la retourner après la livraison.	new
+The courier has picked this order up, so it can't be cancelled now.	Le livreur a récupéré cette commande : elle ne peut plus être annulée.	new
+This order was delivered: start a return instead.	Cette commande a été livrée : faites plutôt un retour.	new
+This order is already cancelled or refunded.	Cette commande est déjà annulée ou remboursée.	new
+Only shop orders can be cancelled here.	Seules les commandes de boutique peuvent être annulées ici.	new
+This shop has nothing left on the order to cancel.	Ce commerce n’a plus rien à annuler dans cette commande.	new
+Choose re-delivery or a refund.	Choisissez une nouvelle livraison ou un remboursement.	new
+This order's delivery hasn't failed.	La livraison de cette commande n’a pas échoué.	new
+You've already chosen what happens to this order.	Vous avez déjà choisi ce qu’il advient de cette commande.	new
+There's no delivery run to send it on right now. Choose a refund, or try later.	Aucune tournée n’est offerte pour l’instant. Choisissez un remboursement ou réessayez plus tard.	new
+Choose why you're returning it.	Choisissez pourquoi vous le retournez.	new
+Choose what you're returning.	Choisissez ce que vous retournez.	new
+Add a photo of the item.	Ajoutez une photo de l’article.	new
+You can return items once the order is delivered.	Vous pourrez retourner des articles une fois la commande livrée.	new
+The return window for this item has closed.	Le délai de retour de cet article est passé.	new
+This item can't be returned.	Cet article ne peut pas être retourné.	new
+This item is already being returned.	Cet article est déjà en cours de retour.	new
+Return items from one shop at a time.	Retournez les articles d’un seul commerce à la fois.	new
+Choose pickup or drop-off.	Choisissez la collecte ou le dépôt.	new
+Say why the return is declined.	Dites pourquoi le retour est refusé.	new
+This return can't change that way now.	Ce retour ne peut pas changer ainsi maintenant.	new
+Only a declined return can go to a Northline agent.	Seul un retour refusé peut être confié à un agent Northline.	new
+Tell the agent why the return should be accepted.	Dites à l’agent pourquoi le retour devrait être accepté.	new
+Photos can't be stored right now. Try again later.	Les photos ne peuvent pas être enregistrées pour l’instant. Réessayez plus tard.	new
+Choose why the order couldn't be handed over.	Choisissez pourquoi la commande n’a pas pu être remise.	new
+Take a photo at the door first.	Prenez d’abord une photo à la porte.	new
+Add a note saying what happened.	Ajoutez une note qui explique ce qui s’est passé.	new
+This stop was taken off your run.	Cet arrêt a été retiré de votre tournée.	new
+This run hasn't started: reassign the whole run.	Cette tournée n’a pas commencé : réattribuez la tournée au complet.	new
+Every order on this run is already picked up.	Toutes les commandes de cette tournée sont déjà récupérées.	new
+Set up your payout account first.	Configurez d’abord votre compte de versement.	new
+No return with id %s	Aucun retour avec l’identifiant %s	new
+Enter a password.	Entrez un mot de passe.	new
+Use at least 12 characters.	Utilisez au moins 12 caractères.	new
+Use at most 128 characters.	Utilisez au plus 128 caractères.	new
+This password is too common. Choose one that's harder to guess.	Ce mot de passe est trop courant. Choisissez-en un plus difficile à deviner.	new
+Your password can't be your email address.	Votre mot de passe ne peut pas être votre adresse courriel.	new
+The passwords don't match.	Les mots de passe ne correspondent pas.	new
+That email and password don't match. Check them and try again.	Ce courriel et ce mot de passe ne correspondent pas. Vérifiez-les et réessayez.	new
+That's not your current password.	Ce n’est pas votre mot de passe actuel.	new
+Enter your current password.	Entrez votre mot de passe actuel.	new
+Send studio, consumer or console as the app.	Envoyez studio, consumer ou console comme application.	new
+This account already has a second factor. Change it in Settings › Security.	Ce compte a déjà un deuxième facteur. Modifiez-le dans Paramètres › Sécurité.	new
+That link has expired or was already used. Ask for a new email.	Ce lien a expiré ou a déjà été utilisé. Demandez un nouveau courriel.	new
+Create the account again.	Recommencez la création du compte.	new
+Ask for a new email first.	Demandez d’abord un nouveau courriel.	new
+Wait %d s before sending another email.	Attendez %d s avant d’envoyer un autre courriel.	new
+# S-153: customer messages, photos on requests and bookings, saved cards, cancellation policies and late cancellations,
+# deposit balances.
+Write a message.	Écrivez un message.	new
+This provider wasn't asked for this quote.	Ce prestataire n’a pas reçu cette demande de devis.	new
+Choose a quote request or a booking.	Choisissez une demande de devis ou une réservation.	new
+Choose a photo to upload.	Choisissez une photo à téléverser.	new
+Add a photo (JPEG, PNG, HEIC or WebP).	Ajoutez une photo (JPEG, PNG, HEIC ou WebP).	new
+Photos can be up to 10 MB.	Les photos peuvent faire jusqu’à 10 Mo.	new
+Add up to 6 photos.	Ajoutez jusqu’à 6 photos.	new
+That photo is no longer available. Add it again.	Cette photo n’est plus disponible. Ajoutez-la de nouveau.	new
+Choose one of your saved cards.	Choisissez l’une de vos cartes enregistrées.	new
+Choose a window from 0 to %d hours.	Choisissez un délai de 0 à %d heures.	new
+Choose a fee from 0 to %d percent.	Choisissez des frais de 0 à %d pour cent.	new
+Choose a window and a fee.	Choisissez un délai et des frais.	new
+Only the customer can cancel this booking.	Seul le client peut annuler cette réservation.	new
+The job has started, so it can't be cancelled. Report a problem instead.	Les travaux ont commencé : la réservation ne peut plus être annulée. Signalez plutôt un problème.	new
+This booking's payment was already taken. Ask for a refund instead.	Le paiement de cette réservation a déjà été perçu. Demandez plutôt un remboursement.	new
+There is no balance to pay for this booking.	Il n’y a aucun solde à payer pour cette réservation.	new
+No payment with id %s	Aucun paiement avec l’identifiant %s	new
+Set a budget for the extra points.	Fixez un budget pour les points en prime.	new
+Choose a budget between $10 and $10,000.	Choisissez un budget entre 10 $ et 10 000 $.	new
+The budget can't be less than what the reward has already spent.	Le budget ne peut pas être inférieur à ce que la récompense a déjà dépensé.	new
+Choose at most 50 listings.	Choisissez au plus 50 annonces.	new
+Enter an invite code.	Entrez un code d’invitation.	new
+We don't know that invite code. Check it with the neighbour who sent it.	Nous ne connaissons pas ce code d’invitation. Vérifiez-le auprès du voisin qui vous l’a envoyé.	new
+That's your own invite code: share it with a neighbour instead.	C’est votre propre code d’invitation : partagez-le plutôt avec un voisin.	new
+Invite codes are for new neighbours: your account isn't new any more.	Les codes d’invitation sont pour les nouveaux voisins : votre compte n’est plus nouveau.	new
+Invite codes are for other households, not your own.	Les codes d’invitation sont pour les autres foyers, pas le vôtre.	new
+Too many tries. Try again in an hour.	Trop d’essais. Réessayez dans une heure.	new
+You've already used an invite code.	Vous avez déjà utilisé un code d’invitation.	new
+Your household doesn't have Northline Plus.	Votre foyer n’a pas Northline Plus.	new
+Only the person who pays for Plus can change it.	Seule la personne qui paie Plus peut le modifier.	new
+That's already your plan.	C’est déjà votre forfait.	new
+Points per dollar between 0 and 100.	Points par dollar entre 0 et 100.	new
+Choose which sales earn: goods, food or services.	Choisissez les ventes qui rapportent : produits, repas ou services.	new
+Points expire after 1 to 60 months, or never.	Les points expirent après 1 à 60 mois, ou jamais.	new
+Referral points between 0 and 100,000.	Points de parrainage entre 0 et 100 000.	new
+Rewarded referrals a month between 0 and 100.	Parrainages récompensés par mois entre 0 et 100.	new
+A first order of $0 or more.	Une première commande de 0 $ ou plus.	new
+Choose a province or market of the region model.	Choisissez une province ou un marché du modèle régional.	new
+The default rule can be changed, not removed.	La règle par défaut peut être modifiée, pas supprimée.	new
+Choose a member price between 1% and 50% off, or none.	Choisissez un prix membre de 1 % à 50 % de rabais, ou aucun.	new
+Add a card in Payment methods first: Plus renews on it.	Ajoutez d’abord une carte dans Modes de paiement : Plus se renouvelle avec elle.	new

@@ -3,6 +3,7 @@ import { aftercareFixtures, newAftercareState } from './aftercare';
 import { FIXTURE_TOTP, authFixtures, newAuthState, type AuthFixtureState } from './auth';
 import { lower, type FixtureArea, type FixtureContext, type FixtureRequest } from './context';
 import { geoFixtures } from './geo';
+import { hireFixtures, newHireState } from './hire';
 import { newServicesState, servicesFixtures } from './services';
 import { newShopState, shopFixtures } from './shop';
 
@@ -33,6 +34,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
   const shop = newShopState();
   const servicesState = newServicesState(now);
   const aftercare = newAftercareState();
+  const hire = newHireState(now());
   const account = newAccountState({
     shop,
     services: servicesState,
@@ -45,6 +47,8 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     accountFixtures(ctx, account),
     authFixtures(ctx, auth),
     geoFixtures(ctx, geo),
+    // S-153: threads, photos, cancelling — before the services area, which owns the rest of /me/bookings
+    hireFixtures(ctx, hire, servicesState),
     // before the shop's and services' own areas: reviews, tips (shop's /me/orders/…) are this one's
     aftercareFixtures(ctx, aftercare, shop, servicesState),
     shopFixtures(ctx, shop),
@@ -56,7 +60,9 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     const method = (init.method ?? 'GET').toUpperCase();
     const headers = lower(init.headers);
     let body: Record<string, unknown> = {};
-    if (typeof init.body === 'string' && init.body) {
+    if (init.body && typeof init.body === 'object' && ('getParts' in init.body || 'getAll' in init.body)) {
+      body = formFields(init.body as FormData);
+    } else if (typeof init.body === 'string' && init.body) {
       body = (headers['content-type'] ?? '').includes('x-www-form-urlencoded')
         ? Object.fromEntries(new URLSearchParams(init.body))
         : (JSON.parse(init.body) as Record<string, unknown>);
@@ -79,8 +85,22 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     account,
     services: servicesState,
     aftercare,
+    hire,
     calls,
   };
 }
 
 export type FixtureServer = ReturnType<typeof createFixtureServer>;
+
+/** A multipart body's fields (React Native's FormData lists its parts; the web's has entries): repeated names become arrays, a file `true`. */
+function formFields(form: FormData): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const add = (k: string, v: unknown) => {
+    const value = typeof v === 'string' ? v : true;
+    out[k] = k in out ? [...([] as unknown[]).concat(out[k]), value] : k === 'lineIds' ? [value] : value;
+  };
+  const rn = form as unknown as { getParts?: () => Array<{ fieldName: string; string?: string; uri?: string }> };
+  if (typeof rn.getParts === 'function') rn.getParts().forEach((p) => add(p.fieldName, p.string ?? (p.uri ? { uri: p.uri } : '')));
+  else (form as unknown as { forEach: (f: (v: unknown, k: string) => void) => void }).forEach((v, k) => add(k, v));
+  return out;
+}

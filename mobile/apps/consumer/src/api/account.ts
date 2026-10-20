@@ -66,6 +66,9 @@ export interface Quote {
 export interface QuoteProvider { merchantId: string; slug: string; name: string; tier: string; rating: number; reviewCount: number; onTimePct?: number | null; disputePct?: number | null; verifiedFacts: string[] }
 export interface QuotePage {
   quote: Quote; provider: QuoteProvider; title: string; area?: string | null; bookingId?: string | null;
+  /** S-153: the late-cancellation terms the booking will keep; a deposit quote's balance, held automatically before. */
+  cancellation?: { windowHours: number; feeBps: number; feeCents: number } | null;
+  balance?: { cents: number; taxCents: number; totalCents: number; leadHours: number } | null;
   others: Array<{ quoteId: string; providerName: string; totalCents: number; state: string }>;
 }
 /** Where the job happens — given to the chosen provider only when accepting (S-56). */
@@ -109,6 +112,35 @@ export interface Wallet {
   points: { balance: number; valueCents: number; weekly: number[] };
   plus?: { plan: 'monthly' | 'annual'; since?: string | null; renewsAt?: string | null; members: number } | null;
 }
+
+// ── loyalty (S-152): points, Invite a neighbour, Plus, rewards near you ─────────────────────────────────────────────
+/** A points ledger line: earn, reward, referral, redemption, redemption_return, refund_return, earn_reversal, … */
+export interface PointsActivity { id: string; type: string; points: number; note?: string | null; at: string; expiresAt?: string | null; fundedBy?: string | null }
+export interface MyPoints {
+  balance: number; valueCents: number; nextExpiryAt?: string | null; nextExpiryPoints: number;
+  pointsPerDollarSpent: number; redeemPointsPerDollar: number; expiryMonths?: number | null; plusMultiplierPct: number;
+  activity: PointsActivity[];
+}
+export interface Referral {
+  code: string; shareUrl: string; pointsEach: number; minOrderCents: number; pending: number; rewarded: number; pointsEarned: number;
+  claimed?: { code: string; state: 'pending' | 'rewarded' | 'refused'; claimedAt: string; reason?: string | null } | null;
+  canClaim: boolean;
+}
+export type PlusPlan = 'monthly' | 'annual';
+export interface Plus {
+  status: 'none' | 'incomplete' | 'trialing' | 'active' | 'past_due' | 'canceled';
+  plan?: PlusPlan | null; provider: 'local' | 'stripe'; since?: string | null; currentPeriodEnd?: string | null;
+  cancelAtPeriodEnd: boolean; payer: boolean; members: number; monthlyPriceCents: number; annualPriceCents: number;
+  trialDays: number; trialAvailable: boolean;
+  benefits: { member: boolean; serviceFeeWaived: boolean; memberPrices: boolean; pointsMultiplierPct: number };
+  /** The first payment needs the bank (3-D Secure): confirm it with Stripe's SDK. */
+  clientSecret?: string | null; publishableKey?: string | null;
+}
+export interface NearbyReward {
+  merchantId: string; businessName: string; type: string; slug?: string | null; multiplier: number; label?: string | null;
+  endsOn: string; distanceKm?: number | null;
+}
+
 export interface Card { id: string; brand: string; last4: string; expMonth: number; expYear: number; isDefault: boolean; addedAt?: string }
 export interface Cards { provider: 'stripe' | 'fake'; publishableKey?: string | null; items: Card[] }
 export interface CardSetup { setupIntentId: string; clientSecret?: string | null; provider: 'stripe' | 'fake'; publishableKey?: string | null }
@@ -231,8 +263,25 @@ export const accountApi = (api: ApiClient) => ({
   defaultAddress: async (addressId: string) => (await api.post<{ items: Address[] }>(`/me/addresses/${id(addressId)}/default`))?.items ?? [],
   removeAddress: async (addressId: string) => (await api.delete<{ items: Address[] }>(`/me/addresses/${id(addressId)}`))?.items ?? [],
   household: () => need(api.get<Household>('/me/household')),
-  startPlus: (plan: 'monthly' | 'annual') => need(api.post<Household>('/me/plus', { json: { plan } })),
-  cancelPlus: () => need(api.delete<Household>('/me/plus')),
+
+  points: (limit = 50) => need(api.get<MyPoints>(`/me/points?limit=${limit}`)),
+  referral: () => need(api.get<Referral>('/me/referral')),
+  claimReferral: (code: string) => need(api.post<Referral>('/me/referral/claim', { json: { code } })),
+  plus: () => need(api.get<Plus>('/me/plus')),
+  joinPlus: (plan: PlusPlan, key: string) => need(api.post<Plus>('/me/plus', { json: { plan }, idempotencyKey: key })),
+  changePlus: (plan: PlusPlan, key: string) => need(api.patch<Plus>('/me/plus', { json: { plan }, idempotencyKey: key })),
+  cancelPlus: () => need(api.delete<Plus>('/me/plus')),
+  resumePlus: () => need(api.post<Plus>('/me/plus/resume')),
+  /** Provider-funded rewards running near the place (public). */
+  rewardsNear: async (place: { city?: string | null; lat?: number | null; lng?: number | null }) => {
+    const q = new URLSearchParams({ limit: '6' });
+    if (place.city) q.set('city', place.city);
+    if (place.lat != null && place.lng != null) {
+      q.set('lat', String(place.lat));
+      q.set('lng', String(place.lng));
+    }
+    return (await api.get<{ items: NearbyReward[] }>(`/public/rewards?${q.toString()}`, { auth: 'optional' }))?.items ?? [];
+  },
 
   wallet: () => need(api.get<Wallet>('/me/wallet')),
   cards: () => need(api.get<Cards>('/me/payment-methods')),

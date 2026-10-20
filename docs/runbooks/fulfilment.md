@@ -66,6 +66,11 @@ The console part is also summarised in [CONSOLE_PLAN.md](../CONSOLE_PLAN.md) § 
 | `delivery.assigned` (`DeliveryAssigned`) | `fulfilment.run`, run id | a courier was given the run |
 | `delivery.picked_up` (`DeliveryPickedUp`) | `fulfilment.delivery`, order id | the courier collected the order from every shop |
 | `delivery.completed` (`DeliveryCompleted`, S-78) | `fulfilment.delivery`, order id | dropped off with proof `photo` / `signature` / `pin` |
+| `delivery.failed` (`DeliveryFailed`, S-151) | `fulfilment.delivery`, order id | the courier couldn't hand it over: `reason`, `attempt` |
+| `run.changed` (`RunChanged`) | `fulfilment.run`, run id | S-151 adds `cancelled` (no stops left), `stops_removed` (an order cancelled), `stops_moved` (a stuck run split) |
+| `order.cancelled` (`OrderCancelled`, S-151) | `orders.order`, order id | the whole order or one shop's lines: `by`, `reason` code, `whole`, line ids |
+| `order.delivery_failed` (`OrderDeliveryFailed`, S-151) | `orders.order`, order id | the customer is asked to choose by `decideBy` |
+| `return.updated` (`ReturnUpdated`, S-151) | `orders.return`, return id | requested, approved, declined, escalated, collected, received, refunded, withdrawn |
 
 All payloads are ids only. They never carry an address, a name or a photo.
 
@@ -92,14 +97,23 @@ All payloads are ids only. They never carry an address, a name or a photo.
 | `POST /api/v1/courier/stops/{id}/pickup` `{scanOk}` | the run; 409 `not_packed` |
 | `POST /api/v1/courier/stops/{id}/proof` multipart `kind=photo\|signature`, `file` | the run; 422 "Upload a JPG, PNG or WebP image under 5 MB." |
 | `POST /api/v1/courier/stops/{id}/dropoff` `{proof: photo\|signature\|pin, pin?}` | the run; 409 `not_picked_up` / `proof_missing`; 422 for a missing or wrong PIN |
+| `POST /api/v1/courier/stops/{id}/fail` `{reason: absent\|unsafe\|refused\|access\|other, note?}` (S-151) | after a `photo` proof upload: the run, with a `return` stop per shop; 409 `proof_missing` / `not_picked_up`; 422 for no reason, or `other` without a note |
+| `POST /api/v1/courier/stops/{id}/collect` (S-151) | a customer's return collected at their door: the run |
+| `POST /api/v1/courier/stops/{id}/returned` | the goods are back at the business (a refusal, a failed drop-off or a return) |
+| `GET /api/v1/courier/earnings` (S-151) | `{zone, today, week, runs[], balanceCents, payoutAccount, payouts[]}` |
+| `POST /api/v1/courier/payout-account/onboarding` `{returnUrl?}` (S-151) | `{url}`: Stripe's onboarding; the return URL is always `fulfilment.courier-payout-return` |
+
+A stop answered 409 `stop_removed` was taken off the run (its order was cancelled, or dispatch moved it).
 
 A stop has these fields:
 
-- `id, seq, kind: pickup|dropoff, state: pending|arrived|done, orderId, orderRef, eta, arrivedAt, doneAt`;
+- `id, seq, kind: pickup|dropoff|return|collect, state: pending|arrived|done, orderId, orderRef, eta, arrivedAt, doneAt`;
 - `place`, for a pickup: `{merchantId, name, address, lat, lng}`;
 - `dropoff`, for a drop-off: `{street, unit, city, postal, note, lat, lng}`;
 - `packed`, for a pickup;
-- `proofKind`.
+- `proofKind` (`failed` after a failed drop-off);
+- S-151: `failReason`, and `returnRef` on a `collect` or `return` stop of a customer's return. A `collect` stop's
+  address is in `dropoff`.
 
 ## Console API (S-81's orders monitor and delivery ops map)
 
@@ -123,6 +137,7 @@ Changes are written to the platform audit log (`developer.audit_log`, no busines
 | `POST /api/v1/console/fulfilment/plan` `{market?}` | `{runs, assigned}` |
 | `POST /api/v1/console/fulfilment/couriers/{courierId}/pause` `{reason}` | CourierSummary with `active: false`: no new run, automatic or by hand (S-81); the run they have stays theirs. Audited `fulfilment.courier_paused` with the reason |
 | `POST /api/v1/console/fulfilment/couriers/{courierId}/resume` | CourierSummary with `active: true`. Audited `fulfilment.courier_resumed` |
+| `POST /api/v1/console/fulfilment/runs/{runId}/move-remaining` `{courierId}` (S-151) | a stuck run: the orders not picked up yet move to another courier as a new part of the same window (RunSummary of the new run). 409 `run_not_started` (use assign) / `run_ended` / `nothing_to_move` / `courier_busy`. Audited `fulfilment.run_split` |
 
 `RunSummary` is:
 
@@ -141,6 +156,10 @@ Changes are written to the platform audit log (`developer.audit_log`, no busines
 | `address-retention` | 30d | when a delivered order's drop-off address is cleared |
 | `proof-dir` | `$TMPDIR/northline-proofs` | proofs under `local` / `test` |
 | `dispatch-interval` | PT1M | the planner job |
+| `courier-pay.per-run-cents`, `…per-pickup-cents`, `…per-dropoff-cents`, `…per-failed-cents`, `…per-collect-cents`, `…per-return-cents` | 400, 100, 300, 300, 300, 100 | S-151: the platform's courier pay model; regions override it (below) |
+| `return-join-within` | 24h | S-151: a return pickup rides on the market's planned pooled run starting this soon |
+| `return-direct-after` | 24h | S-151: a return pickup no pooled run took gets a run of its own after this long |
+| `courier-payout-return` | `${CONSUMER_ORIGIN}/courier/payouts` | S-151: where Stripe's onboarding sends a courier back (the courier app claims `/courier/*`) |
 
 Proof photos and signatures use the object storage of [object-storage.md](object-storage.md) (`STORAGE_PROVIDER`):
 prefix `fulfilment/proofs/<runId>/<stopId>-<kind>`. Outside `local`/`test` with `STORAGE_PROVIDER=local`, uploads
@@ -206,7 +225,8 @@ Money rules and the reasons are in [DECISIONS.md § Mobile gaps part 2](../DECIS
 - **Tips:** console order › Tips lists them (`GET /api/v1/console/orders/{orderId}/tips`); refund only when the order
   wasn't delivered, a tip was charged twice or the amount was wrong (`POST /api/v1/console/tips/{id}/refund` with
   `reason` `not_delivered` | `duplicate` | `amount_error`; FINANCE + refund). A refunded tip that was already allocated
-  is taken back from the courier's account. Couriers aren't paid out yet (S-89): tips accrue on their ledger account.
+  is taken back from the courier's account. Tips and run pay accrue on the courier's ledger account and are paid out
+  weekly (S-151, [Courier earnings and payouts](#courier-earnings-and-payouts-s-151)).
 - **Reviews:** a screened review (masked contact details or swearing) raises a `review_screened` flag in the trust
   queue; "Hide review" there or `POST /api/v1/console/trust/reviews/{id}/hide|show` (TRUST, second factor). Hidden
   reviews leave the business's rating at once and its search document on the worker's next sweep.
@@ -214,3 +234,87 @@ Money rules and the reasons are in [DECISIONS.md § Mobile gaps part 2](../DECIS
   `nl:visit-ping:*`, 5-minute TTL, no history). A customer seeing "isn't sharing" while the member says they are: the
   member's Studio tab must stay open (the browser shares every 5 s) and the job must be en route; a booking without a
   map point shows "sharing" without minutes.
+
+## Cancelling, failed deliveries and returns (S-151)
+
+Decisions and what is not done: [DECISIONS.md § S-151](../DECISIONS.md). Money moves through the payments module's
+refund queue (`OrderRefunds`): every refund is a `Refund` charged to the shop, with the ledger entries of a normal
+refund and the tax reversed at the tax provider (`taxes.refunded`, the `TaxGateway`).
+
+### Who may cancel, and until when (configuration)
+
+`northline.orders.after-sale` (defaults in `AfterSaleProperties`, no environment variable; relaxed binding gives
+`NORTHLINE_ORDERS_AFTERSALE_*` if an environment needs one):
+
+| property | default | meaning |
+|---|---|---|
+| `customer-cancel-until` | `packed` | the customer cancels until any shop packs (`packed` \| `picked_up` \| `delivered`) |
+| `seller-cancel-until` | `picked_up` | a shop cancels its own lines until the courier has them |
+| `staff-cancel-until` | `delivered` | Northline staff (console, support action) until delivery; after that it is a refund |
+| `failed-delivery-decide-within` | 48h | how long the customer has to choose after a missed delivery |
+| `failed-delivery-fee-cents` | 0 | kept from the delivery fee when the customer chooses a refund (or it is refunded automatically) |
+| `return-days` | 30 | the return window when the category sets none |
+| `job-interval` | PT1M | the job that refunds missed deliveries nobody chose for |
+
+Food orders are not cancelled here (409 `not_cancellable`; the kitchen flow owns them).
+
+**What a cancellation does:** the lines go `cancelled`; the escrow holds (products) are voided — or refunded when
+captured — per shop; the delivery fee hold is voided when the whole order is cancelled; stock goes back on sale
+(`restock`, default on for shops and staff); the order's stops leave their run (`RunChanged stops_removed`; a run with
+no stops left is `cancelled` and its courier freed); `order.cancelled` goes out (worker: push, SMS, email to the
+customer; Studio live events). Staff cancels are audited `orders.order_cancelled` (codes only; the note stays on the
+order).
+
+| call | answer |
+|---|---|
+| `POST /api/v1/me/orders/{id}/cancel` `{reason, note?}` | the order's tracking; 409 `too_late` / `order_closed` / `not_cancellable` |
+| `POST /api/v1/merchants/{m}/orders/{id}/cancel` `{reason, note?, restock?}` (OPERATE) | the shop's order; 409 `too_late` / `nothing_to_cancel` / `order_closed` |
+| `GET /api/v1/console/orders/{id}/after-sale` (orders screen) | `{orderId, state, cancellations[], deliveryFailure, returns[]}` |
+| `POST /api/v1/console/orders/{id}/cancel` `{reason, note?, restock?}` (orders screen + `support` action) | `{cancellationId, orderId, state, whole, lineIds}` |
+
+### Failed deliveries
+
+1. The courier takes a photo at the door (`/proof`, kind `photo`) and calls `/fail` with a reason. The drop-off stop is
+   `done` with proof `failed`; a `return` stop to each shop is added to the run; `delivery.failed` goes out.
+2. Orders moves the order to `delivery_failed` and asks the customer (`order.delivery_failed`: push, SMS, email). The
+   console's orders monitor lists these under **Delivery failed**.
+3. The customer chooses by `decideBy`: `POST /api/v1/me/orders/{id}/delivery-failure {choice: redeliver|refund}`.
+   - `redeliver`: the order is handed to dispatch again for the next run in its market (`attempts` counts).
+   - `refund`: like a cancellation by the customer, keeping `failed-delivery-fee-cents` of the delivery fee.
+4. Nobody chose by then: the job refunds it the same way (`by: system`).
+
+### Returns
+
+1. A delivered line in its window can be returned. The window is the category's
+   (`catalogue.category_return_windows`, days; 0 = not returnable, e.g. food and restricted items), else `return-days`.
+2. The customer sends one shop's lines, a reason and a photo (JPG / PNG / WebP up to 5 MB, object storage under
+   `orders/returns/`): `POST /api/v1/me/orders/{id}/returns` (multipart).
+3. The shop decides in Studio › Orders › Returns (`/api/v1/merchants/{m}/returns`, `…/{id}/photo`, `…/approve
+   {method: pickup|dropoff, restock?}`, `…/decline {reason}`, `…/received`):
+   - **pickup:** a `collect` stop at the customer's door and a `return` stop at the shop ride on the market's next
+     pooled run (within `return-join-within`), else a run of their own after `return-direct-after`;
+   - **dropoff:** the customer brings it; the shop marks it received.
+   - Received (or delivered back by the courier): the lines are refunded with their tax, restocked if asked.
+4. A declined return can go to a Northline agent: `POST /api/v1/me/returns/{id}/escalate {statement}` opens a dispute
+   in the disputes queue. `…/withdraw` withdraws it before the shop has the items.
+
+### Moving the rest of a stuck run
+
+Console › Delivery ops › Runs › **Move remaining stops** (dispatch action) on a run that is `loading` or `en_route`:
+the orders whose pickups aren't done move to a free courier on shift as a new part of the same window. What the first
+courier already carries stays with them. Audited `fulfilment.run_split`.
+
+## Courier earnings and payouts (S-151)
+
+- **Pay model (region configuration):** `region.regions.courier_pay` (jsonb) on a province or a market, keys
+  `perRunCents`, `perPickupCents` (each shop), `perDropoffCents`, `perFailedCents`, `perCollectCents`, `perReturnCents`.
+  The market's keys win over its province's, which win over `northline.fulfilment.courier-pay`. A finished run is paid
+  once (`fulfilment.courier_earnings`, with the model it was paid under) and posted to the ledger
+  (`courier_pay` → `courier:<userId>`, ref `courier_run`).
+- **Tips** (checkout or after delivery) are allocated to the courier who delivered and show on that run.
+- **Payouts:** a weekly job (`COURIER_PAYOUTS_CRON`, default Monday 06:41 in the platform zone) pays each courier's
+  balance of at least $1.00 through the payouts port: a transfer to their Stripe Connect account (Express, Canada,
+  transfers only, manual payouts) then a payout to its bank. Webhooks `payout.*` and `account.updated` settle them.
+  Under `local`/`test` the fake gateway enables the account when the onboarding link is asked for and pays the next
+  business morning. Details and what never ran against Stripe: [stripe.md § Courier payouts](stripe.md#13-courier-payouts-s-151).
+- **The courier app:** Profile › Earnings and payouts ([courier-app.md](courier-app.md)).

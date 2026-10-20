@@ -16,6 +16,7 @@ import { gtinProblem, parseMoney, useMessageT } from './validation';
 import { ValidationError } from '../../lib/http';
 import { ListingCopyButton } from '../writing/WritingHelp';
 import { FrenchTextPanel } from './FrenchTextPanel';
+import { MemberPriceField } from './MemberPrice';
 
 type Tab = Section | 'preview';
 const FULFILMENT: Fulfilment[] = ['pooled', 'install', 'pickup', 'ship'];
@@ -225,6 +226,7 @@ export function ProductEditor({ detail, portal, typePicker, type = 'product' }: 
                 <Checkbox checked={form.warranty} onChange={v => update({ warranty: v })} label={t('warranty')} />
               </div>
             </div>
+            {isBundle ? null : <MemberPriceField listingId={saved?.id} priceCents={parseMoney(form.price)} canEdit={perms.update} />}
             <DocumentsField listingId={saved?.id} canEdit={perms.update} />
             <Field label={t('keywords')} error={err('searchKeywords')}><TextInput value={form.searchKeywords} onChange={e => update({ searchKeywords: e.target.value })} onBlur={() => touch('searchKeywords')} /></Field>
           </>}
