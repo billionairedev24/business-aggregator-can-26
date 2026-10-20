@@ -136,9 +136,14 @@ export const storefrontStatsQuery = (merchantId: string) => queryOptions({
 });
 
 /** S-75: the provider-funded reward (`GET`, 204 = never set; `PUT` switches it on with its terms, or off). */
-export const Reward = z.object({ active: z.boolean(), multiplier: z.number(), label: z.string().nullish(), endsOn: z.string(), running: z.boolean() });
+export const Reward = z.object({
+  active: z.boolean(), multiplier: z.number(), label: z.string().nullish(), endsOn: z.string(), running: z.boolean(),
+  // S-152: what the extra points may cost in all, what they cost so far, whether the budget ran out, what it paid for
+  budgetCents: z.number().int().nullish(), spentCents: z.number().int().optional().default(0), exhausted: z.boolean().optional().default(false),
+  pointsCredited: z.number().int().optional().default(0), salesCredited: z.number().int().optional().default(0),
+});
 export type Reward = z.infer<typeof Reward>;
-export interface RewardInput { active: boolean; multiplier: 2 | 3; label: string | null; endsOn: string | null }
+export interface RewardInput { active: boolean; multiplier: 2 | 3; label: string | null; endsOn: string | null; budgetCents: number | null }
 const rewardKey = (merchantId: string) => ['merchant', merchantId, 'reward'] as const;
 export const rewardQuery = (merchantId: string) => queryOptions({
   queryKey: rewardKey(merchantId),
