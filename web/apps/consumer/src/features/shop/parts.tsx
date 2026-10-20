@@ -5,6 +5,7 @@ import { useZone } from '../location/regions';
 import type { ProductCard, Run, ShopCard } from './api';
 import { clock, runWhen, weekday } from './format';
 import { useShopT } from './messages';
+import { usePlusBadge } from '../loyalty/PlusBadge';
 
 /** Design 06 tier tags: Master = accent, Trusted = rosehip, Registered = neutral. */
 export const TIER_TONE: Record<string, TagTone> = { master: 'accent', trusted: 'accent-2', registered: 'neutral' };
@@ -48,7 +49,9 @@ export function ProductCardTile({ product, withMarket }: { product: ProductCard;
     : product.unit ? t('productMeta', { shop: product.shopName, unit: product.unit }) : product.shopName;
   // an age-restricted product says so on its card, before the checkout's ID check
   const age = product.age ? (product.age.minimumAge ? t('ageCard', { age: product.age.minimumAge }) : t('ageCardNoAge')) : null;
-  const meta = age ? <>{shops}<span className="nl-age-chip">{age}</span></> : shops;
+  // S-152: the shop's Plus member price, under the meta line
+  const plus = usePlusBadge(product.offerId, product.sellers > 1 ? null : product.priceCents);
+  const meta = <>{age ? <>{shops}<span className="nl-age-chip">{age}</span></> : shops}{plus ? <span className="nl-plus-chip">{plus}</span> : null}</>;
   return (
     <ProductTile href={withMarket(`/products/${product.productId}`)} name={product.name} imageUrl={product.imageUrl}
       fallback={<Scene slot={[categorySlot(product.categoryId)]} subject={product.name} crop="square" sizes="(min-width: 960px) 220px, 45vw" />}

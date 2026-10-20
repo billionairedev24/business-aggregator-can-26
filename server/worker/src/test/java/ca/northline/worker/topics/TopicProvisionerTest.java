@@ -77,7 +77,7 @@ class TopicProvisionerTest {
         assertThat(first.getStdout())
                 .contains("CREATE payments.payout (partitions 6, retention.ms 604800000)")
                 .contains("CREATE payments.payout.dlq (partitions 1, retention.ms 2592000000)")
-                .contains("CREATE food.menu.search-indexer.retry-2 (partitions 6, retention.ms 86400000)")
+                .contains("CREATE food.menu.search-indexer.retry-1 (partitions 6, retention.ms 86400000)")
                 .contains("DRIFT  identity.user retention.ms: 1000000, catalogue 604800000")
                 .contains(desired.size() + " topics in the catalogue: " + (desired.size() - 1)
                         + " created, 0 unchanged, 1 with drift");

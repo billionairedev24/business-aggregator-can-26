@@ -15,17 +15,20 @@ export const CartLine = z.object({
   name: z.string(), option: z.string().nullish(), unit: z.string().nullish(), imageUrl: z.string().nullish(),
   unitCents: z.number().int(), qty: z.number().int(), lineCents: z.number().int(), stock: z.number().int(),
   available: z.boolean(), handlingDays: z.number().int().nullish(),
+  // S-152: the shop's price, its Plus member price (null without one) and whether this buyer gets it
+  listUnitCents: z.number().int().optional(), memberUnitCents: z.number().int().nullish(), memberPrice: z.boolean().optional(),
 });
 export type CartLine = z.infer<typeof CartLine>;
 export const Cart = z.object({
   itemCount: z.number().int().nonnegative(), shopCount: z.number().int().optional().default(0), subtotalCents: z.number().int().optional().default(0),
   groups: z.array(z.object({ merchantId: z.string(), shopName: z.string(), items: z.array(CartLine) })).optional().default([]),
+  plusSavingsCents: z.number().int().optional().default(0),
 }).loose();
 export type Cart = z.infer<typeof Cart>;
 /** What the header needs (kept for S-45's contract). */
 export const CartSummary = Cart;
 export type CartSummary = Cart;
-const EMPTY: Cart = { itemCount: 0, shopCount: 0, subtotalCents: 0, groups: [] };
+const EMPTY: Cart = { itemCount: 0, shopCount: 0, subtotalCents: 0, groups: [], plusSavingsCents: 0 };
 
 export const cartQuery = queryOptions({
   queryKey: ['cart'],

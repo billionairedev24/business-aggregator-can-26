@@ -279,7 +279,7 @@ class FoodOrderingApiTest extends IntegrationTest {
     }
 
     /**
-     * Mobile gaps part 2: the kitchen's own code takes 10 % off the dishes (taxed after), points pay $10, the tip goes
+     * Mobile gaps part 2: the kitchen's own code takes 10 % off the dishes and points $10 (S-152: both before tax), the tip goes
      * with the order to the couriers' pool at hand-off and to the courier who delivers; every posting balances.
      */
     @Test
@@ -316,14 +316,14 @@ class FoodOrderingApiTest extends IntegrationTest {
                 .getContentAsString();
         String orderId = JsonPath.read(started, "$.orderId");
         int dishTax = (Integer) JsonPath.read(started, "$.totals.taxCents") - 30;
-        assertThat(dishTax).isEqualTo(171); // GST on the $34.20 left, not on $38
+        assertThat(dishTax).isEqualTo(121); // S-152: GST on the $24.20 left after the code and the points
         confirm(orderId, TestJwt.customerWithMfa(customer)).andExpect(status().isOk());
 
         var escrow = jdbc.sql("""
                         select amount_cents, discount_cents, discount_funded_by, points_cents, tip_cents
                           from payments.escrows where ref_type = 'food_order' and ref_id = ?""").params(orderId).query().singleRow();
         assertThat(escrow)
-                .containsEntry("amount_cents", 3420L)
+                .containsEntry("amount_cents", 2420L)
                 .containsEntry("discount_cents", 380L)
                 .containsEntry("discount_funded_by", "merchant")
                 .containsEntry("points_cents", 1000L)
@@ -374,7 +374,7 @@ class FoodOrderingApiTest extends IntegrationTest {
         assertThat(ledger.stream().mapToLong(e -> e.getValue()[0]).sum())
                 .isEqualTo(ledger.stream().mapToLong(e -> e.getValue()[1]).sum());
         assertThat(accounts.get("points_redeemed")[0]).isEqualTo(1000);
-        assertThat(accounts.get("stripe_balance")[0]).isEqualTo(3420 + 171 + 299 + 304 + 30 + 400 - 1000);
+        assertThat(accounts.get("stripe_balance")[0]).isEqualTo(2420 + 121 + 299 + 304 + 30 + 400);
         assertThat(accounts.get("courier:" + courier)[1]).isEqualTo(400);
         assertThat(accounts.get("courier_tips")[0]).isEqualTo(400);
         assertThat(accounts.get("courier_tips")[1]).isEqualTo(400);

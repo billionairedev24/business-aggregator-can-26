@@ -334,6 +334,15 @@ Premium processing unit (100 event hubs) (`TopicCatalogueTest`); `TopicProvision
 provisioner against Kafka 4 in Testcontainers; `modules/kafka/catalogue/tests` and the Azure env test check the
 Terraform derivation.
 
+**The 100-event-hub budget (S-152):** the catalogue holds **94** topics (6 to spare). To stay on one processing unit
+when S-152 (`loyalty.points`) and S-153 (`booking.quote_request`, `messaging.message`) together reached 101, consumer
+`search-indexer` went from three retry delays (10 s, 60 s, 5 min) to two (10 s, 5 min), freeing one retry topic for
+each of its 7 source topics. That's safe because its handler is idempotent re-indexing: it re-reads the scope from
+Postgres and writes versioned documents, so a retry repeats no side effect, and a record that still fails after 5 min
+goes to the `.dlq` for replay as before. New topics cost 2 each (`<topic>` + `.dlq`), plus one per retry delay of
+every consumer that reads them. Past 100, either trim another consumer's delays or move every Azure environment to 2
+processing units (cost) and raise the limit in `TopicCatalogueTest` and `modules/kafka/catalogue/tests`.
+
 Per cloud:
 
 | | who creates topics | credential | `kafkaTopics` (chart) | notes |

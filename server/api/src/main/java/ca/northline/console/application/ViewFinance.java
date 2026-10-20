@@ -15,8 +15,9 @@ public interface ViewFinance {
     Finance finance();
 
     /**
-     * @param plusCents Plus subscriptions: not recorded anywhere yet, always null
-     * @param rewardsCents provider-funded rewards (pass-through): not recorded yet, always null
+     * @param plusCents Plus subscriptions paid in the week, net of tax (S-152)
+     * @param rewardsCents provider-funded rewards (pass-through): what businesses paid for their rewards' points in the
+     *     week, net of refunds (S-152)
      */
     record Mix(
             long takeCents,
@@ -32,6 +33,24 @@ public interface ViewFinance {
             int rateBps,
             @Nullable Double gmvShare) {}
 
+    /**
+     * S-152 loyalty liabilities and Plus.
+     *
+     * @param pointsOutstanding points not yet spent or expired; {@code pointsOutstandingCents} what they would take off
+     *     at checkout (the liability)
+     * @param rewardsFundedCents what businesses paid for reward points, held by Northline (part of that liability)
+     * @param pointsRedeemedWeekCents what points took off sales this week (Northline's cost)
+     */
+    record Loyalty(
+            long pointsOutstanding,
+            long pointsOutstandingCents,
+            long pointHolders,
+            long rewardsFundedCents,
+            long pointsRedeemedWeekCents,
+            long plusMembers,
+            long plusTrialing,
+            long pendingReferrals) {}
+
     /** @param nextFiling the GST/HST return of the quarter is due the last day of the month after it */
     record Tax(String period, long platformFeeCents, long facilitatorCents, LocalDate nextFiling) {}
 
@@ -46,7 +65,8 @@ public interface ViewFinance {
             long revenueWeekCents,
             Mix mix,
             List<TierRow> tiers,
-            Tax tax) {
+            Tax tax,
+            Loyalty loyalty) {
 
         public Finance {
             tiers = List.copyOf(tiers);

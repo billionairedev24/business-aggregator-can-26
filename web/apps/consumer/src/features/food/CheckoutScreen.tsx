@@ -233,11 +233,11 @@ function Summary({ t, totals, loading, lines }: { t: T; totals?: Totals; loading
         <dl className="nl-rest-totals">
           <div><dt>{t('items')}</dt><dd>{money(totals.subtotalCents)}</dd></div>
           {totals.discountCents > 0 && <div><dt>{tp('discount', { code: totals.promoCode ?? '' })}</dt><dd>−{money(totals.discountCents)}</dd></div>}
+          {totals.pointsCents > 0 && <div><dt>{tp('pointsLine')}</dt><dd>−{money(totals.pointsCents)}</dd></div>}
           {totals.mode === 'delivery' && <div><dt>{t('delivery')}</dt><dd>{money(totals.deliveryFeeCents)}</dd></div>}
-          <div><dt>{t('serviceFee')}</dt><dd>{money(totals.serviceFeeCents)}</dd></div>
+          <div><dt>{t('serviceFee')}</dt><dd>{totals.plusServiceFee ? tp('plusFee') : money(totals.serviceFeeCents)}</dd></div>
           {totals.mode === 'delivery' && <div><dt>{t('tip')}</dt><dd>{money(totals.tipCents)}</dd></div>}
           <div><dt>{t('tax')}</dt><dd>{money(totals.taxCents)}</dd></div>
-          {totals.pointsCents > 0 && <div><dt>{tp('pointsLine')}</dt><dd>−{money(totals.pointsCents)}</dd></div>}
           <div className="nl-rest-total"><dt>{t('total')}</dt><dd>{money(totals.totalCents)}</dd></div>
         </dl>
       ) : null}

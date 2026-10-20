@@ -1,7 +1,7 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { http } from '@northline/client';
-import { accountSummaryQuery, walletQuery } from './api';
+import { accountSummaryQuery } from './api';
 
 /**
  * The account's settings (S-59) — all under `/api/v1/me`, personal, loaded in the browser. Every change refreshes the
@@ -121,10 +121,7 @@ export const useDefaultAddress = () => useAccountMutation(async (id: string) =>
 export const useRemoveAddress = () => useAccountMutation(async (id: string) =>
   (await http(`/api/v1/me/addresses/${encodeURIComponent(id)}`, { method: 'DELETE' }, Addresses)).items, { set: addressesQuery.queryKey });
 
-export const useStartPlus = () => useAccountMutation((plan: 'monthly' | 'annual') => http('/api/v1/me/plus', { method: 'POST', body: { plan } }, Household),
-  { set: householdQuery.queryKey, refresh: [walletQuery.queryKey] });
-export const useCancelPlus = () => useAccountMutation(() => http('/api/v1/me/plus', { method: 'DELETE' }, Household),
-  { set: householdQuery.queryKey, refresh: [walletQuery.queryKey] });
+// Joining, changing and cancelling Plus: features/loyalty/api.ts (S-152).
 
 export const startSetup = () => http('/api/v1/me/payment-methods/setup-intents', { method: 'POST' }, Setup);
 export const useConfirmCard = () => useAccountMutation((setupIntentId: string) => http('/api/v1/me/payment-methods', { method: 'POST', body: { setupIntentId } }, Cards), { set: cardsQuery.queryKey });

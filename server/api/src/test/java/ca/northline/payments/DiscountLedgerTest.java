@@ -28,7 +28,8 @@ import org.springframework.test.context.event.RecordApplicationEvents;
  * Mobile gaps part 2, money: who funds a promo code and what points pay, through the whole escrow life — hold, capture,
  * release, transfer, refunds — with every posting balanced. Northline-funded codes top the merchant up from
  * {@code promotions} at release (the merchant gets the full price less the fee on it); merchant-funded codes show in the
- * merchant's own account; points are Northline's money ({@code points_redeemed}) and go back to the wallet with refunds.
+ * merchant's own account; points (S-152: a discount before tax) are Northline's top-up ({@code points_redeemed}) at
+ * release and go back to the wallet with refunds.
  */
 @Import(PaymentsFixture.class)
 @RecordApplicationEvents
@@ -151,31 +152,53 @@ class DiscountLedgerTest extends IntegrationTest {
     }
 
     @Test
-    void pointsPayPartOfTheCard_andAFullRefundGivesThemBack() {
+    void pointsComeOffBeforeTax_northlineTopsTheMerchantUp_andAFullRefundGivesThemBack() {
         var shop = fx.shop("provider", "master");
-        // $100 + $5 GST, $30 paid with points: the card is charged $75
-        var h = hold(shop.merchantId(), 10_000, new EscrowLifecycle.Discount(0, null, 3_000));
-        escrows.fulfilled("booking", h.refId(), Instant.now());
-        var captured = postings(h.escrowId());
-        balanced(captured);
-        assertThat(captured.get("stripe_balance")[0]).isEqualTo(7_500);
-        assertThat(captured.get("points_redeemed")[0]).isEqualTo(3_000);
-        assertThat(captured.get("tax_payable")[1]).isEqualTo(500); // tax on the full $100: points pay like money
+        // S-152: $100 with $30 of points off before tax: the card pays $70 + 5 % GST on $70
+        var h = hold(shop.merchantId(), 7_000, new EscrowLifecycle.Discount(0, null, 3_000));
+        var fee = jdbc.sql("select fee_cents from payments.escrows where id = ?")
+                .params(h.escrowId())
+                .query(Long.class)
+                .single();
+        assertThat(fee).as("the take rate is on the full $100").isEqualTo(900);
+        escrows.confirmed("booking", h.refId(), Instant.now());
+        var released = postings(h.escrowId());
+        balanced(released);
+        assertThat(released.get("stripe_balance")[0]).isEqualTo(7_350);
+        assertThat(released.get("tax_payable")[1]).isEqualTo(350); // tax on the price after the points
+        assertThat(released.get("points_redeemed")[0]).isEqualTo(3_000); // Northline's top-up at release
+        assertThat(fx.balance(shop.merchantId())).isEqualTo(9_100); // $100 − 9 %, as without the points
+        assertThat(transferred(h.escrowId())).isEqualTo(9_100);
 
-        var refund = cases.requestReview(h.escrowId(), h.customerId(), 10_000, "Didn't show up");
+        var refund = cases.requestReview(h.escrowId(), h.customerId(), 7_000, "Didn't show up");
         decisions.decideRefund(refund, true, "agent-" + Ids.next());
         jobs.payRefundQueue();
 
         var after = postings(h.escrowId());
         balanced(after);
-        assertThat(after.get("stripe_balance")[1]).isEqualTo(7_500); // the card gets back what it paid
-        assertThat(after.get("points_redeemed")[1]).isEqualTo(3_000); // the points go back to the wallet
-        assertThat(after.get("tax_payable")[0]).isEqualTo(500);
+        assertThat(after.get("stripe_balance")[1]).isEqualTo(7_350); // the card gets back what it paid
+        assertThat(after.get("points_redeemed")[1]).isEqualTo(3_000); // the top-up comes back from the merchant
+        assertThat(after.get("tax_payable")[0]).isEqualTo(350);
         assertThat(events.stream(PointsReturned.class))
                 .anyMatch(e -> e.aggregateId().equals(refund)
                         && e.cents() == 3_000
                         && e.customerId().equals(h.customerId())
                         && e.escrowRefId().equals(h.refId()));
+    }
+
+    @Test
+    void aRefundBeforeTheRelease_givesThePointsBackToTheWallet_withoutLedgerPostings() {
+        var shop = fx.shop("provider", "master");
+        var h = hold(shop.merchantId(), 7_000, new EscrowLifecycle.Discount(0, null, 3_000));
+        escrows.fulfilled("booking", h.refId(), Instant.now());
+        var refund = cases.requestReview(h.escrowId(), h.customerId(), 7_000, "Didn't show up");
+        decisions.decideRefund(refund, true, "agent-" + Ids.next());
+        jobs.payRefundQueue();
+        var p = postings(h.escrowId());
+        balanced(p);
+        assertThat(p).doesNotContainKey("points_redeemed"); // never topped up, nothing to take back
+        assertThat(events.stream(PointsReturned.class))
+                .anyMatch(e -> e.aggregateId().equals(refund) && e.cents() == 3_000);
     }
 
     @Test

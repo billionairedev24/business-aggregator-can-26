@@ -168,14 +168,15 @@ describe('Orders & bookings (redesign § 2.1, AT Shop:688)', () => {
 });
 
 describe('Your account (redesign § 2.1, AT Shop:596)', () => {
-  it('opens on the card grid, not Wallet & points (§ 3.6)', async () => {
+  it('opens on the card grid, not Wallet & points (§ 3.6; S-152 adds points, Plus and invites)', async () => {
     account();
     expect(await screen.findByRole('heading', { level: 1, name: 'Your account' })).toBeInTheDocument();
     await expectNoAxeViolations(document.body);
     const cards = within(screen.getByRole('list', { name: 'Account sections' })).getAllByRole('link');
     expect(cards.map(c => c.getAttribute('href'))).toEqual([
       '/account/orders', '/account/orders?tab=bookings', '/account?tab=addresses', '/account?tab=payments', '/account?tab=security',
-      '/account?tab=notifications', '/account?tab=favourites', '/account?tab=profile', '/account?tab=help', '/sell',
+      '/account?tab=notifications', '/account?tab=favourites', '/account?tab=wallet', '/account?tab=plus', '/account?tab=invite',
+      '/account?tab=profile', '/account?tab=help', '/sell',
     ]);
     expect(cards[0]).toHaveTextContent('OrdersTrack, return or buy things again');
     expect(cards[6]).toHaveTextContent('Saved');
@@ -184,9 +185,9 @@ describe('Your account (redesign § 2.1, AT Shop:596)', () => {
   });
 
   it('opens the card grid for a section hidden for the demo', async () => {
-    account('/account?tab=wallet');
+    account('/account?tab=dietary');
     expect(await screen.findByRole('heading', { level: 1, name: 'Your account' })).toBeInTheDocument();
-    expect(screen.queryByText('1,240 pts')).toBeNull();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Dietary & accessibility' })).toBeNull();
   });
 
   it('opens a section under the Your account crumb', async () => {
@@ -214,7 +215,7 @@ describe('Account sections behind the full navigation (VITE_NL_FULL_NAV)', () =>
     expect(screen.getByText('1,240 pts')).toBeInTheDocument();
     expect(screen.getByText('= $12.40 off anything · Standard')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /^Points earned, last 8 weeks: 120 pts, 7 weeks ago,.*300 pts, this week$/ })).toBeInTheDocument();
-    expect(screen.getByText('Free pooled delivery, 2× points, priority windows · $7.99/mo per household')).toBeInTheDocument();
+    expect(screen.getByText('$0 service fee on food, member prices, 2× points · one membership per household')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Try free' })).toHaveAttribute('href', '/account?tab=plus');
   });
 

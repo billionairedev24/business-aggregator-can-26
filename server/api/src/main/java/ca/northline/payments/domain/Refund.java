@@ -83,8 +83,10 @@ public class Refund {
     private @Nullable String stripeRefund;
     private @Nullable String stripeTransferReversal;
     private long reversedCents;
-    // Mobile gaps part 2: the refunded share of what points paid (back to the wallet, not the card), and of a
-    // Northline-funded code's top-up (taken back from the merchant when the escrow had been released, so topped up).
+    // Mobile gaps part 2: the refunded share of what points took off (back to the wallet, on top of the card's money;
+    // S-152: points are a discount before tax) and of a Northline-funded code's top-up (both taken back from the
+    // merchant
+    // when the escrow had been released, so topped up).
     private final long pointsCents;
 
     private final long promoReturnCents;
@@ -184,11 +186,11 @@ public class Refund {
     }
 
     /**
-     * What goes back to the customer's card: the amount plus the tax on it, less the share points paid (that goes back
-     * to the wallet). A credit gives back no tax.
+     * What goes back to the customer's card: the amount plus the tax on it (the points' share goes back to the wallet
+     * as well). A credit gives back no tax.
      */
     public long cardCents() {
-        return amountCents + taxCents - pointsCents;
+        return amountCents + taxCents;
     }
 
     /** The share of the points an escrow's refund of {@code amountCents} gives back (all of them for the whole). */

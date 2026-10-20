@@ -348,12 +348,14 @@ function Checkout({ cart }: { cart: Cart }) {
           <dl className="co-totals">
             <Row label={c('items')} value={money(view.subtotalCents)} />
             <Row label={c('delivery')} value={option ? (option.feeCents === 0 ? c('free') : money(option.feeCents)) : '—'} />
+            {view.plusSavingsCents > 0 ? <Row label={tp('plusSavings')} value={`−${money(view.plusSavingsCents)}`} /> : null}
             {quote.data && quote.data.discountCents > 0 ? <Row label={tp('discount', { code: quote.data.promoCode ?? '' })} value={`−${money(quote.data.discountCents)}`} /> : null}
+            {/* S-152: points are a discount before tax, like the code */}
+            {quote.data && quote.data.pointsCents > 0 ? <Row label={tp('pointsLine')} value={`−${money(quote.data.pointsCents)}`} /> : null}
             {quote.data
               ? quote.data.taxes.map(tax => <Row key={`${tax.type}${tax.percent}`} label={taxLabel(c, tax.type, tax.percent, locale)} value={money(tax.cents)} />)
               : <Row label={c('taxPending')} value={quote.isFetching ? <Skeleton width={48} height={14} /> : <span className="co-muted">{c('taxLater')}</span>} />}
             {quote.data && quote.data.tipCents > 0 ? <Row label={tp('tip')} value={money(quote.data.tipCents)} /> : null}
-            {quote.data && quote.data.pointsCents > 0 ? <Row label={tp('pointsLine')} value={`−${money(quote.data.pointsCents)}`} /> : null}
           </dl>
           <div className="co-total"><span>{c('total')}</span><span className="co-total-amount">{started ? money(started.totalCents) : quote.data ? money(quote.data.totalCents) : '—'}</span></div>
           {error ? <Alert tone="error" role="alert">{error}</Alert> : null}

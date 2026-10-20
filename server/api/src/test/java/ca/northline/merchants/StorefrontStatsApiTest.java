@@ -196,7 +196,7 @@ class StorefrontStatsApiTest extends IntegrationTest {
             mvc.perform(get("/api/v1/public/merchants/{id}/reward", merchantId)).andExpect(status().isNoContent());
 
             putReward(owner, """
-                            {"active":true,"multiplier":2,"label":"  brake jobs ","endsOn":"%s"}""".formatted(until(10)))
+                            {"active":true,"budgetCents":2000,"multiplier":2,"label":"  brake jobs ","endsOn":"%s"}""".formatted(until(10)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.active").value(true))
                     .andExpect(jsonPath("$.running").value(true))
@@ -225,22 +225,31 @@ class StorefrontStatsApiTest extends IntegrationTest {
 
         @Test
         void theTermsAreValidated() throws Exception {
-            putReward(owner, "{\"active\":true,\"multiplier\":5,\"endsOn\":\"%s\"}".formatted(until(10)))
+            putReward(
+                            owner,
+                            "{\"active\":true,\"budgetCents\":2000,\"multiplier\":5,\"endsOn\":\"%s\"}"
+                                    .formatted(until(10)))
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].field").value("multiplier"))
                     .andExpect(jsonPath("$.errors[0].message").value("Choose 2× or 3× points."));
-            putReward(owner, "{\"active\":true,\"multiplier\":2,\"endsOn\":\"%s\"}".formatted(until(120)))
+            putReward(
+                            owner,
+                            "{\"active\":true,\"budgetCents\":2000,\"multiplier\":2,\"endsOn\":\"%s\"}"
+                                    .formatted(until(120)))
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].message").value("Pick an end date within the next 90 days."));
-            putReward(owner, "{\"active\":true,\"multiplier\":2,\"endsOn\":\"%s\"}".formatted(until(-3)))
+            putReward(
+                            owner,
+                            "{\"active\":true,\"budgetCents\":2000,\"multiplier\":2,\"endsOn\":\"%s\"}"
+                                    .formatted(until(-3)))
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].field").value("endsOn"));
-            putReward(owner, "{\"active\":true,\"multiplier\":3}")
+            putReward(owner, "{\"active\":true,\"budgetCents\":2000,\"multiplier\":3}")
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].message").value("Choose when the reward ends."));
             putReward(
                             owner,
-                            "{\"active\":true,\"multiplier\":3,\"label\":\"%s\",\"endsOn\":\"%s\"}"
+                            "{\"active\":true,\"budgetCents\":2000,\"multiplier\":3,\"label\":\"%s\",\"endsOn\":\"%s\"}"
                                     .formatted("x".repeat(61), until(10)))
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].message").value("At most 60 characters."));
@@ -253,9 +262,15 @@ class StorefrontStatsApiTest extends IntegrationTest {
         void onlyTheOwnerFundsIt_membersSeeIt() throws Exception {
             var tech = data.user("Tech");
             data.member(merchantId, tech, MerchantRole.TECHNICIAN);
-            putReward(tech, "{\"active\":true,\"multiplier\":2,\"endsOn\":\"%s\"}".formatted(until(10)))
+            putReward(
+                            tech,
+                            "{\"active\":true,\"budgetCents\":2000,\"multiplier\":2,\"endsOn\":\"%s\"}"
+                                    .formatted(until(10)))
                     .andExpect(status().isForbidden());
-            putReward(owner, "{\"active\":true,\"multiplier\":3,\"endsOn\":\"%s\"}".formatted(until(10)))
+            putReward(
+                            owner,
+                            "{\"active\":true,\"budgetCents\":2000,\"multiplier\":3,\"endsOn\":\"%s\"}"
+                                    .formatted(until(10)))
                     .andExpect(status().isOk());
             mvc.perform(get("/api/v1/merchants/{id}/reward", merchantId).with(TestJwt.member(tech)))
                     .andExpect(status().isOk())

@@ -45,7 +45,8 @@ public class Escrow {
     private final long platformTaxCents;
     private final long tipCents;
     // Mobile gaps part 2: a promo code's discount on this line (amountCents is already after it), who funds it
-    // ("northline" or "merchant", null without a code) and what points paid of amount + tax (Northline's money).
+    // ("northline" or "merchant", null without a code). S-152: what points took off the price before tax (amountCents
+    // is after them too); Northline tops the merchant up by it at release, like a Northline-funded code.
     private final long discountCents;
 
     private final @Nullable String discountFundedBy;
@@ -74,8 +75,10 @@ public class Escrow {
         var discount = hold.discount();
         var code = discount == null ? 0 : discount.codeCents();
         var funder = discount == null || code == 0 ? null : discount.fundedBy();
-        // Northline-funded: the merchant's sale is the full price, so the take rate is on it too (as without the code)
-        var feeBase = hold.amountCents() + ("northline".equals(funder) ? code : 0);
+        // Northline-funded code and points: the merchant's sale is the full price, so the take rate is on it too (as
+        // without them)
+        var points = discount == null ? 0 : discount.pointsCents();
+        var feeBase = hold.amountCents() + ("northline".equals(funder) ? code : 0) + points;
         return Escrow.builder()
                 .id(Ids.next())
                 .paymentIntentId(paymentIntentId)
@@ -92,7 +95,7 @@ public class Escrow {
                 .tipCents(hold.platform() == null ? 0 : hold.platform().tipCents())
                 .discountCents(code)
                 .discountFundedBy(funder)
-                .pointsCents(discount == null ? 0 : discount.pointsCents())
+                .pointsCents(points)
                 .label(hold.label())
                 .orderNumber(hold.orderNumber())
                 .customerId(hold.customerId())
@@ -107,11 +110,11 @@ public class Escrow {
     }
 
     /**
-     * What the card is charged at capture: the merchant's amount, its tax and Northline's own charges, less what
-     * points paid.
+     * What the card is charged at capture: the merchant's amount (after a code and points), its tax and Northline's own
+     * charges.
      */
     public long capturedCents() {
-        return amountCents + taxCents + platformFeeCents + platformTaxCents + tipCents - pointsCents;
+        return amountCents + taxCents + platformFeeCents + platformTaxCents + tipCents;
     }
 
     /** The top-up Northline pays the merchant at release for a Northline-funded code (0 otherwise). */
@@ -124,9 +127,17 @@ public class Escrow {
         return "merchant".equals(discountFundedBy) ? discountCents : 0;
     }
 
-    /** The merchant's sale: what the customer's amount and a Northline-funded code together pay. */
+    /**
+     * S-152: the top-up Northline pays the merchant at release for the points the customer redeemed (ledger
+     * {@code points_redeemed}).
+     */
+    public long pointsTopUpCents() {
+        return pointsCents;
+    }
+
+    /** The merchant's sale: what the customer's amount, a Northline-funded code and the points together pay. */
     public long saleCents() {
-        return amountCents + northlineDiscountCents();
+        return amountCents + northlineDiscountCents() + pointsTopUpCents();
     }
 
     public long netCents() {
