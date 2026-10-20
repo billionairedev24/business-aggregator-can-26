@@ -8,7 +8,7 @@ postgres:
     provider: s3
     bucket: northline-ovh-vps-pg-backups
     retentionPolicy: 7d
-    s3: { endpointURL: "https://s3.bhs.io.cloud.ovh.net", credentialsSecret: northline-pg-backup-s3 }
+    s3: { endpointURL: "https://s3.us-east-va.io.cloud.ovh.us", credentialsSecret: northline-pg-backup-s3 }
 valkey: { enabled: true }
 meilisearch: { enabled: true }
 kafka: { enabled: true }

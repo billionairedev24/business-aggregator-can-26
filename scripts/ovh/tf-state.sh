@@ -3,7 +3,7 @@
 # so the pipeline (.github/workflows/ovh.yml) and a Mac share one state and no state ever sits in the repository, a
 # workflow artifact or a runner's disk after the job.
 #
-#   scripts/ovh/tf-state.sh ensure               create the state bucket once (idempotent; versioning on) — aws CLI
+#   scripts/ovh/tf-state.sh ensure [TARGET]      create the state bucket once (idempotent; versioning on) — aws CLI
 #   scripts/ovh/tf-state.sh init ovh-vps|ovh-mks terraform init of the target's root on that bucket
 #                                                (make ovh-tf-init TARGET=…)
 #
@@ -13,7 +13,9 @@
 #   TF_STATE_ACCESS_KEY, TF_STATE_SECRET_KEY   S3 keys of an Object Storage user (Public Cloud › Object Storage › Users,
 #                        role "ObjectStore operator"); or AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY already exported.
 #                        Every later terraform command of that shell needs them too (the backend reads the state).
-#   TF_STATE_ENDPOINT [https://s3.bhs.io.cloud.ovh.net], TF_STATE_REGION [bhs] — Beauharnois, with the rest.
+#   OVH_LOCATION [us-east-va]  the state bucket lives in the same location as the rest (S-160, locations.json):
+#                        TF_STATE_ENDPOINT and TF_STATE_REGION default to its S3 endpoint and region
+#                        (us-east-va: https://s3.us-east-va.io.cloud.ovh.us / us-east-va; ca-bhs: …bhs.io.cloud.ovh.net / bhs).
 #   MIGRATE=1            init -migrate-state: move an existing local state into the bucket once.
 #
 # The backend block is written at run time to <root>/backend_override.tf (git-ignored): without TF_STATE_BUCKET the
@@ -24,8 +26,11 @@ set -euo pipefail
 . "$(dirname "$0")/common.sh"
 
 cmd=${1:-}
-TF_STATE_ENDPOINT=${TF_STATE_ENDPOINT:-https://s3.bhs.io.cloud.ovh.net}
-TF_STATE_REGION=${TF_STATE_REGION:-bhs}
+# The location: OVH_LOCATION, else the target's .ovh/<target>.env (a Mac), else us-east-va.
+if [ -z "${OVH_LOCATION:-}" ] && [ -n "${2:-}" ]; then ovh_target "$2"; OVH_LOCATION=$(env_get OVH_LOCATION); fi
+ovh_location "${OVH_LOCATION:-}"
+TF_STATE_ENDPOINT=${TF_STATE_ENDPOINT:-$(loc_get s3_endpoint)}
+TF_STATE_REGION=${TF_STATE_REGION:-$(loc_get s3_region)}
 if [ -n "${TF_STATE_ACCESS_KEY:-}" ]; then export AWS_ACCESS_KEY_ID="$TF_STATE_ACCESS_KEY"; fi
 if [ -n "${TF_STATE_SECRET_KEY:-}" ]; then export AWS_SECRET_ACCESS_KEY="$TF_STATE_SECRET_KEY"; fi
 # Third-party S3: send checksums only when an operation requires them (newer AWS CLIs add them by default).
@@ -47,7 +52,7 @@ ensure() {
     "${s3[@]}" s3api create-bucket --bucket "$TF_STATE_BUCKET" \
       --create-bucket-configuration "LocationConstraint=$TF_STATE_REGION" >/dev/null \
       || die "could not create $TF_STATE_BUCKET (taken by someone else? pick another TF_STATE_BUCKET)"
-    echo "state bucket $TF_STATE_BUCKET created"
+    echo "state bucket $TF_STATE_BUCKET created in $OVH_LOCATION ($TF_STATE_ENDPOINT)"
   fi
   # Versioning: an earlier state can be restored after a bad apply (Object Storage › the bucket › versions).
   "${s3[@]}" s3api put-bucket-versioning --bucket "$TF_STATE_BUCKET" --versioning-configuration Status=Enabled >/dev/null \
@@ -86,7 +91,7 @@ EOF
 }
 
 case "$cmd" in
-  ensure) ensure ;;
+  ensure) ensure ;;   # [TARGET] only picks the location (above)
   init) init "${2:-}" ;;
-  *) die "usage: $0 ensure | init ovh-vps|ovh-mks" ;;
+  *) die "usage: $0 ensure [ovh-vps|ovh-mks] | init ovh-vps|ovh-mks" ;;
 esac

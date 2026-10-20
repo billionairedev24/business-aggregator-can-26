@@ -10185,3 +10185,57 @@ template | kubeconform, actionlint, bash 3.2, shellcheck, stubbed runs).
   (`smtp-relay.brevo.com`, SMTP login + SMTP key, confirmed sender), Gmail with an app password (`smtp.gmail.com`),
   OVHcloud email (MX Plan `ssl0.ovh.net`, Email Pro `pro1.mail.ovh.net`); port 587 + STARTTLS only (the SMTP adapter
   has no implicit TLS — 465 doesn't work). All three keep mail outside Canada: demo data only.
+
+## 2026-10-20 — S-160 OVHcloud in the United States for now (Vint Hill), Canada kept as an option
+
+Owner: "for ovh, I am in the US right now, lets deploy there for now". Runbook: [ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo),
+[§ Data residency](runbooks/ovh.md#data-residency), [§ Locations](runbooks/ovh.md#locations),
+[§ Canada later](runbooks/ovh.md#canada-later). **Nothing here has run against a real OVHcloud account, US or
+Canadian**: checked offline only (`terraform test` with the mocked provider for each location, `helm template |
+kubeconform` and the chart's refusals, actionlint, bash 3.2 parsing, shellcheck, stubbed runs of `ci.sh tfvars`,
+`tf-state.sh init` and `deploy.sh`'s pre-check). `gh-setup.sh` was only parsed and linted (it reads the terminal).
+
+- **Data residency — owner's decision, 2026-10-20: demo in the US for now.** The platform's rule stays Canadian data
+  residency for production. A US location is allowed for the **dry run only: fake demo data, the `dev` profile**.
+  **Real Canadian customer data must move to `ca-bhs` before launch**, and nothing real is entered in a US deployment
+  meanwhile. Enforced in the chart: new value `global.hostingCountry` (Terraform's `helm_values`: `US` / `CA`; empty =
+  not declared, as on the three clouds); any country other than `CA` refuses `global.environment` staging/prod and the
+  staging/prod Spring profiles. `scripts/ovh/deploy.sh` renders the chart with the same values first, so a refusal
+  stops the deploy before Secrets or `northline-data` are touched (new `OVH_EXTRA_VALUES` layers one more file, in the
+  check too).
+- **One location setting** — `infra/terraform/stacks/ovh/locations.json` (Terraform `jsondecode(file())`, scripts `jq`):
+  `us-east-va` (default), `us-west-or`, `ca-bhs` → country, site, API endpoint (`ovh-us` / `ovh-ca`), token page,
+  Public Cloud region, Object Storage region and S3 endpoint/region, Managed Databases region, VPS datacentre, and
+  what the region offers. Terraform: the roots' `ovh_endpoint` and `region` variables are **replaced** by
+  `ovh_location` (the provider's endpoint comes from it; the Canada-only validation and the `canadian_region_only`
+  tests are gone; a test per location + an unknown-location refusal in each root); the stack's `region` became
+  `location`; new output `location` in both roots. The default changed from Canada to `us-east-va` — acceptable
+  because nothing was ever applied (S-155 merged today); an old `terraform.tfvars` with `region = "BHS5"` gets an
+  undeclared-variable warning and must set `ovh_location = "ca-bhs"` to stay in Canada.
+- **Pipeline**: environment variable `OVH_LOCATION` (default `us-east-va`), **not** a workflow input — an environment's
+  credentials, project and state bucket belong to one OVHcloud account, so a per-run choice could only point them at
+  the wrong one. S-155's `OVH_ENDPOINT` variable is now only checked: one that contradicts the location stops
+  `ci.sh tfvars` (`gh-setup.sh` deletes it). `gh-setup.sh` asks the location first (current value as the default;
+  confirming a change), explains that US and Canada accounts are separate, prints that entity's token page with the
+  rights pre-filled. `tf-state.sh` puts the state bucket in the location (`ensure [TARGET]` reads it from
+  `.ovh/<target>.env` on a Mac). `ci.sh teardown` empties buckets with the location's S3 region (was `bhs`).
+  `secrets.sh init` writes `OVH_LOCATION=` into the file. The smoke test checks the api's `STORAGE_ENDPOINT` against
+  the location and shows the location in the summary.
+- **What was verified about the US regions** (search-engine excerpts of OVHcloud US/OVHcloud docs; the vendor sites
+  were unreachable from here): `ovh-us` → `https://api.us.ovhcloud.com/1.0` (in the provider binary); S3 region
+  `us-east-va`, endpoint `https://s3.us-east-va.io.cloud.ovh.us`, Hillsboro = `us-west-or`; MKS free plan (1-AZ) in
+  `US-EAST-VA-1` and `US-WEST-OR-1`; Managed Databases in all 1-AZ regions, `US-EAST-VA` used in OVHcloud US's
+  Terraform guide; VPS in Vint Hill and Hillsboro; the Edge Network Firewall guide on the US support site.
+  **Unverified**: the `us-west-or` S3 endpoint written out (pattern only), Object Storage `region_name`
+  `US-EAST-VA`/`US-WEST-OR` (by analogy with `BHS`), `US-WEST-OR` for databases, PostGIS on PostgreSQL 17 in the US,
+  the Network Firewall API on `ovh-us`, the US VPS service-name suffix, the VPS-4 spec and price (third-party
+  listings: 8 vCores / 24 GB / 200 GB, ≈ $27.50 a month, ≈ $23.37 with 12 months).
+- **Fallbacks per location** (flags in `locations.json`, all `true` today on that evidence): no Managed PostgreSQL →
+  `ovh-mks` puts Postgres in the cluster (output `postgres.fallback`); no Network Firewall → `ovh-vps` keeps ufw only
+  (output `location.edge_firewall_used`); no Managed Kubernetes → `ovh-mks` refuses to plan (use `ovh-vps`). Not
+  testable with the mocked provider without editing the file, so no test of the fallback paths.
+- **Canada later** is a new account and a fresh deployment (destroy the US one first — its state is in the US
+  bucket), with an optional `pg_dump` + bucket sync + the generated secrets carried over; the simplest move is
+  `make demo-data` again. Documented, not scripted.
+- **Not done**: no migration tool between the two OVHcloud entities; no Toronto or US Local Zones; no OVHcloud KMS
+  adapter (staging/prod on OVHcloud still impossible under `KMS_PROVIDER=local`, whatever the location).

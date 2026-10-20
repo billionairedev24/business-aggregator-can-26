@@ -1,10 +1,12 @@
 # Shape of `terraform output -json helm_values` of infra/terraform/envs/ovh/mks (Managed PostgreSQL, the rest in the cluster; dummy
-# values; deploy/helm/validate.sh only).
+# values; deploy/helm/validate.sh only). The default location us-east-va (S-160).
+global:
+  hostingCountry: US
 configEnv:
   STORAGE_PROVIDER: s3
   STORAGE_BUCKET: northline-ovh-mks-uploads
-  STORAGE_REGION: bhs
-  STORAGE_ENDPOINT: https://s3.bhs.io.cloud.ovh.net
+  STORAGE_REGION: us-east-va
+  STORAGE_ENDPOINT: https://s3.us-east-va.io.cloud.ovh.us
   STORAGE_PATH_STYLE: "true"
   STORAGE_ENCRYPTION_KEY: ""
   KMS_PROVIDER: local

@@ -1,5 +1,9 @@
 # S-155 — provision OVHcloud and deploy Northline there: the dry-run targets ovh-vps (k3s on one VPS) and ovh-mks
-# (Managed Kubernetes + Managed PostgreSQL), both in Beauharnois. Runbook: docs/runbooks/ovh.md § Today.
+# (Managed Kubernetes + Managed PostgreSQL), each in ONE location — the environment variable OVH_LOCATION (S-160):
+# us-east-va (Vint Hill, OVHcloud US; the default for now), us-west-or (Hillsboro, OVHcloud US) or ca-bhs (Beauharnois,
+# OVHcloud Canada). A US location is for fake demo data on the dev profile only: the chart refuses staging/prod there.
+# It is a variable of the target's environment, not an input: the environment's credentials, state bucket and project
+# belong to one OVHcloud account, hence one entity. Runbook: docs/runbooks/ovh.md § Today.
 #
 # MANUAL ONLY: Actions › ovh › Run workflow (or `gh workflow run ovh.yml -f target=ovh-vps -f action=plan`). Never add
 # push, pull_request or schedule triggers: every run spends money at OVHcloud and CI minutes are scarce.
@@ -118,7 +122,10 @@ jobs:
     permissions:
       contents: read
     env:
-      OVH_ENDPOINT: ${{ vars.OVH_ENDPOINT || 'ovh-ca' }}
+      # S-160: where (us-east-va — the default —, us-west-or: OVHcloud US, demo data only; ca-bhs: OVHcloud Canada). It
+      # decides the API endpoint, regions and S3 endpoint (infra/terraform/stacks/ovh/locations.json).
+      OVH_LOCATION: ${{ vars.OVH_LOCATION || 'us-east-va' }}
+      OVH_ENDPOINT: ${{ vars.OVH_ENDPOINT }} # S-155's setting, only checked against the location (scripts/ovh/ci.sh)
       OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
       OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
       OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
@@ -157,7 +164,7 @@ jobs:
       - name: Terraform variables
         run: scripts/ovh/ci.sh tfvars "$TARGET"
       - name: State bucket (created once)
-        run: scripts/ovh/tf-state.sh ensure
+        run: scripts/ovh/tf-state.sh ensure "$TARGET"
       - name: terraform init (S3 backend on Object Storage)
         run: scripts/ovh/tf-state.sh init "$TARGET"
       - name: Empty the cluster and the buckets (destroy)
@@ -221,7 +228,10 @@ jobs:
       contents: read
       packages: read # the fallback pull secret (the run's token) when REGISTRY_PULL_TOKEN is not set
     env:
-      OVH_ENDPOINT: ${{ vars.OVH_ENDPOINT || 'ovh-ca' }}
+      # S-160: where (us-east-va — the default —, us-west-or: OVHcloud US, demo data only; ca-bhs: OVHcloud Canada). It
+      # decides the API endpoint, regions and S3 endpoint (infra/terraform/stacks/ovh/locations.json).
+      OVH_LOCATION: ${{ vars.OVH_LOCATION || 'us-east-va' }}
+      OVH_ENDPOINT: ${{ vars.OVH_ENDPOINT }} # S-155's setting, only checked against the location (scripts/ovh/ci.sh)
       OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
       OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
       OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
@@ -327,7 +337,10 @@ jobs:
     permissions:
       contents: read
     env:
-      OVH_ENDPOINT: ${{ vars.OVH_ENDPOINT || 'ovh-ca' }}
+      # S-160: where (us-east-va — the default —, us-west-or: OVHcloud US, demo data only; ca-bhs: OVHcloud Canada). It
+      # decides the API endpoint, regions and S3 endpoint (infra/terraform/stacks/ovh/locations.json).
+      OVH_LOCATION: ${{ vars.OVH_LOCATION || 'us-east-va' }}
+      OVH_ENDPOINT: ${{ vars.OVH_ENDPOINT }} # S-155's setting, only checked against the location (scripts/ovh/ci.sh)
       OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
       OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
       OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}

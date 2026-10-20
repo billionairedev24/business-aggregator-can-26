@@ -18,6 +18,8 @@
 # OVH_DOMAIN [demo.northline.ca]: the zone of the public hosts (values-dryrun.yaml's urls) — another domain the operator
 # controls moves every host under it (OVH_DOMAIN itself is the consumer site, auth./api./studio./… below it).
 # OVH_SECRETS_SOURCE=env: every secret from environment variables (the pipeline, scripts/ovh/secrets.sh).
+# OVH_EXTRA_VALUES: one more values file layered last (and in the data-residency pre-check: a US location refuses
+# staging/prod values — S-160, docs/runbooks/ovh.md § Data residency).
 set -euo pipefail
 . "$(dirname "$0")/common.sh"
 ovh_target "${1:-}"
@@ -36,6 +38,19 @@ work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 tf_out helm_values >"$work/values.json"
 tf_out data_values >"$work/data.json"
 in_pg=$(tf_out in_cluster .postgres)
+
+# Where (S-160, Terraform's ovh_location) and Canadian data residency: outside Canada only the dev profile with fake
+# demo data. The chart refuses staging/prod there (global.hostingCountry); render it first with the same values so a
+# refusal stops the deploy before anything is installed.
+loc=$(tf_out location .name 2>/dev/null || true)
+country=$(jq -r '.global.hostingCountry // ""' "$work/values.json")
+echo "   location ${loc:-not in the state yet (terraform apply)}, country ${country:-not declared}"
+helm template northline "$H/northline" -n "$NS" -f "$H/northline/values-dryrun.yaml" -f "$H/northline/values-$OVH_TARGET.yaml" \
+  -f "$work/values.json" ${OVH_EXTRA_VALUES:+-f "$OVH_EXTRA_VALUES"} --set global.image.registry="$REGISTRY" --set global.image.tag="$IMAGE_TAG" >/dev/null \
+  || die "the northline chart refuses these values (above) — nothing was changed. Outside Canada (OVH_LOCATION=${loc:-?}) only the dev profile runs: docs/runbooks/ovh.md § Data residency"
+if [ -n "$country" ] && [ "$country" != CA ]; then
+  echo "   outside Canada ($country): fake demo data only — real customer data goes to ca-bhs (docs/runbooks/ovh.md § Data residency)"
+fi
 
 echo "== 1. secrets"
 "$(dirname "$0")/secrets.sh" apply "$OVH_TARGET"
@@ -144,6 +159,7 @@ if [ "$domain" != demo.northline.ca ]; then
 fi
 helm upgrade --install northline "$H/northline" -n "$NS" \
   -f "$H/northline/values-dryrun.yaml" -f "$H/northline/values-$OVH_TARGET.yaml" -f "$work/values.json" \
+  ${OVH_EXTRA_VALUES:+-f "$OVH_EXTRA_VALUES"} \
   --set global.image.registry="$REGISTRY" --set global.image.tag="$IMAGE_TAG" ${extra[@]+"${extra[@]}"} --wait --timeout 20m
 
 if [ "${RESTART:-0}" = 1 ]; then kubectl -n "$NS" rollout restart deployment -l app.kubernetes.io/part-of=northline; fi

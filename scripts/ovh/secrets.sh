@@ -74,6 +74,9 @@ init() {
   done
   {
     echo "# Northline $OVH_TARGET secrets (docs/runbooks/ovh.md § Secrets). KEY=value, taken literally; never commit."
+    echo "# Where (S-160): us-east-va (Vint Hill) or us-west-or (Hillsboro) on an OVHcloud US account — fake demo data on"
+    echo "# the dev profile only — or ca-bhs (Beauharnois) on an OVHcloud Canada account. Not an app secret."
+    echo "OVH_LOCATION=${OVH_LOCATION:-us-east-va}"
     echo "# Generated:"
     echo "TOTP_KEY=$(rand_b64)"
     echo "WEBHOOK_SECRET_KEY=$(rand_b64)"

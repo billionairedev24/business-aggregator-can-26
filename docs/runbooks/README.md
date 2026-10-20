@@ -14,7 +14,7 @@ say where a step is still manual or missing.
 | [staging.md](staging.md) | pre-production: prod shape, Stripe test mode |
 | [prod.md](prod.md) | production (Calgary launch) |
 | [dryrun-gcp.md](dryrun-gcp.md) | the GCP dry run: a short-lived demo environment on one zonal GKE cluster (fake data only, a $300 free-trial credit) — Postgres + PostGIS, Valkey, Meilisearch and Kafka in the cluster or at an external provider, cost estimate, step by step from an empty project to teardown |
-| [ovh.md](ovh.md) | the dry run on OVHcloud, everything in Beauharnois (BHS): `ovh-vps` (one VPS with k3s, ≈ $25–30/month) or `ovh-mks` (Managed Kubernetes + Managed PostgreSQL, ≈ $150–215/month) — **§ Today: from a new OVH account to a running demo through the manual `ovh` pipeline (S-155)**, account and API credentials, ordering, step by step for both, secrets from a local file, demo data, backups and restore, cost, teardown; [Google vs OVH](#google-vs-ovh) compares them with the GCP dry run |
+| [ovh.md](ovh.md) | the dry run on OVHcloud, everything in one location (`OVH_LOCATION`, S-160: Vint Hill on OVHcloud US for now — demo data only —, Hillsboro, or Beauharnois on OVHcloud Canada): `ovh-vps` (one VPS with k3s, ≈ $25–30/month) or `ovh-mks` (Managed Kubernetes + Managed PostgreSQL, ≈ $150–215/month) — **§ Today: from a new OVH account to a running demo through the manual `ovh` pipeline (S-155)**, account and API credentials, ordering, step by step for both, secrets from a local file, demo data, backups and restore, cost, teardown; [Google vs OVH](#google-vs-ovh) compares them with the GCP dry run |
 | [photos.md](photos.md) | real photos: the photo library (`web/packages/media`), every slot and its fallback, licences (Pexels, Unsplash, Openverse CC0), the owner's three commands on a Mac (`make photos-fetch`, `make photos-push`), picking, `make photos`, serving from the site or a CDN, the merchants' own photos |
 | [demo.md](demo.md) | the client demo on the dry run: `make demo-data` (a demo marketplace made through the product — businesses approved by staff, listings with pictures, customers with orders, bookings and reviews), the accounts, the 15-minute script, reset between demos, what to avoid, the pre-demo checklist |
 | [backups-dr.md](backups-dr.md) | backups, point-in-time restore and disaster recovery: RPO/RTO per data store and cloud, copies in the other Canadian region, restore scripts, the masked prod → staging refresh, verification, the local drill and the quarterly drill schedule (S-114) |
@@ -705,11 +705,11 @@ each provider's calculator or console before ordering.
 
 | | `gcp-dryrun` (Google Cloud) | `ovh-vps` (OVHcloud) | `ovh-mks` (OVHcloud) |
 |---|---|---|---|
-| Where | Montréal `northamerica-northeast1`, one zone | Beauharnois (BHS), one VPS | Beauharnois, Public Cloud BHS5 |
+| Where | Montréal `northamerica-northeast1`, one zone | `OVH_LOCATION`: Vint Hill (OVHcloud US, for now; demo data only) or Beauharnois, one VPS | `US-EAST-VA-1` (for now) or `BHS5` |
 | Compute | zonal GKE, 2 × `e2-standard-4` Spot | one VPS 8 vCore / 24 GB / 200 GB NVMe, k3s | free MKS control plane, 2 × `b3-16` |
 | Postgres + PostGIS | CloudNativePG in the cluster (or external) | CloudNativePG on the VPS | Managed PostgreSQL 17 Essential (or in the cluster) |
 | Valkey, Meilisearch, Kafka | in the cluster (or external) | on the VPS | in the cluster |
-| Object storage | Cloud Storage (CMEK) | Object Storage BHS (S3 API) | Object Storage BHS (S3 API) |
+| Object storage | Cloud Storage (CMEK) | Object Storage in the location (S3 API) | Object Storage in the location (S3 API) |
 | Secrets | Secret Manager + External Secrets | plain Secrets from `.ovh/ovh-vps.env` | plain Secrets from `.ovh/ovh-mks.env` |
 | Keys (signing, sealing) | Cloud KMS | local (a key file, `KMS_LOCAL_KEY`): `dev` only | local, as `ovh-vps` |
 | Edge | Envoy Gateway behind a regional network LB, external-dns | Envoy Gateway on the VPS's ports 80/443, DNS by hand | Envoy Gateway behind an OVHcloud LB, DNS by hand |
