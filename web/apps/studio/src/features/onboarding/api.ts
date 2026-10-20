@@ -57,6 +57,14 @@ export const onboardingQuery = (merchantId: string) => queryOptions({
   queryFn: () => http(`/api/v1/merchants/${merchantId}/onboarding`, {}, Onboarding),
 });
 
+/** S-156: the agent's latest "Request info" — the checks to redo and the note (204 → null). */
+export const AgentNote = z.object({ checkKeys: z.array(z.string()), note: z.string().nullish(), decidedAt: z.string() });
+export type AgentNote = z.infer<typeof AgentNote>;
+export const agentNoteQuery = (merchantId: string) => queryOptions({
+  queryKey: ['merchant', merchantId, 'onboarding', 'agent-note'],
+  queryFn: async () => (await http(`/api/v1/merchants/${merchantId}/onboarding/agent-note`, {}, AgentNote.nullish())) ?? null,
+});
+
 /**
  * `GET /api/v1/merchants/{id}/onboarding/legal-forms`: the Business step's legal-details form of every structure in the
  * business's province — docs/spec/legal-details.schema.json's fields with the province's labels, formats, help and
