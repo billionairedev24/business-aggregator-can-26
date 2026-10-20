@@ -81,6 +81,11 @@ output "s3_credentials" {
 }
 
 output "database_region" {
-  description = "Managed Databases region of this Public Cloud region (e.g. BHS for BHS5)."
-  value       = local.r.database
+  description = "Managed Databases region of the location (e.g. US-EAST-VA, BHS)."
+  value       = local.r.database_region
+}
+
+output "location" {
+  description = "The location (locations.json) and everything derived from it: country (data residency), API endpoint and token page, Public Cloud region, S3 endpoint and region, VPS datacentre, what the region offers."
+  value       = merge(local.r, { name = var.location })
 }

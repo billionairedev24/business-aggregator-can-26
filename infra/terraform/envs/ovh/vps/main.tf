@@ -1,12 +1,20 @@
-provider "ovh" {
-  endpoint = var.ovh_endpoint
+locals {
+  # The location (S-160): API endpoint, Object Storage region, VPS datacentre — infra/terraform/stacks/ovh/locations.json.
+  loc = jsondecode(file("${path.module}/../../../stacks/ovh/locations.json"))[var.ovh_location]
+  # The Network Firewall where the location offers it; elsewhere ufw on the host is the only firewall (bootstrap-k3s.sh).
+  edge_firewall = var.edge_firewall && local.loc.edge_firewall
 }
 
-# ovh-vps — the cheapest dry run (docs/runbooks/ovh.md, DECISIONS 2026-10-19): ONE OVHcloud VPS in Beauharnois running
-# k3s, every data service on it (deploy/helm/northline-data), Object Storage in BHS for uploads and Postgres backups.
+provider "ovh" {
+  endpoint = local.loc.api_endpoint
+}
+
+# ovh-vps — the cheapest dry run (docs/runbooks/ovh.md, DECISIONS 2026-10-19, S-160): ONE OVHcloud VPS running k3s in
+# the location's datacentre (ovh_location: Vint Hill by default, Hillsboro or Beauharnois), every data service on it
+# (deploy/helm/northline-data), Object Storage in the same location for uploads and Postgres backups.
 #
 # The VPS itself is ORDERED IN THE CONSOLE, not here. The provider has an ovh_vps resource that orders through the
-# order workflow, but it needs the catalogue's plan code of the current VPS range in Beauharnois and a default payment
+# order workflow, but it needs the catalogue's plan code of the current VPS range in the datacentre and a default payment
 # method, and an apply commits a month's payment — neither could be checked from here, and a typo orders the wrong
 # box. Terraform reads the ordered VPS (vps_service_name) for its address and puts the Network Firewall in front of
 # it; scripts/ovh/bootstrap-k3s.sh installs k3s over SSH.
@@ -15,7 +23,7 @@ module "ovh" {
   source = "../../../stacks/ovh"
 
   service_name       = var.service_name
-  region             = var.region
+  location           = var.ovh_location
   target             = "ovh-vps"
   bucket_name_suffix = var.bucket_name_suffix
   storage_class_name = "local-path" # k3s's local-path provisioner: volumes on the VPS's NVMe disk
@@ -33,7 +41,7 @@ locals {
   # OVHcloud Network Firewall rules, evaluated in sequence order (0 first); the last one drops everything else. It
   # filters inbound packets only, so replies to the box's own connections are let in explicitly: TCP established
   # (image pulls, Let's Encrypt, Stripe), DNS and NTP answers.
-  firewall_rules = var.vps_service_name == "" || !var.edge_firewall ? {} : merge(
+  firewall_rules = var.vps_service_name == "" || !local.edge_firewall ? {} : merge(
     { "0-tcp-established" = { sequence = 0, protocol = "tcp", tcp_option = "established", source = null, destination_port = null, source_port = null, action = "permit" } },
     { for i, cidr in var.admin_cidrs : "${i + 1}-ssh-${cidr}" => { sequence = i + 1, protocol = "tcp", tcp_option = null, source = cidr, destination_port = 22, source_port = null, action = "permit" } },
     # The pipeline's runner, for one run only (ci_ssh_cidr; .github/workflows/ovh.yml).

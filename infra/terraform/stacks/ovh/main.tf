@@ -4,17 +4,10 @@
 # keys): OVHcloud has no SSE-KMS the storage port could name, so STORAGE_ENCRYPTION_KEY stays empty.
 
 locals {
-  # Per Public Cloud region: the Object Storage region and its S3 endpoint (Standard tier), the Managed Databases
-  # region. A new Canadian region is one entry here once its services are confirmed.
-  regions = {
-    BHS5 = {
-      storage_region = "BHS"
-      s3_region      = "bhs"
-      s3_endpoint    = "https://s3.bhs.io.cloud.ovh.net"
-      database       = "BHS"
-    }
-  }
-  r    = local.regions[var.region]
+  # Per location (locations.json — also read by scripts/ovh/*.sh): the API endpoint, the Public Cloud region, the
+  # Object Storage region and its S3 endpoint (Standard tier), the Managed Databases region, the VPS datacentre and
+  # what the region offers. Sources and what is unverified: docs/runbooks/ovh.md § Locations.
+  r    = jsondecode(file("${path.module}/locations.json"))[var.location]
   name = "northline-${var.target}"
   ds   = var.data_services
 
