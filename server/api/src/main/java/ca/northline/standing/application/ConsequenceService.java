@@ -93,6 +93,7 @@ class ConsequenceService implements StaffLifts {
             }
             case PHOTO_DELAY -> delays.lift(Objects.requireNonNull(c.refId()), staffId);
             case NO_SHOW_WARNING -> noShows.lift(Objects.requireNonNull(c.customerId()));
+            default -> throw new IllegalStateException("No switch to turn back for " + c.kind());
         }
     }
 
