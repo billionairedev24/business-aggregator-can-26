@@ -10239,3 +10239,64 @@ kubeconform` and the chart's refusals, actionlint, bash 3.2 parsing, shellcheck,
   `make demo-data` again. Documented, not scripted.
 - **Not done**: no migration tool between the two OVHcloud entities; no Toronto or US Local Zones; no OVHcloud KMS
   adapter (staging/prod on OVHcloud still impossible under `KMS_PROVIDER=local`, whatever the location).
+
+## 2026-10-20 — S-161 No console step for OVHcloud: the state user, its keys, the bucket and the server from code
+
+Owner: "why can't we use pipeline to do all of this? I do not want to create resources manually." The owner now does
+three things by hand — the OVHcloud US account, a default payment method, the API token — plus `make ovh-gh-setup`
+and the pipeline runs ([ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo)). The owner
+already has a Public Cloud project, so a given `OVH_SERVICE_NAME` stays the default path. **Nothing here has run
+against a real OVHcloud account**: checked offline only — `terraform validate`/`test` with the mocked `ovh/ovh` 2.22
+provider (vps 13 runs, mks 9, the new project root 2), tflint, actionlint, shellcheck, bash 3.2 parsing
+(`make shell-compat`), and `scripts/ovh/api.sh` / `tf-state.sh keys|teardown` against a local stub of the OVHcloud API
+and a fake `aws` CLI. The stub checks the request signature with this repository's own reading of OVHcloud's scheme,
+so a wrong reading would pass both; `gh-setup.sh` was only parsed and linted (it reads the terminal).
+
+- **The state user through the API, not a Terraform root** (the story preferred a root with local state): a local
+  state lives on one machine, so a run on a runner or another Mac would create a second user and key, and a root that
+  looks the user up with a data source before creating it flips to destroying it on its second apply. Signed API calls
+  (`scripts/ovh/api.sh`: application key set, or the OAuth2 service account) find the project's user **by its
+  description `terraform-state`** (role `objectstore_operator`), create it when missing, wait for `ok`, and reuse its
+  first S3 key — `POST /cloud/project/{p}/user/{u}/s3Credentials/{access}/secret` returns an existing key's secret
+  (the path is in the provider binary; its data source uses it). Stateless, so the Mac and every job agree, and a user
+  made by hand with that description is adopted. Credentials never go on a command line (curl reads its headers from
+  stdin) or into the output; the access key is shown as its last four characters.
+- **Where it runs**: `make ovh-gh-setup` (stores `TF_STATE_ACCESS_KEY`/`SECRET_KEY` in the Environment; keys in
+  `.ovh/<target>.env` win — the manual fallback), and a new **State keys** step in every pipeline job
+  (`tf-state.sh keys`): the stored keys if S3 accepts them, else the API's, masked, as `AWS_*` in `$GITHUB_ENV`. The
+  jobs' `env` now maps the secrets to `TF_STATE_*` instead of `AWS_*` so `$GITHUB_ENV` never competes with a job-level
+  value. On a Mac: `eval "$(scripts/ovh/tf-state.sh keys ovh-vps)"` (refuses to print onto a terminal).
+- **The bucket** stays the pipeline's (`tf-state.sh ensure`, aws CLI, versioning on) — the Mac needs no `aws`. gh-setup
+  proposes a `northline-tfstate-*` bucket already in the project (`GET /cloud/project/{p}/region/{storage region}/storage`)
+  so one made by hand is adopted.
+- **Teardown, last**: `destroy` gains a final step `tf-state.sh teardown`: the target's state key (every version) out of
+  the bucket; when nothing else is left (the other target's state shares the bucket), the bucket and then the user.
+  The Environment's stored keys go stale; the State keys step then makes a new user by itself.
+- **The server for `ovh-vps`: a Public Cloud instance by default** (`server = "instance"`; `ovh_cloud_project_instance`,
+  Ubuntu 24.04 by name, flavor `b3-32` by name — the Linux one —, hourly, `ssh_key_create` with the pipeline's public
+  key, public network; `ignore_changes = [boot_from]` so a newer image never rebuilds it). Not the VPS by code: provider
+  2.22's `ovh_vps` can order, but needs the US catalogue's plan code and configuration labels (unverified) and commits a
+  month that a destroy doesn't refund. `server = "vps"` keeps the S-155 path (console-ordered VPS, Network Firewall).
+  **Price, unverified**: `b3-32` ≈ $0.20–0.23 an hour, ≈ $145–165 for a full month, against ≈ $27.50 for the VPS-4 —
+  ≈ $120–135 a month more if it runs all month; less for a week of demos with `destroy` in between. `b3-32` and not
+  `b3-16`: the stack was sized for the VPS's 24 GB. No Network Firewall on the instance (the `/ip` firewall on Public
+  Cloud addresses is unverified; `ovh_cloud_security_group` exists in 2.22 but the instance resource can't attach one):
+  `ufw` on the host, SSH by key only. The instance's host key is learnt on first sight in each run (it doesn't exist
+  when gh-setup runs); gh-setup deletes a VPS's `OVH_VPS_KNOWN_HOSTS` when switching to the instance.
+- **SSH key pair**: gh-setup's existing deploy key; for the instance the public half is the new variable
+  `OVH_SSH_PUBLIC_KEY` (→ `ssh_public_key`), the private half the existing secret.
+- **The project, optional**: `infra/terraform/envs/ovh/project` (`ovh_cloud_project`, plan `project.2018` from the order
+  cart, the account's subsidiary; local state in `.ovh/project-<location>.tfstate`) run by `scripts/ovh/project.sh
+  ensure`, which first adopts a project described `northline-dryrun`. Only when gh-setup gets no project id. That
+  `project.2018` is orderable on OVHcloud US is **unverified**.
+- **Token rights**: the default design needs `GET/POST/PUT/DELETE /cloud/*` only (one URL, ovh.md § Today step 3). The
+  VPS option adds `GET /vps/*` and `/ip/*`; ordering the project adds `GET /me`, `GET /me/*`, `POST /me/order/*`,
+  `GET/POST/DELETE /order/*` (paths from the provider binary).
+- **New settings**: `locations.json` `oauth2_token_url` (from the provider binary: `https://us.ovhcloud.com/auth/oauth2/token`,
+  `https://ca.ovh.com/auth/oauth2/token`); Environment variables `OVH_SERVER`, `OVH_INSTANCE_FLAVOR`,
+  `OVH_SSH_PUBLIC_KEY`; `TF_STATE_*` secrets now optional; Terraform `server`, `instance_flavor`, `instance_image`,
+  `instance_flavor_id`, `instance_image_id`, `ssh_public_key`; output `vps` gains `server` and `flavor`. No migrations.
+- **Not done / not testable here**: the flavor and image lookups (data sources returning nested sets can't be mocked by
+  `terraform test` 1.16), so the tests pass the ids; the OVHcloud US API itself (signature, OAuth2 token, user and key
+  endpoints, storage listing); `project.2018` on the US account; Public Cloud prices; stopping (shelving) the instance
+  between demos (`down` scales the apps only).
