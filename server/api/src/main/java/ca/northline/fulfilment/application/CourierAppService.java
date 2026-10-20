@@ -3,8 +3,11 @@ package ca.northline.fulfilment.application;
 import ca.northline.fulfilment.api.CourierArrived;
 import ca.northline.fulfilment.api.CourierLocations;
 import ca.northline.fulfilment.api.DeliveryCompleted;
+import ca.northline.fulfilment.api.DeliveryFailed;
 import ca.northline.fulfilment.api.DeliveryPickedUp;
 import ca.northline.fulfilment.api.DeliveryRefused;
+import ca.northline.fulfilment.api.ReturnCollected;
+import ca.northline.fulfilment.api.ReturnDelivered;
 import ca.northline.fulfilment.application.CourierStore.Courier;
 import ca.northline.fulfilment.application.CourierStore.Shift;
 import ca.northline.fulfilment.application.DeliveryStore.Delivery;
@@ -65,6 +68,8 @@ class CourierAppService implements CourierApp {
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final HandoffChecks handoffs;
+    private final RunLifecycle lifecycle;
+    private final ReturnPickupStore returnPickups;
 
     @Override
     @Transactional(readOnly = true)
@@ -285,12 +290,7 @@ class CourierAppService implements CourierApp {
                 stopId,
                 mine.courier().id(),
                 proof));
-        var all = runs.stops(mine.run().id());
-        if (all.stream().allMatch(s -> s.state().equals("done") || s.id().equals(stopId))) {
-            runs.moveState(mine.run().id(), "done", at);
-            var onShift = couriers.onShift(mine.courier().id()).isPresent();
-            couriers.status(mine.courier().id(), onShift ? "available" : "offline");
-        }
+        lifecycle.settle(runs.find(mine.run().id()).orElseThrow(), at);
         return reload(mine.run());
     }
 
@@ -353,14 +353,98 @@ class CourierAppService implements CourierApp {
         if (stop.state().equals("done")) {
             return reload(mine.run());
         }
-        runs.droppedOff(stopId, "id_refused", at);
-        deliveries.moveState(stop.orderId(), "returned", at);
-        var all = runs.stops(mine.run().id());
-        if (all.stream().allMatch(s -> s.state().equals("done") || s.id().equals(stopId))) {
-            runs.moveState(mine.run().id(), "done", at);
-            var onShift = couriers.onShift(mine.courier().id()).isPresent();
-            couriers.status(mine.courier().id(), onShift ? "available" : "offline");
+        var returnId = stop.returnId();
+        if (returnId != null) {
+            // S-151: a customer's return, back at its shop
+            runs.droppedOff(stopId, null, at);
+            returnPickups.moveState(returnId, "returned", at);
+            events.publishEvent(new ReturnDelivered(
+                    Ids.next(),
+                    at,
+                    returnId,
+                    stop.orderId(),
+                    java.util.Objects.requireNonNullElse(stop.merchantId(), ""),
+                    mine.run().id()));
+        } else {
+            var delivery = delivery(stop.orderId());
+            var refused = delivery.state().equals("returning");
+            runs.droppedOff(stopId, refused ? "id_refused" : null, at);
+            if (refused) {
+                deliveries.moveState(stop.orderId(), "returned", at);
+            }
         }
+        lifecycle.settle(runs.find(mine.run().id()).orElseThrow(), at);
+        return reload(mine.run());
+    }
+
+    @Override
+    public RunView fail(String userId, String stopId, String reason, @Nullable String note) {
+        var at = clock.instant();
+        if (!DeliveryRules.FAIL_REASONS.contains(reason)) {
+            throw RuleViolation.of("reason", "required", DeliveryRules.FAIL_REASON);
+        }
+        var text = note == null || note.isBlank() ? null : note.strip();
+        if (text == null && reason.equals("other")) {
+            throw RuleViolation.of("note", "required", DeliveryRules.FAIL_NOTE);
+        }
+        if (text != null && text.length() > DeliveryRules.MAX_NOTE) {
+            throw RuleViolation.of("note", "length", DeliveryRules.FAIL_NOTE_LENGTH);
+        }
+        var mine = ownStop(userId, stopId);
+        var stop = mine.stop();
+        if (!stop.kind().equals("dropoff")) {
+            throw new Conflict("not_a_dropoff", DeliveryRules.NOT_YOUR_RUN);
+        }
+        if (stop.state().equals("done")) {
+            return reload(mine.run());
+        }
+        var pickedUp = runs.stops(mine.run().id()).stream()
+                .filter(s -> s.orderId().equals(stop.orderId()) && s.kind().equals("pickup"))
+                .allMatch(s -> s.state().equals("done"));
+        if (!pickedUp) {
+            throw new Conflict("not_picked_up", DeliveryRules.NOT_PICKED_UP);
+        }
+        if (!"photo".equals(stop.proofKind()) || stop.proofKey() == null) {
+            throw new Conflict("proof_missing", DeliveryRules.FAIL_PHOTO);
+        }
+        var delivery = delivery(stop.orderId());
+        runs.failed(stopId, reason, text, at);
+        start(mine.run(), at);
+        deliveries.moveState(stop.orderId(), "failed", at);
+        // the goods go back to every shop they came from
+        delivery.pickups()
+                .forEach(p -> runs.addStop(mine.run().id(), stop.orderId(), "return", p.merchantId(), null, at));
+        events.publishEvent(new DeliveryFailed(
+                Ids.next(),
+                at,
+                stop.orderId(),
+                mine.run().id(),
+                stopId,
+                mine.courier().id(),
+                reason,
+                deliveries.attempts(stop.orderId())));
+        lifecycle.settle(runs.find(mine.run().id()).orElseThrow(), at);
+        return reload(mine.run());
+    }
+
+    @Override
+    public RunView collect(String userId, String stopId) {
+        var at = clock.instant();
+        var mine = ownStop(userId, stopId);
+        var stop = mine.stop();
+        var returnId = stop.returnId();
+        if (!stop.kind().equals("collect") || returnId == null) {
+            throw new Conflict("not_a_collect", DeliveryRules.NOT_YOUR_RUN);
+        }
+        if (stop.state().equals("done")) {
+            return reload(mine.run());
+        }
+        runs.droppedOff(stopId, null, at);
+        start(mine.run(), at);
+        returnPickups.moveState(returnId, "collected", at);
+        events.publishEvent(new ReturnCollected(
+                Ids.next(), at, returnId, stop.orderId(), mine.run().id()));
+        lifecycle.settle(runs.find(mine.run().id()).orElseThrow(), at);
         return reload(mine.run());
     }
 
@@ -408,7 +492,11 @@ class CourierAppService implements CourierApp {
                         && (!r.state().equals("done") || stop.state().equals("done")))
                 .orElseThrow(() -> new NotFound("stop", stopId));
         // re-read under the lock: a concurrent action may have moved it
-        return new Mine(c, run, runs.stop(stopId).orElseThrow());
+        var fresh = runs.stop(stopId).orElseThrow();
+        if (fresh.state().equals("cancelled")) {
+            throw new Conflict("stop_removed", DeliveryRules.STOP_REMOVED); // S-151: its order was cancelled
+        }
+        return new Mine(c, run, fresh);
     }
 
     private Delivery delivery(String orderId) {

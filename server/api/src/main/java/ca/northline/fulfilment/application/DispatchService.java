@@ -53,6 +53,7 @@ class DispatchService implements PlanRuns, AssignCouriers {
     private final Clock clock;
     private final FulfilmentProperties props;
     private final RoutePlanner planner;
+    private final ReturnPickupStore returns;
 
     DispatchService(
             DeliveryStore deliveries,
@@ -61,7 +62,9 @@ class DispatchService implements PlanRuns, AssignCouriers {
             PublicDirectory directory,
             ApplicationEventPublisher events,
             Clock clock,
-            FulfilmentProperties props) {
+            FulfilmentProperties props,
+            ReturnPickupStore returns) {
+        this.returns = returns;
         this.deliveries = deliveries;
         this.runs = runs;
         this.couriers = couriers;
@@ -101,7 +104,102 @@ class DispatchService implements PlanRuns, AssignCouriers {
             createRun(List.of(d), "direct", null, null, 1, start, null, null, shops, now);
             planned++;
         }
+        for (var p : returns.waiting()) {
+            if (market == null || market.equalsIgnoreCase(p.market())) {
+                planned += planReturn(p, now);
+            }
+        }
         return planned;
+    }
+
+    /**
+     * S-151: a return pickup rides on the market's planned pooled run starting within {@code returnJoinWithin} (its
+     * collect and return stops after the run's own); none for {@code returnDirectAfter} → a direct run of its own.
+     * Returns the runs created.
+     */
+    private int planReturn(ReturnPickupStore.ReturnPickup p, Instant now) {
+        var pooled = runs.plannedPooled(p.market(), now, now.plus(props.returnJoinWithin())).stream()
+                .findFirst()
+                .orElse(null);
+        if (pooled != null) {
+            var last = runs.stops(pooled.id()).stream()
+                    .map(Stop::eta)
+                    .filter(Objects::nonNull)
+                    .max(Instant::compareTo)
+                    .orElse(Objects.requireNonNullElse(pooled.startsAt(), now));
+            var collectAt = last.plus(props.unknownLeg());
+            runs.addStop(pooled.id(), p.orderId(), "collect", null, p.returnId(), collectAt);
+            runs.addStop(
+                    pooled.id(),
+                    p.orderId(),
+                    "return",
+                    p.merchantId(),
+                    p.returnId(),
+                    collectAt.plus(props.unknownLeg()));
+            returns.attach(p.returnId(), pooled.id(), now);
+            log.info("Return {} joins pooled run {}", p.returnId(), pooled.id());
+            return 0;
+        }
+        if (p.createdAt().plus(props.returnDirectAfter()).isAfter(now)) {
+            return 0; // a pooled run may still come
+        }
+        var runId = Ids.next();
+        var collect = new Stop(
+                Ids.next(),
+                runId,
+                p.orderId(),
+                "collect",
+                1,
+                null,
+                now,
+                "pending",
+                null,
+                null,
+                null,
+                null,
+                null,
+                p.returnId(),
+                null);
+        var back = new Stop(
+                Ids.next(),
+                runId,
+                p.orderId(),
+                "return",
+                2,
+                p.merchantId(),
+                now.plus(props.unknownLeg()),
+                "pending",
+                null,
+                null,
+                null,
+                null,
+                null,
+                p.returnId(),
+                null);
+        runs.insert(
+                new Run(
+                        runId,
+                        p.market(),
+                        "direct",
+                        "planned",
+                        null,
+                        null,
+                        1,
+                        now,
+                        back.eta(),
+                        null,
+                        null,
+                        now,
+                        null,
+                        null,
+                        null,
+                        RoutePlanner.HEURISTIC),
+                List.of(collect, back));
+        returns.attach(p.returnId(), runId, now);
+        events.publishEvent(new RunPlanned(
+                Ids.next(), now, runId, p.market(), "direct", null, List.of(p.orderId()), 2, RoutePlanner.HEURISTIC));
+        log.info("Return {} gets direct run {}", p.returnId(), runId);
+        return 1;
     }
 
     /** One or more runs for a window: the full route is split into parts of at most {@code maxDropsPerRun} drops. */
@@ -161,6 +259,8 @@ class DispatchService implements PlanRuns, AssignCouriers {
                     s.merchantId(),
                     s.eta(),
                     "pending",
+                    null,
+                    null,
                     null,
                     null,
                     null,
@@ -229,10 +329,15 @@ class DispatchService implements PlanRuns, AssignCouriers {
     void give(Run run, String courierId, Instant now) {
         runs.assign(run.id(), courierId, now);
         var onRun = deliveries.onRun(run.id());
-        var orderIds = onRun.stream().map(Delivery::orderId).toList();
-        var merchantIds = onRun.stream()
-                .flatMap(d -> d.pickups().stream())
-                .map(DeliveryStore.Pickup::merchantId)
+        var pickups = returns.onRun(run.id());
+        var orderIds = java.util.stream.Stream.concat(
+                        onRun.stream().map(Delivery::orderId),
+                        pickups.stream().map(ReturnPickupStore.ReturnPickup::orderId))
+                .distinct()
+                .toList();
+        var merchantIds = java.util.stream.Stream.concat(
+                        onRun.stream().flatMap(d -> d.pickups().stream()).map(DeliveryStore.Pickup::merchantId),
+                        pickups.stream().map(ReturnPickupStore.ReturnPickup::merchantId))
                 .distinct()
                 .sorted()
                 .toList();

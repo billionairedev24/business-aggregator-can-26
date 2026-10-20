@@ -29,7 +29,7 @@ class RunStoreJdbc implements RunStore {
             assigned_at, started_at, done_at, heuristic""";
     private static final String STOP = """
             id, run_id, order_id, kind, seq, merchant_id, eta, state, arrived_at, done_at, proof_kind, proof_media_id,
-            scan_ok""";
+            scan_ok, return_id, fail_reason""";
 
     private final JdbcClient jdbc;
 
@@ -140,7 +140,8 @@ class RunStoreJdbc implements RunStore {
 
     @Override
     public Optional<Run> openRunOf(String courierId) {
-        return jdbc.sql("select " + RUN + " from fulfilment.runs where courier_id = :c and state <> 'done'")
+        return jdbc.sql("select " + RUN
+                        + " from fulfilment.runs where courier_id = :c and state not in ('done', 'cancelled')")
                 .param("c", courierId)
                 .query(RunStoreJdbc::run)
                 .optional();
@@ -178,7 +179,8 @@ class RunStoreJdbc implements RunStore {
 
     @Override
     public List<Stop> stops(String runId) {
-        return jdbc.sql("select " + STOP + " from fulfilment.stops where run_id = :r order by seq, id")
+        return jdbc.sql("select " + STOP
+                        + " from fulfilment.stops where run_id = :r and state <> 'cancelled' order by seq, id")
                 .param("r", runId)
                 .query(RunStoreJdbc::stop)
                 .list();
@@ -189,7 +191,8 @@ class RunStoreJdbc implements RunStore {
         if (runIds.isEmpty()) {
             return List.of();
         }
-        return jdbc.sql("select " + STOP + " from fulfilment.stops where run_id in (:r) order by run_id, seq, id")
+        return jdbc.sql("select " + STOP + """
+                         from fulfilment.stops where run_id in (:r) and state <> 'cancelled' order by run_id, seq, id""")
                 .param("r", List.copyOf(runIds))
                 .query(RunStoreJdbc::stop)
                 .list();
@@ -201,6 +204,16 @@ class RunStoreJdbc implements RunStore {
                 .param("id", stopId)
                 .query(RunStoreJdbc::stop)
                 .optional();
+    }
+
+    @Override
+    public List<Stop> stopsOfOrder(String orderId) {
+        return jdbc.sql(
+                        "select " + STOP
+                                + " from fulfilment.stops where order_id = :o and state <> 'cancelled' order by run_id, seq, id")
+                .param("o", orderId)
+                .query(RunStoreJdbc::stop)
+                .list();
     }
 
     @Override
@@ -248,31 +261,101 @@ class RunStoreJdbc implements RunStore {
     }
 
     @Override
-    public void droppedOff(String stopId, String proofKind, Instant at) {
+    public void droppedOff(String stopId, @Nullable String proofKind, Instant at) {
         jdbc.sql("""
                         update fulfilment.stops set state = 'done', done_at = :at, proof_kind = :k,
                                arrived_at = coalesce(arrived_at, :at)
                          where id = :id""")
                 .param("at", JdbcTimes.ts(at), Types.TIMESTAMP_WITH_TIMEZONE)
-                .param("k", proofKind)
+                .param("k", proofKind, Types.VARCHAR)
                 .param("id", stopId)
                 .update();
     }
 
     @Override
+    public void failed(String stopId, String reason, @Nullable String note, Instant at) {
+        jdbc.sql("""
+                        update fulfilment.stops set state = 'done', done_at = :at, proof_kind = 'failed',
+                               fail_reason = :reason, fail_note = :note, arrived_at = coalesce(arrived_at, :at)
+                         where id = :id""")
+                .param("at", JdbcTimes.ts(at), Types.TIMESTAMP_WITH_TIMEZONE)
+                .param("reason", reason)
+                .param("note", note, Types.VARCHAR)
+                .param("id", stopId)
+                .update();
+    }
+
+    @Override
+    public void cancelStops(Collection<String> stopIds) {
+        if (stopIds.isEmpty()) {
+            return;
+        }
+        jdbc.sql("update fulfilment.stops set state = 'cancelled' where id in (:ids) and state <> 'done'")
+                .param("ids", List.copyOf(stopIds))
+                .update();
+    }
+
+    @Override
+    public void moveStops(Collection<String> stopIds, String toRunId) {
+        var offset = jdbc.sql("select coalesce(max(seq), 0) from fulfilment.stops where run_id = :r")
+                .param("r", toRunId)
+                .query(Integer.class)
+                .single();
+        var ordered = jdbc.sql("select id from fulfilment.stops where id in (:ids) order by seq, id")
+                .param("ids", List.copyOf(stopIds))
+                .query(String.class)
+                .list();
+        for (int i = 0; i < ordered.size(); i++) {
+            jdbc.sql("update fulfilment.stops set run_id = :r, seq = :seq where id = :id")
+                    .param("r", toRunId)
+                    .param("seq", offset + i + 1)
+                    .param("id", ordered.get(i))
+                    .update();
+        }
+    }
+
+    @Override
+    public List<Run> plannedPooled(String market, Instant from, Instant to) {
+        return jdbc.sql("select " + RUN + """
+                         from fulfilment.runs
+                        where state = 'planned' and kind = 'pooled' and lower(market) = lower(:market)
+                          and starts_at >= :from and starts_at < :to
+                        order by starts_at, part, id
+                        """)
+                .param("market", market)
+                .param("from", JdbcTimes.ts(from), Types.TIMESTAMP_WITH_TIMEZONE)
+                .param("to", JdbcTimes.ts(to), Types.TIMESTAMP_WITH_TIMEZONE)
+                .query(RunStoreJdbc::run)
+                .list();
+    }
+
+    @Override
     public String addReturnStop(String runId, String orderId, String merchantId, Instant at) {
+        return addStop(runId, orderId, "return", merchantId, null, at);
+    }
+
+    @Override
+    public String addStop(
+            String runId,
+            String orderId,
+            String kind,
+            @Nullable String merchantId,
+            @Nullable String returnId,
+            Instant eta) {
         var id = ca.northline.shared.Ids.next();
         jdbc.sql("""
-                        insert into fulfilment.stops (id, run_id, order_id, kind, seq, merchant_id, eta, state)
-                        values (:id, :run, :order, 'return',
+                        insert into fulfilment.stops (id, run_id, order_id, kind, seq, merchant_id, eta, state, return_id)
+                        values (:id, :run, :order, :kind,
                                 (select coalesce(max(seq), 0) + 1 from fulfilment.stops where run_id = :run),
-                                :merchant, :at, 'pending')
+                                :merchant, :at, 'pending', :return)
                         """)
                 .param("id", id)
                 .param("run", runId)
                 .param("order", orderId)
-                .param("merchant", merchantId)
-                .param("at", JdbcTimes.ts(at), Types.TIMESTAMP_WITH_TIMEZONE)
+                .param("kind", kind)
+                .param("merchant", merchantId, Types.VARCHAR)
+                .param("at", JdbcTimes.ts(eta), Types.TIMESTAMP_WITH_TIMEZONE)
+                .param("return", returnId, Types.VARCHAR)
                 .update();
         return id;
     }
@@ -328,6 +411,8 @@ class RunStoreJdbc implements RunStore {
                 JdbcTimes.instant(rs, "done_at"),
                 rs.getString("proof_kind"),
                 rs.getString("proof_media_id"),
-                scanOk);
+                scanOk,
+                rs.getString("return_id"),
+                rs.getString("fail_reason"));
     }
 }

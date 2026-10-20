@@ -1,5 +1,6 @@
 package ca.northline.fulfilment.persistence;
 
+import ca.northline.fulfilment.api.DeliveryRequests;
 import ca.northline.fulfilment.api.DeliveryRequests.Dropoff;
 import ca.northline.fulfilment.application.DeliveryStore;
 import ca.northline.shared.JdbcTimes;
@@ -161,6 +162,43 @@ class DeliveryStoreJdbc implements DeliveryStore {
                 .param("o", orderId)
                 .query((rs, _) -> new IdCheck(rs.getInt("id_check_age"), rs.getString("id_check_province")))
                 .optional();
+    }
+
+    @Override
+    public void removePickup(String orderId, String merchantId) {
+        jdbc.sql("delete from fulfilment.delivery_pickups where order_id = :o and merchant_id = :m")
+                .param("o", orderId)
+                .param("m", merchantId)
+                .update();
+    }
+
+    @Override
+    public void redeliver(String orderId, DeliveryRequests.@Nullable Window w, Instant at) {
+        jdbc.sql("""
+                        update fulfilment.deliveries
+                           set state = 'waiting', run_id = null, attempts = attempts + 1, updated_at = :at,
+                               kind = :kind, window_id = :window, window_label = :label, starts_at = :starts,
+                               ends_at = :ends, order_by = :orderBy, pack_by = :packBy
+                         where order_id = :o and state = 'failed'
+                        """)
+                .param("o", orderId)
+                .param("at", JdbcTimes.ts(at), Types.TIMESTAMP_WITH_TIMEZONE)
+                .param("kind", w == null ? "direct" : "pooled")
+                .param("window", w == null ? null : w.windowId(), Types.VARCHAR)
+                .param("label", w == null ? null : w.label(), Types.VARCHAR)
+                .param("starts", JdbcTimes.ts(w == null ? null : w.startsAt()), Types.TIMESTAMP_WITH_TIMEZONE)
+                .param("ends", JdbcTimes.ts(w == null ? null : w.endsAt()), Types.TIMESTAMP_WITH_TIMEZONE)
+                .param("orderBy", JdbcTimes.ts(w == null ? null : w.orderBy()), Types.TIMESTAMP_WITH_TIMEZONE)
+                .param("packBy", JdbcTimes.ts(w == null ? null : w.packBy()), Types.TIMESTAMP_WITH_TIMEZONE)
+                .update();
+    }
+
+    @Override
+    public int attempts(String orderId) {
+        return jdbc.sql("select coalesce(max(attempts), 1) from fulfilment.deliveries where order_id = :o")
+                .param("o", orderId)
+                .query(Integer.class)
+                .single();
     }
 
     @Override
