@@ -58,3 +58,19 @@
   .order-card { padding: var(--space-5); }
   .order-title { font-size: var(--text-2xl); }
 }
+
+/* S-151: cancelling, a missed delivery's choice, returns */
+.order-aftersale { display: flex; flex-direction: column; gap: var(--space-3); }
+.order-aftersale .order-note { margin: 0; }
+.order-failed { border-color: var(--color-warning); }
+.order-fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: var(--space-2); min-width: 0; }
+.order-fieldset legend { font-weight: var(--weight-semibold); margin-bottom: var(--space-2); }
+.order-returns { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.order-return { padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+.order-return:first-child { border-top: 0; padding-top: 0; }
+.order-return-head { overflow-wrap: anywhere; }
+.order-return-form { display: grid; gap: var(--space-3); }
+.order-return-line { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-1) var(--space-3); align-items: center; min-height: var(--size-touch); }
+.order-return-line input { width: 20px; height: 20px; }
+.order-return-line .order-note { grid-column: 2; margin: 0; }
+.order-escalate { display: grid; gap: var(--space-2); }
