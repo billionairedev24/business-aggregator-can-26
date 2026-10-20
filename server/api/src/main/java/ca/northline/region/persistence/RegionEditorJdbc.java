@@ -1,5 +1,6 @@
 package ca.northline.region.persistence;
 
+import ca.northline.region.api.FrenchListings;
 import ca.northline.region.api.LaunchStatus;
 import ca.northline.region.api.RegionEditor;
 import ca.northline.shared.CodedEnum;
@@ -134,6 +135,28 @@ class RegionEditorJdbc implements RegionEditor {
         jdbc.sql("update region.regions set courier_model = :m where id = :id")
                 .param("m", model)
                 .param("id", provinceId)
+                .update();
+    }
+
+    @Override
+    public List<LanguageRow> languageRows(String provinceId) {
+        return jdbc.sql("""
+                        select id, french_first, french_listings from region.regions
+                        where id = :p or parent_id = :p order by parent_id nulls first, city""")
+                .param("p", provinceId)
+                .query((rs, _) -> new LanguageRow(
+                        java.util.Objects.requireNonNull(rs.getString("id")),
+                        (Boolean) rs.getObject("french_first"),
+                        rs.getString("french_listings")))
+                .list();
+    }
+
+    @Override
+    public void languages(String regionId, @Nullable Boolean frenchFirst, @Nullable FrenchListings frenchListings) {
+        jdbc.sql("update region.regions set french_first = :ff, french_listings = :fl where id = :id")
+                .param("ff", frenchFirst)
+                .param("fl", frenchListings == null ? null : frenchListings.code())
+                .param("id", regionId)
                 .update();
     }
 

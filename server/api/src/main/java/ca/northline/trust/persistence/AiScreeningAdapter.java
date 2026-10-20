@@ -172,4 +172,22 @@ class AiScreeningAdapter implements AiScreeningStore {
                 .param("id", id)
                 .update();
     }
+
+    @Override
+    public List<ScanRun> recentScans(int limit) {
+        return jdbc.sql("""
+                        select id, market, week_start, merchants, flags_raised, summary, model, ran_at
+                        from trust.anomaly_scans order by week_start desc, market limit :limit""")
+                .param("limit", limit)
+                .query((rs, n) -> new ScanRun(
+                        java.util.Objects.requireNonNull(rs.getString("id")),
+                        java.util.Objects.requireNonNull(rs.getString("market")),
+                        rs.getObject("week_start", java.time.LocalDate.class),
+                        rs.getInt("merchants"),
+                        rs.getInt("flags_raised"),
+                        rs.getString("summary"),
+                        rs.getString("model"),
+                        rs.getObject("ran_at", java.time.OffsetDateTime.class).toInstant()))
+                .list();
+    }
 }

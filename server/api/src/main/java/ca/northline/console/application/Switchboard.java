@@ -40,6 +40,14 @@ public interface Switchboard {
 
     Province courierModel(String code, String model, Actor actor);
 
+    String FRENCH_LISTINGS = "Choose off, warn or require.";
+
+    /**
+     * S-158 (S-116's toggles): a province's or market's French-first default and what listings there need in French.
+     * {@code null} = not set: a market then follows its province, a province has no rule.
+     */
+    Province languages(String regionId, @Nullable Boolean frenchFirst, @Nullable String frenchListings, Actor actor);
+
     Province marketStage(String marketId, LaunchStatus stage, String confirm, Actor actor);
 
     Province addMarket(NewMarket market, Actor actor);
@@ -53,6 +61,27 @@ public interface Switchboard {
     record Actor(String userId, String role) {}
 
     record NewMarket(String province, String city, double lat, double lng, double radiusKm) {}
+
+    /**
+     * One place's language rules (S-116) as stored and as they apply.
+     *
+     * @param kind {@code province | market}
+     * @param city the market's city, null for the province
+     * @param frenchFirst stored; null = follows the province (market) / no rule (province)
+     * @param frenchListings stored {@code off | warn | require}; null as above
+     * @param effectiveFrenchFirst what applies, {@code REGION_FRENCH_FIRST} included
+     * @param fromConfiguration French-first because {@code REGION_FRENCH_FIRST} names the place (the toggle can't undo
+     *     it)
+     */
+    record LanguageSetting(
+            String regionId,
+            String kind,
+            @Nullable String city,
+            @Nullable Boolean frenchFirst,
+            @Nullable String frenchListings,
+            boolean effectiveFrenchFirst,
+            String effectiveFrenchListings,
+            boolean fromConfiguration) {}
 
     record Board(List<Province> provinces) {
         public Board {
@@ -83,9 +112,11 @@ public interface Switchboard {
             long waitlist,
             List<Market> markets,
             List<Zone> zones,
-            Map<String, Boolean> checklist) {
+            Map<String, Boolean> checklist,
+            List<LanguageSetting> languageRules) {
 
         public Province {
+            languageRules = List.copyOf(languageRules);
             names = Map.copyOf(names);
             languages = List.copyOf(languages);
             tax = Map.copyOf(tax);
