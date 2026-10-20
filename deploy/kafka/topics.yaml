@@ -80,6 +80,8 @@ topics:
     owner: trust
   - name: trust.review
     owner: trust
+  - name: booking.quote_request   # S-153: quote.requested
+    owner: booking
   - name: messaging.message
     owner: messaging
   - name: messaging.ticket

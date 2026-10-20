@@ -121,7 +121,8 @@ class QuoteFlowService
                 day == null
                         ? null
                         : day.atTime(PREFERRED_TIME).atZone(region.zone(null)).toInstant(),
-                ask.details()));
+                ask.details(),
+                ask.photoIds()));
         return new Requested(ref.id(), ref.ref(), ref.respondBy(), ref.expiresAt(), chosen.size());
     }
 
