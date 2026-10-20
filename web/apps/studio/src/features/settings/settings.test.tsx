@@ -458,6 +458,84 @@ describe('Settings › Security', () => {
     expect(screen.getByText('Cet appareil')).toBeTruthy();
   });
 
+  it('S-154: changes the password after a step-up — the current one first, every other session ends', async () => {
+    let changes = 0;
+    const calls = mockFetch({
+      [`GET ${AUTH}/security`]: () => security({ password: true }),
+      [`POST ${AUTH}/security/password`]: () => {
+        changes += 1;
+        if (changes === 1) throw stepUpRequired;
+        if (changes === 2) throw { status: 422, body: { errors: [{ field: 'currentPassword', rule: 'mismatch', message: "That's not your current password." }] } };
+        return undefined;
+      },
+      [`POST ${AUTH}/step-up/totp`]: () => ({ proof: 'jwt', expiresAt: new Date().toISOString() }),
+    });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<SecurityTab />);
+    await user.click(await screen.findByRole('button', { name: 'Change password' }));
+    const dialog = screen.getByRole('dialog', { name: 'Change password' });
+    await user.click(within(dialog).getByRole('button', { name: 'Save password' }));
+    expect(await within(dialog).findByText('Enter your current password.')).toBeTruthy();
+    expect(within(dialog).getByText('Enter a password.')).toBeTruthy();
+    await user.type(within(dialog).getByLabelText('Current password'), 'old password here');
+    await user.type(within(dialog).getByLabelText('New password'), 'Maple syrup on fresh snow 42');
+    await user.type(within(dialog).getByLabelText('Confirm password'), 'Maple syrup on fresh snow 42');
+    await user.click(within(dialog).getByRole('button', { name: 'Save password' }));
+
+    const stepUp = await screen.findByRole('dialog', { name: 'Confirm it’s you' });
+    await user.type(within(stepUp).getByLabelText('Authenticator code'), '123456');
+    await user.click(within(stepUp).getByRole('button', { name: 'Confirm' }));
+    // The retried change: the server says the current password is wrong; then the person fixes it.
+    expect(await screen.findByText("That's not your current password.")).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Save password' }));
+    expect(await screen.findByText('Password changed. Your other devices were signed out.')).toBeTruthy();
+    expect(calls.filter(c => c.url === `${AUTH}/security/password`).at(-1)?.body).toEqual({
+      currentPassword: 'old password here', password: 'Maple syrup on fresh snow 42', passwordConfirm: 'Maple syrup on fresh snow 42', current: 'sess-bff',
+    });
+  });
+
+  it('S-154: an account without a password sets one (no current password asked)', async () => {
+    mockFetch({ [`GET ${AUTH}/security`]: () => security({ password: false }) });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<SecurityTab />);
+    await user.click(await screen.findByRole('button', { name: 'Set a password' }));
+    expect(screen.queryByLabelText('Current password')).toBeNull();
+  });
+
+  it('S-154: sets up the authenticator app again with the QR code and a code from it', async () => {
+    const calls = mockFetch({
+      [`GET ${AUTH}/security`]: () => security({ authenticator: true }),
+      // (mockFetch matches by prefix: the longer path first)
+      [`POST ${AUTH}/security/authenticator/verify`]: () => ({ authenticator: true }),
+      [`POST ${AUTH}/security/authenticator`]: () => ({ secret: 'JBSWY3DPEHPK3PXP', otpauthUri: 'otpauth://totp/Northline:ravi', qrCode: 'data:image/png;base64,AAAA' }),
+    });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<SecurityTab />);
+    await user.click(await screen.findByRole('button', { name: 'Set up again' }));
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByText('JBSW Y3DP EHPK 3PXP')).toBeTruthy();
+    await user.type(screen.getByLabelText('6-digit code from the app'), '123456');
+    await user.click(screen.getByRole('button', { name: 'Confirm code' }));
+    expect(await screen.findByText('Authenticator app set up. Codes from an older one no longer work.')).toBeTruthy();
+    expect(calls.find(c => c.url === `${AUTH}/security/authenticator/verify`)?.body).toEqual({ code: '123456' });
+  });
+
+  it('S-154: confirming it’s them sends the password first when one is typed', async () => {
+    const calls = mockFetch({
+      'GET http://localhost:9000/api/auth/security': () => { throw { status: 401, body: { code: 'unauthenticated' } }; },
+      [`POST ${AUTH}/sign-in/password`]: () => ({ step: 'factor', factors: ['totp'] }),
+      [`POST ${AUTH}/sign-in/totp`]: () => ({ user: { id: 'u1', firstName: 'Ravi', lastName: 'Sandhu', initials: 'RS' }, acr: 'mfa' }),
+    });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<SecurityTab />);
+    await screen.findByRole('heading', { name: 'Confirm it’s you' });
+    await user.type(screen.getByLabelText('Password'), 'correct horse battery staple');
+    await user.type(screen.getByLabelText('Authenticator code'), '654321');
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(calls.some(c => c.url === `${AUTH}/sign-in/totp`)).toBe(true));
+    expect(calls.find(c => c.url === `${AUTH}/sign-in/password`)?.body).toEqual({ email: 'ravi@prairiewrench.ca', password: 'correct horse battery staple' });
+  });
+
   it('names devices from the user agent', () => {
     const t = ((k: string) => k) as never;
     expect(deviceName('Mozilla/5.0 (Linux; Android 14)', t)).toBe('device_android');
