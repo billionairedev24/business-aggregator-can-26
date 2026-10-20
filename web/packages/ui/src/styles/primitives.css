@@ -110,6 +110,26 @@
 .nl-empty { padding: var(--space-10) var(--space-5); text-align: center; color: var(--color-text-muted); font-size: var(--text-md); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); background: var(--color-surface-sunken); border-radius: var(--radius-lg); }
 .nl-empty-title { display: block; color: var(--color-text); font-family: var(--font-heading); font-size: var(--text-xl); font-weight: var(--weight-semibold); }
 .nl-errorstate { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-danger-bg); color: var(--color-danger); display: flex; gap: var(--space-3); align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: var(--text-md); }
+/* A whole screen that could not be shown (FailureScreen): picture, heading, one sentence, Try again / Go to home. */
+.nl-failure-page { min-height: 100vh; display: flex; justify-content: center; padding: var(--space-10) var(--space-4); background: var(--color-canvas); }
+.nl-failure { width: 100%; max-width: 640px; margin: 0 auto; padding-top: var(--space-8); text-align: center; display: flex; flex-direction: column; align-items: center; }
+.nl-failure-art { display: flex; justify-content: center; width: 100%; margin-bottom: var(--space-6); }
+.nl-failure-icon { display: grid; place-items: center; width: 112px; height: 112px; border-radius: 50%; background: var(--color-surface-brand); color: var(--color-action-primary); }
+.nl-failure-title { margin: 0; font-family: var(--font-heading); font-size: var(--text-4xl); letter-spacing: var(--tracking-tight); line-height: var(--leading-tight); }
+.nl-failure-body { margin: var(--space-3) 0 0; max-width: 34em; color: var(--color-text-muted); font-size: var(--text-lg); }
+.nl-failure-retry { min-height: 1.5em; margin: var(--space-3) 0 0; color: var(--color-text-muted); font-size: var(--text-md); }
+.nl-failure-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); margin-top: var(--space-6); }
+.nl-failure-help { margin: var(--space-5) 0 0; }
+.nl-failure-help a { display: inline-flex; align-items: center; min-height: 44px; color: var(--color-link); font-weight: var(--weight-semibold); }
+.nl-failure-dev { width: 100%; margin-top: var(--space-8); padding: var(--space-4); text-align: left; border-radius: var(--radius-md); border: 1px solid var(--color-danger); background: var(--color-danger-bg); }
+.nl-failure-dev summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: var(--weight-semibold); }
+.nl-failure-dev p { margin: var(--space-2) 0 0; white-space: pre-wrap; word-break: break-word; }
+.nl-failure-dev pre { margin: var(--space-3) 0 0; padding: var(--space-3); max-height: 360px; overflow: auto; border-radius: var(--radius-sm); background: var(--color-surface); font-size: var(--text-xs); }
+@media (max-width: 599.98px) {
+  .nl-failure { padding-top: var(--space-4); }
+  .nl-failure-title { font-size: var(--text-3xl); }
+  .nl-failure-actions { flex-direction: column; align-items: stretch; width: 100%; }
+}
 
 /* ── overlays: dialog, sheet (right, min(680px, 100%)), drawer ── */
 .nl-backdrop { position: fixed; inset: 0; z-index: var(--z-dialog); background: var(--color-overlay); display: grid; place-items: center; padding: var(--space-4); }
