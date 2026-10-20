@@ -21,6 +21,8 @@ public interface FoodCheckoutFacts {
      * @param etaFromMin minutes until a delivery arrives (prep + ride), {@code etaToMin} 10 later
      * @param pickupFromMin minutes until a pickup is ready, {@code pickupToMin} 5 later
      * @param slots the start of every 30-minute window a scheduled order may pick (within opening hours)
+     * @param groupOrders S-159: the kitchen takes group orders (Studio › Kitchen › Hours &amp; prep), for up to
+     *     {@code groupMax} people
      */
     record Kitchen(
             String merchantId,
@@ -40,7 +42,9 @@ public interface FoodCheckoutFacts {
             int pickupToMin,
             long minOrderCents,
             int serviceFeeBps,
-            List<Instant> slots) {
+            List<Instant> slots,
+            boolean groupOrders,
+            int groupMax) {
         public Kitchen {
             fulfilment = List.copyOf(fulfilment);
             slots = List.copyOf(slots);

@@ -1211,3 +1211,28 @@ Choose a province or market of the region model.	Choisissez une province ou un m
 The default rule can be changed, not removed.	La règle par défaut peut être modifiée, pas supprimée.	new
 Choose a member price between 1% and 50% off, or none.	Choisissez un prix membre de 1 % à 50 % de rabais, ou aucun.	new
 Add a card in Payment methods first: Plus renews on it.	Ajoutez d’abord une carte dans Modes de paiement : Plus se renouvelle avec elle.	new
+Choose who pays: you, or each person their own share.	Choisissez qui paie : vous, ou chaque personne sa part.	new
+Add something to the order before you lock it.	Ajoutez quelque chose à la commande avant de la verrouiller.	new
+To split the bill, add something for yourself first.	Pour partager l’addition, ajoutez d’abord quelque chose pour vous.	new
+You can add up to 30 dishes to a group order.	Vous pouvez ajouter jusqu’à 30 plats à une commande de groupe.	new
+Enter the code you were sent, like 7Q2M-K4XP.	Entrez le code qu’on vous a envoyé, par exemple 7Q2M-K4XP.	new
+The host has locked this order. Ask them to unlock it to make changes.	L’hôte a verrouillé cette commande. Demandez-lui de la déverrouiller pour la modifier.	new
+This group order is with the kitchen now.	Cette commande de groupe est maintenant en cuisine.	new
+This group order was cancelled or has expired.	Cette commande de groupe a été annulée ou a expiré.	new
+This group order is full (up to %d people).	Cette commande de groupe est complète (jusqu’à %d personnes).	new
+{kitchen} doesn't take group orders.	{kitchen} n’accepte pas les commandes de groupe.	new
+Lock the order first, so nobody changes it while it's paid.	Verrouillez d’abord la commande, pour que personne ne la modifie pendant le paiement.	new
+Everyone has to pay their share before the order goes to the kitchen.	Chacun doit payer sa part avant que la commande parte en cuisine.	new
+Someone has already paid, so the order can't be unlocked. Cancel it to start again.	Quelqu’un a déjà payé : la commande ne peut plus être déverrouillée. Annulez-la pour recommencer.	new
+The kitchen has this order now. Food orders can't be cancelled once they're with the kitchen.	La cuisine a maintenant cette commande. Une commande de repas ne peut plus être annulée une fois en cuisine.	new
+You're the host. Cancel the group order instead of leaving it.	Vous êtes l’hôte. Annulez la commande de groupe au lieu de la quitter.	new
+This share is already paid.	Cette part est déjà payée.	new
+Each person pays their own share of this group order.	Chaque personne paie sa part de cette commande de groupe.	new
+The host pays for this group order.	L’hôte paie cette commande de groupe.	new
+A dish's price changed after the shares were paid. Cancel this group order and start a new one.	Le prix d’un plat a changé après le paiement des parts. Annulez cette commande de groupe et recommencez.	new
+{title} is age-restricted. Order it on its own, not in a group order.	{title} est soumis à une restriction d’âge. Commandez-le seul, pas dans une commande de groupe.	new
+You can take out only your own dishes.	Vous ne pouvez retirer que vos propres plats.	new
+Only the host can do that.	Seul l’hôte peut faire ceci.	new
+Pay your own share. Only the host can pay for someone else.	Payez votre part. Seul l’hôte peut payer pour quelqu’un d’autre.	new
+Pay for the order first.	Payez d’abord la commande.	new
+Pay for the share first.	Payez d’abord votre part.	new

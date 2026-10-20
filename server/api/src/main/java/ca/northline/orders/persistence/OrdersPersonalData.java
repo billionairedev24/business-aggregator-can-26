@@ -60,8 +60,16 @@ class OrdersPersonalData implements PersonalDataContributor {
                           from orders.carts c where c.customer_id = :u
                         """, p),
                 section(jdbc, "orders.groupOrders", "Group orders", "Commandes de groupe", """
-                        select id, merchant_id, host_user_id = :u as host, locks_at
-                          from orders.group_orders where host_user_id = :u or :u = any(member_user_ids)
+                        select g.id, g.merchant_id, g.kitchen_name, g.host_user_id = :u as host, g.state, g.payment,
+                               g.fulfilment_mode, g.scheduled_for, g.order_ref, g.created_at, g.locks_at, g.placed_at,
+                               (select coalesce(json_agg(json_build_object('title', i.title, 'qty', i.qty,
+                                       'totalCents', i.total_cents, 'choices', i.choices, 'note', i.note)), '[]')
+                                  from orders.group_order_items i where i.group_order_id = g.id and i.user_id = :u)
+                                   as my_items,
+                               (select json_build_object('totalCents', s.total_cents, 'state', s.state)
+                                  from orders.group_order_shares s where s.group_order_id = g.id and s.user_id = :u)
+                                   as my_share
+                          from orders.group_orders g where g.host_user_id = :u or :u = any(g.member_user_ids)
                         """, p));
     }
 
@@ -88,6 +96,11 @@ class OrdersPersonalData implements PersonalDataContributor {
                          where f.customer_id = :u and f.delivery is not null
                            and not exists (select 1 from orders.orders o where o.id = f.id and o.state in
                         """ + OPEN + ")").param("u", u).update();
+        // S-159: their dishes in shared carts go (a placed group's dishes are its order's lines); shares are payment
+        // records and stay under the blanked id
+        jdbc.sql("delete from orders.group_order_items where user_id = :u")
+                .param("u", u)
+                .update();
         jdbc.sql("""
                         update orders.group_orders set member_user_ids = array_remove(member_user_ids, :u)
                          where :u = any(member_user_ids)
