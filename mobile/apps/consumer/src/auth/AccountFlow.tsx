@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 
 import type { PendingSignIn } from '@northline/mobile-kit';
 
-import type { AuthSessionAnswer, TotpSetup } from '../api/auth';
+import type { AuthSessionAnswer, MarketingConsent, TotpSetup } from '../api/auth';
 import { services } from '../services';
 import { useAuth } from './AuthProvider';
 import { HandoffError } from './errors';
@@ -37,7 +37,8 @@ interface FlowState {
 interface FlowValue extends FlowState {
   setDraft(d: SignUpForm): void;
   setIdentifier(v: string): void;
-  register(form: SignUpForm): Promise<void>;
+  /** `marketing`: S-157, the sign-up's ticked marketing boxes (CASL express consent). */
+  register(form: SignUpForm, marketing?: MarketingConsent[]): Promise<void>;
   signIn(identifier: string): Promise<void>;
   /** The code from the SMS / call: registration moves on to the second factor, sign-in finishes. */
   verify(code: string): Promise<'mfa' | 'done'>;
@@ -80,10 +81,10 @@ export function AccountFlowProvider({ children, now = Date.now }: { children: Re
   );
 
   const register = useCallback(
-    async (form: SignUpForm) => {
+    async (form: SignUpForm, marketing: MarketingConsent[] = []) => {
       await begin();
       const { firstName, lastName } = splitName(form.fullName);
-      const step = await services().authApi.register({ firstName, lastName, phone: form.phone, email: form.email, terms: form.terms });
+      const step = await services().authApi.register({ firstName, lastName, phone: form.phone, email: form.email, terms: form.terms, marketing });
       setState((s) => ({ ...s, mode: 'register', draft: form, phone: step.phone, channel: step.channel, resendAt: now() + step.resendAfterSeconds * 1000, totp: null }));
     },
     [begin, now],

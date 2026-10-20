@@ -23,7 +23,7 @@ async function fillSignUp(phone = '555 555 0148', name = 'Grace Hopper', email =
   fireEvent.changeText(await screen.findByTestId('field-phone'), phone);
   fireEvent.changeText(screen.getByTestId('field-name'), name);
   fireEvent.changeText(screen.getByTestId('field-email'), email);
-  fireEvent.press(screen.getByRole('checkbox'));
+  fireEvent.press(screen.getByTestId('terms'));
 }
 
 describe('A1 Welcome', () => {
@@ -57,7 +57,7 @@ describe('A2 Sign up', () => {
     fireEvent.changeText(screen.getByTestId('field-phone'), '12345');
     fireEvent.changeText(screen.getByTestId('field-name'), 'Grace');
     fireEvent.changeText(screen.getByTestId('field-email'), 'grace@');
-    fireEvent.press(screen.getByRole('checkbox'));
+    fireEvent.press(screen.getByTestId('terms'));
     expect(screen.getByRole('button', { name: 'Send code' }).props.accessibilityState).toMatchObject({ disabled: false });
     fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
     expect(await screen.findByText('Enter a valid Canadian mobile, e.g. +1 403 555 0148.')).toBeTruthy();
@@ -92,6 +92,34 @@ describe('A2 Sign up', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
     expect(await screen.findByText("We couldn't reach Northline. Check your connection and try again.")).toBeTruthy();
     expect(screen.getByTestId('field-name').props.value).toBe('Grace Hopper');
+  });
+});
+
+describe('S-157: the sign-up’s offers checkboxes (CASL express consent)', () => {
+  it('shows them unticked with the server’s wording; a ticked one is sent with its version, from the app', async () => {
+    const { server } = await start({ url: '/sign-up' });
+    const email = await screen.findByTestId('consent-marketing_email');
+    expect(email.props.accessibilityState).toMatchObject({ checked: false });
+    expect(screen.getByTestId('consent-marketing_sms').props.accessibilityState).toMatchObject({ checked: false });
+    expect(screen.getByText('Offers and news (optional)')).toBeTruthy();
+    expect(screen.getByText(/Sent by Northline Marketplace Inc\./)).toBeTruthy();
+    await fillSignUp();
+    fireEvent.press(screen.getByTestId('consent-marketing_email'));
+    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
+    expect(await screen.findByText('Enter the 6-digit code')).toBeTruthy();
+    expect(server.auth.api[0]).toMatchObject({
+      path: '/api/auth/register',
+      body: { consentSource: 'app_signup', marketing: [{ category: 'marketing_email', wordingVersion: 'account.email.2026-10' }] },
+    });
+  });
+
+  it('sends no consent when nothing is ticked', async () => {
+    const { server } = await start({ url: '/sign-up' });
+    await screen.findByTestId('consent-marketing_email');
+    await fillSignUp();
+    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
+    expect(await screen.findByText('Enter the 6-digit code')).toBeTruthy();
+    expect(server.auth.api[0]!.body).not.toHaveProperty('marketing');
   });
 });
 

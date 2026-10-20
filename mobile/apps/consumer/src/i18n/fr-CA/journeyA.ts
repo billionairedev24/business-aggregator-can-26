@@ -20,6 +20,8 @@ export const journeyA: { [k in keyof typeof en]: string } = {
   'signup.termsAnd': ' et la ',
   'signup.privacyLink': 'Politique de confidentialité',
   'signup.termsAfter': '. {brand} stocke les données au Canada.',
+  'signup.marketingTitle': 'Offres et nouvelles (facultatif)',
+  'signup.marketingNote': 'Laissez ces cases décochées si vous n’en voulez pas; les textos vont au mobile ci-dessus. Changez d’avis en tout temps dans Compte › Notifications. Envoyé par {requester}.',
   'signup.send': 'Envoyer le code',
   'signup.haveAccount': 'Vous avez déjà un compte ?',
   'social.apple': 'Continuer avec Apple',

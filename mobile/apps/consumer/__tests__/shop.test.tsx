@@ -626,9 +626,9 @@ describe('S-157: Apple Pay and Google Pay in PaymentSheet', () => {
       { paymentIntent: 'pi_2', clientSecret: 'pi_2_secret', status: 'requires_payment_method', amountCents: 446 },
     ],
   };
-  const env = { ...process.env };
+  const KEYS = ['EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID', 'EXPO_PUBLIC_GOOGLE_PAY', 'EXPO_PUBLIC_GOOGLE_PAY_TEST'] as const;
   afterEach(() => {
-    process.env = { ...env };
+    for (const k of KEYS) delete process.env[k];
     setWalletsForTests(null);
   });
 

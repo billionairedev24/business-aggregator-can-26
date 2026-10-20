@@ -93,7 +93,7 @@ describe('Create account — validation', () => {
     expect(screen.getByText('5 things need attention.')).toBeTruthy();
     // the mobile is optional
     expect(screen.queryByText('Mobile number is required for verification.')).toBeNull();
-    expect(calls).toHaveLength(0);
+    expect(calls.filter(c => c.path === '/api/auth/accounts')).toHaveLength(0);
   });
 
   it('password rules: 12 characters, the confirmation, not the email (no composition rules)', async () => {
@@ -134,6 +134,44 @@ describe('Create account — validation', () => {
     expect(screen.getByLabelText('Mot de passe').getAttribute('aria-invalid')).toBe('true');
   });
 
+  it('S-157: an unticked offers checkbox with the server’s wording; ticked, it is sent with its version (en + fr)', async () => {
+    routes['/api/auth/accounts/consent-wordings'] = () => ok({
+      requester: 'Northline Marketplace Inc. · 1200 – 8th Avenue SW · support@northline.ca',
+      items: [{ category: 'marketing_email', channel: 'email', wordingVersion: 'studio.email.2026-10', wording: 'Yes, Northline Marketplace Inc. may email me news, offers and tips for businesses selling on Northline.' }],
+    });
+    const { ui } = renderPage();
+    const box = await screen.findByRole('checkbox', { name: /may email me news, offers and tips/ });
+    expect((box as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByText(/Leave this unticked if you don’t want it\..*Sent by Northline Marketplace Inc\./)).toBeTruthy();
+    await ui.type(screen.getByLabelText('First name'), 'Amara');
+    await ui.type(screen.getByLabelText('Last name'), 'Osei');
+    await ui.type(screen.getByLabelText('Email'), 'amara@example.ca');
+    await ui.type(screen.getByLabelText('Password'), PASSWORD);
+    await ui.type(screen.getByLabelText('Confirm password'), PASSWORD);
+    await ui.click(screen.getByRole('checkbox', { name: /Terms of Service/ }));
+    await ui.click(box);
+    await ui.click(screen.getByRole('button', { name: 'Create account' }));
+    await screen.findByRole('heading', { name: 'Check your email' });
+    expect(calls.find(c => c.path === '/api/auth/accounts')!.body.marketing).toEqual([{ category: 'marketing_email', wordingVersion: 'studio.email.2026-10' }]);
+    expect(calls.find(c => c.path === '/api/auth/accounts/consent-wordings')).toBeTruthy();
+  });
+
+  it('S-157: the offers box in French, and a stale wording comes back on it', async () => {
+    routes['/api/auth/accounts/consent-wordings'] = () => ok({ requester: 'Northline Marketplace Inc.', items: [{ category: 'marketing_email', channel: 'email', wordingVersion: 'studio.email.2026-10', wording: 'Oui, Northline Marketplace Inc. peut m’envoyer par courriel des nouvelles.' }] });
+    routes['/api/auth/accounts'] = () => invalid('marketing', 'stale', 'The consent wording has changed. Read it again before you agree.');
+    const { ui } = renderPage({ locale: 'fr' });
+    expect(await screen.findByText('Offres et nouvelles (facultatif)')).toBeTruthy();
+    await ui.type(screen.getByLabelText('Prénom'), 'Amara');
+    await ui.type(screen.getByLabelText('Nom'), 'Osei');
+    await ui.type(screen.getByLabelText('Courriel'), 'amara@example.ca');
+    await ui.type(screen.getByLabelText('Mot de passe'), PASSWORD);
+    await ui.type(screen.getByLabelText('Confirmez le mot de passe'), PASSWORD);
+    await ui.click(screen.getByRole('checkbox', { name: /Conditions/ }));
+    await ui.click(screen.getByRole('checkbox', { name: /peut m’envoyer par courriel/ }));
+    await ui.click(screen.getByRole('button', { name: 'Créer le compte' }));
+    expect(await screen.findByText('Le texte du consentement a changé. Relisez-le avant d’accepter.')).toBeTruthy();
+  });
+
   it('links the Terms and Privacy Policy in a new tab', () => {
     renderPage();
     expect((screen.getByRole('link', { name: 'Terms of Service' })).getAttribute('href')).toBe('/legal/terms.html');
@@ -153,7 +191,7 @@ describe('Create account — email code → second factor → backup codes', () 
     expect(screen.getByText(/We sent a 6-digit code to amara@example\.ca/)).toBeTruthy();
     expect(screen.getByText(/^New code in (1:00|0:5\d)$/)).toBeTruthy();
     expect(screen.getByText(/Mailpit: http:\/\/localhost:8025/)).toBeTruthy(); // jsdom runs on localhost
-    expect(calls[0]).toMatchObject({ path: '/api/auth/accounts', body: { firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', password: PASSWORD, phone: '+1 403 555 0148', terms: true, app: 'studio' } });
+    expect(calls.find(c => c.path === '/api/auth/accounts')).toMatchObject({ path: '/api/auth/accounts', body: { firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', password: PASSWORD, phone: '+1 403 555 0148', terms: true, app: 'studio' } });
 
     await ui.type(screen.getByLabelText('Code from the email'), '000000');
     await ui.click(screen.getByRole('button', { name: 'Confirm email' }));

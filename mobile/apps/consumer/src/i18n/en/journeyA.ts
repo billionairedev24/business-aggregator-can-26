@@ -26,6 +26,8 @@ export const journeyA = {
   'signup.termsAnd': ' and ',
   'signup.privacyLink': 'Privacy Policy',
   'signup.termsAfter': '. {brand} stores data in Canada.',
+  'signup.marketingTitle': 'Offers and news (optional)',
+  'signup.marketingNote': 'Leave these unticked if you don’t want them; texts go to the mobile above. Change your mind any time in Account › Notifications. Sent by {requester}.',
   'signup.send': 'Send code',
   'signup.haveAccount': 'Already have an account?',
   'social.apple': 'Continue with Apple',
