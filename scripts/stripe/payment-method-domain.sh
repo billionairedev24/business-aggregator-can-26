@@ -31,6 +31,8 @@ stripe() { # method path [form fields…]
   shift 2
   local args=()
   for field in "$@"; do args+=(--data-urlencode "$field"); done
+  # a POST without fields still sends a form body (Stripe and stripe-mock expect the form content type)
+  if [ "$method" = POST ] && [ $# -eq 0 ]; then args+=(-H 'Content-Type: application/x-www-form-urlencoded' --data ''); fi
   curl -sS --fail-with-body -X "$method" -u "$STRIPE_SECRET_KEY:" -H "Stripe-Version: $version" \
     ${args[@]+"${args[@]}"} "$api$path"
 }

@@ -539,7 +539,7 @@ existing mocks only: the api's options endpoint (fake gateway) and `StripePaymen
 stubbed Stripe.js (the element gets `wallets: {applePay, googlePay}`), the app's adapter with the SDK mocked
 (PaymentSheet gets `applePay` / `googlePay`, `initStripe` the merchant id), and the association file. No Apple Pay or
 Google Pay sheet has been shown, no domain registered, no merchant id created, `payment-method-domain.sh` has not been
-run against Stripe. Before launch, in test mode: pay a shop order with two shops (three intents) with Apple Pay in
+run against Stripe (only its `status` / `validate` against stripe-mock). Before launch, in test mode: pay a shop order with two shops (three intents) with Apple Pay in
 Safari and on an iPhone, and with Google Pay in Chrome and on Android; check every intent is `requires_capture`, the
 later ones confirmed with the wallet's PaymentMethod without a second sheet; a booking deposit and a tip; a phone-code
 sign-in still asks for the step-up first.

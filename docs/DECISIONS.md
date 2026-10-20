@@ -10193,7 +10193,8 @@ Branch `feat/s157-wallets-consent`. Runbooks: [stripe.md § 14](runbooks/stripe.
 (range V452–V461). No new Kafka topic.
 
 - **Never run against the real Stripe, Twilio, Apple or Google.** Wallets: no Apple Pay / Google Pay sheet shown, no
-  domain registered, no merchant id, `scripts/stripe/payment-method-domain.sh` not run against Stripe (only `bash -n`);
+  domain registered, no merchant id, `scripts/stripe/payment-method-domain.sh` not run against Stripe (its `status` and
+  `validate` ran against stripe-mock v0.205.0, `register` up to the association-file check; bash 3.2 parses it);
   tested with a stubbed Stripe.js, the React Native SDK mocked and the fake gateway. Twilio: the signature is checked
   against Twilio's documented example (`0/KCTR6DLpKmkAf8muzZqo1nDgQ=`) and MockMvc deliveries; no real number, handset,
   Messaging Service, Advanced Opt-Out or status callback. `StatusCallback` on sends is asserted with WireMock. Offers
