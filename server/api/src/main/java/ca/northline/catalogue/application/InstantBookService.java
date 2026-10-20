@@ -13,14 +13,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * {@link InstantBook} and the Studio's switch (S-156). The business may always turn instant book off; turning it on
- * while Northline has paused it answers 409 {@code instant_book_paused} (the switch respects the pause). Every change of
- * the effective value publishes {@link InstantBookChanged} in the same transaction.
+ * {@link InstantBook} (S-156). The business may always turn instant book off; turning it on while Northline has paused it
+ * answers 409 {@code instant_book_paused} (the switch respects the pause). Every change of the effective value publishes
+ * {@link InstantBookChanged} in the same transaction.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional
-class InstantBookService implements InstantBook, SwitchInstantBook {
+class InstantBookService implements InstantBook {
 
     private final InstantBookStore store;
     private final ApplicationEventPublisher events;
@@ -33,8 +33,11 @@ class InstantBookService implements InstantBook, SwitchInstantBook {
     }
 
     @Override
-    public State set(String merchantId, boolean enabled, String userId) {
+    public State setEnabled(String merchantId, boolean enabled, String userId) {
         var current = store.lock(merchantId).orElse(State.DEFAULT);
+        if (enabled == current.enabled()) {
+            return current;
+        }
         if (enabled && current.pausedAt() != null) {
             throw new Conflict("instant_book_paused", PAUSED);
         }

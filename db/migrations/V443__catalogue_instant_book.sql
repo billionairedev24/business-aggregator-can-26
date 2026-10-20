@@ -13,3 +13,12 @@ CREATE TABLE catalogue.instant_book_settings (
   updated_at    timestamptz NOT NULL,
   CONSTRAINT chk_instant_book_pause CHECK ((paused_at IS NULL) = (paused_cause IS NULL))
 );
+
+-- The business's switch is Studio › Availability › "How bookings come in" (availability.booking_rules.accept_mode,
+-- stored but not enforced until now): a business that chose "Approve within 2 h" or "Requests only" has instant book
+-- off from now on, as it asked.
+INSERT INTO catalogue.instant_book_settings (merchant_id, enabled, updated_by, updated_at)
+SELECT DISTINCT r.merchant_id, false, 'migration', now()
+  FROM availability.booking_rules r
+ WHERE r.accept_mode IS NOT NULL AND r.accept_mode <> 'instant' AND r.merchant_id IS NOT NULL
+ON CONFLICT (merchant_id) DO NOTHING;

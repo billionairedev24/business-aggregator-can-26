@@ -110,6 +110,15 @@ class StandingEnforcementTest extends IntegrationTest {
         return offers.ofMerchant(merchantId, "en").stream().allMatch(ServiceOffers.Offer::instantBook);
     }
 
+    org.springframework.test.web.servlet.ResultActions rules(String acceptMode) throws Exception {
+        return mvc.perform(put("/api/v1/merchants/{m}/availability/rules", business)
+                .with(TestJwt.member(owner))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"intervalMin":30,"bufferMin":0,"minNoticeMin":60,"horizonDays":14,"maxJobsPerDay":99,
+                         "acceptMode":"%s","rescheduleFreeMin":180,"lateCancelFeeCents":0,"serviceAreas":[]}""".formatted(acceptMode)));
+    }
+
     String standing(String merchantId, String who) throws Exception {
         return mvc.perform(get("/api/v1/merchants/{m}/standing", merchantId).with(TestJwt.member(who)))
                 .andExpect(status().isOk())
@@ -144,27 +153,17 @@ class StandingEnforcementTest extends IntegrationTest {
                 .until(() -> emails.to(ownerEmail).stream()
                         .anyMatch(m -> m.subject().equals("Instant book is paused for No-show Mechanics")));
 
-        // the business can turn it off, not back on while paused
-        var url = "/api/v1/merchants/{m}/instant-book";
-        mvc.perform(put(url, business)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"enabled\":true}")
-                        .with(TestJwt.member(owner)))
+        // its switch ("How bookings come in") can go off while paused, not back on
+        rules("approve").andExpect(status().isOk());
+        rules("instant")
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("instant_book_paused"));
-        mvc.perform(put(url, business)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}")
-                        .with(TestJwt.member(owner)))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.errors[0].message").value("Choose on or off."));
-        var viewer = data.user("Priya Sandhu");
-        data.member(business, viewer, MerchantRole.BOOKKEEPER);
-        mvc.perform(put(url, business)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"enabled\":false}")
-                        .with(TestJwt.member(viewer)))
-                .andExpect(status().isForbidden());
+                .andExpect(jsonPath("$.code").value("instant_book_paused"))
+                .andExpect(
+                        jsonPath("$.detail")
+                                .value(
+                                        "Northline paused instant book for your business. Standing shows why and how to appeal."));
+        mvc.perform(get("/api/v1/merchants/{m}/instant-book", business).with(TestJwt.member(owner)))
+                .andExpect(jsonPath("$.enabled").value(false));
 
         // staff lift it; the rule leaves it alone for its window
         var id = JsonPath.<List<String>>read(json, "$.active[?(@.kind == 'instant_book_off')].id")
@@ -174,12 +173,14 @@ class StandingEnforcementTest extends IntegrationTest {
                         .content("{\"reason\":\"Two of the no-shows were the customer's mistake.\"}")
                         .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
                 .andExpect(status().isOk());
+        assertThat(instantBook(business)).as("its own switch is off").isFalse();
+        rules("instant").andExpect(status().isOk());
         assertThat(instantBook(business)).isTrue();
         enforce.run();
         assertThat(instantBook(business)).isTrue();
         await().atMost(Duration.ofSeconds(10))
                 .until(() -> emails.to(ownerEmail).stream()
-                        .anyMatch(m -> m.subject().equals("Instant book is back on for No-show Mechanics")));
+                        .anyMatch(m -> m.subject().equals("Instant book is no longer paused for No-show Mechanics")));
     }
 
     @Test

@@ -16,6 +16,13 @@ public interface InstantBook {
 
     State state(String merchantId);
 
+    /**
+     * The business's own switch — Studio › Availability › "How bookings come in": instant book on or off. Turning it on
+     * while Northline has paused it (and it was off) answers 409 {@code instant_book_paused}: the switch respects the
+     * pause; keeping it on, or turning it off, is always possible.
+     */
+    State setEnabled(String merchantId, boolean enabled, String actorId);
+
     /** Northline pauses it ({@code cause}: {@code provider_no_shows} | {@code staff}); false when already paused. */
     boolean pause(String merchantId, String cause, String reason, String actorId);
 
