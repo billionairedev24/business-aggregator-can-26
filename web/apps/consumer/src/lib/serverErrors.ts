@@ -12,13 +12,15 @@ import { errorReference, errorResponseParts, logError } from '@northline/ui/erro
 
 type Handler = (request: Request, opts?: never) => Promise<Response> | Response;
 interface Slot { error?: unknown }
-const slots = new AsyncLocalStorage<Slot>();
 
 /** h3's HTTPError, as its toResponse() logs it before answering JSON (prepareResponse → console.error(error)). */
 const isH3Error = (v: unknown): v is Error & { status: number; cause?: unknown } =>
   v instanceof Error && v.name === 'HTTPError' && typeof (v as { status?: unknown }).status === 'number';
 
-const g = globalThis as { __nlConsoleError?: typeof console.error };
+// On globalThis: Vite runs this module again after every change in development, while the console.error installed by
+// the first run stays — both must keep using the same request slots.
+const g = globalThis as { __nlConsoleError?: typeof console.error; __nlErrorSlots?: AsyncLocalStorage<Slot> };
+const slots = (g.__nlErrorSlots ??= new AsyncLocalStorage<Slot>());
 /** The console.error before this module captured h3's (the log line goes there). */
 const originalError = (): typeof console.error => g.__nlConsoleError ?? console.error;
 
@@ -56,12 +58,12 @@ async function h3ErrorBody(response: Response): Promise<{ status: number; messag
   return 'unhandled' in body || typeof body.message === 'string' ? { status: body.status, message: typeof body.message === 'string' ? body.message : undefined } : null;
 }
 
-export interface ErrorPageOptions { dev: boolean; supportEmail?: string | null; log?: (line: string) => void }
+export interface ErrorPageOptions { dev: boolean; supportEmail?: string | null; log?: (line: string) => void; reload?: boolean }
 
 /** The branded answer for `request`: the page (or JSON), the status, no cache, the reference; logged once. */
 export function errorPage(request: Request, status: number, error: unknown, opts: ErrorPageOptions): Response {
   const answer = errorResponseParts({
-    status, error, request, dev: opts.dev, supportEmail: opts.supportEmail, log: opts.log ?? originalError(), source: 'consumer-ssr',
+    status, error, request, dev: opts.dev, supportEmail: opts.supportEmail, log: opts.log ?? originalError(), source: 'consumer-ssr', reload: opts.reload,
     // node-server.mjs chose this page's nonce and puts it in the policy (the retry script needs it)
     nonce: request.headers.get('x-nl-csp-nonce') ?? undefined,
   });
@@ -81,7 +83,7 @@ export function withErrorPages(start: Handler, opts: ErrorPageOptions & { previe
     if (/^\/(api|bff)\//.test(path)) return errorPage(request, 404, undefined, opts);
     if (opts.preview && path === '/__nl/error') {
       const status = Number(new URL(request.url).searchParams.get('status')) || 500;
-      return errorPage(request, status, opts.dev ? new Error('A preview of the error page (NL_ERROR_PREVIEW=1)') : undefined, { ...opts, log: () => {} });
+      return errorPage(request, status, opts.dev ? new Error('A preview of the error page (NL_ERROR_PREVIEW=1)') : undefined, { ...opts, log: () => {}, reload: false }); // shows the countdown, never reloads
     }
     const slot: Slot = {};
     let response: Response;

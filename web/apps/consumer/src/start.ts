@@ -1,3 +1,4 @@
+import './lib/zodJitless'; // first: before any zod schema is built (CSP without 'unsafe-eval', S104-09) — Start loads this file before the router
 import { createCsrfMiddleware, createStart } from '@tanstack/react-start';
 import { createSerializationAdapter } from '@tanstack/react-router';
 import { ApiError, failureKind } from '@northline/client';
