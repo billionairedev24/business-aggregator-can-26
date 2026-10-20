@@ -47,6 +47,7 @@ public interface CardDisputes {
     String CLOSED = "This card dispute is closed.";
     String SUBMITTED = "The evidence was already submitted to Stripe.";
     String OVERDUE = "The issuer's deadline for evidence has passed.";
+    String STRIPE_REJECTED = "Stripe didn't accept the evidence. The error is on the case; fix it and submit again.";
 
     Set<String> OPEN_STATUSES = Set.of("warning_needs_response", "needs_response");
 

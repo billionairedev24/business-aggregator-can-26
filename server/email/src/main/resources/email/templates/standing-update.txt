@@ -1,4 +1,4 @@
-[# th:with="what=${#messages.msg('standing-update.subject-name.' + subject)}"]
+[# th:with="what=${#messages.msg('standing-update.subject-name.' + about)}"]
 [(#{__${'standing-update.heading.' + change}__})]
 
 [(#{__${'standing-update.body.' + change}__(${businessName}, ${what}, ${reference})})]

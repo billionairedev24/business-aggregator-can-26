@@ -75,7 +75,10 @@ class InstantBookJdbc implements InstantBookStore {
         return jdbc.sql("""
                         select merchant_id from catalogue.instant_book_settings
                          where paused_cause = :cause order by merchant_id
-                        """).param("cause", cause).query((rs, _) -> java.util.Objects.requireNonNull(rs.getString(1))).list();
+                        """)
+                .param("cause", cause)
+                .query((rs, _) -> java.util.Objects.requireNonNull(rs.getString(1)))
+                .list();
     }
 
     private static State state(ResultSet rs, int i) throws SQLException {

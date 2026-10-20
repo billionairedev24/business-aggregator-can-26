@@ -109,7 +109,7 @@ class CardDisputeService implements CardDisputes {
             log.warn("Submitting evidence of card dispute {} to {} failed", disputeId, gateway.provider(), e);
             var message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
             store.failed(disputeId, message);
-            throw new Conflict("stripe_rejected", "Stripe didn't accept the evidence: " + message);
+            throw new Conflict("stripe_rejected", STRIPE_REJECTED);
         }
         store.submitted(disputeId, uploaded, staffId, role, now);
         audit.record(new AuditTrail.Entry(

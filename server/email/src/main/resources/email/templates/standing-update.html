@@ -3,7 +3,7 @@
       th:replace="~{layout.html :: email(#{standing-update.preheader}, ~{::content})}">
 <body>
 <div th:fragment="content"
-     th:with="what=${#messages.msg('standing-update.subject-name.' + subject)}">
+     th:with="what=${#messages.msg('standing-update.subject-name.' + about)}">
   <h1 th:style="${s.h1}" th:text="#{__${'standing-update.heading.' + change}__}">Heading</h1>
   <p th:style="${s.p}" th:text="#{__${'standing-update.body.' + change}__(${businessName}, ${what}, ${reference})}">Body</p>
   <p th:style="${s.notice}" th:text="#{standing-update.reason-given(${staffReason})}">Reason</p>

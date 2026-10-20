@@ -809,7 +809,7 @@ public sealed interface EmailContent {
             var v = new LinkedHashMap<String, Object>();
             v.put("businessName", businessName);
             v.put("change", code(change));
-            v.put("subject", subject.isEmpty() ? "other" : subject);
+            v.put("about", subject.isEmpty() ? "other" : subject);
             v.put("staffReason", reason);
             v.put("reference", reference);
             v.put("compensation", compensationCents > 0 ? format.money(compensationCents) : "");
