@@ -16,9 +16,14 @@
 //   NL_ANDROID_PACKAGES      comma-separated application ids (default: the production ones)
 //   NL_ANDROID_CERT_SHA256   comma-separated SHA-256 fingerprints of the apps' signing certificates (Play app
 //                            signing key, AA:BB:…); empty = no assetlinks.json (404)
+//   NL_APPLE_PAY_DOMAIN_ASSOCIATION
+//                            S-157: the content of Stripe's Apple Pay domain association file (served as is at
+//                            /.well-known/apple-developer-merchantid-domain-association so the domain can be registered
+//                            with Stripe's payment method domains API, docs/runbooks/stripe.md § 13); empty = 404
 export const AASA_PATH = '/.well-known/apple-app-site-association';
 export const ASSETLINKS_PATH = '/.well-known/assetlinks.json';
 export const REDIRECT_PATHS = ['/app/oauth2redirect', '/courier/oauth2redirect'];
+export const APPLE_PAY_PATH = '/.well-known/apple-developer-merchantid-domain-association';
 export const DEFAULT_APP_IDS = ['ca.northline.app', 'ca.northline.courier'];
 
 const list = (value, fallback = []) => {
@@ -30,7 +35,7 @@ const list = (value, fallback = []) => {
 export const pathPrefixFor = id => (/\.courier(\.|$)/.test(id) ? '/courier' : '/app');
 
 export function isAppLinkPath(pathname) {
-  return pathname === AASA_PATH || pathname === ASSETLINKS_PATH || REDIRECT_PATHS.includes(pathname);
+  return pathname === AASA_PATH || pathname === ASSETLINKS_PATH || pathname === APPLE_PAY_PATH || REDIRECT_PATHS.includes(pathname);
 }
 
 export function appLinksConfig(env = process.env) {
@@ -39,6 +44,7 @@ export function appLinksConfig(env = process.env) {
     iosBundleIds: list(env.NL_IOS_BUNDLE_IDS, DEFAULT_APP_IDS),
     androidPackages: list(env.NL_ANDROID_PACKAGES, DEFAULT_APP_IDS),
     androidCertSha256: list(env.NL_ANDROID_CERT_SHA256).map(f => f.toUpperCase()),
+    applePayDomainAssociation: (env.NL_APPLE_PAY_DOMAIN_ASSOCIATION ?? '').trim(),
   };
 }
 
@@ -78,6 +84,12 @@ export function appLinkAnswer(pathname, config) {
   const missing = { status: 404, type: 'text/plain; charset=utf-8', cache: 'no-store', body: 'Not configured.' };
   if (pathname === AASA_PATH) return config.appleTeamId ? json(appleAppSiteAssociation(config)) : missing;
   if (pathname === ASSETLINKS_PATH) return config.androidCertSha256.length ? json(assetLinks(config)) : missing;
+  // Apple fetches it over https without redirects when the domain is registered (Stripe asks Apple to); plain text
+  if (pathname === APPLE_PAY_PATH) {
+    return config.applePayDomainAssociation
+      ? { status: 200, type: 'text/plain; charset=utf-8', cache: 'public, max-age=3600', body: config.applePayDomainAssociation }
+      : missing;
+  }
   // the URL carries an authorization code: never cached, never sent on as a Referer
   if (REDIRECT_PATHS.includes(pathname)) return { status: 200, type: 'text/html; charset=utf-8', cache: 'no-store', body: REDIRECT_PAGE, referrerPolicy: 'no-referrer' };
   return null;

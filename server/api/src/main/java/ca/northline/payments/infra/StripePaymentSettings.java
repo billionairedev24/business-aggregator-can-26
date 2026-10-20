@@ -25,4 +25,11 @@ class StripePaymentSettings implements PaymentSettings {
         var key = properties.stripePublishableKey();
         return "stripe".equals(provider()) && key != null && !key.isBlank() ? key : null;
     }
+
+    @Override
+    public Wallets wallets() {
+        return publishableKey() == null
+                ? Wallets.NONE
+                : new Wallets(properties.applePay(), properties.googlePay());
+    }
 }
