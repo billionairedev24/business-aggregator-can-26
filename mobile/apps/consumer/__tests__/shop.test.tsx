@@ -451,6 +451,30 @@ describe('B6 Payment', () => {
     expect(screen.getByRole('tab', { name: 'Cart' })).toBeTruthy(); // no badge: the cart is empty
   });
 
+  it('S-157: an unticked offers box with the wording; ticked, it is recorded after the order is placed (source checkout)', async () => {
+    const { view, server } = await signedInWithCart({ url: PAY });
+    const box = await screen.findByTestId('checkout-consent-email');
+    expect(box.props.accessibilityState).toMatchObject({ checked: false });
+    expect(screen.getByText('Offers by email (optional)')).toBeTruthy();
+    fireEvent.press(box);
+    expect(await screen.findByText(/^Charged \$23\.35 now\./)).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Place your order · $23.35' }));
+    fireEvent.press(await screen.findByTestId('bank-approve'));
+    await waitFor(() => expect(view.getPathname()).toBe('/orders/ord-48213/confirmed'));
+    await waitFor(() => expect(server.account.consentHistory[0]).toMatchObject({ category: 'marketing_email', action: 'granted', source: 'checkout' }));
+  });
+
+  it('S-157: nothing is recorded when the offers box stays unticked', async () => {
+    const { view, server } = await signedInWithCart({ url: PAY });
+    await screen.findByTestId('checkout-consent-email');
+    const before = server.account.consentHistory.length;
+    expect(await screen.findByText(/^Charged \$23\.35 now\./)).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Place your order · $23.35' }));
+    fireEvent.press(await screen.findByTestId('bank-approve'));
+    await waitFor(() => expect(view.getPathname()).toBe('/orders/ord-48213/confirmed'));
+    expect(server.account.consentHistory).toHaveLength(before);
+  });
+
   it('keeps the same Idempotency-Key when there was no answer, so trying again can’t pay twice', async () => {
     const keys: string[] = [];
     let drop = true;

@@ -2,6 +2,8 @@ import type { account as en } from '../en/account';
 
 /** S-101 in Canadian French: design/i18n-fr.js where it has the phrase, the consumer web's French (S-56 … S-60) next, ours otherwise. */
 export const account: { [k in keyof typeof en]: string } = {
+  'checkout.consentTitle': 'Offres par courriel (facultatif)',
+  'checkout.consentWho': 'Envoyé par {requester}. Changez d’avis en tout temps dans Compte › Notifications.',
   'account.card': '{brand} ··{last4}',
 
   'account.orders.title': 'Activité',

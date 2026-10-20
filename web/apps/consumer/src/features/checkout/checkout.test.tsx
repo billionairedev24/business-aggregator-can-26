@@ -131,6 +131,41 @@ describe('3-step checkout (redesign § 1.3, AT Shop:502)', () => {
     expect(calls.filter(c => c.url === '/api/v1/cart').length).toBeGreaterThan(1);
   });
 
+  it('S-157: an unticked offers box for someone without the consent; ticked, it is recorded after the order (source checkout)', async () => {
+    const wording = 'Yes, Northline Marketplace Inc. may email me Northline’s offers, rewards and news.';
+    routes['GET /api/v1/me/consents'] = () => ({ body: {
+      categories: [{ category: 'marketing_email', channel: 'email', granted: false, since: null, source: null, wordingVersion: 'account.email.2026-10', wording }],
+      history: [], requester: 'Northline Marketplace Inc. · 1200 – 8th Avenue SW · support@northline.ca',
+    } });
+    routes['PUT /api/v1/me/consents/marketing_email'] = () => ({ body: { categories: [], history: [], requester: '' } });
+    const { calls } = open();
+    const u = userEvent.setup({ delay: null });
+    await u.click(await within(await screen.findByRole('region', { name: 'Delivery address and time' })).findByRole('button', { name: 'Continue' }));
+    await u.click(within(step('Payment')).getByRole('button', { name: 'Continue to payment' }));
+    const review = await screen.findByRole('region', { name: 'Review items and delivery' });
+    const box = within(review).getByRole('checkbox', { name: wording });
+    expect(box).not.toBeChecked();
+    expect(within(review).getByText(/Sent by Northline Marketplace Inc\./)).toBeInTheDocument();
+    await u.click(box);
+    await u.click(within(screen.getByRole('complementary', { name: 'Total' })).getByRole('button', { name: 'Place your order' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Thank you — your order is placed.' })).toBeInTheDocument();
+    const put = calls.find(c => c.method === 'PUT' && c.url === '/api/v1/me/consents/marketing_email')!;
+    expect(put.body).toEqual({ granted: true, source: 'checkout', wordingVersion: 'account.email.2026-10' });
+    expect(calls.findIndex(c => c.url.endsWith('/place'))).toBeLessThan(calls.indexOf(put));
+  });
+
+  it('S-157: nothing is recorded when the offers box stays unticked', async () => {
+    routes['GET /api/v1/me/consents'] = () => ({ body: { categories: [{ category: 'marketing_email', channel: 'email', granted: false, wordingVersion: 'account.email.2026-10', wording: 'Yes, email me.' }], history: [], requester: 'N' } });
+    const { calls } = open();
+    const u = userEvent.setup({ delay: null });
+    await u.click(await within(await screen.findByRole('region', { name: 'Delivery address and time' })).findByRole('button', { name: 'Continue' }));
+    await u.click(within(step('Payment')).getByRole('button', { name: 'Continue to payment' }));
+    await screen.findByRole('checkbox', { name: 'Yes, email me.' });
+    await u.click(within(screen.getByRole('complementary', { name: 'Total' })).getByRole('button', { name: 'Place your order' }));
+    await screen.findByRole('heading', { level: 1, name: 'Thank you — your order is placed.' });
+    expect(calls.some(c => c.method === 'PUT')).toBe(false);
+  });
+
   it('keeps the sticky summary under the header as drawn (its measured height, else the header token)', () => {
     const checkoutCss = readFileSync('src/features/checkout/checkout.css', 'utf8'); // vitest runs in apps/consumer
     expect(checkoutCss).toMatch(/\.co-summary \{[^}]*position: sticky; top: calc\(var\(--nl-header-h, var\(--size-header\)\) \+ var\(--space-4\)\)/);
