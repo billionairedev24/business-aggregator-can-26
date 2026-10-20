@@ -193,6 +193,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | ✓ | | | | staging and prod |
 | `STRIPE_API_BASE` | ✓ | | | | never in the cloud (stripe-mock only) |
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | ✓ | | | | staging and prod (S-12; [stripe.md](stripe.md#5-webhooks-s-12)) |
+| `STRIPE_APPLE_PAY`, `STRIPE_GOOGLE_PAY` | ✓ | | | | no (`false`: cards only; each wallet once its set-up is done — S-157, [stripe.md § 13](stripe.md#13-apple-pay-and-google-pay-s-157)) |
+| `OFFERS_PER_MINUTE` | ✓ | | | | no (`30`, at most 50: console offers queued a minute for the worker — S-157, [casl.md § 10](casl.md#10-offers-from-the-console-s-157)) |
 | `TAX_PROVIDER` | ✓ | | | | staging and prod: `stripe` (`local` refused there — S-21, [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
 | `TAX_CODE_SERVICE`, `TAX_CODE_GOODS`, `TAX_CODE_FOOD`, `TAX_RECONCILE_CRON` | ✓ | | | | no (Stripe's general service / goods / prepared-food codes; 03:17 in the platform zone) |
 | `IDENTITY_PROVIDER` | ✓ | | | | staging and prod (`stripe`; `local` refused there — S-22, [stripe.md § Identity](stripe.md#8-identity-s-22)) |
@@ -255,6 +257,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `SMS_PROVIDER`, `SMS_FROM` | ✓ | ✓ | | ✓ | staging and prod (`local` refused there; `dev` may keep `local`). api: team invitations, worker: notifications (S-27) |
 | `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | ✓ | ✓ | | ✓ | with `SMS_PROVIDER=twilio` |
 | `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | ✓ | ✓ | | ✓ | no (`= SMS_FROM`; SDK default region; provider API) |
+| `SMS_STATUS_CALLBACK_URL` | ✓ | | | ✓ | no (empty: no delivery-status callbacks; with Twilio `https://api.<zone>/api/v1/webhooks/sms/status` — S-157, [casl.md § 9](casl.md#9-text-replies-stop-start-help-and-delivery-statuses-s-157)) |
 | `PUSH_PROVIDER` | | | | ✓ | staging and prod: `native` (`local` refused there — staging since the owner decision of 2026-10-04; dev may keep `local` — S-102, [push.md](push.md)) |
 | `PUSH_APNS_KEY_ID`, `PUSH_APNS_TEAM_ID`, `PUSH_APNS_KEY`, `PUSH_FCM_SERVICE_ACCOUNT` | | | | ✓ | with `PUSH_PROVIDER=native`; `PUSH_APNS_KEY` and `PUSH_FCM_SERVICE_ACCOUNT` are secrets ([push.md § Set-up](push.md#set-up)) |
 | `PUSH_APNS_URL`, `PUSH_APNS_CONSUMER_TOPIC`, `PUSH_APNS_COURIER_TOPIC`, `PUSH_FCM_URL`, `PUSH_STALE_AFTER` | | | | ✓ | no (`https://api.push.apple.com` — `https://api.sandbox.push.apple.com` for development builds; `ca.northline.app`; `ca.northline.courier`; `https://fcm.googleapis.com`; `90d`) |

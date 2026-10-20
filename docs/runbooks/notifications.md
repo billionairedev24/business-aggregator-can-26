@@ -15,7 +15,7 @@ the provider is called — the api's S-13 `Mailer` and the worker use the same c
 |---|---|---|---|---|
 | `payout_account.changed` (`payments.payout_account`) | — security | owners | email, always | **SMS, always** — whatever the matrix, even in quiet hours |
 | `payout.sent` (`payments.payout`) | `payout` | owners, bookkeepers | email | SMS, push |
-| `payout.failed` (`payments.payout`) | `payout` | owners, bookkeepers | — | **email** (template `payout-failed`), SMS, push |
+| `payout.failed` (`payments.payout`) | `payout` | owners, bookkeepers | — | **email** (template `payout-failed`: Stripe's failure code in words — 14 codes and a general reason, en/fr — and "Update your bank details"; S-157), SMS, push. The Studio's Payouts screen also shows a notice ("Your bank returned a payout", the reason, **Update bank details** for owners) while the latest payout is a returned one to the account still in use (`returned` on `GET …/payouts/overview`) |
 | `dispute.updated`, `dispute.decided` (`payments.dispute`; the agent's note in the email since S-80) | `dispute` | owners | email | SMS, push |
 | `refund.case_updated`, `refund.issued` (`payments.refund`) | `dispute` | owners | email | SMS, push |
 | team invitation to a mobile number | — | the invitee | **SMS** (the link's token never leaves the api) | — |
@@ -29,6 +29,8 @@ the provider is called — the api's S-13 `Mailer` and the worker use the same c
 | a customer's message on a quote request or booking (`messaging.message_sent`, `threadKind = customer`, `senderRole = customer`; S-153) | `customer_message` | owners | — | email (`team-update`), SMS, push → Studio Messages (`?thread=`); never the message's words |
 | `booking.cancelled` (`booking.booking`, S-153): a customer cancelled; with a late fee its amount | `new_booking` | owners | — | email (`team-update`), SMS, push |
 | `booking.balance_failed` (`booking.booking`, S-153): a deposit quote's balance couldn't be held (each attempt; the last says so) | `new_booking` | owners | — | email (`team-update`), SMS, push |
+
+| an offer from the console's Offers screen (S-157, [casl.md § 10](casl.md#10-offers-from-the-console-s-157); not an event: one `messaging.offer` row per customer in `messaging.deferred_notifications`, queued by the api `OFFERS_PER_MINUTE` a minute) | `offers` — commercial: the customer's consent for that channel, checked at send time | the consenting customers of a market | — | the row's channel only: **email** (`marketing-offer`, CASL footer, one-click unsubscribe) or **SMS** (sender, opt-out link, "or reply STOP"), held in quiet hours |
 
 The emails S-13 built stay in the api (they're tested there and send right after commit); the worker adds what S-13
 left open: the SMS and push channels, and the `payout.failed` email. Technicians and cooks get no money notices. Rows
@@ -47,6 +49,9 @@ carries only S-153's cancellations and failed balances so far.
 - Contact details are read when sending, never carried in events: the worker reads `identity.users`,
   `merchants.merchant_members`, `merchants.merchants` and `messaging.notification_prefs` read-only (same database,
   like northline-auth).
+
+**S-157:** a deferred row that comes due inside the person's quiet hours (an outage retry, a queued offer) waits until
+they end without counting as an attempt.
 
 ## 3. Failures
 
@@ -80,6 +85,11 @@ for both and list them among the required variables. Chart: `apps.worker.secretE
 (required in staging/prod), `EMAIL_API_KEY`, `SMTP_PASSWORD`, `SMS_AUTH_TOKEN`; the cloud overlays set the worker's
 `EMAIL_PROVIDER` like the api's.
 
+S-157: `SMS_STATUS_CALLBACK_URL` (api, worker) asks Twilio to post each text's delivery status to the api's
+`/api/v1/webhooks/sms/status` (`messaging.sms_delivery_status`, the latest status per text, 90 days; metric
+`northline_sms_delivery_total{status}`; a `failed` / `undelivered` text is logged with Twilio's error code). Inbound
+texts (STOP / START / HELP) — [casl.md § 9](casl.md#9-text-replies-stop-start-help-and-delivery-statuses-s-157).
+
 Locally everything works without accounts: email to Mailpit (`--profile mail`) or the log, SMS to the worker/api log
 (`[SMS] to +1 403 *** **48: Northline: …`), push to the log.
 
@@ -92,4 +102,8 @@ whatever the matrix; a provider outage is retried and only the missing text is s
 the DLQ with the claims released; an undeliverable number isn't retried. api: `TeamInvitationEmailTest` (a mobile
 invitation is texted once, in the inviter's language), `NotificationMatrixDefaultsSpecTest`. Library: `server/sms`
 (`SmsTransportsTest`, `TwilioSmsTransportTest`), auth's S-8 SMS tests unchanged over the shared adapters, email
-templates incl. `payout-failed` in en/fr.
+templates incl. `payout-failed` in en/fr. S-157: `EmailTemplatesTest` (every payout failure reason in both languages),
+`StripeWebhookApiTest` (the Studio's returned-payout notice comes and goes), `CommercialNoticesTest` (a queued offer
+goes on its channel only; a text due at night waits for the morning without an attempt), `SmsWebhookApiTest` /
+`SmsWebhookSignatureTest` (keywords, statuses, Twilio's signature), `ConsoleOffersApiTest`, the Studio's
+`finance.test.tsx`.

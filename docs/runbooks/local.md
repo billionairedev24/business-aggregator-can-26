@@ -311,10 +311,18 @@ Notes:
 - **Mail:** the api emails team invitations and money notices to Mailpit (`EMAIL_PROVIDER=local`, the default); without
   Mailpit each email's text is logged instead. Template previews: http://localhost:8080/api/v1/dev/emails
   ([email.md](email.md#local-mailpit)).
-- **Marketing consent (S-108, [casl.md](casl.md)):** Account › Notifications › "Marketing messages" records CASL
-  consents in `messaging.consent_records`; no commercial message is sent by anything yet. The unsubscribe page is
-  `http://localhost:8080/api/v1/email/unsubscribe?t=…` (no sign-in); `EMAIL_LEGAL_NAME` defaults to
-  `Northline Marketplace Inc.`.
+- **Marketing consent (S-108, S-157, [casl.md](casl.md)):** Account › Notifications › "Marketing messages" records CASL
+  consents in `messaging.consent_records`; so do the unticked offers boxes of the sign-up forms (consumer, Studio, app)
+  and of the checkouts. The unsubscribe page is `http://localhost:8080/api/v1/email/unsubscribe?t=…` (no sign-in);
+  `EMAIL_LEGAL_NAME` defaults to `Northline Marketplace Inc.`. **Text replies:** with `SMS_PROVIDER=local` the inbound
+  webhook is the fake — no signature, local profile only:
+  `curl -d MessageSid=SMlocal1 -d From=+14035550201 -d Body=STOP localhost:8080/api/v1/webhooks/sms/inbound` (the
+  TwiML reply is the confirmation; `START`, `HELP` too). `SMS_STATUS_CALLBACK_URL` stays empty locally. **Offers:** the
+  console's Offers screen (`OFFERS_PER_MINUTE`, default 30) queues them for the worker, which sends them to Mailpit and
+  the SMS log.
+- **Apple Pay / Google Pay (S-157):** off locally (`STRIPE_APPLE_PAY`, `STRIPE_GOOGLE_PAY` default `false`; the fake
+  gateway never offers them). `NL_APPLE_PAY_DOMAIN_ASSOCIATION` (consumer web) is empty, so
+  `/.well-known/apple-developer-merchantid-domain-association` answers 404 ([stripe.md § 13](stripe.md#13-apple-pay-and-google-pay-s-157)).
 - **Owners' identity (S-22):** `IDENTITY_PROVIDER=local` (the default) — "This is me · verify now" in Onboarding ›
   Verification opens http://localhost:8080/api/v1/dev/identity-sessions/vs_fake_… where you pick how Stripe Identity
   ends (verified, name mismatch, `document_expired`, …); emailed links land in Mailpit and open the same page. To try

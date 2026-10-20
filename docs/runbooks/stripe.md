@@ -70,8 +70,8 @@ objects, connected accounts, webhooks and keys don't carry over.
    price changes, change `Fees` and design copy together.
 10. **Radar**: default rules; add *Block if :risk_level: = 'highest'*. 3-D Secure: Stripe's default (request when
     required).
-11. **Payment methods** (Settings → Payment methods): cards only (manual capture). Apple Pay / Google Pay can be added
-    later (they are cards to Stripe).
+11. **Payment methods** (Settings → Payment methods): cards (manual capture), plus Apple Pay and Google Pay once
+    § 13 is done (they are cards to Stripe: the same manual-capture PaymentIntents).
 12. **API keys.** Developers → API keys: the *secret key* (`sk_test_…` / `sk_live_…`) and *publishable key*
     (`pk_…`). Prefer a **restricted key** for the api (S-110 review, [compliance/pci/stripe-review.md](../compliance/pci/stripe-review.md))
     with **write** access to: PaymentIntents, SetupIntents and PaymentMethods (saved cards, S-59), Customers, Refunds,
@@ -455,3 +455,56 @@ payout deduction. A refund of the sale gives the unspent share back with a new t
 - **Never run against the real Stripe API:** the reversal and the refund transfer were tested against stripe-mock only.
   Before launch: a test-mode sale with a reward running, released; check the reversal on the connected account's
   transfer, the business's payout and the Finance screen's "held from businesses' rewards".
+
+## 13. Apple Pay and Google Pay (S-157)
+
+The Payment Element (consumer web) and PaymentSheet (the app) offer Apple Pay and Google Pay next to the card form at
+every checkout that uses them — shop, food (web), bookings, quote deposits, tips. Nothing changes on the server: a
+wallet hands Stripe a card, so the checkout opens the same manual-capture PaymentIntents (escrow, S-11), after the same
+step-up (S-51), and the PaymentMethod the wallet leaves on the first intent (saved to the customer,
+`setup_future_usage`) confirms the order's other intents like a typed card's. Which wallets are offered comes from the
+api, `GET /api/v1/public/payments/options` → `{provider, applePay, googlePay}`: only under Stripe, each switched on by
+configuration once its set-up is done; the browser or phone then shows a wallet only when the person has one.
+
+| variable | where | what |
+|---|---|---|
+| `STRIPE_APPLE_PAY`, `STRIPE_GOOGLE_PAY` | api | `true` offers the wallet (default `false`: cards only) |
+| `NL_APPLE_PAY_DOMAIN_ASSOCIATION` | consumer web | the content of Stripe's Apple Pay domain association file, served as `text/plain` at `/.well-known/apple-developer-merchantid-domain-association` on every host of the site (404 when empty) |
+| `EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID` | app build (EAS) | the Apple Pay merchant id; Stripe's config plugin adds the entitlement and `initStripe` gets it |
+| `EXPO_PUBLIC_GOOGLE_PAY`, `EXPO_PUBLIC_GOOGLE_PAY_TEST` | app build (EAS) | `1` = Google Pay in PaymentSheet (the plugin's manifest flag); `_TEST=1` = Google's test environment (every build but production) |
+
+### Set-up (once per mode: test for dev/staging, live for prod)
+
+1. **Google Pay:** Settings → Payment methods → Google Pay on. Then `STRIPE_GOOGLE_PAY=true`; app builds
+   `EXPO_PUBLIC_GOOGLE_PAY=1`.
+2. **Apple Pay on the web:** Settings → Payment methods → Apple Pay → download the domain association file; put its
+   content into `NL_APPLE_PAY_DOMAIN_ASSOCIATION` for the consumer web (ConfigMap) and deploy. Register each domain
+   customers pay on (the site, `pages.<zone>` if storefront pages take payments) with Stripe's payment method domains
+   API:
+   ```sh
+   STRIPE_SECRET_KEY=sk_test_… scripts/stripe/payment-method-domain.sh register staging.northline.ca
+   STRIPE_SECRET_KEY=sk_test_… scripts/stripe/payment-method-domain.sh status   staging.northline.ca
+   ```
+   `register` checks the file is served over https without a redirect, creates the domain (or finds it), asks Stripe
+   to validate it and prints the Apple Pay / Google Pay / Link status (`active`, or Stripe's error); `validate` asks
+   again after a fix. A restricted key needs write access to *Payment method domains*. Then `STRIPE_APPLE_PAY=true`.
+3. **Apple Pay in the app:** Apple Developer → Identifiers → Merchant IDs → `merchant.ca.northline…` (one per
+   environment); Stripe Dashboard → Settings → Payment methods → Apple Pay → iOS certificate (upload Apple's CSR, Stripe
+   gives the certificate back to Apple); the app id's capability "Apple Pay Payment Processing" with that merchant id.
+   Build with `EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID`.
+4. **Content-Security-Policy:** nothing to add — the wallets run inside Stripe's iframe (`js.stripe.com`, already in
+   `frame-src`); the consumer site's `Permissions-Policy` delegates `payment` to `https://js.stripe.com`, which the
+   Payment Request API needs.
+
+### Never run against the real Stripe, Apple or Google
+
+Written from Stripe's Payment Element, PaymentSheet and payment method domains documentation and tested with the
+existing mocks only: the api's options endpoint (fake gateway) and `StripePaymentSettings`, the web checkout with a
+stubbed Stripe.js (the element gets `wallets: {applePay, googlePay}`), the app's adapter with the SDK mocked
+(PaymentSheet gets `applePay` / `googlePay`, `initStripe` the merchant id), and the association file. No Apple Pay or
+Google Pay sheet has been shown, no domain registered, no merchant id created, `payment-method-domain.sh` has not been
+run against Stripe. Before launch, in test mode: pay a shop order with two shops (three intents) with Apple Pay in
+Safari and on an iPhone, and with Google Pay in Chrome and on Android; check every intent is `requires_capture`, the
+later ones confirmed with the wallet's PaymentMethod without a second sheet; a booking deposit and a tip; a phone-code
+sign-in still asks for the step-up first.
+
