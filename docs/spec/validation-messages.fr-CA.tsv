@@ -1115,6 +1115,7 @@ No promo code with id %s	Aucun code promo avec l’identifiant %s	new
 No tip with id %s	Aucun pourboire avec l’identifiant %s	new
 No age session with id %s	Aucune session de vérification d’âge avec l’identifiant %s	new
 No licence with id %s	Aucun permis avec l’identifiant %s	new
+No loyalty rule with id %s	Aucune règle de points avec l’identifiant %s	new
 BC incorporation number is BC + 7 digits (e.g. BC0999999).	Le numéro de constitution de la C.-B. est BC + 7 chiffres (p. ex. BC0999999).	new
 BC registration number is FM + 7 digits (e.g. FM1016176).	Le numéro d'enregistrement de la C.-B. est FM + 7 chiffres (p. ex. FM1016176).	new
 The NEQ is 10 digits.	Le NEQ compte 10 chiffres.	new

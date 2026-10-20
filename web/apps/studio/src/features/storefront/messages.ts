@@ -143,7 +143,7 @@ export const useStorefrontT = defineMessages({
     rewardOn: 'Récompense active', rewardMultiplier: 'Points', rewardTimes: 'Points ×{n}', rewardLabel: 'Sur', rewardLabelPlaceholder: 'p. ex. freins (vide = tout)',
     rewardUntil: 'Jusqu’au', rewardSave: 'Enregistrer la récompense', rewardRunning: 'En cours · points ×{n} jusqu’au {date}', rewardStopped: 'Désactivée', rewardEnded: 'Terminée le {date}',
     rewardOwnerOnly: 'Seul le propriétaire peut financer des récompenses.',
-    rewardBudget: 'Budget ($)', rewardBudgetHint: 'De 10 $ à 10 000 $ au total; la récompense s’arrête quand il est dépensé. Il est déduit de vos versements.',
+    rewardBudget: 'Budget (en $)', rewardBudgetHint: 'De 10 $ à 10 000 $ au total; la récompense s’arrête quand il est dépensé. Il est déduit de vos versements.',
     rewardSpentLabel: 'Ce que la récompense a payé',
     rewardSpent: '{spent} dépensés sur {budget} · {points} points en prime sur {sales, plural, one {# vente} other {# ventes}}',
     rewardExhausted: 'Budget épuisé — augmentez-le pour continuer',
