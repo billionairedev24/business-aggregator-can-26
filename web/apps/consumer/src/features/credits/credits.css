@@ -1,0 +1,11 @@
+/* Photo credits (CreditsScreen): a plain list — thumbnail, what it shows, who, where, licence. */
+.nl-credits { max-width: 880px; padding-block: var(--space-8) var(--space-12); }
+.nl-credits-lede { color: var(--color-text-muted); max-width: 64ch; margin-block: var(--space-3) var(--space-6); }
+.nl-credits-none, .nl-credits-count { color: var(--color-text-muted); }
+.nl-credits-list { list-style: none; margin: var(--space-4) 0 0; padding: 0; display: grid; gap: var(--space-3); }
+.nl-credits-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--space-4); align-items: center; padding: var(--space-3); border: 1px solid var(--color-border-card); border-radius: var(--radius-md); background: var(--color-surface); }
+.nl-credits-thumb { position: relative; width: 64px; height: 64px; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-surface-sunken); }
+.nl-credits-text { display: grid; gap: var(--space-1); min-width: 0; }
+.nl-credits-what { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.nl-credits-meta { color: var(--color-text-muted); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.nl-credits-meta a { color: var(--color-link); }

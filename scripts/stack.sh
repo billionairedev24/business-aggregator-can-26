@@ -121,16 +121,26 @@ java_major() { "$1/bin/java" -XshowSettings:properties -version 2>&1 | awk -F'= 
 
 STARTED=""
 start_one() { # start_one <service> <services being started>
-  local s="$1" port cmd pidf
-  port="$(port_of "$s")"
+  local s="$1" cmd
   cmd="$(command_of "$s" "$2")"
   if running "$s"; then
     if [ "$(cat "$RUN_DIR/$s.cmd" 2>/dev/null)" = "$cmd" ]; then
-      say "${c_dim}• $s already running (pid $(cat "$(pid_file "$s")"))${c_off}"; return
+      if [ "$JS_DEPS_CHANGED" = 1 ] && is_web_dev "$s"; then
+        say "${c_warn}↻${c_off} $s: its dependencies changed — restarting it (Vite keeps a failed import until it restarts)"
+      else
+        say "${c_dim}• $s already running (pid $(cat "$(pid_file "$s")"))${c_off}"; return
+      fi
+    else
+      say "${c_warn}↻${c_off} $s is running with different settings — restarting it"
     fi
-    say "${c_warn}↻${c_off} $s is running with different settings — restarting it"
     stop_one "$s"
   fi
+  start_cmd "$s" "$cmd"
+}
+
+start_cmd() { # start_cmd <service> <command>: launch it detached, its pid and command in .run/
+  local s="$1" cmd="$2" port pidf
+  port="$(port_of "$s")"
   if port_listening "$port"; then
     local who="something this script did not start"
     if command -v lsof >/dev/null 2>&1; then
@@ -193,12 +203,53 @@ stop_one() {
   say "${c_dim}■ $s stopped${c_off}"
 }
 
+# js_deps_stale: why web/node_modules is behind the checkout (prints nothing when it is current). Not only the lockfile:
+# a pull that adds a workspace package (PR #199's @northline/media) changes package.json files, and a package that is
+# not linked into its dependants' node_modules makes Vite answer every page with a raw 500 ("Cannot find module").
+js_deps_stale() {
+  local marker="$ROOT/web/node_modules/.modules.yaml" f dir name
+  [ -f "$marker" ] || { echo "web/node_modules is missing"; return 0; }
+  [ "$ROOT/web/pnpm-lock.yaml" -nt "$marker" ] && { echo "web/pnpm-lock.yaml changed since the last install"; return 0; }
+  for f in "$ROOT/web/package.json" "$ROOT"/web/apps/*/package.json "$ROOT"/web/packages/*/package.json; do
+    [ -f "$f" ] || continue
+    if [ "$f" -nt "$marker" ]; then echo "${f#"$ROOT"/} changed since the last install"; return 0; fi
+    dir="${f%/package.json}"
+    # every workspace package it depends on ("@northline/x": "workspace:*") is linked into its node_modules
+    for name in $(sed -n 's/.*"\(@northline\/[A-Za-z0-9._-]*\)"[[:space:]]*:[[:space:]]*"workspace:.*/\1/p' "$f"); do
+      [ -e "$dir/node_modules/$name" ] || { echo "$name is not installed for ${dir#"$ROOT"/}"; return 0; }
+    done
+  done
+  return 0
+}
+
+JS_DEPS_CHANGED=0
 ensure_js_deps() {
-  local marker="$ROOT/web/node_modules/.modules.yaml"
-  if [ ! -f "$marker" ] || [ "$ROOT/web/pnpm-lock.yaml" -nt "$marker" ]; then
-    say "web/pnpm-lock.yaml changed since the last install — running pnpm install…"
-    (cd "$ROOT/web" && pnpm install --frozen-lockfile) || die "pnpm install failed — run it yourself to see why"
-  fi
+  local why
+  why="$(js_deps_stale)"
+  [ -n "$why" ] || return 0
+  say "$why — running pnpm install…"
+  (cd "$ROOT/web" && pnpm install --frozen-lockfile) || die "pnpm install failed — run it yourself (cd web && pnpm install) to see why"
+  touch "$ROOT/web/node_modules/.modules.yaml"
+  JS_DEPS_CHANGED=1
+}
+
+WEB_DEV_SERVICES="studio consumer console storybook docs"
+is_web_dev() { contains "$WEB_DEV_SERVICES" "$1"; }
+
+# restart_web_dev [services being started]: after an install, the web dev servers already running (Vite keeps a
+# failed import until it restarts, so a dev server that ran across the pull goes on answering 500) start again with
+# the command they ran with; the ones being started now are restarted by start_one.
+restart_web_dev() {
+  local s cmd
+  for s in $WEB_DEV_SERVICES; do
+    contains "$1" "$s" && continue
+    running "$s" || continue
+    cmd="$(cat "$RUN_DIR/$s.cmd" 2>/dev/null)" || continue
+    [ -n "$cmd" ] || continue
+    say "${c_warn}↻${c_off} $s: its dependencies changed — restarting it"
+    stop_one "$s"
+    start_cmd "$s" "$cmd"
+  done
 }
 
 cmd_up() {
@@ -212,8 +263,12 @@ cmd_up() {
     say "${c_dim}… compiling$tasks${c_off}"
     (cd "$ROOT/server" && ./gradlew $GRADLE_FLAGS -q $tasks) || die "the server does not compile (above)"
   fi
-  [ "$services" = "${java# }" ] || { command -v pnpm >/dev/null || die "pnpm is missing (Node 22: corepack enable)"; ensure_js_deps; }
+  # web apps to start, or web dev servers already running (a pull may have added a workspace package under them)
+  local web=0
+  for s in $services $WEB_DEV_SERVICES; do { contains "$services" "$s" && ! is_java "$s"; } || { is_web_dev "$s" && running "$s"; } && web=1; done
+  [ $web = 0 ] || { command -v pnpm >/dev/null || die "pnpm is missing (Node 22: corepack enable)"; ensure_js_deps; }
   mkdir -p "$RUN_DIR"
+  [ "$JS_DEPS_CHANGED" = 0 ] || restart_web_dev "$services"
   for s in $services; do start_one "$s" "$services"; done
   local failed=0
   for s in $services; do wait_healthy "$s" || failed=1; done

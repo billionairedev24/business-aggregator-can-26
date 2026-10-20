@@ -121,7 +121,8 @@ class ProviderPageService implements ViewProvider, ListProviderReviews {
                 o.durationMin(),
                 o.instantBook(),
                 category == null ? null : slug(category),
-                category == null ? ServiceKind.VISIT : ServiceKind.of(category, null));
+                category == null ? ServiceKind.VISIT : ServiceKind.of(category, null),
+                o.imageUrl());
     }
 
     private static String slug(String categoryId) {

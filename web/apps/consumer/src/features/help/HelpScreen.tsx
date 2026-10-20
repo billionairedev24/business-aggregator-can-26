@@ -1,7 +1,7 @@
 import { SiteLink } from '@northline/ui';
 import { useSiteConfig } from '../../lib/config';
 import { signInHref, useViewer } from '../session/api';
-import { Art } from '../art/Art';
+import { Scene } from '../art/Scene';
 import { ChatCircleDots, Lifebuoy } from '@phosphor-icons/react';
 import { useHelpT } from './messages';
 
@@ -24,7 +24,7 @@ export function HelpScreen() {
           <h1 className="nl-band-title">{t('heading')}</h1>
           <p className="nl-band-lede">{t('lede')}</p>
         </div>
-        <span className="nl-band-pic" aria-hidden><Art subject="help" tone="mint" draw={{ main: Lifebuoy, side: ChatCircleDots }} fit="contain" /></span>
+        <span className="nl-band-pic" aria-hidden><Scene slot="banner/help" subject="help" tone="mint" draw={{ main: Lifebuoy, side: ChatCircleDots }} fit="contain" sizes="(min-width: 960px) 45vw, 100vw" priority /></span>
       </header>
       <div className="nl-help-grid">
       <section aria-labelledby="help-problem">

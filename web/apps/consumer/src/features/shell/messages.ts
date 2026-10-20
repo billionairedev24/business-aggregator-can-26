@@ -9,7 +9,7 @@ export const useShellT = defineMessages({
     search: 'Search “sourdough”, “mobile mechanic”, “DJ”…',
     signIn: 'Sign in', createAccount: 'Create account',
     skip: 'Skip to content',
-    privacy: 'Privacy', terms: 'Terms', helpLink: 'Help', langSwitch: 'Français',
+    privacy: 'Privacy', terms: 'Terms', helpLink: 'Help', langSwitch: 'Français', photoCredits: 'Photo credits',
     sell: 'Sell on {brand}', offer: 'Offer a service', kitchen: 'Run a kitchen',
     footerBusiness: 'For businesses', footerHelp: 'Help and policies', footerLanguage: 'Language',
     // account menu
@@ -27,13 +27,15 @@ export const useShellT = defineMessages({
     pendingKicker: 'Design 06 · {state}', pendingBody: 'This screen is being built ({story}).', backHome: 'Back to home',
     notFoundTitle: 'We couldn’t find that page.', notFoundBody: 'The link may be old, or the page has moved.',
     errorTitle: 'Something went wrong on our side.', retry: 'Retry',
+    unreachableTitle: 'We can’t reach the shop right now.',
+    unreachableBody: 'Our servers aren’t answering at the moment. It’s not you — we’ll keep trying.',
   },
   fr: {
     services: 'Services', shop: 'Boutique', food: 'Restaurants',
     search: 'Rechercher « pain au levain », « mécanicien mobile », « DJ »…',
     signIn: 'Se connecter', createAccount: 'Créer un compte',
     skip: 'Aller au contenu',
-    privacy: 'Confidentialité', terms: 'Conditions', helpLink: 'Aide', langSwitch: 'English',
+    privacy: 'Confidentialité', terms: 'Conditions', helpLink: 'Aide', langSwitch: 'English', photoCredits: 'Crédits photo',
     sell: 'Vendre sur {brand}', offer: 'Offrir un service', kitchen: 'Gérer une cuisine',
     footerBusiness: 'Pour les entreprises', footerHelp: 'Aide et politiques', footerLanguage: 'Langue',
     activity: 'Activité', account: 'Compte', preferences: 'Préférences',
@@ -49,6 +51,8 @@ export const useShellT = defineMessages({
     pendingKicker: 'Maquette 06 · {state}', pendingBody: "Cet écran est en cours de construction ({story}).", backHome: "Retour à l'accueil",
     notFoundTitle: 'Page introuvable.', notFoundBody: 'Le lien est peut-être ancien, ou la page a été déplacée.',
     errorTitle: 'Un problème est survenu de notre côté.', retry: 'Réessayer',
+    unreachableTitle: 'Impossible de joindre la boutique pour le moment.',
+    unreachableBody: 'Nos serveurs ne répondent pas en ce moment. Le problème ne vient pas de vous — nous réessayons.',
   },
 });
 
@@ -59,14 +63,14 @@ export const SCREEN_NAMES: { en: Record<ScreenKey, string>; fr: Record<ScreenKey
     product: 'Product', cart: 'Cart', checkout: 'Secure checkout', checkoutComplete: 'Order placed', confirmed: 'Your order', food: 'Food', restaurant: 'Restaurant',
     foodCheckout: 'Checkout', foodTrack: 'Track order', services: 'Services', svcCategory: 'Service category',
     providers: 'Providers', provider: 'Provider', book: 'Book a service', booking: 'Your booking', quote: 'Quote', quoteRequest: 'Request quotes', quoteCompare: 'Compare quotes', orders: 'Orders & bookings',
-    account: 'Account', problem: 'Report a problem', signIn: 'Sign in', register: 'Create account', sell: 'Sell or offer a service', help: 'Help',
+    account: 'Account', problem: 'Report a problem', signIn: 'Sign in', register: 'Create account', sell: 'Sell or offer a service', help: 'Help', credits: 'Photo credits',
   },
   fr: {
     home: 'Accueil', location: 'Où devons-nous livrer ?', search: 'Rechercher', shop: 'Boutique', category: 'Rayon',
     product: 'Produit', cart: 'Panier', checkout: 'Paiement sécurisé', checkoutComplete: 'Commande passée', confirmed: 'Votre commande', food: 'Restaurants', restaurant: 'Restaurant',
     foodCheckout: 'Paiement', foodTrack: 'Suivre la commande', services: 'Services', svcCategory: 'Catégorie de service',
     providers: 'Prestataires', provider: 'Prestataire', book: 'Réserver un service', booking: 'Votre réservation', quote: 'Devis', quoteRequest: 'Demander des devis', quoteCompare: 'Comparer les devis', orders: 'Commandes et réservations',
-    account: 'Compte', problem: 'Signaler un problème', signIn: 'Se connecter', register: 'Créer un compte', sell: 'Vendre ou offrir un service', help: 'Aide',
+    account: 'Compte', problem: 'Signaler un problème', signIn: 'Se connecter', register: 'Créer un compte', sell: 'Vendre ou offrir un service', help: 'Aide', credits: 'Crédits photo',
   },
 };
 export const useScreenT = defineMessages(SCREEN_NAMES);

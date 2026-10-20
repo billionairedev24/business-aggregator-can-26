@@ -131,7 +131,8 @@ class RevettingTest {
                         20,
                         "Pads and rotors",
                         true,
-                        "SVC-BI"))
+                        "SVC-BI",
+                        List.of("MEDIA1")))
                 .state(state(vetting, status))
                 .build();
     }
@@ -220,9 +221,29 @@ class RevettingTest {
                 d.bufferMin(),
                 d.included(),
                 false,
-                d.sku());
+                d.sku(),
+                d.imageIds());
         service.revise(quoted, ACTOR, T1);
         assertThat(service.getState().getRevetReasons()).containsExactly(MaterialField.PRICE);
+    }
+
+    @Test
+    void aServicesNewPhotosAreReVetted() {
+        var service = service(Vetting.APPROVED, ListingStatus.LIVE);
+        var d = service.getDetails();
+        var reordered = new ServiceDetails(
+                d.name(),
+                d.categoryId(),
+                d.pricingMode(),
+                d.priceCents(),
+                d.durationMin(),
+                d.bufferMin(),
+                d.included(),
+                d.instantBook(),
+                d.sku(),
+                List.of("MEDIA2", "MEDIA1"));
+        assertThat(types(service.revise(reordered, ACTOR, T1))).contains(ListingSubmitted.class);
+        assertThat(service.getState().getRevetReasons()).containsExactly(MaterialField.IMAGES);
     }
 
     @Test

@@ -29,16 +29,17 @@ export interface ProductTileProps {
   price: ReactNode;
   /** "Glenmore Bakery · 900 g". */
   meta?: ReactNode;
-  /** An approved image; without one the tile shows the design's halftone placeholder. */
+  /** An approved image (the merchant's upload); without one, `fallback` (the category's library photo), else the initial. */
   imageUrl?: string | null;
+  fallback?: ReactNode;
   tag?: TileTag;
 }
 
-export function ProductTile({ href, name, price, meta, imageUrl, tag }: ProductTileProps) {
+export function ProductTile({ href, name, price, meta, imageUrl, fallback, tag }: ProductTileProps) {
   return (
     <SiteLink href={href} className="nl-product-tile">
       <span className="nl-product-tile-media" aria-hidden>
-        {imageUrl ? <img src={imageUrl} alt="" loading="lazy" decoding="async" /> : <MediaFallback name={name} />}
+        {imageUrl ? <img src={imageUrl} alt="" loading="lazy" decoding="async" /> : fallback ?? <MediaFallback name={name} />}
         {tag ? <TagLabel tag={tag} /> : null}
       </span>
       <span className="nl-product-tile-row"><span className="nl-product-tile-name">{name}</span><span className="nl-product-tile-price">{price}</span></span>
@@ -59,16 +60,18 @@ export interface ShopTileProps {
   tag?: TileTag;
   /** `initial`: a square with the first letter (department page); `dot`: a round swatch (landing). */
   look?: 'initial' | 'dot';
+  /** The shop's photo (one of its own listing photos): shown in the mark's place instead of the letter. */
+  imageUrl?: string | null;
 }
 
-export function ShopTile({ href, name, id, meta, tier, tag, look = 'initial' }: ShopTileProps) {
+export function ShopTile({ href, name, id, meta, tier, tag, look = 'initial', imageUrl }: ShopTileProps) {
   const swatch = `nl-swatch-${swatchOf(id)}`;
   // one layout for both looks: the mark | the name (two lines at most), its meta, then the tier and delivery tags
   // under it — the tags never take the name's width (2026-10-19: names wrapped one letter a line next to them)
   return (
     <SiteLink href={href} className={clsx('nl-shop-tile', `nl-shop-tile-${look}`)}>
-      <span className={clsx('nl-shop-tile-mark', look === 'dot' && 'nl-shop-tile-round', swatch)} aria-hidden>
-        {name.trim().charAt(0).toUpperCase() || <Storefront size={22} />}
+      <span className={clsx('nl-shop-tile-mark', look === 'dot' && 'nl-shop-tile-round', imageUrl ? 'nl-shop-tile-photo' : swatch)} aria-hidden>
+        {imageUrl ? <img src={imageUrl} alt="" loading="lazy" decoding="async" /> : name.trim().charAt(0).toUpperCase() || <Storefront size={22} />}
       </span>
       <span className="nl-shop-tile-body">
         <span className="nl-shop-tile-title">{name}</span>

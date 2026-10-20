@@ -15,6 +15,7 @@ say where a step is still manual or missing.
 | [prod.md](prod.md) | production (Calgary launch) |
 | [dryrun-gcp.md](dryrun-gcp.md) | the GCP dry run: a short-lived demo environment on one zonal GKE cluster (fake data only, a $300 free-trial credit) — Postgres + PostGIS, Valkey, Meilisearch and Kafka in the cluster or at an external provider, cost estimate, step by step from an empty project to teardown |
 | [ovh.md](ovh.md) | the dry run on OVHcloud, everything in Beauharnois (BHS): `ovh-vps` (one VPS with k3s, ≈ $25–30/month) or `ovh-mks` (Managed Kubernetes + Managed PostgreSQL, ≈ $150–215/month) — account and API credentials, ordering, step by step for both, secrets from a local file, demo data, backups and restore, cost, teardown; [Google vs OVH](#google-vs-ovh) compares them with the GCP dry run |
+| [photos.md](photos.md) | real photos: the photo library (`web/packages/media`), every slot and its fallback, licences (Pexels, Unsplash, Openverse CC0), the owner's three commands on a Mac (`make photos-fetch`, `make photos-push`), picking, `make photos`, serving from the site or a CDN, the merchants' own photos |
 | [demo.md](demo.md) | the client demo on the dry run: `make demo-data` (a demo marketplace made through the product — businesses approved by staff, listings with pictures, customers with orders, bookings and reviews), the accounts, the 15-minute script, reset between demos, what to avoid, the pre-demo checklist |
 | [backups-dr.md](backups-dr.md) | backups, point-in-time restore and disaster recovery: RPO/RTO per data store and cloud, copies in the other Canadian region, restore scripts, the masked prod → staging refresh, verification, the local drill and the quarterly drill schedule (S-114) |
 | [infrastructure.md](infrastructure.md) | Terraform on AWS / Google Cloud / Azure: accounts, state bucket, plan/apply, outputs → variables, cost, teardown (S-2/S-3) |
@@ -295,7 +296,12 @@ the site. Both optional, set by the chart. S-61: `NL_STUDIO_ORIGIN` (= `urls.stu
 `http://localhost:3100`) — `/sell` links into the Studio's onboarding there (signed in: the Studio BFF's
 `/bff/login?next=/onboarding?type=…` hand-off; a guest: `/onboarding?type=…`, which signs in on the Studio). S-145:
 `NL_SUPPORT_EMAIL` (optional, no default) — the support mailbox the Help page (`/help`, in every page's footer) names;
-unset, Help sends people to Help & cases only.
+unset, Help sends people to Help & cases only. Real photos (2026-10-19): `NL_PHOTOS_BASE_URL` (optional, no default)
+— where the stock photos' variants are served (a CDN); unset, the site's own `/photos/`, built into the image by
+`make photos` (photos.md). Error pages (2026-10-20): every failure the consumer server answers itself is the branded
+page (or JSON for `/api`, `/bff` and `Accept: application/json`), its status kept, with a reference that is also in the
+log line `web.request_failed` (JSON; search the logs by `ref`); `NL_ERROR_PREVIEW` (a test switch for the sweep and
+`make ui-shots`) stays unset in every environment.
 
 ## Consumer BFF (S-45)
 

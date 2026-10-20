@@ -1,7 +1,8 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useZone } from '../location/regions';
 import { EmptyState, Tag, TileGrid, useLocale } from '@northline/ui';
-import { Art } from '../art/Art';
+import { departmentSlot } from '@northline/media';
+import { Scene } from '../art/Scene';
 import { RailSection, RailTrack } from '../pages/Rail';
 import { Tile } from '../pages/Tile';
 import { landingQuery } from './api';
@@ -42,7 +43,7 @@ export function ShopLanding({ market: explicit }: { market?: string }) {
           <div className="nl-band-lede">{data.served ? `${sub} · ${area}` : area}</div>
           {data.served && run ? <div className="nl-band-actions"><Tag tone="success">{t('pooledTag', { area })}</Tag></div> : null}
         </div>
-        <span className="nl-band-pic" aria-hidden><Art subject="groceries" tone="ember" fit="contain" /></span>
+        <span className="nl-band-pic" aria-hidden><Scene slot="banner/shop" subject="groceries" tone="ember" fit="contain" sizes="(min-width: 960px) 45vw, 100vw" priority /></span>
       </header>
 
       {!data.served ? (
@@ -54,7 +55,7 @@ export function ShopLanding({ market: explicit }: { market?: string }) {
           <section className="nl-section" aria-labelledby="shop-depts">
             <div className="nl-section-head"><h2 id="shop-depts" className="nl-section-title">{t('byDept')}</h2></div>
             <ul className="nl-tiles shop-depts">
-              {data.departments.map(d => <li key={d.slug}><Tile href={link(`/shop/${d.slug}`)} name={d.name} subject={d.slug} meta={t('shopsCount', { count: d.shops })} /></li>)}
+              {data.departments.map(d => <li key={d.slug}><Tile href={link(`/shop/${d.slug}`)} name={d.name} slot={departmentSlot(d.slug) ?? 'banner/shop'} subject={d.slug} meta={t('shopsCount', { count: d.shops })} /></li>)}
             </ul>
           </section>
 

@@ -7,7 +7,7 @@ import { useRegions } from '../location/regions';
 import { LegalLink } from './LegalLink';
 import { useAuthT, type AuthKey } from './messages';
 import { RegisterFlow } from './RegisterFlow';
-import { Art } from '../art/Art';
+import { Scene } from '../art/Scene';
 import { SignInFlow } from './SignInFlow';
 
 export type AuthMode = 'signin' | 'register';
@@ -66,7 +66,7 @@ export function AuthPage({ mode, search, navigate = url => window.location.assig
   return (
     <div className="nl-auth">
       <div className="nl-auth-intro">
-        <span className="nl-auth-pic" aria-hidden><Art subject={register ? 'service' : 'locksmith'} tone={register ? 'ember' : 'sage'} fit="contain" /></span>
+        <span className="nl-auth-pic" aria-hidden><Scene slot={register ? 'hero/register' : 'hero/sign-in'} subject={register ? 'service' : 'locksmith'} tone={register ? 'ember' : 'sage'} fit="contain" sizes="(min-width: 960px) 40vw, 100vw" priority /></span>
         <div className="nl-auth-kicker">{t(register ? 'kickerRegister' : 'kickerSignIn')}</div>
         <h1 className="nl-auth-hero">{t(register ? 'heroRegister' : 'heroSignIn')}</h1>
         <p className="nl-auth-lede">{t(register ? 'heroSubRegister' : 'heroSubSignIn')}</p>

@@ -194,6 +194,22 @@ once because northline-auth already has the session.
 Help (S-145): `/help`, linked from every page's footer, works signed out too. `NL_SUPPORT_EMAIL` (optional, in
 `web/apps/consumer/.env`) adds a support mailbox to it; leave it unset locally.
 
+Error pages (2026-10-20): whatever fails while the consumer server renders a page answers the branded error page —
+never h3's raw `{"status":500,"unhandled":true,"message":"HTTPError"}` — with its status (404, 500, 502, 503, 504), a
+short reference that is also in the server's log line (`web.request_failed`, one JSON line, no query string or
+headers) and, in development only, the error's name, message and stack with the likely cause: the consumer-bff on
+:8081 or the api not running (`make up SERVICES="auth api bff-consumer consumer"`, or `make up-all`), a workspace
+package missing after a pull (`cd web && pnpm install`, then restart the dev server: Vite keeps a failed import until
+it restarts). The BFF or the api down while a page renders gives the page with "We can't reach the shop right now"
+(503), tried again in the browser with a backoff. The dev proxies answer the same page (502) for a page load through a
+BFF that isn't running (Sign in). `make up` / `make dev` reinstall when `web/pnpm-lock.yaml` or any web `package.json`
+changed since the last install, or a workspace package isn't linked, and restart the web dev servers that were running.
+`NL_ERROR_PREVIEW=1` (optional, a test switch) serves the page at `/__nl/error?status=503`; leave it unset.
+
+Photos (photos.md): `pnpm dev:consumer` and the build run `make photos` first, so the stock photos in
+`web/packages/media` are served at `/photos/`; slots without a photo show their drawing. `NL_PHOTOS_BASE_URL` (optional)
+points the pages at a CDN instead; leave it unset locally.
+
 Business pages on other hosts (S-54): the built server serves `pages.<zone>/<slug>` and merchants' own domains when
 `NL_PAGES_HOST` is set (the Vite dev server doesn't). Try it with `pnpm --filter @northline/consumer build`, then
 `NL_SITE_ORIGIN=http://localhost:3000 NL_PAGES_HOST=pages.localhost NL_BFF_URL=http://localhost:8080 node

@@ -13,3 +13,4 @@ test('privacy requests', async ({ page }) => sweep(page, 'console', 'privacy', '
 test('retention', async ({ page }) => sweep(page, 'console', 'retention', '/privacy?view=retention', { signedIn: true }));
 test('team & audit log', async ({ page }) => sweep(page, 'console', 'audit', '/team', { signedIn: true }));
 test('delivery ops (map)', async ({ page }) => sweep(page, 'console', 'delivery', '/delivery', { signedIn: true }));
+test('unreachable (BFF down)', async ({ page }) => sweep(page, 'console', 'unreachable', '/', { signedIn: true, down: 503, ready: '.nl-failure-title' }));

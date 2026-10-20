@@ -61,6 +61,7 @@ export const publicConfig = createIsomorphicFn()
     legalEntity: process.env.NL_LEGAL_ENTITY?.trim() || FALLBACK_CONFIG.legalEntity,
     studioOrigin: (process.env.NL_STUDIO_ORIGIN ?? FALLBACK_CONFIG.studioOrigin).replace(/\/$/, ''),
     supportEmail: process.env.NL_SUPPORT_EMAIL?.trim() || null,
+    photosBaseUrl: process.env.NL_PHOTOS_BASE_URL?.trim() || null,
     page: pageFromHeaders(),
   }))
   .client((): PublicConfig => ({ ...FALLBACK_CONFIG, ...window.__NL_CONFIG__ }));

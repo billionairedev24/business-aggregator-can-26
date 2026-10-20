@@ -12,7 +12,8 @@ import { FavouriteButton } from '../account/FavouriteButton';
 import { useStorefrontVisit } from '../../lib/visits';
 import { moreReviewsQuery, providerQuery, rewardQuery, storefrontQuery, type ProviderFacts, type PublicReview, type Storefront } from './api';
 import { useProviderT } from './messages';
-import { Art } from '../art/Art';
+import { categorySlot } from '@northline/media';
+import { Scene } from '../art/Scene';
 import { SealCheck, Star } from '@phosphor-icons/react';
 
 /** Sections the provider page renders in the page's order (hero first, the CTA card beside them). */
@@ -55,9 +56,15 @@ function Hero({ page, facts, locale }: { page: Storefront; facts: ProviderFacts;
   const year = new Date(facts.since).getFullYear();
   const tagline = [page.tagline ?? [category, facts.city].filter(Boolean).join(' · '), t('since', { year })].filter(Boolean).join(' · ');
   const tier = dyn(s, `tier_${facts.tier}`, facts.tier);
+  // the business's own photo (its most booked service with one), else its category's library photo, else the drawing
+  const cover = facts.services.find(sv => sv.imageUrl)?.imageUrl ?? null;
   return (
     <header className="nl-prov-hero">
-      <span className="nl-prov-cover" aria-hidden><Art subject={facts.category?.slug ?? facts.kind} fit="contain" /></span>
+      <span className="nl-prov-cover" aria-hidden>
+        {cover
+          ? <img src={cover} alt="" className="nl-prov-cover-img" />
+          : <Scene slot={[categorySlot(facts.category?.id), 'banner/services']} subject={facts.category?.slug ?? facts.kind} fit="contain" sizes="(min-width: 1200px) 1140px, 100vw" priority />}
+      </span>
       <div className="nl-prov-head">
         <span className="nl-prov-mark" aria-hidden style={{ borderColor: page.brandColor }}>{page.logoUrl ? <img src={page.logoUrl} alt="" /> : facts.name.trim().charAt(0).toUpperCase()}</span>
         <div className="nl-prov-idtext">

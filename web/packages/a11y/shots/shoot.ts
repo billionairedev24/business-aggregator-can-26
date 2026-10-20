@@ -39,7 +39,7 @@ async function photos(page: Page) {
 async function shoot(page: Page, app: App, r: ShotRoute) {
   mkdirSync(`${OUT}${app}`, { recursive: true });
   // the Studio and the console default to signed in (their screens need a session); the consumer to a guest
-  const missing = await mockApi(page, app, { signedIn: r.signedIn ?? app !== 'consumer' });
+  const missing = await mockApi(page, app, { signedIn: r.signedIn ?? app !== 'consumer', down: r.down });
   await photos(page);
   if (app !== 'consumer') await page.addInitScript(() => { try { localStorage.setItem('nl.locale', 'en'); } catch { /* ignore */ } });
   for (const s of SIZES) {

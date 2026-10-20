@@ -2,7 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Art, Icon, colors, fonts, radius, semantic, shadow, space } from '@northline/mobile-kit';
+import { Icon, colors, fonts, radius, semantic, shadow, space, Scene, slugSlot } from '@northline/mobile-kit';
 
 import { nameIn, type ProviderPage, type ProviderService, type Review } from '../api/services';
 import { useAuth } from '../auth/AuthProvider';
@@ -69,7 +69,7 @@ function Profile({ p }: { p: ProviderPage }) {
   return (
     <>
       <View testID="provider-hero">
-        <Art subject={p.category?.slug ?? p.name} fit="contain" style={styles.cover} />
+        <Scene slot={[slugSlot('service', p.category?.slug), 'banner/services']} subject={p.category?.slug ?? p.name} fit="contain" style={styles.cover} />
         <View style={styles.overlay}>
           <RoundButton icon="caret-left" label={t('common.back')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))} onPhoto testID="header-back" />
         </View>

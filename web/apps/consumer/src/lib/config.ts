@@ -11,11 +11,13 @@ import type { PageHost } from './pages';
  * request is a business page on `pages.<zone>` or a merchant's own domain (server/page-hosts.mjs, S-54). Read on the
  * server by `publicConfig()` (request.ts), serialized into the page, read back in the browser. `supportEmail` is the
  * support mailbox the Help page names (NL_SUPPORT_EMAIL, S-145); unset, Help sends people to Help & cases only.
+ * `photosBaseUrl` is where the stock photos' variants are served (NL_PHOTOS_BASE_URL, a CDN; docs/runbooks/photos.md);
+ * unset, this site's own /photos/.
  */
-export interface PublicConfig { authOrigin: string; siteOrigin: string; legalEntity: string; studioOrigin: string; supportEmail?: string | null; page?: PageHost | null }
+export interface PublicConfig { authOrigin: string; siteOrigin: string; legalEntity: string; studioOrigin: string; supportEmail?: string | null; photosBaseUrl?: string | null; page?: PageHost | null }
 declare global { interface Window { __NL_CONFIG__?: PublicConfig } }
 
-export const FALLBACK_CONFIG: PublicConfig = { authOrigin: 'http://localhost:9000', siteOrigin: 'http://localhost:3000', legalEntity: brand.legalName, studioOrigin: 'http://localhost:3100', supportEmail: null, page: null };
+export const FALLBACK_CONFIG: PublicConfig = { authOrigin: 'http://localhost:9000', siteOrigin: 'http://localhost:3000', legalEntity: brand.legalName, studioOrigin: 'http://localhost:3100', supportEmail: null, photosBaseUrl: null, page: null };
 
 const PRIVATE_V4 = /^(10\.\d{1,3}|172\.(1[6-9]|2\d|3[01])|192\.168|169\.254)\.\d{1,3}\.\d{1,3}$/;
 const LOOPBACK = /^(localhost|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|\[::1\])$/;

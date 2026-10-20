@@ -52,6 +52,9 @@ public enum MaterialField implements CodedEnum {
         if (!Objects.equals(before.categoryId(), after.categoryId())) {
             changed.add(CATEGORY);
         }
+        if (!before.imageIds().equals(after.imageIds())) { // photos of the work, the main one first
+            changed.add(IMAGES);
+        }
         return changed;
     }
 

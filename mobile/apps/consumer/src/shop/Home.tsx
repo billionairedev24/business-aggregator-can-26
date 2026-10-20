@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router, type Href } from 'expo-router';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, Art, Icon, LogoMark, MIN_TARGET, brand, colors, fonts, radius, semantic, shadow, space } from '@northline/mobile-kit';
+import { ApiError, Icon, LogoMark, MIN_TARGET, brand, colors, fonts, radius, semantic, shadow, space, Scene, slugSlot } from '@northline/mobile-kit';
 
 import type { MessageKey } from '../i18n';
 import { useAuth } from '../auth/AuthProvider';
@@ -121,10 +121,10 @@ export function Home() {
           </Text>
           <Body tone="muted">{t('lt.home.heroSub')}</Body>
           <View style={styles.collage}>
-            <Art subject="mobile-mechanic" style={styles.collageMain} />
+            <Scene slot="hero/home-main" subject="mobile-mechanic" style={styles.collageMain} />
             <View style={styles.collageSide}>
-              <Art subject="bakery" style={styles.collageSmall} />
-              <Art subject="house-cleaning" style={styles.collageSmall} />
+              <Scene slot="hero/home-side-a" subject="bakery" crop="square" style={styles.collageSmall} />
+              <Scene slot="hero/home-side-b" subject="house-cleaning" crop="square" style={styles.collageSmall} />
             </View>
             <View style={styles.badge}>
               <Icon name="seal-check" size={18} filled color={semantic.success} />
@@ -142,7 +142,7 @@ export function Home() {
         </View>
         <Strip edge>
           {SERVICE_TILES.map(([key, slug]) => (
-            <Tile key={slug} label={t(key)} subject={slug} width={148} onPress={() => router.push(`/services/${slug}` as Href)} />
+            <Tile key={slug} label={t(key)} slot={slugSlot('service', slug)} subject={slug} width={148} onPress={() => router.push(`/services/${slug}` as Href)} />
           ))}
         </Strip>
       </View>
@@ -171,7 +171,7 @@ export function Home() {
               </View>
               <Strip edge>
                 {departments.slice(0, 8).map((d) => (
-                  <Tile key={d.slug} label={d.name} subject={d.slug} width={148} onPress={() => router.push({ pathname: '/search', params: { department: d.slug, name: d.name } })} />
+                  <Tile key={d.slug} label={d.name} slot={slugSlot('shop', d.slug)} subject={d.slug} width={148} onPress={() => router.push({ pathname: '/search', params: { department: d.slug, name: d.name } })} />
                 ))}
               </Strip>
             </View>
@@ -188,7 +188,7 @@ export function Home() {
                     : t('rd.home.heroSub')}
                 </Text>
               </View>
-              <Art subject={run ? 'courier' : 'shop'} style={styles.runArt} />
+              <Scene slot={run ? 'banner/order-complete' : 'banner/shop'} subject={run ? 'courier' : 'shop'} crop="square" style={styles.runArt} />
             </Card>
             {landing.data && !landing.data.served ? <Body tone="muted">{t('shop.home.notServed', { place: landing.data.market })}</Body> : null}
             {landing.data && landing.data.departments.length === 0 ? <Body tone="muted">{t('shop.home.noShops')}</Body> : null}

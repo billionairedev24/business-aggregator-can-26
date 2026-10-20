@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { ApiError, Art, Icon, NetworkError, colors, radius, semantic, space } from '@northline/mobile-kit';
+import { ApiError, Icon, NetworkError, colors, radius, semantic, space, Scene } from '@northline/mobile-kit';
 
 import type { Shift } from '../../../src/api/courier';
 import { OutboxBar } from '../../../src/components/tracking';
@@ -134,7 +134,7 @@ export default function ShiftScreen() {
 
       {run ? (
         <Card highlight flush onPress={() => router.navigate('/run')} label={t('shift.openRun')} testID="open-run">
-          <Art subject="courier" tone="sage" fit="contain" style={styles.art} />
+          <Scene slot="hero/courier" subject="courier" tone="sage" fit="contain" style={styles.art} />
           <View style={styles.runBody}>
             <Row>
               <View style={styles.flex}>

@@ -142,6 +142,7 @@ export const useCatalogueT = defineMessages({
     instantBook: 'Instant book (no approval needed)',
     dur_30: '30 min', dur_45: '45 min', dur_60: '60 min', dur_90: '90 min', dur_120: '2 h', dur_240: 'Half day', buf_0: '0', buf_15: '15 min', buf_20: '20 min', buf_30: '30 min',
     secPricingSchedule: 'Price, duration & booking', secDetails: 'Name & category', secPricing: 'Pricing', secSchedule: 'Duration & buffer', secIncluded: "What's included",
+    secPhotos: 'Photos of your work', photoAlt: 'Photo of your work {n}', photosHint: 'Optional. Customers see the first photo on your page, in search and on the category’s cards — the finished job, your van, your tools. JPG or PNG, at least 1000 px; checked with the listing.', addFirstPhoto: 'Add photos of your work — drop them here or choose',
 
     // bulk upload
     bulkKicker: '{section} · bulk upload', bulkTitle: 'Add or update hundreds of products at once',
@@ -301,6 +302,7 @@ export const useCatalogueT = defineMessages({
     instantBook: 'Réservation instantanée (sans approbation)',
     dur_30: '30 min', dur_45: '45 min', dur_60: '60 min', dur_90: '90 min', dur_120: '2 h', dur_240: 'Demi-journée', buf_0: '0', buf_15: '15 min', buf_20: '20 min', buf_30: '30 min',
     secPricingSchedule: 'Prix, durée et réservation', secDetails: 'Nom et catégorie', secPricing: 'Tarification', secSchedule: 'Durée et battement', secIncluded: 'Ce qui est inclus',
+    secPhotos: 'Photos de votre travail', photoAlt: 'Photo de votre travail {n}', photosHint: 'Facultatif. Les clients voient la première photo sur votre page, dans la recherche et sur les cartes de la catégorie — le travail terminé, votre camion, vos outils. JPG ou PNG, au moins 1000 px; vérifiées avec l’annonce.', addFirstPhoto: 'Ajoutez des photos de votre travail — déposez-les ici ou choisissez',
 
     bulkKicker: '{section} · import en masse', bulkTitle: 'Ajoutez ou modifiez des centaines de produits à la fois',
     bulkLede: 'Téléchargez le modèle de votre catégorie, remplissez-le, téléversez-le. Les lignes sont validées avant tout changement; les erreurs reviennent dans un rapport avec les numéros de ligne. Les UGS existantes sont mises à jour avec chaque colonne remplie (une cellule vide garde la valeur actuelle), les nouvelles sont créées en brouillon. Les URL d’images doivent être des liens https publics vers des images JPG ou PNG; nous les vérifions une à une.',

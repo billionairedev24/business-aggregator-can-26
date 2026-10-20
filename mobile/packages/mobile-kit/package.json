@@ -7,8 +7,9 @@
   "types": "src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/gen-brand.mjs --check && jest",
-    "brand": "node scripts/gen-brand.mjs"
+    "test": "node scripts/gen-brand.mjs --check && node scripts/gen-photos.mjs --check && jest",
+    "brand": "node scripts/gen-brand.mjs",
+    "photos": "node scripts/gen-photos.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/dm-sans": "0.4.2",

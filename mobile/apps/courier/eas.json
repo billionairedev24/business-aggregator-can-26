@@ -23,7 +23,8 @@
       "env": {
         "APP_VARIANT": "development",
         "EXPO_PUBLIC_API_URL": "https://api.dev.northline.ca/api/v1",
-        "EXPO_PUBLIC_AUTH_ISSUER": "https://auth.dev.northline.ca"
+        "EXPO_PUBLIC_AUTH_ISSUER": "https://auth.dev.northline.ca",
+        "EXPO_PUBLIC_PHOTOS_BASE_URL": "https://dev.northline.ca/photos"
       },
       "ios": { "simulator": true, "resourceClass": "m-medium" },
       "android": { "buildType": "apk" }
@@ -41,7 +42,8 @@
       "env": {
         "APP_VARIANT": "preview",
         "EXPO_PUBLIC_API_URL": "https://api.staging.northline.ca/api/v1",
-        "EXPO_PUBLIC_AUTH_ISSUER": "https://auth.staging.northline.ca"
+        "EXPO_PUBLIC_AUTH_ISSUER": "https://auth.staging.northline.ca",
+        "EXPO_PUBLIC_PHOTOS_BASE_URL": "https://staging.northline.ca/photos"
       },
       "ios": { "resourceClass": "m-medium" },
       "android": { "buildType": "apk" }
@@ -55,7 +57,8 @@
       "env": {
         "APP_VARIANT": "production",
         "EXPO_PUBLIC_API_URL": "https://api.northline.ca/api/v1",
-        "EXPO_PUBLIC_AUTH_ISSUER": "https://auth.northline.ca"
+        "EXPO_PUBLIC_AUTH_ISSUER": "https://auth.northline.ca",
+        "EXPO_PUBLIC_PHOTOS_BASE_URL": "https://northline.ca/photos"
       },
       "ios": { "resourceClass": "m-medium" },
       "android": { "buildType": "app-bundle" }

@@ -59,6 +59,7 @@ public final class ShopViews {
     /**
      * @param tier {@code registered} | {@code trusted} | {@code master}
      * @param run the earliest pooled run the shop has something in stock for; null when none of the upcoming ones
+     * @param imageUrl the shop's photo: its best-selling product's approved image, or null
      */
     public record ShopCard(
             String merchantId,
@@ -67,7 +68,8 @@ public final class ShopViews {
             String departmentSlug,
             String departmentName,
             int products,
-            @Nullable Run run) {}
+            @Nullable Run run,
+            @Nullable String imageUrl) {}
 
     /**
      * The best (cheapest) offer of a catalogue product in the market.
@@ -76,6 +78,7 @@ public final class ShopViews {
      * @param imageUrl an approved image, or null
      * @param sellers how many shops of the market sell it
      * @param age set when the product is age-restricted (the card says so before checkout)
+     * @param categoryId the catalogue category (the pages show its library photo when there is no image)
      */
     public record ProductCard(
             String productId,
@@ -88,7 +91,8 @@ public final class ShopViews {
             @Nullable String imageUrl,
             int sellers,
             @Nullable Run run,
-            @Nullable Age age) {}
+            @Nullable Age age,
+            @Nullable String categoryId) {}
 
     /**
      * An age-restricted product (demo rehearsal 2026-10-19: the page said nothing about the ID check until checkout).

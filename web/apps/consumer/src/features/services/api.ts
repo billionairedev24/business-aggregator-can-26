@@ -46,6 +46,8 @@ export const ProviderCard = z.object({
   onTimePct: z.number().nullish(), disputePct: z.number().nullish(), rebookPct: z.number().nullish(),
   fromCents: z.number().nullish(), pricingMode: PricingMode, instantBook: z.boolean(),
   nextAvailable: z.string().nullish(), zones: z.array(z.string()),
+  // the provider's own photo (a service photo it uploaded, its most booked first), when it has one
+  imageUrl: z.string().nullish(),
 });
 export type ProviderCard = z.infer<typeof ProviderCard>;
 

@@ -213,6 +213,8 @@ export const serviceDraftSchema = z.object({
   bufferMin: z.number().min(0, MSG.BUFFER_RANGE).max(120, MSG.BUFFER_RANGE),
   included: z.string().max(2000, MSG.INCLUDED_TOO_LONG).nullable(),
   sku: z.string().max(40, MSG.SKU_TOO_LONG).nullable(),
+  // photos of the work (optional; the business's own uploads)
+  imageIds: z.array(z.string()).max(9, MSG.IMAGES_TOO_MANY),
 }).superRefine((v, ctx) => {
   if (v.pricingMode === 'quote') return;
   if (v.priceCents === null || Number.isNaN(v.priceCents)) ctx.addIssue({ code: 'custom', path: ['priceCents'], message: MSG.PRICE_REQUIRED });

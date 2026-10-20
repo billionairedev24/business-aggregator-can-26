@@ -11,6 +11,7 @@
     "test-storybook": "pnpm --filter @northline/tokens build && vitest run --project storybook"
   },
   "dependencies": {
+    "@northline/media": "workspace:*",
     "@northline/tokens": "workspace:*",
     "@phosphor-icons/react": "^2.1.7",
     "@tanstack/react-form": "^1.33.5",
@@ -45,6 +46,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./styles.css": "./src/styles/index.css",
-    "./DataTable.css": "./src/DataTable/DataTable.css"
+    "./DataTable.css": "./src/DataTable/DataTable.css",
+    "./error-page": { "types": "./src/server/error-page.d.mts", "default": "./src/server/error-page.mjs" }
   }
 }

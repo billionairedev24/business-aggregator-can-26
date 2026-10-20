@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Art, Logo, radius, space } from '@northline/mobile-kit';
+import { Logo, radius, space, Scene } from '@northline/mobile-kit';
 
 import { useAuth } from '../src/auth';
 import { LanguageSwitch } from '../src/components/LanguageSwitch';
@@ -33,7 +33,7 @@ export default function SignIn() {
       <View style={styles.brand}>
         {/* the palette's mark and wordmark (brand.json), with the portal word — AT DR:31 LOGIN */}
         <Logo size={36} portal={t('signIn.portal')} />
-        <Art subject="courier" tone="sage" fit="contain" style={styles.art} />
+        <Scene slot="hero/courier" subject="courier" tone="sage" fit="contain" style={styles.art} />
         <Heading>{t('signIn.title')}</Heading>
       </View>
       {ended ? <Banner tone="warn">{t('signIn.ended')}</Banner> : null}

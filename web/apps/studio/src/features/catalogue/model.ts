@@ -163,15 +163,16 @@ export function variantSku(baseSku: string, value: string) {
 }
 
 // ── service form ──────────────────────────────────────────────────────────────────────────────────────────────────
-export interface ServiceForm { name: string; categoryId: string; pricingMode: PricingMode; price: string; durationMin: number; bufferMin: number; included: string; instantBook: boolean; sku: string }
-export const emptyService = (): ServiceForm => ({ name: '', categoryId: '', pricingMode: 'fixed', price: '', durationMin: 60, bufferMin: 0, included: '', instantBook: true, sku: '' });
+export interface ServiceForm { name: string; categoryId: string; pricingMode: PricingMode; price: string; durationMin: number; bufferMin: number; included: string; instantBook: boolean; sku: string; images: Media[] }
+export const emptyService = (): ServiceForm => ({ name: '', categoryId: '', pricingMode: 'fixed', price: '', durationMin: 60, bufferMin: 0, included: '', instantBook: true, sku: '', images: [] });
 export const serviceFromDetail = (d: ServiceDetail): ServiceForm => ({
   name: d.name, categoryId: d.categoryId ?? '', pricingMode: d.pricingMode, price: centsToInput(d.priceCents), durationMin: d.durationMin, bufferMin: d.bufferMin,
-  included: d.included ?? '', instantBook: d.instantBook, sku: d.sku ?? '',
+  included: d.included ?? '', instantBook: d.instantBook, sku: d.sku ?? '', images: d.images ?? [],
 });
 export const servicePayload = (f: ServiceForm): ServicePayload => ({
   name: f.name.trim(), categoryId: f.categoryId || null, pricingMode: f.pricingMode, priceCents: f.pricingMode === 'quote' ? null : parseMoney(f.price),
   durationMin: f.durationMin, bufferMin: f.bufferMin, included: nullIfBlank(f.included), instantBook: f.instantBook, sku: nullIfBlank(f.sku),
+  imageIds: f.images.map(m => m.id),
 });
 export function validateServiceDraft(f: ServiceForm, category: Category | undefined): Record<string, string> {
   const parsed = serviceDraftSchema.safeParse(servicePayload(f));

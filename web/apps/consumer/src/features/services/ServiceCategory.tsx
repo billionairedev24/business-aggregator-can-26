@@ -6,7 +6,8 @@ import { price } from './format';
 import { useServicesT } from './messages';
 import { categoryName, copyKeys, familyOf, nouns } from './taxonomy';
 import { dyn } from './text';
-import { Art } from '../art/Art';
+import { categorySlot } from '@northline/media';
+import { Scene } from '../art/Scene';
 import { Crumbs } from '../pages/Crumbs';
 
 /** design 06 `svcCategory`: what the category is, common jobs and typical prices, how booking works, get started. */
@@ -38,7 +39,7 @@ export function CategoryView({ category: c }: { category: Category }) {
           </div>
           <p className="nl-band-lede">{dyn(t, keys.blurb, '', { registry: c.regulatedRegistry ?? 'none' })}</p>
         </div>
-        <span className="nl-band-pic" aria-hidden><Art subject={c.slug} fit="contain" /></span>
+        <span className="nl-band-pic" aria-hidden><Scene slot={categorySlot(c.id) ?? 'banner/services'} subject={c.slug} fit="contain" sizes="(min-width: 960px) 45vw, 100vw" priority /></span>
       </section>
       <div className="nl-svc-split">
         <div className="nl-svc-main">

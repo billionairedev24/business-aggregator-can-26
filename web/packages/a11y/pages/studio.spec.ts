@@ -16,3 +16,4 @@ test('finance · reports (charts)', async ({ page }) => sweep(page, 'studio', 'r
 test('kitchen display', async ({ page }) => sweep(page, 'studio', 'kds', `/b/${KITCHEN}/kitchen/live`, { signedIn: true }));
 test('kitchen · menu builder', async ({ page }) => sweep(page, 'studio', 'menu', `/b/${KITCHEN}/kitchen/menu`, { signedIn: true }));
 test('settings', async ({ page }) => sweep(page, 'studio', 'settings', `/b/${PROVIDER}/settings`, { signedIn: true }));
+test('unreachable (BFF down)', async ({ page }) => sweep(page, 'studio', 'unreachable', `/b/${PROVIDER}`, { signedIn: true, down: 503, ready: '.nl-failure-title' }));

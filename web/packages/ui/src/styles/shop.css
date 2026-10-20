@@ -31,6 +31,8 @@
 .nl-shop-tile:hover { box-shadow: var(--shadow-md); color: var(--color-text); text-decoration: none; }
 .nl-shop-tile-mark { width: 52px; height: 52px; flex: none; border-radius: var(--radius-md); display: grid; place-items: center; font-family: var(--font-display); font-weight: var(--weight-semibold); font-size: var(--text-2xl); color: var(--color-text-inverse); }
 .nl-shop-tile-round { border-radius: 50%; }
+.nl-shop-tile-photo { overflow: hidden; background: var(--color-surface-sunken); }
+.nl-shop-tile-photo > img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .nl-shop-tile-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .nl-shop-tile-title { font-weight: var(--weight-bold); line-height: var(--leading-tight); overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .nl-shop-tile-meta { font-size: var(--text-sm); color: var(--color-text-muted); overflow-wrap: break-word; }

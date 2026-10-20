@@ -277,10 +277,10 @@ class ListingPersistenceAdapter implements ListingRepository {
         jdbc.sql("""
                         insert into catalogue.services (id, merchant_id, category_id, name, name_i18n, sku, included,
                           pricing_mode, price_cents, duration_min, buffer_min, instant_book, vetting, status, vetting_flags,
-                          revet_reasons, submitted_at, created_at, updated_at)
+                          revet_reasons, submitted_at, created_at, updated_at, own_images)
                         values (:id, :merchant, :category, :name, cast(:nameI18n as jsonb), :sku, :included, :mode, :price,
                           :duration, :buffer, :instant, :vetting, :status, :flags, :revet, :submittedAt, :createdAt,
-                          :updatedAt)
+                          :updatedAt, :images)
                         on conflict (id) do update set category_id = excluded.category_id, name = excluded.name,
                           name_i18n = catalogue.services.name_i18n || excluded.name_i18n, sku = excluded.sku,
                           included = excluded.included, pricing_mode = excluded.pricing_mode,
@@ -288,11 +288,12 @@ class ListingPersistenceAdapter implements ListingRepository {
                           buffer_min = excluded.buffer_min, instant_book = excluded.instant_book, vetting = excluded.vetting,
                           status = excluded.status, vetting_flags = excluded.vetting_flags,
                           revet_reasons = excluded.revet_reasons, submitted_at = excluded.submitted_at,
-                          updated_at = excluded.updated_at
+                          updated_at = excluded.updated_at, own_images = excluded.own_images
                         """)
                 .param("id", listing.getId())
                 .param("merchant", listing.getMerchantId())
                 .param("category", d.categoryId())
+                .param("images", array(d.imageIds()))
                 .param("name", d.name())
                 .param("nameI18n", json(Map.of("en", d.name())))
                 .param("sku", d.sku())
@@ -461,7 +462,8 @@ class ListingPersistenceAdapter implements ListingRepository {
                 rs.getInt("buffer_min"),
                 rs.getString("included"),
                 rs.getBoolean("instant_book"),
-                rs.getString("sku"));
+                rs.getString("sku"),
+                strings(rs, "own_images"));
         return ServiceListing.builder()
                 .id(rs.getString("id"))
                 .merchantId(rs.getString("merchant_id"))

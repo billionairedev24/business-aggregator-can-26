@@ -38,7 +38,12 @@ class ProviderPageApiTest extends IntegrationTest {
         var p = fx.provider("Page Wrench", "master", List.of("Beltline", "Airdrie"));
         fx.service(p.merchantId(), "service.automotive.mobile-mechanic", "Diagnostic scan", "fixed", 12000L, 60);
         fx.service(p.merchantId(), "service.automotive.mobile-mechanic", "Alternator", "quote", null, 90);
-        fx.service(p.merchantId(), "service.automotive.brakes-and-suspension", "Brake inspection", "fixed", 8900L, 60);
+        var brakes = fx.service(
+                p.merchantId(), "service.automotive.brakes-and-suspension", "Brake inspection", "fixed", 8900L, 60);
+        // real photos: an approved service's photo of the work is on the page
+        jdbc.sql("update catalogue.services set own_images = array['01PHOTO0000000000000000001'] where id = ?")
+                .params(brakes)
+                .update();
         fx.quality(p.merchantId(), 98, 0.3, 71);
         fx.verified(p.merchantId(), "licence:AMVIC");
         fx.verified(p.merchantId(), "insurance");
@@ -70,6 +75,8 @@ class ProviderPageApiTest extends IntegrationTest {
                         .value("quote"))
                 .andExpect(jsonPath("$.services[?(@.name == 'Brake inspection')].categorySlug")
                         .value("brakes-and-suspension"))
+                .andExpect(jsonPath("$.services[?(@.name == 'Brake inspection')].imageUrl")
+                        .value("/api/v1/public/catalogue/media/01PHOTO0000000000000000001"))
                 .andExpect(jsonPath("$.nextAvailable").isNotEmpty())
                 .andExpect(jsonPath("$.reviews.items.length()").value(3))
                 .andExpect(jsonPath("$.reviews.items[0].text").value("Great job 4"))

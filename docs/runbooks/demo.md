@@ -34,9 +34,11 @@ site and the console do:
 | opening hours | each provider's week (weekdays 9–5, Thursday to 7, Saturday 10–3), bookable |
 | 3 customers | with an address in the market; 6 orders (3 packed, 3 still "to pack"), 6 bookings (4 completed, signed off and reviewed 4–5★, 2 upcoming) |
 
-- **Pictures** are drawn at run time (`scripts/demo/lib/images.mjs`: a 1000 × 1000 PNG on white with the item's name) —
-  nothing is downloaded, hotlinked or stored in the repository. Six more for the listing you add live are written next
-  to the state file (`-photos/`).
+- **Pictures** are real photos from the photo library ([photos.md](photos.md) § 10): each business and listing names a
+  `photo` slot, and a slot that has a photo is uploaded through the product (the product image, the service's photo
+  of the work, the business's logo). While a slot has none, the picture is drawn at run time
+  (`scripts/demo/lib/images.mjs`: a 1000 × 1000 PNG on white with the item's name; services get none) — nothing is
+  downloaded or hotlinked. Six more for the listing you add live are written next to the state file (`-photos/`).
 - **Places** come from the region model: the market is the configured default (`GET /api/v1/geo/markets` → `fallback`)
   or `DEMO_MARKET`; addresses come from the product's own address search in that market. The plan names no place.
 - **Idempotent:** a re-run finds what exists (the state file's ids, the listings' `DEMO-…` SKUs, the business names),

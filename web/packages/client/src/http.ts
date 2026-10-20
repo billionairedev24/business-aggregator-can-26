@@ -35,11 +35,41 @@ export function xsrfToken(): string | undefined {
 }
 
 let base = '';
+let timeoutMs: number | undefined;
 /**
  * Origin prefixed to same-origin paths. Browsers leave it empty; the consumer app's server-side rendering sets the
  * in-cluster BFF (`NL_BFF_URL`) once at start-up, so loaders fetch public data through the BFF as a guest.
+ * `timeoutMs` (server-side rendering): a call that has no answer by then fails, so a BFF that accepts connections but
+ * never answers can't hold the page forever; a call's own `signal` still applies.
  */
-export function setHttpBase(origin: string) { base = origin.replace(/\/$/, ''); }
+export function setHttpBase(origin: string, opts: { timeoutMs?: number } = {}) {
+  base = origin.replace(/\/$/, '');
+  timeoutMs = opts.timeoutMs && opts.timeoutMs > 0 ? opts.timeoutMs : undefined;
+}
+
+/**
+ * What a failure means for the screen that shows it (the error screens, the consumer's server error page):
+ *  - `unreachable` — the BFF or the api could not be reached or did not answer properly: no connection, a timeout, a
+ *    5xx, or an answer this app cannot read (an HTML error page, a schema mismatch). Worth trying again on its own.
+ *  - `updated` — a newer build replaced the code this page was loading (a chunk is gone): reloading fixes it.
+ *  - `notFound`, `forbidden`, `unauthorized` — 404, 403, 401.
+ *  - `error` — anything else (a bug).
+ */
+export type FailureKind = 'unreachable' | 'updated' | 'notFound' | 'forbidden' | 'unauthorized' | 'error';
+const NETWORK = /fetch failed|failed to fetch|networkerror|network request failed|load failed|ECONNREFUSED|ECONNRESET|ETIMEDOUT|socket hang up/i;
+const STALE_CHUNK = /dynamically imported module|importing a module script failed|error loading dynamically imported|ChunkLoadError|Loading chunk/i;
+export function failureKind(error: unknown): FailureKind {
+  if (error instanceof ApiError) {
+    if (error.status === 0 || error.status >= 500) return 'unreachable';
+    return error.status === 404 ? 'notFound' : error.status === 403 ? 'forbidden' : error.status === 401 ? 'unauthorized' : 'error';
+  }
+  if (!(error instanceof Error) && !(typeof DOMException !== 'undefined' && error instanceof DOMException)) return 'error';
+  const e = error as Error;
+  if (STALE_CHUNK.test(e.message)) return 'updated';
+  if (e.name === 'TimeoutError' || e.name === 'ZodError' || (e.name === 'TypeError' && NETWORK.test(e.message))) return 'unreachable';
+  if (e.name === 'SyntaxError' && /JSON/.test(e.message)) return 'unreachable';
+  return 'error';
+}
 const resolve = (path: string) => (path.startsWith('/') ? base + path : path);
 
 /**
@@ -78,7 +108,9 @@ export async function http<T = unknown>(path: string, opts: RequestOptions = {},
   if (language && !Object.keys(headers).some(h => h.toLowerCase() === 'accept-language')) headers['accept-language'] = language;
   // Same-origin (the BFF) only: another origin's CORS policy may not allow the header.
   if (path.startsWith('/') && !headers.traceparent) headers.traceparent = traceparent();
-  const res = await fetch(resolve(path), { method, headers, credentials: 'include', signal: opts.signal, body: opts.body === undefined ? undefined : opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body) });
+  const timeout = timeoutMs && path.startsWith('/') ? AbortSignal.timeout(timeoutMs) : undefined;
+  const signal = timeout && opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout ?? opts.signal;
+  const res = await fetch(resolve(path), { method, headers, credentials: 'include', signal, body: opts.body === undefined ? undefined : opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body) });
   const text = await res.text();
   const data: unknown = text ? safeJson(text) : undefined;
   if (res.status === 422 && data && typeof data === 'object' && 'errors' in data) throw new ValidationError((data as { errors: FieldError[] }).errors);

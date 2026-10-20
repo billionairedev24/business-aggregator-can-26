@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, type DimensionValue } from 'react-native';
 
-import { ApiError, Art, NetworkError, SignedOutError, colors, fonts, radius, semantic, space, type Subject } from '@northline/mobile-kit';
+import { ApiError, NetworkError, SignedOutError, colors, fonts, radius, semantic, space, type Subject, Scene } from '@northline/mobile-kit';
 
 import { useI18n, type MessageKey } from '../i18n';
 import { Body, Button, type } from './primitives';
@@ -66,7 +66,7 @@ export function Loading() {
 export function EmptyState({ message, action, onAction, art, draw, title }: { message: string; action?: string; onAction?: () => void; art?: string; draw?: Subject; title?: string }) {
   return (
     <View style={styles.empty} testID="empty">
-      {art || draw ? <Art subject={art ?? 'empty'} draw={draw} style={styles.emptyArt} /> : null}
+      {art || draw ? <Scene slot={art === 'search' ? 'empty/search' : 'empty/generic'} subject={art ?? 'empty'} draw={draw} style={styles.emptyArt} /> : null}
       {title ? <Text style={styles.emptyTitle}>{title}</Text> : null}
       {message ? (
         <Body tone="muted" style={styles.emptyText}>
@@ -110,7 +110,7 @@ export function SignInPrompt({ message, art = 'user' }: { message: string; art?:
   const { t } = useI18n();
   return (
     <View style={styles.empty} testID="sign-in-prompt">
-      <Art subject={art} draw={{ main: 'HandHeart', side: 'Key' }} style={styles.emptyArt} />
+      <Scene slot="empty/signed-out" subject={art} draw={{ main: 'HandHeart', side: 'Key' }} style={styles.emptyArt} />
       <Body tone="muted" style={styles.emptyText}>
         {message}
       </Body>

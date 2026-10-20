@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CartRouteImport } from './routes/cart'
+import { Route as CreditsRouteImport } from './routes/credits'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as LocationRouteImport } from './routes/location'
 import { Route as RegisterRouteImport } from './routes/register'
@@ -48,6 +49,11 @@ const IndexRoute = IndexRouteImport.update({
 const CartRoute = CartRouteImport.update({
   id: '/cart',
   path: '/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreditsRoute = CreditsRouteImport.update({
+  id: '/credits',
+  path: '/credits',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HelpRoute = HelpRouteImport.update({
@@ -195,6 +201,7 @@ const AccountProblemKindIdRoute = AccountProblemKindIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cart': typeof CartRoute
+  '/credits': typeof CreditsRoute
   '/help': typeof HelpRoute
   '/location': typeof LocationRoute
   '/register': typeof RegisterRoute
@@ -227,6 +234,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cart': typeof CartRoute
+  '/credits': typeof CreditsRoute
   '/help': typeof HelpRoute
   '/location': typeof LocationRoute
   '/register': typeof RegisterRoute
@@ -260,6 +268,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/cart': typeof CartRoute
+  '/credits': typeof CreditsRoute
   '/help': typeof HelpRoute
   '/location': typeof LocationRoute
   '/register': typeof RegisterRoute
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/cart'
+    | '/credits'
     | '/help'
     | '/location'
     | '/register'
@@ -326,6 +336,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/cart'
+    | '/credits'
     | '/help'
     | '/location'
     | '/register'
@@ -358,6 +369,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/cart'
+    | '/credits'
     | '/help'
     | '/location'
     | '/register'
@@ -391,6 +403,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CartRoute: typeof CartRoute
+  CreditsRoute: typeof CreditsRoute
   HelpRoute: typeof HelpRoute
   LocationRoute: typeof LocationRoute
   RegisterRoute: typeof RegisterRoute
@@ -435,6 +448,13 @@ declare module '@tanstack/react-router' {
       path: '/cart'
       fullPath: '/cart'
       preLoaderRoute: typeof CartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/credits': {
+      id: '/credits'
+      path: '/credits'
+      fullPath: '/credits'
+      preLoaderRoute: typeof CreditsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/help': {
@@ -639,6 +659,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CartRoute: CartRoute,
+  CreditsRoute: CreditsRoute,
   HelpRoute: HelpRoute,
   LocationRoute: LocationRoute,
   RegisterRoute: RegisterRoute,
@@ -673,10 +694,11 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

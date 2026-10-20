@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 import { legalPages } from '@northline/legal/vite';
 import { createSeo, isSeoPath } from './server/seo.mjs';
 import { appLinkAnswer, appLinksConfig, isAppLinkPath } from './server/app-links.mjs';
+import { proxyErrors } from '@northline/ui/error-page';
 
 /**
  * Local "dev auth", like the Studio's: with NL_DEV_USER (a seeded identity.users id) /api goes straight to the api with
@@ -71,10 +72,12 @@ export default defineConfig(({ mode }) => {
   const bff = env.NL_BFF ?? 'http://localhost:8081';
   // S-117: keep the browser's Host (Vite's string shorthand rewrites it to the target), so the BFF builds its OAuth
   // redirect URI and its post-login redirect on this origin instead of sending the browser to the BFF's own port.
-  const toBff: ProxyOptions = { target: bff, changeOrigin: false };
+  // A BFF that is not running: the branded page with what to start (Sign in → /oauth2/… is a page load), JSON for
+  // the app's own calls — not Vite's empty 500 (@northline/ui/error-page).
+  const toBff: ProxyOptions = { target: bff, changeOrigin: false, configure: proxyErrors({ service: 'The consumer-bff' }) };
   const api = env.NL_API ?? 'http://localhost:8080';
   const proxy: Record<string, string | ProxyOptions> = env.NL_DEV_USER || env.NL_DEV_GUEST
-    ? { '/api': { target: api, headers: env.NL_DEV_USER ? { 'X-Dev-User': env.NL_DEV_USER, 'X-Dev-Acr': 'none' } : { 'X-Northline-Guest': 'g_devguest_0000000000000' } } }
+    ? { '/api': { target: api, configure: proxyErrors({ service: 'The api' }), headers: env.NL_DEV_USER ? { 'X-Dev-User': env.NL_DEV_USER, 'X-Dev-Acr': 'none' } : { 'X-Northline-Guest': 'g_devguest_0000000000000' } } }
     : { '/api': toBff, '/bff': toBff, '/oauth2': toBff, '/login': toBff };
   return {
     // /legal/*.html: the Studio's verbatim design 09/10 pages, one copy for both apps (S-63)

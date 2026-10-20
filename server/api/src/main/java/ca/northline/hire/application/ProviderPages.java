@@ -70,5 +70,6 @@ public final class ProviderPages {
             int durationMin,
             boolean instantBook,
             @Nullable String categorySlug,
-            ServiceKind kind) {}
+            ServiceKind kind,
+            @Nullable String imageUrl) {}
 }

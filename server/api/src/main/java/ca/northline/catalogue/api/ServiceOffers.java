@@ -18,6 +18,7 @@ public interface ServiceOffers {
      * @param priceCents the fixed price, or the hourly rate; null for quote-only services
      * @param included "What's included", as the business wrote it
      * @param sales30d bookings in the last 30 days (S-38), for "common jobs"
+     * @param imageId the main photo of the work the business uploaded (approved with the service), or null
      */
     record Offer(
             String serviceId,
@@ -30,10 +31,19 @@ public interface ServiceOffers {
             int durationMin,
             int bufferMin,
             boolean instantBook,
-            int sales30d) {
+            int sales30d,
+            @Nullable String imageId) {
+
+        /** Where the consumer site and the apps load images from: approved images only (S-123). */
+        public static final String PUBLIC_MEDIA = "/api/v1/public/catalogue/media/";
 
         public boolean quoteOnly() {
             return "quote".equals(pricingMode) || priceCents == null;
+        }
+
+        /** The photo's public URL (an approved service's photos are public), or null. */
+        public @Nullable String imageUrl() {
+            return imageId == null ? null : PUBLIC_MEDIA + imageId;
         }
     }
 
