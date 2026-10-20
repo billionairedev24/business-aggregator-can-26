@@ -1,5 +1,6 @@
 package ca.northline.loyalty.application;
 
+import ca.northline.loyalty.api.PointsCredited;
 import ca.northline.loyalty.domain.Earning;
 import ca.northline.payments.api.EscrowReleased;
 import ca.northline.payments.api.RefundIssued;
@@ -7,12 +8,14 @@ import ca.northline.payments.api.RewardCharges;
 import ca.northline.payments.api.SaleFacts;
 import ca.northline.region.api.LoyaltyRules;
 import ca.northline.region.api.MerchantPlaces;
+import ca.northline.shared.Ids;
 import ca.northline.trust.api.PointsLedger;
 import ca.northline.trust.api.RewardCredits;
 import java.time.Clock;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +42,7 @@ class EarningService {
     private final MembershipService plus;
     private final ReferralService referrals;
     private final LoyaltyStore store;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     @ApplicationModuleListener
@@ -96,14 +100,18 @@ class EarningService {
         if (points > 0) {
             ledger.credit(customer, points, PointsLedger.EARN, escrowId, expires, null, note(fact));
         }
-        rewards.credit(
-                        new RewardCredits.Sale(
-                                fact.merchantId(), escrowId, customer, fact.heldAt(), fact.listingId(), base),
-                        expires)
-                .ifPresent(granted -> {
-                    store.rewardPoints(escrowId, granted.points());
-                    charges.charge(granted.creditId(), fact.merchantId(), escrowId, granted.cents());
-                });
+        var granted = rewards.credit(
+                new RewardCredits.Sale(fact.merchantId(), escrowId, customer, fact.heldAt(), fact.listingId(), base),
+                expires);
+        granted.ifPresent(g -> {
+            store.rewardPoints(escrowId, g.points());
+            charges.charge(g.creditId(), fact.merchantId(), escrowId, g.cents());
+        });
+        var extra = granted.map(RewardCredits.Granted::points).orElse(0L);
+        if (points + extra > 0) {
+            events.publishEvent(new PointsCredited(
+                    Ids.next(), now, escrowId, customer, fact.merchantId(), points + extra, extra, "earn"));
+        }
         referrals.completedSale(customer, escrowId, amount, rule, now);
     }
 

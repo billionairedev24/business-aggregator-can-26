@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:loyalty.points_credited:1",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "customerId",
+    "points",
+    "rewardPoints",
+    "reason"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "the escrow that earned (reason earn) or the invitee's account id (reason referral)"
+    },
+    "customerId": {
+      "type": "string",
+      "description": "identity.users.id of who got the points (an id, never a name or contact)"
+    },
+    "merchantId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "points": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "rewardPoints": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "reason": {
+      "enum": [
+        "earn",
+        "referral"
+      ]
+    }
+  }
+}

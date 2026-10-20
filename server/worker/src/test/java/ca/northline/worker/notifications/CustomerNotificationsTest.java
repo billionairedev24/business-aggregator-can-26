@@ -112,6 +112,39 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
         assertThat(push.toString()).doesNotContain(amara.email(), amara.phone(), "Amara");
     }
 
+    /** S-152: points a completed sale or a referral credited tell the customer, in their language. */
+    @Test
+    void pointsCredited_tellTheCustomer_withTheBusiness_andALinkToTheirPoints() throws Exception {
+        var amara = customer("en-CA");
+        var merchant = merchant();
+        var id = Events.id();
+        publish("loyalty.points", id, "loyalty.points_credited", """
+                {"eventId":"%s","occurredAt":"2026-09-30T15:00:00Z","aggregateId":"esc_1","customerId":"%s",\
+                "merchantId":"%s","points":1246,"rewardPoints":600,"reason":"earn"}""".formatted(id, amara.id(), merchant));
+        await().atMost(Duration.ofSeconds(30))
+                .untilAsserted(() -> assertThat(pushes.to(amara.id())).hasSize(1));
+        awaitProcessed(id);
+        var push = pushes.to(amara.id()).getFirst();
+        assertThat(push.title()).isEqualTo("Points earned");
+        assertThat(push.link()).isEqualTo(URI.create("http://localhost:3000/app/account/points"));
+        await().atMost(Duration.ofSeconds(30))
+                .untilAsserted(() -> assertThat(emails.to(amara.email())).hasSize(1));
+        assertThat(emails.to(amara.email()).getFirst().text())
+                .contains("You earned 1,246 points from " + merchantName(merchant) + ".");
+
+        var kofi = customer("fr-CA");
+        prefs(kofi.id(), """
+                {"order_updates": {"push": false, "sms": true, "email": false}}""", null, "fr");
+        var referral = Events.id();
+        publish("loyalty.points", referral, "loyalty.points_credited", """
+                {"eventId":"%s","occurredAt":"2026-09-30T15:00:00Z","aggregateId":"inv_1","customerId":"%s",\
+                "merchantId":null,"points":1000,"rewardPoints":0,"reason":"referral"}""".formatted(referral, kofi.id()));
+        await().atMost(Duration.ofSeconds(30))
+                .untilAsserted(() -> assertThat(texts.to(kofi.phone())).hasSize(1));
+        assertThat(spaces(texts.to(kofi.phone()).getFirst().body()))
+                .isEqualTo("Northline : La première commande d’un voisin vous a rapporté 1 000 points.");
+    }
+
     @Test
     void theCustomersMatrixDecides_andTheirLanguage() throws Exception {
         var kofi = customer("en-CA");

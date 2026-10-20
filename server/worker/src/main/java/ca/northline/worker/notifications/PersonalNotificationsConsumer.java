@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Consumer group {@code personal-notifications} (S-102, deploy/kafka/topics.yaml): customers' order, delivery, booking
- * and quote updates and couriers' runs, through the S-26 framework. It has <b>no retry topics</b> — 15 more would pass
+ * and quote updates, points credited (S-152) and couriers' runs, through the S-26 framework. It has <b>no retry topics</b> — 15 more would pass
  * Event Hubs Premium's 100 per processing unit — because nothing it sends throws: a provider outage or throttling is
  * written to {@code messaging.deferred_notifications} and retried by the deferred job (every 5 minutes, 10 attempts).
  * Only an unexpected failure (a bug, the database) goes to the {@code .dlq}, for a replay.
@@ -37,7 +37,14 @@ class PersonalNotificationsConsumer {
             exclude = PoisonEventException.class,
             traversingCauses = "true")
     @KafkaListener(
-            topics = {"orders.order", "fulfilment.delivery", "fulfilment.run", "booking.booking", "booking.quote"},
+            topics = {
+                "orders.order",
+                "fulfilment.delivery",
+                "fulfilment.run",
+                "booking.booking",
+                "booking.quote",
+                "loyalty.points"
+            },
             groupId = GROUP)
     void on(ConsumerRecord<String, byte[]> record) {
         events.process(GROUP, record, notifier::on);

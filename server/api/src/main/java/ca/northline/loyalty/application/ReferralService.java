@@ -2,12 +2,14 @@ package ca.northline.loyalty.application;
 
 import ca.northline.identity.api.Households;
 import ca.northline.identity.api.SignupDates;
+import ca.northline.loyalty.api.PointsCredited;
 import ca.northline.loyalty.application.LoyaltyUseCases.Referrals;
 import ca.northline.loyalty.domain.Earning;
 import ca.northline.loyalty.domain.ReferralCode;
 import ca.northline.region.api.LoyaltyRules;
 import ca.northline.region.api.Markets;
 import ca.northline.shared.Conflict;
+import ca.northline.shared.Ids;
 import ca.northline.shared.RuleViolation;
 import ca.northline.trust.api.PointsLedger;
 import java.time.Clock;
@@ -15,6 +17,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +43,7 @@ class ReferralService implements Referrals {
     private final Households households;
     private final SignupDates signups;
     private final LoyaltyProperties props;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     @Override
@@ -147,6 +151,8 @@ class ReferralService implements Referrals {
         ledger.credit(customerId, points, PointsLedger.REFERRAL, customerId, expires, null, "Welcome, neighbour");
         ledger.credit(referrer, points, PointsLedger.REFERRAL, customerId, expires, null, "A neighbour you invited");
         store.decide(customerId, "rewarded", null, escrowId, points, now);
+        events.publishEvent(new PointsCredited(Ids.next(), now, customerId, customerId, null, points, 0, "referral"));
+        events.publishEvent(new PointsCredited(Ids.next(), now, customerId, referrer, null, points, 0, "referral"));
     }
 
     /** Pending referrals whose window passed are refused. */
