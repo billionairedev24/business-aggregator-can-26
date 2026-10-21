@@ -405,7 +405,8 @@ public final class PersonalNotices {
                 ? OffsetDateTime.parse(data.path("retryAt").asString()).toInstant()
                 : null;
         var key = "plus." + outcome;
-        Arguments arguments = (f, _) -> new Object[] {f.money(amount + tax), f.date(from), f.date(to), retryAt == null ? "" : f.date(retryAt)};
+        Arguments arguments = (f, _) ->
+                new Object[] {f.money(amount + tax), f.date(from), f.date(to), retryAt == null ? "" : f.date(retryAt)};
         var words = texts(key, false, arguments);
         return new Notice(
                 eventId,
@@ -432,7 +433,10 @@ public final class PersonalNotices {
                         return new EmailContent.PlusPayment(outcome, plan, amount, tax, from, to, retryAt, link);
                     }
                 },
-                new Notice.Push("/app/wallet", Map.of("type", key), "plus:" + data.path("aggregateId").asString("")));
+                new Notice.Push(
+                        "/app/wallet",
+                        Map.of("type", key),
+                        "plus:" + data.path("aggregateId").asString("")));
     }
 
     private static @Nullable Notice offer(String eventId, String type, JsonNode data) {
@@ -806,11 +810,16 @@ public final class PersonalNotices {
             Map.entry("points.referral.title", "Merci d’avoir invité un voisin"),
             Map.entry("plus.paid", "Merci! Nous avons porté {0} pour Northline Plus ({1} – {2})."),
             Map.entry("plus.paid.title", "Reçu Northline Plus"),
-            Map.entry("plus.action_required", "Votre banque vous demande de confirmer le paiement Northline Plus de {0}."),
+            Map.entry(
+                    "plus.action_required",
+                    "Votre banque vous demande de confirmer le paiement Northline Plus de {0}."),
             Map.entry("plus.action_required.title", "Confirmez votre paiement Plus"),
-            Map.entry("plus.declined", "Votre carte a été refusée pour Northline Plus ({0}). Nous réessaierons le {3}."),
+            Map.entry(
+                    "plus.declined", "Votre carte a été refusée pour Northline Plus ({0}). Nous réessaierons le {3}."),
             Map.entry("plus.declined.title", "Paiement Plus refusé"),
-            Map.entry("plus.lapsed", "Nous n’avons pas pu percevoir {0} pour Northline Plus : votre abonnement a pris fin."),
+            Map.entry(
+                    "plus.lapsed",
+                    "Nous n’avons pas pu percevoir {0} pour Northline Plus : votre abonnement a pris fin."),
             Map.entry("plus.lapsed.title", "Northline Plus a pris fin"),
             Map.entry("plus.refunded", "{0} pour Northline Plus revient sur votre carte."),
             Map.entry("plus.refunded.title", "Paiement Plus remboursé"));

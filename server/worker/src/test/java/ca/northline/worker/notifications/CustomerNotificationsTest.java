@@ -163,7 +163,8 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
         awaitProcessed(paid);
         var receipt = emails.to(amara.email()).getFirst();
         assertThat(receipt.subject()).isEqualTo("Your Northline Plus receipt — $8.39");
-        assertThat(receipt.text()).contains("Price: $7.99", "Tax: $0.40", "Total: $8.39", "http://localhost:3000/app/wallet");
+        assertThat(receipt.text())
+                .contains("Price: $7.99", "Tax: $0.40", "Total: $8.39", "http://localhost:3000/app/wallet");
         assertThat(receipt.headers()).doesNotContainKey(EmailMessage.LIST_UNSUBSCRIBE);
         assertThat(pushes.to(amara.id())).as("no push for a receipt").isEmpty();
 
@@ -179,7 +180,8 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
         assertThat(push.data()).containsOnlyKeys("type");
         await().atMost(Duration.ofSeconds(30))
                 .untilAsserted(() -> assertThat(emails.to(amara.email())).hasSize(2));
-        assertThat(emails.to(amara.email()).getLast().subject()).isEqualTo("Confirm your Northline Plus payment of $8.39");
+        assertThat(emails.to(amara.email()).getLast().subject())
+                .isEqualTo("Confirm your Northline Plus payment of $8.39");
         assertThat(texts.to(amara.phone())).isEmpty();
     }
 
