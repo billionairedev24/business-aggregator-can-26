@@ -62,7 +62,7 @@ Each app is released on its own (its own version, tag, store records and listing
 One EAS build profile family per environment; the profile sets the build variables (Metro inlines them) and the EAS
 Update channel baked into the binary. `mobile-release-check` holds `eas.json` to this table.
 
-| environment | build profile(s) | variant / bundle id (consumer · courier) | channel = EAS environment | `EXPO_PUBLIC_API_URL` | `EXPO_PUBLIC_AUTH_ISSUER` | `EXPO_PUBLIC_SITE_ORIGIN` (consumer only) | distribution |
+| environment | build profile(s) | variant / bundle id (consumer · courier) | channel = EAS environment | `EXPO_PUBLIC_API_URL` | `EXPO_PUBLIC_AUTH_ISSUER` | `EXPO_PUBLIC_SITE_ORIGIN` (both apps since S-159) | distribution |
 |---|---|---|---|---|---|---|---|
 | dev | `development` (simulator), `development-device` | `ca.northline.app.dev` · `ca.northline.courier.dev` | `development` | `https://api.dev.northline.ca/api/v1` | `https://auth.dev.northline.ca` | `https://dev.northline.ca` | internal, development client |
 | staging | `preview` | `ca.northline.app.preview` · `ca.northline.courier.preview` | `preview` | `https://api.staging.northline.ca/api/v1` | `https://auth.staging.northline.ca` | `https://staging.northline.ca` | internal (registered iPhones, APK) |
@@ -72,6 +72,10 @@ The three variants have their own bundle id and name, so they install side by si
 stores; `preview` builds are shared from their EAS build page (or as TestFlight builds of the production variant —
 see below). Nothing secret is in `eas.json` (the check refuses `*_TOKEN`, `*_SECRET`, `*_KEY` variables and key file
 paths); a build that needs a secret reads it from the EAS environment (`eas env:create --environment production`).
+The courier app reads `EXPO_PUBLIC_SITE_ORIGIN` since S-159: its own sign-in screens hand off to tokens through the
+https redirect `https://<site>/courier/oauth2redirect`, registered for the courier client in northline-auth's
+`application.yml` like the consumer app's `/app/oauth2redirect` (the app reads the code from the redirect; no page
+is opened). A courier build with the wrong origin fails the in-app sign-in (its redirect is not registered).
 
 ## Versions and build numbers
 
@@ -327,13 +331,15 @@ development builds). Every data type is *linked to the person* and used for *app
 | Other data › Other data types; Personal info › Other info | ✓ (optional) | | the age check's result for a customer who buys alcohol: "verified over N, on date, by method" (2026-10-04) — never the ID, photos or date of birth |
 
 Data safety also asks: *Is all collected data required?* (no — the optional ones above), *Can users request deletion?*
-— **yes (S-105)**: the consumer app deletes the account in the app (You › Personal details › Your data › Delete my
-account: a privacy request confirmed with the texted code or the authenticator app, withdrawable during its grace
-period — docs/runbooks/privacy-requests.md), and the web link Google asks for is the consumer site's same page,
-`https://northline.ca/account?tab=profile#your-data` (`store/privacy.json` `accountDeletion`). What the law makes
-Northline keep after deletion (receipts, tax and payment records, without the name) is the Data safety form's "some
-data is retained" answer. The courier app creates no accounts: couriers use the same web page — ask App Review whether
-5.1.1(v) applies — **owner decision 2026-10-04: courier deletion stays on the website** (`store/privacy.json`
+— **yes (S-105, S-159)**: the consumer app deletes the account in the app (Account › **Delete account**: what the
+deletion affects, then a privacy request confirmed with the authenticator code or a code to the verified mobile or
+email, withdrawable during its grace period, with confirmation emails — docs/runbooks/privacy-requests.md § Deleting
+one's account), and the web link Google asks for is the public page `https://northline.ca/account-deletion`
+(`store/privacy.json` `accountDeletion.webUrl`, both apps; S-105's link was `/account?tab=profile#your-data`). Update
+the URL in Play Console › App content › Data safety and in App Store Connect's privacy policy notes when it changes.
+What the law makes Northline keep after deletion (receipts, tax and payment records, without the name) is the Data
+safety form's "some data is retained" answer. The courier app creates no accounts: couriers use the same web page —
+**owner decision 2026-10-04: courier deletion stays on the website** (`store/privacy.json`
 `accountDeletion.webOnlyDecision`); answer App Review with that page if it asks.
 
 **Stripe Identity** (consumer, 2026-10-04) is a service provider: the age check's photo ID, selfie and face match
