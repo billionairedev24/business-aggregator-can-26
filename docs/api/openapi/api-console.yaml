@@ -187,6 +187,332 @@ paths:
           description: Not found.
       tags:
       - staff-admin-controller
+  /api/v1/console/appeals:
+    get:
+      operationId: consoleStandingQueue
+      parameters:
+      - in: query
+        name: province
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: market
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseQueueItem"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - console-standing-controller
+  /api/v1/console/appeals/{appealId}:
+    get:
+      operationId: consoleStandingDetail
+      parameters:
+      - in: path
+        name: appealId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AppealDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - console-standing-controller
+  /api/v1/console/appeals/{appealId}/assign:
+    post:
+      operationId: consoleStandingAssign
+      parameters:
+      - in: path
+        name: appealId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AppealDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - console-standing-controller
+  /api/v1/console/appeals/{appealId}/decision:
+    post:
+      operationId: consoleStandingDecide
+      parameters:
+      - in: path
+        name: appealId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecisionRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AppealDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - console-standing-controller
+  /api/v1/console/appeals/{appealId}/files/{fileId}:
+    get:
+      operationId: consoleStandingFile
+      parameters:
+      - in: path
+        name: appealId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: fileId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - console-standing-controller
   /api/v1/console/audit:
     get:
       operationId: staffAdminAudit
@@ -263,6 +589,266 @@ paths:
           description: Your sign-in doesn't allow this.
       tags:
       - staff-admin-controller
+  /api/v1/console/card-disputes:
+    get:
+      operationId: cardDisputesList
+      parameters:
+      - in: query
+        name: province
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: market
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseItem"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - card-disputes-controller
+  /api/v1/console/card-disputes/{id}:
+    get:
+      operationId: cardDisputesDetail
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Detail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - card-disputes-controller
+  /api/v1/console/card-disputes/{id}/evidence:
+    put:
+      operationId: cardDisputesSave
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Detail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - card-disputes-controller
+  /api/v1/console/card-disputes/{id}/evidence/submit:
+    post:
+      operationId: cardDisputesSubmit
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Detail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - card-disputes-controller
   /api/v1/console/consents:
     get:
       operationId: consentDeskLookup
@@ -6827,6 +7413,318 @@ paths:
           description: Not found.
       tags:
       - sellers-controller
+  /api/v1/console/standing/coaching/{planId}/close:
+    post:
+      operationId: consoleStandingClose
+      parameters:
+      - in: path
+        name: planId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CoachingView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - console-standing-controller
+  /api/v1/console/standing/consequences/{consequenceId}/lift:
+    post:
+      operationId: consoleStandingLift
+      parameters:
+      - in: path
+        name: consequenceId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LiftRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ConsequenceView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - console-standing-controller
+  /api/v1/console/standing/{businessId}:
+    get:
+      operationId: consoleStandingStanding
+      parameters:
+      - in: path
+        name: businessId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BusinessStanding"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - console-standing-controller
+  /api/v1/console/standing/{businessId}/coaching:
+    post:
+      operationId: consoleStandingCoaching
+      parameters:
+      - in: path
+        name: businessId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachingRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CoachingView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - console-standing-controller
   /api/v1/console/support/macros:
     get:
       operationId: supportDeskMacros
@@ -11341,6 +12239,58 @@ components:
           type: string
         source:
           type: string
+    AppealDetail:
+      type: object
+      properties:
+        consequence:
+          $ref: "#/components/schemas/ConsequenceView"
+        decidedBy:
+          type: string
+        decidedByName:
+          type: string
+        dispute:
+          $ref: "#/components/schemas/DisputeView"
+        item:
+          $ref: "#/components/schemas/QueueItem"
+        originalActor:
+          type: string
+        originalActorName:
+          type: string
+    AppealView:
+      type: object
+      properties:
+        compensationCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        decidedAt:
+          type: string
+          format: date-time
+        decisionReason:
+          type: string
+        filedAt:
+          type: string
+          format: date-time
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileView"
+        id:
+          type: string
+        number:
+          type: string
+        state:
+          type: string
+        statement:
+          type: string
+        subjectId:
+          type: string
+        subjectKind:
+          type: string
+        subjectLabel:
+          type: string
+        subjectType:
+          type: string
     ApplicationDetail:
       type: object
       properties:
@@ -11531,6 +12481,31 @@ components:
           type: string
         type:
           type: string
+    BusinessStanding:
+      type: object
+      properties:
+        active:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsequenceView"
+        appealableDisputes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DisputeView"
+        appeals:
+          type: array
+          items:
+            $ref: "#/components/schemas/AppealView"
+        coaching:
+          $ref: "#/components/schemas/CoachingView"
+        past:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsequenceView"
+        pastCoaching:
+          type: array
+          items:
+            $ref: "#/components/schemas/CoachingView"
     CancelRequest:
       type: object
       properties:
@@ -11605,22 +12580,6 @@ components:
           type: boolean
         root:
           type: string
-    Check:
-      type: object
-      properties:
-        checkType:
-          type: string
-        expiresAt:
-          type: string
-          format: date-time
-        id:
-          type: string
-        reference:
-          type: string
-        registry:
-          type: string
-        status:
-          type: string
     CheckRow:
       type: object
       properties:
@@ -11680,6 +12639,57 @@ components:
       type: object
       properties:
         reason:
+          type: string
+    CloseRequest:
+      type: object
+      properties:
+        completed:
+          type: boolean
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - completed
+    CoachingRequest:
+      type: object
+      properties:
+        dueOn:
+          type: string
+          format: date
+        note:
+          type: string
+        tasks:
+          type: array
+          items:
+            type: string
+        title:
+          type: string
+    CoachingView:
+      type: object
+      properties:
+        closeReason:
+          type: string
+        closedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        dueOn:
+          type: string
+          format: date
+        id:
+          type: string
+        note:
+          type: string
+        state:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskView"
+        title:
           type: string
     CodeRequest:
       type: object
@@ -11787,6 +12797,43 @@ components:
         totalLimit:
           type: integer
           format: int32
+    ConsequenceView:
+      type: object
+      properties:
+        active:
+          type: boolean
+        appeal:
+          $ref: "#/components/schemas/AppealView"
+        appealBy:
+          type: string
+          format: date-time
+        appealable:
+          type: boolean
+        cause:
+          type: string
+        detail:
+          type: object
+          additionalProperties:
+            type: string
+        endsAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+        kind:
+          type: string
+        liftReason:
+          type: string
+        liftedAt:
+          type: string
+          format: date-time
+        liftedByStaff:
+          type: boolean
+        reason:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
     CorrectBody:
       type: object
       properties:
@@ -12135,43 +13182,10 @@ components:
     Detail:
       type: object
       properties:
-        approvedAt:
-          type: string
-          format: date-time
-        asOf:
-          type: string
-          format: date-time
-        checks:
-          type: array
-          items:
-            $ref: "#/components/schemas/Check"
-        disputes:
-          $ref: "#/components/schemas/Measure"
-        joinedAt:
-          type: string
-          format: date-time
-        onTime:
-          $ref: "#/components/schemas/Measure"
-        quality:
-          $ref: "#/components/schemas/Measure"
-        ratingAverage:
-          type: number
-          format: double
-        ratingCount:
-          type: integer
-          format: int32
-        seller:
-          $ref: "#/components/schemas/Row"
-        signals:
-          type: array
-          items:
-            $ref: "#/components/schemas/Signal"
-        stripeAccount:
-          type: string
-        trail:
-          type: array
-          items:
-            $ref: "#/components/schemas/TrailEntry"
+        detail:
+          $ref: "#/components/schemas/Detail"
+        item:
+          $ref: "#/components/schemas/Item"
     Directory:
       type: object
       properties:
@@ -12190,6 +13204,29 @@ components:
             $ref: "#/components/schemas/Row"
         truncated:
           type: boolean
+    DisputeView:
+      type: object
+      properties:
+        appealBy:
+          type: string
+          format: date-time
+        caseNumber:
+          type: string
+        decidedAt:
+          type: string
+          format: date-time
+        decision:
+          type: string
+        disputeId:
+          type: string
+        note:
+          type: string
+        refundCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        subject:
+          type: string
     Dropoff:
       type: object
       properties:
@@ -12223,6 +13260,17 @@ components:
           type: string
         requestId:
           type: string
+    EvidenceRequest:
+      type: object
+      properties:
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+        files:
+          type: object
+          additionalProperties:
+            type: string
     ExportView:
       type: object
       properties:
@@ -12312,6 +13360,18 @@ components:
           format: double
         name:
           type: string
+    FileView:
+      type: object
+      properties:
+        contentType:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        size:
+          type: integer
+          format: int64
     Finance:
       type: object
       properties:
@@ -12651,57 +13711,10 @@ components:
       properties:
         businessName:
           type: string
-        category:
-          type: string
-        decidedAt:
-          type: string
-          format: date-time
-        deviationPct:
-          type: integer
-          format: int32
-        flags:
-          type: array
-          items:
-            type: string
-        id:
-          type: string
-        kind:
-          type: string
-        medianCents:
-          type: integer
-          format: int64
-          description: Cents of Canadian dollars (CAD).
-        merchantId:
-          type: string
-        name:
-          type: string
-        note:
-          type: string
-        priceCents:
-          type: integer
-          format: int64
-          description: Cents of Canadian dollars (CAD).
         province:
           type: string
-        reasons:
-          type: array
-          items:
-            type: string
-        regulator:
-          type: string
-        revetReasons:
-          type: array
-          items:
-            type: string
-        state:
-          type: string
-        submittedAt:
-          type: string
-          format: date-time
-        trustFlags:
-          type: array
-          items:
-            $ref: "#/components/schemas/TrustFlag"
+        row:
+          $ref: "#/components/schemas/Row"
     ItemsMacro:
       type: object
       properties:
@@ -12854,6 +13867,15 @@ components:
         submittedAt:
           type: string
           format: date-time
+    LiftRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - reason
     Limit:
       type: object
       properties:
@@ -12911,6 +13933,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FlagView"
+    ListResponseItem:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Item"
     ListResponseKeyRow:
       type: object
       properties:
@@ -13169,15 +14198,6 @@ components:
             $ref: "#/components/schemas/RoleGrant"
         userId:
           type: string
-    Measure:
-      type: object
-      properties:
-        floor:
-          type: number
-          format: double
-        value:
-          type: number
-          format: double
     Member:
       type: object
       properties:
@@ -14823,22 +15843,6 @@ components:
           type: string
           maxLength: 500
           minLength: 0
-    Signal:
-      type: object
-      properties:
-        bar:
-          type: integer
-          format: int32
-        barFloor:
-          type: integer
-          format: int32
-        inverted:
-          type: boolean
-        key:
-          type: string
-        value:
-          type: number
-          format: double
     SignoffBody:
       type: object
       properties:
@@ -14979,6 +15983,18 @@ components:
           type: string
         name:
           type: string
+    TaskView:
+      type: object
+      properties:
+        done:
+          type: boolean
+        doneAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+        title:
+          type: string
     Tax:
       type: object
       properties:
@@ -15115,26 +16131,6 @@ components:
           type: string
           maxLength: 500
           minLength: 0
-    TrailEntry:
-      type: object
-      properties:
-        action:
-          type: string
-        actorName:
-          type: string
-        actorRole:
-          type: string
-        at:
-          type: string
-          format: date-time
-        detail:
-          type: object
-          additionalProperties:
-            type: string
-        id:
-          type: string
-        reason:
-          type: string
     TrendDay:
       type: object
       properties:
@@ -15167,21 +16163,6 @@ components:
         note:
           type: string
         to:
-          type: string
-    TrustFlag:
-      type: object
-      properties:
-        categories:
-          type: array
-          items:
-            type: string
-        explanation:
-          type: string
-        flagId:
-          type: string
-        rule:
-          type: string
-        source:
           type: string
     Ulid:
       type: string

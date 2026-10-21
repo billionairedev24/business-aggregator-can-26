@@ -19,6 +19,7 @@ import ca.northline.payments.api.SavedCards;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
+import ca.northline.trust.api.NoShowReports;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -53,6 +54,7 @@ class ProblemService implements ReportProblems {
     private final CustomerCaseDesk desk;
     private final SavedCards cards;
     private final Businesses businesses;
+    private final NoShowReports noShows;
     private final Clock clock;
 
     /** What was bought, before the escrow facts are known. */
@@ -184,6 +186,13 @@ class ProblemService implements ReportProblems {
                 refunds,
                 r.attachmentIds(),
                 locale));
+        if ("booking".equals(subject.kind()) && "no_show".equals(r.reason())) {
+            // S-156: "nobody came" also goes to trust & safety; confirmed no-shows count for the provider's rules
+            subject.things().stream()
+                    .map(Thing::merchantId)
+                    .distinct()
+                    .forEach(merchantId -> noShows.providerNoShow(merchantId, subject.id(), userId));
+        }
         var summaries = refunds.stream()
                 .map(id -> caseQuery.find(userId, id).orElseThrow())
                 .map(c -> new Opened(

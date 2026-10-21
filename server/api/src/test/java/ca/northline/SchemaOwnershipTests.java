@@ -53,7 +53,8 @@ class SchemaOwnershipTests {
             "golive",
             "restricted",
             "promotions",
-            "loyalty");
+            "loyalty",
+            "standing");
 
     /**
      * Known cross-schema reads kept on purpose, by class → schemas. Keep this list short and give each entry a reason

@@ -491,3 +491,38 @@ the request shapes, the pinned `Stripe-Version` and an `Idempotency-Key` on ever
 state, so Express onboarding itself, `account.updated` for an individual courier, a real transfer and payout, a bank
 that rejects a payout, and the Connect webhooks for courier accounts have not been exercised. Before couriers are paid
 for real: onboard a test courier in test mode, run `payCouriers` by hand, and watch the payout's webhooks arrive.
+
+## 14. Card disputes — evidence to Stripe (S-156)
+
+A card dispute (chargeback) is opened by the cardholder's bank, not by Northline: the `charge.dispute.created` webhook
+(§ 5) opens the payments case as before (S-115), and now also records Stripe's **evidence deadline**
+(`evidence_details.due_by` → `payments.disputes.stripe_evidence_due_by`) and the **dispute fee** from the event's
+`balance_transactions` (`payments.dispute_fees`, one row per balance transaction, idempotent). The fee is posted to the
+ledger account `dispute_fees` against `stripe_balance`; a fee Stripe gives back (a won dispute) posts the reverse.
+Northline carries the fee: it is not charged to the business.
+
+Agents answer from the console (**Payments › Disputes › Card disputes**, `/api/v1/console/card-disputes`): the list
+puts open disputes first, earliest deadline first; the detail shows the business's response and the case's
+evidence files; the agent fills Stripe's evidence fields and picks files, saves a draft, then submits **once**.
+
+| | |
+|---|---|
+| Port | `DisputeEvidenceGateway` (payments) |
+| Provider | `DISPUTE_EVIDENCE_PROVIDER` (`northline.payments.dispute-evidence.provider`): `local` (fake, nothing sent; a Stripe dispute id containing `rejectEvidence` is refused, to try the error path; refused under staging and prod) · `stripe` |
+| Stripe calls | each picked file: `POST /v1/files` (`purpose=dispute_evidence`); then `POST /v1/disputes/{id}` with `evidence[…]` and `submit=true`. Both with Northline's idempotency key (`StripeIdempotencyKeys.of`), the platform key (§ 2) |
+| Text fields | `product_description`, `service_date`, `cancellation_policy_disclosure`, `cancellation_rebuttal`, `refund_policy_disclosure`, `refund_refusal_explanation`, `uncategorized_text` (up to 5,000 characters each) |
+| File fields | `receipt`, `service_documentation`, `customer_communication`, `cancellation_policy`, `refund_policy`, `uncategorized_file` (from the case's evidence only) |
+| Left out on purpose | the customer's name, email, IP, billing and shipping address: personal data Northline doesn't send on the business's behalf. Stripe already has the payment's details |
+| Who | finance and support read; agents with the trust `decide` action (trust & safety, admin) save and submit. Audit `disputes.evidence_submitted` (the draft keeps who saved it last) |
+| Refusals | Stripe's error is kept on the draft (`lastError`) and shown; the agent fixes it and submits again. Closed, overdue or already-submitted disputes refuse with 409 |
+
+- **Nothing new in Stripe to set up:** the platform key and the `charge.dispute.*` webhook events (§ 5). Set
+  `DISPUTE_EVIDENCE_PROVIDER=stripe` (the Helm values for staging and prod do).
+- **Tested against stripe-mock only** (`StripeDisputeEvidenceStripeMockTest`: the file upload, the update with
+  `submit=true`, an error). stripe-mock doesn't keep state, so the deadline and the status change aren't checked there.
+- **Never run against the real Stripe API:** the Files upload, the dispute update with `submit=true`, the fee rows
+  from real `charge.dispute.created` / `charge.dispute.funds_reinstated` events, and S-156's compensation transfer on a
+  granted dispute appeal ([standing.md](standing.md#4-appeals)). Before launch, in test mode: pay with
+  `4000 0000 0000 0259` (disputed), check the case shows the deadline and the fee (Finance › ledger `dispute_fees`),
+  submit evidence with one file and check the dispute in the dashboard is `under_review` with the file attached; then
+  use `4000 0000 0000 2685` (dispute lost) and the "winning evidence" text to check the fee comes back.

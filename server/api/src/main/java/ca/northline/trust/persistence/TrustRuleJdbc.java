@@ -94,6 +94,26 @@ class TrustRuleJdbc implements TrustRuleStore {
     }
 
     @Override
+    public Map<String, Integer> confirmedNoShows(String rule, Instant since) {
+        // a business's no-show names it on the flag; a customer's is in the evidence (an id, never a name)
+        var who = "customer_no_show".equals(rule)
+                ? "f.evidence ->> 'customerId'"
+                : "coalesce(f.merchant_id, case when f.target_type = 'merchant' then f.target_id end)";
+        var sql = """
+                select %s as who, count(*) as n from trust.flags f
+                 where f.rule = :rule and f.action = 'confirm' and f.decided_at >= :since and %s is not null
+                 group by 1 order by 1""".formatted(who, who);
+        return jdbc
+                .sql(sql)
+                .param("rule", rule)
+                .param("since", since.atOffset(ZoneOffset.UTC))
+                .query((rs, _) -> Map.entry(java.util.Objects.requireNonNull(rs.getString("who")), rs.getInt("n")))
+                .list()
+                .stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, _) -> a, LinkedHashMap::new));
+    }
+
+    @Override
     public java.util.List<String> warnedAgain(Instant since) {
         return jdbc.sql("""
                         with flagged as (

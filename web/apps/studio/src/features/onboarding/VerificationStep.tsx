@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { Alert, useLocale } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
-import { onboardingQuery, useCompleteCheck, useSubmitApplication, type Check, type Onboarding } from './api';
+import { agentNoteQuery, onboardingQuery, useCompleteCheck, useSubmitApplication, type Check, type Onboarding } from './api';
 import { CheckDialog } from './CheckDialog';
 import { IdentityDialog } from './IdentityDialog';
 import { checkText, isComplete } from './checks';
@@ -30,6 +30,9 @@ export function VerificationStep({ onboarding, onBack, onSubmitted, identityRetu
   useQuery({ ...onboardingQuery(onboarding.merchantId), refetchInterval: identityReturned && kycOpen ? 5000 : false, enabled: identityReturned && kycOpen });
   const done = checks.filter(isComplete).length;
   const applicant = onboarding.status === 'applicant';
+  // S-156 (S-79's open item): what the agent asked to fix, in the wizard and not only in the email
+  const agentNote = useQuery({ ...agentNoteQuery(onboarding.merchantId), enabled: applicant }).data;
+  const redo = agentNote ? agentNote.checkKeys.map(k => checks.find(c => c.key === k)).filter((c): c is Check => !!c).map(c => checkText(c, onboarding.type, t, locale).name) : [];
   const dialogErrors = complete.error instanceof ValidationError ? Object.fromEntries(complete.error.errors.map(e => [e.field, e.message])) : {};
   const submitError = submit.error instanceof ValidationError ? submit.error.errors[0]?.message : submit.isError ? t('saveError') : undefined;
 
@@ -45,6 +48,12 @@ export function VerificationStep({ onboarding, onBack, onSubmitted, identityRetu
       <h1 className="nl-ob-title">{t('verifyTitle')}</h1>
       <p className="nl-ob-intro">{t(onboarding.type === 'kitchen' ? 'verifyIntro_kitchen' : 'verifyIntro')}</p>
       {identityReturned && kycOpen ? <Alert tone="info" role="status">{t('idReturned')}</Alert> : null}
+      {applicant && agentNote ? (
+        <Alert tone="highlight" title={t('agentAsked')}>
+          {redo.length ? <p style={{ margin: 0 }}>{t('agentRedo', { checks: new Intl.ListFormat(locale, { type: 'conjunction' }).format(redo) })}</p> : null}
+          {agentNote.note ? <p style={{ margin: redo.length ? '8px 0 0' : 0 }}>{t('agentNote', { note: agentNote.note })}</p> : null}
+        </Alert>
+      ) : null}
       <ul className="nl-ob-checks" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
         {checks.map(c => {
           const text = checkText(c, onboarding.type, t, locale);

@@ -408,6 +408,67 @@ class StripeWebhookApiTest extends IntegrationTest {
         assertThat(disputeRow(dp).get("stripe_status")).isEqualTo("lost");
     }
 
+    /** A dispute with its balance transactions (Stripe's fee on each). */
+    static String disputeWithFees(String id, String pi, String status, Instant dueBy, String... txns) {
+        var json = dispute(id, pi, status, 16_000, dueBy);
+        return json.substring(0, json.length() - 1) + ",\"balance_transactions\":[" + String.join(",", txns) + "]}";
+    }
+
+    static String txn(String id, long amount, long fee) {
+        return """
+                {"id":"%s","object":"balance_transaction","amount":%d,"fee":%d,"created":%d}""".formatted(id, amount, fee, Instant.now().getEpochSecond());
+    }
+
+    long ledger(String account, String refId) {
+        return jdbc.sql("""
+                        select coalesce(sum(debit_cents - credit_cents), 0) from payments.ledger_entries
+                         where account = ? and ref_id = ?""").params(account, refId).query(Long.class).single();
+    }
+
+    /**
+     * S-156: Stripe's dispute fee is recorded once per balance transaction (Northline carries it), a fee given back
+     * reverses it, and the issuer's deadline is kept for the console.
+     */
+    @Test
+    void chargebackFees_areInTheLedgerOnce_andTheIssuersDeadlineIsKept() throws Exception {
+        var held = released(16_000);
+        var dp = "dp_" + Ids.next();
+        var due = Instant.now().plus(Duration.ofDays(9)).truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        var t0 = Instant.now().minusSeconds(120);
+        var withdrawn = "txn_" + Ids.next();
+        platform(
+                "charge.dispute.created",
+                t0,
+                disputeWithFees(dp, held.paymentIntent(), "needs_response", due, txn(withdrawn, -16_000, 1_500)));
+        platform(
+                "charge.dispute.funds_withdrawn",
+                t0.plusSeconds(5),
+                disputeWithFees(dp, held.paymentIntent(), "needs_response", due, txn(withdrawn, -16_000, 1_500)));
+        assertThat(ledger("dispute_fees", withdrawn)).isEqualTo(1_500);
+        assertThat(ledger("stripe_balance", withdrawn)).isEqualTo(-1_500);
+        var row = disputeRow(dp);
+        assertThat(((java.sql.Timestamp) row.get("stripe_evidence_due_by")).toInstant())
+                .isEqualTo(due);
+
+        var reinstated = "txn_" + Ids.next();
+        platform(
+                "charge.dispute.funds_reinstated",
+                t0.plusSeconds(10),
+                disputeWithFees(
+                        dp,
+                        held.paymentIntent(),
+                        "won",
+                        due,
+                        txn(withdrawn, -16_000, 1_500),
+                        txn(reinstated, 16_000, -1_500)));
+        assertThat(ledger("dispute_fees", reinstated)).isEqualTo(-1_500);
+        assertThat(jdbc.sql("select coalesce(sum(fee_cents), 0) from payments.dispute_fees where dispute_id = ?")
+                        .params(row.get("id"))
+                        .query(Long.class)
+                        .single())
+                .isZero();
+    }
+
     @Test
     void chargebackClosedBeforeCreated_endsTheSame_andAWonOneResumesTheEscrow() throws Exception {
         var held = held(9_000);

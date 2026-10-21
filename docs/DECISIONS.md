@@ -10300,3 +10300,77 @@ so a wrong reading would pass both; `gh-setup.sh` was only parsed and linted (it
   `terraform test` 1.16), so the tests pass the ids; the OVHcloud US API itself (signature, OAuth2 token, user and key
   endpoints, storage listing); `project.2018` on the US account; Public Cloud prices; stopping (shelving) the instance
   between demos (`down` scales the apps only).
+
+## 2026-09-30 — S-156 Trust & safety: appeals, automatic consequences, dispute evidence to Stripe
+
+S-82 and S-93 defined the trust rules and the console's enforcement but left most consequences unenforced ("no
+instant-book state exists to switch", no appeals, no way to send evidence to Stripe). S-156 builds the rest across
+api, worker, Studio, console and consumer web, en and fr-CA.
+
+**Decisions**
+
+- **A new `standing` module** (schema `standing`) keeps one registry of consequences (`suspended`, `search_hidden`,
+  `instant_book_off`, `photo_delay`, a customer's `no_show_warning`) with the reason and who/what took it, the appeals
+  and the coaching plans. It orchestrates; the switches stay with their owners (merchants: suspension and search hiding
+  through `SellerSanctions.reinstate/showInSearch`; catalogue: `InstantBook`; payments: `ReleaseDelays`; identity:
+  `CustomerNoShows`). To avoid module cycles, `payments.api.CompletionPhotoRule` is implemented by trust, the notice type
+  is `messaging.api.StandingNotice`, and no-show reports go account/hire → trust.
+- **Instant book is a business-level state** (`catalogue.instant_book_settings`): enabled (the business's switch) and
+  paused (Northline's). Effective instant = the service's own flag ∧ enabled ∧ not paused; search (worker
+  `DocumentSource`), the provider page and checkout read it. **The switch is the existing Studio › Availability "How
+  bookings come in"** (accept mode, stored but never enforced before): saving the rules sets `enabled`, and the
+  migration backfills `enabled = false` for businesses that chose approval or requests only. A separate PUT endpoint
+  and toggle were built and removed again — two controls for one thing. Turning instant on while paused is a 409
+  `instant_book_paused`; the change goes out as `catalogue.instant_book_changed` on the existing `catalogue.listing`
+  topic (no new topic; no personal data).
+- **No-shows are confirmed trust flags**, not raw reports: a customer reports a provider no-show from "Something's
+  wrong" (problem reason `no_show`), a business reports a customer's from Appointments from 15 minutes after the start;
+  both become `trust.flags` on target `booking` (rules `no_show`, `customer_no_show`) and count only once staff confirm
+  them. The nightly `EnforceStanding` (`STANDING_ENFORCEMENT_CRON`, after S-82's job) pauses instant book at the S-93
+  rule (3 in 30 days) and resumes it by itself when the window holds fewer.
+- **Customer no-show consequence = a warning shown to providers + no instant booking** (2 confirmed in 12 months),
+  not S-93's "deposit required": every booking already holds the full amount or a deposit at checkout, so a deposit
+  would change nothing. The customer sees it on Account › Profile with how it clears.
+- **The completion-photo delay applies at completion**, not in the nightly job: a job completed without a photo has its
+  escrow (and a deposit quote's balance) released `missing_photo_delay` (48 h) later, and the customer's sign-off
+  doesn't release it earlier. The nightly job only closes delays whose time ran out.
+- **Staff lifts hold** for the rule's window (`standing.api.StaffLifts`): the nightly rules — S-82's rating-floor and
+  off-platform jobs too — don't re-apply a consequence staff lifted, by hand or by granting an appeal.
+- **Appeals:** once per dispute decision and once per appealable consequence (suspension, search hiding, instant-book
+  pause; not a photo delay, which staff can lift, nor a customer's warning), within 14 days, a statement and up to 5
+  files. Staff take one, then grant or deny with a reason; whoever took the original decision can't decide its appeal.
+  States `open → in_review → granted | denied` (named for the outcome, not "upheld/overturned", which read backwards to
+  businesses). Audited, emailed (`standing-update`) and shown in Studio › Standing.
+- **A granted dispute appeal compensates the seller; the customer keeps the refund.** Clawing a refund back from a
+  customer after an appeal isn't something Northline can do reliably or fairly. Northline pays the seller their share of
+  the refunded amount after its fee (ledger `appeal_compensation`, a transfer to the connected account). The dispute's
+  own `appealed` state (S-115) stays unused. Card chargebacks aren't appealable: the bank decides them; Northline
+  answers with evidence.
+- **Dispute evidence goes through a port** `DisputeEvidenceGateway` (`DISPUTE_EVIDENCE_PROVIDER`: `local` fake, refused
+  under staging/prod; `stripe` = Files upload + dispute update with `submit=true`, idempotency keys). Personal-data
+  evidence fields (customer name, email, IP, addresses) are excluded on purpose. The webhook records Stripe's
+  deadline and the dispute fee; **Northline carries the fee** (ledger `dispute_fees`), it isn't charged to the business.
+- **Studio shows the reviewer's reasons** on a rejected listing (`GET …/listings/{id}/review`) and the agent's note in
+  the onboarding wizard (`GET …/onboarding/agent-note`), both 204 when there is none.
+
+**Schema (additive, V442–V451):** V442 schema `standing` (`consequences`, `appeals` unique on `(subject_type,
+subject_id)`, `appeal_files`, `coaching_plans` one active per business, `coaching_tasks`, `appeal_number_seq`); V443
+`catalogue.instant_book_settings` with the accept-mode backfill; V444 `payments.disputes.stripe_evidence_due_by`,
+`payments.card_dispute_evidence`, `dispute_fees`, `release_delays`, `appeal_compensations`; V445
+`identity.users.no_show_count/no_show_restricted_at`, index `trust.flags ix_flags_no_shows`. V446–V451 unused; no dev
+seed. Configuration: `DISPUTE_EVIDENCE_PROVIDER` (required in staging and prod, the Helm values set `stripe`),
+`STANDING_ENFORCEMENT_CRON`. No new secrets, no new Kafka topic (still 94). Runbooks: [standing.md](runbooks/standing.md),
+[stripe.md § 14](runbooks/stripe.md#14-card-disputes--evidence-to-stripe-s-156).
+
+**Not done**
+
+- Coaching plans carry no automatic consequence or reminder; the agent follows up.
+- The console's seller Standing card (lift, start/close coaching) has no component test of its own; its endpoints
+  are covered by `StandingApiTest`. The mobile apps don't show standing yet (the web pages do).
+- Stripe's evidence deadline isn't re-read if Stripe extends it, except from a later `charge.dispute.updated` event.
+- A customer's no-show restriction has no appeal (staff can lift it).
+
+**Never run against the real Stripe API** (stripe-mock and signed test events only): the Files upload with
+`purpose=dispute_evidence`, the dispute update with `submit=true`, the dispute-fee balance transactions from real
+`charge.dispute.*` events, and the compensation transfer on a granted dispute appeal. stripe.md § 14 lists the
+test-mode checks to run before launch.

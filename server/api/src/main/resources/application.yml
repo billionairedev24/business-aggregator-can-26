@@ -204,6 +204,8 @@ northline:
     reconcile-cron: ${PAYMENTS_RECONCILE_CRON:0 41 4 * * *}   # S-85 Stripe ↔ ledger, yesterday, platform zone
     courier-payouts-cron: ${COURIER_PAYOUTS_CRON:0 41 6 * * MON}  # S-151 weekly courier payouts, platform zone
     unheld-booking-grace: ${PAYMENTS_UNHELD_BOOKING_GRACE:PT30M}  # S-153: a booking's card hold never confirmed → canceled
+    dispute-evidence:                                          # S-156 card-dispute evidence to Stripe (stripe.md § Card disputes)
+      provider: ${DISPUTE_EVIDENCE_PROVIDER:local}             # local (fake; refused under staging/prod) | stripe
   stripe:                                                      # Stripe Connect (merchants) outside local/test
     secret-key: ${STRIPE_SECRET_KEY:}
     api-base: ${STRIPE_API_BASE:}
@@ -536,6 +538,8 @@ northline:
   # Empty = no basemap: the console draws the zones on its own grid (design 03). The browser fetches the tiles.
   # S-82: the trust rules' consequences (rating floor → hidden from search; off-platform after a warning → suspended).
   console.trust-enforcement-cron: ${CONSOLE_TRUST_ENFORCEMENT_CRON:0 23 5 * * *}  # nightly, platform zone
+  # S-156: the standing rules (provider no-shows → instant book off, customer no-shows → warning), after S-82's.
+  standing.enforcement-cron: ${STANDING_ENFORCEMENT_CRON:0 33 5 * * *}  # nightly, platform zone
   console.map:
     tiles: ${CONSOLE_MAP_TILES:}
     attribution: ${CONSOLE_MAP_ATTRIBUTION:}

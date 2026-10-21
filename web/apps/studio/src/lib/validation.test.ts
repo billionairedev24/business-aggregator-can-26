@@ -6,6 +6,7 @@ import { AVAILABILITY_MESSAGES_FR } from '../features/availability/rules';
 import { FR as CATALOGUE_FR } from '../features/catalogue/validation';
 import { FR as MESSAGING_FR } from '../features/messages/validation';
 import { FR as REVIEWS_FR } from '../features/reviews/validation';
+import { FR as STANDING_FR } from '../features/standing/validation';
 import { localizeAll, localizeMessage } from './validation';
 
 /** docs/spec/validation-messages.fr-CA.tsv: the api's French for each English message (S-40). */
@@ -24,6 +25,7 @@ describe('client validation messages in French (S-40)', () => {
     ['catalogue', CATALOGUE_FR],
     ['messages & help', MESSAGING_FR],
     ['reviews', REVIEWS_FR],
+    ['standing', STANDING_FR],
   ])('%s reads the same as the api', (_, fr) => {
     const differing = Object.entries(fr).filter(([en, f]) => apiFrench.has(en) && apiFrench.get(en) !== f);
     expect(differing.map(([en, f]) => `${en} → ${f} (api: ${apiFrench.get(en)})`)).toEqual([]);

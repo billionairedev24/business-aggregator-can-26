@@ -1,4 +1,4 @@
-import { ArrowUUpLeft, Bank, BookOpenText, Briefcase, CalendarCheck, ChartBar, ChartLineUp, ChatCircleText, Clock, CookingPot, GearSix, Lifebuoy, Package, ShieldCheck, SquaresFour, Stack, Star, Storefront, Tag, Timer, UserCircle, Wallet, type Icon } from '@phosphor-icons/react';
+import { ArrowUUpLeft, Bank, Scales, BookOpenText, Briefcase, CalendarCheck, ChartBar, ChartLineUp, ChatCircleText, Clock, CookingPot, GearSix, Lifebuoy, Package, ShieldCheck, SquaresFour, Stack, Star, Storefront, Tag, Timer, UserCircle, Wallet, type Icon } from '@phosphor-icons/react';
 import type { NavGroup, NavItem } from '@northline/ui';
 import type { MerchantType } from './api';
 import type { useShellT } from './messages';
@@ -7,7 +7,7 @@ import { screenHref, screensFor, type ScreenKey } from './nav';
 /** The Studio menu and its icons (design navAll / navKitchen). Only the layout imports it (S-69: icons stay out of the initial bundle). */
 const ICON: Record<ScreenKey, Icon> = {
   dashboard: SquaresFour, appointments: CalendarCheck, orders: Package, messages: ChatCircleText, products: Tag, availability: Clock, storefront: Storefront, earnings: ChartLineUp, reports: ChartBar,
-  payouts: Bank, refunds: ArrowUUpLeft, compliance: ShieldCheck, reviews: Star, settings: GearSix, help: Lifebuoy, kds: CookingPot, menu: BookOpenText, combos: Stack, kitchenHours: Timer,
+  payouts: Bank, refunds: ArrowUUpLeft, compliance: ShieldCheck, standing: Scales, reviews: Star, settings: GearSix, help: Lifebuoy, kds: CookingPot, menu: BookOpenText, combos: Stack, kitchenHours: Timer,
 };
 
 
@@ -24,7 +24,7 @@ export function buildNav(type: MerchantType, merchantId: string, t: ReturnType<t
     return { pinned: [], groups: [
       { label: t('g_kitchen'), icon: CookingPot, items: pick(['kds', 'menu', 'combos', 'kitchenHours', 'messages']) },
       { label: t('g_finance'), icon: Wallet, items: pick(['earnings', 'reports', 'payouts', 'refunds', 'compliance']) },
-      { label: t('g_account'), icon: UserCircle, items: pick(['reviews', 'storefront', 'settings']) },
+      { label: t('g_account'), icon: UserCircle, items: pick(['reviews', 'standing', 'storefront', 'settings']) },
       { label: t('g_help'), icon: Lifebuoy, items: pick(['help']) },
     ] };
   }
@@ -32,7 +32,7 @@ export function buildNav(type: MerchantType, merchantId: string, t: ReturnType<t
     { label: t('g_operations'), icon: Briefcase, items: pick(['appointments', 'orders', 'messages']) },
     { label: t('g_catalogue'), icon: Storefront, items: pick(['products', 'availability', 'storefront']) },
     { label: t('g_finance'), icon: Wallet, items: pick(['earnings', 'reports', 'payouts', 'refunds', 'compliance']) },
-    { label: t('g_account'), icon: UserCircle, items: pick(['reviews', 'settings']) },
+    { label: t('g_account'), icon: UserCircle, items: pick(['reviews', 'standing', 'settings']) },
     { label: t('g_help'), icon: Lifebuoy, items: pick(['help']) },
   ] };
 }
