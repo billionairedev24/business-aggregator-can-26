@@ -1,6 +1,7 @@
 package ca.northline.mcp;
 
 import io.modelcontextprotocol.server.McpSyncServer;
+import io.swagger.v3.oas.models.OpenAPI;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
@@ -8,7 +9,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
-import io.swagger.v3.oas.models.OpenAPI;
 import org.springdoc.ai.mcp.OpenApiMcpToolCallbackProvider;
 import org.springdoc.api.AbstractOpenApiResource;
 import org.springdoc.core.service.OpenAPIService;
