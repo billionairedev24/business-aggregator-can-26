@@ -10484,3 +10484,55 @@ Branch `feat/s157-wallets-consent`. Runbooks: [stripe.md § 15](runbooks/stripe.
   segments finer than a province, per-offer results; batch enqueue; a "your payout came back" item on the Studio
   dashboard (the Payouts screen only); counsel review of the new wordings; Twilio's Advanced Opt-Out texts are an
   operator step.
+
+## 2026-09-30 — S-163 Slim the api's memory (and the other JVM apps')
+
+Why the api needed 1–2 GiB: not its size but its heap cap. Measured (docs/runbooks/deploy.md § JVM memory has the
+table): the live heap after start-up is 165–175 MiB and metaspace 105–110 MiB, but the image gave the heap 75 % of the
+limit and a JVM grows its heap towards the cap before it collects old objects — springdoc building seven OpenAPI
+documents in parallel during start-up promoted ~600 MiB of short-lived objects — so at 1Gi the heap alone was ~750
+MiB, plus metaspace, code cache and the C heap: peak RSS 1019 MiB, the OOMKill. Same run at 2Gi: 1030 MiB peak.
+
+- **Target met for 768Mi, not for 512Mi.** api peak RSS 555–620 MiB at 768Mi (620 with every docs group built); at
+  512Mi the peak is ≈ 510 MiB (live heap + metaspace alone ≈ 250 MiB) — not shipped. Chart: api 768Mi by default and on
+  ovh-vps (its 2Gi override removed; values-dryrun 900Mi → 768Mi), auth 768Mi → 512Mi (peak 289 MiB; dry run 640Mi →
+  512Mi), bffs and worker unchanged at 512Mi (peaks 217 / 245 MiB). Prod keeps its sizes (2Gi api = capacity for queued
+  requests, perf F11) with explicit flags.
+- **JVM flags in the chart, per app** (`spring.javaOptions` + `apps.<app>.javaOptions` → `JAVA_TOOL_OPTIONS`; an explicit
+  `JAVA_TOOL_OPTIONS` in env wins): serial GC, C1 only, code cache 48m, `-Xss512k`, direct memory 64m for everyone (the
+  dry run's flags, now the default; dev/staging get them too); api heap 50 % + metaspace ≤ 192m; the others 55 % + ≤
+  128m; prod: G1 + C2, direct 128m, api 65 % + ≤ 256m. The Jib images no longer pass `-XX:MaxRAMPercentage=75` on the
+  command line (it overrode any `JAVA_TOOL_OPTIONS`); they set `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=60` as the default
+  the chart replaces. The Jobs keep their explicit `-XX:MaxRAMPercentage=75`. validate.sh checks the rendered flags.
+- **springdoc pre-loading off; MCP tools registered after start-up** (`ca.northline.mcp.McpToolRegistration`). Found
+  while measuring: springdoc's registrar held start-up 30 s polling the provider's `OpenAPIService`, which is a
+  different instance from the one the default resource fills, and timed out on every measured start ("No MCP tools will
+  be registered" — tools/list empty, tools/call refused; why it succeeded in McpServerTest before was not established).
+  Now its bean definition is removed (a registry post-processor),
+  and on `ApplicationReadyEvent` a virtual thread builds the default document (`AbstractOpenApiResource#getOpenApi(Locale)`,
+  protected, by reflection), puts it into the provider's `OpenAPIService` (private field, by reflection) and adds the
+  tools to the MCP server (33). The gateway makes `tools/list`, `tools/call` and `resources/read` wait up to 30 s for it,
+  then `503 mcp_unavailable` + `Retry-After: 10`. The six docs groups are built on first request (dev/staging viewers;
+  prod never). Reflection on a library is fragile; `McpServerTest` (tools registered, registrar gone, pre-loading off)
+  fails on a springdoc upgrade that renames either member. MCP tools now appear ~6 s after readiness instead of before.
+- **Only what's used:** `spring-boot-starter-data-elasticsearch` → `spring-boot-elasticsearch` + `elasticsearch-java` in
+  api and worker (Spring Data Elasticsearch was never used); `ca.northline.platform.SearchProviderImportFilter` (an
+  `AutoConfigurationImportFilter` in spring.factories) drops Boot's Elasticsearch auto-configurations unless
+  `northline.search.provider` is `elasticsearch` (unset = kept: auth, bff); Redis repositories off in all four apps
+  (unused; they made Spring Data scan every package). The cloud SDKs (AWS, Google Cloud, Azure) and Stripe were already
+  behind provider-conditional configuration — measured: ≤ 5 of their classes load under `local`/`dev` — so they stay
+  `implementation` in one image (a per-cloud split would save image size, not memory). Kafka, springdoc and Spring AI/MCP
+  are used in every deployed profile and stay.
+- **Threads:** virtual threads were already on everywhere (Tomcat, `@Async`, schedulers); ~30 platform threads in the
+  api, ~3 MiB of stacks; Hikari pools unchanged (they bound DB concurrency, S-119); no `ThreadLocal` (Checkstyle). Nothing
+  to change; `-Xss512k` stays for the platform threads.
+- **Not adopted:** Spring AOT for the JVM — it evaluates profiles and `@Conditional` at build time, and every adapter
+  here is chosen at run time from the environment. JDK AOT cache (JEP 483/514), measured: start-up 21–26 s → 15 s, peak
+  RSS unchanged (~490 MiB with pre-loading off), a 168 MB cache file; it needs a jar class path (Jib's exploded
+  `classes`/`resources` directories are refused) and a training run on the base image's exact JDK at build time (Jib has
+  no build step that runs code) — a follow-up if start-up time matters. Lazy initialization: not used (probes and the
+  first requests would pay for it; peak is unchanged). GraalVM native image: out of scope (reflection-heavy libraries:
+  springdoc, Spring AI, Stripe, the cloud SDKs).
+- **Measurements are local** (JDK 25 on Ubuntu, `-XX:MaxRAM` standing in for the pod limit, `ActiveProcessorCount=1`, a
+  shared and loaded 4-CPU machine, so times vary ±30 %); never measured in a real pod. RSS is not all of cgroup memory
+  (page cache counts too, but is reclaimable).
