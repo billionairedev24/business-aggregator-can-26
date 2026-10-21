@@ -1270,3 +1270,5 @@ Only a paid Plus period can be refunded.	Seule une période Plus payée peut êt
 There's no Plus payment waiting for you.	Aucun paiement Plus ne vous attend.	new
 This Plus payment is being charged already.	Ce paiement Plus est déjà en cours.	new
 Your bank declined the card. Try another card in Payment methods.	Votre banque a refusé la carte. Essayez une autre carte dans Modes de paiement.	new
+No plus_membership with id %s	Aucun abonnement Plus avec l’identifiant %s	new
+No plus_period with id %s	Aucune période Plus avec l’identifiant %s	new
