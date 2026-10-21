@@ -84,7 +84,7 @@ ovh-gh-setup: ## Once per target, on your Mac: the GitHub Environment + every se
 
 .PHONY: ovh-tf-init
 ovh-tf-init: ## terraform init of the target's root; with TF_STATE_BUCKET (+ TF_STATE_ACCESS_KEY/SECRET_KEY) on the shared Object Storage state (MIGRATE=1 moves a local state there)
-	$(ROOT)/scripts/ovh/tf-state.sh ensure
+	$(ROOT)/scripts/ovh/tf-state.sh ensure $(or $(TARGET),ovh-vps)
 	$(ROOT)/scripts/ovh/tf-state.sh init $(or $(TARGET),ovh-vps)
 
 .PHONY: demo-data

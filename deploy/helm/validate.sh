@@ -239,7 +239,7 @@ for t in vps mks; do
   if grep -q 'SPRING_PROFILES_ACTIVE: "dev"' <<<"$out" && ! grep -qE '^kind: (ExternalSecret|SecretStore|Secret)$' <<<"$out" \
       && grep -q 'name: northline-secrets' <<<"$out" && ! grep -q 'northline-.*-secrets$' <<<"$out" \
       && grep -q 'key: STORAGE_ACCESS_KEY' <<<"$out" && grep -q 'key: KMS_LOCAL_KEY' <<<"$out" \
-      && grep -q 'STORAGE_ENDPOINT: "https://s3.bhs.io.cloud.ovh.net"' <<<"$out" && grep -q 'KMS_PROVIDER: "local"' <<<"$out" \
+      && grep -q 'STORAGE_ENDPOINT: "https://s3.us-east-va.io.cloud.ovh.us"' <<<"$out" && grep -q 'KMS_PROVIDER: "local"' <<<"$out" \
       && grep -q 'type: Recreate' <<<"$auth" && grep -q 'claimName: northline-auth-signing-keys' <<<"$auth" \
       && grep -q -- '- name: northline-registry' <<<"$out" && ! grep -q 'googlecloud' <<<"$out" && ! grep -q 'redis-ca' <<<"$out"; then
     echo "ok   dryrun × ovh-$t: dev profile, one plain Secret (no External Secrets), S3 keys and local KMS key mapped, auth Recreate on its key volume"
@@ -247,6 +247,13 @@ for t in vps mks; do
   check "dryrun × ovh-$t + Collector (flag)" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-$t.yaml" -f "test-values/infra-ovh-$t.yaml" \
     --set observability.collector.enabled=true
 done
+# S-160: Canadian data residency — a US location (global.hostingCountry from Terraform) runs the dev profile only.
+refuse "US location × staging values (data residency)" -f "$CHART/values-staging.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml
+refuse "US location × prod values (data residency)" -f "$CHART/values-prod.yaml" -f "$CHART/values-ovh-mks.yaml" -f test-values/infra-ovh-mks.yaml
+refuse "US location × dryrun on the prod profile (data residency)" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml --set global.springProfiles=prod
+refuse "US location × dryrun on the staging profile (data residency)" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml --set global.springProfiles=staging
+check "ca-bhs × staging values (Canadian location allowed)" -f "$CHART/values-staging.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml \
+  --set global.hostingCountry=CA --set-string configEnv.STORAGE_ENDPOINT=https://s3.bhs.io.cloud.ovh.net --set-string configEnv.STORAGE_REGION=bhs
 # S-155: what scripts/ovh/deploy.sh adds for a first demo without Stripe on the operator's own domain (OVH_DOMAIN):
 # identity and age checks on the local fakes, the Stripe keys optional, every host under that domain.
 nostripe=(--set apps.api.env.IDENTITY_PROVIDER=local --set apps.api.env.AGE_VERIFICATION_PROVIDER=local
@@ -321,7 +328,7 @@ check_data "northline-data: ovh-vps (everything on the VPS, S3 backups)" -f test
 check_data "northline-data: ovh-mks (Managed PostgreSQL)" -f test-values/data-ovh-mks.yaml
 data_out=$(helm template northline-data "$DATA" --namespace northline-dryrun -f test-values/data-ovh-vps.yaml)
 if ! grep -q 'topology.kubernetes.io/zone' <<<"$data_out" && ! grep -qE '^kind: (ExternalSecret|SecretStore|Secret)$' <<<"$data_out" \
-    && grep -q 'destinationPath: s3://northline-ovh-vps-pg-backups/' <<<"$data_out" && grep -q 'endpointURL: https://s3.bhs.io.cloud.ovh.net' <<<"$data_out" \
+    && grep -q 'destinationPath: s3://northline-ovh-vps-pg-backups/' <<<"$data_out" && grep -q 'endpointURL: https://s3.us-east-va.io.cloud.ovh.us' <<<"$data_out" \
     && grep -q 'name: northline-pg-backup-s3, key: ACCESS_KEY_ID' <<<"$data_out" && ! grep -q 'serviceAccountTemplate' <<<"$data_out" \
     && grep -q '^kind: PersistentVolumeClaim$' <<<"$data_out" && grep -q '^  name: northline-auth-signing-keys$' <<<"$data_out" && grep -q 'storageClassName: local-path' <<<"$data_out"; then
   echo "ok   northline-data ovh-vps: no zone pinning, no External Secrets, S3 backups with the script's keys, auth key volume"

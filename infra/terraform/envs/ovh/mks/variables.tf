@@ -1,28 +1,17 @@
-variable "ovh_endpoint" {
-  description = "OVHcloud API endpoint of the account: ovh-ca for an OVHcloud Canada account (ca.ovh.com), ovh-eu for a European one. Credentials come from the environment (OVH_APPLICATION_KEY, OVH_APPLICATION_SECRET, OVH_CONSUMER_KEY, or OVH_CLIENT_ID / OVH_CLIENT_SECRET) — docs/runbooks/ovh.md § API credentials."
+variable "ovh_location" {
+  description = "Where the target lives (infra/terraform/stacks/ovh/locations.json, S-160): us-east-va (Vint Hill, Virginia — OVHcloud US, the default for now), us-west-or (Hillsboro, Oregon — OVHcloud US) or ca-bhs (Beauharnois, Québec — OVHcloud Canada). Decides the API endpoint (ovh-us / ovh-ca), the Public Cloud region, Object Storage, the database region and the VPS datacentre. The account must belong to that OVHcloud entity: us.ovhcloud.com and ca.ovhcloud.com accounts are separate. Credentials come from the environment (OVH_APPLICATION_KEY, OVH_APPLICATION_SECRET, OVH_CONSUMER_KEY, or OVH_CLIENT_ID / OVH_CLIENT_SECRET) — docs/runbooks/ovh.md § Today. A US location holds fake demo data only (dev profile): Canadian data residency applies to real customer data, which must be on ca-bhs before launch (DECISIONS 2026-10-20, S-160)."
   type        = string
-  default     = "ovh-ca"
+  default     = "us-east-va"
 
   validation {
-    condition     = contains(["ovh-ca", "ovh-eu"], var.ovh_endpoint)
-    error_message = "ovh_endpoint must be ovh-ca (OVHcloud Canada) or ovh-eu."
+    condition     = contains(["us-east-va", "us-west-or", "ca-bhs"], var.ovh_location)
+    error_message = "ovh_location must be us-east-va or us-west-or (OVHcloud US, demo data only) or ca-bhs (OVHcloud Canada)."
   }
 }
 
 variable "service_name" {
   description = "Public Cloud project id (32 hex characters) for the cluster, the database and Object Storage."
   type        = string
-}
-
-variable "region" {
-  description = "OVHcloud Public Cloud region. Canadian data residency: BHS5 (Beauharnois) — one location for the cluster, its private network, the database and Object Storage (no egress between them)."
-  type        = string
-  default     = "BHS5"
-
-  validation {
-    condition     = contains(["BHS5"], var.region)
-    error_message = "Canadian data residency: region must be BHS5 (Beauharnois)."
-  }
 }
 
 variable "kubernetes_version" {

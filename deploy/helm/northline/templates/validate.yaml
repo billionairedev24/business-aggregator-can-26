@@ -12,6 +12,15 @@
 {{- if and (has .Values.global.environment (list "staging" "prod" "dryrun")) (not (hasPrefix "https://" .Values.urls.auth)) }}
 {{- fail "urls.* must be https:// in staging, prod and dryrun" }}
 {{- end }}
+{{- /* S-160: Canadian data residency. A cluster outside Canada (global.hostingCountry from Terraform: the OVHcloud US
+locations) may only run the dev profile with fake demo data — never staging or prod, by environment or by profile. */ -}}
+{{- $country := upper (default "" .Values.global.hostingCountry) }}
+{{- if and $country (ne $country "CA") }}
+{{- $profiles := splitList "," (include "northline.springProfiles" .) }}
+{{- if or (has .Values.global.environment (list "staging" "prod")) (has "staging" $profiles) (has "prod" $profiles) }}
+{{- fail (printf "Canadian data residency: this cluster is in %s (global.hostingCountry) — only the dev profile with fake demo data may run outside Canada. Staging and prod need a Canadian location (OVHcloud: OVH_LOCATION=ca-bhs; docs/runbooks/ovh.md § Data residency)." $country) }}
+{{- end }}
+{{- end }}
 {{- if .Values.demoMail.enabled }}
 {{- if has .Values.global.environment (list "staging" "prod") }}
 {{- fail "demoMail (Mailpit, S-155b) captures every email and is not allowed in staging or prod" }}

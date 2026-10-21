@@ -2,7 +2,7 @@
 # without credentials or state. Run: terraform init -backend=false && terraform test
 mock_provider "ovh" {
   mock_resource "ovh_cloud_project_network_private" {
-    defaults = { regions_attributes = [{ region = "BHS5", openstackid = "1f2e3d4c-0000-4000-8000-000000000001", status = "ACTIVE" }] }
+    defaults = { regions_attributes = [{ region = "US-EAST-VA-1", openstackid = "1f2e3d4c-0000-4000-8000-000000000001", status = "ACTIVE" }] }
   }
   mock_resource "ovh_cloud_project_database" {
     defaults = {
@@ -32,8 +32,8 @@ run "managed_postgres_by_default" {
   }
 
   assert {
-    condition     = ovh_cloud_project_database.pg[0].version == "17" && ovh_cloud_project_database.pg[0].plan == "essential" && length(ovh_cloud_project_database.pg[0].nodes) == 1 && ovh_cloud_project_database.pg[0].nodes[0].region == "BHS"
-    error_message = "PostgreSQL 17 (PostGIS), Essential, one node in BHS."
+    condition     = ovh_cloud_project_database.pg[0].version == "17" && ovh_cloud_project_database.pg[0].plan == "essential" && length(ovh_cloud_project_database.pg[0].nodes) == 1 && ovh_cloud_project_database.pg[0].nodes[0].region == "US-EAST-VA"
+    error_message = "PostgreSQL 17 (PostGIS), Essential, one node in the default location's database region US-EAST-VA."
   }
 
   assert {
@@ -42,8 +42,8 @@ run "managed_postgres_by_default" {
   }
 
   assert {
-    condition     = ovh_cloud_project_kube.cluster.region == "BHS5" && ovh_cloud_project_kube.cluster.plan == "free" && ovh_cloud_project_kube_nodepool.general.desired_nodes == 2 && ovh_cloud_project_kube_nodepool.general.flavor_name == "b3-16" && !ovh_cloud_project_kube_nodepool.general.monthly_billed
-    error_message = "Free MKS control plane in BHS5, 2 × b3-16 billed hourly."
+    condition     = ovh_cloud_project_kube.cluster.region == "US-EAST-VA-1" && ovh_cloud_project_kube.cluster.plan == "free" && ovh_cloud_project_kube_nodepool.general.desired_nodes == 2 && ovh_cloud_project_kube_nodepool.general.flavor_name == "b3-16" && !ovh_cloud_project_kube_nodepool.general.monthly_billed
+    error_message = "Free MKS control plane in US-EAST-VA-1 (the default location), 2 × b3-16 billed hourly."
   }
 
   assert {
@@ -52,8 +52,8 @@ run "managed_postgres_by_default" {
   }
 
   assert {
-    condition     = output.data_values.storageClassName == "csi-cinder-high-speed" && output.config_env["STORAGE_ENDPOINT"] == "https://s3.bhs.io.cloud.ovh.net" && output.config_env["KMS_PROVIDER"] == "local"
-    error_message = "Cinder volumes, Object Storage in BHS, local keys."
+    condition     = output.data_values.storageClassName == "csi-cinder-high-speed" && output.config_env["STORAGE_ENDPOINT"] == "https://s3.us-east-va.io.cloud.ovh.us" && output.config_env["KMS_PROVIDER"] == "local" && output.helm_values.global.hostingCountry == "US"
+    error_message = "Cinder volumes, Object Storage in US-EAST-VA, local keys, hosting country US."
   }
 }
 
@@ -112,12 +112,65 @@ run "postgres_18_refused" {
   expect_failures = [var.managed_postgres]
 }
 
-run "canadian_region_only" {
+# S-160: one run per location — everything derived from ovh_location (locations.json).
+run "location_us_east_va" {
   command = plan
 
   variables {
-    region = "DE1"
+    ovh_location = "us-east-va"
   }
 
-  expect_failures = [var.region]
+  assert {
+    condition = (
+      output.location.api_endpoint == "ovh-us" && output.location.country == "US" && ovh_cloud_project_kube.cluster.region == "US-EAST-VA-1" &&
+      ovh_cloud_project_network_private_subnet.net.region == "US-EAST-VA-1" && ovh_cloud_project_gateway.net.region == "US-EAST-VA-1" &&
+      contains(ovh_cloud_project_network_private.net.regions, "US-EAST-VA-1") && ovh_cloud_project_database.pg[0].nodes[0].region == "US-EAST-VA" &&
+      module.ovh.storage.region == "US-EAST-VA" && !output.postgres.fallback
+    )
+    error_message = "us-east-va: cluster, network, gateway in US-EAST-VA-1; Managed PostgreSQL in US-EAST-VA; Object Storage US-EAST-VA."
+  }
+}
+
+run "location_us_west_or" {
+  command = plan
+
+  variables {
+    ovh_location = "us-west-or"
+  }
+
+  assert {
+    condition = (
+      output.location.api_endpoint == "ovh-us" && ovh_cloud_project_kube.cluster.region == "US-WEST-OR-1" &&
+      ovh_cloud_project_database.pg[0].nodes[0].region == "US-WEST-OR" && output.config_env["STORAGE_ENDPOINT"] == "https://s3.us-west-or.io.cloud.ovh.us" &&
+      output.helm_values.global.hostingCountry == "US"
+    )
+    error_message = "us-west-or: everything in Hillsboro (US-WEST-OR-1 / US-WEST-OR)."
+  }
+}
+
+run "location_ca_bhs" {
+  command = plan
+
+  variables {
+    ovh_location = "ca-bhs"
+  }
+
+  assert {
+    condition = (
+      output.location.api_endpoint == "ovh-ca" && output.location.country == "CA" && ovh_cloud_project_kube.cluster.region == "BHS5" &&
+      ovh_cloud_project_database.pg[0].nodes[0].region == "BHS" && output.config_env["STORAGE_ENDPOINT"] == "https://s3.bhs.io.cloud.ovh.net" &&
+      output.helm_values.global.hostingCountry == "CA"
+    )
+    error_message = "ca-bhs: everything in Beauharnois (BHS5 / BHS) — Canadian data residency."
+  }
+}
+
+run "unknown_location_refused" {
+  command = plan
+
+  variables {
+    ovh_location = "DE1"
+  }
+
+  expect_failures = [var.ovh_location]
 }

@@ -10249,3 +10249,118 @@ Closes what S-35 (stock one-way), S-23, S-30, S-116, S-120, S-132 and S-133 left
   was fetched (in-process JWK Set in tests).
 - Consent requests send no email; the owner sees them in Studio.
 - Help triage's category → help section mapping is client-side; the mobile app has NL search but not help triage.
+
+## 2026-10-20 — S-160 OVHcloud in the United States for now (Vint Hill), Canada kept as an option
+
+Owner: "for ovh, I am in the US right now, lets deploy there for now". Runbook: [ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo),
+[§ Data residency](runbooks/ovh.md#data-residency), [§ Locations](runbooks/ovh.md#locations),
+[§ Canada later](runbooks/ovh.md#canada-later). **Nothing here has run against a real OVHcloud account, US or
+Canadian**: checked offline only (`terraform test` with the mocked provider for each location, `helm template |
+kubeconform` and the chart's refusals, actionlint, bash 3.2 parsing, shellcheck, stubbed runs of `ci.sh tfvars`,
+`tf-state.sh init` and `deploy.sh`'s pre-check). `gh-setup.sh` was only parsed and linted (it reads the terminal).
+
+- **Data residency — owner's decision, 2026-10-20: demo in the US for now.** The platform's rule stays Canadian data
+  residency for production. A US location is allowed for the **dry run only: fake demo data, the `dev` profile**.
+  **Real Canadian customer data must move to `ca-bhs` before launch**, and nothing real is entered in a US deployment
+  meanwhile. Enforced in the chart: new value `global.hostingCountry` (Terraform's `helm_values`: `US` / `CA`; empty =
+  not declared, as on the three clouds); any country other than `CA` refuses `global.environment` staging/prod and the
+  staging/prod Spring profiles. `scripts/ovh/deploy.sh` renders the chart with the same values first, so a refusal
+  stops the deploy before Secrets or `northline-data` are touched (new `OVH_EXTRA_VALUES` layers one more file, in the
+  check too).
+- **One location setting** — `infra/terraform/stacks/ovh/locations.json` (Terraform `jsondecode(file())`, scripts `jq`):
+  `us-east-va` (default), `us-west-or`, `ca-bhs` → country, site, API endpoint (`ovh-us` / `ovh-ca`), token page,
+  Public Cloud region, Object Storage region and S3 endpoint/region, Managed Databases region, VPS datacentre, and
+  what the region offers. Terraform: the roots' `ovh_endpoint` and `region` variables are **replaced** by
+  `ovh_location` (the provider's endpoint comes from it; the Canada-only validation and the `canadian_region_only`
+  tests are gone; a test per location + an unknown-location refusal in each root); the stack's `region` became
+  `location`; new output `location` in both roots. The default changed from Canada to `us-east-va` — acceptable
+  because nothing was ever applied (S-155 merged today); an old `terraform.tfvars` with `region = "BHS5"` gets an
+  undeclared-variable warning and must set `ovh_location = "ca-bhs"` to stay in Canada.
+- **Pipeline**: environment variable `OVH_LOCATION` (default `us-east-va`), **not** a workflow input — an environment's
+  credentials, project and state bucket belong to one OVHcloud account, so a per-run choice could only point them at
+  the wrong one. S-155's `OVH_ENDPOINT` variable is now only checked: one that contradicts the location stops
+  `ci.sh tfvars` (`gh-setup.sh` deletes it). `gh-setup.sh` asks the location first (current value as the default;
+  confirming a change), explains that US and Canada accounts are separate, prints that entity's token page with the
+  rights pre-filled. `tf-state.sh` puts the state bucket in the location (`ensure [TARGET]` reads it from
+  `.ovh/<target>.env` on a Mac). `ci.sh teardown` empties buckets with the location's S3 region (was `bhs`).
+  `secrets.sh init` writes `OVH_LOCATION=` into the file. The smoke test checks the api's `STORAGE_ENDPOINT` against
+  the location and shows the location in the summary.
+- **What was verified about the US regions** (search-engine excerpts of OVHcloud US/OVHcloud docs; the vendor sites
+  were unreachable from here): `ovh-us` → `https://api.us.ovhcloud.com/1.0` (in the provider binary); S3 region
+  `us-east-va`, endpoint `https://s3.us-east-va.io.cloud.ovh.us`, Hillsboro = `us-west-or`; MKS free plan (1-AZ) in
+  `US-EAST-VA-1` and `US-WEST-OR-1`; Managed Databases in all 1-AZ regions, `US-EAST-VA` used in OVHcloud US's
+  Terraform guide; VPS in Vint Hill and Hillsboro; the Edge Network Firewall guide on the US support site.
+  **Unverified**: the `us-west-or` S3 endpoint written out (pattern only), Object Storage `region_name`
+  `US-EAST-VA`/`US-WEST-OR` (by analogy with `BHS`), `US-WEST-OR` for databases, PostGIS on PostgreSQL 17 in the US,
+  the Network Firewall API on `ovh-us`, the US VPS service-name suffix, the VPS-4 spec and price (third-party
+  listings: 8 vCores / 24 GB / 200 GB, ≈ $27.50 a month, ≈ $23.37 with 12 months).
+- **Fallbacks per location** (flags in `locations.json`, all `true` today on that evidence): no Managed PostgreSQL →
+  `ovh-mks` puts Postgres in the cluster (output `postgres.fallback`); no Network Firewall → `ovh-vps` keeps ufw only
+  (output `location.edge_firewall_used`); no Managed Kubernetes → `ovh-mks` refuses to plan (use `ovh-vps`). Not
+  testable with the mocked provider without editing the file, so no test of the fallback paths.
+- **Canada later** is a new account and a fresh deployment (destroy the US one first — its state is in the US
+  bucket), with an optional `pg_dump` + bucket sync + the generated secrets carried over; the simplest move is
+  `make demo-data` again. Documented, not scripted.
+- **Not done**: no migration tool between the two OVHcloud entities; no Toronto or US Local Zones; no OVHcloud KMS
+  adapter (staging/prod on OVHcloud still impossible under `KMS_PROVIDER=local`, whatever the location).
+
+## 2026-10-20 — S-161 No console step for OVHcloud: the state user, its keys, the bucket and the server from code
+
+Owner: "why can't we use pipeline to do all of this? I do not want to create resources manually." The owner now does
+three things by hand — the OVHcloud US account, a default payment method, the API token — plus `make ovh-gh-setup`
+and the pipeline runs ([ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo)). The owner
+already has a Public Cloud project, so a given `OVH_SERVICE_NAME` stays the default path. **Nothing here has run
+against a real OVHcloud account**: checked offline only — `terraform validate`/`test` with the mocked `ovh/ovh` 2.22
+provider (vps 13 runs, mks 9, the new project root 2), tflint, actionlint, shellcheck, bash 3.2 parsing
+(`make shell-compat`), and `scripts/ovh/api.sh` / `tf-state.sh keys|teardown` against a local stub of the OVHcloud API
+and a fake `aws` CLI. The stub checks the request signature with this repository's own reading of OVHcloud's scheme,
+so a wrong reading would pass both; `gh-setup.sh` was only parsed and linted (it reads the terminal).
+
+- **The state user through the API, not a Terraform root** (the story preferred a root with local state): a local
+  state lives on one machine, so a run on a runner or another Mac would create a second user and key, and a root that
+  looks the user up with a data source before creating it flips to destroying it on its second apply. Signed API calls
+  (`scripts/ovh/api.sh`: application key set, or the OAuth2 service account) find the project's user **by its
+  description `terraform-state`** (role `objectstore_operator`), create it when missing, wait for `ok`, and reuse its
+  first S3 key — `POST /cloud/project/{p}/user/{u}/s3Credentials/{access}/secret` returns an existing key's secret
+  (the path is in the provider binary; its data source uses it). Stateless, so the Mac and every job agree, and a user
+  made by hand with that description is adopted. Credentials never go on a command line (curl reads its headers from
+  stdin) or into the output; the access key is shown as its last four characters.
+- **Where it runs**: `make ovh-gh-setup` (stores `TF_STATE_ACCESS_KEY`/`SECRET_KEY` in the Environment; keys in
+  `.ovh/<target>.env` win — the manual fallback), and a new **State keys** step in every pipeline job
+  (`tf-state.sh keys`): the stored keys if S3 accepts them, else the API's, masked, as `AWS_*` in `$GITHUB_ENV`. The
+  jobs' `env` now maps the secrets to `TF_STATE_*` instead of `AWS_*` so `$GITHUB_ENV` never competes with a job-level
+  value. On a Mac: `eval "$(scripts/ovh/tf-state.sh keys ovh-vps)"` (refuses to print onto a terminal).
+- **The bucket** stays the pipeline's (`tf-state.sh ensure`, aws CLI, versioning on) — the Mac needs no `aws`. gh-setup
+  proposes a `northline-tfstate-*` bucket already in the project (`GET /cloud/project/{p}/region/{storage region}/storage`)
+  so one made by hand is adopted.
+- **Teardown, last**: `destroy` gains a final step `tf-state.sh teardown`: the target's state key (every version) out of
+  the bucket; when nothing else is left (the other target's state shares the bucket), the bucket and then the user.
+  The Environment's stored keys go stale; the State keys step then makes a new user by itself.
+- **The server for `ovh-vps`: a Public Cloud instance by default** (`server = "instance"`; `ovh_cloud_project_instance`,
+  Ubuntu 24.04 by name, flavor `b3-32` by name — the Linux one —, hourly, `ssh_key_create` with the pipeline's public
+  key, public network; `ignore_changes = [boot_from]` so a newer image never rebuilds it). Not the VPS by code: provider
+  2.22's `ovh_vps` can order, but needs the US catalogue's plan code and configuration labels (unverified) and commits a
+  month that a destroy doesn't refund. `server = "vps"` keeps the S-155 path (console-ordered VPS, Network Firewall).
+  **Price, unverified**: `b3-32` ≈ $0.20–0.23 an hour, ≈ $145–165 for a full month, against ≈ $27.50 for the VPS-4 —
+  ≈ $120–135 a month more if it runs all month; less for a week of demos with `destroy` in between. `b3-32` and not
+  `b3-16`: the stack was sized for the VPS's 24 GB. No Network Firewall on the instance (the `/ip` firewall on Public
+  Cloud addresses is unverified; `ovh_cloud_security_group` exists in 2.22 but the instance resource can't attach one):
+  `ufw` on the host, SSH by key only. The instance's host key is learnt on first sight in each run (it doesn't exist
+  when gh-setup runs); gh-setup deletes a VPS's `OVH_VPS_KNOWN_HOSTS` when switching to the instance.
+- **SSH key pair**: gh-setup's existing deploy key; for the instance the public half is the new variable
+  `OVH_SSH_PUBLIC_KEY` (→ `ssh_public_key`), the private half the existing secret.
+- **The project, optional**: `infra/terraform/envs/ovh/project` (`ovh_cloud_project`, plan `project.2018` from the order
+  cart, the account's subsidiary; local state in `.ovh/project-<location>.tfstate`) run by `scripts/ovh/project.sh
+  ensure`, which first adopts a project described `northline-dryrun`. Only when gh-setup gets no project id. That
+  `project.2018` is orderable on OVHcloud US is **unverified**.
+- **Token rights**: the default design needs `GET/POST/PUT/DELETE /cloud/*` only (one URL, ovh.md § Today step 3). The
+  VPS option adds `GET /vps/*` and `/ip/*`; ordering the project adds `GET /me`, `GET /me/*`, `POST /me/order/*`,
+  `GET/POST/DELETE /order/*` (paths from the provider binary).
+- **New settings**: `locations.json` `oauth2_token_url` (from the provider binary: `https://us.ovhcloud.com/auth/oauth2/token`,
+  `https://ca.ovh.com/auth/oauth2/token`); Environment variables `OVH_SERVER`, `OVH_INSTANCE_FLAVOR`,
+  `OVH_SSH_PUBLIC_KEY`; `TF_STATE_*` secrets now optional; Terraform `server`, `instance_flavor`, `instance_image`,
+  `instance_flavor_id`, `instance_image_id`, `ssh_public_key`; output `vps` gains `server` and `flavor`. No migrations.
+- **Not done / not testable here**: the flavor and image lookups (data sources returning nested sets can't be mocked by
+  `terraform test` 1.16), so the tests pass the ids; the OVHcloud US API itself (signature, OAuth2 token, user and key
+  endpoints, storage listing); `project.2018` on the US account; Public Cloud prices; stopping (shelving) the instance
+  between demos (`down` scales the apps only).

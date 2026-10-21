@@ -1,10 +1,12 @@
 # Copy to terraform.tfvars (git-ignored) and fill in — docs/runbooks/ovh.md § ovh-vps.
 service_name     = "0123456789abcdef0123456789abcdef" # Public Cloud project id (Object Storage)
-region           = "BHS5"
-vps_service_name = "" # e.g. "vps-1a2b3c4d.vps.ovh.ca" once ordered; empty = Object Storage only
+ovh_location     = "us-east-va" # us-east-va (Vint Hill) or us-west-or (Hillsboro): OVHcloud US, demo data only; ca-bhs: OVHcloud Canada
+server           = "instance" # a Public Cloud instance made by Terraform; "vps" = a VPS ordered in the console
+ssh_public_key   = "" # server = instance: your or the pipeline's public key (cat ~/.ssh/id_ed25519.pub)
+# instance_flavor = "b3-32"
+vps_service_name = "" # server = vps: e.g. "vps-1a2b3c4d.vps.ovh.us" once ordered; empty = Object Storage only
 admin_cidrs      = [] # e.g. ["203.0.113.7/32"] — your IP (curl -s ifconfig.me); SSH only from here
 edge_firewall    = true
-# ovh_endpoint   = "ovh-ca"   # OVHcloud Canada account
 # bucket_name_suffix = "-a1b2" # if northline-ovh-vps-uploads is taken
 
 # Every data service runs on the VPS by default. An external provider instead (endpoint here, credential in
