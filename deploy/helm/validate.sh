@@ -269,6 +269,20 @@ if grep -q 'IDENTITY_PROVIDER: "local"' <<<"$out" && grep -A4 'key: STRIPE_SECRE
     && grep -q 'https://studio.demo.example' <<<"$out" && ! grep -q 'demo.northline.ca' <<<"$out"; then
   echo "ok   dryrun × ovh-vps without Stripe: local identity, Stripe keys optional, hosts under the operator's domain"
 else echo "FAIL dryrun × ovh-vps without Stripe / own domain"; failed=1; fi
+# S-163: JVM memory (deploy.md § JVM memory) — JAVA_TOOL_OPTIONS = spring.javaOptions + the app's heap share and
+# metaspace cap; the api at 768Mi on the VPS; prod on G1 with the api's heap at 65 % of 2Gi; an explicit
+# JAVA_TOOL_OPTIONS replaces the chart's.
+jvm() { awk -v app="$2" '/^kind: ConfigMap$/{c=1} c && $0 == "  name: " app {a=1} a && /JAVA_TOOL_OPTIONS:/{sub(/^ *JAVA_TOOL_OPTIONS: /, ""); print; exit} /^---/{c=0; a=0}' <<<"$1"; }
+limit() { awk -v app="$2" '/^kind: Deployment$/{d=1} d && $0 == "  name: " app {a=1} a && /limits:/{getline; print $2; exit} /^---/{d=0; a=0}' <<<"$1"; }
+out=$(helm template northline "$CHART" -f "$CHART/values-dryrun.yaml" -f "$CHART/values-ovh-vps.yaml" -f test-values/infra-ovh-vps.yaml)
+prod=$(helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml)
+own=$(helm template northline "$CHART" -f "$CHART/values-dev.yaml" --set-string apps.api.env.JAVA_TOOL_OPTIONS=-Xmx300m)
+if [[ $(jvm "$out" northline-api) == '"-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=48m -Xss512k -XX:MaxDirectMemorySize=64m -XX:MaxRAMPercentage=50 -XX:MaxMetaspaceSize=192m"' ]] \
+    && [[ $(limit "$out" northline-api) == 768Mi ]] && [[ $(jvm "$out" northline-auth) == *"-XX:MaxRAMPercentage=55 -XX:MaxMetaspaceSize=128m"* ]] \
+    && [[ $(jvm "$prod" northline-api) == '"-XX:+UseG1GC -Xss512k -XX:MaxDirectMemorySize=128m -XX:MaxRAMPercentage=65 -XX:MaxMetaspaceSize=256m"' ]] \
+    && [[ $(limit "$prod" northline-api) == 2Gi ]] && [[ $(jvm "$own" northline-api) == '"-Xmx300m"' ]]; then
+  echo "ok   JVM flags per app: small JVMs, api 768Mi on ovh-vps, G1 in prod, an explicit JAVA_TOOL_OPTIONS wins"
+else echo "FAIL JVM flags (S-163): $(jvm "$out" northline-api) / $(limit "$out" northline-api) / $(jvm "$prod" northline-api) / $(jvm "$own" northline-api)"; failed=1; fi
 # S-155b: email on OVHcloud — an SMTP relay for api, auth and worker (SMTP_PASSWORD from the plain Secret), and the
 # demo inbox (Mailpit behind basic auth on its own host, SMTP only from this release's pods; refused in staging/prod).
 smtp=(--set apps.api.env.EMAIL_PROVIDER=smtp --set apps.auth.env.EMAIL_PROVIDER=smtp --set apps.worker.env.EMAIL_PROVIDER=smtp
