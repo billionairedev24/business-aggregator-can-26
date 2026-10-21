@@ -62,6 +62,8 @@ export const PayoutOverview = z.object({
   availableCents: z.number(), payableCents: z.number(), reserveCents: z.number(), nextPayoutAt: z.string().nullish(), schedule: Schedule,
   account: Account.nullish(), pendingAccount: Account.nullish(), pausedUntil: z.string().nullish(),
   instant: z.object({ eligible: z.boolean(), feeBps: z.number(), minFeeCents: z.number(), minAmountCents: z.number() }),
+  /** S-157: the bank returned the latest payout to the account still in use (Stripe's reason); null = nothing to fix. */
+  returned: z.object({ payoutId: z.string(), amountCents: z.number(), failureCode: z.string().nullish(), sentAt: z.string() }).nullish(),
 });
 export type PayoutOverview = z.infer<typeof PayoutOverview>;
 export const PayoutLine = z.object({

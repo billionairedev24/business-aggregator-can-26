@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Button, ErrorState, Field, FormGrid, Select, Skeleton, TextInput, useFormatters } from '@northline/ui';
 import { serverFieldErrors } from '@northline/client';
-import { profileQuery, useSaveProfile, type Profile } from './settingsApi';
+import { profileQuery, standingQuery, useSaveProfile, type Profile } from './settingsApi';
 import { YourData } from './YourData';
 import { useSettingsT, type SettingsT } from './settingsMessages';
 
@@ -86,6 +86,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
       </FormGrid>
       <h2 className="nl-acct-h2">{profile.reliability != null ? t('reliabilityTitle', { score: number(profile.reliability, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }) : t('reliabilityNone')}</h2>
       <p className="nl-acct-lede">{t('reliabilityBody')}</p>
+      <NoShowNotice />
       {errors._form ? <p className="nl-error" role="alert">{errors._form}</p> : null}
       {save.isError && !Object.keys(errors).length ? <p className="nl-error" role="alert">{t('saveError')}</p> : null}
       {profile.erasureRequestedAt ? <p className="nl-acct-note" role="status">{t('deleteRequested', { date: date(profile.erasureRequestedAt, 'long') })}</p> : null}
@@ -102,6 +103,20 @@ export function FormSkeleton({ label, rows = 4 }: { label: string; rows?: number
     <div aria-busy="true" style={{ marginTop: 18, maxWidth: 640 }}>
       <span className="nl-sr-only">{label}</span>
       {Array.from({ length: rows }, (_, i) => <Skeleton key={i} height={44} style={{ marginTop: 12 }} />)}
+    </div>
+  );
+}
+
+/** S-156: confirmed no-shows put a notice on the account: providers see them and confirm bookings first. */
+function NoShowNotice() {
+  const t = useSettingsT();
+  const { date } = useFormatters();
+  const warning = useQuery(standingQuery).data?.active.find(c => c.kind === 'no_show_warning');
+  if (!warning) return null;
+  return (
+    <div className="nl-acct-note" role="status">
+      <strong>{t('noShowTitle')}</strong> {t('noShowBody', { date: date(warning.startedAt, 'long') })}
+      <br />{t('noShowReason', { reason: warning.reason })}
     </div>
   );
 }

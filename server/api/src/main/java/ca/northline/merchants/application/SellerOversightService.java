@@ -176,6 +176,29 @@ class SellerOversightService implements SellerOversight, SellerSanctions {
     }
 
     @Override
+    public boolean reinstate(String merchantId, String reason, String actorId, String role) {
+        var state = store.lock(merchantId);
+        if (state.isEmpty() || !"suspended".equals(state.get().status())) {
+            return false;
+        }
+        reinstate(merchantId, reason, new Actor(actorId, role));
+        return true;
+    }
+
+    @Override
+    public boolean showInSearch(String merchantId, String reason, String actorId, String role) {
+        if (store.lock(merchantId).isEmpty()) {
+            return false;
+        }
+        var cause = store.searchHidden(merchantId);
+        if (cause.isEmpty()) {
+            return false;
+        }
+        visibility(merchantId, false, cause.get(), reason(reason), new Actor(actorId, role));
+        return true;
+    }
+
+    @Override
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<String> hiddenFromSearch(String cause) {
         return store.hiddenFromSearch(cause);

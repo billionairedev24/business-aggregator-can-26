@@ -70,8 +70,8 @@ objects, connected accounts, webhooks and keys don't carry over.
    price changes, change `Fees` and design copy together.
 10. **Radar**: default rules; add *Block if :risk_level: = 'highest'*. 3-D Secure: Stripe's default (request when
     required).
-11. **Payment methods** (Settings → Payment methods): cards only (manual capture). Apple Pay / Google Pay can be added
-    later (they are cards to Stripe).
+11. **Payment methods** (Settings → Payment methods): cards (manual capture), plus Apple Pay and Google Pay once
+    § 15 is done (they are cards to Stripe: the same manual-capture PaymentIntents).
 12. **API keys.** Developers → API keys: the *secret key* (`sk_test_…` / `sk_live_…`) and *publishable key*
     (`pk_…`). Prefer a **restricted key** for the api (S-110 review, [compliance/pci/stripe-review.md](../compliance/pci/stripe-review.md))
     with **write** access to: PaymentIntents, SetupIntents and PaymentMethods (saved cards, S-59), Customers, Refunds,
@@ -492,3 +492,91 @@ the request shapes, the pinned `Stripe-Version` and an `Idempotency-Key` on ever
 state, so Express onboarding itself, `account.updated` for an individual courier, a real transfer and payout, a bank
 that rejects a payout, and the Connect webhooks for courier accounts have not been exercised. Before couriers are paid
 for real: onboard a test courier in test mode, run `payCouriers` by hand, and watch the payout's webhooks arrive.
+
+## 14. Card disputes — evidence to Stripe (S-156)
+
+A card dispute (chargeback) is opened by the cardholder's bank, not by Northline: the `charge.dispute.created` webhook
+(§ 5) opens the payments case as before (S-115), and now also records Stripe's **evidence deadline**
+(`evidence_details.due_by` → `payments.disputes.stripe_evidence_due_by`) and the **dispute fee** from the event's
+`balance_transactions` (`payments.dispute_fees`, one row per balance transaction, idempotent). The fee is posted to the
+ledger account `dispute_fees` against `stripe_balance`; a fee Stripe gives back (a won dispute) posts the reverse.
+Northline carries the fee: it is not charged to the business.
+
+Agents answer from the console (**Payments › Disputes › Card disputes**, `/api/v1/console/card-disputes`): the list
+puts open disputes first, earliest deadline first; the detail shows the business's response and the case's
+evidence files; the agent fills Stripe's evidence fields and picks files, saves a draft, then submits **once**.
+
+| | |
+|---|---|
+| Port | `DisputeEvidenceGateway` (payments) |
+| Provider | `DISPUTE_EVIDENCE_PROVIDER` (`northline.payments.dispute-evidence.provider`): `local` (fake, nothing sent; a Stripe dispute id containing `rejectEvidence` is refused, to try the error path; refused under staging and prod) · `stripe` |
+| Stripe calls | each picked file: `POST /v1/files` (`purpose=dispute_evidence`); then `POST /v1/disputes/{id}` with `evidence[…]` and `submit=true`. Both with Northline's idempotency key (`StripeIdempotencyKeys.of`), the platform key (§ 2) |
+| Text fields | `product_description`, `service_date`, `cancellation_policy_disclosure`, `cancellation_rebuttal`, `refund_policy_disclosure`, `refund_refusal_explanation`, `uncategorized_text` (up to 5,000 characters each) |
+| File fields | `receipt`, `service_documentation`, `customer_communication`, `cancellation_policy`, `refund_policy`, `uncategorized_file` (from the case's evidence only) |
+| Left out on purpose | the customer's name, email, IP, billing and shipping address: personal data Northline doesn't send on the business's behalf. Stripe already has the payment's details |
+| Who | finance and support read; agents with the trust `decide` action (trust & safety, admin) save and submit. Audit `disputes.evidence_submitted` (the draft keeps who saved it last) |
+| Refusals | Stripe's error is kept on the draft (`lastError`) and shown; the agent fixes it and submits again. Closed, overdue or already-submitted disputes refuse with 409 |
+
+- **Nothing new in Stripe to set up:** the platform key and the `charge.dispute.*` webhook events (§ 5). Set
+  `DISPUTE_EVIDENCE_PROVIDER=stripe` (the Helm values for staging and prod do).
+- **Tested against stripe-mock only** (`StripeDisputeEvidenceStripeMockTest`: the file upload, the update with
+  `submit=true`, an error). stripe-mock doesn't keep state, so the deadline and the status change aren't checked there.
+- **Never run against the real Stripe API:** the Files upload, the dispute update with `submit=true`, the fee rows
+  from real `charge.dispute.created` / `charge.dispute.funds_reinstated` events, and S-156's compensation transfer on a
+  granted dispute appeal ([standing.md](standing.md#4-appeals)). Before launch, in test mode: pay with
+  `4000 0000 0000 0259` (disputed), check the case shows the deadline and the fee (Finance › ledger `dispute_fees`),
+  submit evidence with one file and check the dispute in the dashboard is `under_review` with the file attached; then
+  use `4000 0000 0000 2685` (dispute lost) and the "winning evidence" text to check the fee comes back.
+
+## 15. Apple Pay and Google Pay (S-157)
+
+The Payment Element (consumer web) and PaymentSheet (the app) offer Apple Pay and Google Pay next to the card form at
+every checkout that uses them — shop, food (web), bookings, quote deposits, tips. Nothing changes on the server: a
+wallet hands Stripe a card, so the checkout opens the same manual-capture PaymentIntents (escrow, S-11), after the same
+step-up (S-51), and the PaymentMethod the wallet leaves on the first intent (saved to the customer,
+`setup_future_usage`) confirms the order's other intents like a typed card's. Which wallets are offered comes from the
+api, `GET /api/v1/public/payments/options` → `{provider, applePay, googlePay}`: only under Stripe, each switched on by
+configuration once its set-up is done; the browser or phone then shows a wallet only when the person has one.
+
+| variable | where | what |
+|---|---|---|
+| `STRIPE_APPLE_PAY`, `STRIPE_GOOGLE_PAY` | api | `true` offers the wallet (default `false`: cards only) |
+| `NL_APPLE_PAY_DOMAIN_ASSOCIATION` | consumer web | the content of Stripe's Apple Pay domain association file, served as `text/plain` at `/.well-known/apple-developer-merchantid-domain-association` on every host of the site (404 when empty) |
+| `EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID` | app build (EAS) | the Apple Pay merchant id; Stripe's config plugin adds the entitlement and `initStripe` gets it |
+| `EXPO_PUBLIC_GOOGLE_PAY`, `EXPO_PUBLIC_GOOGLE_PAY_TEST` | app build (EAS) | `1` = Google Pay in PaymentSheet (the plugin's manifest flag); `_TEST=1` = Google's test environment (every build but production) |
+
+### Set-up (once per mode: test for dev/staging, live for prod)
+
+1. **Google Pay:** Settings → Payment methods → Google Pay on. Then `STRIPE_GOOGLE_PAY=true`; app builds
+   `EXPO_PUBLIC_GOOGLE_PAY=1`.
+2. **Apple Pay on the web:** Settings → Payment methods → Apple Pay → download the domain association file; put its
+   content into `NL_APPLE_PAY_DOMAIN_ASSOCIATION` for the consumer web (ConfigMap) and deploy. Register each domain
+   customers pay on (the site, `pages.<zone>` if storefront pages take payments) with Stripe's payment method domains
+   API:
+   ```sh
+   STRIPE_SECRET_KEY=sk_test_… scripts/stripe/payment-method-domain.sh register staging.northline.ca
+   STRIPE_SECRET_KEY=sk_test_… scripts/stripe/payment-method-domain.sh status   staging.northline.ca
+   ```
+   `register` checks the file is served over https without a redirect, creates the domain (or finds it), asks Stripe
+   to validate it and prints the Apple Pay / Google Pay / Link status (`active`, or Stripe's error); `validate` asks
+   again after a fix. A restricted key needs write access to *Payment method domains*. Then `STRIPE_APPLE_PAY=true`.
+3. **Apple Pay in the app:** Apple Developer → Identifiers → Merchant IDs → `merchant.ca.northline…` (one per
+   environment); Stripe Dashboard → Settings → Payment methods → Apple Pay → iOS certificate (upload Apple's CSR, Stripe
+   gives the certificate back to Apple); the app id's capability "Apple Pay Payment Processing" with that merchant id.
+   Build with `EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID`.
+4. **Content-Security-Policy:** nothing to add — the wallets run inside Stripe's iframe (`js.stripe.com`, already in
+   `frame-src`); the consumer site's `Permissions-Policy` delegates `payment` to `https://js.stripe.com`, which the
+   Payment Request API needs.
+
+### Never run against the real Stripe, Apple or Google
+
+Written from Stripe's Payment Element, PaymentSheet and payment method domains documentation and tested with the
+existing mocks only: the api's options endpoint (fake gateway) and `StripePaymentSettings`, the web checkout with a
+stubbed Stripe.js (the element gets `wallets: {applePay, googlePay}`), the app's adapter with the SDK mocked
+(PaymentSheet gets `applePay` / `googlePay`, `initStripe` the merchant id), and the association file. No Apple Pay or
+Google Pay sheet has been shown, no domain registered, no merchant id created, `payment-method-domain.sh` has not been
+run against Stripe (only its `status` / `validate` against stripe-mock). Before launch, in test mode: pay a shop order with two shops (three intents) with Apple Pay in
+Safari and on an iPhone, and with Google Pay in Chrome and on Android; check every intent is `requires_capture`, the
+later ones confirmed with the wallet's PaymentMethod without a second sheet; a booking deposit and a tip; a phone-code
+sign-in still asks for the step-up first.
+

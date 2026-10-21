@@ -294,6 +294,31 @@ describe('Payouts', () => {
     expect(screen.getByRole('button', { name: 'Reconnecter' })).toBeTruthy();
   });
 
+  it('S-157: a payout the bank returned is a notice with the reason and Update bank details (en + fr; owners act)', async () => {
+    const returned = { payoutId: 'PO1', amountCents: 81437, failureCode: 'account_closed', sentAt: '2026-09-25T16:00:00Z' };
+    routes['GET /api/v1/merchants/PWM1/payouts/overview'] = () => ok({ ...overview, returned });
+    const ui = renderScreen(<PayoutsScreen />);
+    const notice = await screen.findByRole('alert');
+    expect(notice.textContent).toContain('Your bank returned a payout.');
+    expect(notice.textContent).toContain('The payout of $814.37 sent');
+    expect(notice.textContent).toContain('Why: the bank account is closed.');
+    expect(notice.textContent).toContain('Update your bank details');
+    await expectNoAxeViolations(document.body);
+    await ui.click(within(notice).getByRole('button', { name: 'Update bank details' }));
+    expect(screen.getByRole('region', { name: 'Change payout account' })).toBeTruthy();
+  });
+
+  it('S-157: the returned-payout notice in French, and bookkeepers are sent to the owner', async () => {
+    shell.role = 'bookkeeper';
+    routes['GET /api/v1/merchants/PWM1/payouts/overview'] = () => ok({ ...overview, returned: { payoutId: 'PO1', amountCents: 1000, failureCode: 'something_new', sentAt: '2026-09-25T16:00:00Z' } });
+    renderScreen(<PayoutsScreen />, 'fr');
+    const notice = await screen.findByRole('alert');
+    expect(notice.textContent).toContain('Votre banque a retourné un versement.');
+    expect(notice.textContent).toContain('Motif : la banque l’a retourné sans autre précision.');
+    expect(notice.textContent).toContain('Demandez au propriétaire');
+    expect(within(notice).queryByRole('button')).toBeNull();
+  });
+
   it('schedule: previews the next payout and saves', async () => {
     routes['PUT /api/v1/merchants/PWM1/payouts/schedule'] = () => ok({ ...overview, schedule: { frequency: 'weekly', weekday: 1, monthlyAnchor: null, reserve: 'none' } });
     const ui = renderScreen(<PayoutsScreen />);

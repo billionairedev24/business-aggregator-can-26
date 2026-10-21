@@ -14,7 +14,7 @@ export type Job = z.infer<typeof Job>;
 export const Approval = z.object({ id: z.string(), description: z.string(), amountCents: z.number(), state: z.enum(['pending', 'approved', 'declined']), requestedAt: z.string(), decidedAt: z.string().nullish() });
 export type Approval = z.infer<typeof Approval>;
 export const JobDetail = Job.extend({
-  customer: z.object({ name: z.string(), reliability: z.number().nullish(), pastJobs: z.number() }).nullish(),
+  customer: z.object({ name: z.string(), reliability: z.number().nullish(), pastJobs: z.number(), noShows: z.number().nullish() }).nullish(),
   addressLine: z.string().nullish(), access: z.string().nullish(), vehicle: z.string().nullish(), customerNote: z.string().nullish(), escrow: z.string().nullish(),
   /** The payments ledger's figures: what the customer paid and is held (incl. GST/HST), the tax, Northline's fee and the business's net. */
   escrowMoney: z.object({ state: z.string(), heldCents: z.number(), taxCents: z.number(), feeCents: z.number(), netCents: z.number() }).nullish(),
@@ -46,7 +46,7 @@ export const Quote = z.object({
 export type Quote = z.infer<typeof Quote>;
 
 export const QuoteRequest = z.object({
-  id: z.string(), ref: z.string(), title: z.string(), customerName: z.string().nullish(), reliability: z.number().nullish(), area: z.string().nullish(), body: z.string().nullish(),
+  id: z.string(), ref: z.string(), title: z.string(), customerName: z.string().nullish(), reliability: z.number().nullish(), customerNoShows: z.number().nullish(), area: z.string().nullish(), body: z.string().nullish(),
   preferredAt: z.string().nullish(), createdAt: z.string(), respondBy: z.string().nullish(), expiresAt: z.string().nullish(), quote: Quote.nullish(),
   /** S-153: the customer's photos (read with `customerPhotoUrl`) */
   photoIds: z.array(z.string()).optional(),
@@ -154,4 +154,7 @@ export function useDeclineRequest(m: string) {
  */
 export const openCustomerThread = (m: string, kind: 'quote-requests' | 'jobs', id: string) =>
   http(`${base(m)}/${kind}/${encodeURIComponent(id)}/thread`, { method: 'POST' }, z.object({ threadId: z.string() }));
+/** S-156: "The customer didn't show" — a report trust & safety confirms; 409 too_early / not_reportable / already_reported. */
+export const reportCustomerNoShow = (m: string, jobId: string) =>
+  http(`${base(m)}/jobs/${encodeURIComponent(jobId)}/customer-no-show`, { method: 'POST' });
 export const customerPhotoUrl = (m: string, photoId: string) => `${base(m)}/customer-photos/${encodeURIComponent(photoId)}`;

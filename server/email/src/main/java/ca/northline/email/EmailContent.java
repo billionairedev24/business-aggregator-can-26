@@ -296,7 +296,8 @@ public sealed interface EmailContent {
      * Settings › Notifications row {@code payout}.
      *
      * @param outcome {@code failed} (returned by the bank) | {@code canceled}
-     * @param failureCode Stripe's code ({@code account_closed}, {@code no_account}, …), null when canceled
+     * @param failureCode Stripe's code ({@code account_closed}, {@code no_account}, …), null when canceled; S-157: the
+     *     email says what it means ({@link #REASONS}, else a general reason) and keeps the code for support
      */
     record PayoutFailed(
             String businessName,
@@ -305,10 +306,35 @@ public sealed interface EmailContent {
             @Nullable String failureCode,
             URI payoutsLink) implements EmailContent {
 
+        /** Stripe's payout failure codes the email (and the Studio's notice) explain in words. */
+        public static final Set<String> REASONS = Set.of(
+                "account_closed",
+                "account_frozen",
+                "bank_account_restricted",
+                "bank_ownership_changed",
+                "could_not_process",
+                "debit_not_authorized",
+                "declined",
+                "incorrect_account_holder_address",
+                "incorrect_account_holder_name",
+                "incorrect_account_holder_tax_id",
+                "insufficient_funds",
+                "invalid_account_number",
+                "invalid_currency",
+                "no_account");
+
         public PayoutFailed {
             if (!outcome.equals("failed") && !outcome.equals("canceled")) {
                 throw new IllegalArgumentException("outcome must be failed or canceled: " + outcome);
             }
+        }
+
+        /** The reason's message key part: a known code, {@code other} for a code we don't explain, {@code canceled}. */
+        public String why() {
+            if (failureCode == null || failureCode.isBlank()) {
+                return outcome.equals("canceled") ? "canceled" : "other";
+            }
+            return REASONS.contains(failureCode) ? failureCode : "other";
         }
 
         @Override
@@ -334,6 +360,7 @@ public sealed interface EmailContent {
             v.put("amount", format.money(amountCents));
             v.put("hasCode", failureCode != null && !failureCode.isBlank());
             v.put("code", failureCode == null ? "" : failureCode);
+            v.put("why", why());
             v.put("link", payoutsLink.toString());
             return v;
         }
@@ -758,6 +785,61 @@ public sealed interface EmailContent {
             v.put("businessName", businessName);
             v.put("rule", "off_platform_payment".equals(rule) ? rule : "other");
             v.put("note", note == null ? "" : note);
+            v.put("link", link.toString());
+            return v;
+        }
+    }
+
+    /**
+     * S-156: the business's standing changed — Northline paused or resumed instant book, an appeal was decided, a
+     * coaching plan started — with the reason. Transactional: an account notice to the owners, always sent.
+     *
+     * @param subject what an appeal was about ({@code dispute}, {@code suspended}, {@code search_hidden},
+     *     {@code instant_book_off}); empty otherwise
+     * @param reference the appeal's or dispute's number; empty otherwise
+     */
+    record StandingUpdate(
+            String businessName,
+            StandingUpdate.Change change,
+            String subject,
+            String reason,
+            String reference,
+            long compensationCents,
+            URI link)
+            implements EmailContent {
+
+        public enum Change {
+            INSTANT_BOOK_PAUSED,
+            INSTANT_BOOK_RESUMED,
+            APPEAL_GRANTED,
+            APPEAL_DENIED,
+            COACHING_STARTED
+        }
+
+        @Override
+        public String template() {
+            return "standing-update";
+        }
+
+        @Override
+        public String variant() {
+            return code(change);
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("change", code(change));
+            v.put("about", subject.isEmpty() ? "other" : subject);
+            v.put("staffReason", reason);
+            v.put("reference", reference);
+            v.put("compensation", compensationCents > 0 ? format.money(compensationCents) : "");
             v.put("link", link.toString());
             return v;
         }
@@ -1317,6 +1399,22 @@ public sealed interface EmailContent {
                         "off_platform_payment",
                         "A message asked a customer to e-transfer you directly.",
                         URI.create(studio + "/messages")));
+        for (var change : StandingUpdate.Change.values()) {
+            var appeal =
+                    change == StandingUpdate.Change.APPEAL_GRANTED || change == StandingUpdate.Change.APPEAL_DENIED;
+            all.put(
+                    "standing-update." + code(change),
+                    new StandingUpdate(
+                            business,
+                            change,
+                            appeal ? "dispute" : "",
+                            change == StandingUpdate.Change.COACHING_STARTED
+                                    ? "Raise your rating — reply to every review within two days."
+                                    : "3 confirmed no-shows in the last 30 days.",
+                            appeal ? "DS-1188" : "",
+                            change == StandingUpdate.Change.APPEAL_GRANTED ? 12_750 : 0,
+                            URI.create(studio + "/standing")));
+        }
         for (var action : SellerOversightNotice.Action.values()) {
             all.put(
                     "seller-oversight." + code(action),

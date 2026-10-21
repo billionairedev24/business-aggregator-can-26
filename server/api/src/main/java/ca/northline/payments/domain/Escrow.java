@@ -166,6 +166,31 @@ public class Escrow {
         }
     }
 
+    /**
+     * S-156 (S-93 "completion photo missing → escrow release delayed"): the release waits until {@code until} at least,
+     * whatever releases it (the clock or the customer's sign-off). False when it is no longer held or already later.
+     */
+    public boolean holdReleaseUntil(Instant until) {
+        if (state == EscrowState.RELEASED || state == EscrowState.REFUNDED) {
+            return false;
+        }
+        if (releaseAt != null && !releaseAt.isBefore(until)) {
+            return false;
+        }
+        releaseAt = until;
+        return true;
+    }
+
+    /** S-156: a lifted delay — the release is due again at {@code at} (or earlier when it already was). */
+    public void releaseNoLaterThan(Instant at) {
+        if (state != EscrowState.RELEASED
+                && state != EscrowState.REFUNDED
+                && releaseAt != null
+                && releaseAt.isAfter(at)) {
+            releaseAt = at;
+        }
+    }
+
     public boolean releasable(Instant now) {
         return state == EscrowState.HELD && releaseAt != null && !releaseAt.isAfter(now);
     }

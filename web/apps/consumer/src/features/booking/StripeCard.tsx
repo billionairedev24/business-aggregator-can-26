@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { StripeJs } from '../cart/Payment';
+import { useWallets, type StripeJs } from '../cart/Payment';
 import { useBookingT } from './messages';
 
 /** Stripe.js from js.stripe.com (SAQ-A: card data only in Stripe's iframe), loaded once. */
@@ -27,20 +27,22 @@ export function StripeCard({ clientSecret, publishableKey, label, onAuthorized, 
   const host = useRef<HTMLDivElement>(null);
   const [stripe, setStripe] = useState<{ js: StripeJs; elements: ReturnType<StripeJs['elements']> }>();
   const [working, setWorking] = useState(false);
+  const options = useWallets(); // S-157: Apple Pay / Google Pay when the api allows them
 
   useEffect(() => {
+    if (!options.ready) return;
     let element: { destroy: () => void } | undefined;
     let cancelled = false;
     void loadStripe(publishableKey).then(js => {
       if (cancelled || !host.current) return;
       const elements = js.elements({ clientSecret, locale: document.documentElement.lang.startsWith('fr') ? 'fr-CA' : 'en-CA' });
-      const payment = elements.create('payment', { layout: 'tabs' });
+      const payment = elements.create('payment', { layout: 'tabs', wallets: options.wallets });
       payment.mount(host.current);
       element = payment;
       setStripe({ js, elements });
     }).catch(() => onError(t('genericError')));
     return () => { cancelled = true; element?.destroy(); };
-  }, [clientSecret, publishableKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clientSecret, publishableKey, options.ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const confirm = async () => {
     if (!stripe) return;

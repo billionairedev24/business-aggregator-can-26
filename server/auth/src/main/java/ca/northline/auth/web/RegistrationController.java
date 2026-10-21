@@ -47,14 +47,18 @@ class RegistrationController {
     private final Clock clock;
 
     @PostMapping
-    AuthResponses.RegistrationStep start(@Valid @RequestBody AuthRequests.Register body) {
+    AuthResponses.RegistrationStep start(
+            @Valid @RequestBody AuthRequests.Register body, jakarta.servlet.http.HttpServletRequest request) {
         var pending = registration.start(new RegistrationService.Start(
                 Objects.requireNonNull(body.firstName()),
                 Objects.requireNonNull(body.lastName()),
                 Objects.requireNonNull(body.phone()),
                 Objects.requireNonNull(body.email()),
                 body.termsLanguage(),
-                Boolean.TRUE.equals(body.termsEnglishRequested())));
+                Boolean.TRUE.equals(body.termsEnglishRequested()),
+                AuthRequests.requested(body.marketing()),
+                Objects.requireNonNullElse(body.consentSource(), "web_signup"),
+                Clients.of(request)));
         return step("otp", pending);
     }
 

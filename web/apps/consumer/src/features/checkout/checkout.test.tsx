@@ -131,6 +131,41 @@ describe('3-step checkout (redesign § 1.3, AT Shop:502)', () => {
     expect(calls.filter(c => c.url === '/api/v1/cart').length).toBeGreaterThan(1);
   });
 
+  it('S-157: an unticked offers box for someone without the consent; ticked, it is recorded after the order (source checkout)', async () => {
+    const wording = 'Yes, Northline Marketplace Inc. may email me Northline’s offers, rewards and news.';
+    routes['GET /api/v1/me/consents'] = () => ({ body: {
+      categories: [{ category: 'marketing_email', channel: 'email', granted: false, since: null, source: null, wordingVersion: 'account.email.2026-10', wording }],
+      history: [], requester: 'Northline Marketplace Inc. · 1200 – 8th Avenue SW · support@northline.ca',
+    } });
+    routes['PUT /api/v1/me/consents/marketing_email'] = () => ({ body: { categories: [], history: [], requester: '' } });
+    const { calls } = open();
+    const u = userEvent.setup({ delay: null });
+    await u.click(await within(await screen.findByRole('region', { name: 'Delivery address and time' })).findByRole('button', { name: 'Continue' }));
+    await u.click(within(step('Payment')).getByRole('button', { name: 'Continue to payment' }));
+    const review = await screen.findByRole('region', { name: 'Review items and delivery' });
+    const box = within(review).getByRole('checkbox', { name: wording });
+    expect(box).not.toBeChecked();
+    expect(within(review).getByText(/Sent by Northline Marketplace Inc\./)).toBeInTheDocument();
+    await u.click(box);
+    await u.click(within(screen.getByRole('complementary', { name: 'Total' })).getByRole('button', { name: 'Place your order' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Thank you — your order is placed.' })).toBeInTheDocument();
+    const put = calls.find(c => c.method === 'PUT' && c.url === '/api/v1/me/consents/marketing_email')!;
+    expect(put.body).toEqual({ granted: true, source: 'checkout', wordingVersion: 'account.email.2026-10' });
+    expect(calls.findIndex(c => c.url.endsWith('/place'))).toBeLessThan(calls.indexOf(put));
+  });
+
+  it('S-157: nothing is recorded when the offers box stays unticked', async () => {
+    routes['GET /api/v1/me/consents'] = () => ({ body: { categories: [{ category: 'marketing_email', channel: 'email', granted: false, wordingVersion: 'account.email.2026-10', wording: 'Yes, email me.' }], history: [], requester: 'N' } });
+    const { calls } = open();
+    const u = userEvent.setup({ delay: null });
+    await u.click(await within(await screen.findByRole('region', { name: 'Delivery address and time' })).findByRole('button', { name: 'Continue' }));
+    await u.click(within(step('Payment')).getByRole('button', { name: 'Continue to payment' }));
+    await screen.findByRole('checkbox', { name: 'Yes, email me.' });
+    await u.click(within(screen.getByRole('complementary', { name: 'Total' })).getByRole('button', { name: 'Place your order' }));
+    await screen.findByRole('heading', { level: 1, name: 'Thank you — your order is placed.' });
+    expect(calls.some(c => c.method === 'PUT')).toBe(false);
+  });
+
   it('keeps the sticky summary under the header as drawn (its measured height, else the header token)', () => {
     const checkoutCss = readFileSync('src/features/checkout/checkout.css', 'utf8'); // vitest runs in apps/consumer
     expect(checkoutCss).toMatch(/\.co-summary \{[^}]*position: sticky; top: calc\(var\(--nl-header-h, var\(--size-header\)\) \+ var\(--space-4\)\)/);
@@ -254,6 +289,35 @@ describe('3-step checkout (redesign § 1.3, AT Shop:502)', () => {
     expect(confirmPayment).toHaveBeenCalledTimes(1);
     expect(confirmCardPayment).toHaveBeenCalledWith('pi_2_secret_fake', { payment_method: 'pm_1' });
     expect(mount).toHaveBeenCalledTimes(1);
+  });
+
+  it('S-157: offers Apple Pay and Google Pay in the Payment Element when the api allows them (same intents, same step-up)', async () => {
+    const create = vi.fn((_type: string, _options: Record<string, unknown>) => ({ mount: vi.fn(), destroy: vi.fn() }));
+    vi.stubGlobal('Stripe', () => ({ elements: () => ({ create, submit: vi.fn(async () => ({})) }), confirmPayment: vi.fn(), confirmCardPayment: vi.fn() }));
+    routes['GET /api/v1/public/payments/options'] = () => ({ body: { provider: 'stripe', applePay: true, googlePay: false } });
+    routes['GET /api/v1/me/checkout'] = () => ({ body: setup({ payment: { provider: 'stripe', publishableKey: 'pk_test_fake' } }) });
+    routes['POST /api/v1/me/checkouts'] = () => ({ status: 201, body: { ...STARTED, payment: { provider: 'stripe', publishableKey: 'pk_test_fake' }, intents: [
+      { paymentIntent: 'pi_1', clientSecret: 'pi_1_secret_fake', status: 'requires_payment_method', amountCents: 4503 }] } });
+    open();
+    const u = userEvent.setup({ delay: null });
+    await u.click(await within(await screen.findByRole('region', { name: 'Delivery address and time' })).findByRole('button', { name: 'Continue' }));
+    await u.click(screen.getByRole('button', { name: 'Continue to payment' }));
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+    expect(create).toHaveBeenCalledWith('payment', { layout: 'tabs', wallets: { applePay: 'auto', googlePay: 'never' } });
+  });
+
+  it('S-157: cards only when the options can’t be read', async () => {
+    const create = vi.fn((_type: string, _options: Record<string, unknown>) => ({ mount: vi.fn(), destroy: vi.fn() }));
+    vi.stubGlobal('Stripe', () => ({ elements: () => ({ create, submit: vi.fn(async () => ({})) }), confirmPayment: vi.fn(), confirmCardPayment: vi.fn() }));
+    routes['GET /api/v1/me/checkout'] = () => ({ body: setup({ payment: { provider: 'stripe', publishableKey: 'pk_test_fake' } }) });
+    routes['POST /api/v1/me/checkouts'] = () => ({ status: 201, body: { ...STARTED, payment: { provider: 'stripe', publishableKey: 'pk_test_fake' }, intents: [
+      { paymentIntent: 'pi_1', clientSecret: 'pi_1_secret_fake', status: 'requires_payment_method', amountCents: 4503 }] } });
+    open();
+    const u = userEvent.setup({ delay: null });
+    await u.click(await within(await screen.findByRole('region', { name: 'Delivery address and time' })).findByRole('button', { name: 'Continue' }));
+    await u.click(screen.getByRole('button', { name: 'Continue to payment' }));
+    await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+    expect(create.mock.calls[0]![1]).toMatchObject({ wallets: { applePay: 'never', googlePay: 'never' } });
   });
 
   it('asks guests to sign in on the way', async () => {

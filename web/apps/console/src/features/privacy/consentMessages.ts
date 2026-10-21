@@ -11,7 +11,7 @@ export const useConsentT = defineMessages({
     act_granted: 'Given', act_withdrawn: 'Withdrawn',
     src_web_signup: 'Sign-up (web)', src_app_signup: 'Sign-up (app)', src_web_settings: 'Account settings (web)', src_app_settings: 'Account settings (app)',
     src_checkout: 'Checkout', src_studio: 'Studio', src_import: 'Import', src_unsubscribe_link: 'Unsubscribe link', src_list_unsubscribe: 'Mailbox one-click',
-    src_sms_keyword: 'STOP reply', src_console: 'Staff, on request', src_erasure: 'Account erased',
+    src_sms_keyword: 'Text reply (STOP or START)', src_console: 'Staff, on request', src_erasure: 'Account erased',
     withdraw: 'Withdraw {what} for {account}', withdrawn: 'Withdrawn. The person won’t get it any more.', withdrawError: 'That wasn’t saved. Try again.',
   },
   fr: {
@@ -23,7 +23,7 @@ export const useConsentT = defineMessages({
     act_granted: 'Donné', act_withdrawn: 'Retiré',
     src_web_signup: 'Inscription (Web)', src_app_signup: 'Inscription (appli)', src_web_settings: 'Paramètres du compte (Web)', src_app_settings: 'Paramètres du compte (appli)',
     src_checkout: 'Paiement', src_studio: 'Studio', src_import: 'Importation', src_unsubscribe_link: 'Lien de désabonnement', src_list_unsubscribe: 'Désabonnement en un clic de la messagerie',
-    src_sms_keyword: 'Réponse ARRET', src_console: 'Personnel, sur demande', src_erasure: 'Compte supprimé',
+    src_sms_keyword: 'Réponse par texto (ARRET ou START)', src_console: 'Personnel, sur demande', src_erasure: 'Compte supprimé',
     withdraw: 'Retirer {what} pour {account}', withdrawn: 'Retiré. La personne ne le recevra plus.', withdrawError: 'Ce n’a pas été enregistré. Réessayez.',
   },
 });

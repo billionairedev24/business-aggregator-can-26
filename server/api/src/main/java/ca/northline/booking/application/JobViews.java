@@ -55,7 +55,8 @@ public final class JobViews {
             BookingMoney.Balance balance,
             BookingMoney.@Nullable Cancellation cancellation) {}
 
-    public record Customer(String name, @Nullable BigDecimal reliability, long pastJobs) {}
+    /** @param noShows S-156: the customer's confirmed no-shows when the trust rules flag them (else 0) */
+    public record Customer(String name, @Nullable BigDecimal reliability, long pastJobs, int noShows) {}
 
     public record TimelineEntry(
             String type,

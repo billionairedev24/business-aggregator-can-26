@@ -216,4 +216,8 @@ NotFound:licence,No licence with id %s,Aucun permis avec l’identifiant %s,need
 web/apps/console/src/features/vetting/ageMessages.ts#colSource,Source,Source,needs translator review
 NotFound:payment,No payment with id %s,Aucun paiement avec l’identifiant %s,needs translator review
 NotFound:loyalty rule,No loyalty rule with id %s,Aucune règle de points avec l’identifiant %s,needs translator review
+NotFound:appeal,No appeal with id %s,Aucun appel avec l’identifiant %s,needs translator review
+NotFound:coaching plan,No coaching plan with id %s,Aucun plan d’accompagnement avec l’identifiant %s,needs translator review
+NotFound:coaching task,No coaching task with id %s,Aucune tâche d’accompagnement avec l’identifiant %s,needs translator review
+NotFound:consequence,No consequence with id %s,Aucune mesure avec l’identifiant %s,needs translator review
 web/apps/studio/src/features/storefront/messages.ts#rewardBudget,Budget ($),Budget (en $),needs translator review

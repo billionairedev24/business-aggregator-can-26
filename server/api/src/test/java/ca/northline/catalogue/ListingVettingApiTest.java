@@ -120,6 +120,18 @@ class ListingVettingApiTest extends CatalogueApiTest {
 
         mvc.perform(get(LISTING, biz.merchantId(), id).with(TestJwt.member(biz.userId())))
                 .andExpect(jsonPath("$.vetting").value("rejected"));
+        // S-156: the Studio reads the reviewer's reasons and note; another business's listing is a 404
+        mvc.perform(get(LISTING + "/review", biz.merchantId(), id).with(TestJwt.member(biz.userId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.decision").value("rejected"))
+                .andExpect(jsonPath("$.reasons[1]").value("pricing"))
+                .andExpect(jsonPath("$.note").value("Add your AMVIC licence."));
+        var other = provider(MerchantRole.OWNER);
+        mvc.perform(get(LISTING + "/review", other.merchantId(), id).with(TestJwt.member(other.userId())))
+                .andExpect(status().isNotFound());
+        var unreviewed = flaggedService(other, "Oil change");
+        mvc.perform(get(LISTING + "/review", other.merchantId(), unreviewed).with(TestJwt.member(other.userId())))
+                .andExpect(status().isNoContent());
         assertThat(audit(biz.merchantId(), "vetting."))
                 .singleElement()
                 .satisfies(a -> assertThat(a)

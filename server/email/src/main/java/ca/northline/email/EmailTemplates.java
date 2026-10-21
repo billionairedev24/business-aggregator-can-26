@@ -122,7 +122,9 @@ public final class EmailTemplates {
             "businessType",
             "what",
             "ageClass",
-            "rejectReason");
+            "rejectReason",
+            // S-157: a payout's failure reason (PayoutFailed.why(): a known Stripe code, other, canceled)
+            "why");
 
     /** Lists whose items (or items' {@code code}) become message keys: {@code reasons}, {@code checks}. */
     static final Set<String> KEY_LISTS = Set.of("reasons", "checks");

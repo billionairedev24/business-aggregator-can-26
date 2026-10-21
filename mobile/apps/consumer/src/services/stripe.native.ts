@@ -1,6 +1,7 @@
 import type * as StripeSdk from '@stripe/stripe-react-native';
 
 import { config } from '../config';
+import { merchantIdentifier, sheetWallets, walletsAllowed } from '../shop/wallets';
 import type { BookingPayments } from './payments';
 
 /**
@@ -18,7 +19,7 @@ export const stripeBookingPayments: BookingPayments = {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const stripe = require('@stripe/stripe-react-native') as typeof StripeSdk;
     // the app's scheme brings the person back from a bank's own page or app (3-D Secure redirects)
-    await stripe.initStripe({ publishableKey: key, urlScheme: SCHEME, setReturnUrlSchemeOnAndroid: true });
+    await stripe.initStripe({ publishableKey: key, urlScheme: SCHEME, setReturnUrlSchemeOnAndroid: true, merchantIdentifier: merchantIdentifier() });
     if (method.kind === 'saved') {
       const r = await stripe.confirmPayment(secret, { paymentMethodType: 'Card', paymentMethodData: { paymentMethodId: method.paymentMethodId } });
       if (!r.error) return { status: 'paid' };
@@ -29,6 +30,7 @@ export const stripeBookingPayments: BookingPayments = {
       merchantDisplayName: 'Northline',
       returnURL: `${SCHEME}://stripe-redirect`,
       defaultBillingDetails: { address: { country: 'CA' } },
+      ...sheetWallets(await walletsAllowed()), // S-157
     });
     if (init.error) return { status: 'failed', message: init.error.localizedMessage ?? init.error.message };
     const shown = await stripe.presentPaymentSheet();

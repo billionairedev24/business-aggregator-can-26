@@ -67,3 +67,23 @@ describe('S-39 re-vetting in the editor', () => {
     expect(screen.getByText(/Modifié : prix\. Les clients ne voient pas cette annonce/)).toBeTruthy();
   });
 });
+
+describe('S-156 a rejected listing shows the reviewer\'s reasons', () => {
+  it('lists the reasons and the note', async () => {
+    stubFetch({
+      [`GET ${base}/catalogue/categories`]: { items: [] },
+      [`GET ${base}/listings/s1/review`]: { decision: 'rejected', reasons: ['pricing', 'misleading'], note: 'Parts are charged on site.', decidedAt: '2026-09-30T16:00:00Z' },
+    });
+    renderScreen(<ServiceEditor portal="provider" detail={service({ vetting: 'rejected' })} />);
+    expect(await screen.findByText("Northline's review rejected this listing")).toBeTruthy();
+    expect(screen.getByText('Reasons: pricing and misleading. Fix it and submit it again.')).toBeTruthy();
+    expect(screen.getByText("Reviewer's note: Parts are charged on site.")).toBeTruthy();
+  });
+
+  it('says nothing when there is no decision', async () => {
+    stubFetch({ [`GET ${base}/catalogue/categories`]: { items: [] } });
+    renderScreen(<ServiceEditor portal="provider" detail={service({ vetting: 'rejected' })} />);
+    await new Promise(r => setTimeout(r, 50));
+    expect(screen.queryByText("Northline's review rejected this listing")).toBeNull();
+  });
+});

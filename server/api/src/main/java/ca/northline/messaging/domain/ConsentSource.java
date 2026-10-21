@@ -19,7 +19,10 @@ public enum ConsentSource implements CodedEnum {
     UNSUBSCRIBE_LINK,
     /** A mailbox provider's one-click unsubscribe (RFC 8058 POST). */
     LIST_UNSUBSCRIBE,
-    /** A STOP / ARRET reply to an SMS. Reserved: the SMS port receives no inbound messages yet. */
+    /**
+     * A STOP / ARRET (withdrawal) or START (grant again, only after a STOP) text to Northline's number (S-157; inbound
+     * webhook from the SMS provider).
+     */
     SMS_KEYWORD,
     /** Staff on the person's behalf (a withdrawal by phone, mail or email). */
     CONSOLE,

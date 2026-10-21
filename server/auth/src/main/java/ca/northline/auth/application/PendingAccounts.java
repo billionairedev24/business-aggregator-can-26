@@ -1,7 +1,9 @@
 package ca.northline.auth.application;
 
 import ca.northline.auth.domain.App;
+import ca.northline.auth.domain.SignupConsent;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
@@ -27,6 +29,7 @@ public interface PendingAccounts {
      * @param id the identity.users id the account gets once confirmed
      * @param phone optional, E.164, unverified
      * @param locale {@code en-CA} | {@code fr-CA}
+     * @param marketingConsents S-157: the form's ticked marketing checkboxes, recorded when the account is created
      */
     record PendingAccount(
             String id,
@@ -41,7 +44,12 @@ public interface PendingAccounts {
             Instant termsAcceptedAt,
             @Nullable String termsLanguage,
             @Nullable Instant termsEnglishRequestedAt,
-            Instant expiresAt) {
+            Instant expiresAt,
+            List<SignupConsent> marketingConsents) {
+
+        public PendingAccount {
+            marketingConsents = List.copyOf(marketingConsents);
+        }
 
         public boolean expired(Instant now) {
             return !expiresAt.isAfter(now);

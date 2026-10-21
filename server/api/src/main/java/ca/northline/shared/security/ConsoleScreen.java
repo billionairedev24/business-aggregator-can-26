@@ -31,6 +31,8 @@ public enum ConsoleScreen implements CodedEnum {
     UAT,
     /** S-118: a market's go-live checklist, the two-person switch to live, rollback and hypercare. */
     GO_LIVE,
+    /** S-157: Northline's own offers by email or text to the consenting customers of a market (CASL). */
+    OFFERS,
     PROFILE,
     ONCALL;
 

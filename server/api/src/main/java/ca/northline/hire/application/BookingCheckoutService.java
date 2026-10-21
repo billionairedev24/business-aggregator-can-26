@@ -25,6 +25,7 @@ import ca.northline.hire.application.BookingCheckout.ViewCalendar;
 import ca.northline.hire.domain.BookingRequest;
 import ca.northline.hire.domain.Pricing;
 import ca.northline.hire.domain.ServiceKind;
+import ca.northline.identity.api.CustomerNoShows;
 import ca.northline.identity.api.PersonDirectory;
 import ca.northline.merchants.api.PublicProviders;
 import ca.northline.payments.api.EscrowKind;
@@ -84,6 +85,7 @@ class BookingCheckoutService
     private final PaymentGate gate;
     private final CustomerBookings bookings;
     private final PersonDirectory people;
+    private final CustomerNoShows noShows;
     private final TaxRates taxRates;
     private final SecretSealer sealer;
     private final RegionDefaults region;
@@ -131,6 +133,10 @@ class BookingCheckoutService
             String customerId, String slug, String serviceId, Instant startsAt, @Nullable BigDecimal hours) {
         var provider = provider(slug);
         var offer = bookable(provider, serviceId);
+        if (noShows.of(customerId).isPresent() && kind(offer) != ServiceKind.CONSULT) {
+            // S-156: after confirmed no-shows the provider accepts a request first (S-93 customer no-shows)
+            throw RuleViolation.of("serviceId", "approval", CustomerNoShows.INSTANT_REFUSED);
+        }
         var duration = hours == null || !"hourly".equals(offer.pricingMode())
                 ? offer.durationMin()
                 : hours.multiply(BigDecimal.valueOf(60)).intValue();

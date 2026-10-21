@@ -17,6 +17,7 @@ import { EmptyState, LoadingList, SignInPrompt, errorMessage } from '../ui/state
 import { SUBSTITUTIONS, Sums, bodyOf, chooseAddress, extrasOf, savedAddress, useQuote } from './Checkout';
 import { CART_KEY, problemCode, shop, useMarket, useShopFormat } from './common';
 import { cardPaymentsFor, pendingIntents, type PayMethod } from './payments';
+import { CheckoutConsent, useCheckoutConsent } from '../account/CheckoutConsent';
 import { Kicker, Panel, Thumb } from './parts';
 import { CheckoutStep } from './steps';
 import { StepUpFailed, stepUpWithCode, type StepUpFailure } from './stepUp';
@@ -54,6 +55,7 @@ export function Pay() {
     staleTime: 15_000,
   });
   const cards = useQuery({ queryKey: ['shop', 'cards'], queryFn: () => shop().cards(), enabled: signedIn, staleTime: 60_000 });
+  const consent = useCheckoutConsent(signedIn); // S-157: the optional offers box (CASL)
 
   const address =
     params.address === 'location'
@@ -116,6 +118,7 @@ export function Pay() {
     setBusy(true);
     try {
       const placed = await shop().place(s.checkoutId, placeKey.current);
+      await consent.record(); // S-157: the ticked offers box, once the order went through
       await qc.invalidateQueries({ queryKey: CART_KEY });
       void qc.invalidateQueries({ queryKey: ['shop', 'checkout'] });
       router.replace({ pathname: '/orders/[id]/confirmed', params: { id: placed?.orderId ?? s.orderId } });
@@ -323,6 +326,7 @@ export function Pay() {
           </View>
         ))}
         <Sums subtotalCents={quote.data?.subtotalCents ?? 0} quote={quote} />
+        <CheckoutConsent consent={consent} />
       </CheckoutStep>
     </Screen>
   );

@@ -29,6 +29,9 @@ const RULES: Record<string, AuthKitKey> = {
   'currentPassword:mismatch': 'currentPasswordWrong',
   'token:expired': 'linkExpired',
   'token:required': 'linkExpired',
+  // S-157: the sign-up marketing checkboxes
+  'marketing:stale': 'consentWordingChanged',
+  'marketing:allowed': 'consentChoose',
 };
 
 /** S-154: the password rule ids the server answers with that depend on the message (length: too short or too long). */
@@ -41,7 +44,8 @@ export function fieldErrors(err: unknown, t: AuthKitT, mismatch: AuthKitKey = 'c
   if (!(err instanceof ValidationError)) return {};
   const out: Record<string, string> = {};
   for (const e of err.errors) {
-    const key = e.field === 'password' && e.rule === 'length' ? passwordLengthKey(e.message)
+    const key = e.field === 'phone' && e.rule === 'required' && /offers by text/.test(e.message) ? 'consentSmsNeedsPhone'
+      : e.field === 'password' && e.rule === 'length' ? passwordLengthKey(e.message)
       : e.field === 'password' && e.rule === 'mismatch' ? 'credentialsWrong'
       : RULES[`${e.field}:${e.rule}`] ?? (e.rule === 'mismatch' ? mismatch : undefined);
     out[e.field] ??= key ? t(key) : e.message;

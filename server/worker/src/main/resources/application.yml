@@ -89,6 +89,7 @@ northline:
     auth-token: ${SMS_AUTH_TOKEN:}
     region: ${SMS_REGION:}
     endpoint: ${SMS_ENDPOINT:}
+    status-callback-url: ${SMS_STATUS_CALLBACK_URL:}   # S-157: the api's /api/v1/webhooks/sms/status; empty = none
   notifications:
     studio-url: ${STUDIO_ORIGIN:http://localhost:3100}        # links in the payout.failed email
     api-url: ${API_PUBLIC_URL:http://localhost:8080}          # unsubscribe links point at the api
