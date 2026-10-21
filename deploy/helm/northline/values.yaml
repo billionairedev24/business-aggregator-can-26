@@ -493,7 +493,7 @@ apps:
     autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 6, targetCPUUtilizationPercentage: 70 }
     resources:
       requests: { cpu: 250m, memory: 1Gi }
-      limits: { memory: 1Gi }
+      limits: { memory: 1536Mi }   # 1Gi: OOMKilled during start-up once S-150–S-157 grew the context (ovh-vps, 2026-10-21)
     env: {}
     # Secret variables → required (true: the pod doesn't start without the key) or optional (false).
     secretEnv:
