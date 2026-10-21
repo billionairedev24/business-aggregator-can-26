@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,7 +29,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * The consumer's loyalty (S-152). Single-factor sessions are accepted, like every {@code /api/v1/me} endpoint; Plus is
- * billed to a card saved with a second factor (S-59), so joining needs no step-up of its own.
+ * billed to a card saved with a second factor (S-59), so joining needs no step-up of its own. S-162: Northline bills Plus
+ * itself (the plan's RRULE, a PaymentIntent per period); a plan change waits for the next renewal.
  *
  * <pre>
  * GET    /api/v1/me/points?limit=            balance, value, next expiry, the rules, activity (newest first)
@@ -36,9 +38,11 @@ import org.springframework.web.bind.annotation.RestController;
  * POST   /api/v1/me/referral/claim           {code} — a new neighbour uses a code → the view; 422 with the reason
  * GET    /api/v1/me/plus                     the household's membership, prices, benefits
  * POST   /api/v1/me/plus                     {plan} (Idempotency-Key) → 201; clientSecret when 3-D Secure is needed
- * PATCH  /api/v1/me/plus                     {plan} (Idempotency-Key) — switch monthly ↔ annual (payer only)
+ * PATCH  /api/v1/me/plus                     {plan} (Idempotency-Key) — monthly ↔ annual from the next renewal (payer)
  * DELETE /api/v1/me/plus                     cancel at the end of the period (payer only)
  * POST   /api/v1/me/plus/resume              keep renewing (payer only)
+ * PUT    /api/v1/me/plus/card                {paymentMethodId|null} — the saved card Plus renews on (payer only)
+ * POST   /api/v1/me/plus/confirm             after confirming the waiting payment with the bank (payer only)
  * </pre>
  */
 @RestController
@@ -54,6 +58,9 @@ class MyLoyaltyController {
     record ClaimRequest(@Nullable String code) {}
 
     record PlanRequest(@Nullable String plan) {}
+
+    /** @param paymentMethodId one of the caller's saved cards; null = their default card */
+    record CardRequest(@Nullable String paymentMethodId) {}
 
     @Operation(summary = "The caller's points: balance, expiry, rules and activity")
     @GetMapping("/points")
@@ -117,6 +124,18 @@ class MyLoyaltyController {
     @PostMapping("/plus/resume")
     PlusView resume(CurrentUser user) {
         return plus.resume(user.userId(), Ids.next());
+    }
+
+    @Operation(summary = "Choose the saved card Plus renews on")
+    @PutMapping("/plus/card")
+    PlusView card(@RequestBody CardRequest body, CurrentUser user) {
+        return plus.useCard(user.userId(), body.paymentMethodId());
+    }
+
+    @Operation(summary = "After confirming the waiting Plus payment with the bank")
+    @PostMapping("/plus/confirm")
+    PlusView confirm(CurrentUser user) {
+        return plus.confirm(user.userId());
     }
 
     private static ResponseEntity<String> answer(IdempotentRequests.Outcome outcome) {

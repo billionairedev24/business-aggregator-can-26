@@ -61,7 +61,7 @@ export const SCREENS: Readonly<Record<ScreenKey, ScreenDef>> = {
   quote: { journey: 'D', story: 'S-101', file: 'quotes/[id]', sample: '/quotes/01J9QUOTE', personal: true, api: ['GET /me/quotes/{id}', 'POST /me/quotes/{id}/accept', 'POST /me/quotes/{id}/accept/confirm', 'POST /me/quotes/{id}/decline'] },
   account: { journey: 'D', story: 'S-101', file: '(tabs)/account', sample: '/account', tab: true, api: ['GET /me/account-summary', 'GET /me/profile', 'GET /me/preferences'] },
   security: { journey: 'D', story: 'S-101', file: 'security', sample: '/security', personal: true, api: ['GET /me/profile', 'POST /oauth2/revoke'] },
-  wallet: { journey: 'D', story: 'S-101', file: 'wallet', sample: '/wallet', personal: true, api: ['GET /me/wallet', 'GET|POST|PATCH|DELETE /me/plus', 'POST /me/plus/resume', 'GET /me/payment-methods'] },
+  wallet: { journey: 'D', story: 'S-101', file: 'wallet', sample: '/wallet', personal: true, api: ['GET /me/wallet', 'GET|POST|PATCH|DELETE /me/plus', 'POST /me/plus/resume', 'POST /me/plus/confirm', 'GET /me/payment-methods'] },
 };
 
 export const SCREEN_KEYS = Object.keys(SCREENS) as ScreenKey[];
