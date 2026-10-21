@@ -391,3 +391,9 @@ Both are AI-assisted suggestions. When `GET /api/v1/ai/status` says `available: 
   - Pre-select the case type from `route` and `category`; the customer can change it. When `urgent` is true, show
     the urgent help first.
   - The call opens nothing: the customer still submits the case.
+- **Built (S-158):** consumer web search results (`features/search/SmartSearch.tsx`) and the mobile app's search
+  (`SmartFilters`) show the reading as editable chips only when the text looks like a sentence and no filter is set;
+  nothing is applied until the shopper presses "Apply these filters" (chips can be removed first; "Just search the
+  words" dismisses). 503/429 → one line "Smart search isn't available right now" and the words' results stay. The help
+  centre (`features/help/HelpTriage.tsx`) suggests the case type and the help section for signed-in visitors; the
+  section mapping (category → help heading) is client-side. Locally the fake model answers both.

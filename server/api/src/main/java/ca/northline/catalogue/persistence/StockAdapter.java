@@ -149,4 +149,12 @@ class StockAdapter implements StockStore {
         sorted.forEach(p -> take(new Take(p.offerId(), p.variantId(), p.qty() * bundles)));
         return true;
     }
+
+    @Override
+    public java.util.Optional<String> merchantOf(String offerId) {
+        return jdbc.sql("select merchant_id from catalogue.offers where id = :id")
+                .param("id", offerId)
+                .query(String.class)
+                .optional();
+    }
 }

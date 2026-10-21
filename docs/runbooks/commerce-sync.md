@@ -34,7 +34,8 @@ hourly: expired OAuth requests and week-old webhook receipts purged
 |---|---|---|---|
 | API | Admin GraphQL `2026-07` (`SHOPIFY_API_VERSION`) | Catalog + Inventory, `Square-Version: 2025-10-16` | 2.0 (1.0 for token and webhooks) |
 | OAuth | app install, offline token (doesn't expire), callback signed with `hmac` | code flow; 30-day access token refreshed when < 7 days remain | code flow; short access token, **rotating** refresh token (re-sealed) |
-| scopes | `read_products,read_inventory` | `ITEMS_READ INVENTORY_READ MERCHANT_PROFILE_READ` | none requested (add `northline.commerce.lightspeed.scopes` if the add-on needs them) |
+| scopes | `read_products,read_inventory,write_inventory,read_locations` (S-158) | `ITEMS_READ INVENTORY_READ INVENTORY_WRITE MERCHANT_PROFILE_READ` (S-158) | none requested (add `northline.commerce.lightspeed.scopes` if the add-on needs them) |
+| stock writes (S-158) | `inventoryAdjustQuantities` (`available`, `@idempotent(key:)`) at the chosen location | `inventory/changes/batch-create` ADJUSTMENT (IN_STOCK → SOLD, NONE → IN_STOCK) with `idempotency_key` | reads the outlet's level, then `PUT /api/2.1/products/{id}` with the new `current_amount` (no idempotency key) |
 | products | `products(query: "status:active")`, 50 a page, variants + up to 9 images | `catalog/search` ITEM + related IMAGE; archived skipped | `products?after=<version>`, families by `variant_parent_id`; inactive/deleted skipped |
 | stock | variant `inventoryQuantity` (all locations) | `inventory/counts/batch-retrieve` IN_STOCK, summed over locations | `inventory?after=`, `inventory_level` summed over outlets |
 | price | variant `price` | variation `price_money.amount` | `price_excluding_tax` |
@@ -57,8 +58,8 @@ listing and only its price and stock change. **Later changes:** price and stock 
 description, images and variants follow it only while the listing is still a draft — once submitted, Northline's
 vetted content stays. A listing the merchant deleted in Northline is not imported again.
 
-**Stock is one-way.** The platform is the source of truth; Northline never writes stock back. Merchants must record
-Northline sales in their POS (or accept that the next sync puts back the platform's number).
+**Stock is two-way (S-158)** — see [Two-way stock](#two-way-stock-s-158). The platform stays the source of truth for
+the count; Northline sends it the *changes* its own orders make.
 
 A refused refresh (`invalid_grant`) or a 401 turns the connection to **reconnect**: the Studio shows "Access expired or
 was removed · reconnect to keep syncing" with **Reconnect**; nothing is read until then. Shopify's `app/uninstalled`
@@ -79,12 +80,54 @@ and Square's `oauth.authorization.revoked` disconnect it at once.
 | `STUDIO_ORIGIN` | yes (already) | where the callback sends the browser back |
 | `KMS_PROVIDER`, `KMS_ENCRYPTION_KEY_ID` | staging, prod (already, S-32) | the envelope key that seals the tokens ([calendar-sync.md](calendar-sync.md#the-envelope-key-kms_encryption_key_id)) |
 | `COMMERCE_POLL_INTERVAL`, `COMMERCE_RECONCILE_INTERVAL`, `COMMERCE_WEBHOOK_RATE_LIMIT` | no | `PT1H`, `P1D`, `600` deliveries per minute and client address |
+| `COMMERCE_STOCK_PUSH_INTERVAL`, `COMMERCE_STOCK_PUSH_MAX_ATTEMPTS` | no | `PT1M` (how often due stock changes are sent), `8` attempts (1 min, 3 min, 9 min … capped at 6 h) before a change is marked failed |
 
 Secrets are listed in Terraform's `app_secrets` for AWS, Google Cloud and Azure (created empty in Secrets Manager /
 Secret Manager; Azure Key Vault can't hold an empty secret, so the operator creates them) and in the chart's
 `externalSecrets.secretNames`; once a value is set, map it in the environment's values
 (`apps.api.secretEnv.SHOPIFY_CLIENT_SECRET: true` and `externalSecrets.optionalKeys`). The client ids are not secret:
 put them in the operator's `configEnv`.
+
+## Two-way stock (S-158)
+
+```
+order placed (OrderPlaced, per offer line)  ─┐
+cancellation (stock given back)              ├─▶ catalogue.commerce_stock_pushes (pending, idempotency key
+return received (stock given back)           ─┘    sale|cancellation|return:<source>:<offer>:<variant>, unique)
+every COMMERCE_STOCK_PUSH_INTERVAL (1 min): due rows claimed (5 min lease, 50 at a time) → adapter adjust(delta)
+   applied → done (platform's new count kept)       refused → conflict (code below)       error → retried
+   retries: 1 min, 3 min, 9 min … ≤ 6 h; after COMMERCE_STOCK_PUSH_MAX_ATTEMPTS (8) → failed
+```
+
+Only offers imported from (or linked to) a connected platform with a known variant are pushed; everything else is
+Northline-only stock as before. While a change is pending, the hourly read subtracts pending deltas from the
+platform's number so a sale isn't "put back" before it lands.
+
+**Location.** Each connection sells from one location (Shopify location, Square location, Lightspeed outlet) —
+`catalogue.integrations.location_id/location_name`. A store with one location is chosen automatically; with several,
+Studio › Settings › Integrations › Stock sync asks the **owner** to choose (`PUT …/integrations/{provider}/location`,
+audited `integration.location_chosen`) and changes wait as `choose_location` until then. Reads (stock) then come
+from that location only. A reconnect of the same account keeps it.
+
+**Conflicts** (shown in Studio › Settings › Integrations › Stock sync, owner/technician/cook can retry or dismiss):
+
+| code | meaning | what to do |
+|---|---|---|
+| `choose_location` | several locations, none chosen | the owner chooses one; waiting changes are re-queued |
+| `scope_missing` | the grant predates `write_inventory` / `INVENTORY_WRITE` | reconnect; the changes are re-queued on reconnect |
+| `reconnect` / `disconnected` | the connection needs a reconnect or was removed | reconnect, or dismiss |
+| `not_found` | the variant or product is gone on the platform | fix the link, then retry, or dismiss |
+| `oversold` | applied, but the platform's count went below zero | correct the count on the platform; dismiss |
+| `rejected` / `ambiguous` | the platform refused the change / the outcome is unknown (timeout) | check the platform, retry or dismiss |
+
+Operations: `select state, conflict, attempts, last_error, next_attempt_at from catalogue.commerce_stock_pushes where
+merchant_id = … order by created_at desc`. Retrying is safe on Shopify and Square (idempotency keys); on Lightspeed a
+retry after an `ambiguous` timeout can apply the change twice — check the outlet's count first.
+
+**Never exercised against the real platforms:** every write path is covered only by WireMock stand-ins built from
+the public docs (Shopify `inventoryAdjustQuantities` with `@idempotent` and `changeFromQuantity: null`, `locations`;
+Square `inventory/changes/batch-create` states; Lightspeed 2.1 product `PUT` field names). Try each on a development
+store / sandbox before enabling for merchants.
 
 ## Redirect and webhook URLs per environment
 
@@ -108,7 +151,7 @@ the module that started it — [pos-menu-import.md](pos-menu-import.md)), the ca
 1. In the Shopify **Partner Dashboard** (or the Dev Dashboard), create an app per environment ("Northline dev",
    "Northline staging", "Northline") with **public distribution** (merchants of any shop install it).
 2. **Configuration:** App URL `https://studio.<zone>/`; allowed redirection URL
-   `https://api.<zone>/api/v1/commerce/oauth/shopify/callback`; Admin API access scopes `read_products,read_inventory`;
+   `https://api.<zone>/api/v1/commerce/oauth/shopify/callback`; Admin API access scopes `read_products,read_inventory,write_inventory,read_locations`;
    webhook API version = `SHOPIFY_API_VERSION`.
 3. **Compliance webhooks** (mandatory for public apps): customer data request, customer redact and shop redact, all
    to `https://api.<zone>/api/v1/webhooks/commerce/shopify`. Northline keeps no Shopify customer data; shop redact

@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.MediaType;
@@ -44,6 +45,11 @@ import tools.jackson.databind.JsonNode;
  *       {@code inventory.count.updated}, {@code oauth.authorization.revoked}); {@code x-square-hmacsha256-signature} =
  *       base64 HMAC-SHA256 of notification URL + raw body with the subscription's signature key; deduplicated on
  *       {@code event_id}.
+ *   <li><b>Two-way stock (S-158):</b> {@code GET /v2/locations} (active ones); with a location chosen, counts are read
+ *       for it only ({@code location_ids}); Northline's sales go out as {@code POST /v2/inventory/changes/batch-create}
+ *       ADJUSTMENTs {@code IN_STOCK → SOLD}, restocks {@code NONE → IN_STOCK}, with the push's key as
+ *       {@code idempotency_key} (Square applies a key once). Needs {@code INVENTORY_WRITE} (scope added in S-158:
+ *       older connections must reconnect).
  *   <li>429s are retried with back-off ({@link Backoff}).
  * </ul>
  */
@@ -163,6 +169,11 @@ class SquareCatalogSource implements CommerceCatalogSource {
 
     @Override
     public Page products(Credentials c, @Nullable String cursor) {
+        return products(c, cursor, null);
+    }
+
+    @Override
+    public Page products(Credentials c, @Nullable String cursor, @Nullable String locationId) {
         var body = new LinkedHashMap<String, Object>();
         body.put("object_types", List.of("ITEM"));
         body.put("include_related_objects", true);
@@ -178,11 +189,16 @@ class SquareCatalogSource implements CommerceCatalogSource {
                 items.add(o);
             }
         }
-        return new Page(products(c, items, images), text(page, "cursor"));
+        return new Page(products(c, items, images, locationId), text(page, "cursor"));
     }
 
     @Override
     public Optional<ExternalProduct> product(Credentials c, String externalId) {
+        return product(c, externalId, null);
+    }
+
+    @Override
+    public Optional<ExternalProduct> product(Credentials c, String externalId, @Nullable String locationId) {
         JsonNode found;
         try {
             found = call(
@@ -201,7 +217,7 @@ class SquareCatalogSource implements CommerceCatalogSource {
         if (!"ITEM".equals(text(object, "type")) || !active(object)) {
             return Optional.empty();
         }
-        return Optional.of(products(c, List.of(object), images(found.path("related_objects")))
+        return Optional.of(products(c, List.of(object), images(found.path("related_objects")), locationId)
                 .getFirst());
     }
 
@@ -222,8 +238,12 @@ class SquareCatalogSource implements CommerceCatalogSource {
         return out;
     }
 
-    /** Maps items and reads their variations' IN_STOCK counts (summed over locations) in batches of 100. */
-    private List<ExternalProduct> products(Credentials c, List<JsonNode> items, Map<String, URI> images) {
+    /**
+     * Maps items and reads their variations' IN_STOCK counts (summed over locations, or the chosen location's) in
+     * batches of 100.
+     */
+    private List<ExternalProduct> products(
+            Credentials c, List<JsonNode> items, Map<String, URI> images, @Nullable String locationId) {
         var variationIds = new ArrayList<String>();
         for (var item : items) {
             for (var v : item.path("item_data").path("variations")) {
@@ -241,6 +261,9 @@ class SquareCatalogSource implements CommerceCatalogSource {
                 var body = new LinkedHashMap<String, Object>();
                 body.put("catalog_object_ids", batch);
                 body.put("states", List.of("IN_STOCK"));
+                if (locationId != null) {
+                    body.put("location_ids", List.of(locationId));
+                }
                 if (cursor != null) {
                     body.put("cursor", cursor);
                 }
@@ -298,6 +321,59 @@ class SquareCatalogSource implements CommerceCatalogSource {
                     updated == null ? null : Instant.parse(updated)));
         }
         return out;
+    }
+
+    @Override
+    public List<Location> locations(Credentials c) {
+        var out = new ArrayList<Location>();
+        var found = call(c, () -> api.get(url("/v2/locations"), config.apiVersion(), bearer(c)));
+        for (var l : found.path("locations")) {
+            var id = text(l, "id");
+            if (id != null && !"INACTIVE".equals(text(l, "status"))) {
+                out.add(new Location(id, Optional.ofNullable(text(l, "name")).orElse(id)));
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public boolean canWriteStock(Set<String> grantedScopes) {
+        return grantedScopes.contains("INVENTORY_WRITE");
+    }
+
+    @Override
+    public Adjusted adjust(Credentials c, Adjustment a) {
+        var sale = a.delta() < 0;
+        var adjustment = new LinkedHashMap<String, Object>();
+        adjustment.put("catalog_object_id", Optional.ofNullable(a.stockRef()).orElse(a.variantId()));
+        adjustment.put("location_id", a.locationId());
+        adjustment.put("from_state", sale ? "IN_STOCK" : "NONE");
+        adjustment.put("to_state", sale ? "SOLD" : "IN_STOCK");
+        adjustment.put("quantity", Integer.toString(Math.abs(a.delta())));
+        adjustment.put("occurred_at", clock.instant().toString());
+        var body = new LinkedHashMap<String, Object>();
+        body.put("idempotency_key", a.idempotencyKey());
+        body.put("changes", List.of(Map.of("type", "ADJUSTMENT", "adjustment", adjustment)));
+        body.put("ignore_unchanged_counts", true);
+        JsonNode result;
+        try {
+            result = call(
+                    c, () -> api.post(url("/v2/inventory/changes/batch-create"), config.apiVersion(), bearer(c), body));
+        } catch (HttpClientErrorException.Forbidden e) {
+            return new Adjusted.Refused("scope_missing", "Square: " + e.getStatusText());
+        } catch (HttpClientErrorException.NotFound e) {
+            return new Adjusted.Refused("not_found", "Square: " + e.getStatusText());
+        } catch (HttpClientErrorException.BadRequest e) {
+            return new Adjusted.Refused("rejected", "Square: " + e.getResponseBodyAsString());
+        }
+        for (var count : result.path("counts")) {
+            if ("IN_STOCK".equals(text(count, "state")) && a.locationId().equals(text(count, "location_id"))) {
+                return new Adjusted.Applied(new java.math.BigDecimal(String.valueOf(text(count, "quantity")))
+                        .setScale(0, java.math.RoundingMode.DOWN)
+                        .intValue());
+            }
+        }
+        return new Adjusted.Applied(null);
     }
 
     /** The subscription is app-level (Developer Console): active when its signature key is configured. */

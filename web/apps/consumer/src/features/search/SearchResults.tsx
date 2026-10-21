@@ -17,6 +17,7 @@ import { categorySlot } from '@northline/media';
 import { Tile } from '../pages/Tile';
 import { PlaceButton } from '../pages/PlaceButton';
 import { rememberSearch } from './recent';
+import { SmartSearch } from './SmartSearch';
 
 type T = ReturnType<typeof useSearchT>;
 const EXACT_UP_TO = 10_000;
@@ -28,7 +29,8 @@ const KIND_SCOPE: Record<string, Scope> = { service: 'services', product: 'shop'
  * Search results (redesign § 1.3 "Results page", AT Shop:274; S-48 behaviour): a summary bar ("N results for q" and
  * the sort), a 230px filter aside — Type (products and services together, or one of them), Category, Distance,
  * Availability, Price, "Clear all" — and one grid of product and service cards, loaded page by page as the visitor
- * scrolls. The first page is server-rendered; the browser adds the visitor's place.
+ * scrolls. The first page is server-rendered; the browser adds the visitor's place. S-158: a sentence typed in the
+ * search box gets the AI's suggested filters as removable chips above the results, applied only on request.
  */
 export function SearchResults({ params }: { params: SearchParams }) {
   const t = useSearchT();
@@ -99,6 +101,7 @@ export function SearchResults({ params }: { params: SearchParams }) {
         </aside>
 
         <div className="nl-results-main" aria-busy={results.isFetching}>
+          <SmartSearch params={params} located={located} onApply={next => go(next)} />
           {results.isError && !results.data ? (
             <ErrorState message={errorText(t, results.error)} onRetry={() => void results.refetch()} />
           ) : !first ? (

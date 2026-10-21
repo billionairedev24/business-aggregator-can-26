@@ -2,6 +2,7 @@ package ca.northline.console.application;
 
 import ca.northline.developer.api.AuditTrail;
 import ca.northline.merchants.api.PilotCohort;
+import ca.northline.region.api.FrenchListings;
 import ca.northline.region.api.LaunchStatus;
 import ca.northline.region.api.RegionEditor;
 import ca.northline.region.api.RegionEditor.ProvinceRow;
@@ -13,6 +14,7 @@ import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -267,7 +269,85 @@ class SwitchboardService implements Switchboard {
                 row.waitlist(),
                 markets,
                 zones,
-                checklist);
+                checklist,
+                languageSettings(row, markets));
+    }
+
+    /**
+     * S-158: the stored rules and what applies — RegionCatalogue's rule (a market's own value, else its province's;
+     * REGION_FRENCH_FIRST wins; a French-first place always requires French listing text).
+     */
+    private List<LanguageSetting> languageSettings(ProvinceRow row, List<RegionEditor.Market> markets) {
+        var stored = new java.util.HashMap<String, RegionEditor.LanguageRow>();
+        store.languageRows(row.id()).forEach(r -> stored.put(r.regionId(), r));
+        var own = stored.get(row.id());
+        var provinceFirst = own == null ? null : own.frenchFirst();
+        var provinceListings = own == null ? null : own.frenchListings();
+        var provinceConfigured = regions.frenchFirstByConfiguration(row.code()) && !Boolean.TRUE.equals(provinceFirst);
+        var effectiveProvinceFirst = Boolean.TRUE.equals(provinceFirst) || provinceConfigured;
+        var effectiveProvinceListings =
+                effectiveProvinceFirst ? "require" : provinceListings == null ? "off" : provinceListings;
+        var out = new java.util.ArrayList<LanguageSetting>();
+        out.add(new LanguageSetting(
+                row.id(),
+                "province",
+                null,
+                provinceFirst,
+                provinceListings,
+                effectiveProvinceFirst,
+                effectiveProvinceListings,
+                provinceConfigured));
+        for (var m : markets) {
+            var r = stored.get(m.id());
+            var first = r == null ? null : r.frenchFirst();
+            var listings = r == null ? null : r.frenchListings();
+            var chainFirst = first != null ? first : effectiveProvinceFirst;
+            var configured = !chainFirst
+                    && (regions.frenchFirstByConfiguration(m.id()) || regions.frenchFirstByConfiguration(row.code()));
+            var effectiveFirst = chainFirst || configured;
+            out.add(new LanguageSetting(
+                    m.id(),
+                    "market",
+                    m.city(),
+                    first,
+                    listings,
+                    effectiveFirst,
+                    effectiveFirst ? "require" : listings != null ? listings : effectiveProvinceListings,
+                    configured));
+        }
+        return out;
+    }
+
+    @Override
+    public Province languages(
+            String regionId, @Nullable Boolean frenchFirst, @Nullable String frenchListings, Actor actor) {
+        var ref = store.lock(regionId).orElseThrow(() -> new NotFound("region", regionId));
+        FrenchListings listings = null;
+        if (frenchListings != null && !frenchListings.isBlank()) {
+            listings = java.util.Arrays.stream(FrenchListings.values())
+                    .filter(f -> f.code().equals(frenchListings.strip()))
+                    .findFirst()
+                    .orElseThrow(() -> RuleViolation.of("frenchListings", "option", FRENCH_LISTINGS));
+        }
+        var provinceId = ref.parentId() == null ? ref.id() : ref.parentId();
+        var before = store.languageRows(provinceId).stream()
+                .filter(r -> r.regionId().equals(regionId))
+                .findFirst()
+                .orElseThrow();
+        var after = new RegionEditor.LanguageRow(regionId, frenchFirst, listings == null ? null : listings.code());
+        if (!before.equals(after)) {
+            store.languages(regionId, frenchFirst, listings);
+            record(actor, "region.languages_changed", ref.kind(), regionId, languageMap(before), languageMap(after));
+            afterCommit();
+        }
+        return reload(ref.province());
+    }
+
+    private static Map<String, Object> languageMap(RegionEditor.LanguageRow r) {
+        var m = new LinkedHashMap<String, Object>();
+        m.put("frenchFirst", r.frenchFirst() == null ? "inherit" : r.frenchFirst());
+        m.put("frenchListings", r.frenchListings() == null ? "inherit" : r.frenchListings());
+        return m;
     }
 
     private void record(

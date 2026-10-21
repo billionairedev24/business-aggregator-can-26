@@ -25,6 +25,8 @@ logging.level:
   ca.northline: debug
   ca.northline.config.DevAuthFilter: debug
 northline:
+  # S-158: a partner registered in the console may publish its JWK Set on http://localhost (the cloud needs https)
+  partners.allow-http-jwks: true
   # No Elasticsearch under `local`: every search is empty until you run the compose `search` profile, create the indices
   # (`./gradlew :worker:searchIndices --args=apply`) and set SEARCH_PROVIDER=elasticsearch (docs/runbooks/search.md).
   search.provider: ${SEARCH_PROVIDER:local}

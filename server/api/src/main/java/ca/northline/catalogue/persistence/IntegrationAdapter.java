@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import tools.jackson.core.type.TypeReference;
@@ -73,6 +74,10 @@ class IntegrationAdapter implements IntegrationRepository {
                         values (:m, :p, :id, 'connected', 'ok', :account, :label, :scopes, :at, :ref, :key, :enc,
                           'importing', 'none', null, :at)
                         on conflict (merchant_id, provider) do update set id = excluded.id, status = 'connected',
+                          location_id = case when catalogue.integrations.external_account_id
+                            = excluded.external_account_id then catalogue.integrations.location_id end,
+                          location_name = case when catalogue.integrations.external_account_id
+                            = excluded.external_account_id then catalogue.integrations.location_name end,
                           connection_state = 'ok', external_account_id = excluded.external_account_id,
                           account_label = excluded.account_label, scopes = excluded.scopes,
                           connected_at = excluded.connected_at, token_ref = excluded.token_ref,
@@ -174,6 +179,15 @@ class IntegrationAdapter implements IntegrationRepository {
         jdbc.sql("update catalogue.integrations set webhooks = :w where id = :id")
                 .param("id", id)
                 .param("w", state.name().toLowerCase(Locale.ROOT))
+                .update();
+    }
+
+    @Override
+    public void setLocation(String id, @Nullable String locationId, @Nullable String locationName) {
+        jdbc.sql("update catalogue.integrations set location_id = :loc, location_name = :name where id = :id")
+                .param("id", id)
+                .param("loc", locationId)
+                .param("name", locationName)
                 .update();
     }
 
@@ -286,6 +300,8 @@ class IntegrationAdapter implements IntegrationRepository {
                 syncStatus == null ? null : SyncStatus.valueOf(syncStatus.toUpperCase(Locale.ROOT)),
                 Webhooks.valueOf(rs.getString("webhooks").toUpperCase(Locale.ROOT)),
                 instant(rs, "last_polled_at"),
-                rs.getString("last_error"));
+                rs.getString("last_error"),
+                rs.getString("location_id"),
+                rs.getString("location_name"));
     }
 }

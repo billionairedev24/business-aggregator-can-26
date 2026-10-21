@@ -64,6 +64,14 @@ record PartnerSpec(
 
     /** Every configuration problem of this partner (empty = valid). */
     List<String> problems(String name, ClientPolicy policy) {
+        return problems(name, policy, true);
+    }
+
+    /**
+     * @param merchantsRequired false for a partner registered in the console (S-158): its businesses are the ones
+     *     whose owners approved, possibly none yet
+     */
+    List<String> problems(String name, ClientPolicy policy, boolean merchantsRequired) {
         var problems = new ArrayList<String>();
         if (!NAME.matcher(name).matches()) {
             problems.add("partner name must be lower-case letters, digits and - (at most 50)");
@@ -92,7 +100,7 @@ record PartnerSpec(
         scopes.stream()
                 .filter(s -> !SCOPES.contains(s))
                 .forEach(s -> problems.add("scope " + s + " is not a partner scope (allowed: " + SCOPES + ")"));
-        if (merchants.isEmpty()) {
+        if (merchantsRequired && merchants.isEmpty()) {
             problems.add("merchants is empty: a partner acts for named businesses only");
         }
         merchants.stream()
@@ -126,6 +134,12 @@ record PartnerSpec(
 
     /** The registration; {@code existing} keeps its internal id and issue date (an update in place). */
     RegisteredClient toRegisteredClient(String partner, @Nullable RegisteredClient existing) {
+        return toRegisteredClient(partner, existing, null);
+    }
+
+    /** @param keyVersion S-158: the console's key version (null for a partner from configuration) */
+    RegisteredClient toRegisteredClient(
+            String partner, @Nullable RegisteredClient existing, @Nullable Integer keyVersion) {
         var builder =
                 RegisteredClient.withId(existing == null ? UUID.randomUUID().toString() : existing.getId());
         var issuedAt = existing == null ? null : existing.getClientIdIssuedAt();
@@ -138,6 +152,10 @@ record PartnerSpec(
                 .tokenEndpointAuthenticationSigningAlgorithm(signingAlgorithm())
                 .setting(RegisteredClients.PARTNER_MERCHANTS, new ArrayList<>(merchants))
                 .setting(RegisteredClients.PARTNER_REVOKED, revoked);
+        if (keyVersion != null) {
+            settings.setting(RegisteredClients.PARTNER_KEY_VERSION, keyVersion)
+                    .setting(RegisteredClients.PARTNER_SOURCE, "console");
+        }
         var url = jwkSetUrl;
         if (url != null && !url.isBlank()) {
             settings.jwkSetUrl(url);

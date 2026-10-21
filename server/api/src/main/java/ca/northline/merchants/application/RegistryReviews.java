@@ -10,6 +10,23 @@ public final class RegistryReviews {
     private RegistryReviews() {}
 
     public static final String DECISION_REQUIRED = "Choose approve or reject.";
+    public static final String NOTHING_TO_LOOK_UP = "There is no number to look up for this check.";
+
+    /**
+     * S-158: the console's registry check queue runs a lookup again (the source was down, or the owner fixed the name
+     * at the registry). The open reviews of that checklist row are closed as {@code superseded}; all matched → the
+     * row is verified, otherwise the new unmatched lookups wait for an agent.
+     */
+    public interface RecheckReview {
+
+        /**
+         * @param verificationStatus the checklist row afterwards ({@code verified} | {@code submitted} | …)
+         * @param checks the new lookups (with their open reviews when unmatched)
+         */
+        record Rechecked(String verificationStatus, List<ReviewView> checks) {}
+
+        Rechecked recheck(String checkId, String agentId, String role);
+    }
 
     public interface ListReviews {
         List<ReviewView> open(int limit);

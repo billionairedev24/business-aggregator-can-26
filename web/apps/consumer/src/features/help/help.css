@@ -7,3 +7,11 @@
 .nl-help-links { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); margin-top: var(--space-2) !important; }
 .nl-help-links a { display: inline-flex; align-items: center; min-height: var(--size-touch); min-width: var(--size-touch); overflow-wrap: anywhere; font-weight: var(--weight-semibold); }
 @media (max-width: 599.98px) { .nl-help-grid { margin-top: var(--space-5); } .nl-help-grid > section { padding: var(--space-5); } }
+/* S-158 help triage */
+.nl-help-triage { display: grid; gap: var(--space-3); margin-bottom: var(--space-6); padding: var(--space-4); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); background: var(--color-surface); }
+.nl-help-triage form { display: grid; gap: var(--space-2); max-width: 640px; }
+.nl-help-triage form .btn { justify-self: start; }
+.nl-help-answer { display: grid; gap: var(--space-2); }
+.nl-help-answer p { margin: 0; }
+.nl-help-urgent { display: flex; gap: var(--space-2); align-items: flex-start; padding: var(--space-3); border-radius: var(--radius-lg); background: var(--color-warning-bg); color: var(--color-text); }
+.nl-help-note { margin: 0; color: var(--color-text-muted); font-size: 0.875rem; }

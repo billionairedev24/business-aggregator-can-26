@@ -10186,6 +10186,70 @@ template | kubeconform, actionlint, bash 3.2, shellcheck, stubbed runs).
   OVHcloud email (MX Plan `ssl0.ovh.net`, Email Pro `pro1.mail.ovh.net`); port 587 + STARTTLS only (the SMTP adapter
   has no implicit TLS — 465 doesn't work). All three keep mail outside Canada: demo data only.
 
+## 2026-09-30 — S-158 Two-way stock sync, the missing console screens, and the shopper-facing AI
+
+Closes what S-35 (stock one-way), S-23, S-30, S-116, S-120, S-132 and S-133 left "Not done". Runbooks:
+[commerce-sync.md § Two-way stock](runbooks/commerce-sync.md#two-way-stock-s-158),
+[partners.md § Partners registered in the console](runbooks/partners.md#partners-registered-in-the-console-s-158),
+[i18n.md § 2](runbooks/i18n.md#2-french-first-places-region-configuration),
+[pilot-onboarding.md § 6](runbooks/pilot-onboarding.md#6-invites-and-the-pilot-cohort),
+[docs/ai/trust-safety.md](ai/trust-safety.md).
+
+**Decisions**
+
+- **Stock writes are deltas, not counts.** Northline sends the change its order, cancellation or return made
+  (−n / +n) to the connected platform, keyed `<reason>:<source>:<offer>:<variant>` (unique in
+  `catalogue.commerce_stock_pushes`), so a replayed event never doubles. The platform stays the source of truth;
+  the hourly read subtracts still-pending deltas so a sale isn't put back before it lands.
+- **Outbox-style table + scheduler, no new Kafka topic.** Orders feed it through the existing `OrderPlaced` event
+  (module listener) and the in-process `SellableOffers.restock` call; the topic budget is untouched.
+- **Retries:** 1 min × 3ⁿ⁻¹, capped at 6 h, 8 attempts, then `failed`; a 5-minute lease stops two instances sending
+  the same row. Shopify and Square writes carry idempotency keys; Lightspeed has none (read-then-PUT), documented.
+- **One location per connection.** One location is chosen automatically; several → the owner chooses in Studio and
+  changes wait as `choose_location`; reads then come from that location only. Reconnect of the same account keeps it.
+- **Conflicts are shown, not resolved silently:** `oversold` (applied but below zero), `scope_missing` (old grants
+  without write scope → reconnect re-queues), `not_found`, `reconnect`, `disconnected`, `rejected`, `ambiguous`. The
+  owner, technician or cook can retry or dismiss; an applied change can only be dismissed.
+- **Requested scopes grew** (`write_inventory,read_locations`; `INVENTORY_WRITE`): existing connections keep working
+  for reads and show `scope_missing` until reconnected.
+- **Registry re-check** supersedes the open review of that registry row (new state `superseded`) and runs the
+  lookup again as the agent; audited `verification.registry_rechecked`.
+- **Console partners live in the api's database; northline-auth reads them** (every 30 s, advisory lock) and turns
+  them into `partner:<name>` clients. Configuration partners win on a name clash. Only owner-**approved** bindings
+  count; staff can request, never approve, access to a business. Only JWK Set URLs (no pasted keys) from the console.
+  Rotation bumps a key version that busts northline-auth's caches.
+- **Language toggles in the console** reuse S-116's rule: a French-first place always requires French listings; a
+  market may inherit or override; places set by `REGION_FRENCH_FIRST` are shown as configuration and can't be changed
+  there.
+- **Pilot enrolment** of an existing business is a console dialog over the existing S-120 endpoint.
+- **AI screening "hide"** maps per type: a listing is a reviewer rejection through vetting (the merchant sees why), a
+  review is hidden by moderation, a message is replaced by a bilingual placeholder for both sides (original kept for
+  export/erasure only). Viewing the flagged content is audited. The model never decides.
+- **Shopper AI never applies on its own:** suggested filters are chips the shopper edits and applies; triage only
+  points to the case type and help section. 503 / 429 fall back with one sentence; when `/ai/status` is off the UI
+  is absent.
+
+**Schema additions** (V483–V486; renumbered from V483–V486 after S-162): `catalogue.integrations.location_id/location_name`,
+`catalogue.commerce_stock_pushes` (V483); `merchants` registry review state `superseded` (V484);
+`developer.partner_clients`, `developer.partner_bindings` (V485); `messaging.messages.hidden_at/hidden_by/hidden_body`
+(V486).
+
+**Configuration additions:** api `COMMERCE_STOCK_PUSH_INTERVAL` (`PT1M`), `COMMERCE_STOCK_PUSH_MAX_ATTEMPTS` (8),
+`northline.partners.allow-http-jwks` (true only in `local`); auth `OAUTH_CONSOLE_PARTNERS_ENABLED` (true),
+`OAUTH_CONSOLE_PARTNERS_REFRESH` (`PT30S`). No new secrets.
+
+**Not done / never exercised against real services**
+
+- No stock write has reached a real Shopify, Square or Lightspeed account: WireMock stand-ins from the public docs
+  only (Shopify `inventoryAdjustQuantities` with `@idempotent` / `changeFromQuantity: null` and `locations`; Square
+  `inventory/changes/batch-create` states and `locations`; Lightspeed `outlets` and the 2.1 product `PUT` field names).
+- The pending-delta adjustment on reads has a small race (a push landing between the platform read and the pending
+  query can be subtracted twice until the next read).
+- Console partner changes take up to `OAUTH_CONSOLE_PARTNERS_REFRESH` to reach northline-auth; no real partner JWK Set
+  was fetched (in-process JWK Set in tests).
+- Consent requests send no email; the owner sees them in Studio.
+- Help triage's category → help section mapping is client-side; the mobile app has NL search but not help triage.
+
 ## 2026-10-20 — S-160 OVHcloud in the United States for now (Vint Hill), Canada kept as an option
 
 Owner: "for ovh, I am in the US right now, lets deploy there for now". Runbook: [ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo),

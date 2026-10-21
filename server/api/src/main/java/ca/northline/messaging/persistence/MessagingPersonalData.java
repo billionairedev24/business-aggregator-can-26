@@ -66,7 +66,7 @@ class MessagingPersonalData implements PersonalDataContributor {
                         """,
                         p),
                 section(jdbc, "messaging.messages", "Messages you sent", "Messages que vous avez envoyés", """
-                        select m.id, m.thread_id, t.ref_code, m.body, m.attachments, m.at
+                        select m.id, m.thread_id, t.ref_code, coalesce(m.hidden_body, m.body) as body, m.attachments, m.at
                           from messaging.messages m join messaging.threads t on t.id = m.thread_id
                          where m.sender_id = :u order by m.at
                         """, p),
@@ -108,7 +108,7 @@ class MessagingPersonalData implements PersonalDataContributor {
                 .param("u", u)
                 .update();
         jdbc.sql("""
-                        update messaging.messages set body = '', attachments = '{}', sender_name = ''
+                        update messaging.messages set body = '', hidden_body = null, attachments = '{}', sender_name = ''
                          where sender_id = :u and sender_role = 'customer'
                            and (body <> '' or sender_name <> '' or cardinality(attachments) > 0)
                         """).param("u", u).update();

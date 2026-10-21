@@ -298,4 +298,56 @@ class RegistryChecksApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.errors[0].message").value("Choose approve or reject."));
         decide("01J9ZD3V0000000000000NOPE1", "{\"decision\":\"approve\"}").andExpect(status().isNotFound());
     }
+
+    /** S-158: the console's queue re-runs a lookup; the open review is superseded by the new lookup's outcome. */
+    @Test
+    void anAgentRechecks_theOpenReviewIsSuperseded() throws Exception {
+        var unknown = corp("2000000001");
+        lookUp(unknown, "registry", "{}");
+        var row = check(unknown, "registry");
+        var first = reviewOf(row);
+
+        mvc.perform(post("/api/v1/console/registry-reviews/{id}/recheck", first)
+                        .with(TestJwt.staff(staff, StaffRole.SUPPORT)))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/console/registry-reviews/{id}/recheck", first)
+                        .with(TestJwt.staffWithoutMfa(staff, StaffRole.TRUST_SAFETY)))
+                .andExpect(status().isForbidden());
+
+        mvc.perform(post("/api/v1/console/registry-reviews/{id}/recheck", first)
+                        .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verificationStatus").value("submitted"))
+                .andExpect(jsonPath("$.checks.length()").value(1))
+                .andExpect(jsonPath("$.checks[0].outcome").value("not_found"))
+                .andExpect(jsonPath("$.checks[0].reviewState").value("open"));
+        assertThat(jdbc.sql("select review_state from merchants.registry_checks where id = ?")
+                        .params(first)
+                        .query(String.class)
+                        .single())
+                .isEqualTo("superseded");
+        var second = reviewOf(row);
+        assertThat(second).isNotEqualTo(first);
+        assertThat(jdbc.sql("select trigger from merchants.registry_checks where id = ?")
+                        .params(second)
+                        .query(String.class)
+                        .single())
+                .isEqualTo("recheck");
+        assertThat(jdbc.sql("""
+                        select count(*) from developer.audit_log
+                        where merchant_id = ? and action = 'verification.registry_rechecked' and actor_id = ?""").params(unknown, staff).query(Integer.class).single())
+                .isEqualTo(1);
+
+        // the superseded review can't be decided or re-checked again; the new one can
+        mvc.perform(post("/api/v1/console/registry-reviews/{id}/recheck", first)
+                        .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("review_closed"));
+        decide(first, "{\"decision\":\"approve\"}").andExpect(status().isConflict());
+        decide(second, "{\"decision\":\"approve\",\"reference\":\"RA search 1\"}")
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/console/registry-reviews/{id}/recheck", "01J00000000000000000000000")
+                        .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
+                .andExpect(status().isNotFound());
+    }
 }

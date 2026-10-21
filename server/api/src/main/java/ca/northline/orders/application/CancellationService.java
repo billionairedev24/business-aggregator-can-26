@@ -158,13 +158,17 @@ class CancellationService implements CancelOrders {
         var now = clock.instant();
         var whole = merchantId == null;
         var ids = lines.stream().map(LineFacts::id).toList();
+        var cancellationId = Ids.next();
         store.cancelLines(ids, restock, now);
         if (restock) {
-            offers.giveBack(lines.stream()
-                    .filter(l -> l.offerId() != null)
-                    .map(l -> new SellableOffers.Take(
-                            java.util.Objects.requireNonNull(l.offerId()), l.variantId(), l.qty()))
-                    .toList());
+            offers.restock(
+                    lines.stream()
+                            .filter(l -> l.offerId() != null)
+                            .map(l -> new SellableOffers.Take(
+                                    java.util.Objects.requireNonNull(l.offerId()), l.variantId(), l.qty()))
+                            .toList(),
+                    "cancellation",
+                    cancellationId);
         }
         String state;
         if (whole) {
@@ -176,7 +180,7 @@ class CancellationService implements CancelOrders {
         }
         var text = note == null || note.isBlank() ? null : note.strip();
         var cancellation = store.insertCancellation(new Cancellation(
-                Ids.next(), order.id(), merchantId, actorId, role, reason, text, restock, ids, whole, now));
+                cancellationId, order.id(), merchantId, actorId, role, reason, text, restock, ids, whole, now));
         var merchants =
                 lines.stream().map(LineFacts::merchantId).distinct().sorted().toList();
         events.publishEvent(new OrderCancelled(

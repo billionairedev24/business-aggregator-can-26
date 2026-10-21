@@ -12,6 +12,8 @@ import {
 } from './api';
 import { usePilotT, type PilotKey, type PilotT } from './messages';
 import '../shell/queues.css';
+import { EnrolDialog } from './EnrolDialog';
+import { useEnrolT } from './enrolMessages';
 
 export interface PilotSearch { market?: string; pilot?: string }
 
@@ -42,6 +44,8 @@ export function PilotBoard() {
   const query = useQuery(boardQuery(search.market));
   const { can, roleName } = useGrant();
   const [inviting, setInviting] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
+  const te = useEnrolT();
   const [notice, setNotice] = useState<string>();
 
   if (query.isPending) return <PageSkeleton kpis={4} rows={6} />;
@@ -81,12 +85,15 @@ export function PilotBoard() {
       </ul>
       <div className="nl-q-actions">
         {can('onboard') ? <Button onClick={() => setInviting(true)}>{t('invite')}</Button> : null}
+        {can('onboard') ? <Button variant="secondary" onClick={() => setEnrolling(true)}>{te('enrol')}</Button> : null}
         <a className="btn btn-secondary" href={exportUrl(search.market)} download>{t('exportCsv')}</a>
       </div>
       {notice ? <p role="status" className="nl-q-note">{notice}</p> : null}
       <DataTable<TableRow> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
         can={{ create: false, update: false, delete: false }} roleName={roleName} emptyText={t('empty')} openLabel={t('open')} onOpen={r => go({ pilot: r.id })} />
       {search.pilot ? <PilotDrawer id={search.pilot} canAct={can('onboard')} onClose={() => go({ pilot: undefined })} onNotice={setNotice} /> : null}
+      {enrolling ? <EnrolDialog markets={b.markets} market={search.market} onClose={() => setEnrolling(false)}
+        onDone={(name, id) => { setEnrolling(false); setNotice(te('enrolled', { name })); go({ pilot: id }); }} /> : null}
       {inviting ? <InviteDialog markets={b.markets} market={search.market} onClose={() => setInviting(false)}
         onSent={(link, id) => { setInviting(false); setNotice(t('inviteSent', { link })); go({ pilot: id }); }} /> : null}
     </div>

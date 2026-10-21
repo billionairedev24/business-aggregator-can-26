@@ -76,6 +76,8 @@ function usePilotWrite<V, R extends Detail | Invited>(run: (v: V) => Promise<R>)
 
 export interface InviteInput { marketId: string; businessType: string; label: string; email: string; language: 'en' | 'fr'; ownerId?: string }
 export const useInvite = () => usePilotWrite((v: InviteInput) => http(`${BASE}/invites`, { method: 'POST', body: v }, Invited));
+/** S-158: mark an existing business as a pilot participant of a market (`POST /enrolments`, S-120's api). */
+export const useEnrol = () => usePilotWrite((v: { businessId: string; marketId: string }) => http(`${BASE}/enrolments`, { method: 'POST', body: v }, Detail));
 export const useReinvite = () => usePilotWrite((v: { id: string; email?: string; language?: string }) =>
   http(`${BASE}/${enc(v.id)}/invites`, { method: 'POST', body: { email: v.email, language: v.language } }, Invited));
 export const useOwner = () => usePilotWrite((v: { id: string; ownerId?: string }) => http(`${BASE}/${enc(v.id)}/owner`, { method: 'PUT', body: { ownerId: v.ownerId } }, Detail));

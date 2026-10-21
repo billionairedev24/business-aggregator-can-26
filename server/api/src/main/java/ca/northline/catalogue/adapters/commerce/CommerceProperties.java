@@ -21,6 +21,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param reconcileInterval full read of a connection with webhooks (missed deliveries, deletions)
  * @param maxRetries attempts after a 429 / 503 or a Shopify throttle before the read fails
  * @param maxBackoff the longest single wait between attempts
+ * @param stockPush S-158: how Northline's sales and restocks are sent to the platforms
  */
 @ConfigurationProperties("northline.commerce")
 record CommerceProperties(
@@ -31,6 +32,7 @@ record CommerceProperties(
         @DefaultValue("P1D") Duration reconcileInterval,
         @DefaultValue("5") int maxRetries,
         @DefaultValue("PT30S") Duration maxBackoff,
+        @DefaultValue StockPush stockPush,
         @DefaultValue Images images,
         @DefaultValue Shopify shopify,
         @DefaultValue Square square,
@@ -39,6 +41,19 @@ record CommerceProperties(
     String effectiveProvider() {
         return provider.isBlank() ? "local" : provider.strip().toLowerCase(Locale.ROOT);
     }
+
+    /**
+     * S-158 two-way stock: the push job runs every {@code interval} ({@code COMMERCE_STOCK_PUSH_INTERVAL}); a push
+     * that fails for a passing reason (429 / 5xx after the in-call back-off, a timeout) is tried again after
+     * {@code firstRetry} × 3^(attempt − 1), at most {@code maxRetry} apart, {@code maxAttempts} times in all
+     * ({@code COMMERCE_STOCK_PUSH_MAX_ATTEMPTS}); then it is {@code failed} and shown in Settings › Integrations.
+     */
+    record StockPush(
+            @DefaultValue("PT1M") Duration interval,
+            @DefaultValue("PT1M") Duration firstRetry,
+            @DefaultValue("PT6H") Duration maxRetry,
+            @DefaultValue("8") int maxAttempts,
+            @DefaultValue("50") int batch) {}
 
     /**
      * Product images are downloaded from these hosts only (HTTPS, no redirects, ≤ 15 MB) — the platforms' CDNs.
@@ -65,7 +80,10 @@ record CommerceProperties(
             @Nullable String clientId,
             @Nullable String clientSecret,
             @DefaultValue("2026-07") String apiVersion,
-            @DefaultValue("read_products,read_inventory") String scopes,
+
+            @DefaultValue("read_products,read_inventory,write_inventory,read_locations")
+            String scopes,
+
             @DefaultValue("https://{shop}") String shopUrl) {
 
         boolean configured() {
@@ -93,7 +111,7 @@ record CommerceProperties(
             @DefaultValue("https://connect.squareup.com") String baseUrl,
             @DefaultValue("2025-10-16") String apiVersion,
 
-            @DefaultValue("ITEMS_READ INVENTORY_READ MERCHANT_PROFILE_READ")
+            @DefaultValue("ITEMS_READ INVENTORY_READ INVENTORY_WRITE MERCHANT_PROFILE_READ")
             String scopes) {
 
         boolean configured() {
