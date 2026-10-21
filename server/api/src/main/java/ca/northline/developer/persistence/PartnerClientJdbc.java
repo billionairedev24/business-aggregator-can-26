@@ -4,7 +4,6 @@ import ca.northline.developer.api.PartnerClients.Binding;
 import ca.northline.developer.application.PartnerClientStore;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -206,7 +205,7 @@ class PartnerClientJdbc implements PartnerClientStore {
     }
 
     private static @Nullable Instant instant(ResultSet rs, String column) throws SQLException {
-        Timestamp t = rs.getTimestamp(column);
+        OffsetDateTime t = rs.getObject(column, OffsetDateTime.class);
         return t == null ? null : t.toInstant();
     }
 
