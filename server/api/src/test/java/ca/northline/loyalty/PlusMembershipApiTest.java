@@ -116,8 +116,16 @@ class PlusMembershipApiTest extends IntegrationTest {
     }
 
     /** The open period (state, attempts, next try, amount, tax, payment intent). */
-    record Open(String id, String state, int attempts, Instant nextAttemptAt, Instant startsAt, long amount, long tax,
-            String paymentIntent, String plan) {}
+    record Open(
+            String id,
+            String state,
+            int attempts,
+            Instant nextAttemptAt,
+            Instant startsAt,
+            long amount,
+            long tax,
+            String paymentIntent,
+            String plan) {}
 
     Open open(String user) {
         return jdbc.sql("""
@@ -149,9 +157,7 @@ class PlusMembershipApiTest extends IntegrationTest {
     void due(String user) {
         jdbc.sql("""
                         update payments.plus_periods set next_attempt_at = now() - interval '1 minute'
-                         where schedule_id = ? and state in ('scheduled', 'retrying', 'requires_action')""")
-                .params(schedule(user))
-                .update();
+                         where schedule_id = ? and state in ('scheduled', 'retrying', 'requires_action')""").params(schedule(user)).update();
     }
 
     /** Joins (the trial), then the trial ends and its first period is charged: an active, paying member. */
@@ -160,13 +166,15 @@ class PlusMembershipApiTest extends IntegrationTest {
         join(user, "{\"plan\":\"monthly\"}").andExpect(status().isCreated());
         due(user);
         paymentsJobs.chargePlusRenewals();
-        await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("active"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> membershipStatus(user).equals("active"));
         return user;
     }
 
     long ledger(String account, String periodId, boolean credit) {
-        return jdbc.sql("select coalesce(sum(" + (credit ? "credit_cents" : "debit_cents") + "), 0)"
-                        + " from payments.ledger_entries where account = ? and ref_type = 'plus_invoice' and ref_id = ?")
+        return jdbc.sql(
+                        "select coalesce(sum(" + (credit ? "credit_cents" : "debit_cents") + "), 0)"
+                                + " from payments.ledger_entries where account = ? and ref_type = 'plus_invoice' and ref_id = ?")
                 .params(account, periodId)
                 .query(Long.class)
                 .single();
@@ -222,7 +230,8 @@ class PlusMembershipApiTest extends IntegrationTest {
         assertThat(first.state()).isEqualTo("scheduled");
         assertThat(first.amount()).isEqualTo(799);
         assertThat(first.startsAt())
-                .isBetween(Instant.now().plus(Duration.ofDays(29)), Instant.now().plus(Duration.ofDays(31)));
+                .isBetween(
+                        Instant.now().plus(Duration.ofDays(29)), Instant.now().plus(Duration.ofDays(31)));
         assertThat(jdbc.sql("select rrule from payments.plus_schedules where id = ?")
                         .params(schedule(user))
                         .query(String.class)
@@ -323,7 +332,8 @@ class PlusMembershipApiTest extends IntegrationTest {
         mvc.perform(delete("/api/v1/me/plus").with(TestJwt.customer(user))).andExpect(status().isOk());
         due(user);
         paymentsJobs.chargePlusRenewals();
-        await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("canceled"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> membershipStatus(user).equals("canceled"));
         assertThat(benefits.of(user).member()).isFalse();
 
         join(user, "{\"plan\":\"annual\"}")
@@ -338,7 +348,8 @@ class PlusMembershipApiTest extends IntegrationTest {
                 .isEqualTo(6900);
         var next = open(user);
         assertThat(next.startsAt())
-                .isBetween(Instant.now().plus(Duration.ofDays(364)), Instant.now().plus(Duration.ofDays(367)));
+                .isBetween(
+                        Instant.now().plus(Duration.ofDays(364)), Instant.now().plus(Duration.ofDays(367)));
     }
 
     @Test
@@ -347,7 +358,8 @@ class PlusMembershipApiTest extends IntegrationTest {
         mvc.perform(delete("/api/v1/me/plus").with(TestJwt.customer(user))).andExpect(status().isOk());
         due(user);
         paymentsJobs.chargePlusRenewals();
-        await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("canceled"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> membershipStatus(user).equals("canceled"));
         var schedules = jdbc.sql("select count(*) from payments.plus_schedules where payer_id = ?")
                 .params(user)
                 .query(Long.class)
@@ -356,7 +368,8 @@ class PlusMembershipApiTest extends IntegrationTest {
         join(user, "{\"plan\":\"monthly\"}")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("card_declined"))
-                .andExpect(jsonPath("$.detail").value("Your bank declined the card. Try another card in Payment methods."));
+                .andExpect(jsonPath("$.detail")
+                        .value("Your bank declined the card. Try another card in Payment methods."));
         assertThat(jdbc.sql("select count(*) from payments.plus_schedules where payer_id = ?")
                         .params(user)
                         .query(Long.class)
@@ -413,8 +426,11 @@ class PlusMembershipApiTest extends IntegrationTest {
             assertThat(now.state()).isEqualTo("retrying");
             assertThat(now.attempts()).isEqualTo(i + 1);
             assertThat(now.nextAttemptAt()).isEqualTo(renewal.startsAt().plus(Duration.ofDays(days[i])));
-            await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("past_due"));
-            assertThat(benefits.of(user).member()).as("the grace keeps the benefits").isTrue();
+            await().atMost(Duration.ofSeconds(10))
+                    .until(() -> membershipStatus(user).equals("past_due"));
+            assertThat(benefits.of(user).member())
+                    .as("the grace keeps the benefits")
+                    .isTrue();
         }
         assertThat(notices(user, "declined")).isEqualTo(3);
         mvc.perform(get("/api/v1/me/plus").with(TestJwt.customer(user)))
@@ -438,7 +454,8 @@ class PlusMembershipApiTest extends IntegrationTest {
                 .isEqualTo("lapsed");
         assertThat(scheduleStatus(user)).isEqualTo("canceled");
         assertThat(notices(user, "lapsed")).isEqualTo(1);
-        await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("canceled"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> membershipStatus(user).equals("canceled"));
         assertThat(benefits.of(user).member()).isFalse();
         assertThat(ledger("revenue", renewal.id(), true)).isZero();
     }
@@ -467,11 +484,14 @@ class PlusMembershipApiTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.card.id").value(good))
                 .andExpect(jsonPath("$.card.chosen").value(true));
-        assertThat(open(user).nextAttemptAt()).as("tried on the next run").isBefore(Instant.now().plusSeconds(1));
+        assertThat(open(user).nextAttemptAt())
+                .as("tried on the next run")
+                .isBefore(Instant.now().plusSeconds(1));
 
         paymentsJobs.chargePlusRenewals();
         assertThat(paidPeriods(user)).isEqualTo(2);
-        await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("active"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> membershipStatus(user).equals("active"));
     }
 
     @Test
@@ -483,7 +503,8 @@ class PlusMembershipApiTest extends IntegrationTest {
         var waiting = open(user);
         assertThat(waiting.state()).isEqualTo("requires_action");
         assertThat(notices(user, "action_required")).isEqualTo(1);
-        await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("past_due"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> membershipStatus(user).equals("past_due"));
         mvc.perform(get("/api/v1/me/plus").with(TestJwt.customer(user)))
                 .andExpect(jsonPath("$.payment.reason").value("authentication_required"))
                 .andExpect(jsonPath("$.payment.periodId").value(waiting.id()))
@@ -506,7 +527,8 @@ class PlusMembershipApiTest extends IntegrationTest {
         mvc.perform(delete("/api/v1/me/plus").with(TestJwt.customer(user))).andExpect(status().isOk());
         due(user);
         paymentsJobs.chargePlusRenewals();
-        await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("canceled"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> membershipStatus(user).equals("canceled"));
         data.card(user, "pm_card_authenticationRequired_" + user, true);
 
         var body = join(user, "{\"plan\":\"monthly\"}")
@@ -525,7 +547,8 @@ class PlusMembershipApiTest extends IntegrationTest {
         due(user); // the confirmation window passed
         paymentsJobs.chargePlusRenewals();
         assertThat(scheduleStatus(user)).isEqualTo("canceled");
-        await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("canceled"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> membershipStatus(user).equals("canceled"));
         assertThat(jdbc.sql("select ended_reason from payments.plus_schedules where id = ?")
                         .params(schedule(user))
                         .query(String.class)
@@ -539,7 +562,8 @@ class PlusMembershipApiTest extends IntegrationTest {
         mvc.perform(delete("/api/v1/me/plus").with(TestJwt.customer(user))).andExpect(status().isOk());
         due(user);
         paymentsJobs.chargePlusRenewals();
-        await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("canceled"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> membershipStatus(user).equals("canceled"));
         data.card(user, "pm_card_authenticationRequired_" + user, true);
         join(user, "{\"plan\":\"monthly\"}").andExpect(jsonPath("$.status").value("incomplete"));
         FakeStripeBank.authenticate(gateway, open(user).paymentIntent());
@@ -570,7 +594,8 @@ class PlusMembershipApiTest extends IntegrationTest {
                         .query((rs, _) -> rs.getString(1) + "/" + rs.getBoolean(2))
                         .single())
                 .isEqualTo("void/true");
-        await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("canceled"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> membershipStatus(user).equals("canceled"));
         var none = data.user("Nobody");
         mvc.perform(delete("/api/v1/me/plus").with(TestJwt.customer(none)))
                 .andExpect(status().isConflict())
@@ -602,18 +627,25 @@ class PlusMembershipApiTest extends IntegrationTest {
         var paid = jdbc.sql("select plan, amount_cents, ends_at from payments.plus_periods where id = ?")
                 .params(renewal.id())
                 .query((rs, _) -> new Object[] {
-                    rs.getString(1), rs.getLong(2), rs.getObject(3, OffsetDateTime.class).toInstant()
+                    rs.getString(1),
+                    rs.getLong(2),
+                    rs.getObject(3, OffsetDateTime.class).toInstant()
                 })
                 .single();
         assertThat(paid[0]).isEqualTo("annual");
         assertThat(paid[1]).isEqualTo(6900L);
-        assertThat((Instant) paid[2]).isEqualTo(renewal.startsAt().atOffset(java.time.ZoneOffset.UTC).plusYears(1).toInstant());
+        assertThat((Instant) paid[2])
+                .isEqualTo(renewal.startsAt()
+                        .atOffset(java.time.ZoneOffset.UTC)
+                        .plusYears(1)
+                        .toInstant());
         assertThat(open(user).plan()).isEqualTo("annual");
-        await().atMost(Duration.ofSeconds(10)).until(() -> jdbc.sql("select plan from loyalty.memberships where payer_id = ?")
-                .params(user)
-                .query(String.class)
-                .single()
-                .equals("annual"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> jdbc.sql("select plan from loyalty.memberships where payer_id = ?")
+                        .params(user)
+                        .query(String.class)
+                        .single()
+                        .equals("annual"));
         mvc.perform(get("/api/v1/me/plus").with(TestJwt.customer(user)))
                 .andExpect(jsonPath("$.plan").value("annual"))
                 .andExpect(jsonPath("$.nextPlan").doesNotExist());
@@ -631,27 +663,35 @@ class PlusMembershipApiTest extends IntegrationTest {
                 .update(); // the trial ended yesterday: this is the current period
         var support = data.user("Support agent");
         var finance = data.user("Finance lead");
-        mvc.perform(post("/api/v1/console/plus/periods/{id}/refund", period).with(TestJwt.staff(support, StaffRole.SUPPORT)))
+        mvc.perform(post("/api/v1/console/plus/periods/{id}/refund", period)
+                        .with(TestJwt.staff(support, StaffRole.SUPPORT)))
                 .andExpect(status().isForbidden());
         mvc.perform(post("/api/v1/console/plus/periods/{id}/refund", period).with(TestJwt.customer(user)))
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/console/plus/households/{h}/periods", household(user))
                         .with(TestJwt.staff(finance, StaffRole.FINANCE)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].state".formatted(period)).value("paid"));
-        mvc.perform(post("/api/v1/console/plus/periods/{id}/refund", period).with(TestJwt.staff(finance, StaffRole.FINANCE)))
+                .andExpect(jsonPath("$.items[?(@.id == '%s')].state".formatted(period))
+                        .value("paid"));
+        mvc.perform(post("/api/v1/console/plus/periods/{id}/refund", period)
+                        .with(TestJwt.staff(finance, StaffRole.FINANCE)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalCents").value(839))
                 .andExpect(jsonPath("$.ended").value(true))
                 .andExpect(jsonPath("$.refundId").value(org.hamcrest.Matchers.startsWith("re_")));
-        mvc.perform(post("/api/v1/console/plus/periods/{id}/refund", period).with(TestJwt.staff(finance, StaffRole.FINANCE)))
+        mvc.perform(post("/api/v1/console/plus/periods/{id}/refund", period)
+                        .with(TestJwt.staff(finance, StaffRole.FINANCE)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("plus_not_refundable"));
-        assertThat(ledger("revenue", period, true) - ledger("revenue", period, false)).isZero();
-        assertThat(ledger("tax_payable", period, true) - ledger("tax_payable", period, false)).isZero();
-        assertThat(ledger("stripe_balance", period, false) - ledger("stripe_balance", period, true)).isZero();
+        assertThat(ledger("revenue", period, true) - ledger("revenue", period, false))
+                .isZero();
+        assertThat(ledger("tax_payable", period, true) - ledger("tax_payable", period, false))
+                .isZero();
+        assertThat(ledger("stripe_balance", period, false) - ledger("stripe_balance", period, true))
+                .isZero();
         assertThat(notices(user, "refunded")).isEqualTo(1);
-        await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("canceled"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> membershipStatus(user).equals("canceled"));
         assertThat(benefits.of(user).member()).isFalse();
     }
 
@@ -723,8 +763,12 @@ class PlusMembershipApiTest extends IntegrationTest {
             FakeStripeBank.authenticate(gateway, waiting.paymentIntent());
             var payload = succeeded(waiting.paymentIntent());
             deliver(payload, "whsec_test_wrong_fake").andExpect(status().is4xxClientError());
-            deliver(payload, PLATFORM_SECRET).andExpect(status().isOk()).andExpect(jsonPath("$.duplicate").value(false));
-            deliver(payload, PLATFORM_SECRET).andExpect(status().isOk()).andExpect(jsonPath("$.duplicate").value(true));
+            deliver(payload, PLATFORM_SECRET)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.duplicate").value(false));
+            deliver(payload, PLATFORM_SECRET)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.duplicate").value(true));
             paymentsJobs.processStripeEvents();
             assertThat(jdbc.sql("select state from payments.plus_periods where id = ?")
                             .params(waiting.id())
@@ -732,7 +776,8 @@ class PlusMembershipApiTest extends IntegrationTest {
                             .single())
                     .isEqualTo("paid");
             assertThat(ledger("revenue", waiting.id(), true)).isEqualTo(799);
-            await().atMost(Duration.ofSeconds(10)).until(() -> membershipStatus(user).equals("active"));
+            await().atMost(Duration.ofSeconds(10))
+                    .until(() -> membershipStatus(user).equals("active"));
         }
     }
 

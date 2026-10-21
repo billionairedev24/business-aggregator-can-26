@@ -204,7 +204,7 @@ describe('Plus', () => {
     plus = PLUS_PAID;
     account('plus');
     expect(await screen.findByText(/Next payment \$7\.99 on Nov 19, plus tax\./)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Your default card' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByRole('button', { name: 'Your default card' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('$7.99 + $0.40 tax')).toBeInTheDocument();
     expect(screen.getByText('Upcoming')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'MASTERCARD ending 4444' }));

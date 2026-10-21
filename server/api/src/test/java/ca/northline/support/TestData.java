@@ -49,7 +49,8 @@ public class TestData {
      * Secure), with their Stripe Customer; the default card when {@code isDefault}.
      */
     public String card(String userId, String paymentMethod, boolean isDefault) {
-        jdbc.sql("insert into payments.stripe_customers (customer_id, stripe_customer) values (?, ?) on conflict do nothing")
+        jdbc.sql(
+                        "insert into payments.stripe_customers (customer_id, stripe_customer) values (?, ?) on conflict do nothing")
                 .params(userId, "cus_test_" + userId)
                 .update();
         if (isDefault) {

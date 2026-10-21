@@ -112,7 +112,8 @@ class BillingRuleTest {
         assertThatThrownBy(() -> BillingRule.planRule("FREQ=MONTHLY;UNTIL=20280101T000000Z"))
                 .hasMessageContaining("UNTIL");
         assertThatThrownBy(() -> BillingRule.planRule("FREQ=WEEKLY")).hasMessageContaining("MONTHLY or FREQ=YEARLY");
-        assertThatThrownBy(() -> BillingRule.planRule("FREQ=MONTHLY;INTERVAL=13")).hasMessageContaining("1–12");
+        assertThatThrownBy(() -> BillingRule.planRule("FREQ=MONTHLY;INTERVAL=13"))
+                .hasMessageContaining("1–12");
         assertThatThrownBy(() -> BillingRule.planRule("every month")).hasMessageContaining("Not an RFC 5545 RRULE");
         assertThat(BillingRule.planRule(" FREQ=YEARLY ")).isEqualTo("FREQ=YEARLY");
     }
