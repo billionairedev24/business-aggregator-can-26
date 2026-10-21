@@ -9,7 +9,7 @@ import { useAuth } from '../src/auth';
 import { LanguageSwitch } from '../src/components/LanguageSwitch';
 import { Banner, Body, Button, Check, Heading, Screen } from '../src/components/ui';
 import { useOutbox } from '../src/hooks';
-import { useI18n, type MessageKey } from '../src/i18n';
+import { useI18n } from '../src/i18n';
 import { services } from '../src/services';
 
 type Step = 'credentials' | 'factor' | 'enrol' | 'codes' | 'forgot' | 'reset' | 'reset-done';
@@ -135,23 +135,6 @@ export default function SignIn() {
     }
   };
 
-  const field = (label: string, value: string, onChange: (v: string) => void, props: TextInputProps & { testID: string }) => (
-    <View style={styles.field}>
-      <Body strong>{label}</Body>
-      <TextInput
-        accessibilityLabel={label}
-        value={value}
-        onChangeText={(v) => {
-          onChange(v);
-          setFieldError(null);
-        }}
-        style={styles.input}
-        autoCapitalize="none"
-        autoCorrect={false}
-        {...props}
-      />
-    </View>
-  );
   const error = fieldError ? <Banner tone="error">{fieldError}</Banner> : null;
   const notice = message ? <Banner tone="error">{message}</Banner> : null;
 
@@ -166,7 +149,7 @@ export default function SignIn() {
     ) : (
       <>
         <Heading level={2}>{backup ? t('factor.backupTitle') : t('factor.title')}</Heading>
-        {field(t('factor.code'), code, setCode, { testID: 'factor-code', keyboardType: backup ? 'default' : 'number-pad', textContentType: 'oneTimeCode', autoComplete: 'one-time-code', onSubmitEditing: submitFactor })}
+        <LabeledInput label={t('factor.code')} value={code} onText={(v) => { setCode(v); setFieldError(null); }} testID="factor-code" keyboardType={backup ? 'default' : 'number-pad'} textContentType="oneTimeCode" autoComplete="one-time-code" onSubmitEditing={submitFactor} />
         {error}
         <Button label={t('factor.submit')} large onPress={submitFactor} busy={busy} testID="factor-submit" />
         {factors.includes('backup_code') && !backup ? <Button label={t('factor.useBackup')} tone="ghost" onPress={() => { setBackup(true); setCode(''); }} testID="use-backup" /> : null}
@@ -181,7 +164,7 @@ export default function SignIn() {
         <View style={styles.qr}><Image source={{ uri: totp.qrCode }} style={styles.qrImage} accessibilityLabel={t('enrol.qr')} accessibilityRole="image" /></View>
         <Button label={t('enrol.open')} tone="secondary" onPress={() => void Linking.openURL(totp.otpauthUri).catch(() => undefined)} testID="enrol-open" />
         <Text selectable style={styles.small}>{t('enrol.key', { secret: totp.secret })}</Text>
-        {field(t('factor.code'), code, setCode, { testID: 'enrol-code', keyboardType: 'number-pad', textContentType: 'oneTimeCode', onSubmitEditing: submitEnrol })}
+        <LabeledInput label={t('factor.code')} value={code} onText={(v) => { setCode(v); setFieldError(null); }} testID="enrol-code" keyboardType="number-pad" textContentType="oneTimeCode" onSubmitEditing={submitEnrol} />
         {error}
         <Button label={t('factor.submit')} large onPress={submitEnrol} busy={busy} testID="enrol-submit" />
       </>
@@ -208,7 +191,7 @@ export default function SignIn() {
       <>
         <Heading level={2}>{t('forgot.title')}</Heading>
         <Body>{t('forgot.body')}</Body>
-        {field(t('signIn.email'), email, setEmail, { testID: 'field-email', keyboardType: 'email-address', autoComplete: 'email' })}
+        <LabeledInput label={t('signIn.email')} value={email} onText={(v) => { setEmail(v); setFieldError(null); }} testID="field-email" keyboardType="email-address" autoComplete="email" />
         {error}
         <Button label={t('forgot.send')} large busy={busy} onPress={() => (email.trim() ? void run(async () => { await services().authApi.forgotPassword(email); setStep('reset'); }) : setFieldError(t('signIn.emailRequired')))} testID="forgot-send" />
         <Button label={t('common.back')} tone="ghost" onPress={() => setStep('credentials')} />
@@ -217,9 +200,9 @@ export default function SignIn() {
       <>
         <Heading level={2}>{t('forgot.title')}</Heading>
         <Body>{t('forgot.codeBody')}</Body>
-        {field(t('forgot.code'), code, setCode, { testID: 'reset-code', keyboardType: 'number-pad', textContentType: 'oneTimeCode' })}
-        {field(t('forgot.newPassword'), password, setPassword, { testID: 'reset-password', secureTextEntry: true, textContentType: 'newPassword' })}
-        {field(t('forgot.confirm'), confirm, setConfirm, { testID: 'reset-confirm', secureTextEntry: true, textContentType: 'newPassword' })}
+        <LabeledInput label={t('forgot.code')} value={code} onText={(v) => { setCode(v); setFieldError(null); }} testID="reset-code" keyboardType="number-pad" textContentType="oneTimeCode" />
+        <LabeledInput label={t('forgot.newPassword')} value={password} onText={(v) => { setPassword(v); setFieldError(null); }} testID="reset-password" secureTextEntry textContentType="newPassword" />
+        <LabeledInput label={t('forgot.confirm')} value={confirm} onText={(v) => { setConfirm(v); setFieldError(null); }} testID="reset-confirm" secureTextEntry textContentType="newPassword" />
         {error}
         <Button
           label={t('forgot.save')}
@@ -245,8 +228,8 @@ export default function SignIn() {
     content = (
       <>
         <Body>{t('signIn.body')}</Body>
-        {field(t('signIn.email'), email, setEmail, { testID: 'field-email', keyboardType: 'email-address', autoComplete: 'email', textContentType: 'username' })}
-        {field(t('signIn.password'), password, setPassword, { testID: 'field-password', secureTextEntry: true, autoComplete: 'current-password', textContentType: 'password', onSubmitEditing: submitPassword })}
+        <LabeledInput label={t('signIn.email')} value={email} onText={(v) => { setEmail(v); setFieldError(null); }} testID="field-email" keyboardType="email-address" autoComplete="email" textContentType="username" />
+        <LabeledInput label={t('signIn.password')} value={password} onText={(v) => { setPassword(v); setFieldError(null); }} testID="field-password" secureTextEntry autoComplete="current-password" textContentType="password" onSubmitEditing={submitPassword} />
         {error}
         <Button label={t('signIn.button')} large onPress={submitPassword} busy={busy} testID="sign-in-button" />
         <Button label={t('signIn.forgot')} tone="ghost" onPress={() => { setStep('forgot'); setFieldError(null); setMessage(null); }} testID="forgot" />
@@ -286,3 +269,13 @@ const styles = StyleSheet.create({
   code: { fontFamily: fonts.regular, fontSize: 17, color: colors.text, fontVariant: ['tabular-nums'] },
   small: { fontFamily: fonts.regular, fontSize: 14, color: colors.textMuted },
 });
+
+/** A labelled text field (the courier app has no form kit of its own). */
+function LabeledInput({ label, value, onText, ...props }: TextInputProps & { label: string; value: string; onText: (v: string) => void; testID: string }) {
+  return (
+    <View style={styles.field}>
+      <Body strong>{label}</Body>
+      <TextInput accessibilityLabel={label} value={value} onChangeText={onText} style={styles.input} autoCapitalize="none" autoCorrect={false} {...props} />
+    </View>
+  );
+}
