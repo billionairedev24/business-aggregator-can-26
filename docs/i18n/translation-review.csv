@@ -224,3 +224,5 @@ NotFound:coaching plan,No coaching plan with id %s,Aucun plan d’accompagnement
 NotFound:coaching task,No coaching task with id %s,Aucune tâche d’accompagnement avec l’identifiant %s,needs translator review
 NotFound:consequence,No consequence with id %s,Aucune mesure avec l’identifiant %s,needs translator review
 web/apps/studio/src/features/storefront/messages.ts#rewardBudget,Budget ($),Budget (en $),needs translator review
+NotFound:plus_membership,No plus_membership with id %s,Aucun abonnement Plus avec l’identifiant %s,needs translator review
+NotFound:plus_period,No plus_period with id %s,Aucune période Plus avec l’identifiant %s,needs translator review

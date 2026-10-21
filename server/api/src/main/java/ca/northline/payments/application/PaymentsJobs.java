@@ -39,6 +39,12 @@ public interface PaymentsJobs {
     /** S-151: the weekly courier payout run (pay and tips owed), and courier payouts that arrived. */
     int payCouriers();
 
+    /**
+     * S-162: Northline Plus renewals due (charged off-session, refused ones retried, the rest lapsed) and the tax of paid
+     * periods not recorded at Stripe Tax yet.
+     */
+    int chargePlusRenewals();
+
     /** S-151: courier payouts that arrived (every minute; their webhook may never come). */
     int settleCourierPayouts();
 }

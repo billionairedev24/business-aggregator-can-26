@@ -73,6 +73,13 @@ export const loyalty: { [k in keyof typeof en]: string } = {
   'loyalty.resume': 'Garder Plus',
   'loyalty.notPayer': 'La personne qui a démarré Plus pour votre foyer le gère.',
   'loyalty.bankFailed': 'Votre banque n’a pas confirmé le paiement. Réessayez ou utilisez une autre carte dans Modes de paiement.',
+  'loyalty.nextCharge': 'Prochain paiement de {amount} le {date}, taxes en sus.',
+  'loyalty.switchesTo': 'Passe au forfait {plan} le {date}.',
+  'loyalty.keepPlan': 'Rester au forfait {plan}',
+  'loyalty.pay.authentication_required': 'Votre banque vous demande de confirmer le paiement de {amount}.',
+  'loyalty.pay.declined': 'Votre carte a été refusée pour {amount}. Nous réessaierons le {date} — ou choisissez une autre carte par défaut dans Modes de paiement.',
+  'loyalty.pay.lastTry': 'Votre carte a été refusée pour {amount}. Choisissez une autre carte par défaut dans Modes de paiement pour garder Plus.',
+  'loyalty.confirmPayment': 'Confirmer le paiement',
   'loyalty.plusPrice': 'Plus {price}',
 
   'loyalty.nearTitle': 'Récompenses près de chez vous',

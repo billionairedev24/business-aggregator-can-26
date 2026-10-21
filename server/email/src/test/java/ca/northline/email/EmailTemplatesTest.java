@@ -38,6 +38,7 @@ class EmailTemplatesTest {
             case EmailContent.IdentityVerificationLink _ -> "https://verify.stripe.com/";
             case EmailContent.CustomerUpdate _,
                     EmailContent.MarketingOffer _,
+                    EmailContent.PlusPayment _,
                     EmailContent.PrivacyCode _,
                     EmailContent.AccountDeletion _ -> "http://localhost:3000/";
             default -> "http://localhost:3100/";

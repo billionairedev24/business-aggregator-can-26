@@ -16,9 +16,11 @@ const ACTIVE = new Set(['trialing', 'active', 'past_due', 'incomplete']);
 
 /**
  * S-152 Northline Plus in the wallet (`GET|POST|PATCH|DELETE /me/plus`, `POST /me/plus/resume`): one membership per
- * household, paid by the person who started it. Join (monthly or annual, the free trial the first time) — under Stripe
- * Billing it renews on the default card (409 `card_required` without one) and the first payment may need the bank —
- * switch plan, cancel at the end of the paid period, keep it. Others in the household see it, the payer manages it.
+ * household, paid by the person who started it. Join (monthly or annual, the free trial the first time) — it renews on
+ * the default saved card (409 `card_required` without one) — switch plan, cancel at the end of the paid period, keep
+ * it. Others in the household see it, the payer manages it. S-162: Northline bills Plus itself — the next payment, a
+ * plan change from the next renewal, a refused renewal; a payment the bank wants confirmed (the first, or a renewal:
+ * the push opens the wallet) is confirmed with Stripe's SDK, then `POST /me/plus/confirm`.
  */
 export function PlusCard() {
   const f = useShopFormat();
@@ -34,15 +36,25 @@ export function PlusCard() {
   // one key per attempt: a retry of the same press replays, a new press is a new request
   const key = useRef(randomId());
   const refresh = [KEYS.wallet, KEYS.household, KEYS.points];
-  const afterJoin = async (p: Plus) => {
-    key.current = randomId();
+  const confirmPay = useAccountMutation(() => account().confirmPlus(), { set: KEYS.plus, refresh });
+  /** The bank's check with Stripe's SDK, then the api reads the PaymentIntent again. */
+  const withBank = async (p: Plus) => {
     if (p.clientSecret && p.publishableKey) {
+      setBank(null);
       const r = await plusPayment()
         .confirm(p.clientSecret, p.publishableKey)
         .catch(() => ({ ok: false as const, message: undefined }));
-      if (!r.ok) setBank(r.message ?? t('loyalty.bankFailed'));
-      void plus.refetch();
+      if (!r.ok) {
+        setBank(r.message ?? t('loyalty.bankFailed'));
+        void plus.refetch();
+        return;
+      }
+      confirmPay.mutate(undefined);
     }
+  };
+  const afterJoin = async (p: Plus) => {
+    key.current = randomId();
+    await withBank(p);
   };
   const join = useAccountMutation((p: PlusPlan) => account().joinPlus(p, key.current), { set: KEYS.plus, refresh });
   const change = useAccountMutation((p: PlusPlan) => account().changePlus(p, key.current), { set: KEYS.plus, refresh });
@@ -54,7 +66,7 @@ export function PlusCard() {
     set: KEYS.plus,
     refresh,
   });
-  const failed = join.error ?? change.error ?? cancel.error ?? resume.error;
+  const failed = join.error ?? change.error ?? cancel.error ?? resume.error ?? confirmPay.error;
   const needsCard = failed instanceof ApiError && failed.status === 409 && failed.code === 'card_required';
 
   if (plus.isPending) return <Skeleton height={120} />;
@@ -84,25 +96,57 @@ export function PlusCard() {
       {member ? (
         <>
           <Body tone="small">{state}</Body>
+          {p.payer && p.nextPlan && p.nextChargeAt ? (
+            <Body tone="small">{t('loyalty.switchesTo', { plan: t(`loyalty.plan.${p.nextPlan}`), date: f.date(p.nextChargeAt) })}</Body>
+          ) : p.payer && p.nextChargeAt && !p.payment && p.status !== 'incomplete' ? (
+            <Body tone="small">{t('loyalty.nextCharge', { amount: f.money(p.nextChargeCents ?? 0), date: f.date(p.nextChargeAt) })}</Body>
+          ) : null}
+          {p.payer && p.payment ? (
+            <View style={styles.confirm} testID="plus-payment">
+              <Notice
+                tone="info"
+                message={
+                  p.payment.reason === 'authentication_required'
+                    ? t('loyalty.pay.authentication_required', { amount: f.money(p.payment.totalCents) })
+                    : p.payment.retryAt
+                      ? t('loyalty.pay.declined', { amount: f.money(p.payment.totalCents), date: f.date(p.payment.retryAt) })
+                      : t('loyalty.pay.lastTry', { amount: f.money(p.payment.totalCents) })
+                }
+              />
+              {p.clientSecret && p.publishableKey ? (
+                <Button label={t('loyalty.confirmPayment')} busy={confirmPay.isPending} onPress={() => void withBank(p)} testID="plus-confirm" />
+              ) : null}
+            </View>
+          ) : null}
           {!p.payer ? <Body tone="muted">{t('loyalty.notPayer')}</Body> : null}
           {p.payer && p.cancelAtPeriodEnd ? (
             <Button label={t('loyalty.resume')} busy={resume.isPending} onPress={() => resume.mutate(undefined)} testID="plus-resume" />
           ) : null}
           {p.payer && !p.cancelAtPeriodEnd ? (
             <>
-              <Button
-                label={t('loyalty.switchTo', {
-                  plan: t(`loyalty.plan.${other}`),
-                })}
-                tone="secondary"
-                busy={change.isPending}
-                onPress={() =>
-                  change.mutate(other, {
-                    onSuccess: () => (key.current = randomId()),
-                  })
-                }
-                testID="plus-switch"
-              />
+              {p.nextPlan && p.plan ? (
+                <Button
+                  label={t('loyalty.keepPlan', { plan: t(`loyalty.plan.${p.plan}`) })}
+                  tone="secondary"
+                  busy={change.isPending}
+                  onPress={() => change.mutate(p.plan!, { onSuccess: () => (key.current = randomId()) })}
+                  testID="plus-keep-plan"
+                />
+              ) : (
+                <Button
+                  label={t('loyalty.switchTo', {
+                    plan: t(`loyalty.plan.${other}`),
+                  })}
+                  tone="secondary"
+                  busy={change.isPending}
+                  onPress={() =>
+                    change.mutate(other, {
+                      onSuccess: () => (key.current = randomId()),
+                    })
+                  }
+                  testID="plus-switch"
+                />
+              )}
               {confirming ? (
                 <View style={styles.confirm} testID="plus-cancel-confirm">
                   <Body tone="small">{t('loyalty.cancelBody', { date: end })}</Body>

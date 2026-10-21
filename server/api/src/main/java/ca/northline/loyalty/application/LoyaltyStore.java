@@ -107,10 +107,16 @@ public interface LoyaltyStore {
 
     Optional<MembershipState> bySubscription(String subscriptionId);
 
+    /** S-162: the latest membership the person pays for (or started), whatever its status. */
+    Optional<MembershipState> ofPayer(String userId);
+
     void save(MembershipState membership, Instant at);
 
-    /** Local-provider memberships whose period ended by {@code now} and that still run. */
-    List<MembershipState> localDue(Instant now, int limit);
+    /**
+     * S-162: running memberships still billed the S-152 way (a Stripe Billing or local-fake subscription,
+     * {@code sub_…}), to move to Northline's own billing.
+     */
+    List<MembershipState> legacy(int limit);
 
     /** @param members households whose membership runs; {@code trialing} of them in their trial */
     record PlusCounts(long members, long trialing) {}

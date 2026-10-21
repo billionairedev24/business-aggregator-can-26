@@ -7,6 +7,7 @@ import ca.northline.shared.ProviderUnavailable;
 import ca.northline.shared.stripe.StripeIdempotencyKeys;
 import com.stripe.StripeClient;
 import com.stripe.exception.ApiConnectionException;
+import com.stripe.exception.CardException;
 import com.stripe.exception.RateLimitException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
@@ -17,6 +18,7 @@ import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.CustomerUpdateParams;
 import com.stripe.param.PaymentIntentCancelParams;
 import com.stripe.param.PaymentIntentCaptureParams;
+import com.stripe.param.PaymentIntentConfirmParams;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.PaymentIntentRetrieveParams;
 import com.stripe.param.PayoutCreateParams;
@@ -157,6 +159,82 @@ class StripeConnectGateway implements PaymentGateway, PayoutGateway {
                 "payment intent",
                 () -> authorization(
                         stripe.v1().paymentIntents().create(params.build(), key(request.idempotencyKey()))));
+    }
+
+    /**
+     * S-162: {@code capture_method=automatic}, card only, confirmed with the saved card; off-session for renewals.
+     * Stripe answers a refused confirmation with 402 {@code card_error} carrying the PaymentIntent: that is an answer
+     * ({@link Charged.Declined}, or {@link Charged.ActionRequired} for {@code authentication_required}), not a failure.
+     */
+    @Override
+    public Charged charge(Charge request) {
+        var params = PaymentIntentCreateParams.builder()
+                .setAmount(request.amountCents())
+                .setCurrency(CAD)
+                .setCaptureMethod(PaymentIntentCreateParams.CaptureMethod.AUTOMATIC)
+                .addPaymentMethodType("card")
+                .setCustomer(request.stripeCustomer())
+                .setPaymentMethod(request.paymentMethod())
+                .setConfirm(true)
+                .putAllMetadata(request.metadata());
+        if (request.offSession()) {
+            params.setOffSession(true);
+        }
+        var built = params.build();
+        return charged("plus charge", () -> stripe.v1().paymentIntents().create(built, key(request.idempotencyKey())));
+    }
+
+    @Override
+    public Charged chargeAgain(String paymentIntent, String paymentMethod, boolean offSession, String idempotencyKey) {
+        var params = PaymentIntentConfirmParams.builder().setPaymentMethod(paymentMethod);
+        if (offSession) {
+            params.setOffSession(PaymentIntentConfirmParams.OffSession.ONE_OFF);
+        }
+        var built = params.build();
+        return charged(
+                "plus charge retry",
+                () -> stripe.v1().paymentIntents().confirm(paymentIntent, built, key(idempotencyKey)));
+    }
+
+    @Override
+    public Charged chargeState(String paymentIntent) {
+        return charged("plus charge read", () -> stripe.v1().paymentIntents().retrieve(paymentIntent));
+    }
+
+    private static Charged charged(String what, StripeCall<PaymentIntent> call) {
+        try {
+            return charged(call.run(), null);
+        } catch (CardException e) {
+            var error = e.getStripeError();
+            var intent = error == null ? null : error.getPaymentIntent();
+            var code = Objects.requireNonNullElse(
+                    e.getDeclineCode(), Objects.requireNonNullElse(e.getCode(), "card_declined"));
+            if (intent != null) {
+                return charged(intent, code);
+            }
+            return new Charged.Declined(null, code);
+        } catch (StripeException e) {
+            throw failure(what, e);
+        }
+    }
+
+    private static Charged charged(PaymentIntent pi, @Nullable String errorCode) {
+        var lastError = pi.getLastPaymentError();
+        @Nullable String code = errorCode;
+        if (code == null && lastError != null) {
+            var decline = lastError.getDeclineCode();
+            code = decline != null ? decline : lastError.getCode();
+        }
+        return switch (Objects.requireNonNullElse(pi.getStatus(), "")) {
+            case "succeeded" -> new Charged.Paid(pi.getId(), pi.getLatestCharge());
+            case "processing" -> new Charged.Processing(pi.getId());
+            case "requires_action", "requires_confirmation" ->
+                new Charged.ActionRequired(pi.getId(), pi.getClientSecret());
+            default ->
+                "authentication_required".equals(code)
+                        ? new Charged.ActionRequired(pi.getId(), pi.getClientSecret())
+                        : new Charged.Declined(pi.getId(), Objects.requireNonNullElse(code, "card_declined"));
+        };
     }
 
     @Override

@@ -10484,6 +10484,108 @@ Branch `feat/s157-wallets-consent`. Runbooks: [stripe.md § 15](runbooks/stripe.
   segments finer than a province, per-offer results; batch enqueue; a "your payout came back" item on the Studio
   dashboard (the Payouts screen only); counsel review of the new wordings; Twilio's Advanced Opt-Out texts are an
   operator step.
+## 2026-10-20 — S-162 Plus renewals billed by Northline (RRULE), not Stripe Billing
+
+**Owner's decision (2026-10-20):** "I do not want to use stripe billing, I will rather manage billing myself with
+RRULE. I do not want to pay api fee for billing in stripe." This replaces S-152's Stripe Billing adapter. Stripe is now
+called for Plus only through **PaymentIntents, SetupIntents and refunds** (plus Stripe Tax, which every sale already
+uses); the only Stripe fees on Plus are card processing. Built: api (payments, loyalty), worker (the Plus notices),
+email (a `plus-payment` template), the consumer web's Plus tab, the app's Plus card, runbooks
+([stripe.md § 11](runbooks/stripe.md#11-northline-plus--billed-by-northline-s-152-s-162),
+[loyalty.md § 5](runbooks/loyalty.md#5-plus-billing-s-162)).
+
+**Decisions the spec didn't make**
+
+- **Library: `org.dmfs:lib-recur` 0.17.1** (Apache-2.0, pinned in the version catalog). It does RFC 5545 recurrence
+  only (with RFC 7529 RSCALE/SKIP), ~200 kB with its two small dmfs dependencies, no reflection, and is what Android
+  calendar apps use. `org.mnode.ical4j` 4.x was rejected: a whole iCalendar model we don't need, and it brings Groovy,
+  jparsec, caffeine, commons-lang3/codec and threeten-extra at runtime. lib-recur's last release is from 2024 — a
+  stable, narrow library; revisit if a CVE or a Java incompatibility appears.
+- **The rule.** A plan's rule is configuration (`PLUS_MONTHLY_RRULE` / `PLUS_ANNUAL_RRULE`, default
+  `FREQ=MONTHLY;INTERVAL=1` / `FREQ=YEARLY;INTERVAL=1`; only `FREQ=MONTHLY|YEARLY` and `INTERVAL` are accepted —
+  `COUNT`/`UNTIL` would end memberships nobody cancelled). It is anchored to the first paid instant, in UTC, to the
+  second. Plain RFC 5545 skips months without the start's day, so a start on the 29th–31st is stored with
+  `BYMONTHDAY=28,…,<day>;BYSETPOS=-1` (and `BYMONTH=<m>` for yearly): short months renew on their last day, long ones
+  go back to the anchor; February 29 renews on February 28 in common years. Stored per membership
+  (`payments.plus_schedules.rrule`, `dtstart`), so any calendar library reads it the same way.
+- **DTSTART with a trial:** a household's first membership still starts with the free trial (S-152); its DTSTART is
+  the trial's end (the first paid instant), not the join. Without a trial (a household that had Plus before, or
+  `PLUS_TRIAL_DAYS=0`) the first period is charged at the join, on-session, and DTSTART is the join.
+- **Prices** are plan settings (`PLUS_*_PRICE_CENTS`, before tax, unchanged names) — not per region yet: a region
+  override is a later story. A member keeps the price their plan started with; a price change applies to new joins and
+  to plan changes (no silent increase at renewal).
+- **Where it lives.** Payments owns the money and the schedule (`payments.plus_schedules`, `plus_periods`,
+  `plus_attempts`); loyalty keeps the membership and the benefits (`loyalty.memberships`, mirrored onto the household as
+  before). The `MembershipBilling` port is kept and is Northline's own (`NorthlineMembershipBilling`); it has no
+  provider switch any more — the card side is the existing `PaymentGateway` (Stripe with a key, the fake without), so
+  `local` and the cloud run the same code. Changes payments makes on its own (paid, refused, lapsed, refunded) reach
+  loyalty as the in-process `PlusBillingChanged` (replaces `PlusSubscriptionUpdated`), ordered by `last_event_at`.
+- **Charging.** Each period is one automatic-capture PaymentIntent (new `PaymentGateway.charge`/`chargeAgain`/
+  `chargeState`; Stripe's 402 `card_error` is an answer — declined, or `authentication_required` with the
+  PaymentIntent's client secret). Price + tax (TaxGateway: the payer's default address's province, else the region
+  model's default province; service tax code; calculated at the period's first attempt, recorded at Stripe Tax when
+  paid, retried by the job when that fails). **Never twice:** the Stripe idempotency key is per membership and period
+  (`nl1:plus:<membership>:<period>`; the join's is derived from the request's Idempotency-Key), retries confirm the
+  *same* PaymentIntent again, the attempt's number is claimed in `payments.plus_attempts` (primary key) and the period
+  row is locked `for update skip locked`, so concurrent job runs or replicas skip it. Ledger: `stripe_balance` →
+  `revenue` + `tax_payable`, ref `plus_invoice` / the period id (the console's Plus revenue keeps working).
+- **Refusals.** A declined renewal: `past_due`, retried at the due date + `PLUS_RETRY_DAYS` (1, 3, 5 days), then the
+  membership lapses (status `canceled`, `ended_reason=lapsed`). Benefits continue during the retries: loyalty's grace is
+  max(`PLUS_GRACE_DAYS`, last retry + 1 day), enforced in code. `authentication_required` (3-D Secure off-session): the
+  period waits for the member (`requires_action`), they're emailed and pushed a link (web `/account?tab=plus`, the app's
+  wallet), confirm with Stripe.js / the SDK and the app calls `POST /me/plus/confirm`; the off-session retries continue
+  meanwhile. A first payment that needs the bank and is never confirmed is dropped after `PLUS_UNCONFIRMED_AFTER`
+  (24 h); a declined join is 409 `card_declined` and keeps nothing.
+- **Cancel** = no further renewal (the due period is voided, benefits to the period's end); cancelling while a
+  renewal is being retried ends the membership at once (nothing is paid past the period). **Plan change** waits for the
+  next renewal, which starts the new plan's rule there (PATCH to the current plan undoes a waiting change; the response's
+  `plan` stays the current one and `nextPlan` shows the change — the web and app say "Switches to … on …").
+- **Card update:** `PUT /api/v1/me/plus/card {paymentMethodId|null}` — one of the payer's saved cards (422 "Choose one
+  of your saved cards."), null = the default card; a renewal being retried is tried on the next run. The app has no card
+  picker: it tells the member to make another card the default in Payment methods (the default is what Plus uses).
+- **Refunds** go the existing way (Stripe Refund of the PaymentIntent + Stripe Tax reversal + ledger back), from the
+  console: `POST /api/v1/console/plus/periods/{id}/refund` (finance screen, `refund` action, audited
+  `payments.plus_refunded`); refunding the current period ends the membership. `GET
+  /api/v1/console/plus/households/{householdId}/periods` lists them. No console screen yet.
+- **Webhooks:** none of Plus's own. The platform endpoint's existing `payment_intent.*` events settle a Plus period
+  (metadata `northline_kind=plus`) confirmed at the bank, before the escrow handlers see it. The four Stripe Billing
+  events are no longer handled; remove them from the endpoint if they were added.
+- **Notices** (no new topic: TopicCatalogueTest stays at its count): `plus_payment.updated` (`paid`, `action_required`,
+  `declined`, `lapsed`, `refunded`; ids, amounts, dates) is externalized to the existing `payments.payment` topic, which
+  the `personal-notifications` group now also reads (no retry topics). The worker sends Northline's own email
+  (`plus-payment`, transactional — a purchase the member made, so not governed by the matrix or quiet hours) and a push
+  except for the receipt; no SMS. Web deep link `/app/wallet` → `/account?tab=plus`.
+- **Moving off S-152:** running memberships with a Stripe Billing or fake `sub_…` id are adopted by the loyalty job
+  (their next period starts at their current period's end, on the plan's rule and price). Stripe Billing Subscriptions
+  left in a Stripe test account must be cancelled by hand (stripe.md § 11). Removed: `StripeMembershipBilling`,
+  `LocalMembershipBilling`, `PlusBillingConfig`, `PlusBillingProperties`, `PlusBillingService`, `PlusInvoiceStore`, the
+  `customer.subscription.*` / `invoice.paid` handling, and `PLUS_BILLING_PROVIDER`, `STRIPE_PLUS_MONTHLY_PRICE`,
+  `STRIPE_PLUS_ANNUAL_PRICE`, `PLUS_AUTOMATIC_TAX` (helm values, runbooks, `.env.example`, required-env lists).
+- **Joining now always needs a saved card** (S-152's fake let a person without one join): the same code path
+  everywhere. Tests save cards with `TestData.card`.
+
+**Schema (additive, V482** — range V482–V491**):** `payments.plus_schedules` (the rule, DTSTART, price, province,
+card, waiting plan change, status, period end, end reason; one running per household), `payments.plus_periods` (one per
+occurrence, unique `(schedule_id, seq)` and `(schedule_id, starts_at)`, `payment_intent` unique, state, attempts, next
+try, tax calculation/transaction, refund), `payments.plus_attempts` (primary key `(period_id, attempt)`).
+`payments.plus_invoices` (V426) is kept and no longer written; `loyalty.memberships` keeps its columns
+(`subscription_id` now holds `plus_<ULID>`, `provider` the card processor `local | stripe`). Configuration:
+`PLUS_MONTHLY_RRULE`, `PLUS_ANNUAL_RRULE`, `PLUS_RETRY_DAYS`, `PLUS_UNCONFIRMED_AFTER` (no secrets).
+
+**Not done**
+
+- Region- or market-specific Plus prices; a member's tax province is fixed at the join (a move doesn't change it until
+  they join again).
+- A console screen for the household's Plus payments and the refund (the endpoints exist).
+- Partial refunds of a period; proration of a mid-period plan change (it waits for the renewal instead).
+- The app's own card picker for Plus (it uses the default card).
+- The billing history's "Northline Plus · monthly" rows (`GET /me/billing-history`) — the Plus tab lists the periods.
+
+**Never run against the real Stripe API** (stripe-mock and the fake gateway only): the automatic-capture Plus
+PaymentIntents confirmed on- and off-session, `confirm` of a refused PaymentIntent, the 402 `card_error` with
+`authentication_required` and the PaymentIntent in the error, Stripe.js `confirmCardPayment` / the SDK's
+`handleNextAction` on a renewal's PaymentIntent, the `payment_intent.succeeded` webhook for a Plus period, the refund
+and Stripe Tax record/reverse of a Plus period. stripe.md § 11 lists the test-mode cards to run before launch.
 
 ## 2026-10-21 — S-159 Group food orders, the phone apps on S-154's accounts, in-app account deletion, demo data by email
 

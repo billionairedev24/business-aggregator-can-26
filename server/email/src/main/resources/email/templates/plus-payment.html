@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{__${'plus-payment.preheader.' + outcome}__}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{__${'plus-payment.heading.' + outcome}__}">Heading</h1>
+  <p th:style="${s.p}" th:text="#{__${'plus-payment.body.' + outcome}__(${total}, ${from}, ${to}, ${retryAt})}">Body</p>
+  <p th:style="${s.p}">
+    <span th:text="#{__${'plus-payment.plan.' + plan}__}">Plan</span> · <span th:text="#{plus-payment.period(${from}, ${to})}">Period</span><br/>
+    <span th:text="#{plus-payment.amount(${amount})}">Amount</span><br/>
+    <span th:text="#{plus-payment.tax(${tax})}">Tax</span><br/>
+    <strong th:text="#{plus-payment.total(${total})}">Total</strong>
+  </p>
+  <p th:if="${hasRetry}" th:style="${s.p}" th:text="#{plus-payment.retry(${retryAt})}">Retry</p>
+  <th:block th:replace="~{button.html :: button(#{__${'plus-payment.cta.' + outcome}__}, ${link})}"/>
+</div>
+</body>
+</html>

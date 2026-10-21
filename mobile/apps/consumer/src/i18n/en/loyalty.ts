@@ -74,6 +74,13 @@ export const loyalty = {
   'loyalty.resume': 'Keep Plus',
   'loyalty.notPayer': 'The person who started Plus for your household manages it.',
   'loyalty.bankFailed': 'Your bank didn’t confirm the payment. Try again, or use another card in Payment methods.',
+  'loyalty.nextCharge': 'Next payment {amount} on {date}, plus tax.',
+  'loyalty.switchesTo': 'Switches to {plan} on {date}.',
+  'loyalty.keepPlan': 'Stay on {plan}',
+  'loyalty.pay.authentication_required': 'Your bank wants you to confirm the payment of {amount}.',
+  'loyalty.pay.declined': 'Your card was declined for {amount}. We’ll try again on {date} — or make another card your default in Payment methods.',
+  'loyalty.pay.lastTry': 'Your card was declined for {amount}. Make another card your default in Payment methods to keep Plus.',
+  'loyalty.confirmPayment': 'Confirm the payment',
   'loyalty.plusPrice': 'Plus {price}',
 
   'loyalty.nearTitle': 'Rewards near you',
