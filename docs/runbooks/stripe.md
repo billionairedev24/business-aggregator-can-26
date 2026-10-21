@@ -401,49 +401,50 @@ midnight): run the next day, then mark the day **resolved** with a note. Tables 
   tested with the payments stand-in (`FakeStripeGateway`) only. Try them in test mode with the `4000 0000 0000 3220`
   (authentication) and `4000 0000 0000 9995` (decline) cards before a pilot takes deposit quotes.
 
-## 11. Northline Plus — Stripe Billing (S-152)
+## 11. Northline Plus — billed by Northline (S-152, S-162)
 
-Plus is a household membership ($7.99/month or $69/year by default, `PLUS_MONTHLY_PRICE_CENTS` /
-`PLUS_ANNUAL_PRICE_CENTS`, with a free trial the first time, `PLUS_TRIAL_DAYS`). It is billed behind the payments
-module's `MembershipBilling` port, chosen by `northline.plus.billing.provider` (`PLUS_BILLING_PROVIDER`):
+**No Stripe Billing** (owner, 2026-10-20: "I do not want to use stripe billing … I do not want to pay api fee for
+billing in stripe"). Northline keeps the schedule itself and Stripe sees only what it sees for any card payment:
+**PaymentIntents, SetupIntents and refunds**. The only Stripe fees on Plus are the card-processing fees of each payment
+(and Stripe Tax's, § 6) — no Billing, Invoicing or subscription fees. No Stripe Product, Price, Subscription or Invoice
+is created, and there is nothing to configure in the dashboard for Plus.
 
-| provider | what it does | needs |
-|---|---|---|
-| `local` (default; refused under `staging`/`prod`) | a fake: subscriptions `sub_local_…`, invoices `in_local_…`, no card, no tax. Renewals are made by the loyalty job (`LOYALTY_JOBS_CRON`). | nothing |
-| `stripe` | Stripe Billing on the **platform account**: a Subscription on the person's Stripe Customer (the one checkout and saved cards use), `payment_behavior=default_incomplete`, the default card from Account › Payment methods, `trial_period_days` the first time, metadata `northline_kind=plus`, `northline_household`, `northline_plan`, `northline_user`. When the first invoice needs 3-D Secure the api returns its PaymentIntent's client secret and the consumer site (Stripe.js `confirmCardPayment`) or the app (the React Native SDK's `handleNextAction`) asks the bank. | `STRIPE_SECRET_KEY`, `STRIPE_PLUS_MONTHLY_PRICE`, `STRIPE_PLUS_ANNUAL_PRICE` (start-up refuses `stripe` without them) |
-
-### Set-up (once per mode: test for dev/staging, live for prod)
-
-1. **Products → Add product** "Northline Plus", two **recurring** prices in CAD: monthly at the monthly price, yearly
-   at the annual price (the amounts must match `PLUS_MONTHLY_PRICE_CENTS` / `PLUS_ANNUAL_PRICE_CENTS`: the account
-   shows those, Stripe charges its own). Copy the two `price_…` ids into the operator's `configEnv` as
-   `STRIPE_PLUS_MONTHLY_PRICE` / `STRIPE_PLUS_ANNUAL_PRICE` (not secrets).
-2. **Tax:** with Stripe Tax on (§ 6) set `PLUS_AUTOMATIC_TAX=true` so subscriptions use `automatic_tax`; the price's
-   tax code is "Software as a service / memberships" (txcd_10103000 or what the accountant picks). Stripe Tax needs a
-   customer address: people without a saved address get an invoice Stripe can't tax — leave it `false` until checked.
-3. **Webhooks:** add to the **platform** endpoint (§ 5, `STRIPE_WEBHOOK_SECRET`) the events
-   `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted` and
-   `invoice.paid`. They are verified and deduplicated by event id like every other Stripe event; the Connect endpoint
-   ignores them. Events of subscriptions without `northline_kind=plus` are ignored.
-4. **Customer portal / dunning:** Settings → Billing → Subscriptions and emails: turn on Smart Retries and "cancel the
-   subscription if all retries fail". Northline keeps the benefits while the subscription is `past_due` and shows
-   "update your card"; Stripe's `customer.subscription.deleted` ends them.
+| what | how |
+|---|---|
+| the schedule | `payments.plus_schedules`: the plan's RFC 5545 rule (`PLUS_MONTHLY_RRULE` / `PLUS_ANNUAL_RRULE`, default `FREQ=MONTHLY;INTERVAL=1` / `FREQ=YEARLY;INTERVAL=1`) anchored to the first paid instant in UTC (a start on the 29th–31st gets `BYMONTHDAY=28,…;BYSETPOS=-1` so short months renew on their last day; February 29 renews on February 28), its price before tax (`PLUS_*_PRICE_CENTS`, fixed when the plan starts), the card (`pm_…`, or the default card) |
+| the card | saved once with a SetupIntent (§ 9, `usage=off_session`) — joining needs one (409 `card_required`) |
+| each period | `payments.plus_periods`: one **automatic-capture PaymentIntent** (card, CAD, on the platform account, metadata `northline_kind=plus`, `northline_plus_membership`, `northline_plus_period`, `northline_household`) for price + tax (Stripe Tax calculation, service tax code, the payer's province); `Idempotency-Key` `nl1:plus:<membership>:<period>` — one PaymentIntent per period, ever |
+| joining | the first period is confirmed **on-session** with the saved card (a household's first membership starts with the free trial instead, `PLUS_TRIAL_DAYS`, and its first charge is the trial's end). 3-D Secure: the api returns the PaymentIntent's client secret; the site (Stripe.js `confirmCardPayment`) or the app (`handleNextAction`) asks the bank, then calls `POST /api/v1/me/plus/confirm`. Declined → 409 `card_declined`, nothing kept. Not confirmed within `PLUS_UNCONFIRMED_AFTER` (24 h) → dropped |
+| renewals | the payments job (every minute) confirms due periods **off-session**; each attempt is claimed in `payments.plus_attempts` and the period row is locked `skip locked`, so overlapping runs or replicas charge once |
+| refused | a decline is tried again on the **same** PaymentIntent on `PLUS_RETRY_DAYS` (default 1, 3, 5 days after the due date), benefits continue (`past_due`), then the membership **lapses**. `authentication_required`: the member is emailed and pushed a link to confirm (3-D Secure on the web or in the app); the retries go on meanwhile. Choosing another card retries on the next run |
+| cancel / plan change | cancelling stops the next renewal (benefits to the period's end); monthly ↔ annual starts at the next renewal with the new plan's rule |
+| refunds | finance: `POST /api/v1/console/plus/periods/{id}/refund` — a Stripe Refund of the period's PaymentIntent (amount + tax), the Stripe Tax reversal, the ledger back; refunding the current period ends the membership |
+| webhooks | none of its own: the platform endpoint's existing `payment_intent.*` events (§ 5) settle a Plus period confirmed at the bank (the member's confirm call and the job's next run do it too) |
 
 ### What Northline keeps
 
-`loyalty.memberships` (one row per household: plan, status, `current_period_end`, `cancel_at_period_end`,
-`last_event_at` — an older webhook never overwrites a newer state) and `payments.plus_invoices` (the invoice id, the
-amount, tax and when it was paid) with a `plus_invoice` ledger entry; the console's Finance screen sums them as Plus
-revenue. Cancel = `cancel_at_period_end` (the household keeps Plus to the end of what it paid for); "Keep Plus" undoes
-it. Only the person who started it (the payer) can change it.
+`payments.plus_schedules`, `plus_periods`, `plus_attempts` (V482); the ledger: `stripe_balance` → `revenue` +
+`tax_payable`, ref `plus_invoice` / the period's id (the console's Finance screen sums it as Plus revenue). The
+membership and its benefits stay in `loyalty.memberships` (status mirrored from payments). Receipts and payment notices
+are Northline's own emails (`plus-payment` template) and pushes, sent by the notification worker from
+`plus_payment.updated` on `payments.payment`. S-152's `payments.plus_invoices` is no longer written.
+
+### Moving off Stripe Billing
+
+S-152 memberships (`sub_…`) are moved by the loyalty job: their next period starts at their current period's end on
+Northline's billing. **Cancel any S-152 test-mode Subscriptions left in the Stripe dashboard** (Billing →
+Subscriptions → cancel immediately, no refund) and delete the four webhook events `customer.subscription.created`,
+`.updated`, `.deleted` and `invoice.paid` from the platform endpoint if they were added; the variables
+`PLUS_BILLING_PROVIDER`, `STRIPE_PLUS_MONTHLY_PRICE`, `STRIPE_PLUS_ANNUAL_PRICE` and `PLUS_AUTOMATIC_TAX` are gone.
 
 ### Never run against the real Stripe API
 
-`StripeMembershipBilling` and the webhook handling were written from Stripe's API reference (API version pinned, § 1;
-`current_period_end` lives on the subscription item, the invoice's subscription on `parent.subscription_details`) and
-tested against **stripe-mock** and signed fixture events only. Before launch, in test mode: join with a card, with the
-3-D Secure card `4000 0025 0000 3155`, and with `4000 0000 0000 0341` (fails after attaching) to see `past_due`;
-switch plan (proration), cancel, resume; check the four events arrive and the Finance screen's Plus revenue.
+The Plus PaymentIntents (create with `confirm=true` and `off_session`, confirm again, read; the 402 `card_error` with
+`authentication_required` and its PaymentIntent) were written from Stripe's API reference and checked against
+stripe-mock (`StripeConnectGatewayStripeMockTest`); declines, retries and 3-D Secure are tested with the fake gateway's
+test cards. **Before launch, in test mode:** join with `4242…`, with `4000 0027 6000 3184` (3-D Secure), renew with
+`4000 0000 0000 0341` (attaches, then declines), with `4000 0025 0000 3155` off-session (authentication_required);
+refund a period; check the Finance screen's Plus revenue and Stripe Tax's transactions.
 
 ## 12. Provider-funded rewards — charging the business (S-152)
 

@@ -170,6 +170,7 @@ class LoyaltyEarningApiTest extends IntegrationTest {
     void aPlusMemberEarnsDouble() throws Exception {
         var shop = fx.shop("provider", "master");
         var customer = data.user("Plus Member");
+        data.card(customer, "pm_card_visa_" + customer, true); // S-162: Plus renews on a saved card
         mvc.perform(post("/api/v1/me/plus")
                         .with(TestJwt.customer(customer))
                         .header("Idempotency-Key", Ids.next())

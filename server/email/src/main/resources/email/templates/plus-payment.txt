@@ -1,0 +1,14 @@
+[(#{__${'plus-payment.heading.' + outcome}__})]
+
+[(#{__${'plus-payment.body.' + outcome}__(${total}, ${from}, ${to}, ${retryAt})})]
+
+[(#{__${'plus-payment.plan.' + plan}__})] · [(#{plus-payment.period(${from}, ${to})})]
+[(#{plus-payment.amount(${amount})})]
+[(#{plus-payment.tax(${tax})})]
+[(#{plus-payment.total(${total})})]
+[# th:if="${hasRetry}"]
+[(#{plus-payment.retry(${retryAt})})]
+[/]
+[(#{__${'plus-payment.cta.' + outcome}__})]: [(${link})]
+
+[# th:insert="~{footer.txt}" /]

@@ -1031,6 +1031,90 @@ public sealed interface EmailContent {
         }
     }
 
+    /**
+     * S-162: a Northline Plus payment, to the member who pays — Northline bills Plus itself. {@code paid} is the receipt
+     * (amount, tax, total, the period); {@code action_required} asks them to confirm the payment with their bank (3-D
+     * Secure, on the web or in the app); {@code declined} says when it's tried again; {@code lapsed} that the
+     * membership ended; {@code refunded} that a period was paid back. Transactional: it confirms or completes a
+     * purchase the member made (CASL s. 6(6)) — no unsubscribe link, sent whatever the matrix says.
+     *
+     * @param outcome {@code paid | action_required | declined | lapsed | refunded}
+     * @param plan {@code monthly | annual}
+     * @param amountCents the plan's price before tax
+     * @param retryAt the next try ({@code declined}, {@code action_required}), else null
+     * @param link the account's Plus page (a universal link: the app opens it when installed)
+     */
+    record PlusPayment(
+            String outcome,
+            String plan,
+            long amountCents,
+            long taxCents,
+            Instant periodStart,
+            Instant periodEnd,
+            @Nullable Instant retryAt,
+            URI link)
+            implements EmailContent {
+
+        public static final Set<String> OUTCOMES = Set.of("paid", "action_required", "declined", "lapsed", "refunded");
+
+        public PlusPayment {
+            if (!OUTCOMES.contains(outcome) || !Set.of("monthly", "annual").contains(plan)) {
+                throw new IllegalArgumentException("Plus payment " + outcome + " / " + plan);
+            }
+        }
+
+        @Override
+        public String template() {
+            return "plus-payment";
+        }
+
+        @Override
+        public String variant() {
+            return outcome;
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public String settingsPlace() {
+            return "account";
+        }
+
+        @Override
+        public String businessName() {
+            return "Northline";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("outcome", outcome);
+            v.put("plan", plan);
+            v.put("amount", format.money(amountCents));
+            v.put("tax", format.money(taxCents));
+            v.put("total", format.money(amountCents + taxCents));
+            v.put("from", format.date(periodStart));
+            v.put("to", format.date(periodEnd));
+            v.put("hasRetry", retryAt != null);
+            v.put("retryAt", retryAt == null ? "" : format.date(retryAt));
+            v.put("link", link.toString());
+            return v;
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(format.money(amountCents + taxCents));
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
     // ── Commercial (S-108) ───────────────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -1288,6 +1372,21 @@ public sealed interface EmailContent {
                         URI.create("http://localhost:3100/sign-in"),
                         URI.create("http://localhost:3100/forgot-password"),
                         "studio"));
+        for (var outcome : List.of("paid", "action_required", "declined", "lapsed", "refunded")) {
+            all.put(
+                    "plus-payment." + outcome,
+                    new PlusPayment(
+                            outcome,
+                            "monthly",
+                            799,
+                            40,
+                            at,
+                            at.plus(Duration.ofDays(31)),
+                            outcome.equals("declined") || outcome.equals("action_required")
+                                    ? at.plus(Duration.ofDays(1))
+                                    : null,
+                            URI.create("http://localhost:3000/account?tab=plus")));
+        }
         return java.util.Collections.unmodifiableMap(all);
     }
 

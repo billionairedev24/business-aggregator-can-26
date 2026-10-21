@@ -133,8 +133,12 @@ export interface Plus {
   cancelAtPeriodEnd: boolean; payer: boolean; members: number; monthlyPriceCents: number; annualPriceCents: number;
   trialDays: number; trialAvailable: boolean;
   benefits: { member: boolean; serviceFeeWaived: boolean; memberPrices: boolean; pointsMultiplierPct: number };
-  /** The first payment needs the bank (3-D Secure): confirm it with Stripe's SDK. */
+  /** A payment needs the bank (3-D Secure): confirm it with Stripe's SDK, then `POST /me/plus/confirm`. */
   clientSecret?: string | null; publishableKey?: string | null;
+  /** S-162: Northline bills Plus itself — the next renewal, a plan change waiting for it, a refused payment. */
+  nextPlan?: PlusPlan | null; nextChargeAt?: string | null; nextChargeCents?: number;
+  card?: { id: string; brand: string; last4: string; chosen: boolean } | null;
+  payment?: { periodId: string; reason: string; totalCents: number; retryAt?: string | null; lapsesAt: string } | null;
 }
 export interface NearbyReward {
   merchantId: string; businessName: string; type: string; slug?: string | null; multiplier: number; label?: string | null;
@@ -272,6 +276,7 @@ export const accountApi = (api: ApiClient) => ({
   changePlus: (plan: PlusPlan, key: string) => need(api.patch<Plus>('/me/plus', { json: { plan }, idempotencyKey: key })),
   cancelPlus: () => need(api.delete<Plus>('/me/plus')),
   resumePlus: () => need(api.post<Plus>('/me/plus/resume')),
+  confirmPlus: () => need(api.post<Plus>('/me/plus/confirm')),
   /** Provider-funded rewards running near the place (public). */
   rewardsNear: async (place: { city?: string | null; lat?: number | null; lng?: number | null }) => {
     const q = new URLSearchParams({ limit: '6' });

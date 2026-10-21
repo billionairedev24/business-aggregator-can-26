@@ -36,6 +36,9 @@ import tools.jackson.databind.JsonNode;
  *   <tr><td>refund.case_updated, refund.issued</td><td>customer</td><td>refunds_cases</td><td>/app/cases/{caseNumber}</td></tr>
  *   <tr><td>points.credited (S-152: a completed sale, a referral)</td><td>customer</td><td>order_updates</td>
  *       <td>/app/account/points</td></tr>
+ *   <tr><td>S-162: plus_payment.updated (paid — the receipt —, action_required, declined, lapsed, refunded)</td>
+ *       <td>the payer</td><td>— (always: a payment they made; email, and push but for the receipt)</td>
+ *       <td>/app/wallet</td></tr>
  *   <tr><td>delivery.assigned, run.changed</td><td>courier</td><td>— (always, push only)</td><td>/courier/run</td></tr>
  *   <tr><td>{@value #OFFER} (S-108; no producer yet)</td><td>customer</td><td>offers — commercial: the person's
  *       consent per channel, checked at send time</td><td>the offer's page</td></tr>
@@ -114,6 +117,7 @@ public final class PersonalNotices {
                                 refund(eventId, type, data, id);
                             case OFFER -> offer(eventId, type, data);
                             case "loyalty.points_credited" -> points(eventId, type, data);
+                            case "payments.plus_payment_updated" -> plus(eventId, type, data);
                             case "fulfilment.delivery_assigned" -> courier(eventId, type, data, id, "run.assigned");
                             case "fulfilment.run_changed" ->
                                 courier(
@@ -381,6 +385,56 @@ public final class PersonalNotices {
                 new Notice.Push("/app/account/points", Map.of("type", key), "points:" + eventId));
     }
 
+    /**
+     * S-162: a Northline Plus payment — Northline bills Plus itself. Not governed by the matrix (a payment the person
+     * made: the receipt, or what they must do for it), so not held by quiet hours either; email always (the
+     * {@link EmailContent.PlusPayment} receipt or notice), push too except for the receipt, no SMS.
+     */
+    private static @Nullable Notice plus(String eventId, String type, JsonNode data) {
+        var customer = data.path("customerId").asString("");
+        var outcome = data.path("outcome").asString("");
+        if (customer.isEmpty() || !EmailContent.PlusPayment.OUTCOMES.contains(outcome)) {
+            return null;
+        }
+        var plan = "annual".equals(data.path("plan").asString("")) ? "annual" : "monthly";
+        var amount = data.path("amountCents").asLong();
+        var tax = data.path("taxCents").asLong();
+        var from = OffsetDateTime.parse(data.path("periodStart").asString()).toInstant();
+        var to = OffsetDateTime.parse(data.path("periodEnd").asString()).toInstant();
+        var retryAt = data.path("retryAt").isString()
+                ? OffsetDateTime.parse(data.path("retryAt").asString()).toInstant()
+                : null;
+        var key = "plus." + outcome;
+        Arguments arguments = (f, _) -> new Object[] {f.money(amount + tax), f.date(from), f.date(to), retryAt == null ? "" : f.date(retryAt)};
+        var words = texts(key, false, arguments);
+        return new Notice(
+                eventId,
+                type,
+                1,
+                null,
+                new Notice.Audience.Customer(customer),
+                null,
+                "paid".equals(outcome) ? EnumSet.of(Channel.EMAIL) : EnumSet.of(Channel.EMAIL, Channel.PUSH),
+                data,
+                new Notice.Texts() {
+                    @Override
+                    public String text(String business, Locale locale, ZoneId zone) {
+                        return words.text(business, locale, zone);
+                    }
+
+                    @Override
+                    public String title(String business, Locale locale, ZoneId zone) {
+                        return words.title(business, locale, zone);
+                    }
+
+                    @Override
+                    public EmailContent email(String business, URI link, Locale locale, ZoneId zone) {
+                        return new EmailContent.PlusPayment(outcome, plan, amount, tax, from, to, retryAt, link);
+                    }
+                },
+                new Notice.Push("/app/wallet", Map.of("type", key), "plus:" + data.path("aggregateId").asString("")));
+    }
+
     private static @Nullable Notice offer(String eventId, String type, JsonNode data) {
         var customer = data.path("customerId").asString("");
         var path = data.path("path").asString("");
@@ -629,7 +683,17 @@ public final class PersonalNotices {
             Map.entry("points.earned", "You earned {0,number,integer} points from {1}."),
             Map.entry("points.earned.title", "Points earned"),
             Map.entry("points.referral", "A neighbour’s first order earned you {0,number,integer} points."),
-            Map.entry("points.referral.title", "Thanks for inviting a neighbour"));
+            Map.entry("points.referral.title", "Thanks for inviting a neighbour"),
+            Map.entry("plus.paid", "Thanks! We charged {0} for Northline Plus ({1} – {2})."),
+            Map.entry("plus.paid.title", "Northline Plus receipt"),
+            Map.entry("plus.action_required", "Your bank wants you to confirm the Northline Plus payment of {0}."),
+            Map.entry("plus.action_required.title", "Confirm your Plus payment"),
+            Map.entry("plus.declined", "Your card was declined for Northline Plus ({0}). We’ll try again on {3}."),
+            Map.entry("plus.declined.title", "Plus payment declined"),
+            Map.entry("plus.lapsed", "We couldn’t collect {0} for Northline Plus, so your membership ended."),
+            Map.entry("plus.lapsed.title", "Northline Plus ended"),
+            Map.entry("plus.refunded", "{0} for Northline Plus is on its way back to your card."),
+            Map.entry("plus.refunded.title", "Plus payment refunded"));
 
     static final Map<String, String> FR = Map.ofEntries(
             Map.entry(
@@ -739,5 +803,15 @@ public final class PersonalNotices {
             Map.entry("points.earned", "Vous avez gagné {0,number,integer} points chez {1}."),
             Map.entry("points.earned.title", "Points gagnés"),
             Map.entry("points.referral", "La première commande d’un voisin vous a rapporté {0,number,integer} points."),
-            Map.entry("points.referral.title", "Merci d’avoir invité un voisin"));
+            Map.entry("points.referral.title", "Merci d’avoir invité un voisin"),
+            Map.entry("plus.paid", "Merci! Nous avons porté {0} pour Northline Plus ({1} – {2})."),
+            Map.entry("plus.paid.title", "Reçu Northline Plus"),
+            Map.entry("plus.action_required", "Votre banque vous demande de confirmer le paiement Northline Plus de {0}."),
+            Map.entry("plus.action_required.title", "Confirmez votre paiement Plus"),
+            Map.entry("plus.declined", "Votre carte a été refusée pour Northline Plus ({0}). Nous réessaierons le {3}."),
+            Map.entry("plus.declined.title", "Paiement Plus refusé"),
+            Map.entry("plus.lapsed", "Nous n’avons pas pu percevoir {0} pour Northline Plus : votre abonnement a pris fin."),
+            Map.entry("plus.lapsed.title", "Northline Plus a pris fin"),
+            Map.entry("plus.refunded", "{0} pour Northline Plus revient sur votre carte."),
+            Map.entry("plus.refunded.title", "Paiement Plus remboursé"));
 }
