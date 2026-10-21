@@ -12,6 +12,8 @@ import { Screen } from '../ui/screen';
 import { EmptyState, LoadingList, QueryView } from '../ui/states';
 import { shop, useMarket, useShopFormat } from './common';
 import { Chip, Kicker, Thumb, shopStyles } from './parts';
+import { ProposalChips, SmartFilters } from './SmartFilters';
+import { withProposals, type Proposal } from './smartSearch';
 
 type Kind = 'all' | 'product' | 'service';
 const KINDS: Kind[] = ['all', 'product', 'service'];
@@ -72,7 +74,8 @@ const fromCard = (p: ProductCard): Row => ({
  * pill with Cancel, the type chips (all · products · services) and the goods chips, the count and the sort, then one
  * list of products and services (96 pt pictures). Text search is `GET /search` (S-44) with the person's province and
  * position — no `kind` for "all"; food and business results are left out (the app has no food screens; Food is hidden
- * as a vertical, thrash item 7). A department circle from Home browses `GET /public/shop/departments/{slug}`.
+ * as a vertical, thrash item 7). A department circle from Home browses `GET /public/shop/departments/{slug}`. S-158: a
+ * typed sentence gets the AI's suggested filters as chips, applied only when the person taps Apply (and removable).
  */
 export function Search() {
   const f = useShopFormat();
@@ -85,6 +88,9 @@ export function Search() {
   const [on, setOn] = useState<Record<Filter, boolean>>({ tonight: false, under10: false });
   const [sort, setSort] = useState<Sort>('relevance');
   const department = params.department && !text ? params.department : undefined;
+  // S-158: filters the person applied from the AI's reading of their sentence (removable; cleared by new words)
+  const [applied, setApplied] = useState<Proposal[]>([]);
+  const [appliedFor, setAppliedFor] = useState('');
   const goods = kind !== 'service';
 
   useEffect(() => {
@@ -92,7 +98,7 @@ export function Search() {
     return () => clearTimeout(id);
   }, [text]);
 
-  const query: SearchQuery = {
+  const own: SearchQuery = {
     q,
     kind: kind === 'all' ? undefined : kind,
     market: market.province,
@@ -102,6 +108,9 @@ export function Search() {
     tonight: goods && on.tonight,
     maxPrice: goods && on.under10 ? UNDER_10 : undefined,
   };
+  const smart = applied.length > 0 && appliedFor === q ? applied : [];
+  const query: SearchQuery = smart.length ? withProposals(own, smart) : own;
+  const located = market.location.lat !== undefined && market.location.lng !== undefined;
   const search = useInfiniteQuery({
     queryKey: ['shop', 'search', query, locale],
     queryFn: ({ pageParam }) => shop().search(query, pageParam || undefined),
@@ -179,6 +188,14 @@ export function Search() {
           ))}
         </View>
       ) : null}
+      {department ? null : smart.length ? (
+        <View style={styles.smartApplied}>
+          <Kicker>{t('ai.search.applied')}</Kicker>
+          <ProposalChips chips={smart} onRemove={(c) => setApplied((list) => list.filter((x) => x.id !== c.id))} testID="smart-applied" />
+        </View>
+      ) : (
+        <SmartFilters text={q} located={located} onApply={(chips) => { setApplied(chips); setAppliedFor(q); }} />
+      )}
       <QueryView
         query={view}
         skeleton={<LoadingList rows={5} height={96} />}
@@ -270,6 +287,7 @@ const styles = StyleSheet.create({
   cancel: { minHeight: MIN_TARGET, justifyContent: 'center', paddingHorizontal: 4 },
   cancelText: { fontFamily: fonts.medium, fontSize: 15, color: colors.text },
   results: { gap: space[3] },
+  smartApplied: { gap: space[2] },
   countRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   sort: { minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: 4 },
   sortText: { fontFamily: fonts.bold, color: colors.text },

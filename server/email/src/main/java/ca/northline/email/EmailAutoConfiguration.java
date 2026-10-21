@@ -1,6 +1,7 @@
 package ca.northline.email;
 
 import ca.northline.email.azure.AzureEmailSender;
+import ca.northline.email.resend.ResendEmailSender;
 import ca.northline.email.sendgrid.SendGridEmailSender;
 import ca.northline.email.ses.SesEmailSender;
 import ca.northline.email.smtp.SmtpEmailSender;
@@ -111,6 +112,12 @@ public class EmailAutoConfiguration {
                 fail(provider, problems);
                 yield new SendGridEmailSender(SendGridEmailSender.client(email.endpoint(), key), from, replyTo);
             }
+            case RESEND -> {
+                var problems = new ArrayList<String>();
+                var key = require(email.apiKey(), "EMAIL_API_KEY (Resend API key re_… with sending access)", problems);
+                fail(provider, problems);
+                yield new ResendEmailSender(ResendEmailSender.client(email.endpoint(), key), from, replyTo);
+            }
             case AZURE -> {
                 var problems = new ArrayList<String>();
                 var endpoint = require(
@@ -134,7 +141,7 @@ public class EmailAutoConfiguration {
             EmailProperties email, Environment environment, EmailAddress from, @Nullable EmailAddress replyTo) {
         if (environment.matchesProfiles("staging | prod")) {
             throw new IllegalStateException("EMAIL_PROVIDER=local is not allowed under staging/prod: set EMAIL_PROVIDER"
-                    + " to smtp, ses, sendgrid or azure (" + RUNBOOK + ")");
+                    + " to smtp, ses, sendgrid, resend or azure (" + RUNBOOK + ")");
         }
         if (environment.matchesProfiles("dev")) {
             log.warn(

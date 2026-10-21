@@ -30,6 +30,16 @@ const PLUS_NONE = {
 };
 const PLUS_TRIAL = { ...PLUS_NONE, status: 'trialing', plan: 'annual', since: '2026-10-20T00:00:00Z', currentPeriodEnd: '2026-11-19T12:00:00Z', payer: true, members: 2, trialAvailable: false, benefits: { ...PLUS_NONE.benefits, member: true } };
 
+const CARDS: unknown[] = [];
+const PERIODS = [
+  { id: 'PR2', startsAt: '2026-11-19T12:00:00Z', endsAt: '2026-12-19T12:00:00Z', plan: 'monthly', state: 'scheduled', amountCents: 799, taxCents: 0, paidAt: null },
+  { id: 'PR1', startsAt: '2026-10-19T12:00:00Z', endsAt: '2026-11-19T12:00:00Z', plan: 'monthly', state: 'paid', amountCents: 799, taxCents: 40, paidAt: '2026-10-19T12:00:00Z' },
+];
+const PLUS_PAID = {
+  ...PLUS_TRIAL, status: 'active', plan: 'monthly', nextChargeAt: '2026-11-19T12:00:00Z', nextChargeCents: 799,
+  card: { id: 'pm_1', brand: 'visa', last4: '4242', chosen: false }, history: PERIODS,
+};
+
 type Reply = { status?: number; body?: unknown } | undefined;
 let calls: Call[];
 let plus: unknown;
@@ -41,7 +51,7 @@ const server = (c: Call): Reply => {
   if (u === '/api/v1/me/account-summary') return { body: {} };
   if (u === '/api/v1/me/wallet') return { body: WALLET };
   if (u.startsWith('/api/v1/me/points')) return { body: POINTS };
-  if (u === '/api/v1/me/payment-methods') return { body: { provider: 'fake', publishableKey: null, items: [] } };
+  if (u === '/api/v1/me/payment-methods') return { body: { provider: 'fake', publishableKey: null, items: CARDS } };
   if (u === '/api/v1/me/referral') return { body: REFERRAL };
   if (u === '/api/v1/me/referral/claim') return claimReply;
   if (u === '/api/v1/me/plus' && c.method === 'GET') return { body: plus };
@@ -49,6 +59,8 @@ const server = (c: Call): Reply => {
   if (u === '/api/v1/me/plus' && c.method === 'PATCH') { plus = { ...PLUS_TRIAL, plan: (c.body as { plan: string }).plan }; return { body: plus }; }
   if (u === '/api/v1/me/plus' && c.method === 'DELETE') { plus = { ...PLUS_TRIAL, cancelAtPeriodEnd: true }; return { body: plus }; }
   if (u === '/api/v1/me/plus/resume') { plus = PLUS_TRIAL; return { body: plus }; }
+  if (u === '/api/v1/me/plus/card') { const id = (c.body as { paymentMethodId: string | null }).paymentMethodId; plus = { ...(plus as object), card: { id: id ?? 'pm_1', brand: 'visa', last4: id ? '4444' : '4242', chosen: id !== null } }; return { body: plus }; }
+  if (u === '/api/v1/me/plus/confirm') { plus = PLUS_PAID; return { body: plus }; }
   return undefined;
 };
 
@@ -183,6 +195,53 @@ describe('Plus', () => {
     account('plus');
     expect(await screen.findByText('The person who started Plus for your household manages it.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancel Plus' })).toBeNull();
+  });
+
+  it('S-162: the next payment, the card Plus renews on, and the payments so far', async () => {
+    CARDS.splice(0, CARDS.length,
+      { id: 'pm_1', brand: 'visa', last4: '4242', expMonth: 12, expYear: 2030, isDefault: true, addedAt: '2026-10-01T00:00:00Z' },
+      { id: 'pm_2', brand: 'mastercard', last4: '4444', expMonth: 1, expYear: 2031, isDefault: false, addedAt: '2026-10-02T00:00:00Z' });
+    plus = PLUS_PAID;
+    account('plus');
+    expect(await screen.findByText(/Next payment \$7\.99 on Nov 19, plus tax\./)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Your default card' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('$7.99 + $0.40 tax')).toBeInTheDocument();
+    expect(screen.getByText('Upcoming')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'MASTERCARD ending 4444' }));
+    await waitFor(() => expect(sent('PUT', '/api/v1/me/plus/card').map(c => c.body)).toEqual([{ paymentMethodId: 'pm_2' }]));
+    expect(await screen.findByRole('button', { name: 'MASTERCARD ending 4444' })).toHaveAttribute('aria-pressed', 'true');
+    await expectNoAxeViolations(document.body);
+    CARDS.splice(0, CARDS.length);
+  });
+
+  it('S-162: a plan change waits for the next renewal, and can be undone', async () => {
+    plus = { ...PLUS_PAID, nextPlan: 'annual', nextChargeCents: 6900 };
+    account('plus');
+    expect(await screen.findByText(/Switches to Annual on Nov 19\./)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Stay on Monthly' }));
+    await waitFor(() => expect(sent('PATCH', '/api/v1/me/plus').map(c => c.body)).toEqual([{ plan: 'monthly' }]));
+  });
+
+  it('S-162: a declined renewal says when it’s tried again', async () => {
+    plus = { ...PLUS_PAID, status: 'past_due', payment: { periodId: 'PR2', reason: 'card_declined', totalCents: 839, retryAt: '2026-11-20T12:00:00Z', lapsesAt: '2026-11-24T12:00:00Z' } };
+    account('plus');
+    expect(await screen.findByText('Your card was declined for $8.39. We’ll try again on Nov 20, or choose another card.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Confirm the payment' })).toBeNull();
+  });
+
+  it('S-162: a payment the bank wants confirmed — Stripe.js, then the api reads it again', async () => {
+    const confirmCardPayment = vi.fn(async () => ({}));
+    vi.stubGlobal('Stripe', () => ({ confirmCardPayment }));
+    plus = {
+      ...PLUS_PAID, status: 'past_due', clientSecret: 'pi_1_secret_x', publishableKey: 'pk_test_fake',
+      payment: { periodId: 'PR2', reason: 'authentication_required', totalCents: 839, retryAt: '2026-11-20T12:00:00Z', lapsesAt: '2026-11-24T12:00:00Z' },
+    };
+    account('plus');
+    expect(await screen.findByText('Your bank wants you to confirm the payment of $8.39.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm the payment' }));
+    await waitFor(() => expect(sent('POST', '/api/v1/me/plus/confirm')).toHaveLength(1));
+    expect(confirmCardPayment).toHaveBeenCalledWith('pi_1_secret_x');
+    expect(await screen.findByText('Thanks — the payment went through.')).toBeInTheDocument();
   });
 
   it('in French', async () => {

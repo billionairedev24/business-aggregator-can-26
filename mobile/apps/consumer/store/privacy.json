@@ -10,8 +10,8 @@
   "encryptedInTransit": true,
   "accountDeletion": {
     "inApp": true,
-    "webUrl": "https://northline.ca/account?tab=profile#your-data",
-    "status": "S-105: You › Personal details › Your data › Delete my account (a privacy request confirmed with the texted code or the authenticator app; the account closes when the grace period ends); the web link is the consumer site's same page"
+    "webUrl": "https://northline.ca/account-deletion",
+    "status": "S-159: Account › Delete account (what it affects, then S-105's privacy request confirmed with the texted or emailed code or the authenticator app; the account closes when the grace period ends, with a confirmation email at each step); the web link is the consumer site's public page on deleting an account (Google Play), which leads to the site's Account › Delete account"
   },
   "collected": {
     "Name": {

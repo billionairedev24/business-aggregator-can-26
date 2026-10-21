@@ -5,7 +5,7 @@ import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { setPushRegistrar } from '@northline/mobile-kit';
 
-import { FIXTURE_CODE, FIXTURE_TOTP } from '../src/fixtures/auth';
+import { FIXTURE_BACKUP, FIXTURE_CODE, FIXTURE_PASSWORD, FIXTURE_TOTP } from '../src/fixtures/auth';
 import { defaultAddress } from '../src/location/DeliveryLocation';
 import { setServices } from '../src/services';
 import { start } from './support';
@@ -19,11 +19,21 @@ afterEach(async () => {
 
 const SAVED = { 'nl.location': JSON.stringify({ label: '1204 Example Ave, Sampleville', city: 'Sampleville', marketId: 'mkt-sampleville' }) };
 
-async function fillSignUp(phone = '555 555 0148', name = 'Grace Hopper', email = 'grace@example.com') {
-  fireEvent.changeText(await screen.findByTestId('field-phone'), phone);
-  fireEvent.changeText(screen.getByTestId('field-name'), name);
+const PASSWORD = 'a long fixture password';
+
+async function fillSignUp(name = 'Grace Hopper', email = 'grace@example.com', password = PASSWORD, phone = '') {
+  fireEvent.changeText(await screen.findByTestId('field-name'), name);
   fireEvent.changeText(screen.getByTestId('field-email'), email);
+  fireEvent.changeText(screen.getByTestId('field-password'), password);
+  fireEvent.changeText(screen.getByTestId('field-password-confirm'), password);
+  if (phone) fireEvent.changeText(screen.getByTestId('field-phone'), phone);
   fireEvent.press(screen.getByTestId('terms'));
+}
+
+async function signInWith(email: string, password: string) {
+  fireEvent.changeText(await screen.findByTestId('field-email'), email);
+  fireEvent.changeText(screen.getByTestId('field-password'), password);
+  fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
 }
 
 describe('A1 Welcome', () => {
@@ -48,21 +58,21 @@ describe('A1 Welcome', () => {
   });
 });
 
-describe('A2 Sign up', () => {
-  it('keeps Send code off until the mobile and the terms are there, then shows every rule with its message', async () => {
+describe('A2 Sign up (S-159: email + password, S-154)', () => {
+  it('keeps Create account off until the terms are ticked, then shows every rule with its message', async () => {
     await start({ url: '/sign-up' });
-    expect(await screen.findByText("A phone number is all we need to start. No passwords — you'll set up a passkey next.")).toBeTruthy();
-    const send = screen.getByRole('button', { name: 'Send code' });
-    expect(send.props.accessibilityState).toMatchObject({ disabled: true });
-    fireEvent.changeText(screen.getByTestId('field-phone'), '12345');
+    expect(await screen.findByText('Your email and a password. Add your mobile if you like — we use it only to reach you about an order.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Create account' }).props.accessibilityState).toMatchObject({ disabled: true });
     fireEvent.changeText(screen.getByTestId('field-name'), 'Grace');
     fireEvent.changeText(screen.getByTestId('field-email'), 'grace@');
+    fireEvent.changeText(screen.getByTestId('field-password'), 'too short');
+    fireEvent.changeText(screen.getByTestId('field-phone'), '12345');
     fireEvent.press(screen.getByTestId('terms'));
-    expect(screen.getByRole('button', { name: 'Send code' }).props.accessibilityState).toMatchObject({ disabled: false });
-    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
-    expect(await screen.findByText('Enter a valid Canadian mobile, e.g. +1 403 555 0148.')).toBeTruthy();
-    expect(screen.getByText('Last name is required.')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
+    expect(await screen.findByText('Last name is required.')).toBeTruthy();
     expect(screen.getByText("That doesn't look like an email address.")).toBeTruthy();
+    expect(screen.getByText('Use at least 12 characters.')).toBeTruthy();
+    expect(screen.getByText('Enter a valid Canadian mobile, e.g. +1 403 555 0148.')).toBeTruthy();
   });
 
   it('opens the Terms and the Privacy Policy outside the app', async () => {
@@ -73,23 +83,23 @@ describe('A2 Sign up', () => {
     expect(Linking.openURL).toHaveBeenNthCalledWith(2, 'http://localhost:3000/legal/privacy.html');
   });
 
-  it('shows the server’s “already used” under the field', async () => {
+  it('shows the server’s “too common” under the password', async () => {
     await start({ url: '/sign-up' });
-    await fillSignUp('+1 555 555 0100');
-    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
-    expect(await screen.findByText('An account already uses this mobile number. Sign in instead.')).toBeTruthy();
+    await fillSignUp('Grace Hopper', 'grace@example.com', 'password1234');
+    fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
+    expect(await screen.findByText("This password is too common. Choose one that's harder to guess.")).toBeTruthy();
   });
 
-  it('keeps what was typed and says so when there is no connection', async () => {
+  it('keeps what was typed (not the password) and says so when there is no connection', async () => {
     await start({
       url: '/sign-up',
       wrap: (f) => async (input, init) => {
-        if (String(input).includes('/api/auth/register')) throw new TypeError('Network request failed');
+        if (String(input).includes('/api/auth/accounts')) throw new TypeError('Network request failed');
         return f(input, init);
       },
     });
     await fillSignUp();
-    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
     expect(await screen.findByText("We couldn't reach Northline. Check your connection and try again.")).toBeTruthy();
     expect(screen.getByTestId('field-name').props.value).toBe('Grace Hopper');
   });
@@ -105,77 +115,78 @@ describe('S-157: the sign-up’s offers checkboxes (CASL express consent)', () =
     expect(screen.getByText(/Sent by Northline Marketplace Inc\./)).toBeTruthy();
     await fillSignUp();
     fireEvent.press(screen.getByTestId('consent-marketing_email'));
-    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
-    expect(await screen.findByText('Enter the 6-digit code')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
+    expect(await screen.findByText('Check your email')).toBeTruthy();
     expect(server.auth.api[0]).toMatchObject({
-      path: '/api/auth/register',
-      body: { consentSource: 'app_signup', marketing: [{ category: 'marketing_email', wordingVersion: 'account.email.2026-10' }] },
+      path: '/api/auth/accounts',
+      body: { marketing: [{ category: 'marketing_email', wordingVersion: 'account.email.2026-10' }] },
     });
   });
 
-  it('sends no consent when nothing is ticked', async () => {
+  it('sends no consent when nothing is ticked, and no text consent without a mobile', async () => {
     const { server } = await start({ url: '/sign-up' });
     await screen.findByTestId('consent-marketing_email');
     await fillSignUp();
-    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
-    expect(await screen.findByText('Enter the 6-digit code')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('consent-marketing_sms'));
+    fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
+    expect(await screen.findByText('Check your email')).toBeTruthy();
     expect(server.auth.api[0]!.body).not.toHaveProperty('marketing');
   });
 });
 
-describe('creating an account (A2 → A3 → A4 → A5) on the app’s own screens', () => {
-  it('sends the code, verifies it, finishes with SMS only, and is signed in with DPoP tokens via the https hand-off', async () => {
+describe('creating an account (A2 → email code → A4 → A5) on the app’s own screens', () => {
+  it('sends the email code, verifies it, skips the second factor, and is signed in with DPoP tokens via the https hand-off', async () => {
     const { server, services, view } = await start({ url: '/sign-up' });
-    await fillSignUp();
-    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
+    await fillSignUp('Grace Hopper', 'grace@example.com', PASSWORD, '555 555 0148');
+    fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
 
-    // A3: where the code went, the countdown, a wrong code
-    expect(await screen.findByText('Enter the 6-digit code')).toBeTruthy();
-    expect(screen.getByText('Sent to +1 (555) 555-0148 ·')).toBeTruthy();
+    expect(await screen.findByText('Check your email')).toBeTruthy();
+    expect(screen.getByText('We sent a 6-digit code to grace@example.com.')).toBeTruthy();
     expect(screen.getByText('Resend in 0:45')).toBeTruthy();
-    expect(server.auth.api[0]).toMatchObject({ path: '/api/auth/register', body: { firstName: 'Grace', lastName: 'Hopper', phone: '555 555 0148', email: 'grace@example.com', terms: true }, language: 'en-CA' });
+    expect(server.auth.api[0]).toMatchObject({
+      path: '/api/auth/accounts',
+      body: { firstName: 'Grace', lastName: 'Hopper', email: 'grace@example.com', password: PASSWORD, passwordConfirm: PASSWORD, phone: '555 555 0148', terms: true, app: 'consumer' },
+      language: 'en-CA',
+    });
     // the app's authorization request was kept in the auth session before the JSON calls
-    expect(server.calls.findIndex((c) => c.path === '/oauth2/authorize')).toBeLessThan(server.calls.findIndex((c) => c.path === '/api/auth/register'));
+    expect(server.calls.findIndex((c) => c.path === '/oauth2/authorize')).toBeLessThan(server.calls.findIndex((c) => c.path === '/api/auth/accounts'));
     fireEvent.changeText(screen.getByTestId('code-input'), '111111');
     expect(await screen.findByText("That code doesn't match. Check it and try again.")).toBeTruthy();
 
-    // six digits (as SMS autofill) submit by themselves
     fireEvent.changeText(screen.getByTestId('code-input'), FIXTURE_CODE);
     expect(await screen.findByText('Protect your account')).toBeTruthy();
     expect(view.getPathname()).toBe('/second-factor');
-
-    // A4: the design's three choices; passkey isn't possible in the app yet
-    expect(screen.getByText("You'll pay into escrow and store addresses here, so we require two factors. Pick your primary.")).toBeTruthy();
     expect(screen.getByTestId('mfa-passkey').props.accessibilityState).toMatchObject({ disabled: true });
-    expect(screen.getByText("Passkeys aren't in the app yet: add one later on the Northline site, in Settings → Security.")).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Scan QR code' })).toBeTruthy();
-    fireEvent.press(screen.getByTestId('mfa-sms'));
-    fireEvent.press(screen.getByRole('button', { name: 'Continue with SMS' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
 
-    // A5, signed in
     expect(await screen.findByText('Where should we bring things?')).toBeTruthy();
     expect(view.getPathname()).toBe('/location');
     expect(await services.session.restore()).toBe(true);
-    const authorize = server.calls.filter((c) => c.path === '/oauth2/authorize');
-    expect(authorize).toHaveLength(2); // kept, then followed through continueTo
+    expect(server.calls.filter((c) => c.path === '/oauth2/authorize')).toHaveLength(2); // kept, then followed through continueTo
     expect(server.calls.filter((c) => c.path === '/oauth2/token')).toHaveLength(2); // use_dpop_nonce, then tokens
-    expect(server.auth.api.map((c) => c.path)).toEqual(['/api/auth/register', '/api/auth/register/verify', '/api/auth/register/verify', '/api/auth/register/complete']);
+    expect(server.auth.api.map((c) => c.path)).toEqual(['/api/auth/accounts', '/api/auth/accounts/verify', '/api/auth/accounts/verify']);
   });
 
-  it('sets up an authenticator app: the QR, the key, the otpauth link, then its code', async () => {
+  it('sets up an authenticator app: the QR, the key, the otpauth link, its code, then the backup codes once', async () => {
     const { server } = await start({ url: '/sign-up' });
     await fillSignUp();
-    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
     fireEvent.changeText(await screen.findByTestId('code-input'), FIXTURE_CODE);
-    fireEvent.press(await screen.findByRole('button', { name: 'Scan QR code' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Set up an authenticator app' }));
     expect(await screen.findByLabelText('QR code for your authenticator app')).toBeTruthy();
     expect(screen.getByText("Can't scan? Enter this key: JBSWY3DPEHPK3PXP")).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Open my authenticator app' }));
     expect(Linking.openURL).toHaveBeenCalledWith(expect.stringMatching(/^otpauth:\/\/totp\//));
     fireEvent.changeText(screen.getByTestId('totp-input'), FIXTURE_TOTP);
     fireEvent.press(screen.getByRole('button', { name: 'Verify' }));
+    expect(await screen.findByText('Save your backup codes')).toBeTruthy();
+    expect(screen.getByText(FIXTURE_BACKUP)).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByText('Tick the box once you’ve saved them.')).toBeTruthy();
+    fireEvent.press(screen.getByRole('checkbox'));
+    fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByText('Where should we bring things?')).toBeTruthy();
-    expect(server.auth.api.at(-1)?.path).toBe('/api/auth/register/totp/verify');
+    expect(server.auth.api.map((c) => c.path).slice(-2)).toEqual(['/api/auth/enroll/totp', '/api/auth/enroll/totp/verify']);
   });
 
   it('offers “Finish signing in” when the account is made but the tokens didn’t arrive, and finishes on retry', async () => {
@@ -192,30 +203,84 @@ describe('creating an account (A2 → A3 → A4 → A5) on the app’s own scree
     });
     const server = () => services.fixtures!;
     await fillSignUp();
-    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
     fireEvent.changeText(await screen.findByTestId('code-input'), FIXTURE_CODE);
-    fireEvent.press(await screen.findByTestId('mfa-sms'));
-    fireEvent.press(screen.getByRole('button', { name: 'Continue with SMS' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Not now' }));
     expect(await screen.findByText("We couldn't reach Northline. Check your connection and try again.")).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Finish signing in' }));
     expect(await screen.findByText('Where should we bring things?')).toBeTruthy();
     expect(await services.session.restore()).toBe(true);
   });
 
-  it('says how long to wait when a new code is asked for too soon', async () => {
+  it('shows when a new email code can be asked for, and the spam-folder hint', async () => {
     await start({ url: '/sign-up' });
     await fillSignUp();
-    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
-    fireEvent.press(await screen.findByRole('link', { name: 'Call me instead' }));
-    expect(await screen.findByText(/Too many attempts\. Try again in 0:4\d\./)).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
+    expect(await screen.findByText('Resend in 0:45')).toBeTruthy();
+    expect(screen.getByText('Not there? Check your spam folder.')).toBeTruthy();
   });
 });
 
-describe('signing in to an existing account', () => {
-  it('sends a code to the account’s phone and signs in; Home when the address is already set', async () => {
+describe('signing in to an existing account (S-159: email + password + its second factor)', () => {
+  it('asks the account’s authenticator code after the password and signs in; Home when the address is set', async () => {
     const pushes: string[] = [];
     setPushRegistrar({ signedIn: async () => void pushes.push('in'), signingOut: async () => void pushes.push('out') });
     const { view, server, services } = await start({ url: '/sign-in', store: SAVED });
+    fireEvent.press(await screen.findByRole('button', { name: 'Sign in' }));
+    expect(await screen.findByText('Email is required.')).toBeTruthy();
+    expect(screen.getByText('Enter a password.')).toBeTruthy();
+    await signInWith('ada@example.com', 'not the password');
+    expect(await screen.findByText("That email and password don't match. Check them and try again.")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('field-password'), FIXTURE_PASSWORD);
+    fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
+    expect(await screen.findByText('Enter the code from your authenticator app')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('factor-code'), FIXTURE_TOTP);
+    fireEvent.press(screen.getByRole('button', { name: 'Verify' }));
+    await screen.findByTestId('home');
+    expect(view.getPathname()).toBe('/home');
+    expect(await services.session.restore()).toBe(true);
+    expect(server.auth.api.map((c) => c.path)).toEqual(['/api/auth/sign-in/password', '/api/auth/sign-in/password', '/api/auth/sign-in/totp']);
+    await waitFor(() => expect(pushes).toEqual(['in']));
+  });
+
+  it('takes a backup code instead of the authenticator', async () => {
+    const { server } = await start({ url: '/sign-in', store: SAVED });
+    await signInWith('ada@example.com', FIXTURE_PASSWORD);
+    fireEvent.press(await screen.findByRole('link', { name: 'Use a backup code instead' }));
+    fireEvent.changeText(screen.getByTestId('factor-backup'), FIXTURE_BACKUP);
+    fireEvent.press(screen.getByRole('button', { name: 'Verify' }));
+    await screen.findByTestId('home');
+    expect(server.auth.api.at(-1)?.path).toBe('/api/auth/sign-in/backup-code');
+  });
+
+  it('an account without a second factor is offered one after its password', async () => {
+    const { server } = await start({ url: '/sign-in', store: SAVED });
+    server.auth.accounts.push({ id: 'acct-bo', firstName: 'Bo', lastName: 'Example', email: 'bo@example.com', phone: '', password: PASSWORD, factors: [] });
+    await signInWith('bo@example.com', PASSWORD);
+    expect(await screen.findByText('Protect your account')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
+    await screen.findByTestId('home');
+  });
+
+  it('forgot password: the email, then the code and a new password, then back to Sign in', async () => {
+    const { server } = await start({ url: '/sign-in' });
+    fireEvent.changeText(await screen.findByTestId('field-email'), 'ada@example.com');
+    fireEvent.press(screen.getByRole('link', { name: 'Forgot password?' }));
+    expect(await screen.findByText('Forgot your password?')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
+    expect(await screen.findByText('Enter the code we emailed to ada@example.com and choose a new password.')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('code-input'), FIXTURE_CODE);
+    fireEvent.changeText(screen.getByTestId('field-password'), 'a brand new long password');
+    fireEvent.changeText(screen.getByTestId('field-password-confirm'), 'a brand new long password');
+    fireEvent.press(screen.getByRole('button', { name: 'Save the new password' }));
+    expect(await screen.findByText('Your password is changed. Sign in with it.')).toBeTruthy();
+    expect(server.auth.api.map((c) => c.path)).toEqual(['/api/auth/password/forgot', '/api/auth/password/reset']);
+    expect(server.auth.api[0]?.body).toEqual({ email: 'ada@example.com', app: 'consumer' });
+  });
+
+  it('the phone code stays as an option: a code to the account’s phone signs in', async () => {
+    const { view, server, services } = await start({ url: '/sign-in', store: SAVED });
+    fireEvent.press(await screen.findByRole('button', { name: 'Use a code to my mobile instead' }));
     fireEvent.press(await screen.findByRole('button', { name: 'Send code' }));
     expect(await screen.findByText('Enter your email or mobile.')).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('field-identifier'), 'ada@example.com');
@@ -226,11 +291,10 @@ describe('signing in to an existing account', () => {
     expect(view.getPathname()).toBe('/home');
     expect(await services.session.restore()).toBe(true);
     expect(server.auth.api.map((c) => c.path)).toEqual(['/api/auth/sign-in', '/api/auth/sign-in/code', '/api/auth/sign-in/code/verify']);
-    await waitFor(() => expect(pushes).toEqual(['in']));
   });
 
-  it('says a wrong code didn’t work, in the sign-in words', async () => {
-    await start({ url: '/sign-in' });
+  it('says a wrong phone code didn’t work, in the sign-in words', async () => {
+    await start({ url: '/sign-in-phone' });
     fireEvent.changeText(await screen.findByTestId('field-identifier'), 'nobody@example.com');
     fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
     fireEvent.changeText(await screen.findByTestId('code-input'), FIXTURE_CODE);
@@ -372,7 +436,7 @@ describe('signing out (You)', () => {
 });
 
 describe('Journey A in French', () => {
-  it('speaks Canadian French end to end, and asks the auth server for French codes', async () => {
+  it('speaks Canadian French end to end, and asks the auth server for French emails', async () => {
     const { getLocales } = jest.requireMock('expo-localization') as { getLocales: jest.Mock };
     getLocales.mockReturnValue([{ languageTag: 'fr-CA' }]);
     try {
@@ -383,9 +447,10 @@ describe('Journey A in French', () => {
       await act(async () => {
         await fillSignUp();
       });
-      fireEvent.press(screen.getByRole('button', { name: 'Envoyer le code' }));
-      expect(await screen.findByText('Entrez le code à 6 chiffres')).toBeTruthy();
+      fireEvent.press(screen.getByRole('button', { name: 'Créer le compte' }));
+      expect(await screen.findByText('Vérifiez vos courriels')).toBeTruthy();
       expect(server.auth.api[0]?.language).toBe('fr-CA');
+      expect(server.auth.api[0]?.body).toMatchObject({ termsLanguage: 'fr' });
     } finally {
       getLocales.mockReturnValue([{ languageTag: 'en-CA' }]);
     }

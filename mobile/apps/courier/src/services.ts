@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import {
   ApiClient,
   ApiError,
+  AppSignIn,
   DpopSession,
   deviceSecureStorage,
   memorySecureStorage,
@@ -13,6 +14,7 @@ import {
   type SecureStorage,
 } from '@northline/mobile-kit';
 
+import { CourierAuthApi } from './api/auth';
 import { CourierApi, type Run } from './api/courier';
 import { config } from './config';
 import { createFixtureServer, type FixtureServer } from './fixtures/server';
@@ -27,6 +29,9 @@ export interface Services {
   session: DpopSession;
   api: ApiClient;
   courier: CourierApi;
+  /** S-159: email + password + the second factor on the app's own screen, then the hand-off to DPoP tokens. */
+  authApi: CourierAuthApi;
+  appSignIn: AppSignIn;
   outbox: Outbox;
   queryClient: QueryClient;
   /** The Keychain / Keystore (memory on the web and the fixture backend): the session, push's installation id. */
@@ -59,6 +64,8 @@ export function createServices(options: ServiceOptions = {}): Services {
   );
   const api = new ApiClient(config.apiUrl, session, () => language, fetchImpl);
   const courier = new CourierApi(api, fetchImpl);
+  const authApi = new CourierAuthApi(config.authIssuer, fetchImpl, () => language);
+  const appSignIn = new AppSignIn(session, config.httpsRedirectUri, fetchImpl);
   const queryClient = new QueryClient({
     defaultOptions: {
       // a refusal (403 not_a_courier, 404) is final; no answer or a 5xx is worth one more try
@@ -111,6 +118,8 @@ export function createServices(options: ServiceOptions = {}): Services {
     session,
     api,
     courier,
+    authApi,
+    appSignIn,
     outbox,
     queryClient,
     secure,

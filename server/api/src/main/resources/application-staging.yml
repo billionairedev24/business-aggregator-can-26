@@ -2,10 +2,9 @@
 northline.required-env:
   payments: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_CONNECT_WEBHOOK_SECRET
   storage: STORAGE_PROVIDER, STORAGE_BUCKET   # s3 | gcs | azure; `local` is refused at start-up (S-10)
-  email: EMAIL_PROVIDER, EMAIL_FROM, EMAIL_UNSUBSCRIBE_KEY, API_PUBLIC_URL   # smtp | ses | sendgrid | azure (S-13)
+  email: EMAIL_PROVIDER, EMAIL_FROM, EMAIL_UNSUBSCRIBE_KEY, API_PUBLIC_URL   # smtp | ses | sendgrid | resend | azure (S-13)
   sms-provider: SMS_PROVIDER, SMS_FROM   # S-27 invitation texts: twilio or aws; `local` is refused here
   tax: TAX_PROVIDER   # S-21: stripe (Stripe Tax); `local` is refused at start-up
-  plus: PLUS_BILLING_PROVIDER, STRIPE_PLUS_MONTHLY_PRICE, STRIPE_PLUS_ANNUAL_PRICE   # S-152: stripe (Stripe Billing); `local` refused
   dispute-evidence: DISPUTE_EVIDENCE_PROVIDER   # S-156: stripe (card-dispute evidence); `local` refused
   identity: IDENTITY_PROVIDER             # S-22: stripe; `local` is refused at start-up
   age-verification: AGE_VERIFICATION_PROVIDER, CONSUMER_ORIGIN   # 2026-10-04: stripe; `local` is refused at start-up

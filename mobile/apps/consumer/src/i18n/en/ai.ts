@@ -1,0 +1,35 @@
+/**
+ * S-158 — natural-language search on the Search screen (S-132's api). Keys `ai.*`; fr-CA in ../fr-CA/ai.ts. Ours (the
+ * design has no drawing): the model's filters are suggestions the person applies or removes, never applied silently.
+ */
+export const ai = {
+  'ai.search.label': 'Suggested filters',
+  'ai.search.understood': 'Searching for: {explanation}',
+  'ai.search.hint': 'Suggested by AI from what you typed. Remove any you don’t want, then apply.',
+  'ai.search.apply': 'Apply filters',
+  'ai.search.dismiss': 'Just the words',
+  'ai.search.remove': 'Remove {chip}',
+  'ai.search.thinking': 'Reading what you typed…',
+  'ai.search.unavailable': 'Smart search isn’t available right now. These are results for your words.',
+  'ai.search.applied': 'Filters from your sentence',
+  'ai.chip.q': 'Words: “{q}”',
+  'ai.chip.product': 'Products',
+  'ai.chip.service': 'Services',
+  'ai.chip.master': 'Master pros',
+  'ai.chip.trusted': 'Trusted pros',
+  'ai.chip.minPrice': 'From {price}',
+  'ai.chip.maxPrice': 'Up to {price}',
+  'ai.chip.minRating': '{rating}+ stars',
+  'ai.chip.openNow': 'Open now',
+  'ai.chip.instantBook': 'Instant book',
+  'ai.chip.tonight': 'On tonight’s run',
+  'ai.chip.radius': 'Within {km} km',
+  'ai.chip.free': 'No {allergen}',
+  'ai.chip.sort.price_asc': 'Lowest price first',
+  'ai.chip.sort.price_desc': 'Highest price first',
+  'ai.chip.sort.rating': 'Best rated first',
+  'ai.diet.gluten_free': 'Gluten-free',
+  'ai.diet.vegan': 'Vegan',
+  'ai.diet.vegetarian': 'Vegetarian',
+  'ai.diet.halal': 'Halal',
+} as const;

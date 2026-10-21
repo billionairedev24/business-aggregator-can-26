@@ -55,6 +55,68 @@ public interface CommerceCatalogSource {
     /** Verifies a webhook delivery's signature and reads what changed; throws {@link Unverified}. */
     Delivery verify(WebhookRequest request);
 
+    // ── two-way stock (S-158) ──────────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * The full catalogue's page with the stock of one location ({@code null}: summed over every location, as before).
+     */
+    default Page products(Credentials credentials, @Nullable String cursor, @Nullable String locationId) {
+        return products(credentials, cursor);
+    }
+
+    /** One product with the stock of one location ({@code null}: summed). */
+    default Optional<ExternalProduct> product(Credentials credentials, String externalId, @Nullable String locationId) {
+        return product(credentials, externalId);
+    }
+
+    /** The places the merchant keeps stock: Shopify locations, Square locations, Lightspeed outlets (active ones). */
+    List<Location> locations(Credentials credentials);
+
+    /**
+     * Whether the grant lets Northline change stock (Shopify {@code write_inventory}, Square {@code INVENTORY_WRITE});
+     * connections made before S-158 need a reconnect.
+     */
+    default boolean canWriteStock(Set<String> grantedScopes) {
+        return true;
+    }
+
+    /**
+     * Changes one variant's available stock at a location by {@code delta}. Idempotent on
+     * {@link Adjustment#idempotencyKey()} where the platform takes a key (Shopify {@code @idempotent}, Square
+     * {@code idempotency_key}); Lightspeed sets an absolute count, so the adapter reads the count first. Transient
+     * failures (429 / 5xx after the adapter's own back-off, I/O) are thrown for the caller to retry later; a refusal
+     * that retrying can't fix is returned as {@link Adjusted.Refused}.
+     */
+    Adjusted adjust(Credentials credentials, Adjustment adjustment);
+
+    record Location(String id, String name) {}
+
+    /**
+     * @param variantId the platform variant ({@code commerce_variants.external_id})
+     * @param stockRef what the inventory API names (Shopify inventory item, Square variation, Lightspeed product)
+     * @param reason {@code sale} | {@code cancellation} | {@code return}
+     * @param sourceRef the Northline order, cancellation or return (Shopify's reference document)
+     */
+    record Adjustment(
+            String variantId,
+            @Nullable String stockRef,
+            String locationId,
+            int delta,
+            String reason,
+            String idempotencyKey,
+            String sourceRef) {}
+
+    sealed interface Adjusted {
+        /** Applied; {@code after} = the platform's available count afterwards, when it says. */
+        record Applied(@Nullable Integer after) implements Adjusted {}
+
+        /**
+         * The platform refused for good: {@code not_found} (the item or location is gone), {@code scope_missing},
+         * {@code rejected} (a validation error).
+         */
+        record Refused(String conflict, String detail) implements Adjusted {}
+    }
+
     // ── values ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
     /**

@@ -424,4 +424,120 @@ class PartnerClientsApiTest extends AuthIntegrationTest {
             assertThat(RegisteredClients.partnerMerchants(client)).containsExactly(PWM);
         }
     }
+
+    /**
+     * S-158: partners registered in the console ({@code developer.partner_clients}, written by the api) are synced
+     * as {@code partner:<name>}; only owner-approved businesses reach the {@code merchants} claim; disabled = revoked;
+     * a rotation's key version is on the registration; a configured partner of the same name wins.
+     */
+    @Nested
+    class ConsoleRegistered {
+
+        private OAuthClientSync sync(Map<String, PartnerSpec> configured) {
+            return new OAuthClientSync(
+                    new OAuthClientCatalog(Specs.withPartners(props(), configured), ClientPolicy.LOCAL),
+                    repository,
+                    jdbcOperations,
+                    new TransactionTemplate(transactionManager));
+        }
+
+        private String row(String name, String url, String state) {
+            var id = UUID.randomUUID().toString();
+            jdbcOperations.update("""
+                    insert into developer.partner_clients (id, name, display_name, jwk_set_url, scopes, token_ttl_seconds,
+                      state, key_version, created_by, created_at, updated_at, disabled_at)
+                    values (?, ?, 'Console Books', ?, '{api.read}', 600, ?, 1, 'staff-1', now(), now(),
+                      case when ? = 'disabled' then now() end)""", id, name, url, state, state);
+            return id;
+        }
+
+        private void binding(String partnerId, String merchantId, String state) {
+            jdbcOperations.update("""
+                    insert into developer.partner_bindings (partner_id, merchant_id, state, requested_by, requested_at,
+                      decided_by, decided_at)
+                    values (?, ?, ?, 'staff-1', now(), case when ? = 'requested' then null else 'owner-1' end,
+                      case when ? = 'requested' then null else now() end)
+                    on conflict (partner_id, merchant_id) do update set state = excluded.state,
+                      decided_by = excluded.decided_by, decided_at = excluded.decided_at""", partnerId, merchantId, state, state, state);
+        }
+
+        @Test
+        void onlyApprovedBusinessesReachTheToken_andDisabledIsRevoked() throws Exception {
+            var key = Key.ec();
+            var path = "/console-jwks-" + name();
+            publish(path, key);
+            var name = name();
+            var id = row(name, JWKS.baseUrl() + path, "active");
+            binding(id, PWM, "approved");
+            binding(id, PWP, "requested");
+            var outcomes = sync(Map.of()).syncConsolePartners(ClientPolicy.LOCAL);
+            var clientId = PartnerSpec.clientId(name);
+            assertThat(outcomes).anySatisfy(o -> {
+                assertThat(o.clientId()).isEqualTo(clientId);
+                assertThat(o.action()).isEqualTo(OAuthClientSync.Action.CREATE);
+            });
+
+            var body = token(assertion(clientId, key), null)
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            var access = claims(JsonPath.read(body, "$.access_token"));
+            assertThat(access.get("merchants")).isEqualTo(List.of(PWM));
+            assertThat(access.get("scope")).isEqualTo("api.read");
+            assertThat(((Number) access.get("exp")).longValue() - ((Number) access.get("iat")).longValue())
+                    .isEqualTo(600);
+
+            // the second owner approves; a re-sync is an update, the next token carries both
+            binding(id, PWP, "approved");
+            assertThat(sync(Map.of()).syncConsolePartners(ClientPolicy.LOCAL)).anySatisfy(o -> {
+                assertThat(o.clientId()).isEqualTo(clientId);
+                assertThat(o.action()).isEqualTo(OAuthClientSync.Action.UPDATE);
+            });
+            body = token(assertion(clientId, key), null)
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            assertThat(claims(JsonPath.read(body, "$.access_token")).get("merchants"))
+                    .isEqualTo(List.of(PWM, PWP));
+
+            // "Rotate keys" bumps the version on the registration (the assertion check reads the JWK Set again)
+            jdbcOperations.update("update developer.partner_clients set key_version = 2 where id = ?", id);
+            sync(Map.of()).syncConsolePartners(ClientPolicy.LOCAL);
+            assertThat(RegisteredClients.partnerKeyVersion(
+                            java.util.Objects.requireNonNull(repository.findByClientId(clientId))))
+                    .isEqualTo(2);
+            token(assertion(clientId, key), null).andExpect(status().isOk());
+
+            // disabled in the console: no new token
+            jdbcOperations.update(
+                    "update developer.partner_clients set state = 'disabled', disabled_at = now() where id = ?", id);
+            sync(Map.of()).syncConsolePartners(ClientPolicy.LOCAL);
+            token(assertion(clientId, key), null)
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error").value("invalid_client"));
+            // and the configuration sync doesn't report it as a leftover
+            assertThat(sync(Map.of()).plan()).noneMatch(o -> o.clientId().equals(clientId));
+        }
+
+        @Test
+        void aConfiguredPartnerOfTheSameNameWins() throws Exception {
+            var key = Key.ec();
+            var name = name();
+            var configured = Specs.partner(List.of(key.publicJson()), List.of("api.read"), List.of(PWP));
+            sync(Map.of(name, configured)).sync();
+            var id = row(name, "http://localhost:1/never.json", "active");
+            binding(id, PWM, "approved");
+            assertThat(sync(Map.of(name, configured)).syncConsolePartners(ClientPolicy.LOCAL))
+                    .noneMatch(o -> o.clientId().equals(PartnerSpec.clientId(name)));
+            var body = token(assertion(PartnerSpec.clientId(name), key), null)
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            assertThat(claims(JsonPath.read(body, "$.access_token")).get("merchants"))
+                    .isEqualTo(List.of(PWP));
+        }
+    }
 }

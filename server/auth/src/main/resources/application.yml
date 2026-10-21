@@ -288,6 +288,11 @@ northline:
     #       scopes: [ api.read ]                                        # api.read | api.write
     #       merchants: [ 01J9ZD3V00000000000000PWM1 ]                   # the businesses it acts for
     #       revoked: false                                              # true = no new token
+    # S-158: partners registered in the platform console (developer.partner_clients, written by the api) are registered
+    # here every refresh; only businesses whose owner approved reach the merchants claim (docs/runbooks/partners.md).
+    console-partners:
+      enabled: ${OAUTH_CONSOLE_PARTNERS_ENABLED:true}
+      refresh: ${OAUTH_CONSOLE_PARTNERS_REFRESH:PT30S}
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   kms:
     provider: ${KMS_PROVIDER:local}    # token signing keys (S-7): local | aws | gcp | azure
@@ -300,7 +305,7 @@ northline:
     endpoint: ${KMS_ENDPOINT:}         # AWS only; e.g. LocalStack
   # S-154: account emails through the shared email library (docs/runbooks/email.md) — the api's settings: local (SMTP to
   # Mailpit on localhost:1025, http://localhost:8025; only logged when Mailpit isn't running; refused under staging/prod)
-  # | smtp | ses | sendgrid | azure.
+  # | smtp | ses | sendgrid | resend | azure.
   email:
     provider: ${EMAIL_PROVIDER:local}
     from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}

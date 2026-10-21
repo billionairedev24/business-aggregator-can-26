@@ -275,6 +275,7 @@ class PrivacyPipeline implements PrivacyWork {
                 var done = request.withState(RequestState.COMPLETED)
                         .withCompletedAt(now)
                         .withHoldsOpen(holds);
+                intake.erasureCompleted(done); // S-159: before the contact is wiped
                 done = intake.save(holds == 0 ? done.withSealed(null) : done);
                 intake.record(done, Intake.SYSTEM, Intake.SYSTEM, "erasure_completed", Map.of("holds", holds));
                 events.publishEvent(new PersonalDataErased(Ids.next(), now, done.id(), done.subjectId(), holds));

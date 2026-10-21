@@ -101,3 +101,23 @@ export const useDecideIdentity = () => useDecision((v: { id: string; checkId: st
 /** S-23 `POST /api/v1/console/registry-reviews/{id}/decision`. */
 export const useDecideRegistry = () => useDecision((v: { reviewId: string; decision: 'approve' | 'reject'; note?: string }) =>
   http(`/api/v1/console/registry-reviews/${encodeURIComponent(v.reviewId)}/decision`, { method: 'POST', body: { decision: v.decision, note: v.note } }));
+
+// ── S-158: the registry check queue (rows needing a human, re-check, outcome) ──────────────────────────────────────
+/** An open S-23 review with its evidence (api `RegistryReviews.ReviewView`). */
+export const RegistryQueueRow = RegistryReview.extend({
+  merchantId: z.string(), businessName: z.string(), subject: z.string(), recordNumber: z.string().nullish(),
+  recordExpiresOn: z.string().nullish(), reference: z.string().nullish(), checkedAt: z.string(),
+});
+export type RegistryQueueRow = z.infer<typeof RegistryQueueRow>;
+export const registryQueueQuery = queryOptions({
+  queryKey: ['console', 'verify', 'registry'],
+  queryFn: async () => (await http('/api/v1/console/registry-reviews?limit=200', {}, z.object({ items: z.array(RegistryQueueRow) }))).items,
+});
+export const Rechecked = z.object({ verificationStatus: z.string(), checks: z.array(RegistryQueueRow) });
+export type Rechecked = z.infer<typeof Rechecked>;
+/** `POST /api/v1/console/registry-reviews/{id}/recheck`: the lookup runs again; the open review is superseded. */
+export const useRecheckRegistry = () => useDecision((reviewId: string) =>
+  http(`/api/v1/console/registry-reviews/${encodeURIComponent(reviewId)}/recheck`, { method: 'POST' }, Rechecked));
+/** The queue's decision with what the agent checked (reference, the licence's expiry). */
+export const useDecideRegistryWithEvidence = () => useDecision((v: { reviewId: string; decision: 'approve' | 'reject'; reference?: string; expiresOn?: string; note?: string }) =>
+  http(`/api/v1/console/registry-reviews/${encodeURIComponent(v.reviewId)}/decision`, { method: 'POST', body: { decision: v.decision, reference: v.reference, expiresOn: v.expiresOn, note: v.note } }));

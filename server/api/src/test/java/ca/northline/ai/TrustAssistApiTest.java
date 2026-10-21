@@ -281,6 +281,146 @@ class TrustAssistApiTest extends ScriptedModelTest {
         }
     }
 
+    /** S-158: the console's AI screening queue — the flagged content, approve (dismiss), hide, escalate; the scans. */
+    @Nested
+    class ScreeningQueue {
+
+        String aiFlag(String targetType, String targetId, String merchantId, String categories) {
+            var id = Ids.next();
+            jdbc.sql("""
+                            insert into trust.flags (id, target_type, target_id, rule, evidence, state, actor_id, merchant_id)
+                            values (?, ?, ?, 'ai_screen', jsonb_build_object('source', 'ai', 'categories', ?::text,
+                                    'explanation', 'The model says so.', 'model', 'm'), 'open', 'system:trust-screening', ?)
+                            """)
+                    .params(id, targetType, targetId, categories, merchantId)
+                    .update();
+            return id;
+        }
+
+        org.springframework.test.web.servlet.ResultActions act(String flagId, String action, String staff)
+                throws Exception {
+            return mvc.perform(post("/api/v1/console/trust/flags/{id}/action", flagId)
+                    .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"action\":\"" + action + "\",\"note\":\"Screened.\"}"));
+        }
+
+        @Test
+        void staffSeeWhatWasFlaggedAndHideIt() throws Exception {
+            var biz = data.business(MerchantRole.OWNER);
+            var staff = data.user("Sam");
+            var thread = thread(biz.merchantId());
+            var message = message(thread, "merchant", "Send the deposit by e-transfer instead", "2099-02-01T00:03:00Z");
+            var messageFlag = aiFlag("message", message, biz.merchantId(), "off_platform_payment");
+
+            mvc.perform(get("/api/v1/console/trust/flags/{id}/content", messageFlag)
+                            .with(TestJwt.staff(staff, StaffRole.SUPPORT)))
+                    .andExpect(status().isForbidden());
+            mvc.perform(get("/api/v1/console/trust/flags/{id}/content", messageFlag)
+                            .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.targetType").value("message"))
+                    .andExpect(jsonPath("$.text").value("Send the deposit by e-transfer instead"))
+                    .andExpect(jsonPath("$.context").value("from the merchant"));
+            assertThat(count(
+                            "select count(*) from developer.audit_log where action = 'trust.flag_content_viewed' and target_id = ?",
+                            messageFlag))
+                    .isOne();
+            mvc.perform(get("/api/v1/console/trust/flags?source=ai&limit=200")
+                            .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
+                    .andExpect(jsonPath("$.items[?(@.id == '%s')].businessName", messageFlag)
+                            .isNotEmpty());
+
+            // hide the message: the thread shows the placeholder, the words are kept apart
+            act(messageFlag, "hide", staff)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.action").value("hide"));
+            var row = jdbc.sql("select body, hidden_body, hidden_by from messaging.messages where id = ?")
+                    .params(message)
+                    .query()
+                    .singleRow();
+            assertThat(row)
+                    .containsEntry("body", ca.northline.messaging.api.MessageTexts.HIDDEN)
+                    .containsEntry("hidden_body", "Send the deposit by e-transfer instead")
+                    .containsEntry("hidden_by", staff);
+            act(messageFlag, "hide", staff).andExpect(status().isConflict());
+
+            // hide a listing: rejected by a reviewer (hidden from customers, the business is told why)
+            var listing = pendingService(biz.merchantId(), "Miracle brake fix", 900L, "2099-02-01T00:01:00Z");
+            var listingFlag = aiFlag("listing", listing, biz.merchantId(), "misleading");
+            mvc.perform(get("/api/v1/console/trust/flags/{id}/content", listingFlag)
+                            .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
+                    .andExpect(jsonPath("$.title").value("Miracle brake fix"));
+            act(listingFlag, "hide", staff).andExpect(status().isOk());
+            assertThat(jdbc.sql("select vetting from catalogue.services where id = ?")
+                            .param(listing)
+                            .query(String.class)
+                            .single())
+                    .isEqualTo("rejected");
+
+            // hide a review
+            var review = review(biz.merchantId(), 1, "You are all crooks and idiots.", "2099-02-01T00:02:00Z");
+            var reviewFlag = aiFlag("review", review, biz.merchantId(), "abuse");
+            act(reviewFlag, "hide", staff).andExpect(status().isOk());
+            assertThat(count("select count(*) from trust.reviews where id = ? and hidden_at is not null", review))
+                    .isOne();
+
+            // approve = dismiss (nothing changes), escalate hands it on; a business-level flag has nothing to hide
+            var fine = aiFlag(
+                    "review",
+                    review(biz.merchantId(), 2, "Slow, but fair.", "2099-02-01T00:04:00Z"),
+                    biz.merchantId(),
+                    "abuse");
+            mvc.perform(post("/api/v1/console/trust/flags/{id}/decision", fine)
+                            .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"decision\":\"dismissed\"}"))
+                    .andExpect(jsonPath("$.state").value("dismissed"));
+            var escalated = aiFlag(
+                    "message",
+                    message(thread, "customer", "Meet me behind the shop", "2099-02-01T00:05:00Z"),
+                    biz.merchantId(),
+                    "abuse");
+            act(escalated, "escalate", staff).andExpect(jsonPath("$.action").value("escalate"));
+            var merchantFlag = aiFlag("merchant", biz.merchantId(), biz.merchantId(), "spam");
+            act(merchantFlag, "hide", staff)
+                    .andExpect(status().isUnprocessableContent())
+                    .andExpect(jsonPath("$.errors[0].message")
+                            .value("Only a listing, a review or a message can be hidden."));
+        }
+
+        @Test
+        void theWeeklyScansWithTheirFlags() throws Exception {
+            var week = LocalDate.of(2100, 4, 5);
+            var biz = data.business(MerchantRole.OWNER);
+            for (var i = 0; i < 3; i++) {
+                jdbc.sql("""
+                                insert into trust.flags (id, target_type, target_id, rule, evidence, state, actor_id,
+                                                         merchant_id, created_at)
+                                values (?, 'message', ?, 'off_platform_payment', '{}', 'open', 'x', ?, '2100-04-06T10:00:00Z')
+                                """).params(Ids.next(), Ids.next(), biz.merchantId()).update();
+            }
+            MODEL.enqueue(MockOpenRouter.status(503));
+            var scans = anomalies.scan(week);
+            assertThat(scans).hasSize(1);
+            var staff = data.user("Sam");
+            mvc.perform(get("/api/v1/console/trust/anomaly-scans?limit=100")
+                            .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.items[?(@.weekStart == '2100-04-05')].flagsRaised")
+                            .value(1))
+                    .andExpect(jsonPath("$.items[?(@.weekStart == '2100-04-05')].aiExplained")
+                            .value(false))
+                    .andExpect(jsonPath("$.items[?(@.weekStart == '2100-04-05')].flags[0].merchantId")
+                            .value(biz.merchantId()))
+                    .andExpect(jsonPath("$.items[?(@.weekStart == '2100-04-05')].flags[0].explanation")
+                            .value(org.hamcrest.Matchers.hasItem(
+                                    org.hamcrest.Matchers.startsWith("Stands out this week"))));
+            mvc.perform(get("/api/v1/console/trust/anomaly-scans").with(TestJwt.staff(staff, StaffRole.FINANCE)))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
     // --- fixtures (all in 2100) ---
 
     static String lastUser(JsonNode req) {

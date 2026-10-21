@@ -39,6 +39,7 @@ dependencies {
     implementation(libs.ulid)
     implementation(libs.stripe)
     implementation(libs.pdfbox) // S-41: tax documents as PDF (Apache-2.0; docs/DECISIONS.md)
+    implementation(libs.lib.recur) // S-162: Plus renewals from an RFC 5545 RRULE (Apache-2.0; docs/DECISIONS.md)
     implementation(libs.mapstruct)
     // Object storage (S-10): only the provider selected by northline.storage.provider is instantiated.
     implementation(libs.aws.s3) { exclude(group = "software.amazon.awssdk", module = "netty-nio-client") }

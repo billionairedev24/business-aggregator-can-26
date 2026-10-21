@@ -1,5 +1,6 @@
 package ca.northline.loyalty.application;
 
+import ca.northline.identity.api.AccountFacts;
 import ca.northline.identity.api.Households;
 import ca.northline.identity.api.PlusMemberships;
 import ca.northline.loyalty.api.LoyaltyFigures;
@@ -7,12 +8,14 @@ import ca.northline.loyalty.api.PlusBenefits;
 import ca.northline.loyalty.application.LoyaltyUseCases.ManagePlus;
 import ca.northline.loyalty.domain.MembershipState;
 import ca.northline.payments.api.PlusBilling;
-import ca.northline.payments.api.PlusSubscriptionUpdated;
+import ca.northline.payments.api.PlusBillingChanged;
+import ca.northline.region.api.Markets;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.RuleViolation;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,10 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * S-152 Northline Plus: one membership per household, paid by the person who joined. Billing is payments'
- * ({@link PlusBilling}: Stripe Billing or the local fake); the provider's webhooks ({@link PlusSubscriptionUpdated})
- * move the membership, an older event than the last one applied changes nothing. Every change is mirrored onto the
- * household ({@link Households#mirrorPlus}), where the account area and {@link #of} read whether benefits apply. A
- * household's first membership starts with the free trial.
+ * ({@link PlusBilling} — since S-162 Northline's own: the plan's RFC 5545 rule and price, a PaymentIntent per period,
+ * renewals charged by payments' job); what payments decides without the member ({@link PlusBillingChanged}: a renewal
+ * paid, refused, lapsed, refunded) moves the membership, an older change than the last one applied changes nothing.
+ * Every change is mirrored onto the household ({@link Households#mirrorPlus}), where the account area and {@link #of}
+ * read whether benefits apply. A household's first membership starts with the free trial. The tax's province is the
+ * payer's default address's, else the region model's default province.
  */
 @Slf4j
 @Service
@@ -39,6 +44,8 @@ class MembershipService implements ManagePlus, PlusBenefits, LoyaltyFigures {
     private final LoyaltyStore store;
     private final Households households;
     private final PlusMemberships memberships;
+    private final AccountFacts accounts;
+    private final Markets markets;
     private final PlusBilling billing;
     private final PlusProperties props;
     private final Clock clock;
@@ -71,8 +78,9 @@ class MembershipService implements ManagePlus, PlusBenefits, LoyaltyFigures {
     @Transactional(readOnly = true)
     public PlusView view(String userId) {
         var plus = memberships.of(userId).orElse(null);
-        var household = plus == null ? null : plus.householdId();
-        var row = household == null ? null : store.membership(household).orElse(null);
+        var row = plus == null
+                ? store.ofPayer(userId).orElse(null) // e.g. a first payment waiting for the bank
+                : store.membership(plus.householdId()).orElse(null);
         return view(userId, plus, row, null, null);
     }
 
@@ -101,9 +109,22 @@ class MembershipService implements ManagePlus, PlusBenefits, LoyaltyFigures {
                     plus == null && trialAvailable,
                     benefits,
                     null,
+                    null,
+                    0,
+                    null,
+                    null,
+                    List.of(),
+                    null,
                     null);
         }
         var showing = plus != null || row.status().equals("incomplete");
+        var payer = row.payerId().equals(userId);
+        var subscription = row.subscriptionId();
+        var account = showing && payer && subscription != null
+                ? billing.account(subscription).orElse(null)
+                : null;
+        var pending = account == null ? null : account.pending();
+        var secret = clientSecret != null ? clientSecret : pending == null ? null : pending.clientSecret();
         return new PlusView(
                 showing ? row.status() : "none",
                 showing ? row.plan() : null,
@@ -111,15 +132,21 @@ class MembershipService implements ManagePlus, PlusBenefits, LoyaltyFigures {
                 showing ? row.startedAt() : null,
                 showing ? row.currentPeriodEnd() : null,
                 showing && row.cancelAtPeriodEnd(),
-                row.payerId().equals(userId),
+                payer,
                 plus == null ? 0 : plus.members(),
                 props.monthlyPriceCents(),
                 props.annualPriceCents(),
                 props.trialDays(),
                 !showing && trialAvailable,
                 benefits,
-                clientSecret,
-                publishableKey);
+                account == null ? null : account.nextPlan(),
+                account == null ? null : account.nextChargeAt(),
+                account == null ? 0 : account.nextChargeCents(),
+                account == null ? null : account.card(),
+                pending,
+                account == null ? List.of() : account.periods(),
+                secret,
+                clientSecret != null ? publishableKey : pending == null ? null : pending.publishableKey());
     }
 
     @Override
@@ -138,7 +165,8 @@ class MembershipService implements ManagePlus, PlusBenefits, LoyaltyFigures {
             throw new Conflict("plus_active", MembershipState.ALREADY);
         }
         var trial = current == null || !current.trialUsed() ? props.trialDays() : 0;
-        var billed = billing.subscribe(userId, household, chosen, props.priceCents(chosen), trial, idempotencyKey);
+        var billed = billing.subscribe(
+                new PlusBilling.Join(userId, household, props.plan(chosen), trial, province(userId), idempotencyKey));
         var state = new MembershipState(
                 household,
                 userId,
@@ -151,9 +179,18 @@ class MembershipService implements ManagePlus, PlusBenefits, LoyaltyFigures {
                 (current != null && current.trialUsed()) || trial > 0,
                 now,
                 null,
-                null);
+                now);
         save(state, now);
-        return view(userId, memberships.of(userId).orElse(null), state, billed.clientSecret(), billed.publishableKey());
+        return answer(userId, state, billed);
+    }
+
+    private String province(String userId) {
+        var home = accounts.of(userId).defaultProvince();
+        var province = home != null ? home : markets.defaultProvince();
+        if (province == null) {
+            throw new Conflict("address_required", PlusBilling.NO_ADDRESS);
+        }
+        return province;
     }
 
     @Override
@@ -162,14 +199,14 @@ class MembershipService implements ManagePlus, PlusBenefits, LoyaltyFigures {
             throw RuleViolation.of("plan", "allowed", MembershipState.PLAN_REQUIRED);
         }
         var m = payerMembership(userId);
-        if (m.plan().equals(plan)) {
+        var chosen = Objects.requireNonNull(plan);
+        var waiting = billing.account(subscription(m))
+                .map(PlusBilling.Account::nextPlan)
+                .orElse(null);
+        if (m.plan().equals(chosen) && waiting == null) {
             throw RuleViolation.of("plan", "same", MembershipState.SAME_PLAN);
         }
-        var chosen = Objects.requireNonNull(plan);
-        var billed = billing.changePlan(current(m), chosen, props.priceCents(chosen), idempotencyKey);
-        var next = withBilled(m, billed, null, clock.instant());
-        save(next, clock.instant());
-        return view(userId, memberships.of(userId).orElse(null), next, null, null);
+        return apply(userId, m, billing.changePlan(subscription(m), props.plan(chosen)));
     }
 
     @Override
@@ -185,10 +222,7 @@ class MembershipService implements ManagePlus, PlusBenefits, LoyaltyFigures {
         if (m.cancelAtPeriodEnd()) {
             return view(userId);
         }
-        var billed = billing.cancelAtPeriodEnd(current(m), true, idempotencyKey);
-        var next = withBilled(m, billed, null, clock.instant());
-        save(next, clock.instant());
-        return view(userId, memberships.of(userId).orElse(null), next, null, null);
+        return apply(userId, m, billing.cancelAtPeriodEnd(subscription(m), true));
     }
 
     @Override
@@ -197,10 +231,40 @@ class MembershipService implements ManagePlus, PlusBenefits, LoyaltyFigures {
         if (!m.cancelAtPeriodEnd()) {
             return view(userId);
         }
-        var billed = billing.cancelAtPeriodEnd(current(m), false, idempotencyKey);
-        var next = withBilled(m, billed, null, clock.instant());
-        save(next, clock.instant());
-        return view(userId, memberships.of(userId).orElse(null), next, null, null);
+        return apply(userId, m, billing.cancelAtPeriodEnd(subscription(m), false));
+    }
+
+    @Override
+    public PlusView useCard(String userId, @Nullable String paymentMethodId) {
+        var m = payerMembership(userId);
+        return apply(userId, m, billing.useCard(subscription(m), userId, paymentMethodId));
+    }
+
+    @Override
+    public PlusView confirm(String userId) {
+        var plus = memberships.of(userId).orElse(null);
+        var household = plus == null
+                ? store.ofPayer(userId).map(MembershipState::householdId).orElse(null)
+                : plus.householdId();
+        var m = household == null ? null : store.lockMembership(household).orElse(null);
+        if (m == null || m.subscriptionId() == null || m.status().equals("canceled")) {
+            throw new Conflict("plus_none", MembershipState.NONE);
+        }
+        if (!m.payerId().equals(userId)) {
+            throw new Conflict("plus_not_payer", MembershipState.NOT_PAYER);
+        }
+        return apply(userId, m, billing.confirm(subscription(m)));
+    }
+
+    private PlusView apply(String userId, MembershipState m, PlusBilling.Billed billed) {
+        var now = clock.instant();
+        var next = withBilled(m, billed, now, now);
+        save(next, now);
+        return answer(userId, next, billed);
+    }
+
+    private PlusView answer(String userId, MembershipState state, PlusBilling.Billed billed) {
+        return view(userId, memberships.of(userId).orElse(null), state, billed.clientSecret(), billed.publishableKey());
     }
 
     private MembershipState payerMembership(String userId) {
@@ -215,14 +279,8 @@ class MembershipService implements ManagePlus, PlusBenefits, LoyaltyFigures {
         return m;
     }
 
-    private static PlusBilling.Current current(MembershipState m) {
-        return new PlusBilling.Current(
-                Objects.requireNonNull(m.subscriptionId()),
-                m.householdId(),
-                m.plan(),
-                m.status(),
-                m.currentPeriodEnd(),
-                m.cancelAtPeriodEnd());
+    private static String subscription(MembershipState m) {
+        return Objects.requireNonNull(m.subscriptionId());
     }
 
     private static MembershipState withBilled(
@@ -242,8 +300,11 @@ class MembershipService implements ManagePlus, PlusBenefits, LoyaltyFigures {
                 eventAt == null ? m.lastEventAt() : eventAt);
     }
 
+    /** Benefits last past the period while a refused renewal is retried: at least a day past the last retry. */
     private Duration grace() {
-        return Duration.ofDays(props.graceDays());
+        var configured = Duration.ofDays(props.graceDays());
+        var retries = billing.retryWindow().plusDays(1);
+        return configured.compareTo(retries) >= 0 ? configured : retries;
     }
 
     /** Stores the membership and mirrors it onto the household. */
@@ -257,40 +318,43 @@ class MembershipService implements ManagePlus, PlusBenefits, LoyaltyFigures {
         }
     }
 
-    // ── the provider says ───────────────────────────────────────────────────────────────────────────────────────
+    // ── payments says ───────────────────────────────────────────────────────────────────────────────────────────
 
     @ApplicationModuleListener
-    void on(PlusSubscriptionUpdated e) {
+    void on(PlusBillingChanged e) {
         var m = store.bySubscription(e.aggregateId()).orElse(null);
         if (m == null) {
-            log.warn("Plus subscription {} is unknown here (household {}); ignored", e.aggregateId(), e.householdId());
+            log.warn("Plus billing {} is unknown here (household {}); ignored", e.aggregateId(), e.householdId());
             return;
         }
         var last = m.lastEventAt();
         if (last != null && e.occurredAt().isBefore(last)) {
-            return; // an older event than the one applied
+            return; // older than the change applied
         }
         var billed = new PlusBilling.Billed(
-                e.aggregateId(),
-                e.status(),
-                e.plan() == null ? m.plan() : e.plan(),
-                e.currentPeriodEnd(),
-                e.cancelAtPeriodEnd(),
-                null,
-                null);
+                e.aggregateId(), e.status(), e.plan(), e.currentPeriodEnd(), e.cancelAtPeriodEnd(), null, null);
         save(withBilled(m, billed, e.occurredAt(), clock.instant()), clock.instant());
     }
 
-    /** The local fake's renewals (Stripe renews by itself and says so by webhook). */
-    int renewLocal(Instant now) {
-        var due = store.localDue(now, 200);
+    /**
+     * S-162: running S-152 memberships (Stripe Billing or the local fake, {@code sub_…}) move to Northline's billing:
+     * the next period starts at the end of the current one, on the plan's rule and price. (Stripe Billing subscriptions
+     * left in a Stripe account are cancelled there by hand: docs/runbooks/stripe.md § 11.)
+     */
+    int adoptLegacy() {
         var n = 0;
-        for (var m : due) {
-            var renewed = billing.renewIfDue(current(m), props.priceCents(m.plan()), now);
-            if (renewed.isPresent()) {
-                save(withBilled(m, renewed.get(), null, now), now);
-                n++;
-            }
+        for (var m : store.legacy(200)) {
+            var end = Objects.requireNonNullElse(m.currentPeriodEnd(), clock.instant());
+            var billed = billing.adopt(
+                    m.payerId(),
+                    m.householdId(),
+                    props.plan(m.plan()),
+                    end,
+                    province(m.payerId()),
+                    m.status().equals("trialing"));
+            var now = clock.instant();
+            save(withBilled(m, billed, now, now), now);
+            n++;
         }
         return n;
     }

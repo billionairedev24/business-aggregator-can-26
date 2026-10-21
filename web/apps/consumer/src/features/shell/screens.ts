@@ -8,9 +8,9 @@
 export type ScreenKey =
   | 'home' | 'location' | 'search'
   | 'shop' | 'category' | 'product' | 'cart' | 'checkout' | 'checkoutComplete' | 'confirmed'
-  | 'food' | 'restaurant' | 'foodCheckout' | 'foodTrack'
+  | 'food' | 'restaurant' | 'foodCheckout' | 'foodTrack' | 'foodGroup'
   | 'services' | 'svcCategory' | 'providers' | 'provider' | 'book' | 'booking' | 'quote' | 'quoteRequest' | 'quoteCompare'
-  | 'orders' | 'account' | 'messages' | 'problem' | 'signIn' | 'register' | 'sell' | 'help' | 'credits';
+  | 'orders' | 'account' | 'accountDelete' | 'accountDeletion' | 'messages' | 'problem' | 'signIn' | 'register' | 'sell' | 'help' | 'credits';
 
 export interface Screen {
   /** Route path (TanStack Router syntax). */
@@ -40,6 +40,8 @@ export const SCREENS: Record<ScreenKey, Screen> = {
   restaurant: { path: '/food/$kitchen', story: 'S-57', section: 'food' },
   foodCheckout: { path: '/food/checkout', story: 'S-57', section: 'food' },
   foodTrack: { path: '/food/orders/$orderId', story: 'S-57', section: 'food' },
+  /** S-159: a group order's share link. */
+  foodGroup: { path: '/food/group/$code', story: 'S-159', section: 'food' },
   services: { path: '/services', story: 'S-53', section: 'services' },
   svcCategory: { path: '/services/$category', story: 'S-53', section: 'services' },
   providers: { path: '/services/$category/providers', story: 'S-53', section: 'services' },
@@ -54,6 +56,10 @@ export const SCREENS: Record<ScreenKey, Screen> = {
   quoteCompare: { path: '/quotes/requests/$requestId', story: 'S-56', section: 'services' },
   orders: { path: '/account/orders', story: 'S-58' },
   account: { path: '/account', story: 'S-58 · S-59' },
+  /** S-159: Account › Delete account (S-105's erasure with its consequences, App Store 5.1.1(v)). */
+  accountDelete: { path: '/account/delete', story: 'S-159' },
+  /** S-159: the public page on deleting an account (Google Play's account deletion link). */
+  accountDeletion: { path: '/account-deletion', story: 'S-159' },
   /** S-153: the customer's messages with providers about quotes and bookings (`?thread=` opens one). */
   messages: { path: '/account/messages', story: 'S-153' },
   /** "Something's wrong" (consumer app `refund`, design 06's case flow): report a problem with an order or a job. */

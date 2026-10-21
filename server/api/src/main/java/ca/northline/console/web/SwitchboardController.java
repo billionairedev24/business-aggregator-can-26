@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  * GET    /api/v1/console/regions                                   {provinces: [Province]}
  * POST   /api/v1/console/regions/provinces/{code}/stage {stage, confirm}   Province   409 not_ready
  * PUT    /api/v1/console/regions/provinces/{code}/courier-model {courierModel}   Province
+ * PUT    /api/v1/console/regions/{regionId}/languages {frenchFirst?, frenchListings?}   Province (S-158; null = not set)
  * POST   /api/v1/console/regions/markets {province, city, lat, lng, radiusKm}   Province   409 market_exists
  * POST   /api/v1/console/regions/markets/{marketId}/stage {stage, confirm}      Province   422 stage (above the province) · 409 not_ready
  * POST   /api/v1/console/regions/zones {marketId, name, runsPerDay?, feeStdCents?, feePlusCents?, minBasketCents?, boundary?}
@@ -58,6 +59,9 @@ class SwitchboardController {
     record MarketStageRequest(
             @NotBlank(message = Switchboard.STAGE) String stage,
             @NotBlank(message = Switchboard.CONFIRM_MARKET) String confirm) {}
+
+    record LanguagesRequest(
+            @Nullable Boolean frenchFirst, @Nullable String frenchListings) {}
 
     record CourierModelRequest(
             @NotBlank(message = Switchboard.COURIER_MODEL) String courierModel) {}
@@ -108,6 +112,12 @@ class SwitchboardController {
     Switchboard.Province courierModel(
             @PathVariable String code, @Valid @RequestBody CourierModelRequest body, CurrentStaff staff) {
         return switchboard.courierModel(code, body.courierModel(), actor(staff));
+    }
+
+    @PutMapping("/{regionId}/languages")
+    Switchboard.Province languages(
+            @PathVariable String regionId, @RequestBody LanguagesRequest body, CurrentStaff staff) {
+        return switchboard.languages(regionId, body.frenchFirst(), body.frenchListings(), actor(staff));
     }
 
     @PostMapping("/markets")

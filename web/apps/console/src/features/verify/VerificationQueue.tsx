@@ -17,11 +17,12 @@ import {
   type Application, type Check, type Detail, type Recommendation,
 } from './api';
 import { ApplicationsHead } from './ApplicationsHead';
+import { RegistryQueue } from './RegistryQueue';
 import { useVerifyT, type VerifyKey, type VerifyT } from './messages';
 import '../shell/queues.css';
 import './applications.css';
 
-export interface VerifySearch extends PlaceFilter { application?: string }
+export interface VerifySearch extends PlaceFilter { application?: string; view?: 'registry' }
 
 interface Row {
   id: string; name: string; sub: string; cat: string; region: string; checks: string; risk: string; wait: string; stage: string; status: string;
@@ -68,6 +69,13 @@ const riskText = (a: Application, t: VerifyT) => t(a.risk === 'low' ? 'riskLow' 
  * the decision history. Admin and trust & safety open it; every other role is refused by the api (denied banner).
  */
 export function VerificationQueue() {
+  const search = useSearch({ strict: false }) as VerifySearch;
+  // S-158: the registry check queue is the screen's second tab
+  if (search.view === 'registry') return <RegistryQueue filter={{ province: search.province, market: search.market }} />;
+  return <BusinessQueue />;
+}
+
+function BusinessQueue() {
   const t = useVerifyT();
   const { locale } = useLocale();
   const search = useSearch({ strict: false }) as VerifySearch;

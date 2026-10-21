@@ -96,12 +96,14 @@ the app creates at sign-in and keeps in the Keychain / Keystore-encrypted storag
 app's — the Secure Enclave / StrongBox key is a follow-up); the refresh token (30 days, rotating) is stored before
 anything from a refresh answer is used; one refresh at a time.
 
-- **On the app's own screens** (S-98: Create account, Sign in): northline-auth's JSON sign-in API in the app's cookie
-  session, then the authorization code on the claimed https redirect — [mobile-auth.md § On the app's own
-  screens](mobile-auth.md#on-the-apps-own-screens-consumer-app-s-98). Create account: mobile, full name, email, terms
-  → a 6-digit code by SMS (or a call) → an authenticator app or "SMS code · backup only" (no second factor, S-62) →
-  Location. Sign in: email or mobile → a code to the account's phone. The redirect URI
-  `${EXPO_PUBLIC_SITE_ORIGIN}/app/oauth2redirect` must equal the registered `${CONSUMER_ORIGIN}/app/oauth2redirect`.
+- **On the app's own screens** (S-98; S-154's accounts since S-159): northline-auth's JSON sign-in API in the app's
+  cookie session, then the authorization code on the claimed https redirect — [mobile-auth.md § On the app's own
+  screens](mobile-auth.md#on-the-apps-own-screens-consumer-app-s-98-both-apps-since-s-159). Create account: full name,
+  email, password, mobile (optional), terms → a 6-digit code by email → an authenticator app or "Not now" → Location.
+  Sign in: email + password → the account's authenticator or a backup code; "Use a code to my mobile instead" keeps
+  S-62's SMS code; "Forgot password" in the app. The courier app signs in with email + password + its second factor
+  (required). The redirect URI `${EXPO_PUBLIC_SITE_ORIGIN}/app/oauth2redirect` (courier: `/courier/oauth2redirect`)
+  must equal the registered `${CONSUMER_ORIGIN}/…/oauth2redirect`.
 - **In the system browser** (Sign in › "Sign in with a passkey", "Continue with Apple" / "Google"; RFC 8252): the authorization request opens in
   ASWebAuthenticationSession / Custom Tabs; northline-auth sends `mobile-consumer` to the **consumer site's** sign-in
   page (`northline.auth.consumer-clients`, S-97), where passkeys, Google and Apple work; the code comes back to

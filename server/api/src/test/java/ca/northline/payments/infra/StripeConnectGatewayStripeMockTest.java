@@ -145,4 +145,36 @@ class StripeConnectGatewayStripeMockTest {
         gateway.makeDefault("acct_1", "ba_123"); // linking itself: StripeBankLinkingStripeMockTest
         assertThat(recorder.sent().getLast().path()).isEqualTo("/v1/accounts/acct_1/external_accounts/ba_123");
     }
+
+    /**
+     * S-162: a Plus period's automatic-capture PaymentIntent — created and confirmed with the saved card (on-session at
+     * the join, off-session at a renewal), confirmed again for a retry, read after the member's bank check. stripe-mock
+     * answers with its fixture (any status); declines and 3-D Secure are the fake gateway's (PlusMembershipApiTest).
+     */
+    @Test
+    void plusCharges_automaticCapture_onAndOffSession_retried_andRead() {
+        var metadata = Map.of("northline_kind", "plus", "northline_plus_period", "01J9ZD3V00000000000000PER1");
+        for (var offSession : new boolean[] {false, true}) {
+            var charged = gateway.charge(new PaymentGateway.Charge(
+                    839,
+                    "cus_test",
+                    "pm_card_visa",
+                    offSession,
+                    metadata,
+                    StripeIdempotencyKeys.of("plus", "plus_01J9", "PER1", String.valueOf(offSession))));
+            assertThat(recorder.sent().getLast().path()).isEqualTo("/v1/payment_intents");
+            assertThat(charged)
+                    .isInstanceOfAny(
+                            PaymentGateway.Charged.Paid.class,
+                            PaymentGateway.Charged.ActionRequired.class,
+                            PaymentGateway.Charged.Processing.class,
+                            PaymentGateway.Charged.Declined.class);
+        }
+        var again = gateway.chargeAgain(
+                "pi_123", "pm_card_mastercard", true, StripeIdempotencyKeys.of("plus-retry", "PER1", "2"));
+        assertThat(recorder.sent().getLast().path()).isEqualTo("/v1/payment_intents/pi_123/confirm");
+        assertThat(again).isNotNull();
+        assertThat(gateway.chargeState("pi_123")).isNotNull();
+        assertThat(recorder.sent().getLast().method()).isEqualTo(com.stripe.net.ApiResource.RequestMethod.GET);
+    }
 }

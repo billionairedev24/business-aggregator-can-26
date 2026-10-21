@@ -17,6 +17,14 @@ public final class RegisteredClients {
     public static final String PARTNER_REVOKED = "settings.client.northline.partner.revoked";
     public static final String PARTNER_PUBLIC_KEYS = "settings.client.northline.partner.public-keys";
 
+    /**
+     * S-158: a partner registered in the console ({@code developer.partner_clients}); its key version is bumped by
+     * "Rotate keys", which makes the assertion check read the JWK Set again.
+     */
+    public static final String PARTNER_KEY_VERSION = "settings.client.northline.partner.key-version";
+
+    public static final String PARTNER_SOURCE = "settings.client.northline.partner.source";
+
     private RegisteredClients() {}
 
     /** A partner ({@code partner:<name>}, client credentials with {@code private_key_jwt}). */
@@ -35,6 +43,11 @@ public final class RegisteredClients {
     /** A revoked partner gets no new token. */
     public static boolean partnerRevoked(RegisteredClient client) {
         return Boolean.TRUE.equals(client.getClientSettings().getSetting(PARTNER_REVOKED));
+    }
+
+    /** S-158: 0 for a partner from configuration, else the console's key version. */
+    public static int partnerKeyVersion(RegisteredClient client) {
+        return client.getClientSettings().getSetting(PARTNER_KEY_VERSION) instanceof Number n ? n.intValue() : 0;
     }
 
     /** The partner's registered public keys (a JWK Set JSON), when it doesn't publish a JWK Set URL. */

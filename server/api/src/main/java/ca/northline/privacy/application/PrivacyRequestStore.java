@@ -107,7 +107,8 @@ public interface PrivacyRequestStore {
             @Nullable String linkHash,
             @Nullable Instant linkExpiresAt,
             int holdsOpen,
-            int version) {
+            int version,
+            @Nullable String codeChannel) {
 
         public Request {
             merchantIds = List.copyOf(merchantIds);

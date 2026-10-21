@@ -83,7 +83,7 @@ apps:
   api:
     docsRoutes: true            # S-125: Swagger UI and the specs on the api host (demo of the API)
     env:
-      # Emails are logged (no SMTP listener) until an email provider exists: EMAIL_PROVIDER=sendgrid + EMAIL_API_KEY
+      # Emails are logged (no SMTP listener) until an email provider exists: EMAIL_PROVIDER=resend or sendgrid + EMAIL_API_KEY
       # (add it to externalSecrets.optionalKeys), docs/runbooks/email.md.
       EMAIL_PROVIDER: local
       EMAIL_FROM: "Northline demo <no-reply@demo.northline.ca>"

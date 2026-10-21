@@ -4,13 +4,15 @@ import { signInHref, useViewer } from '../session/api';
 import { Scene } from '../art/Scene';
 import { ChatCircleDots, Lifebuoy } from '@phosphor-icons/react';
 import { useHelpT } from './messages';
+import { HelpTriage } from './HelpTriage';
 
 const CASES = '/account?tab=help';
 
 /**
  * Help (S-145, WCAG 3.2.6): linked from the footer of every consumer page. Who is signed in is known in the browser
  * only, so the page is written for a guest first and the account links appear once the session answers. The support
- * mailbox is configuration (`NL_SUPPORT_EMAIL`); without it, contact goes through Help & cases.
+ * mailbox is configuration (`NL_SUPPORT_EMAIL`); without it, contact goes through Help & cases. S-158: help triage on
+ * top suggests where to start before anything is opened.
  */
 export function HelpScreen() {
   const t = useHelpT();
@@ -26,6 +28,7 @@ export function HelpScreen() {
         </div>
         <span className="nl-band-pic" aria-hidden><Scene slot="banner/help" subject="help" tone="mint" draw={{ main: Lifebuoy, side: ChatCircleDots }} fit="contain" sizes="(min-width: 960px) 45vw, 100vw" priority /></span>
       </header>
+      <HelpTriage signedIn={signedIn} />
       <div className="nl-help-grid">
       <section aria-labelledby="help-problem">
         <h2 id="help-problem">{t('problemTitle')}</h2>

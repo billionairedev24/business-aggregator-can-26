@@ -33,6 +33,8 @@ import org.springframework.web.bind.annotation.RestController;
  * <pre>
  * GET  /api/v1/console/trust/flags[?state=open|dismissed|actioned][&amp;source=ai|rules][&amp;limit=50]   {items: [FlagView]}
  * POST /api/v1/console/trust/flags/{id}/decision {decision: dismissed|actioned, note?}             FlagView
+ * GET  /api/v1/console/trust/flags/{id}/content     S-158: what was flagged (audit-logged)            FlagContent
+ * GET  /api/v1/console/trust/anomaly-scans[?limit=20]   S-158: weekly scans with their flags        {items: [ScanView]}
  * </pre>
  */
 @RestController
@@ -63,7 +65,7 @@ class TrustFlagQueueController {
     record ActionRequest(
             @NotBlank(message = TrustRules.ACTION_REQUIRED)
             @Pattern(
-                    regexp = "warn|coach|confirm|suspend_listings|escalate|hide_review",
+                    regexp = "warn|coach|confirm|suspend_listings|escalate|hide_review|hide",
                     message = TrustRules.ACTION_REQUIRED)
             String action,
 
@@ -98,5 +100,11 @@ class TrustFlagQueueController {
     @RequiresConsole(value = ConsoleScreen.TRUST, actions = ConsoleAction.DECIDE)
     FlagView decide(@PathVariable String id, @Valid @RequestBody DecisionRequest body, CurrentStaff staff) {
         return queue.decide(id, body.decision(), staff.userId(), staff.roleCodes(), body.note());
+    }
+
+    @GetMapping("/{id}/content")
+    @RequiresConsole(value = ConsoleScreen.TRUST, actions = ConsoleAction.DECIDE)
+    TrustFlagQueue.FlagContent content(@PathVariable String id, CurrentStaff staff) {
+        return queue.content(id, staff.userId(), staff.roleCodes());
     }
 }

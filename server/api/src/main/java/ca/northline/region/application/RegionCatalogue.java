@@ -70,6 +70,11 @@ class RegionCatalogue implements Regions, Markets {
         this.frenchFirst = places(properties.frenchFirst());
     }
 
+    @Override
+    public boolean frenchFirstByConfiguration(String provinceOrMarket) {
+        return frenchFirst.contains(provinceOrMarket);
+    }
+
     /** {@code QC,mkt-x} → the province codes (upper case) and market ids named. */
     static Set<String> places(String spec) {
         var out = new LinkedHashSet<String>();

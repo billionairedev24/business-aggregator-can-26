@@ -1,5 +1,6 @@
 package ca.northline.catalogue.adapters.commerce;
 
+import ca.northline.catalogue.application.StockSync.PushStock;
 import ca.northline.catalogue.application.SyncIntegrations.CommerceJobs;
 import java.util.function.IntSupplier;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +15,9 @@ import org.springframework.scheduling.annotation.Scheduled;
  * {@code COMMERCE_POLL_INTERVAL} (1 h: "stock changes sync hourly"), with them every {@code
  * COMMERCE_RECONCILE_INTERVAL} (1 day: missed deliveries, deletions). Hourly, expired OAuth requests and week-old
  * webhook receipts are purged. Not under {@code test} (tests call {@link CommerceJobs}). Replicas share the work: a
- * read is claimed by moving {@code last_polled_at}, so one replica wins.
+ * read is claimed by moving {@code last_polled_at}, so one replica wins. S-158: every
+ * {@code COMMERCE_STOCK_PUSH_INTERVAL} (1 min) Northline's sales and restocks are sent to the platforms; replicas
+ * claim pushes with a lease (skip locked).
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
@@ -24,6 +27,12 @@ import org.springframework.scheduling.annotation.Scheduled;
 class CommerceScheduler {
 
     private final CommerceJobs jobs;
+    private final PushStock stock;
+
+    @Scheduled(fixedDelayString = "${northline.commerce.stock-push.interval:PT1M}", initialDelayString = "PT2M")
+    void pushStock() {
+        step("stock-push", stock::pushDue);
+    }
 
     @Scheduled(fixedDelayString = "PT5M", initialDelayString = "PT1M")
     void sync() {

@@ -35,7 +35,18 @@ rejected, blocked or penalized automatically.
   - `POST /api/v1/console/trust/flags/{id}/decision {decision: dismissed|actioned, note?}` records who decided, when
     and why. It is audited as `trust.flag_decided`. Deciding a flag changes nothing else: what "actioned" means
     (hiding a listing, warning a business) is a separate staff action in the existing tools.
-  - There is no console web app yet, so this is API only.
+  - `POST /api/v1/console/trust/flags/{id}/action {action: hide|escalate|…, note?}` (S-158 adds `hide`) hides the
+    flagged item and closes the flag as actioned: a **listing** is rejected back to the merchant through vetting
+    (reviewer rejection, reason from the flag's categories), a **review** is hidden by moderation, a **message** is
+    replaced for both sides by "Message hidden by trust & safety." (the original is kept in `messaging.messages.hidden_body`
+    for exports and erasure). A business flag can't be hidden (`nothing_to_hide`).
+  - `GET /api/v1/console/trust/flags/{id}/content` shows the flagged text to the deciding staff member (role Trust ›
+    Decide), audited `trust.flag_content_viewed`; `GET /api/v1/console/trust/anomaly-scans` lists the recent weekly
+    scans per market with their flags.
+- **Console screens (S-158):** Trust & safety › **AI screening** (the queue of `ai_screen` flags with the model's
+  reasons and categories; open the item, then approve — nothing changes —, hide or escalate, with an optional note) and
+  › **Weekly scan** (each market's summary, counts, whether the model or only the rules explained it, and the flagged
+  businesses with their signals). The model never decides.
 
 ## What is sent to the model
 

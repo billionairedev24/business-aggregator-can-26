@@ -28,6 +28,9 @@ export const SearchParams = z.object({
   sort: z.enum(SORTS).optional().catch(undefined),
   tier: z.enum(['registered', 'trusted', 'master']).optional().catch(undefined),
   maxPrice: z.coerce.number().int().min(0).max(10_000_000).optional().catch(undefined),
+  // S-158: what the natural-language search can propose besides the aside's filters
+  minPrice: z.coerce.number().int().min(0).max(10_000_000).optional().catch(undefined),
+  minRating: z.coerce.number().min(1).max(5).optional().catch(undefined),
   delivery: z.literal('tonight').optional().catch(undefined),
   openNow: flag,
   instantBook: flag,
@@ -38,7 +41,7 @@ export const SearchParams = z.object({
 export type SearchParams = z.infer<typeof SearchParams>;
 
 /** The filter parameters (everything but the text, scope and sort): "Clear all" removes these. */
-export const FILTER_KEYS = ['category', 'tier', 'maxPrice', 'delivery', 'openNow', 'instantBook', 'dietary', 'allergenFree', 'radiusKm'] as const;
+export const FILTER_KEYS = ['category', 'tier', 'minPrice', 'maxPrice', 'minRating', 'delivery', 'openNow', 'instantBook', 'dietary', 'allergenFree', 'radiusKm'] as const;
 
 /** Where the visitor is, when the browser knows it: province code (the API's `market`) and coordinates. */
 export interface Place { market?: string; lat?: number; lng?: number }
@@ -57,7 +60,9 @@ export function apiQuery(p: SearchParams, place: Place | null, locale: Locale): 
   if (p.scope && p.scope !== 'all') qs.set('kind', KIND[p.scope]);
   if (p.category) qs.set('category', p.category);
   if (p.tier) qs.set('tier', p.tier);
+  if (p.minPrice !== undefined) qs.set('minPrice', String(p.minPrice));
   if (p.maxPrice !== undefined) qs.set('maxPrice', String(p.maxPrice));
+  if (p.minRating !== undefined) qs.set('minRating', String(p.minRating));
   if (p.delivery) qs.set('delivery', p.delivery);
   if (p.openNow) qs.set('openNow', 'true');
   if (p.instantBook) qs.set('instantBook', 'true');
@@ -214,3 +219,72 @@ export const railQuery = (kind: 'product' | 'service', place: Place, locale: Loc
     staleTime: 60_000,
   });
 };
+
+// ── S-158: natural-language search (S-132's `POST /api/v1/search/interpret`) ─────────────────────────────────────────
+/** `GET /api/v1/ai/status`: the apps hide AI help when no model is configured. */
+export const AiStatus = z.object({ available: z.boolean(), provider: z.string().nullish() });
+export const aiStatusQuery = queryOptions({
+  queryKey: ['ai', 'status'],
+  queryFn: ({ signal }) => http('/api/v1/ai/status', { signal }, AiStatus),
+  staleTime: 5 * 60_000,
+});
+/** The search API's own parameters the model proposed, already checked by the api (codes, ranges, location rules). */
+export const Interpretation = z.object({
+  q: z.string().nullish(), kind: z.array(z.string()).default([]), minPrice: z.number().nullish(), maxPrice: z.number().nullish(),
+  minRating: z.number().nullish(), tier: z.array(z.string()).default([]), instantBook: z.boolean().nullish(), openNow: z.boolean().nullish(),
+  delivery: z.string().nullish(), dietary: z.array(z.string()).default([]), allergenFree: z.array(z.string()).default([]),
+  radiusKm: z.number().nullish(), sort: z.string().nullish(), explanation: z.string(), aiAssisted: z.boolean().default(true),
+});
+export type Interpretation = z.infer<typeof Interpretation>;
+export const interpretQuery = (text: string, hasLocation: boolean, locale: Locale) => queryOptions({
+  queryKey: ['search', 'interpret', text.trim().toLowerCase(), hasLocation, locale],
+  queryFn: ({ signal }) => http('/api/v1/search/interpret', { method: 'POST', body: { text: text.trim(), hasLocation, lang: locale }, signal }, Interpretation),
+  staleTime: 10 * 60_000,
+  retry: false,
+});
+
+/** Typed like a sentence ("gluten-free bakery open now near me"), not a product name: worth asking the model. */
+export const looksNatural = (q: string | undefined) => (q?.trim().split(/\s+/).length ?? 0) >= 3;
+
+/** One proposed filter, shown as a removable chip: which page parameter, its value, and its label's message key. */
+export interface Proposal { id: string; key: keyof SearchParams; value: string | number | boolean }
+
+const SORT_OK: readonly string[] = SORTS;
+const TIERS = ['registered', 'trusted', 'master'];
+
+/** The interpretation as the page's own parameters (a chip per value); values the page can't show are left out. */
+export function proposals(i: Interpretation): Proposal[] {
+  const out: Proposal[] = [];
+  const add = (key: keyof SearchParams, value: string | number | boolean, id = `${String(key)}:${value}`) => out.push({ id, key, value });
+  if (i.q?.trim()) add('q', i.q.trim());
+  if (i.kind.length === 1) {
+    const scope = ({ service: 'services', product: 'shop', food: 'food' } as Record<string, Scope>)[i.kind[0]!];
+    if (scope) add('scope', scope);
+  }
+  const tier = i.tier.find(x => TIERS.includes(x));
+  if (tier) add('tier', tier);
+  if (i.minPrice != null) add('minPrice', i.minPrice);
+  if (i.maxPrice != null) add('maxPrice', i.maxPrice);
+  if (i.minRating != null) add('minRating', i.minRating);
+  if (i.openNow) add('openNow', true);
+  if (i.instantBook) add('instantBook', true);
+  if (i.delivery === 'tonight') add('delivery', 'tonight');
+  i.dietary.forEach(d => add('dietary', d));
+  i.allergenFree.forEach(a => add('allergenFree', a));
+  if (i.radiusKm != null) add('radiusKm', Math.round(i.radiusKm));
+  if (i.sort && SORT_OK.includes(i.sort) && i.sort !== 'relevance') add('sort', i.sort);
+  return out;
+}
+
+/** The chips that are left, as `/search` parameters; the typed words when no `q` chip is left. */
+export function applyProposals(chips: Proposal[], typed: string | undefined): SearchParams {
+  const p: Record<string, unknown> = {};
+  const lists: Record<string, string[]> = {};
+  for (const c of chips) {
+    if (c.key === 'dietary' || c.key === 'allergenFree') (lists[c.key] ??= []).push(String(c.value));
+    else p[c.key] = c.value;
+  }
+  Object.entries(lists).forEach(([k, v]) => { p[k] = v.join(','); });
+  if (p.q === undefined && typed?.trim()) p.q = typed.trim();
+  return SearchParams.parse(p);
+}

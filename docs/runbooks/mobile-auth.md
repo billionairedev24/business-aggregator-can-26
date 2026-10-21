@@ -77,32 +77,52 @@ https://auth.<zone>/oauth2/authorize?response_type=code
   `northline.auth.consumer-clients`). After the sign-in or "Create account" succeeds, the page **goes back to your
   authorization request** (northline-auth answers the sign-in with `continueTo`), and northline-auth redirects to your
   redirect URI with `code` and `state`. Already signed in on this phone's browser: the code comes back at once.
-- Every sign-in today uses a second factor (passkey, authenticator app or backup code), so the tokens carry
-  `acr=mfa` and `amr`; the consumer and courier apps must not depend on it.
+- A sign-in with a second factor (passkey, authenticator app or backup code) gives tokens with `acr=mfa` and `amr`;
+  since S-154 a customer may sign in with a password only (enrolment is offered, not required), so the consumer app
+  must not depend on it. Paying asks a step-up then (S-51).
 
-### On the app's own screens (consumer app, S-98)
+### On the app's own screens (consumer app S-98, both apps since S-159)
 
-The consumer app's Journey A (welcome, sign up, code, second factor) is drawn natively (design 01), so it signs people
-in without the browser — as a first-party app — and still ends with the same authorization code, PKCE and DPoP:
+The consumer app's Journey A (welcome, sign up, code, second factor) is drawn natively (design 01), and since S-159
+the courier app's sign-in too, so both sign people in without the browser — as first-party apps — and still end with
+the same authorization code, PKCE and DPoP:
 
-1. `GET /oauth2/authorize?…&redirect_uri=https://<consumer host>/app/oauth2redirect` (PKCE S256, `state`) in the app's
-   own HTTP session (the platform cookie store), `Accept: text/html`. Not signed in: northline-auth keeps the request
-   in that session and redirects to the sign-in page (the app ignores the page).
-2. The JSON sign-in API in the same session, exactly as the consumer site's pages call it (S-62):
-   `POST /api/auth/register` → `/register/verify` → `/register/totp` + `/register/totp/verify` or `/register/complete`;
-   or `POST /api/auth/sign-in` → `/sign-in/code` → `/sign-in/code/verify`. A native request has no `Origin`, which the
-   origin check lets through. The answer that signs the person in carries **`continueTo`** = the kept request.
+1. `GET /oauth2/authorize?…&redirect_uri=https://<consumer host>/app/oauth2redirect` (the courier app:
+   `/courier/oauth2redirect`) — PKCE S256, `state` — in the app's own HTTP session (the platform cookie store),
+   `Accept: text/html`. Not signed in: northline-auth keeps the request in that session and redirects to the sign-in
+   page (the app ignores the page).
+2. The JSON sign-in API in the same session, exactly as the consumer site's pages call it (S-154's email + password
+   accounts since S-159). A native request has no `Origin`, which the origin check lets through. The answer that signs
+   the person in carries **`continueTo`** = the kept request:
+
+   | path | consumer app | courier app |
+   |---|---|---|
+   | create an account | `POST /api/auth/accounts` {firstName, lastName, email, password, passwordConfirm, phone?, terms, termsLanguage, `app: consumer`} → `/accounts/verify` {code from the email} (`/accounts/resend` after the cool-down) | — (Northline makes courier accounts) |
+   | sign in | `POST /api/auth/sign-in/password` {email, password} → `factor`: `/sign-in/totp` or `/sign-in/backup-code`; `enroll`: signed in without a second factor; `verify-email`: the code first | the same; `enroll` is **required** (below) |
+   | second factor | offered after the email code or an `enroll` sign-in, skippable ("Not now"): `/enroll/totp` + `/enroll/totp/verify` → ten backup codes, shown once ("I saved them") | required: the same calls before the hand-off |
+   | forgot password | `/password/forgot` {email, `app: consumer`} → `/password/reset` {code, password, passwordConfirm} → sign in again | the same |
+   | by phone (kept as an option) | `POST /api/auth/sign-in` {identifier} → `/sign-in/code` → `/sign-in/code/verify` (S-62) | — |
+
+   Passwords: 12–128 characters as a person counts them (code points after NFKC), not the email — checked on the
+   phone and again by the server (which also refuses common ones). The passwords and codes never leave the request:
+   nothing is kept on the phone but the DPoP key and the tokens.
 3. `GET continueTo` (rebuilt on the issuer, only this client's request with this `state`): northline-auth redirects to
    the https redirect with `code` and `state`; the platform's fetch follows it to the consumer site's small
-   `/app/oauth2redirect` page and reports where it landed; the app reads the code from that URL and exchanges it
-   (`POST /oauth2/token` with the same `redirect_uri` and a DPoP proof). No answer to this step: the app asks again
-   ("Finish signing in") — the session is signed in, so the request answers with a new code at once.
+   `/app/oauth2redirect` (`/courier/oauth2redirect`) page and reports where it landed; the app reads the code from that
+   URL and exchanges it (`POST /oauth2/token` with the same `redirect_uri` and a DPoP proof). No answer to this step:
+   the app asks again ("Finish signing in") — the session is signed in, so the request answers with a new code at once.
+
+**The courier's second factor is the app's rule, not a server one.** `courier-app` tokens don't require `acr=mfa`
+(S-29: couriers are neither business nor staff), so the courier app refuses to hand off before the account has an
+authenticator: an `enroll` answer sets one up first. A courier signing in through the browser (passkey) is unchanged.
+Builds set `EXPO_PUBLIC_SITE_ORIGIN` (the consumer site) for the courier's https redirect, as the consumer app's do.
 
 The custom scheme can't be used here (fetch can't land on `ca.northline.app:`), hence the https redirect; the code in
 that URL is useless without the app's `code_verifier` and key. Passkeys, Google and Apple still go through the system
 browser (above) — the app has no native module for them. Code: `AppSignIn` in `@northline/mobile-kit`
-(`src/auth/handoff.ts`); server proof: `MobileDpopApiTest.Sessions` (registration with a phone code and none, sign-in
-with a phone code).
+(`src/auth/handoff.ts`), the consumer app's `src/auth/AccountFlow.tsx` and the courier app's `app/sign-in.tsx`; server
+proof: `MobileDpopApiTest.Sessions` (phone code) and S-154's `AccountSignUpApiTest` (the email + password calls). The
+apps' own tests run these calls against their fixture backends (`journeyA.test.tsx`, courier `screens.test.tsx`).
 
 
 

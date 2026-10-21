@@ -81,6 +81,14 @@ public interface Regions {
                 .orElse(LanguageRules.NONE);
     }
 
+    /**
+     * S-158: whether {@code REGION_FRENCH_FIRST} names this place (a province code or a market id) — French first
+     * whatever its row says, so the console's toggle can't turn it off.
+     */
+    default boolean frenchFirstByConfiguration(String provinceOrMarket) {
+        return false;
+    }
+
     /** Re-reads the region rows now (after the console edits them); otherwise they are re-read every cache period. */
     void refresh();
 }

@@ -10186,6 +10186,70 @@ template | kubeconform, actionlint, bash 3.2, shellcheck, stubbed runs).
   OVHcloud email (MX Plan `ssl0.ovh.net`, Email Pro `pro1.mail.ovh.net`); port 587 + STARTTLS only (the SMTP adapter
   has no implicit TLS — 465 doesn't work). All three keep mail outside Canada: demo data only.
 
+## 2026-09-30 — S-158 Two-way stock sync, the missing console screens, and the shopper-facing AI
+
+Closes what S-35 (stock one-way), S-23, S-30, S-116, S-120, S-132 and S-133 left "Not done". Runbooks:
+[commerce-sync.md § Two-way stock](runbooks/commerce-sync.md#two-way-stock-s-158),
+[partners.md § Partners registered in the console](runbooks/partners.md#partners-registered-in-the-console-s-158),
+[i18n.md § 2](runbooks/i18n.md#2-french-first-places-region-configuration),
+[pilot-onboarding.md § 6](runbooks/pilot-onboarding.md#6-invites-and-the-pilot-cohort),
+[docs/ai/trust-safety.md](ai/trust-safety.md).
+
+**Decisions**
+
+- **Stock writes are deltas, not counts.** Northline sends the change its order, cancellation or return made
+  (−n / +n) to the connected platform, keyed `<reason>:<source>:<offer>:<variant>` (unique in
+  `catalogue.commerce_stock_pushes`), so a replayed event never doubles. The platform stays the source of truth;
+  the hourly read subtracts still-pending deltas so a sale isn't put back before it lands.
+- **Outbox-style table + scheduler, no new Kafka topic.** Orders feed it through the existing `OrderPlaced` event
+  (module listener) and the in-process `SellableOffers.restock` call; the topic budget is untouched.
+- **Retries:** 1 min × 3ⁿ⁻¹, capped at 6 h, 8 attempts, then `failed`; a 5-minute lease stops two instances sending
+  the same row. Shopify and Square writes carry idempotency keys; Lightspeed has none (read-then-PUT), documented.
+- **One location per connection.** One location is chosen automatically; several → the owner chooses in Studio and
+  changes wait as `choose_location`; reads then come from that location only. Reconnect of the same account keeps it.
+- **Conflicts are shown, not resolved silently:** `oversold` (applied but below zero), `scope_missing` (old grants
+  without write scope → reconnect re-queues), `not_found`, `reconnect`, `disconnected`, `rejected`, `ambiguous`. The
+  owner, technician or cook can retry or dismiss; an applied change can only be dismissed.
+- **Requested scopes grew** (`write_inventory,read_locations`; `INVENTORY_WRITE`): existing connections keep working
+  for reads and show `scope_missing` until reconnected.
+- **Registry re-check** supersedes the open review of that registry row (new state `superseded`) and runs the
+  lookup again as the agent; audited `verification.registry_rechecked`.
+- **Console partners live in the api's database; northline-auth reads them** (every 30 s, advisory lock) and turns
+  them into `partner:<name>` clients. Configuration partners win on a name clash. Only owner-**approved** bindings
+  count; staff can request, never approve, access to a business. Only JWK Set URLs (no pasted keys) from the console.
+  Rotation bumps a key version that busts northline-auth's caches.
+- **Language toggles in the console** reuse S-116's rule: a French-first place always requires French listings; a
+  market may inherit or override; places set by `REGION_FRENCH_FIRST` are shown as configuration and can't be changed
+  there.
+- **Pilot enrolment** of an existing business is a console dialog over the existing S-120 endpoint.
+- **AI screening "hide"** maps per type: a listing is a reviewer rejection through vetting (the merchant sees why), a
+  review is hidden by moderation, a message is replaced by a bilingual placeholder for both sides (original kept for
+  export/erasure only). Viewing the flagged content is audited. The model never decides.
+- **Shopper AI never applies on its own:** suggested filters are chips the shopper edits and applies; triage only
+  points to the case type and help section. 503 / 429 fall back with one sentence; when `/ai/status` is off the UI
+  is absent.
+
+**Schema additions** (V483–V486; renumbered from V483–V486 after S-162): `catalogue.integrations.location_id/location_name`,
+`catalogue.commerce_stock_pushes` (V483); `merchants` registry review state `superseded` (V484);
+`developer.partner_clients`, `developer.partner_bindings` (V485); `messaging.messages.hidden_at/hidden_by/hidden_body`
+(V486).
+
+**Configuration additions:** api `COMMERCE_STOCK_PUSH_INTERVAL` (`PT1M`), `COMMERCE_STOCK_PUSH_MAX_ATTEMPTS` (8),
+`northline.partners.allow-http-jwks` (true only in `local`); auth `OAUTH_CONSOLE_PARTNERS_ENABLED` (true),
+`OAUTH_CONSOLE_PARTNERS_REFRESH` (`PT30S`). No new secrets.
+
+**Not done / never exercised against real services**
+
+- No stock write has reached a real Shopify, Square or Lightspeed account: WireMock stand-ins from the public docs
+  only (Shopify `inventoryAdjustQuantities` with `@idempotent` / `changeFromQuantity: null` and `locations`; Square
+  `inventory/changes/batch-create` states and `locations`; Lightspeed `outlets` and the 2.1 product `PUT` field names).
+- The pending-delta adjustment on reads has a small race (a push landing between the platform read and the pending
+  query can be subtracted twice until the next read).
+- Console partner changes take up to `OAUTH_CONSOLE_PARTNERS_REFRESH` to reach northline-auth; no real partner JWK Set
+  was fetched (in-process JWK Set in tests).
+- Consent requests send no email; the owner sees them in Studio.
+- Help triage's category → help section mapping is client-side; the mobile app has NL search but not help triage.
+
 ## 2026-10-20 — S-160 OVHcloud in the United States for now (Vint Hill), Canada kept as an option
 
 Owner: "for ovh, I am in the US right now, lets deploy there for now". Runbook: [ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo),
@@ -10484,6 +10548,230 @@ Branch `feat/s157-wallets-consent`. Runbooks: [stripe.md § 15](runbooks/stripe.
   segments finer than a province, per-offer results; batch enqueue; a "your payout came back" item on the Studio
   dashboard (the Payouts screen only); counsel review of the new wordings; Twilio's Advanced Opt-Out texts are an
   operator step.
+## 2026-10-20 — S-162 Plus renewals billed by Northline (RRULE), not Stripe Billing
+
+**Owner's decision (2026-10-20):** "I do not want to use stripe billing, I will rather manage billing myself with
+RRULE. I do not want to pay api fee for billing in stripe." This replaces S-152's Stripe Billing adapter. Stripe is now
+called for Plus only through **PaymentIntents, SetupIntents and refunds** (plus Stripe Tax, which every sale already
+uses); the only Stripe fees on Plus are card processing. Built: api (payments, loyalty), worker (the Plus notices),
+email (a `plus-payment` template), the consumer web's Plus tab, the app's Plus card, runbooks
+([stripe.md § 11](runbooks/stripe.md#11-northline-plus--billed-by-northline-s-152-s-162),
+[loyalty.md § 5](runbooks/loyalty.md#5-plus-billing-s-162)).
+
+**Decisions the spec didn't make**
+
+- **Library: `org.dmfs:lib-recur` 0.17.1** (Apache-2.0, pinned in the version catalog). It does RFC 5545 recurrence
+  only (with RFC 7529 RSCALE/SKIP), ~200 kB with its two small dmfs dependencies, no reflection, and is what Android
+  calendar apps use. `org.mnode.ical4j` 4.x was rejected: a whole iCalendar model we don't need, and it brings Groovy,
+  jparsec, caffeine, commons-lang3/codec and threeten-extra at runtime. lib-recur's last release is from 2024 — a
+  stable, narrow library; revisit if a CVE or a Java incompatibility appears.
+- **The rule.** A plan's rule is configuration (`PLUS_MONTHLY_RRULE` / `PLUS_ANNUAL_RRULE`, default
+  `FREQ=MONTHLY;INTERVAL=1` / `FREQ=YEARLY;INTERVAL=1`; only `FREQ=MONTHLY|YEARLY` and `INTERVAL` are accepted —
+  `COUNT`/`UNTIL` would end memberships nobody cancelled). It is anchored to the first paid instant, in UTC, to the
+  second. Plain RFC 5545 skips months without the start's day, so a start on the 29th–31st is stored with
+  `BYMONTHDAY=28,…,<day>;BYSETPOS=-1` (and `BYMONTH=<m>` for yearly): short months renew on their last day, long ones
+  go back to the anchor; February 29 renews on February 28 in common years. Stored per membership
+  (`payments.plus_schedules.rrule`, `dtstart`), so any calendar library reads it the same way.
+- **DTSTART with a trial:** a household's first membership still starts with the free trial (S-152); its DTSTART is
+  the trial's end (the first paid instant), not the join. Without a trial (a household that had Plus before, or
+  `PLUS_TRIAL_DAYS=0`) the first period is charged at the join, on-session, and DTSTART is the join.
+- **Prices** are plan settings (`PLUS_*_PRICE_CENTS`, before tax, unchanged names) — not per region yet: a region
+  override is a later story. A member keeps the price their plan started with; a price change applies to new joins and
+  to plan changes (no silent increase at renewal).
+- **Where it lives.** Payments owns the money and the schedule (`payments.plus_schedules`, `plus_periods`,
+  `plus_attempts`); loyalty keeps the membership and the benefits (`loyalty.memberships`, mirrored onto the household as
+  before). The `MembershipBilling` port is kept and is Northline's own (`NorthlineMembershipBilling`); it has no
+  provider switch any more — the card side is the existing `PaymentGateway` (Stripe with a key, the fake without), so
+  `local` and the cloud run the same code. Changes payments makes on its own (paid, refused, lapsed, refunded) reach
+  loyalty as the in-process `PlusBillingChanged` (replaces `PlusSubscriptionUpdated`), ordered by `last_event_at`.
+- **Charging.** Each period is one automatic-capture PaymentIntent (new `PaymentGateway.charge`/`chargeAgain`/
+  `chargeState`; Stripe's 402 `card_error` is an answer — declined, or `authentication_required` with the
+  PaymentIntent's client secret). Price + tax (TaxGateway: the payer's default address's province, else the region
+  model's default province; service tax code; calculated at the period's first attempt, recorded at Stripe Tax when
+  paid, retried by the job when that fails). **Never twice:** the Stripe idempotency key is per membership and period
+  (`nl1:plus:<membership>:<period>`; the join's is derived from the request's Idempotency-Key), retries confirm the
+  *same* PaymentIntent again, the attempt's number is claimed in `payments.plus_attempts` (primary key) and the period
+  row is locked `for update skip locked`, so concurrent job runs or replicas skip it. Ledger: `stripe_balance` →
+  `revenue` + `tax_payable`, ref `plus_invoice` / the period id (the console's Plus revenue keeps working).
+- **Refusals.** A declined renewal: `past_due`, retried at the due date + `PLUS_RETRY_DAYS` (1, 3, 5 days), then the
+  membership lapses (status `canceled`, `ended_reason=lapsed`). Benefits continue during the retries: loyalty's grace is
+  max(`PLUS_GRACE_DAYS`, last retry + 1 day), enforced in code. `authentication_required` (3-D Secure off-session): the
+  period waits for the member (`requires_action`), they're emailed and pushed a link (web `/account?tab=plus`, the app's
+  wallet), confirm with Stripe.js / the SDK and the app calls `POST /me/plus/confirm`; the off-session retries continue
+  meanwhile. A first payment that needs the bank and is never confirmed is dropped after `PLUS_UNCONFIRMED_AFTER`
+  (24 h); a declined join is 409 `card_declined` and keeps nothing.
+- **Cancel** = no further renewal (the due period is voided, benefits to the period's end); cancelling while a
+  renewal is being retried ends the membership at once (nothing is paid past the period). **Plan change** waits for the
+  next renewal, which starts the new plan's rule there (PATCH to the current plan undoes a waiting change; the response's
+  `plan` stays the current one and `nextPlan` shows the change — the web and app say "Switches to … on …").
+- **Card update:** `PUT /api/v1/me/plus/card {paymentMethodId|null}` — one of the payer's saved cards (422 "Choose one
+  of your saved cards."), null = the default card; a renewal being retried is tried on the next run. The app has no card
+  picker: it tells the member to make another card the default in Payment methods (the default is what Plus uses).
+- **Refunds** go the existing way (Stripe Refund of the PaymentIntent + Stripe Tax reversal + ledger back), from the
+  console: `POST /api/v1/console/plus/periods/{id}/refund` (finance screen, `refund` action, audited
+  `payments.plus_refunded`); refunding the current period ends the membership. `GET
+  /api/v1/console/plus/households/{householdId}/periods` lists them. No console screen yet.
+- **Webhooks:** none of Plus's own. The platform endpoint's existing `payment_intent.*` events settle a Plus period
+  (metadata `northline_kind=plus`) confirmed at the bank, before the escrow handlers see it. The four Stripe Billing
+  events are no longer handled; remove them from the endpoint if they were added.
+- **Notices** (no new topic: TopicCatalogueTest stays at its count): `plus_payment.updated` (`paid`, `action_required`,
+  `declined`, `lapsed`, `refunded`; ids, amounts, dates) is externalized to the existing `payments.payment` topic, which
+  the `personal-notifications` group now also reads (no retry topics). The worker sends Northline's own email
+  (`plus-payment`, transactional — a purchase the member made, so not governed by the matrix or quiet hours) and a push
+  except for the receipt; no SMS. Web deep link `/app/wallet` → `/account?tab=plus`.
+- **Moving off S-152:** running memberships with a Stripe Billing or fake `sub_…` id are adopted by the loyalty job
+  (their next period starts at their current period's end, on the plan's rule and price). Stripe Billing Subscriptions
+  left in a Stripe test account must be cancelled by hand (stripe.md § 11). Removed: `StripeMembershipBilling`,
+  `LocalMembershipBilling`, `PlusBillingConfig`, `PlusBillingProperties`, `PlusBillingService`, `PlusInvoiceStore`, the
+  `customer.subscription.*` / `invoice.paid` handling, and `PLUS_BILLING_PROVIDER`, `STRIPE_PLUS_MONTHLY_PRICE`,
+  `STRIPE_PLUS_ANNUAL_PRICE`, `PLUS_AUTOMATIC_TAX` (helm values, runbooks, `.env.example`, required-env lists).
+- **Joining now always needs a saved card** (S-152's fake let a person without one join): the same code path
+  everywhere. Tests save cards with `TestData.card`.
+
+**Schema (additive, V482** — range V482–V491**):** `payments.plus_schedules` (the rule, DTSTART, price, province,
+card, waiting plan change, status, period end, end reason; one running per household), `payments.plus_periods` (one per
+occurrence, unique `(schedule_id, seq)` and `(schedule_id, starts_at)`, `payment_intent` unique, state, attempts, next
+try, tax calculation/transaction, refund), `payments.plus_attempts` (primary key `(period_id, attempt)`).
+`payments.plus_invoices` (V426) is kept and no longer written; `loyalty.memberships` keeps its columns
+(`subscription_id` now holds `plus_<ULID>`, `provider` the card processor `local | stripe`). Configuration:
+`PLUS_MONTHLY_RRULE`, `PLUS_ANNUAL_RRULE`, `PLUS_RETRY_DAYS`, `PLUS_UNCONFIRMED_AFTER` (no secrets).
+
+**Not done**
+
+- Region- or market-specific Plus prices; a member's tax province is fixed at the join (a move doesn't change it until
+  they join again).
+- A console screen for the household's Plus payments and the refund (the endpoints exist).
+- Partial refunds of a period; proration of a mid-period plan change (it waits for the renewal instead).
+- The app's own card picker for Plus (it uses the default card).
+- The billing history's "Northline Plus · monthly" rows (`GET /me/billing-history`) — the Plus tab lists the periods.
+
+**Never run against the real Stripe API** (stripe-mock and the fake gateway only): the automatic-capture Plus
+PaymentIntents confirmed on- and off-session, `confirm` of a refused PaymentIntent, the 402 `card_error` with
+`authentication_required` and the PaymentIntent in the error, Stripe.js `confirmCardPayment` / the SDK's
+`handleNextAction` on a renewal's PaymentIntent, the `payment_intent.succeeded` webhook for a Plus period, the refund
+and Stripe Tax record/reverse of a Plus period. stripe.md § 11 lists the test-mode cards to run before launch.
+
+## 2026-10-21 — S-164 Resend as an email provider over its HTTPS API
+
+Why: the owner's provider is Resend; from the OVHcloud US instance, SMTP to `smtp.resend.com` times out on 587 and
+2587 (outbound mail ports filtered) while HTTPS works, so the live demo could not send sign-up codes.
+
+- **`EMAIL_PROVIDER=resend`** (library `server/email`, package `ca.northline.email.resend`, the SendGrid adapter as the
+  model): `POST /emails` on `https://api.resend.com` with `Authorization: Bearer`, JSON `from`, `to`, `subject`,
+  `html`, `text`, `reply_to` (`EMAIL_REPLY_TO`), `headers` (the one-click `List-Unsubscribe` pair the Mailer adds, as
+  for SMTP/SendGrid) and a `template` tag (non-tag characters → `_`). Field names, the 256-character
+  `Idempotency-Key` header and the 200 `{"id"}` answer from Resend's OpenAPI description
+  (github.com/resend/resend-openapi `resend.yaml`, `emails/send`) and resend.com/docs (Send Email, Errors, Idempotency
+  Keys). Selected for api, auth and worker alike (they share `northline.email.*`).
+- **Key variable: `EMAIL_API_KEY`**, base URL **`EMAIL_ENDPOINT`** (not `RESEND_API_KEY` / `RESEND_API_BASE` in the
+  apps): the library has one provider key and one endpoint override for every HTTP provider. Start-up stops with
+  `EMAIL_PROVIDER=resend needs: EMAIL_API_KEY (Resend API key re_… with sending access)`. On OVHcloud the operator's
+  name is `RESEND_API_KEY` (GitHub environment secret / `.ovh/<target>.env`) so it can't be mistaken for a SendGrid
+  key; `scripts/ovh/secrets.sh apply` writes it into `northline-secrets` as `EMAIL_API_KEY` (replacing a SendGrid key
+  there), and `deploy.sh` sets `EMAIL_PROVIDER=resend` + `secretEnv.EMAIL_API_KEY=true` for api/auth/worker. The chart
+  already maps `EMAIL_API_KEY` (optional) into all three, so no new Helm/External Secrets key: comments in
+  values/values-staging/values-prod/values-dryrun name `resend`.
+- **OVH precedence:** `OVH_DEMO_MAILPIT=true` → `RESEND_API_KEY` → `SMTP_HOST` → `EMAIL_API_KEY` (SendGrid) → `local`;
+  deploy warns when Resend wins over a set `SMTP_HOST`.
+- **Idempotency:** `EmailMessage` gains a nullable `idempotencyKey` (old 6-argument constructor kept); the Mailer fills
+  it with the delivery key; the adapter sends `northline-` + SHA-256 hex of it (fixed length, no internal ids leave the
+  platform). A send without the Mailer (offer test sends) has no key and no header.
+- **Failure kinds — deviation from the brief:** the brief asked for 401/403 → not retryable. Kept the library's rule
+  (`EmailDeliveryFailed.ofHttpStatus`, used by SendGrid and Azure): 401/403 (missing/invalid key, unverified domain)
+  are *unavailable* — retried in-process, then the Mailer releases its claim so the email can go out once the key or
+  domain is fixed; *rejected* would mark it as sent-and-refused for good (a sign-up code lost). 429/5xx/408 →
+  unavailable; other 4xx (400/422 `validation_error`, 451) → rejected. 409: `concurrent_idempotent_requests` →
+  unavailable (retried); any other 409 (`invalid_idempotent_request`: the key was used already) → rejected. The
+  exception message is `Resend <status> <name>: <message>`, with any address in Resend's message masked
+  (`EmailAddress.masked()`, now shared with the Mailer's log masking).
+- **Residency:** Resend processes mail in its domain's region (US East by default) — outside Canada, like SendGrid;
+  listed as such in email.md § Choosing a provider.
+- **Never run against the real Resend:** the adapter is tested only against a WireMock stand-in built from the
+  documented API (no Resend account here). Error bodies in the tests (`rate_limit_exceeded`, `validation_error`,
+  `missing_api_key`, the 409 names) follow Resend's errors page as documented; the docs site itself could not be
+  fetched from this machine, the OpenAPI file could.
+- **Tests:** email `ResendEmailSenderContractTest` (documented body + Bearer + Idempotency-Key; no key → no header;
+  429 retried with the same key then accepted; 500 ×3 unavailable; 422 rejected once with the message masked; 401 and
+  403 unavailable with Resend's message; 409 both kinds; the account-verification template rendered through the Mailer
+  into Resend's body; the unsubscribe headers on a notification), `EmailAutoConfigurationTest` +2 (adapter chosen;
+  start-up refusal without a key); scripts: `make shell-compat`, shellcheck (no new findings), actionlint on ovh.yml.
+- **Schema:** none. **Config:** `EMAIL_PROVIDER=resend` (new value), `RESEND_API_KEY` (OVH secret only).
+- **Not done:** Resend webhooks (bounces/complaints → suppressions, S-27's operations work), Resend's own templates,
+  attachments, scheduled sends.
+## 2026-10-21 — S-159 Group food orders, the phone apps on S-154's accounts, in-app account deletion, demo data by email
+
+Branch `feat/s159-group-orders-app-auth`; migrations V487–V488 (range V487–V496 — first assigned V472–V481, renumbered
+above S-162's V482 and S-158's V483–V486 by the ordering rule). No new Kafka topic, no new secret.
+
+**Group food orders**
+- **Model:** the baseline's `orders.group_orders` (V009, unused until now) gains the life `open → locked → paying →
+  placed`, or `cancelled` (host, before placing) / `expired` (24 h after it was started, every
+  `northline.orders.group-expiry-interval`, default 15 min). New `orders.group_order_items` (each person's dishes,
+  priced from the live menu when added and again at payment) and `orders.group_order_shares`. The kitchen's existing
+  `food.kitchen_settings.group_orders` / `group_max` (V006/V091, default on / 12) decide whether a kitchen takes them
+  and how many people; the restaurant API now exposes `groupOrders`.
+- **Joining:** an 8-character code `XXXX-XXXX` (no 0/O/1/I/L) and a link `/food/group/<code>` on the consumer
+  site; guests must be signed in. The app has a code entry screen (Account › Join a group order); no new deep link —
+  the shared link opens the web page.
+- **One ticket, one delivery:** placing goes through `FoodCheckoutService` exactly like a single order (same
+  fulfilment checks, the kitchen sees one ticket with every dish). Guests see the delivery area, never the host's
+  street.
+- **Paying:** *host pays* reuses the host's normal food checkout (promos and points as usual). *Split* prices each
+  person's dishes separately: delivery fee split equally, service fee by subtotal, the fees' tax with the fees, each
+  share's sales tax from `taxes.calculate`, the remainder cents to the host (largest remainder), the tip on the host's
+  share; promo codes and points are not offered in split groups. Each share is its own manual-capture card payment
+  and escrow hold with `ref_type = food_order`, `ref_id = share id` — no payments schema change. The host's share id is
+  the order id, so `KitchenEscrowRelease` releases it on hand-off like any food order; `GroupShareRelease` (a listener
+  on `FoodOrderHandedOff`) releases the guests'. The order is placed once every share is authorized; the host sees
+  who has paid. A cancelled group refunds the authorized shares (`refunds.refundNow`). Cancelling a **placed** group
+  order is S-151's order cancellation, unchanged.
+- **Refused in groups:** age-restricted dishes (409 — one ID check per order can't cover several buyers).
+- **No events, no notifications:** clients poll the group every 5 s while it is open; no Kafka topic (budget).
+- **Step-up:** paying a share follows S-51's rule like any checkout.
+
+**Phone apps on S-154's accounts**
+- Consumer app: sign-up is email + password + the emailed code, then the second factor offered (authenticator app;
+  "Not now" allowed for customers); sign-in is email + password + the account's factor (authenticator or backup
+  code); sign-in by phone code is kept on its own screen; forgot password in the app. Phone-first registration is
+  gone from the app. Passkey creation is shown but disabled (no native passkey module yet).
+- S-157's offers checkboxes (CASL express consent) moved with the app's sign-up onto `POST /api/auth/accounts`
+  (`marketing`, the wording versions; a text box only with a mobile). That endpoint records the consents with source
+  `web_signup` (AccountService), not `app_signup` as the phone registration did: changing it needs a column on
+  `auth.pending_accounts` and was left for S-157's owners.
+- Courier app: email + password + its second factor, **required**: a courier account without one is taken to
+  enrolment before it can sign in (enforced in the app; northline-auth does not know which client is a courier
+  app). The browser passkey sign-in stays.
+- Both keep PKCE + DPoP: the screens call `/api/auth/*`, then the kit's `AppSignIn` hand-off via `continueTo` to the
+  https redirect (`<CONSUMER_ORIGIN>/app/oauth2redirect`, `/courier/oauth2redirect`). The courier app now reads
+  `EXPO_PUBLIC_SITE_ORIGIN` (eas.json, app.config.ts).
+
+**Account deletion**
+- Consumer site Account › Delete account (`/account/delete`), the same in the consumer app, and a public page
+  `/account-deletion` (no sign-in to read it) which both apps' `store/privacy.json` now give as the deletion URL.
+- They drive S-105's erasure request: `GET /api/v1/me/privacy-requests/erasure-preview` first lists the consequences
+  (new SPI method `PersonalDataContributor.consequences()`: open orders, upcoming bookings, held payments, open refunds
+  and disputes, points lost, Plus — not cancelled, cards detached so it doesn't renew — and businesses losing their
+  only owner); then the step-up proof or the code.
+- The code goes to the verified mobile, else the **verified email** (new; V488 `privacy.requests.code_channel`), else
+  an older account's mobile. Emails `PrivacyCode` and `AccountDeletion` (requested / completed, en + fr), linking to
+  `northline.privacy.site-origin` (= `CONSUMER_ORIGIN`). The completed email is sent before the pipeline wipes the
+  address.
+
+**Demo data by email:** `make demo-data` registers email + random password + authenticator accounts, reading each
+code from Mailpit's API (local compose Mailpit, or the OVH demo inbox with `MAILPIT_PASSWORD`), auth's dev outbox
+locally, `DEMO_EMAIL_CODE_CMD`, or the terminal. Passwords join the state file. Older state files without passwords
+still sign in the old way. Twilio is no longer needed for the demo. New variables `DEMO_MAILPIT_URL`,
+`DEMO_MAILPIT_PASSWORD`, `DEMO_EMAIL_CODE_CMD`, `DEMO_STAFF_PASSWORD` (demo.md, `.env.example`).
+
+**Never run against the real services** (tests use Testcontainers Postgres, the local payment and tax fakes, vitest and
+jest fixtures only): Stripe card payments and escrow holds for split shares and Stripe Tax per share; the real
+northline-auth from a device (both apps' screens ran against in-app fixtures); a real Mailpit or the OVH demo inbox
+(the Mailpit reader is unit-tested on recorded response shapes); the deletion emails through a real relay; Google
+Play's review of the public deletion page.
+
+**Not done:** group notifications (push / email when the host locks or a share is due); promo codes and points in
+split groups; age-restricted dishes in groups; native passkey creation in the apps; a courier rule on the server.
+
 
 ## 2026-09-30 — S-163 Slim the api's memory (and the other JVM apps')
 

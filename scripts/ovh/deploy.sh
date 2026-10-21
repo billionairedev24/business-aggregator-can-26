@@ -13,7 +13,7 @@
 #
 # Environment: REGISTRY, IMAGE_TAG (required: where the images are and their tag — docs/runbooks/ovh.md § Images),
 # ADDONS=0 skips step 2, RESTART=1 restarts every app afterwards (after a secret changed: Helm can't see Secrets).
-# Twilio and the email provider (SMTP relay, demo inbox or SendGrid — below) are switched on from the secrets file; without STRIPE_SECRET_KEY the api
+# Twilio and the email provider (demo inbox, Resend, SMTP relay or SendGrid — below) are switched on from the secrets file; without STRIPE_SECRET_KEY the api
 # runs on its fake payment gateway with identity and age checks on the local fakes (a first demo without Stripe).
 # OVH_DOMAIN [demo.northline.ca]: the zone of the public hosts (values-dryrun.yaml's urls) — another domain the operator
 # controls moves every host under it (OVH_DOMAIN itself is the consumer site, auth./api./studio./… below it).
@@ -150,6 +150,8 @@ fi
 # Email for api, auth (account codes, S-154) and worker — the first that applies (docs/runbooks/ovh.md § Email):
 #   OVH_DEMO_MAILPIT=true  the demo inbox in the namespace (chart demoMail): every email lands there, nothing is
 #                          delivered; the inbox is https://mail.<domain> behind basic auth (user demo, MAILPIT_PASSWORD)
+#   RESEND_API_KEY         Resend's HTTPS API (EMAIL_PROVIDER=resend; secrets.sh stores the key as EMAIL_API_KEY) — the
+#                          choice on OVHcloud, which filters outbound SMTP ports (587/2587 time out), HTTPS is not
 #   SMTP_HOST              any SMTP relay on port 587 with STARTTLS (OVHcloud email, Brevo, Gmail, SendGrid SMTP…)
 #   EMAIL_API_KEY          SendGrid's API
 #   none                   EMAIL_PROVIDER=local: no SMTP server answers in the cluster, so each email's text — the
@@ -165,6 +167,13 @@ if [ "$mailpit" = true ]; then
   done
   [ -z "$(env_get SMTP_HOST)" ] || echo "   warning: OVH_DEMO_MAILPIT=true wins over SMTP_HOST — nothing is delivered"
   echo "   emails into the demo inbox https://mail.$domain (user demo)"
+elif [ -n "$(env_get RESEND_API_KEY)" ]; then
+  for a in $mail_apps; do
+    extra+=(--set "apps.$a.env.EMAIL_PROVIDER=resend" --set "apps.$a.secretEnv.EMAIL_API_KEY=true")
+  done
+  [ -z "$(env_get SMTP_HOST)" ] || echo "   warning: RESEND_API_KEY wins over SMTP_HOST"
+  [ -n "$(env_get EMAIL_FROM)" ] || echo "   warning: no EMAIL_FROM — the sender is no-reply@$domain, refused unless Resend verified $domain"
+  echo "   emails through Resend's API (EMAIL_FROM must be on a domain verified at Resend)"
 elif [ -n "$(env_get SMTP_HOST)" ]; then
   for a in $mail_apps; do
     extra+=(--set "apps.$a.env.EMAIL_PROVIDER=smtp" --set-string "apps.$a.env.SMTP_HOST=$(env_get SMTP_HOST)"

@@ -16,10 +16,10 @@ import { TermsLabel } from './LegalText';
 import { useAfterSignIn } from './useAfterSignIn';
 
 /**
- * A2 Sign up: phone first — mobile, full name, email for receipts, the terms (links open outside the app). "Send code"
- * stays off until the mobile and the terms are filled (as on the consumer site, S-62); every rule shows under its
- * field on submit, with the auth server's own rules as a second check. Apple / Google continue on the consumer site in
- * the browser (the app has no native Sign in with Apple / Google).
+ * A2 Sign up on S-154's accounts (S-159; S-98's phone-first form before): full name, email, a password (12–128
+ * characters, no composition rules), the mobile optional, the terms (links open outside the app). Every rule shows
+ * under its field on submit, with the auth server's own rules (a common password, the email as password) as a second
+ * check. The code then goes to the email. Apple / Google continue on the consumer site in the browser.
  */
 export function SignUp() {
   const { t, locale } = useI18n();
@@ -33,8 +33,10 @@ export function SignUp() {
   // S-157: unticked offers boxes (email, texts) with the auth server's wording — CASL express consent; no wording, no box
   const wordings = useQuery({ queryKey: ['auth', 'consent-wordings', locale], queryFn: () => services().authApi.consentWordings(), retry: false, staleTime: 10 * 60_000 });
   const [ticked, setTicked] = useState<Record<string, boolean>>({});
-  const nameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
 
   const change = <K extends SignUpField>(key: K, value: SignUpForm[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -45,7 +47,8 @@ export function SignUp() {
     const found = validateSignUp(form, t);
     setErrors(found);
     setMessage(null);
-    flow.setDraft(form);
+    // the password is never kept for "Back"
+    flow.setDraft({ ...form, password: '', passwordConfirm: '' });
     if (Object.keys(found).length) return;
     setBusy(true);
     try {
@@ -53,10 +56,13 @@ export function SignUp() {
         .filter((i) => ticked[i.category] && (i.category !== 'marketing_sms' || form.phone.trim()))
         .map((i) => ({ category: i.category, wordingVersion: i.wordingVersion }));
       await flow.register(form, marketing);
-      router.push('/verify');
+      router.push('/verify-email');
     } catch (e) {
       const fields = fieldErrors(e, t);
-      setErrors({ phone: fields.phone, fullName: fields.firstName ?? fields.lastName, email: fields.email, terms: fields.terms });
+      setErrors({
+        fullName: fields.firstName ?? fields.lastName, email: fields.email, password: fields.password,
+        passwordConfirm: fields.passwordConfirm, phone: fields.phone, terms: fields.terms,
+      });
       setMessage(flowError(e, t, 'form') ?? null);
     } finally {
       setBusy(false);
@@ -76,7 +82,7 @@ export function SignUp() {
       footer={
         <>
           {message ? <Notice message={message} /> : null}
-          <Button label={t('signup.send')} large busy={busy} disabled={!form.phone.trim() || !form.terms} onPress={() => void send()} testID="send-code" />
+          <Button label={t('signup.create')} large busy={busy} disabled={!form.terms} onPress={() => void send()} testID="create-account" />
           <Row wrap>
             <Button label={t('social.apple')} tone="secondary" hint={t('social.hint')} onPress={() => void social()} style={styles.half} />
             <Button label={t('social.google')} tone="secondary" hint={t('social.hint')} onPress={() => void social()} style={styles.half} />
@@ -92,19 +98,6 @@ export function SignUp() {
       <Body tone="muted">{t('signup.lede')}</Body>
       <View style={styles.fields}>
         <Field
-          label={t('field.mobile')}
-          value={form.phone}
-          onChangeText={(v) => change('phone', v)}
-          error={errors.phone}
-          keyboardType="phone-pad"
-          textContentType="telephoneNumber"
-          autoComplete="tel"
-          returnKeyType="next"
-          onSubmitEditing={() => nameRef.current?.focus()}
-          testID="field-phone"
-        />
-        <Field
-          ref={nameRef}
           label={t('field.fullName')}
           placeholder={t('field.fullNamePh')}
           value={form.fullName}
@@ -129,7 +122,51 @@ export function SignUp() {
           autoComplete="email"
           autoCapitalize="none"
           autoCorrect={false}
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
           testID="field-email"
+        />
+        <Field
+          ref={passwordRef}
+          label={t('field.password')}
+          hint={t('field.passwordHint')}
+          value={form.password}
+          onChangeText={(v) => change('password', v)}
+          error={errors.password}
+          secureTextEntry
+          textContentType="newPassword"
+          autoComplete="new-password"
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="next"
+          onSubmitEditing={() => confirmRef.current?.focus()}
+          testID="field-password"
+        />
+        <Field
+          ref={confirmRef}
+          label={t('field.passwordConfirm')}
+          value={form.passwordConfirm}
+          onChangeText={(v) => change('passwordConfirm', v)}
+          error={errors.passwordConfirm}
+          secureTextEntry
+          textContentType="newPassword"
+          autoComplete="new-password"
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="next"
+          onSubmitEditing={() => phoneRef.current?.focus()}
+          testID="field-password-confirm"
+        />
+        <Field
+          ref={phoneRef}
+          label={t('field.mobileOptional')}
+          value={form.phone}
+          onChangeText={(v) => change('phone', v)}
+          error={errors.phone}
+          keyboardType="phone-pad"
+          textContentType="telephoneNumber"
+          autoComplete="tel"
+          testID="field-phone"
         />
         <Checkbox checked={form.terms} onChange={(v) => change('terms', v)} label={t('signup.terms')} error={errors.terms} testID="terms">
           <TermsLabel />

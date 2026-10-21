@@ -338,6 +338,11 @@ northline:
     poll-interval: ${COMMERCE_POLL_INTERVAL:PT1H}           # full read without webhooks
     reconcile-interval: ${COMMERCE_RECONCILE_INTERVAL:P1D}  # full read with webhooks
     webhook-rate-limit: ${COMMERCE_WEBHOOK_RATE_LIMIT:600}  # deliveries per minute and client address
+    # S-158 two-way stock: Northline's sales and restocks pushed to the platforms (retried with growing waits, then
+    # listed in Settings › Integrations as failed)
+    stock-push:
+      interval: ${COMMERCE_STOCK_PUSH_INTERVAL:PT1M}
+      max-attempts: ${COMMERCE_STOCK_PUSH_MAX_ATTEMPTS:8}
     shopify:
       client-id: ${SHOPIFY_CLIENT_ID:}
       client-secret: ${SHOPIFY_CLIENT_SECRET:}
@@ -401,7 +406,7 @@ northline:
     region: ${KMS_REGION:}
     endpoint: ${KMS_ENDPOINT:}
   # Transactional email (S-13, library server/email; docs/runbooks/email.md): local (SMTP to Mailpit, only logs when
-  # Mailpit isn't running; refused under staging/prod) | smtp (any relay, e.g. SES SMTP) | ses | sendgrid | azure.
+  # Mailpit isn't running; refused under staging/prod) | smtp (any relay, e.g. SES SMTP) | ses | sendgrid | resend | azure.
   email:
     provider: ${EMAIL_PROVIDER:local}
     from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}
@@ -412,7 +417,7 @@ northline:
     time-zone: ${EMAIL_TIME_ZONE:${REGION_PLATFORM_ZONE:America/Edmonton}}   # dates in emails (S-134)
     region: ${EMAIL_REGION:}                     # ses: ca-central-1
     endpoint: ${EMAIL_ENDPOINT:}                 # azure: https://<resource>.communication.azure.com; tests/VPC endpoints
-    api-key: ${EMAIL_API_KEY:}                   # sendgrid: SG.…; azure: access key (blank = Entra ID)
+    api-key: ${EMAIL_API_KEY:}                   # sendgrid: SG.…; resend: re_…; azure: access key (blank = Entra ID)
     configuration-set: ${EMAIL_CONFIGURATION_SET:}
     smtp: { host: "${SMTP_HOST:localhost}", port: "${SMTP_PORT:1025}", username: "${SMTP_USERNAME:}", password: "${SMTP_PASSWORD:}", starttls: "${SMTP_STARTTLS:false}" }
     retry: { attempts: "${EMAIL_RETRY_ATTEMPTS:3}", backoff: "${EMAIL_RETRY_BACKOFF:2s}" }
@@ -424,6 +429,7 @@ northline:
     link-ttl: ${PRIVACY_LINK_TTL:PT15M}              # a download link's life (at most PT1H)
     hold-retry: ${PRIVACY_HOLD_RETRY:P1D}            # a held erasure step (open order, dispute) is tried again after this
     run-every: ${PRIVACY_RUN_INTERVAL:PT1M}          # how often the pipeline looks for work
+    site-origin: ${CONSUMER_ORIGIN:http://localhost:3000} # S-159: the deletion emails link to its /account/delete
   # S-107 retention jobs (docs/runbooks/retention.md). The periods are the Privacy Policy's, in
   # privacy/retention-schedule.yml — not settings.
   retention:
@@ -507,26 +513,27 @@ northline:
   # S-152 loyalty (docs/runbooks/loyalty.md): the earning rules are region data (region.loyalty_rules, the console's
   # finance screen); these are the jobs and the referral limits.
   loyalty:
-    jobs-cron: ${LOYALTY_JOBS_CRON:0 7 * * * *}                    # expiry, referral windows, local Plus renewals
+    jobs-cron: ${LOYALTY_JOBS_CRON:0 7 * * * *}                    # expiry, referral windows, S-152 memberships → S-162 billing
     referral-window: ${LOYALTY_REFERRAL_WINDOW:P90D}                # the invitee's first completed order within this
     new-account-window: ${LOYALTY_NEW_ACCOUNT_WINDOW:P30D}          # only accounts this new may use a code
     claim-attempts-per-hour: ${LOYALTY_CLAIM_ATTEMPTS_PER_HOUR:5}
     site-origin: ${CONSUMER_ORIGIN:http://localhost:3000}
-  # S-152 Northline Plus: benefits and prices as configuration; billing behind payments' MembershipBilling port —
-  # local (fake; refused under staging/prod) | stripe (Stripe Billing, STRIPE_SECRET_KEY, docs/runbooks/stripe.md § 11).
+  # S-152 Northline Plus: benefits and plans as configuration. S-162: Northline bills the plans itself (no Stripe
+  # Billing) — each plan is a price before tax and an RFC 5545 rule; payments' renewal job charges each period once as a
+  # PaymentIntent on the payer's saved card (docs/runbooks/loyalty.md § Plus billing).
   plus:
     monthly-price-cents: ${PLUS_MONTHLY_PRICE_CENTS:799}
     annual-price-cents: ${PLUS_ANNUAL_PRICE_CENTS:6900}
+    monthly-rule: ${PLUS_MONTHLY_RRULE:FREQ=MONTHLY;INTERVAL=1}
+    annual-rule: ${PLUS_ANNUAL_RRULE:FREQ=YEARLY;INTERVAL=1}
     trial-days: ${PLUS_TRIAL_DAYS:30}
     service-fee-waived: ${PLUS_SERVICE_FEE_WAIVED:true}
     member-prices: ${PLUS_MEMBER_PRICES:true}
     points-multiplier-pct: ${PLUS_POINTS_MULTIPLIER_PCT:200}
-    grace-days: ${PLUS_GRACE_DAYS:7}
+    grace-days: ${PLUS_GRACE_DAYS:7}                               # at least a day past the last retry (enforced)
     billing:
-      provider: ${PLUS_BILLING_PROVIDER:local}
-      monthly-price: ${STRIPE_PLUS_MONTHLY_PRICE:}
-      annual-price: ${STRIPE_PLUS_ANNUAL_PRICE:}
-      automatic-tax: ${PLUS_AUTOMATIC_TAX:false}
+      retry-days: ${PLUS_RETRY_DAYS:1,3,5}                         # a refused renewal is tried again on these days, then lapses
+      unconfirmed: ${PLUS_UNCONFIRMED_AFTER:PT24H}                 # a first payment never confirmed with the bank is dropped
   booking.eta:
     minutes-per-km: ${BOOKING_ETA_MINUTES_PER_KM:2.0}              # straight-line estimate (≈ 30 km/h)
     share-interval: PT5S

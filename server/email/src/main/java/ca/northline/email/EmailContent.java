@@ -1113,6 +1113,90 @@ public sealed interface EmailContent {
         }
     }
 
+    /**
+     * S-162: a Northline Plus payment, to the member who pays — Northline bills Plus itself. {@code paid} is the receipt
+     * (amount, tax, total, the period); {@code action_required} asks them to confirm the payment with their bank (3-D
+     * Secure, on the web or in the app); {@code declined} says when it's tried again; {@code lapsed} that the
+     * membership ended; {@code refunded} that a period was paid back. Transactional: it confirms or completes a
+     * purchase the member made (CASL s. 6(6)) — no unsubscribe link, sent whatever the matrix says.
+     *
+     * @param outcome {@code paid | action_required | declined | lapsed | refunded}
+     * @param plan {@code monthly | annual}
+     * @param amountCents the plan's price before tax
+     * @param retryAt the next try ({@code declined}, {@code action_required}), else null
+     * @param link the account's Plus page (a universal link: the app opens it when installed)
+     */
+    record PlusPayment(
+            String outcome,
+            String plan,
+            long amountCents,
+            long taxCents,
+            Instant periodStart,
+            Instant periodEnd,
+            @Nullable Instant retryAt,
+            URI link)
+            implements EmailContent {
+
+        public static final Set<String> OUTCOMES = Set.of("paid", "action_required", "declined", "lapsed", "refunded");
+
+        public PlusPayment {
+            if (!OUTCOMES.contains(outcome) || !Set.of("monthly", "annual").contains(plan)) {
+                throw new IllegalArgumentException("Plus payment " + outcome + " / " + plan);
+            }
+        }
+
+        @Override
+        public String template() {
+            return "plus-payment";
+        }
+
+        @Override
+        public String variant() {
+            return outcome;
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public String settingsPlace() {
+            return "account";
+        }
+
+        @Override
+        public String businessName() {
+            return "Northline";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("outcome", outcome);
+            v.put("plan", plan);
+            v.put("amount", format.money(amountCents));
+            v.put("tax", format.money(taxCents));
+            v.put("total", format.money(amountCents + taxCents));
+            v.put("from", format.date(periodStart));
+            v.put("to", format.date(periodEnd));
+            v.put("hasRetry", retryAt != null);
+            v.put("retryAt", retryAt == null ? "" : format.date(retryAt));
+            v.put("link", link.toString());
+            return v;
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(format.money(amountCents + taxCents));
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
     // ── Commercial (S-108) ───────────────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -1168,6 +1252,110 @@ public sealed interface EmailContent {
     }
 
     // ── Samples (preview endpoint, rendering tests) ──────────────────────────────────────────────────────────────
+
+    /**
+     * S-159: the code that confirms a privacy request (a copy of one's data, a correction, deleting the account) for an
+     * account with no verified mobile — an email + password account (S-154) may have no phone and no second factor,
+     * and must still be able to delete itself in the app (App Store 5.1.1(v)). Transactional (a security notice the
+     * person asked for).
+     */
+    record PrivacyCode(String firstName, String code, long validMinutes, URI link) implements EmailContent {
+
+        @Override
+        public String template() {
+            return "privacy-code";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public String settingsPlace() {
+            return "account";
+        }
+
+        @Override
+        public String businessName() {
+            return "";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of("firstName", firstName, "code", code, "minutes", validMinutes, "link", link.toString());
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(code);
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
+    /**
+     * S-159: the account's deletion — {@code requested} once the person confirmed it (when it starts, how to cancel it
+     * until then, what happens to open orders, balances and a Plus membership), {@code completed} when the erasure
+     * pipeline (S-105) finished. Sent to the address the account had when the request was made. Transactional.
+     *
+     * @param startsAt when the erasure starts (the grace period's end); unused for {@code completed}
+     * @param link {@code requested}: the page that cancels the request; {@code completed}: the consumer site
+     */
+    record AccountDeletion(String firstName, Stage stage, Instant startsAt, URI link) implements EmailContent {
+
+        public enum Stage {
+            REQUESTED,
+            COMPLETED
+        }
+
+        @Override
+        public String template() {
+            return "account-deletion";
+        }
+
+        @Override
+        public String variant() {
+            return stage.name().toLowerCase(Locale.ROOT);
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public String settingsPlace() {
+            return "account";
+        }
+
+        @Override
+        public String businessName() {
+            return "";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of(
+                    "firstName", firstName,
+                    "phase", variant(),
+                    "startsAt", format.date(startsAt),
+                    "link", link.toString());
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of();
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
 
     /**
      * One sample per template and variant, keyed {@code <template>[.<variant>]}, with the design's Prairie Wrench
@@ -1386,6 +1574,29 @@ public sealed interface EmailContent {
                         URI.create("http://localhost:3100/sign-in"),
                         URI.create("http://localhost:3100/forgot-password"),
                         "studio"));
+        all.put(
+                "privacy-code",
+                new PrivacyCode("Amara", "318604", 15, URI.create("http://localhost:3000/account/delete")));
+        for (var stage : AccountDeletion.Stage.values()) {
+            var sample = new AccountDeletion(
+                    "Amara", stage, at.plus(Duration.ofDays(7)), URI.create("http://localhost:3000/account/delete"));
+            all.put(key(sample), sample);
+        }
+        for (var outcome : List.of("paid", "action_required", "declined", "lapsed", "refunded")) {
+            all.put(
+                    "plus-payment." + outcome,
+                    new PlusPayment(
+                            outcome,
+                            "monthly",
+                            799,
+                            40,
+                            at,
+                            at.plus(Duration.ofDays(31)),
+                            outcome.equals("declined") || outcome.equals("action_required")
+                                    ? at.plus(Duration.ofDays(1))
+                                    : null,
+                            URI.create("http://localhost:3000/account?tab=plus")));
+        }
         return java.util.Collections.unmodifiableMap(all);
     }
 

@@ -31,7 +31,7 @@ say where a step is still manual or missing.
 | [stripe-incidents.md](stripe-incidents.md) | Stripe incidents: an outage (checkout degrades to 503, what queues), a webhook backlog or replay, Stripe vs ledger mismatches, a dispute spike, leaked keys — decision trees, commands, comms (S-115) |
 | [age-restricted.md](age-restricted.md) | age-restricted purchases (2026-10-04): restricted categories and the region model's minimum ages, hours and delivery rules (sources, counsel), sellers' licences and the console queue, the customer's ID check (Stripe Identity), the ID check at the door and counter, refusals and returns with their refunds, the report, store policies |
 | [key-rotation.md](key-rotation.md) | rotating every key and secret: auth signing keys (JWKS rollover), KMS data keys and the envelope re-wrap job, merchants' webhook secrets, Stripe keys, DB / Kafka / push / OpenRouter / on-call credentials, External Secrets commands per cloud (S-7, S-115) |
-| [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
+| [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Resend / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures (S-13/S-27) |
 | [push.md](push.md) | push notifications (APNs, FCM) and deep links: the device registry, customers' and couriers' notifications, back-off, Apple / Firebase set-up (S-102) |
 | [casl.md](casl.md) | Canada's anti-spam law (S-108): which messages are commercial, express consent and its proof, one-click unsubscribe (RFC 8058) and the SMS opt-out link, the sender identification check, consent history for people and staff, the 3-year proof retention, what has never met a real provider |
@@ -90,7 +90,7 @@ say where a step is still manual or missing.
 | AI (`AI_PROVIDER`, S-129) | `fake`: deterministic answers, no key | `fake`, or `openrouter` with the dev key | **`openrouter`** (`fake` refused; no key yet = AI answers 503) | same |
 | Identity verification (`IDENTITY_PROVIDER`) | `local`: pick the outcome on a page | `local` (owners can't finish) or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
 | Age verification (`AGE_VERIFICATION_PROVIDER`, 2026-10-04) | `local`: pick the outcome on a page | `local` or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
-| Plus billing (`PLUS_BILLING_PROVIDER`, S-152) | `local`: fake subscriptions, no card | `local`, or `stripe` with test prices | **`stripe`**, test mode (`local` refused) | **`stripe`**, live mode |
+| Plus billing (S-162: Northline's own, RRULE + PaymentIntents) | the fake gateway's PaymentIntents (no Stripe) | same, or Stripe test keys | Stripe test mode (PaymentIntents only) | Stripe live mode (PaymentIntents only) |
 | Card-dispute evidence (`DISPUTE_EVIDENCE_PROVIDER`, S-156) | `local`: fake, nothing sent | `local`, or `stripe` with test keys | **`stripe`**, test mode (`local` refused) | **`stripe`**, live mode |
 | SMS / email | logged | *no provider yet (S-8, S-13)* | same | same |
 | Required variables checked at start-up | none | yes | yes (+ Stripe, storage) | yes (+ Stripe, storage) |
@@ -144,7 +144,6 @@ say where a step is still manual or missing.
   | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#8-identity-s-22)) |
   | `northline.age-verification.provider` | `AGE_VERIFICATION_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity, document + selfie) | **done** (2026-10-04, the customer's age check — [age-restricted.md](age-restricted.md)) |
   | `northline.payments.dispute-evidence.provider` | `DISPUTE_EVIDENCE_PROVIDER` | `local` (in-process fake) · `stripe` (Files + Disputes APIs) | **done** (S-156, card-dispute evidence — [stripe.md § 14](stripe.md#14-card-disputes--evidence-to-stripe-s-156)) |
-  | `northline.plus.billing.provider` | `PLUS_BILLING_PROVIDER` | `local` (fake subscriptions and invoices) · `stripe` (Stripe Billing) | **done** (S-152, Northline Plus — [stripe.md § 11](stripe.md#11-northline-plus--stripe-billing-s-152), [loyalty.md](loyalty.md)) |
   | `northline.registries.<source>.provider` | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | `fixtures` · `manual` · `api` (Corporations Canada) / `opencorporates` (Alberta) / `socrata` (Calgary) | **done** (S-23, business registry lookups — [registries.md](registries.md)) |
   | `northline.push.provider` | `PUSH_PROVIDER` | `local` (the worker log) · `native` (APNs + FCM) | **done** (S-102, worker push — [push.md](push.md)) |
   | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `aws` (End User Messaging SMS and voice) · `azure` (reserved) | **done** (S-8, auth phone codes — [SMS and voice codes](#sms-and-voice-codes-s-8); S-27: shared library `server/sms`, also api invitations and worker notifications — [notifications.md](notifications.md)) |
@@ -192,6 +191,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `CONSOLE_BFF_SECRET` | | | ✓ (`console` profile) | | yes, for the console-bff (S-90, [Console BFF](#console-bff-s-90)) |
 | `CONSOLE_BFF_SECRET_HASH` | | ✓ | | | yes (S-90: the console-bff exists) |
 | `OAUTH_CLIENTS_SYNC_ON_STARTUP` | | ✓ | | | no (`true`; `false` = register only with the Job) |
+| `OAUTH_CONSOLE_PARTNERS_ENABLED`, `OAUTH_CONSOLE_PARTNERS_REFRESH` | | ✓ | | | no (`true`, `PT30S`: partners registered in Console › Integrations become clients — S-158, [partners.md](partners.md)) |
 | `GOOGLE_CLIENT_ID`/`_SECRET`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | | ✓ | | | staging, prod (S-18, [federation.md](federation.md)); empty = that provider off |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | ✓ | | | | staging and prod |
 | `STRIPE_API_BASE` | ✓ | | | | never in the cloud (stripe-mock only) |
@@ -204,8 +204,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `IDENTITY_PROVIDER` | ✓ | | | | staging and prod (`stripe`; `local` refused there — S-22, [stripe.md § Identity](stripe.md#8-identity-s-22)) |
 | `AGE_VERIFICATION_PROVIDER`, `AGE_VERIFICATION_APP_RETURN_URL`, `RESTRICTED_LICENCE_CRON` | ✓ | | | | `AGE_VERIFICATION_PROVIDER` in staging and prod (`stripe`; `local` refused there — 2026-10-04, [age-restricted.md](age-restricted.md)); the others optional |
 | `DISPUTE_EVIDENCE_PROVIDER`, `STANDING_ENFORCEMENT_CRON` | ✓ | | | | `DISPUTE_EVIDENCE_PROVIDER` in staging and prod (`stripe`; `local` refused there — S-156, [stripe.md § 14](stripe.md#14-card-disputes--evidence-to-stripe-s-156)); the cron optional ([standing.md](standing.md)) |
-| `PLUS_BILLING_PROVIDER`, `STRIPE_PLUS_MONTHLY_PRICE`, `STRIPE_PLUS_ANNUAL_PRICE` | ✓ | | | | staging and prod (`stripe` with both Stripe Price ids; `local` refused there — S-152, [stripe.md § 11](stripe.md#11-northline-plus--stripe-billing-s-152)) |
-| `PLUS_AUTOMATIC_TAX`, `PLUS_MONTHLY_PRICE_CENTS`, `PLUS_ANNUAL_PRICE_CENTS`, `PLUS_TRIAL_DAYS`, `PLUS_SERVICE_FEE_WAIVED`, `PLUS_MEMBER_PRICES`, `PLUS_POINTS_MULTIPLIER_PCT`, `PLUS_GRACE_DAYS`, `LOYALTY_JOBS_CRON`, `LOYALTY_REFERRAL_WINDOW`, `LOYALTY_NEW_ACCOUNT_WINDOW`, `LOYALTY_CLAIM_ATTEMPTS_PER_HOUR` | ✓ | | | | no (S-152, [loyalty.md](loyalty.md)) |
+| `PLUS_MONTHLY_PRICE_CENTS`, `PLUS_ANNUAL_PRICE_CENTS`, `PLUS_MONTHLY_RRULE`, `PLUS_ANNUAL_RRULE`, `PLUS_RETRY_DAYS`, `PLUS_UNCONFIRMED_AFTER`, `PLUS_TRIAL_DAYS`, `PLUS_SERVICE_FEE_WAIVED`, `PLUS_MEMBER_PRICES`, `PLUS_POINTS_MULTIPLIER_PCT`, `PLUS_GRACE_DAYS`, `LOYALTY_JOBS_CRON`, `LOYALTY_REFERRAL_WINDOW`, `LOYALTY_NEW_ACCOUNT_WINDOW`, `LOYALTY_CLAIM_ATTEMPTS_PER_HOUR` | ✓ | | | | no (S-152, S-162 — [loyalty.md](loyalty.md)) |
 | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | ✓ | | | | staging and prod (`fixtures` refused there — S-23, [registries.md](registries.md)) |
 | `REGISTRY_CORPORATIONS_CANADA_URL`/`_KEY`/`_KEY_HEADER`, `REGISTRY_ALBERTA_URL`/`_KEY`, `REGISTRY_CALGARY_URL`/`_DATASET`/`_APP_TOKEN`, `REGISTRY_RECHECK_AFTER`, `REGISTRY_RECHECK_CRON` | ✓ | | | | per provider ([registries.md](registries.md#set-up-per-environment)) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | ✓ | yes (the same value in both: the api encrypts partner webhook secrets, the worker decrypts them to sign — S-33) |
@@ -240,6 +239,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `COMMERCE_PROVIDER` | ✓ | | | | staging and prod: `oauth` (`local` refused there — S-35, [commerce-sync.md](commerce-sync.md)) |
 | `SHOPIFY_CLIENT_ID`/`_SECRET`, `SHOPIFY_API_VERSION`, `SQUARE_CLIENT_ID`/`_SECRET`, `SQUARE_WEBHOOK_SIGNATURE_KEY`, `SQUARE_BASE_URL`, `LIGHTSPEED_CLIENT_ID`/`_SECRET` | ✓ | | | | no — empty = that platform shows "Not available yet" ([commerce-sync.md](commerce-sync.md#variables-api)) |
 | `COMMERCE_POLL_INTERVAL`, `COMMERCE_RECONCILE_INTERVAL`, `COMMERCE_WEBHOOK_RATE_LIMIT` | ✓ | | | | no (`PT1H`, `P1D`, 600/min) |
+| `COMMERCE_STOCK_PUSH_INTERVAL`, `COMMERCE_STOCK_PUSH_MAX_ATTEMPTS` | ✓ | | | | no (`PT1M`, 8 — two-way stock, S-158, [commerce-sync.md](commerce-sync.md#two-way-stock-s-158)) |
 | `POS_PROVIDER` | ✓ | | | | staging and prod: `oauth` (`local` refused there — S-36, [pos-menu-import.md](pos-menu-import.md)) |
 | `CLOVER_CLIENT_ID`/`_SECRET`, `CLOVER_AUTH_URL`, `CLOVER_API_URL`, `TOAST_CLIENT_ID`/`_SECRET`, `TOAST_API_URL` | ✓ | | | | no — empty = that POS shows "Not available yet" ([pos-menu-import.md](pos-menu-import.md#variables-api)) |
 | `PLACES_PROVIDER`, `GOOGLE_MAPS_API_KEY` | ✓ | | | | staging and prod: `google` + the key (`local` refused there — S-47, [google-maps.md](google-maps.md)) |
@@ -258,7 +258,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | ✓ | | | ✓ | staging and prod (`local` refused there — S-13, [email.md](email.md)) |
 | `EMAIL_UNSUBSCRIBE_KEY`, `API_PUBLIC_URL` | ✓ | | | ✓ | staging and prod (unsubscribe links; the worker signs them for `payout.failed`, S-27 — [email.md](email.md#variables); S-32 calendar notification URLs) |
 | `API_PUBLIC_URL` (auth) | | ✓ | | | no (`http://localhost:8080`; the chart derives it: S-127's MCP resource, and outside prod the `docs` client's redirect URIs and token-endpoint CORS origin — S-139) |
-| `EMAIL_REPLY_TO`, `EMAIL_LEGAL_NAME`, `EMAIL_MAILING_ADDRESS`, `EMAIL_CONTACT`, `EMAIL_REGION`, `EMAIL_ENDPOINT`, `EMAIL_API_KEY`, `EMAIL_CONFIGURATION_SET`, `EMAIL_RETRY_*`, `SMTP_*` | ✓ | | | ✓ | per provider: `EMAIL_API_KEY` with `sendgrid`, `EMAIL_ENDPOINT` with `azure`, `SMTP_HOST` with `smtp` ([email.md](email.md#variables)) |
+| `EMAIL_REPLY_TO`, `EMAIL_LEGAL_NAME`, `EMAIL_MAILING_ADDRESS`, `EMAIL_CONTACT`, `EMAIL_REGION`, `EMAIL_ENDPOINT`, `EMAIL_API_KEY`, `EMAIL_CONFIGURATION_SET`, `EMAIL_RETRY_*`, `SMTP_*` | ✓ | | | ✓ | per provider: `EMAIL_API_KEY` with `sendgrid` or `resend`, `EMAIL_ENDPOINT` with `azure`, `SMTP_HOST` with `smtp` ([email.md](email.md#variables)) |
 | `SMS_PROVIDER`, `SMS_FROM` | ✓ | ✓ | | ✓ | staging and prod (`local` refused there; `dev` may keep `local`). api: team invitations, worker: notifications (S-27) |
 | `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | ✓ | ✓ | | ✓ | with `SMS_PROVIDER=twilio` |
 | `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | ✓ | ✓ | | ✓ | no (`= SMS_FROM`; SDK default region; provider API) |

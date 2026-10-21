@@ -32,7 +32,7 @@ province's code or the market's name typed to confirm), new markets (centre and 
 boundary, and the courier model. Going live needs the checklist on screen (tax profile, holidays, a registry key on
 the province — `manual` when an agent checks records by hand —, and a market with a zone). Every change is in the
 platform audit log (`region.*`) and is served at once by the instance that made it, by the others within
-`REGION_CACHE_TTL`. Service zones (`availability.service_zones`), time zones and registry keys are still SQL.
+`REGION_CACHE_TTL`. Service zones (`availability.service_zones`), time zones and registry keys are still SQL. Since S-158 the **Languages** panel sets French-first and the French-listings rule per province and market ([i18n.md § 2](i18n.md#2-french-first-places-region-configuration)).
 
 ## 2. Configuration (`northline.region.*`)
 

@@ -220,11 +220,14 @@ export function Account() {
         ) : null}
         <SettingsRow icon="chat-circle" name={t('hire.messages.row')} onPress={() => router.push('/messages' as never)} testID="row-messages" />
         <SettingsRow icon="hand-coins" name={t('loyalty.inviteRow')} onPress={() => router.push('/account/invite')} testID="row-invite" />
+        <SettingsRow icon="basket" name={t('group.codeTitle')} onPress={() => router.push('/group')} testID="row-group" />
         <SettingsRow icon="heart" name={t('rd.account.saved')} value={value(s?.favourites != null ? String(s.favourites) : null)} onPress={() => router.push('/account/favourites')} testID="row-favourites" />
       </SettingsGroup>
       <SettingsGroup title={t('rd.account.groupHelp')}>
         <SettingsRow icon="question" name={t('account.you.help')} value={value(s?.openCases ? t('account.you.cases', { n: s.openCases }) : null)} onPress={() => router.push('/account/help')} testID="row-help" />
         <SettingsRow icon="storefront" name={t('account.you.sell')} hint={t('common.opensInBrowser')} onPress={() => void Linking.openURL(`${config.siteOrigin}/sell`)} testID="row-sell" />
+        {/* S-159: deleting the account is one tap from Account (App Store 5.1.1(v)) */}
+        <SettingsRow icon="trash" name={t('delete.row')} tone="danger" onPress={() => router.push('/account/delete')} testID="row-delete" />
       </SettingsGroup>
 
       {language}

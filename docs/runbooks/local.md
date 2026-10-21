@@ -340,10 +340,11 @@ Notes:
   (`RESTRICTED_LICENCE_CRON`, `0 17 0 * * *`) expires licences and sends the 30-day reminders.
 - **Points, rewards, referrals and Plus (S-152, [loyalty.md](loyalty.md)):** nothing to set. Points arrive when an
   escrow is released (complete Amara's booking or confirm a delivery); the dev seed gives Prairie Wrench a 2× reward
-  with a $50 budget, a 10 % Plus member price on one product and Amara the invite code `AMARAK26`. Plus uses the fake
-  billing (`PLUS_BILLING_PROVIDER=local`: no card, no tax); to try Stripe Billing set `PLUS_BILLING_PROVIDER=stripe`,
-  `STRIPE_PLUS_MONTHLY_PRICE` / `STRIPE_PLUS_ANNUAL_PRICE` (test-mode prices) and a test `STRIPE_SECRET_KEY`, and forward
-  `customer.subscription.*` and `invoice.paid` with `stripe listen` ([stripe.md § 11](stripe.md#11-northline-plus--stripe-billing-s-152)).
+  with a $50 budget, a 10 % Plus member price on one product and Amara the invite code `AMARAK26`. Plus (S-162)
+  is billed by Northline itself: save a card in Account › Payment methods (the fake test Visa), join, and the fake
+  gateway's PaymentIntents pay; renewals are charged by the payments job (every minute) when a period is due. With a
+  test `STRIPE_SECRET_KEY` the same code makes real test-mode PaymentIntents — there is no Stripe Billing to set up
+  ([stripe.md § 11](stripe.md#11-northline-plus--billed-by-northline-s-152-s-162)).
 - **Standing, appeals and card disputes (S-156, [standing.md](standing.md)):** nothing to set. Report a customer
   no-show from Studio › Appointments (15 min after the start) or a provider no-show from the customer's "Something's
   wrong"; confirm the flags in the console's Trust & safety; `EnforceStanding.run()` (nightly at
@@ -401,6 +402,13 @@ Notes:
   (`server/api/src/main/resources/commerce-fixtures/`) as drafts; stock moves by the hour so "Sync now" shows updates.
   No webhooks (no public HTTPS); the hourly read does the work. Real platforms from a laptop need a public HTTPS
   `API_PUBLIC_URL` (a tunnel) for their redirect URL. [commerce-sync.md](commerce-sync.md)
+- **Two-way stock (S-158):** with the fake platforms, a Northline order, cancellation or return is pushed to the
+  connected store within `COMMERCE_STOCK_PUSH_INTERVAL` (`PT1M`); the fake Shopify has two locations, so Studio ›
+  Settings › Integrations asks the owner to choose one first. A SKU ending in `-gone` comes back "not found" to try the
+  conflict list. `COMMERCE_STOCK_PUSH_MAX_ATTEMPTS` (8) bounds the retries.
+- **Console partners (S-158):** partners registered in Console › Integrations › Partners become OAuth clients of
+  northline-auth within `OAUTH_CONSOLE_PARTNERS_REFRESH` (`PT30S`; `OAUTH_CONSOLE_PARTNERS_ENABLED=false` turns it
+  off). The `local` profile accepts an `http://localhost` JWK Set URL (`northline.partners.allow-http-jwks`).
 - **AI (S-129):** `AI_PROVIDER=fake` (the default) answers every AI feature offline and deterministically ("(fake
   model) …", JSON drafts from each prompt's example). To try a real model: `AI_PROVIDER=openrouter` and your own
   `OPENROUTER_API_KEY` in `server/.env`. Budgets are in memory under `local`. [ai.md](ai.md)

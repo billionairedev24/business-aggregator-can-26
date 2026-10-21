@@ -24,7 +24,9 @@ class PrivacyAccountsJdbc implements PrivacyAccounts {
     public Optional<Holder> holder(String userId) {
         return jdbc.sql("""
                         select id, email::text as email, phone, coalesce(locale, 'en-CA') as locale,
-                               coalesce(status, 'active') as status, erasure_requested_at
+                               coalesce(status, 'active') as status, erasure_requested_at,
+                               phone_verified_at is not null as phone_verified,
+                               email_verified_at is not null as email_verified
                           from identity.users where id = :id
                         """)
                 .param("id", userId)
@@ -34,7 +36,9 @@ class PrivacyAccountsJdbc implements PrivacyAccounts {
                         rs.getString("phone"),
                         rs.getString("locale"),
                         rs.getString("status"),
-                        instant(rs, "erasure_requested_at")))
+                        instant(rs, "erasure_requested_at"),
+                        rs.getBoolean("phone_verified"),
+                        rs.getBoolean("email_verified")))
                 .optional();
     }
 

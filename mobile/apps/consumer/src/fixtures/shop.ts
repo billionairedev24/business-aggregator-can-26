@@ -83,6 +83,8 @@ export interface ShopFixtureState {
   checkouts: Map<string, { checkoutId: string; order: Order; placed: boolean }>;
   /** Idempotency-Key → the first answer (replayed). */
   idempotent: Map<string, unknown>;
+  /** S-158: false = the api answers 503 ai_unavailable to the natural-language search (tests flip it). */
+  aiAvailable?: boolean;
   upcoming: boolean;
   next: number;
   /** Push installations (`PUT|DELETE /me/devices/{id}`, S-102), by installation id. */
@@ -334,6 +336,26 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
           : [],
         direct: ok ? { etaMinutes: 45, feeCents: 999 } : null,
       });
+    }
+    // S-158: the AI's reading of a typed sentence (the fake model: a few words it knows; never applied by the app)
+    if (method === 'GET' && path === '/ai/status') return ctx.answer(200, { available: state.aiAvailable !== false, provider: 'fake' });
+    if (method === 'POST' && path === '/search/interpret') {
+      if (state.aiAvailable === false) return ctx.answer(503, { code: 'ai_unavailable', detail: 'AI is not available.' });
+      let text = String(req.body.text ?? '').toLowerCase();
+      if (!text.trim()) return ctx.answer(422, { errors: [{ field: 'text', rule: 'required', message: 'Type what you’re looking for.' }] });
+      const out = { q: null as string | null, kind: [] as string[], maxPrice: null as number | null, tier: [] as string[], delivery: null as string | null, dietary: [] as string[], allergenFree: [] as string[], openNow: null as boolean | null, sort: null as string | null, explanation: '', aiAssisted: true };
+      const take = (re: RegExp, then: (m: RegExpExecArray) => void) => { const m = re.exec(text); if (m) { then(m); text = text.replace(m[0], ' '); } };
+      take(/\bhalal\b/, () => out.dietary.push('halal'));
+      take(/\bgluten[- ]free\b/, () => out.dietary.push('gluten_free'));
+      take(/\btonight\b/, () => { out.delivery = 'tonight'; });
+      take(/\bopen now\b/, () => { out.openNow = true; });
+      take(/\bunder \$?(\d+)\b/, (m) => { out.maxPrice = Number(m[1]) * 100 - 1; });
+      take(/\bcheapest\b/, () => { out.sort = 'price_asc'; });
+      take(/\bnear me\b/, () => {});
+      const words = text.replace(/\s+/g, ' ').trim();
+      out.q = words || null;
+      out.explanation = [out.dietary.join(' '), out.q, out.delivery ? 'on tonight’s run' : '', out.maxPrice != null ? `under $${(out.maxPrice + 1) / 100}` : ''].filter(Boolean).join(', ');
+      return ctx.answer(200, out);
     }
     if (method === 'GET' && path === '/search') {
       const text = (q.get('q') ?? '').toLowerCase();

@@ -15,6 +15,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param codeTtl how long a texted verification code works (PT15M)
  * @param holdRetry {@code PRIVACY_HOLD_RETRY} (P1D): when a held erasure step is tried again
  * @param runEvery {@code PRIVACY_RUN_INTERVAL} (PT1M): how often the pipeline looks for work
+ * @param siteOrigin {@code CONSUMER_ORIGIN}: the consumer site the deletion emails link to (S-159)
  */
 @ConfigurationProperties("northline.privacy")
 public record PrivacySettings(
@@ -23,7 +24,8 @@ public record PrivacySettings(
         @Nullable Duration linkTtl,
         @Nullable Duration codeTtl,
         @Nullable Duration holdRetry,
-        @Nullable Duration runEvery) {
+        @Nullable Duration runEvery,
+        @Nullable String siteOrigin) {
 
     private static final Duration MAX_LINK = Duration.ofHours(1);
 
@@ -42,6 +44,11 @@ public record PrivacySettings(
 
     public Duration codeLife() {
         return codeTtl == null ? Duration.ofMinutes(15) : codeTtl;
+    }
+
+    public String site() {
+        var origin = siteOrigin == null || siteOrigin.isBlank() ? "http://localhost:3000" : siteOrigin;
+        return origin.replaceAll("/+$", "");
     }
 
     public Duration holdBackoff() {

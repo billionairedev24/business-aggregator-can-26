@@ -2,6 +2,7 @@ package ca.northline.privacy.application;
 
 import ca.northline.developer.api.AuditTrail;
 import ca.northline.identity.api.AccountFacts;
+import ca.northline.identity.api.PersonDirectory;
 import ca.northline.identity.api.PrivacyAccounts;
 import ca.northline.identity.api.PrivacyAccounts.Holder;
 import ca.northline.privacy.application.PrivacyRequestStore.Request;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
@@ -37,6 +39,7 @@ import org.springframework.stereotype.Component;
  * Opening requests and the transitions people and staff share: the SLA clock from the person's province's law, the
  * grace period of an erasure, the account's "Deletion requested" mark, the verification code, and the audit log.
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 class Intake {
@@ -54,6 +57,8 @@ class Intake {
     private final Secrets secrets;
     private final AuditTrail audit;
     private final PrivacySettings settings;
+    private final PersonDirectory people;
+    private final PrivacyEmails emails;
 
     Holder holder(String userId) {
         var holder = accounts.holder(userId).orElseThrow(() -> new NotFound("account", userId));
@@ -132,7 +137,8 @@ class Intake {
                 null,
                 null,
                 0,
-                0);
+                0,
+                null);
         if (verification != null) {
             request = request.withScheduledFor(scheduleFor(request, now));
         }
@@ -167,6 +173,58 @@ class Intake {
     void verified(Request r, Instant at) {
         if (r.type() == RequestType.ERASURE) {
             accounts.erasureRequested(r.subjectId(), at);
+            // S-159: the confirmation email — when it starts and how to cancel it until then
+            var email = secrets.open(r.id(), r.sealed()).email();
+            if (email != null) {
+                var startsAt = Objects.requireNonNullElse(r.scheduledFor(), at);
+                notify(
+                        r,
+                        () -> emails.deletionRequested(
+                                "privacy:" + r.id() + ":deletion-requested",
+                                email,
+                                firstName(r.subjectId()),
+                                startsAt,
+                                localeOf(r.subjectId())));
+            }
+        }
+    }
+
+    /** S-159: the erasure finished — told to the address the account had when the request was made. */
+    void erasureCompleted(Request r) {
+        if (r.type() != RequestType.ERASURE) {
+            return;
+        }
+        var content = secrets.open(r.id(), r.sealed());
+        if (content.email() != null) {
+            var email = content.email();
+            notify(
+                    r,
+                    () -> emails.deletionCompleted(
+                            "privacy:" + r.id() + ":deletion-completed", email, localeOf(r.subjectId())));
+        }
+    }
+
+    /** The first name for an email's greeting ("" when the account has none). */
+    String firstName(String userId) {
+        var person = people.people(List.of(userId)).get(userId);
+        return person == null ? "" : person.firstName();
+    }
+
+    java.util.Locale localeOf(String userId) {
+        return accounts.holder(userId)
+                .map(h -> h.locale().startsWith("fr") ? java.util.Locale.CANADA_FRENCH : java.util.Locale.CANADA)
+                .orElse(java.util.Locale.CANADA);
+    }
+
+    /** An email that can't go now doesn't undo the request (logged; the person sees the state in the app). */
+    private static void notify(Request r, Runnable send) {
+        try {
+            send.run();
+        } catch (RuntimeException e) {
+            log.warn(
+                    "Privacy request {}: email not sent ({})",
+                    r.id(),
+                    e.getClass().getSimpleName());
         }
     }
 
@@ -175,7 +233,7 @@ class Intake {
         if (r.type() == RequestType.ERASURE) {
             accounts.erasureRequested(r.subjectId(), null);
         }
-        return r.withSealed(null).withCodeHash(null).withCodeExpiresAt(null);
+        return r.withSealed(null).withCodeHash(null).withCodeExpiresAt(null).withCodeChannel(null);
     }
 
     Request save(Request r) {

@@ -7,6 +7,7 @@ import { inflateSync } from 'node:zlib';
 import { CookieJar } from './lib/http.mjs';
 import { listingPicture, logoPicture, demoPdf } from './lib/images.mjs';
 import { totpAt } from './lib/totp.mjs';
+import { AccountExists, codeFromMailpit, codeFromOutbox } from './lib/mail.mjs';
 import { libraryPhoto } from './lib/photos.mjs';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -111,4 +112,19 @@ test('real photos: every business and listing has a photo slot of the slot list,
   assert.equal(photo.bytes.length, 4);
   assert.equal(libraryPhoto('demo/listing/bakery.pie', root), null);
   assert.equal(libraryPhoto('demo/listing/bakery.baguette', root), null);
+});
+
+test('S-159: the emailed code is read from Mailpit\'s search (newest first, after the sign-up) or the dev outbox', () => {
+  const since = Date.parse('2026-10-21T10:00:00Z');
+  const body = { messages: [
+    { Created: '2026-10-21T09:00:00Z', Subject: '111111 is your code to confirm your email' }, // an earlier run's
+    { Created: '2026-10-21T10:00:05Z', Subject: '482913 is your code to confirm your email' },
+    { Created: '2026-10-21T10:00:01Z', Subject: '222222 is your code to confirm your email' },
+  ] };
+  assert.equal(codeFromMailpit(body, since), '482913');
+  assert.equal(codeFromMailpit({ messages: [body.messages[0]] }, since), null);
+  assert.equal(codeFromMailpit({ messages: [{ Created: '2026-10-21T10:00:02Z', Subject: '318604 est votre code pour confirmer votre courriel' }] }, since), '318604');
+  assert.throws(() => codeFromMailpit({ messages: [{ Created: '2026-10-21T10:00:03Z', Subject: 'You already have a Northline account' }] }, since), AccountExists);
+  assert.equal(codeFromOutbox({ items: [{ to: 'a@demo.northline.test', code: '135790', at: '2026-10-21T10:00:04Z' }] }, since), '135790');
+  assert.equal(codeFromOutbox({ items: [{ code: '135790', at: '2026-10-21T09:59:00Z' }] }, since), null);
 });

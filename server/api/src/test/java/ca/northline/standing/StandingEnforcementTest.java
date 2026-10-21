@@ -205,6 +205,8 @@ class StandingEnforcementTest extends IntegrationTest {
 
     @Test
     void customerNoShows_putAWarningProvidersSee_andStopInstantBooking_untilStaffLiftIt() throws Exception {
+        // the default of 2: TrustRulesApiTest (same database) leaves the rule at 3 when it runs first
+        jdbc.sql("delete from trust.rules where key = 'customer_no_shows'").update();
         var customer = data.user("Casey Late");
         confirmed("customer_no_show", business, customer, 10);
         enforce.run();

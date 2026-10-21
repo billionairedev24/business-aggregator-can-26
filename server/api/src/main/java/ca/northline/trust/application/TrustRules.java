@@ -52,6 +52,11 @@ public interface TrustRules {
         /** Hand it to the operations on-call. */
         ESCALATE,
         /** Mobile gaps part 2: hide the reported or screened review (public pages and the rating). */
-        HIDE_REVIEW
+        HIDE_REVIEW,
+        /**
+         * S-158 (AI screening queue): hide the flagged item, whatever it is — a review (as {@link #HIDE_REVIEW}), a
+         * listing (rejected by a reviewer, the business is told why) or a message (replaced in its thread).
+         */
+        HIDE
     }
 }
