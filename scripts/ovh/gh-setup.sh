@@ -62,12 +62,13 @@ STRIPE_CONNECT_WEBHOOK_SECRET|secret|opt|both||whsec_… of the Connect webhook
 SMS_AUTH_TOKEN|secret|opt|both||Twilio auth token (needed for anyone to sign up under dev)
 SMS_ACCOUNT_ID|var|opt|both||Twilio account SID AC…
 SMS_FROM|var|opt|both||Twilio sender: +1… number or a Messaging Service MG…
+RESEND_API_KEY|secret|opt|both||Resend API key re_… with sending access: every email over HTTPS, sign-up codes included (OVHcloud filters outbound SMTP; wins over SMTP_HOST — docs/runbooks/ovh.md § Email)
 SMTP_HOST|var|opt|both||SMTP relay for every email, sign-up codes included (e.g. smtp-relay.brevo.com, smtp.gmail.com, ssl0.ovh.net — docs/runbooks/ovh.md § Email)
 SMTP_PORT|var|opt|both|587|SMTP port (587 with STARTTLS; 465 is not supported)
 SMTP_USERNAME|var|opt|both||SMTP login
 SMTP_PASSWORD|secret|opt|both||SMTP password, SMTP key or app password
 SMTP_STARTTLS|var|opt|both|true|STARTTLS (true whenever there is a login)
-EMAIL_FROM|var|opt|both||sender the relay accepts, e.g. Northline demo <you@example.com> (no commas)
+EMAIL_FROM|var|opt|both||sender on the domain verified at Resend, or one the relay accepts, e.g. Northline demo <you@example.com> (no commas)
 OVH_DEMO_MAILPIT|var|opt|both|false|true = the demo inbox at mail.<domain> instead of delivering email (private demos)
 EMAIL_API_KEY|secret|opt|both||SendGrid API key (empty = emails are logged)
 KAFKA_SASL_JAAS_CONFIG|secret|opt|both||external Kafka with SASL only: the whole JAAS line

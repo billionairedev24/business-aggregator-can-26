@@ -45,7 +45,8 @@ apps:
   api:
     docsRoutes: true            # S-125: Swagger UI, Scalar, Redoc and the specs on the api host
     env:
-      # S-13: EMAIL_PROVIDER comes from the cloud overlay (ses / sendgrid / azure); the sender is per environment.
+      # S-13: EMAIL_PROVIDER comes from the cloud overlay (ses / sendgrid / resend / azure; resend and sendgrid: EMAIL_API_KEY
+      # secretEnv true, S-164); the sender is per environment.
       TAX_PROVIDER: stripe          # S-21: Stripe Tax (with STRIPE_SECRET_KEY); `local` is refused here
       IDENTITY_PROVIDER: stripe       # S-22: Stripe Identity for owners ≥ 25 % (uses STRIPE_SECRET_KEY)
       AGE_VERIFICATION_PROVIDER: stripe  # 2026-10-04: customers' age check before alcohol (Stripe Identity; `local` refused)
