@@ -93,8 +93,9 @@ jobs:
           REGISTRY_VAR: ${{ vars.REGISTRY }} # repository variable: a registry other than ghcr.io (e.g. OVHcloud Managed Private Registry)
           OWNER: ${{ github.repository_owner }}
         run: |
+          CONFIRM="$(printf %s "$CONFIRM" | tr -d '[:space:]"' | tr '[:upper:]' '[:lower:]')"
           if [ "$ACTION" = destroy ] && [ "$CONFIRM" != "$TARGET" ]; then
-            echo "::error::destroy deletes $TARGET: type its name in confirm-destroy"; exit 1
+            echo "::error::destroy deletes $TARGET: type its name in confirm-destroy (got '$CONFIRM')"; exit 1
           fi
           [ -n "$TAG" ] || TAG="${GITHUB_SHA::12}"
           case "$TAG" in (*[!A-Za-z0-9._-]*) echo "::error::image-tag: letters, digits, . _ - only"; exit 1 ;; esac
@@ -198,6 +199,7 @@ jobs:
               [ "$TARGET" = ovh-vps ] && [ "${OVH_SERVER:-instance}" = vps ] && echo "The VPS itself still bills: console › Bare Metal Cloud › VPS › Terminate. Then delete the DNS records and revoke the API token."
               [ "$TARGET" = ovh-vps ] && [ "${OVH_SERVER:-instance}" = instance ] && echo "The instance is deleted (hourly billing stopped). Delete the DNS records and revoke the API token."
               [ "$TARGET" = ovh-mks ] && echo "Check Public Cloud › Load Balancer and Block Storage for leftovers; delete the DNS records and revoke the API token."
+              true # the last test is false for ovh-vps; do not let it fail the step
             } >> "$GITHUB_STEP_SUMMARY"
           else
             terraform -chdir="$tf" output -json dns_records | jq -r '"### DNS records\n\n```text\n" + join("\n") + "\n```"' >> "$GITHUB_STEP_SUMMARY"
