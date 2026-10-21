@@ -7,6 +7,13 @@ import type { Courier, Run, Shift, Stop } from '../api/courier';
  * whole stack (session, proofs, outbox, pinger) runs against it. Places and people are made up.
  */
 export const FIXTURE_PIN = '4821';
+/** S-159: the courier's account (made up): email + password, an authenticator (code {@link FIXTURE_TOTP}). */
+export const FIXTURE_COURIER = { email: 'casey@example.com', password: 'fixture courier password' };
+export const FIXTURE_TOTP = '135790';
+export const FIXTURE_BACKUP = 'abcd-efgh-ij';
+/** A courier account without a second factor yet (enrolment is required in the courier app). */
+export const FIXTURE_NEW_COURIER = { email: 'new.courier@example.com', password: 'another fixture password' };
+export const FIXTURE_EMAIL_CODE = '246810';
 
 type Json = Record<string, unknown>;
 
@@ -127,17 +134,94 @@ export function createFixtureServer(options: FixtureOptions = {}) {
   const devices = new Map<string, Json>();
   const feedback: Json[] = [];
 
+  // S-159: northline-auth's JSON sign-in in the app's cookie session, and /oauth2/authorize answering on the https
+  // redirect once signed in (the kit's AppSignIn hand-off)
+  const auth = {
+    saved: null as string | null,
+    signedIn: false,
+    password: null as null | { email: string; factors: string[] },
+    reset: false,
+    api: [] as Array<{ path: string; body: Json }>,
+    factors: new Map<string, string[]>([[FIXTURE_COURIER.email, ['totp', 'backup_code']], [FIXTURE_NEW_COURIER.email, []]]),
+  };
+  const passwords = new Map<string, string>([[FIXTURE_COURIER.email, FIXTURE_COURIER.password], [FIXTURE_NEW_COURIER.email, FIXTURE_NEW_COURIER.password]]);
+  const landed = (to: string) => {
+    const res = new Response('<!doctype html><title>Northline</title>', { status: 200, headers: { 'content-type': 'text/html' } });
+    Object.defineProperty(res, 'url', { value: to });
+    return res;
+  };
+  const session = () => {
+    auth.signedIn = true;
+    const continueTo = auth.saved;
+    auth.saved = null;
+    return { user: { id: 'courier-1', firstName: 'Casey', lastName: 'Example' }, acr: 'mfa', continueTo };
+  };
+  function authAnswer(path: string, body: Json, u: URL): Response | undefined {
+    if (path === '/oauth2/authorize') {
+      if (!auth.signedIn) {
+        auth.saved = u.toString();
+        return landed('https://site.fixtures.invalid/sign-in');
+      }
+      return landed(`${u.searchParams.get('redirect_uri')}?code=fixture-code&state=${u.searchParams.get('state')}`);
+    }
+    if (!path.startsWith('/api/auth/')) return undefined;
+    auth.api.push({ path, body });
+    const invalid = (field: string, rule: string, message: string) => answer(422, { errors: [{ field, rule, message }] });
+    const code = String(body.code ?? '').trim();
+    switch (path) {
+      case '/api/auth/sign-in/password': {
+        const email = String(body.email ?? '').trim().toLowerCase();
+        if (passwords.get(email) !== body.password) return invalid('password', 'mismatch', "That email and password don't match. Check them and try again.");
+        const factors = auth.factors.get(email) ?? [];
+        if (factors.length === 0) {
+          auth.password = { email, factors };
+          return answer(200, { step: 'enroll', session: { ...session(), acr: null, needsSecondFactor: true } });
+        }
+        auth.password = { email, factors };
+        return answer(200, { step: 'factor', factors, email });
+      }
+      case '/api/auth/sign-in/totp':
+        if (!auth.password) return answer(409, { code: 'flow_not_started' });
+        return code === FIXTURE_TOTP ? answer(200, session()) : invalid('code', 'mismatch', "That code didn't work. Check it and try again.");
+      case '/api/auth/sign-in/backup-code':
+        if (!auth.password) return answer(409, { code: 'flow_not_started' });
+        return code === FIXTURE_BACKUP ? answer(200, session()) : invalid('code', 'mismatch', "That code didn't work. Check it and try again.");
+      case '/api/auth/enroll/totp':
+        return answer(200, { secret: 'JBSWY3DPEHPK3PXP', otpauthUri: 'otpauth://totp/Northline:casey?secret=JBSWY3DPEHPK3PXP&issuer=Northline', qrCode: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=' });
+      case '/api/auth/enroll/totp/verify':
+        if (code !== FIXTURE_TOTP) return invalid('code', 'mismatch', "That code doesn't match. Check it and try again.");
+        if (auth.password) auth.factors.set(auth.password.email, ['totp', 'backup_code']);
+        return answer(200, { session: session(), backupCodes: [FIXTURE_BACKUP, 'code-01-fx', 'code-02-fx'] });
+      case '/api/auth/password/forgot':
+        auth.reset = true;
+        return answer(202, { step: 'verify-email', email: String(body.email ?? ''), resendAfterSeconds: 60 });
+      case '/api/auth/password/reset':
+        if (!auth.reset || code !== FIXTURE_EMAIL_CODE) return invalid('code', 'mismatch', "That code doesn't match. Check it and try again.");
+        auth.reset = false;
+        return answer(200, { email: FIXTURE_COURIER.email });
+    }
+    return answer(404, { code: 'not_found' });
+  }
+
   async function handle(url: string, init: RequestInit = {}): Promise<Response> {
     const method = (init.method ?? 'GET').toUpperCase();
     const u = new URL(url, 'http://fixtures.invalid');
     const path = u.pathname.replace(/^.*\/api\/v1/, '');
     const headers = (init.headers ?? {}) as Record<string, string>;
     calls.push({ method, path: u.pathname, idempotencyKey: headers['Idempotency-Key'] });
+    if (u.pathname === '/oauth2/authorize' || u.pathname.startsWith('/api/auth/')) {
+      const authBody = typeof init.body === 'string' ? (JSON.parse(init.body) as Json) : {};
+      const handled = authAnswer(u.pathname, authBody, u);
+      if (handled) return handled;
+    }
     if (u.pathname.endsWith('/oauth2/token')) {
       issued++;
       return answer(200, { access_token: `fixture-access-${issued}`, token_type: 'DPoP', expires_in: 599, refresh_token: `fixture-refresh-${issued}` }, { 'DPoP-Nonce': `n${issued}` });
     }
-    if (u.pathname.endsWith('/oauth2/revoke')) return answer(200, {});
+    if (u.pathname.endsWith('/oauth2/revoke')) {
+      auth.signedIn = false; // single sign-out (S-20): the app's auth session ends too
+      return answer(200, {});
+    }
     if (path === '/geo/regions') {
       const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       return answer(200, { platformTimeZone: zone, markets: [{ id: 'mkt-sample', city: 'Sampleville', province: 'XX', timeZone: zone }] });
@@ -294,6 +378,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
   const fetchImpl = ((input: RequestInfo | URL, init?: RequestInit) => handle(String(input), init)) as typeof fetch;
   return {
     fetch: fetchImpl,
+    auth,
     pings,
     calls,
     devices,

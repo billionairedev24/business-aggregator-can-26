@@ -4,6 +4,7 @@ import { Alert, Button, Checkbox, Field, StepBars, TextInput, useLocale } from '
 import { visibleError } from '../../lib/forms';
 import {
   authApi, createAccountSchema, useAuthMutation, type AuthSession, type CreateAccountValues, type EmailSent, fieldErrors, flowError, RateLimitNotice, useRateLimit,
+  MarketingConsents, useMarketingConsents,
   PasswordField, EmailCodeStep, EnrolSecondFactor,
 } from '@northline/auth-kit';
 import { useAuthT } from './messages';
@@ -70,13 +71,15 @@ function RegisterForm({ initial, notice, onSignIn, onSent }: { initial: CreateAc
   const limit = useRateLimit();
   const { locale } = useLocale();
   const send = useAuthMutation((v: CreateAccountValues) => authApi.createAccount({ ...v, termsLanguage: locale === 'fr' ? 'fr' : 'en' }, 'studio', locale));
+  // S-157: an unticked "news and offers for businesses" checkbox with the server's wording (CASL express consent)
+  const marketing = useMarketingConsents('studio');
   const form = useForm({
     defaultValues: initial,
     validators: { onChange: schema, onSubmit: schema },
     onSubmit: async ({ value }) => {
       setFailure('');
       try {
-        onSent(value, await send.mutateAsync(value));
+        onSent(value, await send.mutateAsync({ ...value, marketing: marketing.chosen() }));
       } catch (e) {
         if (limit.hold(e)) return;
         setServer(fieldErrors(e, t));
@@ -134,6 +137,7 @@ function RegisterForm({ initial, notice, onSignIn, onSent }: { initial: CreateAc
               onChange={c => { clearServer('terms'); field.handleChange(c); field.handleBlur(); }}
               label={<span>{t('termsBefore')}<a href="/legal/terms.html" target="_blank" rel="noopener">{t('terms')}</a>{t('termsAnd')}<a href="/legal/privacy.html" target="_blank" rel="noopener">{t('privacy')}</a>{t('termsAfter')}</span>} />
             {errorOf('terms') && <div role="alert" className="nl-error">{errorOf('terms')}</div>}
+            <MarketingConsents app="studio" consents={marketing} error={server.marketing} />
           </div>
         )}
       </form.Field>

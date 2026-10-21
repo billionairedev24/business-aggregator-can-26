@@ -75,6 +75,7 @@ interface PaymentsWebMapper {
     }
 
     default PayoutResponses.Overview toResponse(ViewPayouts.Overview o) {
+        var returned = o.returned();
         return new PayoutResponses.Overview(
                 o.availableCents(),
                 o.payableCents(),
@@ -88,7 +89,14 @@ interface PaymentsWebMapper {
                         o.instantEligible(),
                         Fees.INSTANT_FEE_BPS,
                         Fees.INSTANT_MIN_FEE_CENTS,
-                        Fees.INSTANT_MIN_AMOUNT_CENTS));
+                        Fees.INSTANT_MIN_AMOUNT_CENTS),
+                returned == null
+                        ? null
+                        : new PayoutResponses.Returned(
+                                returned.payoutId(),
+                                returned.amountCents(),
+                                returned.failureCode(),
+                                returned.sentAt()));
     }
 
     default CaseResponses.Overview toResponse(RespondToCases.Overview o) {

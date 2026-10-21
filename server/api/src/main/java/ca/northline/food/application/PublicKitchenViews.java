@@ -55,6 +55,7 @@ public final class PublicKitchenViews {
      * scheduled-order windows, its live menus' sections with dishes, and the combos on offer.
      *
      * @param taxBps the sales tax on food in the kitchen's province (the page's estimate; checkout prices it)
+     * @param groupOrders S-159: "Start a group order" is offered
      */
     public record Restaurant(
             Card kitchen,
@@ -66,7 +67,8 @@ public final class PublicKitchenViews {
             int taxBps,
             List<Instant> slots,
             List<Section> sections,
-            List<Combo> combos) {
+            List<Combo> combos,
+            boolean groupOrders) {
         public Restaurant {
             slots = List.copyOf(slots);
             sections = List.copyOf(sections);

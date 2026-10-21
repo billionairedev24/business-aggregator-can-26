@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 
 import { memorySecureStorage } from '@northline/mobile-kit';
 
-import { createFixtureServer, FIXTURE_PIN, type FixtureOptions } from '../src/fixtures/server';
+import { createFixtureServer, FIXTURE_BACKUP, FIXTURE_COURIER, FIXTURE_EMAIL_CODE, FIXTURE_NEW_COURIER, FIXTURE_PIN, FIXTURE_TOTP, type FixtureOptions } from '../src/fixtures/server';
 import type { KeyValueStore } from '../src/offline/outbox';
 import { createServices, setServices, type Services } from '../src/services';
 
@@ -39,10 +39,77 @@ afterEach(async () => {
 });
 
 describe('signing in', () => {
-  it('opens the system browser with the courier client, PKCE and the registered redirect, then shows the shift', async () => {
-    const { view } = await start({ signedIn: false });
+  const credentials = async (email: string, password: string) => {
+    fireEvent.changeText(await screen.findByTestId('field-email'), email);
+    fireEvent.changeText(screen.getByTestId('field-password'), password);
+    fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
+  };
+
+  it('S-159: email, password, then the authenticator code — the same courier-app PKCE + DPoP tokens through the https hand-off', async () => {
+    const { server, services } = await start({ signedIn: false });
     expect(await screen.findByText('Courier sign-in')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
+    expect(await screen.findByText('Enter your email.')).toBeTruthy();
+    await credentials(FIXTURE_COURIER.email, 'wrong password');
+    expect(await screen.findByText("That email and password don't match. Check them and try again.")).toBeTruthy();
+    await credentials(FIXTURE_COURIER.email, FIXTURE_COURIER.password);
+    expect(await screen.findByText('Enter the code from your authenticator app')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('factor-code'), FIXTURE_TOTP);
+    fireEvent.press(screen.getByRole('button', { name: 'Verify' }));
+    await screen.findByText('On a run');
+    expect(await services.session.restore()).toBe(true);
+    expect(server.auth.api.map((c) => c.path)).toEqual(['/api/auth/sign-in/password', '/api/auth/sign-in/password', '/api/auth/sign-in/totp']);
+    const authorize = server.calls.filter((c) => c.path === '/oauth2/authorize');
+    expect(authorize).toHaveLength(3); // kept in the auth session at each try (two), then followed through continueTo
+    expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
+  });
+
+  it('takes a backup code instead of the authenticator', async () => {
+    const { server } = await start({ signedIn: false });
+    await credentials(FIXTURE_COURIER.email, FIXTURE_COURIER.password);
+    fireEvent.press(await screen.findByRole('button', { name: 'Use a backup code instead' }));
+    fireEvent.changeText(screen.getByTestId('factor-code'), FIXTURE_BACKUP);
+    fireEvent.press(screen.getByRole('button', { name: 'Verify' }));
+    await screen.findByText('On a run');
+    expect(server.auth.api.at(-1)?.path).toBe('/api/auth/sign-in/backup-code');
+  });
+
+  it('a courier account without a second factor sets up an authenticator first and saves its backup codes', async () => {
+    const { server } = await start({ signedIn: false });
+    await credentials(FIXTURE_NEW_COURIER.email, FIXTURE_NEW_COURIER.password);
+    expect(await screen.findByText('Set up your authenticator app')).toBeTruthy();
+    expect(screen.getByText("Can't scan? Enter this key: JBSWY3DPEHPK3PXP")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('enrol-code'), FIXTURE_TOTP);
+    fireEvent.press(screen.getByRole('button', { name: 'Verify' }));
+    expect(await screen.findByText('Save your backup codes')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByText('Tick the box once you’ve saved them.')).toBeTruthy();
+    fireEvent.press(screen.getByRole('checkbox', { name: 'I saved them somewhere safe' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    await screen.findByText('On a run');
+    expect(server.auth.api.map((c) => c.path)).toEqual(['/api/auth/sign-in/password', '/api/auth/enroll/totp', '/api/auth/enroll/totp/verify']);
+  });
+
+  it('forgot password: a code by email and a new password', async () => {
+    const { server } = await start({ signedIn: false });
+    fireEvent.press(await screen.findByRole('button', { name: 'Forgot password?' }));
+    fireEvent.changeText(screen.getByTestId('field-email'), FIXTURE_COURIER.email);
+    fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
+    fireEvent.changeText(await screen.findByTestId('reset-code'), FIXTURE_EMAIL_CODE);
+    fireEvent.changeText(screen.getByTestId('reset-password'), 'short');
+    fireEvent.changeText(screen.getByTestId('reset-confirm'), 'short');
+    fireEvent.press(screen.getByRole('button', { name: 'Save the new password' }));
+    expect(await screen.findByText('Use at least 12 characters.')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('reset-password'), 'a new long courier password');
+    fireEvent.changeText(screen.getByTestId('reset-confirm'), 'a new long courier password');
+    fireEvent.press(screen.getByRole('button', { name: 'Save the new password' }));
+    expect(await screen.findByText('Your password is changed. Sign in with it.')).toBeTruthy();
+    expect(server.auth.api[0]).toEqual({ path: '/api/auth/password/forgot', body: { email: FIXTURE_COURIER.email, app: 'consumer' } });
+  });
+
+  it('keeps the system-browser sign-in for a passkey: the courier client, PKCE and the registered redirect', async () => {
+    const { view } = await start({ signedIn: false });
+    fireEvent.press(await screen.findByRole('button', { name: 'Sign in with a passkey in the browser' }));
     await screen.findByText('On a run');
     const [url, redirect] = (WebBrowser.openAuthSessionAsync as jest.Mock).mock.calls[0];
     const q = new URL(url).searchParams;
@@ -57,7 +124,7 @@ describe('signing in', () => {
   it('says so when the browser sign-in is cancelled', async () => {
     (WebBrowser.openAuthSessionAsync as jest.Mock).mockResolvedValueOnce({ type: 'cancel' });
     await start({ signedIn: false });
-    fireEvent.press(await screen.findByRole('button', { name: 'Sign in' }));
+    fireEvent.press(await screen.findByRole('button', { name: 'Sign in with a passkey in the browser' }));
     expect(await screen.findByText('Sign-in was cancelled.')).toBeTruthy();
   });
 

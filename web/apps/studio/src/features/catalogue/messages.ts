@@ -31,6 +31,9 @@ export const useCatalogueT = defineMessages({
     saveDraft: 'Save draft', saveChanges: 'Save changes', submit: 'Submit for vetting', saving: 'Saving…', submitting: 'Submitting…',
     draftPrivate: 'Draft · private', draftSaved: 'Draft saved {time}', submitted: 'Submitted · vetting', inReview: 'In review · flagged',
     approvedLive: 'Approved · live', approvedHidden: 'Approved · hidden', rejected: 'Rejected · fix and resubmit',
+    // S-156: the reviewer's reasons on a rejected listing
+    rejectedTitle: "{brand}'s review rejected this listing", rejectedBody: 'Reasons: {reasons}. Fix it and submit it again.', rejectedNote: "Reviewer's note: {note}",
+    reject_prohibited: 'not allowed on {brand}', reject_misleading: 'misleading', reject_pricing: 'pricing', reject_licence: 'licence or permit missing', reject_images: 'images', reject_other: 'other',
     // S-39 re-vetting
     materialHint: '{kind, select, service {Changing the price or category} other {Changing the price, category or images}} sends this listing back to vetting. Customers don\'t see it until the checks pass.',
     revetTitle: 'Back in vetting',
@@ -203,6 +206,8 @@ export const useCatalogueT = defineMessages({
     saveDraft: 'Enregistrer le brouillon', saveChanges: 'Enregistrer', submit: 'Soumettre au contrôle', saving: 'Enregistrement…', submitting: 'Envoi…',
     draftPrivate: 'Brouillon · privé', draftSaved: 'Brouillon enregistré {time}', submitted: 'Soumis · contrôle', inReview: 'En révision · signalé',
     approvedLive: 'Approuvée · en ligne', approvedHidden: 'Approuvée · masquée', rejected: 'Refusée · corrigez et soumettez de nouveau',
+    rejectedTitle: 'L’examen de {brand} a refusé cette annonce', rejectedBody: 'Raisons : {reasons}. Corrigez-la et soumettez-la de nouveau.', rejectedNote: 'Note de l’examinateur : {note}',
+    reject_prohibited: 'interdite sur {brand}', reject_misleading: 'trompeuse', reject_pricing: 'prix', reject_licence: 'permis manquant', reject_images: 'images', reject_other: 'autre',
     // S-39 nouveau contrôle
     materialHint: '{kind, select, service {Modifier le prix ou la catégorie} other {Modifier le prix, la catégorie ou les images}} renvoie cette annonce au contrôle. Les clients ne la voient pas avant la fin des vérifications.',
     revetTitle: 'De nouveau en contrôle',

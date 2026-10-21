@@ -4,6 +4,8 @@
  * S-58, S-59, S-60) for what the design doesn't draw, ours otherwise. Places, times, prices and counts are parameters.
  */
 export const account = {
+  'checkout.consentTitle': 'Offers by email (optional)',
+  'checkout.consentWho': 'Sent by {requester}. Change your mind any time in Account › Notifications.',
   'account.card': '{brand} ··{last4}',
 
   // D1 Orders & bookings
@@ -329,7 +331,7 @@ export const account = {
   'account.notif.consent.src.import': 'Imported with your earlier consent',
   'account.notif.consent.src.unsubscribe_link': 'Unsubscribe link',
   'account.notif.consent.src.list_unsubscribe': 'Your mailbox’s unsubscribe button',
-  'account.notif.consent.src.sms_keyword': 'STOP reply',
+  'account.notif.consent.src.sms_keyword': 'Text reply (STOP or START)',
   'account.notif.consent.src.console': '{brand} support, at your request',
   'account.notif.consent.src.erasure': 'Account deleted',
 

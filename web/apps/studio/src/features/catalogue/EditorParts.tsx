@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { CheckCircle, Circle, XCircle } from '@phosphor-icons/react';
 import { Alert, Button, Select, rovingIndex, tablistKeyDown, useFormatters, useLocale } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
-import type { Category, ListingDetail } from './api';
+import { listingReviewQuery, type Category, type ListingDetail } from './api';
+import { useMerchantId } from '../shell/api';
 import { useCatalogueT, type CatalogueT } from './messages';
 import { categoryPath, childrenOf, fees, type Check } from './model';
 import { useMessageT } from './validation';
@@ -97,6 +99,7 @@ export function RevetNotice({ detail, kind }: { detail: ListingDetail | undefine
   const t = useCatalogueT();
   const { locale } = useLocale();
   if (!detail) return null;
+  if (detail.vetting === 'rejected') return <RejectionNotice listingId={detail.id} />;
   if (detail.vetting === 'approved') return <p className="nl-cat-note" style={{ marginBottom: 16 }}>{t('materialHint', { kind })}</p>;
   if (detail.vetting !== 'pending' || !detail.revetReasons.length) return null;
   const reasons = new Intl.ListFormat(locale, { type: 'conjunction' }).format(detail.revetReasons.map(r => t(`reason_${r}`)));
@@ -104,6 +107,23 @@ export function RevetNotice({ detail, kind }: { detail: ListingDetail | undefine
     <div style={{ marginBottom: 16 }}>
       <Alert tone="neutral" role="status" title={t('revetTitle')}>
         {detail.vettingFlags.length ? t('revetFlagged', { reasons }) : t('revetBody', { reasons })}
+      </Alert>
+    </div>
+  );
+}
+
+/** S-156 (S-92's open item): a rejected listing shows the reviewer's reasons and note, not only the email. */
+function RejectionNotice({ listingId }: { listingId: string }) {
+  const t = useCatalogueT();
+  const { locale } = useLocale();
+  const review = useQuery(listingReviewQuery(useMerchantId(), listingId)).data;
+  if (!review || review.decision !== 'rejected') return null;
+  const reasons = new Intl.ListFormat(locale, { type: 'conjunction' }).format(review.reasons.map(r => t(`reject_${r}` as Parameters<CatalogueT>[0])));
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <Alert tone="error" title={t('rejectedTitle')}>
+        <p style={{ margin: 0 }}>{t('rejectedBody', { reasons })}</p>
+        {review.note ? <p style={{ margin: '8px 0 0' }}>{t('rejectedNote', { note: review.note })}</p> : null}
       </Alert>
     </div>
   );

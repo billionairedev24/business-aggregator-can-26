@@ -100,6 +100,15 @@ class TrustFlagAdapter implements TrustFlagStore {
     }
 
     @Override
+    public List<StoredFlag> ofScan(String scanId) {
+        return jdbc.sql("select " + COLUMNS
+                        + " from trust.flags where evidence ->> 'scanId' = :id order by created_at, id")
+                .param("id", scanId)
+                .query((rs, n) -> flag(rs))
+                .list();
+    }
+
+    @Override
     public Optional<StoredFlag> find(String id) {
         return jdbc.sql("select " + COLUMNS + " from trust.flags where id = :id")
                 .param("id", id)

@@ -269,6 +269,12 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                         row.deliveryFeeCents() + row.serviceFeeCents(), row.feeTaxCents(), row.tipCents()),
                 discount(row)));
         promotions.redeem("food", row.id());
+        enter(row, lines, customerId, now);
+        return new Placed(row.id(), row.ref());
+    }
+
+    /** The placed checkout becomes the kitchen's ticket: order rows, then S-51's {@code order.placed}. */
+    private void enter(CheckoutRow row, List<Line> lines, String customerId, Instant now) {
         var orderLines = lines.stream()
                 .map(l -> new OrderLineRow(
                         Ids.next(),
@@ -307,7 +313,110 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                                     l.menuItemId() != null ? "menu_item" : "combo"))
                             .toList()));
         }
-        return new Placed(row.id(), row.ref());
+    }
+
+    // ── S-159: group orders ────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A group order's whole cart priced as one food order (every S-57 rule: kitchen open, mode, minimum, windows),
+     * with its place of supply for the shares' tax.
+     */
+    record GroupPricing(
+            Totals totals, String province, @Nullable String postalCode, FoodCheckoutFacts.Kitchen kitchen) {}
+
+    GroupPricing priceGroup(String hostId, Order order) {
+        var p = price(hostId, order);
+        var tax = Math.round(p.dishes().subtotalCents() * rates.bpsFor(p.province()) / 10_000.0);
+        var none = promotions.price(basket(hostId, p, "quote"), new Promotions.Ask(null, false));
+        return new GroupPricing(
+                totals(order, p, tax, true, ageGate.view(hostId, p.age()), none),
+                p.province(),
+                order.delivery() == null ? null : order.delivery().postalCode(),
+                p.kitchen());
+    }
+
+    /** The split bill's sums: what the shares' card payments hold (escrow per share, S-159). */
+    record GroupAmounts(
+            long subtotalCents,
+            long deliveryFeeCents,
+            long serviceFeeCents,
+            long feeTaxCents,
+            long taxCents,
+            long tipCents) {
+        long totalCents() {
+            return subtotalCents + deliveryFeeCents + serviceFeeCents + feeTaxCents + taxCents + tipCents;
+        }
+    }
+
+    /**
+     * A split-bill group order goes to the kitchen: priced again (the kitchen must still be open, every dish still
+     * orderable at the price the shares were paid at), written as a placed food checkout without a card payment of its
+     * own — each share holds its own escrow; {@code hostPaymentIntent} is the host's share's (its escrow's id is the
+     * order's) — and entered like any food order.
+     */
+    Placed placeGroup(
+            String hostId, String orderId, String ref, Order order, GroupAmounts amounts, String hostPaymentIntent) {
+        if (store.find(orderId).filter(r -> r.state().equals("placed")).isPresent()) {
+            return new Placed(orderId, ref);
+        }
+        var p = price(hostId, order);
+        if (p.dishes().subtotalCents() != amounts.subtotalCents()) {
+            throw ca.northline.orders.domain.GroupOrderRules.pricesChanged();
+        }
+        var now = clock.instant();
+        var none = promotions.price(basket(hostId, p, "quote"), new Promotions.Ask(null, false));
+        var lines = totals(order, p, amounts.taxCents(), false, ageGate.view(hostId, p.age()), none)
+                .lines();
+        var row = new CheckoutRow(
+                orderId,
+                ref,
+                hostId,
+                p.kitchen().merchantId(),
+                p.kitchen().name(),
+                p.kitchen().slug(),
+                "pending",
+                order.mode(),
+                order.scheduledFor(),
+                customerEta(order, p, now),
+                p.etaFromMin(),
+                p.etaToMin(),
+                json.writeValueAsString(lines),
+                amounts.subtotalCents(),
+                amounts.deliveryFeeCents(),
+                amounts.serviceFeeCents(),
+                amounts.feeTaxCents(),
+                amounts.taxCents(),
+                amounts.tipCents(),
+                amounts.totalCents(),
+                p.province(),
+                null,
+                hostPaymentIntent,
+                order.delivery() == null ? null : json.writeValueAsString(order.delivery()),
+                now,
+                null,
+                0,
+                0,
+                null);
+        if (store.find(orderId).isEmpty()) {
+            store.insert(row);
+        }
+        enter(row, lines, hostId, now);
+        return new Placed(orderId, ref);
+    }
+
+    /** The kitchen can take this mode at all (S-57's 409s), before anything is priced. */
+    static void checkFulfilment(FoodCheckoutFacts.Kitchen kitchen, boolean isDelivery) {
+        if (isDelivery && !kitchen.fulfilment().contains("courier")) {
+            throw new Conflict("no_delivery", kitchen.name() + " doesn't deliver. Choose pickup.");
+        }
+        if (isDelivery && Boolean.FALSE.equals(kitchen.delivers())) {
+            throw new Conflict(
+                    "out_of_range",
+                    kitchen.name() + " doesn't deliver to this address. Choose pickup or another address.");
+        }
+        if (!isDelivery && !kitchen.fulfilment().contains("pickup")) {
+            throw new Conflict("no_pickup", kitchen.name() + " doesn't offer pickup.");
+        }
     }
 
     @Override
@@ -362,17 +471,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                         delivery == null ? null : delivery.lat(),
                         delivery == null ? null : delivery.lng())
                 .orElseThrow(() -> new NotFound("kitchen", order.merchantId()));
-        if (isDelivery && !kitchen.fulfilment().contains("courier")) {
-            throw new Conflict("no_delivery", kitchen.name() + " doesn't deliver. Choose pickup.");
-        }
-        if (isDelivery && Boolean.FALSE.equals(kitchen.delivers())) {
-            throw new Conflict(
-                    "out_of_range",
-                    kitchen.name() + " doesn't deliver to this address. Choose pickup or another address.");
-        }
-        if (!isDelivery && !kitchen.fulfilment().contains("pickup")) {
-            throw new Conflict("no_pickup", kitchen.name() + " doesn't offer pickup.");
-        }
+        checkFulfilment(kitchen, isDelivery);
         var at = order.scheduledFor();
         if (at == null) {
             if (!kitchen.open()) {

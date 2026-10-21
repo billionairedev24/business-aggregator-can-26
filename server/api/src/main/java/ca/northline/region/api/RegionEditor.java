@@ -31,6 +31,14 @@ public interface RegionEditor {
 
     void courierModel(String provinceId, String model);
 
+    /**
+     * S-158: the stored language rules (S-116) of the province and its markets — {@code null} = not set (a market
+     * takes its province's; a province without one has none).
+     */
+    List<LanguageRow> languageRows(String provinceId);
+
+    void languages(String regionId, @Nullable Boolean frenchFirst, @Nullable FrenchListings frenchListings);
+
     boolean cityTaken(String provinceId, String city);
 
     /** Inserts the market (stage off) and returns its id. */
@@ -68,6 +76,12 @@ public interface RegionEditor {
             LaunchStatus stage) {}
 
     record ZoneRef(String id, String marketId, String provinceId) {}
+
+    /** @param frenchListings {@code off | warn | require}, null when not set */
+    record LanguageRow(
+            String regionId,
+            @Nullable Boolean frenchFirst,
+            @Nullable String frenchListings) {}
 
     record Market(
             String id,

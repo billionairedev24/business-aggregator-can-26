@@ -55,6 +55,7 @@ class OnboardingController {
     private final SubmitApplication submitApplication;
     private final CompleteVerification completeVerification;
     private final OnboardingWebMapper mapper;
+    private final ca.northline.merchants.application.OnboardingAgentNote agentNotes;
 
     /** End of the Account step. Needs a second factor like every business action ({@code acr=mfa}). */
     @PostMapping("/api/v1/merchants")
@@ -78,6 +79,21 @@ class OnboardingController {
     @RequiresMerchant(VIEW)
     OnboardingResponse get(@PathVariable String merchantId) {
         return mapper.toResponse(viewOnboarding.view(merchantId));
+    }
+
+    /**
+     * S-156: the agent's latest "Request info" (checks to redo and the note) for the wizard's Verification step; 204
+     * when there is none.
+     */
+    @GetMapping("/api/v1/merchants/{merchantId}/onboarding/agent-note")
+    @RequiresMerchant(VIEW)
+    org.springframework.http.ResponseEntity<ca.northline.merchants.application.OnboardingAgentNote.Note> agentNote(
+            @PathVariable String merchantId) {
+        return agentNotes
+                .latest(merchantId)
+                .map(org.springframework.http.ResponseEntity::ok)
+                .orElseGet(() ->
+                        org.springframework.http.ResponseEntity.noContent().build());
     }
 
     /**

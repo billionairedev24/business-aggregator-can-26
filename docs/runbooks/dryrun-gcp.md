@@ -283,7 +283,10 @@ CI alternative: [deploy.md § Build and push](deploy.md#build-and-push).
 
 ```sh
 kubectl create namespace northline-dryrun
-helm upgrade --install northline-data deploy/helm/northline-data -n northline-dryrun -f northline-data-values.json --wait --timeout 15m
+helm upgrade --install northline-data deploy/helm/northline-data -n northline-dryrun -f northline-data-values.json
+# not --wait: the auth signing keys' volume binds only when auth mounts it (WaitForFirstConsumer); wait for the services
+kubectl -n northline-dryrun rollout status statefulset -l app.kubernetes.io/instance=northline-data --timeout 15m
+kubectl -n northline-dryrun wait clusters.postgresql.cnpg.io --all --for=condition=Ready --timeout 15m
 kubectl -n northline-dryrun get cluster.postgresql.cnpg.io,statefulsets,pods
 kubectl -n northline-dryrun get backups.postgresql.cnpg.io     # the immediate first backup: completed
 ```

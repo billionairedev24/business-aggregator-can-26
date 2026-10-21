@@ -5,10 +5,10 @@ import { z } from 'zod';
 import { Alert, Dialog, ErrorState, Field, Skeleton, TextArea, TextInput, useFormatters, useLocale, type Locale, timeZone } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { screenHref } from '../shell/nav';
-import { ValidationError } from '../../lib/http';
+import { ApiError, ValidationError } from '../../lib/http';
 import { useSession } from '../../lib/session';
 import { clock } from '../../lib/time';
-import { jobQuery, openCustomerThread, useAdvanceJob, useRequestApproval, useUploadMedia, type JobDetail, type Media, type Step } from './api';
+import { jobQuery, openCustomerThread, reportCustomerNoShow, useAdvanceJob, useRequestApproval, useUploadMedia, type JobDetail, type Media, type Step } from './api';
 import { CustomerPhotos } from './QuoteRequests';
 import { useAppointmentsT } from './messages';
 import { LiveShare } from './LiveShare';
@@ -84,11 +84,19 @@ function JobCard({ job: j }: { job: JobDetail }) {
       void nav({ to: screenHref(merchantId, 'messages'), search: { thread: threadId } as never });
     } catch { setThreadError(true); }
   };
+  // S-156: a customer who isn't there 15 minutes after the start can be reported; trust & safety confirm it
+  const [noShow, setNoShow] = useState<'sent' | 'error' | string>();
+  const lateEnough = Date.now() >= new Date(j.startsAt).getTime() + 15 * 60_000;
+  const reportNoShow = async () => {
+    try { await reportCustomerNoShow(merchantId, j.id); setNoShow('sent'); }
+    catch (e) { setNoShow(e instanceof ApiError && e.body && typeof e.body === 'object' && 'detail' in e.body ? String((e.body as { detail: unknown }).detail) : 'error'); }
+  };
   return (
     <section aria-labelledby="appt-job">
       <h2 id="appt-job" className="nl-h2 nl-appt-h2">{title}{j.memberName && j.memberUserId !== me ? <span className="nl-muted"> ({j.memberName})</span> : null}</h2>
       <dl className="nl-appt-facts">
-        {j.customer ? <><dt>{t('customer')}</dt><dd>{j.customer.reliability != null ? t('customerLine', { name: j.customer.name, score: j.customer.reliability.toFixed(1), jobs: j.customer.pastJobs }) : t('customerLineNoScore', { name: j.customer.name, jobs: j.customer.pastJobs })}</dd></> : null}
+        {j.customer ? <><dt>{t('customer')}</dt><dd>{j.customer.reliability != null ? t('customerLine', { name: j.customer.name, score: j.customer.reliability.toFixed(1), jobs: j.customer.pastJobs }) : t('customerLineNoScore', { name: j.customer.name, jobs: j.customer.pastJobs })}
+          {j.customer.noShows ? <> <span className="tag tag-warning">{t('customerNoShows', { n: j.customer.noShows })}</span></> : null}</dd></> : null}
         {j.addressLine || j.access ? <><dt>{t('where')}</dt><dd>{[j.addressLine, j.access].filter(Boolean).join(' · ')}</dd></> : null}
         {j.vehicle ? <><dt>{t('vehicle')}</dt><dd>{j.vehicle}</dd></> : null}
         <dt>{t('escrow')}</dt><dd><EscrowFact j={j} /></dd>
@@ -110,8 +118,12 @@ function JobCard({ job: j }: { job: JobDetail }) {
           <button type="button" className="btn btn-secondary" onClick={() => void message()}>{t('message')}</button>
           {['confirmed', 'en_route', 'on_site'].includes(j.state) ? <button type="button" className="btn btn-secondary" onClick={() => setApproving(true)}>{t('extraParts')}</button> : null}
           <button type="button" className="btn btn-ghost" onClick={toMessages}>{t('reschedule')}</button>
+          {['confirmed', 'en_route', 'on_site'].includes(j.state) && lateEnough && noShow !== 'sent'
+            ? <button type="button" className="btn btn-ghost" onClick={() => void reportNoShow()}>{t('noShow')}</button> : null}
         </div>
       ) : null}
+      {noShow === 'sent' ? <Alert tone="info" role="status">{t('noShowSent')}</Alert>
+        : noShow ? <Alert tone="error">{noShow === 'error' ? t('advanceError') : noShow}</Alert> : null}
       <div className="nl-appt-hint" aria-live="polite">{st.hint}</div>
       {canOperate && j.state === 'en_route' && (j.memberUserId === me || (!j.memberUserId && role === 'owner')) ? <LiveShare merchantId={merchantId} jobId={j.id} /> : null}
       {advance.isError ? <Alert tone="error">{t('advanceError')}</Alert> : null}

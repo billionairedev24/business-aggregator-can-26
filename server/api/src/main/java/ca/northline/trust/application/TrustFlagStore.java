@@ -41,6 +41,9 @@ public interface TrustFlagStore {
 
     Optional<StoredFlag> find(String id);
 
+    /** S-158: the flags one weekly anomaly scan raised ({@code evidence.scanId}), oldest first. */
+    List<StoredFlag> ofScan(String scanId);
+
     /** S-92: open flags on one kind of target (and one target, when given), oldest first. */
     List<StoredFlag> openOn(String targetType, @Nullable String targetId, int limit);
 

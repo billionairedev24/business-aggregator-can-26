@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Chip, ErrorState, Field, OptionCard, PageSkeleton, RadioGroup, Select, formatMoney, useLocale } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
-import { ValidationError } from '../../lib/http';
+import { ApiError, ValidationError } from '../../lib/http';
 import { rulesQuery, useSaveRules, type Rules, type RulesInput } from './api';
+import { instantBookQuery } from '../standing/api';
+import { screenHref } from '../shell/nav';
 import type { SaveState } from './AvailabilityScreen';
 import { useAvailabilityT } from './messages';
 
@@ -22,6 +24,9 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
   const canEdit = role !== 'bookkeeper';
   const q = useQuery(rulesQuery(merchantId));
   const save = useSaveRules(merchantId);
+  // S-156: Northline's pause on instant book — the business's "Instant book" choice respects it
+  const instant = useQuery(instantBookQuery(merchantId)).data;
+  const paused = !!instant?.paused;
   const [form, setForm] = useState<RulesInput | null>(null);
   useEffect(() => { if (q.data) setForm(strip(q.data)); }, [q.data]);
   const dirty = !!form && !!q.data && JSON.stringify(form) !== JSON.stringify(strip(q.data));
@@ -56,9 +61,16 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
           <h3 className="nl-av-h3">{t('acceptance')}</h3>
           <div className="nl-field">
             <span className="nl-label" id="av-accept">{t('howBookings')}</span>
+            {paused ? (
+              <Alert tone="highlight" title={t('instantPaused')}>
+                {instant?.pausedReason ? `${instant.pausedReason} ` : ''}<a href={screenHref(merchantId, 'standing')}>{t('instantPausedLink')}</a>
+              </Alert>
+            ) : null}
             <RadioGroup className="nl-av-options" aria-labelledby="av-accept">
               {(['instant', 'approve', 'request'] as const).map(m => (
-                <OptionCard key={m} role="radio" aria-checked={form.acceptMode === m} selected={form.acceptMode === m} disabled={!canEdit} title={t(`accept_${m}`)} description={t(`accept_${m}_desc`)} onClick={() => set({ acceptMode: m })} />
+                <OptionCard key={m} role="radio" aria-checked={form.acceptMode === m} selected={form.acceptMode === m}
+                  disabled={!canEdit || (m === 'instant' && paused && q.data?.acceptMode !== 'instant')}
+                  title={t(`accept_${m}`)} description={m === 'instant' && paused ? t('accept_instant_paused') : t(`accept_${m}_desc`)} onClick={() => set({ acceptMode: m })} />
               ))}
             </RadioGroup>
           </div>
@@ -83,7 +95,7 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
           </div>
         </div>
       </div>
-      {save.isError && !(save.error instanceof ValidationError) ? <Alert tone="error">{t('saveError')}</Alert> : null}
+      {save.isError && !(save.error instanceof ValidationError) ? <Alert tone="error">{save.error instanceof ApiError && save.error.status === 409 ? t('instantPausedSave') : t('saveError')}</Alert> : null}
       {canEdit
         ? <button type="button" className="btn btn-primary nl-av-saverules" disabled={save.isPending || !dirty} onClick={() => save.mutate(form)}>{t('saveRules')}</button>
         : <p className="nl-small nl-muted">{t('readOnly', { role: t(`role_${role}` as Parameters<T>[0]) })}</p>}

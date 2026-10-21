@@ -39,8 +39,13 @@ export interface AccountFixtureState {
   };
   labels: Map<string, string>;
   points: { balance: number; weekly: number[] };
-  plus: { plan: 'monthly' | 'annual'; since: string; status?: 'trialing' | 'active'; cancelAtPeriodEnd?: boolean; payer?: boolean } | null;
-  /** S-152: whether the household already had its free trial; `card` makes a join answer 409 card_required (Stripe Billing). */
+  plus: {
+    plan: 'monthly' | 'annual'; since: string; status?: 'trialing' | 'active' | 'past_due'; cancelAtPeriodEnd?: boolean; payer?: boolean;
+    /** S-162: a plan change waiting for the next renewal; a renewal the bank wants confirmed or that was declined. */
+    nextPlan?: 'monthly' | 'annual' | null;
+    payment?: { reason: string; totalCents: number; retryAt: string | null; clientSecret?: string | null } | null;
+  } | null;
+  /** S-152: whether the household already had its free trial; `card` makes a join answer 409 card_required (no saved card). */
   plusTrialUsed: boolean;
   plusNeedsCard: boolean;
   /** S-152: the points ledger (newest first) and Invite a neighbour. */
@@ -247,7 +252,13 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       cancelAtPeriodEnd: !!p?.cancelAtPeriodEnd, payer: p ? p.payer !== false : true, members: 2, monthlyPriceCents: 799, annualPriceCents: 6900,
       trialDays: 30, trialAvailable: !state.plusTrialUsed,
       benefits: { member: !!p, serviceFeeWaived: !!p, memberPrices: !!p, pointsMultiplierPct: p ? 200 : 100 },
-      clientSecret: null, publishableKey: null,
+      // S-162: Northline bills Plus itself
+      nextPlan: p?.nextPlan ?? null, nextChargeAt: p && !p.cancelAtPeriodEnd ? end : null,
+      nextChargeCents: p ? ((p.nextPlan ?? p.plan) === 'annual' ? 6900 : 799) : 0,
+      card: p ? { id: 'pm_fixture', brand: 'visa', last4: '4242', chosen: false } : null,
+      payment: p?.payment ? { periodId: 'pp-1', reason: p.payment.reason, totalCents: p.payment.totalCents, retryAt: p.payment.retryAt, lapsesAt: end } : null,
+      history: [],
+      clientSecret: p?.payment?.clientSecret ?? null, publishableKey: p?.payment?.clientSecret ? 'pk_test_fake' : null,
     };
   };
   const myPoints = () => ({
@@ -338,8 +349,8 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
 
     // ── the api: personal ─────────────────────────────────────────────────────────────────────────────────────────
     const mine =
-      ['/me/account-summary', '/me/activity', '/me/profile', '/me/addresses', '/me/household', '/me/plus', '/me/plus/resume', '/me/points', '/me/referral', '/me/referral/claim', '/me/wallet', '/me/notifications', '/me/consents', '/me/preferences', '/me/privacy-requests', '/me/cases'].includes(path) ||
-      /^\/me\/(quotes|addresses|cases|privacy-requests)\//.test(path) ||
+      ['/me/account-summary', '/me/activity', '/me/profile', '/me/addresses', '/me/household', '/me/plus', '/me/plus/resume', '/me/plus/confirm', '/me/points', '/me/referral', '/me/referral/claim', '/me/wallet', '/me/notifications', '/me/consents', '/me/preferences', '/me/privacy-requests', '/me/cases'].includes(path) ||
+      /^\/me\/(quotes|addresses|cases|privacy-requests|consents)\//.test(path) ||
       (path.startsWith('/me/payment-methods') && !(method === 'GET' && path === '/me/payment-methods'));
     if (!mine) return undefined;
     if (!signedIn(req)) return ctx.answer(401, { error: 'invalid_token' });
@@ -401,6 +412,10 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       return ctx.answer(200, profile());
     }
 
+    // S-159: what deleting the account would affect (the fixture account has its points and Plus)
+    if (path === '/me/privacy-requests/erasure-preview' && method === 'GET') {
+      return ctx.answer(200, { items: [{ code: 'points', count: 340, amountCents: 0, until: null }, { code: 'plus', count: 1, amountCents: 0, until: iso(ctx.now() + 20 * DAY) }] });
+    }
     // privacy requests (S-105): verified at once with a step-up proof, else a code is "texted"
     if (path === '/me/privacy-requests') {
       if (method === 'GET') return ctx.answer(200, { items: state.privacy });
@@ -415,7 +430,7 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
         id: `pr-${state.privacy.length + 1}`, reference: `PR-${1001 + state.privacy.length}`, type: String(b.type), state: 'awaiting_verification',
         law: { code: 'ab_pipa', name: 'Personal Information Protection Act', shortName: 'PIPA', authority: 'the Information and Privacy Commissioner', authorityUrl: 'https://example.ca/privacy-commissioner' },
         receivedAt: iso(ctx.now()), dueAt: iso(ctx.now() + 45 * DAY), extendedTo: null, scheduledFor: null, completedAt: null,
-        codeSentTo: proven ? null : `•••• ${state.profile.phone.slice(-4)}`, decision: null, export: null, corrections: b.corrections ?? [], holdsOpen: 0,
+        codeSentTo: proven ? null : `•••• ${state.profile.phone.slice(-4)}`, codeChannel: proven ? null : 'sms', decision: null, export: null, corrections: b.corrections ?? [], holdsOpen: 0,
       };
       state.privacy.unshift(r);
       if (proven) verified(r);
@@ -469,7 +484,13 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       return ctx.answer(200, addresses());
     }
     if (method === 'GET' && path === '/me/household') return ctx.answer(200, household());
-    // S-152 Plus (the local billing's shapes: no card, no tax)
+    // S-152 Plus (the local billing's shapes, no tax); S-162: plan changes wait for the renewal, payments are confirmed
+    if (method === 'POST' && path === '/me/plus/confirm') {
+      if (!state.plus?.payment) return ctx.answer(409, { code: 'plus_nothing_to_confirm', detail: 'There’s no Plus payment waiting for you.' });
+      state.plus.payment = null;
+      state.plus.status = 'active';
+      return ctx.answer(200, plusView());
+    }
     if (path === '/me/plus' || path === '/me/plus/resume') {
       const plan = req.body.plan;
       if ((method === 'POST' && path === '/me/plus') || method === 'PATCH') {
@@ -480,7 +501,7 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
         if (state.plusNeedsCard) return ctx.answer(409, { code: 'card_required', detail: 'Add a card in Payment methods first: Plus renews on your default card.' });
         state.plus = { plan: plan as 'monthly' | 'annual', since: iso(ctx.now()), status: state.plusTrialUsed ? 'active' : 'trialing' };
         state.plusTrialUsed = true;
-      } else if (method === 'PATCH' && state.plus) state.plus.plan = plan as 'monthly' | 'annual';
+      } else if (method === 'PATCH' && state.plus) state.plus.nextPlan = plan === state.plus.plan ? null : (plan as 'monthly' | 'annual');
       else if (method === 'DELETE' && state.plus) state.plus.cancelAtPeriodEnd = true;
       else if (method === 'POST' && state.plus) state.plus.cancelAtPeriodEnd = false;
       else if (method !== 'GET') return ctx.answer(409, { code: 'not_member', detail: 'Your household isn’t a Plus member.' });
@@ -539,6 +560,12 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       return ctx.answer(200, notifications());
     }
     if (path === '/me/consents' && method === 'GET') return ctx.answer(200, consents());
+    if (method === 'PUT' && (m = /^\/me\/consents\/(marketing_email|marketing_sms|marketing_push)$/.exec(path))) {
+      // S-157: a consent given (or withdrawn) in one place, e.g. the checkout's offers box
+      const b = req.body as { granted: boolean; source: string };
+      consentChange(m[1]!.replace('marketing_', ''), b.granted, b.source);
+      return ctx.answer(200, consents());
+    }
     if (path === '/me/preferences') {
       if (method === 'GET') return ctx.answer(200, state.prefs);
       const b = req.body as Partial<AccountFixtureState['prefs']>;

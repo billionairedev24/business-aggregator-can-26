@@ -296,7 +296,8 @@ public sealed interface EmailContent {
      * Settings › Notifications row {@code payout}.
      *
      * @param outcome {@code failed} (returned by the bank) | {@code canceled}
-     * @param failureCode Stripe's code ({@code account_closed}, {@code no_account}, …), null when canceled
+     * @param failureCode Stripe's code ({@code account_closed}, {@code no_account}, …), null when canceled; S-157: the
+     *     email says what it means ({@link #REASONS}, else a general reason) and keeps the code for support
      */
     record PayoutFailed(
             String businessName,
@@ -305,10 +306,35 @@ public sealed interface EmailContent {
             @Nullable String failureCode,
             URI payoutsLink) implements EmailContent {
 
+        /** Stripe's payout failure codes the email (and the Studio's notice) explain in words. */
+        public static final Set<String> REASONS = Set.of(
+                "account_closed",
+                "account_frozen",
+                "bank_account_restricted",
+                "bank_ownership_changed",
+                "could_not_process",
+                "debit_not_authorized",
+                "declined",
+                "incorrect_account_holder_address",
+                "incorrect_account_holder_name",
+                "incorrect_account_holder_tax_id",
+                "insufficient_funds",
+                "invalid_account_number",
+                "invalid_currency",
+                "no_account");
+
         public PayoutFailed {
             if (!outcome.equals("failed") && !outcome.equals("canceled")) {
                 throw new IllegalArgumentException("outcome must be failed or canceled: " + outcome);
             }
+        }
+
+        /** The reason's message key part: a known code, {@code other} for a code we don't explain, {@code canceled}. */
+        public String why() {
+            if (failureCode == null || failureCode.isBlank()) {
+                return outcome.equals("canceled") ? "canceled" : "other";
+            }
+            return REASONS.contains(failureCode) ? failureCode : "other";
         }
 
         @Override
@@ -334,6 +360,7 @@ public sealed interface EmailContent {
             v.put("amount", format.money(amountCents));
             v.put("hasCode", failureCode != null && !failureCode.isBlank());
             v.put("code", failureCode == null ? "" : failureCode);
+            v.put("why", why());
             v.put("link", payoutsLink.toString());
             return v;
         }
@@ -763,6 +790,61 @@ public sealed interface EmailContent {
         }
     }
 
+    /**
+     * S-156: the business's standing changed — Northline paused or resumed instant book, an appeal was decided, a
+     * coaching plan started — with the reason. Transactional: an account notice to the owners, always sent.
+     *
+     * @param subject what an appeal was about ({@code dispute}, {@code suspended}, {@code search_hidden},
+     *     {@code instant_book_off}); empty otherwise
+     * @param reference the appeal's or dispute's number; empty otherwise
+     */
+    record StandingUpdate(
+            String businessName,
+            StandingUpdate.Change change,
+            String subject,
+            String reason,
+            String reference,
+            long compensationCents,
+            URI link)
+            implements EmailContent {
+
+        public enum Change {
+            INSTANT_BOOK_PAUSED,
+            INSTANT_BOOK_RESUMED,
+            APPEAL_GRANTED,
+            APPEAL_DENIED,
+            COACHING_STARTED
+        }
+
+        @Override
+        public String template() {
+            return "standing-update";
+        }
+
+        @Override
+        public String variant() {
+            return code(change);
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("change", code(change));
+            v.put("about", subject.isEmpty() ? "other" : subject);
+            v.put("staffReason", reason);
+            v.put("reference", reference);
+            v.put("compensation", compensationCents > 0 ? format.money(compensationCents) : "");
+            v.put("link", link.toString());
+            return v;
+        }
+    }
+
     // ── Console oversight ────────────────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -1031,6 +1113,90 @@ public sealed interface EmailContent {
         }
     }
 
+    /**
+     * S-162: a Northline Plus payment, to the member who pays — Northline bills Plus itself. {@code paid} is the receipt
+     * (amount, tax, total, the period); {@code action_required} asks them to confirm the payment with their bank (3-D
+     * Secure, on the web or in the app); {@code declined} says when it's tried again; {@code lapsed} that the
+     * membership ended; {@code refunded} that a period was paid back. Transactional: it confirms or completes a
+     * purchase the member made (CASL s. 6(6)) — no unsubscribe link, sent whatever the matrix says.
+     *
+     * @param outcome {@code paid | action_required | declined | lapsed | refunded}
+     * @param plan {@code monthly | annual}
+     * @param amountCents the plan's price before tax
+     * @param retryAt the next try ({@code declined}, {@code action_required}), else null
+     * @param link the account's Plus page (a universal link: the app opens it when installed)
+     */
+    record PlusPayment(
+            String outcome,
+            String plan,
+            long amountCents,
+            long taxCents,
+            Instant periodStart,
+            Instant periodEnd,
+            @Nullable Instant retryAt,
+            URI link)
+            implements EmailContent {
+
+        public static final Set<String> OUTCOMES = Set.of("paid", "action_required", "declined", "lapsed", "refunded");
+
+        public PlusPayment {
+            if (!OUTCOMES.contains(outcome) || !Set.of("monthly", "annual").contains(plan)) {
+                throw new IllegalArgumentException("Plus payment " + outcome + " / " + plan);
+            }
+        }
+
+        @Override
+        public String template() {
+            return "plus-payment";
+        }
+
+        @Override
+        public String variant() {
+            return outcome;
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public String settingsPlace() {
+            return "account";
+        }
+
+        @Override
+        public String businessName() {
+            return "Northline";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("outcome", outcome);
+            v.put("plan", plan);
+            v.put("amount", format.money(amountCents));
+            v.put("tax", format.money(taxCents));
+            v.put("total", format.money(amountCents + taxCents));
+            v.put("from", format.date(periodStart));
+            v.put("to", format.date(periodEnd));
+            v.put("hasRetry", retryAt != null);
+            v.put("retryAt", retryAt == null ? "" : format.date(retryAt));
+            v.put("link", link.toString());
+            return v;
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(format.money(amountCents + taxCents));
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
     // ── Commercial (S-108) ───────────────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -1086,6 +1252,110 @@ public sealed interface EmailContent {
     }
 
     // ── Samples (preview endpoint, rendering tests) ──────────────────────────────────────────────────────────────
+
+    /**
+     * S-159: the code that confirms a privacy request (a copy of one's data, a correction, deleting the account) for an
+     * account with no verified mobile — an email + password account (S-154) may have no phone and no second factor,
+     * and must still be able to delete itself in the app (App Store 5.1.1(v)). Transactional (a security notice the
+     * person asked for).
+     */
+    record PrivacyCode(String firstName, String code, long validMinutes, URI link) implements EmailContent {
+
+        @Override
+        public String template() {
+            return "privacy-code";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public String settingsPlace() {
+            return "account";
+        }
+
+        @Override
+        public String businessName() {
+            return "";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of("firstName", firstName, "code", code, "minutes", validMinutes, "link", link.toString());
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(code);
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
+    /**
+     * S-159: the account's deletion — {@code requested} once the person confirmed it (when it starts, how to cancel it
+     * until then, what happens to open orders, balances and a Plus membership), {@code completed} when the erasure
+     * pipeline (S-105) finished. Sent to the address the account had when the request was made. Transactional.
+     *
+     * @param startsAt when the erasure starts (the grace period's end); unused for {@code completed}
+     * @param link {@code requested}: the page that cancels the request; {@code completed}: the consumer site
+     */
+    record AccountDeletion(String firstName, Stage stage, Instant startsAt, URI link) implements EmailContent {
+
+        public enum Stage {
+            REQUESTED,
+            COMPLETED
+        }
+
+        @Override
+        public String template() {
+            return "account-deletion";
+        }
+
+        @Override
+        public String variant() {
+            return stage.name().toLowerCase(Locale.ROOT);
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public String settingsPlace() {
+            return "account";
+        }
+
+        @Override
+        public String businessName() {
+            return "";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of(
+                    "firstName", firstName,
+                    "phase", variant(),
+                    "startsAt", format.date(startsAt),
+                    "link", link.toString());
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of();
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
 
     /**
      * One sample per template and variant, keyed {@code <template>[.<variant>]}, with the design's Prairie Wrench
@@ -1233,6 +1503,22 @@ public sealed interface EmailContent {
                         "off_platform_payment",
                         "A message asked a customer to e-transfer you directly.",
                         URI.create(studio + "/messages")));
+        for (var change : StandingUpdate.Change.values()) {
+            var appeal =
+                    change == StandingUpdate.Change.APPEAL_GRANTED || change == StandingUpdate.Change.APPEAL_DENIED;
+            all.put(
+                    "standing-update." + code(change),
+                    new StandingUpdate(
+                            business,
+                            change,
+                            appeal ? "dispute" : "",
+                            change == StandingUpdate.Change.COACHING_STARTED
+                                    ? "Raise your rating — reply to every review within two days."
+                                    : "3 confirmed no-shows in the last 30 days.",
+                            appeal ? "DS-1188" : "",
+                            change == StandingUpdate.Change.APPEAL_GRANTED ? 12_750 : 0,
+                            URI.create(studio + "/standing")));
+        }
         for (var action : SellerOversightNotice.Action.values()) {
             all.put(
                     "seller-oversight." + code(action),
@@ -1288,6 +1574,29 @@ public sealed interface EmailContent {
                         URI.create("http://localhost:3100/sign-in"),
                         URI.create("http://localhost:3100/forgot-password"),
                         "studio"));
+        all.put(
+                "privacy-code",
+                new PrivacyCode("Amara", "318604", 15, URI.create("http://localhost:3000/account/delete")));
+        for (var stage : AccountDeletion.Stage.values()) {
+            var sample = new AccountDeletion(
+                    "Amara", stage, at.plus(Duration.ofDays(7)), URI.create("http://localhost:3000/account/delete"));
+            all.put(key(sample), sample);
+        }
+        for (var outcome : List.of("paid", "action_required", "declined", "lapsed", "refunded")) {
+            all.put(
+                    "plus-payment." + outcome,
+                    new PlusPayment(
+                            outcome,
+                            "monthly",
+                            799,
+                            40,
+                            at,
+                            at.plus(Duration.ofDays(31)),
+                            outcome.equals("declined") || outcome.equals("action_required")
+                                    ? at.plus(Duration.ofDays(1))
+                                    : null,
+                            URI.create("http://localhost:3000/account?tab=plus")));
+        }
         return java.util.Collections.unmodifiableMap(all);
     }
 

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Alert, Button, Checkbox, Field, StepBars, TextInput, useLocale } from '@northline/ui';
 import {
   authApi, createAccountSchema, fieldErrors, flowError, RateLimitNotice, useRateLimit, type AuthSession, type EmailSent, PasswordField, EmailCodeStep, EnrolSecondFactor,
+  MarketingConsents, useMarketingConsents,
 } from '@northline/auth-kit';
 import { termsPresentation } from '../../lib/legal';
 import { useFrenchFirst } from '../location/regions';
@@ -63,6 +64,9 @@ export function RegisterFlow({ prefill, onSignIn, onFinished }: RegisterFlowProp
   const frenchFirst = useFrenchFirst();
   const [englishRequested, setEnglishRequested] = useState(false);
   const presented = termsPresentation({ frenchFirst, locale, englishRequested });
+  // S-157: unticked offers checkboxes (email, texts) with the server's wording — CASL express consent
+  const marketing = useMarketingConsents('consumer');
+  const [marketingError, setMarketingError] = useState<string>();
 
   const clientErrors = validate(values, t);
   const errorOf = (f: FieldName) => ((touched[f] || submitted) ? clientErrors[f] : undefined) ?? server[f];
@@ -84,6 +88,7 @@ export function RegisterFlow({ prefill, onSignIn, onFinished }: RegisterFlowProp
       const info = await authApi.createAccount({
         ...splitName(values.fullName), email: values.email, password: values.password, passwordConfirm: values.passwordConfirm, phone: values.phone, terms: values.terms,
         termsLanguage: presented.language, termsEnglishRequested: presented.frenchFirst && presented.frenchAvailable && englishRequested,
+        marketing: values.phone.trim() ? marketing.chosen() : marketing.chosen().filter(c => c.category !== 'marketing_sms'),
       }, 'consumer', locale);
       setSent(info);
       setValues(x => ({ ...x, password: '', passwordConfirm: '' }));
@@ -93,6 +98,7 @@ export function RegisterFlow({ prefill, onSignIn, onFinished }: RegisterFlowProp
       if (limit.hold(err)) return;
       const f = fieldErrors(err, t);
       setServer({ fullName: f.firstName ?? f.lastName, phone: f.phone, email: f.email, password: f.password, passwordConfirm: f.passwordConfirm, terms: f.terms });
+      setMarketingError(f.marketing);
       setFailure(flowError(err, t) ?? '');
     } finally { setBusy(false); }
   };
@@ -131,6 +137,7 @@ export function RegisterFlow({ prefill, onSignIn, onFinished }: RegisterFlowProp
             </p>
             : <p className="nl-auth-note">{t('termsFrenchPending')}</p>)}
           {errorOf('terms') && <div role="alert" className="nl-error">{errorOf('terms')}</div>}
+          <MarketingConsents app="consumer" consents={marketing} hasPhone={!!values.phone.trim()} error={marketingError} />
           {attention > 0 && <Alert tone="error">{t('attention', { count: attention })}</Alert>}
           {failure && <Alert tone="error">{failure}</Alert>}
           <RateLimitNotice left={limit.left} />

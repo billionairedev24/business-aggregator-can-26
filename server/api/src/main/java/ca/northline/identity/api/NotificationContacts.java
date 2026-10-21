@@ -15,6 +15,9 @@ public interface NotificationContacts {
 
     Map<String, Contact> contacts(Collection<String> userIds);
 
+    /** S-157: the active accounts that hold this mobile (E.164) — who an inbound STOP / START text is from. */
+    List<String> usersWithPhone(String e164);
+
     default Optional<Contact> contact(String userId) {
         return Optional.ofNullable(contacts(List.of(userId)).get(userId));
     }

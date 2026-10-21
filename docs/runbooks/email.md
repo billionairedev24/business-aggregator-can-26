@@ -10,6 +10,7 @@ variables, CASL and operations. Decisions and trade-offs: `docs/DECISIONS.md` §
 - [Choosing a provider](#choosing-a-provider)
 - [Amazon SES (AWS)](#amazon-ses-aws)
 - [SendGrid (Google Cloud, or anywhere)](#sendgrid-google-cloud-or-anywhere)
+- [Resend (anywhere; HTTPS only)](#resend-anywhere-https-only)
 - [Azure Communication Services Email (Azure)](#azure-communication-services-email-azure)
 - [Any SMTP relay](#any-smtp-relay)
 - [DNS: SPF, DKIM, DMARC](#dns-spf-dkim-dmarc)
@@ -85,6 +86,7 @@ Ports taken? Set `MAILPIT_SMTP_PORT` / `MAILPIT_UI_PORT` in the root `.env` and 
 | AWS | Amazon SES in `ca-central-1` | `ses` (API v2) — or `smtp` with SES SMTP credentials | stays in Canada |
 | Google Cloud | SendGrid (Google Cloud has no first-party email service) | `sendgrid` — or `smtp` with any relay | leaves Canada (US) — disclosed in the Privacy Policy |
 | Azure | Azure Communication Services Email | `azure` | ACS data location **Canada** for the resources; delivery is global |
+| OVHcloud, or anywhere outbound SMTP is filtered | Resend (HTTPS API, S-164) | `resend` | leaves Canada (Resend's sending region, US by default) — disclosed in the Privacy Policy |
 
 All adapters take the same message (text + HTML + headers) and report the same two failure kinds:
 **rejected** (bad or suppressed address, content refused — logged, never retried) and **unavailable** (5xx, 408/429,
@@ -130,6 +132,41 @@ secrets manager), `SMTP_HOST=email-smtp.ca-central-1.amazonaws.com`, `SMTP_PORT=
 5. Variables: `EMAIL_PROVIDER=sendgrid`, `EMAIL_API_KEY=SG.…`, `EMAIL_FROM=Northline <no-reply@northline.ca>` (the
    domain must be the authenticated one, or SendGrid answers 403 → unavailable).
 
+## Resend (anywhere; HTTPS only)
+
+`EMAIL_PROVIDER=resend` (S-164) sends with `POST https://api.resend.com/emails` over HTTPS (port 443), so it works on
+hosts whose outbound mail ports are filtered — OVHcloud's instances time out on 587 and 2587 to `smtp.resend.com`
+([ovh.md § Email](ovh.md#email)). Reference: Resend's API reference ("Send Email", "Errors", "Idempotency Keys" on
+resend.com/docs) and its OpenAPI description (github.com/resend/resend-openapi).
+
+1. Account at resend.com; pick the domain's **region** when adding it (US East is the default; the region is where
+   Resend processes the mail).
+2. **Domain verification** (Domains → Add domain, e.g. `northline.ca` or a sending subdomain such as
+   `mail.northline.ca`): publish exactly the records Resend shows, then *Verify*:
+   - **SPF**: an `MX` on `send.<domain>` → `feedback-smtp.<region>.amazonses.com` (priority 10) and a `TXT` on
+     `send.<domain>` → `v=spf1 include:amazonses.com ~all` (the envelope/bounce domain, so it never clashes with the
+     root domain's own SPF record);
+   - **DKIM**: a `TXT` on `resend._domainkey.<domain>` → `p=MIGfMA0G…` (the public key Resend shows);
+   - **DMARC** (recommended, see below): `TXT _dmarc.<domain>` → `v=DMARC1; p=none;` to start.
+   Until the domain shows *Verified*, Resend answers 403 (`validation_error`, "domain is not verified") — and without
+   a verified domain it only lets the account owner's own address receive test mail.
+3. **API key** (API Keys → Create): permission **Sending access**, limited to that domain. It starts with `re_`.
+   Store it as `EMAIL_API_KEY` in the secrets manager (on OVHcloud: the `RESEND_API_KEY` secret — `scripts/ovh/secrets.sh`
+   writes it into the apps' `EMAIL_API_KEY`).
+4. Variables: `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY=re_…`, `EMAIL_FROM=Northline <no-reply@northline.ca>` — the
+   address must be **on the verified domain**. `EMAIL_ENDPOINT` overrides `https://api.resend.com` (tests only).
+   Start-up stops without a key: `EMAIL_PROVIDER=resend needs: EMAIL_API_KEY (…)`.
+5. What the adapter sends: `from`, `to`, `subject`, `html`, `text`, `reply_to` (`EMAIL_REPLY_TO`), `headers` (the
+   one-click `List-Unsubscribe` + `List-Unsubscribe-Post` on notifications and commercial mail, as SMTP and SendGrid),
+   a `template` tag, and an `Idempotency-Key` header (SHA-256 of the Mailer's delivery key): a retried send of the
+   same email within Resend's 24 hours is answered with the first result instead of being delivered twice. Resend
+   does not rewrite links unless click tracking is switched on for the domain — leave it **off**.
+6. Answers: 200 → accepted. 429 (rate limit, 2 requests/s by default; daily/monthly quota), 5xx, 401/403 (missing or
+   invalid key, unverified domain) and a 409 for a concurrent request with the same key → **unavailable** (retried,
+   then left to the caller, like every provider's credential problem). 400/422 (`validation_error`,
+   `invalid_from_address`, …), 451 and a 409 for a key already used → **rejected** (not retried). The log carries
+   Resend's `name` and `message`, any address in it masked (`s***@example.com`).
+
 ## Azure Communication Services Email (Azure)
 
 1. Create an **Email Communication Service** and a **Communication Service** resource, data location **Canada**.
@@ -166,8 +203,8 @@ run two):
 
 | record | value | notes |
 |---|---|---|
-| SPF (`TXT` on the envelope/MAIL FROM domain) | `v=spf1 include:amazonses.com ~all` · `include:sendgrid.net` · `include:spf.protection.outlook.com` | one SPF record per name; merge includes; ≤ 10 DNS lookups |
-| DKIM | the provider's `CNAME`s (SES 3, SendGrid 2, ACS 2) | 2048-bit keys; providers rotate them |
+| SPF (`TXT` on the envelope/MAIL FROM domain) | `v=spf1 include:amazonses.com ~all` (SES; Resend on `send.<domain>`) · `include:sendgrid.net` · `include:spf.protection.outlook.com` | one SPF record per name; merge includes; ≤ 10 DNS lookups |
+| DKIM | the provider's `CNAME`s (SES 3, SendGrid 2, ACS 2); Resend: one `TXT` on `resend._domainkey` | 2048-bit keys; providers rotate them |
 | DMARC (`TXT _dmarc.northline.ca`) | start `v=DMARC1; p=none; rua=mailto:dmarc@northline.ca; adkim=r; aspf=r; pct=100` | move to `p=quarantine`, then `p=reject`, once reports show only aligned mail (2–4 weeks) |
 | MX for bounces | SES custom MAIL FROM only | `10 feedback-smtp.ca-central-1.amazonses.com` |
 
@@ -179,15 +216,15 @@ mail-tester.com or by viewing the headers of a received email (`spf=pass dkim=pa
 
 | variable | app | required | example | notes |
 |---|---|---|---|---|
-| `EMAIL_PROVIDER` | api (worker later) | staging, prod (`local` refused there) | `ses` · `sendgrid` · `azure` · `smtp` | default `local` |
+| `EMAIL_PROVIDER` | api, auth, worker | staging, prod (`local` refused there) | `ses` · `sendgrid` · `resend` · `azure` · `smtp` | default `local` |
 | `EMAIL_FROM` | api | staging, prod | `Northline <no-reply@northline.ca>` | domain verified at the provider |
 | `EMAIL_REPLY_TO` | api | no | `support@northline.ca` | empty = no Reply-To |
 | `EMAIL_LEGAL_NAME` | api, worker | no | `Northline Marketplace Inc.` | CASL: the legal sender commercial messages name (S-108); required (the yml has the default) |
 | `EMAIL_MAILING_ADDRESS` | api | no | `Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada` | CASL footer (default = the Terms' address) |
 | `EMAIL_CONTACT` | api | no | `support@northline.ca` | CASL footer |
 | `EMAIL_REGION` | api | with `ses` (else SDK default chain) | `ca-central-1` | |
-| `EMAIL_ENDPOINT` | api | with `azure` | `https://nl-prod.canada.communication.azure.com` | also a VPC endpoint / mock |
-| `EMAIL_API_KEY` | api | with `sendgrid`; `azure` with an access key | `SG.…` | **secret** |
+| `EMAIL_ENDPOINT` | api | with `azure` | `https://nl-prod.canada.communication.azure.com` | also a VPC endpoint / mock; `resend`: default `https://api.resend.com` |
+| `EMAIL_API_KEY` | api | with `sendgrid` or `resend`; `azure` with an access key | `SG.…` · `re_…` | **secret** |
 | `EMAIL_CONFIGURATION_SET` | api | no | `northline-transactional` | SES only |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_STARTTLS` | api | with `smtp` | `email-smtp.ca-central-1.amazonaws.com`, `587`, …, `true` | `SMTP_PASSWORD` is a **secret** |
 | `EMAIL_RETRY_ATTEMPTS`, `EMAIL_RETRY_BACKOFF` | api | no | `3`, `2s` | in-process tries per email; back-off doubles |

@@ -9,6 +9,8 @@ import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { screenHref } from '../shell/nav';
 import { apiKeysQuery, businessQuery, deliveriesQuery, developerOptionsQuery, useAddWebhook, useEnableWebhook, useIssueKey, useQueueDelivery, useRemoveWebhook, useRevokeKey, useRotateWebhook, webhooksQuery, type ApiKey, type Webhook, type WebhookDelivery } from './api';
 import { EmbedSnippet } from './EmbedSnippet';
+import { PartnerAccess } from './PartnerAccess';
+import { StockSync } from './StockSync';
 import { useSettingsT, type SettingsT } from './messages';
 import { keySchema, localizeServerErrors, webhookErrors } from './validation';
 
@@ -24,7 +26,7 @@ export function ago(iso: string | null | undefined, t: SettingsT, now = Date.now
 interface KeyRow { id: string; name: string; prefix: string; scopes: string; used: string }
 type Secret = { title: string; note: string; value: string };
 
-/** API & integrations (design st.api): API keys DataTable, webhooks, embed snippet, integrations. */
+/** API & integrations (design st.api): API keys DataTable, webhooks, embed snippet, integrations; S-158 stock sync and partner access. */
 export function ApiTab() {
   const t = useSettingsT();
   const merchantId = useMerchantId();
@@ -55,6 +57,8 @@ export function ApiTab() {
       <div>
         <Embed />
         <Integrations keys={keys.data ?? []} owner={owner} onQuickBooks={() => setIssuing({ name: 'QuickBooks sync', scopes: ['payouts:read', 'orders:read'] })} />
+        <StockSync />
+        <PartnerAccess />
       </div>
       {issuing && <IssueKeyDialog initial={issuing} onClose={() => setIssuing(null)} onIssued={value => { setIssuing(null); setSecret({ title: t('secretTitle'), note: t('secretNote'), value }); }} />}
       {secret && <SecretDialog secret={secret} onClose={() => setSecret(null)} />}

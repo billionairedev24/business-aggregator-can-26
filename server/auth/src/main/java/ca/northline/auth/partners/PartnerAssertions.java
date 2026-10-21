@@ -83,7 +83,9 @@ public final class PartnerAssertions implements JwtDecoderFactory<RegisteredClie
             throw invalidClient("This partner is revoked.");
         }
         var url = client.getClientSettings().getJwkSetUrl();
-        var keys = url != null ? "url:" + url : "keys:" + RegisteredClients.partnerPublicKeys(client);
+        // S-158: a console rotation bumps the key version, so the JWK Set is read again even at the same URL
+        var keys = (url != null ? "url:" + url : "keys:" + RegisteredClients.partnerPublicKeys(client)) + "#v"
+                + RegisteredClients.partnerKeyVersion(client);
         var cached = decoders.compute(
                 client.getClientId(),
                 (_, c) -> c != null && c.keys().equals(keys) ? c : new Cached(keys, build(client, url)));

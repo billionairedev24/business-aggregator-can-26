@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:payments.plus_payment_updated:1",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "customerId",
+    "outcome",
+    "plan",
+    "amountCents",
+    "taxCents",
+    "periodStart",
+    "periodEnd"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "payments.plus_periods.id"
+    },
+    "customerId": {
+      "type": "string",
+      "description": "identity.users.id of the payer — the notification worker looks up the contact details"
+    },
+    "outcome": {
+      "enum": [
+        "paid",
+        "action_required",
+        "declined",
+        "lapsed",
+        "refunded"
+      ]
+    },
+    "plan": {
+      "enum": [
+        "monthly",
+        "annual"
+      ]
+    },
+    "amountCents": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "the plan's price before tax"
+    },
+    "taxCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "periodStart": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "periodEnd": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "retryAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "declined / action_required: the next automatic try"
+    },
+    "code": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "declined: Stripe's decline code"
+    }
+  }
+}

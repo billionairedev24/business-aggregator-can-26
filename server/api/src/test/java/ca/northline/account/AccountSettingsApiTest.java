@@ -182,6 +182,7 @@ class AccountSettingsApiTest extends IntegrationTest {
         mvc.perform(get("/api/v1/me/household").with(TestJwt.customer(amara)))
                 .andExpect(jsonPath("$.plan").value("none"))
                 .andExpect(jsonPath("$.members", hasSize(0)));
+        data.card(amara, "pm_card_visa_" + amara, true); // S-162: Plus renews on a saved card
         mvc.perform(post("/api/v1/me/plus")
                         .with(TestJwt.customer(amara))
                         .header("Idempotency-Key", ca.northline.shared.Ids.next())

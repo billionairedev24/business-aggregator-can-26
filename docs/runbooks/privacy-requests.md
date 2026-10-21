@@ -53,9 +53,33 @@ ids and codes only); the console's request detail and the audit log viewer show 
 
 **Identity check.** A request from the account is verified by (a) a fresh step-up proof — the passkey or the
 authenticator code at northline-auth (`/api/auth/step-up/*`), sent as `X-Step-Up` — or (b) a 6-digit code the api
-texts to the account's verified mobile (15 minutes, 5 tries, a new code at most once a minute). (b) exists because a
-phone-code account has no other factor and the app must be able to delete it. A request staff record (email, mail,
+sends to the account (15 minutes, 5 tries, a new code at most once a minute). (b) exists because a phone-code account
+has no other factor and the app must be able to delete it. Since S-159 the code goes to the verified mobile if there
+is one, else to the **verified email** (S-154's email + password accounts often have no mobile), else to an older
+account's mobile; `privacy.requests.code_channel` (V488, `sms` | `email`) records which, and the request shows
+`codeSentTo` masked (`•••• 1234` or `a•••@example.com`). A request staff record (email, mail,
 phone) waits for staff to verify the person by hand (**Identity verified**).
+
+### Deleting one's account (S-159)
+
+The same erasure request, started from three places that share one flow:
+
+| where | path |
+|---|---|
+| consumer site | Account › **Delete account**, `/account/delete` (Your data's "Delete my account" leads there) |
+| consumer app | Account › **Delete account**, `app/account/delete.tsx` (Your data's button leads there) |
+| public page | `/account-deletion` on the consumer site — no sign-in needed to read it; the link Google Play's Data safety form and both apps' `store/privacy.json` give (`accountDeletion.webUrl`). It says what is deleted and kept, then sends a signed-in person to `/account/delete` (sign-in first otherwise) |
+
+1. **What it affects**: `GET /api/v1/me/privacy-requests/erasure-preview` lists, per module, what stops or is lost —
+   `open_orders`, `upcoming_bookings`, `held_payments` (count + amount), `open_refunds`, `open_disputes`, `points`
+   (the balance, lost), `plus` (the paid period's end: Plus is **not** cancelled by the erasure, the cards are
+   detached so it doesn't renew), `sole_owner` (businesses that lose their only owner). Each module answers through
+   `PersonalDataContributor.consequences()` (a default of none). Codes and numbers only; the screens word them.
+2. **Step-up**: the authenticator code or passkey (S-51, `X-Step-Up`), or the emailed / texted code above.
+3. **Confirmation emails** (the email library's `PrivacyCode` and `AccountDeletion`, en / fr): the code; "deletion
+   requested" with the day it starts and a link to withdraw (`<site-origin>/account/delete`) once the request is
+   verified; "your account was deleted" when the pipeline finishes — sent **before** the last step wipes the address.
+4. Withdrawing during the grace period is the request row's **Withdraw**, on the same page.
 
 ## 3. The erasure pipeline
 
@@ -153,7 +177,9 @@ open requests soonest deadline first (overdue marked), or closed ones.
 | `PRIVACY_HOLD_RETRY` | `P1D` | when a held step is retried |
 | `PRIVACY_RUN_INTERVAL` | `PT1M` | how often the pipeline looks for work |
 
-The exports use the existing `STORAGE_*` and `KMS_*` settings; codes go out through `SMS_PROVIDER`. No new secret.
+The exports use the existing `STORAGE_*` and `KMS_*` settings; codes go out through `SMS_PROVIDER` or the mailer
+(`SMTP_*`, S-159). The deletion emails' links use `northline.privacy.site-origin`, which is `CONSUMER_ORIGIN` (no new
+variable). No new secret.
 
 ## 8. Operations
 

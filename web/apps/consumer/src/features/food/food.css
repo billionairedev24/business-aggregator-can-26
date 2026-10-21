@@ -127,3 +127,20 @@
 /* a dish's picture is small: the main pictogram only, the "+" in the corner */
 .nl-rest-plus .nl-art-badge, .nl-rest-plus .nl-art-side { display: none; }
 .nl-fco-empty .nl-empty { margin-top: var(--space-5); }
+/* S-159: group food orders */
+.nl-grp { display: grid; gap: var(--space-4); max-width: 760px; }
+.nl-grp-share { display: grid; gap: 8px; padding: var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-border-card); }
+.nl-grp-share h2, .nl-grp-share p { margin: 0; }
+.nl-grp-link { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nl-grp-link code { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-surface-sunken); font-size: 14px; }
+.nl-grp-members { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.nl-grp-member { padding: var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-border-card); display: grid; gap: 8px; }
+.nl-grp-member-head { display: flex; gap: 8px; align-items: center; }
+.nl-grp-member-total { margin-inline-start: auto; font-variant-numeric: tabular-nums; }
+.nl-grp-share-line { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.nl-grp-subtotal { display: flex; justify-content: space-between; margin: var(--space-3) 0 0; }
+.nl-grp-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.nl-grp-actions .nl-fco-chips { flex-basis: 100%; }
+.nl-grp-code { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.nl-grp-start { display: grid; gap: var(--space-3); }
+.nl-rest-group-bar { display: grid; gap: 8px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface-sunken); }

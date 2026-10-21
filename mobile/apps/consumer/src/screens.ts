@@ -29,9 +29,10 @@ export interface ScreenDef {
 export const SCREENS: Readonly<Record<ScreenKey, ScreenDef>> = {
   // A — account & security (S-98)
   welcome: { journey: 'A', story: 'S-98', file: 'welcome', sample: '/welcome', api: ['GET /geo/regions'] },
-  signup: { journey: 'A', story: 'S-98', file: 'sign-up', sample: '/sign-up', api: ['GET /oauth2/authorize', 'POST /api/auth/register'] },
-  otp: { journey: 'A', story: 'S-98', file: 'verify', sample: '/verify', api: ['POST /api/auth/register/verify', 'POST /api/auth/register/resend', 'POST /api/auth/sign-in/code', 'POST /api/auth/sign-in/code/verify'] },
-  mfa: { journey: 'A', story: 'S-98', file: 'second-factor', sample: '/second-factor', api: ['POST /api/auth/register/totp', 'POST /api/auth/register/totp/verify', 'POST /api/auth/register/complete', 'POST /oauth2/token'] },
+  // S-159: email + password accounts (S-154); the phone code stays for signing in (`otp`)
+  signup: { journey: 'A', story: 'S-98', file: 'sign-up', sample: '/sign-up', api: ['GET /oauth2/authorize', 'POST /api/auth/accounts', 'POST /api/auth/accounts/verify', 'POST /api/auth/accounts/resend'] },
+  otp: { journey: 'A', story: 'S-98', file: 'verify', sample: '/verify', api: ['POST /api/auth/sign-in', 'POST /api/auth/sign-in/code', 'POST /api/auth/sign-in/code/verify'] },
+  mfa: { journey: 'A', story: 'S-98', file: 'second-factor', sample: '/second-factor', api: ['POST /api/auth/enroll/totp', 'POST /api/auth/enroll/totp/verify', 'POST /oauth2/token'] },
   location: { journey: 'A', story: 'S-98', file: 'location', sample: '/location', api: ['GET /geo/markets', 'GET /geo/reverse', 'GET /geo/autocomplete', 'GET /geo/places/{placeId}', 'POST /geo/waitlist'] },
   // B — shop & get it delivered (S-99)
   home: { journey: 'B', story: 'S-99', file: '(tabs)/home', sample: '/home', tab: true, api: ['GET /public/home?city=', 'GET /public/shop?market=', 'GET /me/upcoming', 'GET /me/account-summary'] },
@@ -61,7 +62,7 @@ export const SCREENS: Readonly<Record<ScreenKey, ScreenDef>> = {
   quote: { journey: 'D', story: 'S-101', file: 'quotes/[id]', sample: '/quotes/01J9QUOTE', personal: true, api: ['GET /me/quotes/{id}', 'POST /me/quotes/{id}/accept', 'POST /me/quotes/{id}/accept/confirm', 'POST /me/quotes/{id}/decline'] },
   account: { journey: 'D', story: 'S-101', file: '(tabs)/account', sample: '/account', tab: true, api: ['GET /me/account-summary', 'GET /me/profile', 'GET /me/preferences'] },
   security: { journey: 'D', story: 'S-101', file: 'security', sample: '/security', personal: true, api: ['GET /me/profile', 'POST /oauth2/revoke'] },
-  wallet: { journey: 'D', story: 'S-101', file: 'wallet', sample: '/wallet', personal: true, api: ['GET /me/wallet', 'GET|POST|PATCH|DELETE /me/plus', 'POST /me/plus/resume', 'GET /me/payment-methods'] },
+  wallet: { journey: 'D', story: 'S-101', file: 'wallet', sample: '/wallet', personal: true, api: ['GET /me/wallet', 'GET|POST|PATCH|DELETE /me/plus', 'POST /me/plus/resume', 'POST /me/plus/confirm', 'GET /me/payment-methods'] },
 };
 
 export const SCREEN_KEYS = Object.keys(SCREENS) as ScreenKey[];

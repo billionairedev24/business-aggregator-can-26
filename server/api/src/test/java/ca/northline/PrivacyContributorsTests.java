@@ -71,6 +71,7 @@ class PrivacyContributorsTests {
                     "ca.northline.shared..",
                     "ca.northline.platform..",
                     "ca.northline.sms..",
+                    "ca.northline.email..", // S-159: the shared email library (a library, like sms)
                     "java..",
                     "jakarta..",
                     "org..",

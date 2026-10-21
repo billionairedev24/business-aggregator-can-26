@@ -294,7 +294,9 @@ jobs:
       SMS_ACCOUNT_ID: ${{ vars.SMS_ACCOUNT_ID }}
       SMS_FROM: ${{ vars.SMS_FROM }}
       EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY }}
-      # Email (S-155b, docs/runbooks/ovh.md § Email): an SMTP relay for api, auth and worker, or the demo inbox.
+      # Email (S-155b, S-164, docs/runbooks/ovh.md § Email): Resend's HTTPS API (RESEND_API_KEY), an SMTP relay for
+      # api, auth and worker, or the demo inbox.
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
       SMTP_HOST: ${{ vars.SMTP_HOST }}
       SMTP_PORT: ${{ vars.SMTP_PORT }}
       SMTP_USERNAME: ${{ vars.SMTP_USERNAME }}
@@ -347,7 +349,7 @@ jobs:
         run: scripts/ovh/ci.sh close "$TARGET"
 
   scale:
-    name: scale (${{ inputs.action }})
+    name: scale (down/up)
     needs: prepare
     if: needs.prepare.outputs.scale == 'true'
     runs-on: ubuntu-24.04

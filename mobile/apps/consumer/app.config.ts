@@ -14,6 +14,10 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  *   EXPO_PUBLIC_SITE_ORIGIN   https://<zone> — the consumer web: legal pages, the claimed https redirect and App Links
  *   EXPO_PUBLIC_FIXTURES      1 = the in-app fixture backend (web smoke test, demos); refused for production
  *   EXPO_PUBLIC_PHOTOS_BASE_URL  optional: the stock photos' CDN (docs/runbooks/photos.md); unset = EXPO_PUBLIC_SITE_ORIGIN/photos
+ *   EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID  S-157, optional: the Apple Pay merchant id (merchant.ca.northline…); set = Stripe's
+ *                             config plugin adds the Apple Pay entitlement and PaymentSheet may offer Apple Pay
+ *   EXPO_PUBLIC_GOOGLE_PAY    S-157, optional: 1 = Google Pay in PaymentSheet (the manifest's Wallet API flag);
+ *                             EXPO_PUBLIC_GOOGLE_PAY_TEST=1 uses Google's test environment (every non-production build)
  *   EAS_PROJECT_ID, EAS_OWNER the Expo project (from `eas init`)
  *   GOOGLE_SERVICES_JSON      path of the environment's google-services.json (FCM); an EAS file variable, never committed
  *   NL_IOS_BUILD_NUMBER, NL_ANDROID_VERSION_CODE  only for local builds (EAS keeps them remotely)
@@ -122,6 +126,12 @@ export function createConfig(env: Env = process.env): ExpoConfig {
   const linkHost = siteOrigin.startsWith('https://') ? siteHost : null; // App Links / Universal Links need https
   const easProjectId = env.EAS_PROJECT_ID ?? '00000000-0000-0000-0000-000000000000';
   const brand = baseTokens();
+  // S-157: Apple Pay / Google Pay in PaymentSheet need Stripe's config plugin (entitlement, manifest flag); cards don't
+  const applePayMerchant = env.EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID?.trim() || null;
+  const googlePay = env.EXPO_PUBLIC_GOOGLE_PAY === '1';
+  const wallets: ExpoConfig['plugins'] = applePayMerchant || googlePay
+    ? [['@stripe/stripe-react-native', { merchantIdentifier: applePayMerchant ?? undefined, enableGooglePay: googlePay }]]
+    : [];
 
   return {
     name: v.name,
@@ -238,6 +248,7 @@ export function createConfig(env: Env = process.env): ExpoConfig {
           ios: { deploymentTarget: NATIVE.ios.deploymentTarget, privacyManifestAggregationEnabled: true },
         },
       ],
+      ...(wallets ?? []),
     ],
     // tsconfig "paths" only pin React's types; Metro resolves the runtime copies itself (metro.config.js)
     experiments: { typedRoutes: false, tsconfigPaths: false },

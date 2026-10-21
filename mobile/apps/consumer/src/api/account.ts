@@ -94,7 +94,11 @@ export interface PrivacyRequest {
   law: { code: string; name: string; shortName: string; authority: string; authorityUrl: string };
   receivedAt: string; dueAt: string; extendedTo?: string | null; scheduledFor?: string | null; completedAt?: string | null;
   codeSentTo?: string | null; decision?: string | null; export?: { ready: boolean; expiresAt?: string | null } | null;
+  /** S-159: the code went by `sms`, or by `email` for an account without a verified mobile */
+  codeChannel?: 'sms' | 'email' | null;
 }
+/** S-159: what deleting the account would affect now (open orders, upcoming bookings, money held, points, Plus…). */
+export interface ErasureConsequence { code: string; count: number; amountCents: number; until?: string | null }
 export interface DownloadLink { url: string; summaryUrl: string; expiresAt: string }
 export interface ProfileChange { firstName: string; lastName: string; email: string; pronouns: string | null; birthday: string | null }
 export interface Address { id: string; label?: string | null; street: string; unit?: string | null; city: string; province: string; postal: string; note?: string | null; isDefault: boolean }
@@ -133,8 +137,12 @@ export interface Plus {
   cancelAtPeriodEnd: boolean; payer: boolean; members: number; monthlyPriceCents: number; annualPriceCents: number;
   trialDays: number; trialAvailable: boolean;
   benefits: { member: boolean; serviceFeeWaived: boolean; memberPrices: boolean; pointsMultiplierPct: number };
-  /** The first payment needs the bank (3-D Secure): confirm it with Stripe's SDK. */
+  /** A payment needs the bank (3-D Secure): confirm it with Stripe's SDK, then `POST /me/plus/confirm`. */
   clientSecret?: string | null; publishableKey?: string | null;
+  /** S-162: Northline bills Plus itself — the next renewal, a plan change waiting for it, a refused payment. */
+  nextPlan?: PlusPlan | null; nextChargeAt?: string | null; nextChargeCents?: number;
+  card?: { id: string; brand: string; last4: string; chosen: boolean } | null;
+  payment?: { periodId: string; reason: string; totalCents: number; retryAt?: string | null; lapsesAt: string } | null;
 }
 export interface NearbyReward {
   merchantId: string; businessName: string; type: string; slug?: string | null; multiplier: number; label?: string | null;
@@ -248,6 +256,7 @@ export const accountApi = (api: ApiClient) => ({
   saveProfile: (c: ProfileChange) => need(api.patch<Profile>('/me/profile', { json: c })),
   /** Privacy requests (S-105): `X-Step-Up` verifies at once; without it the api texts a code. */
   privacyRequests: async () => (await api.get<{ items: PrivacyRequest[] }>('/me/privacy-requests'))?.items ?? [],
+  erasurePreview: async () => (await api.get<{ items: ErasureConsequence[] }>('/me/privacy-requests/erasure-preview'))?.items ?? [],
   correctableFields: async () => (await api.get<{ items: string[] }>('/me/privacy-requests/correctable-fields'))?.items ?? [],
   openPrivacyRequest: (r: { type: PrivacyType; corrections?: { field: string; value: string }[]; note?: string }, stepUp?: string) =>
     need(api.post<PrivacyRequest>('/me/privacy-requests', { json: r, headers: stepUp ? { 'X-Step-Up': stepUp } : undefined })),
@@ -272,6 +281,7 @@ export const accountApi = (api: ApiClient) => ({
   changePlus: (plan: PlusPlan, key: string) => need(api.patch<Plus>('/me/plus', { json: { plan }, idempotencyKey: key })),
   cancelPlus: () => need(api.delete<Plus>('/me/plus')),
   resumePlus: () => need(api.post<Plus>('/me/plus/resume')),
+  confirmPlus: () => need(api.post<Plus>('/me/plus/confirm')),
   /** Provider-funded rewards running near the place (public). */
   rewardsNear: async (place: { city?: string | null; lat?: number | null; lng?: number | null }) => {
     const q = new URLSearchParams({ limit: '6' });
@@ -293,6 +303,9 @@ export const accountApi = (api: ApiClient) => ({
   notifications: () => need(api.get<NotificationPrefs>('/me/notifications')),
   saveNotifications: (c: NotificationChange) => need(api.put<NotificationPrefs>('/me/notifications', { json: c })),
   consents: () => need(api.get<Consents>('/me/consents')),
+  /** S-157: a consent given at checkout (the wording version shown; CASL express consent). */
+  grantAtCheckout: (category: string, wordingVersion: string) =>
+    need(api.put<Consents>(`/me/consents/${id(category)}`, { json: { granted: true, source: 'checkout', wordingVersion } })),
   prefs: () => need(api.get<Prefs>('/me/preferences')),
   savePrefs: (c: Partial<Prefs>) => need(api.patch<Prefs>('/me/preferences', { json: c })),
 

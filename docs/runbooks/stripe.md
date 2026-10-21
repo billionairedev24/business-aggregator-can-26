@@ -70,8 +70,8 @@ objects, connected accounts, webhooks and keys don't carry over.
    price changes, change `Fees` and design copy together.
 10. **Radar**: default rules; add *Block if :risk_level: = 'highest'*. 3-D Secure: Stripe's default (request when
     required).
-11. **Payment methods** (Settings → Payment methods): cards only (manual capture). Apple Pay / Google Pay can be added
-    later (they are cards to Stripe).
+11. **Payment methods** (Settings → Payment methods): cards (manual capture), plus Apple Pay and Google Pay once
+    § 15 is done (they are cards to Stripe: the same manual-capture PaymentIntents).
 12. **API keys.** Developers → API keys: the *secret key* (`sk_test_…` / `sk_live_…`) and *publishable key*
     (`pk_…`). Prefer a **restricted key** for the api (S-110 review, [compliance/pci/stripe-review.md](../compliance/pci/stripe-review.md))
     with **write** access to: PaymentIntents, SetupIntents and PaymentMethods (saved cards, S-59), Customers, Refunds,
@@ -401,49 +401,50 @@ midnight): run the next day, then mark the day **resolved** with a note. Tables 
   tested with the payments stand-in (`FakeStripeGateway`) only. Try them in test mode with the `4000 0000 0000 3220`
   (authentication) and `4000 0000 0000 9995` (decline) cards before a pilot takes deposit quotes.
 
-## 11. Northline Plus — Stripe Billing (S-152)
+## 11. Northline Plus — billed by Northline (S-152, S-162)
 
-Plus is a household membership ($7.99/month or $69/year by default, `PLUS_MONTHLY_PRICE_CENTS` /
-`PLUS_ANNUAL_PRICE_CENTS`, with a free trial the first time, `PLUS_TRIAL_DAYS`). It is billed behind the payments
-module's `MembershipBilling` port, chosen by `northline.plus.billing.provider` (`PLUS_BILLING_PROVIDER`):
+**No Stripe Billing** (owner, 2026-10-20: "I do not want to use stripe billing … I do not want to pay api fee for
+billing in stripe"). Northline keeps the schedule itself and Stripe sees only what it sees for any card payment:
+**PaymentIntents, SetupIntents and refunds**. The only Stripe fees on Plus are the card-processing fees of each payment
+(and Stripe Tax's, § 6) — no Billing, Invoicing or subscription fees. No Stripe Product, Price, Subscription or Invoice
+is created, and there is nothing to configure in the dashboard for Plus.
 
-| provider | what it does | needs |
-|---|---|---|
-| `local` (default; refused under `staging`/`prod`) | a fake: subscriptions `sub_local_…`, invoices `in_local_…`, no card, no tax. Renewals are made by the loyalty job (`LOYALTY_JOBS_CRON`). | nothing |
-| `stripe` | Stripe Billing on the **platform account**: a Subscription on the person's Stripe Customer (the one checkout and saved cards use), `payment_behavior=default_incomplete`, the default card from Account › Payment methods, `trial_period_days` the first time, metadata `northline_kind=plus`, `northline_household`, `northline_plan`, `northline_user`. When the first invoice needs 3-D Secure the api returns its PaymentIntent's client secret and the consumer site (Stripe.js `confirmCardPayment`) or the app (the React Native SDK's `handleNextAction`) asks the bank. | `STRIPE_SECRET_KEY`, `STRIPE_PLUS_MONTHLY_PRICE`, `STRIPE_PLUS_ANNUAL_PRICE` (start-up refuses `stripe` without them) |
-
-### Set-up (once per mode: test for dev/staging, live for prod)
-
-1. **Products → Add product** "Northline Plus", two **recurring** prices in CAD: monthly at the monthly price, yearly
-   at the annual price (the amounts must match `PLUS_MONTHLY_PRICE_CENTS` / `PLUS_ANNUAL_PRICE_CENTS`: the account
-   shows those, Stripe charges its own). Copy the two `price_…` ids into the operator's `configEnv` as
-   `STRIPE_PLUS_MONTHLY_PRICE` / `STRIPE_PLUS_ANNUAL_PRICE` (not secrets).
-2. **Tax:** with Stripe Tax on (§ 6) set `PLUS_AUTOMATIC_TAX=true` so subscriptions use `automatic_tax`; the price's
-   tax code is "Software as a service / memberships" (txcd_10103000 or what the accountant picks). Stripe Tax needs a
-   customer address: people without a saved address get an invoice Stripe can't tax — leave it `false` until checked.
-3. **Webhooks:** add to the **platform** endpoint (§ 5, `STRIPE_WEBHOOK_SECRET`) the events
-   `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted` and
-   `invoice.paid`. They are verified and deduplicated by event id like every other Stripe event; the Connect endpoint
-   ignores them. Events of subscriptions without `northline_kind=plus` are ignored.
-4. **Customer portal / dunning:** Settings → Billing → Subscriptions and emails: turn on Smart Retries and "cancel the
-   subscription if all retries fail". Northline keeps the benefits while the subscription is `past_due` and shows
-   "update your card"; Stripe's `customer.subscription.deleted` ends them.
+| what | how |
+|---|---|
+| the schedule | `payments.plus_schedules`: the plan's RFC 5545 rule (`PLUS_MONTHLY_RRULE` / `PLUS_ANNUAL_RRULE`, default `FREQ=MONTHLY;INTERVAL=1` / `FREQ=YEARLY;INTERVAL=1`) anchored to the first paid instant in UTC (a start on the 29th–31st gets `BYMONTHDAY=28,…;BYSETPOS=-1` so short months renew on their last day; February 29 renews on February 28), its price before tax (`PLUS_*_PRICE_CENTS`, fixed when the plan starts), the card (`pm_…`, or the default card) |
+| the card | saved once with a SetupIntent (§ 9, `usage=off_session`) — joining needs one (409 `card_required`) |
+| each period | `payments.plus_periods`: one **automatic-capture PaymentIntent** (card, CAD, on the platform account, metadata `northline_kind=plus`, `northline_plus_membership`, `northline_plus_period`, `northline_household`) for price + tax (Stripe Tax calculation, service tax code, the payer's province); `Idempotency-Key` `nl1:plus:<membership>:<period>` — one PaymentIntent per period, ever |
+| joining | the first period is confirmed **on-session** with the saved card (a household's first membership starts with the free trial instead, `PLUS_TRIAL_DAYS`, and its first charge is the trial's end). 3-D Secure: the api returns the PaymentIntent's client secret; the site (Stripe.js `confirmCardPayment`) or the app (`handleNextAction`) asks the bank, then calls `POST /api/v1/me/plus/confirm`. Declined → 409 `card_declined`, nothing kept. Not confirmed within `PLUS_UNCONFIRMED_AFTER` (24 h) → dropped |
+| renewals | the payments job (every minute) confirms due periods **off-session**; each attempt is claimed in `payments.plus_attempts` and the period row is locked `skip locked`, so overlapping runs or replicas charge once |
+| refused | a decline is tried again on the **same** PaymentIntent on `PLUS_RETRY_DAYS` (default 1, 3, 5 days after the due date), benefits continue (`past_due`), then the membership **lapses**. `authentication_required`: the member is emailed and pushed a link to confirm (3-D Secure on the web or in the app); the retries go on meanwhile. Choosing another card retries on the next run |
+| cancel / plan change | cancelling stops the next renewal (benefits to the period's end); monthly ↔ annual starts at the next renewal with the new plan's rule |
+| refunds | finance: `POST /api/v1/console/plus/periods/{id}/refund` — a Stripe Refund of the period's PaymentIntent (amount + tax), the Stripe Tax reversal, the ledger back; refunding the current period ends the membership |
+| webhooks | none of its own: the platform endpoint's existing `payment_intent.*` events (§ 5) settle a Plus period confirmed at the bank (the member's confirm call and the job's next run do it too) |
 
 ### What Northline keeps
 
-`loyalty.memberships` (one row per household: plan, status, `current_period_end`, `cancel_at_period_end`,
-`last_event_at` — an older webhook never overwrites a newer state) and `payments.plus_invoices` (the invoice id, the
-amount, tax and when it was paid) with a `plus_invoice` ledger entry; the console's Finance screen sums them as Plus
-revenue. Cancel = `cancel_at_period_end` (the household keeps Plus to the end of what it paid for); "Keep Plus" undoes
-it. Only the person who started it (the payer) can change it.
+`payments.plus_schedules`, `plus_periods`, `plus_attempts` (V482); the ledger: `stripe_balance` → `revenue` +
+`tax_payable`, ref `plus_invoice` / the period's id (the console's Finance screen sums it as Plus revenue). The
+membership and its benefits stay in `loyalty.memberships` (status mirrored from payments). Receipts and payment notices
+are Northline's own emails (`plus-payment` template) and pushes, sent by the notification worker from
+`plus_payment.updated` on `payments.payment`. S-152's `payments.plus_invoices` is no longer written.
+
+### Moving off Stripe Billing
+
+S-152 memberships (`sub_…`) are moved by the loyalty job: their next period starts at their current period's end on
+Northline's billing. **Cancel any S-152 test-mode Subscriptions left in the Stripe dashboard** (Billing →
+Subscriptions → cancel immediately, no refund) and delete the four webhook events `customer.subscription.created`,
+`.updated`, `.deleted` and `invoice.paid` from the platform endpoint if they were added; the variables
+`PLUS_BILLING_PROVIDER`, `STRIPE_PLUS_MONTHLY_PRICE`, `STRIPE_PLUS_ANNUAL_PRICE` and `PLUS_AUTOMATIC_TAX` are gone.
 
 ### Never run against the real Stripe API
 
-`StripeMembershipBilling` and the webhook handling were written from Stripe's API reference (API version pinned, § 1;
-`current_period_end` lives on the subscription item, the invoice's subscription on `parent.subscription_details`) and
-tested against **stripe-mock** and signed fixture events only. Before launch, in test mode: join with a card, with the
-3-D Secure card `4000 0025 0000 3155`, and with `4000 0000 0000 0341` (fails after attaching) to see `past_due`;
-switch plan (proration), cancel, resume; check the four events arrive and the Finance screen's Plus revenue.
+The Plus PaymentIntents (create with `confirm=true` and `off_session`, confirm again, read; the 402 `card_error` with
+`authentication_required` and its PaymentIntent) were written from Stripe's API reference and checked against
+stripe-mock (`StripeConnectGatewayStripeMockTest`); declines, retries and 3-D Secure are tested with the fake gateway's
+test cards. **Before launch, in test mode:** join with `4242…`, with `4000 0027 6000 3184` (3-D Secure), renew with
+`4000 0000 0000 0341` (attaches, then declines), with `4000 0025 0000 3155` off-session (authentication_required);
+refund a period; check the Finance screen's Plus revenue and Stripe Tax's transactions.
 
 ## 12. Provider-funded rewards — charging the business (S-152)
 
@@ -491,3 +492,91 @@ the request shapes, the pinned `Stripe-Version` and an `Idempotency-Key` on ever
 state, so Express onboarding itself, `account.updated` for an individual courier, a real transfer and payout, a bank
 that rejects a payout, and the Connect webhooks for courier accounts have not been exercised. Before couriers are paid
 for real: onboard a test courier in test mode, run `payCouriers` by hand, and watch the payout's webhooks arrive.
+
+## 14. Card disputes — evidence to Stripe (S-156)
+
+A card dispute (chargeback) is opened by the cardholder's bank, not by Northline: the `charge.dispute.created` webhook
+(§ 5) opens the payments case as before (S-115), and now also records Stripe's **evidence deadline**
+(`evidence_details.due_by` → `payments.disputes.stripe_evidence_due_by`) and the **dispute fee** from the event's
+`balance_transactions` (`payments.dispute_fees`, one row per balance transaction, idempotent). The fee is posted to the
+ledger account `dispute_fees` against `stripe_balance`; a fee Stripe gives back (a won dispute) posts the reverse.
+Northline carries the fee: it is not charged to the business.
+
+Agents answer from the console (**Payments › Disputes › Card disputes**, `/api/v1/console/card-disputes`): the list
+puts open disputes first, earliest deadline first; the detail shows the business's response and the case's
+evidence files; the agent fills Stripe's evidence fields and picks files, saves a draft, then submits **once**.
+
+| | |
+|---|---|
+| Port | `DisputeEvidenceGateway` (payments) |
+| Provider | `DISPUTE_EVIDENCE_PROVIDER` (`northline.payments.dispute-evidence.provider`): `local` (fake, nothing sent; a Stripe dispute id containing `rejectEvidence` is refused, to try the error path; refused under staging and prod) · `stripe` |
+| Stripe calls | each picked file: `POST /v1/files` (`purpose=dispute_evidence`); then `POST /v1/disputes/{id}` with `evidence[…]` and `submit=true`. Both with Northline's idempotency key (`StripeIdempotencyKeys.of`), the platform key (§ 2) |
+| Text fields | `product_description`, `service_date`, `cancellation_policy_disclosure`, `cancellation_rebuttal`, `refund_policy_disclosure`, `refund_refusal_explanation`, `uncategorized_text` (up to 5,000 characters each) |
+| File fields | `receipt`, `service_documentation`, `customer_communication`, `cancellation_policy`, `refund_policy`, `uncategorized_file` (from the case's evidence only) |
+| Left out on purpose | the customer's name, email, IP, billing and shipping address: personal data Northline doesn't send on the business's behalf. Stripe already has the payment's details |
+| Who | finance and support read; agents with the trust `decide` action (trust & safety, admin) save and submit. Audit `disputes.evidence_submitted` (the draft keeps who saved it last) |
+| Refusals | Stripe's error is kept on the draft (`lastError`) and shown; the agent fixes it and submits again. Closed, overdue or already-submitted disputes refuse with 409 |
+
+- **Nothing new in Stripe to set up:** the platform key and the `charge.dispute.*` webhook events (§ 5). Set
+  `DISPUTE_EVIDENCE_PROVIDER=stripe` (the Helm values for staging and prod do).
+- **Tested against stripe-mock only** (`StripeDisputeEvidenceStripeMockTest`: the file upload, the update with
+  `submit=true`, an error). stripe-mock doesn't keep state, so the deadline and the status change aren't checked there.
+- **Never run against the real Stripe API:** the Files upload, the dispute update with `submit=true`, the fee rows
+  from real `charge.dispute.created` / `charge.dispute.funds_reinstated` events, and S-156's compensation transfer on a
+  granted dispute appeal ([standing.md](standing.md#4-appeals)). Before launch, in test mode: pay with
+  `4000 0000 0000 0259` (disputed), check the case shows the deadline and the fee (Finance › ledger `dispute_fees`),
+  submit evidence with one file and check the dispute in the dashboard is `under_review` with the file attached; then
+  use `4000 0000 0000 2685` (dispute lost) and the "winning evidence" text to check the fee comes back.
+
+## 15. Apple Pay and Google Pay (S-157)
+
+The Payment Element (consumer web) and PaymentSheet (the app) offer Apple Pay and Google Pay next to the card form at
+every checkout that uses them — shop, food (web), bookings, quote deposits, tips. Nothing changes on the server: a
+wallet hands Stripe a card, so the checkout opens the same manual-capture PaymentIntents (escrow, S-11), after the same
+step-up (S-51), and the PaymentMethod the wallet leaves on the first intent (saved to the customer,
+`setup_future_usage`) confirms the order's other intents like a typed card's. Which wallets are offered comes from the
+api, `GET /api/v1/public/payments/options` → `{provider, applePay, googlePay}`: only under Stripe, each switched on by
+configuration once its set-up is done; the browser or phone then shows a wallet only when the person has one.
+
+| variable | where | what |
+|---|---|---|
+| `STRIPE_APPLE_PAY`, `STRIPE_GOOGLE_PAY` | api | `true` offers the wallet (default `false`: cards only) |
+| `NL_APPLE_PAY_DOMAIN_ASSOCIATION` | consumer web | the content of Stripe's Apple Pay domain association file, served as `text/plain` at `/.well-known/apple-developer-merchantid-domain-association` on every host of the site (404 when empty) |
+| `EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID` | app build (EAS) | the Apple Pay merchant id; Stripe's config plugin adds the entitlement and `initStripe` gets it |
+| `EXPO_PUBLIC_GOOGLE_PAY`, `EXPO_PUBLIC_GOOGLE_PAY_TEST` | app build (EAS) | `1` = Google Pay in PaymentSheet (the plugin's manifest flag); `_TEST=1` = Google's test environment (every build but production) |
+
+### Set-up (once per mode: test for dev/staging, live for prod)
+
+1. **Google Pay:** Settings → Payment methods → Google Pay on. Then `STRIPE_GOOGLE_PAY=true`; app builds
+   `EXPO_PUBLIC_GOOGLE_PAY=1`.
+2. **Apple Pay on the web:** Settings → Payment methods → Apple Pay → download the domain association file; put its
+   content into `NL_APPLE_PAY_DOMAIN_ASSOCIATION` for the consumer web (ConfigMap) and deploy. Register each domain
+   customers pay on (the site, `pages.<zone>` if storefront pages take payments) with Stripe's payment method domains
+   API:
+   ```sh
+   STRIPE_SECRET_KEY=sk_test_… scripts/stripe/payment-method-domain.sh register staging.northline.ca
+   STRIPE_SECRET_KEY=sk_test_… scripts/stripe/payment-method-domain.sh status   staging.northline.ca
+   ```
+   `register` checks the file is served over https without a redirect, creates the domain (or finds it), asks Stripe
+   to validate it and prints the Apple Pay / Google Pay / Link status (`active`, or Stripe's error); `validate` asks
+   again after a fix. A restricted key needs write access to *Payment method domains*. Then `STRIPE_APPLE_PAY=true`.
+3. **Apple Pay in the app:** Apple Developer → Identifiers → Merchant IDs → `merchant.ca.northline…` (one per
+   environment); Stripe Dashboard → Settings → Payment methods → Apple Pay → iOS certificate (upload Apple's CSR, Stripe
+   gives the certificate back to Apple); the app id's capability "Apple Pay Payment Processing" with that merchant id.
+   Build with `EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID`.
+4. **Content-Security-Policy:** nothing to add — the wallets run inside Stripe's iframe (`js.stripe.com`, already in
+   `frame-src`); the consumer site's `Permissions-Policy` delegates `payment` to `https://js.stripe.com`, which the
+   Payment Request API needs.
+
+### Never run against the real Stripe, Apple or Google
+
+Written from Stripe's Payment Element, PaymentSheet and payment method domains documentation and tested with the
+existing mocks only: the api's options endpoint (fake gateway) and `StripePaymentSettings`, the web checkout with a
+stubbed Stripe.js (the element gets `wallets: {applePay, googlePay}`), the app's adapter with the SDK mocked
+(PaymentSheet gets `applePay` / `googlePay`, `initStripe` the merchant id), and the association file. No Apple Pay or
+Google Pay sheet has been shown, no domain registered, no merchant id created, `payment-method-domain.sh` has not been
+run against Stripe (only its `status` / `validate` against stripe-mock). Before launch, in test mode: pay a shop order with two shops (three intents) with Apple Pay in
+Safari and on an iPhone, and with Google Pay in Chrome and on Android; check every intent is `requires_capture`, the
+later ones confirmed with the wallet's PaymentMethod without a second sheet; a booking deposit and a tip; a phone-code
+sign-in still asks for the step-up first.
+

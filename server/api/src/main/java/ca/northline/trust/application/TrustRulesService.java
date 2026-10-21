@@ -27,7 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class TrustRulesService implements TrustRules, OffPlatformPhrases, ListingKeywordRules, TrustConsequences {
+class TrustRulesService
+        implements TrustRules,
+                OffPlatformPhrases,
+                ListingKeywordRules,
+                TrustConsequences,
+                ca.northline.payments.api.CompletionPhotoRule {
 
     /** A business needs this many reviews in the window before the rating floor applies to it. */
     static final int MIN_REVIEWS = 5;
@@ -115,6 +120,42 @@ class TrustRulesService implements TrustRules, OffPlatformPhrases, ListingKeywor
     public List<String> offPlatformAfterWarning(Duration within) {
         return store.warnedAgain(clock.instant().minus(within));
     }
+
+    // ── S-156: no-shows and the completion-photo delay ──────────────────────────────────────────────────────
+
+    @Override
+    public NoShowRule providerNoShowRule() {
+        var rule = value(TrustRule.PROVIDER_NO_SHOWS);
+        return new NoShowRule(
+                ((Number) rule.getOrDefault("count", 3)).intValue(),
+                ((Number) rule.getOrDefault("days", 30)).intValue());
+    }
+
+    @Override
+    public Map<String, Integer> providerNoShows() {
+        var rule = providerNoShowRule();
+        return store.confirmedNoShows(NO_SHOW, clock.instant().minus(Duration.ofDays(rule.days())));
+    }
+
+    @Override
+    public int customerNoShowLimit() {
+        return ((Number) value(TrustRule.CUSTOMER_NO_SHOWS).getOrDefault("count", 2)).intValue();
+    }
+
+    @Override
+    public Map<String, Integer> customerNoShows(Duration within) {
+        return store.confirmedNoShows(CUSTOMER_NO_SHOW, clock.instant().minus(within));
+    }
+
+    @Override
+    public Duration missingPhotoDelay() {
+        return Duration.ofHours(((Number) value(TrustRule.MISSING_PHOTO_DELAY).getOrDefault("hours", 48)).longValue());
+    }
+
+    /** Flag rules (S-156): the provider didn't come / the customer wasn't there. */
+    static final String NO_SHOW = "no_show";
+
+    static final String CUSTOMER_NO_SHOW = "customer_no_show";
 
     private Map<String, Object> value(TrustRule rule) {
         return store.find(rule.code()).map(TrustRuleStore.Stored::value).orElse(new LinkedHashMap<>(rule.defaults()));

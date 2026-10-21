@@ -57,7 +57,7 @@ describe('verification queue (S-79, design 03 verify)', () => {
     expect((await screenReady()).textContent).toBe('Applications');
     expect(screen.getByText('2 waiting · median decision 1.4 days · SLA 2 days')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Businesses', 'Listings', 'Licences', 'Age checks']);
+    expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Businesses', 'Registry checks', 'Listings', 'Licences', 'Age checks']);
     const kpis = within(screen.getByRole('list', { name: 'Applications by stage' }));
     expect(kpis.getByText('Stage 1 · Review').nextElementSibling?.textContent).toBe('1');
     expect(kpis.getByText('Stage 2 · Decision').nextElementSibling?.textContent).toBe('1');

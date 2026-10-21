@@ -1,5 +1,6 @@
 package ca.northline.privacy.application;
 
+import ca.northline.identity.api.PrivacyAccounts.Holder;
 import ca.northline.payments.api.PaymentStepUp;
 import ca.northline.privacy.application.PrivacyRequestStore.Request;
 import ca.northline.privacy.application.PrivacyRequests.Link;
@@ -12,6 +13,7 @@ import ca.northline.privacy.domain.Verification;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
+import ca.northline.shared.privacy.PersonalDataContributor;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -50,6 +52,7 @@ class SelfServiceImpl implements SelfService {
     private final Contributors contributors;
     private final PaymentStepUp stepUp;
     private final CodeSender codes;
+    private final PrivacyEmails emails;
     private final PrivacySettings settings;
     private final Clock clock;
 
@@ -73,8 +76,9 @@ class SelfServiceImpl implements SelfService {
         var request =
                 intake.open(holder, command.type(), command.corrections(), command.note(), verification, null, now);
         // S-104: over the person's texting budget the request still opens; it waits for a step-up proof or a later code
-        if (verification == null && holder.phone() != null && withinTextBudget(command.userId(), now)) {
-            request = text(request, holder.phone(), locale);
+        var contact = contact(holder);
+        if (verification == null && contact != null && withinTextBudget(command.userId(), now)) {
+            request = send(request, contact, locale);
         }
         return views.view(request, locale, true);
     }
@@ -82,8 +86,8 @@ class SelfServiceImpl implements SelfService {
     @Override
     public RequestView sendCode(String userId, String requestId, Locale locale) {
         var request = awaiting(own(userId, requestId));
-        var holder = intake.holder(userId);
-        if (holder.phone() == null) {
+        var contact = contact(intake.holder(userId));
+        if (contact == null) {
             throw new Conflict("no_mobile", PrivacyRules.NO_MOBILE);
         }
         var now = clock.instant();
@@ -95,7 +99,7 @@ class SelfServiceImpl implements SelfService {
         if (!withinTextBudget(userId, now)) {
             throw new Conflict("too_many_codes", PrivacyRules.TOO_MANY_CODES);
         }
-        return views.view(text(request, holder.phone(), locale), locale, true);
+        return views.view(send(request, contact, locale), locale, true);
     }
 
     /**
@@ -108,11 +112,39 @@ class SelfServiceImpl implements SelfService {
                 && store.textsSince(userId, now.minus(Duration.ofDays(1))) < TEXTS_PER_DAY;
     }
 
-    private Request text(Request request, String phone, Locale locale) {
+    /** Where the code goes: {@code sms} or {@code email}, and the number or address. */
+    record Contact(String channel, String to) {}
+
+    /**
+     * S-159: a verified mobile first (S-105's texted code), else a verified email (an email + password account, S-154,
+     * may have no mobile and no second factor), else a mobile stored before verification was recorded; none = the
+     * person confirms with a passkey or authenticator, or staff verify them.
+     */
+    static @Nullable Contact contact(Holder holder) {
+        if (holder.phone() != null && holder.phoneVerified()) {
+            return new Contact("sms", holder.phone());
+        }
+        if (holder.email() != null && holder.emailVerified()) {
+            return new Contact("email", holder.email());
+        }
+        return holder.phone() == null ? null : new Contact("sms", holder.phone());
+    }
+
+    private Request send(Request request, Contact contact, Locale locale) {
         var issued = intake.newCode(request, clock.instant());
-        var saved = intake.save(issued.request());
+        var saved = intake.save(issued.request().withCodeChannel(contact.channel()));
         try {
-            codes.send(phone, issued.code(), locale);
+            if (contact.channel().equals("email")) {
+                emails.code(
+                        "privacy-code:" + saved.id() + ":" + saved.codeExpiresAt(),
+                        contact.to(),
+                        intake.firstName(saved.subjectId()),
+                        issued.code(),
+                        settings.codeLife().toMinutes(),
+                        locale);
+            } else {
+                codes.send(contact.to(), issued.code(), locale);
+            }
         } catch (RuntimeException e) {
             // the request (or the new code) rolls back: the person tries again
             log.warn(
@@ -122,8 +154,19 @@ class SelfServiceImpl implements SelfService {
             throw new Conflict("code_not_sent", PrivacyRules.CODE_NOT_SENT);
         }
         store.textSent(saved.subjectId(), saved.id(), clock.instant());
-        intake.record(saved, saved.subjectId(), "self", "code_sent", Map.of("channel", "sms"));
+        intake.record(saved, saved.subjectId(), "self", "code_sent", Map.of("channel", contact.channel()));
         return saved;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PersonalDataContributor.Consequence> consequences(String userId) {
+        var holder = intake.holder(userId);
+        var subject = new PersonalDataContributor.Subject(
+                userId, holder.email(), holder.phone(), Locale.forLanguageTag(holder.locale()));
+        return contributors.ordered().stream()
+                .flatMap(c -> c.consequences(subject).stream())
+                .toList();
     }
 
     @Override

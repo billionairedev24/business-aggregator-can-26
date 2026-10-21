@@ -32,5 +32,7 @@ public interface KitchenCalendarStore {
             boolean menuLive,
             @Nullable Double radiusKm,
             long avgItemCents,
-            int scheduledDays) {}
+            int scheduledDays,
+            boolean groupOrders,
+            int groupMax) {}
 }

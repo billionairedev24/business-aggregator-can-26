@@ -79,6 +79,59 @@ public interface PaymentGateway {
         }
     }
 
+    /**
+     * S-162: an automatic-capture PaymentIntent for money Northline keeps itself (a Northline Plus period), confirmed at
+     * once with a card the customer saved (S-59 SetupIntent, {@code usage=off_session}). No transfer group: nothing is
+     * paid out to a business.
+     *
+     * @param offSession the customer isn't there (a renewal); false = they are (joining), so the bank may ask them
+     * @param idempotencyKey one per membership and period: the same period never makes a second PaymentIntent
+     */
+    record Charge(
+            long amountCents,
+            String stripeCustomer,
+            String paymentMethod,
+            boolean offSession,
+            Map<String, String> metadata,
+            String idempotencyKey) {
+
+        public Charge {
+            metadata = Map.copyOf(metadata);
+        }
+    }
+
+    /** What a {@link Charge} (or another try of its PaymentIntent) came to. */
+    sealed interface Charged {
+
+        /** {@code succeeded}: the money is Northline's. */
+        record Paid(String paymentIntent, @Nullable String charge) implements Charged {}
+
+        /**
+         * The bank wants the customer (3-D Secure; off-session: {@code authentication_required}): Stripe.js / the
+         * mobile SDK confirms {@code clientSecret} with the card.
+         */
+        record ActionRequired(
+                String paymentIntent, @Nullable String clientSecret) implements Charged {}
+
+        /** Still with the card network ({@code processing}). */
+        record Processing(String paymentIntent) implements Charged {}
+
+        /**
+         * Refused (Stripe answers 402 {@code card_error}): {@code code} is the decline code ({@code insufficient_funds},
+         * {@code card_declined}, {@code expired_card} …). The PaymentIntent stays and can be tried again.
+         */
+        record Declined(@Nullable String paymentIntent, String code) implements Charged {}
+    }
+
+    /** Creates and confirms an automatic-capture PaymentIntent; a decline is an answer, not an exception. */
+    Charged charge(Charge request);
+
+    /** Tries an existing {@link #charge} PaymentIntent again with {@code paymentMethod} (a retry, a new card). */
+    Charged chargeAgain(String paymentIntent, String paymentMethod, boolean offSession, String idempotencyKey);
+
+    /** Reads a {@link #charge} PaymentIntent (after the customer confirmed it, or a webhook said it changed). */
+    Charged chargeState(String paymentIntent);
+
     /** A Stripe Customer holding nothing but our user id ({@code cus_…}); cards are attached by Stripe.js. */
     String customer(String customerId, String idempotencyKey);
 

@@ -45,5 +45,31 @@ export const useSaveRule = () => useTrustMutation((v: { key: string; value: Reco
   http(`/api/v1/console/trust/rules/${v.key}`, { method: 'PUT', body: { value: v.value } }, Rule));
 export const useFlagAction = () => useTrustMutation((v: { id: string; action: string; note?: string }) =>
   http(`/api/v1/console/trust/flags/${encodeURIComponent(v.id)}/action`, { method: 'POST', body: { action: v.action, note: v.note } }, Flag));
-export const useFlagDecision = () => useTrustMutation((v: { id: string; decision: 'dismissed' | 'actioned' }) =>
-  http(`/api/v1/console/trust/flags/${encodeURIComponent(v.id)}/decision`, { method: 'POST', body: { decision: v.decision } }, Flag));
+export const useFlagDecision = () => useTrustMutation((v: { id: string; decision: 'dismissed' | 'actioned'; note?: string }) =>
+  http(`/api/v1/console/trust/flags/${encodeURIComponent(v.id)}/decision`, { method: 'POST', body: { decision: v.decision, note: v.note } }, Flag));
+
+// ── S-158: the AI screening queue and the weekly anomaly scan ──────────────────────────────────────────────────────
+export const AiFlag = Flag.extend({ evidence: z.record(z.string(), z.string()).default({}), decisionNote: z.string().nullish() });
+export type AiFlag = z.infer<typeof AiFlag>;
+export const aiFlagsQuery = (state: 'open' | 'all') => queryOptions({
+  queryKey: ['console', 'trust', 'ai', state],
+  queryFn: () => http(`/api/v1/console/trust/flags?source=ai&state=${state}&limit=200`, {}, z.object({ items: z.array(AiFlag) })),
+  placeholderData: keepPreviousData,
+});
+export const FlagContent = z.object({ flagId: z.string(), targetType: z.string(), targetId: z.string(), title: z.string().nullish(), text: z.string(), context: z.string() });
+export type FlagContent = z.infer<typeof FlagContent>;
+/** What was flagged (the api audit-logs every opening). */
+export const flagContentQuery = (id: string) => queryOptions({
+  queryKey: ['console', 'trust', 'content', id],
+  queryFn: () => http(`/api/v1/console/trust/flags/${encodeURIComponent(id)}/content`, {}, FlagContent),
+  staleTime: Infinity,
+});
+export const Scan = z.object({
+  id: z.string(), market: z.string(), weekStart: z.string(), merchants: z.number(), flagsRaised: z.number(), summary: z.string().nullish(),
+  aiExplained: z.boolean(), ranAt: z.string(), flags: z.array(AiFlag),
+});
+export type Scan = z.infer<typeof Scan>;
+export const scansQuery = queryOptions({
+  queryKey: ['console', 'trust', 'scans'],
+  queryFn: () => http('/api/v1/console/trust/anomaly-scans?limit=20', {}, z.object({ items: z.array(Scan) })),
+});

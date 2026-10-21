@@ -66,7 +66,7 @@ final class JobResponses {
      */
     record EscrowMoneyResponse(String state, long heldCents, long taxCents, long feeCents, long netCents) {}
 
-    record CustomerResponse(String name, @Nullable BigDecimal reliability, long pastJobs) {}
+    record CustomerResponse(String name, @Nullable BigDecimal reliability, long pastJobs, int noShows) {}
 
     record TimelineResponse(
             String type,

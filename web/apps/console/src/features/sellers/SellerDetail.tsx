@@ -6,6 +6,7 @@ import { ApiError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { sellerQuery, type Check, type Detail, type OversightAction, type Trail } from './api';
 import { checkName, compactMoney } from './format';
+import { StandingCard } from './StandingCard';
 import { useSellersT, type SellersKey, type SellersT } from './messages';
 import { OversightDialog } from './OversightDialog';
 import './sellers.css';
@@ -126,6 +127,7 @@ function DetailView({ data }: { data: Detail }) {
             {timeline.map(e => <li key={e.key}><span>{fmt.date(e.at)}</span><span>{e.text}</span></li>)}
           </ol>
         </ChartCard>
+        <StandingCard businessId={s.id} />
         </div>
         <ChartCard id="sl-oversight" title={t('oversightTitle')} className="nl-sl-oversight">
           <RadioGroup className="nl-sl-options" aria-label={t('oversightTitle')}>

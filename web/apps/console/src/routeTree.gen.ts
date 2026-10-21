@@ -18,6 +18,7 @@ import { Route as ConsoleDisputesRouteImport } from './routes/_console/disputes'
 import { Route as ConsoleFinanceRouteImport } from './routes/_console/finance'
 import { Route as ConsoleGoLiveRouteImport } from './routes/_console/go-live'
 import { Route as ConsoleIntegrationsRouteImport } from './routes/_console/integrations'
+import { Route as ConsoleOffersRouteImport } from './routes/_console/offers'
 import { Route as ConsoleOnCallRouteImport } from './routes/_console/on-call'
 import { Route as ConsoleOrdersRouteImport } from './routes/_console/orders'
 import { Route as ConsolePilotRouteImport } from './routes/_console/pilot'
@@ -31,8 +32,10 @@ import { Route as ConsoleTrustRouteImport } from './routes/_console/trust'
 import { Route as ConsoleUatRouteImport } from './routes/_console/uat'
 import { Route as ConsoleVerificationRouteImport } from './routes/_console/verification'
 import { Route as ConsoleVettingRouteImport } from './routes/_console/vetting'
+import { Route as ConsoleDisputesCardRouteImport } from './routes/_console/disputes_.card'
 import { Route as ConsoleSellersIndexRouteImport } from './routes/_console/sellers.index'
 import { Route as ConsoleSellersSellerIdRouteImport } from './routes/_console/sellers.$sellerId'
+import { Route as ConsoleTrustAppealsRouteImport } from './routes/_console/trust_.appeals'
 
 const ConsoleRoute = ConsoleRouteImport.update({
   id: '/_console',
@@ -76,6 +79,11 @@ const ConsoleGoLiveRoute = ConsoleGoLiveRouteImport.update({
 const ConsoleIntegrationsRoute = ConsoleIntegrationsRouteImport.update({
   id: '/integrations',
   path: '/integrations',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleOffersRoute = ConsoleOffersRouteImport.update({
+  id: '/offers',
+  path: '/offers',
   getParentRoute: () => ConsoleRoute,
 } as any)
 const ConsoleOnCallRoute = ConsoleOnCallRouteImport.update({
@@ -143,6 +151,11 @@ const ConsoleVettingRoute = ConsoleVettingRouteImport.update({
   path: '/vetting',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleDisputesCardRoute = ConsoleDisputesCardRouteImport.update({
+  id: '/disputes_/card',
+  path: '/disputes/card',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 const ConsoleSellersIndexRoute = ConsoleSellersIndexRouteImport.update({
   id: '/sellers/',
   path: '/sellers/',
@@ -151,6 +164,11 @@ const ConsoleSellersIndexRoute = ConsoleSellersIndexRouteImport.update({
 const ConsoleSellersSellerIdRoute = ConsoleSellersSellerIdRouteImport.update({
   id: '/sellers/$sellerId',
   path: '/sellers/$sellerId',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsoleTrustAppealsRoute = ConsoleTrustAppealsRouteImport.update({
+  id: '/trust_/appeals',
+  path: '/trust/appeals',
   getParentRoute: () => ConsoleRoute,
 } as any)
 
@@ -163,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/finance': typeof ConsoleFinanceRoute
   '/go-live': typeof ConsoleGoLiveRoute
   '/integrations': typeof ConsoleIntegrationsRoute
+  '/offers': typeof ConsoleOffersRoute
   '/on-call': typeof ConsoleOnCallRoute
   '/orders': typeof ConsoleOrdersRoute
   '/pilot': typeof ConsolePilotRoute
@@ -176,7 +195,9 @@ export interface FileRoutesByFullPath {
   '/uat': typeof ConsoleUatRoute
   '/verification': typeof ConsoleVerificationRoute
   '/vetting': typeof ConsoleVettingRoute
+  '/disputes/card': typeof ConsoleDisputesCardRoute
   '/sellers/$sellerId': typeof ConsoleSellersSellerIdRoute
+  '/trust/appeals': typeof ConsoleTrustAppealsRoute
   '/sellers/': typeof ConsoleSellersIndexRoute
 }
 export interface FileRoutesByTo {
@@ -187,6 +208,7 @@ export interface FileRoutesByTo {
   '/finance': typeof ConsoleFinanceRoute
   '/go-live': typeof ConsoleGoLiveRoute
   '/integrations': typeof ConsoleIntegrationsRoute
+  '/offers': typeof ConsoleOffersRoute
   '/on-call': typeof ConsoleOnCallRoute
   '/orders': typeof ConsoleOrdersRoute
   '/pilot': typeof ConsolePilotRoute
@@ -201,7 +223,9 @@ export interface FileRoutesByTo {
   '/verification': typeof ConsoleVerificationRoute
   '/vetting': typeof ConsoleVettingRoute
   '/': typeof ConsoleIndexRoute
+  '/disputes/card': typeof ConsoleDisputesCardRoute
   '/sellers/$sellerId': typeof ConsoleSellersSellerIdRoute
+  '/trust/appeals': typeof ConsoleTrustAppealsRoute
   '/sellers': typeof ConsoleSellersIndexRoute
 }
 export interface FileRoutesById {
@@ -214,6 +238,7 @@ export interface FileRoutesById {
   '/_console/finance': typeof ConsoleFinanceRoute
   '/_console/go-live': typeof ConsoleGoLiveRoute
   '/_console/integrations': typeof ConsoleIntegrationsRoute
+  '/_console/offers': typeof ConsoleOffersRoute
   '/_console/on-call': typeof ConsoleOnCallRoute
   '/_console/orders': typeof ConsoleOrdersRoute
   '/_console/pilot': typeof ConsolePilotRoute
@@ -228,7 +253,9 @@ export interface FileRoutesById {
   '/_console/verification': typeof ConsoleVerificationRoute
   '/_console/vetting': typeof ConsoleVettingRoute
   '/_console/': typeof ConsoleIndexRoute
+  '/_console/disputes_/card': typeof ConsoleDisputesCardRoute
   '/_console/sellers/$sellerId': typeof ConsoleSellersSellerIdRoute
+  '/_console/trust_/appeals': typeof ConsoleTrustAppealsRoute
   '/_console/sellers/': typeof ConsoleSellersIndexRoute
 }
 export interface FileRouteTypes {
@@ -242,6 +269,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/go-live'
     | '/integrations'
+    | '/offers'
     | '/on-call'
     | '/orders'
     | '/pilot'
@@ -255,7 +283,9 @@ export interface FileRouteTypes {
     | '/uat'
     | '/verification'
     | '/vetting'
+    | '/disputes/card'
     | '/sellers/$sellerId'
+    | '/trust/appeals'
     | '/sellers/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -266,6 +296,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/go-live'
     | '/integrations'
+    | '/offers'
     | '/on-call'
     | '/orders'
     | '/pilot'
@@ -280,7 +311,9 @@ export interface FileRouteTypes {
     | '/verification'
     | '/vetting'
     | '/'
+    | '/disputes/card'
     | '/sellers/$sellerId'
+    | '/trust/appeals'
     | '/sellers'
   id:
     | '__root__'
@@ -292,6 +325,7 @@ export interface FileRouteTypes {
     | '/_console/finance'
     | '/_console/go-live'
     | '/_console/integrations'
+    | '/_console/offers'
     | '/_console/on-call'
     | '/_console/orders'
     | '/_console/pilot'
@@ -306,7 +340,9 @@ export interface FileRouteTypes {
     | '/_console/verification'
     | '/_console/vetting'
     | '/_console/'
+    | '/_console/disputes_/card'
     | '/_console/sellers/$sellerId'
+    | '/_console/trust_/appeals'
     | '/_console/sellers/'
   fileRoutesById: FileRoutesById
 }
@@ -378,6 +414,13 @@ declare module '@tanstack/react-router' {
       path: '/integrations'
       fullPath: '/integrations'
       preLoaderRoute: typeof ConsoleIntegrationsRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/offers': {
+      id: '/_console/offers'
+      path: '/offers'
+      fullPath: '/offers'
+      preLoaderRoute: typeof ConsoleOffersRouteImport
       parentRoute: typeof ConsoleRoute
     }
     '/_console/on-call': {
@@ -471,6 +514,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleVettingRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/disputes_/card': {
+      id: '/_console/disputes_/card'
+      path: '/disputes/card'
+      fullPath: '/disputes/card'
+      preLoaderRoute: typeof ConsoleDisputesCardRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
     '/_console/sellers/': {
       id: '/_console/sellers/'
       path: '/sellers'
@@ -485,6 +535,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleSellersSellerIdRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/trust_/appeals': {
+      id: '/_console/trust_/appeals'
+      path: '/trust/appeals'
+      fullPath: '/trust/appeals'
+      preLoaderRoute: typeof ConsoleTrustAppealsRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
   }
 }
 
@@ -495,6 +552,7 @@ interface ConsoleRouteChildren {
   ConsoleFinanceRoute: typeof ConsoleFinanceRoute
   ConsoleGoLiveRoute: typeof ConsoleGoLiveRoute
   ConsoleIntegrationsRoute: typeof ConsoleIntegrationsRoute
+  ConsoleOffersRoute: typeof ConsoleOffersRoute
   ConsoleOnCallRoute: typeof ConsoleOnCallRoute
   ConsoleOrdersRoute: typeof ConsoleOrdersRoute
   ConsolePilotRoute: typeof ConsolePilotRoute
@@ -509,7 +567,9 @@ interface ConsoleRouteChildren {
   ConsoleVerificationRoute: typeof ConsoleVerificationRoute
   ConsoleVettingRoute: typeof ConsoleVettingRoute
   ConsoleIndexRoute: typeof ConsoleIndexRoute
+  ConsoleDisputesCardRoute: typeof ConsoleDisputesCardRoute
   ConsoleSellersSellerIdRoute: typeof ConsoleSellersSellerIdRoute
+  ConsoleTrustAppealsRoute: typeof ConsoleTrustAppealsRoute
   ConsoleSellersIndexRoute: typeof ConsoleSellersIndexRoute
 }
 
@@ -520,6 +580,7 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleFinanceRoute: ConsoleFinanceRoute,
   ConsoleGoLiveRoute: ConsoleGoLiveRoute,
   ConsoleIntegrationsRoute: ConsoleIntegrationsRoute,
+  ConsoleOffersRoute: ConsoleOffersRoute,
   ConsoleOnCallRoute: ConsoleOnCallRoute,
   ConsoleOrdersRoute: ConsoleOrdersRoute,
   ConsolePilotRoute: ConsolePilotRoute,
@@ -534,7 +595,9 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleVerificationRoute: ConsoleVerificationRoute,
   ConsoleVettingRoute: ConsoleVettingRoute,
   ConsoleIndexRoute: ConsoleIndexRoute,
+  ConsoleDisputesCardRoute: ConsoleDisputesCardRoute,
   ConsoleSellersSellerIdRoute: ConsoleSellersSellerIdRoute,
+  ConsoleTrustAppealsRoute: ConsoleTrustAppealsRoute,
   ConsoleSellersIndexRoute: ConsoleSellersIndexRoute,
 }
 

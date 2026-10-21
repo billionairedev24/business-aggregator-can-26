@@ -35,6 +35,7 @@ import { Route as BMerchantIdRefundsRouteImport } from './routes/b.$merchantId/r
 import { Route as BMerchantIdReportsRouteImport } from './routes/b.$merchantId/reports'
 import { Route as BMerchantIdReviewsRouteImport } from './routes/b.$merchantId/reviews'
 import { Route as BMerchantIdSettingsRouteImport } from './routes/b.$merchantId/settings'
+import { Route as BMerchantIdStandingRouteImport } from './routes/b.$merchantId/standing'
 import { Route as BMerchantIdKitchenCombosRouteImport } from './routes/b.$merchantId/kitchen/combos'
 import { Route as BMerchantIdKitchenHoursRouteImport } from './routes/b.$merchantId/kitchen/hours'
 import { Route as BMerchantIdKitchenLiveRouteImport } from './routes/b.$merchantId/kitchen/live'
@@ -174,6 +175,11 @@ const BMerchantIdSettingsRoute = BMerchantIdSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => BMerchantIdRoute,
 } as any)
+const BMerchantIdStandingRoute = BMerchantIdStandingRouteImport.update({
+  id: '/standing',
+  path: '/standing',
+  getParentRoute: () => BMerchantIdRoute,
+} as any)
 const BMerchantIdKitchenCombosRoute =
   BMerchantIdKitchenCombosRouteImport.update({
     id: '/kitchen/combos',
@@ -244,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/b/$merchantId/reports': typeof BMerchantIdReportsRoute
   '/b/$merchantId/reviews': typeof BMerchantIdReviewsRoute
   '/b/$merchantId/settings': typeof BMerchantIdSettingsRoute
+  '/b/$merchantId/standing': typeof BMerchantIdStandingRoute
   '/b/$merchantId/': typeof BMerchantIdIndexRoute
   '/b/$merchantId/kitchen/combos': typeof BMerchantIdKitchenCombosRoute
   '/b/$merchantId/kitchen/hours': typeof BMerchantIdKitchenHoursRoute
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/b/$merchantId/reports': typeof BMerchantIdReportsRoute
   '/b/$merchantId/reviews': typeof BMerchantIdReviewsRoute
   '/b/$merchantId/settings': typeof BMerchantIdSettingsRoute
+  '/b/$merchantId/standing': typeof BMerchantIdStandingRoute
   '/b/$merchantId': typeof BMerchantIdIndexRoute
   '/b/$merchantId/kitchen/combos': typeof BMerchantIdKitchenCombosRoute
   '/b/$merchantId/kitchen/hours': typeof BMerchantIdKitchenHoursRoute
@@ -316,6 +324,7 @@ export interface FileRoutesById {
   '/b/$merchantId/reports': typeof BMerchantIdReportsRoute
   '/b/$merchantId/reviews': typeof BMerchantIdReviewsRoute
   '/b/$merchantId/settings': typeof BMerchantIdSettingsRoute
+  '/b/$merchantId/standing': typeof BMerchantIdStandingRoute
   '/b/$merchantId/': typeof BMerchantIdIndexRoute
   '/b/$merchantId/kitchen/combos': typeof BMerchantIdKitchenCombosRoute
   '/b/$merchantId/kitchen/hours': typeof BMerchantIdKitchenHoursRoute
@@ -354,6 +363,7 @@ export interface FileRouteTypes {
     | '/b/$merchantId/reports'
     | '/b/$merchantId/reviews'
     | '/b/$merchantId/settings'
+    | '/b/$merchantId/standing'
     | '/b/$merchantId/'
     | '/b/$merchantId/kitchen/combos'
     | '/b/$merchantId/kitchen/hours'
@@ -389,6 +399,7 @@ export interface FileRouteTypes {
     | '/b/$merchantId/reports'
     | '/b/$merchantId/reviews'
     | '/b/$merchantId/settings'
+    | '/b/$merchantId/standing'
     | '/b/$merchantId'
     | '/b/$merchantId/kitchen/combos'
     | '/b/$merchantId/kitchen/hours'
@@ -425,6 +436,7 @@ export interface FileRouteTypes {
     | '/b/$merchantId/reports'
     | '/b/$merchantId/reviews'
     | '/b/$merchantId/settings'
+    | '/b/$merchantId/standing'
     | '/b/$merchantId/'
     | '/b/$merchantId/kitchen/combos'
     | '/b/$merchantId/kitchen/hours'
@@ -635,6 +647,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BMerchantIdSettingsRouteImport
       parentRoute: typeof BMerchantIdRoute
     }
+    '/b/$merchantId/standing': {
+      id: '/b/$merchantId/standing'
+      path: '/standing'
+      fullPath: '/b/$merchantId/standing'
+      preLoaderRoute: typeof BMerchantIdStandingRouteImport
+      parentRoute: typeof BMerchantIdRoute
+    }
     '/b/$merchantId/kitchen/combos': {
       id: '/b/$merchantId/kitchen/combos'
       path: '/kitchen/combos'
@@ -708,6 +727,7 @@ interface BMerchantIdRouteChildren {
   BMerchantIdReportsRoute: typeof BMerchantIdReportsRoute
   BMerchantIdReviewsRoute: typeof BMerchantIdReviewsRoute
   BMerchantIdSettingsRoute: typeof BMerchantIdSettingsRoute
+  BMerchantIdStandingRoute: typeof BMerchantIdStandingRoute
   BMerchantIdIndexRoute: typeof BMerchantIdIndexRoute
   BMerchantIdKitchenCombosRoute: typeof BMerchantIdKitchenCombosRoute
   BMerchantIdKitchenHoursRoute: typeof BMerchantIdKitchenHoursRoute
@@ -733,6 +753,7 @@ const BMerchantIdRouteChildren: BMerchantIdRouteChildren = {
   BMerchantIdReportsRoute: BMerchantIdReportsRoute,
   BMerchantIdReviewsRoute: BMerchantIdReviewsRoute,
   BMerchantIdSettingsRoute: BMerchantIdSettingsRoute,
+  BMerchantIdStandingRoute: BMerchantIdStandingRoute,
   BMerchantIdIndexRoute: BMerchantIdIndexRoute,
   BMerchantIdKitchenCombosRoute: BMerchantIdKitchenCombosRoute,
   BMerchantIdKitchenHoursRoute: BMerchantIdKitchenHoursRoute,

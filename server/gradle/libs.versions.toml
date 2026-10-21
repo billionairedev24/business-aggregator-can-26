@@ -38,6 +38,8 @@ greenmail = "2.1.14"
 bouncycastle = "1.85.2"
 otel-proto = "1.10.0-alpha"
 pdfbox = "3.0.8"
+# S-162: RFC 5545 RRULE recurrence for Plus renewals (Apache-2.0; small, no transitive Groovy/caching like ical4j)
+lib-recur = "0.17.1"
 datasource-micrometer = "2.3.0"
 
 [libraries]
@@ -68,6 +70,7 @@ bouncycastle-prov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = 
 greenmail-junit5 = { module = "com.icegreen:greenmail-junit5", version.ref = "greenmail" }
 datasource-micrometer = { module = "net.ttddyy.observation:datasource-micrometer-spring-boot", version.ref = "datasource-micrometer" } # S-111: JDBC spans
 pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" } # S-41: tax documents as PDF
+lib-recur = { module = "org.dmfs:lib-recur", version.ref = "lib-recur" } # S-162: Plus renewal dates from RRULE
 otel-proto = { module = "io.opentelemetry.proto:opentelemetry-proto", version.ref = "otel-proto" } # S-111 tests: decode OTLP exports
 wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 gcp-kms = { module = "com.google.cloud:google-cloud-kms", version.ref = "gcp-kms" }

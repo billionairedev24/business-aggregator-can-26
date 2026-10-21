@@ -393,6 +393,91 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - commerce-webhook-controller
+  /api/v1/webhooks/sms/inbound:
+    post:
+      operationId: smsWebhookInbound
+      parameters:
+      - in: header
+        name: X-Twilio-Signature
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                form:
+                  $ref: "#/components/schemas/MultiValueMapStringString"
+              required:
+              - form
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: object
+          description: OK
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      summary: "A text sent to Northline's number (STOP / START / HELP), from the\
+        \ SMS provider"
+      tags:
+      - sms-webhook-controller
+  /api/v1/webhooks/sms/status:
+    post:
+      operationId: smsWebhookStatus
+      parameters:
+      - in: header
+        name: X-Twilio-Signature
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                form:
+                  $ref: "#/components/schemas/MultiValueMapStringString"
+              required:
+              - form
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: object
+          description: OK
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      summary: "The delivery status of a text Northline sent, from the SMS provider"
+      tags:
+      - sms-webhook-controller
   /api/v1/webhooks/stripe:
     post:
       operationId: stripeWebhookPlatform
@@ -469,6 +554,20 @@ paths:
       - stripe-webhook-controller
 components:
   schemas:
+    MultiValueMapStringString:
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: string
+      properties:
+        all:
+          type: object
+          additionalProperties:
+            type: string
+          writeOnly: true
+        empty:
+          type: boolean
     Problem:
       type: object
       description: RFC 9457 problem details. 403 and 409 carry a machine-readable

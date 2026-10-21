@@ -6,6 +6,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { ApiError, colors, randomId, space } from '@northline/mobile-kit';
 
+import { CheckoutConsent, useCheckoutConsent } from '../account/CheckoutConsent';
 import { percent } from '../account/common';
 import { PromoPoints } from '../aftercare/PromoPoints';
 import { aftercare } from '../aftercare/Review';
@@ -114,6 +115,7 @@ function Pay({ p, draft }: { p: ProviderPage; draft: BookingDraft }) {
   const [promoCode, setPromoCode] = useState<string>();
   const [usePoints, setUsePoints] = useState(false);
   const { location } = useDeliveryLocation();
+  const consent = useCheckoutConsent(true); // S-157: the optional offers box (CASL)
   const ask = { holdId: hold.holdId, serviceId: service.id, ...(promoCode ? { promoCode } : {}), usePoints };
   const price = useQuery({
     queryKey: ['aftercare', 'booking-price', ask],
@@ -193,6 +195,7 @@ function Pay({ p, draft }: { p: ProviderPage; draft: BookingDraft }) {
         }
       }
       const booked = await api.confirm(hold.holdId, confirmKey.current);
+      await consent.record(); // S-157: the ticked offers box, once the booking is made
       done(booked);
     } catch (e) {
       fail(e);
@@ -287,6 +290,7 @@ function Pay({ p, draft }: { p: ProviderPage; draft: BookingDraft }) {
       <Checkbox checked={agree.terms} onChange={(v) => setAgree((a) => ({ ...a, terms: v }))} label={t('services.book.agreeTerms')} error={errors.terms} testID="agree-terms">
         <Body tone="small">{t('services.book.agreeTerms')}</Body>
       </Checkbox>
+      <CheckoutConsent consent={consent} />
       {failure ? (
         <View style={styles.cards}>
           <Notice message={failure.message} testID="pay-error" />

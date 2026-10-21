@@ -143,11 +143,63 @@ final class OAuthClientSync {
                 repository.save(wanted);
             }
         }
+        var console = new ConsolePartners(jdbc).byClientId().keySet();
         jdbc.queryForList("select client_id from oauth2_registered_client order by client_id", String.class).stream()
                 .filter(id -> !catalog.declares(id))
+                // S-158: partners registered in the console are synced by syncConsolePartners
+                .filter(id -> !console.contains(id))
                 // S-127: agents registered at run time from their Client ID Metadata Document aren't configuration
                 .filter(id -> !id.startsWith("https://") && !id.startsWith("http://"))
                 .forEach(id -> outcomes.add(new Outcome(id, Action.NOT_IN_CONFIGURATION, List.of())));
         return List.copyOf(outcomes);
+    }
+
+    // ── S-158: partners registered in the console ──────────────────────────────────────────────────────────────────
+
+    /** {@code pg_advisory_xact_lock} key of the console-partner sync (replicas run it on a schedule). */
+    static final long CONSOLE_LOCK_KEY = 0x4e4c_5061_7274_6e72L; // "NLPartnr"
+
+    /**
+     * Registers or updates the console's partners ({@code developer.partner_clients}): JWK Set URL, scopes, token
+     * lifetime, the approved businesses as the {@code merchants} claim, disabled as revoked, the key version. A partner
+     * with the same name in configuration wins (it is skipped here and reported). A row with an invalid URL or scope —
+     * the api validates them, so only a hand edit — is skipped with a warning. Never deletes.
+     */
+    List<Outcome> syncConsolePartners(ClientPolicy policy) {
+        var outcomes = Objects.requireNonNull(transactions.execute(_ -> {
+            jdbc.queryForList("select pg_advisory_xact_lock(?)", CONSOLE_LOCK_KEY);
+            var out = new ArrayList<Outcome>();
+            for (var row : new ConsolePartners(jdbc).all()) {
+                var clientId = row.clientId();
+                if (catalog.declares(clientId)) {
+                    log.warn("Console partner {} is also in configuration: the configured one is used", clientId);
+                    continue;
+                }
+                var problems = row.spec().problems(row.name(), policy, false);
+                if (!problems.isEmpty()) {
+                    log.warn("Console partner {} skipped: {}", clientId, problems);
+                    continue;
+                }
+                var existing = repository.findByClientId(clientId);
+                var wanted = row.spec().toRegisteredClient(row.name(), existing, row.keyVersion());
+                if (existing == null) {
+                    out.add(new Outcome(clientId, Action.CREATE, List.of()));
+                } else {
+                    var changes = FIELDS.stream()
+                            .filter(f -> f.differs(wanted, existing))
+                            .map(Field::name)
+                            .toList();
+                    if (changes.isEmpty()) {
+                        out.add(new Outcome(clientId, Action.UNCHANGED, List.of()));
+                        continue;
+                    }
+                    out.add(new Outcome(clientId, Action.UPDATE, changes));
+                }
+                repository.save(wanted);
+            }
+            return List.copyOf(out);
+        }));
+        outcomes.stream().filter(o -> o.action() != Action.UNCHANGED).forEach(o -> log.info("Console partner {}", o));
+        return outcomes;
     }
 }

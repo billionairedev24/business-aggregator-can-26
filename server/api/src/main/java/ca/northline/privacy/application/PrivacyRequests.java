@@ -39,6 +39,7 @@ public final class PrivacyRequests {
             @Nullable Verification verification,
             @Nullable Instant verifiedAt,
             @Nullable String codeSentTo,
+            @Nullable String codeChannel,
             @Nullable Instant scheduledFor,
             @Nullable Instant startedAt,
             @Nullable Instant completedAt,
@@ -142,6 +143,12 @@ public final class PrivacyRequests {
 
         /** The fields people can ask to have corrected (they can't change them themselves). */
         Set<String> correctable();
+
+        /**
+         * S-159: what deleting the account would affect now (open orders, upcoming bookings, money held, points, Northline
+         * Plus, businesses only this person owns), for Account › Delete account. Reads only.
+         */
+        List<ca.northline.shared.privacy.PersonalDataContributor.Consequence> consequences(String userId);
 
         record Open(
                 String userId,

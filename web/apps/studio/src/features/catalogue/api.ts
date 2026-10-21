@@ -118,6 +118,8 @@ export const Connection = z.object({
   accountLabel: z.string().nullish(), connectedAt: z.string().nullish(), lastSyncAt: z.string().nullish(), lastSyncCount: z.number().nullish(),
   createdCount: z.number().optional(), hiddenCount: z.number().optional(), syncStatus: z.enum(['importing', 'ok', 'failed']).nullish(),
   updates: z.enum(['webhooks', 'hourly']).optional(), errors: z.array(z.object({ externalId: z.string(), title: z.string(), error: z.string() })).optional(),
+  // S-158: the platform location Northline sells from
+  locationId: z.string().nullish(), locationName: z.string().nullish(),
 });
 export const ConnectStart = z.object({ authorizationUrl: z.string() });
 export type Connection = z.infer<typeof Connection>;
@@ -275,3 +277,11 @@ export function useIntegrationAction(m: string) {
     },
   });
 }
+
+/** S-156: the reviewer's latest decision on a listing (reasons and note); 204 → null. */
+export const ListingReview = z.object({ decision: z.string(), reasons: z.array(z.string()), note: z.string().nullish(), decidedAt: z.string() });
+export type ListingReview = z.infer<typeof ListingReview>;
+export const listingReviewQuery = (m: string, listingId: string) => queryOptions({
+  queryKey: ['merchant', m, 'listing', listingId, 'review'] as const,
+  queryFn: async () => (await http(`/api/v1/merchants/${m}/listings/${encodeURIComponent(listingId)}/review`, {}, ListingReview.nullish())) ?? null,
+});

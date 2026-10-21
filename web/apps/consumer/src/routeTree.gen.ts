@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountDeletionRouteImport } from './routes/account-deletion'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as CreditsRouteImport } from './routes/credits'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
@@ -22,6 +23,7 @@ import { Route as SellRouteImport } from './routes/sell'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AccountIndexRouteImport } from './routes/account/index'
+import { Route as AccountDeleteRouteImport } from './routes/account/delete'
 import { Route as AccountMessagesRouteImport } from './routes/account/messages'
 import { Route as AccountOrdersRouteImport } from './routes/account/orders'
 import { Route as BookingsBookingIdRouteImport } from './routes/bookings/$bookingId'
@@ -36,6 +38,7 @@ import { Route as QuotesQuoteIdRouteImport } from './routes/quotes/$quoteId'
 import { Route as ServicesIndexRouteImport } from './routes/services/index'
 import { Route as ShopIndexRouteImport } from './routes/shop/index'
 import { Route as ShopDepartmentRouteImport } from './routes/shop/$department'
+import { Route as FoodGroupCodeRouteImport } from './routes/food/group.$code'
 import { Route as FoodOrdersOrderIdRouteImport } from './routes/food/orders/$orderId'
 import { Route as ProvidersSlugIndexRouteImport } from './routes/providers/$slug/index'
 import { Route as ProvidersSlugBookRouteImport } from './routes/providers/$slug/book'
@@ -48,6 +51,11 @@ import { Route as AccountProblemKindIdRouteImport } from './routes/account/probl
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountDeletionRoute = AccountDeletionRouteImport.update({
+  id: '/account-deletion',
+  path: '/account-deletion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CartRoute = CartRouteImport.update({
@@ -108,6 +116,11 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
 const AccountIndexRoute = AccountIndexRouteImport.update({
   id: '/account/',
   path: '/account/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountDeleteRoute = AccountDeleteRouteImport.update({
+  id: '/account/delete',
+  path: '/account/delete',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountMessagesRoute = AccountMessagesRouteImport.update({
@@ -180,6 +193,11 @@ const ShopDepartmentRoute = ShopDepartmentRouteImport.update({
   path: '/shop/$department',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FoodGroupCodeRoute = FoodGroupCodeRouteImport.update({
+  id: '/food/group/$code',
+  path: '/food/group/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FoodOrdersOrderIdRoute = FoodOrdersOrderIdRouteImport.update({
   id: '/food/orders/$orderId',
   path: '/food/orders/$orderId',
@@ -224,6 +242,7 @@ const AccountProblemKindIdRoute = AccountProblemKindIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account-deletion': typeof AccountDeletionRoute
   '/cart': typeof CartRoute
   '/credits': typeof CreditsRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -235,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/sell': typeof SellRoute
   '/sign-in': typeof SignInRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/account/delete': typeof AccountDeleteRoute
   '/account/messages': typeof AccountMessagesRoute
   '/account/orders': typeof AccountOrdersRoute
   '/bookings/$bookingId': typeof BookingsBookingIdRoute
@@ -250,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/food/': typeof FoodIndexRoute
   '/services/': typeof ServicesIndexRoute
   '/shop/': typeof ShopIndexRoute
+  '/food/group/$code': typeof FoodGroupCodeRoute
   '/food/orders/$orderId': typeof FoodOrdersOrderIdRoute
   '/providers/$slug/book': typeof ProvidersSlugBookRoute
   '/quotes/requests/$requestId': typeof QuotesRequestsRequestIdRoute
@@ -261,6 +282,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account-deletion': typeof AccountDeletionRoute
   '/cart': typeof CartRoute
   '/credits': typeof CreditsRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -272,6 +294,7 @@ export interface FileRoutesByTo {
   '/sell': typeof SellRoute
   '/sign-in': typeof SignInRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/account/delete': typeof AccountDeleteRoute
   '/account/messages': typeof AccountMessagesRoute
   '/account/orders': typeof AccountOrdersRoute
   '/bookings/$bookingId': typeof BookingsBookingIdRoute
@@ -287,6 +310,7 @@ export interface FileRoutesByTo {
   '/food': typeof FoodIndexRoute
   '/services': typeof ServicesIndexRoute
   '/shop': typeof ShopIndexRoute
+  '/food/group/$code': typeof FoodGroupCodeRoute
   '/food/orders/$orderId': typeof FoodOrdersOrderIdRoute
   '/providers/$slug/book': typeof ProvidersSlugBookRoute
   '/quotes/requests/$requestId': typeof QuotesRequestsRequestIdRoute
@@ -299,6 +323,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account-deletion': typeof AccountDeletionRoute
   '/cart': typeof CartRoute
   '/credits': typeof CreditsRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -310,6 +335,7 @@ export interface FileRoutesById {
   '/sell': typeof SellRoute
   '/sign-in': typeof SignInRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/account/delete': typeof AccountDeleteRoute
   '/account/messages': typeof AccountMessagesRoute
   '/account/orders': typeof AccountOrdersRoute
   '/bookings/$bookingId': typeof BookingsBookingIdRoute
@@ -325,6 +351,7 @@ export interface FileRoutesById {
   '/food/': typeof FoodIndexRoute
   '/services/': typeof ServicesIndexRoute
   '/shop/': typeof ShopIndexRoute
+  '/food/group/$code': typeof FoodGroupCodeRoute
   '/food/orders/$orderId': typeof FoodOrdersOrderIdRoute
   '/providers/$slug/book': typeof ProvidersSlugBookRoute
   '/quotes/requests/$requestId': typeof QuotesRequestsRequestIdRoute
@@ -338,6 +365,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account-deletion'
     | '/cart'
     | '/credits'
     | '/forgot-password'
@@ -349,6 +377,7 @@ export interface FileRouteTypes {
     | '/sell'
     | '/sign-in'
     | '/verify-email'
+    | '/account/delete'
     | '/account/messages'
     | '/account/orders'
     | '/bookings/$bookingId'
@@ -364,6 +393,7 @@ export interface FileRouteTypes {
     | '/food/'
     | '/services/'
     | '/shop/'
+    | '/food/group/$code'
     | '/food/orders/$orderId'
     | '/providers/$slug/book'
     | '/quotes/requests/$requestId'
@@ -375,6 +405,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account-deletion'
     | '/cart'
     | '/credits'
     | '/forgot-password'
@@ -386,6 +417,7 @@ export interface FileRouteTypes {
     | '/sell'
     | '/sign-in'
     | '/verify-email'
+    | '/account/delete'
     | '/account/messages'
     | '/account/orders'
     | '/bookings/$bookingId'
@@ -401,6 +433,7 @@ export interface FileRouteTypes {
     | '/food'
     | '/services'
     | '/shop'
+    | '/food/group/$code'
     | '/food/orders/$orderId'
     | '/providers/$slug/book'
     | '/quotes/requests/$requestId'
@@ -412,6 +445,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/account-deletion'
     | '/cart'
     | '/credits'
     | '/forgot-password'
@@ -423,6 +457,7 @@ export interface FileRouteTypes {
     | '/sell'
     | '/sign-in'
     | '/verify-email'
+    | '/account/delete'
     | '/account/messages'
     | '/account/orders'
     | '/bookings/$bookingId'
@@ -438,6 +473,7 @@ export interface FileRouteTypes {
     | '/food/'
     | '/services/'
     | '/shop/'
+    | '/food/group/$code'
     | '/food/orders/$orderId'
     | '/providers/$slug/book'
     | '/quotes/requests/$requestId'
@@ -450,6 +486,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountDeletionRoute: typeof AccountDeletionRoute
   CartRoute: typeof CartRoute
   CreditsRoute: typeof CreditsRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
@@ -461,6 +498,7 @@ export interface RootRouteChildren {
   SellRoute: typeof SellRoute
   SignInRoute: typeof SignInRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  AccountDeleteRoute: typeof AccountDeleteRoute
   AccountMessagesRoute: typeof AccountMessagesRoute
   AccountOrdersRoute: typeof AccountOrdersRoute
   BookingsBookingIdRoute: typeof BookingsBookingIdRoute
@@ -476,6 +514,7 @@ export interface RootRouteChildren {
   FoodIndexRoute: typeof FoodIndexRoute
   ServicesIndexRoute: typeof ServicesIndexRoute
   ShopIndexRoute: typeof ShopIndexRoute
+  FoodGroupCodeRoute: typeof FoodGroupCodeRoute
   FoodOrdersOrderIdRoute: typeof FoodOrdersOrderIdRoute
   ProvidersSlugBookRoute: typeof ProvidersSlugBookRoute
   QuotesRequestsRequestIdRoute: typeof QuotesRequestsRequestIdRoute
@@ -493,6 +532,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account-deletion': {
+      id: '/account-deletion'
+      path: '/account-deletion'
+      fullPath: '/account-deletion'
+      preLoaderRoute: typeof AccountDeletionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cart': {
@@ -577,6 +623,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account/'
       preLoaderRoute: typeof AccountIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/delete': {
+      id: '/account/delete'
+      path: '/account/delete'
+      fullPath: '/account/delete'
+      preLoaderRoute: typeof AccountDeleteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/messages': {
@@ -677,6 +730,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopDepartmentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/food/group/$code': {
+      id: '/food/group/$code'
+      path: '/food/group/$code'
+      fullPath: '/food/group/$code'
+      preLoaderRoute: typeof FoodGroupCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/food/orders/$orderId': {
       id: '/food/orders/$orderId'
       path: '/food/orders/$orderId'
@@ -738,6 +798,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountDeletionRoute: AccountDeletionRoute,
   CartRoute: CartRoute,
   CreditsRoute: CreditsRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
@@ -749,6 +810,7 @@ const rootRouteChildren: RootRouteChildren = {
   SellRoute: SellRoute,
   SignInRoute: SignInRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  AccountDeleteRoute: AccountDeleteRoute,
   AccountMessagesRoute: AccountMessagesRoute,
   AccountOrdersRoute: AccountOrdersRoute,
   BookingsBookingIdRoute: BookingsBookingIdRoute,
@@ -764,6 +826,7 @@ const rootRouteChildren: RootRouteChildren = {
   FoodIndexRoute: FoodIndexRoute,
   ServicesIndexRoute: ServicesIndexRoute,
   ShopIndexRoute: ShopIndexRoute,
+  FoodGroupCodeRoute: FoodGroupCodeRoute,
   FoodOrdersOrderIdRoute: FoodOrdersOrderIdRoute,
   ProvidersSlugBookRoute: ProvidersSlugBookRoute,
   QuotesRequestsRequestIdRoute: QuotesRequestsRequestIdRoute,

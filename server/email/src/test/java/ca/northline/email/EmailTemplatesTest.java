@@ -36,7 +36,11 @@ class EmailTemplatesTest {
         // customer's update, which links to the consumer site (S-102: a deep link the app opens when installed)
         var link = switch (content) {
             case EmailContent.IdentityVerificationLink _ -> "https://verify.stripe.com/";
-            case EmailContent.CustomerUpdate _, EmailContent.MarketingOffer _ -> "http://localhost:3000/";
+            case EmailContent.CustomerUpdate _,
+                    EmailContent.MarketingOffer _,
+                    EmailContent.PlusPayment _,
+                    EmailContent.PrivacyCode _,
+                    EmailContent.AccountDeletion _ -> "http://localhost:3000/";
             default -> "http://localhost:3100/";
         };
 
@@ -83,6 +87,40 @@ class EmailTemplatesTest {
         assertThat(fr.text())
                 .contains("Frais de versement instantané: −8,23\u00a0$", "vendredi 2 octobre 2026 à 09 h 30");
         assertThat(fr.html()).contains("Se désabonner", "Envoyé par Northline Marketplace Inc.");
+    }
+
+    @Test
+    void payoutFailed_saysWhyAndWhatToDo_inBothLanguages() {
+        var link = URI.create("http://localhost:3100/b/M1/payouts");
+        var closed = new EmailContent.PayoutFailed("Prairie Wrench", 81_437, "failed", "account_closed", link);
+        var en = TEMPLATES.render(closed, Locale.CANADA, UNSUBSCRIBE);
+        var fr = TEMPLATES.render(closed, Locale.CANADA_FRENCH, UNSUBSCRIBE);
+        assertThat(en.text())
+                .contains(
+                        "Why: the bank account is closed.",
+                        "Update your bank details in Payouts › Bank account.",
+                        "Stripe’s code, for support: account_closed");
+        assertThat(fr.text())
+                .contains("Motif : le compte bancaire est fermé.", "Mettez à jour vos coordonnées bancaires");
+        assertThat(en.html()).contains("Update bank details");
+        // every code Stripe documents has words in both languages; an unknown one gets the general reason
+        for (var code : EmailContent.PayoutFailed.REASONS) {
+            for (var locale : new Locale[] {Locale.CANADA, Locale.CANADA_FRENCH}) {
+                var email = TEMPLATES.render(
+                        new EmailContent.PayoutFailed("Prairie Wrench", 100, "failed", code, link),
+                        locale,
+                        UNSUBSCRIBE);
+                assertThat(email.text()).doesNotContain("??").containsAnyOf("Why: ", "Motif : ");
+            }
+        }
+        var unknown = new EmailContent.PayoutFailed("Prairie Wrench", 100, "failed", "something_new", link);
+        assertThat(unknown.why()).isEqualTo("other");
+        assertThat(TEMPLATES.render(unknown, Locale.CANADA, UNSUBSCRIBE).text())
+                .contains("Why: the bank returned it without saying more.", "something_new");
+        var canceled = new EmailContent.PayoutFailed("Prairie Wrench", 100, "canceled", null, link);
+        assertThat(TEMPLATES.render(canceled, Locale.CANADA, UNSUBSCRIBE).text())
+                .contains("Why: it was canceled before it left.")
+                .doesNotContain("Stripe’s code");
     }
 
     @Test

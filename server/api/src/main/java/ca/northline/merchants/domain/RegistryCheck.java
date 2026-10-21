@@ -34,7 +34,9 @@ public class RegistryCheck {
     public enum ReviewState implements CodedEnum {
         OPEN,
         APPROVED,
-        REJECTED
+        REJECTED,
+        /** S-158: an agent ran the lookup again; the new lookup is the evidence now. */
+        SUPERSEDED
     }
 
     /** What a source answered, before it is compared with what the owner entered. */
@@ -166,5 +168,15 @@ public class RegistryCheck {
         reviewedBy = agentId;
         reviewedAt = at;
         reviewNote = note == null || note.isBlank() ? null : note.strip();
+    }
+
+    /** S-158: the agent re-ran the lookup; this open review is replaced by the new lookup's outcome. */
+    public void supersede(String agentId, Instant at) {
+        if (reviewState != ReviewState.OPEN) {
+            throw new Conflict("review_closed", "This review was already decided.");
+        }
+        reviewState = ReviewState.SUPERSEDED;
+        reviewedBy = agentId;
+        reviewedAt = at;
     }
 }

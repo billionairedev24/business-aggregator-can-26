@@ -9,8 +9,10 @@ import { http } from '@northline/client';
  *   POST   /api/v1/me/referral/claim       {code} — a new neighbour uses a code (422 with the reason)
  *   GET    /api/v1/me/plus                 the household's membership, prices and benefits
  *   POST   /api/v1/me/plus                 {plan} (Idempotency-Key) → clientSecret when 3-D Secure is needed
- *   PATCH  /api/v1/me/plus                 {plan} (Idempotency-Key)
+ *   PATCH  /api/v1/me/plus                 {plan} (Idempotency-Key) — S-162: from the next renewal (nextPlan)
  *   DELETE /api/v1/me/plus · POST /api/v1/me/plus/resume
+ *   PUT    /api/v1/me/plus/card            {paymentMethodId|null} — S-162: the saved card Plus renews on
+ *   POST   /api/v1/me/plus/confirm         S-162: after Stripe.js confirmed the waiting payment with the bank
  *   GET    /api/v1/public/rewards?city=&lat=&lng=   provider-funded rewards near the place
  *   GET    /api/v1/public/plus-prices?offers=       shops' Plus member prices (% off) of the offers on screen
  */
@@ -56,6 +58,16 @@ export const Plus = z.object({
   since: z.string().nullish(), currentPeriodEnd: z.string().nullish(), cancelAtPeriodEnd: z.boolean(), payer: z.boolean(),
   members: z.number().int(), monthlyPriceCents: z.number().int(), annualPriceCents: z.number().int(), trialDays: z.number().int(),
   trialAvailable: z.boolean(), benefits: Benefits, clientSecret: z.string().nullish(), publishableKey: z.string().nullish(),
+  // S-162: Northline bills Plus itself — what the payer sees of it
+  nextPlan: z.enum(['monthly', 'annual']).nullish(), nextChargeAt: z.string().nullish(), nextChargeCents: z.number().int().catch(0),
+  card: z.object({ id: z.string(), brand: z.string(), last4: z.string(), chosen: z.boolean() }).nullish(),
+  payment: z.object({
+    periodId: z.string(), reason: z.string(), totalCents: z.number().int(), retryAt: z.string().nullish(), lapsesAt: z.string(),
+  }).nullish(),
+  history: z.array(z.object({
+    id: z.string(), startsAt: z.string(), endsAt: z.string(), plan: z.enum(['monthly', 'annual']), state: z.string(),
+    amountCents: z.number().int(), taxCents: z.number().int(), paidAt: z.string().nullish(),
+  })).catch([]),
 });
 export type Plus = z.infer<typeof Plus>;
 export const plusQuery = queryOptions({ queryKey: ['me', 'plus'], queryFn: () => http('/api/v1/me/plus', {}, Plus) });
@@ -81,6 +93,9 @@ export const useChangePlus = () => usePlusMutation((plan: 'monthly' | 'annual') 
   http('/api/v1/me/plus', { method: 'PATCH', body: { plan }, idempotencyKey: newKey() }, Plus));
 export const useCancelPlus = () => usePlusMutation((_: void) => http('/api/v1/me/plus', { method: 'DELETE' }, Plus));
 export const useResumePlus = () => usePlusMutation((_: void) => http('/api/v1/me/plus/resume', { method: 'POST' }, Plus));
+export const usePlusCard = () => usePlusMutation((paymentMethodId: string | null) =>
+  http('/api/v1/me/plus/card', { method: 'PUT', body: { paymentMethodId } }, Plus));
+export const useConfirmPlus = () => usePlusMutation((_: void) => http('/api/v1/me/plus/confirm', { method: 'POST' }, Plus));
 
 export const NearbyReward = z.object({
   merchantId: z.string(), businessName: z.string(), type: z.string(), slug: z.string().nullish(), multiplier: z.number().int(),

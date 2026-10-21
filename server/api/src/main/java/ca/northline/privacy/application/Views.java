@@ -14,6 +14,7 @@ import ca.northline.region.api.PrivacyRegimes;
 import java.time.Clock;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -46,9 +47,14 @@ class Views {
         var now = clock.instant();
         var content = detail ? secrets.open(r.id(), r.sealed()) : null;
         var phone = content == null ? null : content.phone();
-        var codeSentTo = r.state() == RequestState.AWAITING_VERIFICATION && r.codeHash() != null && phone != null
-                ? PrivacyRules.maskedPhone(phone)
-                : null;
+        var email = content == null ? null : content.email();
+        var awaitingCode = r.state() == RequestState.AWAITING_VERIFICATION && r.codeHash() != null;
+        // S-159: the code went by email (no verified mobile) or by SMS
+        var codeSentTo = !awaitingCode
+                ? null
+                : "email".equals(r.codeChannel())
+                        ? (email == null ? null : PrivacyRules.maskedEmail(email))
+                        : (phone == null ? null : PrivacyRules.maskedPhone(phone));
         var export = r.type() != RequestType.ACCESS || r.state() != RequestState.COMPLETED
                 ? null
                 : new ExportView(
@@ -80,6 +86,7 @@ class Views {
                 r.verification(),
                 r.verifiedAt(),
                 codeSentTo,
+                codeSentTo == null ? null : Objects.requireNonNullElse(r.codeChannel(), "sms"),
                 r.scheduledFor(),
                 r.startedAt(),
                 r.completedAt(),

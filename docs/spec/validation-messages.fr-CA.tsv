@@ -828,6 +828,9 @@ No escrow with id %s	Aucun séquestre avec l’identifiant %s	new
 No evidence with id %s	Aucune preuve avec l’identifiant %s	new
 No file with id %s	Aucun fichier avec l’identifiant %s	new
 No flag with id %s	Aucun signalement avec l’identifiant %s	new
+No group order item with id %s	Aucun plat de la commande de groupe avec l’identifiant %s	new
+No group order share with id %s	Aucune part de la commande de groupe avec l’identifiant %s	new
+No group order with id %s	Aucune commande de groupe avec l’identifiant %s	new
 No holiday hours with id %s	Aucun horaire de jour férié avec l’identifiant %s	new
 No identity review with id %s	Aucun examen d’identité avec l’identifiant %s	new
 No identity session with id %s	Aucune session de vérification d’identité avec l’identifiant %s	new
@@ -1096,7 +1099,6 @@ Enter a limit of 1 or more.	Entrez une limite de 1 ou plus.	new
 Choose who funds the code.	Choisissez qui finance le code.	new
 Choose the business that funds this code.	Choisissez l’entreprise qui finance ce code.	new
 Choose at least one of shop, food or services.	Choisissez au moins un parmi boutique, restauration ou services.	new
-Choose on or off.	Choisissez activé ou désactivé.	new
 Your points were used elsewhere. Start the checkout again.	Vos points ont été utilisés ailleurs. Recommencez le paiement.	new
 Tips start at $1.00.	Les pourboires commencent à 1,00 $.	new
 You can tip once the courier has delivered.	Vous pourrez donner un pourboire une fois la livraison faite.	new
@@ -1211,3 +1213,114 @@ Choose a province or market of the region model.	Choisissez une province ou un m
 The default rule can be changed, not removed.	La règle par défaut peut être modifiée, pas supprimée.	new
 Choose a member price between 1% and 50% off, or none.	Choisissez un prix membre de 1 % à 50 % de rabais, ou aucun.	new
 Add a card in Payment methods first: Plus renews on it.	Ajoutez d’abord une carte dans Modes de paiement : Plus se renouvelle avec elle.	new
+Choose one of the store's locations.	Choisissez l’un des emplacements de la boutique.	new
+This change already reached the platform; it can only be dismissed.	Ce changement a déjà atteint la plateforme; vous pouvez seulement l’ignorer.	new
+This change is no longer waiting for you.	Ce changement ne vous attend plus.	new
+Reconnect the store first.	Reconnectez d’abord la boutique.	new
+There is no number to look up for this check.	Il n’y a aucun numéro à rechercher pour cette vérification.	new
+Use 1 to 50 lower-case letters, digits or dashes, starting with a letter or a digit.	Utilisez de 1 à 50 lettres minuscules, chiffres ou tirets, en commençant par une lettre ou un chiffre.	new
+Enter the partner's name, 1 to 80 characters.	Entrez le nom du partenaire, de 1 à 80 caractères.	new
+Enter the HTTPS address of the partner's JWK Set.	Entrez l’adresse HTTPS du JWK Set du partenaire.	new
+Choose api.read, api.write or both.	Choisissez api.read, api.write ou les deux.	new
+Choose at least one business.	Choisissez au moins une entreprise.	new
+Choose a token lifetime between 1 and 60 minutes.	Choisissez une durée de jeton de 1 à 60 minutes.	new
+Choose approve, decline or revoke.	Choisissez d’approuver, de refuser ou de révoquer.	new
+A partner with this name already exists.	Un partenaire porte déjà ce nom.	new
+This partner hasn't asked to access your business.	Ce partenaire n’a pas demandé l’accès à votre entreprise.	new
+You already answered this request.	Vous avez déjà répondu à cette demande.	new
+Only approved access can be revoked.	Seul un accès approuvé peut être révoqué.	new
+No business with this id.	Aucune entreprise avec cet identifiant.	new
+Choose off, warn or require.	Choisissez désactivé, avertir ou exiger.	new
+Only a listing, a review or a message can be hidden.	Seuls une annonce, un avis ou un message peuvent être masqués.	new
+No stock change with id %s	Aucun changement de stock avec l’identifiant %s	new
+No partner with id %s	Aucun partenaire avec l’identifiant %s	new
+No partner business with id %s	Aucune entreprise partenaire avec l’identifiant %s	new
+No region with id %s	Aucune région avec l’identifiant %s	new
+No flagged item with id %s	Aucun élément signalé avec l’identifiant %s	new
+Pick an evidence field from the list.	Choisissez un champ de preuve dans la liste.	new
+Keep each answer under 5,000 characters.	Gardez chaque réponse sous 5 000 caractères.	new
+Pick a file from this case's evidence.	Choisissez un fichier parmi les preuves de ce dossier.	new
+Add evidence before submitting it.	Ajoutez des preuves avant de les soumettre.	new
+This case isn't a card dispute.	Ce dossier n’est pas une contestation de carte.	new
+This card dispute is closed.	Cette contestation de carte est fermée.	new
+The evidence was already submitted to Stripe.	Les preuves ont déjà été soumises à Stripe.	new
+The issuer's deadline for evidence has passed.	Le délai de l’émetteur pour les preuves est passé.	new
+Stripe didn't accept the evidence. The error is on the case; fix it and submit again.	Stripe n’a pas accepté les preuves. L’erreur figure au dossier; corrigez-la et soumettez de nouveau.	new
+This decision didn't cost the seller anything.	Cette décision n’a rien coûté au vendeur.	new
+The seller was already paid for this dispute.	Le vendeur a déjà été payé pour ce litige.	new
+Northline paused instant book for your business. Standing shows why and how to appeal.	Northline a suspendu la réservation instantanée de votre entreprise. Statut du compte indique pourquoi et comment faire appel.	new
+After missed appointments, providers confirm your bookings first — ask for a quote instead.	Après des rendez-vous manqués, les fournisseurs confirment d’abord vos réservations — demandez plutôt une soumission.	new
+You can report a no-show 15 minutes after the start time.	Vous pouvez signaler une absence 15 minutes après l’heure de début.	new
+Only an upcoming or ongoing job can be reported as a no-show.	Seul un travail à venir ou en cours peut être signalé comme une absence.	new
+This no-show is already with Northline.	Cette absence est déjà entre les mains de Northline.	new
+Choose what you're appealing.	Choisissez ce que vous contestez.	new
+Tell us why the decision should change.	Dites-nous pourquoi la décision devrait changer.	new
+Keep your appeal under 2,000 characters.	Gardez votre appel sous 2 000 caractères.	new
+You can attach up to 5 files.	Vous pouvez joindre jusqu’à 5 fichiers.	new
+Choose grant or deny.	Choisissez d’accueillir ou de rejeter l’appel.	new
+Give the business a reason.	Donnez une raison à l’entreprise.	new
+Keep the reason under 1,000 characters.	Gardez la raison sous 1 000 caractères.	new
+This was already appealed — each decision can be appealed once.	Un appel a déjà été déposé — chaque décision ne peut être contestée qu’une fois.	new
+This can't be appealed.	Cette décision ne peut pas faire l’objet d’un appel.	new
+The 14 days to appeal have passed.	Le délai de 14 jours pour faire appel est passé.	new
+This appeal was already decided.	Cet appel a déjà été tranché.	new
+Someone other than the person who made the decision must decide the appeal.	Une autre personne que celle qui a pris la décision doit trancher l’appel.	new
+Files can only be added while the appeal is waiting for Northline.	Des fichiers ne peuvent être ajoutés que pendant que l’appel attend Northline.	new
+This consequence was already lifted.	Cette mesure a déjà été levée.	new
+Give the plan a title.	Donnez un titre au plan.	new
+Keep the title under 120 characters.	Gardez le titre sous 120 caractères.	new
+Add at least one task.	Ajoutez au moins une tâche.	new
+At most 10 tasks.	Au plus 10 tâches.	new
+Keep each task under 200 characters.	Gardez chaque tâche sous 200 caractères.	new
+Pick a date after today.	Choisissez une date après aujourd’hui.	new
+This business already has a coaching plan.	Cette entreprise a déjà un plan d’accompagnement.	new
+This coaching plan is closed.	Ce plan d’accompagnement est fermé.	new
+Choose done or not done.	Choisissez fait ou pas fait.	new
+Choose completed or cancelled.	Choisissez terminé ou annulé.	new
+No appeal with id %s	Aucun appel avec l’identifiant %s	new
+No coaching plan with id %s	Aucun plan d’accompagnement avec l’identifiant %s	new
+No coaching task with id %s	Aucune tâche d’accompagnement avec l’identifiant %s	new
+No consequence with id %s	Aucune mesure avec l’identifiant %s	new
+Add your mobile number to get offers by text.	Ajoutez votre numéro de mobile pour recevoir les offres par texto.	new
+Choose a market Northline serves.	Choisissez un marché que Northline dessert.	new
+Choose email or text.	Choisissez courriel ou texto.	new
+Write the English title (up to 80 characters).	Écrivez le titre en anglais (80 caractères au plus).	new
+Write the French title (up to 80 characters).	Écrivez le titre en français (80 caractères au plus).	new
+Write the English message (up to 600 characters).	Écrivez le message en anglais (600 caractères au plus).	new
+Write the French message (up to 600 characters).	Écrivez le message en français (600 caractères au plus).	new
+Link to a page of the site, starting with /.	Faites un lien vers une page du site, qui commence par /.	new
+Nobody in this market has agreed to offers on this channel yet.	Personne dans ce marché n’a encore accepté les offres sur ce canal.	new
+Add an email address to your profile to get a test.	Ajoutez une adresse courriel à votre profil pour recevoir un essai.	new
+Add a mobile number to your profile to get a test.	Ajoutez un numéro de mobile à votre profil pour recevoir un essai.	new
+Add your home address in Addresses first: Plus is taxed where you live.	Ajoutez d’abord votre adresse dans Adresses : Plus est taxé là où vous habitez.	new
+Only a paid Plus period can be refunded.	Seule une période Plus payée peut être remboursée.	new
+There's no Plus payment waiting for you.	Aucun paiement Plus ne vous attend.	new
+This Plus payment is being charged already.	Ce paiement Plus est déjà en cours.	new
+Your bank declined the card. Try another card in Payment methods.	Votre banque a refusé la carte. Essayez une autre carte dans Modes de paiement.	new
+No plus_membership with id %s	Aucun abonnement Plus avec l’identifiant %s	new
+No plus_period with id %s	Aucune période Plus avec l’identifiant %s	new
+Choose who pays: you, or each person their own share.	Choisissez qui paie : vous, ou chaque personne sa part.	new
+Add something to the order before you lock it.	Ajoutez quelque chose à la commande avant de la verrouiller.	new
+To split the bill, add something for yourself first.	Pour partager l’addition, ajoutez d’abord quelque chose pour vous.	new
+You can add up to 30 dishes to a group order.	Vous pouvez ajouter jusqu’à 30 plats à une commande de groupe.	new
+Enter the code you were sent, like 7Q2M-K4XP.	Entrez le code qu’on vous a envoyé, par exemple 7Q2M-K4XP.	new
+The host has locked this order. Ask them to unlock it to make changes.	L’hôte a verrouillé cette commande. Demandez-lui de la déverrouiller pour la modifier.	new
+This group order is with the kitchen now.	Cette commande de groupe est maintenant en cuisine.	new
+This group order was cancelled or has expired.	Cette commande de groupe a été annulée ou a expiré.	new
+This group order is full (up to %d people).	Cette commande de groupe est complète (jusqu’à %d personnes).	new
+{kitchen} doesn't take group orders.	{kitchen} n’accepte pas les commandes de groupe.	new
+Lock the order first, so nobody changes it while it's paid.	Verrouillez d’abord la commande, pour que personne ne la modifie pendant le paiement.	new
+Everyone has to pay their share before the order goes to the kitchen.	Chacun doit payer sa part avant que la commande parte en cuisine.	new
+Someone has already paid, so the order can't be unlocked. Cancel it to start again.	Quelqu’un a déjà payé : la commande ne peut plus être déverrouillée. Annulez-la pour recommencer.	new
+The kitchen has this order now. Food orders can't be cancelled once they're with the kitchen.	La cuisine a maintenant cette commande. Une commande de repas ne peut plus être annulée une fois en cuisine.	new
+You're the host. Cancel the group order instead of leaving it.	Vous êtes l’hôte. Annulez la commande de groupe au lieu de la quitter.	new
+This share is already paid.	Cette part est déjà payée.	new
+Each person pays their own share of this group order.	Chaque personne paie sa part de cette commande de groupe.	new
+The host pays for this group order.	L’hôte paie cette commande de groupe.	new
+A dish's price changed after the shares were paid. Cancel this group order and start a new one.	Le prix d’un plat a changé après le paiement des parts. Annulez cette commande de groupe et recommencez.	new
+{title} is age-restricted. Order it on its own, not in a group order.	{title} est soumis à une restriction d’âge. Commandez-le seul, pas dans une commande de groupe.	new
+You can take out only your own dishes.	Vous ne pouvez retirer que vos propres plats.	new
+Only the host can do that.	Seul l’hôte peut faire ceci.	new
+Pay your own share. Only the host can pay for someone else.	Payez votre part. Seul l’hôte peut payer pour quelqu’un d’autre.	new
+Pay for the order first.	Payez d’abord la commande.	new
+Pay for the share first.	Payez d’abord votre part.	new

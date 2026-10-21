@@ -34,6 +34,7 @@ public interface IntegrationRepository {
      * @param id null until the first connect (rows from before S-35 only held the fake's label)
      * @param available whether the platform's app is configured (not stored)
      * @param lastSyncCount listings whose price or stock changed in the last full sync
+     * @param locationId S-158: the platform location Northline sells from (null: not chosen)
      */
     @With
     record Connection(
@@ -55,7 +56,9 @@ public interface IntegrationRepository {
             @Nullable SyncStatus syncStatus,
             Webhooks webhooks,
             @Nullable Instant lastPolledAt,
-            @Nullable String lastError) {
+            @Nullable String lastError,
+            @Nullable String locationId,
+            @Nullable String locationName) {
 
         public Connection {
             scopes = Set.copyOf(scopes);
@@ -81,6 +84,8 @@ public interface IntegrationRepository {
                     List.of(),
                     null,
                     Webhooks.NONE,
+                    null,
+                    null,
                     null,
                     null);
         }
@@ -134,6 +139,9 @@ public interface IntegrationRepository {
     void recordFailure(String id, String error, Instant at);
 
     void setWebhooks(String id, Webhooks state);
+
+    /** S-158: the location Northline sells from (null clears the choice). */
+    void setLocation(String id, @Nullable String locationId, @Nullable String locationName);
 
     /**
      * Connected, healthy integrations to read now: without webhooks when not read since {@code pollBefore}, with

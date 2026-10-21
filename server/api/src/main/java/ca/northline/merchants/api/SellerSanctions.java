@@ -21,6 +21,15 @@ public interface SellerSanctions {
     /** Suspends an active or paused business; false when it isn't. */
     boolean suspend(String merchantId, String reason);
 
+    /**
+     * S-156: staff reverse a consequence from the console's standing view, or an appeal against it was upheld — the
+     * business is reinstated by {@code actorId}; false when it isn't suspended.
+     */
+    boolean reinstate(String merchantId, String reason, String actorId, String role);
+
+    /** S-156: shown in search again by {@code actorId} whatever hid it; false when it isn't hidden. */
+    boolean showInSearch(String merchantId, String reason, String actorId, String role);
+
     /** Businesses hidden from search for {@code cause}. */
     List<String> hiddenFromSearch(String cause);
 }

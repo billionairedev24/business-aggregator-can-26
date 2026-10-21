@@ -51,7 +51,7 @@ function RequestCard({ request: r, composing, onCompose, onClose }: { request: Q
   const [customerView, setCustomerView] = useState(false);
   const canEdit = role !== 'bookkeeper';
   const sent = r.quote && r.quote.state !== 'draft' ? r.quote : null;
-  const who = [r.customerName, r.reliability != null ? t('reliability', { score: r.reliability.toFixed(1) }) : null, r.area].filter(Boolean).join(' · ');
+  const who = [r.customerName, r.reliability != null ? t('reliability', { score: r.reliability.toFixed(1) }) : null, r.customerNoShows ? t('customerNoShows', { n: r.customerNoShows }) : null, r.area].filter(Boolean).join(' · ');
   return (
     <article className="nl-appt-request" aria-label={r.title}>
       <div className="nl-appt-request-head"><strong>{r.title}</strong><span className="nl-muted nl-small">{who}</span></div>

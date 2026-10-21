@@ -71,4 +71,17 @@ class LoyaltyPersonalData implements PersonalDataContributor {
                         """).param("u", u).query(Boolean.class).single();
         return kept ? Erasure.done().retaining("loyalty.earnings", Retention.TAX_RECORDS) : Erasure.done();
     }
+
+    @Override
+    public List<Consequence> consequences(Subject subject) {
+        return jdbc.sql("""
+                        select current_period_end from loyalty.memberships
+                         where payer_id = :u and status in ('trialing', 'active', 'past_due')
+                         order by current_period_end desc nulls last limit 1
+                        """)
+                .param("u", subject.userId())
+                .query((rs, _) ->
+                        new Consequence("plus", 1, 0, ca.northline.shared.JdbcTimes.instant(rs, "current_period_end")))
+                .list();
+    }
 }

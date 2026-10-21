@@ -27,6 +27,7 @@ export const useSettingsT = defineMessages({
     birthday: 'Birthday (optional · birthday points)', birthdayPlaceholder: 'MM / DD',
     mobileHint: 'Your verified number signs you in. To change it, sign in with the new number’s code.',
     reliabilityTitle: 'Reliability score · {score}', reliabilityNone: 'Reliability score',
+    noShowTitle: 'Providers confirm your bookings first.', noShowBody: 'Since {date}, instant booking is off for you and providers see your confirmed no-shows before they accept. Ask for a quote; it lifts once fewer remain in the last 12 months.', noShowReason: 'Why: {reason}',
     reliabilityBody: 'Providers see this before accepting a job. Built from on-time sign-offs, no-shows and disputes over 12 months.',
     saveChanges: 'Save changes',
     deleteRequested: 'You asked to delete your account on {date}. See “Your data” below.',
@@ -93,7 +94,7 @@ export const useSettingsT = defineMessages({
     act_granted: 'Given', act_withdrawn: 'Withdrawn',
     src_web_signup: 'Sign-up (web)', src_app_signup: 'Sign-up (app)', src_web_settings: 'Account settings (web)', src_app_settings: 'Account settings (app)',
     src_checkout: 'Checkout', src_studio: 'Studio', src_import: 'Imported with your earlier consent', src_unsubscribe_link: 'Unsubscribe link',
-    src_list_unsubscribe: 'Your mailbox’s unsubscribe button', src_sms_keyword: 'STOP reply', src_console: '{brand} support, at your request', src_erasure: 'Account deleted',
+    src_list_unsubscribe: 'Your mailbox’s unsubscribe button', src_sms_keyword: 'Text reply (STOP or START)', src_console: '{brand} support, at your request', src_erasure: 'Account deleted',
 
     // Language & region
     langTitle: 'Language / Langue & region', appLanguage: 'App language',
@@ -150,6 +151,7 @@ export const useSettingsT = defineMessages({
     birthday: 'Anniversaire (facultatif · points d’anniversaire)', birthdayPlaceholder: 'MM / JJ',
     mobileHint: 'Votre numéro vérifié sert à vous connecter. Pour le changer, connectez-vous avec le code du nouveau numéro.',
     reliabilityTitle: 'Score de fiabilité · {score}', reliabilityNone: 'Score de fiabilité',
+    noShowTitle: 'Les fournisseurs confirment d’abord vos réservations.', noShowBody: 'Depuis le {date}, la réservation instantanée est désactivée pour vous et les fournisseurs voient vos absences confirmées avant d’accepter. Demandez une soumission; la mesure est levée quand il en reste moins au cours des 12 derniers mois.', noShowReason: 'Pourquoi : {reason}',
     reliabilityBody: 'Les prestataires le voient avant d’accepter un travail. Calculé sur 12 mois : approbations à temps, absences et litiges.',
     saveChanges: 'Enregistrer',
     deleteRequested: 'Vous avez demandé la suppression de votre compte le {date}. Voyez « Vos données » ci-dessous.',
@@ -213,7 +215,7 @@ export const useSettingsT = defineMessages({
     act_granted: 'Donné', act_withdrawn: 'Retiré',
     src_web_signup: 'Inscription (Web)', src_app_signup: 'Inscription (appli)', src_web_settings: 'Paramètres du compte (Web)', src_app_settings: 'Paramètres du compte (appli)',
     src_checkout: 'Paiement', src_studio: 'Studio', src_import: 'Importé avec votre consentement antérieur', src_unsubscribe_link: 'Lien de désabonnement',
-    src_list_unsubscribe: 'Bouton de désabonnement de votre messagerie', src_sms_keyword: 'Réponse ARRET', src_console: 'Soutien {brand}, à votre demande', src_erasure: 'Compte supprimé',
+    src_list_unsubscribe: 'Bouton de désabonnement de votre messagerie', src_sms_keyword: 'Réponse par texto (ARRET ou START)', src_console: 'Soutien {brand}, à votre demande', src_erasure: 'Compte supprimé',
 
     langTitle: 'Langue / Language et région', appLanguage: 'Langue de l’application',
     l_en: 'English', l_en_sub: 'Interface, receipts, notifications', l_fr: 'Français', l_fr_sub: 'Interface, reçus, notifications', l_fr_required: 'requis {places}',

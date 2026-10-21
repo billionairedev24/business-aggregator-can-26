@@ -12,7 +12,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *
  * @param provider {@code local} (SMTP to Mailpit; a missing Mailpit only logs) | {@code smtp} (any SMTP relay,
  *     including Amazon SES SMTP) | {@code ses} (Amazon SES API v2) | {@code sendgrid} (Twilio SendGrid v3 API) |
- *     {@code azure} (Azure Communication Services Email) ({@code EMAIL_PROVIDER})
+ *     {@code resend} (Resend's HTTPS API) | {@code azure} (Azure Communication Services Email) ({@code EMAIL_PROVIDER})
  * @param from sender, {@code Name <address>}; its domain must be verified at the provider ({@code EMAIL_FROM})
  * @param replyTo where replies go; empty = no Reply-To header ({@code EMAIL_REPLY_TO})
  * @param legalName CASL sender identification: the legal name of the entity that sends (S-108; commercial messages
@@ -26,10 +26,10 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param region AWS region for {@code ses}, e.g. {@code ca-central-1}; empty = the SDK default chain ({@code
  *     EMAIL_REGION})
  * @param endpoint API base override: the Azure Communication Services resource endpoint ({@code
- *     https://<resource>.communication.azure.com}, required for {@code azure}), a mock in tests, a VPC endpoint
- *     ({@code EMAIL_ENDPOINT})
- * @param apiKey SendGrid API key ({@code SG.…}) or the Azure Communication Services access key (empty = Entra ID
- *     workload identity) ({@code EMAIL_API_KEY})
+ *     https://<resource>.communication.azure.com}, required for {@code azure}), Resend's base URL (default {@code
+ *     https://api.resend.com}), a mock in tests, a VPC endpoint ({@code EMAIL_ENDPOINT})
+ * @param apiKey SendGrid API key ({@code SG.…}), Resend API key ({@code re_…}, sending access) or the Azure
+ *     Communication Services access key (empty = Entra ID workload identity) ({@code EMAIL_API_KEY})
  * @param configurationSet SES configuration set (event publishing, dedicated IPs); empty = none ({@code
  *     EMAIL_CONFIGURATION_SET})
  * @param smtp SMTP server when {@code provider = local | smtp}
@@ -58,6 +58,7 @@ public record EmailProperties(
         SMTP,
         SES,
         SENDGRID,
+        RESEND,
         AZURE
     }
 

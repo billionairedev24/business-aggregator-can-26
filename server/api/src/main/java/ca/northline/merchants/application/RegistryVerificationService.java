@@ -3,6 +3,7 @@ package ca.northline.merchants.application;
 import ca.northline.developer.api.AuditTrail;
 import ca.northline.merchants.application.RegistryReviews.DecideReview;
 import ca.northline.merchants.application.RegistryReviews.ListReviews;
+import ca.northline.merchants.application.RegistryReviews.RecheckReview;
 import ca.northline.merchants.application.RegistryReviews.ReviewView;
 import ca.northline.merchants.domain.CheckKind;
 import ca.northline.merchants.domain.MerchantApplication;
@@ -18,6 +19,7 @@ import ca.northline.merchants.domain.Verification;
 import ca.northline.merchants.domain.VerificationStatus;
 import ca.northline.region.api.MerchantPlaces;
 import ca.northline.region.api.Regions;
+import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import java.time.Clock;
@@ -45,7 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @Transactional
-class RegistryVerificationService implements ListReviews, DecideReview, RecheckRegistries {
+class RegistryVerificationService implements ListReviews, DecideReview, RecheckRegistries, RecheckReview {
 
     /** Reference of a {@code registry} row when nothing needs registering (a sole proprietor without a trade name). */
     static final String NOT_REQUIRED = "not_required";
@@ -130,6 +132,17 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
             List<RegistryQuery> queries,
             Trigger trigger,
             Instant now) {
+        run(application, row, queries, trigger, false, now);
+    }
+
+    /** {@code byAgent}: an agent re-ran it from the queue — unmatched goes to review as at onboarding, never lapses. */
+    private void run(
+            MerchantApplication application,
+            Verification row,
+            List<RegistryQuery> queries,
+            Trigger trigger,
+            boolean byAgent,
+            Instant now) {
         if (queries.isEmpty()) {
             row.confirmByRegistry(NOT_REQUIRED, null, now);
             store.markRechecked(row.getId(), now);
@@ -157,7 +170,7 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
                         application.getId(),
                         c.getOutcome().code(),
                         c.getReasons()));
-        if (trigger == Trigger.INITIAL) {
+        if (trigger == Trigger.INITIAL || byAgent) {
             row.follow(VerificationStatus.SUBMITTED, reference, now);
             return;
         }
@@ -215,14 +228,7 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
             if (application == null || row == null) {
                 continue;
             }
-            var queries = row.kind() == CheckKind.REGISTRY
-                    ? RegistryPlan.business(application, routes(application))
-                    : List.of(RegistryPlan.licence(
-                            application,
-                            routes(application),
-                            Objects.requireNonNullElse(
-                                    row.getRegistry(), row.kind().key()),
-                            Objects.requireNonNullElse(row.getReference(), "")));
+            var queries = queriesOf(application, row);
             if (queries.stream().anyMatch(q -> q.number().isBlank())) {
                 continue;
             }
@@ -232,7 +238,57 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
         return due.size();
     }
 
+    private List<RegistryQuery> queriesOf(MerchantApplication application, Verification row) {
+        return row.kind() == CheckKind.REGISTRY
+                ? RegistryPlan.business(application, routes(application))
+                : List.of(RegistryPlan.licence(
+                        application,
+                        routes(application),
+                        Objects.requireNonNullElse(row.getRegistry(), row.kind().key()),
+                        Objects.requireNonNullElse(row.getReference(), "")));
+    }
+
     // ── console: manual reviews ──────────────────────────────────────────────────────────────────────────────────
+
+    @Override
+    public Rechecked recheck(String checkId, String agentId, String role) {
+        var check = store.lock(checkId).orElseThrow(() -> new NotFound("registry review", checkId));
+        if (check.getReviewState() != RegistryCheck.ReviewState.OPEN) {
+            throw new Conflict("review_closed", "This review was already decided.");
+        }
+        var merchantId = check.getMerchantId();
+        var application = applications.findById(merchantId).orElseThrow(() -> new NotFound("application", merchantId));
+        var row = verifications
+                .find(merchantId, check.getVerificationId())
+                .orElseThrow(() -> new NotFound("verification", check.getVerificationId()));
+        var queries = queriesOf(application, row);
+        if (queries.stream().anyMatch(q -> q.number().isBlank())) {
+            throw new Conflict("nothing_to_look_up", RegistryReviews.NOTHING_TO_LOOK_UP);
+        }
+        var now = clock.instant();
+        var superseded = new java.util.ArrayList<String>();
+        for (var open : store.reviewsOf(merchantId)) {
+            if (open.getVerificationId().equals(row.getId())
+                    && open.getReviewState() == RegistryCheck.ReviewState.OPEN) {
+                var locked = store.lock(open.getId()).orElseThrow();
+                locked.supersede(agentId, now);
+                store.saveReview(locked);
+                superseded.add(locked.getId());
+            }
+        }
+        run(application, row, queries, Trigger.RECHECK, true, now);
+        verifications.save(row);
+        var fresh = store.latest(row.getId(), Math.max(1, queries.size())).stream()
+                .filter(c -> !superseded.contains(c.getId()))
+                .map(this::view)
+                .toList();
+        audit.record(AuditTrail.Entry.of(
+                        merchantId, agentId, role, "verification.registry_rechecked", "registry_check", check.getId())
+                .withChange(
+                        Map.of("review", "open"),
+                        Map.of("review", "superseded", "row", row.getStatus().code())));
+        return new Rechecked(row.getStatus().code(), fresh);
+    }
 
     @Override
     @Transactional(readOnly = true)

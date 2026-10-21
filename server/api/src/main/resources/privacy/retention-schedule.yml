@@ -259,6 +259,7 @@ retention:
     - { code: payments.idempotency_keys, period: PT24H, where: "api · Valkey key expiry (Postgres only under local/test)", setting: "—", name: { en: "Idempotency keys", fr: "Clés d'idempotence" } }
     - { code: fulfilment.live_positions, period: PT24H, where: "Valkey key expiry", setting: "—", name: { en: "Live courier positions", fr: "Positions des livreurs en direct" } }
     - { code: messaging.push_devices, period: P90D, where: "worker · PushPruneJob, daily", setting: PUSH_STALE_AFTER, name: { en: "Push installations not refreshed", fr: "Installations push non actualisées" } }
+    - { code: messaging.sms_webhooks, period: P90D, where: "api · SmsKeywordService, nightly (S-157)", setting: "—", name: { en: "SMS keyword and delivery-status log (no number or text)", fr: "Journal des mots-clés et des statuts de livraison des textos (sans numéro ni texte)" } }
     - { code: messaging.deferred_notifications, period: P30D, where: "worker · DeferredNotificationsJob, nightly (S-115)", setting: northline.notifications.deferred-dead-retention, name: { en: "Notifications given up on", fr: "Notifications abandonnées" } }
     - { code: events.processed_events, period: P60D, where: "worker · nightly", setting: EVENTS_PROCESSED_RETENTION, name: { en: "Event dedupe claims", fr: "Réclamations de déduplication d'événements" } }
     - { code: developer.webhook_deliveries, period: P30D, where: "worker · nightly", setting: WEBHOOKS_LOG_RETENTION, name: { en: "Partner webhook delivery log", fr: "Journal de livraison des webhooks partenaires" } }

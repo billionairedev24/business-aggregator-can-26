@@ -17,3 +17,4 @@ export * from './webauthn';
 export * from './security';
 export * from './account';
 export * from './securityForms';
+export * from './consent';

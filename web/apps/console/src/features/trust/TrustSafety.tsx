@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSearch } from '@tanstack/react-router';
-import { BoHeader, Button, ChartCard, DataTable, Dialog, ErrorState, Field, formatNumber, PageSkeleton, TextArea, TextInput, useLocale, type DataTableColumn } from '@northline/ui';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { BoHeader, Button, ChartCard, DataTable, Dialog, ErrorState, Field, formatNumber, PageSkeleton, TextArea, TextInput, UnderlineTabs, useLocale, type DataTableColumn } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { PlaceFilters, type PlaceFilter } from '../shell/PlaceFilters';
 import { SCREEN_PATH } from '../shell/screens';
 import { flagsQuery, impactOf, rulesQuery, useFlagAction, useFlagDecision, useSaveRule, type Flag, type Impact, type Rule } from './api';
 import { useTrustT, type TrustKey } from './messages';
+import { AiScreening, WeeklyScan } from './AiScreening';
+import { useAiT } from './aiMessages';
 import '../shell/queues.css';
 import './trust.css';
 
@@ -22,7 +24,8 @@ export function actionFor(f: Flag): string {
   if (f.targetType === 'review') return 'hide_review';
   if (f.rule === 'off_platform_payment') return 'warn';
   if (f.rule === 'floor_breach') return 'coach';
-  if (f.rule === 'no_show' && f.targetType === 'customer') return 'confirm';
+  // S-156: no-shows reported on a booking (the provider's: no_show; the customer's: customer_no_show) are confirmed
+  if (f.rule === 'no_show' || f.rule === 'customer_no_show') return 'confirm';
   if (f.rule === 'regulated_without_permit') return 'suspend_listings';
   return 'escalate';
 }
@@ -30,16 +33,44 @@ export function actionFor(f: Flag): string {
 /**
  * Trust & safety (S-93, design 03 `trust`): tier rules, automatic consequences and the rating floor as configuration
  * (role `decide` edits them), the keyword lists of the off-platform detector and listing vetting, and the open flags
- * with their action or Dismiss. Admin and trust & safety open it.
+ * with their action or Dismiss. Admin and trust & safety open it. S-158: the AI screening queue and the weekly scan as
+ * the screen's other views (`?view=ai|scan`).
  */
+export type TrustView = 'rules' | 'ai' | 'scan';
+
+/** The screen's views (S-158): rules & flags, the AI screening queue, the weekly anomaly scan. */
+function TrustTabs({ view, filter }: { view: TrustView; filter: PlaceFilter }) {
+  const t = useAiT();
+  const navigate = useNavigate();
+  return (
+    <UnderlineTabs aria-label={t('tabs')} value={view} options={[{ value: 'rules', label: t('tabRules') }, { value: 'ai', label: t('tabAi') }, { value: 'scan', label: t('tabScan') }]}
+      onChange={next => void navigate({ to: SCREEN_PATH.trust, search: { ...filter, ...(next === 'rules' ? {} : { view: next }) } as never })} />
+  );
+}
+
 export function TrustSafety() {
   const t = useTrustT();
-  const search = useSearch({ strict: false }) as PlaceFilter;
+  const search = useSearch({ strict: false }) as PlaceFilter & { view?: TrustView };
   const filter = { province: search.province, market: search.market };
+  const view = search.view ?? 'rules';
+  if (view !== 'rules') {
+    return (
+      <div className="bo-page">
+        <BoHeader title={t('title')} sub={t('lede')} />
+        <TrustTabs view={view} filter={filter} />
+        {view === 'ai' ? <AiScreening /> : <WeeklyScan />}
+      </div>
+    );
+  }
+  return <RulesAndFlags filter={filter} />;
+}
+
+function RulesAndFlags({ filter }: { filter: PlaceFilter }) {
+  const t = useTrustT();
   const rules = useQuery(rulesQuery);
   const flags = useQuery(flagsQuery(filter));
   const { can, roleName } = useGrant();
-  const head = <BoHeader title={t('title')} sub={t('lede')} actions={<PlaceFilters to={SCREEN_PATH.trust} filter={filter} />} />;
+  const head = <><BoHeader title={t('title')} sub={t('lede')} actions={<><Link className="btn btn-secondary" to="/trust/appeals">{t('appeals')}</Link><PlaceFilters to={SCREEN_PATH.trust} filter={filter} /></>} /><TrustTabs view="rules" filter={filter} /></>;
   if (rules.isPending || flags.isPending) return <div className="bo-page">{head}<PageSkeleton kpis={0} rows={6} /></div>;
   if (rules.isError || (flags.isError && !flags.data)) {
     return <div className="bo-page">{head}{flags.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => { void rules.refetch(); void flags.refetch(); }} />}</div>;

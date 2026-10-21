@@ -5,6 +5,7 @@ import static ca.northline.auth.domain.AuthMessages.BACKUP_CODE_REQUIRED;
 import static ca.northline.auth.domain.AuthMessages.BACKUP_CODE_WRONG;
 import static ca.northline.auth.domain.AuthMessages.CODE_FORMAT;
 import static ca.northline.auth.domain.AuthMessages.CODE_REQUIRED;
+import static ca.northline.auth.domain.AuthMessages.CONSENT_CHOOSE;
 import static ca.northline.auth.domain.AuthMessages.EMAIL_FORMAT;
 import static ca.northline.auth.domain.AuthMessages.EMAIL_REQUIRED;
 import static ca.northline.auth.domain.AuthMessages.FIRST_NAME_REQUIRED;
@@ -19,12 +20,14 @@ import static ca.northline.auth.domain.AuthMessages.TERMS_LANGUAGE;
 import static ca.northline.auth.domain.AuthMessages.TERMS_REQUIRED;
 
 import ca.northline.auth.domain.PhoneNumber;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
@@ -34,6 +37,32 @@ final class AuthRequests {
     static final String EMAIL = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$";
 
     private AuthRequests() {}
+
+    /**
+     * S-157: a ticked marketing checkbox on a sign-up form (CASL express consent): the category and the wording version
+     * the form showed ({@code GET /api/auth/accounts/consent-wordings}). Unticked boxes are simply not sent.
+     */
+    record MarketingConsent(
+            @NotBlank(message = CONSENT_CHOOSE)
+            @Pattern(regexp = "^(marketing_email|marketing_sms)$", message = CONSENT_CHOOSE)
+            @Nullable
+            String category,
+
+            @NotBlank(message = CONSENT_CHOOSE)
+            @Pattern(regexp = "^[a-z0-9_.-]{3,64}$", message = CONSENT_CHOOSE)
+            @Nullable
+            String wordingVersion) {}
+
+    static List<ca.northline.auth.application.SignupConsents.Requested> requested(
+            @Nullable List<MarketingConsent> marketing) {
+        return marketing == null
+                ? List.of()
+                : marketing.stream()
+                        .map(m -> new ca.northline.auth.application.SignupConsents.Requested(
+                                java.util.Objects.requireNonNull(m.category()),
+                                java.util.Objects.requireNonNull(m.wordingVersion())))
+                        .toList();
+    }
 
     /**
      * Create account, step 1. Strings are trimmed before validation ("required, trimmed"). S-116: {@code termsLanguage}
@@ -60,7 +89,13 @@ final class AuthRequests {
             @Pattern(regexp = "^(en|fr)$", message = TERMS_LANGUAGE) @Nullable
             String termsLanguage,
 
-            @Nullable Boolean termsEnglishRequested) {
+            @Nullable Boolean termsEnglishRequested,
+
+            @Size(max = 2, message = CONSENT_CHOOSE) @Nullable
+            List<@Valid MarketingConsent> marketing,
+
+            @Pattern(regexp = "^(web_signup|app_signup)$", message = CONSENT_CHOOSE) @Nullable
+            String consentSource) {
 
         Register {
             firstName = trim(firstName);
@@ -127,7 +162,10 @@ final class AuthRequests {
             @Nullable Boolean termsEnglishRequested,
 
             @Pattern(regexp = APPS, message = APP_UNKNOWN) @Nullable
-            String app) {
+            String app,
+
+            @Size(max = 2, message = CONSENT_CHOOSE) @Nullable
+            List<@Valid MarketingConsent> marketing) {
 
         CreateAccount {
             firstName = trim(firstName);

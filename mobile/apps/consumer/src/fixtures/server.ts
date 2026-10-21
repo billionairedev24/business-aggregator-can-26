@@ -3,6 +3,7 @@ import { aftercareFixtures, newAftercareState } from './aftercare';
 import { FIXTURE_TOTP, authFixtures, newAuthState, type AuthFixtureState } from './auth';
 import { lower, type FixtureArea, type FixtureContext, type FixtureRequest } from './context';
 import { geoFixtures } from './geo';
+import { groupFixtures, newGroupState } from './group';
 import { hireFixtures, newHireState } from './hire';
 import { newServicesState, servicesFixtures } from './services';
 import { newShopState, shopFixtures } from './shop';
@@ -35,6 +36,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
   const servicesState = newServicesState(now);
   const aftercare = newAftercareState();
   const hire = newHireState(now());
+  const group = newGroupState();
   const account = newAccountState({
     shop,
     services: servicesState,
@@ -51,6 +53,8 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     hireFixtures(ctx, hire, servicesState),
     // before the shop's and services' own areas: reviews, tips (shop's /me/orders/…) are this one's
     aftercareFixtures(ctx, aftercare, shop, servicesState),
+    // S-159: group food orders (and their kitchen's public menu)
+    groupFixtures(ctx, group, () => auth.session.signedIn ?? auth.accounts.at(-1) ?? null),
     shopFixtures(ctx, shop),
     servicesFixtures(ctx, servicesState),
   ];
@@ -86,6 +90,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     services: servicesState,
     aftercare,
     hire,
+    group,
     calls,
   };
 }

@@ -120,6 +120,14 @@ public final class DeferredNotifications {
                 .update();
     }
 
+    /** S-157: due later, attempts unchanged (quiet hours, not a failure). */
+    public void postpone(String id, Instant dueAt) {
+        jdbc.sql("update messaging.deferred_notifications set due_at = :due where id = :id")
+                .param("id", id)
+                .param("due", at(dueAt))
+                .update();
+    }
+
     public void retryAt(String id, Instant dueAt) {
         jdbc.sql("update messaging.deferred_notifications set attempts = attempts + 1, due_at = :due where id = :id")
                 .param("id", id)

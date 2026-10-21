@@ -56,8 +56,20 @@ export interface SearchQuery {
   /** Redesign: products and services together unless one kind is asked for. */
   kind?: 'product' | 'service';
   q: string; market?: string; lat?: number; lng?: number; sort: Sort;
-  tonight?: boolean; maxPrice?: number; tier?: 'master'; dietary?: string[];
+  tonight?: boolean; maxPrice?: number; tier?: 'master' | 'trusted'; dietary?: string[];
+  /** S-158: what the natural-language search can add (only after the person applies it). */
+  minPrice?: number; minRating?: number; openNow?: boolean; instantBook?: boolean; allergenFree?: string[]; radiusKm?: number;
 }
+
+/** S-158: S-132's reading of a typed sentence — the search API's own parameters, checked by the api. */
+export interface Interpretation {
+  q?: string | null; kind?: string[]; minPrice?: number | null; maxPrice?: number | null; minRating?: number | null; tier?: string[];
+  instantBook?: boolean | null; openNow?: boolean | null; delivery?: string | null; dietary?: string[]; allergenFree?: string[];
+  radiusKm?: number | null; sort?: string | null; explanation: string; aiAssisted?: boolean;
+}
+
+/** S-157: `GET /public/payments/options`. */
+export interface PaymentOptions { provider: 'stripe' | 'fake'; applePay: boolean; googlePay: boolean }
 
 // ── cart and checkout (S-51) ─────────────────────────────────────────────────────────────────────────────────────
 export interface CartLine {
@@ -156,7 +168,13 @@ export function searchPath(s: SearchQuery, after?: string): string {
     market: s.market,
     kind: s.kind,
     delivery: s.tonight ? 'tonight' : undefined,
+    minPrice: s.minPrice,
     maxPrice: s.maxPrice,
+    minRating: s.minRating,
+    openNow: s.openNow,
+    instantBook: s.instantBook,
+    allergenFree: s.allergenFree?.length ? s.allergenFree.join(',') : undefined,
+    radiusKm: s.lat !== undefined && s.lng !== undefined ? s.radiusKm : undefined,
     tier: s.tier,
     dietary: s.dietary?.length ? s.dietary.join(',') : undefined,
     lat: s.lat?.toFixed(5),
@@ -176,6 +194,10 @@ export const shopApi = (api: ApiClient) => ({
   product: (productId: string, market: string | undefined, l: Locale) =>
     api.get<ProductPage>(`/public/shop/products/${id(productId)}?${qs({ market, lang: lang(l) })}`, { auth: 'optional' }),
   search: (s: SearchQuery, after?: string) => api.get<SearchPage>(searchPath(s, after), { auth: 'optional' }),
+  /** S-158: whether AI help is on here, and the model's reading of a typed sentence (503 when AI is off). */
+  aiStatus: () => api.get<{ available: boolean; provider?: string }>('/ai/status', { auth: 'optional' }),
+  interpret: (text: string, hasLocation: boolean, l: Locale) =>
+    api.post<Interpretation>('/search/interpret', { auth: 'optional', json: { text: text.trim(), hasLocation, lang: lang(l) } }),
   me: () => api.get<Me>('/me'),
   upcoming: () => api.get<{ items: Upcoming[] }>('/me/upcoming'),
   accountSummary: () => api.get<AccountSummary>('/me/account-summary'),
@@ -195,6 +217,8 @@ export const shopApi = (api: ApiClient) => ({
     api.post<Started>(`/me/checkouts?${qs({ lang: lang(l) })}`, { json: body, idempotencyKey: key, headers: proof ? { 'X-Step-Up': proof } : undefined }),
   place: (checkoutId: string, key: string) => api.post<Placed>(`/me/checkouts/${id(checkoutId)}/place`, { idempotencyKey: key }),
   cards: () => api.get<Cards>('/me/payment-methods'),
+  /** S-157: the wallets checkouts may offer (public, the same for everyone). */
+  paymentOptions: () => api.get<PaymentOptions>('/public/payments/options', { auth: 'optional' }),
   ageStatus: () => api.get<AgeStatus>('/me/age-verification'),
   /** Opens the identity provider's session; the app opens `url` in the in-app browser, which returns to the app. */
   startAgeCheck: () => api.post<{ url: string; status: AgeStatus }>('/me/age-verification', { json: { returnTo: 'app' } }),

@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.PostExchange;
+import org.springframework.web.service.annotation.PutExchange;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -53,6 +54,11 @@ import tools.jackson.databind.JsonNode;
  *       form posts ({@code payload}, {@code type}, {@code domain_prefix}) signed in {@code X-Signature:
  *       signature=…, algorithm=HMAC-SHA256} over the raw body with the app's client secret; deduplicated on a hash of
  *       the body (X-Series sends no delivery id).
+ *   <li><b>Two-way stock (S-158):</b> {@code GET /api/2.0/outlets}; with an outlet chosen, reads count that outlet's
+ *       {@code inventory_level} only. X-Series has no relative adjustment, so a push reads the outlet's level
+ *       ({@code GET /api/2.0/products/{id}/inventory}) and writes level + delta with {@code PUT /api/2.1/products/{id}}
+ *       ({@code details.inventory[].current_amount}). Not idempotent: a retry after a lost answer can apply twice
+ *       (DECISIONS S-158). Field names unverified, like the rest of this adapter.
  * </ul>
  */
 @Slf4j
@@ -70,6 +76,10 @@ class LightspeedCatalogSource implements CommerceCatalogSource {
 
         @GetExchange(accept = MediaType.APPLICATION_JSON_VALUE)
         JsonNode get(URI url, @RequestHeader("Authorization") String authorization);
+
+        @PutExchange(contentType = MediaType.APPLICATION_JSON_VALUE, accept = MediaType.APPLICATION_JSON_VALUE)
+        JsonNode put(
+                URI url, @RequestHeader("Authorization") String authorization, @RequestBody Map<String, Object> body);
 
         @PostExchange(
                 contentType = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
@@ -184,6 +194,11 @@ class LightspeedCatalogSource implements CommerceCatalogSource {
     /** The whole catalogue in one page: a family's variants can sit on different API pages, so they are grouped here. */
     @Override
     public Page products(Credentials c, @Nullable String cursor) {
+        return products(c, cursor, null);
+    }
+
+    @Override
+    public Page products(Credentials c, @Nullable String cursor, @Nullable String locationId) {
         var rows = new ArrayList<JsonNode>();
         long after = 0;
         while (true) {
@@ -199,11 +214,16 @@ class LightspeedCatalogSource implements CommerceCatalogSource {
             }
             after = max;
         }
-        return new Page(families(rows, inventory(c)), null);
+        return new Page(families(rows, inventory(c, locationId)), null);
     }
 
     @Override
     public Optional<ExternalProduct> product(Credentials c, String externalId) {
+        return product(c, externalId, null);
+    }
+
+    @Override
+    public Optional<ExternalProduct> product(Credentials c, String externalId, @Nullable String locationId) {
         JsonNode row;
         try {
             row = get(c, "/api/2.0/products/" + CommerceHttp.encode(externalId), Map.of())
@@ -217,19 +237,21 @@ class LightspeedCatalogSource implements CommerceCatalogSource {
         if (row.path("has_variants").asBoolean(false) || text(row, "variant_parent_id") != null) {
             // a family: read everything and pick it (the 2.0 API has no "variants of" call)
             var family = Optional.ofNullable(text(row, "variant_parent_id")).orElse(externalId);
-            return products(c, null).items().stream()
+            return products(c, null, locationId).items().stream()
                     .filter(p -> p.id().equals(family))
                     .findFirst();
         }
         var levels = new HashMap<String, Integer>();
         for (var level : get(c, "/api/2.0/products/" + CommerceHttp.encode(externalId) + "/inventory", Map.of())
                 .path("data")) {
-            levels.merge(externalId, level.path("inventory_level").asInt(0), Integer::sum);
+            if (locationId == null || locationId.equals(text(level, "outlet_id"))) {
+                levels.merge(externalId, level.path("inventory_level").asInt(0), Integer::sum);
+            }
         }
         return families(List.of(row), levels).stream().findFirst();
     }
 
-    private Map<String, Integer> inventory(Credentials c) {
+    private Map<String, Integer> inventory(Credentials c, @Nullable String outletId) {
         var levels = new HashMap<String, Integer>();
         long after = 0;
         while (true) {
@@ -240,7 +262,7 @@ class LightspeedCatalogSource implements CommerceCatalogSource {
             }
             for (var level : data) {
                 var id = text(level, "product_id");
-                if (id != null) {
+                if (id != null && (outletId == null || outletId.equals(text(level, "outlet_id")))) {
                     levels.merge(id, level.path("inventory_level").asInt(0), Integer::sum);
                 }
             }
@@ -251,6 +273,53 @@ class LightspeedCatalogSource implements CommerceCatalogSource {
             after = max;
         }
         return levels;
+    }
+
+    @Override
+    public List<Location> locations(Credentials c) {
+        var out = new ArrayList<Location>();
+        for (var outlet : get(c, "/api/2.0/outlets", Map.of()).path("data")) {
+            var id = text(outlet, "id");
+            var deleted = outlet.path("deleted_at");
+            if (id != null && (deleted.isMissingNode() || deleted.isNull())) {
+                out.add(new Location(
+                        id, Optional.ofNullable(text(outlet, "name")).orElse(id)));
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public Adjusted adjust(Credentials c, Adjustment a) {
+        var product = Optional.ofNullable(a.stockRef()).orElse(a.variantId());
+        Integer level = null;
+        try {
+            for (var l : get(c, "/api/2.0/products/" + CommerceHttp.encode(product) + "/inventory", Map.of())
+                    .path("data")) {
+                if (a.locationId().equals(text(l, "outlet_id"))) {
+                    level = l.path("inventory_level").asInt(0);
+                }
+            }
+        } catch (HttpClientErrorException.NotFound _) {
+            return new Adjusted.Refused("not_found", "Lightspeed: no product " + product);
+        }
+        var after = (level == null ? 0 : level) + a.delta();
+        var body = Map.<String, Object>of(
+                "details", Map.of("inventory", List.of(Map.of("outlet_id", a.locationId(), "current_amount", after))));
+        try {
+            backoff.call(
+                    "Lightspeed " + c.account(),
+                    () -> CommerceHttp.authorized(() -> api.put(
+                            CommerceHttp.uri(
+                                    base(c.account()), "/api/2.1/products/" + CommerceHttp.encode(product), Map.of()),
+                            "Bearer " + c.accessToken(),
+                            body)));
+        } catch (HttpClientErrorException.NotFound _) {
+            return new Adjusted.Refused("not_found", "Lightspeed: no product " + product);
+        } catch (HttpClientErrorException.BadRequest | HttpClientErrorException.UnprocessableContent e) {
+            return new Adjusted.Refused("rejected", "Lightspeed: " + e.getResponseBodyAsString());
+        }
+        return new Adjusted.Applied(after);
     }
 
     private static boolean active(JsonNode row) {
