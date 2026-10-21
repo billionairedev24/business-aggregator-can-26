@@ -16,7 +16,7 @@ Fake data only, the `dev` Spring profile, the same two charts and `values-dryrun
 and what was left open: [DECISIONS.md § 2026-10-19](../DECISIONS.md). Comparison with Google Cloud:
 [README § Google vs OVH](README.md#google-vs-ovh).
 
-> **Status (2026-10-20, S-160): never applied** — neither in the US nor in Canada. Nothing here has run against a real OVHcloud account. The Terraform roots
+> **Status (2026-10-20, S-161): never applied** — neither in the US nor in Canada. Nothing here has run against a real OVHcloud account. The Terraform roots
 > (`infra/terraform/envs/ovh/vps`, `infra/terraform/envs/ovh/mks`) pass `terraform validate`, `tflint` and an offline
 > plan against a mocked `ovh/ovh` provider (2.22, built from source here); both charts render and validate offline with
 > the OVHcloud values (`deploy/helm/validate.sh`); the scripts parse with bash 3.2 and were run against stubs only.
@@ -30,70 +30,87 @@ Other environments: [dryrun-gcp](dryrun-gcp.md), [dev](dev.md), [staging](stagin
 
 ## Today: from a new OVH account to a running demo
 
-The shortest path, through the **`ovh` pipeline** (`.github/workflows/ovh.yml`, S-155): you click in the OVHcloud
-console, run one set-up command on your Mac, then start the pipeline from GitHub. Written for the **US location
-`us-east-va`** (the default for now); Canada is the same with the Canadian site, token page and datacentre —
-[§ Canada later](#canada-later). `ovh-vps` is the target for a first
-demo (≈ $25–30 for the month); `ovh-mks` works the same way with the differences noted. About an hour end to end, most
-of it waiting.
+The shortest path, through the **`ovh` pipeline** (`.github/workflows/ovh.yml`, S-155): **three steps in a browser,
+one set-up command on your Mac, then the pipeline** (S-161: nothing else is made by hand). Written for the **US
+location `us-east-va`** (the default for now); Canada is the same with the Canadian site and token page —
+[§ Canada later](#canada-later). `ovh-vps` is the target for a first demo; `ovh-mks` works the same way with the
+differences noted. About an hour end to end, most of it waiting.
 
-> **Never run against a real account yet.** The pipeline, `scripts/ovh/gh-setup.sh`, the state bucket bootstrap and
-> the runner's firewall rule were checked offline only (actionlint, bash 3.2 parsing, shellcheck, stubbed runs of the
-> scripts, `terraform test` with a mocked provider, `helm template | kubeconform`). Expect to fix small things on the
-> first run; each step below says where it reports problems.
+> **Never run against a real account yet.** The pipeline, `scripts/ovh/gh-setup.sh`, the API calls that make the
+> state user (`scripts/ovh/api.sh`), the state bucket bootstrap and the runner's firewall rule were checked offline only
+> (actionlint, bash 3.2 parsing, shellcheck, the scripts against a stub of the OVHcloud API and the `aws` CLI,
+> `terraform test` with a mocked provider, `helm template | kubeconform`). Expect to fix small things on the first run;
+> each step below says where it reports problems.
 
-### 1. Account and project (console, OVHcloud US)
+**What you do by hand — and nothing else:**
+
+| | where | what |
+|---|---|---|
+| 1 | us.ovhcloud.com | the account |
+| 2 | us.ovhcloud.com › Billing | a payment method |
+| 3 | api.us.ovhcloud.com/createToken | the API token (three values) |
+
+You already have a Public Cloud project? Keep its id (32 hex characters) for § 4. You don't? `make ovh-gh-setup`
+can order one (optional, [below](#no-project-yet)).
+
+**What code makes** (`make ovh-gh-setup`, then the pipeline's `apply`, all in **US-EAST-VA** / Vint Hill):
+
+- the **Public Cloud user `terraform-state`** (role ObjectStore operator) and its **S3 key**, through the OVHcloud API
+  — stored straight into the GitHub Environment as `TF_STATE_ACCESS_KEY` / `TF_STATE_SECRET_KEY`, never printed;
+- the **state bucket** (`northline-tfstate-` + the project id's first 8 characters, versioned) — by the pipeline's
+  first run, in the location's Object Storage (`https://s3.us-east-va.io.cloud.ovh.us`);
+- the **app buckets** (uploads, Postgres backups) and their own S3 users — by Terraform in the same location;
+- for `ovh-vps`, the **server**: a **Public Cloud instance** (Ubuntu 24.04, `b3-32`: 8 vCPU / 32 GB, billed by the
+  hour) with a **public IPv4**, and the **SSH key pair** the pipeline uses (gh-setup makes it; Terraform registers the
+  public half with the instance; the private half is an Environment secret);
+- for `ovh-mks`, the cluster, nodes, private network and database (as before).
+
+**No Object Storage, no bucket, no S3 user, no VPS is created in the console.** Did you already make some by hand?
+They are adopted, not duplicated: a user described `terraform-state` is reused with its existing S3 key (the API hands
+its secret back), and a bucket named `northline-tfstate-…` already in the project is proposed as `TF_STATE_BUCKET`.
+
+### 1. Account (browser, OVHcloud US)
 
 OVHcloud US (**us.ovhcloud.com**, the US company: prices in US$, the `ovh-us` API) and OVHcloud Canada
 (ca.ovhcloud.com) are **separate companies with separate accounts**: a login, a project or an API token from one does
-not work on the other. For the US location (`us-east-va`, the default for now) everything below is on the US site.
+not work on the other. For the US location (`us-east-va`, the default for now) everything is on the US site.
 
-1. Open **us.ovhcloud.com** › *Log in* › *Create an account* (or sign in) › in the Control Panel, *Billing* (your
-   name, top right › *Payment methods*): add a card.
-2. **Public Cloud** › *Create a project* › name `northline-dryrun`, no voucher, accept the terms. Copy the project's
-   id (32 hex characters, under the project's name, top left): this is `OVH_SERVICE_NAME`. Nothing to pick for the
-   region here — Terraform creates everything in **US-EAST-VA-1** (Vint Hill, Virginia).
-3. In the project: **Object Storage** › *S3 users* (or *Users & Roles*) › *Add user* › description `terraform-state`,
-   role **ObjectStore operator**. Copy its **access key** and **secret key** when they are shown (the secret is shown
-   once): `TF_STATE_ACCESS_KEY` / `TF_STATE_SECRET_KEY`. The pipeline creates the state bucket with them on its first
-   run, in the same location (`https://s3.us-east-va.io.cloud.ovh.us`, versioning on); nothing else uses this user.
+Open **us.ovhcloud.com** › *Log in* › *Create an account* (or sign in).
 
-### 2. API token (browser, OVHcloud US)
+### 2. Payment method (browser, OVHcloud US)
 
-Open this address while signed in to us.ovhcloud.com (it pre-fills the rights; pick a validity covering the demo
-period, e.g. 30 days, and no IP restriction — the pipeline's runners have new addresses every run). `make ovh-gh-setup`
-prints the same address for the location you pick:
+In the Control Panel, your name (top right) › *Billing* › *Payment methods* › add a card, and make it the **default**.
+The instance is billed by the hour against it (and, if you let gh-setup order the project, that free order is paid
+with it).
+
+### 3. API token (browser, OVHcloud US)
+
+Open this address while signed in to us.ovhcloud.com. It pre-fills the rights; pick a validity covering the demo
+period (e.g. 30 days) and **no IP restriction** (the pipeline's runners have new addresses every run):
 
 ```text
-https://api.us.ovhcloud.com/createToken/?GET=/cloud/*&POST=/cloud/*&PUT=/cloud/*&DELETE=/cloud/*&GET=/vps/*&GET=/ip/*&POST=/ip/*&PUT=/ip/*&DELETE=/ip/*
+https://api.us.ovhcloud.com/createToken/?GET=/cloud/*&POST=/cloud/*&PUT=/cloud/*&DELETE=/cloud/*
 ```
 
-`/cloud/*`: Object Storage, its users, and for `ovh-mks` the cluster, node pool, private network and database;
-`GET /vps/*`: read the VPS; `/ip/*`: the Network Firewall in front of the VPS. It returns three values —
+`/cloud/*` is everything this design touches: the state user and its S3 key, Object Storage, the instance and its SSH
+key, and for `ovh-mks` the cluster, node pool, private network and database. It returns three values —
 **application key**, **application secret**, **consumer key** (`OVH_APPLICATION_KEY`, `OVH_APPLICATION_SECRET`,
-`OVH_CONSUMER_KEY`). The rights are the same as on the Canadian page (`ca.api.ovh.com/createToken/`); only the host
-differs. Revoke them at teardown (§ 8).
+`OVH_CONSUMER_KEY`). Keep the page open for § 4. Revoke the token at teardown (§ 8). The Canadian page
+(`https://ca.api.ovh.com/createToken/`) takes the same rights.
 
-### 3. The VPS (`ovh-vps` only; console, OVHcloud US)
+Two options need more rights, appended to the same address — only if you choose them:
 
-1. On your Mac, a key if you have none: `ssh-keygen -t ed25519` (Enter three times), then `cat ~/.ssh/id_ed25519.pub`.
-2. **Bare Metal Cloud** › *Virtual Private Servers* › *Order*. Choose by the specs, not the name (it changes between
-   ranges): **8 vCores, 24 GB RAM, 200 GB NVMe** — on the US site that is **VPS-4** (third-party listings of
-   OVHcloud US, Sept 2026: 8 vCores / 24 GB / 200 GB, ≈ $27.50 a month without commitment, ≈ $23.37 with 12 months —
-   unverified; VPS-3 is 6 vCores / 12 GB / 100 GB, too small for everything on one box). Location **Vint Hill,
-   Virginia (US-East)** — the same place as the rest; Hillsboro only with `OVH_LOCATION=us-west-or`. Image
-   **Ubuntu 24.04**. Paste the public key from step 1 in *SSH key*. No options. Monthly, no commitment. Pay.
-3. When it is delivered (minutes; an email): note its **service name** (the VPS's page, `vps-xxxxxxxx.vps.ovh.us` —
-   the US suffix is unverified; copy what the page shows) — `OVH_VPS_SERVICE_NAME` — and its **IPv4**. Check that
-   `ssh ubuntu@IPv4` works from your Mac.
-
-`ovh-mks` orders nothing by hand: the pipeline's `apply` creates the cluster, nodes and database in US-EAST-VA-1.
+| option | append |
+|---|---|
+| a VPS you order in the console instead of the instance (`OVH_SERVER=vps`, [below](#a-vps-instead-of-the-instance)) | `&GET=/vps/*&GET=/ip/*&POST=/ip/*&PUT=/ip/*&DELETE=/ip/*` |
+| gh-setup orders the Public Cloud project ([below](#no-project-yet)) | `&GET=/me&GET=/me/*&POST=/me/order/*&GET=/order/*&POST=/order/*&DELETE=/order/*` |
 
 ### 4. GitHub set-up (your Mac, once per target)
 
-Needs the GitHub CLI signed in with admin rights on the repository (`brew install gh`, `gh auth login`) and `jq`
-(macOS 15 has it; else `brew install jq`). Environments on a private repository need a paid GitHub plan; if the command
-says GitHub refused the environment, use [the local alternative](#the-local-alternative-no-github-actions).
+Needs the GitHub CLI signed in with admin rights on the repository (`brew install gh`, `gh auth login`), `jq` (macOS
+15 has it; else `brew install jq`), `curl` and `openssl` (macOS has them). Environments on a private repository need a
+paid GitHub plan; if the command says GitHub refused the environment, use
+[the local alternative](#the-local-alternative-no-github-actions).
 
 ```sh
 make ovh-gh-setup TARGET=ovh-vps
@@ -109,34 +126,70 @@ make ovh-gh-setup TARGET=ovh-vps
 OVH_LOCATION [us-east-va]:
 ```
 
-It stores the variable `OVH_LOCATION`, prints the token page of that location's company, then asks for the API values
-of step 2 (from the **US** account), the project id, the state user's keys, and so on. It creates the **Environment**
-`ovh-vps` (Settings › Environments) with **you as required reviewer** and deployments allowed from `develop` and `main`
-only, then sets every secret and variable the pipeline reads. It asks for each required one (secrets are typed
-hidden) — or takes them from `.ovh/ovh-vps.env` if you put them there (`KEY=value` lines; the file is git-ignored;
-`OVH_LOCATION=us-east-va` there skips the question; on a re-run the current value is the default). For `ovh-vps` it also makes a **deploy key** for the pipeline
-(`.ovh/ovh-vps-deploy-key`), installs it on the VPS over your own SSH access, and records the VPS's host key
-(compare the fingerprint it prints with the console's KVM if you want to be thorough). Re-run it to change a value;
-it removes the old S-155 variable `OVH_ENDPOINT` if the environment still has one (the location decides it now).
+Then it prints the token page of that location (§ 3) and asks for the three token values (typed hidden), then:
 
-What ends up where ([§ Pipeline secrets and variables](#pipeline-secrets-and-variables) has the full list):
-
-| you have | goes into (environment `ovh-vps` / `ovh-mks`) |
+| question | answer |
 |---|---|
-| the location | variable `OVH_LOCATION` = `us-east-va` (API endpoint `ovh-us`, region `US-EAST-VA-1`, S3 `https://s3.us-east-va.io.cloud.ovh.us` follow from it) |
-| project id | variable `OVH_SERVICE_NAME` |
-| the three API values | secrets `OVH_APPLICATION_KEY`, `OVH_APPLICATION_SECRET`, `OVH_CONSUMER_KEY` |
-| the state user's keys | secrets `TF_STATE_ACCESS_KEY`, `TF_STATE_SECRET_KEY`; variable `TF_STATE_BUCKET` (proposed: `northline-tfstate-` + the project id's first 8 characters) |
-| the VPS's service name, your IP | variables `OVH_VPS_SERVICE_NAME`, `OVH_ADMIN_CIDRS` (proposed: your current address/32) |
-| the domain of the demo | variable `OVH_DOMAIN` (`demo.northline.ca` by default; any zone you control — every host moves under it) |
-| a GitHub classic token with **read:packages** only (Settings › Developer settings › Tokens (classic)) | secret `REGISTRY_PULL_TOKEN` — the cluster pulls the images from ghcr.io with it. Without it the pipeline uses the run's own token, which expires when the run ends (a restarted pod on a node without the image then can't pull) |
-| an SMTP relay's settings, or "demo inbox" (§ 6 — sign-ups need one) | variables `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_STARTTLS`, `EMAIL_FROM`, secret `SMTP_PASSWORD` — or variable `OVH_DEMO_MAILPIT=true` |
-| Stripe test keys, Twilio (optional, § 6) | secrets `STRIPE_*`, `SMS_AUTH_TOKEN`; variables `SMS_ACCOUNT_ID`, `SMS_FROM` |
+| `OVH_SERVICE_NAME` | your project's id (32 hex characters, top left of the project page). Empty: [no project yet](#no-project-yet) |
+| `TF_STATE_BUCKET` | Enter (the proposal: your existing `northline-tfstate-…` bucket if there is one, else `northline-tfstate-` + 8 characters of the project id — the pipeline creates it) |
+| `OVH_DOMAIN` | Enter for `demo.northline.ca`, or a zone you control |
+| `OVH_SERVER` | Enter for **`instance`** |
+| `OVH_ADMIN_CIDRS` | Enter (your current address/32: who may SSH besides the pipeline) |
+| the optional ones | `y` to the ones you want (§ 6: an email way is needed for sign-ups) |
+
+Along the way it shows, without any secret:
+
+```text
+== Terraform state user (terraform-state)
+   Public Cloud user terraform-state created (id …, role ObjectStore operator)   (or: exists: reused)
+   its S3 key …WXYZ: created                                                       (or: reused)
+   set secret TF_STATE_ACCESS_KEY
+   set secret TF_STATE_SECRET_KEY
+== SSH for the pipeline
+   new deploy key …/.ovh/ovh-vps-deploy-key (+ .pub)
+   set secret OVH_VPS_SSH_PRIVATE_KEY
+   set var OVH_SSH_PUBLIC_KEY
+```
+
+It creates the **Environment** `ovh-vps` (Settings › Environments) with **you as required reviewer** and deployments
+allowed from `develop` and `main` only, and sets every secret and variable the pipeline reads. Values can also come from
+`.ovh/ovh-vps.env` (`KEY=value` lines; git-ignored; `OVH_LOCATION=us-east-va` there skips the question; on a re-run the
+current value is the default). **Re-run it any time**: it reuses the same state user, S3 key and deploy key — nothing
+piles up. It removes the old S-155 variable `OVH_ENDPOINT` if the environment still has one.
+
+`ovh-mks`: `make ovh-gh-setup TARGET=ovh-mks` — the same questions without the server and SSH ones; the same state
+user and bucket serve both targets (each target's state is its own key in the bucket).
 
 The app's own secrets (`TOTP_KEY`, `KMS_LOCAL_KEY`, the BFF secrets, the data-service passwords) need nothing from
 you: the first deploy generates them **once** and keeps them in the cluster (`secret/northline-generated`); later runs
 reuse them. Back them up after the first deploy:
 `kubectl -n northline-dryrun get secret northline-generated -o yaml > .ovh/ovh-vps-generated.yaml`.
+
+#### No project yet
+
+Leave `OVH_SERVICE_NAME` empty and answer `y`: `scripts/ovh/project.sh` first looks for a project named
+`northline-dryrun` on the account and adopts it; only if there is none does it order one with
+`infra/terraform/envs/ovh/project` (`ovh_cloud_project`, plan `project.2018`, paid — it is free — with the default
+payment method; local state in `.ovh/project-us-east-va.tfstate`). The token needs the order rights of § 3 for that.
+
+#### A VPS instead of the instance
+
+The instance is the default because code makes it — and deletes it — completely. A VPS is cheaper by the month
+([§ Cost estimate](#cost-estimate)) but is **ordered in the console** (Bare Metal Cloud › Virtual Private Servers ›
+Order: 8 vCores / 24 GB / 200 GB, Vint Hill, Ubuntu 24.04, monthly): provider 2.22's `ovh_vps` can order, but it needs
+the US catalogue's plan code and configuration labels for the current range — unverified from here — and an apply
+commits a month's payment that a destroy doesn't refund. With a VPS: answer `vps` to `OVH_SERVER`, then its service
+name (`vps-….vps.ovh.us`) and IPv4; gh-setup installs the deploy key over your own SSH access and records the host
+key. The token then needs the VPS rights of § 3 (the Network Firewall in front of the VPS).
+
+#### Manual fallback: the state user in the console
+
+Only if the API path fails (gh-setup or the State keys step says why). The console's labels may differ slightly.
+**OVHcloud US**: Public Cloud › your project › *Storage* › *Object Storage* › tab *Users* › *Create user* —
+description `terraform-state` — then the user's *…* menu › *View the secret key*; or *Project Management* › *Users &
+Roles* › *Add user*, description `terraform-state`, role **ObjectStore operator**. Put its keys in `.ovh/ovh-vps.env`
+as `TF_STATE_ACCESS_KEY=…` and `TF_STATE_SECRET_KEY=…` and re-run `make ovh-gh-setup` (keys in the file win). Use the
+description `terraform-state` and later runs adopt that user. Still no bucket to create: the pipeline makes it.
 
 ### 5. Run the pipeline (GitHub)
 
@@ -144,15 +197,19 @@ reuse them. Back them up after the first deploy:
 
 | run | target | action | other inputs | what happens |
 |---|---|---|---|---|
-| 1 | `ovh-vps` | `plan` | — | approve the run (*Review deployments* › `ovh-vps` › Approve); the summary lists what would be created: 2 buckets, 2 S3 users, the Network Firewall and its rules |
-| 2 | `ovh-vps` | `provision-and-deploy` | `build-images` on | approve; Terraform applies, the seven images are built and pushed to `ghcr.io/<owner>/northline` (≈ 20 min, in parallel), then the deploy job: the runner's address is let through the Network Firewall for this run only, k3s is installed over SSH (idempotent), the Secrets, cert-manager, Envoy Gateway, CloudNativePG, `northline-data` and `northline` are installed (≈ 15 min the first time), rollouts are waited for and the smoke test runs; the runner's firewall rule is removed at the end |
+| 1 | `ovh-vps` | `plan` | — | approve the run (*Review deployments* › `ovh-vps` › Approve); the state bucket is created (versioned) if missing; the summary lists what would be created: the instance, 2 buckets, 2 S3 users |
+| 2 | `ovh-vps` | `provision-and-deploy` | `build-images` on | approve; Terraform applies (the instance comes up in a few minutes with its public IPv4), the seven images are built and pushed to `ghcr.io/OWNER/northline` (≈ 20 min, in parallel), then the deploy job: k3s is installed over SSH (idempotent; `ufw` on the host: SSH only from `OVH_ADMIN_CIDRS` and the runner, 80/443), the Secrets, cert-manager, Envoy Gateway, CloudNativePG, `northline-data` and `northline` are installed (≈ 15 min the first time), rollouts are waited for and the smoke test runs |
 
-The deploy job's summary prints the **public address** (the VPS's IPv4; on `ovh-mks` the load balancer's), the DNS
-records to create and the URLs. The HTTPS part of the smoke test shows *pending* until the records exist (§ 7);
+Each job that reads the state first runs **State keys**: the stored `TF_STATE_*` keys, or — when they are missing or
+refused — the `terraform-state` user's keys from the API (found or created, masked in the log). So the pipeline works
+even if gh-setup could not store them.
+
+The deploy job's summary prints the **public address** (the instance's IPv4; on `ovh-mks` the load balancer's), the
+DNS records to create and the URLs. The HTTPS part of the smoke test shows *pending* until the records exist (§ 7);
 after creating them, run **`deploy`** again with `build-images` off (≈ 5 min): it then checks auth's OpenID
-configuration, the Studio's and the consumer's sign-in pages, the consumer home and the console over HTTPS. A
-failing step names what failed; the logs of a pod: run the [local alternative](#the-local-alternative-no-github-actions)'s
-`kubectl` commands from your Mac.
+configuration, the Studio's and the consumer's sign-in pages, the consumer home and the console over HTTPS. A failing
+step names what failed; the logs of a pod: run the [local alternative](#the-local-alternative-no-github-actions)'s
+`kubectl` commands from your Mac (`ssh -i .ovh/ovh-vps-deploy-key ubuntu@IPv4` reaches the instance).
 
 Later: `deploy` after each change (the images are tagged with the commit's short sha; `image-tag` + `build-images`
 off redeploys an existing tag), `down` / `up` between demos (§ [Between demos](#between-demos)), `plan` / `apply`
@@ -206,14 +263,20 @@ records resolve; then `deploy` again for the HTTPS smoke test.
 
 ### 8. Teardown
 
-1. **Pause** between demos: action `down` (`ovh-mks`: also the nodes → 0; `ovh-vps` saves nothing — monthly billing).
+1. **Pause** between demos: action `down` (apps to 0; `ovh-mks`: also the nodes → 0). On `ovh-vps` the instance keeps
+   billing by the hour while it exists — for a pause of days, `destroy` and later `provision-and-deploy` again is
+   cheaper (≈ 40 minutes to rebuild; fake data: `make demo-data` again, or back up first, [§ Backups](#backups-and-restore)).
 2. **Delete**: action `destroy` with `confirm-destroy` = the target's name. It removes the releases (on `ovh-mks` the
-   load balancer and volumes with them), empties the buckets (fake data) and runs `terraform destroy`.
-3. `ovh-vps`: console › Bare Metal Cloud › the VPS › **Terminate** (billing stops at the end of the paid month).
+   load balancer and volumes with them), empties the buckets (fake data), runs `terraform destroy` (on `ovh-vps` that
+   deletes the instance and its SSH key: billing stops), then — **last** — deletes the target's state from the state
+   bucket and, when no other target's state is left there, the bucket and the `terraform-state` user. The
+   Environment's `TF_STATE_*` secrets are then stale; a later run makes a new user and uses its keys by itself.
+3. `OVH_SERVER=vps` only: console › Bare Metal Cloud › the VPS › **Terminate** (billing stops at the end of the paid
+   month).
 4. Remove the DNS records; revoke the API token (the console's API keys page of the account — us.ovhcloud.com for the
-   US locations, ca.ovhcloud.com for `ca-bhs`);
-   delete the state user and bucket and the Public Cloud project if nothing else lives there; delete the GitHub
-   Environment (Settings › Environments) and the `.ovh/` files; check the next invoice.
+   US locations, ca.ovhcloud.com for `ca-bhs`); delete the Public Cloud project if nothing else lives there (it costs
+   nothing empty); delete the GitHub Environment (Settings › Environments) and the `.ovh/` files; check the next
+   invoice.
 
 ### Data residency
 
@@ -279,23 +342,25 @@ missing, set that flag to `false` in `locations.json` (or, without a code change
 ### Canada later
 
 Moving the demo — or launching — in Canada is a **new account and a fresh deployment**, not a setting flip on the US
-one (the US account's project, token, state bucket and VPS don't exist on ca.ovhcloud.com):
+one (the US account's project, token, state bucket and server don't exist on ca.ovhcloud.com):
 
-1. **Account**: ca.ovhcloud.com › create an account, payment method; Public Cloud project; Object Storage S3 user
-   for the state (as § 1, on the Canadian site).
-2. **Token**: `https://ca.api.ovh.com/createToken/` with the same rights as § 2.
-3. **VPS** (`ovh-vps`): order 8 vCores / 24 GB / 200 GB in **Beauharnois (BHS)**.
+1. **Account**: ca.ovhcloud.com › create an account, a default payment method, a Public Cloud project (or let
+   gh-setup order one) — § 1–2 on the Canadian site. The state user and bucket are made by code, as in the US.
+2. **Token**: `https://ca.api.ovh.com/createToken/` with the same rights as § 3.
+3. **Server** (`ovh-vps`): nothing to do with the instance (Terraform makes it in `BHS5`); with `OVH_SERVER=vps`,
+   order 8 vCores / 24 GB / 200 GB in **Beauharnois (BHS)**.
 4. **Keep what you want from the US demo** (it is fake data — the simplest is to keep nothing and re-run
    `make demo-data` in Canada, [§ Demo data](#demo-data)). To carry it over: a `pg_dump` of the US database
    ([§ Backups and restore](#backups-and-restore); `kubectl exec` on the `northline-pg` pod, or the managed database's
    URI), the uploads bucket (`aws s3 sync` to your Mac with the uploads user's keys from `terraform output -json
    s3_credentials`), and `secret/northline-generated` (`TOTP_KEY`, `KMS_LOCAL_KEY`… — without them enrolled
    authenticators and sealed values stop working with that database).
-5. **Delete the US deployment** (§ 8: `destroy`, terminate the VPS, revoke the US token) — the pipeline's state for the
+5. **Delete the US deployment** (§ 8: `destroy` — it removes the US state, bucket and state user last —, revoke the
+   US token) — the pipeline's state for the
    target is in the US bucket, so destroy it **before** the environment points at Canada; afterwards no copy stays
    outside Canada.
 6. **GitHub**: put the Canadian values in `.ovh/ovh-vps.env` (project id `OVH_SERVICE_NAME`, the three token values, a
-   **new** `TF_STATE_BUCKET` with `TF_STATE_ACCESS_KEY`/`SECRET_KEY`, `OVH_VPS_SERVICE_NAME`, `OVH_ADMIN_CIDRS`) — the
+   **new** `TF_STATE_BUCKET`, `OVH_ADMIN_CIDRS`; the state user's keys are made again from the Canadian token) — the
    script keeps a value that is already set unless the file holds a new one — then `make ovh-gh-setup TARGET=ovh-vps`
    and answer **`ca-bhs`** to the location question (it shows the current one as the default and asks you to confirm
    the move).
@@ -314,9 +379,10 @@ The same steps from your Mac with `make` — the pipeline only wraps them. Tools
 make ovh-secrets-init TARGET=ovh-vps            # .ovh/ovh-vps.env: generated secrets; add Stripe/Twilio if you have them
 export OVH_LOCATION=us-east-va                   # also ovh_location in terraform.tfvars (same value); ca-bhs in Canada
 export OVH_APPLICATION_KEY=… OVH_APPLICATION_SECRET=… OVH_CONSUMER_KEY=…   # from that location's account
-# Optional: the pipeline's shared state instead of a local one (MIGRATE=1 moves an existing local state there).
-export TF_STATE_BUCKET=… TF_STATE_ACCESS_KEY=… TF_STATE_SECRET_KEY=…
-export AWS_ACCESS_KEY_ID=$TF_STATE_ACCESS_KEY AWS_SECRET_ACCESS_KEY=$TF_STATE_SECRET_KEY
+# Optional: the pipeline's shared state instead of a local one (MIGRATE=1 moves an existing local state there). The
+# state user's keys come from the API (found or created, never shown); the bucket is created if missing.
+export OVH_SERVICE_NAME=… TF_STATE_BUCKET=…
+eval "$(scripts/ovh/tf-state.sh keys ovh-vps)"    # exports AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY for this shell
 make ovh-tf-init TARGET=ovh-vps
 cp infra/terraform/envs/ovh/vps/terraform.tfvars.example infra/terraform/envs/ovh/vps/terraform.tfvars   # fill it in
 terraform -chdir=infra/terraform/envs/ovh/vps apply
@@ -339,19 +405,22 @@ Per environment (`ovh-vps`, `ovh-mks`); `make ovh-gh-setup` sets them. **R** = r
 | name | kind | | targets | what |
 |---|---|---|---|---|
 | `OVH_LOCATION` | variable | O | both | `us-east-va` (default; Vint Hill, OVHcloud US), `us-west-or` (Hillsboro, OVHcloud US) or `ca-bhs` (Beauharnois, OVHcloud Canada) — [§ Locations](#locations). Replaces S-155's `OVH_ENDPOINT` (a leftover that contradicts the location stops the run) |
-| `OVH_SERVICE_NAME` | variable | R | both | Public Cloud project id |
+| `OVH_SERVICE_NAME` | variable | R | both | Public Cloud project id (gh-setup can find or order it, [§ 4](#no-project-yet)) |
 | `OVH_APPLICATION_KEY`, `OVH_APPLICATION_SECRET`, `OVH_CONSUMER_KEY` | secrets | R (or the next row) | both | the API token |
 | `OVH_CLIENT_ID`, `OVH_CLIENT_SECRET` | secrets | instead of the token | both | an OAuth2 service account |
-| `TF_STATE_BUCKET` | variable | R | both | the state bucket (created by the first run) |
-| `TF_STATE_ACCESS_KEY`, `TF_STATE_SECRET_KEY` | secrets | R | both | its S3 user's keys |
+| `TF_STATE_BUCKET` | variable | R | both | the state bucket (created, versioned, by the first run; one made by hand is adopted) |
+| `TF_STATE_ACCESS_KEY`, `TF_STATE_SECRET_KEY` | secrets | O | both | the S3 key of the Public Cloud user `terraform-state` — gh-setup makes and stores them through the API; missing or refused, each job takes them from the API (found or created) |
 | `OVH_DOMAIN` | variable | O | both | zone of the public hosts (default `demo.northline.ca`) |
 | `OVH_BUCKET_SUFFIX` | variable | O | both | if the bucket names are taken |
 | `OVH_TFVARS` | variable | O | both | extra Terraform variables as HCL (e.g. `data_services`, `managed_postgres`) |
-| `OVH_VPS_SERVICE_NAME` | variable | R | ovh-vps | the VPS (its service name, e.g. `vps-….vps.ovh.us`; `.vps.ovh.ca` in Canada) |
+| `OVH_SERVER` | variable | O | ovh-vps | `instance` (default: a Public Cloud instance Terraform makes, hourly) or `vps` (ordered in the console) |
+| `OVH_INSTANCE_FLAVOR` | variable | O | ovh-vps | the instance's flavor (default `b3-32`: 8 vCPU / 32 GB) |
+| `OVH_SSH_PUBLIC_KEY` | variable | R with `instance` | ovh-vps | the deploy key's public half (gh-setup), registered with the instance by Terraform |
+| `OVH_VPS_SERVICE_NAME` | variable | R with `vps` | ovh-vps | the VPS (its service name, e.g. `vps-….vps.ovh.us`; `.vps.ovh.ca` in Canada) |
 | `OVH_ADMIN_CIDRS` | variable | R | ovh-vps | who may SSH besides the pipeline (≤ 3, space-separated) |
-| `OVH_EDGE_FIREWALL` | variable | O | ovh-vps | `true` (default) / `false` |
+| `OVH_EDGE_FIREWALL` | variable | O | ovh-vps | `vps` only: `true` (default) / `false` (the instance has `ufw` on the host only) |
 | `OVH_VPS_SSH_PRIVATE_KEY` | secret | R | ovh-vps | the pipeline's deploy key (made by gh-setup) |
-| `OVH_VPS_KNOWN_HOSTS` | secret | R | ovh-vps | the VPS's host key line (gh-setup; without it the run trusts the key on first sight, with a warning) |
+| `OVH_VPS_KNOWN_HOSTS` | secret | R with `vps` | ovh-vps | the VPS's host key line (gh-setup; without it — and always for the instance, which doesn't exist before the run — the run trusts the key on first sight) |
 | `OVH_API_ALLOWED_CIDRS` | variable | O | ovh-mks | who may reach the Kubernetes API (the runner is added for each run) |
 | `OVH_NODE_COUNT`, `OVH_NODE_FLAVOR` | variables | O | ovh-mks | `2`, `b3-16` |
 | `REGISTRY_PULL_TOKEN` | secret | O (recommended) | both | classic token, `read:packages` |
@@ -397,7 +466,7 @@ to push; `MAVEN_MIRROR_*` as for [deploy.yml](deploy.md).
 
 | piece | `ovh-vps` | `ovh-mks` |
 |---|---|---|
-| Location (`OVH_LOCATION`) | VPS in the location's datacentre (Vint Hill / Hillsboro / Beauharnois); Object Storage there | Public Cloud region `US-EAST-VA-1` / `US-WEST-OR-1` / `BHS5` ([§ Locations](#locations)) |
+| Location (`OVH_LOCATION`) | a Public Cloud instance (default) in the location's region, or a VPS in its datacentre (Vint Hill / Hillsboro / Beauharnois); Object Storage there | Public Cloud region `US-EAST-VA-1` / `US-WEST-OR-1` / `BHS5` ([§ Locations](#locations)) |
 | Kubernetes | **k3s** on the VPS (one node; Traefik off), installed over SSH by `scripts/ovh/bootstrap-k3s.sh` | **Managed Kubernetes**, free plan (control plane included, single zone), node pool `general`: 2 × `b3-16` (4 vCPU / 16 GB), hourly |
 | Network | the VPS's public IPv4; **OVHcloud Network Firewall** in front (Terraform) and `ufw` on the host: SSH only from `admin_cidrs`, 80 and 443 from anywhere; the k3s API only through an SSH tunnel | private network (vRack) `10.60.0.0/24` with a gateway (`s`); the Kubernetes API optionally limited to `api_allowed_cidrs` |
 | Postgres 17 + PostGIS | CloudNativePG on the VPS (`local-path` volume), daily base backup + WAL to Object Storage | **OVHcloud Managed PostgreSQL 17**, Essential `db1-4`, on the private network (`data_services.postgres.mode`: `managed`, `in-cluster` or `external`) |
@@ -430,10 +499,11 @@ Hill selected, or ca.ovhcloud.com with Beauharnois) before ordering. US prices a
 
 | item | per month | notes |
 |---|---|---|
-| VPS 8 vCore / 24 GB / 200 GB NVMe in the location ("VPS-4" in the 2025/2027 range; check the specs, the names move) | ≈ $23–28 | **billed by the month** (paying a month even for three weeks); unlimited traffic. US: ≈ $27.50 without commitment, ≈ $23.37 with 12 months (third-party listings); Canada: check the CA$ price |
+| **the instance (default, `OVH_SERVER=instance`)**: Public Cloud `b3-32`, 8 vCPU / 32 GB / 200 GB, hourly | ≈ $145–165 for a full month (≈ $0.20–0.23 an hour) | **unverified** (EU list price ≈ €0.18/h, scaled); billed only while it exists — a week of demos ≈ $35–40, `destroy` stops it. `b3-16` (16 GB) is half that but below the 24 GB the stack was sized for |
+| or a VPS 8 vCore / 24 GB / 200 GB NVMe (`OVH_SERVER=vps`, ordered in the console; "VPS-4" in the 2025/2027 range; check the specs, the names move) | ≈ $23–28 | **billed by the month** (paying a month even for three weeks); unlimited traffic. US: ≈ $27.50 without commitment, ≈ $23.37 with 12 months (third-party listings); Canada: check the CA$ price. **≈ $120–135 a month less than the instance** for a full month |
 | Object Storage (Standard, the location): uploads and Postgres backups, well under 50 GB | under $1 | ≈ €7/TB-month; internal traffic included |
-| Network Firewall, IPv4 | $0 | included |
-| **Total** | **≈ $25–30** | for the month, whatever runs |
+| Network Firewall (VPS), IPv4 | $0 | included |
+| **Total** | **instance ≈ $150–170 for a full month (by the hour); VPS ≈ $25–30** | the VPS for the month, whatever runs |
 
 Fallback if that VPS is out of stock in the datacentre: two 6 vCore / 12 GB VPSs would need a two-node k3s — not scripted here.
 
@@ -456,7 +526,8 @@ Between demos `make ovh-down TARGET=ovh-mks` scales the nodes to 0 (the rest kee
 
 - `terraform` 1.9+, `kubectl`, `helm` 3.14+, `jq`, `ssh`, `openssl`, `htpasswd` (or Docker for it), Docker with buildx
   and Java 25 (the images), Node 22 (`make demo-data`). For the pipeline only the GitHub CLI `gh` (`make ovh-gh-setup`);
-  the shared state from a Mac also needs the `aws` CLI (`make ovh-tf-init` creates the bucket with it).
+  the shared state from a Mac also needs the `aws` CLI (`make ovh-tf-init` creates the bucket with it), `curl` and
+  `openssl` (the API calls that make the state user).
 - An OVHcloud account of the location's company with a payment method: **OVHcloud US** (us.ovhcloud.com) for
   `us-east-va` / `us-west-or`, **OVHcloud Canada** (ca.ovhcloud.com) for `ca-bhs`
   ([§ Account](#account-and-api-credentials)).
@@ -475,7 +546,7 @@ Everything below runs from the repository root.
    (API `ovh-us`), **ca.ovhcloud.com** for `ca-bhs` (API `ovh-ca`); the subsidiary decides the currency, the taxes and
    the API endpoint, and the accounts are separate. Add a payment method (Billing › Payment methods).
 2. **Public Cloud project** (both targets: Object Storage lives in one). Public Cloud › Create a project, name
-   `northline-dryrun`. Its id (32 hex characters, top left of the project) is Terraform's `service_name`. A project
+   `northline-dryrun` (or `scripts/ovh/project.sh ensure` orders it — [§ No project yet](#no-project-yet)). Its id (32 hex characters, top left of the project) is Terraform's `service_name`. A project
    costs nothing by itself. Check that the location's region (`US-EAST-VA-1`, `US-WEST-OR-1` or `BHS5`) is offered (Object Storage, Managed Kubernetes and, for `ovh-mks`,
    Managed Databases for PostgreSQL 17 with PostGIS).
 3. **API credentials for Terraform.** Either an application key set (simplest) — create it on the token page of the
@@ -483,9 +554,8 @@ Everything below runs from the repository root.
 
    ```text
    https://api.us.ovhcloud.com/createToken/       (US; Canada: https://ca.api.ovh.com/createToken/)
-   rights: GET/POST/PUT/DELETE on /cloud/*   (Public Cloud: storage, users, kube, databases, network)
-           GET on /vps/*                     (ovh-vps: read the VPS)
-           GET/POST/PUT/DELETE on /ip/*      (ovh-vps: the Network Firewall)
+   rights: GET/POST/PUT/DELETE on /cloud/*   (Public Cloud: storage, users, instance, kube, databases, network)
+           only with server = "vps":  GET on /vps/* (read the VPS), GET/POST/PUT/DELETE on /ip/* (the Network Firewall)
    ```
 
    ```sh
@@ -502,7 +572,13 @@ Everything below runs from the repository root.
 
 ## ovh-vps step by step
 
-### V1. Order the VPS (console)
+### V1. The server
+
+Default (`server = "instance"` in `terraform.tfvars`, with `ssh_public_key`): nothing to order — V2's `terraform apply`
+makes the Public Cloud instance (Ubuntu 24.04, `instance_flavor`, hourly) and prints its IPv4. The rest of this
+section is for `server = "vps"`.
+
+**Order the VPS (console).**
 
 Bare Metal Cloud › Virtual Private Servers › Order: **8 vCore / 24 GB / 200 GB NVMe** (check the specs, not the plan
 name), datacentre **the location's** (Vint Hill for `us-east-va`, Hillsboro for `us-west-or`, Beauharnois for

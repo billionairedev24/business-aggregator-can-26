@@ -42,7 +42,10 @@ tfvars() {
   setenv TF_VAR_dns_zone_name "${OVH_DOMAIN:-demo.northline.ca}"
   [ -z "${OVH_BUCKET_SUFFIX:-}" ] || setenv TF_VAR_bucket_name_suffix "$OVH_BUCKET_SUFFIX"
   if [ "$OVH_TARGET" = ovh-vps ]; then
+    setenv TF_VAR_server "${OVH_SERVER:-instance}"
     setenv TF_VAR_vps_service_name "${OVH_VPS_SERVICE_NAME:-}"
+    setenv TF_VAR_ssh_public_key "${OVH_SSH_PUBLIC_KEY:-}"
+    [ -z "${OVH_INSTANCE_FLAVOR:-}" ] || setenv TF_VAR_instance_flavor "$OVH_INSTANCE_FLAVOR"
     setenv TF_VAR_admin_cidrs "$(list_json "${OVH_ADMIN_CIDRS:-}")"
     [ -z "${OVH_EDGE_FIREWALL:-}" ] || setenv TF_VAR_edge_firewall "$OVH_EDGE_FIREWALL"
   else
@@ -85,7 +88,7 @@ tf_target_apply() { terraform -chdir="$OVH_TF" apply -input=false -auto-approve 
 open_vps() {
   local mode=$1 host ip i
   host=$(tf_out vps .ssh)
-  [ -n "$host" ] && [ "$host" != null ] || die "no VPS in Terraform's state: order it (docs/runbooks/ovh.md § Today), set the variable OVH_VPS_SERVICE_NAME, run the workflow with action apply"
+  [ -n "$host" ] && [ "$host" != null ] || die "no server in Terraform's state: run the workflow with action apply (OVH_SERVER=instance makes it; OVH_SERVER=vps needs OVH_VPS_SERVICE_NAME)"
   [ -n "${OVH_VPS_SSH_PRIVATE_KEY:-}" ] || die "secret OVH_VPS_SSH_PRIVATE_KEY is not set (make ovh-gh-setup TARGET=ovh-vps)"
   mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
   (umask 077; printf '%s\n' "$OVH_VPS_SSH_PRIVATE_KEY" >"$KEY")
@@ -93,8 +96,17 @@ open_vps() {
   if [ -n "${OVH_VPS_KNOWN_HOSTS:-}" ]; then
     printf '%s\n' "$OVH_VPS_KNOWN_HOSTS" >"$HOME/.ssh/known_hosts"
   else
-    echo "::warning::secret OVH_VPS_KNOWN_HOSTS is not set: trusting the VPS's host key on first sight (ssh-keyscan). Set it: make ovh-gh-setup TARGET=ovh-vps"
-    ssh-keyscan -t ed25519 "${host#*@}" 2>/dev/null >"$HOME/.ssh/known_hosts"
+    if [ "$(tf_out vps .server)" = instance ]; then
+      echo "::notice::the instance's host key is trusted on first sight (ssh-keyscan; it is made by Terraform, so there is no key to record beforehand)"
+    else
+      echo "::warning::secret OVH_VPS_KNOWN_HOSTS is not set: trusting the VPS's host key on first sight (ssh-keyscan). Set it: make ovh-gh-setup TARGET=ovh-vps"
+    fi
+    for i in $(seq 1 36); do   # a new instance boots for a minute or two before sshd answers
+      ssh-keyscan -t ed25519 "${host#*@}" 2>/dev/null >"$HOME/.ssh/known_hosts" || true
+      [ ! -s "$HOME/.ssh/known_hosts" ] || break
+      [ "$i" -lt 36 ] || die "no SSH host key from ${host#*@} after 3 minutes (is the server up?)"
+      sleep 5
+    done
   fi
   setenv SSH_STRICT yes
 
@@ -104,7 +116,7 @@ open_vps() {
     echo "Network Firewall: SSH from this runner for this run"
     tf_target_apply 'ovh_ip_firewall_rule.box["9-ssh-ci"]'
   else
-    echo "::warning::edge_firewall is off: SSH on the VPS is open to every address (keys only, rate-limited by ufw)"
+    echo "::warning::no Network Firewall in front of the server: SSH is open to every address (keys only, rate-limited by ufw)"
   fi
   for i in $(seq 1 36); do
     if ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes "$host" true 2>/dev/null; then break; fi

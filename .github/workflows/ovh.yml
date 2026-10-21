@@ -14,15 +14,18 @@
 #
 # Actions:
 #   plan                  terraform plan (the summary lists what would change)
-#   apply                 plan + apply (ovh-vps: Object Storage + the Network Firewall; the VPS itself is ordered in the
-#                         console; ovh-mks: network, cluster, nodes, Managed PostgreSQL, Object Storage)
+#   apply                 plan + apply (ovh-vps: Object Storage + the server — a Public Cloud instance by default, or the
+#                         Network Firewall in front of a VPS ordered in the console; ovh-mks: network, cluster, nodes,
+#                         Managed PostgreSQL, Object Storage)
 #   deploy                [images] → cluster access → Secrets → both charts → rollouts → smoke test; URLs + the address
 #                         for DNS in the summary
 #   provision-and-deploy  apply, then deploy
 #   down / up             scripts/ovh/scale.sh (apps to 0 and back; ovh-mks also the node pool)
-#   destroy               releases out of the cluster, buckets emptied, terraform destroy (fake data only)
+#   destroy               releases out of the cluster, buckets emptied, terraform destroy (fake data only), then the
+#                         target's state; the state bucket and its user too when no other target's state is left
 #
-# State: an OVHcloud Object Storage bucket as the S3 backend (scripts/ovh/tf-state.sh; created by the first run). It
+# State: an OVHcloud Object Storage bucket as the S3 backend (scripts/ovh/tf-state.sh; created by the first run, with
+# the keys of the Public Cloud user terraform-state, which the API credentials make — S-161: nothing in the console). It
 # never goes into the repository, an artifact or the log; plans are made and applied inside one job.
 name: ovh
 
@@ -135,6 +138,9 @@ jobs:
       OVH_DOMAIN: ${{ vars.OVH_DOMAIN }}
       OVH_BUCKET_SUFFIX: ${{ vars.OVH_BUCKET_SUFFIX }}
       OVH_TFVARS: ${{ vars.OVH_TFVARS }}
+      OVH_SERVER: ${{ vars.OVH_SERVER }} # ovh-vps: instance (default; made by Terraform) or vps (ordered in the console)
+      OVH_INSTANCE_FLAVOR: ${{ vars.OVH_INSTANCE_FLAVOR }}
+      OVH_SSH_PUBLIC_KEY: ${{ vars.OVH_SSH_PUBLIC_KEY }}
       OVH_VPS_SERVICE_NAME: ${{ vars.OVH_VPS_SERVICE_NAME }}
       OVH_ADMIN_CIDRS: ${{ vars.OVH_ADMIN_CIDRS }}
       OVH_EDGE_FIREWALL: ${{ vars.OVH_EDGE_FIREWALL }}
@@ -142,8 +148,10 @@ jobs:
       OVH_NODE_COUNT: ${{ vars.OVH_NODE_COUNT }}
       OVH_NODE_FLAVOR: ${{ vars.OVH_NODE_FLAVOR }}
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }} # the S3 backend's keys (state bucket only)
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      # The state user's S3 keys (make ovh-gh-setup stores them). Empty or stale: the "State keys" step takes them from
+      # the OVHcloud API (the user terraform-state, found or created — S-161) and puts AWS_* into $GITHUB_ENV, masked.
+      TF_STATE_ACCESS_KEY: ${{ secrets.TF_STATE_ACCESS_KEY }}
+      TF_STATE_SECRET_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
       ACTION: ${{ inputs.action }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -163,6 +171,8 @@ jobs:
           fi
       - name: Terraform variables
         run: scripts/ovh/ci.sh tfvars "$TARGET"
+      - name: State keys (the state user's, found or created through the API when not stored)
+        run: scripts/ovh/tf-state.sh keys "$TARGET"
       - name: State bucket (created once)
         run: scripts/ovh/tf-state.sh ensure "$TARGET"
       - name: terraform init (S3 backend on Object Storage)
@@ -185,12 +195,16 @@ jobs:
           if [ "$ACTION" = destroy ]; then
             {
               echo "### $TARGET destroyed"
-              [ "$TARGET" = ovh-vps ] && echo "The VPS itself still bills: console › Bare Metal Cloud › VPS › Terminate. Then delete the DNS records and revoke the API token."
+              [ "$TARGET" = ovh-vps ] && [ "${OVH_SERVER:-instance}" = vps ] && echo "The VPS itself still bills: console › Bare Metal Cloud › VPS › Terminate. Then delete the DNS records and revoke the API token."
+              [ "$TARGET" = ovh-vps ] && [ "${OVH_SERVER:-instance}" = instance ] && echo "The instance is deleted (hourly billing stopped). Delete the DNS records and revoke the API token."
               [ "$TARGET" = ovh-mks ] && echo "Check Public Cloud › Load Balancer and Block Storage for leftovers; delete the DNS records and revoke the API token."
             } >> "$GITHUB_STEP_SUMMARY"
           else
             terraform -chdir="$tf" output -json dns_records | jq -r '"### DNS records\n\n```text\n" + join("\n") + "\n```"' >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: The state, its bucket and its user, last (destroy)
+        if: inputs.action == 'destroy'
+        run: scripts/ovh/tf-state.sh teardown "$TARGET"
       - name: Remove the plan (it holds secret values)
         if: always()
         run: rm -f "$RUNNER_TEMP/tfplan"
@@ -241,6 +255,9 @@ jobs:
       OVH_DOMAIN: ${{ vars.OVH_DOMAIN }}
       OVH_BUCKET_SUFFIX: ${{ vars.OVH_BUCKET_SUFFIX }}
       OVH_TFVARS: ${{ vars.OVH_TFVARS }}
+      OVH_SERVER: ${{ vars.OVH_SERVER }} # ovh-vps: instance (default; made by Terraform) or vps (ordered in the console)
+      OVH_INSTANCE_FLAVOR: ${{ vars.OVH_INSTANCE_FLAVOR }}
+      OVH_SSH_PUBLIC_KEY: ${{ vars.OVH_SSH_PUBLIC_KEY }}
       OVH_VPS_SERVICE_NAME: ${{ vars.OVH_VPS_SERVICE_NAME }}
       OVH_ADMIN_CIDRS: ${{ vars.OVH_ADMIN_CIDRS }}
       OVH_EDGE_FIREWALL: ${{ vars.OVH_EDGE_FIREWALL }}
@@ -248,8 +265,8 @@ jobs:
       OVH_NODE_COUNT: ${{ vars.OVH_NODE_COUNT }}
       OVH_NODE_FLAVOR: ${{ vars.OVH_NODE_FLAVOR }}
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      TF_STATE_ACCESS_KEY: ${{ secrets.TF_STATE_ACCESS_KEY }} # → AWS_* by the "State keys" step (S-161)
+      TF_STATE_SECRET_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
       OVH_VPS_SSH_PRIVATE_KEY: ${{ secrets.OVH_VPS_SSH_PRIVATE_KEY }}
       OVH_VPS_KNOWN_HOSTS: ${{ secrets.OVH_VPS_KNOWN_HOSTS }}
       # scripts/ovh/secrets.sh with OVH_SECRETS_SOURCE=env: every key it writes, by name. An empty generated key is
@@ -313,6 +330,8 @@ jobs:
           if [ -z "$PULL_TOKEN" ] && [ "${REGISTRY_SERVER}" = ghcr.io ]; then
             echo "::warning::REGISTRY_PULL_TOKEN is not set: the cluster pulls with this run's token, which expires when the run ends — a pod that moves or restarts on a node without the image cached will fail to pull. Set a classic token with read:packages (make ovh-gh-setup)."
           fi
+      - name: State keys
+        run: scripts/ovh/tf-state.sh keys "$TARGET"
       - name: Terraform variables and state
         run: |
           scripts/ovh/ci.sh tfvars "$TARGET"
@@ -350,6 +369,9 @@ jobs:
       OVH_DOMAIN: ${{ vars.OVH_DOMAIN }}
       OVH_BUCKET_SUFFIX: ${{ vars.OVH_BUCKET_SUFFIX }}
       OVH_TFVARS: ${{ vars.OVH_TFVARS }}
+      OVH_SERVER: ${{ vars.OVH_SERVER }} # ovh-vps: instance (default; made by Terraform) or vps (ordered in the console)
+      OVH_INSTANCE_FLAVOR: ${{ vars.OVH_INSTANCE_FLAVOR }}
+      OVH_SSH_PUBLIC_KEY: ${{ vars.OVH_SSH_PUBLIC_KEY }}
       OVH_VPS_SERVICE_NAME: ${{ vars.OVH_VPS_SERVICE_NAME }}
       OVH_ADMIN_CIDRS: ${{ vars.OVH_ADMIN_CIDRS }}
       OVH_EDGE_FIREWALL: ${{ vars.OVH_EDGE_FIREWALL }}
@@ -357,8 +379,8 @@ jobs:
       OVH_NODE_COUNT: ${{ vars.OVH_NODE_COUNT }}
       OVH_NODE_FLAVOR: ${{ vars.OVH_NODE_FLAVOR }}
       TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      TF_STATE_ACCESS_KEY: ${{ secrets.TF_STATE_ACCESS_KEY }} # → AWS_* by the "State keys" step (S-161)
+      TF_STATE_SECRET_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
       OVH_VPS_SSH_PRIVATE_KEY: ${{ secrets.OVH_VPS_SSH_PRIVATE_KEY }}
       OVH_VPS_KNOWN_HOSTS: ${{ secrets.OVH_VPS_KNOWN_HOSTS }}
       ACTION: ${{ inputs.action }}
@@ -368,6 +390,8 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
+      - name: State keys
+        run: scripts/ovh/tf-state.sh keys "$TARGET"
       - name: Terraform variables and state
         run: |
           scripts/ovh/ci.sh tfvars "$TARGET"

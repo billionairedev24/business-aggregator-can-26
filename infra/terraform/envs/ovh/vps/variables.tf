@@ -14,8 +14,49 @@ variable "service_name" {
   type        = string
 }
 
+variable "server" {
+  description = "The server (S-161): instance (default) — a Public Cloud instance made by Terraform (Ubuntu 24.04, hourly, instance_flavor, ssh_public_key; nothing in the console, destroy deletes it); vps — a VPS ordered in the console (cheaper by the month), named by vps_service_name."
+  type        = string
+  default     = "instance"
+
+  validation {
+    condition     = contains(["instance", "vps"], var.server)
+    error_message = "server must be instance or vps."
+  }
+}
+
+variable "instance_flavor" {
+  description = "server = instance: the Public Cloud flavor. b3-32 (8 vCPU / 32 GB, general purpose) — the smallest b3 that holds the whole stack (the VPS shape is 8 vCores / 24 GB; b3-16 has 16 GB). Prices are per hour (docs/runbooks/ovh.md § Cost estimate)."
+  type        = string
+  default     = "b3-32"
+}
+
+variable "instance_image" {
+  description = "server = instance: the image name (the user is ubuntu, as on the VPS)."
+  type        = string
+  default     = "Ubuntu 24.04"
+}
+
+variable "instance_flavor_id" {
+  description = "server = instance: a flavor id instead of the lookup by instance_flavor (empty = look it up in the region)."
+  type        = string
+  default     = ""
+}
+
+variable "instance_image_id" {
+  description = "server = instance: an image id instead of the lookup by instance_image (empty = look it up in the region)."
+  type        = string
+  default     = ""
+}
+
+variable "ssh_public_key" {
+  description = "server = instance: the pipeline's deploy key, OpenSSH public key line (make ovh-gh-setup makes the pair: the private half is the Environment secret OVH_VPS_SSH_PRIVATE_KEY, this half the variable OVH_SSH_PUBLIC_KEY)."
+  type        = string
+  default     = ""
+}
+
 variable "vps_service_name" {
-  description = "The VPS's service name once ordered in the console (Bare Metal Cloud › VPS, e.g. vps-1a2b3c4d.vps.ovh.us in the US, vps-1a2b3c4d.vps.ovh.ca in Canada). Empty = no VPS yet: only Object Storage is planned, no firewall."
+  description = "server = vps: the VPS's service name once ordered in the console (Bare Metal Cloud › VPS, e.g. vps-1a2b3c4d.vps.ovh.us in the US, vps-1a2b3c4d.vps.ovh.ca in Canada). Empty = no VPS yet: only Object Storage is planned, no firewall."
   type        = string
   default     = ""
 }
