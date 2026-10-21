@@ -127,8 +127,18 @@ echo "== 4. northline-data"
 # .ovh/<target>-data.yaml (optional, git-ignored): the operator's lasting overrides, e.g. after a restore
 # (docs/runbooks/ovh.md § Backups and restore).
 data_extra=(); [ -f "$OVH_REPO/.ovh/$OVH_TARGET-data.yaml" ] && data_extra=(-f "$OVH_REPO/.ovh/$OVH_TARGET-data.yaml")
-helm upgrade --install northline-data "$H/northline-data" -n "$NS" -f "$work/data.json" ${data_extra[@]+"${data_extra[@]}"} \
-  --wait --timeout 15m
+# No `helm --wait` here: it also waits for every PersistentVolumeClaim to be Bound, and the auth signing keys' volume
+# binds only when auth (step 5) mounts it — on a WaitForFirstConsumer storage class (k3s's local-path, GKE's
+# standard-rwo) the wait could never finish ("context deadline exceeded"). Wait for the data services themselves.
+helm upgrade --install northline-data "$H/northline-data" -n "$NS" -f "$work/data.json" ${data_extra[@]+"${data_extra[@]}"}
+for sts in $(kubectl -n "$NS" get statefulsets -l app.kubernetes.io/instance=northline-data -o name 2>/dev/null); do
+  kubectl -n "$NS" rollout status "$sts" --timeout 15m
+done
+if kubectl -n "$NS" get clusters.postgresql.cnpg.io >/dev/null 2>&1; then
+  for c in $(kubectl -n "$NS" get clusters.postgresql.cnpg.io -o name); do
+    kubectl -n "$NS" wait "$c" --for=condition=Ready --timeout 15m
+  done
+fi
 
 echo "== 5. northline"
 extra=()
