@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, DataTable, Dialog, EmptyState, Field, PageSkeleton, Skeleton, TextArea, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
+import { Alert, Button, DataTable, Dialog, EmptyState, Field, PageSkeleton, Skeleton, TextArea, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import {
@@ -11,6 +11,8 @@ import { dateTime, moneyShort, pctFromBps, timeOf } from './format';
 import { useFinanceT, type FinanceKey } from './messages';
 import { QueryState } from './QueryState';
 import './finance.css';
+import { standingQuery } from '../standing/api';
+import { screenHref } from '../shell/nav';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/heif', 'application/pdf'];
@@ -32,10 +34,18 @@ function Body({ c }: { c: CasesOverview }) {
   const t = useFinanceT();
   const { locale } = useLocale();
   const tier = useMerchant()?.tier ?? 'registered';
+  const merchantId = useMerchantId();
+  // S-156: decisions an agent took against the business can be appealed once, from Standing
+  const appealable = useQuery(standingQuery(merchantId)).data?.appealableDisputes.length ?? 0;
   return (
     <>
       <h1 className="nl-page-title">{t('refundsTitle', { disputes: c.openDisputes, refunds: c.refundsLast30Days })}</h1>
       <p className="fin-lede">{t('refundsLede')}</p>
+      {appealable ? (
+        <Alert tone="highlight" actions={<a className="btn btn-secondary" href={screenHref(merchantId, 'standing')}>{t('appealOpen')}</a>}>
+          {t('appealable', { n: appealable })}
+        </Alert>
+      ) : null}
       <div className="fin-cases">
         {c.open.length ? c.open.map(x => <div key={x.id} className="bo-card">{x.type === 'dispute' ? <DisputeCase d={x} /> : <RefundCase r={x} />}</div>)
           : <EmptyState>{t('noOpenCases')}</EmptyState>}

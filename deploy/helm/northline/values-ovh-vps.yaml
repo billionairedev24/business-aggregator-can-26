@@ -1,5 +1,6 @@
-# ovh-vps — the dry run on ONE OVHcloud VPS in Beauharnois (BHS) running k3s (docs/runbooks/ovh.md, DECISIONS
-# 2026-10-19): fake data only, everything on the box. The same dry-run shape as Google Cloud (values-dryrun.yaml: Spring
+# ovh-vps — the dry run on ONE OVHcloud VPS running k3s, in the location of Terraform's ovh_location (S-160: Vint
+# Hill by default, Hillsboro, or Beauharnois — docs/runbooks/ovh.md, DECISIONS 2026-10-19): fake data only, everything
+# on the box. Terraform's helm_values carry global.hostingCountry (US/CA): outside Canada the chart refuses staging/prod. The same dry-run shape as Google Cloud (values-dryrun.yaml: Spring
 # profile `dev`, hosts, small JVMs, Stripe test mode); this file replaces values-gcp.yaml for OVHcloud. Layer it after
 # values-dryrun.yaml and before Terraform's values (scripts/ovh/deploy.sh does this):
 #
@@ -14,7 +15,8 @@
 #   - Keys: no key service the apps support (KMS_PROVIDER=local from Terraform): northline-auth keeps its signing keys
 #     in a file on a volume (the claim comes from deploy/helm/northline-data, authSigningKeys), the api seals stored
 #     secrets with KMS_LOCAL_KEY. Allowed under `dev`; staging/prod refuse both (an OVHcloud KMS adapter would be needed).
-#   - Object storage: OVHcloud Object Storage over the S3 API (STORAGE_PROVIDER=s3 + endpoint from Terraform), static
+#   - Object storage: OVHcloud Object Storage over the S3 API (STORAGE_PROVIDER=s3 + the location's endpoint from Terraform, e.g.
+#     https://s3.us-east-va.io.cloud.ovh.us), static
 #     keys of a Terraform-made user limited to the uploads bucket (STORAGE_ACCESS_KEY / STORAGE_SECRET_KEY).
 #   - Edge: the same Envoy Gateway as Google Cloud; on k3s its LoadBalancer Service is served by k3s's ServiceLB on the
 #     VPS's own ports 80/443 (no cloud load balancer). Records by hand (no external-dns): docs/runbooks/ovh.md § DNS.

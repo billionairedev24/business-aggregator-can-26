@@ -24,6 +24,7 @@ class EscrowFulfilmentListener {
     static final String BOOKING = "booking";
 
     private final EscrowLifecycle escrow;
+    private final ReleaseDelayService delays;
 
     /** S-153: a deposit quote's balance is its own escrow, captured and released with the job's. */
     static final String BALANCE = "booking_balance";
@@ -32,6 +33,9 @@ class EscrowFulfilmentListener {
     void on(BookingCompleted event) {
         fulfil(BOOKING, event.aggregateId(), event);
         escrow.fulfilledIfHeld(BALANCE, event.aggregateId(), event.occurredAt());
+        if (event.photoCount() == 0) {
+            delays.completedWithoutPhotos(event.aggregateId(), event.occurredAt()); // S-156
+        }
     }
 
     @ApplicationModuleListener

@@ -8,7 +8,12 @@ output "config_env" {
 
 output "helm_values" {
   description = "Values for deploy/helm/northline: configEnv (layered after values-dryrun.yaml and values-ovh-mks.yaml)."
-  value       = { configEnv = module.ovh.config_env }
+  value       = { configEnv = module.ovh.config_env, global = { hostingCountry = local.loc.country } }
+}
+
+output "location" {
+  description = "The location (S-160) and what it derived: country (data residency), API endpoint, token page, region, S3 endpoint and region, database region, whether Postgres fell back to the cluster."
+  value       = merge(module.ovh.location, { postgres_fallback = local.pg_fallback })
 }
 
 output "data_values" {
@@ -47,11 +52,12 @@ output "kubeconfig" {
 output "postgres" {
   description = "Postgres placement; for the managed database its private endpoint and plan."
   value = {
-    mode   = local.pg_mode
-    host   = local.managed ? local.pg_endpoint.domain : null
-    port   = local.managed ? local.pg_endpoint.port : null
-    plan   = local.managed ? var.managed_postgres.plan : null
-    flavor = local.managed ? var.managed_postgres.flavor : null
+    mode     = local.pg_mode
+    fallback = local.pg_fallback # managed asked, but the location has no Managed PostgreSQL: in the cluster instead
+    host     = local.managed ? local.pg_endpoint.domain : null
+    port     = local.managed ? local.pg_endpoint.port : null
+    plan     = local.managed ? var.managed_postgres.plan : null
+    flavor   = local.managed ? var.managed_postgres.flavor : null
   }
 }
 

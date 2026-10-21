@@ -9,7 +9,7 @@
 
 # The one zone of the cluster: every pod with a volume is pinned to it (zonal persistent disks).
 zone: ""
-# false = no zone pinning (OVHcloud: one k3s node on the VPS, or MKS in the single-zone region BHS5); zone may then
+# false = no zone pinning (OVHcloud: one k3s node on the VPS, or MKS in a single-zone region: US-EAST-VA-1, US-WEST-OR-1, BHS5); zone may then
 # stay empty.
 pinToZone: true
 # StorageClass of the volumes. GKE: standard-rwo = pd-balanced, WaitForFirstConsumer. k3s: local-path. OVHcloud MKS:
@@ -74,7 +74,7 @@ postgres:
     bucket: ""                    # Terraform data_values.postgres.backup.bucket (gs://<bucket> or s3://<bucket>)
     serviceAccountAnnotations: {} # gcs: iam.gke.io/gcp-service-account of the backup identity (Terraform)
     s3:
-      endpointURL: ""             # e.g. https://s3.bhs.io.cloud.ovh.net
+      endpointURL: ""             # e.g. https://s3.us-east-va.io.cloud.ovh.us (the location's, S-160)
       credentialsSecret: northline-pg-backup-s3
     # Folder of this cluster's backups in the bucket; empty = the cluster's name. After a restore, a new name (e.g.
     # northline-pg-2): Barman refuses to archive into a folder that already holds another cluster's WAL.

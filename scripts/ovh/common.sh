@@ -37,6 +37,18 @@ env_get() {
   awk -v k="$1" 'index($0, k "=") == 1 { print substr($0, length(k) + 2); exit }' "$OVH_ENV_FILE"
 }
 
+# ovh_location [name] — checks the location (S-160; default OVH_LOCATION, else us-east-va) against
+# infra/terraform/stacks/ovh/locations.json and sets OVH_LOCATION; loc_get <key> reads one of its fields
+# (api_endpoint, token_url, region, s3_endpoint, s3_region, vps_datacenter, country, site, label…).
+OVH_LOCATIONS_FILE="$OVH_REPO/infra/terraform/stacks/ovh/locations.json"
+ovh_location() {
+  OVH_LOCATION=${1:-${OVH_LOCATION:-us-east-va}}
+  need jq
+  jq -e --arg l "$OVH_LOCATION" 'has($l)' "$OVH_LOCATIONS_FILE" >/dev/null \
+    || die "OVH_LOCATION must be us-east-va or us-west-or (OVHcloud US) or ca-bhs (OVHcloud Canada) — got '$OVH_LOCATION'"
+}
+loc_get() { jq -r --arg l "$OVH_LOCATION" --arg k "$1" '.[$l][$k]' "$OVH_LOCATIONS_FILE"; }
+
 need() {
   local c
   for c in "$@"; do command -v "$c" >/dev/null 2>&1 || die "$c is needed (not found on PATH) — docs/runbooks/ovh.md § What you need"; done

@@ -7,6 +7,7 @@ northline.required-env:
   sms-provider: SMS_PROVIDER, SMS_FROM   # S-27 invitation texts: twilio or aws; `local` is refused here
   tax: TAX_PROVIDER   # S-21: stripe (Stripe Tax); `local` is refused at start-up
   plus: PLUS_BILLING_PROVIDER, STRIPE_PLUS_MONTHLY_PRICE, STRIPE_PLUS_ANNUAL_PRICE   # S-152: stripe (Stripe Billing); `local` refused
+  dispute-evidence: DISPUTE_EVIDENCE_PROVIDER   # S-156: stripe (card-dispute evidence); `local` refused
   identity: IDENTITY_PROVIDER             # S-22: stripe; `local` is refused at start-up
   age-verification: AGE_VERIFICATION_PROVIDER, CONSUMER_ORIGIN   # 2026-10-04: stripe; `local` is refused at start-up
   registries: REGISTRY_CORPORATIONS_CANADA_PROVIDER, REGISTRY_ALBERTA_PROVIDER, REGISTRY_CALGARY_PROVIDER   # S-23; `fixtures` refused

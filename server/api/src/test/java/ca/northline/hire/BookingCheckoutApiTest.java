@@ -587,7 +587,7 @@ class BookingCheckoutApiTest extends IntegrationTest {
     class SignOff {
 
         @Test
-        void followsTheJob_thenTheSignOffReleasesTheEscrowAtOnce() throws Exception {
+        void followsTheJob_thenTheSignOffReleasesTheEscrow_afterTheMissingPhotoDelay() throws Exception {
             var bookingId = book(tomorrowAt(18));
             // not completed yet: nothing to sign off
             mvc.perform(post("/api/v1/me/bookings/{id}/sign-off", bookingId).with(TestJwt.customer(customer)))
@@ -634,16 +634,21 @@ class BookingCheckoutApiTest extends IntegrationTest {
                             .filter(e -> e.aggregateId().equals(bookingId)))
                     .singleElement()
                     .satisfies(e -> assertThat(e.customerId()).isEqualTo(customer));
-            // The escrow is released by payments' asynchronous listener, which shares the context's event executor
-            // with every other test class; 10 s timed out twice when the machine was busy, so allow 30 s.
+            // S-156 (S-93 "completion photo missing → release delayed 48 h"): the job was completed without a photo,
+            // so the sign-off doesn't release the escrow at once — it waits for the delay. The escrow is handled by
+            // payments' asynchronous listeners, which share the context's event executor with every other test
+            // class; 10 s timed out twice when the machine was busy, so allow 30 s.
             Awaitility.await()
                     .atMost(Duration.ofSeconds(30))
-                    .untilAsserted(() -> assertThat(jdbc.sql(
-                                            "select release_at <= now() from payments.escrows where ref_type = 'booking' and ref_id = ?")
+                    .untilAsserted(() -> assertThat(jdbc.sql("""
+                                            select d.delayed_until > now() + interval '1 day'
+                                                   and e.release_at = d.delayed_until
+                                              from payments.escrows e join payments.release_delays d on d.escrow_id = e.id
+                                             where e.ref_type = 'booking' and e.ref_id = ?""")
                                     .params(bookingId)
                                     .query(Boolean.class)
-                                    .single())
-                            .isTrue());
+                                    .optional())
+                            .contains(true));
         }
 
         @Test

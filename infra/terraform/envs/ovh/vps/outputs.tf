@@ -10,7 +10,12 @@ output "config_env" {
 # Holds no secret (the secrets are in the Secret northline-secrets, scripts/ovh/secrets.sh).
 output "helm_values" {
   description = "Values for deploy/helm/northline: configEnv (layered after values-dryrun.yaml and values-ovh-vps.yaml)."
-  value       = { configEnv = module.ovh.config_env }
+  value       = { configEnv = module.ovh.config_env, global = { hostingCountry = local.loc.country } }
+}
+
+output "location" {
+  description = "The location (S-160) and what it derived: country (data residency), API endpoint, token page, Object Storage endpoint and region, the VPS datacentre to order in, whether the Network Firewall is used."
+  value       = merge(module.ovh.location, { edge_firewall_used = local.edge_firewall })
 }
 
 output "data_values" {
@@ -30,9 +35,11 @@ output "s3_credentials" {
 }
 
 output "vps" {
-  description = "The VPS: service name, IPv4 (the DNS records' target and the SSH host), whether the Network Firewall is on, who may SSH (read by scripts/ovh/bootstrap-k3s.sh)."
+  description = "The server (an instance or a VPS — the name stays vps for the scripts): kind, service name or instance id, flavor, IPv4 (the DNS records' target and the SSH host), whether the Network Firewall is on, who may SSH (read by scripts/ovh/bootstrap-k3s.sh and ci.sh)."
   value = {
-    service_name  = var.vps_service_name
+    server        = var.server
+    service_name  = local.instance ? ovh_cloud_project_instance.box[0].id : var.vps_service_name
+    flavor        = local.instance ? var.instance_flavor : null
     ipv4          = local.vps_ipv4
     edge_firewall = length(ovh_ip_firewall.box) > 0
     ssh           = local.vps_ipv4 == null ? null : "ubuntu@${local.vps_ipv4}"
