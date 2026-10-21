@@ -220,11 +220,11 @@ class StripeConnectGateway implements PaymentGateway, PayoutGateway {
 
     private static Charged charged(PaymentIntent pi, @Nullable String errorCode) {
         var lastError = pi.getLastPaymentError();
-        var code = errorCode != null
-                ? errorCode
-                : lastError == null
-                        ? null
-                        : Objects.requireNonNullElse(lastError.getDeclineCode(), lastError.getCode());
+        @Nullable String code = errorCode;
+        if (code == null && lastError != null) {
+            var decline = lastError.getDeclineCode();
+            code = decline != null ? decline : lastError.getCode();
+        }
         return switch (Objects.requireNonNullElse(pi.getStatus(), "")) {
             case "succeeded" -> new Charged.Paid(pi.getId(), pi.getLatestCharge());
             case "processing" -> new Charged.Processing(pi.getId());

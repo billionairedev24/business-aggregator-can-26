@@ -5000,6 +5000,131 @@ paths:
       summary: Who at Northline looks after the business
       tags:
       - pilot-controller
+  /api/v1/console/plus/households/{householdId}/periods:
+    get:
+      operationId: consolePlusPeriods
+      parameters:
+      - in: path
+        name: householdId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponsePeriod"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - console-plus-controller
+  /api/v1/console/plus/periods/{periodId}/refund:
+    post:
+      operationId: consolePlusRefund
+      parameters:
+      - in: path
+        name: periodId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Refunded"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - console-plus-controller
   /api/v1/console/privacy-requests:
     get:
       operationId: privacyDeskQueue
@@ -12939,6 +13064,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ParticipantView"
+    ListResponsePeriod:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Period"
     ListResponseQueueItem:
       type: object
       properties:
@@ -13436,6 +13568,32 @@ components:
           $ref: "#/components/schemas/RefundRequest"
         ticket:
           $ref: "#/components/schemas/Ticket"
+    Period:
+      type: object
+      properties:
+        amountCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        endsAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+        paidAt:
+          type: string
+          format: date-time
+        plan:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+        state:
+          type: string
+        taxCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
     Person:
       type: object
       properties:
@@ -13987,6 +14145,19 @@ components:
           minLength: 0
       required:
       - amountCents
+    Refunded:
+      type: object
+      properties:
+        ended:
+          type: boolean
+        period:
+          $ref: "#/components/schemas/Period"
+        refundId:
+          type: string
+        totalCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
     RegionChoice:
       type: object
       properties:

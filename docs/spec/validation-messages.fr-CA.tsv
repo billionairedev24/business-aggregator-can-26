@@ -1211,3 +1211,8 @@ Choose a province or market of the region model.	Choisissez une province ou un m
 The default rule can be changed, not removed.	La règle par défaut peut être modifiée, pas supprimée.	new
 Choose a member price between 1% and 50% off, or none.	Choisissez un prix membre de 1 % à 50 % de rabais, ou aucun.	new
 Add a card in Payment methods first: Plus renews on it.	Ajoutez d’abord une carte dans Modes de paiement : Plus se renouvelle avec elle.	new
+Add your home address in Addresses first: Plus is taxed where you live.	Ajoutez d’abord votre adresse dans Adresses : Plus est taxé là où vous habitez.	new
+Only a paid Plus period can be refunded.	Seule une période Plus payée peut être remboursée.	new
+There's no Plus payment waiting for you.	Aucun paiement Plus ne vous attend.	new
+This Plus payment is being charged already.	Ce paiement Plus est déjà en cours.	new
+Your bank declined the card. Try another card in Payment methods.	Votre banque a refusé la carte. Essayez une autre carte dans Modes de paiement.	new
