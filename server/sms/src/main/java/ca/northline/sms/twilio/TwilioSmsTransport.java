@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
@@ -39,12 +40,29 @@ public final class TwilioSmsTransport implements SmsTransport {
     private final String accountSid;
     private final String from;
     private final String voiceFrom;
+    private final @Nullable String statusCallback;
 
     public TwilioSmsTransport(TwilioApi api, String accountSid, String from, String voiceFrom) {
+        this(api, accountSid, from, voiceFrom, null);
+    }
+
+    /**
+     * @param statusCallback S-157: where Twilio posts each text's delivery status ({@code SMS_STATUS_CALLBACK_URL}, the
+     *     api's {@code /api/v1/webhooks/sms/status}); null = no callbacks
+     */
+    public TwilioSmsTransport(
+            TwilioApi api, String accountSid, String from, String voiceFrom, @Nullable String statusCallback) {
         this.api = api;
         this.accountSid = accountSid;
         this.from = from;
         this.voiceFrom = voiceFrom;
+        this.statusCallback = statusCallback;
+    }
+
+    /** The same transport with delivery-status callbacks to {@code url} (blank = none). */
+    public TwilioSmsTransport withStatusCallback(@Nullable String url) {
+        return new TwilioSmsTransport(
+                api, accountSid, from, voiceFrom, url == null || url.isBlank() ? null : url.strip());
     }
 
     @Override
@@ -53,6 +71,9 @@ public final class TwilioSmsTransport implements SmsTransport {
         form.add("To", to);
         form.add(from.startsWith("MG") ? "MessagingServiceSid" : "From", from);
         form.add("Body", body);
+        if (statusCallback != null) {
+            form.add("StatusCallback", statusCallback);
+        }
         return request("SMS", to, () -> api.sendMessage(accountSid, form));
     }
 

@@ -31,12 +31,15 @@ public final class SmsTransports {
 
     public static final String TWILIO_API = "https://api.twilio.com";
 
+    /** S-157: where Twilio posts delivery statuses of the texts the api and the worker send ({@code SMS_STATUS_CALLBACK_URL}). */
+    public static final String STATUS_CALLBACK = "northline.sms.status-callback-url";
+
     private SmsTransports() {}
 
     public static SmsTransport of(SmsProperties sms, Environment environment) {
         return switch (sms.provider()) {
             case LOCAL -> local(environment);
-            case TWILIO -> twilio(sms);
+            case TWILIO -> twilio(sms).withStatusCallback(environment.getProperty(STATUS_CALLBACK));
             case AWS -> aws(awsClient(sms), sms);
             case AZURE -> throw azureNotImplemented();
         };

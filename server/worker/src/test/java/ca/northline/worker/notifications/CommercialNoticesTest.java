@@ -91,11 +91,11 @@ class CommercialNoticesTest extends WorkerIntegrationTest {
         });
         assertThat(texts.to(amara.phone()))
                 .singleElement()
-                .satisfies(
-                        t -> assertThat(t.body())
-                                .startsWith("Northline : Livraison gratuite ce week-end.")
-                                .contains(
-                                        "— Northline Marketplace Inc. · Désabonnement : http://localhost:8080/api/v1/email/unsubscribe?t="));
+                .satisfies(t -> assertThat(t.body())
+                        .startsWith("Northline : Livraison gratuite ce week-end.")
+                        .contains(
+                                "— Northline Marketplace Inc. · Désabonnement : http://localhost:8080/api/v1/email/unsubscribe?t=")
+                        .endsWith(" ou répondez ARRET")); // S-157: the STOP keyword works too
         EmailMessage email = emails.to(amara.email()).getFirst();
         assertThat(email.subject()).isEqualTo("Livraison gratuite ce week-end — Northline");
         assertThat(email.headers())
@@ -130,6 +130,71 @@ class CommercialNoticesTest extends WorkerIntegrationTest {
         assertThat(pushes.to(kofi.id())).hasSize(1);
         assertThat(texts.to(kofi.phone())).isEmpty();
         assertThat(deferred(kofi.id())).isZero();
+    }
+
+    /** S-157: what the console's offer producer queues (the api's OfferCampaignJdbc row and payload). */
+    void queued(Member to, String channel, String campaign, Instant due) {
+        var payload = new java.util.LinkedHashMap<String, Object>(PersonalNotices.offer(
+                to.id(),
+                "Free delivery this weekend",
+                "Order before Sunday night and delivery is on us.",
+                "Livraison gratuite ce week-end",
+                "Commandez avant dimanche soir et la livraison est offerte.",
+                "/shop"));
+        payload.put("campaignId", campaign);
+        jdbc.sql("""
+                        insert into messaging.deferred_notifications (id, channel, audience, user_id, merchant_id,
+                               event_id, event_type, event_version, payload, due_at)
+                        values (:id, :channel, 'customer', :user, null, :event, 'messaging.offer', 1,
+                               cast(:payload as jsonb), :due)""")
+                .param("id", Events.id())
+                .param("channel", channel)
+                .param("user", to.id())
+                .param("event", campaign)
+                .param("payload", json.writeValueAsString(payload))
+                .param("due", due.atOffset(java.time.ZoneOffset.UTC))
+                .update();
+    }
+
+    @Test
+    void s157_aQueuedOffer_goesOnItsChannelOnly_andATextDueAtNightWaitsForTheMorning() {
+        var efua = customer("fr-CA");
+        consent(efua.id(), "marketing_email", "granted");
+        consent(efua.id(), "marketing_sms", "granted");
+        consent(efua.id(), "marketing_push", "granted");
+        clock.set(NIGHT);
+        queued(efua, "sms", "C" + Events.id(), NIGHT);
+        for (var i = 0; i < 20; i++) {
+            notifier.sendDue(50);
+        }
+        assertThat(texts.to(efua.phone())).isEmpty(); // quiet hours: postponed, not an attempt
+        assertThat(deferred(efua.id())).isEqualTo(1);
+        assertThat(jdbc.sql("select attempts from messaging.deferred_notifications where user_id = ?")
+                        .params(efua.id())
+                        .query(Integer.class)
+                        .single())
+                .isZero();
+
+        clock.set(MORNING);
+        for (var i = 0; i < 100 && deferred(efua.id()) > 0; i++) {
+            notifier.sendDue(50);
+        }
+        assertThat(texts.to(efua.phone()))
+                .singleElement()
+                .satisfies(t -> assertThat(t.body())
+                        .startsWith("Northline : Livraison gratuite ce week-end.")
+                        .endsWith(" ou répondez ARRET"));
+        assertThat(emails.to(efua.email())).isEmpty(); // the campaign's channel only
+        assertThat(pushes.to(efua.id())).isEmpty();
+
+        queued(efua, "email", "C" + Events.id(), MORNING);
+        for (var i = 0; i < 100 && deferred(efua.id()) > 0; i++) {
+            notifier.sendDue(50);
+        }
+        assertThat(emails.to(efua.email()))
+                .singleElement()
+                .satisfies(e -> assertThat(e.headers()).containsKey(EmailMessage.LIST_UNSUBSCRIBE));
+        assertThat(texts.to(efua.phone())).hasSize(1);
     }
 
     @Test

@@ -10,6 +10,7 @@ import { setServices } from '../src/services';
 import { appRoute } from '../src/shop/common';
 import { TRACK_POLL_MS } from '../src/shop/Order';
 import { setCardPayments, stripeCardPayments, type CardPayments } from '../src/shop/payments';
+import { setWalletsForTests } from '../src/shop/wallets';
 import { start } from './support';
 
 jest.mock('@stripe/stripe-react-native', () => ({
@@ -450,6 +451,30 @@ describe('B6 Payment', () => {
     expect(screen.getByRole('tab', { name: 'Cart' })).toBeTruthy(); // no badge: the cart is empty
   });
 
+  it('S-157: an unticked offers box with the wording; ticked, it is recorded after the order is placed (source checkout)', async () => {
+    const { view, server } = await signedInWithCart({ url: PAY });
+    const box = await screen.findByTestId('checkout-consent-email');
+    expect(box.props.accessibilityState).toMatchObject({ checked: false });
+    expect(screen.getByText('Offers by email (optional)')).toBeTruthy();
+    fireEvent.press(box);
+    expect(await screen.findByText(/^Charged \$23\.35 now\./)).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Place your order · $23.35' }));
+    fireEvent.press(await screen.findByTestId('bank-approve'));
+    await waitFor(() => expect(view.getPathname()).toBe('/orders/ord-48213/confirmed'));
+    await waitFor(() => expect(server.account.consentHistory[0]).toMatchObject({ category: 'marketing_email', action: 'granted', source: 'checkout' }));
+  });
+
+  it('S-157: nothing is recorded when the offers box stays unticked', async () => {
+    const { view, server } = await signedInWithCart({ url: PAY });
+    await screen.findByTestId('checkout-consent-email');
+    const before = server.account.consentHistory.length;
+    expect(await screen.findByText(/^Charged \$23\.35 now\./)).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Place your order · $23.35' }));
+    fireEvent.press(await screen.findByTestId('bank-approve'));
+    await waitFor(() => expect(view.getPathname()).toBe('/orders/ord-48213/confirmed'));
+    expect(server.account.consentHistory).toHaveLength(before);
+  });
+
   it('keeps the same Idempotency-Key when there was no answer, so trying again can’t pay twice', async () => {
     const keys: string[] = [];
     let drop = true;
@@ -612,6 +637,46 @@ describe('the Stripe adapter (the payment port’s real side, Stripe’s SDK moc
     expect(await stripeCardPayments.pay(started, { kind: 'new' })).toEqual({ status: 'cancelled' });
     stripe().confirmPayment!.mockResolvedValueOnce({ error: { code: 'Failed', message: 'declined', localizedMessage: 'Your card was declined.' } });
     expect(await stripeCardPayments.pay(started, { kind: 'saved', paymentMethodId: 'pm_saved' })).toEqual({ status: 'failed', message: 'Your card was declined.' });
+  });
+});
+
+describe('S-157: Apple Pay and Google Pay in PaymentSheet', () => {
+  const stripe = () => jest.requireMock('@stripe/stripe-react-native') as Record<string, jest.Mock>;
+  const started: Started = {
+    checkoutId: 'co-2', orderId: 'ord-2', ref: 'NL-2', totalCents: 1946, expiresAt: '2026-10-02T00:15:00Z',
+    payment: { provider: 'stripe', publishableKey: 'pk_test_x' },
+    intents: [
+      { paymentIntent: 'pi_1', clientSecret: 'pi_1_secret', status: 'requires_payment_method', amountCents: 1500 },
+      { paymentIntent: 'pi_2', clientSecret: 'pi_2_secret', status: 'requires_payment_method', amountCents: 446 },
+    ],
+  };
+  const KEYS = ['EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID', 'EXPO_PUBLIC_GOOGLE_PAY', 'EXPO_PUBLIC_GOOGLE_PAY_TEST'] as const;
+  afterEach(() => {
+    for (const k of KEYS) delete process.env[k];
+    setWalletsForTests(null);
+  });
+
+  it('offers both wallets when the api and the build allow them; the wallet’s PaymentMethod confirms the other intents', async () => {
+    process.env.EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID = 'merchant.ca.northline.test';
+    process.env.EXPO_PUBLIC_GOOGLE_PAY = '1';
+    process.env.EXPO_PUBLIC_GOOGLE_PAY_TEST = '1';
+    setWalletsForTests({ applePay: true, googlePay: true });
+    expect(await stripeCardPayments.pay(started, { kind: 'new' })).toEqual({ status: 'paid' });
+    expect(stripe().initStripe).toHaveBeenLastCalledWith(expect.objectContaining({ merchantIdentifier: 'merchant.ca.northline.test' }));
+    expect(stripe().initPaymentSheet).toHaveBeenLastCalledWith(expect.objectContaining({
+      applePay: { merchantCountryCode: 'CA' },
+      googlePay: { merchantCountryCode: 'CA', currencyCode: 'CAD', testEnv: true },
+    }));
+    expect(stripe().confirmPayment).toHaveBeenLastCalledWith('pi_2_secret', { paymentMethodType: 'Card', paymentMethodData: { paymentMethodId: 'pm_new' } });
+  });
+
+  it('cards only when the api says no, or the build lacks the merchant id', async () => {
+    process.env.EXPO_PUBLIC_GOOGLE_PAY = '1';
+    setWalletsForTests({ applePay: true, googlePay: false });
+    await stripeCardPayments.pay(started, { kind: 'new' });
+    const options = stripe().initPaymentSheet!.mock.lastCall![0] as Record<string, unknown>;
+    expect(options).not.toHaveProperty('applePay');
+    expect(options).not.toHaveProperty('googlePay');
   });
 });
 

@@ -15,6 +15,7 @@ import {
 } from '../cart/api';
 import { useCartT } from '../cart/messages';
 import { FakePayment, useStripePayment } from '../cart/Payment';
+import { CheckoutConsent, useCheckoutConsent } from '../consent/CheckoutConsent';
 import { StepUpDialog } from '../cart/StepUpDialog';
 import { AgeCheck } from '../cart/AgeCheck';
 import { ageCleared, NO_AGE } from '../cart/age';
@@ -103,6 +104,7 @@ function Checkout({ cart }: { cart: Cart }) {
   const [usePoints, setUsePoints] = useState(false);
   const [tip, setTip] = useState<TipChoice>({ kind: 'none', value: 0 });
   const pay = useStripePayment(started, m => setError(m));
+  const consent = useCheckoutConsent(); // S-157: the optional offers box (CASL)
   const headings = useRef<Partial<Record<StepKey, HTMLHeadingElement | null>>>({});
   const moved = useRef(false);
 
@@ -197,6 +199,7 @@ function Checkout({ cart }: { cart: Cart }) {
       const order = await placeOrder(started.checkoutId, newIdempotencyKey());
       key.current = newIdempotencyKey();
       setPlaced(true);
+      await consent.record(); // S-157: the ticked offers box, once the order went through
       await qc.cancelQueries({ queryKey: ['checkout'] });
       await navigate({ to: '/checkout/complete', search: { order: order.orderId, ref: order.ref } });
       // after leaving: the cart is refetched (now empty) and the next checkout starts from a fresh set-up and quote
@@ -338,6 +341,7 @@ function Checkout({ cart }: { cart: Cart }) {
                 </li>
               ))}
             </ul>
+            <CheckoutConsent consent={consent} />
             <div className="co-actions">
               <button type="button" className="btn btn-primary btn-lg" disabled={!canPlace} aria-busy={busy} onClick={() => void place()}>{busy ? t('placing') : t('place')}</button>
             </div>

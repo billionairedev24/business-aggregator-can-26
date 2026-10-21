@@ -44,6 +44,18 @@ export interface RegisterValues {
   phone: string;
   email: string;
   terms: boolean;
+  /** S-157: the ticked marketing boxes (CASL express consent), with the wording version shown */
+  marketing?: MarketingConsent[];
+}
+/** S-157: a ticked marketing checkbox. */
+export interface MarketingConsent {
+  category: 'marketing_email' | 'marketing_sms';
+  wordingVersion: string;
+}
+/** S-157: `GET /api/auth/accounts/consent-wordings?app=consumer` — the sign-up's marketing checkboxes. */
+export interface ConsentWordings {
+  requester: string;
+  items: { category: 'marketing_email' | 'marketing_sms'; channel: string; wordingVersion: string; wording: string }[];
 }
 
 export class AuthApi {
@@ -82,7 +94,23 @@ export class AuthApi {
       phone: v.phone.trim(),
       email: v.email.trim(),
       terms: v.terms,
+      ...(v.marketing?.length ? { marketing: v.marketing, consentSource: 'app_signup' } : {}),
     });
+  }
+
+  /** S-157: the wordings of the sign-up's marketing checkboxes, in the app's language. */
+  async consentWordings(): Promise<ConsentWordings> {
+    let res: Response;
+    try {
+      res = await this.fetchImpl(`${this.issuer}/api/auth/accounts/consent-wordings?app=consumer`, {
+        credentials: 'include',
+        headers: { Accept: 'application/json', 'Accept-Language': this.language() === 'fr-CA' ? 'fr-CA' : 'en-CA' },
+      });
+    } catch (e) {
+      throw new NetworkError(e);
+    }
+    if (!res.ok) throw await apiErrorOf(res);
+    return (await res.json()) as ConsentWordings;
   }
   resend(channel: 'sms' | 'voice') {
     return this.post<RegistrationStep>('/api/auth/register/resend', { channel });

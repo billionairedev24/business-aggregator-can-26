@@ -88,13 +88,15 @@ class ConsentService implements ManageConsents, ConsentDesk, ConsentRetention, C
         String version = null;
         String addressHash = null;
         if (c.granted()) {
-            if (!ConsentSource.PERSONAL.contains(c.source())) {
+            if (!ConsentSource.PERSONAL.contains(c.source()) && c.source() != ConsentSource.SMS_KEYWORD) {
                 throw new IllegalArgumentException(
                         NOT_GRANTED_HERE + " (" + c.source().code() + ")");
             }
-            var surface = c.source() == ConsentSource.STUDIO
-                    ? ConsentWordings.Surface.STUDIO
-                    : ConsentWordings.Surface.ACCOUNT;
+            var surface = switch (c.source()) {
+                case STUDIO -> ConsentWordings.Surface.STUDIO;
+                case SMS_KEYWORD -> ConsentWordings.Surface.SMS_KEYWORD; // S-157: START after a STOP
+                default -> ConsentWordings.Surface.ACCOUNT;
+            };
             var wording = ConsentWordings.current(c.category(), surface)
                     .orElseThrow(() -> RuleViolation.of("category", "allowed", "Choose from the list."));
             if (c.wordingVersion() != null && !c.wordingVersion().equals(wording.version())) {
@@ -235,10 +237,6 @@ class ConsentService implements ManageConsents, ConsentDesk, ConsentRetention, C
 
     /** "Northline Marketplace Inc. · <address> · support@…": who asks for consent (CASL regulations s. 4). */
     private String requester() {
-        var address =
-                email.mailingAddress() == null ? "" : email.mailingAddress().strip();
-        var name = legalName();
-        var who = address.contains(name) ? address : name + " · " + address;
-        return who + " · " + email.contact();
+        return ca.northline.email.ConsentWordings.requester(legalName(), email.mailingAddress(), email.contact());
     }
 }

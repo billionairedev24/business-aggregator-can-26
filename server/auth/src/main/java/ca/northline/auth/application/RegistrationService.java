@@ -6,6 +6,7 @@ import static ca.northline.auth.domain.AuthMessages.CODE_WRONG;
 
 import ca.northline.auth.application.FlowRejected.Reason;
 import ca.northline.auth.application.SignInLog.Client;
+import ca.northline.auth.domain.App;
 import ca.northline.auth.domain.AuthMessages;
 import ca.northline.auth.domain.Factor;
 import ca.northline.auth.domain.OtpChallenge;
@@ -16,6 +17,7 @@ import ca.northline.auth.domain.Totp;
 import com.github.f4b6a3.ulid.UlidCreator;
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -47,6 +49,7 @@ public class RegistrationService {
     private final FederatedLinking federation;
     private final ApplicationEventPublisher events;
     private final AuthProperties props;
+    private final SignupConsents consents;
     private final Clock clock;
 
     /**
@@ -61,10 +64,13 @@ public class RegistrationService {
             String phone,
             String email,
             @Nullable String termsLanguage,
-            boolean termsEnglishRequested) {
+            boolean termsEnglishRequested,
+            List<SignupConsents.Requested> marketing,
+            String consentSource,
+            Client client) {
 
         public Start(String firstName, String lastName, String phone, String email) {
-            this(firstName, lastName, phone, email, null, false);
+            this(firstName, lastName, phone, email, null, false, List.of(), "web_signup", new Client(null, null));
         }
     }
 
@@ -91,6 +97,9 @@ public class RegistrationService {
         if (!taken.isEmpty()) {
             throw new InvalidInput(taken);
         }
+        // S-157: the ticked marketing boxes (customers: email and texts), checked against the wording shown
+        var marketing = consents.accept(
+                in.marketing(), App.CONSUMER, AccountService.language(), in.client(), phone.e164(), clock.instant());
         // "Back" and submitting the same form again must not become a way around the resend cool-down.
         var open = flow.get(FlowStore.REGISTRATION)
                 .filter(r -> r.phone().equals(phone) && !r.phoneVerified())
@@ -101,7 +110,9 @@ public class RegistrationService {
                     .withLastName(in.lastName().trim())
                     .withEmail(email)
                     .withTermsLanguage(termsLanguage(in))
-                    .withTermsEnglishRequested(in.termsEnglishRequested());
+                    .withTermsEnglishRequested(in.termsEnglishRequested())
+                    .withMarketingConsents(marketing)
+                    .withConsentSource(in.consentSource());
             flow.put(FlowStore.REGISTRATION, same);
             return same;
         }
@@ -116,7 +127,9 @@ public class RegistrationService {
                 false,
                 null,
                 termsLanguage(in),
-                in.termsEnglishRequested());
+                in.termsEnglishRequested(),
+                marketing,
+                in.consentSource());
         flow.remove(FlowStore.PASSKEY_CREATION);
         flow.put(FlowStore.REGISTRATION, registration);
         return registration;
@@ -236,6 +249,13 @@ public class RegistrationService {
                 now,
                 registration.termsLanguage(),
                 registration.termsEnglishRequested() ? now : null));
+        // S-157: the sign-up form's marketing consents, with the account
+        consents.record(
+                registration.userId(),
+                registration.marketingConsents(),
+                registration.consentSource(),
+                registration.email(),
+                registration.phone().e164());
         // S-28: in this transaction — the outbox row commits with the account, or neither does.
         events.publishEvent(new UserRegistered(UlidCreator.getMonotonicUlid().toString(), now, registration.userId()));
         flow.remove(FlowStore.REGISTRATION);

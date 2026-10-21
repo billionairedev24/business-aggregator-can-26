@@ -201,6 +201,8 @@ northline:
     stripe-connect-webhook-secret: ${STRIPE_CONNECT_WEBHOOK_SECRET:}  # whsec_… of …/webhooks/stripe/connect
     stripe-webhook-tolerance: ${STRIPE_WEBHOOK_TOLERANCE:PT5M} # oldest signed delivery accepted (replay protection)
     webhook-rate-limit: ${STRIPE_WEBHOOK_RATE_LIMIT:600}       # deliveries per minute and client address
+    apple-pay: ${STRIPE_APPLE_PAY:false}                       # S-157: offer Apple Pay (domain registered, stripe.md § 15)
+    google-pay: ${STRIPE_GOOGLE_PAY:false}                     # S-157: offer Google Pay (on in the Stripe Dashboard)
     reconcile-cron: ${PAYMENTS_RECONCILE_CRON:0 41 4 * * *}   # S-85 Stripe ↔ ledger, yesterday, platform zone
     courier-payouts-cron: ${COURIER_PAYOUTS_CRON:0 41 6 * * MON}  # S-151 weekly courier payouts, platform zone
     unheld-booking-grace: ${PAYMENTS_UNHELD_BOOKING_GRACE:PT30M}  # S-153: a booking's card hold never confirmed → canceled
@@ -441,6 +443,13 @@ northline:
     auth-token: ${SMS_AUTH_TOKEN:}
     region: ${SMS_REGION:}
     endpoint: ${SMS_ENDPOINT:}
+    webhook-base-url: ${API_PUBLIC_URL:http://localhost:8080}  # S-157: the URL Twilio signs (inbound + status webhooks)
+    status-callback-url: ${SMS_STATUS_CALLBACK_URL:}          # S-157: …/api/v1/webhooks/sms/status; empty = no callbacks
+  # S-157 (docs/runbooks/casl.md § Offers): offers sent from the console go into the worker's deferred queue this many
+  # a minute (at most 50: what the worker's deferred job sends each minute); their links open on the consumer site.
+  messaging.offers:
+    per-minute: ${OFFERS_PER_MINUTE:30}
+    consumer-url: ${CONSUMER_ORIGIN:http://localhost:3000}
   # AI (S-129, ca.northline.ai; docs/runbooks/ai.md): the LlmClient port. fake (deterministic, no network or key;
   # refused under staging/prod) | openrouter (OpenRouter's OpenAI-compatible API; blank key = every AI feature 503).
   ai:

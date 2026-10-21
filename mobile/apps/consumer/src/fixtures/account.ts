@@ -339,7 +339,7 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
     // ── the api: personal ─────────────────────────────────────────────────────────────────────────────────────────
     const mine =
       ['/me/account-summary', '/me/activity', '/me/profile', '/me/addresses', '/me/household', '/me/plus', '/me/plus/resume', '/me/points', '/me/referral', '/me/referral/claim', '/me/wallet', '/me/notifications', '/me/consents', '/me/preferences', '/me/privacy-requests', '/me/cases'].includes(path) ||
-      /^\/me\/(quotes|addresses|cases|privacy-requests)\//.test(path) ||
+      /^\/me\/(quotes|addresses|cases|privacy-requests|consents)\//.test(path) ||
       (path.startsWith('/me/payment-methods') && !(method === 'GET' && path === '/me/payment-methods'));
     if (!mine) return undefined;
     if (!signedIn(req)) return ctx.answer(401, { error: 'invalid_token' });
@@ -539,6 +539,12 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       return ctx.answer(200, notifications());
     }
     if (path === '/me/consents' && method === 'GET') return ctx.answer(200, consents());
+    if (method === 'PUT' && (m = /^\/me\/consents\/(marketing_email|marketing_sms|marketing_push)$/.exec(path))) {
+      // S-157: a consent given (or withdrawn) in one place, e.g. the checkout's offers box
+      const b = req.body as { granted: boolean; source: string };
+      consentChange(m[1]!.replace('marketing_', ''), b.granted, b.source);
+      return ctx.answer(200, consents());
+    }
     if (path === '/me/preferences') {
       if (method === 'GET') return ctx.answer(200, state.prefs);
       const b = req.body as Partial<AccountFixtureState['prefs']>;

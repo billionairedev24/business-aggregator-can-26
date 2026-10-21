@@ -21782,6 +21782,8 @@ components:
           type: integer
           format: int64
           description: Cents of Canadian dollars (CAD).
+        returned:
+          $ref: "#/components/schemas/Returned"
         schedule:
           $ref: "#/components/schemas/Schedule"
     OwnerView:
@@ -23127,6 +23129,20 @@ components:
           type: boolean
         state:
           type: string
+    Returned:
+      type: object
+      properties:
+        amountCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        failureCode:
+          type: string
+        payoutId:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
     Review:
       type: object
       properties:

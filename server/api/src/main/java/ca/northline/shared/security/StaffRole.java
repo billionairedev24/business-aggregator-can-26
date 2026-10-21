@@ -62,7 +62,9 @@ public enum StaffRole implements CodedEnum {
                         ConsoleScreen.DISPUTES,
                         ConsoleScreen.TEAM,
                         // S-118: finance records the Stripe live-mode and PCI gates
-                        ConsoleScreen.GO_LIVE);
+                        ConsoleScreen.GO_LIVE,
+                        // S-157: finance runs the promotions, so the offers that announce them too
+                        ConsoleScreen.OFFERS);
             case SUPPORT ->
                 Set.of(
                         ConsoleScreen.OVERVIEW,
@@ -109,7 +111,12 @@ public enum StaffRole implements CodedEnum {
                         ConsoleAction.SUPPORT);
             case DISPATCH -> Set.of(ConsoleAction.DISPATCH);
             case FINANCE ->
-                Set.of(ConsoleAction.REFUND, ConsoleAction.PAYOUTS, ConsoleAction.ATTEST, ConsoleAction.PROMOTIONS);
+                Set.of(
+                        ConsoleAction.REFUND,
+                        ConsoleAction.PAYOUTS,
+                        ConsoleAction.ATTEST,
+                        ConsoleAction.PROMOTIONS,
+                        ConsoleAction.OFFERS);
             // S-121: support triages the pilot group's feedback, as it does their cases
             case SUPPORT -> Set.of(ConsoleAction.SUPPORT, ConsoleAction.UAT);
             case SUPPORT_LEAD ->

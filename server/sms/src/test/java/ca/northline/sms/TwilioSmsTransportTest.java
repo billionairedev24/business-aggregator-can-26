@@ -67,6 +67,19 @@ class TwilioSmsTransportTest {
     }
 
     @Test
+    void s157_asksForDeliveryStatusCallbacksWhenConfigured() {
+        twilio.stubFor(post(urlEqualTo(MESSAGES)).willReturn(json(201, "{\"sid\":\"SM2\",\"status\":\"queued\"}")));
+        ((ca.northline.sms.twilio.TwilioSmsTransport) transport("+15875550100", ""))
+                .withStatusCallback("https://api.example.test/api/v1/webhooks/sms/status")
+                .sendText("+14035550148", "Northline: hello");
+        twilio.verify(postRequestedFor(urlEqualTo(MESSAGES))
+                .withRequestBody(containing(
+                        "StatusCallback=https%3A%2F%2Fapi.example.test%2Fapi%2Fv1%2Fwebhooks%2Fsms%2Fstatus")));
+        transport("+15875550100", "").sendText("+14035550148", "Northline: no callback");
+        twilio.verify(1, postRequestedFor(urlEqualTo(MESSAGES)).withRequestBody(containing("StatusCallback")));
+    }
+
+    @Test
     void callsReadTheTextInFrench() {
         twilio.stubFor(post(urlEqualTo(CALLS)).willReturn(json(201, "{\"sid\":\"CA1\",\"status\":\"queued\"}")));
         transport("+15875550100", "").call("+14035550148", "Bonjour & à bientôt", Locale.CANADA_FRENCH);

@@ -19,7 +19,7 @@ export const SCRIPT_INVENTORY = Object.freeze([
   Object.freeze({
     origin: 'https://js.stripe.com',
     script: 'Stripe.js v3 (https://js.stripe.com/v3), loaded on demand',
-    why: 'Payment Element: card entry in Stripe’s iframe for cart, food checkout, booking deposit, quote acceptance and saved cards',
+    why: 'Payment Element: card entry (and, S-157, Apple Pay / Google Pay) in Stripe’s iframe for cart, food checkout, booking deposit, quote acceptance and saved cards',
     integrity: 'not pinnable: Stripe serves v3 unversioned and forbids self-hosting or SRI; authorised by origin',
   }),
 ]);
@@ -70,7 +70,8 @@ export function securityHeaders(env = process.env, nonce = undefined) {
     'x-content-type-options': 'nosniff',
     'referrer-policy': 'strict-origin-when-cross-origin',
     'x-frame-options': 'DENY',
-    'permissions-policy': 'camera=(), microphone=(), payment=(self), geolocation=(self)',
+    // S-157: Apple Pay / Google Pay run the Payment Request API inside Stripe's iframe, which needs `payment` delegated
+    'permissions-policy': 'camera=(), microphone=(), payment=(self "https://js.stripe.com"), geolocation=(self)',
     'cross-origin-opener-policy': 'same-origin-allow-popups',
     'content-security-policy': contentSecurityPolicy(env, nonce),
     'reporting-endpoints': `${REPORT_GROUP}="${CSP_REPORT_PATH}"`,

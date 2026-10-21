@@ -16,7 +16,13 @@ export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
  * `termsLanguage` / `termsEnglishRequested` (S-116): the language the Terms were shown in, and an express request for the
  * English version where they are presented in French first — recorded with the acceptance.
  */
-export interface RegisterValues { firstName: string; lastName: string; phone: string; email: string; terms: boolean; termsLanguage?: 'en' | 'fr'; termsEnglishRequested?: boolean }
+/** S-157: a ticked marketing checkbox (CASL express consent) — the category and the wording version the form showed. */
+export interface MarketingConsent { category: 'marketing_email' | 'marketing_sms'; wordingVersion: string }
+export interface RegisterValues {
+  firstName: string; lastName: string; phone: string; email: string; terms: boolean; termsLanguage?: 'en' | 'fr'; termsEnglishRequested?: boolean;
+  /** S-157: the ticked boxes, and where (the app's sign-up: `app_signup`; default `web_signup`) */
+  marketing?: MarketingConsent[]; consentSource?: 'web_signup' | 'app_signup';
+}
 export const REGISTER_FIELDS = ['firstName', 'lastName', 'phone', 'email', 'terms'] as const;
 
 export const registerSchema = (t: AuthKitT) => z.object({
@@ -43,6 +49,8 @@ export type AccountApp = 'studio' | 'consumer' | 'console';
 export interface CreateAccountValues {
   firstName: string; lastName: string; email: string; password: string; passwordConfirm: string; phone: string; terms: boolean;
   termsLanguage?: 'en' | 'fr'; termsEnglishRequested?: boolean;
+  /** S-157: the ticked marketing checkboxes (unticked ones are not sent) */
+  marketing?: MarketingConsent[];
 }
 export const CREATE_ACCOUNT_FIELDS = ['firstName', 'lastName', 'email', 'password', 'passwordConfirm', 'phone', 'terms'] as const;
 
@@ -100,6 +108,16 @@ export type EmailConfirmed = z.infer<typeof EmailConfirmed>;
 export const Enrolled = z.object({ session: AuthSession, backupCodes: z.array(z.string()) });
 export type Enrolled = z.infer<typeof Enrolled>;
 export const PasswordReset = z.object({ email: z.string() });
+/**
+ * S-157: the sign-up form's marketing checkboxes (`GET /api/auth/accounts/consent-wordings?app=`): per category the
+ * words to show and their version, and who asks (CASL: legal name, mailing address, contact). Consumer: email and texts;
+ * Studio: email; console: none.
+ */
+export const ConsentWordings = z.object({
+  requester: z.string(),
+  items: z.array(z.object({ category: z.enum(['marketing_email', 'marketing_sms']), channel: z.string(), wordingVersion: z.string(), wording: z.string() })),
+});
+export type ConsentWordings = z.infer<typeof ConsentWordings>;
 
 /** WebAuthn options exactly as Spring Security serialises them (base64url bytes). */
 export const PasskeyOptions = z.record(z.string(), z.unknown());
@@ -131,7 +149,9 @@ export const authApi = {
   createAccount: (v: CreateAccountValues, app: AccountApp, locale = 'en') => post('/api/auth/accounts', EmailSent, {
     firstName: v.firstName.trim(), lastName: v.lastName.trim(), email: v.email.trim(), password: v.password, passwordConfirm: v.passwordConfirm,
     phone: v.phone.trim() || null, terms: v.terms, termsLanguage: v.termsLanguage, termsEnglishRequested: v.termsEnglishRequested, app,
+    marketing: v.marketing ?? [],
   }, language(locale)),
+  consentWordings: (app: AccountApp, locale = 'en') => http(authUrl(`/api/auth/accounts/consent-wordings?app=${app}`), { headers: language(locale) }, ConsentWordings),
   resendVerification: (locale = 'en') => post('/api/auth/accounts/resend', EmailSent, {}, language(locale)),
   verifyEmail: (code: string) => post('/api/auth/accounts/verify', AuthSession, { code: code.trim() }),
   verifyEmailLink: (token: string) => post('/api/auth/accounts/verify-link', EmailConfirmed, { token }),

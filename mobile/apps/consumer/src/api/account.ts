@@ -293,6 +293,9 @@ export const accountApi = (api: ApiClient) => ({
   notifications: () => need(api.get<NotificationPrefs>('/me/notifications')),
   saveNotifications: (c: NotificationChange) => need(api.put<NotificationPrefs>('/me/notifications', { json: c })),
   consents: () => need(api.get<Consents>('/me/consents')),
+  /** S-157: a consent given at checkout (the wording version shown; CASL express consent). */
+  grantAtCheckout: (category: string, wordingVersion: string) =>
+    need(api.put<Consents>(`/me/consents/${id(category)}`, { json: { granted: true, source: 'checkout', wordingVersion } })),
   prefs: () => need(api.get<Prefs>('/me/preferences')),
   savePrefs: (c: Partial<Prefs>) => need(api.patch<Prefs>('/me/preferences', { json: c })),
 

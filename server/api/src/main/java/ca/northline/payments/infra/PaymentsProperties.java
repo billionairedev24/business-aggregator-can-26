@@ -16,6 +16,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param stripeConnectWebhookSecret signing secret of the Connect webhook endpoint (connected accounts' events)
  * @param stripeWebhookTolerance how old a signed delivery may be (replay protection); default 5 minutes
  * @param webhookRateLimit webhook deliveries accepted per minute and client address; default 600
+ * @param applePay S-157: offer Apple Pay in the Payment Element / PaymentSheet (Stripe only; needs the domain
+ *     registered and, in the app, the merchant id — stripe.md § 15)
+ * @param googlePay S-157: offer Google Pay (Stripe only; Google Pay on in the Stripe Dashboard)
  */
 @ConfigurationProperties("northline.payments")
 record PaymentsProperties(
@@ -26,7 +29,9 @@ record PaymentsProperties(
         @Nullable String stripeWebhookSecret,
         @Nullable String stripeConnectWebhookSecret,
         @Nullable Duration stripeWebhookTolerance,
-        @Nullable Integer webhookRateLimit) {
+        @Nullable Integer webhookRateLimit,
+        boolean applePay,
+        boolean googlePay) {
 
     static final Duration DEFAULT_TOLERANCE = Duration.ofMinutes(5);
     static final int DEFAULT_RATE_LIMIT = 600;

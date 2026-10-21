@@ -26,6 +26,17 @@ export const config = {
   photosBaseUrl: strip(process.env.EXPO_PUBLIC_PHOTOS_BASE_URL ?? `${siteOrigin}/photos`),
 } as const;
 
+/**
+ * S-157: the wallets this build can offer in PaymentSheet (app.config.ts adds Stripe's plugin for them): Apple Pay needs
+ * the merchant id, Google Pay its flag. The api still decides per environment (`/public/payments/options`). Read at
+ * call time, like the nav flags, so tests set them per test.
+ */
+export const walletBuild = () => ({
+  applePayMerchantId: process.env.EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID?.trim() || null,
+  googlePay: process.env.EXPO_PUBLIC_GOOGLE_PAY === '1',
+  googlePayTest: process.env.EXPO_PUBLIC_GOOGLE_PAY_TEST === '1',
+});
+
 /** The verbatim legal pages (design 09/10, S-63; English only, as on the web), opened outside the app. */
 export const legalUrl = (doc: 'terms' | 'privacy') => `${config.siteOrigin}/legal/${doc}.html`;
 
