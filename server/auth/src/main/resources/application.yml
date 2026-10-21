@@ -304,7 +304,7 @@ northline:
     endpoint: ${KMS_ENDPOINT:}         # AWS only; e.g. LocalStack
   # S-154: account emails through the shared email library (docs/runbooks/email.md) — the api's settings: local (SMTP to
   # Mailpit on localhost:1025, http://localhost:8025; only logged when Mailpit isn't running; refused under staging/prod)
-  # | smtp | ses | sendgrid | azure.
+  # | smtp | ses | sendgrid | resend | azure.
   email:
     provider: ${EMAIL_PROVIDER:local}
     from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}

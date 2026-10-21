@@ -10650,3 +10650,51 @@ PaymentIntents confirmed on- and off-session, `confirm` of a refused PaymentInte
 `authentication_required` and the PaymentIntent in the error, Stripe.js `confirmCardPayment` / the SDK's
 `handleNextAction` on a renewal's PaymentIntent, the `payment_intent.succeeded` webhook for a Plus period, the refund
 and Stripe Tax record/reverse of a Plus period. stripe.md § 11 lists the test-mode cards to run before launch.
+
+## 2026-10-21 — S-164 Resend as an email provider over its HTTPS API
+
+Why: the owner's provider is Resend; from the OVHcloud US instance, SMTP to `smtp.resend.com` times out on 587 and
+2587 (outbound mail ports filtered) while HTTPS works, so the live demo could not send sign-up codes.
+
+- **`EMAIL_PROVIDER=resend`** (library `server/email`, package `ca.northline.email.resend`, the SendGrid adapter as the
+  model): `POST /emails` on `https://api.resend.com` with `Authorization: Bearer`, JSON `from`, `to`, `subject`,
+  `html`, `text`, `reply_to` (`EMAIL_REPLY_TO`), `headers` (the one-click `List-Unsubscribe` pair the Mailer adds, as
+  for SMTP/SendGrid) and a `template` tag (non-tag characters → `_`). Field names, the 256-character
+  `Idempotency-Key` header and the 200 `{"id"}` answer from Resend's OpenAPI description
+  (github.com/resend/resend-openapi `resend.yaml`, `emails/send`) and resend.com/docs (Send Email, Errors, Idempotency
+  Keys). Selected for api, auth and worker alike (they share `northline.email.*`).
+- **Key variable: `EMAIL_API_KEY`**, base URL **`EMAIL_ENDPOINT`** (not `RESEND_API_KEY` / `RESEND_API_BASE` in the
+  apps): the library has one provider key and one endpoint override for every HTTP provider. Start-up stops with
+  `EMAIL_PROVIDER=resend needs: EMAIL_API_KEY (Resend API key re_… with sending access)`. On OVHcloud the operator's
+  name is `RESEND_API_KEY` (GitHub environment secret / `.ovh/<target>.env`) so it can't be mistaken for a SendGrid
+  key; `scripts/ovh/secrets.sh apply` writes it into `northline-secrets` as `EMAIL_API_KEY` (replacing a SendGrid key
+  there), and `deploy.sh` sets `EMAIL_PROVIDER=resend` + `secretEnv.EMAIL_API_KEY=true` for api/auth/worker. The chart
+  already maps `EMAIL_API_KEY` (optional) into all three, so no new Helm/External Secrets key: comments in
+  values/values-staging/values-prod/values-dryrun name `resend`.
+- **OVH precedence:** `OVH_DEMO_MAILPIT=true` → `RESEND_API_KEY` → `SMTP_HOST` → `EMAIL_API_KEY` (SendGrid) → `local`;
+  deploy warns when Resend wins over a set `SMTP_HOST`.
+- **Idempotency:** `EmailMessage` gains a nullable `idempotencyKey` (old 6-argument constructor kept); the Mailer fills
+  it with the delivery key; the adapter sends `northline-` + SHA-256 hex of it (fixed length, no internal ids leave the
+  platform). A send without the Mailer (offer test sends) has no key and no header.
+- **Failure kinds — deviation from the brief:** the brief asked for 401/403 → not retryable. Kept the library's rule
+  (`EmailDeliveryFailed.ofHttpStatus`, used by SendGrid and Azure): 401/403 (missing/invalid key, unverified domain)
+  are *unavailable* — retried in-process, then the Mailer releases its claim so the email can go out once the key or
+  domain is fixed; *rejected* would mark it as sent-and-refused for good (a sign-up code lost). 429/5xx/408 →
+  unavailable; other 4xx (400/422 `validation_error`, 451) → rejected. 409: `concurrent_idempotent_requests` →
+  unavailable (retried); any other 409 (`invalid_idempotent_request`: the key was used already) → rejected. The
+  exception message is `Resend <status> <name>: <message>`, with any address in Resend's message masked
+  (`EmailAddress.masked()`, now shared with the Mailer's log masking).
+- **Residency:** Resend processes mail in its domain's region (US East by default) — outside Canada, like SendGrid;
+  listed as such in email.md § Choosing a provider.
+- **Never run against the real Resend:** the adapter is tested only against a WireMock stand-in built from the
+  documented API (no Resend account here). Error bodies in the tests (`rate_limit_exceeded`, `validation_error`,
+  `missing_api_key`, the 409 names) follow Resend's errors page as documented; the docs site itself could not be
+  fetched from this machine, the OpenAPI file could.
+- **Tests:** email `ResendEmailSenderContractTest` (documented body + Bearer + Idempotency-Key; no key → no header;
+  429 retried with the same key then accepted; 500 ×3 unavailable; 422 rejected once with the message masked; 401 and
+  403 unavailable with Resend's message; 409 both kinds; the account-verification template rendered through the Mailer
+  into Resend's body; the unsubscribe headers on a notification), `EmailAutoConfigurationTest` +2 (adapter chosen;
+  start-up refusal without a key); scripts: `make shell-compat`, shellcheck (no new findings), actionlint on ovh.yml.
+- **Schema:** none. **Config:** `EMAIL_PROVIDER=resend` (new value), `RESEND_API_KEY` (OVH secret only).
+- **Not done:** Resend webhooks (bounces/complaints → suppressions, S-27's operations work), Resend's own templates,
+  attachments, scheduled sends.

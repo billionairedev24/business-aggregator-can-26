@@ -44,11 +44,12 @@ CONSUMER_BFF_SECRET CONSUMER_BFF_SECRET_HASH CONSOLE_BFF_SECRET CONSOLE_BFF_SECR
 MEILISEARCH_API_KEY MAILPIT_PASSWORD"
 # Third-party values, always given (empty = that integration stays on its dev fake or off).
 PROVIDED="STRIPE_SECRET_KEY STRIPE_PUBLISHABLE_KEY STRIPE_WEBHOOK_SECRET STRIPE_CONNECT_WEBHOOK_SECRET SMS_AUTH_TOKEN
-SMS_ACCOUNT_ID SMS_FROM EMAIL_API_KEY SMTP_HOST SMTP_PORT SMTP_USERNAME SMTP_PASSWORD SMTP_STARTTLS EMAIL_FROM
-KAFKA_SASL_JAAS_CONFIG REGISTRY_SERVER REGISTRY_USERNAME REGISTRY_PASSWORD"
-# Settings kept in the same file that are not app secrets (never copied into northline-secrets).
+SMS_ACCOUNT_ID SMS_FROM RESEND_API_KEY EMAIL_API_KEY SMTP_HOST SMTP_PORT SMTP_USERNAME SMTP_PASSWORD SMTP_STARTTLS
+EMAIL_FROM KAFKA_SASL_JAAS_CONFIG REGISTRY_SERVER REGISTRY_USERNAME REGISTRY_PASSWORD"
+# Settings kept in the same file that are not app secrets (never copied into northline-secrets as they are;
+# RESEND_API_KEY becomes the apps' EMAIL_API_KEY in apply).
 NOT_APP="SMS_FROM SMS_ACCOUNT_ID REGISTRY_SERVER REGISTRY_USERNAME REGISTRY_PASSWORD MAILPIT_PASSWORD SMTP_HOST SMTP_PORT
-SMTP_USERNAME SMTP_STARTTLS EMAIL_FROM"
+SMTP_USERNAME SMTP_STARTTLS EMAIL_FROM RESEND_API_KEY"
 GENERATED_SECRET=northline-generated
 SOURCE=${OVH_SECRETS_SOURCE:-file}
 case "$SOURCE" in (file | env) ;; (*) die "OVH_SECRETS_SOURCE must be file or env (got '$SOURCE')" ;; esac
@@ -105,9 +106,12 @@ init() {
     echo "SMS_AUTH_TOKEN="
     echo "SMS_ACCOUNT_ID="
     echo "SMS_FROM="
-    echo "# Email (docs/runbooks/ovh.md § Email) — one of: an SMTP relay (port 587 with STARTTLS; EMAIL_FROM = a sender the"
-    echo "# relay accepts), the demo inbox (OVH_DEMO_MAILPIT=true: nothing is delivered, read the codes at mail.<domain>),"
-    echo "# a SendGrid API key (EMAIL_API_KEY). None = the emails, codes included, are only in the apps' logs."
+    echo "# Email (docs/runbooks/ovh.md § Email) — one of: a Resend API key (RESEND_API_KEY, re_…: HTTPS, the choice on"
+    echo "# OVHcloud, which filters outbound SMTP; EMAIL_FROM on the domain verified at Resend), an SMTP relay (port 587"
+    echo "# with STARTTLS; EMAIL_FROM = a sender the relay accepts), the demo inbox (OVH_DEMO_MAILPIT=true: nothing is"
+    echo "# delivered, read the codes at mail.<domain>), a SendGrid API key (EMAIL_API_KEY). None = the emails, codes"
+    echo "# included, are only in the apps' logs."
+    echo "RESEND_API_KEY="
     echo "SMTP_HOST="
     echo "SMTP_PORT=587"
     echo "SMTP_USERNAME="
@@ -243,6 +247,11 @@ apply() {
   if [ "$MANAGED_PG" = yes ]; then
     grep -v '^DB_PASSWORD=' "$tmp/app.env" >"$tmp/app2.env" || true; mv "$tmp/app2.env" "$tmp/app.env"
     printf 'DB_PASSWORD=%s\n' "$(tf_out postgres_credentials .app_password)" >>"$tmp/app.env"
+  fi
+  if [ -n "$(env_get RESEND_API_KEY)" ]; then
+    # Resend's key is the apps' EMAIL_API_KEY (the email library's one provider key); deploy.sh picks EMAIL_PROVIDER=resend.
+    grep -v '^EMAIL_API_KEY=' "$tmp/app.env" >"$tmp/app2.env" || true; mv "$tmp/app2.env" "$tmp/app.env"
+    printf 'EMAIL_API_KEY=%s\n' "$(env_get RESEND_API_KEY)" >>"$tmp/app.env"
   fi
   printf 'STORAGE_ACCESS_KEY=%s\nSTORAGE_SECRET_KEY=%s\n' "$(tf_out s3_credentials '.uploads.access_key_id')" \
     "$(tf_out s3_credentials '.uploads.secret_access_key')" >>"$tmp/app.env"
