@@ -1,6 +1,7 @@
 package ca.northline.loyalty.application;
 
 import ca.northline.loyalty.api.PlusBenefits;
+import ca.northline.payments.api.PlusBilling;
 import ca.northline.trust.api.PointsLedger;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -78,10 +79,16 @@ public final class LoyaltyUseCases {
 
         /**
          * @param status {@code none | incomplete | trialing | active | past_due | canceled}
-         * @param provider {@code local | stripe}
+         * @param provider the card processor: {@code local} (the fake gateway) or {@code stripe}
          * @param payer the caller pays for it (only they can change it)
          * @param trialAvailable a new membership would start with the free trial
-         * @param clientSecret the first payment needs the customer (3-D Secure): confirm with Stripe.js
+         * @param nextPlan S-162: the plan from the next renewal, when a change waits
+         * @param nextChargeAt S-162: the next renewal; null when it won't renew
+         * @param nextChargeCents S-162: its price before tax
+         * @param card S-162: the card Plus renews on (the payer's view)
+         * @param payment S-162: a payment that was refused or waits for the bank (the payer's view)
+         * @param history S-162: the latest periods, newest first (the payer's view)
+         * @param clientSecret a payment needs the member (3-D Secure): confirm with Stripe.js, then {@code confirm}
          */
         record PlusView(
                 String status,
@@ -97,13 +104,25 @@ public final class LoyaltyUseCases {
                 int trialDays,
                 boolean trialAvailable,
                 PlusBenefits.Benefits benefits,
+                @Nullable String nextPlan,
+                @Nullable Instant nextChargeAt,
+                long nextChargeCents,
+                PlusBilling.@Nullable Card card,
+                PlusBilling.@Nullable Pending payment,
+                List<PlusBilling.Period> history,
                 @Nullable String clientSecret,
-                @Nullable String publishableKey) {}
+                @Nullable String publishableKey) {
+
+            public PlusView {
+                history = List.copyOf(history);
+            }
+        }
 
         PlusView view(String userId);
 
         PlusView join(String userId, @Nullable String plan, String idempotencyKey);
 
+        /** Monthly ↔ annual from the next renewal. */
         PlusView changePlan(String userId, @Nullable String plan, String idempotencyKey);
 
         /** Cancels at the end of what was paid for. */
@@ -111,6 +130,12 @@ public final class LoyaltyUseCases {
 
         /** Undoes a cancellation before the period ends. */
         PlusView resume(String userId, String idempotencyKey);
+
+        /** S-162: the saved card Plus renews on (null = the default card). */
+        PlusView useCard(String userId, @Nullable String paymentMethodId);
+
+        /** S-162: after confirming the waiting payment with the bank (Stripe.js / the app). */
+        PlusView confirm(String userId);
     }
 
     /** "Rewards near you" on the consumer home and the app. */
@@ -158,13 +183,14 @@ public final class LoyaltyUseCases {
         void remove(String regionId, String staffId, String role);
     }
 
-    /** The jobs: expiry, referral windows, the local fake's renewals. */
+    /** The jobs: expiry, referral windows, S-152 memberships moving to Northline's billing. */
     public interface LoyaltyJobs {
 
         int expirePoints();
 
         int closeReferrals();
 
-        int renewLocalMemberships();
+        /** S-162: running S-152 memberships ({@code sub_…}) to Northline's own billing, renewing at their period's end. */
+        int adoptLegacyMemberships();
     }
 }

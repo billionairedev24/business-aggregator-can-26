@@ -114,6 +114,7 @@ public final class EmailTemplates {
             "change",
             "kind",
             "outcome",
+            "plan",
             "role",
             "action",
             "rule",

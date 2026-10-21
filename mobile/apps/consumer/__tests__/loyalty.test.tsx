@@ -115,7 +115,11 @@ describe('Northline Plus (wallet)', () => {
     expect(server.account.plus?.plan).toBe('annual');
 
     fireEvent.press(screen.getByTestId('plus-switch'));
-    await waitFor(() => expect(server.account.plus?.plan).toBe('monthly'));
+    // S-162: the plan changes at the next renewal
+    await waitFor(() => expect(server.account.plus?.nextPlan).toBe('monthly'));
+    expect(server.account.plus?.plan).toBe('annual');
+    expect(await screen.findByText(/^Switches to Monthly on /)).toBeTruthy();
+    expect(screen.getByTestId('plus-keep-plan')).toBeTruthy();
     const patch = rec.sent.find((s) => s.method === 'PATCH')!;
     expect(patch.headers['idempotency-key']).not.toBe(post.headers['idempotency-key']);
 
@@ -153,6 +157,45 @@ describe('Northline Plus (wallet)', () => {
     fireEvent.press(await screen.findByTestId('plus-start'));
     await waitFor(() => expect(confirm).toHaveBeenCalledWith('pi_fake_secret_fake', 'pk_test_fake'));
     expect(await screen.findByText('Your bank didn’t confirm the payment. Try again, or use another card in Payment methods.')).toBeTruthy();
+  });
+
+  it('S-162: a renewal the bank wants confirmed — the SDK, then the api reads it again', async () => {
+    const confirm = jest.fn().mockResolvedValue({ ok: true });
+    setPlusPayment({ confirm });
+    const rec = recorder();
+    const { server, services } = await signedIn('/wallet', { wrap: rec.wrap });
+    await screen.findByTestId('plus-start');
+    server.account.plus = {
+      plan: 'monthly', since: new Date().toISOString(), status: 'past_due',
+      payment: { reason: 'authentication_required', totalCents: 839, retryAt: null, clientSecret: 'pi_r_secret_x' },
+    };
+    await act(async () => {
+      await services.queryClient.invalidateQueries();
+    });
+    expect(await screen.findByText('Your bank wants you to confirm the payment of $8.39.')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('plus-confirm'));
+    await waitFor(() => expect(confirm).toHaveBeenCalledWith('pi_r_secret_x', 'pk_test_fake'));
+    await waitFor(() => expect(rec.sent.some((x) => x.method === 'POST' && x.url.endsWith('/me/plus/confirm'))).toBe(true));
+    expect(await screen.findByText(/^Active · renews /)).toBeTruthy();
+  });
+
+  it('S-162: a declined renewal says when it’s tried again, and the next payment otherwise', async () => {
+    const { server, services } = await signedIn('/wallet');
+    await screen.findByTestId('plus-start');
+    server.account.plus = {
+      plan: 'monthly', since: new Date().toISOString(), status: 'past_due',
+      payment: { reason: 'card_declined', totalCents: 839, retryAt: '2026-11-20T12:00:00Z' },
+    };
+    await act(async () => {
+      await services.queryClient.invalidateQueries();
+    });
+    expect(await screen.findByText(/^Your card was declined for \$8\.39\. We’ll try again on /)).toBeTruthy();
+    expect(screen.queryByTestId('plus-confirm')).toBeNull();
+    server.account.plus = { plan: 'monthly', since: new Date().toISOString(), status: 'active' };
+    await act(async () => {
+      await services.queryClient.invalidateQueries();
+    });
+    expect(await screen.findByText(/^Next payment \$7\.99 on .*, plus tax\.$/)).toBeTruthy();
   });
 
   it('someone else in the household sees it but doesn’t manage it', async () => {

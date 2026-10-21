@@ -39,7 +39,10 @@ public record LedgerEntry(
     public static final String REWARDS_FUNDED = "rewards_funded";
     /** S-152: the reference type of a reward charge's postings ({@code payments.reward_charges.id}). */
     public static final String REWARD = "reward_charge";
-    /** S-152: the reference type of a Plus invoice's postings ({@code payments.plus_invoices.id}). */
+    /**
+     * S-152: the reference type of a Plus payment's postings — since S-162 a paid period ({@code payments.plus_periods.id};
+     * S-152's {@code payments.plus_invoices.id} before).
+     */
     public static final String PLUS = "plus_invoice";
     /** S-78: the reference type of a delivery fee's postings (the order id), as on its PaymentIntent. */
     public static final String DELIVERY_FEE = "order_delivery";
@@ -226,8 +229,8 @@ public record LedgerEntry(
     }
 
     /**
-     * S-152: a Northline Plus invoice was paid — the card's money is Northline's revenue, less the tax on it (owed to
-     * the CRA).
+     * S-152: a Northline Plus period was paid (S-162: Northline's own PaymentIntent) — the card's money is Northline's
+     * revenue, less the tax on it (owed to the CRA).
      */
     public static List<LedgerEntry> plusInvoicePaid(String invoiceRowId, long totalCents, long taxCents, Instant at) {
         return nonZero(
@@ -256,6 +259,17 @@ public record LedgerEntry(
         return nonZero(
                 debit(APPEAL_COMPENSATION, cents, "appeal", appealId, at),
                 credit(merchant(merchantId), cents, "appeal", appealId, at));
+    }
+
+    /**
+     * S-162: a paid Plus period refunded to the card — the revenue and the tax on it are given back (same reference as
+     * {@link #plusInvoicePaid}: {@code plus_invoice} / the period's id, so the console's Plus revenue nets out).
+     */
+    public static List<LedgerEntry> plusRefunded(String periodId, long totalCents, long taxCents, Instant at) {
+        return nonZero(
+                debit(REVENUE, totalCents - taxCents, PLUS, periodId, at),
+                debit(TAX_PAYABLE, taxCents, PLUS, periodId, at),
+                credit(STRIPE_BALANCE, totalCents, PLUS, periodId, at));
     }
 
     /** A tip paid after the delivery: straight to the courier (no tax: a tip is not a taxable supply). */

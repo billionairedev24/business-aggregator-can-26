@@ -269,6 +269,14 @@ class LoyaltyJdbc implements LoyaltyStore {
                 .optional();
     }
 
+    @Override
+    public Optional<MembershipState> ofPayer(String userId) {
+        return jdbc.sql("select * from loyalty.memberships where payer_id = :u order by updated_at desc limit 1")
+                .param("u", userId)
+                .query((rs, _) -> membership(rs))
+                .optional();
+    }
+
     private static MembershipState membership(ResultSet rs) throws SQLException {
         return new MembershipState(
                 rs.getString("household_id"),
@@ -317,17 +325,12 @@ class LoyaltyJdbc implements LoyaltyStore {
     }
 
     @Override
-    public List<MembershipState> localDue(Instant now, int limit) {
+    public List<MembershipState> legacy(int limit) {
         return jdbc.sql("""
                         select * from loyalty.memberships
-                         where provider = 'local' and status in ('trialing', 'active', 'past_due')
-                           and current_period_end <= :now
+                         where subscription_id like 'sub\\_%' and status in ('trialing', 'active', 'past_due')
                          order by current_period_end limit :n
-                        """)
-                .param("now", JdbcTimes.ts(now))
-                .param("n", limit)
-                .query((rs, _) -> membership(rs))
-                .list();
+                        """).param("n", limit).query((rs, _) -> membership(rs)).list();
     }
 
     @Override
