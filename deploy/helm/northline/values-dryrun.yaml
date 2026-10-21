@@ -51,10 +51,8 @@ env:
   SPRING_DATA_REDIS_SSL_BUNDLE: null
   SPRING_SSL_BUNDLE_PEM_REDIS_TRUSTSTORE_CERTIFICATE: null
   LOGGING_LEVEL_CA_NORTHLINE: info
-  # Small JVMs: the images size the heap at 75 % of the memory limit (-XX:MaxRAMPercentage=75, server/build.gradle.kts),
-  # so the limits below are the heaps' budget; these trim the rest (serial GC on 1–2 cores, smaller code cache and
-  # thread stacks).
-  JAVA_TOOL_OPTIONS: "-XX:+UseSerialGC -XX:ReservedCodeCacheSize=64m -Xss512k -XX:TieredStopAtLevel=1"
+  # Small JVMs (serial GC, C1, capped code cache, stacks and direct memory; each app's heap share for its limit) are the
+  # chart's default since S-163: spring.javaOptions + apps.<app>.javaOptions in values.yaml (docs/runbooks/deploy.md § JVM memory).
 spring:
   extraVolumes: []
   extraVolumeMounts: []
@@ -95,9 +93,9 @@ apps:
       # buy an age-restricted item (docs/runbooks/demo.md). Test mode's hosted page lets you pick the outcome.
       IDENTITY_PROVIDER: stripe
       AGE_VERIFICATION_PROVIDER: stripe
-    resources:
-      requests: { cpu: 200m, memory: 900Mi }
-      limits: { memory: 900Mi }
+    resources:                  # S-163: measured peak RSS 555–620 MiB (docs/runbooks/deploy.md § JVM memory)
+      requests: { cpu: 200m, memory: 768Mi }
+      limits: { memory: 768Mi }
     secretEnv:
       STRIPE_SECRET_KEY: true       # Stripe TEST mode keys (sk_test_…, pk_test_…) — docs/runbooks/stripe.md
       STRIPE_PUBLISHABLE_KEY: true
@@ -111,8 +109,8 @@ apps:
       OAUTH_CLIENTS_SYNC_ON_STARTUP: "true"
       DB_POOL_SIZE: "5"
     resources:
-      requests: { cpu: 100m, memory: 640Mi }
-      limits: { memory: 640Mi }
+      requests: { cpu: 100m, memory: 512Mi }
+      limits: { memory: 512Mi }
   bff:
     resources:
       requests: { cpu: 50m, memory: 400Mi }

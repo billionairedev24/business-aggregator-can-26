@@ -26,6 +26,7 @@ spring:
     username: ${REDIS_USERNAME:}
     password: ${REDIS_PASSWORD:}
     ssl.enabled: ${REDIS_SSL:false}
+    repositories.enabled: false       # S-163: no Redis repositories (Spring Data would scan every package for them)
   session.data.redis.namespace: nl:auth   # Boot 4 name (spring.session.redis.* is ignored)
   # S-28: events (user.registered) through a transactional outbox — Spring Modulith's JDBC registry in the auth schema
   # (V023; not the api's events.* tables) — externalized to Kafka after commit, like the api.

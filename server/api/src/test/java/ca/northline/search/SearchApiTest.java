@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.support.IntegrationTest;
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import com.jayway.jsonpath.JsonPath;
 import java.time.Clock;
 import java.time.Instant;
@@ -19,7 +20,9 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -68,6 +71,15 @@ class SearchApiTest extends IntegrationTest {
     }
 
     // ── text, languages, market ─────────────────────────────────────────────────────────────────────────────────
+
+    @Autowired
+    ApplicationContext context;
+
+    /** S-163: the client is configured only for this provider (SearchProviderImportFilter). */
+    @Test
+    void theElasticsearchClientExists() {
+        assertThat(context.getBeanNamesForType(ElasticsearchClient.class)).hasSize(1);
+    }
 
     @Test
     void text_rankedByTrustAndRating_onlyTheMarket_anonymous() throws Exception {

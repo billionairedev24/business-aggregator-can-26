@@ -38,6 +38,11 @@ networkPolicy:
 kafkaTopics:
   minInsyncReplicas: "2"
 
+# S-163: full-speed JVMs in production — G1 and the C2 compiler (pods get a whole core); each app's heap share and
+# metaspace cap still come from apps.<app>.javaOptions (values.yaml; the api's below).
+spring:
+  javaOptions: "-XX:+UseG1GC -Xss512k -XX:MaxDirectMemorySize=128m"
+
 apps:
   api:
     env:
@@ -84,6 +89,9 @@ apps:
           selectPolicy: Min
           policies:
             - { type: Pods, value: 1, periodSeconds: 120 }
+    # S-163: 2Gi is capacity here (queued requests under load, docs/perf/results.md F11), not start-up: heap 65 %
+    # = 1.3 GiB, the rest for metaspace (≤ 256m), C2's code cache, G1 and direct buffers (docs/runbooks/deploy.md § JVM memory).
+    javaOptions: "-XX:MaxRAMPercentage=65 -XX:MaxMetaspaceSize=256m"
     resources:
       requests: { cpu: "1", memory: 2Gi }
       limits: { memory: 2Gi }

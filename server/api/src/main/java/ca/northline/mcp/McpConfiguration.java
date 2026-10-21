@@ -9,7 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springdoc.ai.customizers.McpToolCustomizer;
 import org.springdoc.ai.mcp.OpenApiMcpToolCallbackProvider;
 import org.springdoc.core.utils.SpringDocUtils;
+import org.springdoc.webmvc.api.OpenApiWebMvcResource;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -53,6 +56,27 @@ class McpConfiguration {
         };
     }
 
+    /** springdoc's registrar that held start-up until the OpenAPI document existed (S-163): replaced by the one below. */
+    static final String SPRINGDOC_TOOL_WAIT = "openApiMcpDeferredToolRegistrar";
+
+    @Bean
+    static BeanDefinitionRegistryPostProcessor withoutSpringdocToolWait() {
+        return (BeanDefinitionRegistry registry) -> {
+            if (registry.containsBeanDefinition(SPRINGDOC_TOOL_WAIT)) {
+                registry.removeBeanDefinition(SPRINGDOC_TOOL_WAIT);
+            }
+        };
+    }
+
+    /** S-163: the tools are registered once the api is ready, not during start-up ({@link McpToolRegistration}). */
+    @Bean
+    McpToolRegistration mcpToolRegistration(
+            ObjectProvider<OpenApiMcpToolCallbackProvider> tools,
+            ObjectProvider<OpenApiWebMvcResource> openApi,
+            ObjectProvider<McpSyncServer> server) {
+        return new McpToolRegistration(tools, openApi, server);
+    }
+
     @Bean
     AgentCalls agentCalls(
             McpProperties props, ObjectProvider<StringRedisTemplate> redis, Clock clock, Environment env) {
@@ -89,9 +113,10 @@ class McpConfiguration {
             AuditTrail audit,
             JsonMapper json,
             Clock clock,
-            McpAgentHeaderFilter agentHeader) {
+            McpAgentHeaderFilter agentHeader,
+            McpToolRegistration toolRegistration) {
         var registration = new FilterRegistrationBean<>(new McpGatewayFilter(
-                server::getObject, tools::getObject, props, calls, audit, json, clock, agentHeader));
+                server::getObject, tools::getObject, props, calls, audit, json, clock, agentHeader, toolRegistration));
         registration.addUrlPatterns(McpGatewayFilter.ENDPOINT);
         registration.setOrder(AFTER_SECURITY);
         log.info("MCP server: {} (Streamable HTTP), store={}", props.resource(), props.store());

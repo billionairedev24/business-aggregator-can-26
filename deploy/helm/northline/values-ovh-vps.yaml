@@ -36,11 +36,8 @@ networkPolicy:
 
 apps:
   api:
-    # 1Gi (the chart's default) was OOMKilled during start-up on the first ovh-vps deploy: the JVM's heap is 75 % of the
-    # limit, and the api's metaspace, code cache and threads need the rest. The instance has 32 GB.
-    resources:
-      requests: { cpu: 250m, memory: 1Gi }
-      limits: { memory: 2Gi }
+    # S-163: the dry run's 768Mi (values-dryrun.yaml). The 2Gi set after the first deploy's OOMKill (1Gi, heap 75 % of
+    # the limit and seven OpenAPI documents built during start-up) is no longer needed: docs/runbooks/deploy.md § JVM memory.
     secretEnv:
       STORAGE_ACCESS_KEY: true      # OVHcloud Object Storage user (Terraform output s3_credentials, via secrets.sh)
       STORAGE_SECRET_KEY: true

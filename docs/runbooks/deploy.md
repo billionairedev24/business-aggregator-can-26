@@ -40,8 +40,8 @@ Other runbooks: [dev](dev.md) · [staging](staging.md) · [prod](prod.md) · [in
   | GitHub / GitLab | `ghcr.io/<owner>/northline` · `registry.gitlab.com/<group>/<project>` |
 
 - **Java (Jib):** no Dockerfile and no Docker daemon needed to push. Exploded classpath in three layers (libraries,
-  resources, classes), `java -cp @/app/jib-classpath-file <main class>`, `-XX:MaxRAMPercentage=75`
-  (the pod's memory limit sizes the heap), reproducible (fixed timestamps — the same commit gives the same digest), OCI
+  resources, classes), `java -cp @/app/jib-classpath-file <main class>`, `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=60`
+  (the pod's memory limit sizes the heap; the chart sets each app's flags, [§ JVM memory](#jvm-memory-s-163)), reproducible (fixed timestamps — the same commit gives the same digest), OCI
   labels (`org.opencontainers.image.revision` = the commit, `.version` = the tag, `.source`, `.title`). Multi-platform
   (`linux/amd64,linux/arm64`) when pushing. The worker gained a health-only HTTP port (8084) for its probes.
 - **Studio:** the Vite build behind nginx, SPA fallback to `index.html`, hashed `/assets/*` cached for a year,
@@ -110,6 +110,7 @@ replica); plus the Ingress or Gateway API HTTPRoutes and the OAuth client Job.
 | network | NetworkPolicies (ingress only): studio, consumer, bff and auth accept the ingress controller (`networkPolicy.ingressFrom`, default any namespace; staging/prod narrow it to `envoy-gateway-system` — S-20, [edge.md § Trusted proxies](edge.md#trusted-proxies-s-20)); api accepts the bff and the consumer-bff (and the ingress for its public paths); auth accepts bff, consumer-bff and api; the consumer-bff also accepts the consumer app (server-side rendering); worker accepts nothing. Egress stays open (managed data stores and cloud APIs sit at provider addresses) |
 | routes and edge (S-17) | default (dev/staging/prod): `gateway.enabled` + `edge.enabled` — the chart's Gateway `northline` (Envoy Gateway) with an HTTPS listener per host, HTTP → 301, HSTS and headers on every route, TLS 1.2+, a cert-manager Issuer and a Certificate per host ([edge.md](edge.md)); or `ingress.enabled` (+ `className`) with the same certificates; or HTTPRoutes on an existing Gateway (`gateway.parentRefs`). Studio host: `/api`, `/bff`, `/oauth2`, `/login` → bff, `/` → studio; auth host → auth; consumer host: `/api`, `/bff`, `/oauth2`, `/login` → consumer-bff (S-45), `/` → consumer; pages: `/api`, `/bff` → consumer-bff, `/` → consumer; `edge.customDomains` → consumer; console host once enabled; api host → only `/api/v1/webhooks/stripe` (S-12) and `/api/v1/email/unsubscribe` (S-13) |
 | migrations (S-16) | pre-install/pre-upgrade hook Job `northline-migrate-<hash>` (Argo CD PreSync; the name carries a hash of its inputs, so each change runs a new Job — S-15) from the api image: Flyway `db/migration`, then the category seed — before any Deployment changes; a failure fails the release ([§ Migrations](#migrations-s-16)) |
+| JVM memory (S-163) | `JAVA_TOOL_OPTIONS` = `spring.javaOptions` (serial GC, C1, capped code cache, stacks and direct memory; prod: G1 + C2) + `apps.<app>.javaOptions` (heap share of the limit, metaspace cap); limits api 768Mi, auth / bffs / worker 512Mi, prod larger ([§ JVM memory](#jvm-memory-s-163)) |
 | OAuth clients (S-122) | post-install/post-upgrade hook Job `northline-oauth-clients-<hash>`: the auth image with the auth environment runs `OAuthClientsCommand sync` (`oauthClientsJob.command: list` to only report). Argo CD runs it as PostSync. Partner clients (S-30) come from the `partners` value, rendered into the ConfigMap `northline-auth-partners` that auth and the Job read ([partners.md](partners.md)) |
 
 Values files (later `-f` wins): `values.yaml` (defaults) → `values-<env>.yaml` (`dev`, `staging`, `prod`: profile,
@@ -190,6 +191,50 @@ Per cloud, nothing differs but the overlay and the registry:
 | overlay | `values-aws.yaml` | `values-gcp.yaml` (+ ConfigMap `northline-redis-ca`) | `values-azure.yaml` (+ `EMAIL_ENDPOINT`) |
 | image pulls | node role reads ECR | node service account reads Artifact Registry | kubelet identity has AcrPull |
 | NetworkPolicy enforced by | VPC CNI network policy agent (enable it) | Dataplane V2 | Cilium |
+
+## JVM memory (S-163)
+
+A JVM uses more than its heap: metaspace (the loaded classes), the JIT's code cache, thread stacks, direct buffers
+(Netty, Lettuce), GC structures and the C heap. A pod is OOMKilled when all of it passes the memory limit, so the chart
+gives every Spring app explicit flags that keep the sum under its limit, in `JAVA_TOOL_OPTIONS` (the images' default is
+only `-XX:MaxRAMPercentage=60`; a command-line flag would override the variable, so the images set none):
+
+| | flags | where |
+|---|---|---|
+| every Spring app | `-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=48m -Xss512k -XX:MaxDirectMemorySize=64m` | `spring.javaOptions` (values.yaml) |
+| prod | `-XX:+UseG1GC -Xss512k -XX:MaxDirectMemorySize=128m` (pods get a whole core: G1 and C2) | values-prod.yaml |
+| api | `-XX:MaxRAMPercentage=50 -XX:MaxMetaspaceSize=192m` at 768Mi (prod: 65 %, 256m at 2Gi) | `apps.api.javaOptions` |
+| auth, bff, consumer-bff, console-bff, worker | `-XX:MaxRAMPercentage=55 -XX:MaxMetaspaceSize=128m` at 512Mi | `apps.<app>.javaOptions` |
+
+An explicit `JAVA_TOOL_OPTIONS` in `env` or `apps.<app>.env` replaces both lines. Serial GC suits pods with a fraction
+of a core (no GC threads); C1 only (`TieredStopAtLevel=1`) needs a fraction of C2's compiler memory and code cache and
+starts faster, for ~20–30 % less peak throughput — prod keeps C2. When a limit changes, change the heap share with it:
+heap + metaspace + ~25 MiB code cache + ~100 MiB of the rest must stay under the limit.
+
+**Measured** (2026-10-21, S-163; one CPU, `ActiveProcessorCount=1`, the flags above, `local` and `dev` profiles against
+Postgres, Valkey, Kafka and Meilisearch stand-ins; peak = the process's high-water RSS from start-up to a warmed-up API;
+"live" = the heap after a full GC; NMT = `-XX:NativeMemoryTracking=summary`):
+
+| app (limit) | before S-163 | after |
+|---|---|---|
+| api (was 2Gi on ovh-vps, 1536Mi default; now 768Mi) | heap grows to the 75 % cap: peak RSS **1030 MiB** at 2Gi, **1019 MiB at 1Gi** (the OOMKill), 1280 MiB at 1536Mi with G1; live heap 165–175 MiB; metaspace 105–110 MiB; 27,200–27,550 classes; started in 57–80 s, of which 30 s waiting for the MCP tools — then **no MCP tools** ("Timed out waiting for OpenAPI specification") | peak RSS **555–620 MiB** (620 with every docs group built), heap 384 MiB cap, live 140–150 MiB, metaspace 102–107 MiB, 26,200–26,800 classes, started in 18–19 s (healthy in ~25 s), 33 MCP tools registered ~6 s later |
+| api at 512Mi (stretch) | — | peak RSS ≈ 510 MiB: **does not fit** (the live heap and metaspace alone are ~250 MiB) |
+| auth (768Mi → 512Mi) | peak 288 MiB, live 54 MiB, metaspace 68 MiB | peak 289 MiB |
+| bff, consumer-bff, console-bff (512Mi) | peak 219 MiB, live 38 MiB, metaspace 55 MiB | peak 217 MiB |
+| worker (512Mi) | peak 255 MiB, 17,150 classes, metaspace 66 MiB, 80 threads | peak 245 MiB, 16,350 classes (no Elasticsearch client with Meilisearch), metaspace 63 MiB |
+
+What made the api fit, in order of effect: (1) the heap share — the live heap is ~170 MiB, but a JVM grows its heap
+towards the cap before collecting old objects, so at 75 % the heap alone was ~750 MiB of a 1Gi pod; (2) springdoc no
+longer builds all seven OpenAPI documents in parallel during start-up (≈ 150 MiB of peak, 30+ s) — the MCP tools'
+document is built once the api is ready and the docs groups on first request (mcp.md); (3) the Elasticsearch client is
+configured only with `SEARCH_PROVIDER=elasticsearch` and Spring Data Elasticsearch / Redis repositories are gone (≈ 800
+classes, a repository scan of every package). The AWS, Google Cloud and Azure SDKs and Stripe were already loaded only
+for the selected provider (≤ 5 classes each otherwise). Virtual threads were already on: ~30 platform threads, ~3 MiB of
+stacks.
+
+Not done (DECISIONS 2026-09-30 S-163): Spring AOT (it fixes the profiles and `@Conditional` provider choices at build
+time, which this codebase selects at run time); a JDK AOT cache (JEP 483/514: start-up 21–26 s → 15 s here, the same
+peak; needs a jar class path and a training run in the base image at build time); GraalVM native image.
 
 ## Migrations (S-16)
 

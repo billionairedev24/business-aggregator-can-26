@@ -158,9 +158,11 @@ configure(subprojects.filter { it.name in appImages }) {
             user = "65532:65532"
             ports = listOf(app.port.toString())
             format = com.google.cloud.tools.jib.api.buildplan.ImageFormat.OCI
-            // Container-aware heap; the pod's memory limit sizes it. Extra flags: JAVA_TOOL_OPTIONS in the chart.
-            jvmFlags = listOf("-XX:MaxRAMPercentage=75", "-XX:+ExitOnOutOfMemoryError", "-Djava.security.egd=file:/dev/urandom")
-            environment = mapOf("SERVER_PORT" to app.port.toString())
+            // Container-aware heap: the pod's memory limit sizes it. S-163: the heap share is JAVA_TOOL_OPTIONS, not a
+            // command-line flag (which would override it): 60 % here, and per app in the chart (spring.javaOptions +
+            // apps.<app>.javaOptions, docs/runbooks/deploy.md § JVM memory).
+            jvmFlags = listOf("-XX:+ExitOnOutOfMemoryError", "-Djava.security.egd=file:/dev/urandom")
+            environment = mapOf("SERVER_PORT" to app.port.toString(), "JAVA_TOOL_OPTIONS" to "-XX:MaxRAMPercentage=60")
             labels.set(mapOf(
                 "org.opencontainers.image.title" to "northline-${project.name}",
                 "org.opencontainers.image.description" to app.description,

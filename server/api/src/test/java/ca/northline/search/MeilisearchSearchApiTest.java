@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ca.northline.searchindex.SearchLanguage;
 import ca.northline.support.IntegrationTest;
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import com.jayway.jsonpath.JsonPath;
 import java.time.Clock;
 import java.time.ZoneOffset;
@@ -19,7 +20,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -63,6 +66,15 @@ class MeilisearchSearchApiTest extends IntegrationTest {
     }
 
     // ── text, languages, market ─────────────────────────────────────────────────────────────────────────────────
+
+    @Autowired
+    ApplicationContext context;
+
+    /** S-163: no Elasticsearch client (nor its connection pool or health check) with Meilisearch (SearchProviderImportFilter). */
+    @Test
+    void noElasticsearchClient() {
+        assertThat(context.getBeanNamesForType(ElasticsearchClient.class)).isEmpty();
+    }
 
     /**
      * Meilisearch ranks a word at the start of the name above the same word later in it (its attribute rule weighs

@@ -142,6 +142,12 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- $_ := set $env "SPRING_FLYWAY_ENABLED" "false" -}}
 {{- end -}}
 {{- $env = merge (deepCopy (default (dict) .app.env)) (deepCopy (default (dict) $v.env)) $env -}}
+{{- /* S-163: the JVM's flags — spring.javaOptions (every Spring app) + apps.<app>.javaOptions (its heap and metaspace
+       for its memory limit); an explicit JAVA_TOOL_OPTIONS in env / apps.<app>.env replaces both. */ -}}
+{{- if not (hasKey $env "JAVA_TOOL_OPTIONS") -}}
+{{- $java := compact (list (default "" $v.spring.javaOptions) (default "" .app.javaOptions)) -}}
+{{- if $java -}}{{- $_ := set $env "JAVA_TOOL_OPTIONS" (join " " $java) -}}{{- end -}}
+{{- end -}}
 {{- else if eq .app.type "static" -}}
 {{- $_ := set $env "NL_AUTH_ORIGIN" $v.urls.auth -}}
 {{- if or (eq .name "docs") (eq .name "docs-internal") -}}
