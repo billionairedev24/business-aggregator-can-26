@@ -128,12 +128,14 @@ class PrivacyRequestJdbc implements PrivacyRequestStore {
         p.put("linkHash", r.linkHash());
         p.put("linkExpires", ts(r.linkExpiresAt()));
         p.put("holds", r.holdsOpen());
+        p.put("codeChannel", r.codeChannel());
         return jdbc.sql("""
                                 update privacy.requests
                                    set state = :state, due_at = :due, extended_to = :extendedTo,
                                        extension_reason = :extensionReason, verification = :verification,
                                        verified_at = :verifiedAt, verified_by = :verifiedBy, code_hash = :codeHash,
                                        code_expires_at = :codeExpires, code_attempts = :codeAttempts,
+                                       code_channel = :codeChannel,
                                        scheduled_for = :scheduled, started_at = :started, completed_at = :completed,
                                        decision = :decision, decision_note = :decisionNote, decided_by = :decidedBy,
                                        sealed_key_ref = :keyRef, sealed_key = :key, sealed_data = :data,
@@ -345,7 +347,8 @@ class PrivacyRequestJdbc implements PrivacyRequestStore {
                 rs.getString("link_hash"),
                 instant(rs, "link_expires_at"),
                 rs.getInt("holds_open"),
-                rs.getInt("version"));
+                rs.getInt("version"),
+                rs.getString("code_channel"));
     }
 
     private Step step(ResultSet rs, int row) throws SQLException {

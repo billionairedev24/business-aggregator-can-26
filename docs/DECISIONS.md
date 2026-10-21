@@ -10698,3 +10698,76 @@ Why: the owner's provider is Resend; from the OVHcloud US instance, SMTP to `smt
 - **Schema:** none. **Config:** `EMAIL_PROVIDER=resend` (new value), `RESEND_API_KEY` (OVH secret only).
 - **Not done:** Resend webhooks (bounces/complaints → suppressions, S-27's operations work), Resend's own templates,
   attachments, scheduled sends.
+## 2026-10-21 — S-159 Group food orders, the phone apps on S-154's accounts, in-app account deletion, demo data by email
+
+Branch `feat/s159-group-orders-app-auth`; migrations V487–V488 (range V487–V496 — first assigned V472–V481, renumbered
+above S-162's V482 and S-158's V483–V486 by the ordering rule). No new Kafka topic, no new secret.
+
+**Group food orders**
+- **Model:** the baseline's `orders.group_orders` (V009, unused until now) gains the life `open → locked → paying →
+  placed`, or `cancelled` (host, before placing) / `expired` (24 h after it was started, every
+  `northline.orders.group-expiry-interval`, default 15 min). New `orders.group_order_items` (each person's dishes,
+  priced from the live menu when added and again at payment) and `orders.group_order_shares`. The kitchen's existing
+  `food.kitchen_settings.group_orders` / `group_max` (V006/V091, default on / 12) decide whether a kitchen takes them
+  and how many people; the restaurant API now exposes `groupOrders`.
+- **Joining:** an 8-character code `XXXX-XXXX` (no 0/O/1/I/L) and a link `/food/group/<code>` on the consumer
+  site; guests must be signed in. The app has a code entry screen (Account › Join a group order); no new deep link —
+  the shared link opens the web page.
+- **One ticket, one delivery:** placing goes through `FoodCheckoutService` exactly like a single order (same
+  fulfilment checks, the kitchen sees one ticket with every dish). Guests see the delivery area, never the host's
+  street.
+- **Paying:** *host pays* reuses the host's normal food checkout (promos and points as usual). *Split* prices each
+  person's dishes separately: delivery fee split equally, service fee by subtotal, the fees' tax with the fees, each
+  share's sales tax from `taxes.calculate`, the remainder cents to the host (largest remainder), the tip on the host's
+  share; promo codes and points are not offered in split groups. Each share is its own manual-capture card payment
+  and escrow hold with `ref_type = food_order`, `ref_id = share id` — no payments schema change. The host's share id is
+  the order id, so `KitchenEscrowRelease` releases it on hand-off like any food order; `GroupShareRelease` (a listener
+  on `FoodOrderHandedOff`) releases the guests'. The order is placed once every share is authorized; the host sees
+  who has paid. A cancelled group refunds the authorized shares (`refunds.refundNow`). Cancelling a **placed** group
+  order is S-151's order cancellation, unchanged.
+- **Refused in groups:** age-restricted dishes (409 — one ID check per order can't cover several buyers).
+- **No events, no notifications:** clients poll the group every 5 s while it is open; no Kafka topic (budget).
+- **Step-up:** paying a share follows S-51's rule like any checkout.
+
+**Phone apps on S-154's accounts**
+- Consumer app: sign-up is email + password + the emailed code, then the second factor offered (authenticator app;
+  "Not now" allowed for customers); sign-in is email + password + the account's factor (authenticator or backup
+  code); sign-in by phone code is kept on its own screen; forgot password in the app. Phone-first registration is
+  gone from the app. Passkey creation is shown but disabled (no native passkey module yet).
+- S-157's offers checkboxes (CASL express consent) moved with the app's sign-up onto `POST /api/auth/accounts`
+  (`marketing`, the wording versions; a text box only with a mobile). That endpoint records the consents with source
+  `web_signup` (AccountService), not `app_signup` as the phone registration did: changing it needs a column on
+  `auth.pending_accounts` and was left for S-157's owners.
+- Courier app: email + password + its second factor, **required**: a courier account without one is taken to
+  enrolment before it can sign in (enforced in the app; northline-auth does not know which client is a courier
+  app). The browser passkey sign-in stays.
+- Both keep PKCE + DPoP: the screens call `/api/auth/*`, then the kit's `AppSignIn` hand-off via `continueTo` to the
+  https redirect (`<CONSUMER_ORIGIN>/app/oauth2redirect`, `/courier/oauth2redirect`). The courier app now reads
+  `EXPO_PUBLIC_SITE_ORIGIN` (eas.json, app.config.ts).
+
+**Account deletion**
+- Consumer site Account › Delete account (`/account/delete`), the same in the consumer app, and a public page
+  `/account-deletion` (no sign-in to read it) which both apps' `store/privacy.json` now give as the deletion URL.
+- They drive S-105's erasure request: `GET /api/v1/me/privacy-requests/erasure-preview` first lists the consequences
+  (new SPI method `PersonalDataContributor.consequences()`: open orders, upcoming bookings, held payments, open refunds
+  and disputes, points lost, Plus — not cancelled, cards detached so it doesn't renew — and businesses losing their
+  only owner); then the step-up proof or the code.
+- The code goes to the verified mobile, else the **verified email** (new; V488 `privacy.requests.code_channel`), else
+  an older account's mobile. Emails `PrivacyCode` and `AccountDeletion` (requested / completed, en + fr), linking to
+  `northline.privacy.site-origin` (= `CONSUMER_ORIGIN`). The completed email is sent before the pipeline wipes the
+  address.
+
+**Demo data by email:** `make demo-data` registers email + random password + authenticator accounts, reading each
+code from Mailpit's API (local compose Mailpit, or the OVH demo inbox with `MAILPIT_PASSWORD`), auth's dev outbox
+locally, `DEMO_EMAIL_CODE_CMD`, or the terminal. Passwords join the state file. Older state files without passwords
+still sign in the old way. Twilio is no longer needed for the demo. New variables `DEMO_MAILPIT_URL`,
+`DEMO_MAILPIT_PASSWORD`, `DEMO_EMAIL_CODE_CMD`, `DEMO_STAFF_PASSWORD` (demo.md, `.env.example`).
+
+**Never run against the real services** (tests use Testcontainers Postgres, the local payment and tax fakes, vitest and
+jest fixtures only): Stripe card payments and escrow holds for split shares and Stripe Tax per share; the real
+northline-auth from a device (both apps' screens ran against in-app fixtures); a real Mailpit or the OVH demo inbox
+(the Mailpit reader is unit-tested on recorded response shapes); the deletion emails through a real relay; Google
+Play's review of the public deletion page.
+
+**Not done:** group notifications (push / email when the host locks or a share is due); promo codes and points in
+split groups; age-restricted dishes in groups; native passkey creation in the apps; a courier rule on the server.

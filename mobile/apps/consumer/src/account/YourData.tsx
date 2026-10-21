@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Share, View } from 'react-native';
 
@@ -34,7 +35,7 @@ export function YourData() {
   const signedIn = status === 'signedIn';
   const qc = useQueryClient();
   const requests = useQuery({ queryKey: KEYS.privacy, queryFn: () => account().privacyRequests(), enabled: signedIn, staleTime: 15_000 });
-  const [mode, setMode] = useState<'delete' | 'correct' | null>(null);
+  const [mode, setMode] = useState<'correct' | null>(null);
   const [verifying, setVerifying] = useState<PrivacyRequest | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,19 +85,14 @@ export function YourData() {
         {shared ? <Notice tone="info" message={t('account.data.shared')} /> : null}
         {verifying ? (
           <Verify request={verifying} onDone={() => { setVerifying(null); void refresh(); }} />
-        ) : mode === 'delete' ? (
-          <View style={accountStyles.actions}>
-            <Body>{t('account.data.deleteBody')}</Body>
-            <Button label={t('account.data.deleteConfirm')} tone="danger" busy={busy} onPress={() => void ask('erasure')} testID="erasure-confirm" />
-            <Button label={t('account.data.keep')} tone="ghost" onPress={() => setMode(null)} />
-          </View>
         ) : mode === 'correct' ? (
           <Correction busy={busy} onSend={(c, note) => void ask('correction', { corrections: [c], note })} onCancel={() => setMode(null)} />
         ) : (
           <View style={accountStyles.actions}>
             <Button label={t('account.data.download')} tone="secondary" busy={busy} disabled={has('access')} onPress={() => void ask('access')} testID="export" />
             <Button label={t('account.data.correct')} tone="ghost" disabled={has('correction')} onPress={() => setMode('correct')} testID="correction-start" />
-            <Button label={t('account.data.delete')} tone="danger" disabled={has('erasure')} onPress={() => setMode('delete')} testID="erasure-start" />
+            {/* S-159: Account › Delete account has its own screen (what it affects, then the confirmation) */}
+            <Button label={t('account.data.delete')} tone="danger" onPress={() => router.push('/account/delete')} testID="erasure-start" />
           </View>
         )}
         <Heading>{t('account.data.requests')}</Heading>
@@ -132,7 +128,7 @@ export function YourData() {
   );
 }
 
-function statusText(r: PrivacyRequest, t: ReturnType<typeof useShopFormat>['t'], date: (iso: string) => string): string {
+export function statusText(r: PrivacyRequest, t: ReturnType<typeof useShopFormat>['t'], date: (iso: string) => string): string {
   switch (r.state) {
     case 'awaiting_verification':
       return t('account.data.s.awaiting');
@@ -149,8 +145,11 @@ function statusText(r: PrivacyRequest, t: ReturnType<typeof useShopFormat>['t'],
   }
 }
 
-/** The texted code, or the authenticator app's code (a step-up proof) — the app has no passkey module (S-98). */
-function Verify({ request, onDone }: { request: PrivacyRequest; onDone: () => void }) {
+/**
+ * The texted code — or, for an account without a verified mobile, the emailed code (S-159) — or the authenticator
+ * app's code (a step-up proof); the app has no passkey module (S-98).
+ */
+export function Verify({ request, onDone }: { request: PrivacyRequest; onDone: () => void }) {
   const { t } = useShopFormat();
   const [code, setCode] = useState('');
   const [authenticator, setAuthenticator] = useState(!request.codeSentTo);
@@ -177,7 +176,7 @@ function Verify({ request, onDone }: { request: PrivacyRequest; onDone: () => vo
   return (
     <View style={accountStyles.actions} testID="privacy-verify">
       <Heading>{t('account.data.confirmIt')}</Heading>
-      <Body>{sentTo && !authenticator ? t('account.data.codeSent', { to: sentTo }) : t('account.data.useAuthenticatorBody')}</Body>
+      <Body>{sentTo && !authenticator ? t(request.codeChannel === 'email' ? 'delete.codeEmail' : 'account.data.codeSent', { to: sentTo }) : t('account.data.useAuthenticatorBody')}</Body>
       <Field
         label={sentTo && !authenticator ? t('account.data.code') : t('account.data.authenticatorCode')}
         value={code}

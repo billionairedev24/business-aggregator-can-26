@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Dialog, ErrorState, Field, Select, Skeleton, TextArea, TextInput, useFormatters, codeValue } from '@northline/ui';
 import { ValidationError } from '@northline/client';
@@ -21,7 +22,7 @@ export function YourData() {
   const requests = useQuery(privacyRequestsQuery);
   const open = useOpenRequest();
   const [verifying, setVerifying] = useState<PrivacyRequest>();
-  const [dialog, setDialog] = useState<'delete' | 'correct'>();
+  const [dialog, setDialog] = useState<'correct'>();
   const [error, setError] = useState<string>();
 
   const ask = (type: RequestType, extra: { corrections?: { field: string; value: string }[]; note?: string } = {}) => {
@@ -40,7 +41,8 @@ export function YourData() {
       <div className="nl-acct-actions">
         <Button type="button" variant="secondary" disabled={open.isPending || has('access')} onClick={() => ask('access')}>{t('download')}</Button>
         <Button type="button" variant="ghost" disabled={has('correction')} onClick={() => setDialog('correct')}>{t('correct')}</Button>
-        <Button type="button" variant="ghost" className="nl-danger" disabled={has('erasure')} onClick={() => setDialog('delete')}>{t('delete')}</Button>
+        {/* S-159: Account › Delete account has its own page (what it affects, then the confirmation) */}
+        <Link to="/account/delete" className="btn btn-ghost nl-danger">{t('delete')}</Link>
       </div>
       {error ? <p className="nl-error" role="alert">{error}</p> : null}
       {requests.isPending ? <Skeleton height={44} />
@@ -50,16 +52,6 @@ export function YourData() {
               {requests.data.map(r => <RequestRow key={r.id} request={r} t={t} onVerify={() => setVerifying(r)} />)}
             </ul>
           ) : null}
-      {dialog === 'delete' ? (
-        <Dialog open onClose={() => setDialog(undefined)} title={t('deleteTitle')} role="alertdialog"
-          actions={<>
-            <Button type="button" variant="ghost" onClick={() => setDialog(undefined)}>{t('cancel')}</Button>
-            <Button type="button" className="nl-danger-btn" disabled={open.isPending} aria-busy={open.isPending} onClick={() => ask('erasure')}>{t('deleteConfirm')}</Button>
-          </>}>
-          <p>{t('deleteBody')}</p>
-          {error ? <p className="nl-error" role="alert">{error}</p> : null}
-        </Dialog>
-      ) : null}
       {dialog === 'correct' ? <CorrectionDialog t={t} busy={open.isPending} error={error} onClose={() => setDialog(undefined)}
         onSend={(corrections, note) => ask('correction', { corrections, note })} /> : null}
       {verifying ? <VerifyDialog request={verifying} t={t} onClose={() => setVerifying(undefined)} /> : null}
@@ -67,7 +59,7 @@ export function YourData() {
   );
 }
 
-function RequestRow({ request: r, t, onVerify }: { request: PrivacyRequest; t: PrivacyT; onVerify: () => void }) {
+export function RequestRow({ request: r, t, onVerify }: { request: PrivacyRequest; t: PrivacyT; onVerify: () => void }) {
   const { date } = useFormatters();
   const withdraw = useWithdraw();
   const [busy, setBusy] = useState(false);
@@ -115,16 +107,17 @@ function RequestRow({ request: r, t, onVerify }: { request: PrivacyRequest; t: P
   );
 }
 
-function VerifyDialog({ request, t, onClose }: { request: PrivacyRequest; t: PrivacyT; onClose: () => void }) {
+export function VerifyDialog({ request, t, onClose }: { request: PrivacyRequest; t: PrivacyT; onClose: () => void }) {
   const verify = useVerify();
   const resend = useResendCode();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string>();
   const [authenticator, setAuthenticator] = useState(!request.codeSentTo);
   const [sentTo, setSentTo] = useState(request.codeSentTo);
+  const byEmail = request.codeChannel === 'email';
   const done = { onSuccess: onClose, onError: (e: Error) => setError(e instanceof ValidationError ? e.message : t('error')) };
   const confirmCode = () => {
-    if (!/^\d{6}$/.test(code.trim())) { setError(t('v_code')); return; }
+    if (!/^\d{6}$/.test(code.trim())) { setError(byEmail && !authenticator ? t('v_codeEmail') : t('v_code')); return; }
     setError(undefined);
     if (authenticator) {
       void stepUpWithCode(code).then(proof => verify.mutate({ id: request.id, proof }, done), () => setError(t('stepUpFailed')));
@@ -142,7 +135,7 @@ function VerifyDialog({ request, t, onClose }: { request: PrivacyRequest; t: Pri
         <Button type="button" variant="ghost" onClick={onClose}>{t('close')}</Button>
         <Button type="button" disabled={verify.isPending} aria-busy={verify.isPending} onClick={confirmCode}>{t('confirm')}</Button>
       </>}>
-      <p>{sentTo && !authenticator ? t('codeSent', { to: sentTo }) : t('noCode')}</p>
+      <p>{sentTo && !authenticator ? (byEmail ? t('codeSentEmail', { to: sentTo }) : t('codeSent', { to: sentTo })) : t('noCode')}</p>
       <Field label={sentTo && !authenticator ? t('code') : t('authenticatorCode')} error={error}>
         <TextInput value={code} onChange={e => setCode(codeValue(e.target.value))} inputMode="numeric" autoComplete="one-time-code" />
       </Field>

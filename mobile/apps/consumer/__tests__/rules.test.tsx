@@ -16,15 +16,23 @@ describe('the registration rules (docs/spec/validation-rules.md § Registration)
     expect(splitName('Cher')).toEqual({ firstName: 'Cher', lastName: '' });
   });
 
-  it('checks every field with the exact messages, in both languages', () => {
-    expect(validateSignUp({ phone: '', fullName: '', email: '', terms: false }, en)).toEqual({
-      phone: 'Mobile number is required for verification.',
+  it('checks every field with the exact messages, in both languages (S-154: email + password, the mobile optional)', () => {
+    const empty = { fullName: '', email: '', password: '', passwordConfirm: '', phone: '', terms: false };
+    expect(validateSignUp(empty, en)).toEqual({
       fullName: 'First name is required.',
       email: 'Email is required.',
+      password: 'Enter a password.',
       terms: 'You need to accept the Terms and Privacy Policy.',
     });
-    expect(validateSignUp({ phone: '+1 (555) 555-0148', fullName: 'Grace Hopper', email: 'g@example.com', terms: true }, en)).toEqual({});
-    expect(validateSignUp({ phone: '555-01', fullName: 'Grace', email: 'g@x', terms: true }, fr)).toEqual({
+    const good = { fullName: 'Grace Hopper', email: 'g@example.com', password: 'correct horse battery', passwordConfirm: 'correct horse battery', phone: '', terms: true };
+    expect(validateSignUp(good, en)).toEqual({});
+    expect(validateSignUp({ ...good, phone: '+1 (555) 555-0148' }, en)).toEqual({});
+    expect(validateSignUp({ ...good, password: 'short', passwordConfirm: 'short' }, en)).toEqual({ password: 'Use at least 12 characters.' });
+    expect(validateSignUp({ ...good, passwordConfirm: 'correct horse battery!' }, en)).toEqual({ passwordConfirm: "The passwords don't match." });
+    expect(validateSignUp({ ...good, email: 'grace.hopper@example.com', password: 'Grace.Hopper@example.com', passwordConfirm: 'Grace.Hopper@example.com' }, en)).toEqual({ password: "Your password can't be your email address." });
+    // twelve characters as a person counts them (code points): six emoji are six characters, not twelve
+    expect(validateSignUp({ ...good, password: '🙂🙂🙂🙂🙂🙂', passwordConfirm: '🙂🙂🙂🙂🙂🙂' }, en)).toEqual({ password: 'Use at least 12 characters.' });
+    expect(validateSignUp({ ...good, phone: '555-01', fullName: 'Grace', email: 'g@x' }, fr)).toEqual({
       phone: 'Entrez un mobile canadien valide, p. ex. +1 403 555 0148.',
       fullName: 'Le nom est obligatoire.',
       email: 'Cette adresse courriel ne semble pas valide.',
@@ -41,6 +49,11 @@ describe('the registration rules (docs/spec/validation-rules.md § Registration)
     ]);
     expect(fieldErrors(e, fr)).toEqual({ phone: 'Un compte utilise déjà ce numéro de mobile. Connectez-vous plutôt.', code: 'Ce code ne correspond pas. Vérifiez-le et réessayez.' });
     expect(fieldErrors(e, en, 'authErr.signInCodeWrong').code).toBe("That code didn't work. Check it and try again.");
+    // S-154: a wrong password is the sign-in's one message; a common one is refused by the server only
+    const p = new ApiError(422, undefined, undefined, [{ field: 'password', rule: 'mismatch', message: 'x' }, { field: 'passwordConfirm', rule: 'mismatch', message: 'y' }]);
+    expect(fieldErrors(p, fr)).toEqual({ password: 'Ce courriel et ce mot de passe ne correspondent pas. Vérifiez-les et réessayez.', passwordConfirm: 'Les mots de passe ne correspondent pas.' });
+    const c = new ApiError(422, undefined, undefined, [{ field: 'password', rule: 'common', message: 'x' }]);
+    expect(fieldErrors(c, en).password).toBe("This password is too common. Choose one that's harder to guess.");
   });
 
   it('words the flow errors: throttled, rate limited, code not sent, restart, network, hand-off', () => {

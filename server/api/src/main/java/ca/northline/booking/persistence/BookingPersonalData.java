@@ -93,4 +93,13 @@ class BookingPersonalData implements PersonalDataContributor {
         }
         return upcoming > 0 ? outcome.holding("booking.bookings", Hold.UPCOMING_BOOKING) : outcome;
     }
+
+    @Override
+    public List<Consequence> consequences(Subject subject) {
+        var upcoming = jdbc.sql("select count(*) from booking.bookings where customer_id = :u and state in " + UPCOMING)
+                .param("u", subject.userId())
+                .query(Long.class)
+                .single();
+        return upcoming > 0 ? List.of(Consequence.of("upcoming_bookings", upcoming)) : List.of();
+    }
 }

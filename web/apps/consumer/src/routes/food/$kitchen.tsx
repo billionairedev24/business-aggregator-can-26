@@ -1,4 +1,5 @@
 import { createFileRoute, notFound } from '@tanstack/react-router';
+import { z } from 'zod';
 import { isNotFound } from '@northline/client';
 import foodCss from '../../features/food/food.css?url';
 import { restaurantQuery } from '../../features/food/api';
@@ -10,6 +11,8 @@ import { brand } from '@northline/tokens';
 
 /** Restaurant menu (S-57): modifiers, combos. Server-rendered for SEO; JSON-LD `Restaurant` with its menu (S-63). */
 export const Route = createFileRoute('/food/$kitchen')({
+  // S-159: `?group=<id>` adds the dishes to a group order
+  validateSearch: z.object({ group: z.string().max(40).optional().catch(undefined) }),
   loader: async ({ context, params }) => {
     try {
       return await context.queryClient.ensureQueryData(restaurantQuery(params.kitchen));
@@ -41,5 +44,6 @@ export const Route = createFileRoute('/food/$kitchen')({
 
 function Restaurant() {
   const { kitchen } = Route.useParams();
-  return <RestaurantScreen slug={kitchen} />;
+  const { group } = Route.useSearch();
+  return <RestaurantScreen slug={kitchen} group={group} />;
 }

@@ -149,7 +149,8 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
                 taxBps(business.province()),
                 slots(row, card, zone),
                 sections,
-                combos);
+                combos,
+                row.groupOrders());
     }
 
     @Override
@@ -188,7 +189,9 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
                 c.pickupToMin(),
                 FoodFees.MIN_ORDER_CENTS,
                 FoodFees.SERVICE_FEE_BPS,
-                slots(row, c, markets.zone(business.get().province()))));
+                slots(row, c, markets.zone(business.get().province())),
+                row.groupOrders(),
+                row.groupMax()));
     }
 
     private Map<String, CalendarRow> calendarsOf(List<String> ids) {

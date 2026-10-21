@@ -36,8 +36,11 @@ class EmailTemplatesTest {
         // customer's update, which links to the consumer site (S-102: a deep link the app opens when installed)
         var link = switch (content) {
             case EmailContent.IdentityVerificationLink _ -> "https://verify.stripe.com/";
-            case EmailContent.CustomerUpdate _, EmailContent.MarketingOffer _, EmailContent.PlusPayment _ ->
-                "http://localhost:3000/";
+            case EmailContent.CustomerUpdate _,
+                    EmailContent.MarketingOffer _,
+                    EmailContent.PlusPayment _,
+                    EmailContent.PrivacyCode _,
+                    EmailContent.AccountDeletion _ -> "http://localhost:3000/";
             default -> "http://localhost:3100/";
         };
 

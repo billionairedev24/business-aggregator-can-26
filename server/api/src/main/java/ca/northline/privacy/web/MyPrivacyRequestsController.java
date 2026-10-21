@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <pre>
  * GET  /api/v1/me/privacy-requests                         {items: [RequestView]} newest first
  * GET  /api/v1/me/privacy-requests/correctable-fields      {items: ["phone", …]}
+ * GET  /api/v1/me/privacy-requests/erasure-preview         {items: [{code, count, amountCents, until}]} (S-159)
  * POST /api/v1/me/privacy-requests  {type, corrections?, note?}  [X-Step-Up]  → 201 RequestView
  *        verified at once with a valid proof; otherwise awaiting_verification and a code texted (codeSentTo)
  * GET  /api/v1/me/privacy-requests/{id}                    RequestView
@@ -58,6 +59,13 @@ class MyPrivacyRequestsController {
     @GetMapping
     ListResponse<RequestView> mine(CurrentUser user, Locale locale) {
         return new ListResponse<>(requests.mine(user.userId(), locale));
+    }
+
+    /** S-159: what deleting the account would affect now (Account › Delete account shows it before confirming). */
+    @Operation(summary = "What deleting the caller's account would affect now")
+    @GetMapping("/erasure-preview")
+    ListResponse<ca.northline.shared.privacy.PersonalDataContributor.Consequence> erasurePreview(CurrentUser user) {
+        return new ListResponse<>(requests.consequences(user.userId()));
     }
 
     @Operation(summary = "Fields the caller can ask to have corrected")

@@ -54,46 +54,50 @@ site and the console do:
 ## 2. Before the first run on the dry run
 
 Once per environment, after [dryrun-gcp.md](dryrun-gcp.md) steps 1–14 (OVHcloud: [ovh.md](ovh.md) up to its smoke
-test; Twilio and Stripe go into `.ovh/<target>.env` instead of Secret Manager, [ovh.md § Secrets](ovh.md#secrets)):
+test; Stripe goes into `.ovh/<target>.env` instead of Secret Manager, [ovh.md § Secrets](ovh.md#secrets)):
 
-1. **SMS codes — blocker for this script.** People signing up on the sites use email + password with an email code
-   (S-154 — the environment needs a way to deliver email: [ovh.md § Email](ovh.md#email) on OVHcloud). This script,
-   though, registers its accounts through the phone path, and under the `dev` profile the local SMS stand-in
-   **withholds** phone codes (S-112: no code reaches a shipped log; there is deliberately no switch). Configure Twilio for
-   northline-auth ([README § SMS and voice codes](README.md#sms-and-voice-codes-s-8)): put the auth token in Secret
-   Manager (`sms-auth-token`) and add to the step 10 command
-   `--set apps.auth.env.SMS_PROVIDER=twilio --set apps.auth.env.SMS_FROM=+1… --set apps.auth.env.SMS_ACCOUNT_ID=AC… --set apps.auth.secretEnv.SMS_AUTH_TOKEN=true`.
-   A Twilio **trial** account texts only verified numbers: verify the six demo phones (below) in the Twilio console.
+1. **An inbox the script can read** (S-159). Every account is an email + a random password + an authenticator app
+   (S-154's accounts), and the code northline-auth emails at sign-up is read from **Mailpit's API**: locally the
+   compose Mailpit (`http://localhost:8025`, found on its own); on OVHcloud the demo inbox — `OVH_DEMO_MAILPIT=true`
+   in `.ovh/<target>.env` ([ovh.md § Email](ovh.md#email)), then `https://mail.<OVH_DOMAIN>` with `MAILPIT_PASSWORD`
+   is used without further settings. Any other inbox: `DEMO_MAILPIT_URL` (+ `DEMO_MAILPIT_PASSWORD`, user `demo`), or
+   `DEMO_EMAIL_CODE_CMD` (a command printing the code emailed to `$1`), or type each code when the terminal asks. The
+   plan's addresses are `@demo.northline.test`, which only a catch-all inbox like Mailpit receives — with a real mail
+   relay set `DEMO_EMAIL_<KEY>` (e.g. `DEMO_EMAIL_OWNER`) to addresses you can read. **No Twilio is needed any more.**
 2. **Stripe test mode** ([stripe.md](stripe.md)): Identity activated in test mode (Settings › Identity), the
    `identity.verification_session.*` events on the platform webhook endpoint (step 12). `values-dryrun.yaml` sets
    `IDENTITY_PROVIDER=stripe` and `AGE_VERIFICATION_PROVIDER=stripe`: the local fakes' outcome pages exist only under
    the `local` profile, so without Stripe no owner could finish onboarding and no customer could buy wine.
 3. **First console admin** (step 13.1) — register on the consumer site with **an authenticator app** as the second
-   factor and keep its key (the "can't scan?" text): the script signs in as this admin — the **approver** — to decide
-   the applications (`DEMO_STAFF_IDENTIFIER`, `DEMO_STAFF_TOTP_SECRET`). The second console account, the **reviewer**,
+   factor and keep its key (the "can't scan?" text) and its password: the script signs in as this admin — the
+   **approver** — to decide the applications (`DEMO_STAFF_IDENTIFIER`, `DEMO_STAFF_PASSWORD`,
+   `DEMO_STAFF_TOTP_SECRET`; an older phone-code admin without a password leaves `DEMO_STAFF_PASSWORD` empty). The second console account, the **reviewer**,
    is made by the script: registered like the other demo accounts, then invited by the admin with the trust & safety
    role (Console › Team; an invite needs an existing account).
 4. **The market live.** Production migrations start the first market at `pilot` (V345), and a pilot market takes no
    orders. Console › **Provinces** (admin) → the market → stage `live` (the screen's checklist must be green;
    [regions.md](regions.md#from-the-console-s-84)). The script warns when the market isn't live.
-5. **Six phones that receive SMS** for the accounts the script creates (`DEMO_PHONE_OWNER`, `_APPLICANT`, `_REVIEWER`,
-   `_CUSTOMER`, `_CUSTOMER2`, `_CUSTOMER3`). The customer's should be the presenter's: the shopper signs in with a code to it.
+5. **Phones are optional.** `DEMO_PHONE_OWNER`, `_APPLICANT`, `_REVIEWER`, `_CUSTOMER`, `_CUSTOMER2`, `_CUSTOMER3`
+   put a mobile on an account (unverified: no SMS is sent). Until S-159 the script needed six phones that received
+   SMS.
 
 ## 3. Run it
 
 ```sh
 # the dry run (≈ 10 minutes the first time, plus the Stripe pages below)
-DEMO_STAFF_IDENTIFIER=admin@… DEMO_STAFF_TOTP_SECRET=… \
-DEMO_PHONE_OWNER=+1… DEMO_PHONE_APPLICANT=+1… DEMO_PHONE_REVIEWER=+1… DEMO_PHONE_CUSTOMER=+1… DEMO_PHONE_CUSTOMER2=+1… DEMO_PHONE_CUSTOMER3=+1… \
+DEMO_STAFF_IDENTIFIER=admin@… DEMO_STAFF_PASSWORD=… DEMO_STAFF_TOTP_SECRET=… \
+DEMO_MAILPIT_URL=https://mail.… DEMO_MAILPIT_PASSWORD=… \
 DEMO_STRIPE_PUBLISHABLE_KEY=pk_test_… \
   make demo-data ENV=dryrun
 
-make demo-data ENV=local                  # a local stack (§ 9)
+make demo-data ENV=ovh-vps                # OVHcloud: the demo inbox from .ovh/ovh-vps.env (OVH_DEMO_MAILPIT=true)
+make demo-data ENV=local                  # a local stack (§ 9): the local Mailpit, the dev seed's reviewer as admin
 make demo-data ENV=dryrun ONLY=wine,barber  # only these businesses (keys in marketplace.json)
 ```
 
-The terminal asks for each new account's SMS code (or `DEMO_SMS_CODE_CMD`, a command that prints the code for the
-number in `$1`). The URLs come from `values-dryrun.yaml` — for `ENV=ovh-vps` / `ovh-mks` from `values-ovh-*.yaml` if it
+Each new account's emailed code is read from the inbox (§ 2.1) — newest message to that address with a 6-digit code,
+polled for up to 20 seconds; without an inbox the terminal asks for it (or `DEMO_EMAIL_CODE_CMD` prints it). Under the
+`local` profile the script can also read auth's dev outbox (`/api/auth/dev/outbox`) when Mailpit isn't running. The URLs come from `values-dryrun.yaml` — for `ENV=ovh-vps` / `ovh-mks` from `values-ovh-*.yaml` if it
 sets `urls`, else the same file (`DEMO_*_URL` override them). Each target has its own state file (`.demo/<env>.json`;
 `ENV=gcp-dryrun` is `dryrun`). Any other `ENV` than `local`, `dryrun`, `gcp-dryrun`, `ovh-vps` and `ovh-mks` is
 refused.
@@ -108,16 +112,19 @@ The end of the output checks every business: `✓ Fade Room Barbers  4/4 listing
 
 ## 4. Accounts
 
-From the state file (`.demo/dryrun.json`, `accounts`). The authenticator app holds each key (scan `.demo/dryrun-qr/`).
+From the state file (`.demo/dryrun.json`, `accounts`): each account's email, **password** (S-159, made by the script),
+authenticator key and backup codes. The authenticator app holds each key (scan `.demo/dryrun-qr/`). State files from
+before S-159 (accounts without a password) keep signing in by code as before; delete the file to start over on email
+accounts.
 
 | account | app | sign in with | for |
 |---|---|---|---|
-| `owner` (Morgan Demo-Owner) | Studio | email + authenticator code | owns the 11 businesses: their orders, calendar, reviews, dashboards (the business switcher in the account menu) |
-| `applicant` (Riley Demo-Applicant) | Studio | email + authenticator code | an account with no business of its own: the live seller onboarding |
-| `customer` (Jordan Demo-Shopper) | consumer site | mobile + SMS code; the authenticator code at payment ("Confirm it's you") | the shopper: past orders, bookings, reviews |
+| `owner` (Morgan Demo-Owner) | Studio | email + password + authenticator code | owns the 11 businesses: their orders, calendar, reviews, dashboards (the business switcher in the account menu) |
+| `applicant` (Riley Demo-Applicant) | Studio | email + password + authenticator code | an account with no business of its own: the live seller onboarding |
+| `customer` (Jordan Demo-Shopper) | consumer site or app | email + password + authenticator code (also at payment, "Confirm it's you") | the shopper: past orders, bookings, reviews |
 | `customer2`, `customer3` | consumer site | as above | background customers |
-| `staff` (the console admin) | console | email + authenticator code | the **approver**: decides applications; vetting, licences |
-| `reviewer` (Casey Demo-Reviewer) | console | email + authenticator code | the **reviewer** (trust & safety): the first pair of eyes on an application when the four-eyes review is on — a different person from the approver |
+| `staff` (the console admin) | console | email + password + authenticator code | the **approver**: decides applications; vetting, licences |
+| `reviewer` (Casey Demo-Reviewer) | console | email + password + authenticator code | the **reviewer** (trust & safety): the first pair of eyes on an application when the four-eyes review is on — a different person from the approver |
 
 ## 5. The 15-minute script
 
@@ -169,7 +176,7 @@ else); a plain `make demo-data ENV=dryrun` brings them back. Accounts are never 
   at "packed".
 - **Alcohol hours:** the region's alcohol hours apply at checkout (`restricted_hours`; [age-restricted.md](age-restricted.md)) —
   demo the wine shop inside them.
-- **Rate limits** ([README § Rate limits](README.md#rate-limits-s-9)): 5 SMS codes an hour per account, 30 sign-in
+- **Rate limits** ([README § Rate limits](README.md#rate-limits-s-9)): 5 codes an hour per account, 30 sign-in
   look-ups per 10 minutes per address. Sign everyone in **before** the demo and don't retry a failed sign-in in a loop;
   `make demo-data` signs in only the accounts it needs.
 - **Known rough edges** (reported for fixing in the pull request that added this page): booking times on the wizard's last
@@ -210,7 +217,8 @@ once afterwards ([search.md § 9](search.md#9-reindex-s-71)).
 | exit 3, "For a person to finish" | a hosted Stripe page per business (dry run): open each link, run again |
 | `429: rate limited … wait N s` | sign-in or code limits (§ 7); wait, then run again |
 | `… is already registered but not in .demo/<env>.json` | the state file was lost or another file was used: restore it, or give that account other details (`DEMO_EMAIL_<KEY>`, `DEMO_PHONE_<KEY>`) |
-| `DEMO_PHONE_… is not set` | outside local, every new account needs a phone that receives SMS (§ 2) |
+| `the code emailed to … is needed` | no code reached the inbox in 20 s (not a terminal, so it can't ask): the environment sends elsewhere or the address isn't delivered (§ 2.1) — check Mailpit's web UI, set `DEMO_MAILPIT_URL` / `DEMO_EMAIL_<KEY>` / `DEMO_EMAIL_CODE_CMD` |
+| `… already has an account that isn't in …` | as the row above (lost state file): the password and authenticator key are gone with it |
 | a booking says "That time was just taken" | the owner is the one bookable person of every demo provider, so their jobs overlap across businesses; pick another time |
 | `! … market … is a pilot market` | § 2 step 4 |
 | a business ✗ in the check | the line under it names the listing and its vetting state; Studio › Listings shows why |

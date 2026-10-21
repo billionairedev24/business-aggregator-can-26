@@ -1,0 +1,11 @@
+[(#{__${'account-deletion.heading.' + phase}__(${firstName})})]
+
+[(#{__${'account-deletion.body.' + phase}__(${startsAt})})]
+
+[(#{__${'account-deletion.kept.' + phase}__})]
+
+[(#{__${'account-deletion.cta.' + phase}__})]: [(${link})]
+[# th:if="${phase == 'requested'}"]
+[(#{account-deletion.warning})]
+[/]
+[# th:insert="~{footer.txt}" /]

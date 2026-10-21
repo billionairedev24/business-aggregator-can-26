@@ -1254,6 +1254,110 @@ public sealed interface EmailContent {
     // ── Samples (preview endpoint, rendering tests) ──────────────────────────────────────────────────────────────
 
     /**
+     * S-159: the code that confirms a privacy request (a copy of one's data, a correction, deleting the account) for an
+     * account with no verified mobile — an email + password account (S-154) may have no phone and no second factor,
+     * and must still be able to delete itself in the app (App Store 5.1.1(v)). Transactional (a security notice the
+     * person asked for).
+     */
+    record PrivacyCode(String firstName, String code, long validMinutes, URI link) implements EmailContent {
+
+        @Override
+        public String template() {
+            return "privacy-code";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public String settingsPlace() {
+            return "account";
+        }
+
+        @Override
+        public String businessName() {
+            return "";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of("firstName", firstName, "code", code, "minutes", validMinutes, "link", link.toString());
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(code);
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
+    /**
+     * S-159: the account's deletion — {@code requested} once the person confirmed it (when it starts, how to cancel it
+     * until then, what happens to open orders, balances and a Plus membership), {@code completed} when the erasure
+     * pipeline (S-105) finished. Sent to the address the account had when the request was made. Transactional.
+     *
+     * @param startsAt when the erasure starts (the grace period's end); unused for {@code completed}
+     * @param link {@code requested}: the page that cancels the request; {@code completed}: the consumer site
+     */
+    record AccountDeletion(String firstName, Stage stage, Instant startsAt, URI link) implements EmailContent {
+
+        public enum Stage {
+            REQUESTED,
+            COMPLETED
+        }
+
+        @Override
+        public String template() {
+            return "account-deletion";
+        }
+
+        @Override
+        public String variant() {
+            return stage.name().toLowerCase(Locale.ROOT);
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public String settingsPlace() {
+            return "account";
+        }
+
+        @Override
+        public String businessName() {
+            return "";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of(
+                    "firstName", firstName,
+                    "phase", variant(),
+                    "startsAt", format.date(startsAt),
+                    "link", link.toString());
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of();
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
+    /**
      * One sample per template and variant, keyed {@code <template>[.<variant>]}, with the design's Prairie Wrench
      * data. Used by the local preview endpoint and the rendering tests.
      */
@@ -1470,6 +1574,14 @@ public sealed interface EmailContent {
                         URI.create("http://localhost:3100/sign-in"),
                         URI.create("http://localhost:3100/forgot-password"),
                         "studio"));
+        all.put(
+                "privacy-code",
+                new PrivacyCode("Amara", "318604", 15, URI.create("http://localhost:3000/account/delete")));
+        for (var stage : AccountDeletion.Stage.values()) {
+            var sample = new AccountDeletion(
+                    "Amara", stage, at.plus(Duration.ofDays(7)), URI.create("http://localhost:3000/account/delete"));
+            all.put(key(sample), sample);
+        }
         for (var outcome : List.of("paid", "action_required", "declined", "lapsed", "refunded")) {
             all.put(
                     "plus-payment." + outcome,

@@ -773,20 +773,33 @@ describe('Your data (S-105: privacy requests; in-app account deletion)', () => {
     expect(screen.getByText(/^Ready to share until /)).toBeTruthy();
   });
 
-  it('deletes the account in the app: asks first, confirms with the authenticator, and can be cancelled before it starts', async () => {
-    const { server } = await signedIn('/account/data');
-    fireEvent.press(await screen.findByTestId('erasure-start'));
-    expect(screen.getByText(/receipts, tax and payment records — stays, without your name/)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('erasure-confirm'));
-    fireEvent.press(await screen.findByTestId('privacy-authenticator'));
+  it('deletes the account in the app (S-159): Account › Delete account says what it affects, needs “I understand”, confirms with the authenticator, and can be cancelled', async () => {
+    const { server, view } = await signedIn('/account');
+    fireEvent.press(await screen.findByTestId('row-delete'));
+    await waitFor(() => expect(view.getPathname()).toBe('/account/delete'));
+    expect(await screen.findByText('• Your 340 points are lost.')).toBeTruthy();
+    expect(screen.getByText('• Your Plus membership won’t renew: your saved cards are removed.')).toBeTruthy();
+    expect(screen.getByText('• Receipts, tax and payment records stay, as the law requires, without your name.')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('delete-confirm'));
+    expect(await screen.findByText('Tick the box to confirm you understand.')).toBeTruthy();
+    fireEvent.press(screen.getByRole('checkbox'));
+    fireEvent.press(screen.getByTestId('delete-confirm'));
+    expect(await screen.findByText(/^We texted a code to •••• /)).toBeTruthy();
+    fireEvent.press(screen.getByTestId('privacy-authenticator'));
     fireEvent.changeText(screen.getByTestId('privacy-code'), FIXTURE_TOTP);
     fireEvent.press(screen.getByTestId('privacy-confirm'));
     expect(await screen.findByText(/^Your account will be deleted on /)).toBeTruthy();
-    expect(screen.getByText(/\(PIPA\)\.$/)).toBeTruthy();
     expect(server.account.profile.erasureRequestedAt).not.toBeNull();
-    fireEvent.press(screen.getByTestId('withdraw-pr-1'));
-    expect(await screen.findByText('Withdrawn.')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('delete-withdraw'));
+    expect(await screen.findByText('Deletion cancelled. Your account stays.')).toBeTruthy();
     expect(server.account.profile.erasureRequestedAt).toBeNull();
+  });
+
+  it('Your data opens the same Delete account screen', async () => {
+    const { view } = await signedIn('/account/data');
+    fireEvent.press(await screen.findByTestId('erasure-start'));
+    await waitFor(() => expect(view.getPathname()).toBe('/account/delete'));
+    expect(await screen.findByText('Deleting your account closes it and erases your personal information.')).toBeTruthy();
   });
 
   it('asks for a correction of a detail people can’t change themselves', async () => {

@@ -32,6 +32,9 @@ NotFound:escrow,No escrow with id %s,Aucun séquestre avec l’identifiant %s,ne
 NotFound:evidence,No evidence with id %s,Aucune preuve avec l’identifiant %s,needs translator review
 NotFound:file,No file with id %s,Aucun fichier avec l’identifiant %s,needs translator review
 NotFound:flag,No flag with id %s,Aucun signalement avec l’identifiant %s,needs translator review
+NotFound:group order,No group order with id %s,Aucune commande de groupe avec l’identifiant %s,needs translator review
+NotFound:group order item,No group order item with id %s,Aucun plat de la commande de groupe avec l’identifiant %s,needs translator review
+NotFound:group order share,No group order share with id %s,Aucune part de la commande de groupe avec l’identifiant %s,needs translator review
 NotFound:holiday hours,No holiday hours with id %s,Aucun horaire de jour férié avec l’identifiant %s,needs translator review
 NotFound:identity review,No identity review with id %s,Aucun examen d’identité avec l’identifiant %s,needs translator review
 NotFound:identity session,No identity session with id %s,Aucune session de vérification d’identité avec l’identifiant %s,needs translator review

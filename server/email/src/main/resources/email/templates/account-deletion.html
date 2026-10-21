@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{__${'account-deletion.preheader.' + phase}__(${startsAt})}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{__${'account-deletion.heading.' + phase}__(${firstName})}">Heading</h1>
+  <p th:style="${s.p}" th:text="#{__${'account-deletion.body.' + phase}__(${startsAt})}">Body</p>
+  <p th:style="${s.p}" th:text="#{__${'account-deletion.kept.' + phase}__}">What is kept</p>
+  <th:block th:replace="~{button.html :: button(#{__${'account-deletion.cta.' + phase}__}, ${link})}"/>
+  <p th:if="${phase == 'requested'}" th:style="${s.warning}" th:text="#{account-deletion.warning}">Warning</p>
+</div>
+</body>
+</html>

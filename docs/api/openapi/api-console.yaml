@@ -16477,6 +16477,8 @@ components:
       properties:
         channel:
           type: string
+        codeChannel:
+          type: string
         codeSentTo:
           type: string
         completedAt:

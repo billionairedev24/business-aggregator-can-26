@@ -1,5 +1,5 @@
 // Demo marketplace (docs/runbooks/demo.md) — the driver behind scripts/demo-data.sh. Builds a believable marketplace
-// THROUGH THE PRODUCT: people register at northline-auth, owners onboard their businesses in the Studio's API, staff
+// THROUGH THE PRODUCT: people register at northline-auth (S-159: email + password, the emailed code, an authenticator), owners onboard their businesses in the Studio's API, staff
 // approve them in the console's API, customers buy and book through the consumer site's API — every call through the
 // app's BFF with a real session, as the apps do. Never the dev seed. Every person, business and listing is FAKE.
 //
@@ -8,12 +8,14 @@
 // data off the marketplace (see reset()). Node 22, no dependencies. Configuration: environment variables set by
 // scripts/demo-data.sh (its header lists them).
 import { execFileSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { AppSession, HttpError, request, CookieJar } from './lib/http.mjs';
 import { demoPdf, listingPicture, logoPicture } from './lib/images.mjs';
 import { libraryPhoto, logoFromPhoto, photoBlob } from './lib/photos.mjs';
+import { AccountExists, emailCode } from './lib/mail.mjs';
 import { freshTotp } from './lib/totp.mjs';
 
 const env = process.env;
@@ -27,7 +29,6 @@ const PLAN = JSON.parse(readFileSync(env.DEMO_PLAN ?? new URL('./data/marketplac
 const RESET = env.DEMO_RESET === '1';
 const ONLY = env.DEMO_MERCHANTS ? env.DEMO_MERCHANTS.split(',').map(s => s.trim()) : null;
 const QUIET = env.CI === 'true' || env.DEMO_QUIET === '1';
-const AREA = env.DEMO_AREA_CODE ?? '555';
 const PERISHABLE = /\.(bakery|produce|dairy-and-eggs|butcher|frozen)$/; // final sale is for perishables only
 const SKU = (m, l) => `DEMO-${m}-${l}`.toUpperCase();
 
@@ -107,68 +108,91 @@ async function presenterPhotos() {
 }
 
 // ── people ────────────────────────────────────────────────────────────────────────────────────────────────────────
-function phoneFor(key, suffix) {
-  const override = env[`DEMO_PHONE_${key.toUpperCase()}`];
-  if (override) return override;
-  if (!LOCAL) throw new Error(`DEMO_PHONE_${key.toUpperCase()} is not set: outside local, every new account needs a phone that receives SMS (docs/runbooks/demo.md § Accounts)`);
-  return `+1 ${AREA} 555 ${suffix}`;
-}
-const e164 = p => `+${p.replace(/\D/g, '').replace(/^(?=\d{10}$)/, '1')}`;
+// S-159: accounts are email + password (S-154), confirmed with the emailed code and given an authenticator app — no
+// Twilio. The code is read from Mailpit (DEMO_MAILPIT_URL: the local compose inbox, or the OVH demo inbox), else locally
+// from auth's dev outbox, else DEMO_EMAIL_CODE_CMD, else asked in the terminal. A mobile number is optional
+// (DEMO_PHONE_<KEY>); it is stored unverified.
+const MAILPIT = env.DEMO_MAILPIT_URL ? { url: env.DEMO_MAILPIT_URL, user: env.DEMO_MAILPIT_USER ?? 'demo', password: env.DEMO_MAILPIT_PASSWORD } : null;
+/** The app whose links the emails carry (S-154 `app`): where the account was made. */
+const EMAIL_APP = { studio: 'studio', console: 'console', consumer: 'consumer' };
 
-async function smsCode(phone, since) {
-  if (LOCAL) {
-    for (let n = 0; n < 30; n++) {
-      const { body } = await request(new CookieJar(), 'GET', `${URLS.auth}/api/auth/dev/outbox?to=${encodeURIComponent(e164(phone))}`);
-      const code = body.items.find(c => Date.parse(c.at) >= since - 2000)?.code;
-      if (code) return code;
-      await sleep(500);
-    }
-    throw new Error(`no SMS code for ${phone} in the local outbox`);
-  }
-  if (env.DEMO_SMS_CODE_CMD) return execFileSync('sh', ['-c', env.DEMO_SMS_CODE_CMD, 'sms-code', e164(phone)], { encoding: 'utf8' }).trim();
-  if (!process.stdin.isTTY) throw new Error(`the code texted to ${phone} is needed: run in a terminal, or set DEMO_SMS_CODE_CMD`);
+async function readCode(email, since) {
+  const code = await emailCode(email, since, { mailpit: MAILPIT, outbox: LOCAL ? URLS.auth : null });
+  if (code) return code;
+  if (env.DEMO_EMAIL_CODE_CMD) return execFileSync('sh', ['-c', env.DEMO_EMAIL_CODE_CMD, 'email-code', email], { encoding: 'utf8' }).trim();
+  if (!process.stdin.isTTY) throw new Error(`the code emailed to ${email} is needed: set DEMO_MAILPIT_URL (the demo inbox), DEMO_EMAIL_CODE_CMD, or run in a terminal`);
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  try { return (await rl.question(`  6-digit code texted to ${phone}: `)).trim(); } finally { rl.close(); }
+  try { return (await rl.question(`  6-digit code emailed to ${email}: `)).trim(); } finally { rl.close(); }
 }
 
-/** An account: registered once (phone code + authenticator app), then signed in with its authenticator key. */
+/** A long random password, kept only in the state file (mode 600) like the authenticator key. */
+const newPassword = () => `demo-${randomBytes(18).toString('base64url')}`;
+
+/** The authenticator app northline-auth sets up for a signed-in account without one; its key and backup codes kept. */
+async function enrol(s, key, a) {
+  const totp = await s.auth('POST', '/api/auth/enroll/totp');
+  const enrolled = await s.auth('POST', '/api/auth/enroll/totp/verify', { code: await freshTotp(totp.secret) });
+  Object.assign(a, { totpSecret: totp.secret, otpauthUri: totp.otpauthUri, backupCodes: enrolled.backupCodes ?? [], usedBackupCodes: [] });
+  save();
+  saveQr(key, totp.qrCode);
+  return enrolled.session;
+}
+
+/** An account: created once (email + password, the emailed code, an authenticator app), then signed in with them. */
 async function account(key, person, app, { open = true } = {}) {
   const s = new AppSession(URLS[app], URLS.auth);
   const saved = state.accounts[key];
   if (saved?.totpSecret) {
     if (!open) return null; // exists; sign-ins are rate limited per address (30 per 10 min), so only when needed
-    await signIn(s, saved);
+    await signIn(s, saved, key);
   } else {
-    const phone = phoneFor(key, person.phoneSuffix);
     const email = env[`DEMO_EMAIL_${key.toUpperCase()}`] ?? person.email;
+    const phone = env[`DEMO_PHONE_${key.toUpperCase()}`] ?? '';
+    const password = saved?.password ?? newPassword();
+    state.accounts[key] = { ...(saved ?? {}), identifier: email, password, name: `${person.firstName} ${person.lastName}`, role: person.role };
+    save(); // the password first: a run cut short can still sign in with it
     const since = Date.now();
+    await s.auth('POST', '/api/auth/accounts', {
+      firstName: person.firstName, lastName: person.lastName, email, password, passwordConfirm: password, phone: phone || null,
+      terms: true, termsLanguage: 'en', app: EMAIL_APP[app] ?? 'consumer',
+    });
+    let code;
     try {
-      await s.auth('POST', '/api/auth/register', { firstName: person.firstName, lastName: person.lastName, phone, email, terms: true, termsLanguage: 'en' });
+      code = await readCode(email, since);
     } catch (e) {
-      if (e instanceof HttpError && [409, 422].includes(e.status)) {
-        throw new Error(`${key}: ${email} / ${phone} is already registered but not in ${STATE_FILE} (its authenticator key is lost) — give this account other details (DEMO_EMAIL_${key.toUpperCase()}, DEMO_PHONE_${key.toUpperCase()}) or restore the file. ${e.message}`);
+      if (e instanceof AccountExists) {
+        throw new Error(`${key}: ${email} already has an account that isn't in ${STATE_FILE} (its password and authenticator key are lost) — give this account another address (DEMO_EMAIL_${key.toUpperCase()}) or restore the file.`);
       }
       throw e;
     }
-    await s.auth('POST', '/api/auth/register/verify', { code: await smsCode(phone, since) });
-    const totp = await s.auth('POST', '/api/auth/register/totp');
-    const created = await s.auth('POST', '/api/auth/register/totp/verify', { code: await freshTotp(totp.secret) });
-    state.accounts[key] = { identifier: email, phone, name: `${person.firstName} ${person.lastName}`, role: person.role, userId: created.user.id, totpSecret: totp.secret, otpauthUri: totp.otpauthUri };
-    save();
-    saveQr(key, totp.qrCode);
-    try {
-      const codes = await s.auth('POST', '/api/auth/backup-codes');
-      state.accounts[key].backupCodes = codes.codes ?? codes.items ?? codes;
-      save();
-    } catch { /* optional */ }
+    const created = await s.auth('POST', '/api/auth/accounts/verify', { code });
+    const a = state.accounts[key];
+    a.userId = created.user.id;
+    await enrol(s, key, a);
     log(`  + ${key}: registered ${email}`);
   }
   await s.openApp();
   return s;
 }
 
-async function signIn(s, a) {
-  await s.auth('POST', '/api/auth/sign-in', { identifier: a.identifier });
+/**
+ * Signs in: email + password, then the authenticator (or a backup code) — S-154. An account the state file knows
+ * without a password (made before S-159 by the phone path) signs in identifier-first as before.
+ */
+async function signIn(s, a, key = 'staff') {
+  if (a.password) {
+    const step = await s.auth('POST', '/api/auth/sign-in/password', { email: a.identifier, password: a.password });
+    if (step.step === 'enroll') { await enrol(s, key, a); return 'totp'; }
+    if (step.step === 'verify-email') {
+      const since = Date.now();
+      await s.auth('POST', '/api/auth/accounts/resend').catch(() => undefined);
+      await s.auth('POST', '/api/auth/accounts/verify', { code: await readCode(a.identifier, since) });
+      await enrol(s, key, a);
+      return 'totp';
+    }
+  } else {
+    await s.auth('POST', '/api/auth/sign-in', { identifier: a.identifier });
+  }
   if (a.totpSecret) {
     for (let attempt = 0; ; attempt++) {
       try { await s.auth('POST', '/api/auth/sign-in/totp', { code: await freshTotp(a.totpSecret) }); return 'totp'; } catch (e) {
@@ -196,6 +220,8 @@ async function staffSession() {
   const same = saved.identifier === identifier;
   const a = {
     identifier,
+    // S-154: an account with a password signs in with it first (its authenticator alone is refused)
+    password: env.DEMO_STAFF_PASSWORD ?? (same ? saved.password : undefined),
     totpSecret: env.DEMO_STAFF_TOTP_SECRET ?? (same ? saved.totpSecret : undefined),
     // codes this script regenerated (local) win over the ones given: those are spent
     backupCodes: same && saved.backupCodes?.length ? saved.backupCodes : env.DEMO_STAFF_BACKUP_CODES?.split(',').map(c => c.trim()).filter(Boolean),
@@ -388,7 +414,7 @@ async function reviewerSession(staff) {
     save();
   }
   const s = new AppSession(URLS.console, URLS.auth);
-  await signIn(s, a);
+  await signIn(s, a, 'reviewer');
   await s.openApp();
   return s;
 }

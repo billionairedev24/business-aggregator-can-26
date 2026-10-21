@@ -215,7 +215,7 @@ export function CheckoutScreen() {
 }
 
 /** S-51's Payment Element expects the cart's shape: one intent here. */
-function asCartStarted(s: FoodStarted): CartStarted {
+export function asCartStarted(s: FoodStarted): CartStarted {
   return {
     checkoutId: s.orderId, orderId: s.orderId, ref: s.ref, totalCents: s.totals.totalCents, expiresAt: '',
     payment: { provider: s.mode, publishableKey: s.publishableKey ?? null },
@@ -251,7 +251,7 @@ function Summary({ t, totals, loading, lines }: { t: T; totals?: Totals; loading
 }
 
 /** The local fake gateway's stand-in for the bank's 3-D Secure screen (design 06 `pay3ds`). */
-function BankStep({ t, total, busy, onApprove }: { t: T; total: string; busy: boolean; onApprove: () => void }) {
+export function BankStep({ t, total, busy, onApprove }: { t: T; total: string; busy: boolean; onApprove: () => void }) {
   const [code, setCode] = useState('');
   return (
     <div className="nl-fco-bank">

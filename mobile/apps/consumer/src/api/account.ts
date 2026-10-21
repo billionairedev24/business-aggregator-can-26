@@ -94,7 +94,11 @@ export interface PrivacyRequest {
   law: { code: string; name: string; shortName: string; authority: string; authorityUrl: string };
   receivedAt: string; dueAt: string; extendedTo?: string | null; scheduledFor?: string | null; completedAt?: string | null;
   codeSentTo?: string | null; decision?: string | null; export?: { ready: boolean; expiresAt?: string | null } | null;
+  /** S-159: the code went by `sms`, or by `email` for an account without a verified mobile */
+  codeChannel?: 'sms' | 'email' | null;
 }
+/** S-159: what deleting the account would affect now (open orders, upcoming bookings, money held, points, Plus…). */
+export interface ErasureConsequence { code: string; count: number; amountCents: number; until?: string | null }
 export interface DownloadLink { url: string; summaryUrl: string; expiresAt: string }
 export interface ProfileChange { firstName: string; lastName: string; email: string; pronouns: string | null; birthday: string | null }
 export interface Address { id: string; label?: string | null; street: string; unit?: string | null; city: string; province: string; postal: string; note?: string | null; isDefault: boolean }
@@ -252,6 +256,7 @@ export const accountApi = (api: ApiClient) => ({
   saveProfile: (c: ProfileChange) => need(api.patch<Profile>('/me/profile', { json: c })),
   /** Privacy requests (S-105): `X-Step-Up` verifies at once; without it the api texts a code. */
   privacyRequests: async () => (await api.get<{ items: PrivacyRequest[] }>('/me/privacy-requests'))?.items ?? [],
+  erasurePreview: async () => (await api.get<{ items: ErasureConsequence[] }>('/me/privacy-requests/erasure-preview'))?.items ?? [],
   correctableFields: async () => (await api.get<{ items: string[] }>('/me/privacy-requests/correctable-fields'))?.items ?? [],
   openPrivacyRequest: (r: { type: PrivacyType; corrections?: { field: string; value: string }[]; note?: string }, stepUp?: string) =>
     need(api.post<PrivacyRequest>('/me/privacy-requests', { json: r, headers: stepUp ? { 'X-Step-Up': stepUp } : undefined })),
