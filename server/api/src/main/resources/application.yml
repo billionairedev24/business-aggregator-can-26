@@ -39,6 +39,7 @@ spring:
     username: ${REDIS_USERNAME:}
     password: ${REDIS_PASSWORD:}
     ssl.enabled: ${REDIS_SSL:false}
+    repositories.enabled: false       # S-163: no Redis repositories (Spring Data would scan every package for them)
   elasticsearch:
     uris: ${ES_URIS:http://localhost:9200}
     username: ${ES_USERNAME:}
@@ -81,8 +82,10 @@ springdoc:
       client-id: docs
       scopes: [ openid, profile, merchant ]
       use-pkce-with-authorization-code-grant: true
-  # S-127: build the OpenAPI model at start-up (in the background); the MCP tools are registered from it.
-  pre-loading-enabled: true
+  # S-127/S-163: the MCP tools come from the default OpenAPI document, built once the api is ready
+  # (ca.northline.mcp.McpToolRegistration); springdoc's own pre-loading built all seven documents in parallel during
+  # start-up (≈ 150 MiB of heap) and held start-up waiting for them. The groups are built when a viewer asks.
+  pre-loading-enabled: false
   # S-127 (docs/runbooks/mcp.md): springdoc turns the operations listed in ca.northline.mcp.AgentTools into MCP tools.
   # Each tool call is an HTTP request back to this api (base-url) with the agent's own token. Writes are confirmed by
   # the MCP gateway itself, so springdoc's approval guardrail is off (one confirmation, per caller).

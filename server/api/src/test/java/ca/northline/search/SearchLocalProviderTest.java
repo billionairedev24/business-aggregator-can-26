@@ -6,14 +6,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ca.northline.search.domain.Highlight;
 import ca.northline.support.IntegrationTest;
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 
 /**
  * The {@code test}/{@code local} default ({@code SEARCH_PROVIDER=local}): no Elasticsearch, every search empty, the
  * rules still enforced, anonymous callers welcome. Same context as the other integration tests.
  */
 class SearchLocalProviderTest extends IntegrationTest {
+
+    @Autowired
+    ApplicationContext context;
+
+    /** S-163: the Elasticsearch auto-configuration is skipped without the provider (SearchProviderImportFilter). */
+    @Test
+    void noElasticsearchClient() {
+        Assertions.assertThat(context.getBeanNamesForType(ElasticsearchClient.class))
+                .isEmpty();
+    }
 
     @Test
     void emptyResults_withoutAnIndex() throws Exception {

@@ -19,7 +19,11 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.springframework.boot:spring-boot-starter-security-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
-    implementation("org.springframework.boot:spring-boot-starter-data-elasticsearch")
+    // S-163: the Elasticsearch client and its auto-configuration only — Spring Data Elasticsearch (repositories, mapping
+    // context, a repository scan of every package at start-up) was never used. Loaded only with SEARCH_PROVIDER=elasticsearch
+    // (ca.northline.platform.SearchProviderImportFilter).
+    implementation("org.springframework.boot:spring-boot-elasticsearch")
+    implementation("co.elastic.clients:elasticsearch-java")
     implementation("org.springframework.boot:spring-boot-starter-kafka")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-opentelemetry")

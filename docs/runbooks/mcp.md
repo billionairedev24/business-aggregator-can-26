@@ -184,8 +184,11 @@ closed (S-125's `northline.docs.enabled: false`).
   `northline-mcp`'s scopes and set `MCP_CLIENT_METADATA_DOCUMENTS=false`. Tokens already issued expire within 1 h.
 - **One misbehaving agent:** find its client id in the audit rows (`details->>'client'`). Delete the client row (URL
   clients), or revoke the person's sessions (Studio → Security), which ends the auth session that silent sign-ins use.
-- **"Tools list is empty"**: the token lacks `mcp` (check the consent), or the api started without its OpenAPI model
-  (`springdoc.pre-loading-enabled` must stay `true`).
+- **"Tools list is empty"**: the token lacks `mcp` (check the consent), or the tools weren't registered: since S-163
+  the api builds the OpenAPI document they come from once it is ready (log line `MCP: <n> tools registered`, a few
+  seconds after `Started`; `springdoc.pre-loading-enabled` stays `false`). Requests that arrive earlier wait up to 30 s,
+  then get `503 mcp_unavailable` with `Retry-After`; `MCP: the tools could not be registered` in the log means a
+  springdoc upgrade changed what `McpToolRegistration` reaches (McpServerTest catches it).
 - **`invalid_target`**: the agent's resource differs from `MCP_RESOURCE`. Check the scheme, the host and that there is
   no trailing slash.
 - **`401 invalid_token` with a fresh token:** `MCP_RESOURCE` differs between api and auth.

@@ -173,6 +173,13 @@ alerting:
 spring:
   extraVolumes: []
   extraVolumeMounts: []
+  # S-163 (docs/runbooks/deploy.md § JVM memory): JAVA_TOOL_OPTIONS of every Spring app = these + apps.<app>.javaOptions
+  # (each app's heap share and metaspace cap for its memory limit). Small JVMs for pods with a fraction of a core:
+  # serial GC (no GC threads, smallest overhead), C1 only (a fraction of C2's compiler memory and code cache, quicker
+  # start-up; ~20-30 % less peak throughput), capped code cache, thread stacks and direct buffers, so that
+  # heap + metaspace + code cache + threads + direct memory stay under the limit. values-prod.yaml uses G1 and C2.
+  # An explicit JAVA_TOOL_OPTIONS in env or apps.<app>.env replaces both.
+  javaOptions: "-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:ReservedCodeCacheSize=48m -Xss512k -XX:MaxDirectMemorySize=64m"
 
 # Secrets without External Secrets: one plain Kubernetes Secret referenced key by key (each app gets only the keys
 # listed in its secretEnv). Create it before installing (kubectl create secret generic northline-secrets
@@ -480,6 +487,8 @@ oauthClientsJob:
 # autoscaling: an HPA on CPU (targetCPUUtilizationPercentage of the request); `behavior` (S-119, optional) replaces the
 # default (scale down after 5 minutes of low CPU) with the HPA's own `behavior` block, e.g. the api's in values-prod.yaml.
 # profiles (spring): Spring profiles added after global.environment's (consumer-bff: the bff image with `consumer`).
+# javaOptions (spring apps, S-163): the app's own JVM flags after spring.javaOptions — its heap share of the memory limit
+# and its metaspace cap (docs/runbooks/deploy.md § JVM memory).
 # strategy (optional): the Deployment's strategy instead of the zero-downtime rolling update, e.g. { type: Recreate } for
 # northline-auth with its signing keys on a ReadWriteOnce volume (values-ovh-*.yaml).
 apps:
@@ -491,9 +500,14 @@ apps:
     service: true
     replicas: 1
     autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 6, targetCPUUtilizationPercentage: 70 }
+    # S-163 (docs/runbooks/deploy.md § JVM memory): heap 50 % = 384 MiB (≈ 140–170 MiB live), metaspace ≈ 105 MiB of
+    # 192, code cache ≈ 25 MiB of 48; measured peak RSS 555–620 MiB (the MCP tools' document after start-up, every
+    # docs group built). 1Gi was OOMKilled during start-up (2026-10-21): heap 75 % of the limit, filled by springdoc
+    # building seven OpenAPI documents at once. 512Mi does not fit (peak ≈ 510 MiB).
+    javaOptions: "-XX:MaxRAMPercentage=50 -XX:MaxMetaspaceSize=192m"
     resources:
-      requests: { cpu: 250m, memory: 1Gi }
-      limits: { memory: 1536Mi }   # 1Gi: OOMKilled during start-up once S-150–S-157 grew the context (ovh-vps, 2026-10-21)
+      requests: { cpu: 250m, memory: 768Mi }
+      limits: { memory: 768Mi }
     env: {}
     # Secret variables → required (true: the pod doesn't start without the key) or optional (false).
     secretEnv:
@@ -563,9 +577,12 @@ apps:
     public: true                  # browsers reach it (OIDC issuer, sign-in API)
     replicas: 1
     autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 4, targetCPUUtilizationPercentage: 70 }
+    # S-163: heap 55 % = 280 MiB (≈ 55 MiB live; each Argon2id hash holds 19 MiB while it runs), metaspace ≈ 70 MiB;
+    # measured peak RSS ≈ 290 MiB (it had 768Mi).
+    javaOptions: "-XX:MaxRAMPercentage=55 -XX:MaxMetaspaceSize=128m"
     resources:
-      requests: { cpu: 200m, memory: 768Mi }
-      limits: { memory: 768Mi }
+      requests: { cpu: 200m, memory: 512Mi }
+      limits: { memory: 512Mi }
     env: {}
     secretEnv:
       DB_PASSWORD: true
@@ -604,6 +621,8 @@ apps:
     public: true                  # /api, /bff, /oauth2, /login on the Studio host
     replicas: 1
     autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 4, targetCPUUtilizationPercentage: 70 }
+    # S-163: heap 55 % (≈ 40 MiB live; sessions are in Valkey), metaspace ≈ 55 MiB; measured peak RSS ≈ 220 MiB.
+    javaOptions: "-XX:MaxRAMPercentage=55 -XX:MaxMetaspaceSize=128m"
     resources:
       requests: { cpu: 100m, memory: 512Mi }
       limits: { memory: 512Mi }
@@ -639,6 +658,8 @@ apps:
     public: true
     replicas: 1
     autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 6, targetCPUUtilizationPercentage: 70 }
+    # S-163: the bff image under `consumer` — the same budget as bff.
+    javaOptions: "-XX:MaxRAMPercentage=55 -XX:MaxMetaspaceSize=128m"
     resources:
       requests: { cpu: 100m, memory: 512Mi }
       limits: { memory: 512Mi }
@@ -673,6 +694,8 @@ apps:
     public: true
     replicas: 1
     autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 3, targetCPUUtilizationPercentage: 70 }
+    # S-163: the bff image under `console` — the same budget as bff.
+    javaOptions: "-XX:MaxRAMPercentage=55 -XX:MaxMetaspaceSize=128m"
     resources:
       requests: { cpu: 50m, memory: 512Mi }
       limits: { memory: 512Mi }
@@ -702,6 +725,8 @@ apps:
     service: false
     replicas: 1
     autoscaling: { enabled: false, minReplicas: 1, maxReplicas: 3, targetCPUUtilizationPercentage: 70 }
+    # S-163: heap 55 % (≈ 50 MiB live), metaspace ≈ 65 MiB, ~80 platform threads (Kafka consumers); peak RSS ≈ 245 MiB.
+    javaOptions: "-XX:MaxRAMPercentage=55 -XX:MaxMetaspaceSize=128m"
     resources:
       requests: { cpu: 100m, memory: 512Mi }
       limits: { memory: 512Mi }

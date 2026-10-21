@@ -19,6 +19,7 @@ spring:
     username: ${REDIS_USERNAME:}
     password: ${REDIS_PASSWORD:}
     ssl.enabled: ${REDIS_SSL:false}
+    repositories.enabled: false       # S-163: no Redis repositories (Spring Data would scan every package for them)
   elasticsearch:
     uris: ${ES_URIS:http://localhost:9200}
     username: ${ES_USERNAME:}

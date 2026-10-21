@@ -11,12 +11,14 @@ import io.modelcontextprotocol.spec.McpSchema.Resource;
 import io.modelcontextprotocol.spec.McpSchema.TextContent;
 import io.modelcontextprotocol.spec.McpSchema.TextResourceContents;
 import io.modelcontextprotocol.spec.McpSchema.Tool;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -42,6 +44,12 @@ class McpServerTest extends McpTestServer {
 
     @Autowired
     JdbcClient jdbc;
+
+    @Autowired
+    ApplicationContext context;
+
+    @Autowired
+    McpToolRegistration registration;
 
     @BeforeEach
     void seedCategoriesOnce() {
@@ -86,6 +94,25 @@ class McpServerTest extends McpTestServer {
                 .param("t", tool)
                 .query(Long.class)
                 .single();
+    }
+
+    /**
+     * S-163: the tools are registered after start-up from the default OpenAPI document, without springdoc's pre-loading
+     * (off) or its registrar that held start-up waiting for the document (removed).
+     */
+    @Test
+    void theToolsAreRegisteredOnceTheApiIsReady_withoutHoldingStartUp() {
+        assertThat(registration.await(Duration.ofSeconds(60))).isTrue();
+        assertThat(context.containsBeanDefinition(McpConfiguration.SPRINGDOC_TOOL_WAIT))
+                .isFalse();
+        assertThat(context.getEnvironment().getProperty("springdoc.pre-loading-enabled"))
+                .isEqualTo("false");
+        var names = context.getBean(io.modelcontextprotocol.server.McpSyncServer.class).listTools().stream()
+                .map(Tool::name)
+                .toList();
+        assertThat(names)
+                .contains("list_my_businesses")
+                .allMatch(name -> AgentTools.named(name).isPresent());
     }
 
     @Test

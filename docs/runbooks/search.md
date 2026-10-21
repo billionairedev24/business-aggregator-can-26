@@ -380,7 +380,9 @@ within minutes once the partial reindex has run.
 The same read model on Meilisearch instead of Elasticsearch, for an environment that runs on a hosted Meilisearch (the
 production dry run's, on Layerbase). Postgres stays the source of truth; the indexer, the reconcile sweep, the reindex,
 the search-indices Job and the search API work the same way, through the engine's adapter. Elasticsearch is untouched:
-`SEARCH_PROVIDER=elasticsearch` (the default) behaves exactly as before.
+`SEARCH_PROVIDER=elasticsearch` (the default) behaves exactly as before. S-163: with any other provider the api and
+the worker don't configure the Elasticsearch client at all (no connection pool, no health check, ~800 fewer classes —
+`ca.northline.platform.SearchProviderImportFilter`); the reindex and search-indices commands still build their own.
 
 **Not exercised against a hosted Meilisearch yet.** Everything below has run against `getmeili/meilisearch:v1.28.0`
 (Testcontainers, the compose `search-meili` profile) only.
