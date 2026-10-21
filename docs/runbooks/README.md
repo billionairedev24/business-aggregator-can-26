@@ -31,7 +31,7 @@ say where a step is still manual or missing.
 | [stripe-incidents.md](stripe-incidents.md) | Stripe incidents: an outage (checkout degrades to 503, what queues), a webhook backlog or replay, Stripe vs ledger mismatches, a dispute spike, leaked keys — decision trees, commands, comms (S-115) |
 | [age-restricted.md](age-restricted.md) | age-restricted purchases (2026-10-04): restricted categories and the region model's minimum ages, hours and delivery rules (sources, counsel), sellers' licences and the console queue, the customer's ID check (Stripe Identity), the ID check at the door and counter, refusals and returns with their refunds, the report, store policies |
 | [key-rotation.md](key-rotation.md) | rotating every key and secret: auth signing keys (JWKS rollover), KMS data keys and the envelope re-wrap job, merchants' webhook secrets, Stripe keys, DB / Kafka / push / OpenRouter / on-call credentials, External Secrets commands per cloud (S-7, S-115) |
-| [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
+| [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Resend / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures (S-13/S-27) |
 | [push.md](push.md) | push notifications (APNs, FCM) and deep links: the device registry, customers' and couriers' notifications, back-off, Apple / Firebase set-up (S-102) |
 | [casl.md](casl.md) | Canada's anti-spam law (S-108): which messages are commercial, express consent and its proof, one-click unsubscribe (RFC 8058) and the SMS opt-out link, the sender identification check, consent history for people and staff, the 3-year proof retention, what has never met a real provider |
@@ -191,6 +191,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `CONSOLE_BFF_SECRET` | | | ✓ (`console` profile) | | yes, for the console-bff (S-90, [Console BFF](#console-bff-s-90)) |
 | `CONSOLE_BFF_SECRET_HASH` | | ✓ | | | yes (S-90: the console-bff exists) |
 | `OAUTH_CLIENTS_SYNC_ON_STARTUP` | | ✓ | | | no (`true`; `false` = register only with the Job) |
+| `OAUTH_CONSOLE_PARTNERS_ENABLED`, `OAUTH_CONSOLE_PARTNERS_REFRESH` | | ✓ | | | no (`true`, `PT30S`: partners registered in Console › Integrations become clients — S-158, [partners.md](partners.md)) |
 | `GOOGLE_CLIENT_ID`/`_SECRET`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | | ✓ | | | staging, prod (S-18, [federation.md](federation.md)); empty = that provider off |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | ✓ | | | | staging and prod |
 | `STRIPE_API_BASE` | ✓ | | | | never in the cloud (stripe-mock only) |
@@ -238,6 +239,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `COMMERCE_PROVIDER` | ✓ | | | | staging and prod: `oauth` (`local` refused there — S-35, [commerce-sync.md](commerce-sync.md)) |
 | `SHOPIFY_CLIENT_ID`/`_SECRET`, `SHOPIFY_API_VERSION`, `SQUARE_CLIENT_ID`/`_SECRET`, `SQUARE_WEBHOOK_SIGNATURE_KEY`, `SQUARE_BASE_URL`, `LIGHTSPEED_CLIENT_ID`/`_SECRET` | ✓ | | | | no — empty = that platform shows "Not available yet" ([commerce-sync.md](commerce-sync.md#variables-api)) |
 | `COMMERCE_POLL_INTERVAL`, `COMMERCE_RECONCILE_INTERVAL`, `COMMERCE_WEBHOOK_RATE_LIMIT` | ✓ | | | | no (`PT1H`, `P1D`, 600/min) |
+| `COMMERCE_STOCK_PUSH_INTERVAL`, `COMMERCE_STOCK_PUSH_MAX_ATTEMPTS` | ✓ | | | | no (`PT1M`, 8 — two-way stock, S-158, [commerce-sync.md](commerce-sync.md#two-way-stock-s-158)) |
 | `POS_PROVIDER` | ✓ | | | | staging and prod: `oauth` (`local` refused there — S-36, [pos-menu-import.md](pos-menu-import.md)) |
 | `CLOVER_CLIENT_ID`/`_SECRET`, `CLOVER_AUTH_URL`, `CLOVER_API_URL`, `TOAST_CLIENT_ID`/`_SECRET`, `TOAST_API_URL` | ✓ | | | | no — empty = that POS shows "Not available yet" ([pos-menu-import.md](pos-menu-import.md#variables-api)) |
 | `PLACES_PROVIDER`, `GOOGLE_MAPS_API_KEY` | ✓ | | | | staging and prod: `google` + the key (`local` refused there — S-47, [google-maps.md](google-maps.md)) |
@@ -256,7 +258,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | ✓ | | | ✓ | staging and prod (`local` refused there — S-13, [email.md](email.md)) |
 | `EMAIL_UNSUBSCRIBE_KEY`, `API_PUBLIC_URL` | ✓ | | | ✓ | staging and prod (unsubscribe links; the worker signs them for `payout.failed`, S-27 — [email.md](email.md#variables); S-32 calendar notification URLs) |
 | `API_PUBLIC_URL` (auth) | | ✓ | | | no (`http://localhost:8080`; the chart derives it: S-127's MCP resource, and outside prod the `docs` client's redirect URIs and token-endpoint CORS origin — S-139) |
-| `EMAIL_REPLY_TO`, `EMAIL_LEGAL_NAME`, `EMAIL_MAILING_ADDRESS`, `EMAIL_CONTACT`, `EMAIL_REGION`, `EMAIL_ENDPOINT`, `EMAIL_API_KEY`, `EMAIL_CONFIGURATION_SET`, `EMAIL_RETRY_*`, `SMTP_*` | ✓ | | | ✓ | per provider: `EMAIL_API_KEY` with `sendgrid`, `EMAIL_ENDPOINT` with `azure`, `SMTP_HOST` with `smtp` ([email.md](email.md#variables)) |
+| `EMAIL_REPLY_TO`, `EMAIL_LEGAL_NAME`, `EMAIL_MAILING_ADDRESS`, `EMAIL_CONTACT`, `EMAIL_REGION`, `EMAIL_ENDPOINT`, `EMAIL_API_KEY`, `EMAIL_CONFIGURATION_SET`, `EMAIL_RETRY_*`, `SMTP_*` | ✓ | | | ✓ | per provider: `EMAIL_API_KEY` with `sendgrid` or `resend`, `EMAIL_ENDPOINT` with `azure`, `SMTP_HOST` with `smtp` ([email.md](email.md#variables)) |
 | `SMS_PROVIDER`, `SMS_FROM` | ✓ | ✓ | | ✓ | staging and prod (`local` refused there; `dev` may keep `local`). api: team invitations, worker: notifications (S-27) |
 | `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | ✓ | ✓ | | ✓ | with `SMS_PROVIDER=twilio` |
 | `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | ✓ | ✓ | | ✓ | no (`= SMS_FROM`; SDK default region; provider API) |

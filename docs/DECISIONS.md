@@ -10186,6 +10186,70 @@ template | kubeconform, actionlint, bash 3.2, shellcheck, stubbed runs).
   OVHcloud email (MX Plan `ssl0.ovh.net`, Email Pro `pro1.mail.ovh.net`); port 587 + STARTTLS only (the SMTP adapter
   has no implicit TLS — 465 doesn't work). All three keep mail outside Canada: demo data only.
 
+## 2026-09-30 — S-158 Two-way stock sync, the missing console screens, and the shopper-facing AI
+
+Closes what S-35 (stock one-way), S-23, S-30, S-116, S-120, S-132 and S-133 left "Not done". Runbooks:
+[commerce-sync.md § Two-way stock](runbooks/commerce-sync.md#two-way-stock-s-158),
+[partners.md § Partners registered in the console](runbooks/partners.md#partners-registered-in-the-console-s-158),
+[i18n.md § 2](runbooks/i18n.md#2-french-first-places-region-configuration),
+[pilot-onboarding.md § 6](runbooks/pilot-onboarding.md#6-invites-and-the-pilot-cohort),
+[docs/ai/trust-safety.md](ai/trust-safety.md).
+
+**Decisions**
+
+- **Stock writes are deltas, not counts.** Northline sends the change its order, cancellation or return made
+  (−n / +n) to the connected platform, keyed `<reason>:<source>:<offer>:<variant>` (unique in
+  `catalogue.commerce_stock_pushes`), so a replayed event never doubles. The platform stays the source of truth;
+  the hourly read subtracts still-pending deltas so a sale isn't put back before it lands.
+- **Outbox-style table + scheduler, no new Kafka topic.** Orders feed it through the existing `OrderPlaced` event
+  (module listener) and the in-process `SellableOffers.restock` call; the topic budget is untouched.
+- **Retries:** 1 min × 3ⁿ⁻¹, capped at 6 h, 8 attempts, then `failed`; a 5-minute lease stops two instances sending
+  the same row. Shopify and Square writes carry idempotency keys; Lightspeed has none (read-then-PUT), documented.
+- **One location per connection.** One location is chosen automatically; several → the owner chooses in Studio and
+  changes wait as `choose_location`; reads then come from that location only. Reconnect of the same account keeps it.
+- **Conflicts are shown, not resolved silently:** `oversold` (applied but below zero), `scope_missing` (old grants
+  without write scope → reconnect re-queues), `not_found`, `reconnect`, `disconnected`, `rejected`, `ambiguous`. The
+  owner, technician or cook can retry or dismiss; an applied change can only be dismissed.
+- **Requested scopes grew** (`write_inventory,read_locations`; `INVENTORY_WRITE`): existing connections keep working
+  for reads and show `scope_missing` until reconnected.
+- **Registry re-check** supersedes the open review of that registry row (new state `superseded`) and runs the
+  lookup again as the agent; audited `verification.registry_rechecked`.
+- **Console partners live in the api's database; northline-auth reads them** (every 30 s, advisory lock) and turns
+  them into `partner:<name>` clients. Configuration partners win on a name clash. Only owner-**approved** bindings
+  count; staff can request, never approve, access to a business. Only JWK Set URLs (no pasted keys) from the console.
+  Rotation bumps a key version that busts northline-auth's caches.
+- **Language toggles in the console** reuse S-116's rule: a French-first place always requires French listings; a
+  market may inherit or override; places set by `REGION_FRENCH_FIRST` are shown as configuration and can't be changed
+  there.
+- **Pilot enrolment** of an existing business is a console dialog over the existing S-120 endpoint.
+- **AI screening "hide"** maps per type: a listing is a reviewer rejection through vetting (the merchant sees why), a
+  review is hidden by moderation, a message is replaced by a bilingual placeholder for both sides (original kept for
+  export/erasure only). Viewing the flagged content is audited. The model never decides.
+- **Shopper AI never applies on its own:** suggested filters are chips the shopper edits and applies; triage only
+  points to the case type and help section. 503 / 429 fall back with one sentence; when `/ai/status` is off the UI
+  is absent.
+
+**Schema additions** (V483–V486; renumbered from V483–V486 after S-162): `catalogue.integrations.location_id/location_name`,
+`catalogue.commerce_stock_pushes` (V483); `merchants` registry review state `superseded` (V484);
+`developer.partner_clients`, `developer.partner_bindings` (V485); `messaging.messages.hidden_at/hidden_by/hidden_body`
+(V486).
+
+**Configuration additions:** api `COMMERCE_STOCK_PUSH_INTERVAL` (`PT1M`), `COMMERCE_STOCK_PUSH_MAX_ATTEMPTS` (8),
+`northline.partners.allow-http-jwks` (true only in `local`); auth `OAUTH_CONSOLE_PARTNERS_ENABLED` (true),
+`OAUTH_CONSOLE_PARTNERS_REFRESH` (`PT30S`). No new secrets.
+
+**Not done / never exercised against real services**
+
+- No stock write has reached a real Shopify, Square or Lightspeed account: WireMock stand-ins from the public docs
+  only (Shopify `inventoryAdjustQuantities` with `@idempotent` / `changeFromQuantity: null` and `locations`; Square
+  `inventory/changes/batch-create` states and `locations`; Lightspeed `outlets` and the 2.1 product `PUT` field names).
+- The pending-delta adjustment on reads has a small race (a push landing between the platform read and the pending
+  query can be subtracted twice until the next read).
+- Console partner changes take up to `OAUTH_CONSOLE_PARTNERS_REFRESH` to reach northline-auth; no real partner JWK Set
+  was fetched (in-process JWK Set in tests).
+- Consent requests send no email; the owner sees them in Studio.
+- Help triage's category → help section mapping is client-side; the mobile app has NL search but not help triage.
+
 ## 2026-10-20 — S-160 OVHcloud in the United States for now (Vint Hill), Canada kept as an option
 
 Owner: "for ovh, I am in the US right now, lets deploy there for now". Runbook: [ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo),
@@ -10587,6 +10651,53 @@ PaymentIntents confirmed on- and off-session, `confirm` of a refused PaymentInte
 `handleNextAction` on a renewal's PaymentIntent, the `payment_intent.succeeded` webhook for a Plus period, the refund
 and Stripe Tax record/reverse of a Plus period. stripe.md § 11 lists the test-mode cards to run before launch.
 
+## 2026-10-21 — S-164 Resend as an email provider over its HTTPS API
+
+Why: the owner's provider is Resend; from the OVHcloud US instance, SMTP to `smtp.resend.com` times out on 587 and
+2587 (outbound mail ports filtered) while HTTPS works, so the live demo could not send sign-up codes.
+
+- **`EMAIL_PROVIDER=resend`** (library `server/email`, package `ca.northline.email.resend`, the SendGrid adapter as the
+  model): `POST /emails` on `https://api.resend.com` with `Authorization: Bearer`, JSON `from`, `to`, `subject`,
+  `html`, `text`, `reply_to` (`EMAIL_REPLY_TO`), `headers` (the one-click `List-Unsubscribe` pair the Mailer adds, as
+  for SMTP/SendGrid) and a `template` tag (non-tag characters → `_`). Field names, the 256-character
+  `Idempotency-Key` header and the 200 `{"id"}` answer from Resend's OpenAPI description
+  (github.com/resend/resend-openapi `resend.yaml`, `emails/send`) and resend.com/docs (Send Email, Errors, Idempotency
+  Keys). Selected for api, auth and worker alike (they share `northline.email.*`).
+- **Key variable: `EMAIL_API_KEY`**, base URL **`EMAIL_ENDPOINT`** (not `RESEND_API_KEY` / `RESEND_API_BASE` in the
+  apps): the library has one provider key and one endpoint override for every HTTP provider. Start-up stops with
+  `EMAIL_PROVIDER=resend needs: EMAIL_API_KEY (Resend API key re_… with sending access)`. On OVHcloud the operator's
+  name is `RESEND_API_KEY` (GitHub environment secret / `.ovh/<target>.env`) so it can't be mistaken for a SendGrid
+  key; `scripts/ovh/secrets.sh apply` writes it into `northline-secrets` as `EMAIL_API_KEY` (replacing a SendGrid key
+  there), and `deploy.sh` sets `EMAIL_PROVIDER=resend` + `secretEnv.EMAIL_API_KEY=true` for api/auth/worker. The chart
+  already maps `EMAIL_API_KEY` (optional) into all three, so no new Helm/External Secrets key: comments in
+  values/values-staging/values-prod/values-dryrun name `resend`.
+- **OVH precedence:** `OVH_DEMO_MAILPIT=true` → `RESEND_API_KEY` → `SMTP_HOST` → `EMAIL_API_KEY` (SendGrid) → `local`;
+  deploy warns when Resend wins over a set `SMTP_HOST`.
+- **Idempotency:** `EmailMessage` gains a nullable `idempotencyKey` (old 6-argument constructor kept); the Mailer fills
+  it with the delivery key; the adapter sends `northline-` + SHA-256 hex of it (fixed length, no internal ids leave the
+  platform). A send without the Mailer (offer test sends) has no key and no header.
+- **Failure kinds — deviation from the brief:** the brief asked for 401/403 → not retryable. Kept the library's rule
+  (`EmailDeliveryFailed.ofHttpStatus`, used by SendGrid and Azure): 401/403 (missing/invalid key, unverified domain)
+  are *unavailable* — retried in-process, then the Mailer releases its claim so the email can go out once the key or
+  domain is fixed; *rejected* would mark it as sent-and-refused for good (a sign-up code lost). 429/5xx/408 →
+  unavailable; other 4xx (400/422 `validation_error`, 451) → rejected. 409: `concurrent_idempotent_requests` →
+  unavailable (retried); any other 409 (`invalid_idempotent_request`: the key was used already) → rejected. The
+  exception message is `Resend <status> <name>: <message>`, with any address in Resend's message masked
+  (`EmailAddress.masked()`, now shared with the Mailer's log masking).
+- **Residency:** Resend processes mail in its domain's region (US East by default) — outside Canada, like SendGrid;
+  listed as such in email.md § Choosing a provider.
+- **Never run against the real Resend:** the adapter is tested only against a WireMock stand-in built from the
+  documented API (no Resend account here). Error bodies in the tests (`rate_limit_exceeded`, `validation_error`,
+  `missing_api_key`, the 409 names) follow Resend's errors page as documented; the docs site itself could not be
+  fetched from this machine, the OpenAPI file could.
+- **Tests:** email `ResendEmailSenderContractTest` (documented body + Bearer + Idempotency-Key; no key → no header;
+  429 retried with the same key then accepted; 500 ×3 unavailable; 422 rejected once with the message masked; 401 and
+  403 unavailable with Resend's message; 409 both kinds; the account-verification template rendered through the Mailer
+  into Resend's body; the unsubscribe headers on a notification), `EmailAutoConfigurationTest` +2 (adapter chosen;
+  start-up refusal without a key); scripts: `make shell-compat`, shellcheck (no new findings), actionlint on ovh.yml.
+- **Schema:** none. **Config:** `EMAIL_PROVIDER=resend` (new value), `RESEND_API_KEY` (OVH secret only).
+- **Not done:** Resend webhooks (bounces/complaints → suppressions, S-27's operations work), Resend's own templates,
+  attachments, scheduled sends.
 ## 2026-10-21 — S-159 Group food orders, the phone apps on S-154's accounts, in-app account deletion, demo data by email
 
 Branch `feat/s159-group-orders-app-auth`; migrations V487–V488 (range V487–V496 — first assigned V472–V481, renumbered

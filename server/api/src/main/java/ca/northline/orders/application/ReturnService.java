@@ -320,10 +320,14 @@ class ReturnService implements Returns {
             refunds.refundNow(GoodsEscrowRelease.LINE, line.id(), "returned", what);
         }
         if (received.restock()) {
-            offers.giveBack(lines.stream()
-                    .filter(l -> l.offerId() != null)
-                    .map(l -> new SellableOffers.Take(Objects.requireNonNull(l.offerId()), l.variantId(), l.qty()))
-                    .toList());
+            offers.restock(
+                    lines.stream()
+                            .filter(l -> l.offerId() != null)
+                            .map(l -> new SellableOffers.Take(
+                                    Objects.requireNonNull(l.offerId()), l.variantId(), l.qty()))
+                            .toList(),
+                    "return",
+                    received.id());
         }
         store.refundLines(received.lineIds(), received.restock());
         if (store.lines(order.id()).stream().noneMatch(LineFacts::open)) {

@@ -17,6 +17,9 @@ public interface StockStore {
 
     void giveBack(Take take);
 
+    /** S-158: the business an offer belongs to. */
+    java.util.Optional<String> merchantOf(String offerId);
+
     record Row(
             String offerId,
             @Nullable String variantId,

@@ -41,6 +41,11 @@ public record EmailAddress(String address, @Nullable String name) {
         return address.substring(address.lastIndexOf('@') + 1).toLowerCase(java.util.Locale.ROOT);
     }
 
+    /** {@code s***@example.com} — logs never hold whole addresses. */
+    public String masked() {
+        return address.charAt(0) + "***" + address.substring(address.lastIndexOf('@'));
+    }
+
     /** RFC 5322 form, the name encoded when it isn't ASCII. */
     public InternetAddress toInternetAddress() {
         try {

@@ -24,6 +24,15 @@ public interface SellableOffers {
     /** Puts stock back (checkout abandoned). */
     void giveBack(List<Take> takes);
 
+    /**
+     * S-158: puts stock back after a cancellation or a return the shop restocked — and, unlike {@link #giveBack}, tells
+     * the shop's connected Shopify / Square / Lightspeed store, in the caller's transaction.
+     *
+     * @param reason {@code cancellation} | {@code return}
+     * @param sourceRef the cancellation or return id (one restock per source and offer / variant)
+     */
+    void restock(List<Take> takes, String reason, String sourceRef);
+
     record Item(String offerId, @Nullable String variantId) {}
 
     record Take(String offerId, @Nullable String variantId, int qty) {}

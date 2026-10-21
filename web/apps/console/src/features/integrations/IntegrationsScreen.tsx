@@ -5,13 +5,15 @@ import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { keysQuery, SCOPES, useIssueKey, useRevokeKey, type Key } from './api';
 import { useIntegrationsT } from './messages';
+import { Partners } from './Partners';
 import '../team/team.css';
 
 interface Row { id: string; owner: string; scopes: string; used: string; status: string; src: Key }
 
 /**
  * API & webhooks (S-96, design 03 `api`; admin): every business's API keys ("Partner keys"). Staff issue a key for a
- * business (shown once) and revoke one; both land in that business's audit log with the staff member as actor.
+ * business (shown once) and revoke one; both land in that business's audit log with the staff member as actor. S-158:
+ * the partner API clients below them.
  */
 export function IntegrationsScreen() {
   const t = useIntegrationsT();
@@ -45,6 +47,7 @@ function KeysView({ keys }: { keys: Key[] }) {
         actions={[{ id: 'revoke', label: t('revoke'), perm: 'update', inline: true, bulk: false, when: { key: 'status', in: [t('active')] } }]}
         onAction={(action, picked) => { if (action.id === 'revoke' && picked[0]) setRevoking(picked[0].src); return false; }} />
       </ChartCard>
+      <Partners />
       {issuing ? <IssueDialog onClose={() => setIssuing(false)} /> : null}
       {revoking ? <RevokeDialog keyRow={revoking} onClose={() => setRevoking(null)} /> : null}
     </div>

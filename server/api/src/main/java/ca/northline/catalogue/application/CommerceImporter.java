@@ -75,6 +75,7 @@ class CommerceImporter {
     private final ImageInspector inspector;
     private final ImageFetcher images;
     private final CommerceLinkRepository links;
+    private final CommerceStockPushStore pushes;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -126,12 +127,29 @@ class CommerceImporter {
      * change on an approved listing sends it back to vetting (S-39).
      */
     private boolean syncStock(CommerceProvider provider, ExternalProduct product, ProductListing listing) {
-        var revet = listing.syncStock(bySku(provider, product, listing), SYNC_ACTOR, clock.instant());
+        var revet = listing.syncStock(
+                lessPending(bySku(provider, product, listing), pushes.pendingBySku(listing.getMerchantId(), provider)),
+                SYNC_ACTOR,
+                clock.instant());
         revet.ifPresent(published -> {
             listings.save(listing);
             published.forEach(events::publishEvent);
         });
         return revet.isPresent();
+    }
+
+    /**
+     * S-158: a Northline sale (or restock) not yet sent to the platform is not in the platform's count; adding the
+     * pending change keeps a read in between from giving back units that were just sold.
+     */
+    static Map<String, PriceStock> lessPending(Map<String, PriceStock> platform, Map<String, Integer> pending) {
+        if (pending.isEmpty()) {
+            return platform;
+        }
+        var out = new HashMap<String, PriceStock>();
+        platform.forEach((sku, ps) ->
+                out.put(sku, new PriceStock(ps.priceCents(), Math.max(0, ps.stock() + pending.getOrDefault(sku, 0)))));
+        return out;
     }
 
     /** The platform's price and stock keyed by the Northline SKU each variant maps to. */

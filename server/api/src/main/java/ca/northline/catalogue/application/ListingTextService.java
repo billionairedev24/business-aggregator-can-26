@@ -22,6 +22,23 @@ class ListingTextService implements ListingTexts {
     private final SubmittedListings submitted;
     private final ListingRepository listings;
     private final CategoryCatalog categories;
+    /** Lazily: the vetting service needs trust's flag queue, which needs these texts (a bean cycle otherwise). */
+    private final org.springframework.beans.factory.ObjectProvider<ca.northline.catalogue.api.ListingVetting> vetting;
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Optional<ListingText> find(String listingId) {
+        return listings.find(listingId).map(l -> text(l, java.time.Instant.EPOCH));
+    }
+
+    @Override
+    @Transactional
+    public void takeDown(String listingId, String reason, @Nullable String note, String staffId, String role) {
+        var code = ca.northline.catalogue.api.ListingVetting.REASONS.contains(reason) ? reason : "other";
+        vetting.getObject()
+                .decide(new ca.northline.catalogue.api.ListingVetting.Decision(
+                        listingId, false, java.util.List.of(code), note, staffId, role));
+    }
 
     @Override
     @Transactional(readOnly = true)

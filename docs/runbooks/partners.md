@@ -123,3 +123,31 @@ min, doubling on repeat), 600 per hour per IP; `429 rate_limited` with `Retry-Af
 **Security notes:** northline-auth fetches a partner's JWK Set over https with 5 s time-outs and caches it; the URL is
 operator configuration, never taken from a request. A partner token has no person behind it (`sub = partner:<name>`,
 no `acr`), reaches only endpoints marked for partners, and only for the businesses listed at issuance.
+
+## Partners registered in the console (S-158)
+
+Besides configuration, staff with **API › Keys** (admin) register partners in **Console › Integrations › Partners**
+(`/api/v1/console/partners`, rows in `developer.partner_clients` and `developer.partner_bindings`):
+
+- **Register:** a name (`[a-z0-9-]`, becomes `partner:<name>`), display name, an https JWK Set URL (registered public
+  keys stay configuration-only), scopes (`api.read`, `api.write`), token lifetime 60–3600 s (default 900) and the
+  businesses it asks for. Audited `partner.registered` (platform-level).
+- **Owner consent:** each business binding starts **requested**. The business owner sees it in Studio › Settings ›
+  API › Partner access and approves or declines; an approved one can be revoked there at any time. Only **approved**
+  bindings go into the client's businesses. Audited under the business (`partner.access_requested`,
+  `partner.access_approved`, `…_declined`, `…_revoked`, `partner.access_removed`). No email is sent: the owner sees
+  the request on next visit.
+- **Rotate keys:** bumps the key version — northline-auth forgets the cached JWK Set and the assertion cache entry for
+  that partner, so the next token request re-fetches the set (use it when the partner reports a compromised key and
+  has already replaced it at the URL). Audited `partner.keys_rotated`.
+- **Disable / enable:** a disabled partner becomes a revoked client (`invalid_client`); tokens already issued end
+  within their lifetime. Audited `partner.disabled` / `partner.enabled`.
+
+northline-auth reads these tables at start-up and every `OAUTH_CONSOLE_PARTNERS_REFRESH` (`PT30S`) — so a change takes
+up to 30 s to apply — under an advisory lock; `OAUTH_CONSOLE_PARTNERS_ENABLED=false` turns it off. A partner with the
+same name in configuration wins (the console row is ignored and reported in the auth log). Console clients are not
+reported as `stored but not in configuration`. The `local` profile accepts `http://` JWK Set URLs
+(`northline.partners.allow-http-jwks`); every other environment requires https.
+
+Never exercised against a real partner's JWK Set: covered by `ConsolePartnersApiTest` (api) and
+`PartnerClientsApiTest.ConsoleRegistered` (auth, with an in-process JWK Set).

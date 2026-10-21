@@ -35,7 +35,8 @@ import org.springframework.transaction.support.TransactionTemplate;
  * every {@code COMMERCE_RECONCILE_INTERVAL} with them) pages through the platform's active products, applies each one
  * ({@link CommerceImporter}) in its own transaction — so one product the rules refuse doesn't stop the rest, and its
  * message is listed in the Studio — and hides the listings whose product is gone (hide, never delete). A <b>webhook</b>
- * re-reads only the product it names. Price and stock always come from the platform: Northline never writes back.
+ * re-reads only the product it names. Price and stock come from the platform (S-158: the chosen location's stock, less
+ * Northline's sales not yet sent there); Northline's own sales go the other way through {@link StockSync}.
  */
 @Slf4j
 @Service
@@ -149,7 +150,8 @@ class CommerceSyncService implements SyncIntegrations, CommerceJobs {
             return;
         }
         var source = sources.get(connection.provider());
-        var product = inTx(() -> credentials.with(connection, c -> source.product(c, externalId)))
+        var product = inTx(() ->
+                        credentials.with(connection, c -> source.product(c, externalId, connection.locationId())))
                 .orElse(null);
         if (product == null) {
             return; // needs a reconnect
@@ -202,7 +204,8 @@ class CommerceSyncService implements SyncIntegrations, CommerceJobs {
         try {
             do {
                 var after = cursor;
-                var page = inTx(() -> credentials.with(connection, c -> source.products(c, after)))
+                var page = inTx(() ->
+                                credentials.with(connection, c -> source.products(c, after, connection.locationId())))
                         .orElse(null);
                 if (page == null) {
                     return; // marked reconnect

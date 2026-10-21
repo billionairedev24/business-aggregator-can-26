@@ -15,6 +15,7 @@ public interface TrustFlagQueue {
     String NOT_OPEN = "This flag was already decided.";
     String DECISION_REQUIRED = "Choose dismissed or actioned.";
     String NO_BUSINESS = "Only a business can be warned.";
+    String NOTHING_TO_HIDE = "Only a listing, a review or a message can be hidden.";
 
     List<FlagView> list(@Nullable String state, @Nullable String source, int limit);
 
@@ -23,6 +24,43 @@ public interface TrustFlagQueue {
 
     /** S-93: a staff action on an open flag (actions it); {@code warn} emails the business's owners. */
     FlagView act(String flagId, TrustRules.FlagAction action, String staffId, String role, @Nullable String note);
+
+    /**
+     * S-158: what was flagged, for the AI screening queue: the listing's name and words, the review's text, the
+     * message's text (as the model saw it). Opening it is audit-logged ({@code trust.flag_content_viewed}).
+     */
+    FlagContent content(String flagId, String staffId, String role);
+
+    /** S-158: the weekly anomaly scans, newest week first, with the flags each raised. */
+    List<ScanView> scans(int limit);
+
+    /**
+     * @param title the listing's name; null for a review or a message
+     * @param context one line: the listing's kind and category, the review's stars, who wrote the message
+     */
+    record FlagContent(
+            String flagId,
+            String targetType,
+            String targetId,
+            @Nullable String title,
+            String text,
+            String context) {}
+
+    /** @param aiExplained the model explained the flags (else the rules' own words) */
+    record ScanView(
+            String id,
+            String market,
+            java.time.LocalDate weekStart,
+            int merchants,
+            int flagsRaised,
+            @Nullable String summary,
+            boolean aiExplained,
+            Instant ranAt,
+            List<FlagView> flags) {
+        public ScanView {
+            flags = List.copyOf(flags);
+        }
+    }
 
     /** @param role the console role(s) the staff member acts with (audit log) */
     FlagView decide(String flagId, String decision, String staffId, String role, @Nullable String note);

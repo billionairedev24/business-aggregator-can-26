@@ -38,6 +38,20 @@ public interface AiScreeningStore {
             @Nullable String model,
             @Nullable String prompt);
 
+    /** S-158: the latest scans (every market), newest week first. */
+    List<ScanRun> recentScans(int limit);
+
+    /** One market's weekly scan as stored ({@code model} null: explained by the rules only). */
+    record ScanRun(
+            String id,
+            String market,
+            LocalDate weekStart,
+            int merchants,
+            int flagsRaised,
+            @Nullable String summary,
+            @Nullable String model,
+            Instant ranAt) {}
+
     /** Where the job has read a source up to: the last item's time and id. */
     record Mark(Instant at, String id) {}
 

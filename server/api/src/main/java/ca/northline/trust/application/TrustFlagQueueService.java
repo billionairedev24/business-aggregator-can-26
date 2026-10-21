@@ -2,6 +2,7 @@ package ca.northline.trust.application;
 
 import ca.northline.developer.api.AuditTrail;
 import ca.northline.merchants.api.BusinessNames;
+import ca.northline.messaging.api.MessageTexts;
 import ca.northline.messaging.api.TrustWarningNotice;
 import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.Conflict;
@@ -11,6 +12,7 @@ import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.trust.api.FlagDecided;
 import ca.northline.trust.api.ListingFlags;
+import ca.northline.trust.api.ListingTexts;
 import ca.northline.trust.application.TrustFlagStore.StoredFlag;
 import ca.northline.trust.application.TrustRules.FlagAction;
 import java.time.Clock;
@@ -40,12 +42,27 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
     private final BusinessNames names;
     private final MerchantPlaces places;
     private final ReviewModeration moderation;
+    private final ListingTexts listings;
+    private final MessageTexts messages;
+    private final ReviewStore reviews;
+    private final AiScreeningStore screenings;
 
     @Override
     @Transactional(readOnly = true)
     public List<FlagView> list(@Nullable String state, @Nullable String source, int limit) {
+        // S-158: with the business's name, for the AI screening queue
+        var nameById = new HashMap<String, String>();
         return flags.list(state, source, Math.clamp(limit, 1, 200)).stream()
-                .map(TrustFlagQueueService::view)
+                .map(f -> {
+                    var m = f.merchantId();
+                    return m == null
+                            ? view(f)
+                            : view(
+                                    f,
+                                    nameById.computeIfAbsent(
+                                            m, id -> names.displayName(id).orElse(id)),
+                                    null);
+                })
                 .toList();
     }
 
@@ -94,11 +111,19 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
         if (action == FlagAction.HIDE_REVIEW && !"review".equals(flag.targetType())) {
             throw RuleViolation.of("action", "option", ReviewModeration.NOT_A_REVIEW);
         }
+        if (action == FlagAction.HIDE
+                && !java.util.Set.of("review", "listing", "message").contains(flag.targetType())) {
+            throw RuleViolation.of("action", "option", NOTHING_TO_HIDE);
+        }
         if (!record(flag, "actioned", action.code(), staffId, role, note)) {
             throw new Conflict("flag_decided", NOT_OPEN);
         }
-        if (action == FlagAction.HIDE_REVIEW) {
+        if (action == FlagAction.HIDE_REVIEW || (action == FlagAction.HIDE && "review".equals(flag.targetType()))) {
             moderation.hide(flag.targetId(), flag.rule(), staffId, role, note);
+        } else if (action == FlagAction.HIDE && LISTING.equals(flag.targetType())) {
+            listings.takeDown(flag.targetId(), takeDownReason(flag), note, staffId, role);
+        } else if (action == FlagAction.HIDE && "message".equals(flag.targetType())) {
+            messages.hide(flag.targetId(), staffId, clock.instant());
         }
         if (action == FlagAction.WARN) {
             events.publishEvent(new TrustWarningNotice(
@@ -110,6 +135,89 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
                     note == null || note.isBlank() ? null : note.strip()));
         }
         return view(flags.find(flagId).orElseThrow(() -> new NotFound("flag", flagId)));
+    }
+
+    /** The screening's category as the vetting's rejection reason (shown to the business). */
+    static String takeDownReason(StoredFlag flag) {
+        var categories = List.of(flag.evidence().getOrDefault("categories", "").split(","));
+        if (categories.contains("prohibited")) {
+            return "prohibited";
+        }
+        if (categories.contains("misleading") || categories.contains("scam")) {
+            return "misleading";
+        }
+        return "other";
+    }
+
+    @Override
+    @Transactional
+    public FlagContent content(String flagId, String staffId, String role) {
+        var flag = flags.find(flagId).orElseThrow(() -> new NotFound("flag", flagId));
+        var content = switch (flag.targetType()) {
+            case LISTING ->
+                listings.find(flag.targetId())
+                        .map(l -> new FlagContent(
+                                flagId,
+                                LISTING,
+                                l.listingId(),
+                                l.name(),
+                                l.details(),
+                                l.kind() + (l.category() == null ? "" : " · " + l.category())));
+            case "review" ->
+                flag.merchantId() == null
+                        ? Optional.<FlagContent>empty()
+                        : reviews.find(flag.merchantId(), flag.targetId())
+                                .map(r -> new FlagContent(
+                                        flagId,
+                                        "review",
+                                        flag.targetId(),
+                                        null,
+                                        java.util.Objects.requireNonNullElse(r.text(), ""),
+                                        r.rating() + "/5"));
+            case "message" ->
+                messages.find(flag.targetId())
+                        .map(m -> new FlagContent(
+                                flagId, "message", m.messageId(), null, m.body(), "from the " + m.senderRole()));
+            default -> Optional.<FlagContent>empty();
+        };
+        var found = content.orElseThrow(() -> new NotFound("flagged item", flag.targetId()));
+        audit.record(new AuditTrail.Entry(
+                flag.merchantId(),
+                staffId,
+                role,
+                "trust.flag_content_viewed",
+                "flag",
+                flagId,
+                null,
+                Map.of("targetType", flag.targetType())));
+        return found;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ScanView> scans(int limit) {
+        return screenings.recentScans(Math.clamp(limit, 1, 100)).stream()
+                .map(s -> new ScanView(
+                        s.id(),
+                        s.market(),
+                        s.weekStart(),
+                        s.merchants(),
+                        s.flagsRaised(),
+                        s.summary(),
+                        s.model() != null,
+                        s.ranAt(),
+                        flags.ofScan(s.id()).stream()
+                                .map(f -> {
+                                    var m = f.merchantId();
+                                    return view(
+                                            f,
+                                            m == null
+                                                    ? null
+                                                    : names.displayName(m).orElse(m),
+                                            null);
+                                })
+                                .toList()))
+                .toList();
     }
 
     @Override

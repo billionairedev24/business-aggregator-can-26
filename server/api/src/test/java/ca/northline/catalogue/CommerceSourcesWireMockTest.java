@@ -10,6 +10,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
+import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
@@ -263,7 +265,7 @@ class CommerceSourcesWireMockTest extends CatalogueApiTest {
         assertThat(consent.get("_url")).startsWith(WM.baseUrl() + base + "/admin/oauth/authorize?");
         assertThat(consent)
                 .containsEntry("client_id", "fake-shopify-client-id")
-                .containsEntry("scope", "read_products,read_inventory")
+                .containsEntry("scope", "read_products,read_inventory,write_inventory,read_locations")
                 .containsEntry("redirect_uri", API + "/api/v1/commerce/oauth/shopify/callback");
 
         // a callback whose hmac doesn't verify is refused (and uses up the state)
@@ -481,7 +483,7 @@ class CommerceSourcesWireMockTest extends CatalogueApiTest {
         var consent = startConnect(biz, "square", "{}");
         assertThat(consent.get("_url")).startsWith(WM.baseUrl() + "/square/oauth2/authorize?");
         assertThat(consent)
-                .containsEntry("scope", "ITEMS_READ INVENTORY_READ MERCHANT_PROFILE_READ")
+                .containsEntry("scope", "ITEMS_READ INVENTORY_READ INVENTORY_WRITE MERCHANT_PROFILE_READ")
                 .containsEntry("session", "false")
                 .containsEntry("redirect_uri", API + "/api/v1/commerce/oauth/square/callback");
         callback("square", Map.of("code", "sq-code-" + merchant, "state", consent.get("state")), "connected", biz);
@@ -685,5 +687,299 @@ class CommerceSourcesWireMockTest extends CatalogueApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("reconnect"));
         assertThat(integration(biz, "lightspeed", "last_error")).contains("401");
+    }
+
+    // ── S-158: two-way stock against the stand-ins ─────────────────────────────────────────────────────────────────
+
+    @Autowired
+    ca.northline.catalogue.application.StockSync.PushStock pushStock;
+
+    @Autowired
+    ca.northline.catalogue.application.StockSync.RecordStockChanges stockChanges;
+
+    /**
+     * A connected integration written directly (the OAuth flows are covered above): sealed fake credentials, the
+     * scopes and location given, one offer with SKU {@code sku} linked to platform variant {@code variant}.
+     */
+    String[] connected(
+            Business biz,
+            String provider,
+            String account,
+            String scopes,
+            @org.jspecify.annotations.Nullable String location,
+            String variant,
+            String stockRef,
+            String sku) {
+        var id = Ids.next();
+        var stored = "{\"accessToken\":\"fake-access-" + id
+                + "\",\"refreshToken\":null,\"expiresAt\":null,\"account\":\"" + account + "\"}";
+        var box = sealer.seal(stored, id);
+        jdbc.sql("""
+                        insert into catalogue.integrations (merchant_id, provider, id, status, connection_state,
+                          external_account_id, account_label, scopes, connected_at, token_ref, credentials_key,
+                          credentials_enc, sync_status, webhooks, location_id, location_name)
+                        values (?, ?, ?, 'connected', 'ok', ?, ?, string_to_array(?, ','), now(), ?, ?, ?, 'ok', 'none', ?, ?)""")
+                .params(
+                        biz.merchantId(),
+                        provider,
+                        id,
+                        account,
+                        account,
+                        scopes,
+                        box.keyRef(),
+                        box.wrappedKey(),
+                        box.ciphertext(),
+                        location,
+                        location == null ? null : "Main")
+                .update();
+        var productId = Ids.next();
+        var offerId = Ids.next();
+        jdbc.sql("""
+                        insert into catalogue.catalog_products (id, ref, identifier_type, title, category_id, attributes, locked)
+                        values (?, ?, 'none', 'Stock test', ?, '{}', false)""").params(productId, "T-" + productId, AUTO_PARTS).update();
+        jdbc.sql("""
+                        insert into catalogue.offers (id, product_id, merchant_id, title, sku, price_cents, stock, vetting, status)
+                        values (?, ?, ?, 'Stock test', ?, 1000, 5, 'approved', 'live')""").params(offerId, productId, biz.merchantId(), sku).update();
+        jdbc.sql("""
+                        insert into catalogue.commerce_products (merchant_id, provider, external_id, offer_id, content_hash)
+                        values (?, ?, ?, ?, 'h')""")
+                .params(biz.merchantId(), provider, "P-" + variant, offerId)
+                .update();
+        jdbc.sql("""
+                        insert into catalogue.commerce_variants (merchant_id, provider, external_id, product_external_id,
+                          offer_id, sku, stock_ref) values (?, ?, ?, ?, ?, ?, ?)""")
+                .params(biz.merchantId(), provider, variant, "P-" + variant, offerId, sku, stockRef)
+                .update();
+        return new String[] {id, offerId};
+    }
+
+    Map<String, Object> pushOf(String offerId) {
+        return jdbc.sql("""
+                        select state, conflict, attempts, location_id, platform_after, idempotency_key, last_error,
+                          next_attempt_at > now() as later
+                        from catalogue.commerce_stock_pushes where offer_id = ? order by created_at desc limit 1""").params(offerId).query().singleRow();
+    }
+
+    void sale(Business biz, String offerId, int qty, String key) {
+        assertThat(stockChanges.record(new ca.northline.catalogue.application.StockSync.RecordStockChanges.Change(
+                        biz.merchantId(), offerId, null, -qty, "sale", "ORDER-" + key, key)))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void shopifyStockAdjustment() throws Exception {
+        var shop = "nl-" + Ids.next().toLowerCase(java.util.Locale.ROOT).substring(16) + ".myshopify.com";
+        var graphql = "/shopify/" + shop + "/admin/api/2026-07/graphql.json";
+        var biz = seller(MerchantRole.OWNER);
+        var c = connected(
+                biz,
+                "shopify",
+                shop,
+                "read_products,read_inventory,write_inventory,read_locations",
+                "gid://shopify/Location/11",
+                "gid://shopify/ProductVariant/91",
+                "gid://shopify/InventoryItem/91",
+                "STK-SH-1");
+        WM.stubFor(post(graphql)
+                .withRequestBody(containing("inventoryAdjustQuantities"))
+                .willReturn(okJson("""
+                        {"data":{"inventoryAdjustQuantities":{"inventoryAdjustmentGroup":{"reason":"other",
+                          "changes":[{"name":"available","delta":-2,"quantityAfterChange":5}]},"userErrors":[]}},""" + COST + "}")));
+        var key = "sale:" + Ids.next() + ":l1";
+        sale(biz, c[1], 2, key);
+        pushStock.pushDue();
+        assertThat(pushOf(c[1]))
+                .containsEntry("state", "done")
+                .containsEntry("platform_after", 5)
+                .containsEntry("location_id", "gid://shopify/Location/11");
+        WM.verify(postRequestedFor(urlPathEqualTo(graphql))
+                .withHeader("X-Shopify-Access-Token", matching("fake-access-.*"))
+                .withRequestBody(containing("@idempotent(key: $key)"))
+                .withRequestBody(containing("\"key\":\"" + key + ":shopify\""))
+                .withRequestBody(containing("\"delta\":-2"))
+                .withRequestBody(containing("\"inventoryItemId\":\"gid://shopify/InventoryItem/91\""))
+                .withRequestBody(containing("\"locationId\":\"gid://shopify/Location/11\""))
+                .withRequestBody(containing("\"name\":\"available\""))
+                .withRequestBody(containing("\"changeFromQuantity\":null")));
+
+        // a connection made before S-158 lacks write_inventory: nothing is sent, the merchant must reconnect
+        var old = seller(MerchantRole.OWNER);
+        var shop2 = "nl-" + Ids.next().toLowerCase(java.util.Locale.ROOT).substring(16) + ".myshopify.com";
+        var c2 = connected(
+                old,
+                "shopify",
+                shop2,
+                "read_products,read_inventory",
+                "gid://shopify/Location/12",
+                "gid://shopify/ProductVariant/92",
+                "gid://shopify/InventoryItem/92",
+                "STK-SH-2");
+        sale(old, c2[1], 1, "sale:" + Ids.next() + ":l1");
+        pushStock.pushDue();
+        assertThat(pushOf(c2[1])).containsEntry("state", "conflict").containsEntry("conflict", "scope_missing");
+        WM.verify(0, postRequestedFor(urlPathEqualTo("/shopify/" + shop2 + "/admin/api/2026-07/graphql.json")));
+
+        // Shopify answers ACCESS_DENIED (the scope was removed on the shop's side), and a sale that oversells
+        var shop3 = "nl-" + Ids.next().toLowerCase(java.util.Locale.ROOT).substring(16) + ".myshopify.com";
+        var graphql3 = "/shopify/" + shop3 + "/admin/api/2026-07/graphql.json";
+        var biz3 = seller(MerchantRole.OWNER);
+        var c3 = connected(
+                biz3,
+                "shopify",
+                shop3,
+                "read_products,write_inventory",
+                "gid://shopify/Location/13",
+                "gid://shopify/ProductVariant/93",
+                "gid://shopify/InventoryItem/93",
+                "STK-SH-3");
+        WM.stubFor(
+                post(graphql3)
+                        .withRequestBody(containing("inventoryAdjustQuantities"))
+                        .willReturn(
+                                okJson(
+                                        "{\"errors\":[{\"message\":\"Access denied for inventoryAdjustQuantities field.\",\"extensions\":{\"code\":\"ACCESS_DENIED\"}}]}")));
+        sale(biz3, c3[1], 1, "sale:" + Ids.next() + ":l1");
+        pushStock.pushDue();
+        assertThat(pushOf(c3[1])).containsEntry("state", "conflict").containsEntry("conflict", "scope_missing");
+        WM.stubFor(post(graphql3)
+                .atPriority(1)
+                .withRequestBody(containing("inventoryAdjustQuantities"))
+                .willReturn(okJson("""
+                        {"data":{"inventoryAdjustQuantities":{"inventoryAdjustmentGroup":{"reason":"other",
+                          "changes":[{"name":"available","delta":-3,"quantityAfterChange":-1}]},"userErrors":[]}}}""")));
+        sale(biz3, c3[1], 3, "sale:" + Ids.next() + ":l2");
+        pushStock.pushDue();
+        assertThat(pushOf(c3[1]))
+                .containsEntry("state", "conflict")
+                .containsEntry("conflict", "oversold")
+                .containsEntry("platform_after", -1);
+
+        // the shop's locations, read live for the Studio
+        WM.stubFor(post(graphql).withRequestBody(containing("query Locations")).willReturn(okJson("""
+                        {"data":{"locations":{"nodes":[{"id":"gid://shopify/Location/11","name":"Downtown","isActive":true},
+                          {"id":"gid://shopify/Location/12","name":"Closed shop","isActive":false}]}},""" + COST + "}")));
+        mvc.perform(MockMvcRequestBuilders.get(INTEGRATIONS + "/shopify/locations", biz.merchantId())
+                        .with(TestJwt.member(biz.userId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].name").value("Downtown"))
+                .andExpect(jsonPath("$.items[0].chosen").value(true));
+
+        // with a location chosen, a full read takes that location's available quantity, less the sale still waiting
+        WM.stubFor(post(graphql)
+                .withRequestBody(containing("query ProductsAt"))
+                .withRequestBody(containing("\"loc\":\"gid://shopify/Location/11\""))
+                .willReturn(okJson(
+                        "{\"data\":{\"products\":{\"pageInfo\":{\"hasNextPage\":false,\"endCursor\":null},\"nodes\":["
+                                + shopifyProduct(
+                                        "991",
+                                        "Stock test",
+                                        "ACTIVE",
+                                        "{\"id\":\"gid://shopify/ProductVariant/91\",\"sku\":\"STK-SH-1\",\"barcode\":null,\"title\":\"STK\",\"price\":\"10.00\","
+                                                + "\"inventoryQuantity\":99,\"inventoryItem\":{\"id\":\"gid://shopify/InventoryItem/91\","
+                                                + "\"inventoryLevel\":{\"quantities\":[{\"name\":\"available\",\"quantity\":7}]}},\"selectedOptions\":[]}",
+                                        "")
+                                + "]}}," + COST + "}")));
+        jdbc.sql("update catalogue.commerce_products set external_id = 'gid://shopify/Product/991' where offer_id = ?")
+                .params(c[1])
+                .update();
+        jdbc.sql(
+                        "update catalogue.commerce_variants set product_external_id = 'gid://shopify/Product/991' where offer_id = ?")
+                .params(c[1])
+                .update();
+        jdbc.sql("update catalogue.integrations set sync_status = 'ok' where id = ?")
+                .params(c[0])
+                .update();
+        sale(biz, c[1], 1, "sale:" + Ids.next() + ":l9"); // still waiting when the read lands
+        mvc.perform(MockMvcRequestBuilders.post(INTEGRATIONS + "/shopify/sync", biz.merchantId())
+                        .with(TestJwt.member(biz.userId())))
+                .andExpect(status().isOk());
+        await(() -> assertThat(column(c[1], "stock")).isEqualTo(6));
+    }
+
+    @Test
+    void squareStockAdjustmentIsRetriedLater() throws Exception {
+        var biz = seller(MerchantRole.OWNER);
+        var merchant = "SQ-MERCHANT-" + Ids.next();
+        var c = connected(
+                biz,
+                "square",
+                merchant,
+                "ITEMS_READ,INVENTORY_READ,INVENTORY_WRITE,MERCHANT_PROFILE_READ",
+                "SQ-LOC-" + merchant,
+                "SQ-VAR-" + merchant,
+                "SQ-VAR-" + merchant,
+                "STK-SQ-1");
+        var batch = urlPathEqualTo("/square/v2/inventory/changes/batch-create");
+        WM.stubFor(post(batch)
+                .withRequestBody(containing(merchant))
+                .willReturn(aResponse().withStatus(503)));
+        var key = "sale:" + Ids.next() + ":l1";
+        sale(biz, c[1], 2, key);
+        pushStock.pushDue();
+        // the adapter's own back-off gave up: the job tries again later
+        assertThat(pushOf(c[1]))
+                .containsEntry("state", "pending")
+                .containsEntry("attempts", 1)
+                .containsEntry("later", true);
+        assertThat(String.valueOf(pushOf(c[1]).get("last_error"))).contains("503");
+
+        WM.stubFor(post(batch)
+                .atPriority(1)
+                .withRequestBody(containing(merchant))
+                .willReturn(okJson("{\"counts\":[{\"catalog_object_id\":\"SQ-VAR-" + merchant
+                        + "\",\"state\":\"IN_STOCK\",\"location_id\":\"SQ-LOC-" + merchant
+                        + "\",\"quantity\":\"4\"}]}")));
+        jdbc.sql("update catalogue.commerce_stock_pushes set next_attempt_at = now() where offer_id = ?")
+                .params(c[1])
+                .update();
+        pushStock.pushDue();
+        assertThat(pushOf(c[1])).containsEntry("state", "done").containsEntry("platform_after", 4);
+        WM.verify(postRequestedFor(batch)
+                .withHeader("Square-Version", equalTo("2025-10-16"))
+                .withRequestBody(containing("\"idempotency_key\":\"" + key + ":square\""))
+                .withRequestBody(containing("\"from_state\":\"IN_STOCK\""))
+                .withRequestBody(containing("\"to_state\":\"SOLD\""))
+                .withRequestBody(containing("\"quantity\":\"2\""))
+                .withRequestBody(containing("\"location_id\":\"SQ-LOC-" + merchant + "\"")));
+
+        // a refusal (400) is a conflict for the merchant, not a retry
+        WM.stubFor(post(batch)
+                .atPriority(1)
+                .withRequestBody(containing("STK-SQ-1-gone"))
+                .willReturn(aResponse().withStatus(400).withBody("{\"errors\":[{\"code\":\"INVALID_VALUE\"}]}")));
+        var biz2 = seller(MerchantRole.OWNER);
+        var merchant2 = "SQ-MERCHANT-" + Ids.next();
+        var c2 = connected(
+                biz2, "square", merchant2, "INVENTORY_WRITE", "SQ-LOC-2", "STK-SQ-1-gone", "STK-SQ-1-gone", "STK-SQ-2");
+        sale(biz2, c2[1], 1, "sale:" + Ids.next() + ":l1");
+        pushStock.pushDue();
+        assertThat(pushOf(c2[1])).containsEntry("state", "conflict").containsEntry("conflict", "rejected");
+    }
+
+    @Test
+    void lightspeedStockAdjustmentReadsThenWrites() throws Exception {
+        var biz = seller(MerchantRole.OWNER);
+        var prefix = "nlstock" + Ids.next().toLowerCase(java.util.Locale.ROOT).substring(20);
+        var product = "ls-" + Ids.next().toLowerCase(java.util.Locale.ROOT);
+        var c = connected(biz, "lightspeed", prefix, "", null, product, product, "STK-LS-1");
+        var base = "/ls/" + prefix;
+        WM.stubFor(get(urlPathEqualTo(base + "/api/2.0/outlets"))
+                .willReturn(okJson("{\"data\":[{\"id\":\"out-1\",\"name\":\"Main outlet\"}]}")));
+        WM.stubFor(get(urlPathEqualTo(base + "/api/2.0/products/" + product + "/inventory"))
+                .willReturn(okJson("{\"data\":[{\"outlet_id\":\"out-1\",\"inventory_level\":7},"
+                        + "{\"outlet_id\":\"out-2\",\"inventory_level\":30}]}")));
+        WM.stubFor(put(urlPathEqualTo(base + "/api/2.1/products/" + product)).willReturn(okJson("{\"data\":{}}")));
+        sale(biz, c[1], 2, "sale:" + Ids.next() + ":l1");
+        pushStock.pushDue();
+        // one outlet: used and remembered; the outlet's level 7 − 2 is written as the new count
+        assertThat(pushOf(c[1]))
+                .containsEntry("state", "done")
+                .containsEntry("location_id", "out-1")
+                .containsEntry("platform_after", 5);
+        assertThat(integration(biz, "lightspeed", "location_name")).isEqualTo("Main outlet");
+        WM.verify(putRequestedFor(urlPathEqualTo(base + "/api/2.1/products/" + product))
+                .withRequestBody(containing("\"outlet_id\":\"out-1\""))
+                .withRequestBody(containing("\"current_amount\":5")));
     }
 }

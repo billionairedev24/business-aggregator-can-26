@@ -402,6 +402,13 @@ Notes:
   (`server/api/src/main/resources/commerce-fixtures/`) as drafts; stock moves by the hour so "Sync now" shows updates.
   No webhooks (no public HTTPS); the hourly read does the work. Real platforms from a laptop need a public HTTPS
   `API_PUBLIC_URL` (a tunnel) for their redirect URL. [commerce-sync.md](commerce-sync.md)
+- **Two-way stock (S-158):** with the fake platforms, a Northline order, cancellation or return is pushed to the
+  connected store within `COMMERCE_STOCK_PUSH_INTERVAL` (`PT1M`); the fake Shopify has two locations, so Studio ›
+  Settings › Integrations asks the owner to choose one first. A SKU ending in `-gone` comes back "not found" to try the
+  conflict list. `COMMERCE_STOCK_PUSH_MAX_ATTEMPTS` (8) bounds the retries.
+- **Console partners (S-158):** partners registered in Console › Integrations › Partners become OAuth clients of
+  northline-auth within `OAUTH_CONSOLE_PARTNERS_REFRESH` (`PT30S`; `OAUTH_CONSOLE_PARTNERS_ENABLED=false` turns it
+  off). The `local` profile accepts an `http://localhost` JWK Set URL (`northline.partners.allow-http-jwks`).
 - **AI (S-129):** `AI_PROVIDER=fake` (the default) answers every AI feature offline and deterministically ("(fake
   model) …", JSON drafts from each prompt's example). To try a real model: `AI_PROVIDER=openrouter` and your own
   `OPENROUTER_API_KEY` in `server/.env`. Budgets are in memory under `local`. [ai.md](ai.md)

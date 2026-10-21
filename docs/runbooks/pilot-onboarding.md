@@ -213,7 +213,7 @@ send invites to lists or to businesses that haven't agreed — that would be a c
 they continue, the business is created and linked to the pilot. An invite for another type or another province is
 refused.
 
-**Enrolling an existing business** (one that registered on its own): `POST /api/v1/console/pilot/enrolments` with `businessId` and `marketId` (console screen: not built, use the API with a staff session).
+**Enrolling an existing business** (one that registered on its own): Pilot onboarding › **Enrol a business** (S-158, role Pilot › Onboard) — find the business by name or id, pick the market, confirm; it joins the board at the stage its progress shows. Behind it: `POST /api/v1/console/pilot/enrolments` with `businessId` and `marketId`. No email is sent.
 
 ## 7. Launch day
 
