@@ -178,7 +178,9 @@ tasks.matching { it.name.startsWith("jib") && it.name != "jibTools" }.configureE
 // the suite too.
 // S-105: the privacy contributors' contexts tipped 1280m. Rather than raise the heap again, cap Spring's test context
 // cache (default 32): least recently used contexts are closed, at the cost of rebuilding one if a later class needs it.
+// S-157: 12 contexts ran out of heap just before SchemaOwnershipTests (the last, ArchUnit's full class import) once
+// S-150–S-157 added theirs; 8 leaves that import its room without raising the heap the shared machines run it with.
 tasks.named<Test>("test") {
     maxHeapSize = "1280m"
-    systemProperty("spring.test.context.cache.maxSize", "12")
+    systemProperty("spring.test.context.cache.maxSize", "8")
 }
