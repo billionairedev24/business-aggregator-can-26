@@ -153,7 +153,7 @@ No secret is added; the region and legal entity come from configuration, nothing
 
 1. Send a `marketing-offer` to a seed address at Gmail, Outlook and Yahoo with consent granted; check the
    "Unsubscribe" the mailbox shows and that pressing it withdraws the consent (`source = list_unsubscribe`).
-2. Check the provider passes `List-Unsubscribe` and `List-Unsubscribe-Post` unchanged (SES, SendGrid and Azure ACS
+2. Check the provider passes `List-Unsubscribe` and `List-Unsubscribe-Post` unchanged (SES, SendGrid, Resend and Azure ACS
    adapters set them as custom headers; SendGrid's own subscription tracking must stay **off**).
 3. DKIM must sign the `List-Unsubscribe` headers (Gmail and Yahoo bulk-sender rules); check `h=` in the signature.
 4. Send a commercial SMS to a test handset: the opt-out link opens the page in the handset's language; carriers may

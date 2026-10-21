@@ -815,15 +815,37 @@ notifications (api, worker) — goes out the same way, chosen by `scripts/ovh/de
 the environment's variables and secrets; Mac: `.ovh/<target>.env`), first match wins:
 
 1. `OVH_DEMO_MAILPIT=true` — the demo inbox (below); nothing is delivered.
-2. `SMTP_HOST` set — `EMAIL_PROVIDER=smtp` for api, auth and worker with `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
+2. `RESEND_API_KEY` set — `EMAIL_PROVIDER=resend` for api, auth and worker: Resend's HTTPS API (S-164). **The
+   recommended choice here** — see below.
+3. `SMTP_HOST` set — `EMAIL_PROVIDER=smtp` for api, auth and worker with `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
    `SMTP_PASSWORD` (secret), `SMTP_STARTTLS`.
-3. `EMAIL_API_KEY` set — SendGrid's API ([email.md](email.md)).
-4. none — `EMAIL_PROVIDER=local`: the text of each email, codes included, in the sending app's log (§ 6).
+4. `EMAIL_API_KEY` set — SendGrid's API ([email.md](email.md)).
+5. none — `EMAIL_PROVIDER=local`: the text of each email, codes included, in the sending app's log (§ 6).
 
-`EMAIL_FROM` (e.g. `Northline demo <you@example.com>`, no commas) must be an address the relay lets you send from;
-without it the sender is `no-reply@<OVH_DOMAIN>`, which a relay will usually refuse or spam-folder. Only **port 587
-with STARTTLS** is supported (no implicit TLS on 465); with a login, STARTTLS is required. Settings change: update
-them, then `deploy` (pipeline) or `make deploy` + `RESTART=1`.
+**OVHcloud filters outbound SMTP.** From the OVHcloud US instance, connections to mail ports time out (seen with
+`smtp.resend.com` on 587 and 2587), while HTTPS works — so an SMTP relay may never answer, and every email then fails
+as *unavailable* after its retries. Resend's API runs over HTTPS (443) and is not affected:
+
+1. resend.com: add and **verify your domain** (the `MX` + `TXT` SPF records on `send.<domain>`, the DKIM `TXT` on
+   `resend._domainkey.<domain>` — [email.md § Resend](email.md#resend-anywhere-https-only)).
+2. Create an API key with **Sending access** (`re_…`).
+3. Pipeline: the environment **secret** `RESEND_API_KEY` (`make ovh-gh-setup` asks for it) and the variable
+   `EMAIL_FROM` = an address on the verified domain (e.g. `Northline demo <no-reply@your-domain>`); Mac: the same two
+   in `.ovh/<target>.env`. Then `deploy` (pipeline) or `make ovh-secrets` + `make deploy` + `RESTART=1`.
+   `scripts/ovh/secrets.sh` stores the key as the apps' `EMAIL_API_KEY` in `northline-secrets`.
+
+Switching the running pods by hand, without a deploy (the next deploy keeps it only if `RESEND_API_KEY` is set):
+
+```sh
+kubectl -n northline-dryrun patch secret northline-secrets --type merge -p '{"stringData":{"EMAIL_API_KEY":"re_your_key"}}' && kubectl -n northline-dryrun set env deploy/northline-api deploy/northline-auth deploy/northline-worker EMAIL_PROVIDER=resend EMAIL_FROM='Northline demo <no-reply@your-domain>'
+```
+
+(`set env` rolls the three Deployments; they already read `EMAIL_API_KEY` from `northline-secrets`.)
+
+For an SMTP relay instead: `EMAIL_FROM` (e.g. `Northline demo <you@example.com>`, no commas) must be an address the
+relay lets you send from; without it the sender is `no-reply@<OVH_DOMAIN>`, which a relay will usually refuse or
+spam-folder. Only **port 587 with STARTTLS** is supported (no implicit TLS on 465); with a login, STARTTLS is
+required. Settings change: update them, then `deploy` (pipeline) or `make deploy` + `RESTART=1`.
 
 The three easiest relays (exact settings as their documentation gave them; menu names and limits **unverified** —
 check them when you sign up). Each one stores and sends mail outside Canada: fine for fake demo data, not a decision
