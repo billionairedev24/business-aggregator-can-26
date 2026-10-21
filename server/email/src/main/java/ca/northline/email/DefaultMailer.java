@@ -50,7 +50,13 @@ final class DefaultMailer implements Mailer {
             headers.put(EmailMessage.LIST_UNSUBSCRIBE_POST, "List-Unsubscribe=One-Click");
         }
         var message = new EmailMessage(
-                delivery.to(), rendered.subject(), rendered.html(), rendered.text(), headers, content.template());
+                delivery.to(),
+                rendered.subject(),
+                rendered.html(),
+                rendered.text(),
+                headers,
+                content.template(),
+                delivery.key());
         var to = masked(delivery.to());
         try {
             sender.send(message);
@@ -78,8 +84,6 @@ final class DefaultMailer implements Mailer {
 
     /** {@code s***@example.com} — logs never hold whole addresses. */
     static String masked(EmailAddress address) {
-        var value = address.address();
-        var at = value.lastIndexOf('@');
-        return value.charAt(0) + "***" + value.substring(at);
+        return address.masked();
     }
 }
