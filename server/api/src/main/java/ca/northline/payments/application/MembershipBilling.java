@@ -1,74 +1,34 @@
 package ca.northline.payments.application;
 
+import ca.northline.payments.api.PlusBilling;
 import java.time.Instant;
-import java.util.Optional;
-import org.jspecify.annotations.Nullable;
+import java.util.List;
 
 /**
- * Outbound port (S-152): Northline Plus subscriptions. {@code northline.plus.billing.provider} ({@code
- * PLUS_BILLING_PROVIDER}) picks the adapter: {@code stripe} — Stripe Billing subscriptions on the platform account's
- * Customer, paid with the person's default saved card (S-59), statuses from webhooks; {@code local} — a fake in this
- * process (local and test; refused under staging and prod). Card data never reaches Northline.
+ * Port (S-152; Northline's own since S-162 — {@code NorthlineMembershipBilling}, no Stripe Billing adapter): the Plus
+ * billing work nobody asks for in the moment — the renewal job (charges due periods off-session, retries refused ones on
+ * {@code PLUS_RETRY_DAYS}, lapses the rest), Stripe's PaymentIntent webhooks for Plus, the tax report, and the console's
+ * refunds of a period. Stripe is called for PaymentIntents and refunds only.
  */
 public interface MembershipBilling {
 
-    /** {@code local} or {@code stripe} (the {@code loyalty.memberships.provider} value). */
-    String provider();
+    /** Due periods, each in its own transaction (a concurrent run skips the ones it can't lock). @return periods changed */
+    int chargeDue(Instant now);
+
+    /** Paid periods whose tax Stripe Tax hasn't recorded yet. @return transactions recorded */
+    int reportTax(int limit);
+
+    /** A {@code payment_intent.*} webhook: false when the PaymentIntent isn't a Plus period's. */
+    boolean paymentIntentChanged(String paymentIntent);
 
     /**
-     * @param paymentMethod the card to bill ({@code pm_…}), the customer's default when null
-     * @param priceCents the plan's price — the fake charges it; Stripe bills its own Price
-     * @param trialDays a first-time member's free days (0 = none)
+     * @param ended the refunded period was the current one: the membership ended at once
      */
-    record Subscribe(
-            String userId,
-            String householdId,
-            String stripeCustomer,
-            @Nullable String paymentMethod,
-            String plan,
-            long priceCents,
-            int trialDays,
-            String idempotencyKey) {}
+    record Refunded(PlusBilling.Period period, String refundId, long totalCents, boolean ended) {}
 
-    /**
-     * @param status {@code incomplete | trialing | active | past_due | canceled} (Stripe's {@code unpaid} and
-     *     {@code incomplete_expired} read as canceled, {@code paused} as past_due)
-     * @param clientSecret when the first payment needs the customer (3-D Secure): the invoice's confirmation secret
-     * @param paid the invoice paid with this call (the fake; Stripe's arrive by webhook)
-     */
-    record Subscription(
-            String id,
-            String status,
-            String plan,
-            @Nullable Instant currentPeriodEnd,
-            boolean cancelAtPeriodEnd,
-            @Nullable String clientSecret,
-            @Nullable Invoice paid) {}
+    /** A paid period back to the card (amount + tax), audited; 409 {@code plus_not_refundable} otherwise. */
+    Refunded refund(String periodId, String staffId, String role);
 
-    record Invoice(String id, long amountCents, long taxCents, Instant paidAt) {}
-
-    Subscription subscribe(Subscribe request);
-
-    /**
-     * The subscription as Northline last recorded it: Stripe reads only the id; the fake keeps no state of its own and
-     * works from this.
-     */
-    record Current(
-            String subscriptionId,
-            String plan,
-            String status,
-            @Nullable Instant currentPeriodEnd,
-            boolean cancelAtPeriodEnd) {}
-
-    /** Monthly ↔ annual, prorated by the provider. */
-    Subscription changePlan(Current current, String plan, long priceCents, String idempotencyKey);
-
-    /** Cancel at the end of the period (true) or keep renewing (false). */
-    Subscription cancelAtPeriodEnd(Current current, boolean cancel, String idempotencyKey);
-
-    /**
-     * The fake's renewal at the end of a period, with the plan's price (local only: Stripe renews on its own and says
-     * so by webhook); empty when nothing is due or this adapter doesn't renew here.
-     */
-    Optional<Subscription> renew(Current current, long priceCents, Instant now);
+    /** The household's periods, every membership, newest first (the console). */
+    List<PlusBilling.Period> periodsOf(String householdId);
 }

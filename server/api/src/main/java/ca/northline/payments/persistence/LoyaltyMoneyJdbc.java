@@ -2,7 +2,6 @@ package ca.northline.payments.persistence;
 
 import ca.northline.payments.api.EscrowKind;
 import ca.northline.payments.api.SaleFacts;
-import ca.northline.payments.application.PlusInvoiceStore;
 import ca.northline.payments.application.RewardChargeStore;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.JdbcTimes;
@@ -14,12 +13,13 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * S-152: {@link SaleFacts} over {@code payments.escrows} and its refunds, {@link RewardChargeStore} over
- * {@code payments.reward_charges} and {@link PlusInvoiceStore} over {@code payments.plus_invoices} (V426).
+ * S-152: {@link SaleFacts} over {@code payments.escrows} and its refunds and {@link RewardChargeStore} over
+ * {@code payments.reward_charges}. ({@code payments.plus_invoices}, V426, is no longer written since S-162: Plus periods
+ * are {@code PlusBillingJdbc}'s.)
  */
 @Repository
 @RequiredArgsConstructor
-class LoyaltyMoneyJdbc implements SaleFacts, RewardChargeStore, PlusInvoiceStore {
+class LoyaltyMoneyJdbc implements SaleFacts, RewardChargeStore {
 
     private final JdbcClient jdbc;
 
@@ -81,35 +81,5 @@ class LoyaltyMoneyJdbc implements SaleFacts, RewardChargeStore, PlusInvoiceStore
                 .param("id", id)
                 .param("s", stripeId)
                 .update();
-    }
-
-    @Override
-    public boolean insert(
-            String id,
-            String provider,
-            String invoiceId,
-            String subscriptionId,
-            String householdId,
-            String plan,
-            long amountCents,
-            long taxCents,
-            Instant paidAt) {
-        return jdbc.sql("""
-                        insert into payments.plus_invoices (id, provider, invoice_id, subscription_id, household_id, plan,
-                                                            amount_cents, tax_cents, paid_at)
-                        values (:id, :provider, :invoice, :sub, :household, :plan, :amount, :tax, :paid)
-                        on conflict (invoice_id) do nothing
-                        """)
-                        .param("id", id)
-                        .param("provider", provider)
-                        .param("invoice", invoiceId)
-                        .param("sub", subscriptionId)
-                        .param("household", householdId)
-                        .param("plan", plan)
-                        .param("amount", amountCents)
-                        .param("tax", taxCents)
-                        .param("paid", JdbcTimes.ts(paidAt))
-                        .update()
-                == 1;
     }
 }

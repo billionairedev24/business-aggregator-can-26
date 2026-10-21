@@ -16,6 +16,8 @@ class PaymentsJobsService implements PaymentsJobs {
     private final TaxSyncService tax;
     private final CourierPayoutService couriers;
     private final UnheldPaymentSweeper unheld;
+    private final MembershipBilling plus;
+    private final java.time.Clock clock;
 
     @Override
     public int releaseDueEscrows() {
@@ -70,6 +72,11 @@ class PaymentsJobsService implements PaymentsJobs {
     @Override
     public int payCouriers() {
         return couriers.payAll();
+    }
+
+    @Override
+    public int chargePlusRenewals() {
+        return plus.chargeDue(clock.instant()) + plus.reportTax(50);
     }
 
     @Override

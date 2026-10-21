@@ -11,8 +11,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 /**
  * Runs the loyalty jobs on {@code LOYALTY_JOBS_CRON} (default hourly at :07, platform zone; not under {@code test}:
- * tests call {@link LoyaltyJobs} themselves): points that expired, referrals whose window passed, the local fake's Plus
- * renewals. One failing step is logged and retried on the next run.
+ * tests call {@link LoyaltyJobs} themselves): points that expired, referrals whose window passed, S-152 Plus memberships
+ * moving to Northline's own billing (S-162; renewals are payments' job). One failing step is logged and retried on the next run.
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
@@ -27,7 +27,7 @@ class LoyaltyScheduler {
     void run() {
         step("expire points", jobs::expirePoints);
         step("close referrals", jobs::closeReferrals);
-        step("renew local Plus", jobs::renewLocalMemberships);
+        step("adopt S-152 Plus memberships", jobs::adoptLegacyMemberships);
     }
 
     private static void step(String name, IntSupplier work) {
