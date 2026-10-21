@@ -108,6 +108,13 @@
           "sha256": "20e58b46933f893203e8a40faf85bf84cf469eb5499bc1b359825443af4b0ddb",
           "note": "Mobile gaps part 1: Photos or videos collected (up to 3 photos on a problem report, a pilot's screenshot), no longer listed as not collected. Not submitted to either store yet.",
           "signOff": null
+        },
+        {
+          "version": "2026-10-21",
+          "effective": "2026-10-21",
+          "sha256": "eb2e77801e3e784beeb243bd64e0066aee4badada5e6abd9e57a23274683985e",
+          "note": "S-159: account deletion in the app (Account › Delete account) and the public deletion page https://northline.ca/account-deletion as the web link. Not submitted to either store yet.",
+          "signOff": null
         }
       ]
     },
@@ -138,6 +145,13 @@
           "effective": "2026-10-04",
           "sha256": "101716f900286aa9fe629d148d4ca0dcf431d763e67fa130b399d7a742330463",
           "note": "Mobile gaps part 1: the door photo is shown to that order's customer (never after an ID check); a pilot courier's screenshot on feedback. Not submitted to either store yet.",
+          "signOff": null
+        },
+        {
+          "version": "2026-10-21",
+          "effective": "2026-10-21",
+          "sha256": "c721f38087e189aab50baea4ec0da4eae977429fbb0d16db12aa4a43f78df8d3",
+          "note": "S-159: the deletion link is the public page https://northline.ca/account-deletion. Not submitted to either store yet.",
           "signOff": null
         }
       ]

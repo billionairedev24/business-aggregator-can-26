@@ -242,7 +242,7 @@ class GroupOrderService
         var it = store.items(groupId).stream()
                 .filter(i -> i.id().equals(itemId))
                 .findFirst()
-                .orElseThrow(() -> new NotFound("group_order_item", itemId));
+                .orElseThrow(() -> new NotFound("group order item", itemId));
         if (!it.userId().equals(userId) && !g.hostId().equals(userId)) {
             throw new GroupForbidden("not_yours", "You can take out only your own dishes.");
         }
@@ -565,7 +565,7 @@ class GroupOrderService
     public GroupView view(String userId, String groupId) {
         var g = store.find(groupId)
                 .filter(r -> r.member(userId))
-                .orElseThrow(() -> new NotFound("group_order", groupId));
+                .orElseThrow(() -> new NotFound("group order", groupId));
         return view(g, userId);
     }
 
@@ -601,14 +601,14 @@ class GroupOrderService
 
     private GroupRow byCode(String code) {
         var normal = GroupOrderRules.normalizeCode(code);
-        return store.byCode(normal).orElseThrow(() -> new NotFound("group_order", normal));
+        return store.byCode(normal).orElseThrow(() -> new NotFound("group order", normal));
     }
 
     /** The group locked for this transaction; someone not in it gets 404 (no hint that it exists). */
     private GroupRow member(String userId, String groupId) {
         return store.lock(groupId)
                 .filter(g -> g.member(userId))
-                .orElseThrow(() -> new NotFound("group_order", groupId));
+                .orElseThrow(() -> new NotFound("group order", groupId));
     }
 
     private GroupRow host(String hostId, String groupId) {
@@ -641,7 +641,7 @@ class GroupOrderService
         return store.shares(g.id()).stream()
                 .filter(s -> s.userId().equals(forUserId))
                 .findFirst()
-                .orElseThrow(() -> new NotFound("group_order_share", forUserId));
+                .orElseThrow(() -> new NotFound("group order share", forUserId));
     }
 
     private static long sum(List<ShareRow> shares, java.util.function.ToLongFunction<ShareRow> f) {
