@@ -19,7 +19,7 @@
 //   NL_APPLE_PAY_DOMAIN_ASSOCIATION
 //                            S-157: the content of Stripe's Apple Pay domain association file (served as is at
 //                            /.well-known/apple-developer-merchantid-domain-association so the domain can be registered
-//                            with Stripe's payment method domains API, docs/runbooks/stripe.md § 14); empty = 404
+//                            with Stripe's payment method domains API, docs/runbooks/stripe.md § 15); empty = 404
 export const AASA_PATH = '/.well-known/apple-app-site-association';
 export const ASSETLINKS_PATH = '/.well-known/assetlinks.json';
 export const REDIRECT_PATHS = ['/app/oauth2redirect', '/courier/oauth2redirect'];

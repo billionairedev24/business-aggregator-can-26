@@ -7856,6 +7856,46 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - my-reviews-controller
+  /api/v1/me/standing:
+    get:
+      operationId: myStandingStanding
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomerStanding"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - my-standing-controller
   /api/v1/me/threads:
     get:
       operationId: myMessagesThreads
@@ -9852,6 +9892,41 @@ components:
         minimumAge:
           type: integer
           format: int32
+    AppealView:
+      type: object
+      properties:
+        compensationCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        decidedAt:
+          type: string
+          format: date-time
+        decisionReason:
+          type: string
+        filedAt:
+          type: string
+          format: date-time
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileView"
+        id:
+          type: string
+        number:
+          type: string
+        state:
+          type: string
+        statement:
+          type: string
+        subjectId:
+          type: string
+        subjectKind:
+          type: string
+        subjectLabel:
+          type: string
+        subjectType:
+          type: string
     Attachment:
       type: object
       properties:
@@ -10602,6 +10677,43 @@ components:
           type: string
           description: "Who asks for consent: legal name, mailing address and contact\
             \ (CASL)"
+    ConsequenceView:
+      type: object
+      properties:
+        active:
+          type: boolean
+        appeal:
+          $ref: "#/components/schemas/AppealView"
+        appealBy:
+          type: string
+          format: date-time
+        appealable:
+          type: boolean
+        cause:
+          type: string
+        detail:
+          type: object
+          additionalProperties:
+            type: string
+        endsAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+        kind:
+          type: string
+        liftReason:
+          type: string
+        liftedAt:
+          type: string
+          format: date-time
+        liftedByStaff:
+          type: boolean
+        reason:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
     Consult:
       type: object
       properties:
@@ -10762,6 +10874,17 @@ components:
             $ref: "#/components/schemas/Version"
         warranty:
           type: string
+    CustomerStanding:
+      type: object
+      properties:
+        active:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsequenceView"
+        past:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsequenceView"
     Day:
       type: object
       properties:
@@ -11213,6 +11336,18 @@ components:
       - platform
       - route
       - severity
+    FileView:
+      type: object
+      properties:
+        contentType:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+        size:
+          type: integer
+          format: int64
     Group:
       type: object
       properties:

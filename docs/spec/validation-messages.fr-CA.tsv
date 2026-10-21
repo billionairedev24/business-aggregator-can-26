@@ -1096,7 +1096,6 @@ Enter a limit of 1 or more.	Entrez une limite de 1 ou plus.	new
 Choose who funds the code.	Choisissez qui finance le code.	new
 Choose the business that funds this code.	Choisissez l’entreprise qui finance ce code.	new
 Choose at least one of shop, food or services.	Choisissez au moins un parmi boutique, restauration ou services.	new
-Choose on or off.	Choisissez activé ou désactivé.	new
 Your points were used elsewhere. Start the checkout again.	Vos points ont été utilisés ailleurs. Recommencez le paiement.	new
 Tips start at $1.00.	Les pourboires commencent à 1,00 $.	new
 You can tip once the courier has delivered.	Vous pourrez donner un pourboire une fois la livraison faite.	new
@@ -1211,6 +1210,50 @@ Choose a province or market of the region model.	Choisissez une province ou un m
 The default rule can be changed, not removed.	La règle par défaut peut être modifiée, pas supprimée.	new
 Choose a member price between 1% and 50% off, or none.	Choisissez un prix membre de 1 % à 50 % de rabais, ou aucun.	new
 Add a card in Payment methods first: Plus renews on it.	Ajoutez d’abord une carte dans Modes de paiement : Plus se renouvelle avec elle.	new
+Pick an evidence field from the list.	Choisissez un champ de preuve dans la liste.	new
+Keep each answer under 5,000 characters.	Gardez chaque réponse sous 5 000 caractères.	new
+Pick a file from this case's evidence.	Choisissez un fichier parmi les preuves de ce dossier.	new
+Add evidence before submitting it.	Ajoutez des preuves avant de les soumettre.	new
+This case isn't a card dispute.	Ce dossier n’est pas une contestation de carte.	new
+This card dispute is closed.	Cette contestation de carte est fermée.	new
+The evidence was already submitted to Stripe.	Les preuves ont déjà été soumises à Stripe.	new
+The issuer's deadline for evidence has passed.	Le délai de l’émetteur pour les preuves est passé.	new
+Stripe didn't accept the evidence. The error is on the case; fix it and submit again.	Stripe n’a pas accepté les preuves. L’erreur figure au dossier; corrigez-la et soumettez de nouveau.	new
+This decision didn't cost the seller anything.	Cette décision n’a rien coûté au vendeur.	new
+The seller was already paid for this dispute.	Le vendeur a déjà été payé pour ce litige.	new
+Northline paused instant book for your business. Standing shows why and how to appeal.	Northline a suspendu la réservation instantanée de votre entreprise. Statut du compte indique pourquoi et comment faire appel.	new
+After missed appointments, providers confirm your bookings first — ask for a quote instead.	Après des rendez-vous manqués, les fournisseurs confirment d’abord vos réservations — demandez plutôt une soumission.	new
+You can report a no-show 15 minutes after the start time.	Vous pouvez signaler une absence 15 minutes après l’heure de début.	new
+Only an upcoming or ongoing job can be reported as a no-show.	Seul un travail à venir ou en cours peut être signalé comme une absence.	new
+This no-show is already with Northline.	Cette absence est déjà entre les mains de Northline.	new
+Choose what you're appealing.	Choisissez ce que vous contestez.	new
+Tell us why the decision should change.	Dites-nous pourquoi la décision devrait changer.	new
+Keep your appeal under 2,000 characters.	Gardez votre appel sous 2 000 caractères.	new
+You can attach up to 5 files.	Vous pouvez joindre jusqu’à 5 fichiers.	new
+Choose grant or deny.	Choisissez d’accueillir ou de rejeter l’appel.	new
+Give the business a reason.	Donnez une raison à l’entreprise.	new
+Keep the reason under 1,000 characters.	Gardez la raison sous 1 000 caractères.	new
+This was already appealed — each decision can be appealed once.	Un appel a déjà été déposé — chaque décision ne peut être contestée qu’une fois.	new
+This can't be appealed.	Cette décision ne peut pas faire l’objet d’un appel.	new
+The 14 days to appeal have passed.	Le délai de 14 jours pour faire appel est passé.	new
+This appeal was already decided.	Cet appel a déjà été tranché.	new
+Someone other than the person who made the decision must decide the appeal.	Une autre personne que celle qui a pris la décision doit trancher l’appel.	new
+Files can only be added while the appeal is waiting for Northline.	Des fichiers ne peuvent être ajoutés que pendant que l’appel attend Northline.	new
+This consequence was already lifted.	Cette mesure a déjà été levée.	new
+Give the plan a title.	Donnez un titre au plan.	new
+Keep the title under 120 characters.	Gardez le titre sous 120 caractères.	new
+Add at least one task.	Ajoutez au moins une tâche.	new
+At most 10 tasks.	Au plus 10 tâches.	new
+Keep each task under 200 characters.	Gardez chaque tâche sous 200 caractères.	new
+Pick a date after today.	Choisissez une date après aujourd’hui.	new
+This business already has a coaching plan.	Cette entreprise a déjà un plan d’accompagnement.	new
+This coaching plan is closed.	Ce plan d’accompagnement est fermé.	new
+Choose done or not done.	Choisissez fait ou pas fait.	new
+Choose completed or cancelled.	Choisissez terminé ou annulé.	new
+No appeal with id %s	Aucun appel avec l’identifiant %s	new
+No coaching plan with id %s	Aucun plan d’accompagnement avec l’identifiant %s	new
+No coaching task with id %s	Aucune tâche d’accompagnement avec l’identifiant %s	new
+No consequence with id %s	Aucune mesure avec l’identifiant %s	new
 Add your mobile number to get offers by text.	Ajoutez votre numéro de mobile pour recevoir les offres par texto.	new
 Choose a market Northline serves.	Choisissez un marché que Northline dessert.	new
 Choose email or text.	Choisissez courriel ou texto.	new

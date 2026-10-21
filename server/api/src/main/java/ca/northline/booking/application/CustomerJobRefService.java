@@ -23,6 +23,18 @@ class CustomerJobRefService implements CustomerJobRefs {
     }
 
     @Override
+    public Optional<Visit> visit(String merchantId, String bookingId) {
+        return jobs.card(merchantId, bookingId)
+                .map(JobQueries.JobCard::job)
+                .filter(j -> j.customerId() != null)
+                .map(j -> new Visit(
+                        j.id(),
+                        Objects.requireNonNull(j.customerId()),
+                        j.state().code(),
+                        j.startsAt()));
+    }
+
+    @Override
     public Optional<JobRef> booking(String merchantId, String bookingId) {
         return jobs.card(merchantId, bookingId)
                 .map(JobQueries.JobCard::job)

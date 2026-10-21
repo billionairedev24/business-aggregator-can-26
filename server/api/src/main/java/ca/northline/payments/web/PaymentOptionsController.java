@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * </pre>
  *
  * Wallets are offered only under Stripe and only once switched on ({@code STRIPE_APPLE_PAY}, {@code
- * STRIPE_GOOGLE_PAY}, stripe.md § 14). They change nothing on the server: a wallet pays the same manual-capture
+ * STRIPE_GOOGLE_PAY}, stripe.md § 15). They change nothing on the server: a wallet pays the same manual-capture
  * PaymentIntents with a card, after the same step-up.
  */
 @RestController

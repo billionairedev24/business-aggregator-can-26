@@ -1,11 +1,11 @@
-variable "ovh_endpoint" {
-  description = "OVHcloud API endpoint of the account: ovh-ca for an OVHcloud Canada account (ca.ovh.com), ovh-eu for a European one. Credentials come from the environment (OVH_APPLICATION_KEY, OVH_APPLICATION_SECRET, OVH_CONSUMER_KEY, or OVH_CLIENT_ID / OVH_CLIENT_SECRET) — docs/runbooks/ovh.md § API credentials."
+variable "ovh_location" {
+  description = "Where the target lives (infra/terraform/stacks/ovh/locations.json, S-160): us-east-va (Vint Hill, Virginia — OVHcloud US, the default for now), us-west-or (Hillsboro, Oregon — OVHcloud US) or ca-bhs (Beauharnois, Québec — OVHcloud Canada). Decides the API endpoint (ovh-us / ovh-ca), the Public Cloud region, Object Storage, the database region and the VPS datacentre (the VPS is ordered there in the console). The account must belong to that OVHcloud entity: us.ovhcloud.com and ca.ovhcloud.com accounts are separate. Credentials come from the environment (OVH_APPLICATION_KEY, OVH_APPLICATION_SECRET, OVH_CONSUMER_KEY, or OVH_CLIENT_ID / OVH_CLIENT_SECRET) — docs/runbooks/ovh.md § Today. A US location holds fake demo data only (dev profile): Canadian data residency applies to real customer data, which must be on ca-bhs before launch (DECISIONS 2026-10-20, S-160)."
   type        = string
-  default     = "ovh-ca"
+  default     = "us-east-va"
 
   validation {
-    condition     = contains(["ovh-ca", "ovh-eu"], var.ovh_endpoint)
-    error_message = "ovh_endpoint must be ovh-ca (OVHcloud Canada) or ovh-eu."
+    condition     = contains(["us-east-va", "us-west-or", "ca-bhs"], var.ovh_location)
+    error_message = "ovh_location must be us-east-va or us-west-or (OVHcloud US, demo data only) or ca-bhs (OVHcloud Canada)."
   }
 }
 
@@ -14,25 +14,55 @@ variable "service_name" {
   type        = string
 }
 
-variable "region" {
-  description = "OVHcloud Public Cloud region of Object Storage. Canadian data residency: BHS5 (Beauharnois), the VPS's datacentre too."
+variable "server" {
+  description = "The server (S-161): instance (default) — a Public Cloud instance made by Terraform (Ubuntu 24.04, hourly, instance_flavor, ssh_public_key; nothing in the console, destroy deletes it); vps — a VPS ordered in the console (cheaper by the month), named by vps_service_name."
   type        = string
-  default     = "BHS5"
+  default     = "instance"
 
   validation {
-    condition     = contains(["BHS5"], var.region)
-    error_message = "Canadian data residency: region must be BHS5 (Beauharnois) — the VPS is ordered in Beauharnois as well."
+    condition     = contains(["instance", "vps"], var.server)
+    error_message = "server must be instance or vps."
   }
 }
 
+variable "instance_flavor" {
+  description = "server = instance: the Public Cloud flavor. b3-32 (8 vCPU / 32 GB, general purpose) — the smallest b3 that holds the whole stack (the VPS shape is 8 vCores / 24 GB; b3-16 has 16 GB). Prices are per hour (docs/runbooks/ovh.md § Cost estimate)."
+  type        = string
+  default     = "b3-32"
+}
+
+variable "instance_image" {
+  description = "server = instance: the image name (the user is ubuntu, as on the VPS)."
+  type        = string
+  default     = "Ubuntu 24.04"
+}
+
+variable "instance_flavor_id" {
+  description = "server = instance: a flavor id instead of the lookup by instance_flavor (empty = look it up in the region)."
+  type        = string
+  default     = ""
+}
+
+variable "instance_image_id" {
+  description = "server = instance: an image id instead of the lookup by instance_image (empty = look it up in the region)."
+  type        = string
+  default     = ""
+}
+
+variable "ssh_public_key" {
+  description = "server = instance: the pipeline's deploy key, OpenSSH public key line (make ovh-gh-setup makes the pair: the private half is the Environment secret OVH_VPS_SSH_PRIVATE_KEY, this half the variable OVH_SSH_PUBLIC_KEY)."
+  type        = string
+  default     = ""
+}
+
 variable "vps_service_name" {
-  description = "The VPS's service name once ordered in the console (e.g. vps-1a2b3c4d.vps.ovh.ca; Bare Metal Cloud › VPS). Empty = no VPS yet: only Object Storage is planned, no firewall."
+  description = "server = vps: the VPS's service name once ordered in the console (Bare Metal Cloud › VPS, e.g. vps-1a2b3c4d.vps.ovh.us in the US, vps-1a2b3c4d.vps.ovh.ca in Canada). Empty = no VPS yet: only Object Storage is planned, no firewall."
   type        = string
   default     = ""
 }
 
 variable "edge_firewall" {
-  description = "OVHcloud Network Firewall on the VPS's IPv4 (in front of the VPS, before any packet reaches it): only SSH from admin_cidrs, HTTP and HTTPS, plus replies to the VPS's own connections. scripts/ovh/bootstrap-k3s.sh adds the same rules on the host (ufw)."
+  description = "OVHcloud Network Firewall on the VPS's IPv4 (in front of the VPS, before any packet reaches it): only SSH from admin_cidrs, HTTP and HTTPS, plus replies to the VPS's own connections. scripts/ovh/bootstrap-k3s.sh adds the same rules on the host (ufw). Ignored where the location has no Network Firewall (locations.json edge_firewall = false): ufw alone then."
   type        = bool
   default     = true
 }

@@ -10,6 +10,7 @@ import ca.northline.email.EmailContent.ListingRejected;
 import ca.northline.email.EmailContent.PayoutSent;
 import ca.northline.email.EmailContent.RefundCaseUpdate;
 import ca.northline.email.EmailContent.RestrictedLicenceNotice;
+import ca.northline.email.EmailContent.StandingUpdate;
 import ca.northline.email.EmailContent.TrustWarning;
 import ca.northline.email.EmailDeliveryFailed;
 import ca.northline.email.Mailer;
@@ -20,6 +21,7 @@ import ca.northline.merchants.api.CustomDomainChanged;
 import ca.northline.merchants.api.RestrictedLicenceUpdated;
 import ca.northline.merchants.api.TeamRoster;
 import ca.northline.messaging.api.ListingRejectedNotice;
+import ca.northline.messaging.api.StandingNotice;
 import ca.northline.messaging.api.TrustWarningNotice;
 import ca.northline.messaging.application.NotificationPreferences.NotificationPrefsStore;
 import ca.northline.messaging.domain.NotificationMatrix;
@@ -248,6 +250,29 @@ class MerchantEmailNotices {
                 OWNERS,
                 null,
                 business -> new TrustWarning(business, event.rule(), event.note(), link));
+    }
+
+    /**
+     * S-156: the business's standing changed (instant book paused or back, an appeal decided, a coaching plan); an
+     * account notice to the owners, always sent, linking to Studio › Standing.
+     */
+    @ApplicationModuleListener
+    void on(StandingNotice event) {
+        var link = links.studio(event.merchantId(), "standing");
+        var change = StandingUpdate.Change.valueOf(event.change().toUpperCase(Locale.ROOT));
+        notify(
+                event.eventId(),
+                event.merchantId(),
+                OWNERS,
+                null,
+                business -> new StandingUpdate(
+                        business,
+                        change,
+                        java.util.Objects.requireNonNullElse(event.subject(), ""),
+                        event.reason(),
+                        java.util.Objects.requireNonNullElse(event.reference(), ""),
+                        event.compensationCents(),
+                        link));
     }
 
     /**

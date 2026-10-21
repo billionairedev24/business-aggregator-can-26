@@ -234,7 +234,9 @@ api seals with this key, allowed under `dev` only). Rotation: edit the file, `ma
 `kubectl -n northline-dryrun rollout restart deploy`.
 
 **From the `ovh` pipeline** (S-155, [ovh.md § Today](ovh.md#pipeline-secrets-and-variables)) the same script reads the
-keys from the GitHub Environment `ovh-vps` / `ovh-mks` (`OVH_SECRETS_SOURCE=env`) instead of the file. The generated
+keys from the GitHub Environment `ovh-vps` / `ovh-mks` (`OVH_SECRETS_SOURCE=env`) instead of the file. The location
+(`OVH_LOCATION`, S-160) is a setting, never copied into `northline-secrets`; the API token must come from that
+location's OVHcloud account (US and Canada are separate). The generated
 keys need no secret there: the first deploy generates them and keeps them in `secret/northline-generated` in the
 namespace, which every later run reuses (never regenerated per run; masked in the log). Back it up after the first
 deploy; rotating one: set the new value as an environment secret (it wins over the stored one), `deploy`, then the

@@ -14,6 +14,10 @@ global:
   environment: dev
   # SPRING_PROFILES_ACTIVE for api, auth, bff, worker. Empty = global.environment.
   springProfiles: ""
+  # S-160: ISO country of the cluster's location ("" = not declared; the clouds' Terraform keeps everything in Canada).
+  # Set by the OVHcloud targets' Terraform (helm_values: US for us-east-va/us-west-or, CA for ca-bhs). Any country but
+  # CA refuses global.environment staging/prod and the staging/prod Spring profiles: Canadian data residency.
+  hostingCountry: ""
   image:
     # <registry>/<repository>:<tag>. The registry includes any path: 123456789012.dkr.ecr.ca-central-1.amazonaws.com/northline,
     # northamerica-northeast1-docker.pkg.dev/<project>/northline, <acr>.azurecr.io/northline, ghcr.io/<org>/northline.

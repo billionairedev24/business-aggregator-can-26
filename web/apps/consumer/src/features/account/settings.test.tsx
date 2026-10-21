@@ -47,6 +47,7 @@ let calls: Call[];
 let cards: typeof CARDS;
 let security: Reply;
 let profilePatch: Reply;
+let standing: { active: unknown[]; past: unknown[] } = { active: [], past: [] };
 const server = (c: Call): Reply => {
   const u = c.url;
   if (u === '/bff/session') return { body: { user: AMARA, guestId: 'g', sid: 'S1' } };
@@ -55,6 +56,7 @@ const server = (c: Call): Reply => {
   if (u === '/api/v1/me/profile' && c.method === 'GET') return { body: PROFILE };
   if (u === '/api/v1/me/profile' && c.method === 'PATCH') return profilePatch ?? { body: { ...PROFILE, ...(c.body as object) } };
   if (u === '/api/v1/me/privacy-requests') return { body: { items: [] } };
+  if (u === '/api/v1/me/standing') return { body: standing };
   if (u === '/api/v1/me/payment-methods' && c.method === 'GET') return { body: cards };
   if (u === '/api/v1/me/payment-methods/setup-intents') return { status: 201, body: { setupIntentId: 'seti_1', clientSecret: 'seti_1_secret', provider: 'fake', publishableKey: null } };
   if (u === '/api/v1/me/payment-methods' && c.method === 'POST') {
@@ -84,6 +86,7 @@ const open = (tab: string, locale: 'en' | 'fr' = 'en') => {
 const body = (method: string, url: string) => calls.filter(c => c.method === method && c.url === url).map(c => c.body);
 
 beforeEach(() => {
+  standing = { active: [], past: [] };
   cards = structuredClone(CARDS);
   profilePatch = undefined;
   security = { body: {
@@ -360,5 +363,23 @@ describe('Language & region, Dietary & accessibility (behind the full navigation
     await userEvent.type(screen.getByLabelText('Notes for providers visiting your home'), 'Service dog on site');
     await userEvent.click(screen.getByRole('button', { name: 'Save preferences' }));
     await waitFor(() => expect(body('PATCH', '/api/v1/me/preferences')).toEqual([{ dietary: ['halal', 'vegan'], allergies: '', accessibility: ['step_free'], accessNotes: 'Service dog on site', display: [] }]));
+  });
+});
+
+/** S-156: confirmed no-shows put a notice on the customer's profile. */
+describe('No-show notice', () => {
+  it('shows why providers confirm the bookings first, in French too', async () => {
+    standing = { active: [{ id: 'N1', kind: 'no_show_warning', reason: '2 confirmed no-shows in the last 12 months.', startedAt: '2026-10-02T15:00:00Z', active: true, liftedAt: null, liftReason: null }], past: [] };
+    open('profile');
+    expect(await screen.findByText('Providers confirm your bookings first.')).toBeTruthy();
+    expect(screen.getByText(/Why: 2 confirmed no-shows in the last 12 months\./)).toBeTruthy();
+    await expectNoAxeViolations(document.body);
+  });
+
+  it('says nothing without one', async () => {
+    open('profile', 'fr');
+    await screen.findByRole('heading', { level: 1 });
+    await waitFor(() => expect(calls.some(c => c.url === '/api/v1/me/standing')).toBe(true));
+    expect(screen.queryByText('Les fournisseurs confirment d’abord vos réservations.')).toBeNull();
   });
 });

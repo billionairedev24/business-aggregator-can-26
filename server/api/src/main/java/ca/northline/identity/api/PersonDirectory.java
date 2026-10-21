@@ -14,7 +14,15 @@ public interface PersonDirectory {
 
     Map<String, Person> people(Collection<String> userIds);
 
-    record Person(String id, String displayName, @Nullable BigDecimal reliabilityScore) {
+    /**
+     * @param noShows S-156: confirmed no-shows that put the customer under the trust rules' consequence (providers see
+     *     it before accepting); 0 otherwise
+     */
+    record Person(String id, String displayName, @Nullable BigDecimal reliabilityScore, int noShows) {
+
+        public Person(String id, String displayName, @Nullable BigDecimal reliabilityScore) {
+            this(id, displayName, reliabilityScore, 0);
+        }
 
         /** "Amara Osei" → "A. Osei" (lists show the short form). */
         public String shortName() {

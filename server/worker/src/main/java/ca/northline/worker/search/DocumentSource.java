@@ -272,7 +272,12 @@ final class DocumentSource {
 
     private List<ServiceRow> services(String merchantId, @Nullable String id) {
         return jdbc.sql("""
-                        select s.id, s.category_id, s.pricing_mode, s.price_cents, coalesce(s.instant_book, false) as instant,
+                        select s.id, s.category_id, s.pricing_mode, s.price_cents,
+                               -- S-156: the business's switch and Northline's pause (catalogue.instant_book_settings)
+                               (coalesce(s.instant_book, false)
+                                 and not exists (select 1 from catalogue.instant_book_settings ib
+                                                  where ib.merchant_id = s.merchant_id
+                                                    and (not ib.enabled or ib.paused_at is not null))) as instant,
                                s.sales_30d, s.updated_at, s.own_images[1] as image_id,
                                coalesce(s.vetting = 'approved' and s.status = 'live', false) as visible,
                                coalesce(nullif(s.name_i18n->>'en', ''), s.name, s.name_i18n->>'fr', '') as name_en,

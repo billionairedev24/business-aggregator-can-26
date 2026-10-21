@@ -3,6 +3,7 @@ import { defineMessages } from '@northline/ui';
 /** Finance screens (design 02: Earnings, Reports, Payouts, Refunds & disputes). fr-CA from design/i18n-fr.js where it exists. */
 export const useFinanceT = defineMessages({
   en: {
+    appealable: '{n, plural, one {You can appeal # dispute decision} other {You can appeal # dispute decisions}} an agent took against you — once each, within 14 days.', appealOpen: 'Open Standing',
     // shared
     loadError: "We couldn't load this. Check your connection and try again.",
     forbidden: "Your role can't see this screen. Ask the owner if you need access.",
@@ -215,6 +216,7 @@ export const useFinanceT = defineMessages({
     historyEmpty: 'No refunds or disputes yet.',
   },
   fr: {
+    appealable: '{n, plural, one {Vous pouvez contester # décision} other {Vous pouvez contester # décisions}} sur des litiges prises contre vous — une fois chacune, dans les 14 jours.', appealOpen: 'Ouvrir Statut du compte',
     loadError: 'Impossible de charger ces données. Vérifiez votre connexion et réessayez.',
     forbidden: 'Votre rôle ne donne pas accès à cet écran. Demandez au propriétaire si vous en avez besoin.',
     viewOnly: 'Consultation seulement',

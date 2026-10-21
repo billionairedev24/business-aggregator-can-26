@@ -3,6 +3,7 @@ import { defineMessages } from '@northline/ui';
 /** Disputes & refunds (design 03 lines 255–271). en = the design's copy; co-sign, evidence and empty states are ours (DECISIONS S-80). */
 export const useDisputesT = defineMessages({
   en: {
+    cardLink: 'Card disputes',
     title: 'Disputes & refunds',
     kpis: 'The desk at a glance', k_agent: 'For an agent', k_window: 'In the seller’s 24 h', k_closed: 'Closed this week',
     entity: 'case', plural: 'cases', open: 'Open',
@@ -38,6 +39,7 @@ export const useDisputesT = defineMessages({
     refundCase: 'Refund case',
   },
   fr: {
+    cardLink: 'Contestations de carte',
     title: 'Litiges et remboursements',
     kpis: 'Le bureau en bref', k_agent: 'Pour un agent', k_window: 'Dans les 24 h du vendeur', k_closed: 'Fermés cette semaine',
     entity: 'dossier', plural: 'dossiers', open: 'Ouvrir',

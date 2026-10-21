@@ -7,6 +7,7 @@
 #   1. every Deployment of the release rolled out; the release's Jobs (migrations, topics, indices, OAuth clients) done
 #   2. the api's readiness from inside its pod (/actuator/health/readiness)
 #   3. the public address: ovh-vps the VPS's IPv4 (Terraform), ovh-mks the load balancer of Envoy's Service
+#   3b. the location (S-160): the api's Object Storage endpoint is the one of Terraform's ovh_location
 #   4. once the zone's records point at that address: over HTTPS — the issuer of auth's OpenID configuration, the
 #      Studio's and the consumer site's sign-in pages, the consumer home, the console (retried while Let's Encrypt issues
 #      the certificates), and with the demo inbox that https://mail.<domain> refuses a request without credentials.
@@ -58,6 +59,16 @@ fi
 [ -n "$ip" ] && [ "$ip" != null ] || { bad "no public address yet"; ip="(pending)"; }
 echo "address: $ip"
 
+echo "== 3b. location"
+loc=$(tf_out location .name 2>/dev/null || true)
+loc_label=$(tf_out location .label 2>/dev/null || true)
+want=$(tf_out location .s3_endpoint 2>/dev/null || true)
+have=$(kubectl -n "$NS" get configmap northline-infra -o jsonpath='{.data.STORAGE_ENDPOINT}' 2>/dev/null || true)
+if [ -z "$loc" ]; then echo "...  no location output in the state (terraform apply with S-160 first)"
+elif [ "$have" = "$want" ]; then ok "location $loc ($loc_label): the api stores uploads at $have"
+else bad "location $loc: the api's STORAGE_ENDPOINT is '$have', expected $want — re-run the deploy after terraform apply"; fi
+country=$(tf_out location .country 2>/dev/null || true)
+
 resolve() {
   if command -v dig >/dev/null 2>&1; then dig +short A "$1" | tail -1
   elif command -v getent >/dev/null 2>&1; then getent ahostsv4 "$1" | awk 'NR == 1 { print $1 }'
@@ -101,6 +112,7 @@ fi
   echo
   echo "| | |"
   echo "|---|---|"
+  echo "| location | \`${loc:-?}\` ${loc_label:+— $loc_label}$( [ -n "$country" ] && [ "$country" != CA ] && printf ' (outside Canada: fake demo data only)') |"
   echo "| public address | \`$ip\` |"
   echo "| DNS | $dns |"
   echo "| HTTPS smoke test | $https |"

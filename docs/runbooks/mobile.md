@@ -175,7 +175,7 @@ Firebase config for push.
 shows the pilot's Feedback button to pilot customers (both apps). Unset, the demo navigation hides them; their screens
 and every endpoint stay. A pilot environment that needs the Feedback button sets the second one in its EAS profile.
 
-**Wallets** (S-157, [stripe.md § 14](stripe.md#14-apple-pay-and-google-pay-s-157)): `EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID`
+**Wallets** (S-157, [stripe.md § 15](stripe.md#15-apple-pay-and-google-pay-s-157)): `EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID`
 (the environment's Apple Pay merchant id) and `EXPO_PUBLIC_GOOGLE_PAY=1` (with `EXPO_PUBLIC_GOOGLE_PAY_TEST=1` on every
 build but production) add Stripe's config plugin (the Apple Pay entitlement, Google Pay's manifest flag) and let
 PaymentSheet offer the wallet — when the api also allows it (`STRIPE_APPLE_PAY`, `STRIPE_GOOGLE_PAY`). Unset: cards

@@ -4,7 +4,7 @@ import { shop } from './common';
 /**
  * S-157: Apple Pay and Google Pay in Stripe's PaymentSheet, for every payment the app makes with it (shop, bookings,
  * quote deposits, tips). Offered only when the api allows them for the environment (`GET /public/payments/options`:
- * Stripe configured and the wallet switched on, docs/runbooks/stripe.md § 14) **and** this build carries what the
+ * Stripe configured and the wallet switched on, docs/runbooks/stripe.md § 15) **and** this build carries what the
  * wallet needs (the Apple Pay merchant id, the Google Pay flag). A wallet is a card to Stripe: the same manual-capture
  * PaymentIntents, the same step-up before them; the PaymentMethod it leaves confirms the order's other intents.
  */

@@ -10186,9 +10186,198 @@ template | kubeconform, actionlint, bash 3.2, shellcheck, stubbed runs).
   OVHcloud email (MX Plan `ssl0.ovh.net`, Email Pro `pro1.mail.ovh.net`); port 587 + STARTTLS only (the SMTP adapter
   has no implicit TLS — 465 doesn't work). All three keep mail outside Canada: demo data only.
 
+## 2026-10-20 — S-160 OVHcloud in the United States for now (Vint Hill), Canada kept as an option
+
+Owner: "for ovh, I am in the US right now, lets deploy there for now". Runbook: [ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo),
+[§ Data residency](runbooks/ovh.md#data-residency), [§ Locations](runbooks/ovh.md#locations),
+[§ Canada later](runbooks/ovh.md#canada-later). **Nothing here has run against a real OVHcloud account, US or
+Canadian**: checked offline only (`terraform test` with the mocked provider for each location, `helm template |
+kubeconform` and the chart's refusals, actionlint, bash 3.2 parsing, shellcheck, stubbed runs of `ci.sh tfvars`,
+`tf-state.sh init` and `deploy.sh`'s pre-check). `gh-setup.sh` was only parsed and linted (it reads the terminal).
+
+- **Data residency — owner's decision, 2026-10-20: demo in the US for now.** The platform's rule stays Canadian data
+  residency for production. A US location is allowed for the **dry run only: fake demo data, the `dev` profile**.
+  **Real Canadian customer data must move to `ca-bhs` before launch**, and nothing real is entered in a US deployment
+  meanwhile. Enforced in the chart: new value `global.hostingCountry` (Terraform's `helm_values`: `US` / `CA`; empty =
+  not declared, as on the three clouds); any country other than `CA` refuses `global.environment` staging/prod and the
+  staging/prod Spring profiles. `scripts/ovh/deploy.sh` renders the chart with the same values first, so a refusal
+  stops the deploy before Secrets or `northline-data` are touched (new `OVH_EXTRA_VALUES` layers one more file, in the
+  check too).
+- **One location setting** — `infra/terraform/stacks/ovh/locations.json` (Terraform `jsondecode(file())`, scripts `jq`):
+  `us-east-va` (default), `us-west-or`, `ca-bhs` → country, site, API endpoint (`ovh-us` / `ovh-ca`), token page,
+  Public Cloud region, Object Storage region and S3 endpoint/region, Managed Databases region, VPS datacentre, and
+  what the region offers. Terraform: the roots' `ovh_endpoint` and `region` variables are **replaced** by
+  `ovh_location` (the provider's endpoint comes from it; the Canada-only validation and the `canadian_region_only`
+  tests are gone; a test per location + an unknown-location refusal in each root); the stack's `region` became
+  `location`; new output `location` in both roots. The default changed from Canada to `us-east-va` — acceptable
+  because nothing was ever applied (S-155 merged today); an old `terraform.tfvars` with `region = "BHS5"` gets an
+  undeclared-variable warning and must set `ovh_location = "ca-bhs"` to stay in Canada.
+- **Pipeline**: environment variable `OVH_LOCATION` (default `us-east-va`), **not** a workflow input — an environment's
+  credentials, project and state bucket belong to one OVHcloud account, so a per-run choice could only point them at
+  the wrong one. S-155's `OVH_ENDPOINT` variable is now only checked: one that contradicts the location stops
+  `ci.sh tfvars` (`gh-setup.sh` deletes it). `gh-setup.sh` asks the location first (current value as the default;
+  confirming a change), explains that US and Canada accounts are separate, prints that entity's token page with the
+  rights pre-filled. `tf-state.sh` puts the state bucket in the location (`ensure [TARGET]` reads it from
+  `.ovh/<target>.env` on a Mac). `ci.sh teardown` empties buckets with the location's S3 region (was `bhs`).
+  `secrets.sh init` writes `OVH_LOCATION=` into the file. The smoke test checks the api's `STORAGE_ENDPOINT` against
+  the location and shows the location in the summary.
+- **What was verified about the US regions** (search-engine excerpts of OVHcloud US/OVHcloud docs; the vendor sites
+  were unreachable from here): `ovh-us` → `https://api.us.ovhcloud.com/1.0` (in the provider binary); S3 region
+  `us-east-va`, endpoint `https://s3.us-east-va.io.cloud.ovh.us`, Hillsboro = `us-west-or`; MKS free plan (1-AZ) in
+  `US-EAST-VA-1` and `US-WEST-OR-1`; Managed Databases in all 1-AZ regions, `US-EAST-VA` used in OVHcloud US's
+  Terraform guide; VPS in Vint Hill and Hillsboro; the Edge Network Firewall guide on the US support site.
+  **Unverified**: the `us-west-or` S3 endpoint written out (pattern only), Object Storage `region_name`
+  `US-EAST-VA`/`US-WEST-OR` (by analogy with `BHS`), `US-WEST-OR` for databases, PostGIS on PostgreSQL 17 in the US,
+  the Network Firewall API on `ovh-us`, the US VPS service-name suffix, the VPS-4 spec and price (third-party
+  listings: 8 vCores / 24 GB / 200 GB, ≈ $27.50 a month, ≈ $23.37 with 12 months).
+- **Fallbacks per location** (flags in `locations.json`, all `true` today on that evidence): no Managed PostgreSQL →
+  `ovh-mks` puts Postgres in the cluster (output `postgres.fallback`); no Network Firewall → `ovh-vps` keeps ufw only
+  (output `location.edge_firewall_used`); no Managed Kubernetes → `ovh-mks` refuses to plan (use `ovh-vps`). Not
+  testable with the mocked provider without editing the file, so no test of the fallback paths.
+- **Canada later** is a new account and a fresh deployment (destroy the US one first — its state is in the US
+  bucket), with an optional `pg_dump` + bucket sync + the generated secrets carried over; the simplest move is
+  `make demo-data` again. Documented, not scripted.
+- **Not done**: no migration tool between the two OVHcloud entities; no Toronto or US Local Zones; no OVHcloud KMS
+  adapter (staging/prod on OVHcloud still impossible under `KMS_PROVIDER=local`, whatever the location).
+
+## 2026-10-20 — S-161 No console step for OVHcloud: the state user, its keys, the bucket and the server from code
+
+Owner: "why can't we use pipeline to do all of this? I do not want to create resources manually." The owner now does
+three things by hand — the OVHcloud US account, a default payment method, the API token — plus `make ovh-gh-setup`
+and the pipeline runs ([ovh.md § Today](runbooks/ovh.md#today-from-a-new-ovh-account-to-a-running-demo)). The owner
+already has a Public Cloud project, so a given `OVH_SERVICE_NAME` stays the default path. **Nothing here has run
+against a real OVHcloud account**: checked offline only — `terraform validate`/`test` with the mocked `ovh/ovh` 2.22
+provider (vps 13 runs, mks 9, the new project root 2), tflint, actionlint, shellcheck, bash 3.2 parsing
+(`make shell-compat`), and `scripts/ovh/api.sh` / `tf-state.sh keys|teardown` against a local stub of the OVHcloud API
+and a fake `aws` CLI. The stub checks the request signature with this repository's own reading of OVHcloud's scheme,
+so a wrong reading would pass both; `gh-setup.sh` was only parsed and linted (it reads the terminal).
+
+- **The state user through the API, not a Terraform root** (the story preferred a root with local state): a local
+  state lives on one machine, so a run on a runner or another Mac would create a second user and key, and a root that
+  looks the user up with a data source before creating it flips to destroying it on its second apply. Signed API calls
+  (`scripts/ovh/api.sh`: application key set, or the OAuth2 service account) find the project's user **by its
+  description `terraform-state`** (role `objectstore_operator`), create it when missing, wait for `ok`, and reuse its
+  first S3 key — `POST /cloud/project/{p}/user/{u}/s3Credentials/{access}/secret` returns an existing key's secret
+  (the path is in the provider binary; its data source uses it). Stateless, so the Mac and every job agree, and a user
+  made by hand with that description is adopted. Credentials never go on a command line (curl reads its headers from
+  stdin) or into the output; the access key is shown as its last four characters.
+- **Where it runs**: `make ovh-gh-setup` (stores `TF_STATE_ACCESS_KEY`/`SECRET_KEY` in the Environment; keys in
+  `.ovh/<target>.env` win — the manual fallback), and a new **State keys** step in every pipeline job
+  (`tf-state.sh keys`): the stored keys if S3 accepts them, else the API's, masked, as `AWS_*` in `$GITHUB_ENV`. The
+  jobs' `env` now maps the secrets to `TF_STATE_*` instead of `AWS_*` so `$GITHUB_ENV` never competes with a job-level
+  value. On a Mac: `eval "$(scripts/ovh/tf-state.sh keys ovh-vps)"` (refuses to print onto a terminal).
+- **The bucket** stays the pipeline's (`tf-state.sh ensure`, aws CLI, versioning on) — the Mac needs no `aws`. gh-setup
+  proposes a `northline-tfstate-*` bucket already in the project (`GET /cloud/project/{p}/region/{storage region}/storage`)
+  so one made by hand is adopted.
+- **Teardown, last**: `destroy` gains a final step `tf-state.sh teardown`: the target's state key (every version) out of
+  the bucket; when nothing else is left (the other target's state shares the bucket), the bucket and then the user.
+  The Environment's stored keys go stale; the State keys step then makes a new user by itself.
+- **The server for `ovh-vps`: a Public Cloud instance by default** (`server = "instance"`; `ovh_cloud_project_instance`,
+  Ubuntu 24.04 by name, flavor `b3-32` by name — the Linux one —, hourly, `ssh_key_create` with the pipeline's public
+  key, public network; `ignore_changes = [boot_from]` so a newer image never rebuilds it). Not the VPS by code: provider
+  2.22's `ovh_vps` can order, but needs the US catalogue's plan code and configuration labels (unverified) and commits a
+  month that a destroy doesn't refund. `server = "vps"` keeps the S-155 path (console-ordered VPS, Network Firewall).
+  **Price, unverified**: `b3-32` ≈ $0.20–0.23 an hour, ≈ $145–165 for a full month, against ≈ $27.50 for the VPS-4 —
+  ≈ $120–135 a month more if it runs all month; less for a week of demos with `destroy` in between. `b3-32` and not
+  `b3-16`: the stack was sized for the VPS's 24 GB. No Network Firewall on the instance (the `/ip` firewall on Public
+  Cloud addresses is unverified; `ovh_cloud_security_group` exists in 2.22 but the instance resource can't attach one):
+  `ufw` on the host, SSH by key only. The instance's host key is learnt on first sight in each run (it doesn't exist
+  when gh-setup runs); gh-setup deletes a VPS's `OVH_VPS_KNOWN_HOSTS` when switching to the instance.
+- **SSH key pair**: gh-setup's existing deploy key; for the instance the public half is the new variable
+  `OVH_SSH_PUBLIC_KEY` (→ `ssh_public_key`), the private half the existing secret.
+- **The project, optional**: `infra/terraform/envs/ovh/project` (`ovh_cloud_project`, plan `project.2018` from the order
+  cart, the account's subsidiary; local state in `.ovh/project-<location>.tfstate`) run by `scripts/ovh/project.sh
+  ensure`, which first adopts a project described `northline-dryrun`. Only when gh-setup gets no project id. That
+  `project.2018` is orderable on OVHcloud US is **unverified**.
+- **Token rights**: the default design needs `GET/POST/PUT/DELETE /cloud/*` only (one URL, ovh.md § Today step 3). The
+  VPS option adds `GET /vps/*` and `/ip/*`; ordering the project adds `GET /me`, `GET /me/*`, `POST /me/order/*`,
+  `GET/POST/DELETE /order/*` (paths from the provider binary).
+- **New settings**: `locations.json` `oauth2_token_url` (from the provider binary: `https://us.ovhcloud.com/auth/oauth2/token`,
+  `https://ca.ovh.com/auth/oauth2/token`); Environment variables `OVH_SERVER`, `OVH_INSTANCE_FLAVOR`,
+  `OVH_SSH_PUBLIC_KEY`; `TF_STATE_*` secrets now optional; Terraform `server`, `instance_flavor`, `instance_image`,
+  `instance_flavor_id`, `instance_image_id`, `ssh_public_key`; output `vps` gains `server` and `flavor`. No migrations.
+- **Not done / not testable here**: the flavor and image lookups (data sources returning nested sets can't be mocked by
+  `terraform test` 1.16), so the tests pass the ids; the OVHcloud US API itself (signature, OAuth2 token, user and key
+  endpoints, storage listing); `project.2018` on the US account; Public Cloud prices; stopping (shelving) the instance
+  between demos (`down` scales the apps only).
+
+## 2026-09-30 — S-156 Trust & safety: appeals, automatic consequences, dispute evidence to Stripe
+
+S-82 and S-93 defined the trust rules and the console's enforcement but left most consequences unenforced ("no
+instant-book state exists to switch", no appeals, no way to send evidence to Stripe). S-156 builds the rest across
+api, worker, Studio, console and consumer web, en and fr-CA.
+
+**Decisions**
+
+- **A new `standing` module** (schema `standing`) keeps one registry of consequences (`suspended`, `search_hidden`,
+  `instant_book_off`, `photo_delay`, a customer's `no_show_warning`) with the reason and who/what took it, the appeals
+  and the coaching plans. It orchestrates; the switches stay with their owners (merchants: suspension and search hiding
+  through `SellerSanctions.reinstate/showInSearch`; catalogue: `InstantBook`; payments: `ReleaseDelays`; identity:
+  `CustomerNoShows`). To avoid module cycles, `payments.api.CompletionPhotoRule` is implemented by trust, the notice type
+  is `messaging.api.StandingNotice`, and no-show reports go account/hire → trust.
+- **Instant book is a business-level state** (`catalogue.instant_book_settings`): enabled (the business's switch) and
+  paused (Northline's). Effective instant = the service's own flag ∧ enabled ∧ not paused; search (worker
+  `DocumentSource`), the provider page and checkout read it. **The switch is the existing Studio › Availability "How
+  bookings come in"** (accept mode, stored but never enforced before): saving the rules sets `enabled`, and the
+  migration backfills `enabled = false` for businesses that chose approval or requests only. A separate PUT endpoint
+  and toggle were built and removed again — two controls for one thing. Turning instant on while paused is a 409
+  `instant_book_paused`; the change goes out as `catalogue.instant_book_changed` on the existing `catalogue.listing`
+  topic (no new topic; no personal data).
+- **No-shows are confirmed trust flags**, not raw reports: a customer reports a provider no-show from "Something's
+  wrong" (problem reason `no_show`), a business reports a customer's from Appointments from 15 minutes after the start;
+  both become `trust.flags` on target `booking` (rules `no_show`, `customer_no_show`) and count only once staff confirm
+  them. The nightly `EnforceStanding` (`STANDING_ENFORCEMENT_CRON`, after S-82's job) pauses instant book at the S-93
+  rule (3 in 30 days) and resumes it by itself when the window holds fewer.
+- **Customer no-show consequence = a warning shown to providers + no instant booking** (2 confirmed in 12 months),
+  not S-93's "deposit required": every booking already holds the full amount or a deposit at checkout, so a deposit
+  would change nothing. The customer sees it on Account › Profile with how it clears.
+- **The completion-photo delay applies at completion**, not in the nightly job: a job completed without a photo has its
+  escrow (and a deposit quote's balance) released `missing_photo_delay` (48 h) later, and the customer's sign-off
+  doesn't release it earlier. The nightly job only closes delays whose time ran out.
+- **Staff lifts hold** for the rule's window (`standing.api.StaffLifts`): the nightly rules — S-82's rating-floor and
+  off-platform jobs too — don't re-apply a consequence staff lifted, by hand or by granting an appeal.
+- **Appeals:** once per dispute decision and once per appealable consequence (suspension, search hiding, instant-book
+  pause; not a photo delay, which staff can lift, nor a customer's warning), within 14 days, a statement and up to 5
+  files. Staff take one, then grant or deny with a reason; whoever took the original decision can't decide its appeal.
+  States `open → in_review → granted | denied` (named for the outcome, not "upheld/overturned", which read backwards to
+  businesses). Audited, emailed (`standing-update`) and shown in Studio › Standing.
+- **A granted dispute appeal compensates the seller; the customer keeps the refund.** Clawing a refund back from a
+  customer after an appeal isn't something Northline can do reliably or fairly. Northline pays the seller their share of
+  the refunded amount after its fee (ledger `appeal_compensation`, a transfer to the connected account). The dispute's
+  own `appealed` state (S-115) stays unused. Card chargebacks aren't appealable: the bank decides them; Northline
+  answers with evidence.
+- **Dispute evidence goes through a port** `DisputeEvidenceGateway` (`DISPUTE_EVIDENCE_PROVIDER`: `local` fake, refused
+  under staging/prod; `stripe` = Files upload + dispute update with `submit=true`, idempotency keys). Personal-data
+  evidence fields (customer name, email, IP, addresses) are excluded on purpose. The webhook records Stripe's
+  deadline and the dispute fee; **Northline carries the fee** (ledger `dispute_fees`), it isn't charged to the business.
+- **Studio shows the reviewer's reasons** on a rejected listing (`GET …/listings/{id}/review`) and the agent's note in
+  the onboarding wizard (`GET …/onboarding/agent-note`), both 204 when there is none.
+
+**Schema (additive, V442–V451):** V442 schema `standing` (`consequences`, `appeals` unique on `(subject_type,
+subject_id)`, `appeal_files`, `coaching_plans` one active per business, `coaching_tasks`, `appeal_number_seq`); V443
+`catalogue.instant_book_settings` with the accept-mode backfill; V444 `payments.disputes.stripe_evidence_due_by`,
+`payments.card_dispute_evidence`, `dispute_fees`, `release_delays`, `appeal_compensations`; V445
+`identity.users.no_show_count/no_show_restricted_at`, index `trust.flags ix_flags_no_shows`. V446–V451 unused; no dev
+seed. Configuration: `DISPUTE_EVIDENCE_PROVIDER` (required in staging and prod, the Helm values set `stripe`),
+`STANDING_ENFORCEMENT_CRON`. No new secrets, no new Kafka topic (still 94). Runbooks: [standing.md](runbooks/standing.md),
+[stripe.md § 14](runbooks/stripe.md#14-card-disputes--evidence-to-stripe-s-156).
+
+**Not done**
+
+- Coaching plans carry no automatic consequence or reminder; the agent follows up.
+- The console's seller Standing card (lift, start/close coaching) has no component test of its own; its endpoints
+  are covered by `StandingApiTest`. The mobile apps don't show standing yet (the web pages do).
+- Stripe's evidence deadline isn't re-read if Stripe extends it, except from a later `charge.dispute.updated` event.
+- A customer's no-show restriction has no appeal (staff can lift it).
+
+**Never run against the real Stripe API** (stripe-mock and signed test events only): the Files upload with
+`purpose=dispute_evidence`, the dispute update with `submit=true`, the dispute-fee balance transactions from real
+`charge.dispute.*` events, and the compensation transfer on a granted dispute appeal. stripe.md § 14 lists the
+test-mode checks to run before launch.
+
 ## 2026-09-30 — S-157 Apple Pay / Google Pay, payout-failed email, CASL consent capture and SMS STOP
 
-Branch `feat/s157-wallets-consent`. Runbooks: [stripe.md § 14](runbooks/stripe.md#14-apple-pay-and-google-pay-s-157),
+Branch `feat/s157-wallets-consent`. Runbooks: [stripe.md § 15](runbooks/stripe.md#15-apple-pay-and-google-pay-s-157),
 [casl.md § 3, § 9, § 10](runbooks/casl.md), [notifications.md](runbooks/notifications.md). Migrations **V452–V454**
 (range V452–V461). No new Kafka topic.
 
@@ -10198,7 +10387,7 @@ Branch `feat/s157-wallets-consent`. Runbooks: [stripe.md § 14](runbooks/stripe.
   tested with a stubbed Stripe.js, the React Native SDK mocked and the fake gateway. Twilio: the signature is checked
   against Twilio's documented example (`0/KCTR6DLpKmkAf8muzZqo1nDgQ=`) and MockMvc deliveries; no real number, handset,
   Messaging Service, Advanced Opt-Out or status callback. `StatusCallback` on sends is asserted with WireMock. Offers
-  went only to Mailpit-style recording fakes. Pre-launch checks: stripe.md § 14, casl.md § 8 items 5–8.
+  went only to Mailpit-style recording fakes. Pre-launch checks: stripe.md § 15, casl.md § 8 items 5–8.
 - **Wallets:** server unchanged — Apple Pay and Google Pay are cards to Stripe, so the same manual-capture
   PaymentIntents (`payment_method_types = card`), the same S-51 step-up, and the wallet's PaymentMethod (saved by
   `setup_future_usage` on the first intent) confirms the order's other intents as a typed card's does. **Decision:** one

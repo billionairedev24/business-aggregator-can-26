@@ -140,3 +140,9 @@ export type PrefsChange = Partial<Prefs>;
 export const useSavePrefs = () => useAccountMutation((c: PrefsChange) => http('/api/v1/me/preferences', { method: 'PATCH', body: c }, Prefs),
   { set: prefsQuery.queryKey, refresh: [profileQuery.queryKey] });
 
+
+/** S-156: consequences of the customer's own no-shows (what providers see, and that they confirm bookings first). */
+const StandingItem = z.object({ id: z.string(), kind: z.string(), reason: z.string(), startedAt: z.string(), active: z.boolean(), liftedAt: z.string().nullish(), liftReason: z.string().nullish() });
+export const MyStanding = z.object({ active: z.array(StandingItem), past: z.array(StandingItem) });
+export type MyStanding = z.infer<typeof MyStanding>;
+export const standingQuery = queryOptions({ queryKey: ['me', 'standing'], queryFn: () => http('/api/v1/me/standing', {}, MyStanding) });
