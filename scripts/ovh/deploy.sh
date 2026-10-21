@@ -34,7 +34,45 @@ kubectl get nodes >/dev/null || die "kubectl can't reach the cluster (ovh-vps: m
 ctx=$(kubectl config current-context)
 echo "== $OVH_TARGET → context $ctx, namespace $NS, images $REGISTRY:$IMAGE_TAG"
 
-work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
+# A failed or timed-out step (Helm's "context deadline exceeded" says only that something never became ready): print
+# what isn't ready and why — pods, volumes, the Postgres cluster, recent events, the logs of pods that aren't ready —
+# in the job's log, and the status part (no logs) in the run's summary.
+diagnose() {
+  echo
+  echo "== the deploy failed — what isn't ready in $NS"
+  local pods bad
+  pods=$(kubectl -n "$NS" get pods -o wide 2>&1 || true)
+  printf '%s\n' "$pods"
+  kubectl -n "$NS" get pvc 2>&1 || true
+  kubectl -n "$NS" get clusters.postgresql.cnpg.io 2>/dev/null || true
+  echo "-- recent events"
+  kubectl -n "$NS" get events --sort-by=.lastTimestamp 2>&1 | tail -40 || true
+  bad=$(kubectl -n "$NS" get pods --no-headers \
+    -o custom-columns="N:.metadata.name,R:.status.containerStatuses[*].ready,P:.status.phase" 2>/dev/null \
+    | awk '$3 != "Succeeded" && ($2 ~ /false/ || $2 == "<none>" || $3 != "Running") { print $1 }' || true)
+  for p in $bad; do
+    echo "-- $p"
+    kubectl -n "$NS" describe pod "$p" 2>&1 | sed -n '/^Conditions:/,$p' | tail -30 || true
+    kubectl -n "$NS" logs "$p" --all-containers --tail=60 2>&1 || true
+    kubectl -n "$NS" logs "$p" --all-containers --previous --tail=30 2>/dev/null || true
+  done
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    {
+      echo "### The deploy failed: what isn't ready in \`$NS\`"
+      echo '```'
+      printf '%s\n' "$pods"
+      echo
+      kubectl -n "$NS" get pvc 2>&1 || true
+      kubectl -n "$NS" get clusters.postgresql.cnpg.io 2>/dev/null || true
+      echo
+      kubectl -n "$NS" get events --sort-by=.lastTimestamp --field-selector type=Warning 2>&1 | tail -25 || true
+      echo '```'
+      echo "Not ready: ${bad:-none}. Their descriptions and logs are in this step's log."
+    } >>"$GITHUB_STEP_SUMMARY"
+  fi
+}
+work=$(mktemp -d); # shellcheck disable=SC2154 # rc is set inside the trap
+trap 'rc=$?; if [ "$rc" != 0 ]; then diagnose; fi; rm -rf "$work"' EXIT
 tf_out helm_values >"$work/values.json"
 tf_out data_values >"$work/data.json"
 in_pg=$(tf_out in_cluster .postgres)
