@@ -3,6 +3,7 @@ package ca.northline.email;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ca.northline.email.azure.AzureEmailSender;
+import ca.northline.email.resend.ResendEmailSender;
 import ca.northline.email.sendgrid.SendGridEmailSender;
 import ca.northline.email.ses.SesEmailSender;
 import ca.northline.email.smtp.SmtpEmailSender;
@@ -68,6 +69,8 @@ class EmailAutoConfigurationTest {
                 .run(c -> assertThat(adapter(c.getBean(EmailSender.class))).isInstanceOf(SesEmailSender.class));
         runner.withPropertyValues("northline.email.provider=sendgrid", "northline.email.api-key=SG.fake")
                 .run(c -> assertThat(adapter(c.getBean(EmailSender.class))).isInstanceOf(SendGridEmailSender.class));
+        runner.withPropertyValues("northline.email.provider=resend", "northline.email.api-key=re_fake_key_for_tests")
+                .run(c -> assertThat(adapter(c.getBean(EmailSender.class))).isInstanceOf(ResendEmailSender.class));
         runner.withPropertyValues(
                         "northline.email.provider=azure",
                         "northline.email.endpoint=https://nl.communication.azure.com",
@@ -82,6 +85,11 @@ class EmailAutoConfigurationTest {
                         .getFailure()
                         .rootCause()
                         .hasMessageContaining("EMAIL_PROVIDER=sendgrid needs: EMAIL_API_KEY"));
+        runner.withPropertyValues("northline.email.provider=resend", "northline.email.api-key= ")
+                .run(c -> assertThat(c)
+                        .getFailure()
+                        .rootCause()
+                        .hasMessageContaining("EMAIL_PROVIDER=resend needs: EMAIL_API_KEY (Resend API key"));
         runner.withPropertyValues("northline.email.provider=azure")
                 .run(c -> assertThat(c).getFailure().rootCause().hasMessageContaining("EMAIL_ENDPOINT"));
         runner.withPropertyValues(

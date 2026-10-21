@@ -398,7 +398,7 @@ northline:
     region: ${KMS_REGION:}
     endpoint: ${KMS_ENDPOINT:}
   # Transactional email (S-13, library server/email; docs/runbooks/email.md): local (SMTP to Mailpit, only logs when
-  # Mailpit isn't running; refused under staging/prod) | smtp (any relay, e.g. SES SMTP) | ses | sendgrid | azure.
+  # Mailpit isn't running; refused under staging/prod) | smtp (any relay, e.g. SES SMTP) | ses | sendgrid | resend | azure.
   email:
     provider: ${EMAIL_PROVIDER:local}
     from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}
@@ -409,7 +409,7 @@ northline:
     time-zone: ${EMAIL_TIME_ZONE:${REGION_PLATFORM_ZONE:America/Edmonton}}   # dates in emails (S-134)
     region: ${EMAIL_REGION:}                     # ses: ca-central-1
     endpoint: ${EMAIL_ENDPOINT:}                 # azure: https://<resource>.communication.azure.com; tests/VPC endpoints
-    api-key: ${EMAIL_API_KEY:}                   # sendgrid: SG.…; azure: access key (blank = Entra ID)
+    api-key: ${EMAIL_API_KEY:}                   # sendgrid: SG.…; resend: re_…; azure: access key (blank = Entra ID)
     configuration-set: ${EMAIL_CONFIGURATION_SET:}
     smtp: { host: "${SMTP_HOST:localhost}", port: "${SMTP_PORT:1025}", username: "${SMTP_USERNAME:}", password: "${SMTP_PASSWORD:}", starttls: "${SMTP_STARTTLS:false}" }
     retry: { attempts: "${EMAIL_RETRY_ATTEMPTS:3}", backoff: "${EMAIL_RETRY_BACKOFF:2s}" }
