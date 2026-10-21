@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 /**
  * Consumer group {@code personal-notifications} (S-102, deploy/kafka/topics.yaml): customers' order, delivery, booking
  * and quote updates and couriers' runs — since S-153 also customers' messages and, for the team, new quote requests
- * and customers' messages (deferred like a customer's on an outage), and since S-152 points credited — through the S-26 framework. It has <b>no retry topics</b> — 15 more would pass
+ * and customers' messages (deferred like a customer's on an outage), since S-152 points credited, and since S-162 Plus payments (payments.payment) — through the S-26 framework. It has <b>no retry topics</b> — 15 more would pass
  * Event Hubs Premium's 100 per processing unit — because nothing it sends throws: a provider outage or throttling is
  * written to {@code messaging.deferred_notifications} and retried by the deferred job (every 5 minutes, 10 attempts).
  * Only an unexpected failure (a bug, the database) goes to the {@code .dlq}, for a replay.
@@ -47,7 +47,8 @@ class PersonalNotificationsConsumer {
                 "booking.quote",
                 "booking.quote_request",
                 "messaging.message",
-                "loyalty.points"
+                "loyalty.points",
+                "payments.payment"
             },
             groupId = GROUP)
     void on(ConsumerRecord<String, byte[]> record) {

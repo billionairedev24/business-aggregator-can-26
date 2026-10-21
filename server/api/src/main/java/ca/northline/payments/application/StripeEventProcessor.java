@@ -39,7 +39,7 @@ class StripeEventProcessor {
     private final StripeChargeSync charges;
     private final ApplicationEventPublisher events;
     private final BankAccountService bankAccounts;
-    private final PlusBillingService plus;
+    private final MembershipBilling plus;
     private final TransactionTemplate transactions;
     private final Clock clock;
 
@@ -53,7 +53,7 @@ class StripeEventProcessor {
             StripeChargeSync charges,
             ApplicationEventPublisher events,
             BankAccountService bankAccounts,
-            PlusBillingService plus,
+            MembershipBilling plus,
             PlatformTransactionManager transactionManager,
             Clock clock) {
         this.store = store;
@@ -131,10 +131,12 @@ class StripeEventProcessor {
                     "charge.dispute.funds_withdrawn",
                     "charge.dispute.funds_reinstated" -> cases.chargeback(event);
             case "account.updated" -> couriers.accountUpdated(event) || accounts.stripeAccountUpdated(event);
+            // S-162: a Plus period's PaymentIntent first (Northline's own billing; confirmed by the member on the web
+            // or in the app), else an escrow's
             case "payment_intent.amount_capturable_updated",
                     "payment_intent.succeeded",
                     "payment_intent.payment_failed",
-                    "payment_intent.canceled" -> charges.paymentIntent(event);
+                    "payment_intent.canceled" -> plusIntent(event) || charges.paymentIntent(event);
             case "charge.refunded" -> charges.chargeRefunded(o);
             case "refund.created", "refund.updated", "refund.failed" -> charges.refund(o);
             case "transfer.reversed", "transfer.updated" -> charges.transferReversed(o);
@@ -145,12 +147,18 @@ class StripeEventProcessor {
                     "identity.verification_session.canceled" -> identitySession(event);
             case "financial_connections.account.disconnected", "financial_connections.account.deactivated" ->
                 bankAccounts.connectionEnded(event);
-            // S-152: Northline Plus on Stripe Billing (platform endpoint only)
-            case "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted" ->
-                event.endpoint() == StripeEvent.Endpoint.PLATFORM && plus.subscriptionEvent(event);
-            case "invoice.paid" -> event.endpoint() == StripeEvent.Endpoint.PLATFORM && plus.invoicePaidEvent(event);
             default -> false;
         };
+    }
+
+    /** S-162: a Plus PaymentIntent ({@code metadata.northline_kind=plus}, platform endpoint only). */
+    private boolean plusIntent(StripeEvent event) {
+        var o = event.object();
+        var id = o.id();
+        return event.endpoint() == StripeEvent.Endpoint.PLATFORM
+                && id != null
+                && "plus".equals(o.text("metadata", "northline_kind"))
+                && plus.paymentIntentChanged(id);
     }
 
     /**

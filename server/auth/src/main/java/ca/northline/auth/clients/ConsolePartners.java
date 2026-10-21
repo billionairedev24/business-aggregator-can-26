@@ -30,7 +30,7 @@ final class ConsolePartners {
         this.jdbc = jdbc;
     }
 
-    /** Every console partner (disabled ones as revoked), oldest first; empty before the api's V464 ran. */
+    /** Every console partner (disabled ones as revoked), oldest first; empty before the api's V485 ran. */
     List<Row> all() {
         if (!Boolean.TRUE.equals(
                 jdbc.queryForObject("select to_regclass('developer.partner_clients') is not null", Boolean.class))) {

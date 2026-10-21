@@ -1289,3 +1289,10 @@ Link to a page of the site, starting with /.	Faites un lien vers une page du sit
 Nobody in this market has agreed to offers on this channel yet.	Personne dans ce marché n’a encore accepté les offres sur ce canal.	new
 Add an email address to your profile to get a test.	Ajoutez une adresse courriel à votre profil pour recevoir un essai.	new
 Add a mobile number to your profile to get a test.	Ajoutez un numéro de mobile à votre profil pour recevoir un essai.	new
+Add your home address in Addresses first: Plus is taxed where you live.	Ajoutez d’abord votre adresse dans Adresses : Plus est taxé là où vous habitez.	new
+Only a paid Plus period can be refunded.	Seule une période Plus payée peut être remboursée.	new
+There's no Plus payment waiting for you.	Aucun paiement Plus ne vous attend.	new
+This Plus payment is being charged already.	Ce paiement Plus est déjà en cours.	new
+Your bank declined the card. Try another card in Payment methods.	Votre banque a refusé la carte. Essayez une autre carte dans Modes de paiement.	new
+No plus_membership with id %s	Aucun abonnement Plus avec l’identifiant %s	new
+No plus_period with id %s	Aucune période Plus avec l’identifiant %s	new

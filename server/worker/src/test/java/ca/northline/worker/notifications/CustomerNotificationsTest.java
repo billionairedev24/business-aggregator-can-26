@@ -145,6 +145,46 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
                 .isEqualTo("Northline : La première commande d’un voisin vous a rapporté 1 000 points.");
     }
 
+    /**
+     * S-162: Northline bills Plus itself — the receipt by email only, whatever the matrix and quiet hours (a payment the
+     * person made); a payment the bank wants confirmed by email and push, with the link to Plus in the wallet.
+     */
+    @Test
+    void plusPayments_aReceiptByEmail_andAPaymentToConfirm_byEmailAndPush() throws Exception {
+        var amara = customer("en-CA");
+        prefs(amara.id(), """
+                {"order_updates": {"push": false, "sms": false, "email": false}}""", null, "en");
+        clock.set(EDMONTON_NIGHT);
+        var paid = Events.id();
+        publish("payments.payment", paid, "payments.plus_payment_updated", """
+                {"eventId":"%s","occurredAt":"2026-10-20T15:00:00Z","aggregateId":"per_1","customerId":"%s",                "outcome":"paid","plan":"monthly","amountCents":799,"taxCents":40,                "periodStart":"2026-10-20T15:00:00Z","periodEnd":"2026-11-20T15:00:00Z","retryAt":null,                "code":null}""".formatted(paid, amara.id()));
+        await().atMost(Duration.ofSeconds(30))
+                .untilAsserted(() -> assertThat(emails.to(amara.email())).hasSize(1));
+        awaitProcessed(paid);
+        var receipt = emails.to(amara.email()).getFirst();
+        assertThat(receipt.subject()).isEqualTo("Your Northline Plus receipt — $8.39");
+        assertThat(receipt.text())
+                .contains("Price: $7.99", "Tax: $0.40", "Total: $8.39", "http://localhost:3000/app/wallet");
+        assertThat(receipt.headers()).doesNotContainKey(EmailMessage.LIST_UNSUBSCRIBE);
+        assertThat(pushes.to(amara.id())).as("no push for a receipt").isEmpty();
+
+        var confirm = Events.id();
+        publish("payments.payment", confirm, "payments.plus_payment_updated", """
+                {"eventId":"%s","occurredAt":"2026-11-20T15:00:00Z","aggregateId":"per_2","customerId":"%s",                "outcome":"action_required","plan":"monthly","amountCents":799,"taxCents":40,                "periodStart":"2026-11-20T15:00:00Z","periodEnd":"2026-12-20T15:00:00Z",                "retryAt":"2026-11-21T15:00:00Z","code":null}""".formatted(confirm, amara.id()));
+        await().atMost(Duration.ofSeconds(30))
+                .untilAsserted(() -> assertThat(pushes.to(amara.id())).hasSize(1));
+        awaitProcessed(confirm);
+        var push = pushes.to(amara.id()).getFirst();
+        assertThat(push.title()).isEqualTo("Confirm your Plus payment");
+        assertThat(push.link()).isEqualTo(URI.create("http://localhost:3000/app/wallet"));
+        assertThat(push.data()).containsOnlyKeys("type");
+        await().atMost(Duration.ofSeconds(30))
+                .untilAsserted(() -> assertThat(emails.to(amara.email())).hasSize(2));
+        assertThat(emails.to(amara.email()).getLast().subject())
+                .isEqualTo("Confirm your Northline Plus payment of $8.39");
+        assertThat(texts.to(amara.phone())).isEmpty();
+    }
+
     @Test
     void theCustomersMatrixDecides_andTheirLanguage() throws Exception {
         var kofi = customer("en-CA");

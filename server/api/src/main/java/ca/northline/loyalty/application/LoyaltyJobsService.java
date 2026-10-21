@@ -31,7 +31,7 @@ class LoyaltyJobsService implements LoyaltyJobs {
 
     @Override
     @Transactional
-    public int renewLocalMemberships() {
-        return memberships.renewLocal(clock.instant());
+    public int adoptLegacyMemberships() {
+        return memberships.adoptLegacy();
     }
 }

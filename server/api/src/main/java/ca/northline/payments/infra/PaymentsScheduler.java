@@ -36,6 +36,7 @@ class PaymentsScheduler {
         step("payout accounts", "payments.payout_accounts", jobs::activatePayoutAccounts);
         step("payouts", JobRuns.PAYOUTS, jobs::runPayouts);
         step("courier payouts arrived", "payments.courier_payouts_settle", jobs::settleCourierPayouts);
+        step("plus renewals", "payments.plus_renewals", jobs::chargePlusRenewals); // S-162: Northline bills Plus itself
     }
 
     /**

@@ -6,6 +6,7 @@
 //   /app/orders/<id>        → /orders/<id>            /app/food/orders/<id> → /food/orders/<id>
 //   /app/quotes/<id>        → /quotes/<id>            /app/bookings/<id>    → /account/orders (bookings are listed there)
 //   /app/cases/<number>     → /account/orders?view=cases                     /courier/run          → /
+//   /app/wallet             → /account?tab=plus  (S-162: Plus payments' receipts and notices; Plus is in the app's wallet)
 //   /courier/payouts        → /  (S-151: Stripe's payout onboarding returns here; the courier app claims it)
 // (/app/oauth2redirect and /courier/oauth2redirect are the OAuth redirects, not deep links: app-links, S-97.)
 const ID = '[A-Za-z0-9_-]{1,64}';
@@ -17,6 +18,8 @@ const ROUTES = [
   [new RegExp(`^/app/cases/(${ID})/?$`), () => '/account/orders?view=cases'],
   // S-153: a thread with a provider → Account › Messages with it open
   [new RegExp(`^/app/messages/(${ID})/?$`), id => `/account/messages?thread=${id}`],
+  // S-162: a Plus payment (receipt, a payment to confirm with the bank) → Account › Plus
+  [/^\/app\/wallet\/?$/, () => '/account?tab=plus'],
   [/^\/courier\/run\/?$/, () => '/'],
   [/^\/courier\/payouts\/?$/, () => '/'],
 ];

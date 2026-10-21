@@ -36,6 +36,10 @@ class FakeStripeGateway implements PaymentGateway, PayoutGateway {
     final Map<String, String> receiptLocales = new ConcurrentHashMap<>();
     /** S-153: what was captured of each PaymentIntent (tests read it). */
     final Map<String, Long> captured = new ConcurrentHashMap<>();
+    /** S-162: Plus charges by PaymentIntent, and the PaymentIntent of each idempotency key. */
+    private final Map<String, Charged> charges = new ConcurrentHashMap<>();
+
+    private final Map<String, String> chargeKeys = new ConcurrentHashMap<>();
 
     private String id(String prefix, int length) {
         var sb = new StringBuilder(prefix);
@@ -145,6 +149,59 @@ class FakeStripeGateway implements PaymentGateway, PayoutGateway {
     public String refund(
             String stripePaymentIntent, long amountCents, Map<String, String> metadata, String idempotencyKey) {
         return id("re_", 14);
+    }
+
+    /**
+     * S-162: Plus charges, decided by the card as at Stripe — {@code chargeDeclined} is declined
+     * ({@code card_declined}), {@code authenticationRequired} needs the customer, {@code insufficientFunds} is declined
+     * with {@code insufficient_funds}; any other card pays. The same idempotency key gives the same PaymentIntent.
+     */
+    @Override
+    public Charged charge(Charge request) {
+        var pi = chargeKeys.computeIfAbsent(request.idempotencyKey(), _ -> id("pi_", 24));
+        var known = charges.get(pi);
+        if (known != null) {
+            return known;
+        }
+        return chargeAgain(pi, request.paymentMethod(), request.offSession(), request.idempotencyKey());
+    }
+
+    @Override
+    public Charged chargeAgain(String paymentIntent, String paymentMethod, boolean offSession, String idempotencyKey) {
+        var current = charges.get(paymentIntent);
+        if (current instanceof Charged.Paid) {
+            return current;
+        }
+        Charged outcome;
+        if (paymentMethod.contains("chargeDeclined")) {
+            outcome = new Charged.Declined(paymentIntent, "card_declined");
+        } else if (paymentMethod.contains("insufficientFunds")) {
+            outcome = new Charged.Declined(paymentIntent, "insufficient_funds");
+        } else if (paymentMethod.contains("authenticationRequired")) {
+            outcome = new Charged.ActionRequired(paymentIntent, paymentIntent + "_secret_" + id("", 24));
+        } else {
+            outcome = new Charged.Paid(paymentIntent, id("ch_", 24));
+        }
+        log.debug(
+                "FAKE STRIPE charge {} with {} (off-session {}) → {}",
+                paymentIntent,
+                paymentMethod,
+                offSession,
+                outcome);
+        charges.put(paymentIntent, outcome);
+        return outcome;
+    }
+
+    @Override
+    public Charged chargeState(String paymentIntent) {
+        return charges.getOrDefault(paymentIntent, new Charged.Declined(paymentIntent, "resource_missing"));
+    }
+
+    /** Tests: the customer passed the bank's check (Stripe.js / the app confirmed the PaymentIntent). */
+    void authenticate(String paymentIntent) {
+        charges.computeIfPresent(
+                paymentIntent,
+                (pi, c) -> c instanceof Charged.ActionRequired ? new Charged.Paid(pi, id("ch_", 24)) : c);
     }
 
     @Override

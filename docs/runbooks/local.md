@@ -340,10 +340,11 @@ Notes:
   (`RESTRICTED_LICENCE_CRON`, `0 17 0 * * *`) expires licences and sends the 30-day reminders.
 - **Points, rewards, referrals and Plus (S-152, [loyalty.md](loyalty.md)):** nothing to set. Points arrive when an
   escrow is released (complete Amara's booking or confirm a delivery); the dev seed gives Prairie Wrench a 2× reward
-  with a $50 budget, a 10 % Plus member price on one product and Amara the invite code `AMARAK26`. Plus uses the fake
-  billing (`PLUS_BILLING_PROVIDER=local`: no card, no tax); to try Stripe Billing set `PLUS_BILLING_PROVIDER=stripe`,
-  `STRIPE_PLUS_MONTHLY_PRICE` / `STRIPE_PLUS_ANNUAL_PRICE` (test-mode prices) and a test `STRIPE_SECRET_KEY`, and forward
-  `customer.subscription.*` and `invoice.paid` with `stripe listen` ([stripe.md § 11](stripe.md#11-northline-plus--stripe-billing-s-152)).
+  with a $50 budget, a 10 % Plus member price on one product and Amara the invite code `AMARAK26`. Plus (S-162)
+  is billed by Northline itself: save a card in Account › Payment methods (the fake test Visa), join, and the fake
+  gateway's PaymentIntents pay; renewals are charged by the payments job (every minute) when a period is due. With a
+  test `STRIPE_SECRET_KEY` the same code makes real test-mode PaymentIntents — there is no Stripe Billing to set up
+  ([stripe.md § 11](stripe.md#11-northline-plus--billed-by-northline-s-152-s-162)).
 - **Standing, appeals and card disputes (S-156, [standing.md](standing.md)):** nothing to set. Report a customer
   no-show from Studio › Appointments (15 min after the start) or a provider no-show from the customer's "Something's
   wrong"; confirm the flags in the console's Trust & safety; `EnforceStanding.run()` (nightly at

@@ -43,6 +43,29 @@ public class TestData {
                 .update();
     }
 
+    /**
+     * S-162: a card saved at Stripe for the person (the fake gateway decides by its id: {@code pm_card_visa} pays,
+     * {@code …chargeDeclined} / {@code …insufficientFunds} are declined, {@code …authenticationRequired} needs 3-D
+     * Secure), with their Stripe Customer; the default card when {@code isDefault}.
+     */
+    public String card(String userId, String paymentMethod, boolean isDefault) {
+        jdbc.sql(
+                        "insert into payments.stripe_customers (customer_id, stripe_customer) values (?, ?) on conflict do nothing")
+                .params(userId, "cus_test_" + userId)
+                .update();
+        if (isDefault) {
+            jdbc.sql("update payments.customer_cards set is_default = false where customer_id = ?")
+                    .params(userId)
+                    .update();
+        }
+        jdbc.sql("""
+                        insert into payments.customer_cards (customer_id, payment_method, brand, last4, exp_month, exp_year,
+                                                             is_default, added_at)
+                        values (?, ?, 'visa', '4242', 12, 2030, ?, now())
+                        """).params(userId, paymentMethod, isDefault).update();
+        return paymentMethod;
+    }
+
     /** Provider business "Prairie Wrench" with one member of the given role. */
     public Business business(MerchantRole role) {
         var merchantId = merchant("provider", "Prairie Wrench");
