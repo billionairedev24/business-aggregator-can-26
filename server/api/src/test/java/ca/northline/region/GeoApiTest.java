@@ -36,12 +36,16 @@ class GeoApiTest extends IntegrationTest {
     DataSource dataSource;
 
     /**
-     * Markets and zones are region data, not migrations: the tests load the local dev seed's (V119, idempotent). The
-     * provinces served come from the test profile's SEARCH_MARKETS default (AB, BC, ON, QC).
+     * Markets and zones are region data, not migrations: the tests load the local dev seed's (V119, idempotent) and
+     * its V349, which puts the launch markets back to live (V345 starts production at pilot/waitlist). The provinces
+     * served come from the test profile's SEARCH_MARKETS default (AB, BC, ON, QC).
      */
     @BeforeEach
     void markets() {
-        new ResourceDatabasePopulator(new ClassPathResource("db/seed-dev/V119__dev_markets.sql")).execute(dataSource);
+        new ResourceDatabasePopulator(
+                        new ClassPathResource("db/seed-dev/V119__dev_markets.sql"),
+                        new ClassPathResource("db/seed-dev/V349__dev_markets_live.sql"))
+                .execute(dataSource);
     }
 
     /** A fresh browsing session per test, so the per-session lookup limit never spills over. */
