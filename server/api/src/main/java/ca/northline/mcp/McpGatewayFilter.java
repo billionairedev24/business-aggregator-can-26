@@ -17,9 +17,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
@@ -68,6 +70,10 @@ public class McpGatewayFilter extends OncePerRequestFilter {
     static final String QUICKSTART = "northline://guides/agent-quickstart";
     static final String ME = "northline://me";
     static final String MERCHANT_PREFIX = "northline://merchants/";
+    /** S-163: how long a request right after start-up waits for the tools ({@link McpToolRegistration}). */
+    static final Duration TOOLS_WAIT = Duration.ofSeconds(30);
+
+    private static final Set<String> NEEDS_TOOLS = Set.of("tools/list", "tools/call", "resources/read");
 
     private final Supplier<McpSyncServer> server;
     private final Supplier<ToolCallbackProvider> tools;
@@ -77,8 +83,9 @@ public class McpGatewayFilter extends OncePerRequestFilter {
     private final JsonMapper json;
     private final Clock clock;
     private final McpAgentHeaderFilter agentHeader;
+    private final McpToolRegistration toolRegistration;
 
-    public McpGatewayFilter(
+    McpGatewayFilter(
             Supplier<McpSyncServer> server,
             Supplier<ToolCallbackProvider> tools,
             McpProperties props,
@@ -86,7 +93,8 @@ public class McpGatewayFilter extends OncePerRequestFilter {
             AuditTrail audit,
             JsonMapper json,
             Clock clock,
-            McpAgentHeaderFilter agentHeader) {
+            McpAgentHeaderFilter agentHeader,
+            McpToolRegistration toolRegistration) {
         this.server = server;
         this.tools = tools;
         this.props = props;
@@ -95,6 +103,7 @@ public class McpGatewayFilter extends OncePerRequestFilter {
         this.json = json;
         this.clock = clock;
         this.agentHeader = agentHeader;
+        this.toolRegistration = toolRegistration;
     }
 
     @Override
@@ -141,7 +150,13 @@ public class McpGatewayFilter extends OncePerRequestFilter {
             return;
         }
         var id = message.get("id");
-        switch (message.path("method").asString("")) {
+        var method = message.path("method").asString("");
+        if (NEEDS_TOOLS.contains(method) && !toolRegistration.await(TOOLS_WAIT)) {
+            response.setHeader("Retry-After", "10");
+            problem(response, 503, "mcp_unavailable", "The tools are not available yet; try again in a few seconds.");
+            return;
+        }
+        switch (method) {
             case "tools/list" -> reply(response, id, toolList(caller));
             case "resources/list" -> reply(response, id, resourceList());
             case "resources/templates/list" -> reply(response, id, templateList());

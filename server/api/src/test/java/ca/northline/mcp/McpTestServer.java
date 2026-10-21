@@ -68,7 +68,6 @@ abstract class McpTestServer {
     static void mcp(DynamicPropertyRegistry registry) {
         registry.add("server.port", () -> PORT);
         registry.add("springdoc.ai.mcp.enabled", () -> "true");
-        registry.add("springdoc.pre-loading-enabled", () -> "true");
         registry.add("springdoc.ai.mcp.base-url", () -> BASE);
         registry.add("northline.mcp.resource", () -> RESOURCE);
         registry.add("northline.mcp.authorization-server", () -> ISSUER);
