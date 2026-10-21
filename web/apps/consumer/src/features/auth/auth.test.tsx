@@ -251,7 +251,7 @@ describe('create account (S-154: email + password)', () => {
     // S-116: the language the Terms were shown in and no request for English
     expect(calls.find(c => c.url.endsWith('/api/auth/accounts'))!.body).toEqual({
       firstName: 'Amara Kofi', lastName: 'Osei', email: 'amara@example.ca', password: PASSWORD, passwordConfirm: PASSWORD, phone: null, terms: true,
-      termsLanguage: 'en', termsEnglishRequested: false, app: 'consumer',
+      termsLanguage: 'en', termsEnglishRequested: false, app: 'consumer', marketing: [],
     });
     await userEvent.type(await screen.findByLabelText('Code from the email'), '482913');
     await userEvent.click(screen.getByRole('button', { name: 'Confirm email' }));
@@ -264,6 +264,36 @@ describe('create account (S-154: email + password)', () => {
     expect(await screen.findByRole('status')).toHaveTextContent("Account created. Set your delivery address next so we can show your province's shops.");
     await userEvent.click(screen.getByRole('button', { name: 'Set my address' }));
     expect(assign).toHaveBeenCalledWith('/bff/login?next=%2Flocation');
+  });
+
+  it('S-157: unticked offers boxes (email, texts) with the server’s wording; texts need the mobile; ticked ones are sent', async () => {
+    routes['/api/auth/accounts/consent-wordings?app=consumer'] = () => ({ body: {
+      requester: 'Northline Marketplace Inc. · 1200 – 8th Avenue SW · support@northline.ca',
+      items: [
+        { category: 'marketing_email', channel: 'email', wordingVersion: 'account.email.2026-10', wording: 'Yes, Northline Marketplace Inc. may email me Northline’s offers, rewards and news.' },
+        { category: 'marketing_sms', channel: 'sms', wordingVersion: 'account.sms.2026-10', wording: 'Yes, Northline Marketplace Inc. may text me Northline’s offers and rewards.' },
+      ],
+    } });
+    const { calls } = open('/register');
+    const email = await screen.findByRole('checkbox', { name: /may email me/ });
+    const sms = screen.getByRole('checkbox', { name: /may text me/ });
+    expect((email as HTMLInputElement).checked).toBe(false);
+    expect((sms as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getByText('Add your mobile number above to get offers by text.')).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Full name'), 'Amara Kofi Osei');
+    await userEvent.type(screen.getByLabelText('Email'), 'amara@example.ca');
+    await userEvent.type(screen.getByLabelText('Password'), PASSWORD);
+    await userEvent.type(screen.getByLabelText('Confirm password'), PASSWORD);
+    await userEvent.click(screen.getByRole('checkbox', { name: /Terms/ }));
+    await userEvent.type(screen.getByLabelText(/Mobile number/), '+1 403 555 0201');
+    await userEvent.click(email);
+    await userEvent.click(screen.getByRole('checkbox', { name: /may text me/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    await screen.findByLabelText('Code from the email');
+    expect((calls.find(c => c.url.endsWith('/api/auth/accounts'))!.body as { marketing: unknown }).marketing).toEqual([
+      { category: 'marketing_email', wordingVersion: 'account.email.2026-10' },
+      { category: 'marketing_sms', wordingVersion: 'account.sms.2026-10' },
+    ]);
   });
 
   it('a second factor can be skipped', async () => {

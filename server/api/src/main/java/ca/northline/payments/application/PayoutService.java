@@ -58,16 +58,31 @@ class PayoutService implements ViewPayouts, MovePayouts, RunPayouts, PayoutPlan,
         var instantEligible = payouts.connectedAccount(merchantId)
                 .map(PayoutRepository.ConnectedAccount::instantPayouts)
                 .orElse(false);
+        var active = payouts.activeAccount(merchantId).orElse(null);
         return new Overview(
                 available,
                 available - reserve,
                 reserve,
                 schedule.nextAfter(now, pausedUntil, time.of(merchantId)).orElse(null),
                 schedule,
-                payouts.activeAccount(merchantId).orElse(null),
+                active,
                 pending,
                 pausedUntil != null && pausedUntil.isAfter(now) ? pausedUntil : null,
-                instantEligible);
+                instantEligible,
+                pending == null ? returned(merchantId, active) : null);
+    }
+
+    /**
+     * S-157: the newest payout, when the bank returned it ({@code failed}; a canceled one isn't the account's fault)
+     * and it went to the account still in use. A new bank account (pending or active) or a later payout ends it.
+     */
+    private ViewPayouts.@Nullable Returned returned(String merchantId, @Nullable PayoutAccount active) {
+        return payouts.history(merchantId, 1).stream()
+                .findFirst()
+                .filter(p -> p.getState() == Payout.State.FAILED)
+                .filter(p -> active != null && active.getId().equals(p.getPayoutAccountId()))
+                .map(p -> new ViewPayouts.Returned(p.getId(), p.getAmountCents(), p.getFailureCode(), p.getCreatedAt()))
+                .orElse(null);
     }
 
     @Override

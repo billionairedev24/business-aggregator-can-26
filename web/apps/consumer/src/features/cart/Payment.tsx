@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useFormatters } from '@northline/ui';
-import type { Started } from './api';
+import { paymentOptionsQuery, type Started } from './api';
 import { useCartT } from './messages';
 
 /**
@@ -18,6 +19,21 @@ export interface StripeJs {
 }
 declare global { interface Window { Stripe?: (key: string) => StripeJs } }
 
+/**
+ * S-157: Apple Pay / Google Pay next to the card form, as the api allows them (`GET /api/v1/public/payments/options`:
+ * only under Stripe, each switched on in configuration). `auto` lets Stripe show the wallet when the browser and the
+ * person's device can pay with it; `never` hides it. Until the answer arrives `ready` is false (the element mounts once,
+ * with the right wallets); a failed answer means cards only.
+ */
+export function useWallets(): { ready: boolean; wallets: { applePay: 'auto' | 'never'; googlePay: 'auto' | 'never' } } {
+  const q = useQuery(paymentOptionsQuery);
+  const o = q.data;
+  return {
+    ready: !q.isPending,
+    wallets: { applePay: o?.applePay ? 'auto' : 'never', googlePay: o?.googlePay ? 'auto' : 'never' },
+  };
+}
+
 async function loadStripe(key: string): Promise<StripeJs> {
   if (!window.Stripe) {
     await new Promise<void>((resolve, reject) => {
@@ -34,7 +50,8 @@ async function loadStripe(key: string): Promise<StripeJs> {
 /**
  * The Payment Element for the first PaymentIntent (the card is saved to the customer, `setup_future_usage`), then the
  * order's other PaymentIntents — one per order line and one for the delivery fee (S-11 escrow model) — confirmed with
- * the same PaymentMethod. Stripe shows 3-D Secure itself when a bank asks for it. The element mounts into `host`, which
+ * the same PaymentMethod (S-157: also when it came from Apple Pay or Google Pay — a wallet hands Stripe a card, saved to
+ * the customer like a typed one, so the later intents confirm with it the same way). Stripe shows 3-D Secure itself when a bank asks for it. The element mounts into `host`, which
  * must stay in the page until `confirm` (the 3-step checkout hides it while the review step is open, never unmounts it).
  * `check` validates what was typed without charging (the checkout's "Use this payment method"); `confirm` authorizes.
  */
@@ -45,20 +62,21 @@ export function useStripePayment(started: Started | null, onError: (message: str
   const pending = started ? started.intents.filter(i => i.status !== 'authorized' && i.clientSecret) : [];
   const first = pending[0];
   const key = started?.payment.provider === 'stripe' ? started.payment.publishableKey : null;
+  const options = useWallets();
 
   useEffect(() => {
-    if (!first || !key || !host.current) return;
+    if (!first || !key || !host.current || !options.ready) return;
     let element: StripeElement | undefined;
     let cancelled = false;
     void loadStripe(key).then(js => {
       if (cancelled || !host.current) return;
       const elements = js.elements({ clientSecret: first.clientSecret!, locale: document.documentElement.lang.startsWith('fr') ? 'fr-CA' : 'en-CA' });
-      element = elements.create('payment', { layout: 'tabs' });
+      element = elements.create('payment', { layout: 'tabs', wallets: options.wallets });
       element.mount(host.current);
       setStripe({ js, elements });
     }).catch(() => onError(t('err_generic')));
     return () => { cancelled = true; element?.destroy(); setStripe(undefined); };
-  }, [first?.clientSecret]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [first?.clientSecret, options.ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const check = async (): Promise<boolean> => {
     if (!stripe) return false;

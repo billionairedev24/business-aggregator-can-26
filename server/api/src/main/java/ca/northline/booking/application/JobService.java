@@ -87,7 +87,8 @@ class JobService implements ListJobs, ViewJob, AdvanceJob, RequestApproval {
                 : new Customer(
                         customerPerson.displayName(),
                         customerPerson.reliabilityScore(),
-                        queries.pastJobs(viewer.merchantId(), customerPerson.id(), job.startsAt()));
+                        queries.pastJobs(viewer.merchantId(), customerPerson.id(), job.startsAt()),
+                        customerPerson.noShows());
         return new JobDetail(
                 job.id(),
                 job.ref(),

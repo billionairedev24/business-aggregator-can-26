@@ -20,3 +20,7 @@
 .nl-acct-key { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: var(--text-sm, 0.875rem); word-break: break-all; color: var(--color-text); }
 .nl-acct-codes { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px var(--space-3, 12px); margin: 0; padding: var(--space-3, 12px) var(--space-3, 12px) var(--space-3, 12px) 2.25em; border: 1px solid var(--color-border); border-radius: var(--radius-md, 12px); background: var(--color-canvas); }
 .nl-acct-codes code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: var(--text-md, 1rem); color: var(--color-text); }
+/* S-157: the sign-up forms' marketing checkboxes (CASL: unticked, optional) */
+.nl-acct-marketing { display: flex; flex-direction: column; gap: var(--space-2, 8px); margin: var(--space-3, 12px) 0 0; padding: var(--space-3, 12px); border: 1px solid var(--color-border); border-radius: var(--radius-md, 12px); min-width: 0; }
+.nl-acct-marketing-title { padding: 0 4px; font-weight: 600; color: var(--color-text); }
+.nl-acct-marketing p { margin: 0; }

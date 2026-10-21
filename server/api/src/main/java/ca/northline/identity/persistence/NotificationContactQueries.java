@@ -2,6 +2,7 @@ package ca.northline.identity.persistence;
 
 import ca.northline.identity.api.NotificationContacts;
 import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
@@ -43,5 +44,16 @@ class NotificationContactQueries implements NotificationContacts {
                 .list()
                 .stream()
                 .collect(Collectors.toUnmodifiableMap(Contact::id, Function.identity()));
+    }
+
+    @Override
+    public List<String> usersWithPhone(String e164) {
+        return jdbc.sql("""
+                        select id from identity.users
+                         where phone = :phone and coalesce(status, 'active') = 'active'
+                         order by phone_verified_at desc nulls last, id""")
+                .param("phone", e164)
+                .query((rs, _) -> rs.getString("id"))
+                .list();
     }
 }

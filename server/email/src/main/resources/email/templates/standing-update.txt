@@ -1,0 +1,15 @@
+[# th:with="what=${#messages.msg('standing-update.subject-name.' + about)}"]
+[(#{__${'standing-update.heading.' + change}__})]
+
+[(#{__${'standing-update.body.' + change}__(${businessName}, ${what}, ${reference})})]
+
+[(#{standing-update.reason-given(${staffReason})})]
+[# th:if="${compensation != ''}"]
+[(#{standing-update.compensation(${compensation})})]
+[/]
+[(#{__${'standing-update.next.' + change}__})]
+
+[(#{standing-update.cta})]: [(${link})]
+[/]
+
+[# th:insert="~{footer.txt}" /]

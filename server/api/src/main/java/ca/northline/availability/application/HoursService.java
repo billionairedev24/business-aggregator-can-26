@@ -15,6 +15,7 @@ import ca.northline.availability.domain.SlotPlanner;
 import ca.northline.availability.domain.WeeklyHours;
 import ca.northline.catalogue.api.CatalogueFacts;
 import ca.northline.catalogue.api.CatalogueFacts.ServiceDuration;
+import ca.northline.catalogue.api.InstantBook;
 import ca.northline.region.api.CancellationRules;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
@@ -42,6 +43,7 @@ class HoursService implements ViewHours, SaveHours, PreviewSlots, ListPreviewSer
     /** Offered when the catalogue has no service with a duration yet. */
     static final List<Integer> FALLBACK_DURATIONS = List.of(30, 45, 60, 90);
 
+    private final InstantBook instantBook;
     private final HoursRepository hours;
     private final Team team;
     private final DaySchedule schedule;
@@ -142,6 +144,8 @@ class HoursService implements ViewHours, SaveHours, PreviewSlots, ListPreviewSer
         if (rules.lateCancelFeeBps() != null && rules.lateCancelFeeBps() > limits.maxFeeBps()) {
             throw RuleViolation.of("lateCancelFee", "range", FEE_LIMIT.formatted(limits.maxFeeBps() / 100));
         }
+        // S-156: "Instant book" is the business's instant-book switch; turning it on while Northline paused it is a 409
+        instantBook.setEnabled(merchantId, rules.acceptMode() == BookingRules.AcceptMode.INSTANT, actorId);
         var at = clock.instant();
         hours.saveRules(merchantId, rules, at);
         events.publishEvent(new AvailabilityChanged(Ids.next(), at, merchantId, actorId, "rules"));

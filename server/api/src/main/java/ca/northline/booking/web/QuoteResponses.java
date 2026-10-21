@@ -61,6 +61,7 @@ final class QuoteResponses {
             String title,
             @Nullable String customerName,
             @Nullable BigDecimal reliability,
+            int customerNoShows,
             @Nullable String area,
             @Nullable String body,
             @Nullable Instant preferredAt,

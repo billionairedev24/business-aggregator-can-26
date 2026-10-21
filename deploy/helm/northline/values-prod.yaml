@@ -45,6 +45,7 @@ apps:
       TAX_PROVIDER: stripe          # S-21: Stripe Tax (with STRIPE_SECRET_KEY); `local` is refused here
       IDENTITY_PROVIDER: stripe       # S-22: Stripe Identity for owners ≥ 25 % (uses STRIPE_SECRET_KEY)
       AGE_VERIFICATION_PROVIDER: stripe  # 2026-10-04: customers' age check before alcohol (Stripe Identity; `local` refused)
+      DISPUTE_EVIDENCE_PROVIDER: stripe  # S-156: card-dispute evidence to Stripe from the console (live mode; `local` refused)
       PLUS_BILLING_PROVIDER: stripe   # S-152: Northline Plus on Stripe Billing (live mode; `local` refused). The price ids
       # STRIPE_PLUS_MONTHLY_PRICE / STRIPE_PLUS_ANNUAL_PRICE go in the operator's configEnv (docs/runbooks/stripe.md § 11).
       # S-23: business registries. Corporations Canada needs the API Store subscription (URL in configEnv, key as a

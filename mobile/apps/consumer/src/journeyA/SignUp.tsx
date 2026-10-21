@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { StyleSheet, View, type TextInput } from 'react-native';
 
@@ -8,6 +9,7 @@ import { useAccountFlow } from '../auth/AccountFlow';
 import { useAuth } from '../auth/AuthProvider';
 import { fieldErrors, flowError, validateSignUp, type SignUpField, type SignUpForm } from '../auth/rules';
 import { useI18n } from '../i18n';
+import { services } from '../services';
 import { Body, Button, Checkbox, Field, Link, Notice, Row, Title } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { TermsLabel } from './LegalText';
@@ -20,7 +22,7 @@ import { useAfterSignIn } from './useAfterSignIn';
  * the browser (the app has no native Sign in with Apple / Google).
  */
 export function SignUp() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const flow = useAccountFlow();
   const { signInWithBrowser } = useAuth();
   const afterSignIn = useAfterSignIn();
@@ -28,6 +30,9 @@ export function SignUp() {
   const [errors, setErrors] = useState<Partial<Record<SignUpField, string>>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // S-157: unticked offers boxes (email, texts) with the auth server's wording — CASL express consent; no wording, no box
+  const wordings = useQuery({ queryKey: ['auth', 'consent-wordings', locale], queryFn: () => services().authApi.consentWordings(), retry: false, staleTime: 10 * 60_000 });
+  const [ticked, setTicked] = useState<Record<string, boolean>>({});
   const nameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
 
@@ -44,7 +49,10 @@ export function SignUp() {
     if (Object.keys(found).length) return;
     setBusy(true);
     try {
-      await flow.register(form);
+      const marketing = (wordings.data?.items ?? [])
+        .filter((i) => ticked[i.category] && (i.category !== 'marketing_sms' || form.phone.trim()))
+        .map((i) => ({ category: i.category, wordingVersion: i.wordingVersion }));
+      await flow.register(form, marketing);
       router.push('/verify');
     } catch (e) {
       const fields = fieldErrors(e, t);
@@ -126,6 +134,17 @@ export function SignUp() {
         <Checkbox checked={form.terms} onChange={(v) => change('terms', v)} label={t('signup.terms')} error={errors.terms} testID="terms">
           <TermsLabel />
         </Checkbox>
+        {wordings.data?.items.length ? (
+          <View style={styles.marketing} accessibilityRole="none">
+            <Body tone="item">{t('signup.marketingTitle')}</Body>
+            {wordings.data.items.map((i) => (
+              <Checkbox key={i.category} checked={!!ticked[i.category]} onChange={(v) => setTicked((x) => ({ ...x, [i.category]: v }))} label={i.wording} testID={`consent-${i.category}`}>
+                <Body tone="small">{i.wording}</Body>
+              </Checkbox>
+            ))}
+            <Body tone="small">{t('signup.marketingNote', { requester: wordings.data.requester })}</Body>
+          </View>
+        ) : null}
       </View>
     </Screen>
   );
@@ -136,4 +155,5 @@ const styles = StyleSheet.create({
   // two to a row when they fit; "Continue with Apple" in French or at a large text size takes its own row
   half: { flexGrow: 1, flexBasis: 180, paddingHorizontal: space[3] },
   center: { justifyContent: 'center' },
+  marketing: { gap: space[2] },
 });

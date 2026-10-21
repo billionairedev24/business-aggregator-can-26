@@ -26,12 +26,16 @@ class PersonDirectoryQueries implements PersonDirectory {
         }
         return jdbc
                 .sql("""
-                        select id, coalesce(display_name, '') as display_name, reliability_score
+                        select id, coalesce(display_name, '') as display_name, reliability_score,
+                               case when no_show_restricted_at is null then 0 else no_show_count end as no_shows
                           from identity.users where id in (:ids)
                         """)
                 .param("ids", userIds.stream().distinct().toList())
                 .query((rs, _) -> new Person(
-                        rs.getString("id"), rs.getString("display_name"), rs.getBigDecimal("reliability_score")))
+                        rs.getString("id"),
+                        rs.getString("display_name"),
+                        rs.getBigDecimal("reliability_score"),
+                        rs.getInt("no_shows")))
                 .list()
                 .stream()
                 .collect(Collectors.toUnmodifiableMap(Person::id, Function.identity()));

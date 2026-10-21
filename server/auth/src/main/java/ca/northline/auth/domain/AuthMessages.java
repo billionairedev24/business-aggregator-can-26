@@ -21,6 +21,12 @@ public final class AuthMessages {
     public static final String TERMS_LANGUAGE = "Send en or fr as the language of the Terms you accepted.";
 
     // Not in the spec (DECISIONS.md)
+    /** S-157: the sign-up consent checkboxes (CASL) — the same words as the api's settings. */
+    public static final String CONSENT_WORDING_CHANGED =
+            "The consent wording has changed. Read it again before you agree.";
+
+    public static final String CONSENT_SMS_NEEDS_PHONE = "Add your mobile number to get offers by text.";
+    public static final String CONSENT_CHOOSE = "Choose from the list.";
     public static final String EMAIL_TAKEN = "An account already uses this email. Sign in instead.";
     public static final String PHONE_TAKEN = "An account already uses this mobile number. Sign in instead.";
     public static final String CODE_REQUIRED = "Enter the 6-digit code.";

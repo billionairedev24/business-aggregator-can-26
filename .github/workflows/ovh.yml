@@ -347,7 +347,7 @@ jobs:
         run: scripts/ovh/ci.sh close "$TARGET"
 
   scale:
-    name: scale (${{ inputs.action }})
+    name: scale (down/up)
     needs: prepare
     if: needs.prepare.outputs.scale == 'true'
     runs-on: ubuntu-24.04

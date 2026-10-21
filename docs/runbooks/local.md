@@ -311,14 +311,22 @@ Notes:
 - **Courier payouts (S-151):** without a Stripe key the api pays couriers through a fake: asking for the payout
   onboarding link (courier app › Profile › Earnings) enables the courier's account at once, and the weekly run
   (`COURIER_PAYOUTS_CRON`, Mondays) pays the next business morning. With `payments` (stripe-mock) the Connect calls go
-  to stripe-mock instead ([stripe.md § 13](stripe.md#13-courier-payouts-s-151)).
+  to stripe-mock instead ([stripe.md § 15](stripe.md#13-courier-payouts-s-151)).
 - **Mail:** the api emails team invitations and money notices to Mailpit (`EMAIL_PROVIDER=local`, the default); without
   Mailpit each email's text is logged instead. Template previews: http://localhost:8080/api/v1/dev/emails
   ([email.md](email.md#local-mailpit)).
-- **Marketing consent (S-108, [casl.md](casl.md)):** Account › Notifications › "Marketing messages" records CASL
-  consents in `messaging.consent_records`; no commercial message is sent by anything yet. The unsubscribe page is
-  `http://localhost:8080/api/v1/email/unsubscribe?t=…` (no sign-in); `EMAIL_LEGAL_NAME` defaults to
-  `Northline Marketplace Inc.`.
+- **Marketing consent (S-108, S-157, [casl.md](casl.md)):** Account › Notifications › "Marketing messages" records CASL
+  consents in `messaging.consent_records`; so do the unticked offers boxes of the sign-up forms (consumer, Studio, app)
+  and of the checkouts. The unsubscribe page is `http://localhost:8080/api/v1/email/unsubscribe?t=…` (no sign-in);
+  `EMAIL_LEGAL_NAME` defaults to `Northline Marketplace Inc.`. **Text replies:** with `SMS_PROVIDER=local` the inbound
+  webhook is the fake — no signature, local profile only:
+  `curl -d MessageSid=SMlocal1 -d From=+14035550201 -d Body=STOP localhost:8080/api/v1/webhooks/sms/inbound` (the
+  TwiML reply is the confirmation; `START`, `HELP` too). `SMS_STATUS_CALLBACK_URL` stays empty locally. **Offers:** the
+  console's Offers screen (`OFFERS_PER_MINUTE`, default 30) queues them for the worker, which sends them to Mailpit and
+  the SMS log.
+- **Apple Pay / Google Pay (S-157):** off locally (`STRIPE_APPLE_PAY`, `STRIPE_GOOGLE_PAY` default `false`; the fake
+  gateway never offers them). `NL_APPLE_PAY_DOMAIN_ASSOCIATION` (consumer web) is empty, so
+  `/.well-known/apple-developer-merchantid-domain-association` answers 404 ([stripe.md § 15](stripe.md#15-apple-pay-and-google-pay-s-157)).
 - **Owners' identity (S-22):** `IDENTITY_PROVIDER=local` (the default) — "This is me · verify now" in Onboarding ›
   Verification opens http://localhost:8080/api/v1/dev/identity-sessions/vs_fake_… where you pick how Stripe Identity
   ends (verified, name mismatch, `document_expired`, …); emailed links land in Mailpit and open the same page. To try
@@ -336,6 +344,13 @@ Notes:
   billing (`PLUS_BILLING_PROVIDER=local`: no card, no tax); to try Stripe Billing set `PLUS_BILLING_PROVIDER=stripe`,
   `STRIPE_PLUS_MONTHLY_PRICE` / `STRIPE_PLUS_ANNUAL_PRICE` (test-mode prices) and a test `STRIPE_SECRET_KEY`, and forward
   `customer.subscription.*` and `invoice.paid` with `stripe listen` ([stripe.md § 11](stripe.md#11-northline-plus--stripe-billing-s-152)).
+- **Standing, appeals and card disputes (S-156, [standing.md](standing.md)):** nothing to set. Report a customer
+  no-show from Studio › Appointments (15 min after the start) or a provider no-show from the customer's "Something's
+  wrong"; confirm the flags in the console's Trust & safety; `EnforceStanding.run()` (nightly at
+  `STANDING_ENFORCEMENT_CRON`, not under `test`) pauses instant book after 3 in 30 days. Studio › Standing shows the
+  consequences and takes appeals; the console's Trust & safety › Appeals decides them. Card-dispute evidence goes to
+  the local fake (`DISPUTE_EVIDENCE_PROVIDER=local`; a Stripe dispute id containing `rejectEvidence` is refused, to try
+  the error path); set `stripe` with a test key and `stripe trigger charge.dispute.created` to try Stripe.
 - **Business registries (S-23):** the three sources answer from `server/api/src/main/resources/registries/fixtures.json`
   (e.g. Alberta `2021456789` = Prairie Wrench, Calgary `BL 22-118840` = Pho Dau Bo); unknown numbers go to the manual
   review queue (`GET /api/v1/console/registry-reviews`, staff). To try Calgary's real dataset:

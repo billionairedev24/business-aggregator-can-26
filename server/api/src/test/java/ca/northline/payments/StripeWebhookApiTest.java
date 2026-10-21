@@ -1,6 +1,7 @@
 package ca.northline.payments;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -19,6 +20,7 @@ import ca.northline.payments.application.RespondToCases;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.support.IntegrationTest;
+import ca.northline.support.TestJwt;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -280,6 +282,32 @@ class StripeWebhookApiTest extends IntegrationTest {
     // ── payouts ──────────────────────────────────────────────────────────────────────────────────────────────────
 
     @Test
+    void s157_aReturnedPayout_isTheStudiosNotice_untilALaterPayoutGoesOut() throws Exception {
+        fx.credit(shop.merchantId(), 30_000, "escrow", Ids.next(), Instant.now().minusSeconds(3_600));
+        var payout =
+                move.instant(new MovePayouts.InstantCommand(shop.merchantId(), 10_000, shop.ownerId(), Ids.next()));
+        connect(
+                "payout.failed",
+                Instant.now(),
+                "{\"id\":\"%s\",\"object\":\"payout\",\"status\":\"failed\",\"failure_code\":\"account_closed\"}"
+                        .formatted(payout.getStripePayout()),
+                "acct_" + shop.merchantId());
+        mvc.perform(get("/api/v1/merchants/{id}/payouts/overview", shop.merchantId())
+                        .with(TestJwt.member(shop.ownerId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.returned.payoutId").value(payout.getId()))
+                .andExpect(jsonPath("$.returned.amountCents").value(10_000))
+                .andExpect(jsonPath("$.returned.failureCode").value("account_closed"));
+        // the next payout reached the bank: nothing to fix any more
+        var next = move.instant(new MovePayouts.InstantCommand(shop.merchantId(), 5_000, shop.ownerId(), Ids.next()));
+        assertThat(next.getId()).isNotEqualTo(payout.getId());
+        mvc.perform(get("/api/v1/merchants/{id}/payouts/overview", shop.merchantId())
+                        .with(TestJwt.member(shop.ownerId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.returned").isEmpty());
+    }
+
+    @Test
     void payoutPaid_thenFailed_returnsTheMoney_andALatePaidChangesNothing() throws Exception {
         fx.credit(shop.merchantId(), 30_000, "escrow", Ids.next(), Instant.now().minusSeconds(3_600));
         var payout =
@@ -406,6 +434,67 @@ class StripeWebhookApiTest extends IntegrationTest {
                 t0.plusSeconds(5),
                 dispute(dp, held.paymentIntent(), "needs_response", 16_000, due));
         assertThat(disputeRow(dp).get("stripe_status")).isEqualTo("lost");
+    }
+
+    /** A dispute with its balance transactions (Stripe's fee on each). */
+    static String disputeWithFees(String id, String pi, String status, Instant dueBy, String... txns) {
+        var json = dispute(id, pi, status, 16_000, dueBy);
+        return json.substring(0, json.length() - 1) + ",\"balance_transactions\":[" + String.join(",", txns) + "]}";
+    }
+
+    static String txn(String id, long amount, long fee) {
+        return """
+                {"id":"%s","object":"balance_transaction","amount":%d,"fee":%d,"created":%d}""".formatted(id, amount, fee, Instant.now().getEpochSecond());
+    }
+
+    long ledger(String account, String refId) {
+        return jdbc.sql("""
+                        select coalesce(sum(debit_cents - credit_cents), 0) from payments.ledger_entries
+                         where account = ? and ref_id = ?""").params(account, refId).query(Long.class).single();
+    }
+
+    /**
+     * S-156: Stripe's dispute fee is recorded once per balance transaction (Northline carries it), a fee given back
+     * reverses it, and the issuer's deadline is kept for the console.
+     */
+    @Test
+    void chargebackFees_areInTheLedgerOnce_andTheIssuersDeadlineIsKept() throws Exception {
+        var held = released(16_000);
+        var dp = "dp_" + Ids.next();
+        var due = Instant.now().plus(Duration.ofDays(9)).truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        var t0 = Instant.now().minusSeconds(120);
+        var withdrawn = "txn_" + Ids.next();
+        platform(
+                "charge.dispute.created",
+                t0,
+                disputeWithFees(dp, held.paymentIntent(), "needs_response", due, txn(withdrawn, -16_000, 1_500)));
+        platform(
+                "charge.dispute.funds_withdrawn",
+                t0.plusSeconds(5),
+                disputeWithFees(dp, held.paymentIntent(), "needs_response", due, txn(withdrawn, -16_000, 1_500)));
+        assertThat(ledger("dispute_fees", withdrawn)).isEqualTo(1_500);
+        assertThat(ledger("stripe_balance", withdrawn)).isEqualTo(-1_500);
+        var row = disputeRow(dp);
+        assertThat(((java.sql.Timestamp) row.get("stripe_evidence_due_by")).toInstant())
+                .isEqualTo(due);
+
+        var reinstated = "txn_" + Ids.next();
+        platform(
+                "charge.dispute.funds_reinstated",
+                t0.plusSeconds(10),
+                disputeWithFees(
+                        dp,
+                        held.paymentIntent(),
+                        "won",
+                        due,
+                        txn(withdrawn, -16_000, 1_500),
+                        txn(reinstated, 16_000, -1_500)));
+        assertThat(ledger("dispute_fees", reinstated)).isEqualTo(-1_500);
+        assertThat(jdbc.sql("select coalesce(sum(fee_cents), 0) from payments.dispute_fees where dispute_id = ?")
+                        .params(row.get("id"))
+                        .query(Long.class)
+                        .single())
+                .isZero();
     }
 
     @Test

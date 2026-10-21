@@ -1,6 +1,7 @@
 [(#{__${'payout-failed.heading.' + outcome}__})]
 
 [(#{__${'payout-failed.body.' + outcome}__(${amount}, ${businessName})})]
+[(#{__${'payout-failed.why.' + why}__})]
 [# th:if="${hasCode}"]
 [(#{payout-failed.code(${code})})]
 [/]

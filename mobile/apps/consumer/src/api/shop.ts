@@ -68,6 +68,9 @@ export interface Interpretation {
   radiusKm?: number | null; sort?: string | null; explanation: string; aiAssisted?: boolean;
 }
 
+/** S-157: `GET /public/payments/options`. */
+export interface PaymentOptions { provider: 'stripe' | 'fake'; applePay: boolean; googlePay: boolean }
+
 // ── cart and checkout (S-51) ─────────────────────────────────────────────────────────────────────────────────────
 export interface CartLine {
   itemId: string; merchantId: string; offerId: string; variantId?: string | null; productId: string; name: string;
@@ -214,6 +217,8 @@ export const shopApi = (api: ApiClient) => ({
     api.post<Started>(`/me/checkouts?${qs({ lang: lang(l) })}`, { json: body, idempotencyKey: key, headers: proof ? { 'X-Step-Up': proof } : undefined }),
   place: (checkoutId: string, key: string) => api.post<Placed>(`/me/checkouts/${id(checkoutId)}/place`, { idempotencyKey: key }),
   cards: () => api.get<Cards>('/me/payment-methods'),
+  /** S-157: the wallets checkouts may offer (public, the same for everyone). */
+  paymentOptions: () => api.get<PaymentOptions>('/public/payments/options', { auth: 'optional' }),
   ageStatus: () => api.get<AgeStatus>('/me/age-verification'),
   /** Opens the identity provider's session; the app opens `url` in the in-app browser, which returns to the app. */
   startAgeCheck: () => api.post<{ url: string; status: AgeStatus }>('/me/age-verification', { json: { returnTo: 'app' } }),

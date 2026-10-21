@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AASA_PATH, ASSETLINKS_PATH, appLinkAnswer, appLinksConfig, isAppLinkPath } from '../../server/app-links.mjs';
+import { AASA_PATH, APPLE_PAY_PATH, ASSETLINKS_PATH, appLinkAnswer, appLinksConfig, isAppLinkPath } from '../../server/app-links.mjs';
 
 const FINGERPRINT = '14:6D:E9:83:C5:73:06:50:D8:EE:B9:95:2F:34:FC:64:16:A0:83:42:E6:1D:BE:A8:8A:04:96:B2:3F:CF:44:E5';
 
@@ -48,5 +48,15 @@ describe('App Links / Universal Links (S-97)', () => {
     expect(isAppLinkPath('/courier/oauth2redirect')).toBe(true);
     expect(isAppLinkPath('/app/other')).toBe(false);
     expect(appLinkAnswer('/sitemap.xml', config)).toBeNull();
+  });
+
+  it('S-157: serves the Apple Pay domain association file from configuration, as plain text, else 404', () => {
+    const content = '7b2270737049223a2246616b65446f6d61696e417373736f63696174696f6e227d';
+    const withFile = appLinksConfig({ NL_APPLE_PAY_DOMAIN_ASSOCIATION: `  ${content}\n` });
+    expect(isAppLinkPath(APPLE_PAY_PATH)).toBe(true);
+    expect(APPLE_PAY_PATH).toBe('/.well-known/apple-developer-merchantid-domain-association');
+    const a = appLinkAnswer(APPLE_PAY_PATH, withFile)!;
+    expect(a).toMatchObject({ status: 200, type: 'text/plain; charset=utf-8', body: content });
+    expect(appLinkAnswer(APPLE_PAY_PATH, config)!.status).toBe(404);
   });
 });

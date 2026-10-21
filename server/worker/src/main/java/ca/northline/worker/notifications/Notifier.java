@@ -145,6 +145,14 @@ public final class Notifier {
                 deferred.done(row.id());
                 continue;
             }
+            // S-157: a queued offer (or an outage retry) that comes due inside the person's quiet hours waits for them
+            // to end, without counting as an attempt
+            if (!notice.security()
+                    && row.channel().quietable()
+                    && person.preferences().quietAt(now)) {
+                deferred.postpone(row.id(), person.preferences().quietEndsAfter(now));
+                continue;
+            }
             var failure = attempt(notice, person, row.channel(), business(notice));
             if (failure == null) {
                 deferred.done(row.id());

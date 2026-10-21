@@ -38,13 +38,13 @@ export const REGIONS = {
 
 export const SESSION = { user: { id: '01J9ZD3V00000000000000PNA1', firstName: 'Priya', lastName: 'Natarajan', initials: 'PN', locale: 'en-CA' }, acr: 'mfa' };
 
-const ALL = ['overview', 'orders', 'disputes', 'delivery', 'sellers', 'verify', 'pilot', 'vetting', 'trust', 'taxonomy', 'support', 'regions', 'finance', 'reports', 'privacy', 'uat', 'go_live', 'api', 'team', 'profile', 'oncall'];
+const ALL = ['overview', 'orders', 'disputes', 'delivery', 'sellers', 'verify', 'pilot', 'vetting', 'trust', 'taxonomy', 'support', 'regions', 'finance', 'reports', 'privacy', 'offers', 'uat', 'go_live', 'api', 'team', 'profile', 'oncall'];
 /** The api's grants (StaffRole), for `GET /api/v1/console/me`. */
 export const GRANTS: Record<RoleCode, { role: RoleCode; screens: string[]; actions: string[] }> = {
-  admin: { role: 'admin', screens: ALL, actions: ['suspend', 'decide', 'refund', 'province', 'payouts', 'keys', 'verify', 'vet', 'dispatch', 'support', 'macros', 'privacy', 'onboard', 'uat', 'attest', 'promotions', 'approve'] },
+  admin: { role: 'admin', screens: ALL, actions: ['suspend', 'decide', 'refund', 'province', 'payouts', 'keys', 'verify', 'vet', 'dispatch', 'support', 'macros', 'privacy', 'onboard', 'uat', 'attest', 'promotions', 'approve', 'offers'] },
   trust_safety: { role: 'trust_safety', screens: ['overview', 'disputes', 'sellers', 'verify', 'vetting', 'trust', 'support', 'team', 'pilot', 'go_live'], actions: ['suspend', 'decide', 'verify', 'approve', 'vet', 'support'] },
   dispatch: { role: 'dispatch', screens: ['overview', 'orders', 'delivery', 'support'], actions: ['dispatch'] },
-  finance: { role: 'finance', screens: ['overview', 'disputes', 'finance', 'reports', 'team', 'go_live'], actions: ['refund', 'payouts', 'attest', 'promotions', 'approve'] },
+  finance: { role: 'finance', screens: ['overview', 'disputes', 'finance', 'reports', 'team', 'go_live', 'offers'], actions: ['refund', 'payouts', 'attest', 'promotions', 'approve', 'offers'] },
   support: { role: 'support', screens: ['overview', 'orders', 'disputes', 'sellers', 'support', 'uat'], actions: ['support', 'uat'] },
   support_lead: { role: 'support_lead', screens: ['overview', 'orders', 'disputes', 'sellers', 'support', 'privacy', 'uat'], actions: ['support', 'macros', 'privacy', 'onboard', 'uat'] },
   analyst: { role: 'analyst', screens: ['overview', 'reports'], actions: [] },

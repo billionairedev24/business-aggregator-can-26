@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import {
   BoHeader, Button, Chip, DataTable, Drawer, ErrorState, Field, formatMoney, formatNumber, KpiStrip, PageSkeleton, SheetSection, Tag, TextArea, TextInput, useLocale,
   type DataTableColumn, type DataTableTone,
@@ -41,7 +41,7 @@ export function Disputes() {
   const age = useAge();
   const { locale } = useLocale();
   const { roleName } = useGrant();
-  const head = <BoHeader title={t('title')} sub={t('lede')} actions={<PlaceFilters to={SCREEN_PATH.disputes} filter={filter} />} />;
+  const head = <BoHeader title={t('title')} sub={t('lede')} actions={<><Link className="btn btn-secondary" to="/disputes/card">{t('cardLink')}</Link><PlaceFilters to={SCREEN_PATH.disputes} filter={filter} /></>} />;
   if (query.isPending) return <div className="bo-page">{head}<PageSkeleton kpis={3} rows={4} /></div>;
   if (query.isError && !query.data) {
     return <div className="bo-page">{head}{query.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />}</div>;

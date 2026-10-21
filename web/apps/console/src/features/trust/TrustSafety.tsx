@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { BoHeader, Button, ChartCard, DataTable, Dialog, ErrorState, Field, formatNumber, PageSkeleton, TextArea, TextInput, UnderlineTabs, useLocale, type DataTableColumn } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
@@ -24,7 +24,8 @@ export function actionFor(f: Flag): string {
   if (f.targetType === 'review') return 'hide_review';
   if (f.rule === 'off_platform_payment') return 'warn';
   if (f.rule === 'floor_breach') return 'coach';
-  if (f.rule === 'no_show' && f.targetType === 'customer') return 'confirm';
+  // S-156: no-shows reported on a booking (the provider's: no_show; the customer's: customer_no_show) are confirmed
+  if (f.rule === 'no_show' || f.rule === 'customer_no_show') return 'confirm';
   if (f.rule === 'regulated_without_permit') return 'suspend_listings';
   return 'escalate';
 }
@@ -69,7 +70,7 @@ function RulesAndFlags({ filter }: { filter: PlaceFilter }) {
   const rules = useQuery(rulesQuery);
   const flags = useQuery(flagsQuery(filter));
   const { can, roleName } = useGrant();
-  const head = <><BoHeader title={t('title')} sub={t('lede')} actions={<PlaceFilters to={SCREEN_PATH.trust} filter={filter} />} /><TrustTabs view="rules" filter={filter} /></>;
+  const head = <><BoHeader title={t('title')} sub={t('lede')} actions={<><Link className="btn btn-secondary" to="/trust/appeals">{t('appeals')}</Link><PlaceFilters to={SCREEN_PATH.trust} filter={filter} /></>} /><TrustTabs view="rules" filter={filter} /></>;
   if (rules.isPending || flags.isPending) return <div className="bo-page">{head}<PageSkeleton kpis={0} rows={6} /></div>;
   if (rules.isError || (flags.isError && !flags.data)) {
     return <div className="bo-page">{head}{flags.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => { void rules.refetch(); void flags.refetch(); }} />}</div>;

@@ -24,4 +24,10 @@ public interface CustomerJobRefs {
     Optional<JobRef> quoteRequest(String merchantId, String requestId);
 
     Optional<JobRef> booking(String merchantId, String bookingId);
+
+    /** S-156: the visit of one of the business's bookings (for a no-show report): its customer, state and start. */
+    Optional<Visit> visit(String merchantId, String bookingId);
+
+    /** @param state {@code booking.bookings.state} */
+    record Visit(String bookingId, String customerId, String state, java.time.Instant startsAt) {}
 }

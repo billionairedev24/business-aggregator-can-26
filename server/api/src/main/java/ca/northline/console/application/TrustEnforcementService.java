@@ -1,6 +1,7 @@
 package ca.northline.console.application;
 
 import ca.northline.merchants.api.SellerSanctions;
+import ca.northline.standing.api.StaffLifts;
 import ca.northline.trust.api.TrustConsequences;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
@@ -18,15 +19,22 @@ class TrustEnforcementService implements EnforceTrustRules {
 
     private final TrustConsequences trust;
     private final SellerSanctions sanctions;
+    private final StaffLifts lifts;
 
     @Override
     @Transactional
     public Result run() {
         var floor = trust.ratingFloor();
+        // S-156: what staff lifted (by hand or by granting an appeal) stays lifted for the rule's window
+        var shown = lifts.liftedWithin("search_hidden", java.time.Duration.ofDays(floor.days()));
+        var reinstated = lifts.liftedWithin("suspended", WARNING_WINDOW);
         int hidden = 0;
         int restored = 0;
         int suspended = 0;
         for (var below : trust.belowRatingFloor()) {
+            if (shown.contains(below.merchantId())) {
+                continue;
+            }
             var reason = String.format(
                     Locale.ROOT,
                     "Average rating %.2f over %d days is below the floor of %.1f (%d reviews). It shows in search again"
@@ -46,9 +54,10 @@ class TrustEnforcementService implements EnforceTrustRules {
             }
         }
         for (var id : trust.offPlatformAfterWarning(WARNING_WINDOW)) {
-            if (sanctions.suspend(
-                    id,
-                    "Off-platform payment mentioned again after a warning (Northline's rules: warning, then suspension).")) {
+            if (!reinstated.contains(id)
+                    && sanctions.suspend(
+                            id,
+                            "Off-platform payment mentioned again after a warning (Northline's rules: warning, then suspension).")) {
                 suspended++;
             }
         }

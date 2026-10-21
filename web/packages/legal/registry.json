@@ -63,21 +63,23 @@
     },
     {
       "id": "casl-consent-wordings",
-      "title": "CASL express-consent wordings (S-108)",
+      "title": "CASL express-consent wordings (S-108, S-157)",
       "kind": "code",
-      "source": "server/api/src/main/java/ca/northline/messaging/domain/ConsentWordings.java",
+      "source": "server/email/src/main/java/ca/northline/email/ConsentWordings.java",
       "pinnedBy": "ConsentWordingsTest (hash of every published wording); legal.test.mjs (the registry lists every version id)",
       "languages": ["en", "fr"],
       "appearsIn": [
         "consumer web and app Account › Notifications › Marketing messages (account.*)",
-        "Studio Settings › Notifications › Marketing from Northline (studio.email)"
+        "Studio Settings › Notifications › Marketing from Northline (studio.email)",
+        "S-157: the sign-up forms' and the checkouts' offers boxes (account.*, studio.email), the reply to a START text (keyword.sms)"
       ],
       "acceptanceRecord": "messaging.consent_records.wording_version + language",
       "versions": [
         { "version": "account.email.2026-10", "effective": "2026-10-02", "signOff": null },
         { "version": "account.sms.2026-10", "effective": "2026-10-02", "signOff": null },
         { "version": "account.push.2026-10", "effective": "2026-10-02", "signOff": null },
-        { "version": "studio.email.2026-10", "effective": "2026-10-02", "signOff": null }
+        { "version": "studio.email.2026-10", "effective": "2026-10-02", "signOff": null },
+        { "version": "keyword.sms.2026-10", "effective": "2026-10-20", "signOff": null }
       ]
     },
     {
