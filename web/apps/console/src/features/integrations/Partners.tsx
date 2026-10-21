@@ -110,7 +110,7 @@ function RegisterDialog({ onClose }: { onClose: () => void }) {
       actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={register.isPending} onClick={submit}>{t('create')}</Button></>}>
       <Field label={t('f_name')} hint={t('f_nameHint', { name: name.trim() || '…' })} error={errors.name}><TextInput value={name} maxLength={50} autoCapitalize="none" spellCheck={false} onChange={e => setName(e.target.value)} /></Field>
       <Field label={t('f_display')} error={errors.displayName}><TextInput value={display} maxLength={80} onChange={e => setDisplay(e.target.value)} /></Field>
-      <Field label={t('f_jwks')} hint={t('f_jwksHint')} error={errors.jwkSetUrl}><TextInput type="url" value={jwks} placeholder="https://" onChange={e => setJwks(e.target.value)} /></Field>
+      <Field label={t('f_jwks')} hint={t('f_jwksHint')} error={errors.jwkSetUrl}><TextInput type="url" value={jwks} onChange={e => setJwks(e.target.value)} /></Field>
       <Field label={t('f_scopes')} error={errors.scopes}>
         <div className="nl-tm-tags">
           {PARTNER_SCOPES.map(s => <Checkbox key={s} label={t(s === 'api.read' ? 'scope_api_read' : 'scope_api_write')} checked={scopes.includes(s)}
@@ -135,7 +135,7 @@ function RotateDialog({ partner, onClose }: { partner: Partner; onClose: () => v
         <Button disabled={rotate.isPending} onClick={() => rotate.mutate({ id: partner.id, jwkSetUrl: url.trim() || undefined }, { onSuccess: onClose })}>{t('confirmRotate')}</Button></>}>
       <p className="nl-tm-sub">{t('rotateBody')}</p>
       <p className="nl-tm-sub"><code>{partner.jwkSetUrl}</code></p>
-      <Field label={t('f_newJwks')} error={errors.jwkSetUrl}><TextInput type="url" value={url} placeholder="https://" onChange={e => setUrl(e.target.value)} /></Field>
+      <Field label={t('f_newJwks')} error={errors.jwkSetUrl}><TextInput type="url" value={url} onChange={e => setUrl(e.target.value)} /></Field>
       {rotate.error && !(rotate.error instanceof ValidationError) ? <p role="alert" className="nl-tm-error">{t('failed')}</p> : null}
     </Dialog>
   );

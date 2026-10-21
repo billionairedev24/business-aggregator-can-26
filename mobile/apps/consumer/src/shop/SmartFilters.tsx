@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
@@ -46,8 +46,10 @@ export function SmartFilters({ text, located, onApply }: { text: string; located
     staleTime: 600_000,
     retry: false,
   });
-  const [chips, setChips] = useState<Proposal[]>([]);
-  useEffect(() => setChips(reading.data ? proposals(reading.data) : []), [reading.data]);
+  // removed chips, per reading: a new reading starts with all of its chips again
+  const [removed, setRemoved] = useState<{ of: unknown; ids: string[] }>({ of: null, ids: [] });
+  const gone = removed.of === reading.data ? removed.ids : [];
+  const chips = reading.data ? proposals(reading.data).filter((c) => !gone.includes(c.id)) : [];
   if (!wanted || status.data?.available !== true) return null;
   if (reading.isPending) return <Text style={styles.quiet}>{t('ai.search.thinking')}</Text>;
   if (reading.isError || !reading.data) return <Text style={styles.quiet} accessibilityLiveRegion="polite" testID="smart-unavailable">{t('ai.search.unavailable')}</Text>;
@@ -58,7 +60,7 @@ export function SmartFilters({ text, located, onApply }: { text: string; located
         <Icon name="sparkle" size={18} />
         <Text style={styles.headText} accessibilityLiveRegion="polite">{t('ai.search.understood', { explanation: reading.data.explanation })}</Text>
       </View>
-      <ProposalChips chips={chips} onRemove={(c) => setChips((list) => list.filter((x) => x.id !== c.id))} testID="smart-chips" />
+      <ProposalChips chips={chips} onRemove={(c) => setRemoved({ of: reading.data, ids: [...gone, c.id] })} testID="smart-chips" />
       <Text style={styles.quiet}>{t('ai.search.hint')}</Text>
       <View style={styles.actions}>
         <Button label={t('ai.search.apply')} onPress={() => onApply(chips)} testID="smart-apply" />

@@ -283,8 +283,7 @@ class SwitchboardService implements Switchboard {
         var own = stored.get(row.id());
         var provinceFirst = own == null ? null : own.frenchFirst();
         var provinceListings = own == null ? null : own.frenchListings();
-        var provinceConfigured =
-                regions.languageRules(row.code(), null).frenchFirst() && !Boolean.TRUE.equals(provinceFirst);
+        var provinceConfigured = regions.frenchFirstByConfiguration(row.code()) && !Boolean.TRUE.equals(provinceFirst);
         var effectiveProvinceFirst = Boolean.TRUE.equals(provinceFirst) || provinceConfigured;
         var effectiveProvinceListings =
                 effectiveProvinceFirst ? "require" : provinceListings == null ? "off" : provinceListings;
@@ -303,8 +302,8 @@ class SwitchboardService implements Switchboard {
             var first = r == null ? null : r.frenchFirst();
             var listings = r == null ? null : r.frenchListings();
             var chainFirst = first != null ? first : effectiveProvinceFirst;
-            var configured =
-                    !chainFirst && regions.languageRules(row.code(), m.id()).frenchFirst();
+            var configured = !chainFirst
+                    && (regions.frenchFirstByConfiguration(m.id()) || regions.frenchFirstByConfiguration(row.code()));
             var effectiveFirst = chainFirst || configured;
             out.add(new LanguageSetting(
                     m.id(),

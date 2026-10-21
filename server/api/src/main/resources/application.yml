@@ -331,6 +331,11 @@ northline:
     poll-interval: ${COMMERCE_POLL_INTERVAL:PT1H}           # full read without webhooks
     reconcile-interval: ${COMMERCE_RECONCILE_INTERVAL:P1D}  # full read with webhooks
     webhook-rate-limit: ${COMMERCE_WEBHOOK_RATE_LIMIT:600}  # deliveries per minute and client address
+    # S-158 two-way stock: Northline's sales and restocks pushed to the platforms (retried with growing waits, then
+    # listed in Settings › Integrations as failed)
+    stock-push:
+      interval: ${COMMERCE_STOCK_PUSH_INTERVAL:PT1M}
+      max-attempts: ${COMMERCE_STOCK_PUSH_MAX_ATTEMPTS:8}
     shopify:
       client-id: ${SHOPIFY_CLIENT_ID:}
       client-secret: ${SHOPIFY_CLIENT_SECRET:}

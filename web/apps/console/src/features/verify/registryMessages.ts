@@ -26,7 +26,7 @@ export const useRegistryT = defineMessages({
     entity: 'vérification au registre', plural: 'vérifications au registre', empty: 'Aucune recherche au registre n’a besoin d’une personne pour l’instant.',
     loadError: 'Impossible de charger les vérifications au registre.',
     colBusiness: 'Entreprise', colCheck: 'Vérification', colNumber: 'Numéro', colSource: 'Source', colFound: 'Ce que dit le registre', colOutcome: 'Résultat', colChecked: 'Vérifié',
-    src_corporations_canada: 'Corporations Canada', src_alberta_corporate_registry: 'Registre provincial des sociétés', src_calgary_business_licences: 'Permis d’affaires municipaux', src_manual: 'Agent (sans API)',
+    src_corporations_canada: 'Corporations Canada (registre fédéral)', src_alberta_corporate_registry: 'Registre provincial des sociétés', src_calgary_business_licences: 'Permis d’affaires municipaux', src_manual: 'Agent (sans API)',
     out_matched: 'Concorde', out_mismatch: 'Ne concorde pas', out_not_found: 'Introuvable', out_manual: 'Agent requis', out_unavailable: 'Source indisponible',
     rsn_name: 'nom', rsn_status: 'statut', rsn_expired: 'expiré',
     outcomeWith: '{outcome} · {reasons}', expected: 'Saisi : {name}', record: '{name} · {status}', noRecord: 'Aucun dossier',
@@ -40,3 +40,4 @@ export const useRegistryT = defineMessages({
   },
 });
 export type RegistryT = ReturnType<typeof useRegistryT>;
+export type RegistryKey = Parameters<RegistryT>[0];

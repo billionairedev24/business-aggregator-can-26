@@ -345,16 +345,17 @@ class SwitchboardApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.languageRules[0].kind").value("province"))
                     .andExpect(jsonPath("$.languageRules[0].frenchFirst").value(true))
                     .andExpect(jsonPath("$.languageRules[0].frenchListings").value("warn"))
-                    // the market has no rule of its own: it follows the province
+                    // the market has no rule of its own: it follows the province (French-first ⇒ French listings
+                    // required)
                     .andExpect(jsonPath("$.languageRules[1].regionId").value(market))
                     .andExpect(jsonPath("$.languageRules[1].frenchFirst").doesNotExist())
                     .andExpect(
                             jsonPath("$.languageRules[1].effectiveFrenchFirst").value(true))
                     .andExpect(jsonPath("$.languageRules[1].effectiveFrenchListings")
-                            .value("warn"));
+                            .value("require"));
             assertThat(audited("region.languages_changed", "prov-pe")).isEqualTo(1);
             assertThat(regions.languageRules(PE, null).frenchFirst()).isTrue();
-            assertThat(regions.languageRules(PE, null).frenchListings()).isEqualTo(FrenchListings.WARN);
+            assertThat(regions.languageRules(PE, null).frenchListings()).isEqualTo(FrenchListings.REQUIRE);
 
             // the market overrides; then goes back to following
             mvc.perform(json(
@@ -370,7 +371,7 @@ class SwitchboardApiTest extends IntegrationTest {
                             .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                     .andExpect(jsonPath("$.languageRules[1].frenchListings").doesNotExist())
                     .andExpect(jsonPath("$.languageRules[1].effectiveFrenchListings")
-                            .value("warn"));
+                            .value("require"));
             // the same values again: no change, no audit row
             mvc.perform(json(put("/api/v1/console/regions/{id}/languages", market), "{}")
                             .with(TestJwt.staff(admin, StaffRole.ADMIN)))

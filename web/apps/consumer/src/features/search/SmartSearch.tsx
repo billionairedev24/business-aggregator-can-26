@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkle, X } from '@phosphor-icons/react';
 import { ApiError } from '@northline/client';
@@ -45,8 +45,10 @@ export function SmartSearch({ params, located, onApply }: { params: SearchParams
   const wanted = looksNatural(q) && untouched && dismissed !== q;
   const status = useQuery({ ...aiStatusQuery, enabled: wanted });
   const reading = useQuery({ ...interpretQuery(q, located, locale), enabled: wanted && status.data?.available === true });
-  const [chips, setChips] = useState<Proposal[]>([]);
-  useEffect(() => setChips(reading.data ? proposals(reading.data) : []), [reading.data]);
+  // removed chips, per reading: a new reading starts with all of its chips again
+  const [removed, setRemoved] = useState<{ of: unknown; ids: string[] }>({ of: null, ids: [] });
+  const gone = removed.of === reading.data ? removed.ids : [];
+  const chips = reading.data ? proposals(reading.data).filter(c => !gone.includes(c.id)) : [];
 
   if (!wanted || status.data?.available !== true) return null;
   if (reading.isPending) return <p className="nl-smart nl-smart-quiet" role="status"><Sparkle size={16} aria-hidden /> {t('thinking')}</p>;
@@ -55,7 +57,7 @@ export function SmartSearch({ params, located, onApply }: { params: SearchParams
     // 422 (the api's own text rules) needs no word; unavailable, over budget or rate-limited: one line
     return code === 422 ? null : <p className="nl-smart nl-smart-quiet" role="status">{t('unavailable')}</p>;
   }
-  if (chips.length === 0 && reading.data && proposals(reading.data).length === 0) {
+  if (proposals(reading.data).length === 0) {
     return <p className="nl-smart nl-smart-quiet" role="status">{t('none')}</p>;
   }
   return (
@@ -67,7 +69,7 @@ export function SmartSearch({ params, located, onApply }: { params: SearchParams
           return (
             <li key={c.id} className="nl-smart-chip">
               <span>{text}</span>
-              <button type="button" className="nl-smart-x" aria-label={t('remove', { chip: text })} onClick={() => setChips(list => list.filter(x => x.id !== c.id))}><X size={14} aria-hidden /></button>
+              <button type="button" className="nl-smart-x" aria-label={t('remove', { chip: text })} onClick={() => setRemoved({ of: reading.data, ids: [...gone, c.id] })}><X size={14} aria-hidden /></button>
             </li>
           );
         })}

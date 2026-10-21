@@ -8,7 +8,7 @@ import { useGrant } from '../shell/grant';
 import type { PlaceFilter } from '../shell/PlaceFilters';
 import { registryQueueQuery, useDecideRegistryWithEvidence, useRecheckRegistry, type Rechecked, type RegistryQueueRow } from './api';
 import { ApplicationsHead } from './ApplicationsHead';
-import { useRegistryT, type RegistryT } from './registryMessages';
+import { useRegistryT, type RegistryKey, type RegistryT } from './registryMessages';
 import { checkLabel } from './VerificationQueue';
 import { useVerifyT } from './messages';
 import '../shell/queues.css';
@@ -16,7 +16,6 @@ import '../shell/queues.css';
 interface Row { id: string; business: string; check: string; number: string; source: string; found: string; outcome: string; checked: string; src: RegistryQueueRow }
 
 const OUTCOMES = ['matched', 'mismatch', 'not_found', 'manual', 'unavailable'] as const;
-const SOURCES = ['corporations_canada', 'alberta_corporate_registry', 'calgary_business_licences', 'manual'] as const;
 
 /** "Doesn't match · name, status" — the outcome and why, in the console's words. */
 export function outcomeText(r: Pick<RegistryQueueRow, 'outcome' | 'reasons'>, t: RegistryT): string {
@@ -26,7 +25,8 @@ export function outcomeText(r: Pick<RegistryQueueRow, 'outcome' | 'reasons'>, t:
 }
 /** The 409's `code` (ProblemDetail), when the api sent one. */
 const codeOf = (e: unknown) => (e instanceof ApiError && e.body && typeof e.body === 'object' ? (e.body as { code?: string }).code : undefined);
-const sourceText = (s: string, t: RegistryT) => ((SOURCES as readonly string[]).includes(s) ? t(`src_${s as (typeof SOURCES)[number]}`) : s);
+/** The registry's name (the api's source code; region-specific codes stay in the catalogue, unknown ones show as sent). */
+const sourceText = (s: string, t: RegistryT) => { const k = `src_${s}` as RegistryKey; const v = t(k); return v === k ? s : v; };
 
 /**
  * Applications › Registry checks (S-158, S-23's queue): every business-registry lookup that needs a human — not found,
