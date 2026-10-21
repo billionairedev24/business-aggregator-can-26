@@ -4,6 +4,7 @@ import ca.northline.auth.application.AccountService;
 import ca.northline.auth.application.AuthProperties;
 import ca.northline.auth.application.EnrollmentService;
 import ca.northline.auth.application.InvalidInput;
+import ca.northline.auth.application.SignupConsents;
 import ca.northline.auth.domain.App;
 import ca.northline.auth.domain.AuthMessages;
 import ca.northline.auth.domain.Factor;
@@ -11,14 +12,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,12 +32,15 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <pre>
  * POST /api/auth/accounts               {firstName, lastName, email, password, passwordConfirm?, phone?, terms,
- *                                        termsLanguage?, termsEnglishRequested?, app?}
+ *                                        termsLanguage?, termsEnglishRequested?, app?,
+ *                                        marketing?: [{category, wordingVersion}]}   (S-157, the ticked boxes)
  *                                        → 202 {step:"verify-email", email, resendAfterSeconds} (always the same answer)
  * POST /api/auth/accounts/resend        → 202 {step:"verify-email", …}; 429 otp_throttled inside the cool-down
  * POST /api/auth/accounts/verify        {code}  → 201 session (signed in with the password; needsSecondFactor)
  * POST /api/auth/accounts/verify-link   {token} → {email, signedIn, session?} (signed in only in the browser that
  *                                        sent the form)
+ * GET  /api/auth/accounts/consent-wordings?app=consumer|studio   → {requester, items:[{category, channel,
+ *                                        wordingVersion, wording}]}  (S-157: the form's marketing checkboxes)
  * </pre>
  *
  * Then {@code /api/auth/enroll/*} ({@link EnrollmentController}) sets up the second factor.
@@ -50,10 +57,11 @@ class AccountController {
     private final SessionSignIn sessions;
     private final AppAuthorizationResume apps;
     private final AuthProperties props;
+    private final SignupConsents consents;
 
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
-    AuthResponses.EmailSent create(@Valid @RequestBody AuthRequests.CreateAccount body) {
+    AuthResponses.EmailSent create(@Valid @RequestBody AuthRequests.CreateAccount body, HttpServletRequest request) {
         var password = Objects.requireNonNull(body.password());
         requireConfirmed(password, body.passwordConfirm());
         var sent = accounts.register(new AccountService.Register(
@@ -64,8 +72,20 @@ class AccountController {
                 body.phone(),
                 app(body.app()),
                 body.termsLanguage(),
-                Boolean.TRUE.equals(body.termsEnglishRequested())));
+                Boolean.TRUE.equals(body.termsEnglishRequested()),
+                AuthRequests.requested(body.marketing()),
+                Clients.of(request)));
         return new AuthResponses.EmailSent(VERIFY_EMAIL, sent.email(), sent.resendAfterSeconds());
+    }
+
+    /**
+     * S-157: the marketing checkboxes the Create account form shows (unticked), in the request's language: per
+     * category the wording and its version, and who asks. {@code app}: {@code consumer} (email and texts) or {@code
+     * studio} (email); the console offers none.
+     */
+    @GetMapping("/consent-wordings")
+    SignupConsents.Wordings consentWordings(@RequestParam(required = false) @Nullable String app, Locale locale) {
+        return consents.wordings(app(app), "fr".equals(locale.getLanguage()) ? "fr" : "en");
     }
 
     @PostMapping("/resend")

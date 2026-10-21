@@ -138,6 +138,17 @@ export function authFixtures(ctx: FixtureContext, state: AuthFixtureState): Fixt
       return ctx.answer(200, { ...user(a), locale: 'en-CA', memberSince: '2026-10-02', mfaPrimary: null, mfa: false });
     }
     if (!path.startsWith('/api/auth/')) return undefined;
+    if (path === '/api/auth/accounts/consent-wordings') {
+      // S-157: the sign-up's marketing checkboxes (a read: not recorded with the flow's calls)
+      const fr = String(req.headers['accept-language'] ?? '').startsWith('fr');
+      return ctx.answer(200, {
+        requester: 'Northline Marketplace Inc. · 1200 – 8th Avenue SW · support@northline.ca',
+        items: [
+          { category: 'marketing_email', channel: 'email', wordingVersion: 'account.email.2026-10', wording: fr ? 'Oui, Northline Marketplace Inc. peut m’envoyer par courriel les offres, récompenses et nouvelles de Northline.' : 'Yes, Northline Marketplace Inc. may email me Northline’s offers, rewards and news.' },
+          { category: 'marketing_sms', channel: 'sms', wordingVersion: 'account.sms.2026-10', wording: fr ? 'Oui, Northline Marketplace Inc. peut m’envoyer par texto les offres et récompenses de Northline.' : 'Yes, Northline Marketplace Inc. may text me Northline’s offers and rewards.' },
+        ],
+      });
+    }
     state.api.push({ path, body: req.body, language: req.headers['accept-language'] });
 
     switch (path) {

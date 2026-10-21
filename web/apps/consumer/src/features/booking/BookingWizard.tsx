@@ -18,6 +18,7 @@ import { usePromoT } from '../promotions/messages';
 import { homeHours, toRequest, useDraft, VALUES, type Draft } from './draft';
 import { useBookingT } from './messages';
 import { StripeCard } from './StripeCard';
+import { CheckoutConsent, useCheckoutConsent } from '../consent/CheckoutConsent';
 import { Crumbs } from '../pages/Crumbs';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 
@@ -377,6 +378,7 @@ function Pay({ zone, facts, service, draft, update, kind, vehicle, cleaning, onB
 }) {
   const t = useBookingT();
   const { money, date } = useFormatters();
+  const consent = useCheckoutConsent(); // S-157: the optional offers box (CASL)
   const [phase, setPhase] = useState<PayPhase>({ step: 'form' });
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -407,6 +409,7 @@ function Pay({ zone, facts, service, draft, update, kind, vehicle, cleaning, onB
   const finish = async (checkout: Checkout) => {
     try {
       const booked = checkout.booking ?? await confirmBooking(checkout.holdId, `confirm-${checkout.holdId}`);
+      await consent.record(); // S-157: the ticked offers box, once the booking is made
       onBooked(booked);
     } catch (e) { fail(e); }
   };
@@ -465,6 +468,7 @@ function Pay({ zone, facts, service, draft, update, kind, vehicle, cleaning, onB
           </div>
         </>
       ) : null}
+      <CheckoutConsent consent={consent} />
       {error ? <p className="nl-error" role="alert">{error}</p> : null}
       {phase.step !== 'card' ? (
         <div className="nl-bk-actions">

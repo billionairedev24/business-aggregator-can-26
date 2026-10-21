@@ -68,6 +68,6 @@ test('versions stored elsewhere agree with the registry', () => {
   assert.match(read('server/auth/src/main/java/ca/northline/auth/application/AuthProperties.java'), new RegExp(`@DefaultValue\\("${version('terms').replace('.', '\\.')}"\\) String termsVersion`));
   assert.equal(version('terms'), version('privacy'), 'one terms_version covers both documents');
   assert.match(read('server/api/src/main/java/ca/northline/merchants/domain/ComplianceRules.java'), new RegExp(`OBLIGATIONS_VERSION = "${version('merchant-obligations').replace('.', '\\.')}"`));
-  const wordings = [...read('server/api/src/main/java/ca/northline/messaging/domain/ConsentWordings.java').matchAll(/new Wording\(\s*"([^"]+)"/g)].map(m => m[1]);
+  const wordings = [...read('server/email/src/main/java/ca/northline/email/ConsentWordings.java').matchAll(/new Wording\(\s*"([^"]+)"/g)].map(m => m[1]);
   assert.deepEqual(registry.documents.find(d => d.id === 'casl-consent-wordings').versions.map(v => v.version).sort(), wordings.sort());
 });

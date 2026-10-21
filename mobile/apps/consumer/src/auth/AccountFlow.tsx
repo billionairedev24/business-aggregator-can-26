@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 
 import type { PendingSignIn } from '@northline/mobile-kit';
 
-import type { AuthSessionAnswer, TotpSetup } from '../api/auth';
+import type { AuthSessionAnswer, MarketingConsent, TotpSetup } from '../api/auth';
 import { services } from '../services';
 import { useAuth } from './AuthProvider';
 import { HandoffError } from './errors';
@@ -45,7 +45,8 @@ interface FlowState {
 interface FlowValue extends FlowState {
   setDraft(d: SignUpForm): void;
   setIdentifier(v: string): void;
-  register(form: SignUpForm): Promise<void>;
+  /** `marketing`: S-157, the sign-up's ticked marketing boxes (CASL express consent). */
+  register(form: SignUpForm, marketing?: MarketingConsent[]): Promise<void>;
   resendEmail(): Promise<void>;
   /** The emailed code: an account without a second factor is offered one, else signed in. */
   verifyEmail(code: string): Promise<'enrol' | 'done'>;
@@ -106,10 +107,10 @@ export function AccountFlowProvider({ children, now = Date.now }: { children: Re
   }, [now]);
 
   const register = useCallback(
-    async (form: SignUpForm) => {
+    async (form: SignUpForm, marketing: MarketingConsent[] = []) => {
       await begin();
       const { firstName, lastName } = splitName(form.fullName);
-      const answer = await services().authApi.createAccount({ firstName, lastName, email: form.email, password: form.password, passwordConfirm: form.passwordConfirm, phone: form.phone, terms: form.terms });
+      const answer = await services().authApi.createAccount({ firstName, lastName, email: form.email, password: form.password, passwordConfirm: form.passwordConfirm, phone: form.phone, terms: form.terms, marketing });
       setState((s) => ({ ...s, mode: 'register', draft: form, totp: null, backupCodes: null }));
       sent(answer.email, answer.resendAfterSeconds);
     },

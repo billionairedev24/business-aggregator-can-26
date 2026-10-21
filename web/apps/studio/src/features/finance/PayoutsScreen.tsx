@@ -1,7 +1,7 @@
 import { FileText } from '@phosphor-icons/react';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Chip, DataTable, Field, OptionCard, PageSkeleton, RadioGroup, Select, Skeleton, TextInput, useFormatters, useLocale, type DataTableColumn, BoHeader } from '@northline/ui';
+import { Alert, Button, Chip, DataTable, Field, OptionCard, PageSkeleton, RadioGroup, Select, Skeleton, TextInput, useFormatters, useLocale, type DataTableColumn, BoHeader } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { attentionCount } from '../../lib/forms';
 import { useMerchantId, useRole } from '../shell/api';
@@ -36,6 +36,11 @@ export function PayoutsScreen() {
 
 const bankName = (a: Account) => a.institutionName;
 
+/** S-157: Stripe's payout failure code in words (the same list as the email); anything else, the general reason. */
+const RETURN_REASONS = ['account_closed', 'account_frozen', 'bank_account_restricted', 'bank_ownership_changed', 'could_not_process', 'debit_not_authorized', 'declined',
+  'incorrect_account_holder_address', 'incorrect_account_holder_name', 'incorrect_account_holder_tax_id', 'insufficient_funds', 'invalid_account_number', 'invalid_currency', 'no_account'];
+export const returnedReason = (code: string | null | undefined): FinanceKey => `returned_${code && RETURN_REASONS.includes(code) ? code : 'other'}` as FinanceKey;
+
 function Money({ o }: { o: PayoutOverview }) {
   const t = useFinanceT();
   const f = useFormatters();
@@ -54,6 +59,13 @@ function Money({ o }: { o: PayoutOverview }) {
   return (
     <section className="bo-card fin-wallet" aria-labelledby="fin-balance">
       <h2 className="bo-card-title" id="fin-balance">{t('balanceTitle')}</h2>
+      {o.returned ? (
+        <Alert tone="error" role="alert" title={t('returnedTitle')}
+          actions={owner ? (panel !== 'bank' ? <Button onClick={() => setPanel('bank')}>{t('returnedCta')}</Button> : null) : <span className="fin-small">{t('returnedAskOwner')}</span>}>
+          {t('returnedBody', { amount: f.money(o.returned.amountCents), date: dayDate(o.returned.sentAt, locale), reason: t(returnedReason(o.returned.failureCode)) })}{' '}
+          {t('returnedAction')}
+        </Alert>
+      ) : null}
       <ul className="fin-balance" aria-label={t('balanceTitle')}>
         <li className="fin-available">
           <span className="fin-available-k">{t('availableNow')}</span>

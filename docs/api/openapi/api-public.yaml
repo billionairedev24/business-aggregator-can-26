@@ -9541,6 +9541,21 @@ paths:
       security: []
       tags:
       - reward-controller
+  /api/v1/public/payments/options:
+    get:
+      operationId: paymentOptionsOptions
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PaymentOptions"
+          description: OK
+      security: []
+      summary: "The payment methods checkouts may offer (cards, Apple Pay, Google\
+        \ Pay)"
+      tags:
+      - payment-options-controller
   /api/v1/public/plus-prices:
     get:
       operationId: memberPriceLive
@@ -13564,6 +13579,15 @@ components:
         provider:
           type: string
         publishableKey:
+          type: string
+    PaymentOptions:
+      type: object
+      properties:
+        applePay:
+          type: boolean
+        googlePay:
+          type: boolean
+        provider:
           type: string
     Payout:
       type: object

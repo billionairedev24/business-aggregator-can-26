@@ -22,7 +22,9 @@ class ConsentWordingsTest {
             "account.email.2026-10", "1c1f5ccca23e88920732b87fef7df1381cd1e75e5e85d30c2200328d5064c7b0",
             "account.sms.2026-10", "56ae9168947ada4ba50cf00af3940099d33c86ddbff90b21e41a3795d3eaf23d",
             "account.push.2026-10", "b9e683813abb45059967844e00e89d94ced3f7ed4ac2fd2b2f67e5c4d3a35d40",
-            "studio.email.2026-10", "228c5c8c75ceba033ae84f185428de6ce52ef4f1fea52177b076ffb2c2e9354b");
+            "studio.email.2026-10", "228c5c8c75ceba033ae84f185428de6ce52ef4f1fea52177b076ffb2c2e9354b",
+            // S-157: the reply to a START text
+            "keyword.sms.2026-10", "2e8b102666ce8f809aba22f5f0d3bf0b57bfb29835a76f689b1274f1eaca2531");
 
     @Test
     void publishedWordings_neverChange_andEveryWordingIsPinned() throws Exception {

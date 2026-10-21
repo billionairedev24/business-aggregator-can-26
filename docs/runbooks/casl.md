@@ -1,15 +1,18 @@
-# CASL — consent and unsubscribe for commercial messages (S-108)
+# CASL — consent and unsubscribe for commercial messages (S-108, S-157)
 
 Canada's anti-spam legislation (CASL) governs **commercial electronic messages**: email, text messages and similar
 messages that encourage someone to buy, or that promote Northline. This page says which of Northline's messages are
 commercial, how consent is captured and proven, how people withdraw it, and what operators check. Québec's Law 25
 also bears on consent wording (separate per purpose, clear and simple terms); the wordings below follow both. Code:
 `ca.northline.email.MessageClasses` (the classification), `ca.northline.messaging` (consent records, the unsubscribe
-page, the settings) and the worker's `notifications` package (senders); decisions in `docs/DECISIONS.md` § S-108.
+page, the settings, the SMS keywords, the offers) and the worker's `notifications` package (senders); decisions in
+`docs/DECISIONS.md` § S-108 and § S-157.
 
 > **Never run against a real email or SMS provider.** Commercial email has only gone to the test fakes and the
 > library's in-memory sender; the RFC 8058 one-click POST has been exercised with MockMvc, not by Gmail, Outlook or
-> Yahoo; the SMS opt-out link has only been "sent" to the recording SMS transport. See [§ 8](#8-first-real-send-checklist).
+> Yahoo; the SMS opt-out link has only been "sent" to the recording SMS transport. S-157's Twilio webhooks (STOP /
+> START / HELP, delivery statuses) were tested with Twilio's documented signature example and MockMvc, never with a
+> real Twilio number or handset. See [§ 8](#8-first-real-send-checklist).
 
 ## 1. Which messages are commercial
 
@@ -65,7 +68,9 @@ marketing is ever added.
 | Consumer web, Account › Notifications ("Offers & rewards" cells, "Marketing emails", the "Marketing messages" section with wording and history) | `PUT /api/v1/me/notifications` (`consentSource`, `consentWordings`) | `web_settings` |
 | Consumer app, You › Notifications (same; turning the offers push off is the push promo opt-out) | same | `app_settings` |
 | Studio › Settings › Notifications › "Marketing from Northline" (email only) | `PUT /api/v1/me/consents/marketing_email` | `studio` |
-| Sign-up and checkout checkboxes | `PUT /api/v1/me/consents/{category}` accepts `web_signup`, `app_signup`, `checkout` | **not built yet** |
+| Sign-up: the unticked offers boxes of the consumer site's and the Studio's Create account forms (S-154's form) and of the app's sign-up (S-157) | northline-auth: `GET /api/auth/accounts/consent-wordings?app=consumer\|studio`, then `marketing: [{category, wordingVersion}]` on `POST /api/auth/accounts` or `POST /api/auth/register`; recorded when the account is created | `web_signup`, `app_signup` |
+| Checkout: the unticked "Offers by email" box (shop, food, bookings on the web; shop and bookings in the app), shown only without the consent (S-157) | `PUT /api/v1/me/consents/marketing_email` after the order or booking went through | `checkout` |
+| A text reply STOP / ARRET / UNSUBSCRIBE / DÉSABONNER (withdraws), START after a STOP (gives it back) — S-157, [§ 9](#9-text-replies-stop-start-help-and-delivery-statuses-s-157) | `POST /api/v1/webhooks/sms/inbound` (Twilio-signed) | `sms_keyword` |
 | An email's unsubscribe link (page with one button) | `POST /api/v1/email/unsubscribe` | `unsubscribe_link` |
 | A mailbox's one-click unsubscribe (RFC 8058, `List-Unsubscribe=One-Click`) | same URL | `list_unsubscribe` |
 | A commercial SMS's opt-out link | same page | `unsubscribe_link` |
@@ -78,11 +83,17 @@ token's language (en/fr), never changes anything on GET (mail scanners prefetch 
 with its mailing address and contact. The ingress must route `/api/v1/email/unsubscribe` to the api without the BFF
 session (as for S-13).
 
-**SMS STOP / ARRET:** the SMS port (`SmsTransport`) only sends; it receives no inbound messages, so Northline doesn't
-see STOP replies. Every commercial text carries an opt-out link instead (CASL allows a link). Carriers and providers
-still handle STOP themselves for long codes (Twilio's default opt-out; AWS End User Messaging opt-out lists), and a
-number that replied STOP fails with Twilio 21610, which the adapter maps to "undeliverable" (not retried). Recording
-those as withdrawals needs an inbound webhook (the reserved source `sms_keyword`) — not built.
+**Sign-up (S-157):** the form shows the wordings northline-auth serves (customers: email and texts, the texts box only
+with a mobile number; Studio: email; the console: none), each unticked, with who asks. A ticked box is checked against
+the current wording (a stale version is 422 "The consent wording has changed…", before the existing-account branch so
+the answer never tells two addresses apart), kept with the pending account (`auth.pending_accounts.marketing_consents`,
+V452) or the phone registration's session, and written to `messaging.consent_records` in the transaction that
+creates the account — wording version, language, the form's time, the truncated IP and hashed user agent. An abandoned
+sign-up leaves nothing. **Checkout (S-157):** the box is shown only to someone without the email consent, and recorded
+after the purchase; recording it never blocks or fails the order.
+
+**SMS STOP / ARRET (S-157):** see [§ 9](#9-text-replies-stop-start-help-and-delivery-statuses-s-157). Every commercial
+text still carries the opt-out link, and now ends "or reply STOP" / « ou répondez ARRET ».
 
 ## 4. Senders check consent at send time
 
@@ -97,7 +108,7 @@ those as withdrawals needs an inbound webhook (the reserved source `sms_keyword`
   opt-out link. A failing message is never sent (a bug, not a delivery problem).
 - **What a commercial message looks like:** email — the footer's sender line, "Northline Marketplace Inc. sent you
   this marketing message because you agreed…", the unsubscribe link, `List-Unsubscribe` + `List-Unsubscribe-Post`;
-  SMS — `Northline: <offer> — Northline Marketplace Inc. · Opt out: https://api…/api/v1/email/unsubscribe?t=…`
+  SMS — `Northline: <offer> — Northline Marketplace Inc. · Opt out: https://api…/api/v1/email/unsubscribe?t=… or reply STOP` (S-157: the keyword works too)
   (French: "Désabonnement :"); push — the title and words only (no personal data), turned off in Account ›
   Notifications.
 
@@ -147,6 +158,66 @@ No secret is added; the region and legal entity come from configuration, nothing
 3. DKIM must sign the `List-Unsubscribe` headers (Gmail and Yahoo bulk-sender rules); check `h=` in the signature.
 4. Send a commercial SMS to a test handset: the opt-out link opens the page in the handset's language; carriers may
    rewrite long links — check the full token arrives.
-5. Reply STOP to that number and confirm the provider blocks the next send (21610) — it is not recorded as a
-   withdrawal by Northline yet.
-6. Have counsel review the four wordings (en/fr) and the footer line before the first campaign.
+5. Reply STOP to that number: Northline records the withdrawal (`source = sms_keyword`, Account › Notifications shows
+   it) and the reply confirms it; the provider then blocks the next send (21610). Reply START: texts work again and the
+   offers consent comes back (it was withdrawn by STOP). Reply HELP. Check the Messaging Service's own opt-out texts
+   don't contradict ours (§ 9).
+6. Have counsel review the five wordings (en/fr) and the footer line before the first campaign.
+7. Point the number's status callback at `SMS_STATUS_CALLBACK_URL` and check `messaging.sms_delivery_status` fills in
+   (`delivered`, or `undelivered` with Twilio's error code).
+8. Send a console offer to a market with two seed customers (one consenting): only one gets it, at the throttle rate,
+   with the footer; the other never.
+
+## 9. Text replies (STOP, START, HELP) and delivery statuses (S-157)
+
+Texts to Northline's number reach the api through the SMS provider's webhook, authenticated by its signature:
+
+| provider | inbound texts | delivery statuses | authentication |
+|---|---|---|---|
+| `twilio` | `POST /api/v1/webhooks/sms/inbound` — the number's (or Messaging Service's) "A message comes in" webhook, HTTP POST | `POST /api/v1/webhooks/sms/status` — every text the api and the worker send asks for it (`StatusCallback` = `SMS_STATUS_CALLBACK_URL`) | `X-Twilio-Signature` (HMAC-SHA1 with `SMS_AUTH_TOKEN`) over the URL Twilio was given: `API_PUBLIC_URL` + the path, never the request's own host; 403 `invalid_signature` otherwise |
+| `local` | the same endpoints, **unsigned, under the local and test profiles only** (`curl -d MessageSid=SMlocal1 -d From=+14035550201 -d Body=STOP localhost:8080/api/v1/webhooks/sms/inbound`) | same | none |
+| `aws`, `azure` | not built (their inbound texts arrive through SNS / Event Grid): 503 `sms_webhooks_unconfigured` | — | — |
+
+- **STOP**, STOPALL, UNSUBSCRIBE, CANCEL, END, QUIT, **ARRET**, DÉSABONNER, DESABONNEMENT (case, accents and punctuation
+  aside; a sentence is not a keyword) withdraws `marketing_sms` of **every active account with that number**, at once
+  (CASL allows 10 business days), source `sms_keyword`; the TwiML reply confirms it in the account's language (both
+  when the number isn't an account's): "you're unsubscribed — no more offers by text. Texts from this number stop until
+  you reply START."
+- **START** (UNSTOP, YES, OUI, ABONNER) turns texts back on at the provider. It gives the **offers consent** back only
+  when that consent was withdrawn by a STOP — with the wording `keyword.sms.2026-10`, quoted in the reply; otherwise
+  offers stay off ("turn them on in Account › Notifications"): a START is not express consent to offers never asked for.
+- **HELP** (INFO, AIDE) answers with the legal name and `EMAIL_CONTACT`.
+- Anything else gets no reply. The provider's message id dedupes a retried webhook (applied and answered once).
+- **Stored:** `messaging.sms_inbound` (provider, message id, keyword, how many accounts, the sender as the SHA-256 of
+  its number — the consent records' address hash) and `messaging.sms_delivery_status` (latest status per text; a final
+  one — delivered, undelivered, failed — is never replaced by a late `sent`), V453; no number or text; kept 90 days
+  (nightly, `SmsKeywordService`). Metrics `northline_sms_inbound_total{keyword}`, `northline_sms_delivery_total{status}`.
+
+**Twilio set-up (once per number, test and live):** Messaging Service → Integration → "Send a webhook" to
+`https://api.<zone>/api/v1/webhooks/sms/inbound`; set `SMS_STATUS_CALLBACK_URL=https://api.<zone>/api/v1/webhooks/sms/status`
+on the api and the worker. Twilio's Advanced Opt-Out handles STOP itself on long codes and may answer before (or
+instead of) Northline's TwiML: set its opt-out, opt-in and help confirmation texts to the same words as above (en / fr),
+so the person reads one consistent answer; Northline records the keyword either way.
+
+## 10. Offers from the console (S-157)
+
+The console's **Offers** screen (admins and finance; sending and testing need the `offers` action) is Northline's only
+producer of commercial messages: an offer in English and French (title ≤ 80, message ≤ 600 characters), one channel
+(email or text) and a page of the consumer site.
+
+1. **Preview** renders it as customers get it — the email's subject and text with the CASL footer (legal name, mailing
+   address, the unsubscribe line), the text with `— legal name · Opt out: link or reply STOP` and its SMS segment
+   count — and counts the **customers of the market** (a saved address in the province) whose newest consent for that
+   channel is a customer-facing grant (Account wording or the START keyword; the Studio's business consent doesn't
+   count).
+2. **Send me a test** goes to the staff member's own email or mobile only, subject or text marked "[Test]"
+   (audit `offer.test_sent`).
+3. **Send** (after a confirmation naming the count) writes `messaging.offer_campaigns` (V454) and queues one
+   `messaging.offer` row per customer in the worker's `messaging.deferred_notifications`, `OFFERS_PER_MINUTE` (30) a
+   minute; audit `offer.sent`. The worker (deferred job, every minute, at most 50 rows) re-reads each person and their
+   consent before sending (a withdrawal meanwhile cancels it), sends only that channel, holds a text inside the
+   person's quiet hours until they end, and adds the unsubscribe link and `List-Unsubscribe` one-click. The list shows
+   each offer's customers, how many are still to send and how many were given up (dead rows, S-115).
+
+Not built: scheduling, targeting finer than a province, images, A/B tests, per-offer results (opens, clicks).
+

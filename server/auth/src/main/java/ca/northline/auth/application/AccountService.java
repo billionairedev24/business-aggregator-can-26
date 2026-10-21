@@ -12,6 +12,7 @@ import ca.northline.auth.domain.SignUp;
 import com.github.f4b6a3.ulid.UlidCreator;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -54,6 +55,7 @@ public class AccountService {
     private final ApplicationEventPublisher events;
     private final AuthProperties authProps;
     private final AccountProperties props;
+    private final SignupConsents consents;
     private final Clock clock;
 
     /** The form, shape-validated by the web adapter (required fields, formats, terms accepted). */
@@ -65,7 +67,33 @@ public class AccountService {
             @Nullable String phone,
             App app,
             @Nullable String termsLanguage,
-            boolean termsEnglishRequested) {}
+            boolean termsEnglishRequested,
+            List<SignupConsents.Requested> marketing,
+            Client client) {
+
+        /** The form without marketing checkboxes (tests, older clients). */
+        public Register(
+                String firstName,
+                String lastName,
+                String email,
+                String password,
+                @Nullable String phone,
+                App app,
+                @Nullable String termsLanguage,
+                boolean termsEnglishRequested) {
+            this(
+                    firstName,
+                    lastName,
+                    email,
+                    password,
+                    phone,
+                    app,
+                    termsLanguage,
+                    termsEnglishRequested,
+                    List.of(),
+                    new Client(null, null));
+        }
+    }
 
     /** The email is on its way (or seems to be): where, and when another may be asked for. */
     public record Sent(String email, long resendAfterSeconds) {}
@@ -85,6 +113,14 @@ public class AccountService {
         limits.consume(LimitedAction.EMAIL_SEND, AttemptLimits.Subject.identifier(email, null));
         var hash = hasher.hash(PasswordPolicy.normalise(in.password())); // same work either way
         var now = clock.instant();
+        // S-157: the ticked marketing boxes, checked against the wording the form showed (a text one needs a mobile) —
+        // before the existing-account branch, so a refusal never tells the two apart
+        var typedPhone = Optional.ofNullable(in.phone())
+                .filter(p -> !p.isBlank())
+                .flatMap(PhoneNumber::parse)
+                .map(PhoneNumber::e164);
+        var marketing =
+                consents.accept(in.marketing(), in.app(), language(), in.client(), typedPhone.orElse(null), now);
         var existing = accounts.findByEmail(email);
         if (existing.isPresent()) {
             var account = existing.get();
@@ -93,10 +129,7 @@ public class AccountService {
             log.info("Create account with the address of an existing account: told by email (user={})", account.id());
             return new Sent(email, props.resendAfter().toSeconds());
         }
-        var phone = Optional.ofNullable(in.phone())
-                .filter(p -> !p.isBlank())
-                .flatMap(PhoneNumber::parse)
-                .map(PhoneNumber::e164)
+        var phone = typedPhone
                 .filter(p -> !accounts.anyPhone(p)) // no enumeration: a number in use is simply not stored
                 .orElse(null);
         var id = pending.save(new PendingAccount(
@@ -112,7 +145,13 @@ public class AccountService {
                 now,
                 in.termsEnglishRequested() ? "en" : in.termsLanguage(),
                 in.termsEnglishRequested() ? now : null,
-                now.plus(props.pendingTtl())));
+                now.plus(props.pendingTtl()),
+                // a text consent whose number isn't stored (in use elsewhere) covers nothing: email ones only then
+                phone == null
+                        ? marketing.stream()
+                                .filter(c -> !"marketing_sms".equals(c.category()))
+                                .toList()
+                        : marketing));
         var account = pending.findById(id).orElseThrow();
         sendVerification(account, now);
         flow.put(FlowStore.SIGN_UP, new SignUp(id, email, in.app(), now));
@@ -217,6 +256,8 @@ public class AccountService {
                 p.termsEnglishRequestedAt(),
                 now));
         passwords.save(p.id(), p.passwordHash(), now);
+        // S-157: the form's marketing consents, with the account (CASL proof: wording, time, place, evidence)
+        consents.record(p.id(), p.marketingConsents(), "web_signup", p.email(), phone);
         pending.delete(p.id());
         // S-28: in this transaction — the outbox row commits with the account, or neither does. Ids only.
         events.publishEvent(new UserRegistered(newId(), now, p.id()));
@@ -278,6 +319,11 @@ public class AccountService {
 
     static String localeOf(UserAccount account) {
         return account.locale() == null ? "en-CA" : account.locale();
+    }
+
+    /** {@code fr} when the browser asked for French, else {@code en}: the language the consent wording was shown in. */
+    static String language() {
+        return "fr".equals(LocaleContextHolder.getLocale().getLanguage().toLowerCase(Locale.ROOT)) ? "fr" : "en";
     }
 
     /** fr-CA when the browser asked for French, else en-CA (as registration does). */

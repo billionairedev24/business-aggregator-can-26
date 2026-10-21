@@ -96,7 +96,11 @@ class NotificationsConsumerTest extends WorkerIntegrationTest {
 
         EmailMessage english = emails.to(owner.email()).getFirst();
         assertThat(english.subject()).isEqualTo("Your payout of $814.37 was returned — " + team.name());
-        assertThat(english.text()).contains("Bank’s reason: account_closed", "/b/" + team.merchantId() + "/payouts");
+        assertThat(english.text())
+                .contains(
+                        "Why: the bank account is closed.",
+                        "Stripe’s code, for support: account_closed",
+                        "/b/" + team.merchantId() + "/payouts");
         assertThat(english.headers().get(EmailMessage.LIST_UNSUBSCRIBE)).contains("/api/v1/email/unsubscribe?t=");
         assertThat(emails.to(bookkeeper.email()).getFirst().subject().replaceAll("[\\u00a0\\u202f]", " "))
                 .isEqualTo("Votre versement de 814,37 $ a été retourné — " + team.name());

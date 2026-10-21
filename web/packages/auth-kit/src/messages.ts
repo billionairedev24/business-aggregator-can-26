@@ -7,6 +7,15 @@ import { defineMessages } from '@northline/ui';
  */
 export const KIT_MESSAGES = {
   en: {
+    // S-157: the sign-up forms' marketing checkboxes (CASL: unticked, optional, the wording is the server's)
+    marketingTitle: 'Offers and news (optional)',
+    marketingNoteConsumer: 'Leave these unticked if you don’t want them. You can change your mind any time in Account › Notifications.',
+    marketingNoteStudio: 'Leave this unticked if you don’t want it. You can change your mind any time in Settings › Notifications.',
+    marketingSmsNeedsPhone: 'Add your mobile number above to get offers by text.',
+    marketingWho: 'Sent by {requester}.',
+    consentWordingChanged: 'The consent wording has changed. Read it again before you agree.',
+    consentChoose: 'Choose from the list.',
+    consentSmsNeedsPhone: 'Add your mobile number to get offers by text.',
     firstNameRequired: 'First name is required.',
     lastNameRequired: 'Last name is required.',
     phoneRequired: 'Mobile number is required for verification.',
@@ -120,6 +129,14 @@ export const KIT_MESSAGES = {
     newBackupCodes: 'New codes',
   },
   fr: {
+    marketingTitle: 'Offres et nouvelles (facultatif)',
+    marketingNoteConsumer: 'Laissez ces cases décochées si vous n’en voulez pas. Vous pouvez changer d’avis en tout temps dans Compte › Notifications.',
+    marketingNoteStudio: 'Laissez cette case décochée si vous n’en voulez pas. Vous pouvez changer d’avis en tout temps dans Paramètres › Notifications.',
+    marketingSmsNeedsPhone: 'Ajoutez votre numéro de mobile ci-dessus pour recevoir les offres par texto.',
+    marketingWho: 'Envoyé par {requester}.',
+    consentWordingChanged: 'Le texte du consentement a changé. Relisez-le avant d’accepter.',
+    consentChoose: 'Choisissez dans la liste.',
+    consentSmsNeedsPhone: 'Ajoutez votre numéro de mobile pour recevoir les offres par texto.',
     firstNameRequired: 'Le prénom est obligatoire.',
     lastNameRequired: 'Le nom est obligatoire.',
     phoneRequired: 'Le numéro de mobile est obligatoire pour la vérification.',

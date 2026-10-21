@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { newIdempotencyKey, ValidationError } from '@northline/client';
 import { Alert, Button, EmptyState, Field, OptionCard, RadioGroup, Select, Skeleton, SiteLink, TextInput, useFormatters } from '@northline/ui';
 import { StripePayment } from '../cart/Payment';
+import { CheckoutConsent, useCheckoutConsent } from '../consent/CheckoutConsent';
 import { AgeCheck } from '../cart/AgeCheck';
 import { ageCleared, NO_AGE } from '../cart/age';
 import { PromoPoints } from '../promotions/PromoPoints';
@@ -52,6 +53,7 @@ export function CheckoutScreen() {
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const keys = useRef({ start: newIdempotencyKey(), confirm: newIdempotencyKey() });
+  const consent = useCheckoutConsent(!!user); // S-157: the optional offers box (CASL)
 
   const data = kitchen.data;
   const pickup = when === 'pickup';
@@ -129,6 +131,7 @@ export function CheckoutScreen() {
     setBusy(true); setError(undefined);
     try {
       const placed = await confirmFood(started.orderId, keys.current.confirm);
+      await consent.record(); // S-157: the ticked offers box, once the order went through
       clear();
       void navigate({ to: '/food/orders/$orderId', params: { orderId: placed.orderId } });
     } catch (e) { failed(e); } finally { setBusy(false); }
@@ -187,6 +190,7 @@ export function CheckoutScreen() {
         {phase.step === 'pay' && phase.started.mode === 'stripe'
           ? <StripePayment started={asCartStarted(phase.started)} busy={busy} onPaid={() => void place(phase.started)} onError={m => setError(m)} />
           : <p className="nl-fco-muted">{t('fakeKicker')}</p>}
+        <CheckoutConsent consent={consent} />
       </div>
 
       <aside className="nl-rest-aside" aria-live="polite">

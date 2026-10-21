@@ -65,6 +65,14 @@ export const DeliveryOption = z.object({
 });
 export type DeliveryOption = z.infer<typeof DeliveryOption>;
 export const Payment = z.object({ provider: z.enum(['stripe', 'fake']), publishableKey: z.string().nullish() });
+/** S-157: which wallets checkouts may offer next to the card (the same for everyone; cached by the api for 5 min). */
+export const PaymentOptions = z.object({ provider: z.enum(['stripe', 'fake']).catch('fake'), applePay: z.boolean(), googlePay: z.boolean() });
+export const paymentOptionsQuery = queryOptions({
+  queryKey: ['payment-options'],
+  queryFn: () => http('/api/v1/public/payments/options', {}, PaymentOptions),
+  staleTime: 5 * 60_000,
+  retry: false,
+});
 export const Setup = z.object({
   cart: Cart, addresses: z.array(AddressView), options: z.array(DeliveryOption), payment: Payment,
   stepUp: z.enum(['none', 'required', 'enrol']), market: z.string(), served: z.boolean(),

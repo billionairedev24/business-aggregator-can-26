@@ -1,6 +1,7 @@
 import { config } from '../config';
 import type { Started } from '../api/shop';
 import { stripeSdk } from './stripeSdk';
+import { merchantIdentifier, sheetWallets, walletsAllowed } from './wallets';
 
 /**
  * Card payments (the port). The api opens one manual-capture PaymentIntent per order line plus one for the delivery fee
@@ -35,7 +36,7 @@ export const stripeCardPayments: CardPayments = {
     const stripe = stripeSdk();
     if (!stripe) return { status: 'failed' };
     // the app's scheme brings the person back from a bank's own app or page (3-D Secure redirects)
-    await stripe.initStripe({ publishableKey: key, urlScheme: SCHEME, setReturnUrlSchemeOnAndroid: true });
+    await stripe.initStripe({ publishableKey: key, urlScheme: SCHEME, setReturnUrlSchemeOnAndroid: true, merchantIdentifier: merchantIdentifier() });
     const pending = pendingIntents(started);
     let paymentMethodId = method.kind === 'saved' ? method.paymentMethodId : undefined;
     if (!paymentMethodId) {
@@ -46,6 +47,9 @@ export const stripeCardPayments: CardPayments = {
         merchantDisplayName: 'Northline',
         returnURL: `${SCHEME}://stripe-redirect`,
         defaultBillingDetails: { address: { country: 'CA' } },
+        // S-157: Apple Pay / Google Pay when the api and this build allow them; the PaymentMethod they leave is read
+        // back below and confirms the other intents, as a typed card's does
+        ...sheetWallets(await walletsAllowed()),
       });
       if (init.error) return { status: 'failed', message: init.error.localizedMessage ?? init.error.message };
       const shown = await stripe.presentPaymentSheet();

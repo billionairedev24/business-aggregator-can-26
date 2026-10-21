@@ -1,6 +1,7 @@
 package ca.northline.payments;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -19,6 +20,7 @@ import ca.northline.payments.application.RespondToCases;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.support.IntegrationTest;
+import ca.northline.support.TestJwt;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -278,6 +280,32 @@ class StripeWebhookApiTest extends IntegrationTest {
     }
 
     // ── payouts ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+    @Test
+    void s157_aReturnedPayout_isTheStudiosNotice_untilALaterPayoutGoesOut() throws Exception {
+        fx.credit(shop.merchantId(), 30_000, "escrow", Ids.next(), Instant.now().minusSeconds(3_600));
+        var payout =
+                move.instant(new MovePayouts.InstantCommand(shop.merchantId(), 10_000, shop.ownerId(), Ids.next()));
+        connect(
+                "payout.failed",
+                Instant.now(),
+                "{\"id\":\"%s\",\"object\":\"payout\",\"status\":\"failed\",\"failure_code\":\"account_closed\"}"
+                        .formatted(payout.getStripePayout()),
+                "acct_" + shop.merchantId());
+        mvc.perform(get("/api/v1/merchants/{id}/payouts/overview", shop.merchantId())
+                        .with(TestJwt.member(shop.ownerId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.returned.payoutId").value(payout.getId()))
+                .andExpect(jsonPath("$.returned.amountCents").value(10_000))
+                .andExpect(jsonPath("$.returned.failureCode").value("account_closed"));
+        // the next payout reached the bank: nothing to fix any more
+        var next = move.instant(new MovePayouts.InstantCommand(shop.merchantId(), 5_000, shop.ownerId(), Ids.next()));
+        assertThat(next.getId()).isNotEqualTo(payout.getId());
+        mvc.perform(get("/api/v1/merchants/{id}/payouts/overview", shop.merchantId())
+                        .with(TestJwt.member(shop.ownerId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.returned").isEmpty());
+    }
 
     @Test
     void payoutPaid_thenFailed_returnsTheMoney_andALatePaidChangesNothing() throws Exception {

@@ -10375,6 +10375,116 @@ seed. Configuration: `DISPUTE_EVIDENCE_PROVIDER` (required in staging and prod, 
 `charge.dispute.*` events, and the compensation transfer on a granted dispute appeal. stripe.md § 14 lists the
 test-mode checks to run before launch.
 
+## 2026-09-30 — S-157 Apple Pay / Google Pay, payout-failed email, CASL consent capture and SMS STOP
+
+Branch `feat/s157-wallets-consent`. Runbooks: [stripe.md § 15](runbooks/stripe.md#15-apple-pay-and-google-pay-s-157),
+[casl.md § 3, § 9, § 10](runbooks/casl.md), [notifications.md](runbooks/notifications.md). Migrations **V452–V454**
+(range V452–V461). No new Kafka topic.
+
+- **Never run against the real Stripe, Twilio, Apple or Google.** Wallets: no Apple Pay / Google Pay sheet shown, no
+  domain registered, no merchant id, `scripts/stripe/payment-method-domain.sh` not run against Stripe (its `status` and
+  `validate` ran against stripe-mock v0.205.0, `register` up to the association-file check; bash 3.2 parses it);
+  tested with a stubbed Stripe.js, the React Native SDK mocked and the fake gateway. Twilio: the signature is checked
+  against Twilio's documented example (`0/KCTR6DLpKmkAf8muzZqo1nDgQ=`) and MockMvc deliveries; no real number, handset,
+  Messaging Service, Advanced Opt-Out or status callback. `StatusCallback` on sends is asserted with WireMock. Offers
+  went only to Mailpit-style recording fakes. Pre-launch checks: stripe.md § 15, casl.md § 8 items 5–8.
+- **Wallets:** server unchanged — Apple Pay and Google Pay are cards to Stripe, so the same manual-capture
+  PaymentIntents (`payment_method_types = card`), the same S-51 step-up, and the wallet's PaymentMethod (saved by
+  `setup_future_usage` on the first intent) confirms the order's other intents as a typed card's does. **Decision:** one
+  public endpoint, `GET /api/v1/public/payments/options` (`provider`, `applePay`, `googlePay`, cached 5 min), rather
+  than a field on each checkout response — it covers every Payment Element / PaymentSheet (shop, food, bookings, quote
+  deposits, tips) without changing five response records. `STRIPE_APPLE_PAY` / `STRIPE_GOOGLE_PAY` default `false`
+  (Stripe's Payment Element would otherwise show wallets as soon as a domain is registered; now it's `never` until
+  configured). Web: `wallets: {applePay, googlePay}` = `auto | never`; the element mounts once the options answered (a
+  failed answer = cards only). App: PaymentSheet's `applePay` / `googlePay` only when the api **and** the build allow
+  them (`EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID`, `EXPO_PUBLIC_GOOGLE_PAY`, `_TEST`); Stripe's config plugin is added to
+  `app.config.ts` only when one is set (cards still need none). The app has no food checkout (none to change). The
+  consumer site serves `/.well-known/apple-developer-merchantid-domain-association` from
+  `NL_APPLE_PAY_DOMAIN_ASSOCIATION` (404 when empty, like the other association files) and its `Permissions-Policy`
+  now delegates `payment` to `https://js.stripe.com` (the Payment Request API inside Stripe's iframe). Domain
+  registration: `scripts/stripe/payment-method-domain.sh register|status|validate <domain>` (curl + python3; checks the
+  file is served without a redirect first).
+- **payout.failed:** the worker already emailed it (S-27; S-12's "not done" line was stale). Added: Stripe's failure
+  code in words (14 documented codes, `other`, `canceled`; `PayoutFailed.REASONS`/`why()`, a new key variable `why`),
+  "Update your bank details in Payouts › Bank account", the raw code kept for support; still owners **and bookkeepers**
+  (row `payout`, S-27) — not narrowed to owners. **Studio notice:** `GET …/payouts/overview` gains `returned` (the
+  newest payout when it is `failed` and went to the account still active, with no pending account change); the
+  Payouts screen shows an alert with the reason and **Update bank details** (owners; others are told to ask the owner).
+  It disappears when the details change or a later payout is sent. Canceled payouts get no notice (not the account's
+  fault). Events unchanged (ids and amounts only).
+- **The consent wordings and evidence rules moved into the email library** (`ca.northline.email.ConsentWordings`,
+  `ConsentProof`) so northline-auth can show and check the sign-up wordings; the api's `messaging.domain` types delegate
+  (every published hash unchanged; `ConsentWordingsTest` still pins them). New wording `keyword.sms.2026-10` (surface
+  `SMS_KEYWORD`) for START. `ConsentWordings.requester()` shared.
+- **Sign-up consent is recorded by northline-auth**, not by the clients after sign-in: the Create account form (S-154,
+  consumer site and Studio) and the app's phone registration (S-62) send the ticked boxes `marketing: [{category,
+  wordingVersion}]`; auth checks each against the current wording for the app (consumer: email + texts — texts only with
+  a mobile; Studio: email; console: none), keeps them with the pending account (**V452**
+  `auth.pending_accounts.marketing_consents` jsonb, ≤ 2) or the registration's session, and inserts them into
+  `messaging.consent_records` in the transaction that creates the account (source `web_signup` for both web forms — the
+  wording version tells Studio from consumer — or `app_signup` from the app's `consentSource`). Why: the account
+  doesn't exist until the email is confirmed (possibly in another browser), and the proof should carry the form's time,
+  IP prefix and user agent. Auth writing the api's `messaging` table is the same shared-database pattern as its
+  `identity.users` writes. Validation runs **before** the existing-account branch so a 422 never reveals an account.
+  New messages: "Add your mobile number to get offers by text." (fr in the catalogue); "The consent wording has
+  changed…" and "Choose from the list." reused. Wordings for the form: `GET /api/auth/accounts/consent-wordings?app=`
+  (auth, public). A text consent whose number isn't stored (in use by another account, S-154's no-enumeration rule) is
+  dropped silently.
+- **Checkout consent:** an unticked "Offers by email" box (the email category only — texts and push stay in Account ›
+  Notifications) on the web's shop review step, food checkout and booking payment, and the app's Pay screen and booking
+  review, shown only to someone without that consent; recorded after the order / booking went through (`PUT
+  /me/consents/marketing_email`, source `checkout`), and a failure there never fails the purchase. Account ›
+  Notifications already shows and changes every consent (S-108); its source label `sms_keyword` now reads "Text reply
+  (STOP or START)".
+- **Inbound SMS (CASL s. 11):** `POST /api/v1/webhooks/sms/inbound` and `/status` (messaging module, form posts,
+  permitted without a token like Stripe's). Verification by provider through the sms library's `SmsWebhooks`: Twilio's
+  `X-Twilio-Signature` (HMAC-SHA1, `SMS_AUTH_TOKEN`) over `northline.sms.webhook-base-url` (= `API_PUBLIC_URL`) + path —
+  never the request's own host; `local` accepts unsigned posts **only under the local/test profiles** (the fake); AWS /
+  Azure → 503 (inbound via SNS / Event Grid not built). STOP-family keywords (en + fr, accents and punctuation aside)
+  withdraw `marketing_sms` of every active account holding the number, at once, source `sms_keyword`; **START gives the
+  offers consent back only when the last record was a keyword withdrawal** (a START is not express consent to offers
+  never asked for) — with the new keyword wording; HELP answers sender and contact. The reply is TwiML (UTF-8) in the
+  account's language, both languages for an unknown number; non-keywords get none. Dedupe by (provider, MessageSid).
+  Twilio's own opt-out handling may answer and block first — documented (set its texts to ours). **V453**
+  `messaging.sms_inbound` and `messaging.sms_delivery_status`: no number (SHA-256, the consent address hash) and no
+  text; a final delivery status is never replaced by a late one; 90-day nightly purge (`SmsKeywordService`,
+  `northline.messaging.sms-webhook-purge-cron`), listed as operational in the retention schedule. Status callbacks:
+  `TwilioSmsTransport` sends `StatusCallback` when `SMS_STATUS_CALLBACK_URL` is set (api and worker; auth's codes are
+  not tracked). Commercial texts now end "or reply STOP" / « ou répondez ARRET ». `identity.api.NotificationContacts`
+  gained `usersWithPhone`.
+- **Offers (the minimal producer):** console screen `offers` (new `ConsoleScreen.OFFERS`, `ConsoleAction.OFFERS`;
+  admins and **finance**, who own promotions); `GET/POST /api/v1/console/offers`, `…/preview`, `…/test`. Market =
+  province (a saved address there, new `identity.api.MarketAudience`); audience = customers whose newest consent for the
+  channel is a grant with a customer wording (`account.*` or `keyword.*` — Studio business consents excluded); one
+  channel per offer; words in both languages (title ≤ 80, message ≤ 600), a site path (`OfferDraft`, 422 messages in
+  the catalogue). **Throttled through the worker without Kafka:** the api writes one `messaging.offer` row per person
+  into `messaging.deferred_notifications` (until now written only by the worker; the payload is S-108's
+  `PersonalNotices.offer` plus `campaignId`, no personal data), due `OFFERS_PER_MINUTE` (30, clamped to the job's 50) a
+  minute; the worker re-reads consent per row, sends only the row's channel, adds the CASL footer / opt-out — and (new,
+  for every deferred row) **postpones a row due inside quiet hours** without counting an attempt. **V454**
+  `messaging.offer_campaigns`; progress = the campaign's pending / dead deferred rows. Test send = the staff member's
+  own address only, "[Test]", straight through `EmailSender` / `SmsTransport` (CASL's employee exemption; their own
+  consent is not asked). Audit `offer.sent`, `offer.test_sent`. Recipients are enqueued one insert at a time — fine
+  for a pilot; a large market wants a batch insert.
+- **Preview's SMS text** is rebuilt by the api to match the worker's format (the brand, title, message, sender, opt-out
+  link, STOP) — two places to keep together (`OfferCampaignService.smsText`, `PersonalNotices.offer` +
+  `Deliveries.commercialSms`).
+- **Tests:** api `PaymentOptionsApiTest`, `StripePaymentSettingsTest`, `StripeWebhookApiTest` +1 (the returned-payout
+  notice), `SmsWebhookApiTest` (STOP once, French, START only after STOP, HELP / unknown number, statuses, 400s),
+  `SmsWebhookSignatureTest` (standalone MockMvc, no extra Spring context: missing / tampered / valid signature, 503 for AWS), `ConsoleOffersApiTest` (preview,
+  exact audience, payload without PII, audit, test send, 403s, 422s en/fr, 409), `ConsentWordingsTest` (+ the keyword
+  wording's hash), `ConsoleRolesApiTest`; auth `SignupConsentApiTest` (wordings en/fr per app, recorded with evidence
+  only on creation, nothing when unticked, Studio wording, 422s, the app's registration); email `EmailTemplatesTest` +1
+  (every reason, both languages); sms `SmsWebhooksTest` (Twilio's example, keywords, verifier per provider),
+  `TwilioSmsTransportTest` +1; worker `CommercialNoticesTest` +1. Web: consumer `checkout.test.tsx` +4 (wallets on /
+  off, checkout consent recorded / not), `auth.test.tsx` +1, `appLinks.test.ts` +1; Studio `auth.test.tsx` +2,
+  `finance.test.tsx` +2; console `offers.test.tsx` (4), shell tests updated. App: `shop.test.tsx` +4 (wallets, checkout
+  consent), `journeyA.test.tsx` +2.
+- **Not done:** inbound texts for AWS End User Messaging / Azure (SNS / Event Grid); offers by push; scheduling,
+  segments finer than a province, per-offer results; batch enqueue; a "your payout came back" item on the Studio
+  dashboard (the Payouts screen only); counsel review of the new wordings; Twilio's Advanced Opt-Out texts are an
+  operator step.
+
 ## 2026-10-21 — S-159 Group food orders, the phone apps on S-154's accounts, in-app account deletion, demo data by email
 
 Branch `feat/s159-group-orders-app-auth`; migrations V472–V473 (range V472–V481). No new Kafka topic, no new secret.
@@ -10410,6 +10520,10 @@ Branch `feat/s159-group-orders-app-auth`; migrations V472–V473 (range V472–V
   "Not now" allowed for customers); sign-in is email + password + the account's factor (authenticator or backup
   code); sign-in by phone code is kept on its own screen; forgot password in the app. Phone-first registration is
   gone from the app. Passkey creation is shown but disabled (no native passkey module yet).
+- S-157's offers checkboxes (CASL express consent) moved with the app's sign-up onto `POST /api/auth/accounts`
+  (`marketing`, the wording versions; a text box only with a mobile). That endpoint records the consents with source
+  `web_signup` (AccountService), not `app_signup` as the phone registration did: changing it needs a column on
+  `auth.pending_accounts` and was left for S-157's owners.
 - Courier app: email + password + its second factor, **required**: a courier account without one is taken to
   enrolment before it can sign in (enforced in the app; northline-auth does not know which client is a courier
   app). The browser passkey sign-in stays.

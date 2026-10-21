@@ -296,7 +296,8 @@ public sealed interface EmailContent {
      * Settings › Notifications row {@code payout}.
      *
      * @param outcome {@code failed} (returned by the bank) | {@code canceled}
-     * @param failureCode Stripe's code ({@code account_closed}, {@code no_account}, …), null when canceled
+     * @param failureCode Stripe's code ({@code account_closed}, {@code no_account}, …), null when canceled; S-157: the
+     *     email says what it means ({@link #REASONS}, else a general reason) and keeps the code for support
      */
     record PayoutFailed(
             String businessName,
@@ -305,10 +306,35 @@ public sealed interface EmailContent {
             @Nullable String failureCode,
             URI payoutsLink) implements EmailContent {
 
+        /** Stripe's payout failure codes the email (and the Studio's notice) explain in words. */
+        public static final Set<String> REASONS = Set.of(
+                "account_closed",
+                "account_frozen",
+                "bank_account_restricted",
+                "bank_ownership_changed",
+                "could_not_process",
+                "debit_not_authorized",
+                "declined",
+                "incorrect_account_holder_address",
+                "incorrect_account_holder_name",
+                "incorrect_account_holder_tax_id",
+                "insufficient_funds",
+                "invalid_account_number",
+                "invalid_currency",
+                "no_account");
+
         public PayoutFailed {
             if (!outcome.equals("failed") && !outcome.equals("canceled")) {
                 throw new IllegalArgumentException("outcome must be failed or canceled: " + outcome);
             }
+        }
+
+        /** The reason's message key part: a known code, {@code other} for a code we don't explain, {@code canceled}. */
+        public String why() {
+            if (failureCode == null || failureCode.isBlank()) {
+                return outcome.equals("canceled") ? "canceled" : "other";
+            }
+            return REASONS.contains(failureCode) ? failureCode : "other";
         }
 
         @Override
@@ -334,6 +360,7 @@ public sealed interface EmailContent {
             v.put("amount", format.money(amountCents));
             v.put("hasCode", failureCode != null && !failureCode.isBlank());
             v.put("code", failureCode == null ? "" : failureCode);
+            v.put("why", why());
             v.put("link", payoutsLink.toString());
             return v;
         }

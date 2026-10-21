@@ -52,6 +52,8 @@ export interface CreateAccountValues {
   passwordConfirm: string;
   phone: string;
   terms: boolean;
+  /** S-157: the ticked marketing boxes (CASL express consent), with the wording version shown */
+  marketing?: MarketingConsent[];
 }
 export interface CodeSent {
   resendAfterSeconds: number;
@@ -63,6 +65,17 @@ export interface TotpSetup {
   /** A PNG data URI of the otpauth:// URI. */
   qrCode: string;
 }
+/** S-157: a ticked marketing checkbox. */
+export interface MarketingConsent {
+  category: 'marketing_email' | 'marketing_sms';
+  wordingVersion: string;
+}
+/** S-157: `GET /api/auth/accounts/consent-wordings?app=consumer` — the sign-up's marketing checkboxes. */
+export interface ConsentWordings {
+  requester: string;
+  items: { category: 'marketing_email' | 'marketing_sms'; channel: string; wordingVersion: string; wording: string }[];
+}
+
 export class AuthApi {
   constructor(
     private readonly issuer: string,
@@ -104,7 +117,24 @@ export class AuthApi {
       terms: v.terms,
       termsLanguage: this.language() === 'fr-CA' ? 'fr' : 'en',
       app: 'consumer',
+      // S-157: the ticked offers boxes (CASL express consent); the accounts endpoint records them as the app's sign-up
+      ...(v.marketing?.length ? { marketing: v.marketing } : {}),
     });
+  }
+
+  /** S-157: the wordings of the sign-up's marketing checkboxes, in the app's language. */
+  async consentWordings(): Promise<ConsentWordings> {
+    let res: Response;
+    try {
+      res = await this.fetchImpl(`${this.issuer}/api/auth/accounts/consent-wordings?app=consumer`, {
+        credentials: 'include',
+        headers: { Accept: 'application/json', 'Accept-Language': this.language() === 'fr-CA' ? 'fr-CA' : 'en-CA' },
+      });
+    } catch (e) {
+      throw new NetworkError(e);
+    }
+    if (!res.ok) throw await apiErrorOf(res);
+    return (await res.json()) as ConsentWordings;
   }
   resendVerification() {
     return this.post<EmailSent>('/api/auth/accounts/resend');
