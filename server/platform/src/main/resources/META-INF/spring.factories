@@ -7,3 +7,7 @@ ca.northline.platform.MissingEnvironmentFailureAnalyzer
 org.springframework.boot.EnvironmentPostProcessor=\
 ca.northline.platform.observability.ObservabilityDefaults,\
 ca.northline.platform.logging.LoggingDefaults
+
+# S-163: the Elasticsearch auto-configuration only with northline.search.provider=elasticsearch
+org.springframework.boot.autoconfigure.AutoConfigurationImportFilter=\
+ca.northline.platform.SearchProviderImportFilter

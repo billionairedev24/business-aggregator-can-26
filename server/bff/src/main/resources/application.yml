@@ -19,6 +19,7 @@ spring:
     username: ${REDIS_USERNAME:}
     password: ${REDIS_PASSWORD:}
     ssl.enabled: ${REDIS_SSL:false}
+    repositories.enabled: false       # S-163: no Redis repositories (Spring Data would scan every package for them)
   session:
     data.redis.namespace: nl:studio-bff   # Boot 4 name (spring.session.redis.* is ignored)
     timeout: 12h                          # "sessions expire after 12 h idle"
