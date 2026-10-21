@@ -10589,7 +10589,8 @@ and Stripe Tax record/reverse of a Plus period. stripe.md § 11 lists the test-m
 
 ## 2026-10-21 — S-159 Group food orders, the phone apps on S-154's accounts, in-app account deletion, demo data by email
 
-Branch `feat/s159-group-orders-app-auth`; migrations V472–V473 (range V472–V481). No new Kafka topic, no new secret.
+Branch `feat/s159-group-orders-app-auth`; migrations V487–V488 (range V487–V496 — first assigned V472–V481, renumbered
+above S-162's V482 and S-158's V483–V486 by the ordering rule). No new Kafka topic, no new secret.
 
 **Group food orders**
 - **Model:** the baseline's `orders.group_orders` (V009, unused until now) gains the life `open → locked → paying →
@@ -10640,7 +10641,7 @@ Branch `feat/s159-group-orders-app-auth`; migrations V472–V473 (range V472–V
   (new SPI method `PersonalDataContributor.consequences()`: open orders, upcoming bookings, held payments, open refunds
   and disputes, points lost, Plus — not cancelled, cards detached so it doesn't renew — and businesses losing their
   only owner); then the step-up proof or the code.
-- The code goes to the verified mobile, else the **verified email** (new; V473 `privacy.requests.code_channel`), else
+- The code goes to the verified mobile, else the **verified email** (new; V488 `privacy.requests.code_channel`), else
   an older account's mobile. Emails `PrivacyCode` and `AccountDeletion` (requested / completed, en + fr), linking to
   `northline.privacy.site-origin` (= `CONSUMER_ORIGIN`). The completed email is sent before the pipeline wipes the
   address.

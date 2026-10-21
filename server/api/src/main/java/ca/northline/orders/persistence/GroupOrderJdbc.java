@@ -16,7 +16,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link GroupOrderStore} on {@code orders.group_orders} (V009 + V472) and its items and shares (V472). */
+/** {@link GroupOrderStore} on {@code orders.group_orders} (V009 + V487) and its items and shares (V487). */
 @Repository
 @RequiredArgsConstructor
 class GroupOrderJdbc implements GroupOrderStore {

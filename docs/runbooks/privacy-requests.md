@@ -56,7 +56,7 @@ authenticator code at northline-auth (`/api/auth/step-up/*`), sent as `X-Step-Up
 sends to the account (15 minutes, 5 tries, a new code at most once a minute). (b) exists because a phone-code account
 has no other factor and the app must be able to delete it. Since S-159 the code goes to the verified mobile if there
 is one, else to the **verified email** (S-154's email + password accounts often have no mobile), else to an older
-account's mobile; `privacy.requests.code_channel` (V473, `sms` | `email`) records which, and the request shows
+account's mobile; `privacy.requests.code_channel` (V488, `sms` | `email`) records which, and the request shows
 `codeSentTo` masked (`•••• 1234` or `a•••@example.com`). A request staff record (email, mail,
 phone) waits for staff to verify the person by hand (**Identity verified**).
 

@@ -1,4 +1,5 @@
--- S-159 (range V472–V481): group food orders on the baseline's orders.group_orders (V009: host, kitchen, link code,
+-- S-159 (range V487–V496; first V472–V481, renumbered above S-162 / S-158).
+-- group food orders on the baseline's orders.group_orders (V009: host, kitchen, link code,
 -- members, locks_at; V181: unique link code) — additive only, no column renamed or dropped. See docs/DECISIONS.md
 -- "S-159".
 
