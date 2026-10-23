@@ -64,16 +64,16 @@ function Group({ group }: { group: ServiceGroup }) {
   );
 }
 
-/** Loading: the band and a few rows of tiles. */
+/** Loading: the landing head and a few rows of tiles, in their own boxes. */
 export function ServicesLandingSkeleton() {
   return (
     <div className="nl-page nl-svc" aria-busy="true">
-      <Skeleton height={260} radius="var(--radius-lg)" style={{ marginTop: 24 }} />
+      <div className="nl-band"><div className="nl-band-copy"><Skeleton width={120} height={12} /><Skeleton width={220} height={28} /><Skeleton width="80%" height={14} /></div><span className="nl-band-pic" /></div>
       {Array.from({ length: 3 }, (_, i) => (
         <div key={i} className="nl-rail">
-          <Skeleton width={200} height={28} />
-          <div className="nl-rail-track nl-rail-tile" style={{ marginTop: 16 }}>
-            {Array.from({ length: 6 }, (_, j) => <Skeleton key={j} height={160} radius="var(--radius-lg)" />)}
+          <div className="nl-rail-head"><Skeleton width={200} height={22} /></div>
+          <div className="nl-rail-track nl-rail-tile">
+            {Array.from({ length: 7 }, (_, j) => <span key={j} className="nl-svc-skel-tile" />)}
           </div>
         </div>
       ))}

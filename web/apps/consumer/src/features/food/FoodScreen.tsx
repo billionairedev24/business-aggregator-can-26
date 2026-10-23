@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Chip, EmptyState, ErrorState, Segmented, SiteLink, Skeleton, Tag, useFormatters, useLocale } from '@northline/ui';
+import { Chip, EmptyState, FilterChip, ErrorState, Segmented, ServiceCard, Skeleton, useFormatters, useLocale } from '@northline/ui';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { useKitchens, type Card } from './api';
 import { cuisineSlot } from '@northline/media';
@@ -82,7 +82,7 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
       {sched && <p className="nl-food-panel">{t('scheduleNote')}</p>}
 
       <div className="nl-food-chips" role="group" aria-label={t('filters')}>
-        {FILTERS.map(f => <Chip key={f} selected={filters.has(f)} onClick={() => toggleFilter(f)}>{t(`f_${f}`)}</Chip>)}
+        {FILTERS.map(f => <FilterChip key={f} label={t(`f_${f}`)} applied={filters.has(f)} onToggle={() => toggleFilter(f)} />)}
       </div>
       <div className="nl-food-chips" role="group" aria-label={t('cuisines')}>
         <Chip selected={cuisine === 'all'} onClick={() => setCuisine('all')}>{t('all')}</Chip>
@@ -92,7 +92,7 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
       {kitchens.isError ? (
         <div className="nl-food-block"><ErrorState message={t('loadError')} onRetry={() => void kitchens.refetch()} /></div>
       ) : !kitchens.data ? (
-        <div className="nl-food-grid" aria-busy="true">{Array.from({ length: 6 }, (_, i) => <div key={i}><Skeleton height={160} radius={12} /><Skeleton width="60%" height={16} style={{ marginTop: 10 }} /></div>)}</div>
+        <ul className="nl-card-grid nl-card-grid-results nl-food-grid" aria-busy="true">{Array.from({ length: 5 }, (_, i) => <li key={i} className="nl-food-skel"><span className="nl-food-skel-pic" /><Skeleton width="60%" height={16} /></li>)}</ul>
       ) : reachable.length === 0 ? (
         <div className="nl-food-block"><EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('empty', { area })}</EmptyState></div>
       ) : (
@@ -104,7 +104,7 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
           </h2>
           {shown.length === 0
             ? <EmptyState action={<button type="button" className="btn btn-secondary" onClick={() => { setFilters(new Set()); setCuisine('all'); }}>{t('clearFilters')}</button>}>{t('emptyFiltered')}</EmptyState>
-            : <div className="nl-food-grid">{shown.map(k => <KitchenCard key={k.merchantId} t={t} k={k} pickup={pickup} cuisineName={cuisineName} />)}</div>}
+            : <ul className="nl-card-grid nl-card-grid-results nl-food-grid">{shown.map(k => <li key={k.merchantId}><KitchenCard t={t} k={k} pickup={pickup} cuisineName={cuisineName} /></li>)}</ul>}
         </>
       )}
 
@@ -117,27 +117,25 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
   );
 }
 
+/** A kitchen as the site's service card (E-15: one card system): its cuisine photo, the cuisines, name, rating, the
+ * time and fee, and when it opens if it is closed. */
 function KitchenCard({ t, k, pickup, cuisineName }: { t: T; k: Card; pickup: boolean; cuisineName: (c: string) => string }) {
   const { money, date } = useFormatters();
   const { locale } = useLocale();
   const eta = pickup ? t('readyIn', { from: k.pickupFromMin, to: k.pickupToMin }) : t('etaRange', { from: k.etaFromMin, to: k.etaToMin });
-  const meta = [
-    k.cuisines.map(cuisineName).join(', ') || null,
+  const place = [
+    eta,
     k.priceLevel,
     k.distanceKm != null ? t('km', { km: k.distanceKm.toLocaleString(locale === 'fr' ? 'fr-CA' : 'en-CA') }) : null,
     pickup ? null : k.delivers === false ? t('noDelivery') : money(k.deliveryFeeCents),
   ].filter(Boolean).join(' · ');
-  const body = (
-    <>
-      <div className="nl-food-tile">
-        <Scene slot={[cuisineSlot(k.cuisines[0]), 'banner/food']} subject={k.cuisines[0] ?? 'food'} sizes="(min-width: 960px) 30vw, 90vw" />
-        <span className="tag nl-food-eta">{eta}</span>
-        {!k.open && <span className="tag tag-neutral nl-food-opens">{k.paused ? t('paused') : k.opensAt ? t('opens', { time: date(k.opensAt, 'time') }) : t('closedNow')}</span>}
-      </div>
-      <div className="nl-food-card-head"><span className="nl-food-card-name">{k.name}</span><span>{k.reviews > 0 ? t('rating', { rating: k.rating.toFixed(1), count: k.reviews }) : t('newKitchen')}</span></div>
-      <div className="nl-food-card-meta">{meta}</div>
-      {k.dietary.length > 0 && <div className="nl-food-tags">{k.dietary.map(d => <Tag key={d} tone="neutral">{TAGS[d]?.[locale] ?? d}</Tag>)}</div>}
-    </>
+  const state = k.open ? null : k.paused ? t('paused') : k.opensAt ? t('opens', { time: date(k.opensAt, 'time') }) : t('closedNow');
+  const diet = k.dietary.map(d => TAGS[d]?.[locale] ?? d).join(' · ');
+  return (
+    <ServiceCard href={k.slug ? `/food/${k.slug}` : '/food'} layout="stack" level={3} name={k.name}
+      kind={k.cuisines.map(cuisineName).join(' · ') || undefined}
+      mark={<Scene slot={[cuisineSlot(k.cuisines[0]), 'banner/food']} subject={k.cuisines[0] ?? 'food'} crop="card" sizes="(min-width: 960px) 18vw, 45vw" />}
+      rating={k.reviews > 0 ? k.rating : null} reviewCount={k.reviews} place={place}
+      note={[state, diet].filter(Boolean).join(' · ') || undefined} />
   );
-  return k.slug ? <SiteLink href={`/food/${k.slug}`} className="nl-food-card">{body}</SiteLink> : <div className="nl-food-card">{body}</div>;
 }
