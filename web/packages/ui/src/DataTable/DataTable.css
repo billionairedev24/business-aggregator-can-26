@@ -216,3 +216,7 @@ table.nl-dt-table td { vertical-align: middle; overflow-wrap: break-word; } /* o
 .nl-dt-dense .nl-dt-sub { margin-top: 2px; }
 .nl-dt-dense .nl-dt-card { padding: var(--space-2-5) var(--space-3); gap: var(--space-2); }
 .nl-status.nl-dt-tag-wrap { white-space: normal; max-width: 100%; }
+/* S-177: the toolbar with quick filters — Columns and Report as 44 px icon buttons (named for screen readers), the
+   search a little narrower, so the views, the search and the filters hold on one line at 1280 */
+.nl-dt-tool-icon { min-width: var(--size-touch); padding-inline: 0; justify-content: center; }
+.nl-dt-toolbar:has(> .seg) .nl-dt-search { flex-basis: 180px; max-width: 280px; }
