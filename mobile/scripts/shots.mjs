@@ -269,7 +269,8 @@ async function courier() {
   await settle(1200);
   await step('sign-in', async () => { await shot('sign-in'); });
   await step('today', async () => {
-    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    // S-159: email + password + code, or the passkey in the browser (the fixture signs that in at once)
+    await tap('browser-sign-in');
     await settle(1500);
     await shot('today');
   });
@@ -296,7 +297,6 @@ async function courier() {
     ['profile', '/account'],
   ]))
     await step(name, fn);
-  await gallery();
   await step('dropoff-pin', async () => {
     await go('/stops/st-3/dropoff');
     await page.getByRole('tab', { name: 'PIN' }).filter({ visible: true }).first().click();
@@ -317,7 +317,10 @@ async function courier() {
       await go(href);
       await shot(`${name}-fr`, { full: false });
     }
+    await go('/account');
+    await page.getByRole('tab', { name: 'English' }).filter({ visible: true }).first().click();
   });
+  await gallery();
 }
 
 try {

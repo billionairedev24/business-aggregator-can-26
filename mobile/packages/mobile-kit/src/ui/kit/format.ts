@@ -9,7 +9,7 @@ import type { Locale } from '../../i18n';
 const INTL: Record<Locale, string> = { en: 'en-CA', 'fr-CA': 'fr-CA' };
 
 /** Intl puts narrow no-break spaces in times and amounts ("6:00 p.m.", "8,50 $"); copy and tests read plain spaces. */
-const plain = (s: string) => s.replace(/[   ]/g, ' ');
+const plain = (s: string) => s.replace(/[\u00a0\u202f\u2009]/g, ' ');
 
 export function formatPrice(cents: number, locale: Locale = 'en'): string {
   return plain(

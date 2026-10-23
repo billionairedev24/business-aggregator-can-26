@@ -28,8 +28,8 @@ export function KitGallery({ initialLocale = 'en', onBack, bottomInset = 0, test
   );
 }
 
-const WINDOW_START = '2026-10-23T00:00:00Z';
-const WINDOW_END = '2026-10-23T03:00:00Z';
+const WINDOW_START = '2026-10-23T18:00:00Z';
+const WINDOW_END = '2026-10-23T21:00:00Z';
 const ZONE = 'UTC';
 
 function GalleryBody({ locale, setLocale, onBack, bottomInset, testID }: { locale: Locale; setLocale: (l: Locale) => void; onBack?: () => void; bottomInset: number; testID: string }) {

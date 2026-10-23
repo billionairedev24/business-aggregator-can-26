@@ -222,7 +222,7 @@ export function Account() {
       </SettingsGroup>
 
       {language}
-      <Button label={t('you.signOut')} tone="danger" large busy={busy} onPress={() => void out()} testID="sign-out" />
+      <Button label={t('you.signOut')} tone="secondary" large busy={busy} onPress={() => void out()} testID="sign-out" />
       {legal}
     </Screen>
   );
