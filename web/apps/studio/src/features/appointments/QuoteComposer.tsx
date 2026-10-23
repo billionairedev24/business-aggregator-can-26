@@ -76,7 +76,7 @@ export function QuoteComposer({ request, revising, onDone, onCancel }: { request
                 <Select aria-label={t('lineType', { n: i + 1 })} value={l.kind} onChange={e => setLine(i, { kind: e.target.value as LineKind })} options={KINDS.map(k => ({ value: k, label: t(`kind_${k}`) }))} />
                 <TextInput aria-label={t('lineQty', { n: i + 1 })} inputMode="decimal" value={l.qty} className="nl-center" aria-invalid={qErr ? true : undefined} onChange={e => setLine(i, { qty: e.target.value })} />
                 <TextInput aria-label={t('lineAmount', { n: i + 1 })} inputMode="decimal" value={l.amount} className="nl-right" aria-invalid={aErr ? true : undefined} aria-describedby={err ? errId : undefined} onChange={e => setLine(i, { amount: e.target.value })} />
-                <button type="button" className="btn btn-ghost nl-appt-x" aria-label={t('removeLine', { n: i + 1 })} disabled={s.lines.length === 1} onClick={() => set({ lines: s.lines.filter((_, j) => j !== i) })}>×</button>
+                <button type="button" className="btn btn-tertiary nl-appt-x" aria-label={t('removeLine', { n: i + 1 })} disabled={s.lines.length === 1} onClick={() => set({ lines: s.lines.filter((_, j) => j !== i) })}>×</button>
               </div>
               {err ? <div id={errId} role="alert" className="nl-error">{err}</div> : null}
             </div>
@@ -85,21 +85,21 @@ export function QuoteComposer({ request, revising, onDone, onCancel }: { request
         {errors.lines ? <div role="alert" className="nl-error">{errors.lines}</div> : null}
       </div>
       <div className="nl-appt-quick">
-        <button type="button" className="btn btn-ghost" onClick={() => set({ lines: [...s.lines, newLine()] })}>{t('addLine')}</button>
-        <button type="button" className="btn btn-ghost" onClick={() => set({ lines: [...s.lines, newLine({ name: t('travelLine'), kind: 'travel', amount: '20' })] })}>{t('addTravel')}</button>
-        <button type="button" className="btn btn-ghost" onClick={() => set({ lines: [...s.lines, newLine({ name: t('shopLine'), kind: 'fee', amount: '12' })] })}>{t('addShop')}</button>
+        <button type="button" className="btn btn-tertiary" onClick={() => set({ lines: [...s.lines, newLine()] })}>{t('addLine')}</button>
+        <button type="button" className="btn btn-tertiary" onClick={() => set({ lines: [...s.lines, newLine({ name: t('travelLine'), kind: 'travel', amount: '20' })] })}>{t('addTravel')}</button>
+        <button type="button" className="btn btn-tertiary" onClick={() => set({ lines: [...s.lines, newLine({ name: t('shopLine'), kind: 'fee', amount: '12' })] })}>{t('addShop')}</button>
       </div>
       <QuoteLineSuggestions merchantId={merchantId} requestId={request.id}
         onAdd={ls => set({ lines: [...s.lines.filter(l => l.name.trim() || l.amount.trim()), ...ls.map(l => newLine({ name: l.description, kind: l.kind, qty: String(l.qty) }))] })} />
       <dl className="nl-appt-totals" aria-live="polite">
-        <dt>{t('totLabour')}</dt><dd>{f.money(tot.labour)}</dd>
-        <dt>{t('totParts')}</dt><dd>{f.money(tot.parts)}</dd>
-        <dt>{t('totFees')}</dt><dd>{f.money(tot.fees)}</dd>
-        {tot.discount > 0 ? <><dt>{t('totDiscount')}</dt><dd>−{f.money(tot.discount)}</dd></> : null}
-        <dt>{t('totGst')}</dt><dd>{f.money(tot.tax)}</dd>
-        <dt className="nl-appt-total">{t('totTotal')}</dt><dd className="nl-appt-total nl-appt-total-v">{f.money(tot.total)}</dd>
+        <dt>{t('totLabour')}</dt><dd>{f.price(tot.labour)}</dd>
+        <dt>{t('totParts')}</dt><dd>{f.price(tot.parts)}</dd>
+        <dt>{t('totFees')}</dt><dd>{f.price(tot.fees)}</dd>
+        {tot.discount > 0 ? <><dt>{t('totDiscount')}</dt><dd>−{f.price(tot.discount)}</dd></> : null}
+        <dt>{t('totGst')}</dt><dd>{f.price(tot.tax)}</dd>
+        <dt className="nl-appt-total">{t('totTotal')}</dt><dd className="nl-appt-total nl-appt-total-v">{f.price(tot.total)}</dd>
       </dl>
-      <FormGrid min={200} style={{ marginTop: 14 }}>
+      <FormGrid min={200} className="nl-appt-gap-top">
         <Field label={t('proposedTime')}><TextInput type="datetime-local" value={s.proposedAt} onChange={e => set({ proposedAt: e.target.value })} /></Field>
         <Field label={t('duration')}><Select value={String(s.durationMin)} onChange={e => set({ durationMin: Number(e.target.value) })} options={DURATIONS.map(d => ({ value: String(d), label: t(`dur${d}`) }))} /></Field>
         <Field label={t('validFor')} error={errors.validHours}><Select value={String(s.validHours)} onChange={e => set({ validHours: Number(e.target.value) })} options={VALID_HOURS.map(h => ({ value: String(h), label: t(`valid${h}`) }))} /></Field>
@@ -111,15 +111,15 @@ export function QuoteComposer({ request, revising, onDone, onCancel }: { request
           <span className="nl-label">{t('attachments')}</span>
           <input ref={fileRef} type="file" hidden multiple accept="image/jpeg,image/png,image/heic,image/webp,application/pdf" onChange={e => void onFiles(e.target.files)} />
           <button type="button" className="btn btn-secondary nl-appt-attach" disabled={upload.isPending || s.attachments.length >= 10} onClick={() => fileRef.current?.click()}>{upload.isPending ? t('uploading') : t('addAttachments')}</button>
-          {s.attachments.length > 0 ? <ul className="nl-appt-files">{s.attachments.map(a => <li key={a.id}><span>{a.fileName}</span><button type="button" className="nl-appt-x btn btn-ghost" aria-label={t('removeAttachment', { name: a.fileName })} onClick={() => set({ attachments: s.attachments.filter(x => x.id !== a.id) })}>×</button></li>)}</ul> : null}
+          {s.attachments.length > 0 ? <ul className="nl-appt-files">{s.attachments.map(a => <li key={a.id}><span>{a.fileName}</span><button type="button" className="nl-appt-x btn btn-tertiary" aria-label={t('removeAttachment', { name: a.fileName })} onClick={() => set({ attachments: s.attachments.filter(x => x.id !== a.id) })}>×</button></li>)}</ul> : null}
           {uploadErr ? <div role="alert" className="nl-error">{uploadErr}</div> : null}
         </div>
       </FormGrid>
       {tried && count > 0 ? <Alert tone="error">{t('toFix', { n: count })}</Alert> : null}
       {sendError ? <Alert tone="error">{t('sendError')}</Alert> : null}
       <div className="nl-appt-send">
-        <button type="button" className="btn btn-primary" disabled={pending} onClick={submit}>{revising ? t('sendRevision', { total: f.money(tot.total) }) : t('sendQuote', { total: f.money(tot.total) })}</button>
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>{t('cancel')}</button>
+        <button type="button" className="btn btn-primary" disabled={pending} onClick={submit}>{revising ? t('sendRevision', { total: f.price(tot.total) }) : t('sendQuote', { total: f.price(tot.total) })}</button>
+        <button type="button" className="btn btn-tertiary" onClick={onCancel}>{t('cancel')}</button>
         <span className="nl-small nl-muted">{t('sendNote')}</span>
       </div>
     </div>

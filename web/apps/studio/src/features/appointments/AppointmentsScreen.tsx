@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
-import { DataTable, Drawer, ErrorState, Segmented, Skeleton, useLocale, type DataTableColumn, type Locale, BoHeader } from '@northline/ui';
+import { DataTable, Drawer, ErrorState, Segmented, Skeleton, formatTimeRange, useLocale, type DataTableColumn, type DataTableView, type Locale, type StatusTone, BoHeader } from '@northline/ui';
 import { useMerchantId } from '../shell/api';
 import { useSession } from '../../lib/session';
 import { timeOffQuery } from '../availability/api';
@@ -162,11 +162,24 @@ function hourLabel(h: number, locale: Locale): string {
   return `${h12} ${h < 12 ? 'am' : 'pm'}`;
 }
 
-interface JobRow { id: string; when: string; job: string; who: string; member: string; state: string }
+interface JobRow { id: string; when: string; job: string; who: string; member: string; state: string; code: Job['state'] }
+/** S-175: one status colour per booking state (the calendar's left edges use the same roles). */
+export const jobTone = (s: Job['state']): StatusTone =>
+  s === 'requested' ? 'warning' : s === 'en_route' || s === 'on_site' ? 'info' : s === 'completed' || s === 'signed_off' ? 'success' : s === 'disputed' ? 'danger' : 'neutral';
 function JobTable({ t, locale, jobs, loading, onOpen }: { t: T; locale: Locale; jobs: Job[]; loading: boolean; onOpen: (id: string) => void }) {
-  const rows: JobRow[] = jobs.map(j => ({ id: j.id, when: `${fmt(localDate(j.startsAt), locale, { weekday: 'short', day: 'numeric' })} · ${clock(j.startsAt, locale)}`, job: j.ref ? `${j.title} · ${j.ref}` : j.title, who: j.customerName ?? '—', member: j.memberName ?? '—', state: t(`state_${j.state}`) }));
+  const rows: JobRow[] = jobs.map(j => ({ id: j.id, when: `${fmt(localDate(j.startsAt), locale, { weekday: 'short', day: 'numeric' })} · ${formatTimeRange(j.startsAt, j.endsAt, locale)}`, job: j.ref ? `${j.title} · ${j.ref}` : j.title, who: j.customerName ?? '—', member: j.memberName ?? '—', state: t(`state_${j.state}`), code: j.state }));
   const columns: DataTableColumn<JobRow>[] = [
-    { key: 'when', label: t('colWhen') }, { key: 'job', label: t('colJob'), primary: true }, { key: 'who', label: t('colCustomer') }, { key: 'member', label: t('colMember'), filter: 'facet' }, { key: 'state', label: t('colStatus'), type: 'tag' },
+    { key: 'when', label: t('colWhen'), card: 'meta' }, { key: 'job', label: t('colJob'), primary: true }, { key: 'who', label: t('colCustomer'), card: 'line' },
+    { key: 'member', label: t('colMember'), filter: 'facet', card: 'line' }, { key: 'state', label: t('colStatus'), type: 'tag', status: r => jobTone(r.code) },
   ];
-  return <DataTable<JobRow> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} loading={loading} can={{ create: false, update: false, delete: false, export: true }} onOpen={r => onOpen(r.id)} emptyText={t('noJobsWeek')} />;
+  const is = (...s: Job['state'][]) => (r: JobRow) => s.includes(r.code);
+  const views: DataTableView<JobRow>[] = [
+    { id: 'all', label: t('viewAll') },
+    { id: 'upcoming', label: t('viewUpcoming'), when: r => !DONE.has(r.code) },
+    { id: 'requested', label: t('state_requested'), when: is('requested') },
+    { id: 'done', label: t('viewDone'), when: is('completed', 'signed_off') },
+    { id: 'disputed', label: t('state_disputed'), when: is('disputed'), tone: 'danger', hideEmpty: true },
+    { id: 'cancelled', label: t('state_cancelled'), when: is('cancelled'), hideEmpty: true },
+  ];
+  return <DataTable<JobRow> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} views={views} loading={loading} can={{ create: false, update: false, delete: false, export: true }} onOpen={r => onOpen(r.id)} emptyText={t('noJobsWeek')} />;
 }
