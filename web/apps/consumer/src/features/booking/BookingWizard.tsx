@@ -154,7 +154,10 @@ function Details({ facts, draft, update, kind, vehicle, cleaning, services, onNe
   const { money } = useFormatters();
   const ok = complete('details', draft, kind, vehicle, cleaning);
   const viewer = useViewer();
-  const years = ['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', t('older')];
+  // S-173: the model years count back from the render clock's year (the same on the server and in the browser's first
+  // render, so the shot's pinned clock never meets a different list), next year's models first
+  const thisYear = Number(dayKey(useRenderNow()).slice(0, 4));
+  const years = [...Array.from({ length: 13 }, (_, i) => String(thisYear + 1 - i)), t('older')];
   const makes = ['Honda', 'Toyota', 'Ford', 'Chevrolet', 'Hyundai', 'Kia', 'Subaru', 'Tesla', t('other')];
   const hint = ok ? t('detailsHint_ok') : kind === 'visit' ? t(vehicle ? 'detailsHint_vehicle' : 'detailsHint_visit') : kind === 'home' ? t('detailsHint_home') : kind === 'consult' ? t('detailsHint_consult') : '';
   const chosen = services.find(x => x.id === draft.serviceId);
