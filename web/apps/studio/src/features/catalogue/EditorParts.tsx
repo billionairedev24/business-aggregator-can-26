@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { CheckCircle, Circle, XCircle } from '@phosphor-icons/react';
-import { Alert, Button, Select, rovingIndex, tablistKeyDown, useFormatters, useLocale } from '@northline/ui';
+import { Check as CheckMark, CheckCircle, Circle, XCircle } from '@phosphor-icons/react';
+import { Alert, BoHeader, Button, Price, SaveBar, Select, StatusTag, UnderlineTabs, useFormatters, useLocale, type StatusTone } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { listingReviewQuery, type Category, type ListingDetail } from './api';
 import { useMerchantId } from '../shell/api';
@@ -57,36 +57,39 @@ export function AttentionSummary({ errors, t }: { errors: Record<string, string>
   );
 }
 
-// ── header ────────────────────────────────────────────────────────────────────────────────────────────────────────
-export function draftTag(detail: ListingDetail | undefined, t: CatalogueT, time: (iso: string) => string): { cls: string; label: string } {
-  if (!detail) return { cls: 'tag-neutral', label: t('draftPrivate') };
+// ── header and save bar ───────────────────────────────────────────────────────────────────────────────────────────
+/** Where the listing stands, as a status (S-175: semantic colours — a draft is neutral, waiting on review a warning). */
+export function draftTag(detail: ListingDetail | undefined, t: CatalogueT, time: (iso: string) => string): { tone: StatusTone; label: string } {
+  if (!detail) return { tone: 'neutral', label: t('draftPrivate') };
   switch (detail.vetting) {
-    case 'pending': return { cls: 'tag-accent-2', label: detail.vettingFlags.length ? t('inReview') : t('submitted') };
-    case 'approved': return { cls: 'tag-accent', label: detail.status === 'live' ? t('approvedLive') : t('approvedHidden') };
-    case 'rejected': return { cls: 'tag-accent-2', label: t('rejected') };
-    default: return { cls: 'tag-neutral', label: t('draftSaved', { time: time(detail.updatedAt) }) };
+    case 'pending': return { tone: 'warning', label: detail.vettingFlags.length ? t('inReview') : t('submitted') };
+    case 'approved': return detail.status === 'live' ? { tone: 'success', label: t('approvedLive') } : { tone: 'neutral', label: t('approvedHidden') };
+    case 'rejected': return { tone: 'danger', label: t('rejected') };
+    default: return { tone: 'neutral', label: t('draftSaved', { time: time(detail.updatedAt) }) };
   }
 }
 
-export function EditorHeader(props: {
-  kicker: string; title: string; tag: { cls: string; label: string }; canEdit: boolean; roleName: string;
+/** The editor's page head: the kicker and the listing's name; a view-only role says so here. */
+export function EditorHeader({ kicker, title, canEdit, roleName }: { kicker: string; title: string; canEdit: boolean; roleName: string }) {
+  const t = useCatalogueT();
+  return <BoHeader kicker={kicker} title={title} actions={canEdit ? undefined : <span className="tag tag-neutral">{t('viewOnly', { role: roleName })}</span>} />;
+}
+
+/**
+ * S-175: the save bar at the bottom of the window (`SaveBar`): the listing's state and whether there are unsaved
+ * changes, then Save draft and Submit for vetting — reachable wherever the form is scrolled to.
+ */
+export function EditorSaveBar(props: {
+  label: string; tag: { tone: StatusTone; label: string }; dirty: boolean; canEdit: boolean;
   saveLabel: string; saving: boolean; submitting: boolean; cannotSubmit: boolean; onSave: () => void; onSubmit: () => void;
 }) {
   const t = useCatalogueT();
+  if (!props.canEdit) return null;
   return (
-    <div className="nl-page-head">
-      <div style={{ minWidth: 0 }}>
-        <span className="nl-kicker">{props.kicker}</span>
-        <h1 className="nl-page-title">{props.title}</h1>
-      </div>
-      <div className="nl-page-actions">
-        <span className={`tag ${props.tag.cls}`} role="status">{props.tag.label}</span>
-        {props.canEdit ? <>
-          <Button variant="secondary" onClick={props.onSave} disabled={props.saving || props.submitting}>{props.saving ? t('saving') : props.saveLabel}</Button>
-          <Button onClick={props.onSubmit} disabled={props.cannotSubmit || props.saving || props.submitting}>{props.submitting ? t('submitting') : t('submit')}</Button>
-        </> : <span className="tag tag-neutral">{t('viewOnly', { role: props.roleName })}</span>}
-      </div>
-    </div>
+    <SaveBar label={props.label} status={<span role="status"><StatusTag tone={props.tag.tone}>{props.tag.label}</StatusTag></span>} note={props.dirty ? t('unsaved') : undefined}>
+      <Button variant="secondary" onClick={props.onSave} disabled={props.saving || props.submitting}>{props.saving ? t('saving') : props.saveLabel}</Button>
+      <Button onClick={props.onSubmit} disabled={props.cannotSubmit || props.saving || props.submitting}>{props.submitting ? t('submitting') : t('submit')}</Button>
+    </SaveBar>
   );
 }
 
@@ -100,15 +103,13 @@ export function RevetNotice({ detail, kind }: { detail: ListingDetail | undefine
   const { locale } = useLocale();
   if (!detail) return null;
   if (detail.vetting === 'rejected') return <RejectionNotice listingId={detail.id} />;
-  if (detail.vetting === 'approved') return <p className="nl-cat-note" style={{ marginBottom: 16 }}>{t('materialHint', { kind })}</p>;
+  if (detail.vetting === 'approved') return <p className="nl-cat-note">{t('materialHint', { kind })}</p>;
   if (detail.vetting !== 'pending' || !detail.revetReasons.length) return null;
   const reasons = new Intl.ListFormat(locale, { type: 'conjunction' }).format(detail.revetReasons.map(r => t(`reason_${r}`)));
   return (
-    <div style={{ marginBottom: 16 }}>
-      <Alert tone="neutral" role="status" title={t('revetTitle')}>
-        {detail.vettingFlags.length ? t('revetFlagged', { reasons }) : t('revetBody', { reasons })}
-      </Alert>
-    </div>
+    <Alert tone="neutral" role="status" title={t('revetTitle')}>
+      {detail.vettingFlags.length ? t('revetFlagged', { reasons }) : t('revetBody', { reasons })}
+    </Alert>
   );
 }
 
@@ -120,29 +121,26 @@ function RejectionNotice({ listingId }: { listingId: string }) {
   if (!review || review.decision !== 'rejected') return null;
   const reasons = new Intl.ListFormat(locale, { type: 'conjunction' }).format(review.reasons.map(r => t(`reject_${r}` as Parameters<CatalogueT>[0])));
   return (
-    <div style={{ marginBottom: 16 }}>
-      <Alert tone="error" title={t('rejectedTitle')}>
-        <p style={{ margin: 0 }}>{t('rejectedBody', { reasons })}</p>
-        {review.note ? <p style={{ margin: '8px 0 0' }}>{t('rejectedNote', { note: review.note })}</p> : null}
-      </Alert>
-    </div>
+    <Alert tone="error" title={t('rejectedTitle')}>
+      <p className="nl-cat-flush">{t('rejectedBody', { reasons })}</p>
+      {review.note ? <p className="nl-cat-flush nl-cat-gap-top">{t('rejectedNote', { note: review.note })}</p> : null}
+    </Alert>
   );
 }
 
-// ── tabs with completion dots ─────────────────────────────────────────────────────────────────────────────────────
+// ── tabs with completion marks ────────────────────────────────────────────────────────────────────────────────────
+/**
+ * The editor's sections as underline tabs (S-175: the one tab style, no hand-made step strip): a check after a
+ * complete section's name; the accessible name says complete / incomplete. Arrow keys move (S-109: one tab stop).
+ */
 export function EditorTabs<K extends string>({ tabs, value, onChange, label }: { tabs: { key: K; name: string; done: boolean }[]; value: K; onChange: (k: K) => void; label: string }) {
   const t = useCatalogueT();
   return (
-    // S-109: tabs state aria-selected only (aria-pressed is not allowed on a tab: axe critical), one tab stop, arrows move
-    <div className="nl-cat-tabs" role="tablist" aria-label={label} onKeyDown={tablistKeyDown(tabs.map(x => x.key), value, onChange)}>
-      {tabs.map((tab, i) => (
-        <button key={tab.key} type="button" role="tab" id={`tab-${tab.key}`} aria-selected={tab.key === value} aria-controls={tab.key === value ? `panel-${tab.key}` : undefined}
-          tabIndex={rovingIndex(tabs.map(x => ({ value: x.key })), value, i)} className="nl-chip nl-cat-tab" onClick={() => onChange(tab.key)}
-          aria-label={tab.done ? t('complete', { name: tab.name }) : t('incomplete', { name: tab.name })}>
-          {tab.name}<span className="nl-cat-dot" data-done={tab.done} data-current={tab.key === value} aria-hidden />
-        </button>
-      ))}
-    </div>
+    <UnderlineTabs<K> aria-label={label} value={value} onChange={onChange} tabId={k => `tab-${k}`} panelId={k => `panel-${k}`}
+      options={tabs.map(tab => ({
+        value: tab.key, name: tab.done ? t('complete', { name: tab.name }) : t('incomplete', { name: tab.name }),
+        label: <>{tab.name}{tab.done ? <CheckMark size={14} weight="bold" className="nl-cat-tab-done" aria-hidden /> : null}</>,
+      }))} />
   );
 }
 
@@ -174,9 +172,7 @@ export function CompletenessPanel({ percent, items, t }: { percent: number; item
   return (
     <div className="nl-cat-side">
       <strong>{t('completeness', { pct: percent })}</strong>
-      <div className="nl-cat-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label={t('completeness', { pct: percent })}>
-        <div className="nl-cat-bar-fill" data-complete={percent === 100} style={{ width: `${percent}%` }} />
-      </div>
+      <progress className="nl-cat-bar" max={100} value={percent} data-complete={percent === 100} aria-label={t('completeness', { pct: percent })} />
       <ul className="nl-cat-checklist">
         {items.map(i => <li key={i.name}><span className="nl-cat-dot" data-done={i.done} aria-hidden />{i.done ? i.name : t('incomplete', { name: i.name })}</li>)}
       </ul>
@@ -204,14 +200,14 @@ export function VettingPanel({ checks, t }: { checks: Check[]; t: CatalogueT }) 
 
 export function FeesPanel({ priceCents, costCents, tier }: { priceCents: number | null; costCents: number | null; tier: string | null | undefined }) {
   const t = useCatalogueT();
-  const { money } = useFormatters();
+  const { price } = useFormatters();
   if (!priceCents || priceCents <= 0) return null;
   const f = fees(priceCents, costCents, tier);
   return (
     <div className="nl-cat-side">
-      <strong>{t('fees')}</strong><br />
-      {t('feesLine', { sale: money(priceCents), rate: f.rate, fee: money(f.fee), processing: money(f.processing) })}<br />
-      <strong>{t('net', { net: money(f.net) })}</strong>{f.margin !== null ? ` · ${t('margin', { pct: f.margin })}` : ''}
+      <strong>{t('fees')}</strong>
+      <p className="nl-cat-flush">{t('feesLine', { sale: price(priceCents), rate: f.rate, fee: price(f.fee), processing: price(f.processing) })}</p>
+      <p className="nl-cat-flush nl-cat-net">{t('netLabel')} <Price cents={f.net} size="sm" />{f.margin !== null ? <span className="nl-cat-muted"> · {t('margin', { pct: f.margin })}</span> : null}</p>
     </div>
   );
 }

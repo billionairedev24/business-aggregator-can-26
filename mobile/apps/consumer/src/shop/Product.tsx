@@ -1,24 +1,57 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Share, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, Icon, colors, fonts, space } from '@northline/mobile-kit';
+import {
+  ApiError,
+  Button as KitButton,
+  Icon,
+  LINE,
+  MIN_TARGET,
+  MetaLine,
+  PhotoWell,
+  Price,
+  ProductCard,
+  QuantityStepper,
+  Rating,
+  Segmented,
+  StatusTag,
+  TYPE,
+  radius,
+  semantic,
+  space,
+  textStyles,
+} from '@northline/mobile-kit';
 
-import { Body, Button, Notice, Tag } from '../ui/primitives';
-import { Header, RoundButton, Screen } from '../ui/screen';
+import { Body, Notice } from '../ui/primitives';
+import { iconFor, photoSource, unitOf } from '../ui/commerce';
+import { GUTTER, Header, RoundButton, Screen } from '../ui/screen';
 import { EmptyState, QueryView, Skeleton, errorMessage } from '../ui/states';
 import { config } from '../config';
 import { serverMessage, shop, useAddToCart, useMarket, useShopFormat } from './common';
-import { Chip, InfoLine, Panel, ProductTile, SectionHead, Stepper, Strip, Thumb, shopStyles } from './parts';
+import { SectionHead, Strip } from './parts';
+
+/** Minutes until an instant (at least 0), re-read every minute. */
+function useMinutesLeft(iso: string | null | undefined) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!iso) return;
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [iso]);
+  return iso ? Math.max(0, Math.round((Date.parse(iso) - now) / 60_000)) : null;
+}
 
 /**
- * Product (light & photo-first): the picture first, edge to edge (the merchant's photo, else the drawn scene of the
- * product), Back and Share as round buttons over it; the shop, the name in the display face, the rating, the price and
- * unit, the facts on linen (tonight's run to your place, sold by, stock, returns, payment held), the description and
- * its bullets, the options, "More from {shop}" as a rail of cards; the sticky bottom bar is the quantity pill and
- * "Add n · price" in the brand colour. `GET /public/shop/products/{id}?market=` (S-50; the id may be an offer's, `?offer=` picks the seller); Add
- * is `POST /cart/items` (guests too) and opens the cart. Tier labels left the byline (thrash item 13).
+ * Product (E-15 A · Plainsight, design/revamp/a.html "Product page with buy box" on a phone): the photo first, edge to
+ * edge in the grey well (product on white; the dashed well with the category icon when there is none), Back and
+ * Share over it; the shop as a link, the name, the rating, the tags; the options as joined boxes (the chosen one solid
+ * ink); about the item and its bullets; the buy box — the price and unit price, delivery on the next pooled run to
+ * the person's place with the order-by countdown, stock, the quantity, Add to cart, who sells it and the payment held;
+ * "More from {shop}". The sticky bar keeps the price, the window and Add to cart in reach. `GET
+ * /public/shop/products/{id}?market=` (S-50; the id may be an offer's, `?offer=` picks the seller); Add is `POST
+ * /cart/items` (guests too) and opens the cart.
  */
 export function Product() {
   const f = useShopFormat();
@@ -43,55 +76,40 @@ export function Product() {
   const needsVariant = !!offer && offer.variants.length > 0 && !variant;
   const tonight = offer?.runs.find((r) => r.day === 'today');
   const next = offer?.runs[0];
+  const left = useMinutesLeft(next?.orderBy);
+  const soldOut = stock <= 0;
 
   const addToCart = () => {
     if (!offer) return;
-    add.mutate(
-      { offerId: offer.offerId, ...(variant ? { variantId: variant.variantId } : {}), qty },
-      { onSuccess: () => router.navigate('/cart') },
-    );
+    add.mutate({ offerId: offer.offerId, ...(variant ? { variantId: variant.variantId } : {}), qty }, { onSuccess: () => router.navigate('/cart') });
   };
-  const addError = add.error
-    ? add.error instanceof ApiError && add.error.status === 422
-      ? serverMessage(add.error.message, t)
-      : errorMessage(add.error, t)
-    : null;
+  const addError = add.error ? (add.error instanceof ApiError && add.error.status === 422 ? serverMessage(add.error.message, t) : errorMessage(add.error, t)) : null;
   const share = () => {
     if (!product.data) return;
     void Share.share({ message: `${product.data.name} — ${config.siteOrigin}/products/${encodeURIComponent(product.data.productId)}` }).catch(() => undefined);
   };
+  const windowText = next ? f.window(next, 'shop.win') : null;
+  const addLabel = soldOut ? t('shop.product.soldOut') : qty > 1 ? t('shop.product.add', { qty, total: f.money(unitCents * qty) }) : t('rv.card.add');
 
   return (
     <Screen
       testID="product"
       padded={false}
-      top={
-        product.data && offer ? undefined : <Header title={t('title.product')} />
-      }
+      top={product.data && offer ? undefined : <Header title={t('title.product')} />}
       footer={
         offer && product.data?.served ? (
           <>
             {addError ? <Notice message={addError} /> : null}
-            <View style={styles.buy}>
-              <Stepper
-                value={qty}
-                onLess={() => setQty((n) => Math.max(1, n - 1))}
-                onMore={() => setQty((n) => Math.min(99, n + 1))}
-                canLess={qty > 1}
-                canMore={qty < Math.min(99, Math.max(1, stock))}
-                lessLabel={t('shop.product.less')}
-                moreLabel={t('shop.product.more')}
-                valueLabel={t('shop.product.qty', { qty })}
-              />
-              <Button
-                label={stock <= 0 ? t('shop.product.soldOut') : t('shop.product.add', { qty, total: f.money(unitCents * qty) })}
-                large
-                busy={add.isPending}
-                disabled={stock <= 0 || needsVariant}
-                onPress={addToCart}
-                style={styles.add}
-                testID="product-add"
-              />
+            <View style={styles.sticky}>
+              <View style={styles.stickyText}>
+                <Price cents={unitCents * qty} size="md" />
+                {windowText ? (
+                  <Text style={textStyles.meta} numberOfLines={1}>
+                    {windowText}
+                  </Text>
+                ) : null}
+              </View>
+              <KitButton label={addLabel} size="lg" busy={add.isPending} disabled={soldOut || needsVariant} onPress={addToCart} style={styles.stickyButton} testID="product-add" />
             </View>
           </>
         ) : undefined
@@ -101,9 +119,9 @@ export function Product() {
         query={product}
         skeleton={
           <View testID="loading" accessibilityRole="progressbar" accessibilityLabel={t('common.loading')} style={styles.skeleton}>
-            <Skeleton height={300} />
-            <Skeleton height={28} width="70%" />
-            <Skeleton height={16} width="50%" />
+            <Skeleton height={space[16] * 5} />
+            <Skeleton height={space[6]} width="70%" />
+            <Skeleton height={space[4]} width="50%" />
           </View>
         }
         isEmpty={(p) => !p || !p.served || p.offers.length === 0}
@@ -113,120 +131,184 @@ export function Product() {
           </View>
         }
       >
-        {(p) =>
-          p && offer ? (
+        {(p) => {
+          if (!p || !offer) return null;
+          const images = variant?.images?.length ? variant.images : offer.images;
+          return (
             <View style={styles.body}>
               <View>
-                <Thumb uri={variant?.images?.[0] ?? offer.images[0]} height={320} subject={p.name} style={styles.picture} label={t('shop.product.image', { name: p.name })} />
+                <PhotoWell source={photoSource(images[0])} icon={iconFor('product')} caption={offer.shopName} inset={0} label={t('shop.product.image', { name: p.name })} style={styles.gallery} testID={images[0] ? 'product-photo' : 'no-photo'} />
                 <View style={styles.overlay}>
                   <RoundButton icon="caret-left" label={t('common.back')} onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))} onPhoto testID="header-back" />
                   <RoundButton icon="export" label={t('rd.product.share')} onPress={share} onPhoto testID="product-share" />
                 </View>
+                {images.length > 1 ? (
+                  <View style={styles.counter} accessible={false}>
+                    <Text style={styles.counterText}>{t('rv.product.photoCount', { n: 1, total: images.length })}</Text>
+                  </View>
+                ) : null}
               </View>
-              <View style={[styles.pad, styles.titleBlock]}>
-                <Text style={styles.shop}>{p.brand ?? offer.shopName}</Text>
+
+              <View style={styles.pad}>
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel={t('rv.product.visit', { shop: p.brand ?? offer.shopName })}
+                  onPress={() => router.push({ pathname: '/search', params: { department: p.departmentSlug, name: p.departmentName } })}
+                  style={styles.visit}
+                >
+                  <Icon name="storefront" size={TYPE.body} color={semantic.link} />
+                  <Text style={[textStyles.label, textStyles.link]}>{p.brand ?? offer.shopName}</Text>
+                </Pressable>
                 <Text accessibilityRole="header" style={styles.name}>
                   {p.name}
                 </Text>
-                {offer.ratingCount > 0 ? (
-                  <View style={styles.rating} accessible accessibilityLabel={t('rd.product.rating', { rating: offer.rating.toFixed(1), count: offer.ratingCount })}>
-                    <Icon name="star" filled size={14} color={colors.rating} />
-                    <Text style={styles.ratingText}>{t('rd.product.ratingShort', { rating: offer.rating.toFixed(1), count: offer.ratingCount })}</Text>
-                  </View>
-                ) : null}
+                {offer.ratingCount > 0 ? <Rating value={offer.rating} count={offer.ratingCount} /> : null}
+                <View style={styles.tags}>
+                  {tonight ? <StatusTag label={t('shop.tag.tonight')} tone="info" /> : null}
+                  {offer.condition ? <StatusTag label={offer.condition} /> : null}
+                </View>
               </View>
-              <View style={styles.pad}>
-              <View style={styles.priceRow}>
-                <Text style={shopStyles.bigPrice}>{f.money(unitCents)}</Text>
-                {p.unit ? <Text style={styles.small}>{p.unit}</Text> : null}
-              </View>
-              <View style={shopStyles.chips}>
-                {tonight ? <Tag label={t('shop.tag.tonight')} tone="accent" /> : null}
-                {offer.lowStock && stock > 0 ? <Tag label={t('shop.product.lowStock', { n: stock })} tone="accent2" /> : null}
-                {offer.condition ? <Tag label={offer.condition} /> : null}
-              </View>
-              <Panel>
-                {next ? (
-                  <InfoLine icon="lightning" color={colors.link}>
-                    {t('rd.product.run', { when: f.window(next, 'shop.when'), place: market.label ?? p.market })}
-                  </InfoLine>
-                ) : null}
-                <InfoLine icon="storefront">{t('rd.product.soldBy', { shop: offer.shopName })}</InfoLine>
-                <InfoLine icon="package">{stock > 0 ? t('rd.product.inStock') : t('shop.product.soldOut')}</InfoLine>
-                {offer.returnsPolicy ? <InfoLine icon="arrow-u-up-left">{offer.returnsPolicy}</InfoLine> : null}
-                <InfoLine icon="shield-check">{t('rd.product.held')}</InfoLine>
-              </Panel>
-              {p.description ? <Body style={styles.description}>{p.description}</Body> : null}
-              {p.bullets.length ? (
-                <View style={styles.bullets}>
+
+              {offer.variants.length > 0 ? (
+                <View style={[styles.pad, styles.options]}>
+                  <Text style={textStyles.body}>
+                    {t('shop.product.options')}: <Text style={styles.strong}>{variant?.value ?? ''}</Text>
+                  </Text>
+                  <Segmented label={t('shop.product.options')} options={offer.variants.map((v) => ({ value: v.variantId, label: v.value }))} value={chosen ?? null} onChange={setVariantId} testID="variant" />
+                </View>
+              ) : null}
+
+              {p.description || p.bullets.length ? (
+                <View style={[styles.pad, styles.about]}>
+                  <Text accessibilityRole="header" style={textStyles.sub}>
+                    {t('rv.product.about')}
+                  </Text>
+                  {p.description ? <Body>{p.description}</Body> : null}
                   {p.bullets.map((b) => (
                     <View key={b} style={styles.bullet}>
-                      <Icon name="check" size={14} color={colors.textMuted} />
-                      <Body tone="small" style={styles.flex}>
-                        {b}
-                      </Body>
+                      <Text style={textStyles.body} importantForAccessibility="no">
+                        •
+                      </Text>
+                      <Body style={styles.flex}>{b}</Body>
                     </View>
                   ))}
+                  {p.unit ? (
+                    <View style={styles.spec}>
+                      <Text style={[textStyles.label, styles.specKey]}>{t('rv.product.size')}</Text>
+                      <Text style={[textStyles.body, styles.flex]}>{p.unit}</Text>
+                    </View>
+                  ) : null}
                 </View>
               ) : null}
-              {offer.variants.length > 0 ? (
-                <View style={shopStyles.section}>
-                  <Text accessibilityRole="header" style={styles.h3}>
-                    {t('shop.product.options')}
-                  </Text>
-                  <View style={shopStyles.chips} accessibilityRole="radiogroup">
-                    {offer.variants.map((v) => (
-                      <Chip key={v.variantId} role="radio" label={v.value} on={v.variantId === chosen} onPress={() => setVariantId(v.variantId)} />
-                    ))}
+
+              <View style={styles.pad}>
+                <View style={styles.box} testID="buy-box">
+                  <Price cents={unitCents} unit={unitOf(unitCents, p.unit)} size="lg" />
+                  {next ? (
+                    <View style={styles.boxLine}>
+                      <Icon name="truck" size={TYPE.price} color={semantic.text} />
+                      <View style={styles.flex}>
+                        <Text style={textStyles.bodyStrong}>{t('rv.product.delivery', { when: f.window(next, 'shop.when') })}</Text>
+                        <Text style={textStyles.meta}>{t('rv.product.deliveryTo', { place: market.label ?? p.market, fee: f.fee(next.feeCents) })}</Text>
+                        {left !== null && left > 0 ? (
+                          <Text style={styles.orderWithin}>{left >= 60 ? t('rv.product.withinHours', { h: Math.floor(left / 60), m: left % 60 }) : t('rv.product.withinMinutes', { m: left })}</Text>
+                        ) : null}
+                      </View>
+                    </View>
+                  ) : null}
+                  {soldOut ? (
+                    <MetaLine icon="warning" tone="warning">
+                      {t('shop.product.soldOut')}
+                    </MetaLine>
+                  ) : offer.lowStock ? (
+                    <MetaLine icon="warning" tone="warning">
+                      {t('shop.product.lowStock', { n: stock })}
+                    </MetaLine>
+                  ) : (
+                    <MetaLine icon="check" tone="success">
+                      {t('rd.product.inStock')}
+                    </MetaLine>
+                  )}
+                  <View style={styles.qty}>
+                    <Text style={textStyles.body}>{t('rv.product.qty')}</Text>
+                    <View style={styles.qtyStepper}>
+                      <QuantityStepper
+                        value={qty}
+                        onLess={() => setQty((n) => Math.max(1, n - 1))}
+                        onMore={() => setQty((n) => Math.min(99, n + 1))}
+                        canLess={qty > 1}
+                        canMore={qty < Math.min(99, Math.max(1, stock))}
+                        lessLabel={t('shop.product.less')}
+                        moreLabel={t('shop.product.more')}
+                        valueLabel={t('shop.product.qty', { qty })}
+                        text={null}
+                      />
+                    </View>
                   </View>
+                  <KitButton label={addLabel} icon="shopping-cart" size="lg" block busy={add.isPending} disabled={soldOut || needsVariant} onPress={addToCart} testID="product-add-box" />
+                  <MetaLine icon="storefront">{t('rd.product.soldBy', { shop: offer.shopName })}</MetaLine>
+                  {offer.returnsPolicy ? <MetaLine icon="arrow-u-up-left">{offer.returnsPolicy}</MetaLine> : null}
+                  <MetaLine icon="shield-check">{t('rd.product.held')}</MetaLine>
                 </View>
-              ) : null}
               </View>
+
               {offer.more.length > 0 ? (
-                <View style={shopStyles.section}>
+                <View style={styles.section}>
                   <View style={styles.pad}>
                     <SectionHead title={t('shop.product.alsoFrom', { shop: offer.shopName })} />
                   </View>
                   <Strip edge>
                     {offer.more.slice(0, 8).map((m) => (
-                      <ProductTile
-                        key={m.productId}
-                        name={m.name}
-                        price={f.money(m.priceCents)}
-                        meta={offer.shopName}
-                        label={`${m.name}, ${f.money(m.priceCents)}`}
+                      <View key={m.productId} style={styles.railCard}>
+                      <ProductCard
+                        title={m.name}
+                        seller={offer.shopName}
+                        priceCents={m.priceCents}
+                        icon={iconFor('product')}
                         onPress={() => router.push({ pathname: '/product/[id]', params: { id: m.productId } })}
+                        label={`${m.name}, ${f.money(m.priceCents)}`}
                       />
+                      </View>
                     ))}
                   </Strip>
                 </View>
               ) : null}
             </View>
-          ) : null
-        }
+          );
+        }}
       </QueryView>
     </Screen>
   );
 }
 
+const RAIL = space[16] * 2 + space[10];
+
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  skeleton: { gap: space[3], paddingHorizontal: space[4] },
-  pad: { paddingHorizontal: space[4], gap: space[4] },
-  body: { gap: space[4], marginTop: -space[3] },
-  picture: { borderRadius: 0 },
-  overlay: { position: 'absolute', top: space[3], left: space[4], right: space[4], flexDirection: 'row', justifyContent: 'space-between' },
-  titleBlock: { gap: 6 },
-  shop: { fontFamily: fonts.semibold, fontSize: 14, color: colors.link },
-  name: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.text },
-  small: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
-  rating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  ratingText: { fontFamily: fonts.regular, fontSize: 13, color: colors.text },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: space[2] },
-  description: { lineHeight: 21 },
-  bullets: { gap: 6 },
-  bullet: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
-  h3: { fontFamily: fonts.display, fontSize: 18, color: colors.text },
-  buy: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  add: { flex: 1 },
+  flex: { flex: 1, minWidth: 0 },
+  strong: { fontFamily: textStyles.section.fontFamily },
+  skeleton: { gap: space[3], paddingHorizontal: GUTTER },
+  pad: { paddingHorizontal: GUTTER, gap: space[2] },
+  body: { gap: space[5], marginTop: -space[3] },
+  gallery: { borderRadius: 0 },
+  overlay: { position: 'absolute', top: space[3], left: GUTTER, right: GUTTER, flexDirection: 'row', justifyContent: 'space-between' },
+  counter: { position: 'absolute', right: GUTTER, bottom: space[3], paddingHorizontal: space[2.5], paddingVertical: space[1], borderRadius: radius.round, backgroundColor: semantic.selected },
+  counterText: { ...StyleSheet.flatten(textStyles.label), color: semantic['selected-text'] },
+  visit: { flexDirection: 'row', alignItems: 'center', gap: space[1.5], minHeight: MIN_TARGET, alignSelf: 'flex-start' },
+  name: textStyles.pageTitle,
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: space[1.5] },
+  options: { gap: space[2], paddingTop: space[3], borderTopWidth: LINE.hair, borderTopColor: semantic.border, marginHorizontal: GUTTER, paddingHorizontal: 0 },
+  about: { gap: space[2] },
+  bullet: { flexDirection: 'row', gap: space[2], paddingLeft: space[1] },
+  spec: { flexDirection: 'row', gap: space[3], paddingVertical: space[2.5], borderTopWidth: LINE.hair, borderTopColor: semantic.border },
+  specKey: { width: space[16] + space[8], color: semantic['text-muted'] },
+  box: { gap: space[3], padding: space[4], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-strong'], backgroundColor: semantic.surface },
+  boxLine: { flexDirection: 'row', gap: space[3] },
+  orderWithin: { ...StyleSheet.flatten(textStyles.label), color: semantic.commerce },
+  qty: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  qtyStepper: { minWidth: space[16] * 2 },
+  section: { gap: space[2] },
+  railCard: { width: RAIL },
+  sticky: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  stickyText: { flex: 1, minWidth: 0 },
+  stickyButton: { flex: 1.3 },
 });

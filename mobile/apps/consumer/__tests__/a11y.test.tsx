@@ -106,8 +106,8 @@ describe('roles, names and 44 pt touch targets on the key screens (S-109)', () =
   });
 
   it.each([
-    ['en', 'Sort: relevance', 'Sort: price, low to high', 'relevance'],
-    ['fr-CA', 'Tri : pertinence', 'Tri : prix croissant', 'pertinence'],
+    ['en', 'Sort: relevance', 'Sort: price, low to high', 'Featured'],
+    ['fr-CA', 'Tri : pertinence', 'Tri : prix croissant', 'En vedette'],
   ])('names the search sort without a glyph (%s, S-147; the caret is a hidden icon)', async (tag, first, next, shown) => {
     if (tag !== 'en') (jest.requireMock('expo-localization') as { getLocales: jest.Mock }).getLocales.mockReturnValueOnce([{ languageTag: tag }]);
     await start({ welcomed: true, url: '/search', store: { 'nl.location': JSON.stringify({ label: '1204 Example Ave, Sampleville', city: 'Sampleville', province: 'XA', marketId: 'mkt-sampleville' }) } });
@@ -117,6 +117,7 @@ describe('roles, names and 44 pt touch targets on the key screens (S-109)', () =
     expect(sort().props.accessibilityLabel).toBe(first);
     expect(screen.getByText(shown)).toBeTruthy();
     fireEvent.press(sort());
+    fireEvent.press(await screen.findByTestId('sort-price_asc')); // S-178: the sort is a sheet of choices
     await waitFor(() => expect(sort().props.accessibilityLabel).toBe(next));
   });
 

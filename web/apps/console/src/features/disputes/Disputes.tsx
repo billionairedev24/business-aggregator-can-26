@@ -77,7 +77,7 @@ export function Disputes() {
         { key: 'closed', label: t('k_closed'), value: formatNumber(s.closedThisWeek, locale) },
       ]} />
       <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={25}
-        views={<UnderlineTabs aria-label={t('views')} value={view} onChange={v => go({ view: v === 'agent' ? undefined : v })}
+        tabs={<UnderlineTabs aria-label={t('views')} value={view} onChange={v => go({ view: v === 'agent' ? undefined : v })}
           options={CASE_VIEWS.map(v => ({ value: v, label: t(`v_${v}` as DisputesKey), count: count(v) }))} />}
         filters={<>
           <Segmented name="disputes-kind" aria-label={t('kindFilter')} value={kind} onChange={k => go({ kind: k === 'all' ? undefined : k })}

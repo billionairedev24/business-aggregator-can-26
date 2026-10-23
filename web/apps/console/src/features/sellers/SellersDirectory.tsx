@@ -108,7 +108,7 @@ function DirectoryView({ data, search }: { data: Directory; search: SellersSearc
       ]} />
       <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={25} roleName={roleName}
         initialSearch={search.q}
-        views={<UnderlineTabs aria-label={t('views')} value={view} onChange={v => go({ view: v === 'all' ? undefined : v })}
+        tabs={<UnderlineTabs aria-label={t('views')} value={view} onChange={v => go({ view: v === 'all' ? undefined : v })}
           options={SELLER_VIEWS.map(v => ({ value: v, label: t(`v_${v}` as SellersKey), count: count(v) }))} />}
         filters={<>
           <Segmented name="sellers-dept" aria-label={t('dept')} value={dept} onChange={d => go({ dept: d === 'all' ? undefined : d })}

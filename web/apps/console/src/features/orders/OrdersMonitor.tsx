@@ -100,7 +100,7 @@ function MonitorView({ data, search, view }: { data: Monitor; search: OrdersSear
     <>
       <KpiStrip label={t('kpis')} items={[kpi('attention'), kpi('live'), kpi('escrow'), kpi('late')]} />
       <DataTable<TableRow> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={25} initialSearch={search.q}
-        views={<UnderlineTabs aria-label={t('views')} value={view} onChange={v => go({ view: v })}
+        tabs={<UnderlineTabs aria-label={t('views')} value={view} onChange={v => go({ view: v })}
           options={VIEWS.map(v => ({ value: v, label: t(`tab_${v}` as OrdersKey), count: v === 'all' ? undefined : formatNumber(data.counts[v], locale), tone: v === 'attention' && data.counts.attention ? 'danger' as const : undefined }))} />}
         filters={<>
           <Segmented name="orders-type" aria-label={t('typeFilter')} value={type} onChange={v => go({ type: v === 'all' ? undefined : v })}

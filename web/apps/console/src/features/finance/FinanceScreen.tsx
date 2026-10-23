@@ -130,7 +130,7 @@ function Reconciliation({ days, zone }: { days: Day[]; zone: string }) {
   return (
     <>
       <DataTable<DayRow> dense entity={t('dayEntity')} plural={t('dayPlural')} columns={columns} rows={rows} pageSize={10} emptyText={t('noDays')}
-        views={<UnderlineTabs aria-label={t('reconViews')} value={view} onChange={setView}
+        tabs={<UnderlineTabs aria-label={t('reconViews')} value={view} onChange={setView}
           options={(['all', 'mismatch', 'matched', 'resolved'] as const).map(v => ({ value: v, label: v === 'all' ? t('rv_all') : t(`s_${v}` as FinanceKey), count: count(v), tone: v === 'mismatch' && days.some(d => d.status === 'mismatch') ? 'danger' as const : undefined }))} />}
         rowTones={r => ({ status: STATUS_TONE[r.src.status] })} can={{ create: false, update: false, delete: false }} roleName={roleName}
         openLabel={t('open')} onOpen={r => setOpen(r.id)} reportName="reconciliation" />

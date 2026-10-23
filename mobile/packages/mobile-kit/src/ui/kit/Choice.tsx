@@ -208,6 +208,7 @@ export function OptionCard({
   onPress,
   disabled,
   role = 'radio',
+  label,
   children,
   style,
   testID,
@@ -215,6 +216,8 @@ export function OptionCard({
   title: string;
   description?: string;
   right?: ReactNode;
+  /** What a screen reader says (default "title, description"); S-178: with what `right` shows ("…, $2.99"). */
+  label?: string;
   selected: boolean;
   onPress: () => void;
   disabled?: boolean;
@@ -226,7 +229,7 @@ export function OptionCard({
   return (
     <Pressable
       accessibilityRole={role}
-      accessibilityLabel={[title, description].filter(Boolean).join(', ')}
+      accessibilityLabel={label ?? [title, description].filter(Boolean).join(', ')}
       accessibilityState={role === 'button' ? { selected, disabled: !!disabled } : { checked: selected, selected, disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}

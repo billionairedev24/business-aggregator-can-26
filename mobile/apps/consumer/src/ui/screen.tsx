@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, type RefreshControlProps } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CAP, Icon, IconButton, LINE, MIN_TARGET, SearchBar, colors, radius, semantic, space, textStyles, type IconName } from '@northline/mobile-kit';
+import { CAP, Icon, IconButton, LINE, MIN_TARGET, SearchBar, TYPE, colors, radius, semantic, space, textStyles, type IconName } from '@northline/mobile-kit';
 
 import { useI18n } from '../i18n';
 import { OfflineBanner } from './states';
@@ -29,6 +29,7 @@ export function Screen({
   scroll = true,
   padded = true,
   refreshControl,
+  scrollRef,
   testID,
 }: {
   /** The header's title; no title = no header. */
@@ -44,6 +45,8 @@ export function Screen({
   scroll?: boolean;
   padded?: boolean;
   refreshControl?: React.ReactElement<RefreshControlProps>;
+  /** The content's ScrollView (S-178: a provider's tabs scroll to their section). */
+  scrollRef?: Ref<ScrollView>;
   testID?: string;
 }) {
   const body = <View style={[styles.body, padded && styles.padded]}>{children}</View>;
@@ -53,7 +56,7 @@ export function Screen({
       <OfflineBanner />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {scroll ? (
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
+          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
             {body}
           </ScrollView>
         ) : (
@@ -123,9 +126,10 @@ export function Header({ title, back = true, onBack, action }: { title: string; 
 }
 
 /**
- * A tab's top bar (light direction; the web header's phone row): the place — "Deliver to" over the place's name on
- * one line with an ellipsis, opening the location sheet — and up to two round buttons on the right, then the one
- * search pill. Never asks for the phone's position (that happens only in the sheet, on "Use my current location").
+ * A tab's top (E-15 Plainsight, design/revamp/a.html's phone header): the brand (`lead`) and the round actions on one
+ * row, the one search bar under it (full width, the ink search button), then "Deliver to <place>" on one line with an
+ * ellipsis — the person's place opens the location sheet. Never asks for the phone's position (that happens only in
+ * the sheet, on "Use my current location").
  */
 export function TopBar({
   lead,
@@ -136,8 +140,9 @@ export function TopBar({
   placeHint,
   actions,
   search,
+  below,
 }: {
-  /** Before the place (Home: the brand's mark). */
+  /** Left of the first row (Home: the brand's mark and name). */
   lead?: ReactNode;
   kicker: string;
   /** The place's name; none yet = the "set your location" words in its stead. */
@@ -147,11 +152,19 @@ export function TopBar({
   placeHint?: string;
   actions?: ReactNode;
   search?: ReactNode;
+  /** Under the place line, edge to edge (Home: the department strip). */
+  below?: ReactNode;
 }) {
   return (
     <View style={styles.top}>
-      <View style={styles.topRow}>
-        {lead}
+      <View style={styles.topIn}>
+        {lead || actions ? (
+          <View style={styles.topRow}>
+            <View style={styles.topLead}>{lead}</View>
+            {actions}
+          </View>
+        ) : null}
+        {search}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={placeLabel}
@@ -160,22 +173,15 @@ export function TopBar({
           style={({ pressed }) => [styles.place, pressed && styles.placePressed]}
           testID="home-place"
         >
-          <Icon name="map-pin" size={22} filled color={semantic['action-primary']} />
-          <View style={styles.placeText}>
-            <Text style={styles.placeKicker} numberOfLines={1} maxFontSizeMultiplier={CAP.control}>
-              {kicker}
-            </Text>
-            <View style={styles.placeLine}>
-              <Text style={styles.placeName} numberOfLines={1} maxFontSizeMultiplier={CAP.control}>
-                {place}
-              </Text>
-              <Icon name="caret-down" size={14} />
-            </View>
-          </View>
+          <Icon name="map-pin" size={TYPE.sub} color={semantic.text} />
+          <Text style={styles.placeLine} numberOfLines={1} maxFontSizeMultiplier={CAP.control}>
+            <Text style={styles.placeKicker}>{kicker} </Text>
+            <Text style={styles.placeName}>{place}</Text>
+          </Text>
+          <Icon name="caret-down" size={TYPE.meta} color={semantic['text-muted']} />
         </Pressable>
-        {actions}
       </View>
-      {search}
+      {below}
     </View>
   );
 }
@@ -214,20 +220,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: { ...StyleSheet.flatten(textStyles.sub), flex: 1 },
   headerTitleAlone: { paddingVertical: space[2] },
-  top: {
-    gap: space[3],
-    paddingHorizontal: GUTTER,
-    paddingTop: space[2],
-    paddingBottom: space[3],
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-  },
+  top: { borderBottomWidth: LINE.hair, borderBottomColor: semantic.border, backgroundColor: semantic.surface },
+  topIn: { gap: space[2], paddingHorizontal: GUTTER, paddingTop: space[2], paddingBottom: space[1] },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  place: { flex: 1, minWidth: 0, minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: space[2], borderRadius: radius.control, paddingRight: space[2] },
+  topLead: { flex: 1, minWidth: 0 },
+  place: { minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: space[1], borderRadius: radius.control },
   placePressed: { backgroundColor: semantic['surface-hover'] },
-  placeText: { flex: 1, minWidth: 0 },
-  placeKicker: textStyles.meta,
-  placeLine: { flexDirection: 'row', alignItems: 'center', gap: space[1], minWidth: 0 },
-  placeName: { ...StyleSheet.flatten(textStyles.label), flexShrink: 1 },
+  placeLine: { ...StyleSheet.flatten(textStyles.meta), flexShrink: 1 },
+  placeKicker: { color: semantic['text-muted'] },
+  placeName: { fontFamily: textStyles.metaStrong.fontFamily, color: semantic.text },
 });

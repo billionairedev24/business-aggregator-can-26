@@ -6,6 +6,11 @@
 //
 //   node scripts/shots.mjs consumer|courier [--only <substring>[,<substring>…]]
 //
+// S-178: the stock photos load too. The fixture build points the photo library at the consumer web's /photos/
+// (EXPO_PUBLIC_SITE_ORIGIN, http://localhost:3000 by default), which isn't running here, so every request for a
+// `…/photos/<slot>/<variant>` is answered from the variants `make photos` builds into web/apps/consumer/public/photos
+// (NL_PHOTOS_DIR to use another folder). Without them the run stops and says so (MOBILE_SHOTS_NO_PHOTOS=1 to go on).
+//
 // Writes shots-out/<app>/<nn>-<screen>.png (what the phone shows) and, when the screen scrolls, <…>-full.png (the
 // whole scroll content in one picture), the French run's screens as <…>-fr.png, and _overflow.txt listing screens
 // that scroll sideways. Native-only parts (maps, camera, the system browser, Keychain) are not on the web build.
@@ -21,12 +26,18 @@ if (app !== 'consumer' && app !== 'courier') {
 }
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : null;
 const MOBILE = new URL('../', import.meta.url).pathname;
-const DIST = join(MOBILE, 'apps', app, 'dist-web');
-const OUT = join(MOBILE, 'shots-out', app);
+// NL_SHOTS_DIST / NL_SHOTS_OUT: another build and folder (S-178: the before pictures of a branch, from an older build)
+const DIST = process.env.NL_SHOTS_DIST ?? join(MOBILE, 'apps', app, 'dist-web');
+const OUT = process.env.NL_SHOTS_OUT ?? join(MOBILE, 'shots-out', app);
 // playwright-core is the apps' devDependency (pnpm doesn't hoist it to mobile/)
 const { chromium } = createRequire(join(MOBILE, 'apps', app, 'package.json'))('playwright-core');
 if (!existsSync(join(DIST, 'index.html'))) {
   console.error(`${DIST} is missing: run \`pnpm --filter ${app === 'consumer' ? '@northline/consumer-app' : '@northline/courier'} export:web\` first`);
+  process.exit(2);
+}
+const PHOTOS = process.env.NL_PHOTOS_DIR ?? join(MOBILE, '..', 'web', 'apps', 'consumer', 'public', 'photos');
+if (!existsSync(PHOTOS) && !process.env.MOBILE_SHOTS_NO_PHOTOS) {
+  console.error(`${PHOTOS} is missing: run \`make photos\` first (or MOBILE_SHOTS_NO_PHOTOS=1 for shots without stock photos)`);
   process.exit(2);
 }
 if (!only) rmSync(OUT, { recursive: true, force: true });
@@ -39,7 +50,13 @@ function chromiumPath() {
   return dir ? join(root, dir, 'chrome-linux', 'chrome') : undefined;
 }
 
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.ttf': 'font/ttf', '.png': 'image/png' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.ttf': 'font/ttf', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.avif': 'image/avif' };
+
+/** A photo variant by its path under /photos/ (`category/x/card-640.<hash>.jpg`), or null. */
+function photoFile(path) {
+  const file = join(PHOTOS, path);
+  return file.startsWith(PHOTOS) && existsSync(file) && extname(file) ? file : null;
+}
 const server = createServer((req, res) => {
   const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   const file = join(DIST, path);
@@ -54,6 +71,17 @@ const W = 390;
 const H = 844;
 const browser = await chromium.launch({ executablePath: chromiumPath(), args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: W, height: H }, locale: 'en-CA', deviceScaleFactor: 2 });
+// the photo library's base is another origin (the consumer web): answer its variants from disk
+const missingPhotos = new Set();
+await page.route(/\/photos\/.+\.(jpg|webp|avif)$/, async (route) => {
+  const path = decodeURIComponent(new URL(route.request().url()).pathname).replace(/^.*?\/photos\//, '');
+  const file = photoFile(path);
+  if (!file) {
+    missingPhotos.add(path);
+    return route.fulfill({ status: 404, body: '' });
+  }
+  return route.fulfill({ status: 200, contentType: TYPES[extname(file)], headers: { 'cache-control': 'max-age=3600' }, body: readFileSync(file) });
+});
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 const overflow = [];
@@ -148,6 +176,7 @@ async function consumer() {
       ['home-guest', '/home'],
       ['sign-in', '/sign-in'],
       ['sign-up', '/sign-up'],
+      ['forgot-password', '/forgot-password'],
       ['location-sheet-guest', '/location'],
       ['account-guest', '/account'],
     ]),
@@ -185,7 +214,14 @@ async function consumer() {
       await shot('cart');
     }],
     ['checkout', async () => { await go('/checkout'); await shot('checkout'); }],
-    ['pay', async () => { await tap('checkout-continue'); await settle(); await shot('pay'); }],
+    // S-178: payment is on the one-page checkout; Place your order with the stand-in opens the bank's step (an older
+    // build's two-screen checkout goes on to /pay first)
+    ['pay', async () => {
+      if (await vis('checkout-continue').count()) await tap('checkout-continue');
+      else await tap('pay-button');
+      await settle(1200);
+      await shot('pay');
+    }],
     ['book-service', async () => {
       await go('/providers/prairie-wrench');
       await tap('book-visit');
@@ -233,6 +269,10 @@ async function consumer() {
       ['case', '/cases/rf-2201'],
       ['problem', '/problem/order/ord-done'],
       ['notifications', '/notifications'],
+      ['messages', '/messages'],
+      // S-178: group food orders (join by code, the shared order)
+      ['group-join', '/group'],
+      ['group-order', '/group/7Q2M-K4XP'],
       ['account', '/account'],
       ['account-profile', '/account/profile'],
       ['account-addresses', '/account/addresses'],
@@ -254,7 +294,7 @@ async function consumer() {
     await go('/account');
     await page.getByRole('radio', { name: 'Français' }).filter({ visible: true }).first().click();
     await settle();
-    for (const [name, href] of [['home', '/home'], ['browse', '/services'], ['product', '/product/p-sourdough'], ['cart', '/cart'], ['order-track', '/orders/ord-transit/track'], ['account', '/account'], ['location-sheet', '/location']]) {
+    for (const [name, href] of [['home', '/home'], ['browse', '/services'], ['search-results', '/search?q=sourdough'], ['product', '/product/p-sourdough'], ['provider', '/providers/prairie-wrench'], ['cart', '/cart'], ['checkout', '/checkout'], ['order-track', '/orders/ord-transit/track'], ['account', '/account'], ['location-sheet', '/location']]) {
       await go(href);
       await shot(`${name}-fr`, { full: false });
     }
@@ -295,6 +335,8 @@ async function courier() {
     ['stop-dropoff', '/stops/st-3'],
     ['dropoff', '/stops/st-3/dropoff'],
     ['profile', '/account'],
+    // S-179: earnings (today, the week, each run, payouts)
+    ['earnings', '/earnings'],
   ]))
     await step(name, fn);
   await step('dropoff-pin', async () => {
@@ -313,7 +355,7 @@ async function courier() {
     await go('/account');
     await page.getByRole('tab', { name: 'Français' }).filter({ visible: true }).first().click();
     await settle();
-    for (const [name, href] of [['today', '/'], ['route', '/run'], ['stop-dropoff', '/stops/st-3'], ['profile', '/account']]) {
+    for (const [name, href] of [['today', '/'], ['route', '/run'], ['stop-dropoff', '/stops/st-3'], ['earnings', '/earnings'], ['profile', '/account']]) {
       await go(href);
       await shot(`${name}-fr`, { full: false });
     }
@@ -328,10 +370,11 @@ try {
 } finally {
   writeFileSync(join(OUT, '_overflow.txt'), overflow.join('\n') + (overflow.length ? '\n' : ''));
   if (errors.length) writeFileSync(join(OUT, '_errors.txt'), errors.join('\n') + '\n');
+  if (missingPhotos.size) writeFileSync(join(OUT, '_missing-photos.txt'), [...missingPhotos].sort().join('\n') + '\n');
   await browser.close();
   server.close();
 }
-console.log(`${n} screens → ${OUT}${overflow.length ? ` · ${overflow.length} scroll sideways (_overflow.txt)` : ''}${errors.length ? ` · ${errors.length} page errors (_errors.txt)` : ''}`);
+console.log(`${n} screens → ${OUT}${overflow.length ? ` · ${overflow.length} scroll sideways (_overflow.txt)` : ''}${errors.length ? ` · ${errors.length} page errors (_errors.txt)` : ''}${missingPhotos.size ? ` · ${missingPhotos.size} photo variants not built (_missing-photos.txt; make photos)` : ''}`);
 if (failures.length) {
   console.error(`${failures.length} step(s) failed: ${failures.join(', ')}`);
   process.exit(1);

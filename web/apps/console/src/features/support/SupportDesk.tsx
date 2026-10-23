@@ -90,7 +90,7 @@ export function SupportDesk() {
       {header(median == null ? t('summaryNoMedian', { open: k.open, urgent: k.urgent }) : t('summary', { open: k.open, urgent: k.urgent, median }))}
       <KpiStrip label={t('kpis')} items={kpis.map(([key, value, label]) => ({ key, value, label }))} />
       <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones} pageSize={25}
-        views={<UnderlineTabs aria-label={t('caseViews')} value={stateView} onChange={v => go({ filter: v === 'all' ? undefined : v })}
+        tabs={<UnderlineTabs aria-label={t('caseViews')} value={stateView} onChange={v => go({ filter: v === 'all' ? undefined : v })}
           options={STATE_VIEWS.map(v => ({ value: v, label: t(`tv_${v}` as SupportKey), count: formatNumber(data.counts[v] ?? 0, locale), tone: v === 'urgent' && data.counts.urgent ? 'danger' as const : undefined }))} />}
         filters={<Segmented name="support-requester" aria-label={t('requester')} value={requester} onChange={v => go({ filter: v === 'all' ? undefined : v })}
           options={REQUESTERS.map(v => ({ value: v, label: v === 'all' ? t('rq_all') : t(`f_${v}` as SupportKey) }))} />}

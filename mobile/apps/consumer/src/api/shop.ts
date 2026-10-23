@@ -13,7 +13,7 @@ import type { TipChoice } from './aftercare';
 export type Day = 'today' | 'tomorrow' | 'later';
 export interface Run { windowId: string; label?: string | null; day: Day; startsAt: string; endsAt: string; orderBy: string; feeCents: number; households: number }
 export interface DepartmentTile { slug: string; name: string; shops: number }
-export interface ShopCard { merchantId: string; name: string; tier: string; departmentSlug: string; departmentName: string; products: number; run?: Run | null }
+export interface ShopCard { merchantId: string; name: string; tier: string; departmentSlug: string; departmentName: string; products: number; run?: Run | null; imageUrl?: string | null }
 export interface ProductCard {
   productId: string; offerId: string; name: string; merchantId: string; shopName: string; unit?: string | null;
   priceCents: number; imageUrl?: string | null; sellers: number; run?: Run | null;

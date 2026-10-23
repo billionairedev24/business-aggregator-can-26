@@ -122,3 +122,15 @@
   /* two product cards a row on phones */
   .nl-card-grid:not(.nl-card-grid-services) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-3); }
 }
+
+/* ── rating filter: "★★★★☆ & up" rows; the chosen one on the selected tint with an ink edge ── */
+.nl-rate-filter { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.nl-rate-opt { position: relative; display: inline-flex; align-items: center; gap: var(--space-1-5); min-height: var(--size-control-sm); padding: 0 var(--space-1-5); margin-left: calc(-1 * var(--space-1-5)); border: 0; border-radius: var(--radius-control); background: none; color: var(--color-text-muted); font: inherit; font-size: var(--type-label); cursor: pointer; }
+.nl-rate-opt:hover { color: var(--color-text); }
+.nl-rate-opt[aria-pressed='true'] { background: var(--color-selected-tint); box-shadow: inset 0 0 0 1px var(--color-selected); color: var(--color-text); font-weight: var(--weight-bold); }
+.nl-rate-opt:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* the results grid (E-15 density): 5 cards a row beside the filter rail at 1280 and up, then 4, 3 and 2 on phones */
+.nl-card-grid-results { grid-template-columns: repeat(var(--density-results-cols), minmax(0, 1fr)); }
+@media (max-width: 1279.98px) { .nl-card-grid-results { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 1023.98px) { .nl-card-grid-results { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

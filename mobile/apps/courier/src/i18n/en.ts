@@ -295,6 +295,18 @@ export const en = {
   'earnings.setupHint': 'Payouts go through Stripe. You give Stripe your bank details; Northline never sees them.',
   'earnings.continue': 'Finish payout setup',
   'earnings.error': "Your earnings couldn't load.",
+  'today.yourRun': 'Your run',
+  'today.stops': 'Stops',
+  'today.doneOf': '{done} of {total}',
+  'today.window': 'Window',
+  'today.until': 'until {time}',
+  'run.doneCount': 'Done',
+  'run.left': 'Left',
+  'run.navigateNext': 'Navigate to stop {seq}',
+  'stop.address': 'Address',
+  'pickup.orderRef': 'Order',
+  'earnings.earned': 'Earned',
+  'pickup.explain': 'Check the label matches the order before you seal the bag. Confirming is saved on this phone and sent when there is a connection.',
 } as const;
 
 export type MessageKey = keyof typeof en;

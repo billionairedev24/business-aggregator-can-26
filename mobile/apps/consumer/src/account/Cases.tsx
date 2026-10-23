@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, space } from '@northline/mobile-kit';
+import { colors, radius, semantic, space } from '@northline/mobile-kit';
 
 import type { CaseDetail, CaseRow } from '../api/account';
 import { useAuth } from '../auth/AuthProvider';
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingVertical: space[3], minHeight: 56 },
   pressed: { backgroundColor: colors.accent100 },
   text: { flex: 1, minWidth: 0, gap: 2 },
-  panel: { padding: space[4], borderRadius: radius.md, backgroundColor: colors.surface },
-  note: { padding: space[3], borderRadius: radius.md, backgroundColor: colors.surface, gap: 2 },
+  panel: { padding: space[4], borderRadius: radius.panel, backgroundColor: semantic.surface },
+  note: { padding: space[3], borderRadius: radius.panel, backgroundColor: semantic.surface, gap: 2 },
   mine: { backgroundColor: colors.accent100 },
 });

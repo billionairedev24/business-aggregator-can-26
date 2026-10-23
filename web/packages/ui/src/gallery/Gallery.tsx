@@ -1,6 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import './gallery.css';
-import { Bank, ChartBar, ChatCircleText, GearSix, Leaf, MagnifyingGlass, Package, Prohibit, ShoppingCart, SquaresFour, Stack, Storefront, Tag as TagIcon, Warning } from '@phosphor-icons/react';
+import { Bank, ChartBar, ChatCircleText, GearSix, Leaf, MagnifyingGlass, Package, Prohibit, ShoppingCart, SignIn, SquaresFour, Stack, Storefront, Tag as TagIcon, Truck, Warning } from '@phosphor-icons/react';
+import { AccountMenu } from '../AccountMenu';
+import { LocationPill } from '../LocationPill';
+import { PromoStrip, SiteHeader } from '../SiteHeader';
 import { AppShell, WorkspaceSwitcher } from '../AppShell';
 import { ActionCard, ActionGrid, ActionPanel, ActionPanelItem, ChartCard, KpiStrip, RecordHeader, RecordHistory, RecordLayout, RecordTabs, SummaryTable, Thumb } from '../BackOffice';
 import { ColumnChart } from '../Charts';
@@ -8,13 +11,14 @@ import { Avatar } from '../Layout';
 import { Logo } from '../Logo';
 import { ShellSearch } from '../ShellSearch';
 import { Button } from '../Button';
-import { Checkbox, ChoiceTiles, FilterChip, OptionCard, RadioGroup, Segmented, Switch, UnderlineTabs } from '../Choice';
-import { DealBadge, MediaFallback, Price, ProductCard, QuantityStepper, ServiceCard, Stars, StatusTag } from '../Commerce';
-import { DataTable } from '../DataTable';
+import { Checkbox, ChoiceTiles, FilterChip, FilterGroup, OptionCard, RadioGroup, Segmented, Switch, UnderlineTabs } from '../Choice';
+import { DealBadge, MediaFallback, Price, ProductCard, QuantityStepper, RatingFilter, ServiceCard, Stars, StatusTag, type StatusTone } from '../Commerce';
+import { DataTable, type DataTableColumn } from '../DataTable';
+import { FormSection, SaveBar } from '../Editor';
 import { listingActions, listingActionsFr, listingColumns, listingColumnsFr, listings, listingsFr, CAN } from '../DataTable/DataTable.fixtures';
 import { Pagination, Toast, ToastProvider, useToast } from '../Feedback';
 import { Field, Select, TextInput } from '../Field';
-import { defineMessages, formatCompactMoney, formatPrice, formatDateRange, formatTimeRange, formatWhen, unitCents, useLocale } from '../i18n';
+import { defineMessages, formatCompactMoney, formatDateRange, formatPrice, formatTimeRange, formatWhen, unitCents, useLocale } from '../i18n';
 import { Alert, EmptyState, ErrorState, PageHeader, Skeleton, CardSkeleton } from '../Layout';
 import { Dialog, Drawer } from '../Overlay';
 import { SearchBar } from '../SearchBar';
@@ -69,6 +73,17 @@ const useT = defineMessages({
     rActions: 'Actions', rSuspendD: 'Page, listings and checkout go offline at once; escrow held', rReverify: 'Require re-verification…', rReverifyD: 'The check shows as expired until a current one is uploaded',
     rNote: 'Every action is logged and the business is emailed.', rEvidenceE: 'Food handling permit · valid to Nov 30', rNotesE: 'No notes yet.',
     fDay: 'A day', fWindow: 'A delivery window', fNight: 'Across midnight', fRange: 'A date range',
+    s_site: 'Site header, department strip and promo strip', s_filters: 'Filter rail',
+    hello: 'Hello, {name}', helloGuest: 'Hello, sign in', accountOrders: 'Account & orders', signIn: 'Sign in',
+    bakery: 'Bakery', butcher: 'Butcher', grocery: 'Grocery', mechanics: 'Mechanics', cleaners: 'Cleaners', deals: 'Today’s deals', sell: 'Sell on {brand}',
+    cutoff: '<b>Tonight’s pooled run closes at 5:30 p.m.</b> Mix any 3 shops for one $2.99 delivery.', cutoffLeft: '2 h 48 min left', cutoffLabel: 'Delivery cut-off',
+    rating: 'Customer rating', distance: 'Distance', price: 'Price', under10: 'Under $10', p10: '$10 to $25', dietary: 'Dietary', glutenFree: 'Gluten-free',
+    any: 'Any',
+    s_worktable: 'Work table and editor: status tabs, quick filters, bulk actions, save bar',
+    order: 'order', orders: 'orders', colOrder: 'Order', colPlaced: 'Placed', colCustomer: 'Customer', colItems: 'Items', colWindow: 'Window', colTotal: 'Total', colStatus: 'Status',
+    qToday: 'Today', qRun: 'Tonight’s run', markPacked: 'Mark packed', printLabel: 'Print label', searchOrders: 'Search order, customer or item',
+    wTonight: 'Tonight 6–9 p.m.', wDelivered: 'Delivered 12:05 p.m.', it1: 'Country sourdough ×2, Seeded rye', it2: 'Sandwich loaf, sliced ×2', it3: 'Seeded rye ×2, Focaccia', it4: 'Seeded rye', it5: 'Sandwich loaf, sliced',
+    pricing: 'Price and stock', pricingDesc: 'What customers pay, and how many you have.', yourPrice: 'Your price', stockOnHand: 'Stock on hand', saveProduct: 'Save product', draftSaved: 'Draft saved 9:00 a.m.', unsaved: 'Unsaved changes', saveDraft: 'Save draft', submit: 'Submit for review',
   },
   fr: {
     title: 'Galerie des composants', lede: 'Chaque composant de @northline/ui sur les jetons v2 (A · Plainsight), en anglais et en français.',
@@ -112,6 +127,17 @@ const useT = defineMessages({
     rActions: 'Actions', rSuspendD: 'La page, les annonces et le paiement passent hors ligne; séquestre retenu', rReverify: 'Exiger une nouvelle vérification…', rReverifyD: 'La vérification paraît expirée jusqu’au dépôt d’une pièce à jour',
     rNote: 'Chaque action est journalisée et l’entreprise reçoit un courriel.', rEvidenceE: 'Permis de manipulation des aliments · valide jusqu’au 30 nov.', rNotesE: 'Aucune note pour l’instant.',
     fDay: 'Un jour', fWindow: 'Une plage de livraison', fNight: 'Après minuit', fRange: 'Une période',
+    s_site: 'En-tête du site, bande des rayons et bande promotionnelle', s_filters: 'Volet de filtres',
+    hello: 'Bonjour, {name}', helloGuest: 'Bonjour, connectez-vous', accountOrders: 'Compte et commandes', signIn: 'Se connecter',
+    bakery: 'Boulangerie', butcher: 'Boucherie', grocery: 'Épicerie', mechanics: 'Mécaniciens', cleaners: 'Ménage', deals: 'Aubaines du jour', sell: 'Vendre sur {brand}',
+    cutoff: '<b>La tournée partagée de ce soir ferme à 17 h 30.</b> Combinez 3 boutiques pour une seule livraison à 2,99 $.', cutoffLeft: 'Encore 2 h 48 min', cutoffLabel: 'Heure limite de livraison',
+    rating: 'Évaluation des clients', distance: 'Distance', price: 'Prix', under10: 'Moins de 10 $', p10: '10 $ à 25 $', dietary: 'Alimentation', glutenFree: 'Sans gluten',
+    any: 'Toutes',
+    s_worktable: 'Tableau de travail et éditeur : onglets de statut, filtres rapides, actions groupées, barre d’enregistrement',
+    order: 'commande', orders: 'commandes', colOrder: 'Commande', colPlaced: 'Passée', colCustomer: 'Client', colItems: 'Articles', colWindow: 'Plage', colTotal: 'Total', colStatus: 'Statut',
+    qToday: 'Aujourd’hui', qRun: 'Tournée de ce soir', markPacked: 'Marquer emballée', printLabel: 'Imprimer l’étiquette', searchOrders: 'Rechercher commande, client ou article',
+    wTonight: 'Ce soir 18 h – 21 h', wDelivered: 'Livrée à 12 h 05', it1: 'Pain de campagne ×2, Seigle aux graines', it2: 'Pain de mie tranché ×2', it3: 'Seigle aux graines ×2, Focaccia', it4: 'Seigle aux graines', it5: 'Pain de mie tranché',
+    pricing: 'Prix et stock', pricingDesc: 'Ce que la clientèle paie, et combien vous en avez.', yourPrice: 'Votre prix', stockOnHand: 'Stock disponible', saveProduct: 'Enregistrer le produit', draftSaved: 'Brouillon enregistré à 9 h', unsaved: 'Changements non enregistrés', saveDraft: 'Enregistrer le brouillon', submit: 'Soumettre pour vérification',
   },
 });
 type GalleryT = ReturnType<typeof useT>;
@@ -121,6 +147,7 @@ const SHOP = 'Loaf & Ladder Bakery · Maple Row';
 const FONT = 'IBM Plex Sans';
 const HIVE = 'Hive & Hollow Apiary';
 const BAKERY = 'Loaf & Ladder Bakery';
+const PLACE = 'Maple Row T2N';
 
 export interface GallerySection {
   id: string; title: (t: GalleryT) => string; render: (t: GalleryT, photo?: string) => ReactNode;
@@ -246,6 +273,52 @@ function Cards({ t, photo }: { t: GalleryT; photo?: string }) {
   );
 }
 
+function Site({ t }: { t: GalleryT }) {
+  const [q, setQ] = useState('');
+  const [scope, setScope] = useState('all');
+  const link = (key: string, href: string, extra: Partial<{ current: boolean; group: string; tone: 'deal' }> = {}) => ({ key, href, label: t(key as 'bakery'), ...extra });
+  return (
+    <div className="nl-gallery-frame">
+      <SiteHeader
+        location={<LocationPill status="saved" name="Amara" label={PLACE} onOpen={() => {}} />}
+        search={<SearchBar variant="header" landmark={t('s_site')} value={q} onChange={setQ} onSubmit={() => {}} label={t('q')} placeholder={t('qPlaceholder')}
+          scope={{ value: scope, onChange: setScope, options: [{ value: 'all', label: t('all') }, { value: 'services', label: t('services') }, { value: 'shop', label: t('shop') }, { value: 'food', label: t('food') }] }} />}
+        links={[link('services', '#services'), link('shop', '#shop', { current: true }), link('food', '#food')]}
+        shortcuts={[link('bakery', '#bakery', { group: 'shop' }), link('butcher', '#butcher', { group: 'shop' }), link('grocery', '#grocery', { group: 'shop' }), link('mechanics', '#mechanics', { group: 'services' }), link('cleaners', '#cleaners', { group: 'services' })]}
+        end={[link('deals', '#deals', { tone: 'deal' }), link('sell', '#sell')]}
+        menu={[{ key: 'shop', heading: t('shop'), href: '#shop', links: [link('bakery', '#bakery')] }]}
+        cart={{ count: 4, href: '#cart' }}
+        account={<AccountMenu greeting={{ line1: t('hello', { name: 'Amara' }), line2: t('accountOrders') }} user={{ name: 'Amara Osei', initials: 'AO' }} sections={[{ items: [{ key: 'in', label: t('signIn'), icon: SignIn, href: '#in' }] }]} />} />
+      <PromoStrip icon={<Truck size={18} />} label={t('cutoffLabel')} end={t('cutoffLeft')}><Eta html={t('cutoff')} /></PromoStrip>
+    </div>
+  );
+}
+
+function Filters({ t }: { t: GalleryT }) {
+  const [tonight, setTonight] = useState(true), [vegan, setVegan] = useState(false), [rating, setRating] = useState<number | undefined>(4);
+  const [km, setKm] = useState<'2' | '5' | '10' | 'any'>('5'), [p, setP] = useState('under10');
+  return (
+    <div className="nl-gallery-rail">
+      <FilterGroup label={t('delivery')}>
+        <Checkbox checked={tonight} onChange={setTonight} label={t('tonightOpt')} count={64} />
+        <Checkbox checked={false} onChange={() => {}} label={t('pickup')} count={52} />
+      </FilterGroup>
+      <FilterGroup label={t('rating')}><RatingFilter value={rating} onChange={setRating} /></FilterGroup>
+      <FilterGroup label={t('distance')}>
+        <Segmented name="gallery-km" size="sm" fill aria-label={t('distance')} value={km} onChange={setKm} options={[{ value: '2', label: '2 km' }, { value: '5', label: '5 km' }, { value: '10', label: '10 km' }, { value: 'any', label: t('any') }]} />
+      </FilterGroup>
+      <FilterGroup label={t('price')}>
+        <Checkbox checked={p === 'under10'} onChange={on => setP(on ? 'under10' : '')} label={t('under10')} count={12} />
+        <Checkbox checked={p === 'p10'} onChange={on => setP(on ? 'p10' : '')} label={t('p10')} count={47} />
+      </FilterGroup>
+      <FilterGroup label={t('dietary')}>
+        <Checkbox checked={vegan} onChange={setVegan} label={t('vegan')} count={31} />
+        <Checkbox checked={false} onChange={() => {}} label={t('glutenFree')} count={6} />
+      </FilterGroup>
+    </div>
+  );
+}
+
 function Table() {
   const { locale } = useLocale();
   return locale === 'fr'
@@ -364,7 +437,7 @@ function RecordsDemo({ t }: { t: GalleryT }) {
   return (
     <div className="nl-gallery-stack">
       <DataTable<QueueRow> dense entity={t('rSeller')} plural={t('rSellers')} rows={rows} pageSize={5} can={{ create: false, update: true, delete: false }}
-        views={<UnderlineTabs aria-label={t('sellers')} value={view} onChange={setView} options={views.map(v => ({ value: v.value, label: v.label, count: count(v.st) }))} />}
+        tabs={<UnderlineTabs aria-label={t('sellers')} value={view} onChange={setView} options={views.map(v => ({ value: v.value, label: v.label, count: count(v.st) }))} />}
         filters={<>
           <Segmented name="gallery-dept" aria-label={t('rDept')} value={dept} onChange={setDept} options={[{ value: 'all', label: t('rAll') }, { value: 'services', label: t('services') }, { value: 'shop', label: t('shop') }, { value: 'food', label: t('food') }]} />
           <FilterChip label={t('rDisputes')} applied={disputes} onToggle={() => setDisputes(x => !x)} />
@@ -402,6 +475,50 @@ function RecordsDemo({ t }: { t: GalleryT }) {
   );
 }
 
+interface WorkRow { id: string; ref: string; placed: string; who: string; items: string; window: string; total: number; state: string; code: 'to_pack' | 'packed' | 'delivered' | 'issue' }
+
+function WorkTable({ t }: { t: GalleryT }) {
+  const { locale } = useLocale();
+  const s = (code: WorkRow['code']) => (code === 'to_pack' ? t('statusToPack') : code === 'packed' ? t('statusPacked') : code === 'issue' ? t('statusWrong') : t('statusDelivered'));
+  const time = (h: number, m: number) => (locale === 'fr' ? `${h} h ${String(m).padStart(2, '0')}` : `${h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')} ${h >= 12 ? 'p.m.' : 'a.m.'}`);
+  const rows: WorkRow[] = [
+    { id: '1', ref: 'NL-48213', placed: time(15, 42), who: 'A. Osei', items: t('it1'), window: t('wTonight'), total: 2625, code: 'to_pack', state: '' },
+    { id: '2', ref: 'NL-48219', placed: time(15, 55), who: 'K. Nguyen', items: t('it2'), window: t('wTonight'), total: 1550, code: 'to_pack', state: '' },
+    { id: '3', ref: 'NL-48201', placed: time(14, 10), who: 'M. Tran', items: t('it3'), window: t('wTonight'), total: 2500, code: 'packed', state: '' },
+    { id: '4', ref: 'NL-48188', placed: time(11, 20), who: 'D. Kowalski', items: t('it4'), window: t('wDelivered'), total: 925, code: 'issue', state: '' },
+    { id: '5', ref: 'NL-48177', placed: time(11, 5), who: 'P. Singh', items: t('it5'), window: t('wDelivered'), total: 775, code: 'delivered', state: '' },
+  ].map(r => ({ ...r, state: s(r.code as WorkRow['code']) })) as WorkRow[];
+  const tone = (r: WorkRow): StatusTone => (r.code === 'to_pack' ? 'warning' : r.code === 'packed' ? 'info' : r.code === 'issue' ? 'danger' : 'success');
+  const columns: DataTableColumn<WorkRow>[] = [
+    { key: 'ref', label: t('colOrder'), primary: true, nowrap: true },
+    { key: 'placed', label: t('colPlaced'), nowrap: true },
+    { key: 'who', label: t('colCustomer'), card: 'line' },
+    { key: 'items', label: t('colItems'), card: 'line' },
+    { key: 'window', label: t('colWindow'), card: 'meta' },
+    { key: 'total', label: t('colTotal'), type: 'money', format: v => formatPrice(v as number, locale), card: 'end' },
+    { key: 'state', label: t('colStatus'), type: 'tag', status: tone },
+  ];
+  return (
+    <div className="nl-gallery-stack">
+      <DataTable<WorkRow> entity={t('order')} plural={t('orders')} columns={columns} rows={rows} searchPlaceholder={t('searchOrders')} can={{ update: true, export: false }}
+        views={[{ id: 'all', label: t('all') }, { id: 'pack', label: t('toPack'), when: r => r.code === 'to_pack' }, { id: 'packed', label: t('packed'), when: r => r.code === 'packed' }, { id: 'delivered', label: t('delivered'), when: r => r.code === 'delivered' }, { id: 'issues', label: t('issues'), when: r => r.code === 'issue', tone: 'danger' }]}
+        quickFilters={[{ id: 'today', label: t('qToday'), when: () => true }, { id: 'run', label: t('qRun'), when: r => r.window === t('wTonight') }]} initialQuickFilters={['today']}
+        actions={[{ id: 'pack', label: t('markPacked'), inline: true, emphasis: 'primary', when: { key: 'code', in: ['to_pack'] } }, { id: 'label', label: t('printLabel'), inline: true, bulk: false, emphasis: 'secondary', when: { key: 'code', in: ['packed'] } }]}
+        onAction={() => false} onOpen={() => {}} />
+      <FormSection title={t('pricing')} description={t('pricingDesc')}>
+        <div className="nl-gallery-pair">
+          <Field label={t('yourPrice')}><TextInput defaultValue={formatPrice(850, locale)} /></Field>
+          <Field label={t('stockOnHand')}><TextInput defaultValue="14" inputMode="numeric" /></Field>
+        </div>
+      </FormSection>
+      <SaveBar sticky={false} label={t('saveProduct')} status={<StatusTag>{t('draftSaved')}</StatusTag>} note={t('unsaved')}>
+        <Button variant="secondary">{t('saveDraft')}</Button>
+        <Button>{t('submit')}</Button>
+      </SaveBar>
+    </div>
+  );
+}
+
 /** The demo persona of the Studio's own tests and shots (a person's name: not translated). */
 const PERSONA = ['Ravi', 'Sandhu'].join(' ');
 
@@ -430,6 +547,7 @@ function ShellDemo({ t }: { t: GalleryT }) {
 
 export const GALLERY_SECTIONS: readonly GallerySection[] = [
   { id: 'tokens', title: t => t('s_tokens'), render: t => <Tokens t={t} /> },
+  { id: 'site', title: t => t('s_site'), render: t => <Site t={t} /> },
   {
     id: 'buttons', title: t => t('s_buttons'), render: t => (
       <>
@@ -441,6 +559,7 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
   { id: 'tabs', title: t => t('s_tabs'), render: t => <Tabs t={t} /> },
   { id: 'choice', title: t => t('s_choice'), render: t => <Choices t={t} /> },
   { id: 'chips', title: t => t('s_chips'), render: t => <Chips t={t} /> },
+  { id: 'filters', title: t => t('s_filters'), render: t => <Filters t={t} /> },
   { id: 'checks', title: t => t('s_checks'), render: t => <Checks t={t} /> },
   { id: 'fields', title: t => t('s_fields'), render: t => <Fields t={t} /> },
   { id: 'commerce', title: t => t('s_commerce'), render: t => <Commerce t={t} /> },
@@ -450,6 +569,7 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
   { id: 'states', title: t => t('s_states'), render: t => <States t={t} /> },
   { id: 'formats', title: t => t('s_formats'), render: t => <Formats t={t} /> },
   { id: 'backoffice', title: t => t('s_backoffice'), render: (t, photo) => <BackOfficeDemo t={t} photo={photo} /> },
+  { id: 'worktable', title: t => t('s_worktable'), render: t => <WorkTable t={t} /> },
   { id: 'records', title: t => t('s_records'), render: t => <RecordsDemo t={t} /> },
   { id: 'shell', title: t => t('s_shell'), render: t => <ShellDemo t={t} />, solo: true },
 ];

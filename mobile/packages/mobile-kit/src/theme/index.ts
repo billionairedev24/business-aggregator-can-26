@@ -98,9 +98,14 @@ export const ramp = theme.ramp;
  */
 export const radius = { ...theme.radius } as const;
 
-/** The 4px spacing scale (scale.json): 0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64. */
+/**
+ * The 4px spacing scale (scale.json): 0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, and its half steps 6 · 10 · 14
+ * (`space[1.5]`, `space[2.5]`, `space[3.5]`, the web's `--space-1-5/2-5/3-5`; S-178).
+ */
 const s = theme.space;
-export const space = { 0: s['0'], 1: s['1'], 2: s['2'], 3: s['3'], 4: s['4'], 5: s['5'], 6: s['6'], 8: s['8'], 10: s['10'], 12: s['12'], 16: s['16'] } as const;
+export const space = {
+  0: s['0'], 1: s['1'], 1.5: s['1-5'], 2: s['2'], 2.5: s['2-5'], 3: s['3'], 3.5: s['3-5'], 4: s['4'], 5: s['5'], 6: s['6'], 8: s['8'], 10: s['10'], 12: s['12'], 16: s['16'],
+} as const;
 
 /** The type scale in px (scale.json): 2xs 11 … 5xl 52. */
 export const text = { ...theme.text } as const;

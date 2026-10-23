@@ -4,21 +4,29 @@
  * mock session; `ready` is what to wait for before the shot (default: the page's h1, or 8 s without one); `click` is
  * pressed once the page is ready (a Playwright selector: open a detail sheet or an editor step), then the shot is taken (the window only: a sheet is fixed to it);
  * `sheet` photographs the window only for a sheet the address opens (`?application=`); `down` makes the mock api answer
- * that status to everything (the BFF or the api down: the error states).
+ * that status to everything (the BFF or the api down: the error states); `now` fixes the page's clock (Date.now) at that
+ * instant, for what depends on the time of day (the delivery cut-off strip counts down to the fixtures' run, E-15).
  * A new route goes here too: shots.spec.ts photographs whatever this lists.
  */
-export interface ShotRoute { name: string; path: string; signedIn?: boolean; ready?: string; click?: string; sheet?: boolean; down?: number }
+export interface ShotRoute { name: string; path: string; signedIn?: boolean; ready?: string; click?: string; sheet?: boolean; down?: number; now?: string }
 
+/** 2 h 48 min before the recorded Shop landing's run closes (fixtures/consumer.json `run.orderBy`), as design/revamp/a.html shows it. */
+const BEFORE_CUTOFF = '2026-09-30T20:32:00Z';
 const PROVIDER = '01J9ZD3V00000000000000PWM1', SELLER = '01J9ZD3V00000000000000PWP1', KITCHEN = '01J9ZD3V00000000000000PDB1';
 
 export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
   consumer: [
-    { name: 'home', path: '/' },
-    { name: 'home-signed-in', path: '/', signedIn: true },
+    { name: 'home', path: '/', now: BEFORE_CUTOFF },
+    { name: 'home-signed-in', path: '/', signedIn: true, now: BEFORE_CUTOFF },
     { name: 'search', path: '/search?q=sourdough' },
     { name: 'search-empty', path: '/search?q=zzz' },
-    { name: 'shop', path: '/shop' },
-    { name: 'shop-department', path: '/shop/bakery' },
+    { name: 'shop', path: '/shop', now: BEFORE_CUTOFF },
+    { name: 'shop-department', path: '/shop/bakery', now: BEFORE_CUTOFF },
+    { name: 'search-shop', path: '/search?q=bakery&scope=shop&delivery=tonight', now: BEFORE_CUTOFF },
+    { name: 'search-filters', path: '/search?q=bakery&scope=shop', click: '.nl-results-filters-toggle' },
+    // the header, home and results in fr-CA (`?lang=fr` wins over the `lang=en` the shots add)
+    { name: 'home-fr', path: '/?lang=fr', now: BEFORE_CUTOFF },
+    { name: 'search-shop-fr', path: '/search?q=bakery&scope=shop&lang=fr', now: BEFORE_CUTOFF },
     { name: 'product', path: '/products/P1' },
     { name: 'services', path: '/services' },
     { name: 'services-category', path: '/services/mobile-mechanic' },

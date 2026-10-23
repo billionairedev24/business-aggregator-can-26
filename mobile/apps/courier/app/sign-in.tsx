@@ -2,7 +2,7 @@ import * as Linking from 'expo-linking';
 import { useRef, useState } from 'react';
 import { Image, Share, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
-import { ApiError, colors, fonts, Logo, NetworkError, radius, space, Scene, type PendingSignIn } from '@northline/mobile-kit';
+import { ApiError, LINE, Logo, NetworkError, radius, Photo, PhotoWell, photoFor, semantic, space, textStyles, type PendingSignIn } from '@northline/mobile-kit';
 
 import type { PasswordStep, SignedIn, TotpSetup } from '../src/api/auth';
 import { useAuth } from '../src/auth';
@@ -244,7 +244,7 @@ export default function SignIn() {
       <View style={styles.brand}>
         {/* the palette's mark and wordmark (brand.json), with the portal word — AT DR:31 LOGIN */}
         <Logo size={36} portal={t('signIn.portal')} />
-        {step === 'credentials' ? <Scene slot="hero/courier" subject="courier" tone="sage" fit="contain" style={styles.art} /> : null}
+        {step === 'credentials' ? <Hero /> : null}
         <Heading>{t('signIn.title')}</Heading>
       </View>
       {ended ? <Banner tone="warn">{t('signIn.ended')}</Banner> : null}
@@ -257,17 +257,23 @@ export default function SignIn() {
   );
 }
 
+/** The courier's photo (the library's hero), else the dashed well with the truck: never a drawing. */
+function Hero() {
+  const photo = photoFor('hero/courier', 'wide');
+  return <View style={styles.art}>{photo ? <Photo slot={[]} photo={photo} crop="wide" style={StyleSheet.absoluteFill} /> : <PhotoWell icon="truck" inset={0} />}</View>;
+}
+
 const styles = StyleSheet.create({
   brand: { paddingTop: space[4], gap: space[4] },
-  art: { height: 180, borderRadius: radius.lg },
+  art: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.panel, overflow: 'hidden', backgroundColor: semantic.well },
   spacer: { flex: 1, minHeight: space[6] },
   field: { gap: space[1] },
-  input: { minHeight: 48, borderWidth: 1, borderColor: colors.borderControl, borderRadius: radius.md, paddingHorizontal: space[3], color: colors.text, backgroundColor: colors.surface, fontFamily: fonts.regular, fontSize: 16 },
-  qr: { alignItems: 'center', padding: space[3], backgroundColor: colors.surface, borderRadius: radius.md },
+  input: { ...StyleSheet.flatten(textStyles.body), minHeight: 48, borderWidth: LINE.hair, borderColor: semantic['border-control'], borderRadius: radius.panel, paddingHorizontal: space[3], backgroundColor: semantic.surface },
+  qr: { alignItems: 'center', padding: space[3], backgroundColor: semantic.surface, borderRadius: radius.panel },
   qrImage: { width: 180, height: 180 },
-  codes: { gap: 4, padding: space[3], backgroundColor: colors.surface, borderRadius: radius.md },
-  code: { fontFamily: fonts.regular, fontSize: 17, color: colors.text, fontVariant: ['tabular-nums'] },
-  small: { fontFamily: fonts.regular, fontSize: 14, color: colors.textMuted },
+  codes: { gap: space[1], padding: space[3], backgroundColor: semantic.surface, borderRadius: radius.panel },
+  code: { ...StyleSheet.flatten(textStyles.body), fontVariant: ['tabular-nums'] },
+  small: { ...StyleSheet.flatten(textStyles.body), color: semantic['text-muted'] },
 });
 
 /** A labelled text field (the courier app has no form kit of its own). */

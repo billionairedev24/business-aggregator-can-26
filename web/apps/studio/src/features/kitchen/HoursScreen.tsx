@@ -71,11 +71,11 @@ export function HoursScreen() {
           <div className="nl-k-subhead nl-k-h2-gap"><h2 className="nl-k-h2">{t('fulfilTitle')}</h2>{canEdit ? <button type="button" className="btn btn-ghost nl-k-small-btn" onClick={() => setOpen({ kind: 'fulfilment' })}>{t('editFulfilment')}</button> : null}</div>
           <div className="nl-k-rows">
             <Row label={t('fu_courier')}><OnOff on={f.courier} t={t} /></Row>
-            <Row label={t('fu_pickup')}>{f.pickup ? <span className="tag tag-accent">{t('pickupOn', { from: f.pickupFromMin, to: f.pickupToMin })}</span> : <OnOff on={false} t={t} />}</Row>
+            <Row label={t('fu_pickup')}>{f.pickup ? <span className="tag tag-success">{t('pickupOn', { from: f.pickupFromMin, to: f.pickupToMin })}</span> : <OnOff on={false} t={t} />}</Row>
             <Row label={t('fu_mealKits')}><OnOff on={f.mealKits} t={t} /></Row>
             <Row label={t('fu_radius')}><span>{f.radiusKm == null ? '—' : f.areas.length ? t('radiusText', { km: f.radiusKm, areas: f.areas.join(', ') }) : t('radiusOnly', { km: f.radiusKm })}</span></Row>
-            <Row label={t('fu_group')}>{f.groupOrders ? <span className="tag tag-accent">{t('groupOn', { n: f.groupMax })}</span> : <OnOff on={false} t={t} />}</Row>
-            <Row label={t('fu_scheduled')}>{f.scheduled ? <span className="tag tag-accent">{t('scheduledOn', { n: f.scheduledDays })}</span> : <OnOff on={false} t={t} />}</Row>
+            <Row label={t('fu_group')}>{f.groupOrders ? <span className="tag tag-success">{t('groupOn', { n: f.groupMax })}</span> : <OnOff on={false} t={t} />}</Row>
+            <Row label={t('fu_scheduled')}>{f.scheduled ? <span className="tag tag-success">{t('scheduledOn', { n: f.scheduledDays })}</span> : <OnOff on={false} t={t} />}</Row>
           </div>
           <h2 className="nl-k-h2 nl-k-h2-gap">{t('safetyTitle')}</h2>
           <FoodSafety setup={s} t={t} merchantId={merchantId} />
@@ -90,15 +90,15 @@ export function HoursScreen() {
 }
 
 const Row = ({ label, children }: { label: string; children: React.ReactNode }) => <div className="nl-k-row"><span>{label}</span>{children}</div>;
-const OnOff = ({ on, t }: { on: boolean; t: KitchenT }) => <span className={`tag ${on ? 'tag-accent' : 'tag-neutral'}`}>{on ? t('on') : t('off')}</span>;
+const OnOff = ({ on, t }: { on: boolean; t: KitchenT }) => <span className={`tag ${on ? 'tag-success' : 'tag-neutral'}`}>{on ? t('on') : t('off')}</span>;
 
 function evidenceTag(e: Setup['foodSafety']['permit'], t: KitchenT, date: (iso: string) => string, verifiedLabel: 'ev_verified' | 'ev_onFile') {
   switch (e.status) {
-    case 'verified': return { cls: 'tag-accent', text: e.expiresAt ? t('ev_renews', { date: date(e.expiresAt) }) : t(verifiedLabel) };
-    case 'submitted': return { cls: 'tag-highlight', text: t('ev_submitted') };
-    case 'expired': return { cls: 'tag-accent-2', text: t('ev_expired') };
-    case 'rejected': return { cls: 'tag-accent-2', text: t('ev_rejected') };
-    case 'todo': return { cls: 'tag-accent-2', text: t('ev_todo') };
+    case 'verified': return { cls: 'tag-success', text: e.expiresAt ? t('ev_renews', { date: date(e.expiresAt) }) : t(verifiedLabel) };
+    case 'submitted': return { cls: 'tag-warning', text: t('ev_submitted') };
+    case 'expired': return { cls: 'tag-danger', text: t('ev_expired') };
+    case 'rejected': return { cls: 'tag-danger', text: t('ev_rejected') };
+    case 'todo': return { cls: 'tag-danger', text: t('ev_todo') };
     default: return { cls: 'tag-neutral', text: t('ev_missing') };
   }
 }
@@ -112,7 +112,7 @@ function FoodSafety({ setup, t, merchantId }: { setup: Setup; t: KitchenT; merch
     <div className="nl-k-rows">
       <div className="nl-k-row"><span>{p.reference ? t('permit', { ref: p.reference.replace(/^#/, '') }) : t('permitNone')}</span><span className={`tag ${pt.cls}`}>{pt.text}</span></div>
       <div className="nl-k-row"><span>{h.reference ? t('handlers', { ref: h.reference }) : t('handlersNone')}</span><span className={`tag ${ht.cls}`}>{ht.text}</span></div>
-      <div className="nl-k-row"><span>{t('seals')}</span><span className="tag tag-accent">{t('sealsTag')}</span></div>
+      <div className="nl-k-row"><span>{t('seals')}</span><span className="tag tag-success">{t('sealsTag')}</span></div>
       <Link className="nl-k-link" to="/b/$merchantId/compliance" params={{ merchantId }}>{t('complianceLink')}</Link>
     </div>
   );

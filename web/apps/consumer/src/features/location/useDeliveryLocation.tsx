@@ -8,6 +8,13 @@ import { BookAddress, Reverse, resolveLocation, SavedLocation, SAVED_KEY, type D
 export { SAVED_KEY, SavedLocation, type DeliveryLocation } from './sources';
 
 /**
+ * The place in a sentence ("Popular near Beltline", "pooled run to Kensington"): the delivery zone, else the chosen
+ * neighbourhood, else the market's city — never a street address (a signed-in person's default address is one).
+ */
+export const shortPlace = (l: DeliveryLocation): string | undefined =>
+  l.status === 'locating' ? undefined : l.zone ?? (l.street ? undefined : l.label?.split(',')[0]?.trim()) ?? l.city;
+
+/**
  * The location every screen reads (consumer location, rebuilt 2026-10-19; the sources and their order are in
  * sources.ts). Server rendering and the first browser render agree on "locating"; the browser then reads, without
  * prompting anyone, the saved choice, the signed-in person's default address, the CDN's city and the fallback market.

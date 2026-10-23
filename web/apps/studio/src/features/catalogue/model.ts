@@ -18,6 +18,11 @@ export function permissions(role: string) {
 export type VetState = 'approved' | 'pending' | 'review' | 'draft' | 'rejected';
 export const vetState = (l: Pick<ListingItem, 'vetting' | 'vettingFlags'>): VetState =>
   l.vetting === 'pending' ? (l.vettingFlags.length ? 'review' : 'pending') : l.vetting;
+/**
+ * S-175: "low stock" on the catalogue table — the editor's default "Low stock at" (5). The list endpoint carries no
+ * per-listing threshold, so the Low stock tab uses the default; a listing's own threshold still drives its alerts.
+ */
+export const LOW_STOCK = 5;
 export const minutesSince = (iso: string | null | undefined, now = Date.now()) => (iso ? Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000)) : 0);
 
 // ── product form ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -213,15 +218,15 @@ const RESTRICTED = /\b(cbd|thc|vape|e-?cig|cannabis|nicotine|firearm|ammo|replic
 /** The vetting preview panel: what automated vetting will look at, computed from the form. */
 export function vettingChecks(input: {
   category: Category | undefined; priceCents: number | null; images: Media[]; imageSource: 'shared' | 'own'; link: CatalogueLink | null;
-  text: string; gtin: { type: IdentifierType; value: string } | null; money: (c: number) => string;
+  text: string; gtin: { type: IdentifierType; value: string } | null; price: (c: number) => string;
 }): Check[] {
-  const { category, priceCents, images, imageSource, link, text, gtin, money } = input;
+  const { category, priceCents, images, imageSource, link, text, gtin, price } = input;
   const checks: Check[] = [];
   checks.push(!category ? { ok: null, key: 'vpCategoryMissing' } : category.banned ? { ok: false, key: 'vpCategoryBanned' } : { ok: true, key: 'vpCategoryOk' });
   const median = category?.medianPriceCents;
   if (median && priceCents && priceCents > 0) {
     const dev = Math.round(((priceCents - median) / median) * 100);
-    checks.push(Math.abs(priceCents - median) <= 0.6 * median ? { ok: true, key: 'vpPriceOk', values: { median: money(median) } } : { ok: false, key: 'vpPriceOut', values: { pct: Math.abs(dev), dir: dev < 0 ? 'below' : 'above', median: money(median) } });
+    checks.push(Math.abs(priceCents - median) <= 0.6 * median ? { ok: true, key: 'vpPriceOk', values: { median: price(median) } } : { ok: false, key: 'vpPriceOut', values: { pct: Math.abs(dev), dir: dev < 0 ? 'below' : 'above', median: price(median) } });
   } else checks.push({ ok: null, key: 'vpPriceNoMedian' });
   if (imageSource === 'shared' && link?.images.length) checks.push({ ok: true, key: 'vpImagesShared' });
   else if (images.length === 0) checks.push({ ok: null, key: 'vpImagesMissing' });

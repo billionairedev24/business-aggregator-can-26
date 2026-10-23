@@ -155,7 +155,7 @@ function BusinessQueue() {
         { key: 'approved', label: t('k_approved'), value: decided('approved'), delta: t('k_approvedNote') },
       ]} />
       <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones} pageSize={25}
-        views={<UnderlineTabs aria-label={t('appViews')} value={view} onChange={v => go({ stage: v === 'all' ? undefined : v })}
+        tabs={<UnderlineTabs aria-label={t('appViews')} value={view} onChange={v => go({ stage: v === 'all' ? undefined : v })}
           options={APP_VIEWS.map(v => ({ value: v, label: t(`av_${v}` as VerifyKey), count: count(v) }))} />}
         filters={<>
           <FilterChip label={t('highRisk')} applied={!!search.risk} onToggle={() => go({ risk: search.risk ? undefined : true })} />

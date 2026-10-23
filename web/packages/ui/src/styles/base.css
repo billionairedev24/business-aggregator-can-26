@@ -105,7 +105,10 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .seg-opt:has(input:checked) + .seg-opt, .seg-opt[aria-checked='true'] + .seg-opt { border-left-color: var(--color-selected); }
 .seg-opt:has(input:checked)::before, .seg-opt[aria-checked='true']::before { content: ''; width: 9px; height: 5px; margin-top: -2px; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); flex: none; }
 .seg-opt:has(input:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: -4px; }
-.seg-sm .seg-opt { min-height: var(--size-control-sm); padding: 0 var(--space-3); }
+.seg-sm .seg-opt { min-height: var(--size-control-sm); padding: 0 var(--space-3); white-space: nowrap; }
+.seg-fill { display: flex; width: 100%; }
+.seg-fill .seg-opt { flex: 1 1 0; min-width: 0; padding-inline: var(--space-1); }
+.seg-fill .seg-opt:has(input:checked)::before, .seg-fill .seg-opt[aria-checked='true']::before { content: none; }
 
 /* ── cards and panels: white, a hairline edge, 4 px corners, flat ── */
 .card { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); border-radius: var(--radius-panel); background: var(--color-surface); border: 1px solid var(--color-border-card); box-shadow: var(--shadow-sm); }

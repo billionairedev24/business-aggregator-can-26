@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { Icon, colors, fonts, radius, semantic, shadow, space, Scene } from '@northline/mobile-kit';
+import { colors, fonts, Icon, LINE, TYPE, radius, semantic, shadow, space, textStyles } from '@northline/mobile-kit';
 
 import { CancelOrder, Cancellations, FailedDelivery, Returns } from '../aftercare/AfterSale';
 import { CourierTip } from '../aftercare/CourierTip';
@@ -16,6 +16,7 @@ import { PushPrompt } from '../push/PushPrompt';
 import { Body, Button, Notice, Tag, Title } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { QueryView, SignInPrompt, Skeleton, errorMessage } from '../ui/states';
+import { Picture } from '../ui/commerce';
 import { backToTab, shop, useShopFormat } from './common';
 import { Ladder, Panel, shopStyles } from './parts';
 
@@ -116,7 +117,7 @@ export function Confirmed() {
     >
       {(o) => (
         <View style={styles.gap}>
-          <Scene slot="banner/order-complete" subject="courier" draw={{ main: 'ShoppingBag', side: 'Truck' }} fit="contain" style={styles.confirmArt} />
+          <Picture slot="banner/order-complete" crop="wide" icon="truck" style={styles.confirmArt} />
           <View style={styles.placed} accessibilityRole="alert">
             <Icon name="check-circle" filled size={22} color={semantic.success} />
             <Text style={[styles.body, styles.strong, styles.flex]}>{t('rd.order.placed')}</Text>
@@ -172,10 +173,10 @@ export function Track() {
                 {/* a quiet street grid under the run (no map SDK: a schematic) */}
                 <Path d="M0 60 H402 M0 140 H402 M70 0 V200 M180 0 V200 M300 0 V200" stroke={colors.surface} strokeWidth={10} />
                 <Path d="M0 100 H402 M240 0 V200" stroke={colors.surface} strokeWidth={6} />
-                <Path d="M30 170 L110 170 L110 110 L240 110 L240 50 L340 50" fill="none" stroke={colors.actionPrimary} strokeWidth={4} strokeDasharray="8 6" />
+                <Path d="M30 170 L110 170 L110 110 L240 110 L240 50 L340 50" fill="none" stroke={semantic.selected} strokeWidth={4} strokeDasharray="8 6" />
                 <Circle cx={30} cy={170} r={8} fill={colors.textMuted} />
                 <Circle cx={110} cy={110} r={8} fill={colors.textMuted} />
-                <Circle cx={240} cy={c && c.stopsBefore === 0 ? 70 : 110} r={11} fill={semantic['action-accent']} stroke={colors.surface} strokeWidth={3} />
+                <Circle cx={240} cy={c && c.stopsBefore === 0 ? 70 : 110} r={11} fill={semantic.selected} stroke={colors.surface} strokeWidth={3} />
                 <Circle cx={340} cy={50} r={9} fill={colors.surface} stroke={colors.text} strokeWidth={3} />
               </Svg>
               <View style={styles.etaPill}>
@@ -199,7 +200,7 @@ export function Track() {
             <View style={styles.courier} testID="track-courier">
               <View style={styles.courierRow}>
               <View style={styles.courierAvatar}>
-                {c?.courierName ? <Text style={styles.courierInitials}>{initialsOf(c.courierName)}</Text> : <Icon name="truck" size={22} color={semantic['action-accent-text']} />}
+                {c?.courierName ? <Text style={styles.courierInitials}>{initialsOf(c.courierName)}</Text> : <Icon name="truck" size={TYPE.price} color={semantic['selected-text']} />}
               </View>
               <View style={styles.flex}>
                 <Text style={styles.courierName}>{c?.courierName ? t('shop.track.courier', { name: c.courierName }) : t('shop.track.noCourier')}</Text>
@@ -317,7 +318,7 @@ function Proof({ orderId, kind, caption }: { orderId: string; kind: string | nul
   }
   return (
     <View style={styles.proof} testID="proof-placeholder">
-      <Scene slot="empty/proof-photo" subject="courier" draw={{ main: 'Package', side: kind === 'pin' ? 'Key' : 'ShieldCheck' }} fit="contain" style={styles.proofArt} />
+      <Picture slot="empty/proof-photo" crop="wide" icon={kind === 'pin' ? 'key' : 'package'} style={styles.proofArt} />
       <Text style={styles.proofText}>{caption}</Text>
     </View>
   );
@@ -335,29 +336,29 @@ const initialsOf = (name: string) =>
 const styles = StyleSheet.create({
   gap: { gap: space[4] },
   head: { gap: 2 },
-  headline: { fontFamily: fonts.display, fontSize: 26, lineHeight: 32, color: colors.text },
-  placed: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: 14, paddingVertical: space[3], borderRadius: radius.lg, backgroundColor: semantic['success-bg'] },
+  headline: { ...StyleSheet.flatten(textStyles.pageTitle) },
+  placed: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[3.5], paddingVertical: space[3], borderRadius: radius.panel, backgroundColor: semantic['success-bg'] },
   strong: { fontFamily: fonts.bold },
   stateRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  etaPill: { position: 'absolute', right: 12, bottom: 12, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.control, backgroundColor: colors.surface, ...shadow.md },
-  etaText: { fontFamily: fonts.bold, fontSize: 13, color: semantic['action-primary'] },
-  courier: { gap: space[3], padding: space[4], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'], backgroundColor: colors.surface, ...shadow.sm },
+  etaPill: { position: 'absolute', right: 12, bottom: 12, paddingHorizontal: space[3], paddingVertical: space[1.5], borderRadius: radius.control, backgroundColor: semantic.surface, ...shadow.md },
+  etaText: { ...StyleSheet.flatten(textStyles.label), color: semantic['status-info-fg'] },
+  courier: { gap: space[3], padding: space[4], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-card'], backgroundColor: semantic.surface, ...shadow.sm },
   courierRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  courierAvatar: { width: 48, height: 48, borderRadius: radius.round, backgroundColor: semantic['action-primary'], alignItems: 'center', justifyContent: 'center' },
-  courierInitials: { fontFamily: fonts.bold, fontSize: 16, color: semantic['action-primary-text'] },
-  courierName: { fontFamily: fonts.semibold, fontSize: 16, color: colors.text },
-  courierSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
-  pinBox: { alignItems: 'center', paddingVertical: space[3], borderRadius: radius.lg, backgroundColor: semantic['surface-brand'] },
-  pin: { fontFamily: fonts.display, fontSize: 34, letterSpacing: 8, color: semantic['badge-brand-text'] },
+  courierAvatar: { width: 48, height: 48, borderRadius: radius.round, backgroundColor: semantic.selected, alignItems: 'center', justifyContent: 'center' },
+  courierInitials: { ...StyleSheet.flatten(textStyles.sub), color: semantic['selected-text'] },
+  courierName: { ...StyleSheet.flatten(textStyles.sub) },
+  courierSub: { ...StyleSheet.flatten(textStyles.meta), color: semantic['text-muted'] },
+  pinBox: { alignItems: 'center', paddingVertical: space[3], borderRadius: radius.panel, backgroundColor: semantic.well },
+  pin: { ...StyleSheet.flatten(textStyles.priceLg), letterSpacing: space[2] },
   gapSmall: { gap: space[1] },
-  confirmArt: { height: 150, borderRadius: radius.lg },
-  photo: { height: 240, borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
+  confirmArt: { width: '100%', aspectRatio: 16 / 9 },
+  photo: { height: 240, borderRadius: radius.panel, backgroundColor: semantic.well },
   flex: { flex: 1 },
-  actions: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-  map: { height: 200, borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], overflow: 'hidden' },
-  proof: { borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], overflow: 'hidden', paddingBottom: space[3], gap: space[2] },
-  proofArt: { height: 160 },
-  proofText: { fontFamily: fonts.medium, fontSize: 14, color: colors.text, textAlign: 'center', paddingHorizontal: space[3] },
-  body: { fontFamily: fonts.regular, fontSize: 15, color: colors.text },
-  small: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
+  actions: { flexDirection: 'row', gap: space[2.5], flexWrap: 'wrap' },
+  map: { height: 200, borderRadius: radius.panel, backgroundColor: semantic.well, overflow: 'hidden' },
+  proof: { borderRadius: radius.panel, backgroundColor: semantic.well, overflow: 'hidden', paddingBottom: space[3], gap: space[2] },
+  proofArt: { width: '100%', aspectRatio: 16 / 9 },
+  proofText: { ...StyleSheet.flatten(textStyles.bodyStrong), textAlign: 'center', paddingHorizontal: space[3] },
+  body: { ...StyleSheet.flatten(textStyles.body) },
+  small: { ...StyleSheet.flatten(textStyles.meta), color: semantic['text-muted'] },
 });

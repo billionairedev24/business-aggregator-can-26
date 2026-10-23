@@ -3,7 +3,7 @@ import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, fonts, radius, semantic, space, Scene } from '@northline/mobile-kit';
+import { fonts, LINE, radius, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import { aftercare, ReviewPanel } from '../aftercare/Review';
 import type { Booking } from '../api/services';
@@ -13,6 +13,7 @@ import { PushPrompt } from '../push/PushPrompt';
 import { Body, Button, Checkbox, Notice, Section, Tag, Title, type } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { errorMessage, Loading, QueryView, SignInPrompt, Skeleton } from '../ui/states';
+import { Picture } from '../ui/commerce';
 import { hoursUntil, money } from './format';
 import { BookingActions } from './BookingActions';
 import { favouritesChanged, Kicker, Mark, Panel, useServicesApi, type T } from './parts';
@@ -89,7 +90,7 @@ export function Booked({ id }: { id: string }) {
     >
       {(b) => (
         <View style={styles.stack}>
-          <Scene slot="banner/booking" subject={b.title} draw={{ main: 'CalendarCheck', side: 'Handshake' }} fit="contain" style={styles.cover} />
+          <Picture slot="banner/booking" crop="wide" icon="calendar-check" style={styles.cover} />
           <Title>{t('services.booked.title', { name: who(b), when: when(b, day, time) })}</Title>
           <Body tone="muted">
             {b.heldCents > 0 ? t('services.booked.held', { ref: b.ref, total: money(b.heldCents, locale) }) : t('services.booked.free', { ref: b.ref })}
@@ -186,7 +187,7 @@ export function Eta({ id }: { id: string }) {
         ];
         return (
           <View style={styles.stack}>
-            <Scene slot="banner/booking" subject={b.title} fit="contain" style={styles.cover} />
+            <Picture slot="banner/booking" crop="wide" icon="calendar-check" style={styles.cover} />
             <View style={styles.head}>
               <View style={styles.flex}>
                 <Title>{headline}</Title>
@@ -363,22 +364,22 @@ function BookingSkeleton() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   stack: { gap: space[3], paddingTop: space[2] },
-  next: { color: colors.text, fontSize: 15 },
+  next: { ...StyleSheet.flatten(textStyles.body) },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3] },
-  person: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  cover: { height: 150, borderRadius: radius.lg },
-  timeline: { gap: 10 },
-  timelineCard: { padding: space[4], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'] },
-  step: { flexDirection: 'row', gap: 12 },
+  person: { flexDirection: 'row', alignItems: 'center', gap: space[3.5] },
+  cover: { width: '100%', aspectRatio: 16 / 9 },
+  timeline: { gap: space[2.5] },
+  timelineCard: { padding: space[4], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-card'] },
+  step: { flexDirection: 'row', gap: space[3] },
   stepAt: { width: 72 },
-  now: { color: colors.link, fontFamily: fonts.bold },
+  now: { color: semantic.link, fontFamily: fonts.bold },
   photos: { flexDirection: 'row', gap: space[2] },
   photo: { flex: 1, minHeight: 80, alignItems: 'center', justifyContent: 'center' },
-  released: { color: semantic['badge-brand-text'] },
+  released: { color: semantic['status-success-fg'] },
   heldRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  actions: { flexDirection: 'row', gap: 10 },
-  stars: { flexDirection: 'row', gap: 6 },
-  star: { width: 48, height: 48, fontSize: 30, lineHeight: 48, textAlign: 'center', color: colors.borderStrong },
-  starOn: { color: colors.rating },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  actions: { flexDirection: 'row', gap: space[2.5] },
+  stars: { flexDirection: 'row', gap: space[1.5] },
+  star: { ...StyleSheet.flatten(textStyles.pageTitle), width: 48, height: 48, textAlign: 'center', color: semantic['border-strong'] },
+  starOn: { color: semantic.star },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[1.5] },
 });

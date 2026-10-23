@@ -4,7 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { Basket, ClockCounterClockwise, ForkKnife, MagnifyingGlass, Storefront, Wrench } from '@phosphor-icons/react';
 import { SearchBar, useFormatters, useLocale, type SearchSuggestion, type SearchSuggestionGroup, type TextRange } from '@northline/ui';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
-import { marketOf, suggestQuery, suggestionHref, type Suggestion } from './api';
+import { marketOf, suggestQuery, suggestionHref, type Scope, type Suggestion } from './api';
 import { useSearchT } from './messages';
 import { daysAgo, readRecent, rememberSearch, type RecentSearch } from './recent';
 
@@ -37,7 +37,7 @@ function useDebounced(value: string): string {
  * listings, businesses and categories for the visitor's province, then "Your recent" searches of this browser.
  * Enter searches (`/search?q=`); a suggestion opens its page. Everything here runs in the browser.
  */
-export function SiteSearch({ variant, placeholder, initial = '', label }: { variant: 'hero' | 'header'; placeholder?: string; initial?: string; label?: string }) {
+export function SiteSearch({ variant, placeholder, initial = '', label, scope: initialScope }: { variant: 'hero' | 'header'; placeholder?: string; initial?: string; label?: string; /** The department scope (E-15): All / Services / Shop / Food before the field; the search runs in it. */ scope?: Scope }) {
   const t = useSearchT();
   const { locale } = useLocale();
   const { money } = useFormatters();
@@ -45,6 +45,8 @@ export function SiteSearch({ variant, placeholder, initial = '', label }: { vari
   const { location } = useDeliveryLocation();
   const [query, setQuery] = useState(initial);
   useEffect(() => setQuery(initial), [initial]);
+  const [scope, setScope] = useState<Scope>(initialScope ?? 'all');
+  useEffect(() => setScope(initialScope ?? 'all'), [initialScope]);
   const typed = useDebounced(query);
   const market = location.status === 'locating' ? undefined : marketOf(location.province);
   const suggest = useQuery({ ...suggestQuery(typed, market, locale), enabled: typed.trim().length > 0, placeholderData: keepPreviousData });
@@ -88,7 +90,7 @@ export function SiteSearch({ variant, placeholder, initial = '', label }: { vari
     if (!q) return;
     rememberSearch(q);
     setRecent(readRecent());
-    void navigate({ to: '/search', search: { q } });
+    void navigate({ to: '/search', search: { q, ...(initialScope !== undefined && scope !== 'all' ? { scope } : {}) } });
   };
   const pick = (s: SearchSuggestion) => {
     const target = byId.get(s.id);
@@ -99,8 +101,10 @@ export function SiteSearch({ variant, placeholder, initial = '', label }: { vari
     void navigate({ href: target.href });
   };
 
+  const scopes = (['all', 'services', 'shop', 'food'] as const).map(value => ({ value, label: t(`scope_${value}`) }));
   return (
     <SearchBar variant={variant} value={query} onChange={setQuery} placeholder={placeholder} label={label}
-      suggestions={groups} onPick={pick} onSubmit={search} />
+      suggestions={groups} onPick={pick} onSubmit={search}
+      scope={initialScope !== undefined ? { value: scope, options: scopes, onChange: v => setScope(v as Scope), label: t('scopeLabel') } : undefined} />
   );
 }

@@ -1,47 +1,53 @@
 /* Consumer site header (E-15 A · Plainsight, design/revamp/a.html): a white search-led bar — logo, deliver-to, the
-   search with its department scope, account, cart with its count in the commerce colour — and the grey department
-   strip under it, the current section underlined in ink. Every item ≥ 44px (S-143). Semantic tokens only. */
+   search with its department scope, "Hello, … / Account & orders", the cart with its count in the commerce colour — and
+   the grey department strip under it: All, the sections (the current one underlined in ink), the departments and
+   service categories in groups, "Today's deals" (commerce) and "Sell on …" at the right end. Under 900px a compact bar
+   (menu, logo, account, cart), the search on its own row, then the place on one line. Every item ≥ 44px (S-143).
+   Semantic tokens only. */
 .nl-site-header { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--color-header-bg); color: var(--color-header-text); padding-top: env(safe-area-inset-top, 0px); border-bottom: 1px solid var(--color-header-border); transition: top var(--duration) var(--ease); }
 /* short phone screens, scrolling down: the first row tucks away above the top edge (useStickyOffset `tuckTo`) */
 .nl-site-header[data-tucked] { top: calc(-1 * var(--nl-header-tuck, 0px)); }
-.nl-site-bar { position: relative; display: flex; align-items: center; gap: var(--space-2) var(--space-3); max-width: var(--page-max); margin: 0 auto; padding: var(--space-2) var(--page-gutter); min-width: 0; box-sizing: border-box; }
+.nl-site-bar { position: relative; display: flex; align-items: center; gap: var(--space-2) var(--space-4); max-width: var(--page-max); margin: 0 auto; padding: var(--space-1-5) var(--page-gutter); min-width: 0; box-sizing: border-box; }
 .nl-site-spacer { flex: 1; }
-.nl-site-search { flex: 1 1 auto; min-width: 0; margin-inline: var(--space-3); }
+.nl-site-search { flex: 1 1 auto; min-width: 0; }
 .nl-site-location { flex: 0 1 auto; min-width: 0; display: flex; }
 .nl-site-account { flex: none; display: flex; margin-left: auto; }
+.nl-site-search + .nl-site-account { margin-left: 0; }
 
-/* header items: no frame at rest, a soft fill on hover, the focus ring in the primary colour */
+/* header items: no frame at rest, a soft fill on hover, the focus ring in the action colour */
 .nl-site-item, .nl-location, .nl-account-button {
   flex: none; display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); min-width: var(--size-touch);
-  padding: 0 var(--space-2); border: 0; border-radius: var(--radius-md); background: none; box-sizing: border-box;
+  padding: 0 var(--space-1-5); border: 0; border-radius: var(--radius-control); background: none; box-sizing: border-box;
   color: var(--color-header-text); font: inherit; text-decoration: none; cursor: pointer; white-space: nowrap;
 }
 .nl-site-item:hover, .nl-location:hover, .nl-account-button:hover { background: var(--color-header-hover-bg); color: var(--color-header-text); text-decoration: none; }
 .nl-site-header :focus-visible { outline: 2px solid var(--color-header-focus); outline-offset: 2px; }
 .nl-site-brand { padding-inline: var(--space-1); margin-left: calc(-1 * var(--space-1)); }
 .nl-site-brand .nl-logo-word { font-family: var(--font-sans); font-weight: var(--weight-bold); letter-spacing: -0.02em; }
+/* the menu button: phones only (the strip's "All" opens the same sheet on wider screens) */
+.nl-site-menu-btn { display: none; margin-left: calc(-1 * var(--space-2)); padding: 0; justify-content: center; }
 
-/* cart: the icon, a count in the accent colour, the bold label */
-.nl-site-cart { gap: var(--space-1); margin-right: calc(-1 * var(--space-2)); }
+/* cart: the icon, a count in the commerce colour, the bold label */
+.nl-site-cart { gap: var(--space-1); align-items: flex-end; padding-bottom: var(--space-2); margin-right: calc(-1 * var(--space-1-5)); }
 .nl-site-cart-icon { position: relative; display: flex; }
-.nl-site-cart-count { position: absolute; top: -6px; right: -9px; min-width: 20px; height: 20px; padding: 0 var(--space-1); box-sizing: border-box; border-radius: var(--radius-round); background: var(--color-cart-badge); color: var(--color-cart-badge-text); border: 2px solid var(--color-header-bg); font-size: var(--type-caps); font-weight: var(--weight-bold); line-height: 16px; text-align: center; }
-.nl-site-cart-label { font-size: var(--text-md); font-weight: var(--weight-bold); margin-left: var(--space-1); }
+.nl-site-cart-count { position: absolute; top: -7px; left: 15px; min-width: 20px; height: 20px; padding: 0 var(--space-1); box-sizing: border-box; border-radius: var(--radius-round); background: var(--color-cart-badge); color: var(--color-cart-badge-text); border: 2px solid var(--color-header-bg); font-size: var(--type-caps); font-weight: var(--weight-bold); line-height: 16px; text-align: center; }
+.nl-site-cart-label { font-size: var(--type-card-title); font-weight: var(--weight-semibold); }
 
-/* the nav row: All · the sections · the departments and categories · Help at the end. One line that scrolls sideways
-   by itself (a finger or a trackpad; no scrollbar drawn), never the page; the current section underlined. */
+/* the department strip: All · the sections · the departments | the service categories · deals and selling at the end.
+   One line that scrolls sideways by itself (a finger or a trackpad; no scrollbar drawn), never the page. */
 .nl-site-subnav { background: var(--color-subheader-bg); border-top: 1px solid var(--color-border); }
 .nl-site-nav {
-  display: flex; align-items: center; gap: var(--space-1); max-width: var(--page-max); margin: 0 auto; padding: 0 var(--page-gutter); box-sizing: border-box;
-  list-style: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; white-space: nowrap; font-size: var(--type-label);
+  display: flex; align-items: center; gap: 2px; max-width: var(--page-max); margin: 0 auto; padding: 0 var(--page-gutter); box-sizing: border-box;
+  list-style: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; white-space: nowrap; font-size: var(--type-card-title);
 }
 .nl-site-nav::-webkit-scrollbar { display: none; }
 .nl-site-nav > li { flex: none; display: flex; }
-.nl-site-nav > li:first-child { margin-left: calc(-1 * var(--space-2)); }
-.nl-site-nav > li:last-child { margin-right: calc(-1 * var(--space-2)); }
+.nl-site-nav > li:first-child { margin-left: calc(-1 * var(--space-2-5)); }
+.nl-site-nav > li:last-child { margin-right: calc(-1 * var(--space-2-5)); }
 .nl-site-nav-sep { width: 1px; height: 18px; margin-inline: var(--space-1-5); background: var(--color-border-strong); }
 .nl-site-nav-fill { flex: 1 1 auto !important; min-width: var(--space-4); }
 .nl-site-link {
-  position: relative; display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); padding: 0 var(--space-2-5);
+  position: relative; display: inline-flex; align-items: center; gap: var(--space-1-5); min-height: var(--size-touch); padding: 0 var(--space-2-5);
   border: 0; background: none; font: inherit; cursor: pointer; color: var(--color-subheader-text); font-weight: var(--weight-regular); text-decoration: none; border-radius: 0;
 }
 .nl-site-link:hover { color: var(--color-subheader-text); background: var(--color-subheader-hover-bg); text-decoration: none; }
@@ -49,46 +55,52 @@
 .nl-site-link::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 0; background: transparent; }
 .nl-site-link[aria-current='page'] { color: var(--color-text); font-weight: var(--weight-bold); }
 .nl-site-link[aria-current='page']::after { background: var(--color-header-indicator); }
-.nl-site-all, .nl-site-section { font-weight: var(--weight-semibold); }
-.nl-site-section svg { color: var(--color-text); }
+.nl-site-all, .nl-site-section, .nl-site-end { font-weight: var(--weight-semibold); }
+.nl-site-all svg { color: var(--color-text); }
+/* "Today's deals": the commerce colour (a deal is commerce, never a button) */
+.nl-site-deal, .nl-site-deal:hover { color: var(--color-commerce-text); }
 
 /* the "All" sheet: a group per section (its heading, "See all", the categories), then help, sell, the language */
 .nl-site-menu-group { display: flex; flex-direction: column; gap: var(--space-1); }
 .nl-site-menu-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
-.nl-site-menu-title { margin: 0; font-size: var(--text-lg); }
-.nl-site-menu-all { display: inline-flex; align-items: center; min-height: var(--size-touch); padding: 0 var(--space-2); color: var(--color-link); font-weight: var(--weight-semibold); font-size: var(--text-md); }
+.nl-site-menu-title { margin: 0; font-size: var(--type-sub); }
+.nl-site-menu-all { display: inline-flex; align-items: center; min-height: var(--size-touch); padding: 0 var(--space-2); color: var(--color-link); font-weight: var(--weight-semibold); font-size: var(--type-label); }
 .nl-site-menu-nav { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.nl-site-menu-link { display: flex; align-items: center; gap: var(--space-3); min-height: var(--size-touch); padding: 0 var(--space-3); border-radius: var(--radius-md); color: var(--color-text); font-size: var(--text-md); text-decoration: none; }
+.nl-site-menu-link { display: flex; align-items: center; gap: var(--space-3); min-height: var(--size-touch); padding: 0 var(--space-3); border-radius: var(--radius-control); color: var(--color-text); font-size: var(--type-body); text-decoration: none; }
 .nl-site-menu-link:hover { background: var(--color-surface-hover); color: var(--color-text); text-decoration: none; }
-.nl-site-menu-link[aria-current='page'] { background: var(--color-nav-active-bg); color: var(--color-nav-active-text); font-weight: var(--weight-semibold); }
+.nl-site-menu-link[aria-current='page'] { background: var(--color-selected-tint); box-shadow: inset 3px 0 0 var(--color-selected); color: var(--color-text); font-weight: var(--weight-semibold); }
 .nl-site-menu-extra { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
-.nl-site-menu-extra a, .nl-site-menu-extra button { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); padding: 0 var(--space-3); color: var(--color-link); font: inherit; font-weight: var(--weight-semibold); background: none; border: 0; cursor: pointer; border-radius: var(--radius-md); }
+.nl-site-menu-extra a, .nl-site-menu-extra button { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); padding: 0 var(--space-3); color: var(--color-link); font: inherit; font-weight: var(--weight-semibold); background: none; border: 0; cursor: pointer; border-radius: var(--radius-control); }
 
-/* 900–1199px: a little less air around the search */
-@media (max-width: 1199.98px) {
-  .nl-site-search { margin-inline: var(--space-1); }
-}
-/* < 900px: logo · location · account · cart, then the search on its own full-width row, then the nav row */
+/* < 900px: menu · logo · account · cart, then the search on its own full-width row (no scope), the place on one line
+   under it, then the strip */
 @media (max-width: 899.98px) {
-  .nl-site-bar { flex-wrap: wrap; gap: var(--space-2) var(--space-1); padding-block: var(--space-1) var(--space-2); }
-  .nl-site-location { flex: 1 1 0; }
+  .nl-site-bar { flex-wrap: wrap; gap: var(--space-1-5) var(--space-1); padding-block: var(--space-1) var(--space-1-5); }
+  .nl-site-menu-btn { display: inline-flex; }
+  .nl-site-account, .nl-site-search + .nl-site-account { margin-left: auto; }
   .nl-site-search { order: 10; flex-basis: 100%; margin-inline: 0; }
+  .nl-site-search .nl-search-scope { display: none; }
+  .nl-site-location { order: 11; flex-basis: 100%; margin-top: calc(-1 * var(--space-1-5)); }
   .nl-site-cart-label { display: none; }
-  .nl-site-cart { margin-right: 0; }
-  .nl-site-nav-fill { display: none; }
+  .nl-site-cart { margin-right: calc(-1 * var(--space-1)); padding-bottom: 0; align-items: center; }
+  .nl-site-nav-fill { min-width: var(--space-2); }
 }
-@media (max-width: 479.98px) {
+@media (max-width: 359.98px) {
   .nl-site-brand .nl-logo-word { display: none; }
 }
 
-/* the location control: a pin, "Deliver to" over the place in bold; the place ellipsed, never hidden */
-.nl-location { min-width: 0; max-width: 260px; text-align: left; }
+/* the location control: a pin, "Deliver to (Amara)" over the place in bold; on phones one line. Ellipsed, never hidden */
+.nl-location { min-width: 0; max-width: 220px; text-align: left; gap: var(--space-1); }
 .nl-location-pin { color: var(--color-text); flex: none; }
 .nl-location-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; min-width: 0; }
-.nl-location-kicker { font-size: var(--type-meta); color: var(--color-header-muted); }
-.nl-location-place { font-size: var(--type-label); font-weight: var(--weight-bold); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nl-location-caret { color: var(--color-header-muted); flex: none; }
-@media (max-width: 899.98px) { .nl-location { max-width: 100%; } }
+.nl-location-kicker { font-size: var(--type-meta); color: var(--color-header-muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.nl-location-place { font-size: var(--type-card-title); font-weight: var(--weight-semibold); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 899.98px) {
+  .nl-location { max-width: 100%; min-height: var(--size-touch); }
+  .nl-location-text { flex-direction: row; align-items: baseline; gap: var(--space-1); }
+  .nl-location-kicker, .nl-location-place { font-size: var(--type-label); }
+  .nl-location-kicker { flex: none; }
+}
 
 /* search: one box with a 2 px ink edge and 4 px corners — the department scope, the field, a solid ink button with the
    magnifier (header); the page's larger box with a labelled button (hero) */
@@ -134,6 +146,16 @@
 /* the panel hangs from the bar's right edge (the bar is its containing block): never off-screen at 320px */
 .nl-account { position: static; flex: none; }
 .nl-account-button { gap: var(--space-1); }
+/* the mockups' trigger: "Hello, Amara" over "Account & orders ▾"; the user icon alone on phones */
+.nl-account-greeting { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; text-align: left; }
+.nl-account-line1 { font-size: var(--type-meta); color: var(--color-header-muted); }
+.nl-account-line2 { display: inline-flex; align-items: center; gap: 2px; font-size: var(--type-card-title); font-weight: var(--weight-semibold); }
+.nl-account-icon-phone { display: none; }
+@media (max-width: 899.98px) {
+  .nl-account-button-greeting { padding: 0; justify-content: center; }
+  .nl-account-icon-phone { display: block; }
+  .nl-account-greeting { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 .nl-account-avatar { width: 32px; height: 32px; border-radius: var(--radius-round); background: var(--color-status-neutral-bg); color: var(--color-text); display: grid; place-items: center; font-weight: var(--weight-bold); font-size: var(--type-meta); flex: none; overflow: hidden; }
 .nl-site-header .nl-account-avatar { box-shadow: none; }
 .nl-account-guest { background: var(--color-surface); color: var(--color-text); box-shadow: inset 0 0 0 1px var(--color-header-ring) !important; }
@@ -157,3 +179,17 @@
 /* BrandMark — a business's initial on its brand colour (merchant layer 3) */
 .nl-brandmark { display: inline-grid; place-items: center; flex: none; border-radius: var(--radius-sm); color: var(--color-text-inverse); font-family: var(--font-sans); font-weight: var(--weight-bold); line-height: 1; overflow: hidden; }
 .nl-brandmark img { width: 100%; height: 100%; object-fit: cover; background: var(--color-surface); }
+
+/* the promo strip under the header (the delivery cut-off): the promo tint, the message, the time left at the end */
+.nl-promo { background: var(--color-promo-bg); color: var(--color-promo-text); font-size: var(--type-card-title); }
+.nl-promo-in { display: flex; align-items: center; gap: var(--space-2-5); max-width: var(--page-max); margin: 0 auto; padding: var(--space-2) var(--page-gutter); box-sizing: border-box; min-height: 40px; }
+.nl-promo-icon { display: inline-flex; flex: none; }
+.nl-promo-text { margin: 0; min-width: 0; }
+.nl-promo-text strong { font-weight: var(--weight-bold); }
+.nl-promo-end { margin-left: auto; font-weight: var(--weight-bold); white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media (max-width: 599.98px) {
+  .nl-promo { font-size: var(--type-label); }
+  .nl-promo-in { flex-wrap: wrap; align-items: flex-start; gap: var(--space-1) var(--space-2); }
+  .nl-promo-text { flex: 1 1 0; }
+  .nl-promo-end { margin-left: calc(var(--space-6) + var(--space-1)); flex-basis: 100%; }
+}

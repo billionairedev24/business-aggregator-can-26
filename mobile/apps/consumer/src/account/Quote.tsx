@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, NetworkError, colors, fonts, radius, randomId, space } from '@northline/mobile-kit';
+import { ApiError, colors, NetworkError, radius, randomId, space, textStyles } from '@northline/mobile-kit';
 
 import type { Acceptance, BookingConfirmation, QuotePage, Visit } from '../api/account';
 import type { Started } from '../api/shop';
@@ -377,11 +377,11 @@ function validFor(until: string, f: Format, now = Date.now()): string {
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
   titleRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', gap: space[3] },
-  h2: { flex: 1, minWidth: 180, fontFamily: fonts.heading, fontSize: 24, lineHeight: 28, letterSpacing: -0.4, color: colors.text },
-  kicker: { ...StyleSheet.flatten(type.kicker), fontSize: 11, marginTop: space[3] },
-  line: { flexDirection: 'row', justifyContent: 'space-between', gap: space[3], paddingVertical: 9 },
+  h2: { ...StyleSheet.flatten(textStyles.pageTitle), flex: 1, minWidth: 180 },
+  kicker: { ...StyleSheet.flatten(textStyles.caps), ...StyleSheet.flatten(type.kicker), marginTop: space[3] },
+  line: { flexDirection: 'row', justifyContent: 'space-between', gap: space[3], paddingVertical: space[2] },
   terms: { flexDirection: 'row', flexWrap: 'wrap', gap: space[4], marginTop: space[3] },
   term: { minWidth: 96, flexShrink: 1, gap: 2 },
-  protected: { marginTop: space[3], padding: 14, borderRadius: radius.md, backgroundColor: colors.accent100 },
-  protectedText: { color: colors.accent900, lineHeight: 19 },
+  protected: { marginTop: space[3], padding: space[3.5], borderRadius: radius.panel, backgroundColor: colors.accent100 },
+  protectedText: { color: colors.accent900 },
 });

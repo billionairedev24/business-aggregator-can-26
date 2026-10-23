@@ -62,7 +62,7 @@ function TaxonomyView({ data }: { data: Screen }) {
         actions={<><Button disabled={!canEdit} onClick={() => setDialog({ mode: 'create' })}>{t('addCategory')}</Button>
           {!canEdit ? <span className="bo-muted">{t('cannot')}</span> : null}</>} />
       <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={25} roleName={roleName}
-        views={<UnderlineTabs aria-label={t('rootViews')} value={root} onChange={setRoot}
+        tabs={<UnderlineTabs aria-label={t('rootViews')} value={root} onChange={setRoot}
           options={(['all', 'service', 'shop', 'food'] as const).map(r => ({ value: r, label: r === 'all' ? t('rv_all') : t(`root_${r}` as TaxonomyKey), count: count(r) }))} />}
         filters={<>
           <FilterChip label={t('regulatedChip')} applied={regulated} onToggle={() => setRegulated(x => !x)} />

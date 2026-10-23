@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { colors, fonts, space } from '@northline/mobile-kit';
+import { colors, radius, space, textStyles, semantic } from '@northline/mobile-kit';
 
 import type { Wallet as WalletData } from '../api/account';
 import { useAuth } from '../auth/AuthProvider';
@@ -105,10 +105,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
   skeleton: { gap: space[3] },
   balance: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', gap: space[2] },
-  big: { fontFamily: fonts.bodyStrong, fontSize: 44, lineHeight: 50, letterSpacing: -0.8, color: colors.text },
-  value: { fontSize: 14 },
-  bars: { flexDirection: 'row', gap: 4, height: 60, marginTop: space[2] },
-  bar: { flex: 1, height: 60, justifyContent: 'flex-end', backgroundColor: colors.neutral200, borderRadius: 2, overflow: 'hidden' },
-  fill: { backgroundColor: colors.accent },
+  big: { ...StyleSheet.flatten(textStyles.pageTitle) },
+  value: { ...StyleSheet.flatten(textStyles.body) },
+  bars: { flexDirection: 'row', gap: space[1], height: 60, marginTop: space[2] },
+  bar: { flex: 1, height: 60, justifyContent: 'flex-end', backgroundColor: colors.neutral200, borderRadius: radius.status, overflow: 'hidden' },
+  fill: { backgroundColor: semantic.selected },
   rows: { marginTop: space[4] },
 });

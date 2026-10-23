@@ -221,7 +221,7 @@ function Flags({ flags, canDecide, roleName }: { flags: Flag[]; canDecide: boole
     <section className="nl-ts-flags" aria-labelledby="ts-flags">
       <h2 className="bo-card-title" id="ts-flags">{t('openFlags', { n: flags.filter(f => f.state === 'open').length })}</h2>
       <DataTable<FlagRow> dense entity={t('flagEntity')} plural={t('flagPlural')} columns={columns} rows={rows} pageSize={10} roleName={roleName}
-        views={<UnderlineTabs aria-label={t('flagViews')} value={view} onChange={setView} options={FLAG_VIEWS.map(v => ({ value: v, label: t(`fv_${v}` as TrustKey), count: count(v) }))} />}
+        tabs={<UnderlineTabs aria-label={t('flagViews')} value={view} onChange={setView} options={FLAG_VIEWS.map(v => ({ value: v, label: t(`fv_${v}` as TrustKey), count: count(v) }))} />}
         rowTones={r => ({ state: statusTone(flagTone(r.src)) })} emptyText={t('noFlags')} reportName="trust-flags"
         can={{ create: false, update: canDecide, delete: false }} actions={actions}
         onAction={async (a, picked) => {
