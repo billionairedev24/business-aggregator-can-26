@@ -32,12 +32,12 @@ export function jobWhen(j: Pick<JobDetail, 'startsAt'>, locale: Locale) {
 }
 
 /** The design's jobStages: the primary action and hint per state. */
-export function stage(j: JobDetail, t: T, money: (c: number) => string): { cta: string; step?: Step; hint: string } {
+export function stage(j: JobDetail, t: T, price: (c: number) => string): { cta: string; step?: Step; hint: string } {
   switch (j.state) {
     case 'confirmed': return { cta: t('startTravel'), step: 'en-route', hint: t('hintStart') };
     case 'en_route': return { cta: t('checkIn'), step: 'on-site', hint: t('hintCheckIn') };
     case 'on_site': return { cta: t('complete'), step: 'complete', hint: t('hintComplete') };
-    case 'completed': return { cta: t('waiting'), hint: t('hintWaiting', { money: money(j.escrowMoney?.heldCents ?? j.priceCents ?? 0) }) };
+    case 'completed': return { cta: t('waiting'), hint: t('hintWaiting', { money: price(j.escrowMoney?.heldCents ?? j.priceCents ?? 0) }) };
     case 'signed_off': return { cta: t('signedOff'), hint: t('hintSigned') };
     default: return { cta: t(`state_${j.state}`), hint: t('hintOther', { state: t(`state_${j.state}`).toLowerCase() }) };
   }

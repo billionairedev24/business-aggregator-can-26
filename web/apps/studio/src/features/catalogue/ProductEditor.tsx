@@ -234,7 +234,7 @@ export function ProductEditor({ detail, portal, typePicker, type = 'product' }: 
         <Side>
           <Preview form={form} link={link} business={merchant.displayName} tier={shellT(tierTag(merchant).key)} />
           <CompletenessPanel t={t} percent={completeness.percent} items={SECTIONS.map(s => ({ name: tabName[s], done: completeness.done[s] }))} />
-          <VettingPanel t={t} checks={vettingChecks({ category, priceCents: parseMoney(form.price), images: form.images, imageSource: form.imageSource, link, text: `${form.title} ${form.searchKeywords}`, gtin: isBundle ? null : { type: form.identifierType, value: form.gtin }, money: price })} />
+          <VettingPanel t={t} checks={vettingChecks({ category, priceCents: parseMoney(form.price), images: form.images, imageSource: form.imageSource, link, text: `${form.title} ${form.searchKeywords}`, gtin: isBundle ? null : { type: form.identifierType, value: form.gtin }, price })} />
           <FeesPanel priceCents={parseMoney(form.price)} costCents={parseMoney(form.cost)} tier={merchant.tier} />
           <p className="nl-cat-note"><strong>{t('howImages')}</strong> {t('howImagesBody')}</p>
         </Side>

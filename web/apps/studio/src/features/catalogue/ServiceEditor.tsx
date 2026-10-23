@@ -160,7 +160,7 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
             </div>
           </section>
           <CompletenessPanel t={t} percent={completeness.percent} items={sections} />
-          <VettingPanel t={t} checks={vettingChecks({ category, priceCents: price, images: [], imageSource: 'own', link: null, text: form.name, gtin: null, money: fmtPrice }).filter(c => !c.key.startsWith('vpImages'))} />
+          <VettingPanel t={t} checks={vettingChecks({ category, priceCents: price, images: [], imageSource: 'own', link: null, text: form.name, gtin: null, price: fmtPrice }).filter(c => !c.key.startsWith('vpImages'))} />
           <FeesPanel priceCents={price} costCents={null} tier={merchant.tier} />
         </Side>
       </div>

@@ -65,11 +65,15 @@ if (photoProblems.length) {
 // colours from the semantic roles: a raw `13px`, `#fff`, `rgb(…)` or `white` there is a look patched past the tokens.
 // Hairline nudges (0–2px, e.g. `margin-bottom: -1px` under a tab row) stay allowed. In TSX the same goes for inline
 // `style` objects (`fontSize: 13`, `padding: 6`, `color: 'white'`).
+const S175 = ['orders', 'catalogue', 'appointments', 'kitchen'].map(f => `apps/studio/src/features/${f}`);
 const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'apps/studio/src/features/shell', 'apps/console/src/features/shell',
   // S-174: the Studio dashboard and the storefront's live preview (audit #7 and #10)
-  'apps/studio/src/features/dashboard', 'apps/studio/src/features/storefront/StorefrontPreview.tsx', 'apps/studio/src/features/storefront/StorefrontPreview.css'];
-// S-174: no inline `style` at all in these (a class with the scale tokens instead; the Studio dashboard had a dozen)
-const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard'];
+  'apps/studio/src/features/dashboard', 'apps/studio/src/features/storefront/StorefrontPreview.tsx', 'apps/studio/src/features/storefront/StorefrontPreview.css',
+  // S-175: the Studio work screens (orders, catalogue and editors, bookings and quotes, the kitchen display and menu)
+  ...S175];
+// S-174: no inline `style` at all in these (a class with the scale tokens instead; the Studio dashboard had a dozen).
+// S-175: the work screens too — except the calendar, whose entries are placed by custom properties from data (--top, --h).
+const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard', ...S175.filter(r => !r.endsWith('/appointments'))];
 // (the server-rendered error page and the printable report are standalone documents with their own fallbacks)
 const strictSkip = [...skip, /\.stories\.tsx$/, /\.fixtures\.ts$/, /\.mdx$/, /(^|\/)server\//, /DataTable\/report\.ts$/];
 const PX = /(-?\d*\.?\d+)px/g;
@@ -112,6 +116,27 @@ for (const root of noStyleRoots) {
     const rel = path.relative(webRoot, file).split(path.sep).join('/');
     if (!rel.endsWith('.tsx') || strictSkip.some(r => r.test(rel))) continue;
     readFileSync(file, 'utf8').split('\n').forEach((line, i) => { if (/\sstyle=\{/.test(line)) raw.push(`${rel}:${i + 1}  inline style (use a class with the scale tokens)`); });
+  }
+}
+
+// ── S-175: one chip, tab, status and price style in the Studio work screens ─────────────────────────────────────
+// No hand-made tab strip (role="tab" outside @northline/ui: UnderlineTabs), no old tag tones for a status (tag-accent,
+// tag-accent-2 and tag-highlight are the action and commerce colours; a status is a StatusTag or tag-success/warning/
+// danger/info/neutral), no app-made chip class (the shared Chip / FilterChip), and prices through formatPrice / Price /
+// `price` (formatMoney's options made the "+$3" style; `money(` was the old formatter's name in these screens).
+const ONE_OFF = [
+  [/role=["']tab["']/, 'a hand-made tab (use UnderlineTabs)'],
+  [/\btag-(?:accent(?:-2)?|highlight)\b/, 'an old tag tone (use StatusTag or a status tone)'],
+  [/className=["'`][^"'`]*\bnl-chip\b/, 'an app-made chip (use Chip / FilterChip)'],
+  [/\bformatMoney\(|\bmoney\(/, 'a one-off price format (use Price, formatPrice or useFormatters().price)'],
+];
+for (const root of S175) {
+  for (const file of walk(path.join(webRoot, root))) {
+    const rel = path.relative(webRoot, file).split(path.sep).join('/');
+    if (!/\.tsx?$/.test(rel) || strictSkip.some(r => r.test(rel))) continue;
+    readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+      for (const [re, what] of ONE_OFF) if (re.test(line)) raw.push(`${rel}:${i + 1}  ${what}`);
+    });
   }
 }
 
