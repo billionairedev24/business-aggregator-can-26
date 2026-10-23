@@ -69,7 +69,7 @@ function AccountMenu({ merchant, badges }: { merchant: MerchantSummary; badges: 
     { kind: 'custom', render: <button type="button" role="menuitem" className="nl-menu-item" aria-expanded={showBiz} onClick={() => setShowBiz(s => !s)}><span>{t('switchBusiness')}</span><span className="nl-menu-meta">{merchant.displayName} ▾</span></button> },
     ...(showBiz ? [
       ...businesses.map((b): MenuEntry => ({ label: b.displayName, meta: `${t(`type_${b.type}`)}${b.tier ? ` · ${t(tierTag(b).key)}` : ''}`, checked: b.id === merchant.id, indent: true, onSelect: () => nav({ to: screenHref(b.id, homeScreen(b.type)) }) })),
-      { kind: 'custom', render: <a href="/onboarding" className="nl-menu-item nl-menu-sub" style={{ fontSize: 12 }} role="menuitem">{t('addBusiness')}</a> } as MenuEntry,
+      { kind: 'custom', render: <a href="/onboarding" className="nl-menu-item nl-menu-sub nl-menu-item-small" role="menuitem">{t('addBusiness')}</a> } as MenuEntry,
     ] : []),
     { label: t('team'), meta: merchant.teamCount ? t('members', { count: merchant.teamCount }) : undefined, onSelect: () => nav({ to: screenHref(merchant.id, 'settings'), search: { tab: 'team' } as never }) },
     { label: t('helpSupport'), meta: badges.help, onSelect: () => nav({ to: screenHref(merchant.id, 'help') }) },
