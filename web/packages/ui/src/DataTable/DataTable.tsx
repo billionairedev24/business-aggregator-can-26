@@ -324,7 +324,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   // ── cells ─────────────────────────────────────────────────────────────────
   const renderValue = (c: NormalizedColumn<T>, r: T, where: 'cell' | 'field') => {
     const v = valueOf(r, c.key);
-    if (c.type === 'tag' && !isBlank(v)) return <span className={clsx('tag', toneOf(c, r), where === 'field' && 'nl-dt-tag-wrap')}>{cellText(c, r, locale)}</span>;
+    if (c.type === 'tag' && !isBlank(v)) return <span className={clsx(tagClass(toneOf(c, r)), where === 'field' && 'nl-dt-tag-wrap')}>{cellText(c, r, locale)}</span>;
     const sub = subText(c, r);
     if (where === 'field') return <div className="nl-dt-field-value">{sub ? `${cellText(c, r, locale)} · ${sub}` : cellText(c, r, locale)}</div>;
     const body = (
@@ -359,7 +359,8 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   const showBody = !loading && !error;
 
   return (
-    <div ref={boxRef} className={clsx('nl-dt', props.className)}>
+    <div ref={boxRef} className={clsx('nl-dt', props.dense && 'nl-dt-dense', props.className)}>
+      {props.views ? <div className="nl-dt-views">{props.views}</div> : null}
       <div className="nl-dt-toolbar">
         <label className="nl-dt-search">
           <MagnifyingGlass size={17} aria-hidden="true" />
@@ -376,6 +377,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
             aria-controls={`${uid}-body`}
           />
         </label>
+        {props.filters}
         <button
           ref={filtersBtn}
           type="button"
@@ -683,7 +685,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
                         <div className="nl-dt-card-name">{name}</div>
                         {pSub && <div className="nl-dt-sub">{pSub}</div>}
                       </div>
-                      {firstTag && !isBlank(tagV) && <span className={clsx('tag nl-dt-tag-wrap', toneOf(firstTag, r))}>{cellText(firstTag, r, locale)}</span>}
+                      {firstTag && !isBlank(tagV) && <span className={clsx('nl-dt-tag-wrap', tagClass(toneOf(firstTag, r)))}>{cellText(firstTag, r, locale)}</span>}
                     </div>
                     <dl className="nl-dt-card-fields">
                       {visible
@@ -881,6 +883,9 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
 }
 
 // ── pieces ──────────────────────────────────────────────────────────────────
+
+/** A tag cell's classes: a `status-*` tone is a StatusTag (`nl-status`, with its dot); the others a plain `tag`. */
+const tagClass = (tone: string) => (tone.startsWith('status-') ? clsx('nl-status', tone !== 'status-neutral' && `nl-${tone}`) : clsx('tag', tone));
 
 function FiltersPanel({ id, t, children, onEscape }: { id: string; t: DataTableT; children: ReactNode; onEscape: () => void }) {
   return (

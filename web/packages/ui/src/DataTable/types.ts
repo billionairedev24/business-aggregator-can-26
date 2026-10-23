@@ -1,10 +1,17 @@
 import type { Icon } from '@phosphor-icons/react';
+import type { ReactNode } from 'react';
 
 /** Column value kinds. `money` values are CAD cents (numbers) per the platform convention. */
 export type DataTableColumnType = 'text' | 'num' | 'money' | 'tag';
 
-/** Tag tone classes from the component layer (`base.css`). */
-export type DataTableTone = 'tag-accent' | 'tag-accent-2' | 'tag-neutral' | 'tag-highlight';
+/**
+ * Tag tone classes from the component layer (`base.css`). A status (Live, Suspended, Under review) takes a `status-*`
+ * tone: drawn as a `StatusTag` (the semantic pair with its square dot, E-15 colour roles), never the action or commerce
+ * colour. `tag-success` … `tag-info` are the same pairs without the dot (a fact: a tier, a risk level).
+ */
+export type DataTableTone = 'tag-accent' | 'tag-accent-2' | 'tag-neutral' | 'tag-highlight'
+  | 'tag-success' | 'tag-warning' | 'tag-danger' | 'tag-info'
+  | 'status-success' | 'status-warning' | 'status-danger' | 'status-info' | 'status-neutral';
 
 export type DataTablePerm = 'create' | 'update' | 'delete';
 
@@ -122,6 +129,15 @@ export interface DataTableProps<T extends object> {
    * action continues elsewhere (a dialog of the caller's) and no "done" toast should show.
    */
   onAction?: (action: DataTableAction<T>, rows: T[]) => Promise<unknown> | unknown;
+
+  /** S-177: a row above the toolbar — the screen's views as `UnderlineTabs` with counts (All 459 · Live 412 · …). The
+   *  caller filters `rows` by the view. */
+  views?: ReactNode;
+  /** S-177: quick filters in the toolbar after the search (a `Segmented` department, `FilterChip`s, saved views). The
+   *  built-in Filters button stays after them as "more filters". The caller filters `rows`. */
+  filters?: ReactNode;
+  /** S-177: dense rows (the back office's queues): 13 px type, two-line cells about 46 px tall. */
+  dense?: boolean;
 
   /** Accessible name for the table. Default: capitalised plural. */
   'aria-label'?: string;
