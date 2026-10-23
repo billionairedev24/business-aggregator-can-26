@@ -10843,3 +10843,60 @@ the Evergreen palette, Fraunces and DM Sans, and the pill-shaped buttons of the 
 photos (Open Images, CC BY 2.0, `design/revamp/CREDITS.md`) are for the design review only: people photos have no model
 releases, and S-181 replaces them.
 
+
+## 2026-10-23 — S-181/S-182 Photography, the image pipeline and screenshot fidelity
+**S-182, the hydration bug (#418).** It came from two places, both fixed in the consumer:
+- *The time zone.* `regionsQuery` configured the platform time zone inside its `queryFn`, which only runs where the
+  query is fetched (the server). The browser received the data hydrated and kept UTC, so "Order by 5:20 p.m." (`/shop`,
+  `/shop/<department>`) and "Next available" (provider page) were written in two zones. The root now configures the
+  platform zone from the hydrated region data before anything renders.
+- *The clock.* A render clock (`lib/renderClock.tsx`): the root loader takes `Date.now()` once on the server
+  (`renderedAt`, hydrated with the loader data) and `ago()`, next-available, order dates, the booking calendar's
+  "today" and the review edit window read it instead of the system clock. Navigations in the browser run the loader
+  again, so the clock moves on with the visit. (Chosen over client-only rendering: the text stays in the server HTML.)
+- *The proof.* `shots/hydration.spec.ts` (`make ui-hydration`) opens every consumer route of `routes.ts` at 1440 and
+  390 in English and French and fails on any hydration warning or React #418–#425; every `make ui-shots` run fails a
+  consumer route with one too. 48/48 routes pass (before the fix: `/shop`, `/shop/bakery`, the provider page failed).
+
+**S-182, screenshot fidelity.** `make ui-shots` no longer draws SVG stand-ins (`shots/photos.mjs` removed):
+fixture listings name photo library slots and `shots/photos.ts` serves the library's source files — the bytes
+`make demo-data` uploads. Stock photos were already the consumer build's real `/photos/` variants. Products of the
+fixtures were renamed to the demo plan's (eggs, croissants, baguette…) so the photo matches the name.
+
+**S-181, the image set.**
+- *Source.* Only Open Images V7 via its CVDF mirror is reachable (Unsplash, Pexels, Openverse, Flickr, Wikimedia are
+  blocked). Its files are mostly 1024 px, but ~1,400 of 1.9 M are the originals; they were found by listing the bucket
+  with sizes and their labels/metadata streamed from Google's CSVs (docs/runbooks/photos.md § 9). Everything is
+  CC BY 2.0 (asserted on import), attributed in `photos.json` (title, photographer, profile, Flickr page, deed, date).
+- *Picks.* 155 photos picked by eye from contact sheets (labels Person/Text/Flag/Logo/Drawing/… excluded up front),
+  product and place shots preferred: 66 fill slots that had none, 89 replace existing ones (the US-flag sign-in hero, the
+  hero/banner set, cuisines, the demo listings). The library has 267 photos for 270 slots; **all 162 leaf categories
+  have their own photo except three that show the designed fallback by choice** (`slots.config.json` `designed`:
+  insurance broker — nothing that is not a cliché; tobacco & vape and cannabis accessories — nothing that would not
+  advertise an age-restricted product). Designed slots have no fallback chain, so they never borrow their group's
+  photo. No photo is used for two slots (`manifest.test.ts`, and the demo test for the uploads).
+- *Size.* Originals saved at ≤ 1600 px long side, JPEG q80; 1024 px files kept as they are. `source/` grew from 23 MB
+  to 35 MB (+12 MB). Originals are not in git; they are refetched by id from the mirror.
+- *Not met everywhere: ≥ 1200 px.* Only 56 of 267 photos are ≥ 1200 px on the long edge (the originals the mirror has
+  for these subjects); the rest are 1024 px. The pipeline therefore never enlarges: variants exist only up to the
+  source's width, and `Scene` caps the displayed picture at its widest variant (`--nl-scene-max`, set from data like
+  Photo's placeholder colour) so a wider box frames it on the photo well. The build lists banner/hero photos under 1440
+  px: hero/courier, hero/home-main, hero/register (all shown far narrower than 1024 px). Replacing the 1024 px files with
+  ≥ 2000 px stock is the follow-up once a photo host is reachable (runbook § 3–5).
+- *People.* New picks avoid identifiable people. Some older library photos (S-151 era) still show people (workwear,
+  paint, sell/provider and a few service categories); flagged, not replaced in this story.
+- *Pipeline.* Already in place (S-151): AVIF/WebP/JPEG srcset at 320–1440, focal-point crops, content-hashed names.
+  Added: `credits.json` written next to the variants (machine-readable attribution, linked from `/credits`), the banner
+  width report, the `designed` slots, the never-upscale cap.
+- *Fallback.* `features/art/PhotoWell.tsx`: grey well, dashed inner line, the category icon (Phosphor light), per
+  design/revamp/a.html. It replaces the illustrated `Art` scenes everywhere (Art.tsx removed): listing cards without
+  a photo (search, shop tiles, "more from"), cart/checkout/menu thumbnails and slots without a photo. Listings no
+  longer fall back to the category's stock photo — that is what repeated one image up to six times on a page.
+  `pnpm lint:tokens` now fails on `fallback={<Scene` / `mark={<Scene` in the consumer. Scene's `tone` prop is kept but
+  no longer drawn (75 callers; removing it is churn for the screen stories).
+- *Demo data.* Every demo business and listing has its own library photo (new test); a product without one stops the
+  run instead of uploading a drawn picture of its name; the presenter's live-listing pictures are library photos. The
+  drawn logo stays only as the path for a business without a photo (none in the plan). No server code changed.
+- *Studio.* "Photo tips" (light, background, size; en + fr-CA) beside the product and service uploaders.
+- Stayed out of `web/packages/tokens` and `web/packages/ui` (S-167/S-168 in flight): the cap and the well live in the
+  consumer's `features/art`.
