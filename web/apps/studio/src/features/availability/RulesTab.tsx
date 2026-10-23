@@ -62,7 +62,7 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
           <div className="nl-field">
             <span className="nl-label" id="av-accept">{t('howBookings')}</span>
             {paused ? (
-              <Alert tone="highlight" title={t('instantPaused')}>
+              <Alert tone="info" title={t('instantPaused')}>
                 {instant?.pausedReason ? `${instant.pausedReason} ` : ''}<a href={screenHref(merchantId, 'standing')}>{t('instantPausedLink')}</a>
               </Alert>
             ) : null}

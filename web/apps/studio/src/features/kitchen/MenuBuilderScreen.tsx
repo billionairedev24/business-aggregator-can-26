@@ -59,7 +59,7 @@ export function MenuBuilderScreen({ returned, onReturnSeen }: { returned?: PosRe
               : <Button variant="tertiary" disabled={state.isPending || d?.kitchenApproved === false} onClick={() => state.mutate({ menuId: current, action: 'publish' })}>{t('publishMenu')}</Button>}
           </> : null}
       </>} />
-      {d && !d.kitchenApproved ? <Alert tone="highlight">{t('notApproved')}</Alert> : null}
+      {d && !d.kitchenApproved ? <Alert tone="info">{t('notApproved')}</Alert> : null}
       {state.isError ? <Alert tone="error" role="alert">{state.error.message || t('saveError')}</Alert> : null}
       <div className="nl-k-builder">
         <div>

@@ -49,7 +49,7 @@ export function VerificationStep({ onboarding, onBack, onSubmitted, identityRetu
       <p className="nl-ob-intro">{t(onboarding.type === 'kitchen' ? 'verifyIntro_kitchen' : 'verifyIntro')}</p>
       {identityReturned && kycOpen ? <Alert tone="info" role="status">{t('idReturned')}</Alert> : null}
       {applicant && agentNote ? (
-        <Alert tone="highlight" title={t('agentAsked')}>
+        <Alert tone="info" title={t('agentAsked')}>
           {redo.length ? <p className="nl-ob-flush">{t('agentRedo', { checks: new Intl.ListFormat(locale, { type: 'conjunction' }).format(redo) })}</p> : null}
           {agentNote.note ? <p className={redo.length ? 'nl-ob-flush nl-ob-gap-sm' : 'nl-ob-flush'}>{t('agentNote', { note: agentNote.note })}</p> : null}
         </Alert>

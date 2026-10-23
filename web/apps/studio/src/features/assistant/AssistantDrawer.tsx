@@ -2,7 +2,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { Sparkle } from '@phosphor-icons/react';
-import { Alert, Button, ChatBubble, ChatLog, Drawer, TextArea } from '@northline/ui';
+import { Alert, Button, ChatBubble, ChatLog, Drawer, TextArea, Chip } from '@northline/ui';
 import { screenFromPath, screenHref, type ScreenKey } from '../shell/nav';
 import { aiErrorKind, aiStatusQuery, streamChat, useConfirmAction, type PendingAction, type ToolRun, type Turn } from './api';
 import { useAssistantT } from './messages';
@@ -98,7 +98,7 @@ export function AssistantDrawer({ merchantId, open, onClose, fake }: { merchantI
         <p>{t('intro')}</p>
         <p className="nl-assistant-try">{t('suggestions')}</p>
         <div className="nl-assistant-chips">
-          {(['s_today', 's_pack', 's_payout', 's_reviews'] as const).map(k => <button key={k} type="button" className="nl-chip" onClick={() => void ask(t(k))}>{t(k)}</button>)}
+          {(['s_today', 's_pack', 's_payout', 's_reviews'] as const).map(k => <Chip key={k} onClick={() => void ask(t(k))}>{t(k)}</Chip>)}
         </div>
       </div> : null}
       <ChatLog label={t('log')} className="nl-assistant-log">
