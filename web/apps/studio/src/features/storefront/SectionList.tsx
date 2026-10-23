@@ -1,6 +1,6 @@
 import { useState, type DragEvent } from 'react';
 import { ArrowDown, ArrowUp, DotsSixVertical } from '@phosphor-icons/react';
-import { Switch } from '@northline/ui';
+import { Switch, StatusTag } from '@northline/ui';
 import type { Section } from './api';
 import { sectionText, useStorefrontT } from './messages';
 import { move, type SectionKind } from './sections';
@@ -53,7 +53,7 @@ export function SectionList({ sections, selected, onSelect, onChange, disabled }
           >
             <span className="nl-section-grip" aria-hidden><DotsSixVertical size={18} /></span>
             <button type="button" className="nl-section-main" aria-pressed={selected === s.kind} onClick={() => onSelect(s.kind)}>
-              <span className="nl-section-name">{nm}{s.required ? <span className="tag tag-neutral nl-section-tag">{t('alwaysOn')}</span> : null}</span>
+              <span className="nl-section-name">{nm}{s.required ? <span className="nl-section-tag"><StatusTag tone="neutral">{t('alwaysOn')}</StatusTag></span> : null}</span>
               <span className="nl-section-desc">{sectionText(t, s.kind, 'desc')}</span>
             </button>
             <span className="nl-section-arrows">

@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { ChipTabs, Field, FileButton, RadioGroup, TextInput } from '@northline/ui';
+import { Chip, Field, FileButton, RadioGroup, Segmented, TextInput } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import type { MerchantType } from '../shell/api';
 import { useArrangeSections, useUpdateStorefront, useUploadLogo, type SectionState, type Storefront } from './api';
@@ -55,7 +55,7 @@ export function PageBuilder({ storefront: s, canEdit, variant, children }: PageB
   return (
     <div className="nl-builder">
       <div className="nl-builder-main">
-        <div className="nl-grid" style={{ ['--nl-min' as string]: '200px' }}>
+        <div className="nl-grid nl-builder-grid">
           <div className="nl-field">
             <span className="nl-label" id={`${ids.sections}-brand`}>{t('brandColour')}</span>
             <RadioGroup className="nl-swatches" aria-labelledby={`${ids.sections}-brand`}>
@@ -124,10 +124,10 @@ export function PageBuilder({ storefront: s, canEdit, variant, children }: PageB
       <div className="nl-builder-preview">
         <div className="nl-pv-head">
           <span className="nl-pv-caption">{t('preview')}</span>
-          <ChipTabs aria-label={t('previewMode')} value={device} onChange={setDevice} options={[{ value: 'phone', label: t('phone') }, { value: 'web', label: t('web') }]} />
+          <Segmented name="builder-device" size="sm" aria-label={t('previewMode')} value={device} onChange={setDevice} options={[{ value: 'phone', label: t('phone') }, { value: 'web', label: t('web') }]} />
         </div>
         <StorefrontPreview storefront={s} device={device} />
-        <div className="nl-hint" style={{ marginTop: 10 }}>{t('previewNote')}</div>
+        <div className="nl-hint nl-builder-note">{t('previewNote')}</div>
       </div>
     </div>
   );
@@ -145,9 +145,9 @@ function SectionDetail({ section, variant, ctaLabel, canEdit, onCta }: { section
       <div className="nl-section-detail-line"><strong>{variant === 'onboarding' ? t('whenOff') : t('offShort')}</strong> {sectionText(t, k, 'off')}</div>
       {variant === 'onboarding' && <div className="nl-section-detail-line"><strong>{t('source')}</strong> {sectionText(t, k, 'source')}</div>}
       {k === 'cta' && (
-        <RadioGroup className="nl-chips" aria-label={t('ctaLabelOptions')} style={{ marginTop: 10 }}>
+        <RadioGroup className="nl-pp-chips nl-builder-note" aria-label={t('ctaLabelOptions')}>
           {CTA_LABELS.map(l => (
-            <button key={l} type="button" role="radio" aria-checked={ctaLabel === l} className="nl-chip" disabled={!canEdit} onClick={() => onCta(l)}>{t(`cta_${l}`)}</button>
+            <Chip key={l} role="radio" selected={ctaLabel === l} disabled={!canEdit} onClick={() => onCta(l)}>{t(`cta_${l}`)}</Chip>
           ))}
         </RadioGroup>
       )}

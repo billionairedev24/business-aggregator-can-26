@@ -28,4 +28,9 @@
 .nl-pv-map { height: calc(var(--size-touch) * 2); border: 1px dashed var(--color-well-line); border-radius: var(--radius-image); background: var(--color-well); display: grid; place-items: center; padding: 0 var(--space-3); font-size: var(--type-meta); color: var(--color-well-ink); text-align: center; }
 .nl-pv-sticky { position: sticky; bottom: 0; background: var(--color-surface); border-top: 1px solid var(--color-border); margin-top: var(--space-3); }
 .nl-pv-cta-wrap { padding: var(--space-3) var(--space-4); }
-.nl-pv-cta { display: grid; place-items: center; min-height: var(--size-control); border-radius: var(--radius-control); background: var(--color-action-primary); color: var(--color-action-primary-text); font-size: var(--type-body); font-weight: var(--weight-bold); }
+/* the button is the real primary button, full width (a picture of it: the wrapper is inert) */
+.nl-pv-cta { width: 100%; }
+/* S-176: services as the consumer page's service rows, products two (phone) or four (web) to a row */
+.nl-pv-cards { display: flex; flex-direction: column; gap: var(--space-2); }
+.nl-pv-products { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.nl-pv-products[data-device='web'] { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }

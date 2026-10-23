@@ -1,6 +1,6 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { formatPrice, StatusTag, useLocale } from '@northline/ui';
+import { ProductCard, ServiceCard, StatusTag } from '@northline/ui';
 import { tierTag } from '../shell/StudioLayout';
 import { useShellT } from '../shell/messages';
 import { listingsQuery, type Listing } from '../onboarding/listingsApi';
@@ -13,6 +13,7 @@ type Row = { a: string; b: string };
 type Block =
   | { kind: SectionKind; type: 'hero' | 'cta' }
   | { kind: SectionKind; type: 'rows'; rows: Row[] }
+  | { kind: SectionKind; type: 'services' | 'products'; items: Listing[] }
   | { kind: SectionKind; type: 'text' | 'map'; text: string };
 
 /** Up to three verified facts for the header (design 02 `site.stats`). */
@@ -27,20 +28,16 @@ export function heroStats(s: Storefront, t: StorefrontT): { v: string; k: string
   return out.slice(0, 3);
 }
 
-function rowsOf(list: Listing[], money: (c: number) => string, t: StorefrontT): Row[] {
-  return list.slice(0, 3).map(l => ({ a: l.name, b: l.priceCents == null ? t('quote') : money(l.priceCents) }));
-}
-
-function blocksFor(s: Storefront, services: Listing[], products: Listing[], t: StorefrontT, money: (c: number) => string): Block[] {
+function blocksFor(s: Storefront, services: Listing[], products: Listing[], t: StorefrontT): Block[] {
   const b = s.business;
   const verified = (f: string) => b.verifiedFacts.includes(f);
   const block = (kind: SectionKind): Block => {
     switch (kind) {
       case 'hero': case 'cta': return { kind, type: kind };
       case 'about': return { kind, type: 'text', text: b.about || t('aboutEmpty') };
-      case 'services': return services.length ? { kind, type: 'rows', rows: rowsOf(services, money, t) } : { kind, type: 'text', text: t('servicesEmpty') };
-      case 'featured': return products.length ? { kind, type: 'rows', rows: rowsOf(products, money, t) } : { kind, type: 'text', text: t('productsEmpty') };
-      case 'catalogue': return products.length ? { kind, type: 'rows', rows: rowsOf(products, money, t) } : { kind, type: 'text', text: t('departmentsEmpty') };
+      case 'services': return services.length ? { kind, type: 'services', items: services.slice(0, 3) } : { kind, type: 'text', text: t('servicesEmpty') };
+      case 'featured': return products.length ? { kind, type: 'products', items: products.slice(0, 4) } : { kind, type: 'text', text: t('productsEmpty') };
+      case 'catalogue': return products.length ? { kind, type: 'products', items: products.slice(0, 4) } : { kind, type: 'text', text: t('departmentsEmpty') };
       case 'menu': return { kind, type: 'text', text: t('menuEmpty') };
       case 'reviews': return { kind, type: 'rows', rows: [{ a: t('newOnNorthline'), b: t('verifiedTag') }, ...(b.type === 'provider' || b.type === 'both' ? [{ a: t('onTime'), b: '—' }] : [])] };
       case 'area': return { kind, type: 'map', text: b.serviceArea || t('areaEmpty') };
@@ -67,23 +64,22 @@ function blocksFor(s: Storefront, services: Listing[], products: Listing[], t: S
  * provider / store page (E-15 A · Plainsight, design/revamp/a.html screen 4; audit #10): a white header with the logo tile
  * (the business's colour as its edge), the name, the tagline and the verified tier, the figures, then the sections as
  * titled blocks and the action-blue book / order button. The business's colour is the tile's edge only, as on the page.
+ * S-176: services and products are the consumer pages' own cards (@northline/ui ServiceCard / ProductCard: the photo in
+ * the grey well or the dashed fallback, the one price format), inert — a picture of the page, not links.
  */
 export function StorefrontPreview({ storefront: s, device }: { storefront: Storefront; device: 'phone' | 'web' }) {
   const t = useStorefrontT();
   const shellT = useShellT();
-  const { locale } = useLocale();
-  const money = (c: number) => formatPrice(c, locale);
   const type = s.business.type;
   const services = useQuery({ ...listingsQuery(s.merchantId, 'service', 3), enabled: type === 'provider' || type === 'both' }).data ?? [];
   const products = useQuery({ ...listingsQuery(s.merchantId, 'product', 3), enabled: type === 'seller' || type === 'both' }).data ?? [];
-  const brand = { ['--nl-brand' as string]: s.brandColor } as CSSProperties;
   const initial = s.business.displayName.trim().charAt(0).toUpperCase() || 'N';
   const tier = tierTag({ tier: s.business.tier, status: s.business.status });
   const heading = (k: SectionKind): ReactNode => <div className="nl-pv-title">{sectionText(t, k, 'name')}</div>;
 
   return (
-    <div className="nl-pv-frame" data-device={device} style={brand} aria-label={t('preview')} role="region">
-      {blocksFor(s, services, products, t, money).map(b => (
+    <div className="nl-pv-frame" data-device={device} style={{ ['--nl-brand' as string]: s.brandColor }} aria-label={t('preview')} role="region">
+      {blocksFor(s, services, products, t).map(b => (
         <div key={b.kind} className={b.type === 'cta' ? 'nl-pv-sticky' : undefined}>
           {b.type === 'hero' && <div className="nl-pv-hero">
             <div className="nl-pv-id">
@@ -97,9 +93,16 @@ export function StorefrontPreview({ storefront: s, device }: { storefront: Store
             <dl className="nl-pv-stats">{heroStats(s, t).map(st => <div key={st.k}><dt>{st.k}</dt><dd>{st.v}</dd></div>)}</dl>
           </div>}
           {b.type === 'rows' && <div className="nl-pv-block">{heading(b.kind)}<div className="nl-pv-rows">{b.rows.map((r, i) => <div key={i} className="nl-pv-row"><span>{r.a}</span><strong>{r.b}</strong></div>)}</div></div>}
+          {b.type === 'services' && <div className="nl-pv-block">{heading(b.kind)}<div className="nl-pv-cards" inert>{b.items.map(l => (
+            <ServiceCard key={l.id} layout="row" level={4} name={l.name} kind={l.meta ?? undefined} place={s.business.displayName}
+              priceCents={l.priceCents ?? null} priceText={l.priceCents == null ? t('quote') : undefined} />
+          ))}</div></div>}
+          {b.type === 'products' && <div className="nl-pv-block">{heading(b.kind)}<div className="nl-pv-products" data-device={device} inert>{b.items.map(l => (
+            <ProductCard key={l.id} href="#" level={4} variant="rail" name={l.name} priceCents={l.priceCents ?? null} meta={s.business.displayName} lowStock={l.stock != null && l.stock > 0 && l.stock <= 5 ? l.stock : null} soldOut={l.stock === 0} />
+          ))}</div></div>}
           {b.type === 'text' && <div className="nl-pv-block">{heading(b.kind)}<div className="nl-pv-text">{b.text}</div></div>}
           {b.type === 'map' && <div className="nl-pv-block">{heading(b.kind)}<div className="nl-pv-map">{b.text}</div></div>}
-          {b.type === 'cta' && <div className="nl-pv-cta-wrap"><div className="nl-pv-cta">{t(`cta_${s.ctaLabel}`)}</div></div>}
+          {b.type === 'cta' && <div className="nl-pv-cta-wrap" inert><span className="btn btn-primary nl-pv-cta">{t(`cta_${s.ctaLabel}`)}</span></div>}
         </div>
       ))}
     </div>

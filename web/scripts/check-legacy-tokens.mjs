@@ -68,7 +68,7 @@ if (photoProblems.length) {
 // `style` objects (`fontSize: 13`, `padding: 6`, `color: 'white'`).
 const S175 = ['orders', 'catalogue', 'appointments', 'kitchen'].map(f => `apps/studio/src/features/${f}`);
 // S-176: the Studio's money, messaging, storefront, settings, account and onboarding screens — with S-175, every Studio folder
-const S176 = ['finance', 'messages'].map(f => `apps/studio/src/features/${f}`);
+const S176 = ['finance', 'messages', 'storefront'].map(f => `apps/studio/src/features/${f}`);
 const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'apps/studio/src/features/shell', 'apps/console/src/features/shell',
   // S-170/S-171: the consumer discovery pages (home, results, the Services / Shop / Food landings and their shared parts)
   'apps/consumer/src/features/home', 'apps/consumer/src/features/search', 'apps/consumer/src/features/pages', 'apps/consumer/src/features/shop',
@@ -120,11 +120,13 @@ for (const root of strictRoots) {
   }
 }
 
+const DATA_PROP = /\sstyle=\{\{\s*\[['"]--[\w-]+['"] as string\]:\s*[\w.]+\s*\}\}/;
 for (const root of noStyleRoots) {
   for (const file of walk(path.join(webRoot, root))) {
     const rel = path.relative(webRoot, file).split(path.sep).join('/');
     if (!rel.endsWith('.tsx') || strictSkip.some(r => r.test(rel))) continue;
-    readFileSync(file, 'utf8').split('\n').forEach((line, i) => { if (/\sstyle=\{/.test(line)) raw.push(`${rel}:${i + 1}  inline style (use a class with the scale tokens)`); });
+    // S-176: a custom property carrying merchant data (the business's colour as --nl-brand / --nl-swatch) is not presentation
+    readFileSync(file, 'utf8').split('\n').forEach((line, i) => { if (/\sstyle=\{/.test(line) && !DATA_PROP.test(line)) raw.push(`${rel}:${i + 1}  inline style (use a class with the scale tokens)`); });
   }
 }
 
