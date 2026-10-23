@@ -51,6 +51,21 @@ export const PAIRS = [
   ['focus', 'surface-sunken', 3, 'focus ring on linen'], ['nav-active-text', 'surface', 3, 'sidebar active bar'],
   ['danger-border', 'surface', 3, 'invalid input outline'], ['action-primary', 'surface', 3, 'checked checkbox, switch track'],
   ['surface', 'action-primary', 3, 'switch knob on the on track'], ['surface', 'border-control', 3, 'switch knob on the off track'],
+  // tokens v2 (S-167): the Plainsight roles
+  ['selected-text', 'selected', 4.5, 'selected segment, tile, page, tab count'], ['selected-ink', 'selected-tint', 4.5, 'applied filter chip'],
+  ['selected', 'surface', 3, 'checked checkbox and radio, tab underline, chip edge'], ['selected', 'canvas', 3, 'selection on the page'],
+  ['commerce-on', 'commerce', 4.5, 'deal badge, cart count'], ['commerce-text', 'surface', 4.5, 'cut-off timer, deal text'],
+  ['commerce-text', 'surface-sunken', 4.5, 'deal text on strips'], ['commerce-text', 'commerce-bg', 4.5, 'commerce tags'],
+  ['text', 'well', 4.5, 'text in a photo well'], ['text-subtle', 'well', 4.5, 'fallback caption in an empty photo well'],
+  ['well-ink', 'well', 3, 'fallback icon in an empty photo well'],
+  ['star', 'surface', 3, 'rating stars'], ['price', 'well', 4.5, 'prices on strips'],
+  ['status-success-fg', 'status-success-bg', 4.5, 'success status tag'], ['status-warning-fg', 'status-warning-bg', 4.5, 'warning status tag'],
+  ['status-danger-fg', 'status-danger-bg', 4.5, 'danger status tag'], ['status-info-fg', 'status-info-bg', 4.5, 'info status tag'],
+  ['status-neutral-fg', 'status-neutral-bg', 4.5, 'neutral status tag'],
+  ['info', 'surface', 4.5, 'info text'], ['warning', 'surface', 4.5, 'low stock'],
+  ['action-secondary-text', 'action-secondary', 4.5, 'secondary buttons'], ['action-tertiary-text', 'surface', 4.5, 'tertiary buttons'],
+  ['action-dark-text', 'action-dark', 4.5, 'bulk-action bar'], ['promo-text', 'promo-bg', 4.5, 'promo strip'],
+  ['text-muted', 'selected-tint', 4.5, 'muted text in an applied chip or a selected row'],
 ];
 
 /** Every pair below its minimum, for one resolved theme. */

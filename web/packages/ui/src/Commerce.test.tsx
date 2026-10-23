@@ -2,23 +2,31 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nProvider, type Locale } from './i18n';
-import { Price, ProductCard, QuantityStepper, ServiceCard, Stars } from './Commerce';
+import { Price, ProductCard, QuantityStepper, ServiceCard, Stars, StatusTag } from './Commerce';
 
 const page = (ui: React.ReactNode, locale: Locale = 'en') => render(<I18nProvider initial={locale}>{ui}</I18nProvider>);
 
 describe('commerce kit', () => {
-  it('prices: superscript sign and cents, the plain amount for screen readers, the earlier price struck through', () => {
-    const { container } = page(<Price cents={4504} compareAtCents={5200} />);
-    expect(container.querySelector('.nl-price-whole')).toHaveTextContent('45');
-    expect(container.querySelectorAll('.nl-price-sup')[1]).toHaveTextContent('04');
-    expect(screen.getByText('$45.04')).toHaveClass('nl-sr-only');
+  it('prices: one format with cents, the unit price as meta, the earlier price struck through', () => {
+    const { container } = page(<Price cents={4504} compareAtCents={5200} unit={{ cents: 94, per: '100g' }} />);
+    expect(container.querySelector('.nl-price-amount')).toHaveTextContent('$45.04');
+    expect(screen.getByText('$0.94/100 g')).toHaveClass('nl-price-unit');
     expect(screen.getByText('Was $52.00')).toBeInTheDocument();
   });
 
-  it('prices in French put the sign after the figure', () => {
-    const { container } = page(<Price cents={128050} />, 'fr');
-    expect(container.querySelector('.nl-price-whole')?.textContent).toMatch(/^1\s280$/);
-    expect(container.querySelector('.nl-price-amount')?.lastElementChild).toHaveTextContent('$');
+  it('prices in French put the sign after the figure, with plain spaces', () => {
+    const { container } = page(<Price cents={128050} unit={{ cents: 375, per: 'each' }} />, 'fr');
+    expect(container.querySelector('.nl-price-amount')?.textContent).toBe('1 280,50 $');
+    expect(screen.getByText('3,75 $ chacun')).toBeInTheDocument();
+  });
+
+  it('a deal badge from the earlier price, and status tags in their tone', () => {
+    const { container } = page(<>
+      <ProductCard href="/p" name="Cinnamon buns" priceCents={1400} compareAtCents={1600} />
+      <StatusTag tone="success">Delivered</StatusTag>
+    </>, 'fr');
+    expect(container.querySelector('.nl-deal')).toHaveTextContent('13 % de rabais');
+    expect(screen.getByText('Delivered')).toHaveClass('nl-status', 'nl-status-success');
   });
 
   it('stars: rounded to the half, announced, with the review count', () => {

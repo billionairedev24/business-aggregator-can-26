@@ -11,7 +11,7 @@ configurePlatformTimeZone('America/Edmonton');
 // Palette switch (redesign 2026-10-18): every palette of web/packages/tokens/palettes, scoped by [data-palette]
 // (dist/palettes.css). The apps wear brand.json's palette; this only previews the others. Fonts of the other
 // palettes are not loaded here (their stacks fall back to the system sans).
-const palettes = ['lakeshore', 'evergreen', 'dusk'];
+const palettes = ['plainsight', 'lakeshore', 'evergreen', 'dusk'];
 const preview: Preview = {
   globalTypes: { palette: { description: 'Brand palette', toolbar: { icon: 'paintbrush', items: palettes } } },
   initialGlobals: { palette: theme.brand.palette },

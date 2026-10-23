@@ -44,7 +44,6 @@
 .nl-help-convo { margin-top: 22px; max-width: 620px; display: flex; flex-direction: column; gap: 10px; }
 .nl-help-convo-title { margin: 0 0 8px; }
 .nl-help-chat { font-size: 14px; gap: 10px; }
-.nl-help-chat .nl-chat-bubble { padding: 10px 12px; }
 
 .nl-help-form { max-width: 640px; display: flex; flex-direction: column; gap: 14px; }
 .nl-help-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }

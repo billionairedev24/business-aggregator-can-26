@@ -33,7 +33,6 @@
 .nl-section-detail-head strong { font-size: 15px; }
 .nl-section-detail-head span { font-size: 12px; }
 .nl-section-detail-line { margin-top: 4px; }
-.nl-section-detail .nl-chip[aria-checked='true'] { border-color: var(--color-action-primary); background: var(--color-action-primary); color: var(--color-action-primary-text); }
 .nl-builder-reset { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
 
 .nl-domain-row { display: flex; gap: 8px; }
@@ -51,7 +50,6 @@
 .nl-dns-record dt { color: var(--color-text-muted); }
 .nl-dns-record dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .nl-dns-record code { font-size: 12px; }
-.nl-dns-record .btn { min-height: 44px; }
 
 /* preview */
 .nl-pv-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }

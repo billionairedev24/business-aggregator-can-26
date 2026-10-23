@@ -10843,3 +10843,75 @@ the Evergreen palette, Fraunces and DM Sans, and the pill-shaped buttons of the 
 photos (Open Images, CC BY 2.0, `design/revamp/CREDITS.md`) are for the design review only: people photos have no model
 releases, and S-181 replaces them.
 
+
+## 2026-10-23 — S-167/S-168 Tokens v2 and the component library
+
+**Tokens (S-167).** `palettes/plainsight.json` holds the locked values and `brand.json` selects it; lakeshore, evergreen
+and dusk still build (and pass the contrast gate) until every screen has moved.
+- A palette now has three optional blocks the build reads: `roles` (semantic roles pinned to exact values after
+  derivation, for the mockups' exact greys and tints), `radius` (replaces brand.json's corners for that palette) and
+  `shadow`. The radii are emitted with the palette's colours, so the Storybook palette switch changes corners too.
+- New roles, derived for every palette: `selected` / `selected-text` / `selected-tint` / `selected-ink`, `commerce` /
+  `commerce-on` / `commerce-text` / `commerce-bg`, `well` / `well-ink` / `well-line`, `star` / `star-empty`,
+  `status-{success,warning,danger,info,neutral}-{fg,bg}`, `action-secondary*` and `action-tertiary*` (names for the
+  neutral and link roles), `promo-bg` / `promo-text`. The contrast gate checks 25 more pairs.
+- New radius names `control` (3), `panel` (4), `image` (2), `status` (2), `round` (999). Mapping the as-built names:
+  xs 2, sm 3, md 4, lg 4 and **pill 3**, so every pill on an unrebuilt screen turns into a 3 px box at once ("never
+  pills"); what is really round (switch, radio, avatar, the cart count) uses `round`.
+- The as-built roles map onto Plainsight: `action-accent` (Add to cart, the old gold/ember role) is the action blue, not
+  a second button colour; `accent`/`accentTint`/`accentInk` (badges, ratings, the email's notice) are the commerce
+  magenta; `rating` and the stars are ink; the inverse/dark role is ink (bulk bar, search button, toasts); the cart
+  count is commerce; the department strip and the footer are the well grey. Flat cards: `shadow-sm` is none.
+- `scale.json` gains `type` (page title 24, section 18, sub 16, card title 13.5, body 14, label 13, meta 12, caps 11,
+  prices 15/17/28), `density` (5 results, 7 a rail, grid gaps 16/22, a 224 px filter rail, the 12 px well inset) and
+  half spacing steps (`--space-1-5` 6, `-2-5` 10, `-3-5` 14). Controls are drawn 38 px (32 sm, 46 lg) with a 44 px hit
+  area; inputs stay 44 px tall (the project's target rule wins over the mockup's 36).
+- **Two values differ from the mockups for WCAG 1.4.11:** the locked line `#C8CDD5` is 1.6:1 on white, not 3:1. It stays
+  the `border-strong` hairline (buy box, chip edges at rest are `#AEB4BE`, as drawn); the 3:1 outline of inputs,
+  checkboxes and segmented controls (`border-control`) is `#858C98` instead of the mockup's `#8E95A0` (2.7:1 on the
+  well), and the empty well's icon is `#858C98` instead of `#8A919C`.
+- The 12 px photo-well inset is the epic's value; the mockup's own CSS overrides it to 8 px on cards. We followed the
+  epic (the written contract) and record the difference.
+- "Dark-mode-ready": every component reads semantic roles only, so a dark palette is a `roles` block away; no dark
+  palette is built (not asked for).
+- The email palette follows (EmailBrand, the test now also checks `warning`): action blue button and links, ink
+  headings in the same sans, 3/4 px corners. Notices no longer use the commerce colour (ink edge; warnings use warning).
+- Mobile: `generated/theme.json` resolves Plainsight, so `mobile-kit` regenerates `brandFonts.ts` and depends on
+  `@expo-google-fonts/ibm-plex-sans`. The native screens pick up the colours, font and corners (`radius.pill` is 3 px
+  there too); rebuilding them is S-169.
+
+**Components (S-168).** Rebuilt in place on the same class names and props, so screens move without code changes.
+- Selection (audit #3): every choice control styles `aria-pressed`, `aria-selected`, `aria-checked`, a checked native
+  input inside it and `data-state` (on/checked/active/selected). Chips gained `aria-checked` when given a radio role;
+  `Chip` no longer puts `aria-pressed` on a radio or checkbox (it was invalid ARIA there).
+- One tab style (audit #4): `ChipTabs` draw as underline tabs; `UnderlineTabs` takes counts and no longer fills the row
+  by default (`fill` for the auth card).
+- New: `FilterChip` (toggle, or an applied chip that removes itself: one button "✓ label ×" named "Remove filter: …"),
+  `ChoiceTiles`, `OptionCard mark`, `Checkbox count`, `SearchBar scope` (a native select), `StatusTag`, `DealBadge`,
+  `CardSkeleton`, `Toast`/`ToastProvider`/`useToast`, `Pagination`/`pageItems`, `EmptyState icon`. Button variants
+  `tertiary` and `destructive` (ghost and danger are their older names; accent/highlight now equal primary).
+- One price format (audit #8): `Price` draws `formatPrice` ($8.50 / 8,50 $) with the unit price and the earlier price
+  as meta; the superscript style is gone. `formatUnitPrice`, `unitCents`, `formatTimeRange`, `formatDateRange`,
+  `formatWhen` live in `i18n.tsx`; the consumer's `windowRange` uses `formatTimeRange`, which fixes the raw ISO window on
+  the orders page (a range across midnight). Other pages' own money formatting (plain `formatMoney` text) already gives
+  the same `$8.50` string; moving them onto `Price` is page work.
+- Headings (audit #5): the UI sans everywhere (`base.css`, card titles, empty states, the logo). Plainsight has no
+  display face, so `--font-heading`/`--font-display` resolve to the sans too.
+- Overrides: 40 app CSS rules that re-styled library classes only for the old look were removed or trimmed to their
+  layout (44 px chips and buttons, the page builder's hand-made selected chip, auth step bars and checkbox radii,
+  onboarding option borders, pill search fields, oversized tags, console tab overrides, cart superscript fix). Layout
+  overrides (flex, margins, widths) stay.
+- `pnpm lint:tokens` now fails on raw px font sizes and spacing (padding, margin, gap; 0–2 px nudges allowed), raw
+  colours in CSS (hex, rgb/hsl/oklch, named) and the same in inline `style` objects, in `packages/ui/src` and the three
+  app shells (`apps/*/src/features/shell`). Stories, fixtures, the server error page and the printable DataTable report
+  (standalone documents) are exempt. The rest of the apps are page stories' work (S-170+).
+- Gallery: `packages/ui/src/gallery` (one source for Storybook "Gallery" and `web/apps/gallery`, a dev-only Vite app,
+  never deployed, port 3400; preview 4677 for the tests). `pnpm test:visual` / `make ui-visual` compare 60 Playwright
+  baselines (13 sections × en/fr × 1440/390, plus the dialog and the sheet open) with a 0.1 % pixel tolerance; it also
+  fails on a sideways scroll or when IBM Plex Sans did not load. Baselines are Linux Chromium 1194 renders
+  (/opt/pw-browsers); CI is manual-only, so wiring the visual run into a workflow is left to S-180 (the backlog's
+  "run in CI").
+
+**Not done here (later stories):** page layouts (results rail, buy box, home hero, back-office dashboards) are S-170+;
+pages still using their own chip/tab/price markup (e.g. the Studio catalogue's step tabs) move with their page; the
+mobile kit is S-169.

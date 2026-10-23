@@ -35,7 +35,6 @@
 .nl-auth-card { padding: var(--space-10) var(--space-10) var(--space-8); min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 @media (max-width: 1099.98px) { .nl-auth-card { padding: var(--space-8); } }
 /* the step dots under the title: a quiet track, the done steps in the primary colour */
-.nl-auth-card .nl-steps > span:not([data-done='true']) { background: var(--color-surface-muted); }
 @media (max-width: 599.98px) { .nl-auth-card { padding: var(--space-5) var(--space-4); } }
 .nl-auth-card .nl-utabs { margin-bottom: 14px; }
 .nl-auth-title { font-size: var(--text-2xl); font-weight: var(--weight-bold); margin: 0; letter-spacing: var(--tracking-tight); }
@@ -46,14 +45,13 @@
 .nl-auth-card .input { min-height: 46px; }
 .nl-auth-code { letter-spacing: .3em; font-size: 18px; }
 .nl-auth-terms { margin-top: 14px; font-size: 13px; color: var(--color-text-muted); }
-.nl-auth-terms .nl-box { border-radius: var(--radius-sm); }
 .nl-auth-primary { width: 100%; min-height: 46px; margin-top: 14px; }
 .nl-auth-row { display: flex; gap: 8px; margin-top: 14px; }
 .nl-auth-row > .btn-primary { flex: 1; min-height: 46px; }
 .nl-auth-divider { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; font-size: 12px; color: var(--color-text-muted); }
 .nl-auth-divider::before, .nl-auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--color-border); }
 .nl-auth-social { display: flex; gap: 8px; flex-wrap: wrap; }
-.nl-auth-social > .btn { flex: 1 1 0; min-height: 44px; gap: 8px; text-decoration: none; }
+.nl-auth-social > .btn { flex: 1 1 0; text-decoration: none; }
 .nl-auth-switch { text-align: center; font-size: 13px; margin-top: 14px; color: var(--color-text-muted); }
 .nl-auth-hint { font-size: 13px; color: var(--color-text-muted); margin-top: 6px; }
 .nl-auth-hint .nl-auth-link, .nl-auth-switch .nl-auth-link, .nl-auth-footer .nl-auth-link {

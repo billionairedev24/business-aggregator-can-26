@@ -74,7 +74,7 @@ export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeI
         </div>
         <section className="nl-auth-card" aria-labelledby="nl-auth-title">
           {panel ? (<><h2 className="nl-auth-title" id="nl-auth-title">{panel.title}</h2>{panel.content}</>) : (<>
-          <UnderlineTabs aria-label={t('tabs')} value={mode} onChange={onModeChange}
+          <UnderlineTabs fill aria-label={t('tabs')} value={mode} onChange={onModeChange}
             options={[{ value: 'signin', label: t('tabSignIn') }, { value: 'register', label: t('tabRegister') }]} />
           <h2 className="nl-auth-title" id="nl-auth-title">{title}</h2>
           {error && <Alert tone="error">{t(ERRORS[error] ?? 'federationFailed')}</Alert>}

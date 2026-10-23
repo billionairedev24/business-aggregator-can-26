@@ -5,9 +5,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ l
   return (
     <div className="field">
       <label htmlFor={fid}>{label}</label>
-      <input ref={ref} id={fid} className="input" aria-invalid={!!error} aria-describedby={error ? fid + '-err' : undefined}
-        style={error ? { borderColor: 'var(--color-danger-border)' } : undefined} {...rest} />
-      {error && <div id={fid + '-err'} role="alert" style={{ color: 'var(--color-danger)', fontSize: 13, marginTop: 6 }}>{error}</div>}
+      {/* aria-invalid draws the danger edge (primitives.css), the message is the field's error line */}
+      <input ref={ref} id={fid} className="input" aria-invalid={!!error} aria-describedby={error ? fid + '-err' : undefined} {...rest} />
+      {error && <div id={fid + '-err'} role="alert" className="nl-error">{error}</div>}
     </div>
   );
 });

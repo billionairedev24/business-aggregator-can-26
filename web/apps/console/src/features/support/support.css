@@ -7,7 +7,6 @@
 .nl-sd-who { font-family: var(--font-heading); font-weight: var(--weight-semibold); font-size: var(--text-xl); margin: 0; }
 .nl-sd-ctx { font-size: var(--text-sm); }
 .nl-sd-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.nl-sd-actions .btn { min-height: var(--size-touch); }
 .nl-sd-decide { width: 100%; }
 .nl-sd-thread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); max-height: 320px; overflow-y: auto; }
 .nl-sd-note { padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-sunken); font-size: var(--text-sm); }

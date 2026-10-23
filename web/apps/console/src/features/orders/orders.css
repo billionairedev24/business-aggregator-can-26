@@ -3,7 +3,7 @@
 .nl-or-filters .input { min-height: var(--size-touch); width: auto; max-width: 100%; }
 .nl-or-bar { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .nl-or-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.nl-or-search .input { min-height: var(--size-touch); width: min(320px, 100%); border-radius: var(--radius-sm); }
+.nl-or-search .input { min-height: var(--size-touch); width: min(320px, 100%); }
 .nl-or-note { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
 .nl-or-error { margin: 0; color: var(--color-danger); font-size: var(--text-md); }
 .nl-or-issue { margin: 0; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--color-danger-bg); color: var(--color-danger); font-size: var(--text-sm); }
