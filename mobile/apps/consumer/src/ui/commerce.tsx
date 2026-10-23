@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import type { ImageSourcePropType } from 'react-native';
+import { StyleSheet, View, type ImageSourcePropType, type StyleProp, type ViewStyle } from 'react-native';
 
-import { ProductCard as KitProductCard, unitCents, type IconName, type PriceUnit } from '@northline/mobile-kit';
+import { Photo, PhotoWell, ProductCard as KitProductCard, photoFor, radius, semantic, unitCents, type Crop, type IconName, type PriceUnit } from '@northline/mobile-kit';
 
 import type { ProductCard, Run } from '../api/shop';
 import { config } from '../config';
@@ -56,6 +56,19 @@ export function useWhen() {
   return (run: Pick<Run, 'day' | 'startsAt' | 'endsAt'> | null | undefined) => (run ? f.window(run, 'rv.when') : null);
 }
 
+/**
+ * A stock photo of the library (a banner, a category, a hero) in the grey well, cover; when no slot has one, the
+ * designed fallback — the dashed well with the icon (S-181/S-178: never the retired drawings). `style` sizes it.
+ */
+export function Picture({ slot, crop = 'card', icon = 'image', label, style, testID }: { slot: string | readonly (string | null | undefined)[]; crop?: Crop; icon?: IconName; label?: string; style?: StyleProp<ViewStyle>; testID?: string }) {
+  const photo = photoFor(slot, crop);
+  return (
+    <View style={[styles.picture, style]} testID={testID}>
+      {photo ? <Photo slot={[]} photo={photo} crop={crop} label={label} style={StyleSheet.absoluteFill} /> : <PhotoWell icon={icon} inset={0} label={label} style={StyleSheet.absoluteFill} />}
+    </View>
+  );
+}
+
 /** The icon of the dashed no-photo well, by what the listing is. */
 export function iconFor(kind: 'product' | 'service' | 'shop' | 'food'): IconName {
   return kind === 'service' ? 'wrench' : kind === 'food' ? 'basket' : kind === 'shop' ? 'storefront' : 'shopping-bag';
@@ -95,3 +108,5 @@ export function ShopProductCard({ p, eta: etaText, low, testID }: { p: ProductCa
     />
   );
 }
+
+const styles = StyleSheet.create({ picture: { overflow: 'hidden', borderRadius: radius.image, backgroundColor: semantic.well } });

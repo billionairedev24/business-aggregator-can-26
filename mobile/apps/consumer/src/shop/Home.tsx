@@ -26,7 +26,9 @@ import {
   textStyles,
 } from '@northline/mobile-kit';
 
+import { nameIn, servicesApi } from '../api/services';
 import type { DepartmentTile, Landing, Run, ShopCard } from '../api/shop';
+import { services } from '../services';
 import { useAuth } from '../auth/AuthProvider';
 import type { MessageKey } from '../i18n';
 import { PlaceBar } from '../location/PlaceBar';
@@ -225,27 +227,7 @@ export function Home() {
             </View>
           ) : null}
 
-          <View style={styles.section} testID="home-pros">
-            <View style={styles.pad}>
-              <SectionHead title={t('rv.rail.pros')} link={t('rv.rail.seeServices')} onLink={() => router.navigate('/services')} />
-            </View>
-            <Strip edge>
-              {SERVICE_TILES.map(([key, slug]) => {
-                const photo = photoFor(slugSlot('service', slug) ?? [], 'square');
-                return (
-                  <View key={slug} style={styles.railCard}>
-                    <ServiceCard
-                      title={t(key)}
-                      photo={photo ? <Photo slot={[]} photo={photo} crop="square" style={StyleSheet.absoluteFill} /> : undefined}
-                      icon={iconFor('service')}
-                      onPress={() => router.push(`/services/${slug}` as Href)}
-                      testID={`home-pro-${slug}`}
-                    />
-                  </View>
-                );
-              })}
-            </Strip>
-          </View>
+          <PopularServices />
         </>
       )}
 
@@ -256,6 +238,44 @@ export function Home() {
         </Card>
       </View>
     </Screen>
+  );
+}
+
+/**
+ * "Popular services near you": the live categories with the most verified providers (`GET /public/services`, the
+ * Browse tab's), as the kit's service cards — the category's photo, its name and how many pros come to you.
+ */
+function PopularServices() {
+  const { t, locale } = useShopFormat();
+  const api = servicesApi(services().api);
+  const landing = useQuery({ queryKey: ['services', 'landing', locale], queryFn: () => api.landing(locale === 'fr-CA' ? 'fr' : 'en'), staleTime: 60_000 });
+  const popular = (landing.data?.groups ?? []).flatMap((g) => g.items).filter((i) => i.providers > 0).sort((a, b) => b.providers - a.providers).slice(0, 8);
+  if (popular.length === 0) return null;
+  return (
+    <View style={styles.section} testID="home-pros">
+      <View style={styles.pad}>
+        <SectionHead title={t('rv.rail.pros')} link={t('rv.rail.seeServices')} onLink={() => router.navigate('/services')} />
+      </View>
+      <Strip edge>
+        {popular.map((i) => {
+          const photo = photoFor(slugSlot('service', i.slug) ?? [], 'square');
+          const name = nameIn(i.names, locale);
+          return (
+            <View key={i.slug} style={styles.railCard}>
+              <ServiceCard
+                title={name}
+                meta={t('rv.card.pros', { n: i.providers })}
+                photo={photo ? <Photo slot={[]} photo={photo} crop="square" style={StyleSheet.absoluteFill} /> : undefined}
+                icon={iconFor('service')}
+                onPress={() => router.push(`/services/${i.slug}` as Href)}
+                label={`${name}, ${t('rv.card.pros', { n: i.providers })}`}
+                testID={`home-pro-${i.slug}`}
+              />
+            </View>
+          );
+        })}
+      </Strip>
+    </View>
   );
 }
 
@@ -461,8 +481,8 @@ const styles = StyleSheet.create({
   section: { gap: space[2] },
   tiles: { flexDirection: 'row', alignItems: 'stretch', gap: space[2.5] },
   tile: { flex: 1, minWidth: 0, gap: space[2], padding: space[3], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-strong'], backgroundColor: semantic.surface },
-  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space[2], rowGap: space[2] },
-  tileItem: { width: '46%', flexGrow: 1, gap: space[1], minHeight: MIN_TARGET },
+  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: space[2] },
+  tileItem: { width: '47%', gap: space[1], minHeight: MIN_TARGET },
   tilePic: { width: '100%', aspectRatio: 1, borderRadius: radius.image, overflow: 'hidden', backgroundColor: semantic.well },
   tileMore: { minHeight: MIN_TARGET, justifyContent: 'center', marginTop: 'auto' },
   railCard: { width: RAIL_CARD },

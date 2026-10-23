@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
+import { ApiError, colors, LINE, MIN_TARGET, radius, space, textStyles } from '@northline/mobile-kit';
 
 import type { Calendar, ProviderPage } from '../api/services';
 import { useAuth } from '../auth/AuthProvider';
@@ -205,14 +205,14 @@ function SlotsSkeleton() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   form: { gap: space[3], paddingTop: space[3] },
-  days: { flexDirection: 'row', gap: 6 },
-  day: { flex: 1, minHeight: MIN_TARGET, paddingVertical: space[2], paddingHorizontal: 6, borderRadius: radius.md, borderWidth: 1, borderColor: colors.divider },
+  days: { flexDirection: 'row', gap: space[1.5] },
+  day: { flex: 1, minHeight: MIN_TARGET, paddingVertical: space[2], paddingHorizontal: space[1.5], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: colors.divider },
   dayOn: { borderColor: colors.accent, backgroundColor: colors.accent100 },
-  dow: { fontFamily: fonts.body, fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: colors.neutral700 },
-  num: { fontFamily: fonts.bodyStrong, fontSize: 20, color: colors.text },
-  free: { fontFamily: fonts.body, fontSize: 10, color: colors.neutral700 },
+  dow: { ...StyleSheet.flatten(textStyles.caps), color: colors.neutral700 },
+  num: { ...StyleSheet.flatten(textStyles.section) },
+  free: { ...StyleSheet.flatten(textStyles.caps), color: colors.neutral700 },
   times: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   time: { width: '31%' },
-  label: { fontFamily: fonts.body, fontSize: 13, color: colors.neutral800 },
-  spots: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  label: { ...StyleSheet.flatten(textStyles.meta), color: colors.neutral800 },
+  spots: { flexDirection: 'row', flexWrap: 'wrap', gap: space[1.5] },
 });

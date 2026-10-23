@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, colors, radius, semantic, space } from '@northline/mobile-kit';
+import { ApiError, colors, LINE, radius, semantic, space } from '@northline/mobile-kit';
 
 import { hireApi, type Message, type ThreadPage, type ThreadRef, type ThreadRow } from '../api/hire';
 import { useAuth } from '../auth/AuthProvider';
@@ -199,12 +199,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0, gap: 2 },
   list: { gap: space[3] },
   stack: { gap: space[3], paddingTop: space[2] },
-  row: { flexDirection: 'row', gap: space[3], padding: 14, minHeight: 56, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
+  row: { flexDirection: 'row', gap: space[3], padding: space[3.5], minHeight: 56, borderWidth: LINE.hair, borderColor: semantic.border, borderRadius: radius.panel, backgroundColor: semantic.surface },
   pressed: { backgroundColor: semantic['surface-hover'] },
-  side: { alignItems: 'flex-end', gap: 4 },
+  side: { alignItems: 'flex-end', gap: space[1] },
   messages: { gap: space[2] },
-  bubble: { maxWidth: '85%', gap: 2, padding: space[3], borderRadius: radius.lg },
+  bubble: { maxWidth: '85%', gap: 2, padding: space[3], borderRadius: radius.panel },
   mine: { alignSelf: 'flex-end', backgroundColor: colors.accent100 },
-  theirs: { alignSelf: 'flex-start', backgroundColor: semantic['surface-sunken'] },
+  theirs: { alignSelf: 'flex-start', backgroundColor: semantic.well },
   composer: { gap: space[2] },
 });

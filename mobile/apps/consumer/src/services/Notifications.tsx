@@ -143,10 +143,10 @@ function InboxSkeleton() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[1.5] },
   list: { gap: space[4] },
-  item: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  dot: { width: 10, height: 10, borderRadius: radius.round, marginTop: 6 },
+  item: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3] },
+  dot: { width: 10, height: 10, borderRadius: radius.round, marginTop: space[1.5] },
   title: { fontFamily: fonts.bodyStrong },
   footer: { gap: 2 },
 });

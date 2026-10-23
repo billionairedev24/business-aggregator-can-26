@@ -223,7 +223,7 @@ function Overview({ s, phone, f }: { s: SecurityData; phone?: string | null; f: 
 
 const styles = StyleSheet.create({
   confirm: { gap: space[3] },
-  summary: { padding: space[4], borderRadius: radius.md, backgroundColor: colors.accent100 },
+  summary: { padding: space[4], borderRadius: radius.panel, backgroundColor: colors.accent100 },
   summaryWeak: { backgroundColor: colors.highlight100 },
   summaryText: { color: colors.accent900 },
 });

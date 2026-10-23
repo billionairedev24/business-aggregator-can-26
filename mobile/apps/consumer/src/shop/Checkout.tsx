@@ -253,7 +253,6 @@ export function Checkout() {
                       title={address.line1}
                       description={address.line2}
                       selected
-                      role="button"
                       onPress={() => router.push('/location?next=/checkout')}
                       testID="checkout-address"
                     />

@@ -48,7 +48,7 @@ export const revamp: { [k in keyof typeof en]: string } = {
   'rv.tile.servicesMore': 'Tous les services',
   'rv.rail.popular': 'Populaire près de {place}',
   'rv.rail.popularAnywhere': 'Populaire près de chez vous',
-  'rv.rail.pros': 'Les pros les mieux notés près de chez vous',
+  'rv.rail.pros': 'Services populaires près de chez vous',
   'rv.rail.seeAll': 'Tout voir',
   'rv.rail.seeServices': 'Tous les services',
 

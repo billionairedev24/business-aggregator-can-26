@@ -188,7 +188,7 @@ export function SignUp() {
 }
 
 const styles = StyleSheet.create({
-  fields: { gap: 14, paddingTop: space[2] },
+  fields: { gap: space[3.5], paddingTop: space[2] },
   // two to a row when they fit; "Continue with Apple" in French or at a large text size takes its own row
   half: { flexGrow: 1, flexBasis: 180, paddingHorizontal: space[3] },
   center: { justifyContent: 'center' },

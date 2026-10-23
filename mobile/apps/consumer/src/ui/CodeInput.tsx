@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { colors, fonts, radius } from '@northline/mobile-kit';
+import { colors, LINE, radius, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import { type } from './primitives';
 
@@ -60,21 +60,12 @@ export function CodeInput({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 8 },
-  row: { flexDirection: 'row', gap: 8 },
-  box: {
-    flex: 1,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.divider,
-  },
+  wrap: { gap: space[2] },
+  row: { flexDirection: 'row', gap: space[2] },
+  box: { flex: 1, height: 56, alignItems: 'center', justifyContent: 'center', borderRadius: radius.panel, backgroundColor: semantic.surface, borderWidth: LINE.hair, borderColor: colors.divider },
   boxNext: { borderColor: colors.accent },
   boxError: { borderColor: colors.accent2 },
-  digit: { fontFamily: fonts.bodyStrong, fontSize: 24, color: colors.text },
+  digit: { ...StyleSheet.flatten(textStyles.pageTitle) },
   // over the boxes, invisible, so a tap anywhere focuses it and the OS autofill bar targets it
   hidden: { position: 'absolute', left: 0, right: 0, top: 0, height: 56, opacity: 0.011, color: 'transparent' },
 });

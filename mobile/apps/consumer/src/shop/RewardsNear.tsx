@@ -3,7 +3,7 @@ import * as Linking from 'expo-linking';
 import { router, type Href } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
+import { radius, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import type { NearbyReward } from '../api/account';
 import { accountApi } from '../api/account';
@@ -79,23 +79,8 @@ function RewardCard({ r, f }: { r: NearbyReward; f: ReturnType<typeof useShopFor
 const styles = StyleSheet.create({
   section: { gap: space[2], paddingTop: space[3] },
   pad: { paddingHorizontal: space[4] },
-  card: { width: 200, gap: space[1], borderRadius: radius.lg },
-  mult: {
-    fontFamily: fonts.display,
-    fontSize: 26,
-    lineHeight: 30,
-    color: semantic['action-primary'],
-  },
-  name: {
-    fontFamily: fonts.semibold,
-    fontSize: 15,
-    lineHeight: 20,
-    color: colors.text,
-  },
-  sub: {
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.textMuted,
-  },
+  card: { width: 200, gap: space[1], borderRadius: radius.panel },
+  mult: { ...StyleSheet.flatten(textStyles.pageTitle), color: semantic['action-primary'] },
+  name: { ...StyleSheet.flatten(textStyles.bodyStrong) },
+  sub: { ...StyleSheet.flatten(textStyles.meta), color: semantic['text-muted'] },
 });

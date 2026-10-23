@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, MIN_TARGET, Segmented, formatPrice, colors, fonts, radius, semantic, space, type Locale } from '@northline/mobile-kit';
+import { colors, formatPrice, Icon, LINE, MIN_TARGET, radius, Segmented, semantic, space, textStyles, type Locale } from '@northline/mobile-kit';
 
 import { useAuth } from '../auth/AuthProvider';
 import { config, fullNav, legalUrl } from '../config';
@@ -231,27 +231,16 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET },
   headText: { flex: 1, minWidth: 0, gap: 2 },
   avatar: { width: 64, height: 64, borderRadius: radius.round, backgroundColor: semantic['action-primary'], alignItems: 'center', justifyContent: 'center' },
-  initials: { fontFamily: fonts.display, fontSize: 24, color: semantic['action-primary-text'] },
-  hi: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.text },
+  initials: { ...StyleSheet.flatten(textStyles.pageTitle), color: semantic['action-primary-text'] },
+  hi: { ...StyleSheet.flatten(textStyles.pageTitle) },
   section: { gap: space[2] },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  h3: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26, color: colors.text },
-  orderRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56, paddingHorizontal: 14, paddingVertical: space[3], borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
-  wallet: {
-    marginTop: space[2],
-    paddingHorizontal: space[4],
-    paddingVertical: 14,
-    minHeight: MIN_TARGET,
-    borderRadius: radius.md,
-    backgroundColor: semantic['surface-brand'],
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space[3],
-  },
+  h3: { ...StyleSheet.flatten(textStyles.section) },
+  orderRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56, paddingHorizontal: space[3.5], paddingVertical: space[3], borderWidth: LINE.hair, borderColor: semantic.border, borderRadius: radius.panel },
+  wallet: { marginTop: space[2], paddingHorizontal: space[4], paddingVertical: space[3.5], minHeight: MIN_TARGET, borderRadius: radius.panel, backgroundColor: semantic['surface-brand'], flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[3] },
   walletPressed: { backgroundColor: semantic['surface-hover'] },
-  walletKicker: { ...StyleSheet.flatten(type.kicker), fontSize: 11, color: semantic['badge-brand-text'] },
-  walletPoints: { fontFamily: fonts.bold, fontSize: 18, color: semantic['badge-brand-text'] },
+  walletKicker: { ...StyleSheet.flatten(textStyles.caps), ...StyleSheet.flatten(type.kicker), color: semantic['badge-brand-text'] },
+  walletPoints: { ...StyleSheet.flatten(textStyles.section), color: semantic['badge-brand-text'] },
   rows: { paddingTop: space[2] },
   language: { gap: space[2], paddingTop: space[3] },
   legal: { paddingTop: space[6] },

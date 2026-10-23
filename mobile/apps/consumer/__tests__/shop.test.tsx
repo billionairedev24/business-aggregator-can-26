@@ -87,7 +87,7 @@ describe('B1 Home', () => {
     const pictures = ['photo', 'photo-well', 'photo-fallback'].flatMap((id) => screen.queryAllByTestId(id, { includeHiddenElements: true }));
     expect(pictures.length).toBeGreaterThan(6);
     expect(screen.queryAllByTestId('photo', { includeHiddenElements: true }).length).toBeGreaterThan(0); // the library has photos
-    for (const tile of ['Bakery', 'Butcher', 'Produce', 'Mechanic', 'Cleaning', 'Events & bar', 'Realtor']) expect(screen.getAllByRole('button', { name: tile }).length).toBeGreaterThan(0);
+    for (const tile of ['Bakery', 'Butcher', 'Produce', 'Mechanic', 'Cleaning', 'Events & bar']) expect(screen.getAllByRole('button', { name: tile }).length).toBeGreaterThan(0);
     expect(screen.getByRole('header', { name: 'Popular near Sampleville' })).toBeTruthy();
     // product cards with the one price format, the unit price and Add to cart
     expect(screen.getByRole('button', { name: /^Country sourdough, Maple Lane Bakery, \$7\.50, Get it Tonight, 6–9 p\.m\./ })).toBeTruthy();

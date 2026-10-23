@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { colors, fonts, semantic, space } from '@northline/mobile-kit';
+import { semantic, space, textStyles } from '@northline/mobile-kit';
 
 import type { MessageKey } from '../i18n';
 import type { MyPoints, PointsActivity } from '../api/account';
@@ -125,19 +125,8 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     gap: space[2],
   },
-  big: {
-    fontFamily: fonts.bodyStrong,
-    fontSize: 44,
-    lineHeight: 50,
-    letterSpacing: -0.8,
-    color: colors.text,
-  },
+  big: { ...StyleSheet.flatten(textStyles.priceLg) },
   how: { gap: space[2], padding: space[4] },
-  pts: {
-    fontFamily: fonts.bold,
-    fontSize: 16,
-    color: semantic.success,
-    fontVariant: ['tabular-nums'],
-  },
-  out: { color: colors.textMuted },
+  pts: { ...StyleSheet.flatten(textStyles.sub), color: semantic.success, fontVariant: ['tabular-nums'] },
+  out: { color: semantic['text-muted'] },
 });

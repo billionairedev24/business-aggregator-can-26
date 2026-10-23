@@ -51,7 +51,7 @@ export const revamp = {
   'rv.tile.servicesMore': 'See all services',
   'rv.rail.popular': 'Popular near {place}',
   'rv.rail.popularAnywhere': 'Popular near you',
-  'rv.rail.pros': 'Top-rated pros near you',
+  'rv.rail.pros': 'Popular services near you',
   'rv.rail.seeAll': 'See all',
   'rv.rail.seeServices': 'See all services',
 

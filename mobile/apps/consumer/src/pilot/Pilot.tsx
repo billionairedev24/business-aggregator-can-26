@@ -4,7 +4,18 @@ import { router, useLocalSearchParams, usePathname } from 'expo-router';
 import { useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { MIN_TARGET, SCREENSHOT_MAX_BYTES, SCREENSHOT_TYPES, checkPhoto, colors, fonts, radius, space, type PickedImage } from '@northline/mobile-kit';
+import {
+  checkPhoto,
+  colors,
+  LINE,
+  MIN_TARGET,
+  radius,
+  SCREENSHOT_MAX_BYTES,
+  SCREENSHOT_TYPES,
+  space,
+  textStyles,
+  type PickedImage,
+} from '@northline/mobile-kit';
 
 import { pilotApi, screenOf, type FeedbackCategory, type FeedbackSeverity } from '../api/pilot';
 import { pickImage } from '../photos/pick';
@@ -155,10 +166,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   fabPressed: { backgroundColor: colors.accent100 },
-  fabText: { color: colors.accent, fontFamily: fonts.bodyStrong, fontSize: 15 },
+  fabText: { ...StyleSheet.flatten(textStyles.bodyStrong), color: colors.accent },
   form: { gap: space[3] },
-  legend: { fontFamily: fonts.bodyStrong, fontSize: 15, color: colors.neutral900 },
+  legend: { ...StyleSheet.flatten(textStyles.bodyStrong), color: colors.neutral900 },
   options: { gap: space[2] },
   shotRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  shot: { width: 72, height: 128, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.divider },
+  shot: { width: 72, height: 128, borderRadius: radius.control, borderWidth: LINE.hair, borderColor: colors.divider },
 });

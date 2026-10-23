@@ -3,7 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Share, StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, colors, fonts, radius, space } from '@northline/mobile-kit';
+import { ApiError, LINE, radius, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import type { Referral } from '../api/account';
 import { useAuth } from '../auth/AuthProvider';
@@ -118,18 +118,7 @@ function InviteBody({ r, f }: { r: Referral; f: ReturnType<typeof useShopFormat>
 }
 
 const styles = StyleSheet.create({
-  code: {
-    padding: space[4],
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    gap: space[1],
-    alignItems: 'flex-start',
-  },
-  codeText: {
-    fontFamily: fonts.bodyStrong,
-    fontSize: 28,
-    letterSpacing: 3,
-    color: colors.text,
-  },
+  code: { padding: space[4], borderRadius: radius.panel, backgroundColor: semantic.surface, gap: space[1], alignItems: 'flex-start' },
+  codeText: { ...StyleSheet.flatten(textStyles.priceLg), letterSpacing: LINE.bold },
   claim: { gap: space[3], marginTop: space[4] },
 });
