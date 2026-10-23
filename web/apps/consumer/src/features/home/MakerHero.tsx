@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { ForkKnife, Wrench } from '@phosphor-icons/react';
 import { brand, SiteLink, Skeleton, useFormatters, useLocale } from '@northline/ui';
-import { categorySlot, cuisineSlot, departmentSlot } from '@northline/media';
+import { cuisineSlot, departmentSlot } from '@northline/media';
+import { PhotoWell } from '../art/PhotoWell';
 import { Scene } from '../art/Scene';
 import type { Card as Kitchen } from '../food/api';
 import { useZone } from '../location/regions';
@@ -125,7 +126,7 @@ function ProTile({ items }: { items: readonly SearchItem[] | undefined }) {
   return (
     <SideTile href={itemHref(top)} title={t('sideProTitle', { name: top.name })}
       text={top.priceCents != null && top.pricingMode !== 'quote' ? t('sideProText', { price: money(top.priceCents), provider: top.merchant.name }) : t('sideProTextQuote', { provider: top.merchant.name })}
-      picture={image ? <img src={image} alt="" loading="lazy" decoding="async" /> : <Scene slot={[categorySlot(top.category?.id)]} subject={top.category?.id ?? top.name} crop="square" sizes="92px" />} />
+      picture={image ? <img src={image} alt="" loading="lazy" decoding="async" /> : <PhotoWell subject={top.category?.id ?? top.name} />} />
   );
 }
 

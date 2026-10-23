@@ -1,15 +1,16 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
-import { test, type Page } from '@playwright/test';
-import { mockApi, type App } from '../pages/support';
+import { expect, test, type Page } from '@playwright/test';
+import { HYDRATION, mockApi, type App } from '../pages/support';
 import { ROUTES, type ShotRoute } from './routes';
-// @ts-expect-error — plain ES module shared with the Node mock api
-import { photo, PHOTO_PREFIX } from './photos.mjs';
+import { libraryPhotos } from './photos';
 
 /**
  * `make ui-shots`: every route of the consumer site, the Studio and the console, full page, at 1440×900 (`-d`) and
  * 390×844 (`-m`), into ui-shots/<app>/<route>-<d|m>.png at the repository root (git-ignored). Same built apps and mock
- * api as the a11y sweep (playwright.config.ts) plus the demo-like data of shots/fixtures.mjs and generated placeholder
- * photos (shots/photos.mjs, served same-origin so no CSP changes). Nothing is asserted: the pictures are for people.
+ * api as the a11y sweep (playwright.config.ts) plus the demo-like data of shots/fixtures.mjs and the photo library's own
+ * files — the ones `make demo-data` uploads (shots/photos.ts, served same-origin so no CSP changes). Nothing is
+ * asserted about the pictures (they are for people), but a consumer route with a React hydration error fails
+ * (S-182; shots/hydration.spec.ts checks every route in both languages, `make ui-hydration`).
  */
 const OUT = new URL('../../../../ui-shots/', import.meta.url).pathname;
 const DEFAULT_SIZES = [{ suffix: 'd', width: 1440, height: 900 }, { suffix: 'm', width: 390, height: 844 }] as const;
@@ -23,25 +24,17 @@ const SIZES: readonly { suffix: string; width: number; height: number }[] = proc
   }))
   : DEFAULT_SIZES;
 
-async function photos(page: Page) {
-  // the generated photos, the catalogue's media (`/api/v1/public/catalogue/media/{id}`, what listings point at) and
-  // the kitchen's menu-item photos (`/api/v1/merchants/{id}/menu-items/{item}/photo`)
-  const MEDIA = '/api/v1/public/catalogue/media/';
-  const MENU_PHOTO = /^\/api\/v1\/merchants\/[^/]+\/menu-items\/([^/]+)\/photo$/;
-  await page.route(url => url.pathname.startsWith(PHOTO_PREFIX) || url.pathname.startsWith(MEDIA) || MENU_PHOTO.test(url.pathname), route => {
-    const path = new URL(route.request().url()).pathname;
-    const item = MENU_PHOTO.exec(path)?.[1];
-    const seed = item ? `bowl-${item}` : decodeURIComponent(path.startsWith(MEDIA) ? path.slice(MEDIA.length) : path.slice(PHOTO_PREFIX.length)).replace(/\.svg$/, '');
-    return route.fulfill({ status: 200, contentType: 'image/svg+xml', body: photo(seed) });
-  });
-}
-
 async function shoot(page: Page, app: App, r: ShotRoute) {
   mkdirSync(`${OUT}${app}`, { recursive: true });
   // the Studio and the console default to signed in (their screens need a session); the consumer to a guest
   const missing = await mockApi(page, app, { signedIn: r.signedIn ?? app !== 'consumer', down: r.down });
-  await photos(page);
+  await libraryPhotos(page);
   if (r.now) await page.clock.setFixedTime(new Date(r.now));
+  const hydration: string[] = [];
+  if (app === 'consumer') {
+    page.on('console', m => { if ((m.type() === 'error' || m.type() === 'warning') && HYDRATION.test(m.text())) hydration.push(m.text().slice(0, 300)); });
+    page.on('pageerror', e => { if (HYDRATION.test(e.message)) hydration.push(e.message.slice(0, 300)); });
+  }
   if (app !== 'consumer') await page.addInitScript(() => { try { localStorage.setItem('nl.locale', 'en'); } catch { /* ignore */ } });
   for (const s of SIZES) {
     await page.setViewportSize({ width: s.width, height: s.height });
@@ -77,6 +70,7 @@ async function shoot(page: Page, app: App, r: ShotRoute) {
     if (wide.length) appendFileSync(`${OUT}${app}/_overflow.txt`, `${r.name}-${s.suffix}: ${wide.join(' · ')}\n`);
     await page.screenshot({ path: `${OUT}${app}/${r.name}-${s.suffix}.png`, fullPage: !r.click && !r.sheet, animations: 'disabled' });
   }
+  expect(hydration, `${r.path}: React hydration errors`).toEqual([]);
   // what the mock api had no answer for (the browser's requests): a page that looks empty usually needs one of these
   if (missing.length) appendFileSync(`${OUT}${app}/_missing-api.txt`, `${r.name}: ${[...new Set(missing)].join(', ')}\n`);
 }

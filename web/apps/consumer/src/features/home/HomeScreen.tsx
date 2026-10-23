@@ -7,6 +7,7 @@ import {
   type PictureGridItem,
 } from '@northline/ui';
 import { categorySlot, cuisineSlot, departmentSlot } from '@northline/media';
+import { PhotoWell } from '../art/PhotoWell';
 import { Scene } from '../art/Scene';
 import { activityQuery } from '../account/api';
 import { useKitchens, type Card as Kitchen } from '../food/api';
@@ -135,7 +136,7 @@ function DealTile({ t, landing }: { t: T; landing: Landing | undefined }) {
         <SiteLink href={`/products/${product.productId}`} className="nl-home-deal-link">
           <span className="nl-home-deal-pic" aria-hidden>
             {product.imageUrl ? <img src={product.imageUrl} alt="" loading="lazy" decoding="async" />
-              : <Scene slot={[categorySlot(product.categoryId)]} subject={product.name} crop="square" sizes="(min-width: 900px) 22vw, 44vw" />}
+              : <PhotoWell subject={`${product.categoryId ?? ''} ${product.name}`} />}
             {offer?.compareAtCents ? <DealBadge className="nl-home-deal-badge" percent={Math.round((1 - offer.priceCents / offer.compareAtCents) * 100)} /> : null}
           </span>
           <span className="nl-home-deal-name">{product.name}</span>
@@ -191,7 +192,7 @@ function KitchenRail({ t, kitchens, loading }: { t: T; kitchens: UseQueryResult<
                 <li key={k.merchantId}>
                   <ServiceCard href={k.slug ? `/food/${k.slug}` : '/food'} layout="stack" level={3} name={k.name}
                     kind={k.cuisines.map(c => CUISINE_NAMES[c]?.[locale] ?? c).join(' · ') || undefined}
-                    mark={<Scene slot={[cuisineSlot(k.cuisines[0]), 'banner/food']} subject={k.cuisines[0] ?? 'food'} crop="card" sizes="(min-width: 900px) 18vw, 44vw" />}
+                    mark={<PhotoWell subject={k.cuisines[0] ?? 'food'} />}
                     rating={k.reviews > 0 ? k.rating : null} reviewCount={k.reviews}
                     place={[t('eta', { from: k.etaFromMin, to: k.etaToMin }), k.priceLevel].filter(Boolean).join(' · ')} />
                 </li>

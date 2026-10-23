@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, MIN_TARGET, colors, fonts, radius, semantic, space, type Locale } from '@northline/mobile-kit';
+import { Icon, MIN_TARGET, Segmented, colors, fonts, radius, semantic, space, type Locale } from '@northline/mobile-kit';
 
 import { useAuth } from '../auth/AuthProvider';
 import { config, fullNav, legalUrl } from '../config';
@@ -85,26 +85,17 @@ export function Account() {
   const language = (
     <View style={styles.language}>
       <Body>{t('you.language')}</Body>
-      <View accessibilityRole="radiogroup" accessibilityLabel={t('you.language')} style={styles.segmented}>
-        {(
-          [
-            ['en', 'English'],
-            ['fr-CA', 'Français'],
-          ] as const
-        ).map(([v, label]) => (
-          <Pressable
-            key={v}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: locale === v }}
-            accessibilityLabel={label}
-            onPress={() => changeLanguage(v)}
-            style={[styles.segment, locale === v && styles.segmentOn]}
-            testID={`language-${v}`}
-          >
-            <Text style={[styles.segmentText, locale === v && styles.segmentTextOn]}>{label}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <Segmented
+        label={t('you.language')}
+        options={[
+          { value: 'en', label: 'English' },
+          { value: 'fr-CA', label: 'Français' },
+        ]}
+        value={locale}
+        onChange={(v) => changeLanguage(v)}
+        fill
+        testID="language"
+      />
       {langError ? <Body tone="small">{t('account.you.languageNotSaved')}</Body> : null}
     </View>
   );
@@ -231,7 +222,7 @@ export function Account() {
       </SettingsGroup>
 
       {language}
-      <Button label={t('you.signOut')} tone="danger" large busy={busy} onPress={() => void out()} testID="sign-out" />
+      <Button label={t('you.signOut')} tone="secondary" large busy={busy} onPress={() => void out()} testID="sign-out" />
       {legal}
     </Screen>
   );
@@ -240,7 +231,7 @@ export function Account() {
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET },
   headText: { flex: 1, minWidth: 0, gap: 2 },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: semantic['action-primary'], alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 64, height: 64, borderRadius: radius.round, backgroundColor: semantic['action-primary'], alignItems: 'center', justifyContent: 'center' },
   initials: { fontFamily: fonts.display, fontSize: 24, color: semantic['action-primary-text'] },
   hi: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.text },
   section: { gap: space[2] },
@@ -264,10 +255,5 @@ const styles = StyleSheet.create({
   walletPoints: { fontFamily: fonts.bold, fontSize: 18, color: semantic['badge-brand-text'] },
   rows: { paddingTop: space[2] },
   language: { gap: space[2], paddingTop: space[3] },
-  segmented: { flexDirection: 'row', backgroundColor: semantic['surface-muted'], borderRadius: radius.pill, padding: 3, gap: 2 },
-  segment: { flex: 1, minHeight: MIN_TARGET, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill },
-  segmentOn: { backgroundColor: colors.surface },
-  segmentText: { fontFamily: fonts.medium, fontSize: 15, color: colors.text },
-  segmentTextOn: { fontFamily: fonts.bold, color: colors.text },
   legal: { paddingTop: space[6] },
 });

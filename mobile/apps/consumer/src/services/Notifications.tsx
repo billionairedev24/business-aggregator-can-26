@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { colors, fonts, space } from '@northline/mobile-kit';
+import { colors, fonts, radius, space } from '@northline/mobile-kit';
 
 import type { ActivityItem, NotificationPrefs } from '../api/services';
 import { useAuth } from '../auth/AuthProvider';
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   list: { gap: space[4] },
   item: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  dot: { width: 10, height: 10, borderRadius: 5, marginTop: 6 },
+  dot: { width: 10, height: 10, borderRadius: radius.round, marginTop: 6 },
   title: { fontFamily: fonts.bodyStrong },
   footer: { gap: 2 },
 });

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, MIN_TARGET, colors, fonts, semantic, space } from '@northline/mobile-kit';
+import { Icon, MIN_TARGET, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
 
 import { useI18n } from '../i18n';
 
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   step: { gap: space[3], paddingBottom: space[4], borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   later: { paddingBottom: space[3] },
   head: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET },
-  num: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.actionPrimary, alignItems: 'center', justifyContent: 'center' },
+  num: { width: 28, height: 28, borderRadius: radius.status, backgroundColor: semantic['selected'], alignItems: 'center', justifyContent: 'center' },
   numDone: { backgroundColor: semantic.success },
   numLater: { backgroundColor: semantic['surface-muted'] },
   numText: { fontFamily: fonts.bold, fontSize: 14, color: colors.actionPrimaryText },

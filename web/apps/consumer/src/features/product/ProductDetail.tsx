@@ -8,8 +8,7 @@ import { useMarketFollowsLocation, withMarket } from '../shop/market';
 import { productQuery, useAddToCart, type Offer, type ProductPage } from './api';
 import { Crumbs } from '../pages/Crumbs';
 import { RailSection, RailTrack } from '../pages/Rail';
-import { departmentSlot } from '@northline/media';
-import { Scene } from '../art/Scene';
+import { PhotoWell } from '../art/PhotoWell';
 import { PlaceButton } from '../pages/PlaceButton';
 import { useProductT } from './messages';
 import { usePlusBadge } from '../loyalty/PlusBadge';
@@ -206,7 +205,7 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
               {offer.more.map(m => (
                 <li key={m.productId}>
                   <SiteLink href={link(`/products/${m.productId}`)} className="nl-tile product-more-card" aria-label={t('moreItem', { name: m.name, price: money(m.priceCents) })}>
-                    <span className="nl-tile-pic product-more-pic"><Scene slot={[departmentSlot(data.departmentSlug)]} subject={`${m.name} ${data.departmentSlug ?? ''}`} crop="square" sizes="180px" /></span>
+                    <span className="nl-tile-pic product-more-pic"><PhotoWell subject={`${data.departmentSlug ?? ''} ${m.name}`} /></span>
                     <span className="nl-tile-name">{m.name}</span>
                     <span className="product-more-price">{money(m.priceCents)}</span>
                   </SiteLink>

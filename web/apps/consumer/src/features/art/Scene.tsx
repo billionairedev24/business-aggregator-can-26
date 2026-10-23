@@ -1,7 +1,9 @@
+import type { CSSProperties } from 'react';
+import clsx from 'clsx';
 import { Photo, type Crop } from '@northline/ui';
-import type { Photo as PhotoData } from '@northline/media';
-import { Art, type Tone } from './Art';
-import type { Subject } from './subjects';
+import { photoFor, type Photo as PhotoData } from '@northline/media';
+import { PhotoWell } from './PhotoWell';
+import type { Subject, Tone } from './subjects';
 
 export interface SceneProps {
   /**
@@ -11,11 +13,13 @@ export interface SceneProps {
   slot: string | readonly (string | null | undefined)[];
   /** An already resolved photo (tests); wins over `slot`. */
   photo?: PhotoData | null;
-  /** The drawn picture while no slot has a photo yet (Art's subject: a slug, code or name). */
+  /** Whose icon the designed fallback shows while no slot has a photo (a slug, code or name). */
   subject: string;
+  /** No longer drawn (S-181 retired the illustrated scenes); kept so the callers' colour hints still type-check. */
   tone?: Tone;
+  /** The fallback's icon instead of the subject's. */
   draw?: Subject;
-  /** contain: a wide banner (16:9 photo; the drawing keeps its size). cover (default): tiles and cards. */
+  /** contain: a wide banner (16:9 photo). cover (default): tiles and cards. */
   fit?: 'cover' | 'contain';
   /** The photo's crop; by default 16:9 for banners, 4:3 otherwise. */
   crop?: Crop;
@@ -29,15 +33,21 @@ export interface SceneProps {
 }
 
 /**
- * A picture of a place in the market (owner, 2026-10-19: "use real pictures"): the stock photo of the slot from the
- * photo library, and only while the library has none for it, the drawn still life (`Art`). docs/runbooks/photos.md.
+ * A picture of a place in the market: the stock photo of the slot from the photo library (`srcset` of its crop, cut
+ * around its focal point), and only when no slot has one, the designed fallback — the dashed photo well with the
+ * subject's icon (S-181). Never upscaled: a photo whose crop is narrower than the box shows at its own width, centred
+ * on the well, instead of stretched (a banner then reads as a framed picture, not a blurry one). docs/runbooks/photos.md.
  */
-export function Scene({ slot, photo, subject, tone, draw, fit = 'cover', crop, sizes, priority, alt, className }: SceneProps) {
+export function Scene({ slot, photo, subject, draw, fit = 'cover', crop, sizes, priority, alt, className }: SceneProps) {
+  const p = photo !== undefined ? photo : photoFor(slot);
+  const c = crop ?? (fit === 'contain' ? 'wide' : 'card');
+  if (!p) return <PhotoWell subject={subject} draw={draw} className={className} />;
+  const native = p.sizes(c, 'jpg').at(-1)?.[0];
+  // the widest variant there is: the box may grow past it, the picture does not (a data value, not a style choice)
+  const style = native ? ({ '--nl-scene-max': `${native}px` } as CSSProperties) : undefined;
   return (
-    <Photo
-      slot={slot} photo={photo} crop={crop ?? (fit === 'contain' ? 'wide' : 'card')} sizes={sizes} priority={priority}
-      alt={alt} decorative={alt === undefined} className={className}
-      fallback={<Art subject={subject} tone={tone} draw={draw} fit={fit} className={className} />}
-    />
+    <span className={clsx('nl-scene', className)} style={style}>
+      <Photo photo={p} crop={c} sizes={sizes} priority={priority} alt={alt} decorative={alt === undefined} />
+    </span>
   );
 }

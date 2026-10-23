@@ -980,7 +980,7 @@
    "label": "Insurance broker",
    "query": "Insurance broker",
    "use": "Services pages and cards",
-   "fallback": "category/service.professional"
+   "designed": true
   },
   {
    "slot": "category/service.professional.translator",
@@ -1508,7 +1508,7 @@
    "label": "Tobacco & vape",
    "query": "Tobacco vape",
    "use": "Shop departments and product cards",
-   "fallback": "category/shop.restricted"
+   "designed": true
   },
   {
    "slot": "category/shop.restricted.cannabis-accessories",
@@ -1516,7 +1516,7 @@
    "label": "Cannabis accessories",
    "query": "Cannabis accessories",
    "use": "Shop departments and product cards",
-   "fallback": "category/shop.restricted"
+   "designed": true
   },
   {
    "slot": "category/food.format",

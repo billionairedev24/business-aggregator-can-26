@@ -13,6 +13,8 @@ describe('photo credits (/credits)', () => {
     ]} />);
     expect(screen.getByRole('heading', { name: 'Photo credits' })).toBeTruthy();
     expect(screen.getByText('2 photographs')).toBeTruthy();
+    // S-181: the same attribution as data, served with the photos
+    expect(screen.getByRole('link', { name: 'credits.json' }).getAttribute('href')).toBe('/photos/credits.json');
     expect(screen.getByRole('link', { name: 'by Jane Doe' })).toHaveAttribute('href', 'https://www.pexels.com/@jane');
     expect(screen.getByRole('link', { name: 'Licence: Pexels License' })).toHaveAttribute('href', 'https://www.pexels.com/license/');
     expect(screen.getByRole('link', { name: 'Licence: CC BY 2.0' })).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/2.0/');

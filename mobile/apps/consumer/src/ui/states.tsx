@@ -3,7 +3,22 @@ import { router } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, type DimensionValue } from 'react-native';
 
-import { ApiError, NetworkError, SignedOutError, colors, fonts, radius, semantic, space, type Subject, Scene } from '@northline/mobile-kit';
+import {
+  ApiError,
+  EmptyState as KitEmptyState,
+  Icon,
+  LINE,
+  NetworkError,
+  SignedOutError,
+  Skeleton as KitSkeleton,
+  TYPE,
+  colors,
+  radius,
+  semantic,
+  space,
+  type IconName,
+  type Subject,
+} from '@northline/mobile-kit';
 
 import { useI18n, type MessageKey } from '../i18n';
 import { Body, Button, type } from './primitives';
@@ -32,9 +47,9 @@ export function OfflineBanner() {
   );
 }
 
-/** A grey block standing in for content while it loads. */
+/** A grey block standing in for content while it loads: the kit's Skeleton (the well grey). */
 export function Skeleton({ height = 16, width = '100%', round }: { height?: number; width?: DimensionValue; round?: boolean }) {
-  return <View style={[styles.skeleton, { height, width }, round && { borderRadius: height / 2 }]} />;
+  return <KitSkeleton height={height} width={width} round={round} />;
 }
 
 /** Rows of skeletons (a list), announced once as "Loading…". */
@@ -59,23 +74,30 @@ export function Loading() {
   );
 }
 
+/** The drawing words the screens pass (`art`, `draw.main`) → the kit's icon for the empty state. */
+const EMPTY_ICON: Record<string, IconName> = {
+  grocery: 'basket',
+  search: 'magnifying-glass',
+  services: 'wrench',
+  shop: 'storefront',
+  basket: 'basket',
+  receipt: 'receipt',
+  user: 'user',
+  HandHeart: 'heart',
+  Heart: 'heart',
+  Handshake: 'calendar-check',
+  Receipt: 'receipt',
+  ShoppingBag: 'shopping-bag',
+  Wrench: 'wrench',
+};
+
 /**
- * Nothing to show (light direction): a linen panel with a small illustrated scene (`art`: the subject's words, as
- * `Art` reads them — "basket", "receipt", …), an optional title in the display face, the line and the one action.
+ * Nothing to show (Plainsight): the kit's EmptyState — the well grey, the subject's icon (from `art` / `draw`, the
+ * words the screens already pass), an optional title, the line and the one action.
  */
 export function EmptyState({ message, action, onAction, art, draw, title }: { message: string; action?: string; onAction?: () => void; art?: string; draw?: Subject; title?: string }) {
-  return (
-    <View style={styles.empty} testID="empty">
-      {art || draw ? <Scene slot={art === 'search' ? 'empty/search' : 'empty/generic'} subject={art ?? 'empty'} draw={draw} style={styles.emptyArt} /> : null}
-      {title ? <Text style={styles.emptyTitle}>{title}</Text> : null}
-      {message ? (
-        <Body tone="muted" style={styles.emptyText}>
-          {message}
-        </Body>
-      ) : null}
-      {action && onAction ? <Button label={action} onPress={onAction} style={styles.emptyAction} /> : null}
-    </View>
-  );
+  const icon = EMPTY_ICON[art ?? ''] ?? EMPTY_ICON[String(draw?.main ?? '')] ?? 'package';
+  return <KitEmptyState icon={icon} title={title} message={message || undefined} action={action} onAction={onAction} />;
 }
 
 /** What went wrong, in words for the person: no connection, the api's own message, or a generic line. */
@@ -110,7 +132,9 @@ export function SignInPrompt({ message, art = 'user' }: { message: string; art?:
   const { t } = useI18n();
   return (
     <View style={styles.empty} testID="sign-in-prompt">
-      <Scene slot="empty/signed-out" subject={art} draw={{ main: 'HandHeart', side: 'Key' }} style={styles.emptyArt} />
+      <View style={styles.emptyIcon}>
+        <Icon name={EMPTY_ICON[art] ?? 'user'} size={TYPE['price-lg']} color={semantic['well-ink']} />
+      </View>
       <Body tone="muted" style={styles.emptyText}>
         {message}
       </Body>
@@ -151,15 +175,13 @@ export function QueryView<T>({
 }
 
 const styles = StyleSheet.create({
-  offline: { marginHorizontal: space[4], marginTop: space[2], padding: space[3], borderRadius: radius.lg, backgroundColor: semantic['warning-bg'] },
-  skeleton: { backgroundColor: semantic['surface-muted'], borderRadius: radius.lg },
+  offline: { marginHorizontal: space[4], marginTop: space[2], padding: space[3], borderRadius: radius.panel, backgroundColor: semantic['status-warning-bg'] },
   list: { gap: space[3] },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space[8], backgroundColor: colors.canvas },
-  empty: { gap: space[3], padding: space[5], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], alignItems: 'center' },
-  emptyArt: { width: 160, height: 120, borderRadius: radius.lg },
-  emptyTitle: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26, color: colors.text, textAlign: 'center' },
+  empty: { gap: space[3], paddingVertical: space[8], paddingHorizontal: space[5], borderRadius: radius.panel, backgroundColor: semantic.well, alignItems: 'center' },
+  emptyIcon: { width: space[16] - space[1], height: space[16] - space[1], alignItems: 'center', justifyContent: 'center', borderRadius: radius.round, borderWidth: LINE.hair, borderStyle: 'dashed', borderColor: semantic['well-line'], backgroundColor: semantic.surface },
   emptyText: { textAlign: 'center' },
   emptyAction: { alignSelf: 'stretch' },
-  error: { gap: space[2], padding: space[4], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['danger-border'], backgroundColor: semantic['danger-bg'] },
+  error: { gap: space[2], padding: space[4], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['danger-border'], backgroundColor: semantic['status-danger-bg'] },
   errorText: { ...StyleSheet.flatten(type.body), color: semantic.danger },
 });

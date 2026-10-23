@@ -1,4 +1,4 @@
-import { credits, photoFor, type Credit } from '@northline/media';
+import { credits, photoBase, photoFor, type Credit } from '@northline/media';
 import { Photo, useLocale } from '@northline/ui';
 import { useCreditsT } from './messages';
 
@@ -19,6 +19,7 @@ export function CreditsScreen({ list = credits() }: { list?: Credit[] }) {
       {list.length === 0 ? <p className="nl-credits-none">{t('none')}</p> : (
         <>
           <p className="nl-credits-count">{t('count', { count: list.length })}</p>
+          <p className="nl-credits-count">{t('data')} <a href={`${photoBase()}credits.json`} type="application/json">{t('dataLink')}</a></p>
           <ul className="nl-credits-list">{list.map(c => <CreditRow key={c.slot} credit={c} />)}</ul>
         </>
       )}

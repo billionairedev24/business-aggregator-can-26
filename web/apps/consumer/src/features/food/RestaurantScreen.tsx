@@ -13,7 +13,7 @@ import { subtotalOf, useFoodCart, type FoodCart } from './foodCart';
 import { CUISINE_NAMES, containsLabel, TAGS, useFoodT } from './messages';
 import { Crumbs } from '../pages/Crumbs';
 import { cuisineSlot } from '@northline/media';
-import { Art } from '../art/Art';
+import { PhotoWell } from '../art/PhotoWell';
 import { Scene } from '../art/Scene';
 import { choiceNames, defaults, deltaOf, pickProblems, toggle, visibleGroups } from './modifiers';
 
@@ -145,7 +145,7 @@ function DishRow({ t, d, open, disabled, onToggle, onAdd }: { t: T; d: Dish; ope
         {open && <DishEditor t={t} d={d} onAdd={onAdd} onCancel={onToggle} />}
       </div>
       <button type="button" className="nl-rest-plus" aria-expanded={open} aria-label={t('add', { name: d.name })}
-        disabled={disabled || !d.availableNow} onClick={onToggle}><Art subject={d.name} /><span className="nl-rest-plus-sign" aria-hidden>+</span></button>
+        disabled={disabled || !d.availableNow} onClick={onToggle}><PhotoWell subject={d.name} /><span className="nl-rest-plus-sign" aria-hidden>+</span></button>
     </div>
   );
 }
@@ -238,7 +238,7 @@ function ComboRow({ t, c, data, open, disabled, onToggle, onAdd }: {
           </div>
         )}
       </div>
-      <button type="button" className="nl-rest-plus" aria-expanded={open} aria-label={t('add', { name: c.name })} disabled={disabled} onClick={onToggle}><Art subject={c.name} /><span className="nl-rest-plus-sign" aria-hidden>+</span></button>
+      <button type="button" className="nl-rest-plus" aria-expanded={open} aria-label={t('add', { name: c.name })} disabled={disabled} onClick={onToggle}><PhotoWell subject={c.name} /><span className="nl-rest-plus-sign" aria-hidden>+</span></button>
     </div>
   );
 }

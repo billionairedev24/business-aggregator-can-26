@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   choices: { gap: space[2] },
   choice: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET, paddingHorizontal: space[3], borderRadius: radius.md, borderWidth: 1, borderColor: colors.divider },
   choiceOn: { borderColor: colors.accent, backgroundColor: colors.accent100 },
-  dot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: colors.neutral500 },
+  dot: { width: 18, height: 18, borderRadius: radius.round, borderWidth: 2, borderColor: colors.neutral500 },
   dotOn: { borderColor: colors.accent, backgroundColor: colors.accent },
   choiceText: { flex: 1, fontFamily: fonts.body, fontSize: 16, color: colors.text },
   input: {

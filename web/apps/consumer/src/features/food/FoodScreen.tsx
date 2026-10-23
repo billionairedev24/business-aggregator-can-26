@@ -4,6 +4,7 @@ import { Chip, EmptyState, FilterChip, ErrorState, Segmented, ServiceCard, Skele
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { useKitchens, type Card } from './api';
 import { cuisineSlot } from '@northline/media';
+import { PhotoWell } from '../art/PhotoWell';
 import { Scene } from '../art/Scene';
 import { PlaceButton } from '../pages/PlaceButton';
 import { CUISINE_NAMES, TAGS, useFoodT } from './messages';
@@ -134,7 +135,7 @@ function KitchenCard({ t, k, pickup, cuisineName }: { t: T; k: Card; pickup: boo
   return (
     <ServiceCard href={k.slug ? `/food/${k.slug}` : '/food'} layout="stack" level={3} name={k.name}
       kind={k.cuisines.map(cuisineName).join(' · ') || undefined}
-      mark={<Scene slot={[cuisineSlot(k.cuisines[0]), 'banner/food']} subject={k.cuisines[0] ?? 'food'} crop="card" sizes="(min-width: 960px) 18vw, 45vw" />}
+      mark={<PhotoWell subject={k.cuisines[0] ?? 'food'} />}
       rating={k.reviews > 0 ? k.rating : null} reviewCount={k.reviews} place={place}
       note={[state, diet].filter(Boolean).join(' · ') || undefined} />
   );

@@ -45,6 +45,21 @@ for (const root of roots) {
     });
   }
 }
+// S-181: a listing without a photo of its own shows the designed fallback (art/PhotoWell: the dashed well with the
+// category icon), never a stock photo through Scene — that repeated one category photo across a page of cards.
+const LISTING_FALLBACK = /\b(?:fallback|mark)=\{\s*<Scene\b/g;
+const photoProblems = [];
+for (const file of walk(path.join(webRoot, 'apps/consumer/src'))) {
+  const rel = path.relative(webRoot, file).split(path.sep).join('/');
+  if (skip.some(r => r.test(rel)) || !rel.endsWith('.tsx')) continue;
+  readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+    for (const m of line.matchAll(LISTING_FALLBACK)) photoProblems.push(`${rel}:${i + 1}  ${m[0]}`);
+  });
+}
+if (photoProblems.length) {
+  console.error(`A listing's missing photo must be the designed <PhotoWell> (features/art/PhotoWell.tsx), not a stock photo:\n${photoProblems.map(p => '  ' + p).join('\n')}`);
+  process.exit(1);
+}
 // ── tokens v2 (S-167/S-168): no raw values in the component library and the app shells ──────────────────────────
 // Font sizes and spacing (padding, margin, gap) come from the scale (`var(--text-*)`, `var(--type-*)`, `var(--space-*)`),
 // colours from the semantic roles: a raw `13px`, `#fff`, `rgb(…)` or `white` there is a look patched past the tokens.

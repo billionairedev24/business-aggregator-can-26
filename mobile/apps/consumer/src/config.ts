@@ -48,3 +48,6 @@ export const legalUrl = (doc: 'terms' | 'privacy') => `${config.siteOrigin}/lega
  */
 export const fullNav = () => process.env.EXPO_PUBLIC_FULL_NAV === '1';
 export const testingTools = () => process.env.EXPO_PUBLIC_TESTING_TOOLS === '1';
+
+/** S-169: dev-only screens (the kit's gallery at /dev/gallery) — a development build (Metro, `__DEV__`) or the fixture build, never a store build. */
+export const devTools = () => (typeof __DEV__ !== 'undefined' && __DEV__) || config.fixtures;

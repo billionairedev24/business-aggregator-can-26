@@ -184,6 +184,7 @@ The profiles are docker-compose.yml's: `db`, `cache`, `events` (Kafka + topic cr
 | `make e2e` · `e2e-smoke` · `e2e-target ENV=staging` | the end-to-end suite (S-117): its own disposable Postgres, the whole stack under `local`, Playwright journeys + the Studio smoke sweep · only the sweep · against a deployed environment ([runbooks/e2e.md](runbooks/e2e.md)) |
 | `make a11y` | the accessibility page sweep (S-109): builds the three web apps, Playwright + axe against them with a mock api ([a11y/audit.md](a11y/audit.md)); `make a11y-record` refreshes its fixtures |
 | `make ui-shots` | full-page screenshots of every web route, desktop and phone, without a backend ([below](#look-at-the-ui-make-ui-shots)) |
+| `make ui-hydration` | S-182: fails on any React hydration error on every consumer route (desktop and phone, en and fr), on the ui-shots servers and data |
 | `make mobile-shots` | screenshots of every consumer and courier app screen at 390×844, without a phone or a backend ([below](#the-native-apps-make-mobile-shots)) |
 | `make all` · `make build` · `make test` · `make lint` · `make format` | both stacks |
 | `make clean` · `make clean-all` | build outputs and runner logs · also `node_modules` and `server/.gradle` |
@@ -212,9 +213,13 @@ detail sheet, an editor step.
 No backend is needed: the apps run as built (`vite preview` for the Studio and the console, the consumer's own Node
 server) on ports 4641–4644, answered by the accessibility sweep's mock api (`web/packages/a11y/fixtures`, recorded from
 the apps' own tests) plus demo-like data in `web/packages/a11y/shots/fixtures.mjs`: a catalogue with photos, shops,
-providers, a fallback market, a Studio dashboard. The photos are placeholders drawn as SVG on request
-(`shots/photos.mjs`) and served from the apps' own origin under `/api/v1/public/catalogue/media/…` — nothing is
-fetched from the internet and no Content-Security-Policy changes. The Studio and the console are signed in (Ravi
+providers, a fallback market, a Studio dashboard. The photos are the photo library's own files
+(`web/packages/media`) — the very ones `make demo-data` uploads, so the pictures are what the demo shows (S-182):
+listings name a library slot (`media('demo/listing/bakery.sourdough')`) and `shots/photos.ts` serves its source photo
+from the apps' own origin under `/api/v1/public/catalogue/media/…`; a slot without a photo answers 404 and the page
+shows the designed photo well, as the demo does. Nothing is fetched from the internet and no Content-Security-Policy
+changes. A consumer route with a React hydration error fails the run; `make ui-hydration` checks every consumer route
+for that alone (1440 and 390 wide, English and French, `UI_SHOTS_SKIP_BUILD=1` reuses the build). The Studio and the console are signed in (Ravi
 Sandhu, Priya Natarajan), the consumer is a guest unless the route says `signedIn`. A page that still looks empty
 usually lacks an answer: `ui-shots/<app>/_missing-api.txt` lists the requests nothing answered — add one to
 `shots/fixtures.mjs`. A page wider than the screen (a sideways scroll on a phone) is named in

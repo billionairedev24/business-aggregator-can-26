@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   overlay: { position: 'absolute', top: 0, left: GUTTER, right: GUTTER, flexDirection: 'row' },
   avatar: { position: 'absolute', left: GUTTER, bottom: -36, width: 76, height: 76, borderRadius: radius.lg + 4, borderWidth: 3, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...shadow.md },
   idBlock: { gap: 4, paddingTop: 44 },
-  seal: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, marginTop: 4, borderRadius: radius.pill, backgroundColor: semantic['success-bg'] },
+  seal: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, marginTop: 4, borderRadius: radius.status, backgroundColor: semantic['success-bg'] },
   sealText: { fontFamily: fonts.semibold, fontSize: 13, color: semantic.success },
   heroName: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.text },
   figures: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },

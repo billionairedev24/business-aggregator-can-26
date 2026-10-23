@@ -6,8 +6,7 @@ import { cartQuery, useChangeCartLine } from '../cart/api';
 import { useAddToCart } from '../product/api';
 import { imageUrl, itemHref, type SearchItem } from './api';
 import { useSearchT } from './messages';
-import { categorySlot } from '@northline/media';
-import { Scene } from '../art/Scene';
+import { PhotoWell } from '../art/PhotoWell';
 import { usePlusBadge } from '../loyalty/PlusBadge';
 import { useZone } from '../location/regions';
 import { windowRange } from '../shop/format';
@@ -29,7 +28,7 @@ export function ItemCard({ item, variant = 'grid', level = 3 }: { item: SearchIt
     return (
       <ServiceCard href={href} layout={variant === 'grid' ? 'stack' : 'row'} level={level}
         kind={item.kind === 'merchant' ? t(`type_${item.merchant.type}` as 'type_seller') : item.category?.name ?? undefined}
-        name={item.name} imageUrl={image} mark={<Scene slot={[categorySlot(item.category?.id)]} subject={item.category?.id ?? item.name} crop="square" sizes="120px" />} rating={item.rating} reviewCount={item.reviewCount}
+        name={item.name} imageUrl={image} mark={<PhotoWell subject={item.category?.id ?? item.name} />} rating={item.rating} reviewCount={item.reviewCount}
         place={[item.kind === 'service' ? item.merchant.name : null, km].filter(Boolean).join(' · ') || undefined}
         note={item.kind === 'service' && item.instantBook ? t('tag_instant') : undefined}
         priceCents={quote ? null : item.priceCents} priceText={quote ? t('quote') : undefined}
@@ -45,7 +44,7 @@ function ProductItemCard({ item, href, image, km, variant, level }: { item: Sear
   const product = item.kind === 'product';
   return (
     <OfferCard offerId={product ? item.id : null} href={href} name={item.name} image={image} variant={variant} level={level}
-      fallback={<Scene slot={[categorySlot(item.category?.id)]} subject={`${item.name} ${item.category?.id ?? ''}`} crop="square" sizes="(min-width: 960px) 240px, 45vw" />}
+      fallback={<PhotoWell subject={`${item.category?.id ?? ''} ${item.name}`} />}
       priceCents={item.priceCents ?? null} sizeWords={[item.name, item.description]}
       meta={[item.merchant.name, km ?? item.category?.name].filter(Boolean).join(' · ')}
       rating={item.rating} reviewCount={item.reviewCount} soldOut={!!item.soldOut} onTonight={!!item.onTonightsRun}
