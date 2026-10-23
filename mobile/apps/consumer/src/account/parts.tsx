@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, Icon, LINE, MIN_TARGET, radius, semantic, space, textStyles, type IconName } from '@northline/mobile-kit';
+import { colors, Icon, LINE, MIN_TARGET, Switch, radius, semantic, space, textStyles, type IconName } from '@northline/mobile-kit';
 
 import { type } from '../ui/primitives';
 
@@ -56,23 +56,9 @@ export function LineRow({ children, right, testID }: { children: ReactNode; righ
   );
 }
 
+/** A labelled on/off switch row: the kit's Switch (the whole row the target, ink when on). */
 export function Toggle({ label, value, onChange, disabled, testID }: { label: string; value: boolean; onChange: (v: boolean) => void; disabled?: boolean; testID?: string }) {
-  return (
-    <View style={styles.row}>
-      <Text style={[type.body, styles.name]}>{label}</Text>
-      <Switch
-        accessibilityRole="switch"
-        accessibilityLabel={label}
-        accessibilityState={{ checked: value, disabled: !!disabled }}
-        value={value}
-        onValueChange={onChange}
-        disabled={disabled}
-        trackColor={{ true: colors.accent, false: colors.neutral300 }}
-        thumbColor={colors.surface}
-        testID={testID}
-      />
-    </View>
-  );
+  return <Switch label={label} value={value} onChange={onChange} disabled={disabled} testID={testID} />;
 }
 
 /** The design's h3 (16px, semibold) between groups of rows. */
