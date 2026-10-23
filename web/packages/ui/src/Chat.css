@@ -1,9 +1,9 @@
 /* Conversation bubbles (design 02 › messages, help case conversation). Tokens only. */
-.nl-chat { display: flex; flex-direction: column; gap: 12px; font-size: 15px; min-width: 0; }
-.nl-chat-bubble { max-width: 80%; padding: 12px 14px; border-radius: var(--radius-md); overflow-wrap: anywhere; min-width: 0; }
+.nl-chat { display: flex; flex-direction: column; gap: var(--space-3); font-size: var(--type-body); min-width: 0; }
+.nl-chat-bubble { max-width: 80%; padding: var(--space-2-5) var(--space-3); border-radius: var(--radius-panel); overflow-wrap: anywhere; min-width: 0; }
 .nl-chat-bubble[data-side='them'] { align-self: flex-start; background: var(--color-surface); border: 1px solid var(--color-border); }
-.nl-chat-bubble[data-side='me'] { align-self: flex-end; background: var(--color-surface-brand); color: var(--color-badge-brand-text); }
+.nl-chat-bubble[data-side='me'] { align-self: flex-end; background: var(--color-promo-bg); color: var(--color-promo-text); }
 .nl-chat-bubble[data-pending] { opacity: .7; }
 .nl-chat-bubble[data-failed] { box-shadow: inset 0 0 0 1px var(--color-danger-border); }
 .nl-chat-text { white-space: pre-wrap; }
-.nl-chat-meta { margin-top: 4px; font-size: 12px; }
+.nl-chat-meta { margin-top: var(--space-1); font-size: var(--type-meta); }

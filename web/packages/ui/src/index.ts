@@ -28,3 +28,4 @@ export * from './Commerce';
 export * from './Photo';
 export * from './PilotFeedback';
 export * from './FailureScreen';
+export * from './Feedback';

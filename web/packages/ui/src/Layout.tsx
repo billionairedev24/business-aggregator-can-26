@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { WarningCircle } from '@phosphor-icons/react';
+import { WarningCircle, type Icon } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
 
 const useT = defineMessages({ en: { retry: 'Retry', loading: 'Loading…' }, fr: { retry: 'Réessayer', loading: 'Chargement…' } });
@@ -13,7 +13,7 @@ export interface PageHeaderProps { kicker?: ReactNode; title: ReactNode; lede?: 
 export function PageHeader({ kicker, title, lede, actions }: PageHeaderProps) {
   return (
     <div className="nl-page-head">
-      <div style={{ minWidth: 0 }}>
+      <div className="nl-page-head-text">
         {kicker ? <span className="nl-kicker">{kicker}</span> : null}
         <h1 className="nl-page-title">{title}</h1>
         {lede ? <p className="nl-lede">{lede}</p> : null}
@@ -58,7 +58,7 @@ function FallbackHeading({ placeholder }: { placeholder?: ReactNode }) {
  * whose `PageSkeleton` / `ErrorState` show `title` as the page's h1 (S-142).
  */
 export const PageState = ({ title, children }: { title: string; children: ReactNode }) =>
-  <main id="main" style={{ padding: 32 }}><PageHeadingProvider value={title}>{children}</PageHeadingProvider></main>;
+  <main id="main" className="nl-page-state"><PageHeadingProvider value={title}>{children}</PageHeadingProvider></main>;
 
 export const Kpi = ({ value, label }: { value: ReactNode; label: ReactNode }) => <div><div className="nl-kpi-value">{value}</div><div className="nl-kpi-label">{label}</div></div>;
 export const KpiRow = ({ children }: { children: ReactNode }) => <div className="nl-kpis">{children}</div>;
@@ -86,29 +86,43 @@ export function Meter({ label, value, display, floor = 0 }: { label: ReactNode; 
   );
 }
 
+/** Initials in a circle (neutral grey, or solid ink with `tone="dark"`); `size` is data (the slot's diameter), so it travels as a custom property. */
 export const Avatar = ({ initials, size = 34, tone = 'accent' }: { initials: string; size?: number; tone?: 'accent' | 'dark' }) =>
-  <span className="nl-avatar" aria-hidden style={{ width: size, height: size, fontSize: Math.round(size * 0.38), background: tone === 'dark' ? 'var(--color-action-dark)' : undefined }}>{initials}</span>;
+  <span className="nl-avatar" aria-hidden data-tone={tone === 'dark' ? 'dark' : undefined} style={size !== 34 ? { ['--nl-avatar' as string]: `${size}px` } : undefined}>{initials}</span>;
 
-export const Skeleton = ({ width = '100%', height = 14, radius, style }: { width?: number | string; height?: number | string; radius?: number | string; style?: CSSProperties }) =>
-  <span className="nl-skel" aria-hidden style={{ display: 'block', width, height, borderRadius: radius, ...style }} />;
+/**
+ * A loading placeholder on the well's grey. Shapes come from classes (`className`: nl-skel-text, nl-skel-card…); a
+ * one-off box takes `width` / `height` (the shape of what is loading is data, not a look).
+ */
+export const Skeleton = ({ width, height, radius, className, style }: { width?: number | string; height?: number | string; radius?: number | string; className?: string; style?: CSSProperties }) => {
+  const box = width != null || height != null || radius != null;
+  return <span className={clsx('nl-skel', !className && height == null && 'nl-skel-text', className)} aria-hidden style={box || style ? { width, height, borderRadius: radius, ...style } : undefined} />;
+};
+
+/** A card's skeleton: the photo well, two lines, the price (results grids and rails while they load). */
+export const CardSkeleton = () => (
+  <span className="nl-skel-card" aria-hidden>
+    <Skeleton className="nl-skel-well" /><Skeleton className="nl-skel-text" width="90%" /><Skeleton className="nl-skel-text" width="60%" /><Skeleton className="nl-skel-text" width="40%" height={18} />
+  </span>
+);
 
 /** Loading placeholder shaped like a page: header + KPI row + two columns of rows. */
 export function PageSkeleton({ kpis = 4, rows = 5 }: { kpis?: number; rows?: number }) {
   const t = useT();
   return (
-    <div aria-busy="true" aria-live="polite">
+    <div className="nl-page-skel" aria-busy="true" aria-live="polite">
       <span className="nl-sr-only">{t('loading')}</span>
-      <Skeleton width={180} height={12} style={{ marginBottom: 14 }} />
-      <FallbackHeading placeholder={<Skeleton width="min(420px, 80%)" height={38} style={{ marginBottom: 28 }} />} />
-      {kpis > 0 && <div className="nl-kpis" style={{ marginBottom: 36 }}>{Array.from({ length: kpis }, (_, i) => <div key={i}><Skeleton width="60%" height={34} /><Skeleton width="80%" height={12} style={{ marginTop: 8 }} /></div>)}</div>}
-      {Array.from({ length: rows }, (_, i) => <Skeleton key={i} height={44} style={{ marginBottom: 8 }} />)}
+      <Skeleton className="nl-skel-kicker" />
+      <FallbackHeading placeholder={<Skeleton className="nl-skel-title" />} />
+      {kpis > 0 && <div className="nl-kpis">{Array.from({ length: kpis }, (_, i) => <div key={i}><Skeleton className="nl-skel-kpi" /><Skeleton className="nl-skel-kpi-label" /></div>)}</div>}
+      {Array.from({ length: rows }, (_, i) => <Skeleton key={i} className="nl-skel-row" />)}
     </div>
   );
 }
 
 /** Inline, never an illustration (redesign § 1.3): one bold line (`title`), one muted sentence, one primary action. */
-export function EmptyState({ title, children, action }: { title?: ReactNode; children?: ReactNode; action?: ReactNode }) {
-  return <div className="nl-empty">{title ? <strong className="nl-empty-title">{title}</strong> : null}{children ? <span>{children}</span> : null}{action}</div>;
+export function EmptyState({ title, children, action, icon: I }: { title?: ReactNode; children?: ReactNode; action?: ReactNode; icon?: Icon }) {
+  return <div className="nl-empty">{I ? <I size={32} weight="light" className="nl-empty-icon" aria-hidden /> : null}{title ? <strong className="nl-empty-title">{title}</strong> : null}{children ? <span>{children}</span> : null}{action}</div>;
 }
 
 export function ErrorState({ message, onRetry }: { message: ReactNode; onRetry?: () => void }) {
@@ -117,7 +131,7 @@ export function ErrorState({ message, onRetry }: { message: ReactNode; onRetry?:
     <>
       <FallbackHeading />
       <div className="nl-errorstate" role="alert">
-        <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}><WarningCircle size={18} aria-hidden />{message}</span>
+        <span className="nl-errorstate-message"><WarningCircle size={18} aria-hidden />{message}</span>
         {onRetry ? <button type="button" className="btn btn-secondary" onClick={onRetry}>{t('retry')}</button> : null}
       </div>
     </>
