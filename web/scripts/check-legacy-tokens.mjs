@@ -158,6 +158,16 @@ for (const root of S175) {
   }
 }
 
+// ── S-173: one price format on the consumer site ($89.00, never "$89" because it is round) ───────────────────────
+// `whole` is for amounts that are choices or ranges (a tip box, "Under $10"), never a price made round when it can be.
+for (const file of walk(path.join(webRoot, 'apps/consumer/src'))) {
+  const rel = path.relative(webRoot, file).split(path.sep).join('/');
+  if (skip.some(r => r.test(rel)) || !/\.tsx?$/.test(rel)) continue;
+  readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+    if (/whole:\s*[^,}]*%\s*100/.test(line)) raw.push(`${rel}:${i + 1}  a price drawn without cents when round (use formatPrice / Price: $89.00)`);
+  });
+}
+
 if (problems.length || raw.length) {
   if (problems.length) console.error(`Deprecated token names in rebuilt code (use the semantic roles of @northline/tokens):\n${problems.map(p => '  ' + p).join('\n')}`);
   if (raw.length) console.error(`Raw font sizes, spacing or colours in the component library or a shell (tokens only, docs/design/revamp-epic.md):\n${raw.map(p => '  ' + p).join('\n')}`);

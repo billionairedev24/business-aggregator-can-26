@@ -67,7 +67,8 @@ describe('sign in (design 06 auth)', () => {
 
   it('shows the design: pitch, card, email + password, passkey, Apple / Google back to the consumer site', async () => {
     open('/sign-in?next=%2Fcart');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Sign in to pick up where you left off.' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Sign in to pick up where you left off.' })).toBeInTheDocument();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Welcome back')).toBeInTheDocument();
     expect(screen.getAllByRole('listitem').map(li => li.textContent)).toEqual([
@@ -188,7 +189,7 @@ describe('sign in (design 06 auth)', () => {
 
   it('is in French', async () => {
     open('/sign-in', 'fr');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Connectez-vous pour reprendre où vous en étiez.' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Connectez-vous pour reprendre où vous en étiez.' })).toBeInTheDocument();
     expect(screen.getByLabelText('Mot de passe')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: "Se connecter avec une clé d'accès" })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Retour' })).toBeInTheDocument();
@@ -206,7 +207,7 @@ describe('create account (S-154: email + password)', () => {
 
   it('shows the design, with the legal documents in a new tab', async () => {
     open('/register');
-    expect(await screen.findByRole('heading', { level: 1, name: 'One account for groceries, hot food and every trusted local.' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'One account for groceries, hot food and every trusted local.' })).toBeInTheDocument();
     const c = card();
     expect(within(c).getByText('Your email and a password. We send a code to confirm the email.')).toBeInTheDocument();
     for (const name of [/^Terms/, /^Privacy Policy/]) {

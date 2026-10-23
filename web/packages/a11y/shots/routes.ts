@@ -42,7 +42,7 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'services-quote', path: '/services/mobile-mechanic/quote', signedIn: true },
     { name: 'provider', path: '/providers/prairie-wrench', now: BEFORE_CUTOFF },
     { name: 'provider-day', path: '/providers/prairie-wrench', now: BEFORE_CUTOFF, click: '.nl-prov-days [role="radio"]:not([disabled]) >> nth=1' },
-    { name: 'provider-book', path: '/providers/prairie-wrench/book', signedIn: true },
+    { name: 'provider-book', path: '/providers/prairie-wrench/book', signedIn: true, now: BEFORE_CUTOFF },
     { name: 'cart', path: '/cart', signedIn: true, now: BEFORE_CUTOFF, storage: { 'nl.savedForLater': SAVED } },
     { name: 'checkout', path: '/checkout', signedIn: true },
     { name: 'checkout-complete', path: '/checkout/complete?order=ORD1&ref=NL-50001', signedIn: true },

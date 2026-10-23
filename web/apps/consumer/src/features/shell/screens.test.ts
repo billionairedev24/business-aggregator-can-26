@@ -12,6 +12,7 @@ describe('screenFor', () => {
     expect(screenFor('/shop/stores/M1')).toBe('store');
     expect(screenFor('/shop/bakery')).toBe('category');
     expect(screenFor('/nowhere/at/all')).toBeUndefined();
+    for (const p of ['/sign-in', '/register', '/forgot-password', '/reset-password', '/verify-email']) expect(SCREENS[screenFor(p)!].auth).toBe(true);
   });
 
   it('covers every consumer state of docs/SCREENS.md', () => {

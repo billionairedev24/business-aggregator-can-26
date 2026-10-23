@@ -7,7 +7,6 @@ import { useRegions } from '../location/regions';
 import { LegalLink } from './LegalLink';
 import { useAuthT, type AuthKey } from './messages';
 import { RegisterFlow } from './RegisterFlow';
-import { Scene } from '../art/Scene';
 import { SignInFlow } from './SignInFlow';
 
 export type AuthMode = 'signin' | 'register';
@@ -37,8 +36,10 @@ const PROVIDERS = { google: 'Google', apple: 'Apple' } as const;
 const SUPPORT_HOURS = ['07:00', '23:00'] as const;
 
 /**
- * Design 06 `auth`: the pitch on the left (kicker, hero, three points, support line), the card on the right (title,
- * "Back to browsing", progress, the flow, the legal line). After the JSON flow against northline-auth, the browser
+ * The sign-in pages (E-15 S-173, in Plainsight; audit #9: no wide empty gap): one centred block — the card first (the
+ * page's h1, "Back to browsing", progress, the flow, the legal line) and beside it a narrow panel with why to sign in
+ * (kicker, heading, three numbered points, the support line); on phones the panel follows the card. The header shows
+ * the logo only (no site navigation on auth pages). After the JSON flow against northline-auth, the browser
  * goes to the consumer-bff's hand-off (`/bff/login?next=`) — a new account to the Location screen, a sign-in back to
  * where the person was — or, for a mobile app's authorization request (S-29), back to it.
  */
@@ -71,25 +72,10 @@ export function AuthPage({ mode, search, navigate = url => window.location.assig
 
   return (
     <div className="nl-auth">
-      <div className="nl-auth-intro">
-        <span className="nl-auth-pic" aria-hidden><Scene slot={register ? 'hero/register' : 'hero/sign-in'} subject={register ? 'service' : 'locksmith'} tone={register ? 'ember' : 'sage'} fit="contain" sizes="(min-width: 960px) 40vw, 100vw" priority /></span>
-        <div className="nl-auth-kicker">{t(register ? 'kickerRegister' : 'kickerSignIn')}</div>
-        <h1 className="nl-auth-hero">{t(register ? 'heroRegister' : 'heroSignIn')}</h1>
-        <p className="nl-auth-lede">{t(register ? 'heroSubRegister' : 'heroSubSignIn')}</p>
-        <ol className="nl-auth-points">
-          {points.map((p, i) => (
-            <li key={p} className="nl-auth-point">
-              <span className="nl-auth-point-num" aria-hidden>{i + 1}</span>
-              <span><strong>{t(p)}</strong><span className="nl-auth-point-body">{t(`${p}Body` as AuthKey)}</span></span>
-            </li>
-          ))}
-        </ol>
-        <div className="nl-auth-foot">{regions ? t('foot', { hours: formatZonedHours(SUPPORT_HOURS[0], SUPPORT_HOURS[1], regions.platformTimeZone, locale) }) : t('footNoHours')}</div>
-      </div>
       <section className="nl-auth-card" aria-labelledby="nl-auth-title">
         <div className="nl-auth-head">
-          <h2 className="nl-auth-title" id="nl-auth-title">{panel ? panel.title : t(register ? 'createAccount' : 'signIn')}</h2>
-          <SiteLink href={back} className="btn btn-ghost nl-auth-cancel">{t('cancel')}</SiteLink>
+          <h1 className="nl-auth-title" id="nl-auth-title">{panel ? panel.title : t(register ? 'createAccount' : 'signIn')}</h1>
+          <SiteLink href={back} className="btn btn-tertiary nl-auth-cancel">{t('cancel')}</SiteLink>
         </div>
         {search.error && <Alert tone="error">{t(ERRORS[search.error] ?? 'federationFailed')}</Alert>}
         {!search.error && federated && (register || search.link) && (
@@ -109,6 +95,20 @@ export function AuthPage({ mode, search, navigate = url => window.location.assig
             : t('legalSignIn')}
         </p>
       </section>
+      <aside className="nl-auth-intro" aria-labelledby="nl-auth-hero">
+        <div className="nl-auth-kicker">{t(register ? 'kickerRegister' : 'kickerSignIn')}</div>
+        <h2 className="nl-auth-hero" id="nl-auth-hero">{t(register ? 'heroRegister' : 'heroSignIn')}</h2>
+        <p className="nl-auth-lede">{t(register ? 'heroSubRegister' : 'heroSubSignIn')}</p>
+        <ol className="nl-auth-points">
+          {points.map((p, i) => (
+            <li key={p} className="nl-auth-point">
+              <span className="nl-auth-point-num" aria-hidden>{i + 1}</span>
+              <span><strong>{t(p)}</strong><span className="nl-auth-point-body">{t(`${p}Body` as AuthKey)}</span></span>
+            </li>
+          ))}
+        </ol>
+        <div className="nl-auth-foot">{regions ? t('foot', { hours: formatZonedHours(SUPPORT_HOURS[0], SUPPORT_HOURS[1], regions.platformTimeZone, locale) }) : t('footNoHours')}</div>
+      </aside>
     </div>
   );
 }
