@@ -21,6 +21,7 @@ import { StripeCard } from './StripeCard';
 import { CheckoutConsent, useCheckoutConsent } from '../consent/CheckoutConsent';
 import { Crumbs } from '../pages/Crumbs';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
+import { useRenderNow } from '../../lib/renderClock';
 
 export type Step = 'details' | 'location' | 'schedule' | 'pay' | 'done';
 const CLEANING = new Set(['house-cleaning', 'move-in-move-out-clean', 'carpet-and-upholstery', 'window-cleaning', 'duct-cleaning']);
@@ -289,7 +290,7 @@ function Schedule({ slug, facts, service, draft, update, notice, onNext, onBack,
   const { locale } = useLocale();
   const viewer = useViewer();
   const qc = useQueryClient();
-  const today = dayKey(new Date(), zone);
+  const today = dayKey(useRenderNow(), zone);
   const thisWeek = weekStartOf(today, locale);
   const [week, setWeek] = useState(() => weekStartOf(draft.day && draft.day > today ? draft.day : today, locale));
   const span = weekSpan(week, today);
