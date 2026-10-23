@@ -1,17 +1,18 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Icon, MIN_TARGET, colors, fonts, radius, semantic, shadow, space } from '@northline/mobile-kit';
+import { BottomSheet, CAP, FilterChip, Icon, LINE, MIN_TARGET, MetaLine, OptionCard, ServiceCard, TYPE, UnderlineTabs, radius, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import type { ProductCard, SearchItem, SearchQuery, Sort } from '../api/shop';
 import type { MessageKey } from '../i18n';
-import { Button, Tag } from '../ui/primitives';
-import { Screen } from '../ui/screen';
-import { EmptyState, LoadingList, QueryView } from '../ui/states';
+import { Button } from '../ui/primitives';
+import { ShopProductCard, iconFor, photoSource, searchImage } from '../ui/commerce';
+import { GUTTER, Screen } from '../ui/screen';
+import { CardSkeleton, EmptyState, QueryView } from '../ui/states';
 import { shop, useMarket, useShopFormat } from './common';
-import { Chip, Kicker, Thumb, shopStyles } from './parts';
+import { Kicker } from './parts';
 import { ProposalChips, SmartFilters } from './SmartFilters';
 import { withProposals, type Proposal } from './smartSearch';
 
@@ -23,59 +24,31 @@ const FILTERS: Filter[] = ['tonight', 'under10'];
 const SORTS: Sort[] = ['relevance', 'price_asc', 'price_desc', 'rating'];
 const UNDER_10 = 999;
 
-interface Row {
-  key: string;
-  kind: 'product' | 'service';
-  name: string;
-  shop: string;
-  meta?: string | null;
-  priceCents?: number | null;
-  rating?: number | null;
-  tag?: 'tonight' | 'soldOut' | 'later';
-  /** What the no-photo picture draws (the category's id or the product's name). */
-  subject: string;
-  imageUrl?: string | null;
-  to: Href | null;
-}
+type Result =
+  | { key: string; kind: 'product'; card: ProductCard; tonight?: boolean; soldOut?: boolean; fromSearch: boolean }
+  | { key: string; kind: 'service'; item: SearchItem; to: Href | null };
 
-const fromSearch = (i: SearchItem): Row => ({
-  key: `${i.kind}-${i.id}`,
-  kind: i.kind === 'service' ? 'service' : 'product',
-  name: i.name,
-  shop: i.merchant.name,
-  meta: i.category?.name ?? null,
-  priceCents: i.priceCents,
-  rating: i.rating,
-  tag: i.kind === 'service' ? undefined : i.onTonightsRun ? 'tonight' : i.soldOut ? 'soldOut' : 'later',
-  subject: i.kind === 'service' ? (i.category?.id ?? i.name) : i.name,
-  // a product result is its offer (the product page takes an offer id too, S-50); a service opens its provider
-  to:
-    i.kind === 'service'
-      ? i.merchant.slug
-        ? ({ pathname: '/providers/[slug]', params: { slug: i.merchant.slug } } as Href)
-        : null
-      : { pathname: '/product/[id]', params: { id: i.id, offer: i.id } },
-});
-const fromCard = (p: ProductCard): Row => ({
-  key: p.offerId,
-  kind: 'product',
-  name: p.name,
-  shop: p.shopName,
-  meta: p.unit,
-  priceCents: p.priceCents,
-  subject: p.name,
-  imageUrl: p.imageUrl,
-  tag: p.run?.day === 'today' ? 'tonight' : 'later',
-  to: { pathname: '/product/[id]', params: { id: p.productId, offer: p.offerId } },
-});
+const fromSearch = (i: SearchItem): Result =>
+  i.kind === 'service'
+    ? { key: `service-${i.id}`, kind: 'service', item: i, to: i.merchant.slug ? ({ pathname: '/providers/[slug]', params: { slug: i.merchant.slug } } as Href) : null }
+    : {
+        key: `product-${i.id}`,
+        kind: 'product',
+        // a product result is its offer (the product page takes an offer id too, S-50)
+        card: { productId: i.id, offerId: i.id, name: i.name, merchantId: i.merchant.id, shopName: i.merchant.name, unit: null, priceCents: i.priceCents ?? 0, imageUrl: searchImage(i.imageKey), sellers: 1, run: null },
+        tonight: !!i.onTonightsRun,
+        soldOut: !!i.soldOut,
+        fromSearch: true,
+      };
+const fromCard = (p: ProductCard): Result => ({ key: p.offerId, kind: 'product', card: p, fromSearch: false });
 
 /**
- * Search (redesign spec § 2.4 → MA:212 SEARCH; products and services together, as the web's results page): the search
- * pill with Cancel, the type chips (all · products · services) and the goods chips, the count and the sort, then one
- * list of products and services (96 pt pictures). Text search is `GET /search` (S-44) with the person's province and
- * position — no `kind` for "all"; food and business results are left out (the app has no food screens; Food is hidden
- * as a vertical, thrash item 7). A department circle from Home browses `GET /public/shop/departments/{slug}`. S-158: a
- * typed sentence gets the AI's suggested filters as chips, applied only when the person taps Apply (and removable).
+ * Search results (E-15 A · Plainsight, design/revamp/a.html "Search results" on a phone): the search field with
+ * Cancel, All · Products · Services as underline tabs, the filter chips (applied = ink edge with ✓) and S-158's
+ * suggested filters, "<n> results for “…”" with the sort (a sheet), the tonight strip, then a two-up grid of the
+ * kit's product cards (photo well, name, shop, price and unit price, "Get it Tonight", Add to cart) and service
+ * cards ("from $89.00"). Text search is `GET /search` (S-44) with the person's province and position — no `kind` for
+ * "all"; food and business results are left out. A department from Home browses `GET /public/shop/departments/{slug}`.
  */
 export function Search() {
   const f = useShopFormat();
@@ -87,6 +60,7 @@ export function Search() {
   const [kind, setKind] = useState<Kind>(params.kind === 'product' || params.kind === 'service' ? params.kind : 'all');
   const [on, setOn] = useState<Record<Filter, boolean>>({ tonight: false, under10: false });
   const [sort, setSort] = useState<Sort>('relevance');
+  const [sorting, setSorting] = useState(false);
   const department = params.department && !text ? params.department : undefined;
   // S-158: filters the person applied from the AI's reading of their sentence (removable; cleared by new words)
   const [applied, setApplied] = useState<Proposal[]>([]);
@@ -126,13 +100,13 @@ export function Search() {
     staleTime: 60_000,
   });
 
-  const rows: Row[] | undefined = department
+  const rows: Result[] | undefined = department
     ? browse.data
       ? (() => {
-          const list = browse.data.products.filter((p) => (!on.tonight || p.run?.day === 'today') && (!on.under10 || p.priceCents <= UNDER_10)).map(fromCard);
-          if (sort === 'price_asc') list.sort((a, b) => (a.priceCents ?? 0) - (b.priceCents ?? 0));
-          if (sort === 'price_desc') list.sort((a, b) => (b.priceCents ?? 0) - (a.priceCents ?? 0));
-          return list;
+          const list = browse.data.products.filter((p) => (!on.tonight || p.run?.day === 'today') && (!on.under10 || p.priceCents <= UNDER_10));
+          if (sort === 'price_asc') list.sort((a, b) => a.priceCents - b.priceCents);
+          if (sort === 'price_desc') list.sort((a, b) => b.priceCents - a.priceCents);
+          return list.map(fromCard);
         })()
       : undefined
     : search.data?.pages.flatMap((p) => (p?.items ?? []).filter((i) => i.kind === 'product' || i.kind === 'service').map(fromSearch));
@@ -143,19 +117,20 @@ export function Search() {
     setOn({ tonight: false, under10: false });
     setKind('all');
   };
+  const tonightCount = (rows ?? []).filter((r) => r.kind === 'product' && (r.fromSearch ? r.tonight : r.card.run?.day === 'today')).length;
+  const place = market.label ?? browse.data?.market;
 
   return (
     <Screen testID="search" title={department ? (params.name ?? t('title.search')) : undefined}>
       {department ? null : (
         <View style={styles.bar}>
           <View style={styles.input}>
-            <Icon name="magnifying-glass" size={20} />
             <TextInput
               value={text}
               onChangeText={setText}
               accessibilityLabel={t('shop.search.label')}
               placeholder={t('rd.search.placeholder')}
-              placeholderTextColor={colors.textSubtle}
+              placeholderTextColor={semantic['text-subtle']}
               autoFocus={!params.q && !params.department}
               returnKeyType="search"
               onSubmitEditing={() => setQ(text.trim())}
@@ -163,30 +138,33 @@ export function Search() {
               testID="search-input"
             />
             {text ? (
-              <Pressable accessibilityRole="button" accessibilityLabel={t('rd.search.clearText')} onPress={() => setText('')} hitSlop={10} style={styles.clearText}>
-                <Icon name="x" size={18} />
+              <Pressable accessibilityRole="button" accessibilityLabel={t('rd.search.clearText')} onPress={() => setText('')} style={styles.clearText}>
+                <Icon name="x" size={TYPE.sub} />
               </Pressable>
             ) : null}
+            <Pressable accessibilityRole="button" accessibilityLabel={t('shop.search.label')} onPress={() => setQ(text.trim())} style={styles.go}>
+              <Icon name="magnifying-glass" size={TYPE.price} color={semantic['selected-text']} />
+            </Pressable>
           </View>
           <Pressable accessibilityRole="button" accessibilityLabel={t('rd.search.cancel')} onPress={() => (router.canGoBack() ? router.back() : router.navigate('/home'))} style={styles.cancel} testID="search-cancel">
-            <Text style={styles.cancelText}>{t('rd.search.cancel')}</Text>
+            <Text style={textStyles.label} maxFontSizeMultiplier={CAP.control}>
+              {t('rd.search.cancel')}
+            </Text>
           </Pressable>
         </View>
       )}
       {department ? <Kicker>{t('shop.search.department', { name: params.name ?? department })}</Kicker> : null}
       {department ? null : (
-        <View style={shopStyles.chips} accessibilityRole="radiogroup" accessibilityLabel={t('rd.search.type')}>
-          {KINDS.map((k) => (
-            <Chip key={k} role="radio" label={t(`rd.search.kind.${k}` as MessageKey)} on={kind === k} onPress={() => setKind(k)} testID={`kind-${k}`} />
-          ))}
+        <View style={styles.edge}>
+          <UnderlineTabs label={t('rd.search.type')} options={KINDS.map((k) => ({ value: k, label: t(`rd.search.kind.${k}` as MessageKey) }))} value={kind} onChange={setKind} testID="kind" />
         </View>
       )}
       {goods ? (
-        <View style={shopStyles.chips}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.edge, styles.chipRow]} contentContainerStyle={styles.chips}>
           {FILTERS.map((x) => (
-            <Chip key={x} label={t(`shop.filter.${x}` as MessageKey)} on={on[x]} onPress={() => setOn((o) => ({ ...o, [x]: !o[x] }))} testID={`filter-${x}`} />
+            <FilterChip key={x} label={t(`shop.filter.${x}` as MessageKey)} selected={on[x]} onPress={() => setOn((o) => ({ ...o, [x]: !o[x] }))} testID={`filter-${x}`} />
           ))}
-        </View>
+        </ScrollView>
       ) : null}
       {department ? null : smart.length ? (
         <View style={styles.smartApplied}>
@@ -198,103 +176,139 @@ export function Search() {
       )}
       <QueryView
         query={view}
-        skeleton={<LoadingList rows={5} height={96} />}
+        skeleton={<CardSkeleton count={4} />}
         isEmpty={(d) => d.length === 0}
         empty={<EmptyState art="search" message={q ? t('shop.search.empty', { q }) : t('shop.search.emptyBrowse')} action={anyFilter ? t('shop.search.clear') : undefined} onAction={clear} />}
       >
         {(list) => (
           <View style={styles.results}>
-            <View style={styles.countRow}>
-              <Text style={styles.small}>{t('shop.search.count', { n: total })} </Text>
+            <View style={styles.resbar}>
+              <Text style={styles.count} accessibilityRole="header">
+                <Text style={styles.countStrong}>{q && !department ? t('rv.results.count', { n: total, q }) : t('rv.results.countAll', { n: total })}</Text>
+                {place ? ` · ${t('rv.results.place', { place })}` : ''}
+              </Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={t('shop.search.sortLabel', { sort: t(`shop.sort.${sort}` as MessageKey) })}
                 accessibilityHint={t('shop.search.sortHint')}
-                onPress={() => setSort((s) => SORTS[(SORTS.indexOf(s) + 1) % SORTS.length]!)}
-                style={styles.sort}
+                onPress={() => setSorting(true)}
+                style={({ pressed }) => [styles.sort, pressed && styles.pressed]}
                 testID="search-sort"
               >
-                <Text style={[styles.small, styles.sortText]}>{t(`shop.sort.${sort}` as MessageKey)}</Text>
-                <Icon name="caret-down" size={12} />
+                <Text style={textStyles.body} maxFontSizeMultiplier={CAP.control}>
+                  {t(`rv.sort.${sort}` as MessageKey)}
+                </Text>
+                <Icon name="caret-down" size={TYPE.meta} color={semantic['text-muted']} />
               </Pressable>
             </View>
-            {list.map((r) => (
-              <ResultRow key={r.key} row={r} f={f} />
-            ))}
+            {goods && tonightCount > 0 ? (
+              <View style={styles.tonight} testID="search-tonight">
+                <MetaLine icon="truck">
+                  <Text style={styles.countStrong}>{t('rv.results.tonight', { n: tonightCount })}</Text> {t('rv.results.tonightSub')}
+                </MetaLine>
+              </View>
+            ) : null}
+            <View style={styles.grid}>
+              {list.map((r) => (
+                <View key={r.key} style={styles.cell} testID={`result-${r.key}`}>
+                  {r.kind === 'product' ? (
+                    <ShopProductCard
+                      p={r.card}
+                      eta={r.fromSearch ? (r.tonight ? t('rv.card.etaTonight') : null) : undefined}
+                      low={r.soldOut ? t('shop.tag.soldOut') : null}
+                    />
+                  ) : (
+                    <ServiceResult r={r.item} to={r.to} />
+                  )}
+                </View>
+              ))}
+            </View>
             {!department && search.hasNextPage ? (
               <Button label={t('shop.search.more')} tone="secondary" busy={search.isFetchingNextPage} onPress={() => void search.fetchNextPage()} />
             ) : null}
           </View>
         )}
       </QueryView>
+      <BottomSheet visible={sorting} onClose={() => setSorting(false)} title={t('rv.sort.title')} testID="sort-sheet">
+        <View style={styles.sortList} accessibilityRole="radiogroup">
+          {SORTS.map((s) => (
+            <OptionCard
+              key={s}
+              title={t(`rv.sort.${s}` as MessageKey)}
+              selected={s === sort}
+              onPress={() => {
+                setSort(s);
+                setSorting(false);
+              }}
+              testID={`sort-${s}`}
+            />
+          ))}
+        </View>
+      </BottomSheet>
     </Screen>
   );
 }
 
-/** A result (MA:218): the 96 pt picture, the name, who sells it and its category, a tag, the price ("from" for a service). */
-function ResultRow({ row: r, f }: { row: Row; f: ReturnType<typeof useShopFormat> }) {
+/** A service result: the kit's ServiceCard — the category's photo well, the service, who offers it, "from $89.00". */
+function ServiceResult({ r, to }: { r: SearchItem; to: Href | null }) {
+  const f = useShopFormat();
   const { t } = f;
-  const price = r.priceCents != null ? (r.kind === 'service' ? t('rd.search.from', { price: f.money(r.priceCents) }) : f.money(r.priceCents)) : null;
-  const kindWord = t(r.kind === 'service' ? 'rd.search.kind.service' : 'rd.search.kind.product');
+  const meta = [r.merchant.name, r.category?.name].filter(Boolean).join(' · ');
+  const price = r.priceCents != null ? t('rd.search.from', { price: f.money(r.priceCents) }) : null;
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={[r.name, kindWord, r.shop, r.meta, price, r.tag ? t(`shop.tag.${r.tag}` as MessageKey) : null].filter(Boolean).join(', ')}
-      disabled={!r.to}
-      onPress={() => r.to && router.push(r.to)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-      testID={`result-${r.key}`}
-    >
-      <Thumb size={88} uri={r.imageUrl} subject={r.subject} />
-      <View style={shopStyles.rowText}>
-        <Text style={styles.name} numberOfLines={2}>
-          {r.name}
-        </Text>
-        <Text style={styles.small} numberOfLines={1}>
-          {[r.shop, r.meta].filter(Boolean).join(' · ')}
-        </Text>
-        {r.rating ? (
-          <View style={styles.rating}>
-            <Icon name="star" filled size={14} color={colors.rating} />
-            <Text style={styles.small}>{r.rating.toFixed(1)}</Text>
-          </View>
-        ) : null}
-        {price ? <Text style={shopStyles.price}>{price}</Text> : null}
-        {r.tag ? <Tag label={t(`shop.tag.${r.tag}` as MessageKey)} tone={r.tag === 'tonight' ? 'accent' : r.tag === 'soldOut' ? 'accent2' : 'neutral'} small /> : r.kind === 'service' ? <Tag label={kindWord} small /> : null}
-      </View>
-    </Pressable>
+    <ServiceCard
+      title={r.name}
+      meta={meta}
+      fromCents={r.priceCents ?? undefined}
+      rating={r.rating ? { value: r.rating } : undefined}
+      source={photoSource(searchImage(r.imageKey))}
+      icon={iconFor('service')}
+      onPress={to ? () => router.push(to) : undefined}
+      label={[r.name, t('rd.search.kind.service'), meta, price].filter(Boolean).join(', ')}
+    />
   );
 }
 
 const styles = StyleSheet.create({
+  pressed: { opacity: 0.85 },
   bar: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   input: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[2],
-    minHeight: 48,
-    paddingLeft: space[4],
-    paddingRight: space[2],
+    alignItems: 'stretch',
+    minHeight: MIN_TARGET,
     borderRadius: radius.control,
-    borderWidth: 1.5,
-    borderColor: semantic['action-primary'],
-    backgroundColor: colors.surface,
-    ...shadow.sm,
+    borderWidth: LINE.bold,
+    borderColor: semantic.selected,
+    backgroundColor: semantic.surface,
+    overflow: 'hidden',
   },
-  inputText: { flex: 1, minWidth: 0, minHeight: 44, fontFamily: fonts.regular, fontSize: 16, color: colors.text },
-  clearText: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  cancel: { minHeight: MIN_TARGET, justifyContent: 'center', paddingHorizontal: 4 },
-  cancelText: { fontFamily: fonts.medium, fontSize: 15, color: colors.text },
-  results: { gap: space[3] },
+  inputText: { ...StyleSheet.flatten(textStyles.sub), fontFamily: textStyles.body.fontFamily, flex: 1, minWidth: 0, minHeight: MIN_TARGET - 2 * LINE.bold, paddingHorizontal: space[3] },
+  clearText: { width: MIN_TARGET, minHeight: MIN_TARGET, alignItems: 'center', justifyContent: 'center' },
+  go: { width: MIN_TARGET + space[2], minHeight: MIN_TARGET, alignItems: 'center', justifyContent: 'center', backgroundColor: semantic.selected },
+  cancel: { minHeight: MIN_TARGET, justifyContent: 'center', paddingHorizontal: space[1] },
+  edge: { marginHorizontal: -GUTTER },
+  chipRow: { flexGrow: 0 },
+  chips: { flexDirection: 'row', gap: space[2], paddingHorizontal: GUTTER, paddingVertical: space[1] },
   smartApplied: { gap: space[2] },
-  countRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
-  sort: { minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  sortText: { fontFamily: fonts.bold, color: colors.text },
-  row: { flexDirection: 'row', gap: space[3], paddingBottom: space[4], borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, minHeight: MIN_TARGET },
-  pressed: { opacity: 0.85 },
-  name: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.text },
-  small: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
-  rating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  results: { gap: space[3] },
+  resbar: { gap: space[2], paddingBottom: space[3], borderBottomWidth: LINE.hair, borderBottomColor: semantic.border },
+  count: textStyles.label,
+  countStrong: { fontFamily: textStyles.section.fontFamily },
+  sort: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
+    minHeight: MIN_TARGET,
+    paddingHorizontal: space[3],
+    borderRadius: radius.control,
+    borderWidth: LINE.hair,
+    borderColor: semantic['border-control'],
+    backgroundColor: semantic.surface,
+  },
+  tonight: { padding: space[3], borderRadius: radius.panel, backgroundColor: semantic.well },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: space[6] },
+  cell: { width: '48.5%' },
+  sortList: { gap: space[2] },
 });
-

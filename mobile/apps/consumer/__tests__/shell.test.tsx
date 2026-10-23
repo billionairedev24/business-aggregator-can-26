@@ -27,7 +27,7 @@ describe('the shell', () => {
     const again = await start({ welcomed: true });
     expect(await routerScreen.findByTestId('home')).toBeTruthy();
     expect(again.view.getPathname()).toBe('/home');
-    const tabs = routerScreen.getAllByRole('tab').map((t) => t.props.accessibilityLabel);
+    const tabs = routerScreen.getAllByTestId(/^tab-/).map((t) => t.props.accessibilityLabel);
     expect(tabs).toEqual(['Home', 'Browse', 'Activity', 'Cart', 'Account']);
     expect(routerScreen.getByRole('tab', { name: 'Home' }).props.accessibilityState).toEqual({ selected: true });
   });
@@ -63,7 +63,7 @@ describe('the shell', () => {
     const { getLocales } = jest.requireMock('expo-localization') as { getLocales: jest.Mock };
     getLocales.mockReturnValueOnce([{ languageTag: 'fr-CA' }]);
     await start({ welcomed: true });
-    expect((await routerScreen.findAllByRole('tab')).map((t) => t.props.accessibilityLabel)).toEqual(['Accueil', 'Parcourir', 'Activité', 'Panier', 'Compte']);
+    expect((await routerScreen.findAllByTestId(/^tab-/)).map((t) => t.props.accessibilityLabel)).toEqual(['Accueil', 'Parcourir', 'Activité', 'Panier', 'Compte']);
   });
 
   it('keeps one random guest id per installation and sends it on api calls (the guest cart, S-51)', async () => {

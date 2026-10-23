@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { M, renderScreen, stubFetch } from './testing';
 
@@ -58,14 +58,32 @@ describe('ListingsScreen', () => {
     expect(screen.getAllByRole('button', { name: /New product/ }).length).toBeGreaterThan(0);
   });
 
+  it('S-175: status tabs with counts (drafts, low stock), quick filters, stock as a status', async () => {
+    stubFetch({ [`GET ${base}/listings`]: { items: LISTINGS } });
+    renderScreen(<ListingsScreen />);
+    expect(await screen.findAllByText('Cabin air filter')).not.toHaveLength(0);
+    const tabs = within(screen.getByRole('tablist', { name: 'Products' }));
+    expect(tabs.getByRole('tab', { name: /^All/ }).textContent).toBe('All3');
+    expect(tabs.getByRole('tab', { name: /^Low stock/ }).textContent).toBe('Low stock2'); // 5 in stock is low; 14 is not
+    expect(tabs.queryByRole('tab', { name: /^Rejected/ })).toBeNull();
+    await user().click(tabs.getByRole('tab', { name: /^Drafts/ }));
+    expect(screen.getAllByText('Cabin air filter').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Brake pads · ceramic (front)')).toBeNull();
+    await user().click(tabs.getByRole('tab', { name: /^All/ }));
+    expect(screen.getAllByText('5 in stock').length).toBe(2); // the phone card's line
+    await user().click(screen.getByRole('button', { name: 'No photo' }));
+    expect(screen.getAllByText('Brake pads · ceramic (front)').length).toBeGreaterThan(0); // none of them has a photo
+  });
+
   it('both portal: services and products with a Type column', async () => {
     shell.type = 'both';
     stubFetch({ [`GET ${base}/listings`]: { items: LISTINGS } });
     renderScreen(<ListingsScreen />);
     expect(screen.getByRole('heading', { name: 'Services & products' })).toBeTruthy();
     expect(await screen.findAllByText('Brake inspection')).not.toHaveLength(0);
-    expect(screen.getAllByText('Service').length).toBeGreaterThan(0); // Type column values (card layout in jsdom)
-    expect(screen.getAllByText('Product').length).toBeGreaterThan(0);
+    // Type column values, on the phone card's meta line (card layout in jsdom)
+    expect(screen.getAllByText(/^Service · /).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^Product · /).length).toBeGreaterThan(0);
   });
 
   it('provider portal: Services & prices with the duration and what the provider gets after the fee (PH:139)', async () => {
@@ -75,7 +93,7 @@ describe('ListingsScreen', () => {
     expect(screen.getByRole('heading', { name: 'Services & prices' })).toBeTruthy();
     expect(await screen.findAllByText('Brake inspection')).not.toHaveLength(0);
     expect(screen.getAllByText('60 min · instant book').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('$75.44').length).toBeGreaterThan(0); // $89 − 12% (Trusted) − card processing
+    expect(screen.getAllByText('You get $75.44').length).toBeGreaterThan(0); // $89 − 12% (Trusted) − card processing (the phone card)
     expect(screen.queryByText('Brake pads · ceramic (front)')).toBeNull();
   });
 
@@ -164,7 +182,9 @@ describe('ProductEditor', () => {
     await user().type(screen.getByRole('textbox', { name: /Product identifier/ }), '028851200226');
     await user().click(screen.getByRole('button', { name: 'Look up' }));
     expect(await screen.findByText('Matched · Northline catalogue NL-P-88120')).toBeTruthy();
-    expect(screen.getByText(/14 sellers/)).toBeTruthy();
+    expect(screen.getAllByText(/14 sellers/)).toHaveLength(2); // the match banner and the live preview's card (S-175)
+    // S-175: the live preview beside the form is the customer's card, with the matched title
+    expect(within(screen.getByRole('region', { name: 'What customers see' })).getByText('Bosch Icon 22" beam blade')).toBeTruthy();
     expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Bosch Icon 22" beam blade');
     expect((screen.getByLabelText('Brand') as HTMLButtonElement).disabled).toBe(true);
   });

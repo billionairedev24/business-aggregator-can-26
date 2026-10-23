@@ -11214,6 +11214,161 @@ phone sheet open).
 deals feed need api work; French shots are not in `make ui-shots` (it photographs `?lang=en`; fr-CA is covered by the
 tests and the gallery's fr baselines).
 
+## 2026-10-23 — S-175 Studio work screens
+
+Built to the "Studio orders table" frame of `design/revamp/a.html` (screen 8, 1280 and 390), applied to every Studio work
+screen. No backend, BFF contract, validation or i18n rule changed; every string is en + fr-CA.
+
+**@northline/ui additions (additive; the existing DataTable, tabs and gallery baselines are unchanged).**
+- `DataTable`: `views` (status tabs with counts above the toolbar, drawn with `UnderlineTabs`; a count's `tone: 'danger'`
+  keeps it red; `hideEmpty` drops a tab with nothing in it; controlled with `view` / `onViewChange`), `quickFilters` (toolbar
+  `FilterChip`s, applied ones show ✓ and remove themselves; they combine with *and*), a column's `status` (the cell is a
+  `StatusTag` of that tone; facets and reports still read the text), `nowrap`, and compact phone cards (`card: 'line' |
+  'meta' | 'end' | 'tag'`, `cardFormat`): thumb, primary value and its sub, the tag top right, a body line, a muted meta
+  line with the total at its end, then the row's actions — the mockup's 390 cards. An action's `emphasis: 'primary' |
+  'secondary'` draws it as a small button in the row and in the bulk bar (Mark packed in the action blue). Tag tones gain
+  `tag-success/warning/danger/info`. Counts are over all rows (the mockup's "All 38" with "Today" applied).
+- `UnderlineTabs`: optional `tabId` / `panelId` and a per-tab accessible `name` (the editors' sections).
+- `FormSection` and `SaveBar` (Editor.tsx): a titled editor panel, and the save bar that stays at the bottom of the window
+  (`sticky={false}` draws it in place). Gallery section "worktable" (4 new baselines; 64 total, all others unchanged);
+  `DataTable/worktable.test.tsx`.
+
+**Screens.**
+- *Orders:* tabs All / To pack / Awaiting pickup / Out for delivery (when any) / Delivered / Issues (red) / Cancelled (when
+  any); quick filters Placed today · Today's runs · Tomorrow's runs; columns Order · Placed · Customer · Items · Run ·
+  Total · Status with semantic statuses (to pack warning, awaiting/out for delivery info, delivered success, issue danger,
+  cancelled neutral) in the table and the detail sheet; Mark packed primary inline and in the bulk bar; `?view=` on the
+  route (the dashboard's "orders to pack" card opens the To pack tab). Times through `formatWhen` ("Delivered 12:05 p.m.",
+  "Pack by 5:20 p.m."), amounts through `formatPrice`/`Price`. Returns: statuses (waiting on you warning, refunded
+  success, declined/escalated danger).
+- *KPI deltas (the S-174 note):* in the Studio a delta's colour means good (green) or bad (red), never "went up". Orders
+  had To pack in red; work still to do is not bad, so it is neutral, and only an open issue is red ("none open" green).
+- *Catalogue (products, services, both):* tabs All / Live / Hidden / Drafts / In review / Rejected (when any) / Low stock
+  (products); quick filters No photo · No sales (bookings) in 30 days; vetting and visibility as statuses; stock as a
+  status ("4 in stock" warning, "Out of stock" danger); Publish a secondary button; `?view=` on the route (the dashboard's
+  low-stock card opens Low stock, searched when there is one product).
+- *Stock:* no route of its own (S-174 kept it off the nav); it is the Products table's **Low stock** tab. The list
+  endpoint has no per-listing threshold, so the tab uses the editor's default "Low stock at" (5) — `LOW_STOCK` in the
+  catalogue model. A listing's own threshold still drives its alerts server-side.
+- *Product and service editors:* the hand-made step strip became `UnderlineTabs` with a ✓ on complete sections (ids kept,
+  so `#tab-images` still works); Save draft / Submit for vetting moved from the head into the sticky save bar with the
+  listing's status (draft neutral, in review warning, live success, rejected danger) and "Unsaved changes"; the product's
+  Preview tab is gone — the aside now shows a **live preview** (the real `ProductCard` / `ServiceCard`, inert) updated as
+  the seller types; S-181's photo tips sit beside the uploader (side by side when the form is ≥ 640 px wide); prices
+  through `price`; no inline styles (thumbs and widths are classes). Editors' panels on Plainsight hairlines, no shadow.
+- *Kitchen display:* three lanes New → Cooking → Ready (a refused hand-off stays in Ready), each ticket with its stage
+  colour across the top (new warning, cooking info, ready success, late danger with a "Late" tag and a red timer), the
+  order number at 24 px, dishes at 18 px, one large full-width button; phones stack the lanes. Pause new orders is the
+  destructive (red) button. *Menu builder:* the availability pill became the shared `Switch` (named "Available: dish"),
+  sold out a danger status, prices `Price`, the head `BoHeader`. Modifier prices use the one format ("+$3.00", was "+$3").
+- *Bookings and quotes:* the list view has tabs All / Upcoming / Requested / Done / Disputed / Cancelled and the
+  booking's time range (`formatTimeRange`); quote and approval tags are statuses; the calendar's confirmed bookings and
+  today's date are ink, not the action blue (one role per colour).
+
+**Lint (`pnpm lint:tokens`).** The orders, catalogue, appointments and kitchen folders are now strict (no raw px sizes or
+spacing, no raw colours), with no inline `style` except the calendar's data-driven custom properties (`--top`, `--h`),
+and refuse a hand-made `role="tab"`, the old tag tones (`tag-accent`, `tag-accent-2`, `tag-highlight`), an app-made
+`nl-chip` class, and `formatMoney(`/`money(`.
+
+**Bundle budget.** The Studio's initial JS budget is 260 kB gzip (was 250). The editors' live preview uses
+`ProductCard`/`ServiceCard`; rollup keeps one chunk per module, so they join the `Commerce` chunk the dashboard already
+loads for `Price`/`StatusTag` (+7 kB, 247.1 → 255.6 kB). Splitting `Commerce.tsx` would collide with the consumer stories
+editing it now; S-180 can split the cards into their own module and bring the budget back.
+
+**Departures from the mockup.** No "Print labels", "Message customers" or "Export" header buttons: the Studio has no label
+or bulk-message endpoint, and export is the table's Report. The window column shows the run's start ("Tonight 6:00
+p.m."): orders carry no window end. Rows keep the Open icon (keyboard path to the sheet) and rows are 44 px for the
+target rule where the mockup draws ~40; at 1440 the orders table drops its Placed column to fit (the DataTable layout rule, "Placed hidden to fit"; it is in the sheet and the export). Phone status tabs scroll sideways inside their row, as drawn.
+
+**Left for S-176 and later.** Finance, payouts, messaging, storefront editor, settings and onboarding keep their page
+bodies (and their own raw px, tags and `money`); kitchen Hours and Modifiers & combos got the status tones and the price
+format but not a layout pass; availability is untouched. The DataTable's built-in `money` type still formats with
+`formatMoney` (the same `$8.50` string); the Studio columns pass `formatPrice`.
+
+## 2026-10-23 — S-178/S-179 Consumer and courier app revamp
+
+**What changed.** Both native apps' screens are rebuilt on the S-169 kit in A · Plainsight (`design/revamp/a.html`'s
+390-wide frames; the consumer home hero is `b.html`'s maker of the week). Everything S-169 left for these stories is
+done: the home hero, results, the product's buy box, the one-page checkout, the provider, orders and the courier's run
+and stop screens; money through the kit's `formatPrice` everywhere (`$89.00` / `89,00 $` — the whole-dollar `$89` and
+both apps' own `Intl` currency formatters are gone); `ProductCard`/`ServiceCard`/`PhotoWell` on the screens; stock
+photos in the web screenshots.
+- **Consumer home:** the header (the mark and the name, the bell, the one search bar, "Deliver to …"), the department
+  strip as underline tabs on the well grey (All current; Services, Shop, then the market's departments), the delivery
+  cut-off strip (the next pooled run's order-by time and fee on the info tint, the time left counting down in the
+  commerce colour), the maker of the week with its two side tiles, the departments and services tiles, rewards near
+  you, "Popular near {city}" as product cards with Add to cart, "Popular services near you" as service cards.
+- **Results:** All · Products · Services as underline tabs, the filter chips (applied = ink edge with ✓), S-158's
+  suggestions as applied chips, "{n} results for “…” · delivering to …", the sort as a sheet of option cards, the
+  tonight strip, a two-up grid of kit cards (photo well, name, shop, price + unit price, "Get it Tonight, 6–9 p.m.",
+  Add to cart → stepper).
+- **Product:** the photo edge to edge in the well, the shop as a link, the name, the kit's rating, tags, the options as
+  joined boxes, "About this item", the buy box (price + unit price, delivery on the next run with the order-within
+  countdown, stock, the quantity, Add to cart, sold by, returns, payment held), "Also from {shop}"; the sticky bar keeps
+  the price, the window and Add to cart.
+- **Provider:** photo, caps line, name, rating, the verified figures and credentials as success tags, Services ·
+  Reviews tabs with counts (they scroll to their section), "Choose a service" as option cards, how paying works, the
+  reviews; the sticky bar has the chosen service's price and Book; favourites are the heart in the header.
+- **Cart + one-page checkout:** six numbered sections in one panel (address with Change, window, out of stock as stacked
+  joined boxes, tip as joined boxes, payment, the items), then the summary (Place your order, the terms, promo code
+  and points, the sums, the offers box); the sticky bar has the total and Place your order.
+- **Courier (glanceable in sunlight):** ink on white, 16 pt body, the key numbers at the 28 pt price role (`Figure`:
+  stops done of the total, the run's window, the order reference at pickup, today's and the week's earnings), large
+  status tags, stop numbers in 44 pt ink squares, an ink progress bar, full-width 46 pt actions, "Navigate to stop n"
+  on the route and Navigate on a stop (the hand-off to the phone's maps app), the kit's `Switch` for the sealed bag
+  (replacing React Native's), the PIN at 28 pt.
+- **Every other screen** (account, orders and tracking, bookings, group orders, sign-in/up, the location sheet, help,
+  messages, quotes, cases) moved onto the kit's text roles, the 4 pt scale with its half steps, 3/4 pt corners and the
+  well grey by a token pass; drawn `Scene`s became the library's photo in the grey well or the dashed fallback
+  (consumer `Picture`).
+
+**Decisions the mockups didn't make.**
+- **Tabs, not a header menu:** the app keeps its bottom tab bar (Home · Browse · Activity · Cart · Account), so the
+  mockup's header menu, account and cart icons are not drawn; the bell stays. The department strip has no Food tab
+  (Food is hidden as a vertical, thrash item 7).
+- **The maker of the week** is derived as on the web (S-170): the landing's highest-tier shop with a photo, one on the
+  next run first, then the one with most products; its photo is the shop's own (`imageUrl`, which the api already
+  returns; the mobile type now reads it), else its department's stock photo. The side tiles are "Book a trusted pro"
+  and "Start a group order" (b.html's second tile is a group order; the app has no kitchen list to name one).
+- **One-page checkout:** payment moved from `/pay` into `/checkout` (`usePlaceOrder` in `shop/Pay.tsx` holds the same
+  calls, keys and step-up/enrol/bank steps); `/pay` redirects to `/checkout` so links and `src/screens.ts` stay. Promo
+  code and points sit in the summary box (the mockup has none). The address is a selected option card (the app knows one
+  address at a time: the phone's, else the account's default).
+- **The provider's "Book a time" panel** stays a step later (`/book/…/time`), because a visit needs the job's details
+  first; that step now draws the mockup's day tiles (solid ink when chosen) and the times as the kit's choice tiles.
+- **Providers have no photo:** a provider row shows its initial in the grey well (not the brand colour, which broke
+  "one role per colour"); the category's photo is the page's cover.
+- **Unit prices** come from the listing's size words (`900 g` → per 100 g, `1 kg` → per kg, `mL`/`L`, `dozen` → each);
+  sizes without a unit (each, bunch) show none.
+- **Colour roles:** selections draw in ink (booking days, problem items, after-sale choices, the code boxes, the
+  wizard's bar), the order timeline's done steps in the success colour, rewards in the commerce colour, the schematic
+  maps' routes in ink; the action blue is left to actions.
+- **Windows** read "Tonight, 6–9 p.m." / "Ce soir, 18 h – 21 h" (the kit's `formatTimeRange`, a comma after the day).
+- **Kit additions** (mobile-kit, no token change): `space` gains the scale's half steps `1.5 · 2.5 · 3.5`; `PhotoWell`
+  takes `fit="cover"` (a shop or place photo); `ProductCard`, `ServiceCard` and `OptionCard` take a fuller `label` for
+  screen readers (name, shop, price); card buttons are ≥ 44 pt.
+- **The screens' lint:tokens:** `mobile-kit/src/ui/kit/rules.ts`, run over every screen by both apps' conventions
+  tests, refuses raw colours, font sizes, line heights, spacing (0–2 pt nudges allowed) and radii, the display face,
+  `surface-sunken`, older radius names, drawn scenes, hand-made currency formats and React Native's `Switch`.
+- **No job offer:** the courier api assigns runs (no offer to accept or decline), so "job offer" is Today's run card
+  (the stops, the window, the next stop). No backend or api change was made.
+
+**Screenshots.** React Native Web's `Image` draws nothing for an array of sources — why S-169's shots showed only the
+placeholder colour — so the kit's `Photo` gives the web one source picked by the view's width (iOS and Android keep
+every variant). `shots.mjs` answers the photo base's requests (`…/photos/<slot>/<variant>`) from the variants `make
+photos` builds (`make mobile-shots` builds them when missing) and lists any it lacks; `NL_SHOTS_DIST`/`NL_SHOTS_OUT`
+photograph another build (the before pictures came from develop's build). The fixture listings and shops carry the
+library's demo photos as their own (`listingPhoto`), as S-182 did on the web; the rye and the butcher's items
+without a matching photo show the designed fallback. New steps: forgot password, messages, group order (join and the
+order), the courier's earnings, and the French search, provider and checkout.
+
+**Not done / not verified.** No device or simulator here (no macOS, no Android SDK): everything was checked in
+react-native-web screenshots at 390 × 844 and in Jest — native `Modal`, dashed borders, `fontVariant`, the system
+font-size setting (Dynamic Type: text uses the kit's roles and scales; one-line bar labels are capped) and the small
+Android size of the acceptance criteria were not looked at on a phone. The results' filter sheet with counts (the
+mockup's "Filters (3)") isn't built: the search api answers two goods filters, kept as chips. The cut-off countdown
+doesn't show in the shots because the fixture's run closes before the screenshot time.
+
 ## 2026-10-23 — S-172 Consumer detail pages
 
 Built from `design/revamp/a.html` ("Product page with buy box", "Service provider with booking") and, for the pages it

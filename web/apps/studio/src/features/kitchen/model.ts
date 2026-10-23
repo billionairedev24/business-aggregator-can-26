@@ -1,4 +1,4 @@
-import { formatMoney, type Locale, timeZone } from '@northline/ui';
+import { formatPrice, type Locale, timeZone } from '@northline/ui';
 import { clock, clockWithPeriod, hhmmLabel, toMinutes } from '../../lib/time';
 import type { MenuSchedule, ModifierGroup, Ticket } from './api';
 import type { KitchenT } from './messages';
@@ -58,7 +58,7 @@ export function ruleText(g: Pick<ModifierGroup, 'pickRule' | 'pickCount' | 'requ
 }
 
 export const optionText = (o: { name: string; priceDeltaCents: number }, t: KitchenT, locale: Locale) =>
-  t('optionPrice', { name: o.name, price: formatMoney(o.priceDeltaCents, locale, { whole: o.priceDeltaCents % 100 === 0 }) });
+  t('optionPrice', { name: o.name, price: formatPrice(o.priceDeltaCents, locale) });
 
 /** "11:00 am – 9:00 pm" / "11 h 00 – 21 h 00". */
 export const rangeText = (r: string[], locale: Locale) => `${hhmmLabel(r[0] ?? '', locale)} – ${hhmmLabel(r[1] ?? '', locale)}`;

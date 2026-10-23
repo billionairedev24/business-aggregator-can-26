@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
-import { Alert, Dialog, ErrorState, Field, Skeleton, TextArea, TextInput, useFormatters, useLocale, type Locale, timeZone } from '@northline/ui';
+import { Alert, Dialog, ErrorState, Field, Skeleton, StatusTag, TextArea, TextInput, useFormatters, useLocale, type Locale, timeZone } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { screenHref } from '../shell/nav';
 import { ApiError, ValidationError } from '../../lib/http';
@@ -32,12 +32,12 @@ export function jobWhen(j: Pick<JobDetail, 'startsAt'>, locale: Locale) {
 }
 
 /** The design's jobStages: the primary action and hint per state. */
-export function stage(j: JobDetail, t: T, money: (c: number) => string): { cta: string; step?: Step; hint: string } {
+export function stage(j: JobDetail, t: T, price: (c: number) => string): { cta: string; step?: Step; hint: string } {
   switch (j.state) {
     case 'confirmed': return { cta: t('startTravel'), step: 'en-route', hint: t('hintStart') };
     case 'en_route': return { cta: t('checkIn'), step: 'on-site', hint: t('hintCheckIn') };
     case 'on_site': return { cta: t('complete'), step: 'complete', hint: t('hintComplete') };
-    case 'completed': return { cta: t('waiting'), hint: t('hintWaiting', { money: money(j.escrowMoney?.heldCents ?? j.priceCents ?? 0) }) };
+    case 'completed': return { cta: t('waiting'), hint: t('hintWaiting', { money: price(j.escrowMoney?.heldCents ?? j.priceCents ?? 0) }) };
     case 'signed_off': return { cta: t('signedOff'), hint: t('hintSigned') };
     default: return { cta: t(`state_${j.state}`), hint: t('hintOther', { state: t(`state_${j.state}`).toLowerCase() }) };
   }
@@ -48,7 +48,7 @@ export function JobPanel({ jobId }: { jobId: string | null }) {
   const merchantId = useMerchantId();
   const q = useQuery({ ...jobQuery(merchantId, jobId ?? ''), enabled: !!jobId });
   if (!jobId) return <section><p className="nl-muted">{t('noJob')}</p></section>;
-  if (q.isPending) return <section aria-busy="true"><Skeleton height={28} width="70%" style={{ marginBottom: 14 }} />{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} height={20} style={{ marginBottom: 10 }} />)}</section>;
+  if (q.isPending) return <section aria-busy="true"><div className="nl-appt-skel"><Skeleton height={28} width="70%" />{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} height={20} />)}</div></section>;
   if (q.isError) return <section><ErrorState message={t('loadJobError')} onRetry={() => void q.refetch()} /></section>;
   return <JobCard job={q.data} />;
 }
@@ -63,7 +63,7 @@ function JobCard({ job: j }: { job: JobDetail }) {
   const advance = useAdvanceJob(merchantId);
   const [completing, setCompleting] = useState(false);
   const [approving, setApproving] = useState(false);
-  const st = stage(j, t, c => f.money(c));
+  const st = stage(j, t, c => f.price(c));
   const canOperate = role !== 'bookkeeper';
   const me = useSession().data?.user.id;
   const when = jobWhen(j, locale);
@@ -96,12 +96,12 @@ function JobCard({ job: j }: { job: JobDetail }) {
       <h2 id="appt-job" className="nl-h2 nl-appt-h2">{title}{j.memberName && j.memberUserId !== me ? <span className="nl-muted"> ({j.memberName})</span> : null}</h2>
       <dl className="nl-appt-facts">
         {j.customer ? <><dt>{t('customer')}</dt><dd>{j.customer.reliability != null ? t('customerLine', { name: j.customer.name, score: j.customer.reliability.toFixed(1), jobs: j.customer.pastJobs }) : t('customerLineNoScore', { name: j.customer.name, jobs: j.customer.pastJobs })}
-          {j.customer.noShows ? <> <span className="tag tag-warning">{t('customerNoShows', { n: j.customer.noShows })}</span></> : null}</dd></> : null}
+          {j.customer.noShows ? <> <StatusTag tone="warning">{t('customerNoShows', { n: j.customer.noShows })}</StatusTag></> : null}</dd></> : null}
         {j.addressLine || j.access ? <><dt>{t('where')}</dt><dd>{[j.addressLine, j.access].filter(Boolean).join(' · ')}</dd></> : null}
         {j.vehicle ? <><dt>{t('vehicle')}</dt><dd>{j.vehicle}</dd></> : null}
         <dt>{t('escrow')}</dt><dd><EscrowFact j={j} /></dd>
-        {j.balance && j.balance.state !== 'none' ? <><dt>{t('balance')}</dt><dd>{t(`balance_${j.balance.state}`, { money: f.money(j.balance.cents + j.balance.taxCents), date: j.balance.dueAt ? f.date(j.balance.dueAt, 'dateTime') : '—', attempts: j.balance.attempts })}</dd></> : null}
-        {j.cancellation ? <><dt>{t('cancelledOn')}</dt><dd>{j.cancellation.feeCents > 0 ? t('cancelledLate', { date: f.date(j.cancellation.at, 'dateTime'), money: f.money(j.cancellation.feeCents + j.cancellation.feeTaxCents) }) : t('cancelledFree', { date: f.date(j.cancellation.at, 'dateTime') })}</dd></> : null}
+        {j.balance && j.balance.state !== 'none' ? <><dt>{t('balance')}</dt><dd>{t(`balance_${j.balance.state}`, { money: f.price(j.balance.cents + j.balance.taxCents), date: j.balance.dueAt ? f.date(j.balance.dueAt, 'dateTime') : '—', attempts: j.balance.attempts })}</dd></> : null}
+        {j.cancellation ? <><dt>{t('cancelledOn')}</dt><dd>{j.cancellation.feeCents > 0 ? t('cancelledLate', { date: f.date(j.cancellation.at, 'dateTime'), money: f.price(j.cancellation.feeCents + j.cancellation.feeTaxCents) }) : t('cancelledFree', { date: f.date(j.cancellation.at, 'dateTime') })}</dd></> : null}
       </dl>
       {j.customerPhotoIds?.length ? <CustomerPhotos merchantId={merchantId} ids={j.customerPhotoIds} /> : null}
       {threadError ? <div role="alert" className="nl-error">{t('threadError')}</div> : null}
@@ -109,7 +109,7 @@ function JobCard({ job: j }: { job: JobDetail }) {
       {j.approvals.length > 0 ? (
         <div className="nl-appt-approvals">
           <h3 className="nl-appt-cv-h">{t('approvalsTitle')}</h3>
-          <ul>{j.approvals.map(a => <li key={a.id}><span>{a.description} · {f.money(a.amountCents)}</span><span className={`tag ${a.state === 'approved' ? 'tag-accent' : a.state === 'declined' ? 'tag-accent-2' : 'tag-neutral'}`}>{t(`approval_${a.state}`)}</span></li>)}</ul>
+          <ul>{j.approvals.map(a => <li key={a.id}><span>{a.description} · {f.price(a.amountCents)}</span><StatusTag tone={a.state === 'approved' ? 'success' : a.state === 'declined' ? 'danger' : 'warning'}>{t(`approval_${a.state}`)}</StatusTag></li>)}</ul>
         </div>
       ) : null}
       {canOperate ? (
@@ -117,9 +117,9 @@ function JobCard({ job: j }: { job: JobDetail }) {
           <button type="button" className="btn btn-primary" disabled={!st.step || advance.isPending} onClick={() => void go()}>{st.cta}</button>
           <button type="button" className="btn btn-secondary" onClick={() => void message()}>{t('message')}</button>
           {['confirmed', 'en_route', 'on_site'].includes(j.state) ? <button type="button" className="btn btn-secondary" onClick={() => setApproving(true)}>{t('extraParts')}</button> : null}
-          <button type="button" className="btn btn-ghost" onClick={toMessages}>{t('reschedule')}</button>
+          <button type="button" className="btn btn-tertiary" onClick={toMessages}>{t('reschedule')}</button>
           {['confirmed', 'en_route', 'on_site'].includes(j.state) && lateEnough && noShow !== 'sent'
-            ? <button type="button" className="btn btn-ghost" onClick={() => void reportNoShow()}>{t('noShow')}</button> : null}
+            ? <button type="button" className="btn btn-tertiary" onClick={() => void reportNoShow()}>{t('noShow')}</button> : null}
         </div>
       ) : null}
       {noShow === 'sent' ? <Alert tone="info" role="status">{t('noShowSent')}</Alert>
@@ -151,7 +151,7 @@ function CompleteDialog({ open, onClose, job }: { open: boolean; onClose: () => 
   };
   return (
     <Dialog open={open} onClose={onClose} title={t('completeTitle')} actions={<>
-      <button type="button" className="btn btn-ghost" onClick={onClose}>{t('cancel')}</button>
+      <button type="button" className="btn btn-tertiary" onClick={onClose}>{t('cancel')}</button>
       <button type="button" className="btn btn-primary" disabled={advance.isPending || upload.isPending} onClick={() => void submit()}>{t('completeCta')}</button>
     </>}>
       <div className="nl-field">
@@ -193,7 +193,7 @@ function ApprovalDialog({ open, onClose, jobId }: { open: boolean; onClose: () =
   };
   return (
     <Dialog open={open} onClose={onClose} title={t('approvalTitle')} actions={<>
-      <button type="button" className="btn btn-ghost" onClick={onClose}>{t('cancel')}</button>
+      <button type="button" className="btn btn-tertiary" onClick={onClose}>{t('cancel')}</button>
       <button type="button" className="btn btn-primary" disabled={request.isPending} onClick={submit}>{t('approvalSend')}</button>
     </>}>
       {tried && count > 0 ? <Alert tone="error">{t('attention', { n: count })}</Alert> : null}
@@ -210,15 +210,15 @@ function EscrowFact({ j }: { j: JobDetail }) {
   const m = j.escrowMoney;
   const held = m?.heldCents ?? j.priceCents ?? 0;
   const state = m?.state ?? j.escrow;
-  const line = state === 'held' ? t('escrowHeld', { money: f.money(held) })
-    : state === 'released' ? t('escrowReleased', { money: f.money(held) })
-    : state === 'disputed' ? t('escrowOnHold', { money: f.money(held) })
-    : state === 'refunded' ? t('escrowRefunded', { money: f.money(held) })
+  const line = state === 'held' ? t('escrowHeld', { money: f.price(held) })
+    : state === 'released' ? t('escrowReleased', { money: f.price(held) })
+    : state === 'disputed' ? t('escrowOnHold', { money: f.price(held) })
+    : state === 'refunded' ? t('escrowRefunded', { money: f.price(held) })
     : t('escrowNone');
   return (
     <>
       <strong>{line}</strong>
-      {m && state !== 'refunded' ? <div className="nl-muted">{t('escrowBreakdown', { tax: f.money(m.taxCents), fee: f.money(m.feeCents), net: f.money(m.netCents) })}</div> : null}
+      {m && state !== 'refunded' ? <div className="nl-muted">{t('escrowBreakdown', { tax: f.price(m.taxCents), fee: f.price(m.feeCents), net: f.price(m.netCents) })}</div> : null}
     </>
   );
 }

@@ -21,7 +21,9 @@ import {
   LINE,
   MIN_TARGET,
   Mark,
+  SIZE,
   Segmented as KitSegmented,
+  StatusTag,
   TYPE,
   colors,
   radius,
@@ -40,7 +42,9 @@ import { useI18n } from '../i18n';
  * corners, never pills), flat white panels with the hairline edge, joined-box segmented controls, a sticky bottom
  * action bar. These keep the props the screens were written against. Colours, radii, spacing and type come from
  * @northline/mobile-kit, never literals. ≥ 44 pt targets (46 pt for the main action): couriers use the app outdoors,
- * often one-handed.
+ * often one-handed. S-179 (glanceable in sunlight): ink on white, 16 pt body, the key numbers at the 28 pt price role
+ * ({@link Figure}), status tags drawn large, stop numbers in solid ink squares ({@link StepNumber}), progress as an ink
+ * bar on the well ({@link Progress}) — no pictures that only decorate.
  */
 
 export function Screen({
@@ -173,13 +177,46 @@ export function Card({ children, onPress, label, highlight, flush, testID }: { c
 }
 
 type ChipTone = 'neutral' | 'accent' | 'done' | 'warn';
+const STATUS: Record<ChipTone, 'neutral' | 'info' | 'success' | 'warning'> = { neutral: 'neutral', accent: 'info', done: 'success', warn: 'warning' };
 
+/** A status (a stop's state, the courier's status, the ID check): the kit's StatusTag, drawn large for a glance. */
 export function Chip({ label, tone = 'neutral' }: { label: string; tone?: ChipTone }) {
+  return <StatusTag label={label} tone={STATUS[tone]} large />;
+}
+
+/** A key number at a glance: the caps label over the figure at 28 pt (tabular), an optional line under it. */
+export function Figure({ label, value, sub, testID }: { label: string; value: string; sub?: string; testID?: string }) {
   return (
-    <View style={[styles.chip, chipTone[tone]]}>
-      <Text style={[styles.chipText, chipText[tone]]} maxFontSizeMultiplier={CAP.bar}>
+    <View style={styles.figure} accessible accessibilityLabel={[label, value, sub].filter(Boolean).join(', ')} testID={testID}>
+      <Text style={textStyles.caps} maxFontSizeMultiplier={CAP.control}>
         {label}
       </Text>
+      <Text style={styles.figureValue}>{value}</Text>
+      {sub ? <Text style={styles.figureSub}>{sub}</Text> : null}
+    </View>
+  );
+}
+
+/** A stop's number in a square: solid ink for the next one, the success tint with ✓ once done, outlined otherwise. */
+export function StepNumber({ n, state }: { n: number; state: 'next' | 'done' | 'later' }) {
+  return (
+    <View style={[styles.step, state === 'next' && styles.stepNext, state === 'done' && styles.stepDone]} accessible={false}>
+      {state === 'done' ? (
+        <Icon name="check" size={TYPE.price} color={semantic['status-success-fg']} />
+      ) : (
+        <Text style={[styles.stepText, state === 'next' && styles.stepTextNext]} maxFontSizeMultiplier={CAP.badge}>
+          {n}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/** Done of total as an ink bar on the well grey (decorative: the words beside it say it). */
+export function Progress({ done, total }: { done: number; total: number }) {
+  return (
+    <View style={styles.track} accessible={false}>
+      <View style={[styles.fill, { width: `${total ? Math.round((done / total) * 100) : 0}%` }]} />
     </View>
   );
 }
@@ -228,23 +265,11 @@ export function Gap({ size = 4 }: { size?: keyof typeof space }) {
 export function Loading({ label }: { label: string }) {
   return (
     <View style={styles.loading} accessibilityLabel={label} accessibilityRole="progressbar">
-      <ActivityIndicator color={colors.actionPrimary} size="large" />
+      <ActivityIndicator color={semantic['action-primary']} size="large" />
     </View>
   );
 }
 
-const chipTone: Record<ChipTone, ViewStyle> = {
-  neutral: { backgroundColor: semantic['status-neutral-bg'] },
-  accent: { backgroundColor: semantic['status-info-bg'] },
-  done: { backgroundColor: semantic['status-success-bg'] },
-  warn: { backgroundColor: semantic['status-warning-bg'] },
-};
-const chipText: Record<ChipTone, TextStyle> = {
-  neutral: { color: semantic['status-neutral-fg'] },
-  accent: { color: semantic['status-info-fg'] },
-  done: { color: semantic['status-success-fg'] },
-  warn: { color: semantic['status-warning-fg'] },
-};
 const bannerTone: Record<BannerTone, ViewStyle> = {
   info: { backgroundColor: semantic['status-info-bg'], borderLeftColor: semantic['status-info-fg'] },
   warn: { backgroundColor: semantic['status-warning-bg'], borderLeftColor: semantic['status-warning-fg'] },
@@ -269,8 +294,16 @@ const styles = StyleSheet.create({
   cardHighlight: { borderColor: semantic['selected'], borderWidth: LINE.bold, padding: space[4] - LINE.hair },
   cardFlush: { padding: 0, overflow: 'hidden' },
   cardPressed: { backgroundColor: semantic['surface-hover'] },
-  chip: { alignSelf: 'flex-start', borderRadius: radius.status, paddingHorizontal: space[2], paddingVertical: LINE.bold },
-  chipText: { ...StyleSheet.flatten(textStyles.label), fontFamily: textStyles.section.fontFamily },
+  figure: { flex: 1, minWidth: SIZE.rail * 2, gap: space[1] },
+  figureValue: { ...StyleSheet.flatten(textStyles.priceLg), color: semantic.text },
+  figureSub: { ...StyleSheet.flatten(textStyles.body), color: semantic['text-muted'] },
+  step: { width: MIN_TARGET, height: MIN_TARGET, borderRadius: radius.control, borderWidth: LINE.bold, borderColor: semantic.selected, alignItems: 'center', justifyContent: 'center', backgroundColor: semantic.surface },
+  stepNext: { backgroundColor: semantic.selected },
+  stepDone: { borderColor: semantic['status-success-bg'], backgroundColor: semantic['status-success-bg'] },
+  stepText: { ...StyleSheet.flatten(textStyles.section), color: semantic.selected },
+  stepTextNext: { color: semantic['selected-text'] },
+  track: { height: space[2], borderRadius: radius.status, backgroundColor: semantic.well, overflow: 'hidden' },
+  fill: { height: space[2], backgroundColor: semantic.selected },
   banner: { borderRadius: radius.panel, padding: space[4], gap: space[2], borderLeftWidth: LINE.bold + LINE.hair },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], flexWrap: 'wrap' },
   check: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET + space[2], paddingHorizontal: space[3], paddingVertical: space[2], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-strong'], backgroundColor: colors.surface },

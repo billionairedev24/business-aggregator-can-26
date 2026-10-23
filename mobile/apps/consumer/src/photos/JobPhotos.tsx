@@ -89,8 +89,8 @@ export function JobPhotos({ state }: { state: ReturnType<typeof useJobPhotos> })
 
 const styles = StyleSheet.create({
   stack: { gap: space[2] },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: space[1.5] },
   photos: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   item: { alignItems: 'center', gap: 2 },
-  photo: { width: 88, height: 88, borderRadius: radius.md, backgroundColor: colors.neutral200 },
+  photo: { width: 88, height: 88, borderRadius: radius.panel, backgroundColor: colors.neutral200 },
 });

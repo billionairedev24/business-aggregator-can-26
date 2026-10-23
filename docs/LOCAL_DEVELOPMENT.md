@@ -253,6 +253,13 @@ its drop-off). Pictures land in `mobile/shots-out/<app>/<nn>-<screen>.png` at 39
 `shots.mjs`. Native-only parts — the camera, the system browser, Keychain, Stripe's sheet, maps — show their web
 fallbacks.
 
+The stock photos are real (S-178): the fixture build asks the consumer site's `/photos/` for them, so `shots.mjs`
+answers those requests from the variants `make photos` builds into `web/apps/consumer/public/photos` (`make
+mobile-shots` runs `make photos` first when the folder is missing; `NL_PHOTOS_DIR` points elsewhere,
+`MOBILE_SHOTS_NO_PHOTOS=1` goes on without them). Variants the folder lacks are listed in `_missing-photos.txt`.
+`NL_SHOTS_DIST=<dist-web folder> NL_SHOTS_OUT=<folder>` photographs another build — an older branch's, for before
+pictures.
+
 ## Database, Kafka, search
 
 | Target | Runs |

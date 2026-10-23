@@ -3,22 +3,22 @@ import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
+import { StatusTag, formatPrice, radius, semantic, space, textStyles, type StatusTone } from '@northline/mobile-kit';
 
 import type { Earnings, Totals } from '../../src/api/courier';
-import { Banner, Body, Button, Card, Heading, Loading, Screen } from '../../src/components/ui';
+import { Banner, Body, Button, Card, Figure, Heading, Loading, Screen } from '../../src/components/ui';
 import { useI18n, type MessageKey } from '../../src/i18n';
 import { services } from '../../src/services';
 
 export const EARNINGS_KEY = ['courier', 'earnings'] as const;
 
-/** `Intl` money in the courier's language: 7,50 $ / $7.50. */
-const money = (cents: number, locale: string) =>
-  new Intl.NumberFormat(locale === 'fr-CA' ? 'fr-CA' : 'en-CA', { style: 'currency', currency: 'CAD' }).format(cents / 100);
+/** A payout's state as a status tag: paid out green, on its way blue, failed red, the rest neutral. */
+const PAYOUT_TONE: Record<string, StatusTone> = { paid: 'success', in_transit: 'info', pending: 'info', failed: 'danger', canceled: 'neutral' };
 
 /**
- * S-151 earnings: today and this week (days and weeks in the market's zone, from the api), each paid run (the market's
- * pay model, plus the tips its deliveries brought), what is not paid out yet, the weekly payouts, and payout setup —
+ * S-151 earnings (S-179: the totals as 28 pt figures, prices in the one format of the kit): today and this week (days
+ * and weeks in the market's zone, from the api), each paid run (the market's pay model, plus the tips its deliveries
+ * brought), what is not paid out yet, the weekly payouts with their state as a tag, and payout setup —
  * Stripe's own onboarding in the browser (the bank details go to Stripe, never to Northline or this phone).
  */
 export default function EarningsScreen() {
@@ -34,7 +34,7 @@ export default function EarningsScreen() {
       await q.refetch();
     },
   });
-  const m = (c: number) => money(c, locale);
+  const m = (c: number) => formatPrice(c, locale);
 
   if (q.isPending) {
     return (
@@ -56,8 +56,7 @@ export default function EarningsScreen() {
   const account = e.payoutAccount;
   const tile = (label: string, x: Totals, testID: string) => (
     <View style={styles.tile} testID={testID}>
-      <Text style={styles.kicker}>{label}</Text>
-      <Text style={styles.big}>{m(x.payCents + x.tipsCents)}</Text>
+      <Figure label={label} value={m(x.payCents + x.tipsCents)} />
       <Body muted>{t('earnings.pay', { amount: m(x.payCents) })} · {t('earnings.tips', { amount: m(x.tipsCents) })}</Body>
       <Body muted>{t('earnings.counts', { runs: x.runs, stops: x.stops })}</Body>
     </View>
@@ -89,8 +88,13 @@ export default function EarningsScreen() {
       {e.runs.length ? (
         e.runs.map((r) => (
           <Card key={r.runId} testID={`earning-${r.runId}`}>
-            <Body strong>{t('earnings.run', { label: r.label ?? r.runId.slice(-6), date: day(r.earnedAt, e.zone) })}</Body>
-            <Body>{m(r.payCents + r.tipsCents)} · {t('earnings.pay', { amount: m(r.payCents) })} · {t('earnings.tips', { amount: m(r.tipsCents) })}</Body>
+            <View style={styles.runHead}>
+              <Body strong style={styles.flex}>
+                {t('earnings.run', { label: r.label ?? r.runId.slice(-6), date: day(r.earnedAt, e.zone) })}
+              </Body>
+              <Text style={textStyles.price}>{m(r.payCents + r.tipsCents)}</Text>
+            </View>
+            <Body>{t('earnings.pay', { amount: m(r.payCents) })} · {t('earnings.tips', { amount: m(r.tipsCents) })}</Body>
             <Body muted>{t('earnings.runDetail', { pickups: r.pickups, dropoffs: r.dropoffs, failed: r.failed, collects: r.collects, returns: r.returns })}</Body>
           </Card>
         ))
@@ -101,9 +105,12 @@ export default function EarningsScreen() {
         <>
           <Heading level={2}>{t('earnings.payouts')}</Heading>
           {e.payouts.map((p) => (
-            <Body key={p.id}>
-              {day(p.createdAt, e.zone)} · {t('earnings.payout', { amount: m(p.amountCents), state: t(`earnings.payout.${p.state}` as MessageKey) })}
-            </Body>
+            <View key={p.id} style={styles.payout}>
+              <Body style={styles.flex}>
+                {day(p.createdAt, e.zone)} · {m(p.amountCents)}
+              </Body>
+              <StatusTag label={t(`earnings.payout.${p.state}` as MessageKey)} tone={PAYOUT_TONE[p.state] ?? 'neutral'} large />
+            </View>
           ))}
         </>
       ) : null}
@@ -112,8 +119,9 @@ export default function EarningsScreen() {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
   tiles: { flexDirection: 'row', gap: space[3], flexWrap: 'wrap' },
-  tile: { flex: 1, minWidth: 150, gap: space[1], padding: space[4], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
-  kicker: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.5, textTransform: 'uppercase', color: colors.textMuted },
-  big: { fontFamily: fonts.display, fontSize: 28, color: colors.text },
+  tile: { flex: 1, minWidth: space[16] * 2 + space[5], gap: space[1], padding: space[4], borderRadius: radius.panel, backgroundColor: semantic.well },
+  runHead: { flexDirection: 'row', alignItems: 'baseline', gap: space[3] },
+  payout: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingVertical: space[2] },
 });

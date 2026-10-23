@@ -1,3 +1,5 @@
+import { photoFor } from '@northline/mobile-kit';
+
 import type { FixtureArea, FixtureContext, FixtureRequest } from './context';
 import { MARKETS, PROVINCES } from './geo';
 import { applyCode, pointsFor, promoError } from './promotions';
@@ -41,6 +43,23 @@ export const PRODUCTS: FixtureProduct[] = [
   { productId: 'p-thighs', offerId: 'o-thighs', name: 'Chicken thighs', merchantId: 'm-butcher', unit: '1 kg', priceCents: 1100, stock: 6, tonight: false, dietary: ['halal'] },
   { productId: 'p-kale', offerId: 'o-kale', name: 'Kale & chard mix', merchantId: 'm-greens', unit: 'bunch', priceCents: 425, stock: 2, tonight: true, dietary: [] },
 ];
+
+/**
+ * S-178: the listings' own photos, as merchants upload them — the photo library's demo slots, the bytes `make
+ * demo-data` uploads (the web fixtures do the same, S-182); a listing without one shows the dashed well. Served from
+ * the library's base (the consumer site's /photos/), at its widest square variant.
+ */
+const LISTING_PHOTO: Record<string, string> = {
+  'p-sourdough': 'demo/listing/bakery.sourdough',
+  'p-baguette': 'demo/listing/bakery.baguette',
+  'p-kale': 'demo/listing/grocer.greens',
+  'm-bakery': 'demo/merchant/bakery',
+  'm-greens': 'demo/merchant/grocer',
+};
+export const listingPhoto = (id: string): string | null => {
+  const slot = LISTING_PHOTO[id];
+  return (slot && photoFor(slot, 'square')?.sources.at(-1)?.uri) || null;
+};
 
 interface Line { itemId: string; offerId: string; variantId?: string; qty: number }
 interface Order {
@@ -151,9 +170,9 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
   const shopOf = (merchantId: string) => SHOPS.find((s) => s.merchantId === merchantId)!;
   const card = (p: FixtureProduct) => ({
     productId: p.productId, offerId: p.offerId, name: p.name, merchantId: p.merchantId, shopName: shopOf(p.merchantId).name, unit: p.unit,
-    priceCents: p.priceCents, imageUrl: null, sellers: 1, run: p.tonight ? run('today') : run('tomorrow'),
+    priceCents: p.priceCents, imageUrl: listingPhoto(p.productId), sellers: 1, run: p.tonight ? run('today') : run('tomorrow'),
   });
-  const shopCard = (s: (typeof SHOPS)[number]) => ({ ...s, products: PRODUCTS.filter((p) => p.merchantId === s.merchantId).length, run: run('today') });
+  const shopCard = (s: (typeof SHOPS)[number]) => ({ ...s, products: PRODUCTS.filter((p) => p.merchantId === s.merchantId).length, run: run('today'), imageUrl: listingPhoto(s.merchantId) });
   const departments = SHOPS.map((s) => ({ slug: s.departmentSlug, name: s.departmentName, shops: 1 }));
   const signedIn = (req: FixtureRequest) => (req.headers.authorization ?? '').startsWith('DPoP ');
   const unauthorized = () => ctx.answer(401, { error: 'invalid_token' });
@@ -188,7 +207,7 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
         .filter(({ p }) => p.merchantId === s.merchantId)
         .map(({ l, p }) => ({
           itemId: l.itemId, merchantId: p.merchantId, offerId: p.offerId, variantId: l.variantId ?? null, productId: p.productId, name: p.name,
-          option: p.variants?.find((v) => v.variantId === l.variantId)?.value ?? null, unit: p.unit, imageUrl: null, unitCents: p.priceCents,
+          option: p.variants?.find((v) => v.variantId === l.variantId)?.value ?? null, unit: p.unit, imageUrl: listingPhoto(p.productId), unitCents: p.priceCents,
           qty: l.qty, lineCents: p.priceCents * l.qty, stock: p.stock, available: true, handlingDays: p.tonight ? 0 : 1,
         })),
     })).filter((g) => g.items.length > 0);
@@ -330,7 +349,7 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
               offerId: p.offerId, merchantId: p.merchantId, shopName: s.name, tier: s.tier, rating: 4.8, ratingCount: 211, priceCents: p.priceCents, compareAtCents: null,
               condition: null, stock: p.stock, lowStock: p.stock <= 3, returnsPolicy: null, variantTheme: 'option',
               variants: (p.variants ?? []).map((v) => ({ ...v, priceCents: p.priceCents, stock: p.stock, images: [] })),
-              runs: p.tonight ? [run('today')] : [run('tomorrow')], images: [],
+              runs: p.tonight ? [run('today')] : [run('tomorrow')], images: [listingPhoto(p.productId)].filter((u): u is string => !!u),
               more: PRODUCTS.filter((x) => x.merchantId === p.merchantId && x.productId !== p.productId).map((x) => ({ productId: x.productId, name: x.name, priceCents: x.priceCents })),
             }]
           : [],
@@ -378,7 +397,7 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
         return {
           id: p.offerId, kind: 'product', name: p.name, description: null, merchant: { id: s.merchantId, name: s.name, type: 'seller', slug: null, tier: s.tier },
           category: { id: `shop.food-and-grocery.${s.departmentSlug}`, name: s.departmentName }, priceCents: p.priceCents, rating: 4.8, trustTier: s.tier,
-          soldOut: false, onTonightsRun: p.tonight, imageKey: null,
+          soldOut: false, onTonightsRun: p.tonight, imageKey: listingPhoto(p.productId),
         };
       });
       // redesign: services come back with products unless one kind is asked for (no delivery filter on a service)

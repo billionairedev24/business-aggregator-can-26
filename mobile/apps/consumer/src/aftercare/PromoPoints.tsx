@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { space } from '@northline/mobile-kit';
+import { Segmented, space } from '@northline/mobile-kit';
 
 import { TIP_CHOICES, type TipChoice } from '../api/aftercare';
 import { useI18n } from '../i18n';
 import { money } from '../services/format';
-import { Chip } from '../shop/parts';
 import { Body, Button, Checkbox, Field, Notice } from '../ui/primitives';
 
 /**
@@ -84,21 +83,29 @@ export function PromoPoints({
 
 export const tipKey = (tip: TipChoice) => `${tip.kind}-${tip.value}`;
 
-/** The courier's tip (as food's, S-57): no tip · $2 · $4 · 15 % · $6 — 100 % to the courier, never taxed. */
+/**
+ * The courier's tip (as food's, S-57): no tip · $2 · $4 · 15 % · $6 — 100 % to the courier, never taxed. E-15: one
+ * choice of a few, so the kit's joined boxes (the chosen one solid ink with ✓), as a.html's checkout.
+ */
 export function TipPicker({ value, onChange, choices = TIP_CHOICES }: { value: TipChoice; onChange: (tip: TipChoice) => void; choices?: readonly TipChoice[] }) {
   const { t, locale } = useI18n();
   const label = (tip: TipChoice) => (tip.kind === 'none' ? t('tip.none') : tip.kind === 'percent' ? t('tip.percent', { n: tip.value }) : money(tip.value, locale));
   return (
-    <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel={t('tip.title')}>
-      {choices.map((tip) => (
-        <Chip key={tipKey(tip)} role="radio" label={label(tip)} on={tip.kind === value.kind && tip.value === value.value} onPress={() => onChange(tip)} testID={`tip-${tipKey(tip)}`} />
-      ))}
-    </View>
+    <Segmented
+      label={t('tip.title')}
+      options={choices.map((tip) => ({ value: tipKey(tip), label: label(tip) }))}
+      value={tipKey(value)}
+      onChange={(k) => {
+        const tip = choices.find((c) => tipKey(c) === k);
+        if (tip) onChange(tip);
+      }}
+      fill
+      testID="tip"
+    />
   );
 }
 
 const styles = StyleSheet.create({
   stack: { gap: space[2] },
   row: { gap: space[1] },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 });

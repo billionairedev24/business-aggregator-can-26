@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, colors, radius, semantic, space, type IconName } from '@northline/mobile-kit';
+import { colors, Icon, LINE, radius, semantic, space, type IconName } from '@northline/mobile-kit';
 
 import type { ActivityItem } from '../api/account';
 import type { RequestRow } from '../api/hire';
@@ -202,7 +202,7 @@ function QuoteRequests() {
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   list: { gap: space[3] },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3], padding: 14, minHeight: 56, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3], padding: space[3.5], minHeight: 56, borderWidth: LINE.hair, borderColor: semantic.border, borderRadius: radius.panel, backgroundColor: semantic.surface },
   pressed: { backgroundColor: semantic['surface-hover'] },
-  text: { flex: 1, minWidth: 0, gap: 4 },
+  text: { flex: 1, minWidth: 0, gap: space[1] },
 });

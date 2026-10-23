@@ -1,20 +1,18 @@
-import type { Locale } from '@northline/mobile-kit';
+import { formatPrice, type Locale } from '@northline/mobile-kit';
 
 /**
- * Money and times of Journey C. Money is CAD from `*_cents`; times are instants shown in the business's time zone
+ * Money and times of Journey C. Money is CAD from `*_cents`, in the one format of the kit; times are instants shown in the business's time zone
  * (`timeZone` on every booking answer — never the phone's, never a zone named in code).
  */
 const tag = (locale: Locale) => (locale === 'fr-CA' ? 'fr-CA' : 'en-CA');
 
+/** S-178: the one price format (the kit's formatPrice): `$89.00` / `89,00 $`, always with cents. */
 export function money(cents: number | null | undefined, locale: Locale): string {
-  return new Intl.NumberFormat(tag(locale), { style: 'currency', currency: 'CAD' }).format((cents ?? 0) / 100);
+  return formatPrice(cents ?? 0, locale);
 }
 
-/** Whole dollars when there are no cents ("$89"), as the design shows menu prices. */
-export function price(cents: number | null | undefined, locale: Locale): string {
-  const c = cents ?? 0;
-  return new Intl.NumberFormat(tag(locale), { style: 'currency', currency: 'CAD', minimumFractionDigits: c % 100 === 0 ? 0 : 2 }).format(c / 100);
-}
+/** A menu price: the one format too (E-15 retired the whole-dollar "$89"). */
+export const price = money;
 
 /** The calendar date (`YYYY-MM-DD`) of an instant in a zone. */
 export function dateIn(iso: string | number | Date, timeZone: string): string {

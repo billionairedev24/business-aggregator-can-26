@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, semantic, space } from '@northline/mobile-kit';
+import { LINE, radius, semantic, space } from '@northline/mobile-kit';
 
 import type { Card } from '../api/account';
 import { useAuth } from '../auth/AuthProvider';
@@ -118,7 +118,7 @@ function CardRow({ card, busy, onDefault, onRemove }: { card: Card; busy: boolea
 
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
-  card: { padding: space[4], gap: 4, borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'], backgroundColor: colors.surface },
+  card: { padding: space[4], gap: space[1], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-card'], backgroundColor: semantic.surface },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
 });

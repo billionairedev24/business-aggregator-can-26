@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef } from 'react';
 
-import { ApiError, type Locale } from '@northline/mobile-kit';
+import { ApiError, formatPrice, formatTimeRange } from '@northline/mobile-kit';
 
 import { geoApi } from '../api/geo';
 import { EMPTY_CART, shopApi, type Cart, type Day } from '../api/shop';
@@ -14,10 +14,6 @@ import { services } from '../services';
 /** Journey B's api on the app's client. */
 export const shop = () => shopApi(services().api);
 
-/** `Intl` money in the person's language: 7,50 $ / $7.50 (CAD, `*_cents / 100`). */
-export function formatMoney(cents: number, locale: Locale): string {
-  return new Intl.NumberFormat(locale === 'fr-CA' ? 'fr-CA' : 'en-CA', { style: 'currency', currency: 'CAD' }).format(cents / 100);
-}
 
 /** The hour (0–23) of an instant in a time zone (for "tonight"). */
 function hourIn(iso: string, timeZone?: string): number {
@@ -55,10 +51,12 @@ export function useShopFormat() {
   const { zone } = useMarket();
   return useMemo(() => {
     const { t, locale } = i18n;
-    const money = (cents: number) => formatMoney(cents, locale);
+    // S-178: the one price format (the kit's formatPrice): $7.50 / 7,50 $
+    const money = (cents: number) => formatPrice(cents, locale);
     const time = (iso?: string | null) => i18n.time(iso, zone);
     const date = (iso?: string | null) => i18n.day(iso, zone);
-    const range = (start?: string | null, end?: string | null) => (start && end ? `${time(start)}–${time(end)}` : time(start));
+    // S-178: one day reads "6–9 p.m." / "18 h – 21 h" (the kit's formatTimeRange), never "6:00 p.m.–9:00 p.m."
+    const range = (start?: string | null, end?: string | null) => (start && end ? formatTimeRange(start, end, locale, zone) : time(start));
     const weekday = (iso: string) => {
       try {
         return new Intl.DateTimeFormat(locale === 'fr-CA' ? 'fr-CA' : 'en-CA', { weekday: 'long', ...(zone ? { timeZone: zone } : {}) }).format(new Date(iso));
@@ -66,12 +64,15 @@ export function useShopFormat() {
         return date(iso);
       }
     };
-    /** "Tonight 6:00 p.m.–9:00 p.m." (`prefix` win = a choice's name, when = inside a sentence). */
-    const window = (w: { day?: Day | null; startsAt?: string | null; endsAt?: string | null }, prefix: 'shop.win' | 'shop.when') => {
-      if (!w.startsAt) return t('shop.when.soon');
+    /** Which day words a window takes: tonight (today from 5 p.m.), today, tomorrow or later. */
+    const which = (w: { day?: Day | null; startsAt?: string | null }): 'tonight' | 'today' | 'tomorrow' | 'later' => {
       const day = w.day ?? 'later';
-      const which = day === 'today' ? (hourIn(w.startsAt, zone) >= 17 ? 'tonight' : 'today') : day;
-      return t(`${prefix}.${which}` as MessageKey, { range: range(w.startsAt, w.endsAt), weekday: weekday(w.startsAt) });
+      return day === 'today' ? (w.startsAt && hourIn(w.startsAt, zone) >= 17 ? 'tonight' : 'today') : day;
+    };
+    /** "Tonight, 6–9 p.m." (`prefix` win = a choice's name, when = inside a sentence, rv.when = a card's "Get it …"). */
+    const window = (w: { day?: Day | null; startsAt?: string | null; endsAt?: string | null }, prefix: 'shop.win' | 'shop.when' | 'rv.when') => {
+      if (!w.startsAt) return t('shop.when.soon');
+      return t(`${prefix}.${which(w)}` as MessageKey, { range: range(w.startsAt, w.endsAt), weekday: weekday(w.startsAt) });
     };
     const fee = (cents: number) => (cents === 0 ? t('shop.free') : money(cents));
     const tier = (code?: string | null) => {
@@ -83,7 +84,7 @@ export function useShopFormat() {
       const p = new Intl.NumberFormat(locale === 'fr-CA' ? 'fr-CA' : 'en-CA', { maximumFractionDigits: 3 }).format(percent);
       return ['gst', 'hst', 'pst', 'qst', 'rst'].includes(type) ? t(`shop.tax.${type}` as MessageKey, { percent: p }) : t('shop.tax.other', { type: type.toUpperCase(), percent: p });
     };
-    return { t, locale, zone, money, time, date, range, window, fee, tier, tax };
+    return { t, locale, zone, money, time, date, range, window, which, weekday, fee, tier, tax };
   }, [i18n, zone]);
 }
 

@@ -1,19 +1,19 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, Icon, NetworkError, colors, radius, semantic, space, Scene } from '@northline/mobile-kit';
+import { ApiError, Icon, LINE, NetworkError, TYPE, radius, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import type { Shift } from '../../../src/api/courier';
 import { OutboxBar } from '../../../src/components/tracking';
-import { Banner, Body, Button, Card, Chip, Heading, IconBadge, Loading, Row, Screen } from '../../../src/components/ui';
+import { Banner, Body, Button, Card, Chip, Figure, Heading, Loading, Progress, Screen, StepNumber } from '../../../src/components/ui';
 import { useMarketZone, useMe, useRun, useShifts } from '../../../src/hooks';
 import { useI18n, type MessageKey } from '../../../src/i18n';
 import { FeedbackButton } from '../../../src/pilot/Feedback';
 import { PushPrompt } from '../../../src/push/PhonePush';
 import { ME_KEY, RUN_KEY, SHIFTS_KEY, services } from '../../../src/services';
-import { kindKey, nextStop, stopName } from '../../../src/stops';
+import { kindKey, nextStop, stopAddress, stopName } from '../../../src/stops';
 
 const EARLY_START_MS = 15 * 60_000;
 
@@ -28,9 +28,11 @@ function useNow(): number {
 }
 
 /**
- * Today (redesign spec § 2.5; the light direction): the courier's status, the shift (start 15 minutes early / end), the
- * run as a picture-first card with its progress and the next stop — the way into Route — and the run notifications
- * prompt.
+ * Today (S-179, E-15 Plainsight, glanceable in sunlight): the courier's status as a large tag; the shift — when it ends
+ * (or the next one), start 15 minutes early / end, full-width 46 pt buttons; the run they're on as the job card — the
+ * stops done of the total and the run's window as 28 pt figures, an ink progress bar, the next stop with its number
+ * in an ink square and its address — the way into Route; and the run notifications prompt. Runs are assigned by
+ * dispatch (the api has no offer to accept or decline).
  */
 export default function ShiftScreen() {
   const { t, time, day } = useI18n();
@@ -88,18 +90,16 @@ export default function ShiftScreen() {
     <Screen testID="shift-screen" title={title} action={<FeedbackButton />}>
       <OutboxBar />
       <View style={styles.status}>
-        <IconBadge name={courier.status === 'offline' ? 'clock' : courier.status === 'on_run' ? 'truck' : 'check-circle'} tone={courier.status === 'offline' ? 'muted' : 'brand'} />
-        <View style={styles.flex}>
-          <Chip tone={courier.status === 'offline' ? 'neutral' : 'accent'} label={t(`shift.status.${courier.status}` as MessageKey)} />
-          {courier.vehicle ? <Body muted>{t('shift.vehicle', { vehicle: t(`vehicle.${courier.vehicle}` as MessageKey) })}</Body> : null}
-        </View>
+        <Chip tone={courier.status === 'offline' ? 'neutral' : 'accent'} label={t(`shift.status.${courier.status}` as MessageKey)} />
+        {courier.vehicle ? <Body muted>{t('shift.vehicle', { vehicle: t(`vehicle.${courier.vehicle}` as MessageKey) })}</Body> : null}
       </View>
 
       {current ? (
         <Card>
-          <Heading level={2}>{t('shift.on', { end: time(current.endsAt, zone) })}</Heading>
+          <Heading>{t('shift.on', { end: time(current.endsAt, zone) })}</Heading>
           <Button
             tone="secondary"
+            large
             label={t('shift.end')}
             disabled={!!run}
             hint={run ? t('shift.endBlocked') : undefined}
@@ -111,7 +111,7 @@ export default function ShiftScreen() {
         </Card>
       ) : next ? (
         <Card>
-          <Heading level={2}>{t('shift.next', { day: day(next.startsAt, zone), start: time(next.startsAt, zone), end: time(next.endsAt, zone) })}</Heading>
+          <Heading>{t('shift.next', { day: day(next.startsAt, zone), start: time(next.startsAt, zone), end: time(next.endsAt, zone) })}</Heading>
           <Button
             label={t('shift.start')}
             large
@@ -133,33 +133,27 @@ export default function ShiftScreen() {
       {error ? <Banner tone="error">{error}</Banner> : null}
 
       {run ? (
-        <Card highlight flush onPress={() => router.navigate('/run')} label={t('shift.openRun')} testID="open-run">
-          <Scene slot="hero/courier" subject="courier" tone="sage" fit="contain" style={styles.art} />
-          <View style={styles.runBody}>
-            <Row>
+        <Card highlight onPress={() => router.navigate('/run')} label={t('shift.openRun')} testID="open-run">
+          <Text style={textStyles.caps}>{t('today.yourRun')}</Text>
+          <Heading level={2}>{run.label ? t('shift.run', { label: run.part > 1 ? `${run.label} · ${run.part}` : run.label }) : t('run.titleNoLabel')}</Heading>
+          <View style={styles.figures}>
+            <Figure label={t('today.stops')} value={t('today.doneOf', { done, total: run.stops.length })} testID="run-progress" />
+            {run.startsAt && run.endsAt ? <Figure label={t('today.window')} value={time(run.startsAt, zone)} sub={t('today.until', { time: time(run.endsAt, zone) })} /> : null}
+          </View>
+          <Progress done={done} total={run.stops.length} />
+          {upNext ? (
+            <View style={styles.next}>
+              <StepNumber n={upNext.seq} state="next" />
               <View style={styles.flex}>
-                <Heading level={2}>{run.label ? t('shift.run', { label: run.part > 1 ? `${run.label} · ${run.part}` : run.label }) : t('run.titleNoLabel')}</Heading>
-                <Body muted>{t('shift.runProgress', { done, total: run.stops.length })}</Body>
+                <Text style={textStyles.caps}>{t('today.next')}</Text>
+                <Body strong>{`${t(kindKey(upNext))} · ${stopName(upNext)}`}</Body>
+                {stopAddress(upNext) ? <Body muted>{stopAddress(upNext)}</Body> : null}
               </View>
-              <Icon name="caret-right" size={18} />
-            </Row>
-            <View style={styles.track} accessible={false}>
-              <View style={[styles.fill, { width: `${run.stops.length ? Math.round((done / run.stops.length) * 100) : 0}%` }]} />
             </View>
-            {upNext ? (
-              <View style={styles.next}>
-                <IconBadge name={upNext.kind === 'dropoff' ? 'map-pin' : 'storefront'} size={36} />
-                <View style={styles.flex}>
-                  <Body muted style={styles.small}>
-                    {t('today.next')}
-                  </Body>
-                  <Body strong>{`${t(kindKey(upNext))} · ${stopName(upNext)}`}</Body>
-                </View>
-              </View>
-            ) : null}
-            <Body strong style={styles.link}>
-              {t('shift.openRun')}
-            </Body>
+          ) : null}
+          <View style={styles.open}>
+            <Text style={[textStyles.bodyStrong, styles.link]}>{t('shift.openRun')}</Text>
+            <Icon name="caret-right" size={TYPE.price} color={semantic.link} />
           </View>
         </Card>
       ) : current ? (
@@ -171,12 +165,9 @@ export default function ShiftScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0, gap: space[1] },
-  status: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  art: { height: 130 },
-  runBody: { padding: space[4], gap: space[3] },
-  next: { flexDirection: 'row', alignItems: 'center', gap: space[3], padding: space[3], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
-  small: { fontSize: 13, lineHeight: 18 },
+  status: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: space[3] },
+  figures: { flexDirection: 'row', flexWrap: 'wrap', gap: space[4], paddingTop: space[1] },
+  next: { flexDirection: 'row', alignItems: 'center', gap: space[3], padding: space[3], borderRadius: radius.panel, backgroundColor: semantic.well },
+  open: { flexDirection: 'row', alignItems: 'center', gap: space[1], paddingTop: space[1], borderTopWidth: LINE.hair, borderTopColor: semantic.border, minHeight: space[10] },
   link: { color: semantic.link },
-  track: { height: 6, borderRadius: radius.status, backgroundColor: semantic['surface-muted'], overflow: 'hidden' },
-  fill: { height: 6, borderRadius: radius.status, backgroundColor: colors.actionPrimary },
 });

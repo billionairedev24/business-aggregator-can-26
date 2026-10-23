@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { Logo, radius, space, Scene } from '@northline/mobile-kit';
+import { Logo, radius, space } from '@northline/mobile-kit';
 
 import { geoApi } from '../api/geo';
 import { useAuth } from '../auth/AuthProvider';
@@ -11,6 +11,7 @@ import { useDeliveryLocation } from '../location/DeliveryLocation';
 import { services } from '../services';
 import { Body, Button, Title } from '../ui/primitives';
 import { Screen } from '../ui/screen';
+import { Picture } from '../ui/commerce';
 
 /**
  * A1 Welcome (light & photo-first): the brand, an illustrated collage, then the value proposition in one breath; Create account, Sign in, or Browse first (browsing needs no account,
@@ -48,10 +49,10 @@ export function Welcome() {
       <View style={styles.top}>
         <Logo size={30} />
         <View style={styles.collage}>
-          <Scene slot="hero/home-main" subject="mobile-mechanic" style={styles.main} />
+          <Picture slot="hero/home-main" icon="wrench" style={styles.main} />
           <View style={styles.side}>
-            <Scene slot="hero/home-side-a" subject="bakery" crop="square" style={styles.small} />
-            <Scene slot="hero/home-side-b" subject="cocktail-bar" crop="square" style={styles.small} />
+            <Picture slot="hero/home-side-a" crop="square" icon="storefront" style={styles.small} />
+            <Picture slot="hero/home-side-b" crop="square" icon="martini" style={styles.small} />
           </View>
         </View>
         <Body tone="kicker">{province ? t('welcome.kicker', { province }) : t('app.name')}</Body>
@@ -65,7 +66,7 @@ export function Welcome() {
 const styles = StyleSheet.create({
   top: { paddingTop: space[2], gap: space[3] },
   collage: { flexDirection: 'row', gap: space[2], height: 220, marginVertical: space[2] },
-  main: { flex: 1.3, borderRadius: radius.lg },
+  main: { flex: 1.3, borderRadius: radius.panel },
   side: { flex: 1, gap: space[2] },
-  small: { flex: 1, borderRadius: radius.lg },
+  small: { flex: 1, borderRadius: radius.panel },
 });

@@ -8,6 +8,8 @@ export type {
   DataTablePermissions,
   DataTablePerm,
   DataTableTone,
+  DataTableView,
+  DataTableQuickFilter,
   ReportScope,
   ReportFormat,
   RowKey,
