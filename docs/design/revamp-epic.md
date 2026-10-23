@@ -4,6 +4,25 @@
 Evergreen direction of 2026-10-19 (`redesign-spec.md`) is **reopened**: this epic picks a new visual direction, then
 rebuilds the design system and every screen on it. Where this file and `redesign-spec.md` disagree, this file wins.
 
+## Locked direction (owner, 2026-10-23): A · Plainsight, with Main Street's maker-of-the-week hero
+The reference mockups are in `design/revamp/` (`a.html` is the locked direction; `b.html` supplies the home hero; `c.html`
+is kept for the record). **When a story and these mockups disagree, the mockups win.**
+- **Type:** IBM Plex Sans for all UI, 400/500/600/700, self-hosted from `@fontsource` (the CSPs allow `'self'` only).
+  Body 14 px, meta 12 px, card titles 13.5 px, page titles 24 px. No display face; Fraunces and DM Sans are retired.
+- **Colour roles:** action `#1747C9` (Add to cart, Book, Place order, links) · selected `#121418` (segments, chips, tabs,
+  checkboxes turn solid ink) · commerce `#B0187F` (deals, cart count, cut-off timer) · success `#137A3A` · warning
+  `#8F5600` · danger `#B42318` (Suspend and every destructive action) · info `#1F5FA8` · line `#C8CDD5` (3:1) · well
+  `#F3F4F6`. One role per colour: the action colour is never a status, the commerce colour is never a button.
+- **Shape:** 3 px corners on controls, 4 px on panels. Buttons, underline tabs, joined-box segmented controls and
+  square-cornered chips must never look alike. Every choice has a visible selected state.
+- **Density:** 5 results per row at 1280, 7 per rail; a left filter rail with counts and removable applied-filter chips.
+- **Photos:** product on white: every photo sits in a 1:1 grey well with a 12 px inset. The fallback is a dashed well with
+  the category icon.
+- **Home:** search-led header and department strip, a delivery cut-off strip, then **Main Street's maker-of-the-week
+  hero** (one featured local business with its photo, story and two actions, plus two side tiles), then category and
+  deal tiles and rails, all in Plainsight's type, colours and shapes.
+- **Prices:** one format: `$8.50` / `8,50 $`, with unit price as meta.
+
 ## Owner inputs
 - **Direction:** reopened, not only re-executed.
 - **Scope:** consumer web, Studio, console, consumer mobile app, courier app.
