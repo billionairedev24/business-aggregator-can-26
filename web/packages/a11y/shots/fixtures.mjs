@@ -17,7 +17,9 @@ const RUN = { windowId: 'W1', label: 'R-611', day: 'today', startsAt: '2026-10-2
 const TOMORROW = { ...RUN, windowId: 'W2', day: 'tomorrow', startsAt: '2026-10-20T14:00:00Z', endsAt: '2026-10-20T17:00:00Z', orderBy: '2026-10-20T13:05:00Z', households: 0 };
 
 // ── the catalogue ────────────────────────────────────────────────────────────────────────────────────────────────
-const shop = (name, tier = 'trusted', slug = null) => ({ id: `m-${name}`, name, type: 'seller', slug, tier });
+// the Shop pages' merchant ids (SHOPS below), so a shop's page finds its goods in the search (S-172)
+const SHOP_IDS = { 'Glenmore Bakery': 'M1', 'Sidewalk Citizen': 'M2', 'Prairie Hive': 'M3', 'Monogram Roasters': 'M4', 'Rooted Farm': 'M5' };
+const shop = (name, tier = 'trusted', slug = null) => ({ id: SHOP_IDS[name] ?? `m-${name}`, name, type: 'seller', slug, tier });
 const pro = (name, slug, tier = 'trusted') => ({ id: `m-${name}`, name, type: 'provider', slug, tier });
 const PRODUCTS = [
   ['P1', 'Country sourdough', 'demo/listing/bakery.sourdough', 750, 'Glenmore Bakery', 'Bakery', 4.8, 211],
@@ -537,6 +539,23 @@ export const SHOTS = {
       b.nextAvailable = '2026-10-21T16:00:00Z';
       return { body: b };
     },
+    // S-172: the kitchen takes group orders (its order box shows the group order entry)
+    (m, p) => (live(m, p, '/api/v1/public/kitchens/pho-lucky') ? { body: { ...body('GET /api/v1/public/kitchens/pho-lucky'), groupOrders: true } } : undefined),
+    // S-172: the provider's live calendar for any week the booking box asks (slots every 90 min, two taken a day, Sundays closed)
+    (m, p) => {
+      if (!live(m, p, '/api/v1/public/providers/prairie-wrench/slots')) return undefined;
+      const q = new URL(p, 'http://x').searchParams;
+      const from = q.get('from') ?? '2026-09-30', count = Number(q.get('days') ?? 7);
+      const days = Array.from({ length: count }, (_, i) => {
+        const d = new Date(`${from}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + i);
+        const date = d.toISOString().slice(0, 10);
+        if (d.getUTCDay() === 0) return { date, closed: 'Closed Sundays', free: 0, slots: [] };
+        // 8:00 a.m.–3:30 p.m. in the business's zone (UTC−6 in the fixtures' season)
+        const slots = [14, 15.5, 17, 19, 20.5, 22].map((h, k) => ({ startsAt: `${date}T${String(Math.floor(h)).padStart(2, '0')}:${h % 1 ? '30' : '00'}:00Z`, free: (k + i) % 4 !== 3 }));
+        return { date, closed: null, free: slots.filter(x => x.free).length, slots };
+      });
+      return { body: { serviceId: q.get('serviceId') ?? 's1', durationMin: 60, days, cancellation: { windowHours: 12, feeBps: 0, feeCents: 0 } } };
+    },
     // a fallback market (the region configuration's), so the location control names a place for a first visit
     (m, p) => (live(m, p, '/api/v1/geo/markets') ? { body: {
       fallback: { id: 'mkt-calgary', city: 'Calgary', province: 'AB', stage: 'live', lat: 51.0447, lng: -114.0719 },
@@ -553,7 +572,10 @@ export const SHOTS = {
     (m, p) => {
       if (m !== 'GET' || !/^\/api\/v1\/public\/shop\/products\/[^/?]+/.test(p)) return undefined;
       const b = structuredClone(body('GET /api/v1/public/shop/products/P1?lang=en'));
-      b.offers = b.offers.map((o, i) => ({ ...o, images: i === 0 ? [media('demo/listing/bakery.sourdough'), media('demo/merchant/bakery'), media('category/shop.food-and-grocery.bakery')] : [] }));
+      // S-172: the details a seller writes (bullets) and the shop's other products under their demo names
+      b.bullets = ['Naturally leavened and fermented for 36 hours, for a mild tang and an open crumb.', 'Unbleached wheat and whole rye, water and sea salt. Nothing else.', 'Baked every morning; tonight’s run leaves the bakery at 5:45 p.m.', 'Keeps 3 days in a paper bag. Slice and freeze for up to a month.'];
+      b.offers = b.offers.map((o, i) => ({ ...o, images: i === 0 ? [media('demo/listing/bakery.sourdough'), media('demo/merchant/bakery'), media('category/shop.food-and-grocery.bakery')] : [],
+        more: i === 0 ? [{ productId: 'P9', name: 'Classic baguette', priceCents: 450 }, { productId: 'P12', name: 'Apple crumble pie', priceCents: 1800 }, { productId: 'P13', name: 'Seeded rye, 750 g', priceCents: 925 }] : o.more }));
       return { body: b };
     },
     (m, p) => (live(m, p, '/api/v1/public/services/mobile-mechanic/providers') ? { body: {

@@ -21,3 +21,20 @@
 /* an age-restricted product on its card (demo rehearsal 2026-10-19): said before the checkout's ID check */
 .nl-age-chip { display: block; margin-top: var(--space-1); color: var(--color-text); font-weight: var(--weight-semibold); }
 .nl-plus-chip { display: block; margin-top: var(--space-1); color: var(--color-link); font-weight: var(--weight-semibold); }
+
+/* a shop's page (E-15 S-172): the header as the provider page's — a 1:1 photo well, department · market, the name, the
+   tier, products and the next run, "Search this store" at the end */
+.store-head { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: var(--space-4) var(--space-5); align-items: start; margin-top: var(--space-3); }
+.store-pic { position: relative; display: block; aspect-ratio: 1 / 1; border-radius: var(--radius-panel); background: var(--color-well); overflow: hidden; }
+.store-pic > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.store-pic > .nl-well { position: absolute; inset: 0; }
+.store-id { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.store-kicker { font-size: var(--type-caps); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
+.store-name { margin: 0; font-size: var(--type-page-title); letter-spacing: var(--tracking-tight); line-height: var(--leading-tight); overflow-wrap: anywhere; }
+.store-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1-5) var(--space-3); font-size: var(--type-label); color: var(--color-text-muted); margin-top: var(--space-1); }
+.store-run { color: var(--color-text); font-weight: var(--weight-semibold); }
+.store-search { align-self: center; }
+@media (max-width: 599.98px) {
+  .store-head { grid-template-columns: 88px minmax(0, 1fr); }
+  .store-search { grid-column: 1 / -1; justify-self: stretch; }
+}

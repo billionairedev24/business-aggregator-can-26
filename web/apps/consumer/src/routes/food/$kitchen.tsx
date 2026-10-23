@@ -2,6 +2,7 @@ import { createFileRoute, notFound } from '@tanstack/react-router';
 import { z } from 'zod';
 import { isNotFound } from '@northline/client';
 import foodCss from '../../features/food/food.css?url';
+import restaurantCss from '../../features/food/restaurant.css?url';
 import { restaurantQuery } from '../../features/food/api';
 import { RestaurantScreen } from '../../features/food/RestaurantScreen';
 import { CUISINE_NAMES } from '../../features/food/messages';
@@ -22,8 +23,8 @@ export const Route = createFileRoute('/food/$kitchen')({
     }
   },
   head: ({ match, loaderData, params }) => {
-    const css = { rel: 'stylesheet', href: foodCss };
-    if (!loaderData) return { meta: [{ title: brand.name }], links: [css] };
+    const css = [{ rel: 'stylesheet', href: foodCss }, { rel: 'stylesheet', href: restaurantCss }];
+    if (!loaderData) return { meta: [{ title: brand.name }], links: css };
     const { locale, config } = match.context;
     const k = loaderData.kitchen;
     const cuisines = k.cuisines.map(c => CUISINE_NAMES[c]?.[locale] ?? c);
@@ -37,7 +38,7 @@ export const Route = createFileRoute('/food/$kitchen')({
         sections: loaderData.sections,
       })],
     });
-    return { ...tags, links: [...tags.links, css] };
+    return { ...tags, links: [...tags.links, ...css] };
   },
   component: Restaurant,
 });

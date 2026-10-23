@@ -1,51 +1,97 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useInfiniteQuery, useQuery, useSuspenseQueries } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { Alert, ErrorState, Skeleton, Tag, useLocale, type Locale } from '@northline/ui';
+import { Alert, ErrorState, OptionCard, RadioGroup, Skeleton, Stars, Tag, UnderlineTabs, useLocale, type Locale } from '@northline/ui';
 import { siteHref, type PageHost } from '../../lib/pages';
 import { useSiteConfig } from '../../lib/config';
-import { nextAvailable, percent, price, rating } from '../services/format';
+import { percent, price, rating } from '../services/format';
 import { useServicesT } from '../services/messages';
 import { categoryName, copyKeys, familyOf } from '../services/taxonomy';
 import { dyn } from '../services/text';
 import { FavouriteButton } from '../account/FavouriteButton';
 import { useStorefrontVisit } from '../../lib/visits';
-import { moreReviewsQuery, providerQuery, rewardQuery, storefrontQuery, type ProviderFacts, type PublicReview, type Storefront } from './api';
+import { moreReviewsQuery, providerQuery, rewardQuery, storefrontQuery, type ProviderFacts, type ProviderService, type PublicReview, type Storefront } from './api';
 import { useProviderT } from './messages';
 import { categorySlot } from '@northline/media';
 import { Scene } from '../art/Scene';
-import { useZone } from '../location/regions';
+import { Crumbs } from '../pages/Crumbs';
+import { BookBox, bookable, QuoteLink, useBookingChoice, type BookingChoice } from './BookBox';
 import { useRenderNow } from '../../lib/renderClock';
-import { SealCheck, Star } from '@phosphor-icons/react';
+import { ShieldCheck, Star } from '@phosphor-icons/react';
 
-/** Sections the provider page renders in the page's order (hero first, the CTA card beside them). */
-const MAIN: readonly string[] = ['about', 'reviews', 'area', 'faq', 'policies'];
+/** Sections the About tab renders, in the page's order. */
+const ABOUT: readonly string[] = ['about', 'area', 'faq', 'policies'];
+type TabKey = 'services' | 'reviews' | 'about';
 
 /**
- * design 06 `provider`: the business's published page — its sections in the order the business chose in the page
- * builder (storefront API), with the trust figures, services, service area and reviews Northline holds. On
- * `pages.<zone>` and the business's own domain the same page renders; its links then lead to the site.
+ * A provider's page (E-15 S-172, design/revamp/a.html "Service provider with booking"; S-54 behaviour): the breadcrumb,
+ * the header (photo, category · area, name, the tagline, rating and track record, the verified facts as trust badges),
+ * underline tabs Services / Reviews / About, the services as one-choice option cards with the business's recent work
+ * and its first reviews, and beside them the booking box (S-172 `BookBox`: days, times, where, the price, "Book <day>
+ * at <time>"). The business's own section choices (storefront API) still decide what shows. On `pages.<zone>` and the
+ * business's own domain the same page renders; its links then lead to the site. Phones: a sticky Book bar.
  */
 export function ProviderPage({ slug }: { slug: string }) {
   const { locale } = useLocale();
+  const t = useProviderT();
   // both at once: two useSuspenseQuery calls suspended twice in turn — the facts were only asked for once the page
   // had arrived (a request waterfall on client navigation, and the slowest first render in the tests)
   const [{ data: page }, { data: facts }] = useSuspenseQueries({ queries: [storefrontQuery(slug), providerQuery(slug, locale)] });
   const config = useSiteConfig();
   useStorefrontVisit(slug);
   const enabled = new Set(page.sections.map(s => s.kind));
-  const main = page.sections.filter(s => MAIN.includes(s.kind));
+  const showServices = enabled.has('services') && facts.services.length > 0;
+  const about = page.sections.filter(s => ABOUT.includes(s.kind));
+  const tabs = [
+    ...(showServices ? [{ value: 'services' as const, label: t('tabServices'), count: facts.services.length }] : []),
+    ...(enabled.has('reviews') ? [{ value: 'reviews' as const, label: t('tabReviews'), count: facts.reviewCount }] : []),
+    { value: 'about' as const, label: t('tabAbout') },
+  ];
+  const [tab, setTab] = useState<TabKey>(tabs[0]!.value);
+  const choice = useBookingChoice(facts);
+  const category = facts.category ? categoryName(facts.category.slug, facts.category.names, locale) : null;
+  const pageHost = config.page ?? null;
+  const crumbs = [
+    { label: t('crumbServices'), href: siteHref(pageHost, config.siteOrigin, '/services') },
+    ...(category && facts.category ? [{ label: category.text, href: siteHref(pageHost, config.siteOrigin, `/services/${facts.category.slug}`), lang: category.lang }] : []),
+    { label: facts.name },
+  ];
+
   return (
     <div className="nl-page nl-prov">
-      {page.announcement ? <div className="nl-prov-announce" role="note"><Alert tone="highlight">{page.announcement}</Alert></div> : null}
-      <Hero page={page} facts={facts} locale={locale} />
+      <Crumbs label={t('crumbs')} items={crumbs} />
+      {page.announcement ? <div className="nl-prov-announce" role="note"><Alert tone="info">{page.announcement}</Alert></div> : null}
       <div className="nl-prov-split">
         <div className="nl-prov-main">
-          <Figures facts={facts} locale={locale} />
-          <Credentials facts={facts} />
-          {main.map(s => <Section key={s.kind} kind={s.kind} settings={s.settings} page={page} facts={facts} slug={slug} pageHost={config.page ?? null} siteOrigin={config.siteOrigin} />)}
+          <Hero page={page} facts={facts} locale={locale} />
+          <div className="nl-prov-tabs">
+            <UnderlineTabs aria-label={t('tabsLabel', { name: facts.name })} options={tabs} value={tab} onChange={setTab} />
+          </div>
+          <div role="tabpanel" aria-label={tabs.find(x => x.value === tab)?.label} className="nl-prov-panel">
+            {tab === 'services' ? (
+              <>
+                <Services facts={facts} choice={choice} />
+                <RecentWork facts={facts} />
+                {enabled.has('reviews') && facts.reviews.items.length > 0 ? (
+                  <SectionBlock id="prov-neighbours" title={t('neighbours')}>
+                    <ul className="nl-prov-reviews">{facts.reviews.items.slice(0, 2).map(r => <li key={r.id}><Review review={r} name={facts.name} /></li>)}</ul>
+                    {facts.reviewCount > 2 ? <button type="button" className="btn btn-tertiary nl-prov-all" onClick={() => setTab('reviews')}>{t('allReviewsCount', { count: facts.reviewCount })}</button> : null}
+                  </SectionBlock>
+                ) : null}
+              </>
+            ) : null}
+            {tab === 'reviews' ? <Reviews facts={facts} slug={slug} pageHost={pageHost} siteOrigin={config.siteOrigin} /> : null}
+            {tab === 'about' ? (
+              <>
+                <Figures facts={facts} locale={locale} />
+                {about.map(s => <Section key={s.kind} kind={s.kind} settings={s.settings} page={page} facts={facts} />)}
+              </>
+            ) : null}
+          </div>
         </div>
-        <CtaCard page={page} facts={facts} showServices={enabled.has('services')} pageHost={config.page ?? null} siteOrigin={config.siteOrigin} />
+        {showServices
+          ? <BookBox facts={facts} choice={choice} pageHost={pageHost} siteOrigin={config.siteOrigin} />
+          : <CtaCard page={page} facts={facts} pageHost={pageHost} siteOrigin={config.siteOrigin} />}
       </div>
     </div>
   );
@@ -56,28 +102,32 @@ function Hero({ page, facts, locale }: { page: Storefront; facts: ProviderFacts;
   const s = useServicesT();
   const category = facts.category ? categoryName(facts.category.slug, facts.category.names, locale).text : null;
   const year = new Date(facts.since).getFullYear();
-  const tagline = [page.tagline ?? [category, facts.city].filter(Boolean).join(' · '), t('since', { year })].filter(Boolean).join(' · ');
   const tier = dyn(s, `tier_${facts.tier}`, facts.tier);
-  // the business's own photo (its most booked service with one), else its category's library photo, else the drawing
+  const area = facts.zones.length > 0 ? facts.zones.join(', ') : facts.city;
+  // the business's own photo (its most booked service with one), else its category's library photo
   const cover = facts.services.find(sv => sv.imageUrl)?.imageUrl ?? null;
+  const track = [
+    facts.onTimePct != null ? t('onTimeLine', { pct: percent(facts.onTimePct, locale) }) : null,
+    facts.rebookPct != null ? t('rebookLine', { pct: percent(facts.rebookPct, locale) }) : null,
+  ].filter(Boolean).join(' · ');
   return (
     <header className="nl-prov-hero">
-      <span className="nl-prov-cover" aria-hidden>
-        {cover
-          ? <img src={cover} alt="" className="nl-prov-cover-img" />
-          : <Scene slot={[categorySlot(facts.category?.id), 'banner/services']} subject={facts.category?.slug ?? facts.kind} fit="contain" sizes="(min-width: 1200px) 1140px, 100vw" priority />}
+      <span className="nl-prov-photo" aria-hidden>
+        {page.logoUrl ? <img src={page.logoUrl} alt="" />
+          : cover ? <img src={cover} alt="" />
+            : <Scene slot={[categorySlot(facts.category?.id), 'banner/services']} subject={facts.category?.slug ?? facts.kind} sizes="160px" priority />}
       </span>
-      <div className="nl-prov-head">
-        <span className="nl-prov-mark" aria-hidden style={{ borderColor: page.brandColor }}>{page.logoUrl ? <img src={page.logoUrl} alt="" /> : facts.name.trim().charAt(0).toUpperCase()}</span>
-        <div className="nl-prov-idtext">
-          <h1 className="nl-prov-name">{facts.name}</h1>
-          <div className="nl-prov-tagline">{tagline}</div>
+      <div className="nl-prov-idtext">
+        {category || area ? <span className="nl-prov-kicker">{[category, area].filter(Boolean).join(' · ')}</span> : null}
+        <h1 className="nl-prov-name">{facts.name}</h1>
+        <div className="nl-prov-tagline">{[page.tagline, t('since', { year }), t('tierVerified', { tier })].filter(Boolean).join(' · ')}</div>
+        <div className="nl-prov-rating">
+          {facts.reviewCount > 0 ? <Stars rating={facts.rating} reviewCount={facts.reviewCount} /> : <span>{t('newOnNorthline')}</span>}
+          {track ? <span>{track}</span> : null}
         </div>
-        <span className="nl-prov-tierbox">
-          <span className="tag tag-success nl-prov-tier"><SealCheck size={16} weight="fill" aria-hidden />{t('tierVerified', { tier })}</span>
-          <FavouriteButton merchantId={facts.merchantId} className="btn btn-secondary btn-icon nl-prov-fav" />
-        </span>
+        <Credentials facts={facts} />
       </div>
+      <FavouriteButton merchantId={facts.merchantId} className="btn btn-secondary btn-icon nl-prov-fav" />
     </header>
   );
 }
@@ -86,7 +136,7 @@ function Figures({ facts, locale }: { facts: ProviderFacts; locale: Locale }) {
   const t = useProviderT();
   const pct = (v: number | null | undefined) => (v === null || v === undefined ? t('noFigure') : percent(v, locale));
   return (
-    <dl className="nl-prov-figures nl-kpis">
+    <dl className="nl-prov-figures">
       <div><dt>{facts.reviewCount > 0 ? t('verifiedReviews', { count: facts.reviewCount }) : t('newOnNorthline')}</dt><dd className="nl-prov-fig">{facts.reviewCount > 0 ? rating(facts.rating, locale) : '—'}</dd></div>
       <div><dt>{t('onTime')}</dt><dd className="nl-prov-fig">{pct(facts.onTimePct)}</dd></div>
       <div><dt>{t('disputes')}</dt><dd className="nl-prov-fig">{pct(facts.disputePct)}</dd></div>
@@ -95,7 +145,7 @@ function Figures({ facts, locale }: { facts: ProviderFacts; locale: Locale }) {
   );
 }
 
-/** Verified facts as the design's credential tags, plus how the business is booked. */
+/** Verified facts as the mockup's trust badges (success), plus how the business is booked and a running reward. */
 function Credentials({ facts }: { facts: ProviderFacts }) {
   const t = useProviderT();
   const { locale } = useLocale();
@@ -105,24 +155,55 @@ function Credentials({ facts }: { facts: ProviderFacts }) {
     : dyn(t, `fact_${f}`, ''))
     .filter(Boolean);
   return (
-    <div className="nl-prov-creds">
-      {tags.map(tag => <Tag key={tag} tone="accent">{tag}</Tag>)}
-      <Tag tone="neutral">{t(`mode_${facts.kind}`)}</Tag>
-      {reward ? <Tag tone="highlight">{t(reward.label ? 'rewardOn' : 'reward', { multiplier: reward.multiplier, label: reward.label ?? '', until: new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${reward.endsOn}T12:00:00Z`)) })}</Tag> : null}
-    </div>
+    <ul className="nl-prov-creds">
+      {tags.map(tag => <li key={tag}><span className="tag tag-success nl-prov-badge"><ShieldCheck size={14} aria-hidden />{tag}</span></li>)}
+      <li><Tag tone="neutral">{t(`mode_${facts.kind}`)}</Tag></li>
+      {reward ? <li><Tag tone="accent">{t(reward.label ? 'rewardOn' : 'reward', { multiplier: reward.multiplier, label: reward.label ?? '', until: new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${reward.endsOn}T12:00:00Z`)) })}</Tag></li> : null}
+    </ul>
   );
 }
 
-interface SectionProps { kind: string; settings: Record<string, unknown>; page: Storefront; facts: ProviderFacts; slug: string; pageHost: PageHost | null; siteOrigin: string }
+/** "Choose a service": one-choice option cards (the booking box follows the choice); quoted services say "Quote". */
+function Services({ facts, choice }: { facts: ProviderFacts; choice: BookingChoice }) {
+  const t = useProviderT();
+  const s = useServicesT();
+  const { locale } = useLocale();
+  const line = (sv: ProviderService) => [t('minutes', { count: sv.durationMin }), sv.included].filter(Boolean).join(' · ');
+  return (
+    <SectionBlock id="prov-services" title={t('chooseService')}>
+      <RadioGroup className="nl-prov-services" aria-labelledby="prov-services">
+        {facts.services.map(sv => (
+          <OptionCard key={sv.id} role="radio" mark="radio" selected={choice.service?.id === sv.id}
+            title={sv.name} description={bookable(sv) ? line(sv) : `${line(sv)} · ${t('quoteOnly')}`}
+            trailing={<strong className="nl-prov-service-price">{price(s, locale, sv.pricingMode, sv.priceCents)}</strong>}
+            onClick={() => choice.setService(sv.id)} />
+        ))}
+      </RadioGroup>
+    </SectionBlock>
+  );
+}
 
-function Section({ kind, settings, page, facts, slug, pageHost, siteOrigin }: SectionProps) {
+/** The business's own photos (its services'); nothing when it has none (never stock photos of its category). */
+function RecentWork({ facts }: { facts: ProviderFacts }) {
+  const t = useProviderT();
+  const photos = [...new Set(facts.services.map(s => s.imageUrl).filter((u): u is string => !!u))].slice(0, 6);
+  if (photos.length === 0) return null;
+  return (
+    <SectionBlock id="prov-work" title={t('recentWork')}>
+      <ul className="nl-prov-work">{photos.map(src => <li key={src}><img src={src} alt="" loading="lazy" decoding="async" /></li>)}</ul>
+    </SectionBlock>
+  );
+}
+
+interface SectionProps { kind: string; settings: Record<string, unknown>; page: Storefront; facts: ProviderFacts }
+
+function Section({ kind, settings, page, facts }: SectionProps) {
   const t = useProviderT();
   switch (kind) {
     case 'about': {
       const about = page.business.about;
-      return about ? <p className="nl-prov-about">{about}</p> : null;
+      return about ? <SectionBlock id="prov-about" title={t('aboutHeading', { name: facts.name })}><p className="nl-prov-about">{about}</p></SectionBlock> : null;
     }
-    case 'reviews': return <Reviews facts={facts} slug={slug} pageHost={pageHost} siteOrigin={siteOrigin} />;
     case 'area': {
       const theirs = facts.kind === 'appointment' || facts.kind === 'consult';
       if (!theirs && facts.zones.length === 0) return null;
@@ -168,6 +249,7 @@ function Reviews({ facts, slug, pageHost, siteOrigin }: { facts: ProviderFacts; 
   const hasMore = more.data ? more.hasNextPage : facts.reviews.nextOffset !== null && facts.reviews.nextOffset !== undefined;
   return (
     <SectionBlock id="prov-reviews" title={t('reviewsHeading', { count: facts.reviewCount })}>
+      {facts.reviewCount > 0 ? <div className="nl-prov-reviews-sum"><Stars rating={facts.rating} size={18} /><span>{t('verifiedReviews', { count: facts.reviewCount })}</span></div> : null}
       {first.length === 0 ? <p className="nl-prov-text">{t('newOnNorthline')}</p> : null}
       <ul className="nl-prov-reviews">{[...first, ...loaded].map(r => <li key={r.id}><Review review={r} name={facts.name} /></li>)}</ul>
       {more.isError ? <ErrorState message={t('reviewsError')} onRetry={() => void more.fetchNextPage()} /> : null}
@@ -184,13 +266,15 @@ function Review({ review: r, name }: { review: PublicReview; name: string }) {
   const t = useProviderT();
   const { locale } = useLocale();
   const now = useRenderNow();
+  const who = r.author ?? t('reviewAnonymous');
+  const initials = who.split(/\s+/).map(w => w.charAt(0)).join('').slice(0, 2).toUpperCase();
   return (
     <figure className="nl-prov-review">
+      <figcaption className="nl-prov-who"><span className="nl-prov-avatar" aria-hidden>{initials}</span>{t('reviewWho', { who, ref: r.refType, when: ago(r.createdAt, locale, now.getTime()) })}</figcaption>
       <span className="nl-prov-review-stars" role="img" aria-label={t('stars', { count: r.rating })}>
-        {Array.from({ length: 5 }, (_, i) => <Star key={i} size={16} weight={i < r.rating ? 'fill' : 'regular'} aria-hidden />)}
+        {Array.from({ length: 5 }, (_, i) => <Star key={i} size={14} weight={i < r.rating ? 'fill' : 'regular'} aria-hidden />)}
       </span>
       {r.text ? <blockquote className="nl-prov-quote">“{r.text}”</blockquote> : null}
-      <figcaption className="nl-prov-who">{t('reviewWho', { who: r.author ?? t('reviewAnonymous'), ref: r.refType, when: ago(r.createdAt, locale, now.getTime()) })}</figcaption>
       {r.reply ? <p className="nl-prov-reply"><strong>{t('reply', { name })}</strong> {r.reply}</p> : null}
     </figure>
   );
@@ -206,49 +290,26 @@ export function ago(iso: string, locale: Locale, now = Date.now()): string {
   return f.format(-Math.round(days / 365), 'year');
 }
 
-function CtaCard({ page, facts, showServices, pageHost, siteOrigin }: { page: Storefront; facts: ProviderFacts; showServices: boolean; pageHost: PageHost | null; siteOrigin: string }) {
+/** A business that publishes no services section (or lists none): the plain booking card — title, hint, the CTA. */
+function CtaCard({ page, facts, pageHost, siteOrigin }: { page: Storefront; facts: ProviderFacts; pageHost: PageHost | null; siteOrigin: string }) {
   const t = useProviderT();
   const s = useServicesT();
-  const { locale } = useLocale();
-  const now = useRenderNow();
-  const zone = useZone(facts.city);
   const family = familyOf(facts.kind, facts.category?.slug ?? '', facts.vehicle);
   const keys = copyKeys(family, facts.kind);
   const book = `/providers/${facts.slug}/book`;
   const bookLink = (className: string, children: ReactNode) => (pageHost
     ? <a href={siteHref(pageHost, siteOrigin, book)} className={className}>{children}</a>
     : <Link to="/providers/$slug/book" params={{ slug: facts.slug }} className={className}>{children}</Link>);
-  /** S-56: ask this business (pre-ticked) and up to two others for quotes. */
-  const quoteLink = (category: string, className: string, children: ReactNode) => {
-    const path = `/services/${category}/quote?provider=${encodeURIComponent(facts.slug)}`;
-    return pageHost
-      ? <a href={siteHref(pageHost, siteOrigin, path)} className={className}>{children}</a>
-      : <Link to="/services/$category/quote" params={{ category }} search={{ provider: facts.slug }} className={className}>{children}</Link>;
-  };
-  const note = dyn(s, keys.note);
   return (
     <aside className="nl-prov-cta" aria-labelledby="prov-cta">
       <h2 id="prov-cta" className="nl-prov-cta-title">{t(`ctaTitle_${facts.kind}`, { name: facts.name })}</h2>
       <p className="nl-prov-cta-hint">{dyn(s, keys.ctaHint)}</p>
-      {showServices
-        ? facts.services.length === 0
-          ? <p className="nl-prov-text">{t('noServices')}</p>
-          : (
-            <ul className="nl-prov-menu">
-              {facts.services.map(sv => (
-                <li key={sv.id} className="nl-prov-menu-row">
-                  <span>{sv.name}<span className="nl-prov-menu-dur">{t('minutes', { count: sv.durationMin })}</span></span>
-                  <strong>{price(s, locale, sv.pricingMode, sv.priceCents)}</strong>
-                </li>
-              ))}
-            </ul>
-          )
-        : null}
+      {facts.services.length === 0 ? <p className="nl-prov-text">{t('noServices')}</p> : null}
       {facts.kind === 'event' && facts.category
-        ? quoteLink(facts.category.slug, 'btn btn-primary nl-prov-book', t('cta_request_quote'))
-        : bookLink('btn btn-primary nl-prov-book', t(`cta_${page.ctaLabel}`))}
-      {facts.quoteable && facts.kind !== 'event' && facts.category ? quoteLink(facts.category.slug, 'btn btn-secondary nl-prov-quote-btn', t('notSure')) : null}
-      <div className="nl-prov-foot">{[t('nextAvailable', { when: nextAvailable(s, locale, facts.nextAvailable, now, zone) }), note].filter(Boolean).join(' · ')}</div>
+        ? <QuoteLink facts={facts} category={facts.category.slug} pageHost={pageHost} siteOrigin={siteOrigin} className="btn btn-primary btn-lg btn-block">{t('cta_request_quote')}</QuoteLink>
+        : bookLink('btn btn-primary btn-lg btn-block', t(`cta_${page.ctaLabel}`))}
+      {facts.quoteable && facts.kind !== 'event' && facts.category
+        ? <QuoteLink facts={facts} category={facts.category.slug} pageHost={pageHost} siteOrigin={siteOrigin} className="btn btn-secondary btn-block nl-prov-quote-btn">{t('notSure')}</QuoteLink> : null}
     </aside>
   );
 }
@@ -256,15 +317,12 @@ function CtaCard({ page, facts, showServices, pageHost, siteOrigin }: { page: St
 export function ProviderPageSkeleton() {
   return (
     <div className="nl-page nl-prov" aria-busy="true">
-      <Skeleton height={150} radius="var(--radius-md)" style={{ marginTop: 24 }} />
-      <div className="nl-prov-split">
+      <div className="nl-prov-split nl-prov-skeleton">
         <div className="nl-prov-main">
-          <Skeleton width="min(420px, 90%)" height={48} />
-          <Skeleton width="min(360px, 80%)" height={24} style={{ marginTop: 16 }} />
-          <Skeleton height={80} style={{ marginTop: 18, maxWidth: 560 }} />
-          {Array.from({ length: 2 }, (_, i) => <Skeleton key={i} height={60} style={{ marginTop: 16, maxWidth: 560 }} />)}
+          <div className="nl-prov-hero"><span className="nl-prov-photo" /><div className="nl-prov-idtext"><Skeleton width="min(420px, 90%)" height={28} /><Skeleton width="min(360px, 80%)" height={16} /></div></div>
+          {Array.from({ length: 3 }, (_, i) => <Skeleton key={i} height={60} />)}
         </div>
-        <Skeleton height={320} radius="var(--radius-md)" />
+        <Skeleton height={320} radius="var(--radius-panel)" />
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import { useMarketFollowsLocation, withMarket } from './market';
 import { useShopT } from './messages';
 import { PlaceButton } from '../pages/PlaceButton';
 import { ProductCardTile, ShopCardTile } from './parts';
+import { storeHref } from './store';
 
 /**
  * A department (S-49, design 06 `category`): breadcrumb, counts, the department's siblings in its group (the chips —
@@ -54,7 +55,7 @@ export function DepartmentPage({ slug, market: explicit }: { slug: string; marke
           <section className="nl-section" aria-labelledby="dept-shops">
             <div className="nl-section-head"><h2 id="dept-shops" className="nl-section-title">{t('shopsIn', { name: data.name })}</h2></div>
             <TileGrid min={240}>
-              {data.shops.map(s => <li key={s.merchantId}><ShopCardTile shop={s} next={run} look="initial" href={`/search?scope=shop&q=${encodeURIComponent(s.name)}`} /></li>)}
+              {data.shops.map(s => <li key={s.merchantId}><ShopCardTile shop={s} next={run} look="initial" href={storeHref(s.merchantId, data.slug, explicit)} /></li>)}
             </TileGrid>
           </section>
           <section className="nl-section" aria-labelledby="dept-products">
