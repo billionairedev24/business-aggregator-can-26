@@ -26,8 +26,9 @@ if (app !== 'consumer' && app !== 'courier') {
 }
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].split(',') : null;
 const MOBILE = new URL('../', import.meta.url).pathname;
-const DIST = join(MOBILE, 'apps', app, 'dist-web');
-const OUT = join(MOBILE, 'shots-out', app);
+// NL_SHOTS_DIST / NL_SHOTS_OUT: another build and folder (S-178: the before pictures of a branch, from an older build)
+const DIST = process.env.NL_SHOTS_DIST ?? join(MOBILE, 'apps', app, 'dist-web');
+const OUT = process.env.NL_SHOTS_OUT ?? join(MOBILE, 'shots-out', app);
 // playwright-core is the apps' devDependency (pnpm doesn't hoist it to mobile/)
 const { chromium } = createRequire(join(MOBILE, 'apps', app, 'package.json'))('playwright-core');
 if (!existsSync(join(DIST, 'index.html'))) {
@@ -175,6 +176,7 @@ async function consumer() {
       ['home-guest', '/home'],
       ['sign-in', '/sign-in'],
       ['sign-up', '/sign-up'],
+      ['forgot-password', '/forgot-password'],
       ['location-sheet-guest', '/location'],
       ['account-guest', '/account'],
     ]),
@@ -212,7 +214,14 @@ async function consumer() {
       await shot('cart');
     }],
     ['checkout', async () => { await go('/checkout'); await shot('checkout'); }],
-    ['pay', async () => { await tap('checkout-continue'); await settle(); await shot('pay'); }],
+    // S-178: payment is on the one-page checkout; Place your order with the stand-in opens the bank's step (an older
+    // build's two-screen checkout goes on to /pay first)
+    ['pay', async () => {
+      if (await vis('checkout-continue').count()) await tap('checkout-continue');
+      else await tap('pay-button');
+      await settle(1200);
+      await shot('pay');
+    }],
     ['book-service', async () => {
       await go('/providers/prairie-wrench');
       await tap('book-visit');
@@ -260,6 +269,10 @@ async function consumer() {
       ['case', '/cases/rf-2201'],
       ['problem', '/problem/order/ord-done'],
       ['notifications', '/notifications'],
+      ['messages', '/messages'],
+      // S-178: group food orders (join by code, the shared order)
+      ['group-join', '/group'],
+      ['group-order', '/group/7Q2M-K4XP'],
       ['account', '/account'],
       ['account-profile', '/account/profile'],
       ['account-addresses', '/account/addresses'],
@@ -281,7 +294,7 @@ async function consumer() {
     await go('/account');
     await page.getByRole('radio', { name: 'Français' }).filter({ visible: true }).first().click();
     await settle();
-    for (const [name, href] of [['home', '/home'], ['browse', '/services'], ['product', '/product/p-sourdough'], ['cart', '/cart'], ['order-track', '/orders/ord-transit/track'], ['account', '/account'], ['location-sheet', '/location']]) {
+    for (const [name, href] of [['home', '/home'], ['browse', '/services'], ['search-results', '/search?q=sourdough'], ['product', '/product/p-sourdough'], ['provider', '/providers/prairie-wrench'], ['cart', '/cart'], ['checkout', '/checkout'], ['order-track', '/orders/ord-transit/track'], ['account', '/account'], ['location-sheet', '/location']]) {
       await go(href);
       await shot(`${name}-fr`, { full: false });
     }
@@ -322,6 +335,8 @@ async function courier() {
     ['stop-dropoff', '/stops/st-3'],
     ['dropoff', '/stops/st-3/dropoff'],
     ['profile', '/account'],
+    // S-179: earnings (today, the week, each run, payouts)
+    ['earnings', '/earnings'],
   ]))
     await step(name, fn);
   await step('dropoff-pin', async () => {
@@ -340,7 +355,7 @@ async function courier() {
     await go('/account');
     await page.getByRole('tab', { name: 'Français' }).filter({ visible: true }).first().click();
     await settle();
-    for (const [name, href] of [['today', '/'], ['route', '/run'], ['stop-dropoff', '/stops/st-3'], ['profile', '/account']]) {
+    for (const [name, href] of [['today', '/'], ['route', '/run'], ['stop-dropoff', '/stops/st-3'], ['earnings', '/earnings'], ['profile', '/account']]) {
       await go(href);
       await shot(`${name}-fr`, { full: false });
     }
