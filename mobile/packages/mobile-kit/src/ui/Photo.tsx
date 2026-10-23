@@ -37,7 +37,7 @@ export function Photo({ slot, photo, crop = 'card', label, fallback = null, styl
       testID={testID ?? 'photo'}
       {...a11y}
     >
-      <Image source={WEB ? (width > 0 ? sourceFor(p.sources, width) : undefined) : p.sources} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <Image source={WEB ? (width > 0 ? webSource(sourceFor(p.sources, width)) : undefined) : p.sources} style={StyleSheet.absoluteFill} resizeMode="cover" />
     </View>
   );
 }
@@ -64,5 +64,8 @@ export function sourceFor<S extends { width: number }>(sources: readonly S[], wi
   const need = width * ratio;
   return sorted.find((s) => s.width >= need) ?? sorted[sorted.length - 1];
 }
+
+/** react-native-web sizes an Image by its source's width and height when they are given: only the uri, so it fills. */
+const webSource = (s: { uri: string } | undefined) => (s ? { uri: s.uri } : undefined);
 
 const styles = StyleSheet.create({ box: { overflow: 'hidden' } });

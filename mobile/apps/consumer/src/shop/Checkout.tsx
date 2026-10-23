@@ -1,22 +1,41 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, MIN_TARGET, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
+import {
+  ApiError,
+  Button as KitButton,
+  Icon,
+  LINE,
+  MetaLine,
+  OptionCard,
+  PhotoWell,
+  Price,
+  SIZE,
+  Segmented,
+  TYPE,
+  radius,
+  semantic,
+  space,
+  textStyles,
+} from '@northline/mobile-kit';
 
+import { CheckoutConsent, useCheckoutConsent } from '../account/CheckoutConsent';
 import { PromoPoints, TipPicker } from '../aftercare/PromoPoints';
 import type { TipChoice } from '../api/aftercare';
 import { ageCleared, type AddressInput, type CheckoutBody, type CheckoutSetup, type DeliveryOption, type SavedAddress, type Substitution } from '../api/shop';
 import { useAuth } from '../auth/AuthProvider';
 import { useDeliveryLocation, type DeliveryLocation } from '../location/DeliveryLocation';
+import { iconFor, photoSource } from '../ui/commerce';
 import { Body, Button, Notice } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { EmptyState, ErrorState, LoadingList, QueryView, SignInPrompt, Skeleton, errorMessage } from '../ui/states';
 import { AgeCheck } from './AgeCheck';
 import { serverMessage, shop, useMarket, useShopFormat } from './common';
-import { Chip, Kicker, SumRow, shopStyles } from './parts';
-import { CheckoutStep } from './steps';
+import { SumRow } from './parts';
+import { PayPhase, usePlaceOrder } from './Pay';
+import { CheckoutSection } from './steps';
 
 export const SUBSTITUTIONS: Substitution[] = ['similar', 'refund', 'ask'];
 
@@ -131,30 +150,37 @@ export function quoteProblem(error: unknown, t: ReturnType<typeof useShopFormat>
 export const promoProblem = (error: unknown) => (error instanceof ApiError ? (error.fieldMessage('promoCode') ?? null) : null);
 
 /**
- * Checkout, step 1 of 3 (redesign spec § 2.4 → MA:244 CHECKOUT, in the web's three numbered sections: 1 address and
- * time · 2 payment · 3 review; the same APIs as the web's /checkout). B5 (design 01 `checkout`; signed in): deliver to (Change → the Location screen and back), the delivery
- * window (the market's pooled runs and the direct courier with their fees), substitutions, a promo code and points
- * and the courier's tip (mobile gaps part 2), then the quote: items, delivery, the code's discount, each tax by name and
- * rate (from the province — never a fixed "GST 5%"; tax is on the price after the code), the tip, the points, total. A cart with age-restricted items shows the age step (2026-10-04) and Continue
- * waits for it. Continue → Payment with the choices in the route.
+ * The one-page checkout (E-15 A · Plainsight, design/revamp/a.html "Cart and one-page checkout" on a phone; before, a
+ * second screen at /pay): six numbered sections in one panel — 1 the delivery address (Change → the Location screen
+ * and back), 2 the delivery window (the market's pooled runs and the direct courier as option cards, the fee on the
+ * right), 3 what to do if an item is out of stock (stacked joined boxes), 4 the courier's tip (joined boxes), 5
+ * payment (the saved cards or a new one, as option cards; the escrow note), 6 the items with who sells them — then the
+ * summary: Place your order, the terms, the promo code and points, the quote (items, delivery, the code's discount,
+ * each tax by name and rate from the province, the tip, the points, the total). The sticky bar keeps the total and
+ * Place your order in reach. A cart with age-restricted items shows the age step (2026-10-04) and placing waits for
+ * it. The same APIs as the web's /checkout (`GET /me/checkout`, `POST /me/checkout/quote`, then {@link usePlaceOrder}).
  */
 export function Checkout() {
   const { status } = useAuth();
   const f = useShopFormat();
   const { t, locale } = f;
+  const signedIn = status === 'signedIn';
   const market = useMarket();
   const { location } = useDeliveryLocation();
   const setup = useQuery({
     queryKey: ['shop', 'checkout', 'setup', market.city?.toLowerCase() ?? '', locale],
     queryFn: () => shop().checkout(market.city, locale),
-    enabled: status === 'signedIn' && market.ready,
+    enabled: signedIn && market.ready,
     staleTime: 15_000,
   });
+  const cards = useQuery({ queryKey: ['shop', 'cards'], queryFn: () => shop().cards(), enabled: signedIn, staleTime: 60_000 });
+  const consent = useCheckoutConsent(signedIn); // S-157: the optional offers box (CASL)
   const [optionId, setOptionId] = useState<string>();
   const [substitution, setSubstitution] = useState<Substitution>('similar');
   const [promoCode, setPromoCode] = useState<string>();
   const [usePoints, setUsePoints] = useState(false);
   const [tip, setTip] = useState<TipChoice>(NO_TIP);
+  const [method, setMethod] = useState<string>();
   const extras: Extras = { promoCode, usePoints, tip };
   const data = setup.data ?? undefined;
   const option = data?.options.find((o) => o.id === optionId) ?? data?.options[0];
@@ -164,22 +190,24 @@ export function Checkout() {
   const problem = quoteProblem(quote.error, t);
   // 2026-10-04: the age step — the quote's answer for the chosen address (its province), else the setup's
   const age = quote.data?.age ?? data?.age;
+  const savedCards = cards.data?.items ?? [];
+  const card = method ?? savedCards.find((c) => c.isDefault)?.id ?? savedCards[0]?.id ?? 'new';
+  const order = usePlaceOrder(body, card, consent);
+  const provider = order.started?.payment.provider ?? data?.payment.provider ?? 'fake';
 
-  if (status !== 'signedIn') {
+  if (!signedIn) {
     return (
       <Screen title={t('title.checkout')} testID="checkout">
         <SignInPrompt message={t('shop.checkout.signIn')} />
       </Screen>
     );
   }
+  if (order.phase !== 'form') return <PayPhase order={order} />;
 
-  const next = () => {
-    if (!option || !address) return;
-    router.push({
-      pathname: '/pay',
-      params: { kind: option.kind, window: option.windowId ?? '', sub: substitution, address: address.source, ...extrasParams(extras) },
-    });
-  };
+  const ready = !!body && !!quote.data && !quote.isPlaceholderData && ageCleared(age);
+  const place = (testID: string, block?: boolean) => (
+    <KitButton label={t('rv.checkout.place')} size="lg" block={block} busy={order.busy} disabled={!ready} onPress={() => void order.pay()} style={block ? undefined : styles.barButton} testID={testID} />
+  );
 
   return (
     <Screen
@@ -188,70 +216,136 @@ export function Checkout() {
       footer={
         data && data.cart.itemCount > 0 ? (
           <>
-            {data.stepUp !== 'none' ? <Body tone="small">{t('shop.checkout.stepUp')}</Body> : null}
+            {order.error ? <Notice message={order.error} testID="pay-error" /> : null}
             {!ageCleared(age) ? <Body tone="small">{t('shop.age.blocked')}</Body> : null}
-            <Button label={t('rd.checkout.toPayment')} large disabled={!body || !quote.data || quote.isPlaceholderData || !ageCleared(age)} onPress={next} testID="checkout-continue" />
+            <View style={styles.bar}>
+              <View style={styles.flex}>
+                <Text style={textStyles.meta}>{t('shop.sum.total')}</Text>
+                {quote.data ? <Price cents={quote.data.totalCents} size="md" /> : <Text style={textStyles.price}>—</Text>}
+              </View>
+              {place('pay-button')}
+            </View>
           </>
         ) : undefined
       }
     >
       <QueryView
         query={setup}
-        skeleton={<LoadingList rows={5} height={52} />}
+        skeleton={<LoadingList rows={5} height={space[12]} />}
         isEmpty={(s) => !s || s.cart.itemCount === 0}
         empty={<EmptyState art="grocery" message={t('shop.cart.empty')} action={t('shop.cart.browse')} onAction={() => router.replace('/search')} />}
       >
         {(s) =>
           s ? (
             <View style={styles.body}>
-              <Body tone="small">{t('rd.checkout.secure', { n: s.cart.itemCount })}</Body>
-              <CheckoutStep n={1} title={t('rd.checkout.step1')} state="open">
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={address ? `${t('shop.checkout.deliverTo')}: ${address.line1}, ${address.line2}. ${t('shop.checkout.change')}` : t('shop.checkout.addAddress')}
-                  accessibilityHint={t('shop.checkout.changeHint')}
-                  onPress={() => router.push('/location?next=/checkout')}
-                  style={styles.address}
-                  testID={address ? 'checkout-address' : 'checkout-add-address'}
-                >
-                  <Kicker>{t('shop.checkout.deliverTo')}</Kicker>
+              <View style={styles.heading}>
+                <Icon name="lock-simple" size={TYPE.price} color={semantic['text-muted']} />
+                <Body tone="muted" style={styles.flex}>
+                  {t('rv.checkout.summary', { items: s.cart.itemCount, shops: s.cart.shopCount })}
+                </Body>
+              </View>
+              {s.stepUp !== 'none' ? <Body tone="small">{t('shop.checkout.stepUp')}</Body> : null}
+
+              <View style={styles.panel}>
+                <CheckoutSection n={1} title={t('rv.checkout.address')} onChange={address ? () => router.push('/location?next=/checkout') : undefined} changeLabel={address ? `${t('shop.checkout.change')}: ${t('rv.checkout.address')}` : undefined}>
                   {address ? (
-                    <View style={styles.addressRow}>
-                      <View style={shopStyles.rowText}>
-                        <Text style={[styles.body15, shopStyles.strong]}>{address.line1}</Text>
-                        <Text style={styles.small}>{address.line2}</Text>
-                      </View>
-                      <Text style={styles.change}>{t('shop.checkout.change')}</Text>
-                    </View>
+                    <OptionCard
+                      title={address.line1}
+                      description={address.line2}
+                      selected
+                      role="button"
+                      onPress={() => router.push('/location?next=/checkout')}
+                      testID="checkout-address"
+                    />
                   ) : (
-                    <View style={styles.addressRow}>
-                      <Text style={[styles.body15, styles.flex]}>{t('shop.checkout.noAddress')}</Text>
-                      <Text style={styles.change}>{t('shop.checkout.addAddress')}</Text>
+                    <>
+                      <Body tone="muted">{t('shop.checkout.noAddress')}</Body>
+                      <Button label={t('shop.checkout.addAddress')} tone="secondary" hint={t('shop.checkout.changeHint')} onPress={() => router.push('/location?next=/checkout')} testID="checkout-add-address" />
+                    </>
+                  )}
+                </CheckoutSection>
+
+                <CheckoutSection n={2} title={t('shop.checkout.window')}>
+                  {!s.served ? (
+                    <Body tone="muted">{t('shop.checkout.notServed', { place: s.market })}</Body>
+                  ) : s.options.length === 0 ? (
+                    <Body tone="muted">{t('shop.checkout.noWindow')}</Body>
+                  ) : (
+                    <View style={styles.gap} accessibilityRole="radiogroup" accessibilityLabel={t('shop.checkout.window')}>
+                      {s.options.map((o) => (
+                        <WindowOption key={o.id} option={o} selected={o.id === option?.id} onPress={() => setOptionId(o.id)} />
+                      ))}
                     </View>
                   )}
-                </Pressable>
+                  {option?.packBy ? <MetaLine icon="truck">{t('rv.checkout.packBy', { time: f.time(option.packBy), shops: s.cart.shopCount })}</MetaLine> : null}
+                </CheckoutSection>
 
-                <Kicker>{t('shop.checkout.window')}</Kicker>
-                {!s.served ? (
-                  <Body tone="muted">{t('shop.checkout.notServed', { place: s.market })}</Body>
-                ) : s.options.length === 0 ? (
-                  <Body tone="muted">{t('shop.checkout.noWindow')}</Body>
-                ) : (
-                  <View style={styles.gap} accessibilityRole="radiogroup">
-                    {s.options.map((o) => (
-                      <WindowOption key={o.id} option={o} selected={o.id === option?.id} onPress={() => setOptionId(o.id)} />
-                    ))}
-                  </View>
-                )}
+                <CheckoutSection n={3} title={t('rv.checkout.substitution')}>
+                  <Segmented
+                    label={t('rv.checkout.substitution')}
+                    stack
+                    options={SUBSTITUTIONS.map((x) => ({ value: x, label: t(`shop.checkout.${x}`) }))}
+                    value={substitution}
+                    onChange={setSubstitution}
+                    testID="sub"
+                  />
+                </CheckoutSection>
 
-                <Kicker>{t('shop.checkout.substitution')}</Kicker>
-                <View style={shopStyles.chips} accessibilityRole="radiogroup">
-                  {SUBSTITUTIONS.map((x) => (
-                    <Chip key={x} role="radio" label={t(`shop.checkout.${x}`)} on={substitution === x} onPress={() => setSubstitution(x)} testID={`sub-${x}`} />
-                  ))}
-                </View>
+                <CheckoutSection n={4} title={t('rv.checkout.tip')}>
+                  <Body tone="small">{t('tip.note')}</Body>
+                  <TipPicker value={tip} onChange={setTip} />
+                </CheckoutSection>
 
-                <Kicker>{t('promo.title')}</Kicker>
+                <CheckoutSection n={5} title={t('rd.checkout.step2')}>
+                  {cards.isPending ? (
+                    <LoadingList rows={2} height={space[12]} />
+                  ) : (
+                    <View style={styles.gap} accessibilityRole="radiogroup" accessibilityLabel={t('shop.pay.withCard')}>
+                      {savedCards.map((c) => (
+                        <OptionCard
+                          key={c.id}
+                          selected={card === c.id}
+                          onPress={() => setMethod(c.id)}
+                          title={t('shop.pay.card', { brand: c.brand, last4: c.last4 })}
+                          description={t('rv.checkout.expires', { date: `${String(c.expMonth).padStart(2, '0')}/${String(c.expYear % 100).padStart(2, '0')}` })}
+                          testID={`card-${c.id}`}
+                        />
+                      ))}
+                      <OptionCard selected={card === 'new'} onPress={() => setMethod('new')} title={t('rv.checkout.newCard')} testID="card-new" />
+                    </View>
+                  )}
+                  {card === 'new' && provider === 'stripe' ? <Body tone="small">{t('shop.pay.newCardNote')}</Body> : null}
+                  {provider === 'fake' ? <Notice tone="info" message={t('shop.pay.fake')} /> : null}
+                  <MetaLine icon="shield-check">{t('shop.pay.note', { total: quote.data ? f.money(quote.data.totalCents) : '—' })}</MetaLine>
+                </CheckoutSection>
+
+                <CheckoutSection n={6} title={t('rv.checkout.review')} testID="checkout-review">
+                  {s.cart.groups.flatMap((g) =>
+                    g.items.map((it) => (
+                      <View key={it.itemId} style={styles.item} accessible accessibilityLabel={[it.name, t('rv.checkout.soldBy', { shop: g.shopName }), t('rd.checkout.qty', { qty: it.qty }), f.money(it.lineCents)].join(', ')}>
+                        <View style={styles.thumb}>
+                          <PhotoWell source={photoSource(it.imageUrl)} icon={iconFor('product')} inset={space[1]} />
+                        </View>
+                        <View style={styles.flex}>
+                          <Text style={textStyles.bodyStrong} numberOfLines={2}>
+                            {it.name}
+                          </Text>
+                          <Text style={textStyles.meta}>{[t('rv.checkout.soldBy', { shop: g.shopName }), it.qty > 1 ? t('rd.checkout.qty', { qty: it.qty }) : null].filter(Boolean).join(' · ')}</Text>
+                        </View>
+                        <Text style={textStyles.priceSm}>{f.money(it.lineCents)}</Text>
+                      </View>
+                    )),
+                  )}
+                  {age?.required ? <AgeCheck age={age} /> : null}
+                </CheckoutSection>
+              </View>
+
+              <View style={[styles.panel, styles.summary]} testID="checkout-summary">
+                {place('pay-button-box', true)}
+                <Text style={[textStyles.meta, styles.center]}>{t('rd.checkout.terms')}</Text>
+                <Text accessibilityRole="header" style={textStyles.label}>
+                  {t('promo.title')}
+                </Text>
                 <PromoPoints
                   code={promoCode}
                   onCode={setPromoCode}
@@ -262,18 +356,11 @@ export function Checkout() {
                   pointsAvailable={quote.data?.pointsAvailable}
                   pointsCents={quote.data?.pointsCents}
                 />
-
-                <Kicker>{t('tip.title')}</Kicker>
-                <TipPicker value={tip} onChange={setTip} />
-                <Body tone="small">{t('tip.note')}</Body>
-
-                {age?.required ? <AgeCheck age={age} /> : null}
                 {problem ? <Notice message={problem} /> : null}
                 {quote.isError && !problem && !promoProblem(quote.error) ? <ErrorState error={quote.error} onRetry={() => void quote.refetch()} /> : null}
-              </CheckoutStep>
-              <CheckoutStep n={2} title={t('rd.checkout.step2')} state="later" />
-              <CheckoutStep n={3} title={t('rd.checkout.step3')} state="later" />
-              <Sums subtotalCents={s.cart.subtotalCents} deliveryCents={option?.feeCents} quote={quote} />
+                <Sums subtotalCents={s.cart.subtotalCents} deliveryCents={option?.feeCents} quote={quote} />
+                <CheckoutConsent consent={consent} />
+              </View>
             </View>
           ) : null
         }
@@ -287,41 +374,24 @@ function WindowOption({ option, selected, onPress }: { option: DeliveryOption; s
   const { t } = f;
   const name = option.kind === 'direct' ? t('shop.win.now', { eta: option.etaMinutes ?? 45 }) : f.window(option, 'shop.win');
   const desc =
-    option.kind === 'direct'
-      ? t('shop.win.direct')
-      : option.households > 0
-        ? t('shop.win.pooledWith', { n: option.households })
-        : t('shop.win.pooled', { time: f.time(option.orderBy) });
-  const price = f.fee(option.feeCents);
-  // the design's `opt` with the price on the right
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityLabel={`${name}, ${desc}, ${price}`}
-      accessibilityState={{ selected, checked: selected }}
-      onPress={onPress}
-      style={({ pressed }) => [styles.option, selected && styles.optionOn, pressed && !selected && styles.optionOn]}
-      testID={`window-${option.id}`}
-    >
-      <View style={shopStyles.rowText}>
-        <Text style={[styles.body15, shopStyles.strong]}>{name}</Text>
-        <Text style={styles.small}>{desc}</Text>
-      </View>
-      <Text style={shopStyles.price}>{price}</Text>
-    </Pressable>
-  );
+    option.kind === 'direct' ? t('shop.win.direct') : option.households > 0 ? t('shop.win.pooledWith', { n: option.households }) : t('shop.win.pooled', { time: f.time(option.orderBy) });
+  const fee = f.fee(option.feeCents);
+  return <OptionCard title={name} description={desc} right={<Text style={textStyles.bodyStrong}>{fee}</Text>} label={`${name}, ${desc}, ${fee}`} selected={selected} onPress={onPress} testID={`window-${option.id}`} />;
 }
 
+const THUMB = SIZE.rail - space[2];
+
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
+  sums: { gap: space[2], paddingTop: space[3], borderTopWidth: LINE.hair, borderTopColor: semantic.border },
+  flex: { flex: 1, minWidth: 0, gap: LINE.bold },
   body: { gap: space[4] },
+  heading: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   gap: { gap: space[2] },
-  address: { gap: 6, padding: 14, minHeight: MIN_TARGET, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderControl, backgroundColor: colors.surface },
-  addressRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  change: { fontFamily: fonts.semibold, fontSize: 14, color: colors.link, textDecorationLine: 'underline' },
-  body15: { fontFamily: fonts.regular, fontSize: 15, color: colors.text },
-  small: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
-  sums: { gap: 6, paddingTop: space[3] },
-  option: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, paddingHorizontal: 14, paddingVertical: space[3], borderRadius: radius.md, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface },
-  optionOn: { borderColor: colors.actionPrimary, backgroundColor: semantic['surface-brand'] },
+  panel: { paddingHorizontal: space[4], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-strong'], backgroundColor: semantic.surface },
+  summary: { gap: space[3], paddingVertical: space[4] },
+  center: { textAlign: 'center' },
+  item: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingBottom: space[3], borderBottomWidth: LINE.hair, borderBottomColor: semantic.border },
+  thumb: { width: THUMB },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  barButton: { flex: 1.3 },
 });

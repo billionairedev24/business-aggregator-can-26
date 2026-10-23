@@ -1,19 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, colors, fonts, radius, semantic, space, Scene, slugSlot } from '@northline/mobile-kit';
+import { CAP, FilterChip, LINE, MetaLine, Photo, PhotoWell, Rating, SIZE, StatusTag, photoFor, radius, semantic, slugSlot, space, textStyles } from '@northline/mobile-kit';
 
 import { nameIn, type ProviderCard } from '../api/services';
 import { useI18n } from '../i18n';
 import { useDeliveryLocation } from '../location/DeliveryLocation';
-import { Body, type } from '../ui/primitives';
-import { Screen } from '../ui/screen';
+import { GUTTER, Screen } from '../ui/screen';
 import { EmptyState, QueryView, Skeleton } from '../ui/states';
-import { Strip } from '../shop/parts';
+import { iconFor } from '../ui/commerce';
 import { dateIn, price } from './format';
-import { brand, Chip, Mark, Row, useServicesApi, useTier, type T } from './parts';
+import { Row, useServicesApi, useTier, type T } from './parts';
 
 export type ProviderFilter = 'master' | 'instant' | 'today' | 'under80';
 export const FILTERS: readonly ProviderFilter[] = ['master', 'instant', 'today', 'under80'];
@@ -43,8 +42,11 @@ export function nextSlot(t: T, time: (iso: string, z: string) => string, locale:
 }
 
 /**
- * C2 Providers (design 01 `providers`): the category's providers whose service area covers the customer (the saved
- * address's coordinates, else its city), most trusted first, with the design's filters. Guests may browse.
+ * C2 Providers (design 01 `providers`; E-15 Plainsight results on a phone): the category's photo in the grey well, the
+ * filter chips (applied = ink edge with ✓), the count, then one dense row per provider whose service area covers the
+ * customer (the saved address's coordinates, else its city), most trusted first: the provider's initial in the well
+ * (providers have no photo of their own yet), the name, the verified seal, the rating with the kit's stars, the
+ * on-time figure, the line they wrote, "from $89.00" and the next opening in the business's zone. Guests may browse.
  */
 export function Providers({ slug }: { slug: string }) {
   const { t, locale } = useI18n();
@@ -73,14 +75,12 @@ export function Providers({ slug }: { slug: string }) {
       testID="providers"
       refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} accessibilityLabel={t('common.retry')} />}
     >
-      <Scene slot={[slugSlot('service', slug), 'banner/services']} subject={slug} fit="contain" style={styles.cover} />
-      <Strip testID="provider-filters">
-        <View style={styles.chips} accessibilityLabel={t('services.providers.filters')}>
-          {FILTERS.map((f) => (
-            <Chip key={f} label={t(`services.filter.${f}`)} selected={on.has(f)} onPress={() => toggle(f)} testID={`filter-${f}`} />
-          ))}
-        </View>
-      </Strip>
+      <Cover slug={slug} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chips} accessibilityLabel={t('services.providers.filters')} testID="provider-filters">
+        {FILTERS.map((f) => (
+          <FilterChip key={f} label={t(`services.filter.${f}`)} selected={on.has(f)} onPress={() => toggle(f)} role="button" testID={`filter-${f}`} />
+        ))}
+      </ScrollView>
       <QueryView
         query={location.status === 'locating' ? { ...list, isPending: true } : list}
         skeleton={<ListSkeleton />}
@@ -99,7 +99,9 @@ export function Providers({ slug }: { slug: string }) {
           const area = data.area ?? data.city ?? '';
           return (
             <>
-              <Body tone="small">{t('services.providers.count', { n: shown.length, area })}</Body>
+              <Text accessibilityRole="header" style={textStyles.label}>
+                {t('services.providers.count', { n: shown.length, area })}
+              </Text>
               {shown.length === 0 ? (
                 <EmptyState message={t('services.providers.filteredEmpty')} action={t('services.providers.clearFilters')} onAction={() => setOn(new Set())} />
               ) : (
@@ -113,46 +115,47 @@ export function Providers({ slug }: { slug: string }) {
   );
 }
 
+/** The category's photo (the library's), else the dashed well with the services icon. */
+function Cover({ slug }: { slug: string }) {
+  const photo = photoFor([slugSlot('service', slug), 'banner/services'], 'wide');
+  return <View style={styles.cover}>{photo ? <Photo slot={[]} photo={photo} crop="wide" style={StyleSheet.absoluteFill} /> : <PhotoWell icon={iconFor('service')} inset={0} />}</View>;
+}
+
 function ProviderRow({ p }: { p: ProviderCard }) {
   const { t, time, locale } = useI18n();
   const tier = useTier()(p.tier);
   const avail = nextSlot(t, time, locale, p.nextAvailable, p.timeZone);
   const onTime = p.onTimePct != null ? t('services.onTime', { pct: Math.round(p.onTimePct) }) : null;
-  const stats = [p.reviewCount > 0 ? t('services.rating', { rating: p.rating.toFixed(1), n: p.reviewCount }) : t('services.newProvider'), onTime]
-    .filter(Boolean)
-    .join(' · ');
   // S-147: spoken without the ★ glyph
-  const spoken = [p.reviewCount > 0 ? t('services.ratingSpoken', { rating: p.rating.toFixed(1), n: p.reviewCount }) : t('services.newProvider'), onTime]
-    .filter(Boolean)
-    .join(', ');
+  const spoken = [p.reviewCount > 0 ? t('services.ratingSpoken', { rating: p.rating.toFixed(1), n: p.reviewCount }) : t('services.newProvider'), onTime].filter(Boolean).join(', ');
   const from = p.fromCents != null ? t('services.providers.from', { price: price(p.fromCents, locale) }) : t('services.providers.quoted');
   return (
     <Row onPress={() => router.push(`/providers/${p.slug}`)} label={[p.name, tier.label, spoken, from, avail].join(', ')} testID={`provider-${p.slug}`}>
       <View style={styles.card}>
-        <Mark name={p.name} color={brand(p.brandColor)} size={52} />
+        <View style={styles.monogram} accessible={false}>
+          <Text style={styles.initial} maxFontSizeMultiplier={CAP.badge}>
+            {p.name.trim().charAt(0).toUpperCase()}
+          </Text>
+        </View>
         <View style={styles.cardMain}>
-          <Text style={styles.name} numberOfLines={2}>
+          <Text style={textStyles.sub} numberOfLines={2}>
             {p.name}
           </Text>
-          <View style={styles.nameRow}>
-            {p.tier === 'master' || p.tier === 'trusted' ? <Icon name="seal-check" size={16} filled color={semantic.success} /> : null}
-            <Text style={type.small}>{tier.label}</Text>
-          </View>
-          <View style={styles.nameRow}>
-            <Text style={type.small}>{stats}</Text>
-          </View>
+          {p.tier === 'master' || p.tier === 'trusted' ? <StatusTag label={tier.label} tone="success" /> : <Text style={textStyles.meta}>{tier.label}</Text>}
+          {p.reviewCount > 0 ? <Rating value={p.rating} count={p.reviewCount} /> : <Text style={textStyles.meta}>{t('services.newProvider')}</Text>}
+          {onTime ? <Text style={textStyles.meta}>{onTime}</Text> : null}
         </View>
       </View>
       {p.blurb ? (
-        <Text style={type.small} numberOfLines={2}>
+        <Text style={textStyles.meta} numberOfLines={2}>
           {p.blurb}
         </Text>
       ) : null}
       <View style={styles.cardFoot}>
-        <Text style={styles.from}>{from}</Text>
-        <Text style={[type.small, styles.avail, !!p.nextAvailable && styles.open]} numberOfLines={1}>
+        <Text style={textStyles.priceSm}>{from}</Text>
+        <MetaLine icon="clock" tone={p.nextAvailable ? 'success' : undefined}>
           {avail}
-        </Text>
+        </MetaLine>
       </View>
     </Row>
   );
@@ -162,13 +165,13 @@ function ListSkeleton() {
   const { t } = useI18n();
   return (
     <View accessibilityRole="progressbar" accessibilityLabel={t('common.loading')} style={styles.list} testID="loading">
-      <Skeleton height={14} width="60%" />
+      <Skeleton height={space[3.5]} width="60%" />
       {[0, 1, 2, 3].map((i) => (
         <View key={i} style={styles.card}>
-          <Skeleton height={56} width={56} />
+          <Skeleton height={MONO} width={MONO} />
           <View style={styles.cardMain}>
-            <Skeleton height={16} width="70%" />
-            <Skeleton height={12} width="50%" />
+            <Skeleton height={space[4]} width="70%" />
+            <Skeleton height={space[3]} width="50%" />
           </View>
         </View>
       ))}
@@ -176,16 +179,16 @@ function ListSkeleton() {
   );
 }
 
+const MONO = SIZE.rail - space[2];
+
 const styles = StyleSheet.create({
-  cover: { height: 150, borderRadius: radius.lg },
-  chips: { flexDirection: 'row', gap: space[2] },
+  cover: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.image, overflow: 'hidden', backgroundColor: semantic.well },
+  chipRow: { flexGrow: 0, marginHorizontal: -GUTTER },
+  chips: { flexDirection: 'row', gap: space[2], paddingHorizontal: GUTTER, paddingVertical: space[1] },
   list: { gap: space[4] },
-  card: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  cardMain: { flex: 1, minWidth: 0, gap: 2 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
-  name: { fontFamily: fonts.semibold, fontSize: 17, lineHeight: 22, color: colors.text },
-  cardFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[3], paddingTop: space[3], borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  from: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
-  avail: { flexShrink: 1, textAlign: 'right' },
-  open: { color: semantic.success },
+  card: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3] },
+  cardMain: { flex: 1, minWidth: 0, gap: space[1] },
+  monogram: { width: MONO, height: MONO, borderRadius: radius.image, backgroundColor: semantic.well, alignItems: 'center', justifyContent: 'center' },
+  initial: { ...StyleSheet.flatten(textStyles.pageTitle), color: semantic['well-ink'] },
+  cardFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: space[3], paddingTop: space[3], borderTopWidth: LINE.hair, borderTopColor: semantic.border },
 });

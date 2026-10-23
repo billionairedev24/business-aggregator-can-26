@@ -182,8 +182,9 @@ describe('C2 Providers', () => {
     const { server, view } = await start({ welcomed: true, url: '/services/mobile-mechanic', store: SAVED });
     expect(await screen.findByText('Mobile mechanic')).toBeTruthy();
     expect(await screen.findByText('4 providers come to Old Town · sorted by trust')).toBeTruthy();
-    expect(screen.getByText('★ 4.9 (312) · 98% on time')).toBeTruthy();
-    expect(screen.getAllByText('from $89').length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText('4.9 out of 5 stars, 312 reviews').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('98% on time').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('from $89.00').length).toBeGreaterThan(0);
     // 15:00 business time is 20:00 UTC: the card says "3:00 p.m." whatever the phone's zone
     expect(screen.getAllByText(/3:00 p\.m\./).length).toBeGreaterThan(0);
     const call = server.calls.find((c) => c.path === '/public/services/mobile-mechanic/providers');
@@ -207,13 +208,16 @@ describe('C3 Provider profile', () => {
     expect(screen.queryByText('Master tier · verified')).toBeNull();
     expect(screen.getAllByText('Prairie Wrench').length).toBeGreaterThan(0);
     expect(screen.getByText('Mobile mechanic · Sampleville · since 2019')).toBeTruthy();
-    expect(screen.getByText('4.9')).toBeTruthy();
-    expect(screen.getByText('312 verified')).toBeTruthy();
-    expect(screen.getByText('98%')).toBeTruthy();
+    expect(screen.getByLabelText('4.9 out of 5 stars, 312 reviews')).toBeTruthy();
+    expect(screen.getByText(/^98% on time/)).toBeTruthy();
     expect(screen.getByText('Red Seal journeyman')).toBeTruthy();
     expect(screen.getByText('Instant book')).toBeTruthy();
-    expect(screen.getByText('Services & fixed prices')).toBeTruthy();
-    expect(screen.getByText('$89')).toBeTruthy();
+    // S-178: the underline tabs with counts, "Choose a service" as option cards with the one price format
+    expect(screen.getByRole('tab', { name: 'Services, 4' }).props.accessibilityState).toMatchObject({ selected: true });
+    expect(screen.getByRole('tab', { name: 'Reviews, 312' })).toBeTruthy();
+    expect(screen.getByText('Choose a service')).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Brake inspection, 45 min, $89.00' }).props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getAllByText('$89.00').length).toBeGreaterThan(0);
     expect(screen.getByText('Reviews · 312')).toBeTruthy();
     expect(screen.getByText(/Showed up at 7 am/)).toBeTruthy();
     fireEvent.press(screen.getByTestId('more-reviews'));
@@ -235,6 +239,8 @@ describe('C3 Provider profile', () => {
   it('starts the booking with the service tapped', async () => {
     const { view } = await start({ welcomed: true, url: '/providers/prairie-wrench' });
     fireEvent.press(await screen.findByTestId('menu-svc-oil'));
+    expect(screen.getByTestId('menu-svc-oil').props.accessibilityState).toMatchObject({ checked: true });
+    fireEvent.press(screen.getByTestId('book-visit'));
     await waitFor(() => expect(view.getPathname()).toBe('/book/prairie-wrench/service'));
     expect(await screen.findByTestId('service-svc-oil')).toBeTruthy();
     expect(screen.getByTestId('service-svc-oil').props.accessibilityState).toMatchObject({ selected: true });

@@ -4,13 +4,12 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, MIN_TARGET, Segmented, colors, fonts, radius, semantic, space, type Locale } from '@northline/mobile-kit';
+import { Icon, MIN_TARGET, Segmented, formatPrice, colors, fonts, radius, semantic, space, type Locale } from '@northline/mobile-kit';
 
 import { useAuth } from '../auth/AuthProvider';
 import { config, fullNav, legalUrl } from '../config';
 import { useI18n } from '../i18n';
 import { useDeliveryLocation } from '../location/DeliveryLocation';
-import { formatMoney } from '../shop/common';
 import { Body, Button, Link, Notice, Row, Tag, Title, type } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { ErrorState, SignInPrompt, Skeleton } from '../ui/states';
@@ -179,7 +178,7 @@ export function Account() {
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={[t('account.you.wallet'), s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatMoney(s.points.valueCents, locale) }) : '', s ? t(s.plus ? 'account.you.plus' : 'account.you.standard') : ''].filter(Boolean).join(', ')}
+        accessibilityLabel={[t('account.you.wallet'), s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatPrice(s.points.valueCents, locale) }) : '', s ? t(s.plus ? 'account.you.plus' : 'account.you.standard') : ''].filter(Boolean).join(', ')}
         onPress={() => router.push('/wallet')}
         style={({ pressed }) => [styles.wallet, pressed && styles.walletPressed]}
         testID="you-wallet"
@@ -190,7 +189,7 @@ export function Account() {
             <Skeleton height={22} width="60%" />
           ) : (
             <Text style={styles.walletPoints}>
-              {s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatMoney(s.points.valueCents, locale) }) : t('account.you.walletOpen')}
+              {s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatPrice(s.points.valueCents, locale) }) : t('account.you.walletOpen')}
             </Text>
           )}
         </View>

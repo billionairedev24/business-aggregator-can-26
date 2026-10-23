@@ -176,7 +176,7 @@ export function InfoLine({ icon, children, color }: { icon: IconName; children: 
  */
 export function Strip({ children, edge, testID }: { children: ReactNode; edge?: boolean; testID?: string }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={!edge && styles.strip} contentContainerStyle={styles.stripContent} testID={testID}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.stripBox, !edge && styles.strip]} contentContainerStyle={styles.stripContent} testID={testID}>
       {children}
     </ScrollView>
   );
@@ -273,6 +273,7 @@ const styles = StyleSheet.create({
   panelDark: { backgroundColor: semantic['surface-brand'] },
   info: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   strip: { marginHorizontal: -GUTTER },
+  stripBox: { flexGrow: 0 },
   stripContent: { paddingHorizontal: GUTTER, gap: space[3] },
   tileBox: { gap: 4, minHeight: MIN_TARGET },
   tileFill: { flex: 1 },

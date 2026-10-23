@@ -23,6 +23,7 @@ export function PhotoWell({
   label,
   badge,
   inset = DENSITY['well-inset'],
+  fit = 'contain',
   style,
   testID,
 }: {
@@ -39,6 +40,8 @@ export function PhotoWell({
   /** Over the top-left corner (a {@link DealBadge}). */
   badge?: ReactNode;
   inset?: number;
+  /** `contain` (default): the product on white, whole. `cover` (S-178): a place or a shop's photo filling the well. */
+  fit?: 'contain' | 'cover';
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
@@ -47,7 +50,7 @@ export function PhotoWell({
   return (
     <View style={[styles.well, { padding: inset }, style]} testID={testID ?? (has ? 'photo-well' : 'photo-fallback')} {...a11y}>
       {source ? (
-        <Image source={source} style={styles.wellImage} resizeMode="contain" />
+        <Image source={source} style={styles.wellImage} resizeMode={fit} />
       ) : photo ? (
         <View style={styles.wellImage}>{photo}</View>
       ) : (
@@ -243,6 +246,8 @@ export interface ProductCardProps {
   photo?: ReactNode;
   icon?: IconName;
   onPress?: () => void;
+  /** What a screen reader says for the card's button (default: the title). S-178: name, shop and price together. */
+  label?: string;
   /** Add to cart; with `inCart` > 0 the stepper takes its place. */
   addLabel?: string;
   onAdd?: () => void;
@@ -253,7 +258,7 @@ export interface ProductCardProps {
 }
 
 /** A product: the photo well (or the dashed fallback with the category icon and the shop), two lines of title, the shop, rating, price + unit, delivery, then Add to cart or the stepper. */
-export function ProductCard({ title, seller, priceCents, unit, wasCents, rating, eta, low, deal, source, photo, icon, onPress, addLabel, onAdd, inCart = 0, onLess, style, testID }: ProductCardProps) {
+export function ProductCard({ title, seller, priceCents, unit, wasCents, rating, eta, low, deal, source, photo, icon, onPress, label, addLabel, onAdd, inCart = 0, onLess, style, testID }: ProductCardProps) {
   const body = (
     <>
       <PhotoWell source={source} photo={photo} icon={icon} caption={seller} badge={deal ? <DealBadge label={deal} /> : null} />
@@ -276,7 +281,7 @@ export function ProductCard({ title, seller, priceCents, unit, wasCents, rating,
   return (
     <View style={[styles.card, style]} testID={testID}>
       {onPress ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => [styles.cardPress, pressed && styles.cardPressed]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={label ?? title} onPress={onPress} style={({ pressed }) => [styles.cardPress, pressed && styles.cardPressed]}>
           {body}
         </Pressable>
       ) : (
@@ -303,6 +308,7 @@ export function ServiceCard({
   photo,
   icon,
   onPress,
+  label,
   style,
   testID,
 }: {
@@ -316,6 +322,8 @@ export function ServiceCard({
   photo?: ReactNode;
   icon?: IconName;
   onPress?: () => void;
+  /** What a screen reader says for the card's button (default: the title). */
+  label?: string;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
@@ -340,7 +348,7 @@ export function ServiceCard({
   return (
     <View style={[styles.card, style]} testID={testID}>
       {onPress ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => [styles.cardPress, pressed && styles.cardPressed]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={label ?? title} onPress={onPress} style={({ pressed }) => [styles.cardPress, pressed && styles.cardPressed]}>
           {body}
         </Pressable>
       ) : (
@@ -405,7 +413,7 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', alignItems: 'flex-start', gap: space[1] },
   metaText: { flexShrink: 1 },
   card: { flex: 1, minWidth: 0, backgroundColor: semantic.surface },
-  cardPress: { gap: space[2] },
+  cardPress: { gap: space[2], minHeight: MIN_TARGET },
   cardPressed: { opacity: 0.85 },
   cardBody: { gap: space[1] - LINE.hair },
   cardAction: { marginTop: space[2] },
