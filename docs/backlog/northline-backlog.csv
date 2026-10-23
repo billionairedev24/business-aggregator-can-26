@@ -1032,6 +1032,8 @@ Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,ph
 E-15,,Epic,"Full UI revamp (Amazon-style marketplace UX, new visual direction)","Full UI revamp (Amazon-style marketplace UX, new visual direction)","Owner direction 2026-10-23: the UI across every app is an eyesore. The 2026-10-19 light & photo-first / Evergreen direction is reopened, not just re-executed. Reference: Amazon — dense, utility-first, search-led marketplace UX (deliver-to, search with department scope, buy box, filter rail, Seller Central-style back office). Patterns only: Northline keeps its own name, colours, type and logo; no Amazon branding, trade dress or assets. Scope: consumer web, Studio, console, consumer and courier mobile apps. Gate: no page work starts until the owner has picked a direction from rendered mockups (S-166). Backend, BFF, validation, i18n (en + fr-CA) and region-neutrality rules of CLAUDE.md are unchanged.",Highest,,ui-revamp,design,,web,,,
 S-165,E-15,Story,"UI audit with evidence (screenshots of every app, root causes)",,"Screenshot every key route of consumer web, Studio, console and the mobile apps at 1440 and 390 wide, dev and production builds. Check that fonts, token CSS and images load in the deployed build (CSP, asset paths). Rank the problems and name their root causes in code (tokens, components, page layout).
 
+Done 2026-10-23: docs/design/audit-2026-10.md.
+
 Acceptance criteria:
 - docs/design/audit-2026-10.md with screenshots and a ranked problem list
 - Every deploy-level breakage filed and fixed separately
@@ -1139,3 +1141,17 @@ Acceptance criteria:
 - Old palettes and dead styles removed
 
 Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",High,5,ui-revamp,qa,a11y,qa,Sprint 6,2026-12-14,2026-12-25
+S-181,E-15,Story,"Photography and imagery: one art-directed, licensed set for every category and demo listing","The audit ranked photography as the worst problem. Build one consistent, licensed image set (high resolution, consistent light and crop, Canadian context) for every category and demo listing; an image pipeline (responsive sizes, focal-point crop, no upscaling); a designed fallback for listings with no photo; photo guidelines for providers in the Studio uploader.
+
+Acceptance criteria:
+- Every one of the 162 categories has its own image; no duplicate on a page
+- make demo-data uploads the new set; banners never upscale
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/audit-2026-10.md",Highest,5,ui-revamp,content,photography,design,Sprint 3,2026-11-02,2026-11-13
+S-182,E-15,Story,Screenshot fidelity and the hydration bug,"make ui-shots must render what the demo shows (the same images as make demo-data, not SVG stand-ins). Fix the React hydration mismatch (#418) on /shop, /shop/bakery and the provider page (time-based text rendered on the server).
+
+Acceptance criteria:
+- ui-shots and the demo show the same images
+- No hydration error on any consumer route
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/audit-2026-10.md",High,2,ui-revamp,qa,bug,web,Sprint 2,2026-10-19,2026-10-30
