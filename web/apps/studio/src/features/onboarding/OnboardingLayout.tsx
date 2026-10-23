@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { CaretDown, Check } from '@phosphor-icons/react';
-import { Avatar, Menu, useLocale, SkipLink } from '@northline/ui';
+import { Avatar, Menu, StatusTag, useLocale, SkipLink } from '@northline/ui';
 import { useSession, useSignOut } from '../../lib/session';
 import type { MerchantType } from '../shell/api';
 import { Brand } from '../shell/StudioLayout';
@@ -37,9 +37,11 @@ export interface OnboardingLayoutProps {
 }
 
 /**
- * Onboarding chrome (redesign § 1.3 Forms, AfroTransact BO:113): the dark top bar with no site nav and no sidebar,
- * then a `240px step rail | form card` grid. The card shows "Step n of 5" and a progress bar above the step; "Finish
- * later" signs out (every step saves on Continue, and the wizard resumes where the owner left off).
+ * Onboarding chrome (S-176, the wizard's own top bar): one white bar — the logo, the business being set up and its
+ * state, the step indicator (numbered steps with their names, the current one solid ink, finished ones ✓ in the
+ * success colour; phones: "Step n of 5 · name" over five segments), "Finish later" and the account menu. Then one
+ * column: the step's title and its one group of questions, with the step's Continue bar sticky at the bottom of the
+ * window. "Finish later" signs out (every step saves on Continue; the wizard resumes where the owner left off).
  */
 export function OnboardingLayout({ step, type, onboarding, onGo, children }: OnboardingLayoutProps) {
   const t = useOnboardingT();
@@ -47,59 +49,57 @@ export function OnboardingLayout({ step, type, onboarding, onGo, children }: Onb
   const current = STEPS.indexOf(step);
   const furthest = reachable(onboarding);
   const submitted = onboarding ? onboarding.status !== 'applicant' : false;
-  // the bar shows the step being filled in as reached (step 1 of 5 = a fifth), all of it once submitted
-  const pct = `${Math.round((Math.min(current + 1, STEPS.length) / STEPS.length) * 100)}%`;
+  const states = STEPS.map((_, i) => (i === current ? 'current' : i < current || i < furthest || (submitted && i < STEPS.length - 1) ? 'done' : 'todo'));
   return (
     <div className="nl-shell nl-ob-shell">
       <SkipLink />
-      <TopBar onboarding={onboarding} />
-      <div className="nl-ob">
-        <nav className="nl-ob-rail" aria-labelledby="nl-ob-rail">
-          <div className="nl-ob-rail-title" id="nl-ob-rail">{t('railTitle')}</div>
+      <TopBar onboarding={onboarding} finishLater={onboarding && step !== 'review' ? () => void signOut() : undefined}>
+        <nav className="nl-ob-steps-nav" aria-label={t('railTitle')}>
           <ol className="nl-ob-steps">
-            {STEPS.map((s, i) => {
-              const done = i < current || i < furthest || (submitted && i < STEPS.length - 1);
-              const state = i === current ? 'current' : done ? 'done' : 'todo';
-              return (
-                <li key={s}>
-                  <button type="button" className="nl-ob-step" aria-current={i === current ? 'step' : undefined} disabled={i > furthest} onClick={() => onGo(s)}>
-                    <span className="nl-ob-num" data-state={state} aria-hidden>{state === 'done' ? <Check size={14} weight="bold" /> : i + 1}</span>
-                    <span className="nl-ob-step-text">{stepName(s, t)}<span className="nl-ob-step-sub">{stepSub(s, type, t)}</span></span>
-                    <span className="nl-sr-only">{t('stepOf', { n: i + 1, total: STEPS.length })}{done && i !== current ? ` · ${t('stepDone')}` : ''}</span>
-                  </button>
-                </li>
-              );
-            })}
+            {STEPS.map((s, i) => (
+              <li key={s} className="nl-ob-steps-item" data-state={states[i]}>
+                <button type="button" className="nl-ob-step" aria-current={i === current ? 'step' : undefined} disabled={i > furthest} onClick={() => onGo(s)}
+                  title={stepSub(s, type, t)}>
+                  <span className="nl-ob-num" data-state={states[i]} aria-hidden>{states[i] === 'done' ? <Check size={13} weight="bold" /> : i + 1}</span>
+                  <span className="nl-ob-step-text">{stepName(s, t)}</span>
+                  <span className="nl-sr-only"> {stepSub(s, type, t)}</span>
+                  <span className="nl-sr-only">{t('stepOf', { n: i + 1, total: STEPS.length })}{states[i] === 'done' ? ` · ${t('stepDone')}` : ''}</span>
+                </button>
+              </li>
+            ))}
           </ol>
-          <p className="nl-ob-rail-note">{t('railNote')}</p>
         </nav>
+      </TopBar>
+      <div className="nl-ob-phone-steps" aria-hidden>
+        <span className="nl-ob-stepof">{t('stepOf', { n: current + 1, total: STEPS.length })} · <strong>{stepName(step, t)}</strong></span>
+        <span className="nl-ob-segments">{STEPS.map((s, i) => <span key={s} data-state={states[i]} />)}</span>
+      </div>
+      <div className="nl-ob">
         <main className="nl-ob-card" id="main" tabIndex={-1}>
-          <div className="nl-ob-card-head">
-            <span className="nl-ob-stepof">{t('stepOf', { n: current + 1, total: STEPS.length })}</span>
-            {onboarding && step !== 'review' ? <button type="button" className="btn btn-secondary btn-sm" onClick={() => void signOut()}>{t('finishLater')}</button> : null}
-          </div>
-          <div className="nl-ob-progress" aria-hidden><span style={{ width: pct }} /></div>
+          <p className="nl-ob-eyebrow">{t('stepOf', { n: current + 1, total: STEPS.length })} · {stepSub(step, type, t)}</p>
           {children}
         </main>
+        <p className="nl-ob-rail-note">{t('railNote')}</p>
       </div>
     </div>
   );
 }
 
-function TopBar({ onboarding }: { onboarding: Onboarding | undefined }) {
+function TopBar({ onboarding, finishLater, children }: { onboarding: Onboarding | undefined; finishLater?: () => void; children: ReactNode }) {
   const t = useOnboardingT();
   const { data: session } = useSession();
   const { locale, setLocale } = useLocale();
   const signOut = useSignOut();
   const user = session?.user;
   const name = onboarding?.business ? onboarding.displayName : t('newBusiness');
-  const tag = onboarding?.status === 'pending' ? { cls: 'tag-warning', text: t('pending') } : onboarding?.status === 'active' ? { cls: 'tag-success', text: t('approved') } : { cls: 'tag-neutral', text: t('applicant') };
+  const tag = onboarding?.status === 'pending' ? { tone: 'warning' as const, text: t('pending') } : onboarding?.status === 'active' ? { tone: 'success' as const, text: t('approved') } : { tone: 'neutral' as const, text: t('applicant') };
   return (
-    <header className="nav nl-topbar">
+    <header className="nav nl-topbar nl-ob-top">
       <Brand label={t('studio')} />
-      <span className="nl-ob-biz">{name}{onboarding?.city ? ` · ${onboarding.city}` : ''}</span>
-      <span className={`tag ${tag.cls}`}>{tag.text}</span>
+      <span className="nl-ob-biz"><span className="nl-ob-biz-name">{name}{onboarding?.city ? ` · ${onboarding.city}` : ''}</span><StatusTag tone={tag.tone}>{tag.text}</StatusTag></span>
+      {children}
       <div className="nl-topbar-end">
+        {finishLater ? <button type="button" className="btn btn-secondary btn-sm nl-ob-later" onClick={finishLater}>{t('finishLater')}</button> : null}
         <Menu label={t('accountMenu')} width={260} items={[
           { label: t('language'), meta: t('languageMeta'), onSelect: () => setLocale(locale === 'en' ? 'fr' : 'en') },
           { kind: 'separator' },

@@ -53,7 +53,7 @@ export function CategoryPicker({ type, value, onChange, suggestions, onSuggestio
           max={max}
           placeholder={t(type === 'kitchen' ? 'catPh_kitchen' : type === 'seller' ? 'catPh_seller' : 'catPh')}
           limitMessage={t('catLimit')}
-          renderNoMatch={(q, suggest) => <>{t('noMatch')} {suggest ? <button type="button" className="btn btn-ghost" style={{ minHeight: 32, padding: '0 4px' }} onClick={suggest}>{t('suggest', { q })}</button> : null}{t('suggestTail')}</>}
+          renderNoMatch={(q, suggest) => <>{t('noMatch')} {suggest ? <button type="button" className="btn btn-ghost btn-sm nl-ob-suggest" onClick={suggest}>{t('suggest', { q })}</button> : null}{t('suggestTail')}</>}
           invalid={!!error}
           describedBy={error ? `${id}-err` : `${id}-note`}
           onClose={onClose}

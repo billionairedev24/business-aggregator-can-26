@@ -135,6 +135,10 @@ export function BusinessStep({ onboarding, part = 'categories', onBack, onNext, 
     <>
       <h1 className="nl-ob-title">{t('bizTitle')}</h1>
       <p className="nl-ob-intro">{t('bizIntro')}</p>
+      {/* S-176: the step's questions in two titled groups — who the business is legally, then what customers see */}
+      <section className="nl-ob-q" aria-labelledby="ob-q-legal">
+        <h2 className="nl-ob-q-title" id="ob-q-legal">{t('grpLegal')}</h2>
+        <p className="nl-ob-q-note">{t('grpLegalNote')}</p>
       <FormGrid className="nl-ob-form">
         <Field label={t(`nameLabel_${type}`)} error={visible.displayName}>
           <TextInput placeholder={t(`namePh_${type}`)} value={displayName} onChange={e => { setDisplayName(e.target.value); clearServer('displayName'); }} onBlur={() => touch('displayName')} />
@@ -166,6 +170,12 @@ export function BusinessStep({ onboarding, part = 'categories', onBack, onNext, 
               : <span className="nl-small nl-muted">{t('legalFormsLoading')}</span>}
           </div>
         )}
+      </FormGrid>
+      </section>
+      <section className="nl-ob-q" aria-labelledby="ob-q-profile">
+        <h2 className="nl-ob-q-title" id="ob-q-profile">{t('grpProfile')}</h2>
+        <p className="nl-ob-q-note">{t('grpProfileNote')}</p>
+      <FormGrid className="nl-ob-form">
         {PROFILE_FIELDS[type].map(f => {
           const value = profile[f.key];
           const set = (v: unknown) => setProfile(p => ({ ...p, [f.key]: v }));
@@ -175,17 +185,18 @@ export function BusinessStep({ onboarding, part = 'categories', onBack, onNext, 
             return (
               <div key={f.key} className="nl-field nl-span-all" role="group" aria-label={t(f.label)}>
                 <span className="nl-label">{t(f.label)}</span>
-                <div className="nl-chips">{f.options.map(o => <Chip key={o.value} selected={list.includes(o.value)} onClick={() => set(list.includes(o.value) ? list.filter(x => x !== o.value) : [...list, o.value])}>{t(o.label)}</Chip>)}</div>
+                <div className="nl-ob-chips">{f.options.map(o => <Chip key={o.value} selected={list.includes(o.value)} onClick={() => set(list.includes(o.value) ? list.filter(x => x !== o.value) : [...list, o.value])}>{t(o.label)}</Chip>)}</div>
               </div>
             );
           }
           const text = typeof value === 'string' ? value : '';
           const err = visible[`profile.${f.key}`];
           return f.kind === 'area'
-            ? <Field key={f.key} label={t(f.label)} span={f.span} error={err}><TextArea style={{ minHeight: 80 }} placeholder={t(f.ph)} maxLength={f.max} value={text} onChange={e => set(e.target.value)} /></Field>
+            ? <Field key={f.key} label={t(f.label)} span={f.span} error={err}><TextArea className="nl-ob-textarea" placeholder={t(f.ph)} maxLength={f.max} value={text} onChange={e => set(e.target.value)} /></Field>
             : <Field key={f.key} label={t(f.label)} span={f.span} error={err}><TextInput placeholder={t(f.ph)} maxLength={f.max} value={text} onChange={e => set(e.target.value)} /></Field>;
         })}
       </FormGrid>
+      </section>
       {count > 0 ? <div role="alert" className="nl-alert nl-alert-error"><strong>{t('attention', { count })}</strong> {t('attentionTail')}</div> : null}
       <div className="nl-ob-actions">
         <button type="button" className="btn btn-secondary" onClick={onBack}>{t('back')}</button>

@@ -175,6 +175,7 @@ export const useOnboardingT = defineMessages({
     importCsv: 'Import CSV', added: 'Added.',
     // redesign § 3.10: categories step, wizard card, approval gate
     step_categories: 'Categories', sub_categories: 'what you offer', sub_categories_seller: 'what you sell', sub_categories_both: 'services & departments', sub_categories_kitchen: 'type of food business',
+    grpLegal: 'Who the business is', grpLegalNote: 'Your legal details go to Stripe for identity checks; customers never see them.', grpProfile: 'What customers see', grpProfileNote: 'This becomes your public page; you can change it later in the Studio.',
     finishLater: 'Finish later', bizToCategories: 'Continue to categories', bizHint: 'Saved when you finish the next step.', catHint: 'Your categories decide which licences we check next.',
     catTitle_provider: 'What services do you offer?', catTitle_seller: 'What do you sell?', catTitle_both: 'What do you offer and sell?', catTitle_kitchen: 'What kind of food business is it?',
     catIntro_provider: 'Pick the services customers can book. Regulated trades get a licence check in the next step.', catIntro_seller: 'Pick the departments your products belong to. Some need a permit, which you declare in the next step.',
@@ -348,6 +349,7 @@ export const useOnboardingT = defineMessages({
     importCsv: 'Importer un CSV', added: 'Ajouté.',
     // refonte § 3.10 : étape catégories, carte de l'assistant, porte d'approbation
     step_categories: 'Catégories', sub_categories: 'ce que vous offrez', sub_categories_seller: 'ce que vous vendez', sub_categories_both: 'services et rayons', sub_categories_kitchen: "type d'entreprise alimentaire",
+    grpLegal: 'Qui est l’entreprise', grpLegalNote: 'Vos détails juridiques vont à Stripe pour les vérifications d’identité; les clients ne les voient jamais.', grpProfile: 'Ce que voient les clients', grpProfileNote: 'Cela devient votre page publique; vous pourrez la modifier plus tard dans le Studio.',
     finishLater: 'Terminer plus tard', bizToCategories: 'Continuer vers les catégories', bizHint: "Enregistré à la fin de l'étape suivante.", catHint: 'Vos catégories déterminent les permis que nous vérifions ensuite.',
     catTitle_provider: 'Quels services offrez-vous?', catTitle_seller: 'Que vendez-vous?', catTitle_both: 'Que proposez-vous et que vendez-vous?', catTitle_kitchen: "Quel type d'entreprise alimentaire est-ce?",
     catIntro_provider: "Choisissez les services que les clients peuvent réserver. Les métiers réglementés passent une vérification de permis à l'étape suivante.", catIntro_seller: "Choisissez les rayons de vos produits. Certains exigent un permis, que vous déclarez à l'étape suivante.",

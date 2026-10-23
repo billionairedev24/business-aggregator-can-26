@@ -50,11 +50,11 @@ export function VerificationStep({ onboarding, onBack, onSubmitted, identityRetu
       {identityReturned && kycOpen ? <Alert tone="info" role="status">{t('idReturned')}</Alert> : null}
       {applicant && agentNote ? (
         <Alert tone="highlight" title={t('agentAsked')}>
-          {redo.length ? <p style={{ margin: 0 }}>{t('agentRedo', { checks: new Intl.ListFormat(locale, { type: 'conjunction' }).format(redo) })}</p> : null}
-          {agentNote.note ? <p style={{ margin: redo.length ? '8px 0 0' : 0 }}>{t('agentNote', { note: agentNote.note })}</p> : null}
+          {redo.length ? <p className="nl-ob-flush">{t('agentRedo', { checks: new Intl.ListFormat(locale, { type: 'conjunction' }).format(redo) })}</p> : null}
+          {agentNote.note ? <p className={redo.length ? 'nl-ob-flush nl-ob-gap-sm' : 'nl-ob-flush'}>{t('agentNote', { note: agentNote.note })}</p> : null}
         </Alert>
       ) : null}
-      <ul className="nl-ob-checks" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+      <ul className="nl-ob-checks">
         {checks.map(c => {
           const text = checkText(c, onboarding.type, t, locale);
           return (
