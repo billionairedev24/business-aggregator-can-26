@@ -11466,3 +11466,113 @@ names, and give search hits the Shop pages' merchant ids.
 **Not done here:** product and shop reviews, a co-purchase rail, allergens and pickup on products, the provider's job
 count and reply time, and a store endpoint all need api work. French shots are still not in `make ui-shots` (fr-CA is
 covered by the tests).
+
+## 2026-10-23 — S-176 Studio money, settings and onboarding
+
+Every remaining Studio route is on the shared system in the Plainsight look, built to the Studio dashboard and orders
+frames of `design/revamp/a.html` (the mockups have no frame for these screens; their language is the page head, the
+KPI strip, white 4 px panels on hairlines over the grey ground, underline status tabs, StatusTag cells and the
+ink/grey columns chart). No backend, BFF contract, validation or i18n rule changed; every new string is en + fr-CA.
+
+**Money (Earnings, Payouts, Reports, Refunds & disputes).**
+- Each screen: `BoHeader` (the screen's name; what matters now as the line under it) and a `KpiStrip`. Amounts are
+  `formatPrice` / `useFormatters().price` only and dates `formatWhen` (finance's own `dayDate`/`dateTime`/`timeOf` now
+  wrap it); `moneyShort` ("$160") is gone, so headings read "$160.00". A chart's y-axis uses whole dollars
+  (`axisDollars`): an axis step is not a price.
+- Earnings: "Net earnings, last 14 days" as a `ColumnChart` built from the ledger's lines by the day they happened
+  (refunds count nothing; there is no daily earnings endpoint). Money in motion's current step is drawn selected (ink
+  edge, ink number), not in the action blue. The ledger has tabs All / In escrow / Released / Disputed (red, when any) /
+  Refunded (when any) and its state is a status (released success, escrow info, disputed danger, refunded neutral). The
+  ledger keeps full phone cards (no compact card hints): its held / tax / fee breakdown must stay readable on a phone.
+- Payouts: the balance is the KPI strip (the old action-blue "available" tile is gone: one role per colour), the account
+  panel shows the account's state as a status (Active / Changing); history has tabs All / Paid / On its way / Failed,
+  Arrives and To columns, and "Your last payouts" as columns (the last 12 paid or moving payouts, newest in ink).
+- Reports: the LineChart (this period vs the one before) became a `ColumnChart` of this period's buckets with the
+  current bucket in ink, as the brief asks; the comparison with the period before stays in the Gross KPI's delta (▲/▼).
+  The refund-rate KPI is green under the category average and red over it. The h1 is "Sales reports"; the period and
+  its dates are the line under it. Sources are a definition list.
+- Refunds & disputes: KPI strip (open disputes, waiting on you, refunds · 30 days, dispute rate against the tier's
+  floor); each open case is a card with its state as a status (waiting on you warning — danger within a day of the
+  reply deadline —, with an agent info, offer sent neutral) and the matching urgency edge; evidence chips are neutral
+  bordered tags with an icon (were the action colour). History: tabs All / In progress / Won / Refunded, an Opened
+  column, outcomes as statuses (won success, awaiting you warning, with an agent info, lost danger).
+
+**Messages.** Page head with the unread count; the conversation list has All / Unread tabs with counts; an unread
+conversation is bold with an ink dot (named "Unread" for screen readers) and its time in ink, the open one sits on the
+grey tint with the 3 px ink bar (the sidebar's current-page style); the reference and subject are a meta line. The
+thread title is an h2 under the page's h1 (was the page's h1). Quick replies are the shared `Chip` (pressed = the reply
+filled in). Help-case conversations use the same composer.
+
+**Store (storefront editor).** The form is three `FormSection` panels; the button-label picker and the section switches
+are the shared Chip / Switch ("Always on" a neutral status); publishing moved into a sticky `SaveBar` with the page's
+state (Published date success / Not published warning) and the approval note; the head keeps Embed code. The live
+preview can show Phone or Web (`Segmented`), and **draws services and products with @northline/ui `ServiceCard` /
+`ProductCard` — the consumer pages' own cards** — inert (stacked two-up on the phone frame, rows on web), with the real
+primary button as the call to action. Listings carry no photo in this endpoint, so the cards show the dashed fallback.
+The unused page builder (`PageBuilder.tsx`, `SectionList.tsx`) is token-only too and kept (its api and tests stay).
+
+**Reviews.** Page head; KPI strip (average with stars, reviews, replied % of the newest page, waiting for a reply);
+the rating summary panel beside the reviews panel with tabs All / Needs a reply / Replied / 1–3 stars; a review still
+waiting for a reply has the warning edge; hidden / edited / reported are statuses; the reply's edge is ink.
+"Replied" counts the reviews loaded so far (the list pages by 20; there is no reply-count endpoint) and says so.
+
+**Settings.** Page head, `UnderlineTabs` with tab/panel ids (was ChipTabs). Business is three `FormSection` panels
+(details, service and bookings, languages) plus Licences & insurance, with the sticky `SaveBar` ("Unsaved changes" /
+"Up to date"); languages are selected chips with × that remove themselves. The other sections keep one white panel. Every
+tag on Team (2FA: passkey/authenticator success, text message warning, none danger), Security, API (deliveries,
+webhooks, integrations), partner access and stock sync is a `StatusTag` of its meaning. Notification cells pressed show
+the selected state (ink edge on the tint), not the link colour.
+
+**Standing, Stripe & compliance, Help & support.** Each: page head + KPI strip (Standing: in force, appealable decisions,
+appeals in review, coaching tasks; compliance: Stripe payouts, documents verified, obligations), panels with an urgency
+edge, statuses for every state (`docState` / `requirementState` return status tones now: verified success, due warning,
+expired/rejected/past due danger). Compliance's h1 is the screen's name and what is due is the line under it. Help: tabs
+as `UnderlineTabs` (open cases as the count); topics show their pressed state; the "Talk to a person" panel is white
+with an info edge (was the brand tint); case and platform status are statuses (operational success, degraded warning,
+outage danger). A Standing fixture was added to `make ui-shots` (it had no recorded answer).
+
+**Availability, kitchen Hours, Modifiers & combos.** Availability: `UnderlineTabs`, the save state as a status beside
+them, the Hours and Rules tabs save through `SaveBar`, free preview slots outlined in ink (were the action blue),
+taken ones struck through on the well; connect / bookable / holiday toggles are the shared Chip. Kitchen Hours: page
+head, KPI strip (days open, default prep, max per 15 min, ways to get food), the five parts as `FormSection` panels in
+two columns with their edit buttons as panel actions, every on/off and evidence state a status. Modifiers & combos: page
+head, panels, options as bordered well tags with "+ option" a small secondary button, combos with status tabs and a
+status column, savings and prices in the one format ("Save $6.00").
+
+**Onboarding (provider, seller, kitchen — one chrome).** The wizard's own top bar: logo, the business and its state
+(status), the step indicator (numbered steps joined by hairlines; the current one solid ink with its name in bold,
+finished ones ✓ in the success colour; below 1280 px only the current step's name shows; below 768 px the bar keeps the
+logo and the account, and a "Step n of 5 · name" line over five segments sits under it), "Finish later" and the account
+menu. The left step rail is gone (its note moved under the card). One column; the Business step's questions are two
+titled groups ("Who the business is" with the province's legal block, "What customers see"); the steps' Back · hint ·
+Continue bar is sticky at the bottom of the window (CSS on the existing `.nl-ob-actions`, so every step and flow gets
+it); the chosen business type is drawn selected (ink edge on the tint, ✓, its icon). The steps' sub-lines stay in each
+step button for screen readers (and as its tooltip). Identity checks are statuses.
+
+**Library (@northline/ui), additive.** `ProductCard` / `ServiceCard` (and `CardBadge`, the prop types) moved to their
+own module, `Cards.tsx`; the package index exports them exactly as before, the strings are shared through an internal
+`commerceText.ts`. No component changed, so no gallery entry or baseline changed. The Studio's dashboard no longer loads
+the cards: **initial JS 255.6 → 247.8 kB gzip and the budget is back to 250 kB** (`scripts/bundle-budget.mjs`).
+
+**Lint (`pnpm lint:tokens`).** Every Studio folder is strict now (no raw px sizes or spacing, no raw colours, no inline
+`style`, no hand-made tabs, old tag tones, app-made chips or `formatMoney`/`money(`): S-176 adds auth, assistant,
+writing, pilot, finance, messages, storefront, reviews, settings, compliance, standing, help, availability and
+onboarding, and the script **fails on a Studio folder that is in none of the lists**. New rules for the Studio: no old
+`<Tag>` (use `StatusTag`) and no `<Alert tone="highlight">` (the promo/commerce colour; paused, instant book paused and
+"redo a check" alerts are `info` now). An inline style may set one custom property from merchant data
+(`style={{ ['--nl-brand' as string]: s.brandColor }}`, the swatches, the review bars' `--pct`): data, not presentation.
+
+**Audit items.** `studio-onboarding-business` (cramped two-panel wizard with an action-blue rail and progress bar, no
+selected type, the Continue bar at the end of a long form), `studio-page` (old card chrome, chips with no shared
+selected state, Publish lost at the bottom; the preview look was fixed in S-174 and now uses the real cards) and
+`studio-settings` (kicker + title head, pill-coloured language tags, inline Save) are gone.
+
+**Departures and limits.**
+- The brief's "one question group per step": the Business step keeps its server step (`business`; changing the step
+  list would change the onboarding contract) and shows two titled groups instead of being split into more steps.
+- Reports lost the line chart's previous-period overlay (now in the KPI delta); Earnings' chart is built client-side
+  from up to 500 ledger lines.
+- Reviews' "Replied" and the tab counts cover the reviews loaded so far, not all reviews.
+- Full-page `ui-shots` draw the sticky save/continue bars where the window's bottom is, over the content below it; in the
+  browser they sit in place at the end of the form.
+- French shots are still not in `make ui-shots` (fr-CA is covered by the tests).

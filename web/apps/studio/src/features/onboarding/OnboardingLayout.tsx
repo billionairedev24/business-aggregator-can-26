@@ -76,7 +76,6 @@ export function OnboardingLayout({ step, type, onboarding, onGo, children }: Onb
       </div>
       <div className="nl-ob">
         <main className="nl-ob-card" id="main" tabIndex={-1}>
-          <p className="nl-ob-eyebrow">{t('stepOf', { n: current + 1, total: STEPS.length })} · {stepSub(step, type, t)}</p>
           {children}
         </main>
         <p className="nl-ob-rail-note">{t('railNote')}</p>

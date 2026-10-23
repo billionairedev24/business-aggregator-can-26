@@ -43,7 +43,6 @@
 .nl-ob { max-width: 880px; width: 100%; margin: 0 auto; padding: var(--space-6) var(--page-gutter) var(--space-12); display: flex; flex-direction: column; gap: var(--space-4); box-sizing: border-box; }
 @media (max-width: 767.98px) { .nl-ob { padding-top: var(--space-4); } }
 .nl-ob-rail-note { font-size: var(--type-meta); color: var(--color-text-muted); margin: 0; line-height: var(--leading-relaxed); max-width: 72ch; }
-.nl-ob-eyebrow { margin: 0; font-size: var(--type-meta); font-weight: var(--weight-semibold); color: var(--color-text-muted); }
 
 /* form card */
 .nl-ob-card { min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-panel); background: var(--color-surface); padding: var(--space-6) var(--space-6) 0; display: flex; flex-direction: column; gap: var(--space-4); }
