@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BoHeader, Button, ChartCard, DataTable, Drawer, ErrorState, Field, formatNumber, KpiStrip, PageSkeleton, TextArea, TextInput, useFormatters, useLocale, type DataTableColumn, type DataTableTone, type Locale } from '@northline/ui';
+import { BoHeader, Button, ChartCard, DataTable, Drawer, ErrorState, Field, formatNumber, KpiStrip, PageSkeleton, TextArea, TextInput, UnderlineTabs, useFormatters, useLocale, type DataTableColumn, type DataTableTone, type Locale } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { dayQuery, daysQuery, exportUrl, financeQuery, ledgerExportUrl, useReconcileTax, useResolveDay, useRunDay, type Day, type Finance, type Item } from './api';
@@ -115,7 +115,9 @@ function Reconciliation({ days, zone }: { days: Day[]; zone: string }) {
   const yesterday = isoDay(Date.now() - 86_400_000, zone);
   const [day, setDay] = useState(yesterday);
   const [open, setOpen] = useState<string | null>(null);
-  const rows: DayRow[] = days.map(d => ({
+  const [view, setView] = useState<'all' | Day['status']>('all');
+  const count = (v: 'all' | Day['status']) => formatNumber(days.filter(d => v === 'all' || d.status === v).length, locale);
+  const rows: DayRow[] = days.filter(d => view === 'all' || d.status === view).map(d => ({
     id: d.day, date: dayLabel(d.day, locale), stripe: d.stripeCents, ledger: d.ledgerCents, variance: d.varianceCents,
     status: d.status === 'resolved' && d.resolvedNote ? t('s_resolvedNote', { note: d.resolvedNote }) : t(`s_${d.status}` as FinanceKey), src: d,
   }));
@@ -128,6 +130,8 @@ function Reconciliation({ days, zone }: { days: Day[]; zone: string }) {
   return (
     <>
       <DataTable<DayRow> dense entity={t('dayEntity')} plural={t('dayPlural')} columns={columns} rows={rows} pageSize={10} emptyText={t('noDays')}
+        views={<UnderlineTabs aria-label={t('reconViews')} value={view} onChange={setView}
+          options={(['all', 'mismatch', 'matched', 'resolved'] as const).map(v => ({ value: v, label: v === 'all' ? t('rv_all') : t(`s_${v}` as FinanceKey), count: count(v), tone: v === 'mismatch' && days.some(d => d.status === 'mismatch') ? 'danger' as const : undefined }))} />}
         rowTones={r => ({ status: STATUS_TONE[r.src.status] })} can={{ create: false, update: false, delete: false }} roleName={roleName}
         openLabel={t('open')} onOpen={r => setOpen(r.id)} reportName="reconciliation" />
       <div className="nl-fi-actions">

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BoHeader, Button, ChartCard, DataTable, Dialog, ErrorState, Field, PageSkeleton, Select, Tag, TextInput, type DataTableColumn } from '@northline/ui';
+import { BoHeader, Button, DataTable, Dialog, ErrorState, Field, formatNumber, PageSkeleton, Select, Tag, TextInput, UnderlineTabs, useLocale, type DataTableColumn } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { useShellT, type ShellKey } from '../shell/messages';
@@ -31,7 +31,9 @@ function TeamView({ team }: { team: Team }) {
   const t = useTeamT();
   const shell = useShellT();
   const { can, roleName } = useGrant();
+  const { locale } = useLocale();
   const admin = can('province');
+  const [tab, setTab] = useState<'people' | 'roles' | 'audit'>('people');
   const [inviting, setInviting] = useState(false);
   const [managing, setManaging] = useState<Member | null>(null);
   const screenName = (s: string) => shell(SCREEN_LABEL[s] ?? (s as ShellKey));
@@ -53,17 +55,19 @@ function TeamView({ team }: { team: Team }) {
     <div className="bo-page">
       <BoHeader title={t('heading')} sub={t('summary')}
         actions={<><Button disabled={!admin} onClick={() => setInviting(true)}>{t('invite')}</Button>{!admin ? <span className="bo-muted">{t('cannot')}</span> : null}</>} />
-      <ChartCard id="tm-roles" title={t('rolesTitle')}>
-        <DataTable<RoleRowView> dense entity={t('roleEntity')} plural={t('rolePlural')} columns={roleColumns} rows={roleRows} pageSize={10} roleName={roleName}
-          can={{ create: false, update: false, delete: false }} />
-      </ChartCard>
-      <ChartCard id="tm-people" title={t('peopleTitle')}>
-        <DataTable<PersonRow> dense entity={t('personEntity')} plural={t('personPlural')} columns={peopleColumns} rows={people} pageSize={10} roleName={roleName}
+      {/* S-177: one tab row with counts, the dense table under it */}
+      <UnderlineTabs aria-label={t('heading')} value={tab} onChange={setTab} options={[
+        { value: 'people', label: t('peopleTitle'), count: formatNumber(people.length, locale) },
+        { value: 'roles', label: t('rolesTitle'), count: formatNumber(roleRows.length, locale) },
+        { value: 'audit', label: t('auditTitle') },
+      ]} />
+      {tab === 'people' ? (
+        <DataTable<PersonRow> dense entity={t('personEntity')} plural={t('personPlural')} columns={peopleColumns} rows={people} pageSize={25} roleName={roleName}
           can={{ create: false, update: false, delete: false }} openLabel={t('manage')} onOpen={admin ? r => setManaging(r.src) : undefined} />
-      </ChartCard>
-      <ChartCard id="tm-audit" title={t('auditTitle')}>
-        <AuditLog staff={team.members} />
-      </ChartCard>
+      ) : tab === 'roles' ? (
+        <DataTable<RoleRowView> dense entity={t('roleEntity')} plural={t('rolePlural')} columns={roleColumns} rows={roleRows} pageSize={25} roleName={roleName}
+          can={{ create: false, update: false, delete: false }} />
+      ) : <AuditLog staff={team.members} />}
       {inviting ? <InviteDialog onClose={() => setInviting(false)} /> : null}
       {managing ? <ManageDialog member={team.members.find(m => m.id === managing.id) ?? managing} onClose={() => setManaging(null)} /> : null}
     </div>
