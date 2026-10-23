@@ -493,6 +493,19 @@ const PROMOS = [
   { id: 'pc3', code: 'SUMMERBBQ', description: null, kind: 'percent', percent: 10, maxDiscountCents: 2000, minSpendCents: 5000, startsAt: '2026-07-01T06:00:00Z', endsAt: '2026-08-31T06:00:00Z', perCustomerLimit: 2, totalLimit: 500, fundedBy: 'northline', appliesTo: ['goods'], active: false, state: 'ended', redeemed: 500, discountCents: 610000 },
 ];
 
+const groupLine = (id, title, qty, unitCents, choices = []) => ({ id, itemId: id, comboId: null, title, qty, unitCents, totalCents: qty * unitCents, choices, note: null });
+const GROUP = {
+  id: 'G1', code: 'PHO123', state: 'open', payment: 'split', merchantId: 'K1', kitchen: 'Pho Lucky', kitchenSlug: 'pho-lucky', mode: 'delivery', scheduledFor: null, area: 'Beltline',
+  hostId: 'C1', you: 'C1', host: true, groupMax: 8, tip: { kind: 'amount', value: 400 }, orderId: null, ref: null, canPlace: false, tracking: null,
+  createdAt: '2026-09-30T23:40:00Z', expiresAt: '2026-10-01T00:40:00Z',
+  members: [
+    { userId: 'C1', name: 'Amara Osei', host: true, items: [groupLine('gi1', 'Pho tai', 1, 1900, ['Large'])], subtotalCents: 1900, share: null },
+    { userId: 'C2', name: 'Dev Patel', host: false, items: [groupLine('gi2', 'Spring rolls', 2, 800), groupLine('gi3', 'Vermicelli bowl', 1, 1650)], subtotalCents: 3250, share: null },
+    { userId: 'C3', name: 'Jordan Kim', host: false, items: [], subtotalCents: 0, share: null },
+  ],
+  subtotalCents: 5150,
+};
+
 export const SHOTS = {
   consumer: [
     (m, p) => (live(m, p, '/api/v1/search') ? { body: search(p) } : undefined),
@@ -525,6 +538,9 @@ export const SHOTS = {
       b.nextAvailable = '2026-10-21T16:00:00Z';
       return { body: b };
     },
+    // S-173: a group order at its share link (Amara hosts; two neighbours added dishes)
+    (m, p) => (live(m, p, '/api/v1/me/group-orders/join/PHO123') ? { body: { code: 'PHO123', kitchen: 'Pho Lucky', kitchenSlug: 'pho-lucky', hostFirstName: 'Amara', state: 'open', people: 3, groupMax: 8, groupId: 'G1' } } : undefined),
+    (m, p) => (live(m, p, '/api/v1/me/group-orders/G1') ? { body: GROUP } : undefined),
     // S-172: the kitchen takes group orders (its order box shows the group order entry)
     (m, p) => (live(m, p, '/api/v1/public/kitchens/pho-lucky') ? { body: { ...body('GET /api/v1/public/kitchens/pho-lucky'), groupOrders: true } } : undefined),
     // S-172: the provider's live calendar for any week the booking box asks (slots every 90 min, two taken a day, Sundays closed)

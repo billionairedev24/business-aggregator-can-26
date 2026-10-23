@@ -5,13 +5,19 @@
  * pressed once the page is ready (a Playwright selector: open a detail sheet or an editor step), then the shot is taken (the window only: a sheet is fixed to it);
  * `sheet` photographs the window only for a sheet the address opens (`?application=`); `down` makes the mock api answer
  * that status to everything (the BFF or the api down: the error states); `now` fixes the page's clock (Date.now) at that
- * instant, for what depends on the time of day (the delivery cut-off strip counts down to the fixtures' run, E-15).
+ * instant, for what depends on the time of day (the delivery cut-off strip counts down to the fixtures' run, E-15);
+ * `storage` sets localStorage entries first (S-173: the food order being built, saved-for-later lines).
  * A new route goes here too: shots.spec.ts photographs whatever this lists.
  */
-export interface ShotRoute { name: string; path: string; signedIn?: boolean; ready?: string; click?: string; sheet?: boolean; down?: number; now?: string }
+export interface ShotRoute { name: string; path: string; signedIn?: boolean; ready?: string; click?: string; sheet?: boolean; down?: number; now?: string; /** S-173: localStorage entries set before the page loads (a food order being built). */ storage?: Record<string, string> }
 
 /** 2 h 48 min before the recorded Shop landing's run closes (fixtures/consumer.json `run.orderBy`), as design/revamp/a.html shows it. */
 const BEFORE_CUTOFF = '2026-09-30T20:32:00Z';
+/** S-173: the food order being built (features/food/foodCart.ts), for the food checkout shot. */
+const FOOD_CART = JSON.stringify({ merchantId: 'K1', slug: 'pho-lucky', name: 'Pho Lucky', lines: [
+  { key: 'D1:O2', kind: 'item', itemId: 'D1', title: 'Pho tai · Large', qty: 2, unitCents: 1900, optionIds: ['O2'], choices: ['Large'], itemIds: [] }] });
+/** S-173: a line saved for later (features/cart/saved.ts). */
+const SAVED = JSON.stringify([{ offerId: 'o-saved', variantId: null, productId: 'P2', name: 'Free-run eggs, dozen', option: null, unit: 'dozen', imageUrl: null, unitCents: 650, qty: 1, shopName: 'Bow Valley Dairy' }]);
 const PROVIDER = '01J9ZD3V00000000000000PWM1', SELLER = '01J9ZD3V00000000000000PWP1', KITCHEN = '01J9ZD3V00000000000000PDB1';
 
 export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
@@ -37,7 +43,7 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'provider', path: '/providers/prairie-wrench', now: BEFORE_CUTOFF },
     { name: 'provider-day', path: '/providers/prairie-wrench', now: BEFORE_CUTOFF, click: '.nl-prov-days [role="radio"]:not([disabled]) >> nth=1' },
     { name: 'provider-book', path: '/providers/prairie-wrench/book', signedIn: true },
-    { name: 'cart', path: '/cart', signedIn: true },
+    { name: 'cart', path: '/cart', signedIn: true, now: BEFORE_CUTOFF, storage: { 'nl.savedForLater': SAVED } },
     { name: 'checkout', path: '/checkout', signedIn: true },
     { name: 'checkout-complete', path: '/checkout/complete?order=ORD1&ref=NL-50001', signedIn: true },
     { name: 'order', path: '/orders/ORD1', signedIn: true },
@@ -52,13 +58,15 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'account-problem', path: '/account/problem/order/O1', signedIn: true },
     { name: 'food', path: '/food' },
     { name: 'food-kitchen', path: '/food/pho-lucky' },
-    { name: 'food-checkout', path: '/food/checkout', signedIn: true },
+    { name: 'food-checkout', path: '/food/checkout', signedIn: true, storage: { 'nl.foodCart': FOOD_CART } },
+    { name: 'food-group', path: '/food/group/PHO123', signedIn: true },
     { name: 'food-order', path: '/food/orders/F1', signedIn: true },
     { name: 'help', path: '/help' },
     { name: 'sell', path: '/sell' },
     { name: 'location', path: '/location' },
     { name: 'sign-in', path: '/sign-in' },
     { name: 'register', path: '/register' },
+    { name: 'forgot-password', path: '/forgot-password' },
     { name: 'not-found', path: '/no-such-page' },
     // the error pages: the server's own (NL_ERROR_PREVIEW=1) and the shell's state with the consumer-bff answering 503
     { name: 'error-500', path: '/__nl/error?status=500' },

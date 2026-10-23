@@ -28,6 +28,7 @@ import { usePromoT } from '../promotions/messages';
 import { legalHref } from '../../lib/legal';
 import { PhotoWell } from '../art/PhotoWell';
 import { useCheckoutT } from './messages';
+import { Section } from './Section';
 
 type Substitution = CheckoutBody['substitution'];
 /** The tip choices drawn in design/revamp/a.html: no tip, $2, $3, $5 or another amount (100 % to the courier). */
@@ -350,22 +351,6 @@ function Checkout({ cart, name }: { cart: Cart; name: string }) {
         <StepUpDialog mode={stepUp} onClose={() => setStepUp(null)} onProof={proof => { setStepUp(null); void place(proof); }} />
       ) : null}
     </div>
-  );
-}
-
-/** A numbered section of the one page: the ink number box, the 18 px title, an action at the right ("Change"). */
-function Section({ n, id, title, action, headingRef, className, children }: {
-  n: number; id: string; title: string; action?: ReactNode; headingRef?: React.Ref<HTMLHeadingElement>; className?: string; children: ReactNode;
-}) {
-  return (
-    <section className={className ? `co-section ${className}` : 'co-section'} aria-labelledby={id}>
-      <div className="co-section-head">
-        <span className="co-num" aria-hidden>{n}</span>
-        <h2 id={id} ref={headingRef} tabIndex={-1} className="co-section-title">{title}</h2>
-        {action}
-      </div>
-      {children}
-    </section>
   );
 }
 
