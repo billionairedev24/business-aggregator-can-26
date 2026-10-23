@@ -76,7 +76,8 @@ describe('Help centre', () => {
   it('shows the design home: tabs, topics, suggestions, SLA by tier, open case, guided fixes', async () => {
     stubFetch(routes());
     renderScreen(<Harness />);
-    expect(screen.getByRole('heading', { name: 'How can we help, Prairie Wrench?' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Help & support' })).toBeTruthy();
+    expect(screen.getByText('How can we help, Prairie Wrench?')).toBeTruthy();
     expect(await screen.findByRole('tab', { name: 'My cases · 1 open' })).toBeTruthy();
     expect(await screen.findByText('What the completion photo must show')).toBeTruthy();
     expect(screen.getByText('Escrow · 2 min')).toBeTruthy();
