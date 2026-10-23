@@ -71,7 +71,7 @@ export function ShopLanding({ market: explicit }: { market?: string }) {
 
           <RailSection id="shop-popular" title={t('popular')} more={{ href: '/search?scope=shop', label: t('searchAll') }}>
             <RailTrack size="product">
-              {data.popular.map(p => <li key={p.productId}><ProductCardTile product={p} withMarket={link} /></li>)}
+              {data.popular.map(p => <li key={p.productId}><ProductCardTile product={p} withMarket={link} next={run} /></li>)}
             </RailTrack>
           </RailSection>
         </>

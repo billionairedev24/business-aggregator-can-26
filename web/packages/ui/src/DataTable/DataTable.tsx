@@ -124,7 +124,9 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   const custom = useMemo(() => (props.onAction ? (actions ?? []).filter((a) => actionAllowed(a, can)) : []), [actions, props.onAction, can.create, can.update, can.delete]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── view state ────────────────────────────────────────────────────────────
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(props.initialSearch ?? '');
+  // a new search from outside (the shell's global search on the same screen) replaces the box's text
+  useEffect(() => { if (props.initialSearch != null) setQuery(props.initialSearch); }, [props.initialSearch]);
   const [facets, setFacets] = useState<Record<string, string[]>>({});
   const [ranges, setRanges] = useState<Record<string, RangeFilterValue>>({});
   const [sorting, setSorting] = useState<SortEntry[]>([]);

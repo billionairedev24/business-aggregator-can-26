@@ -44,6 +44,8 @@ export interface SearchBarProps {
    * keyboard and screen readers get the platform's own control. `label` names it ("Search in").
    */
   scope?: SearchScope;
+  /** The search landmark's own name, when a page has more than one search (WCAG landmark-unique). */
+  landmark?: string;
 }
 
 export interface SearchScope { value: string; options: readonly { value: string; label: string }[]; onChange: (value: string) => void; label?: string }
@@ -64,7 +66,7 @@ export function Highlighted({ text, ranges = [] }: { text: string; ranges?: read
 }
 
 /** Search field (role=search). Enter or the button submits; with `suggestions` it predicts as you type. The header variant is the mockups' search bar: one box with an ink edge — the department scope (`scope`), the field and a solid ink button. */
-export function SearchBar({ value, onChange, onSubmit, variant = 'hero', placeholder, label, suggestions, onPick, scope }: SearchBarProps) {
+export function SearchBar({ value, onChange, onSubmit, variant = 'hero', placeholder, label, suggestions, onPick, scope, landmark }: SearchBarProps) {
   const t = useT();
   const id = useId();
   const listId = `${id}-list`;
@@ -98,7 +100,7 @@ export function SearchBar({ value, onChange, onSubmit, variant = 'hero', placeho
 
   let index = -1;
   return (
-    <form role="search" className={clsx('nl-search', `nl-search-${variant}`)}
+    <form role="search" aria-label={landmark} className={clsx('nl-search', `nl-search-${variant}`)}
       onSubmit={e => { e.preventDefault(); setDismissed(true); onSubmit(value.trim()); }}>
       {scope ? (
         <span className="nl-search-scope">

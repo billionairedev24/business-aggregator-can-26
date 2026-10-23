@@ -3,7 +3,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 /**
  * S-182: one clock for the server's render and the browser's first render. Time-based text ("last week", "Today 3 pm",
  * "tonight", whether a review can still be edited) rendered from `Date.now()` on each side can differ — a request that
- * straddles a minute, an hour or midnight — and React then throws the server's HTML away (#418). The root route's
+ * straddles a minute, an hour or midnight — and React then throws the server's HTML away (React error 418). The root route's
  * loader takes the time once on the server (`renderedAt`); it travels to the browser with the rest of the loader data
  * and every screen reads it here instead of the system clock. A later navigation in the browser runs the loader
  * again, so the clock moves on with the visit. Outside the app (component tests), it is the system clock.

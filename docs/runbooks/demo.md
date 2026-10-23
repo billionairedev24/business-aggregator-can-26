@@ -166,10 +166,10 @@ else); a plain `make demo-data ENV=dryrun` brings them back. Accounts are never 
 ## 7. What to avoid
 
 - **Hidden features — keep the flags off** in the demo builds (the dry run's images are built without them):
-  `VITE_NL_FULL_NAV=1` (consumer) shows Food in the department bar, on the home and in the search's Type facet, and the
-  account's Wallet & points, Dietary, Plus and Language; `VITE_NL_TESTING_TOOLS=1` shows the "Send feedback" control
-  and the console's Pilot / UAT / Go-live / On-call / API screens. Their routes still answer a typed URL — don't type
-  the Food routes or `/account?tab=wallet`.
+  `VITE_NL_FULL_NAV=1` (consumer) shows the account's Wallet & points, Dietary, Plus and Language;
+  `VITE_NL_TESTING_TOOLS=1` shows the "Send feedback" control and the console's Pilot / UAT / Go-live / On-call / API
+  screens. Their routes still answer a typed URL — don't type `/account?tab=wallet`. Food is part of the consumer
+  site since E-15 (the locked mockups show it in the department strip, the search scope and the home).
 - **"Demo the approval" / "Simulate approval →"** on the Studio's gate: a development shortcut that only the `local`
   profile answers. Approve in the console.
 - **Food, kitchens, couriers:** out of the demo. A delivery needs a courier on shift with the courier app; orders stay
