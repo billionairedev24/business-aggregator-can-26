@@ -299,3 +299,12 @@
 .nl-feedback-attached { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
 .nl-feedback-remove { min-width: var(--size-touch); min-height: var(--size-touch); border: 0; background: none; color: var(--color-text); cursor: pointer; border-radius: var(--radius-control); }
 .nl-feedback-remove:focus-visible { outline: 2px solid var(--color-focus); }
+/* ColumnChart (Charts.tsx): grid, axis figures, the grey columns and the current one in ink */
+.nl-chart-figure { margin: 0; min-width: 0; }
+.nl-columns .nl-columns-grid { stroke: var(--color-border); stroke-width: 1; fill: none; }
+.nl-columns .nl-columns-axis { font-size: var(--type-caps); fill: var(--color-text-subtle); }
+.nl-columns-bar { fill: var(--color-border-control); }
+.nl-columns-bar[data-now] { fill: var(--color-selected); }
+.nl-columns-legend { margin: var(--space-2) 0 0; font-size: var(--type-meta); }
+.nl-columns-key { background: var(--color-border-control); }
+.nl-columns-key[data-now] { background: var(--color-selected); }

@@ -1,6 +1,13 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { ArrowRight, type Icon } from '@phosphor-icons/react';
 import clsx from 'clsx';
+import type { StatusTone } from './Commerce';
+import { defineMessages } from './i18n';
+
+const useT = defineMessages({
+  en: { danger: 'Urgent', warning: 'Due soon' },
+  fr: { danger: 'Urgent', warning: 'À faire bientôt' },
+});
 
 /*
  * Back-office building blocks of the redesign (docs/design/redesign-spec.md § 1.3, AfroTransact BO:263–280, BO:811,
@@ -16,6 +23,9 @@ export interface KpiItem {
   /** The xs line under the value ("+12% vs Sep"); `trend` colours it green / red. */
   delta?: ReactNode;
   trend?: Trend;
+  /** The delta is a change over time ("+12% vs last Friday"): ▲ / ▼ before it, as well as the colour. Off for a
+   *  delta whose colour means good / bad rather than up / down. */
+  arrow?: boolean;
   /** Makes the card a button that opens the screen behind the figure (PH:55). */
   onClick?: () => void;
 }
@@ -32,7 +42,7 @@ export function KpiStrip({ items, label }: { items: readonly KpiItem[]; label: s
         const body = <>
           <span className="bo-kpi-label">{k.label}</span>
           <span className="bo-kpi-value">{k.value}</span>
-          {k.delta ? <span className="bo-kpi-delta" data-trend={k.trend ?? 'flat'}>{k.delta}</span> : null}
+          {k.delta ? <span className="bo-kpi-delta" data-trend={k.trend ?? 'flat'}>{k.arrow && k.trend === 'up' ? <span aria-hidden>▲ </span> : k.arrow && k.trend === 'down' ? <span aria-hidden>▼ </span> : null}{k.delta}</span> : null}
         </>;
         return <li key={k.key}>{k.onClick ? <button type="button" className="bo-kpi" onClick={k.onClick}>{body}</button> : <div className="bo-kpi">{body}</div>}</li>;
       })}
@@ -101,4 +111,76 @@ export function BoHeader({ title, sub, actions, kicker }: { title: ReactNode; su
       {actions ? <div className="bo-head-actions">{actions}</div> : null}
     </div>
   );
+}
+
+/** What a "Needs you now" card asks for: one button, a link (`href`) or an action (`onClick`). */
+export interface ActionCardAction { label: string; href?: string; onClick?: () => void }
+export interface ActionCardProps {
+  /** Urgency: danger (now), warning (today), info / success / neutral (to know). Colours the card's edge and icon. */
+  tone: StatusTone;
+  icon: Icon;
+  /** The job ("3 orders to pack"). */
+  title: ReactNode;
+  /** The deadline or the detail ("Pack by 5:20 p.m. for run R-611"). */
+  detail?: ReactNode;
+  action: ActionCardAction;
+  /** The most urgent card's button is the page's primary action; the others are secondary. */
+  primary?: boolean;
+}
+
+/**
+ * One "Needs you now" card (design/revamp/a.html `act`): an icon tile, the job in bold, the deadline under it and the one
+ * button that does it, with a 3 px edge in the urgency's status colour. Urgent and due-soon cards also say so to
+ * screen readers (the edge is colour only).
+ */
+export function ActionCard({ tone, icon: I, title, detail, action, primary }: ActionCardProps) {
+  const t = useT();
+  const id = useId();
+  const cls = clsx('btn', 'btn-sm', primary ? 'btn-primary' : 'btn-secondary', 'bo-act-btn');
+  return (
+    <li className="bo-act" data-tone={tone}>
+      <span className="bo-act-icon" aria-hidden><I size={18} /></span>
+      <div className="bo-act-body">
+        <h3 className="bo-act-title" id={id}>{tone === 'danger' || tone === 'warning' ? <span className="nl-sr-only">{t(tone)}: </span> : null}{title}</h3>
+        {detail ? <p className="bo-act-detail">{detail}</p> : null}
+      </div>
+      {action.href
+        ? <a className={cls} href={action.href} aria-describedby={id} onClick={action.onClick ? e => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); action.onClick!(); } : undefined}>{action.label}</a>
+        : <button type="button" className={cls} aria-describedby={id} onClick={action.onClick}>{action.label}</button>}
+    </li>
+  );
+}
+
+/** The "Needs you now" grid: a section title with its count, then the cards three across (one column on phones). */
+export function ActionGrid({ title, children, count }: { title: ReactNode; count: number; children: ReactNode }) {
+  const id = useId();
+  return (
+    <section className="bo-acts-wrap" aria-labelledby={id}>
+      <h2 className="bo-sec-title" id={id}>{title}<span className="bo-count">{count}</span></h2>
+      <ul className="bo-acts">{children}</ul>
+    </section>
+  );
+}
+
+export interface SummaryColumn<T> { key: string; label: ReactNode; align?: 'start' | 'end'; render: (row: T) => ReactNode; /** Left out on phones (< 600px) to give the first column room. */ hideOnPhone?: boolean }
+/**
+ * A short read-only table in a panel (design/revamp/a.html `tbl`: "Top products today"): grey head, hairline rows,
+ * figures right-aligned in tabular numbers. For lists of a handful of rows; long, searchable lists are `DataTable`.
+ */
+export function SummaryTable<T>({ caption, columns, rows, rowKey, empty }: { caption: string; columns: readonly SummaryColumn<T>[]; rows: readonly T[]; rowKey: (row: T) => string; empty?: ReactNode }) {
+  if (rows.length === 0) return <p className="bo-muted">{empty}</p>;
+  return (
+    <div className="bo-table-wrap">
+      <table className="bo-table">
+        <caption className="nl-sr-only">{caption}</caption>
+        <thead><tr>{columns.map(c => <th key={c.key} scope="col" data-align={c.align ?? 'start'} data-phone={c.hideOnPhone ? 'hide' : undefined}>{c.label}</th>)}</tr></thead>
+        <tbody>{rows.map(r => <tr key={rowKey(r)}>{columns.map(c => <td key={c.key} data-align={c.align ?? 'start'} data-phone={c.hideOnPhone ? 'hide' : undefined}>{c.render(r)}</td>)}</tr>)}</tbody>
+      </table>
+    </div>
+  );
+}
+
+/** A small square thumbnail in a grey well (a table's product photo); without a photo, the name's initial. */
+export function Thumb({ src, name }: { src?: string | null; name: string }) {
+  return <span className="bo-thumb" aria-hidden>{src ? <img src={src} alt="" loading="lazy" /> : name.trim().charAt(0).toUpperCase()}</span>;
 }
