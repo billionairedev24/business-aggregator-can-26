@@ -10915,3 +10915,67 @@ and dusk still build (and pass the contrast gate) until every screen has moved.
 **Not done here (later stories):** page layouts (results rail, buy box, home hero, back-office dashboards) are S-170+;
 pages still using their own chip/tab/price markup (e.g. the Studio catalogue's step tabs) move with their page; the
 mobile kit is S-169.
+
+## 2026-10-23 — S-169 Mobile component kit on tokens v2
+
+**The kit.** `mobile/packages/mobile-kit/src/ui/kit` (exported from `@northline/mobile-kit`) holds the phone apps' components
+on tokens v2 (Plainsight, the phone frames of `design/revamp/a.html`), shared by the consumer and courier apps:
+- Actions and choices: `Button` (`primary | secondary | tertiary | destructive | dark`), `IconButton`, `UnderlineTabs`
+  (with counts), `Segmented` (joined boxes; `stack` for long labels, `fill`, `role="tab"` for modes), `FilterChip` (square;
+  applied = ink edge on the selected tint with ✓, removable ×, named "Remove filter: …"), `ChoiceTiles` (one choice,
+  solid ink), `OptionCard` (radio mark, 2 pt ink edge), `Checkbox`, `Switch`, `Mark`.
+- Commerce: `PhotoWell` (1:1 well, 12 pt inset, product contained; dashed fallback with the category icon and the shop),
+  `ProductCard`, `ServiceCard`, `Price`, `Rating`/`Stars`, `DealBadge`, `StatusTag`, `CountBadge`, `QuantityStepper`,
+  `MetaLine`; formatters `formatPrice` / `formatUnitPrice` / `unitCents` / `formatTime` / `formatTimeRange` /
+  `formatDateRange`, the same rules and strings as the web's `@northline/ui` (`$8.50` / `8,50 $`; "6–9 p.m."). The kit
+  falls back to "start – end" where an engine has no `Intl.DateTimeFormat#formatRange` (older Hermes).
+- Inputs: `TextField`, `SearchBar` (the department scope opens a bottom sheet of scopes; without a field the whole bar
+  is one `search` button that opens the search screen).
+- Feedback: `BottomSheet` (RN `Modal`, slide, grabber, Close), `ToastProvider`/`useToast`/`Toast` (ink, announced,
+  4 s), `EmptyState` (well grey, icon), `Skeleton`/`CardSkeleton`.
+- Navigation: `AppHeader` (44 pt Back, title, actions, optional large title) and `BottomTabBar` (current tab in ink with
+  the filled icon and a 2 pt ink bar on top; the cart count in the round commerce badge). Expo Router's js-tabs and
+  Stack stay the navigators; the kit draws them.
+- Text roles `textStyles` (page title 24, section 18, sub 16, card title 13.5, body 14, label 13, meta 12, caps 11,
+  prices 15/17/28), `TYPE`, `SIZE`, `LINE`, `CAP`, `slopFor`.
+- Its own words (labels for screen readers, the gallery) live in `kit/messages.ts` (en + fr-CA, a test checks keys and
+  parameters); `KitProvider` gives them the app's locale (both apps mount it inside their I18nProvider).
+
+**Decisions the spec didn't make.**
+- **Round stays round:** tokens v2 already emits `radius.round` (999); S-167 mapped `radius.pill` to 3 pt. Circles
+  (avatars, radio dots, switches, the cart count, status dots, the empty-state disc) now use `radius.round`; every other
+  `radius.pill` in the apps became `radius.control` (they were controls), progress tracks `radius.status`. Both apps'
+  conventions tests now refuse `radius.pill`. No token change, so web/packages/tokens is untouched.
+- **Button heights on a phone:** `md` is drawn 44 pt (the project's target rule over the mockup's 38), `lg` 46 (the
+  mockup's sticky bar), `sm` 32 drawn with a vertical hit slop to 44 (`slopFor`), as the web's 38 + 44 hit area.
+- **Dynamic Type:** sizes are points and scale with the system setting (React Native's default); nothing has a fixed
+  text height (controls use `minHeight` and wrap). One-line labels inside a bar cap growth (`CAP`: tab labels 1.3,
+  badges 1.2, control labels 1.6).
+- **The apps' primitives became wrappers:** consumer `src/ui/{primitives,screen,states,TabBar}.tsx`, the shop/services
+  `Chip` and `Stepper`, and courier `src/components/ui.tsx` + its tab bar keep their props and draw with the kit, so
+  every existing screen picked up the new look without page changes. Tone mapping: `accent` → primary (one action
+  blue), `ghost` → tertiary, `danger` → destructive (red, solid: cancel, remove, delete, refuse, sign out everywhere).
+  Account's plain Sign out is not destructive, so it moved from `danger` to `secondary` (the one page edit).
+  The round 44 pt buttons (Back, Share, the bell) are square `IconButton`s with the control edge; Cards are flat white
+  panels with the hairline (no shadow); sunken panels and empty states are the well grey; tags take the status
+  colours; the consumer's illustrated empty-state scenes are replaced by the kit's icon empty state (an icon chosen from
+  the `art` / `draw` words the screens already pass); Account's language switch is the kit `Segmented`.
+- **The kit's lint:** `__tests__/kitRules.test.ts` is the native `lint:tokens`: no raw colour, font size, spacing
+  (beyond 0–2 pt nudges), corner radius or line height, and no `radius.pill`, in `src/ui/kit`. The apps' shared chrome
+  files are checked for raw font sizes and the retired display face.
+- **Gallery:** `KitGallery` (every component and state, an English/Français switch, fixed sample instants in UTC so the
+  pictures don't drift) on `/dev/gallery` in both apps, shown when `__DEV__` (a development build on Metro) or the
+  fixture build; any other build redirects home. It is not a design screen, so it is not in `src/screens.ts`.
+- **Screenshots:** `make mobile-shots` now photographs the gallery (English, the sheet open, French) in both apps. The
+  courier run had been broken since S-159 (the "Sign in" name matched two buttons and the email form needs a
+  password); it now signs in with the fixture's browser passkey and completes all 19 steps.
+
+**Not done here (S-178 consumer screens, S-179 courier screens):** page layouts and page-level markup — the home hero,
+results with the filter rail, product buy box, checkout (still its own blue radio cards and numbered steps), provider,
+orders and the courier's run and stop screens — are unchanged apart from what the primitives draw; screens still format
+money with their own `formatMoney`/`money` (same `$8.50` string) and should move to `Price`/`formatPrice` with their
+page; `ProductCard`/`ServiceCard`/`PhotoWell` are not yet used by the screens (their own `Thumb` and cards stay until
+the page stories). Stock photos don't load in the web shots (the fixture build points at the consumer web's `/photos/`,
+which `shots.mjs` doesn't serve), so photo slots show their placeholder colour in the pictures, before and after; that is
+S-181/S-182's area. Nothing was run on a real device or simulator (no macOS or Android SDK here): native rendering of
+`Modal`, dashed borders and `fontVariant` was checked only in react-native-web and Jest.
