@@ -62,6 +62,8 @@ export interface DataTableColumn<T> {
    * line, only these columns below, then the row's actions; the others stay in the view dialog and the table.
    */
   card?: 'line' | 'meta' | 'end' | 'tag';
+  /** S-175: the cell never wraps (an order number, a time): the table drops a column before it breaks one. */
+  nowrap?: boolean;
   /** S-175: the value's words on a compact card when the bare value would be unclear there ("You get $75.44"). */
   cardFormat?: (value: unknown, row: T) => string;
 }

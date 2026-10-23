@@ -672,7 +672,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
                       <DataTableCheckbox checked={on} onChange={(v) => setSel([id], v)} label={t('selectRow', { name })} />
                     </td>
                     {shown.map((c) => (
-                      <td key={c.key} className={clsx(c.isNum && 'is-num')}>
+                      <td key={c.key} className={clsx(c.isNum && 'is-num', c.nowrap && 'is-nowrap')}>
                         {renderValue(c, r, 'cell')}
                       </td>
                     ))}

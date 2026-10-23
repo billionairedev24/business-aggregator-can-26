@@ -350,8 +350,8 @@ function WorkTable({ t }: { t: GalleryT }) {
   ].map(r => ({ ...r, state: s(r.code as WorkRow['code']) })) as WorkRow[];
   const tone = (r: WorkRow): StatusTone => (r.code === 'to_pack' ? 'warning' : r.code === 'packed' ? 'info' : r.code === 'issue' ? 'danger' : 'success');
   const columns: DataTableColumn<WorkRow>[] = [
-    { key: 'ref', label: t('colOrder'), primary: true },
-    { key: 'placed', label: t('colPlaced') },
+    { key: 'ref', label: t('colOrder'), primary: true, nowrap: true },
+    { key: 'placed', label: t('colPlaced'), nowrap: true },
     { key: 'who', label: t('colCustomer'), card: 'line' },
     { key: 'items', label: t('colItems'), card: 'line' },
     { key: 'window', label: t('colWindow'), card: 'meta' },

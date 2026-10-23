@@ -72,8 +72,8 @@ export function OrdersScreen({ search, view, onViewChange }: { search?: string; 
   })), [q.data, t, locale, f, d0]);
 
   const columns: DataTableColumn<OrderRow>[] = [
-    { key: 'ref', label: t('colOrder'), primary: true },
-    { key: 'placed', label: t('colPlaced'), priority: 40 },
+    { key: 'ref', label: t('colOrder'), primary: true, nowrap: true },
+    { key: 'placed', label: t('colPlaced'), priority: 40, nowrap: true },
     { key: 'who', label: t('colCustomer'), card: 'line' },
     { key: 'items', label: t('colItems'), card: 'line' },
     { key: 'run', label: t('colRun'), filter: 'facet', card: 'meta' },

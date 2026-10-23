@@ -220,3 +220,4 @@ table.nl-dt-table td { vertical-align: middle; overflow-wrap: break-word; } /* o
 .nl-dt-cc-meta { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); font-size: var(--type-meta); color: var(--color-text-muted); }
 .nl-dt-cc-end { color: var(--color-text); font-size: var(--type-body); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .nl-dt-cc-acts .nl-dt-row-acts { justify-content: flex-end; flex-wrap: wrap; }
+.nl-dt-table td.is-nowrap { white-space: nowrap; overflow-wrap: normal; }
