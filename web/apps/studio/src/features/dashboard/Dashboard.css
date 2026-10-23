@@ -1,22 +1,18 @@
-/* Dashboard (redesign § 3.9; AfroTransact BO:263–280; light direction 2026-10-19). Semantic tokens only.
-   Order: head · KPI strip · today's work + what needs the owner · the figures over time. */
-.nl-dash { display: flex; flex-direction: column; gap: var(--space-5); }
-.nl-dash > .bo-head { margin-bottom: 0; }
-.nl-dash-now { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--space-4); align-items: stretch; }
-.nl-dash-side { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
-.nl-dash-side > .bo-card:first-child { flex: 1; }
-.nl-dash-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: stretch; }
-@media (max-width: 1099.98px) { .nl-dash-now, .nl-dash-charts { grid-template-columns: minmax(0, 1fr); } }
-.nl-dash-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.nl-dash-row { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; padding: var(--space-3) 0; font-size: var(--text-md); }
-.nl-dash-row + .nl-dash-row { border-top: 1px solid var(--color-border); }
-.nl-dash-time { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.nl-dash-what { min-width: 0; overflow-wrap: break-word; }
-.nl-dash-who { display: block; margin-top: 2px; font-size: var(--text-sm); color: var(--color-text-muted); }
-.nl-dash-tag { align-self: center; }
-@media (max-width: 479.98px) {
-  .nl-dash-row { grid-template-columns: minmax(0, 1fr) auto; }
-  .nl-dash-time { grid-column: 1 / -1; font-size: var(--text-sm); color: var(--color-text-muted); }
-}
-.nl-dash-link { text-decoration: none; display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--size-touch); padding: 0 var(--space-2); margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0; border: 0; border-radius: var(--radius-sm); background: none; font: inherit; font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-link); cursor: pointer; }
+/* Dashboard (E-15, design/revamp/a.html screen 7; DashboardScreen.tsx). The blocks come from @northline/ui
+   (ActionGrid, KpiStrip, ChartCard, ColumnChart, SummaryTable); this is their order and the few page parts.
+   Semantic tokens only — `pnpm lint:tokens` checks this folder strictly. */
+.nl-dash { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.nl-dash-head { margin-bottom: 0; }
+.nl-dash-head .bo-head-actions { flex-wrap: nowrap; }
+.nl-dash-clear { grid-column: 1 / -1; padding: var(--space-4); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-panel); background: var(--color-surface); font-size: var(--type-body); color: var(--color-text-muted); }
+.nl-dash-chart-skel { height: calc(var(--size-touch) * 4); }
+.nl-dash-time { font-weight: var(--weight-semibold); white-space: nowrap; }
+.nl-dash-what { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.nl-dash-who { font-size: var(--type-meta); color: var(--color-text-muted); }
+.nl-dash-link { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--size-touch); padding: 0 var(--space-2); margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0; border-radius: var(--radius-control); font-size: var(--type-label); font-weight: var(--weight-semibold); color: var(--color-link); text-decoration: none; }
 .nl-dash-link:hover { background: var(--color-surface-hover); text-decoration: underline; }
+@media (max-width: 767.98px) {
+  .nl-dash-head { flex-direction: column; align-items: flex-start; }
+  .nl-dash-head .bo-head-text { flex: none; }
+  .nl-dash-head .bo-head-actions { flex-wrap: wrap; }
+}
