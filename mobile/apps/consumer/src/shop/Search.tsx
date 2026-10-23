@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingLeft: space[4],
     paddingRight: space[2],
-    borderRadius: radius.pill,
+    borderRadius: radius.control,
     borderWidth: 1.5,
     borderColor: semantic['action-primary'],
     backgroundColor: colors.surface,

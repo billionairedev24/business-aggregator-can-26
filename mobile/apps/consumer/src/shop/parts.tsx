@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { Icon, MIN_TARGET, colors, fonts, radius, semantic, space, type IconName, Scene } from '@northline/mobile-kit';
+import { FilterChip, Icon, MIN_TARGET, QuantityStepper, colors, fonts, radius, semantic, space, type IconName, Scene } from '@northline/mobile-kit';
 
 import { config } from '../config';
 import { useI18n, type MessageKey } from '../i18n';
@@ -74,7 +74,7 @@ export function SectionHead({ title, link, onLink, testID }: { title: string; li
   );
 }
 
-/** − n + : a pill with 44 pt targets (52 pt tall in the bottom action bar), the count announced with the item's name. */
+/** − n + : the kit's QuantityStepper (ink edge on the selected tint, 44 pt targets; 46 pt in the bottom action bar), the count announced with the item's name. */
 export function Stepper({
   value,
   onLess,
@@ -99,35 +99,27 @@ export function Stepper({
   testID?: string;
 }) {
   return (
-    <View style={[styles.stepper, compact && styles.stepperCompact]} testID={testID}>
-      <Pressable accessibilityRole="button" accessibilityLabel={lessLabel} accessibilityState={{ disabled: !canLess }} disabled={!canLess} onPress={onLess} style={[styles.step, compact && styles.stepCompact]}>
-        <Icon name="minus" size={18} color={canLess ? colors.text : colors.textSubtle} />
-      </Pressable>
-      <Text accessibilityLabel={valueLabel} accessibilityLiveRegion="polite" style={styles.stepValue}>
-        {value}
-      </Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={moreLabel} accessibilityState={{ disabled: !canMore }} disabled={!canMore} onPress={onMore} style={[styles.step, compact && styles.stepCompact]}>
-        <Icon name="plus" size={18} color={canMore ? colors.text : colors.textSubtle} />
-      </Pressable>
+    <View style={compact ? styles.stepperCompact : styles.stepper}>
+      <QuantityStepper
+        value={value}
+        onLess={onLess}
+        onMore={onMore}
+        lessLabel={lessLabel}
+        moreLabel={moreLabel}
+        valueLabel={valueLabel}
+        canLess={canLess}
+        canMore={canMore}
+        text={null}
+        size={compact ? 'sm' : 'lg'}
+        testID={testID}
+      />
     </View>
   );
 }
 
-/** A pill chip (MA's recent searches, reasons, kinds): the primary colour when on, a hairline otherwise. */
+/** A square chip (the kit's FilterChip): chosen = the ink edge on the selected tint with ✓, for one choice (radio) or many (checkbox). */
 export function Chip({ label, on, onPress, role = 'checkbox', icon, testID }: { label: string; on: boolean; onPress: () => void; role?: 'checkbox' | 'radio'; icon?: IconName; testID?: string }) {
-  return (
-    <Pressable
-      accessibilityRole={role}
-      accessibilityLabel={label}
-      accessibilityState={{ checked: on, selected: on }}
-      onPress={onPress}
-      style={[styles.chip, on && styles.chipOn]}
-      testID={testID}
-    >
-      {icon ? <Icon name={icon} size={16} color={on ? colors.actionPrimaryText : colors.text} /> : null}
-      <Text style={[styles.chipText, on && styles.chipTextOn]}>{label}</Text>
-    </Pressable>
-  );
+  return <FilterChip label={label} selected={on} onPress={onPress} role={role} icon={icon} testID={testID} />;
 }
 
 export function SumRow({ label, value, strong, tone }: { label: string; value: string; strong?: boolean; tone?: 'accent2' }) {
@@ -259,15 +251,8 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[2] },
   headLink: { minHeight: MIN_TARGET, justifyContent: 'center' },
   headLinkText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.link },
-  stepper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.borderControl, borderRadius: radius.pill, minHeight: 52 },
-  stepperCompact: { minHeight: MIN_TARGET },
-  step: { width: 48, height: 52, alignItems: 'center', justifyContent: 'center' },
-  stepCompact: { width: MIN_TARGET, height: MIN_TARGET },
-  stepValue: { minWidth: 24, textAlign: 'center', fontFamily: fonts.bold, fontSize: 15, color: colors.text },
-  chip: { minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderControl, backgroundColor: colors.surface },
-  chipOn: { backgroundColor: colors.actionPrimary, borderColor: colors.actionPrimary },
-  chipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
-  chipTextOn: { fontFamily: fonts.semibold, color: colors.actionPrimaryText },
+  stepper: { minWidth: space[16] + space[12] },
+  stepperCompact: { minWidth: space[16] + space[8] },
   sum: { flexDirection: 'row', gap: space[2] },
   sumStrong: { paddingTop: 6 },
   sumTotal: { fontFamily: fonts.black, fontSize: 17, color: colors.text },
@@ -275,7 +260,7 @@ const styles = StyleSheet.create({
   ladder: { gap: 0 },
   rung: { flexDirection: 'row', gap: space[3] },
   rail: { width: 24, alignItems: 'center' },
-  dot: { width: 16, height: 16, borderRadius: 8, marginTop: 3 },
+  dot: { width: space[4], height: space[4], borderRadius: radius.round, marginTop: 3 },
   dotDone: { backgroundColor: colors.actionPrimary, borderWidth: 2, borderColor: colors.actionPrimary },
   dotCurrent: { backgroundColor: colors.surface, borderWidth: 3, borderColor: colors.actionPrimary },
   dotTodo: { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.borderStrong },

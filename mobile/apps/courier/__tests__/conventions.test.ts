@@ -48,6 +48,17 @@ describe('code rules', () => {
     const offenders = source.filter((f) => /['"`]#[0-9a-fA-F]{3,8}['"`]|rgba?\(/.test(readFileSync(f, 'utf8')));
     expect(offenders).toEqual([]);
   });
+
+  // S-169: `radius.pill` is 3 pt in Plainsight (never pills); what is a circle says `radius.round`, a control `radius.control`
+  it('never asks for a pill radius', () => {
+    expect(source.filter((f) => /radius\.pill/.test(readFileSync(f, 'utf8')))).toEqual([]);
+  });
+
+  // S-169: the shared chrome draws with the kit's type roles (textStyles / TYPE), never a raw font size or the retired display face
+  it('sets no raw font size in the shared chrome', () => {
+    const chrome = ['src/components/ui.tsx', 'app/(app)/(tabs)/_layout.tsx'].map((f) => join(ROOT, f));
+    expect(chrome.filter((f) => /fontSize:\s*\d|fonts\.display/.test(readFileSync(f, 'utf8')))).toEqual([]);
+  });
 });
 
 describe('the native configuration', () => {
