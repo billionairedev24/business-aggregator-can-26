@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkle } from '@phosphor-icons/react';
-import { Button, Dialog, Panel } from '@northline/ui';
+import { Button, Dialog, Panel, Chip } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { aiErrorKind, aiStatusQuery } from '../assistant/api';
 import { useListingCopy, useQuoteLineSuggestions, useReplySuggestions, useReviewSummaryDraft, type Copy, type ListingFacts, type QuoteLineSuggestion } from './api';
@@ -84,7 +84,7 @@ export function ReplySuggestions({ merchantId, threadId, onPick }: { merchantId:
       <div role="group" aria-label={t('replies')}>
         <p className="nl-writing-note">{t('replies')}</p>
         <div className="nl-writing-reply-list">
-          {suggest.data.replies.map(r => <button key={r} type="button" className="nl-chip nl-writing-reply" onClick={() => onPick(r)}>{r}</button>)}
+          {suggest.data.replies.map(r => <Chip key={r} className="nl-writing-reply" onClick={() => onPick(r)}>{r}</Chip>)}
         </div>
       </div>
     ) : (

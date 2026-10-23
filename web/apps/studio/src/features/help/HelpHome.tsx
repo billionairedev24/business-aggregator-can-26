@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Button, Drawer, ErrorState, formatZonedHours, platformTimeZone, Skeleton, useLocale } from '@northline/ui';
+import { Button, Drawer, ErrorState, formatZonedHours, platformTimeZone, Skeleton, StatusTag, useLocale } from '@northline/ui';
 import { useMerchant } from '../shell/api';
 import { screenHref, type ScreenKey } from '../shell/nav';
 import { articleQuery, articlesQuery, casesQuery, topicsQuery, type ArticleSummary, type HelpTopic } from './api';
@@ -90,7 +90,7 @@ export function HelpHome({ merchantId, onContact, onOpenCase }: HelpHomeProps) {
             <div className="nl-help-talk-sla">{sla(false)}</div>
             <div className="nl-help-talk-actions">
               <Button onClick={() => onContact({ channel: 'chat' })}>{t('startChat')}</Button>
-              <Button variant="secondary" className="nl-help-on-bg" onClick={() => onContact({ channel: 'call' })}>{t('callback')}</Button>
+              <Button variant="secondary" onClick={() => onContact({ channel: 'call' })}>{t('callback')}</Button>
             </div>
           </div>
           <h3 className="nl-help-h3">{openCases.length > 1 ? t('openCases') : t('openCase')}</h3>
@@ -98,7 +98,7 @@ export function HelpHome({ merchantId, onContact, onOpenCase }: HelpHomeProps) {
             const cell = cells(c);
             return (
               <button key={c.id} type="button" className="nl-help-case" onClick={() => onOpenCase(c.id)}>
-                <span className="nl-help-case-head"><strong>{c.code}</strong><span className="tag tag-accent-2">{t('open')}</span></span>
+                <span className="nl-help-case-head"><strong>{c.code}</strong><StatusTag tone="info">{t('open')}</StatusTag></span>
                 <span className="nl-help-case-title">{c.subject}</span>
                 <span className="nl-help-meta">{cell.status}{cell.next ? ` · ${cell.next}` : ''}</span>
               </button>
@@ -129,7 +129,7 @@ function ArticleDrawer({ merchantId, slug, topics, onClose, onContact }: { merch
       <Button variant="ghost" onClick={onClose}>{t('close')}</Button>
       <Button variant="secondary" onClick={() => { onClose(); onContact({ topic: caseTopic }); }}>{t('stillStuck')}</Button>
     </>}>
-      {q.isPending ? <><Skeleton height={14} /><Skeleton height={14} style={{ marginTop: 8 }} /><Skeleton height={14} width="60%" style={{ marginTop: 8 }} /></>
+      {q.isPending ? <div className="nl-help-skel"><Skeleton height={14} /><Skeleton height={14} /><Skeleton height={14} width="60%" /></div>
         : q.isError ? <ErrorState message={t('articleError')} onRetry={() => void q.refetch()} />
           : (
             <article className="nl-help-body">
@@ -142,5 +142,5 @@ function ArticleDrawer({ merchantId, slug, topics, onClose, onContact }: { merch
 }
 
 function ArticleSkeleton() {
-  return <div aria-busy="true">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={20} style={{ margin: '14px 0' }} />)}</div>;
+  return <div aria-busy="true" className="nl-help-skel">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={20} />)}</div>;
 }

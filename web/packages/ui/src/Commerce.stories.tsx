@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, within } from 'storybook/test';
 import { BrandMark } from './BrandMark';
-import { Price, ProductCard, QuantityStepper, ServiceCard, Stars } from './Commerce';
+import { Price, QuantityStepper, Stars } from './Commerce';
+import { ProductCard, ServiceCard } from './Cards';
 
 /** The consumer commerce kit (redesign § 1.3): Price, Stars, the quantity stepper, product and service cards. */
 const meta = {

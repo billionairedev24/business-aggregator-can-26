@@ -1,86 +1,82 @@
-/* Studio › Help & support (design 02 › help). Values from tokens only. */
-.nl-help-tabs { margin: -4px 0 22px; }
-.nl-help-search { max-width: 560px; width: 100%; min-height: 46px; font-size: 16px; }
-.nl-help-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 28px clamp(24px, 4vw, 56px); margin-top: 24px; }
+/*
+ * Studio › Help & support (design 02 › help; S-176 on the Studio dashboard's language): the page head, underline tabs,
+ * articles and topics on the left, talk to a person + your cases on the right, white panels on hairlines. Semantic
+ * tokens and the scale only (`pnpm lint:tokens` checks this folder strictly).
+ */
+.nl-help-tabs { margin: 0 0 var(--space-4); }
+.nl-help-tabs .nl-utabs { overflow-x: auto; }
+.nl-help-skel { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) 0; }
+.nl-help-search { max-width: 720px; width: 100%; min-height: var(--size-control-lg); font-size: var(--type-sub); }
+.nl-help-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(min(100%, 300px), 2fr); gap: var(--space-6); margin-top: var(--space-5); }
 .nl-help-grid > * { min-width: 0; }
-.nl-help-h2 { font-size: 22px; margin: 0 0 10px; overflow-wrap: anywhere; }
-.nl-help-h2-gap { margin-top: 24px; }
-.nl-help-h3 { font-size: 18px; margin: 22px 0 8px; }
-.nl-help-note { font-size: 13px; color: var(--color-text-muted); margin: 10px 0 0; line-height: 1.55; }
-.nl-help-meta { font-size: 12px; color: var(--color-text-muted); }
-.nl-help-back, .nl-help-link { font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--color-link); cursor: pointer; padding: 0; min-height: 32px; text-align: left; }
+.nl-help-h2 { font-size: var(--type-sub); font-weight: var(--weight-semibold); margin: 0 0 var(--space-2-5); overflow-wrap: anywhere; }
+.nl-help-h2-gap { margin-top: var(--space-6); }
+.nl-help-h3 { font-size: var(--type-sub); font-weight: var(--weight-semibold); margin: var(--space-5) 0 var(--space-2); }
+.nl-help-note { font-size: var(--type-label); color: var(--color-text-muted); margin: var(--space-2-5) 0 0; line-height: var(--leading-relaxed); }
+.nl-help-meta { font-size: var(--type-meta); color: var(--color-text-muted); }
+.nl-help-back, .nl-help-link { font: inherit; font-size: var(--type-label); border: 0; background: transparent; color: var(--color-link); cursor: pointer; padding: 0; min-height: var(--size-touch); text-align: start; }
 .nl-help-back:focus-visible, .nl-help-link:focus-visible { outline: 2px solid var(--color-focus); }
 
-.nl-help-articles { list-style: none; margin: 0; padding: 0; }
-.nl-help-article { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; font-size: 15px; text-decoration: none; color: var(--color-text); min-height: 44px; }
+.nl-help-articles { list-style: none; margin: 0; padding: 0 var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-panel); background: var(--color-surface); }
+.nl-help-articles > li + li { border-top: 1px solid var(--color-border); }
+.nl-help-article { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; font-size: var(--type-body); text-decoration: none; color: var(--color-link); font-weight: var(--weight-medium); min-height: var(--size-touch); }
 .nl-help-article:hover span:first-child { text-decoration: underline; }
 .nl-help-article .nl-help-meta { white-space: nowrap; }
 
-.nl-help-topics { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 10px; }
-.nl-help-topic { text-align: left; font: inherit; padding: 14px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; color: var(--color-text); }
-.nl-help-topic[aria-pressed='true'] { border-color: var(--color-action-primary); }
+.nl-help-topics { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--space-2-5); }
+.nl-help-topic { text-align: start; font: inherit; padding: var(--space-3-5); min-height: var(--space-16); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); cursor: pointer; color: var(--color-text); }
+.nl-help-topic:hover { background: var(--color-surface-hover); }
+.nl-help-topic[aria-pressed='true'] { border-color: var(--color-selected); background: var(--color-selected-tint); box-shadow: inset 0 0 0 1px var(--color-selected); }
 .nl-help-topic:focus-visible { outline: 2px solid var(--color-focus); }
-.nl-help-topic-name { display: block; font-weight: 600; }
+.nl-help-topic-name { display: block; font-weight: var(--weight-semibold); }
 .nl-help-topic .nl-help-meta { display: block; margin-top: 2px; }
 
-.nl-help-talk { padding: 16px; background: var(--color-surface-brand); border-radius: var(--radius-md); color: var(--color-text); }
-.nl-help-talk-kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
-.nl-help-talk-sla { font-weight: 600; font-size: 18px; margin-top: 4px; }
-.nl-help-talk-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-.nl-help-on-bg { background: var(--color-canvas); }
+.nl-help-talk { padding: var(--space-5); background: var(--color-surface); border: 1px solid var(--color-border); border-inline-start: 3px solid var(--color-status-info-fg); border-radius: var(--radius-panel); color: var(--color-text); }
+.nl-help-talk-kicker { font-size: var(--type-caps); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
+.nl-help-talk-sla { font-weight: var(--weight-semibold); font-size: var(--type-section); margin-top: var(--space-1); }
+.nl-help-talk-actions { display: flex; gap: var(--space-2); margin-top: var(--space-3); flex-wrap: wrap; }
 
-.nl-help-case { display: block; width: 100%; text-align: left; font: inherit; font-size: 14px; padding: 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: transparent; color: var(--color-text); cursor: pointer; margin-bottom: 8px; }
+
+.nl-help-case { display: block; width: 100%; text-align: start; font: inherit; font-size: var(--type-body); padding: var(--space-3-5); border: 1px solid var(--color-border); border-radius: var(--radius-panel); background: var(--color-surface); color: var(--color-text); cursor: pointer; margin-bottom: var(--space-2); }
+.nl-help-case:hover { background: var(--color-surface-hover); }
 .nl-help-case:focus-visible { outline: 2px solid var(--color-focus); }
-.nl-help-case-head { display: flex; justify-content: space-between; gap: 8px; }
-.nl-help-case-title { display: block; margin-top: 4px; }
+.nl-help-case-head { display: flex; justify-content: space-between; gap: var(--space-2); }
+.nl-help-case-title { display: block; margin-top: var(--space-1); }
 .nl-help-case .nl-help-meta { display: block; margin-top: 2px; }
 
-.nl-help-fixes { list-style: none; margin: 0; padding: 0; font-size: 14px; display: flex; flex-direction: column; gap: 6px; color: var(--color-text); }
+.nl-help-fixes { list-style: none; margin: 0; padding: 0; font-size: var(--type-body); display: flex; flex-direction: column; gap: var(--space-1-5); color: var(--color-text); line-height: var(--leading-relaxed); }
 .nl-help-fixes a { color: var(--color-link); }
-.nl-help-footer { font-size: 12px; color: var(--color-text-muted); margin-top: 18px; }
+.nl-help-footer { font-size: var(--type-meta); color: var(--color-text-muted); margin-top: var(--space-4); }
 
 .nl-help-table { max-width: 900px; width: 100%; min-width: 0; }
-.nl-help-sent { margin-top: 14px; padding: 14px 16px; background: var(--color-surface-brand); border-radius: var(--radius-md); color: var(--color-text); font-size: 14px; max-width: 900px; }
-.nl-help-convo { margin-top: 22px; max-width: 620px; display: flex; flex-direction: column; gap: 10px; }
-.nl-help-convo-title { margin: 0 0 8px; }
-.nl-help-chat { font-size: 14px; gap: 10px; }
+.nl-help-sent { margin-top: var(--space-3-5); padding: var(--space-3-5) var(--space-4); background: var(--color-status-success-bg); border-radius: var(--radius-panel); color: var(--color-text); font-size: var(--type-body); max-width: 900px; }
+.nl-help-convo { margin-top: var(--space-5); max-width: 620px; display: flex; flex-direction: column; gap: var(--space-2-5); }
+.nl-help-convo-title { margin: 0 0 var(--space-2); }
+.nl-help-chat { font-size: var(--type-body); gap: var(--space-2-5); }
 
-.nl-help-form { max-width: 640px; display: flex; flex-direction: column; gap: 14px; }
+.nl-help-form { max-width: 640px; display: flex; flex-direction: column; gap: var(--space-3-5); }
 .nl-help-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
-.nl-help-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.nl-help-chips { display: flex; gap: var(--space-1-5); flex-wrap: wrap; margin-top: var(--space-1-5); }
 .nl-help-textarea { min-height: 110px; }
-.nl-help-tiles { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-.nl-help-tile { width: 84px; height: 84px; border-radius: var(--radius-md); border: 1px dashed var(--color-border-control); display: grid; place-items: center; font-size: 12px; color: var(--color-text-muted); background: transparent; font-family: inherit; position: relative; padding: 6px; text-align: center; }
+.nl-help-tiles { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-1-5); }
+.nl-help-tile { width: calc(var(--space-16) + var(--space-5)); height: calc(var(--space-16) + var(--space-5)); border-radius: var(--radius-panel); border: 1px dashed var(--color-border-control); display: grid; place-items: center; font-size: var(--type-meta); color: var(--color-text-muted); background: transparent; font-family: inherit; position: relative; padding: var(--space-1-5); text-align: center; }
 .nl-help-tile-add { cursor: pointer; }
 .nl-help-tile-add:focus-visible { outline: 2px solid var(--color-focus); }
-.nl-help-tile-file { border-style: solid; border-color: var(--color-border); background: var(--color-surface); align-content: center; gap: 4px; }
+.nl-help-tile-file { border-style: solid; border-color: var(--color-border); background: var(--color-surface); align-content: center; gap: var(--space-1); }
 .nl-help-tile-name { max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nl-help-tile-file button { position: absolute; top: 2px; right: 2px; border: 0; background: transparent; cursor: pointer; min-width: 24px; min-height: 24px; color: inherit; border-radius: var(--radius-sm); }
-.nl-help-urgent { display: flex; gap: 10px; align-items: center; width: 100%; }
+.nl-help-tile-file button { position: absolute; top: 2px; right: 2px; border: 0; background: transparent; cursor: pointer; min-width: var(--space-6); min-height: var(--space-6); color: inherit; border-radius: var(--radius-control); }
+.nl-help-urgent { display: flex; gap: var(--space-2-5); align-items: center; width: 100%; }
 .nl-help-urgent-text { flex: 1; text-align: left; }
-.nl-help-urgent-box { width: 18px; height: 18px; border-radius: var(--radius-md); flex: none; border: 1.5px solid var(--color-border); background: transparent; }
-.nl-help-urgent-box[data-on] { border-color: var(--color-action-primary); background: var(--color-action-primary); }
-.nl-help-form-actions { display: flex; gap: 8px; margin-top: 2px; }
+.nl-help-urgent-box { width: var(--space-4); height: var(--space-4); border-radius: var(--radius-control); flex: none; border: 1.5px solid var(--color-border-control); background: var(--color-surface); display: grid; place-items: center; }
+.nl-help-urgent-box[data-on] { border-color: var(--color-selected); background: var(--color-selected); }
+.nl-help-urgent-box[data-on]::after { content: '✓'; color: var(--color-selected-text); font-size: var(--type-caps); font-weight: var(--weight-bold); line-height: 1; }
+.nl-help-form-actions { display: flex; gap: var(--space-2); margin-top: 2px; }
 
 .nl-help-status { max-width: 720px; }
 .nl-help-status-list { list-style: none; margin: 0; padding: 0; }
-.nl-help-status-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; font-size: 15px; flex-wrap: wrap; }
-.nl-help-status-row .tag { white-space: normal; }
-.nl-help-body p { margin: 0 0 12px; line-height: 1.6; }
+.nl-help-status-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); min-height: var(--space-12); font-size: var(--type-body); flex-wrap: wrap; }
+.nl-help-status-list > li + li { border-top: 1px solid var(--color-border); }
+.nl-help-status-row .nl-status { white-space: normal; }
+.nl-help-body p { margin: 0 0 var(--space-3); line-height: var(--leading-relaxed); }
 
-/* light direction (2026-10-19): articles and topics on the left, talk to a person + your cases on the right */
-.nl-help-search { max-width: 720px; border-radius: var(--radius-pill); padding-inline: var(--space-5); }
-.nl-help-grid { grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr); gap: var(--space-6); }
 @media (max-width: 1023.98px) { .nl-help-grid { grid-template-columns: minmax(0, 1fr); } }
-.nl-help-h2 { font-size: var(--text-xl); font-weight: var(--weight-semibold); }
-.nl-help-h3 { font-family: var(--font-heading); font-size: var(--text-lg); font-weight: var(--weight-semibold); }
-.nl-help-articles { border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); padding: 0 var(--space-4); }
-.nl-help-articles > li + li { border-top: 1px solid var(--color-border); }
-.nl-help-article { align-items: center; padding: var(--space-3) 0; }
-.nl-help-topic { border-color: var(--color-border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: var(--space-4); min-height: 88px; }
-.nl-help-topic:hover { background: var(--color-surface-hover); }
-.nl-help-talk { padding: var(--space-5); border-radius: var(--radius-lg); }
-.nl-help-talk-sla { font-family: var(--font-heading); font-size: var(--text-xl); }
-.nl-help-case { border-color: var(--color-border-card); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); padding: var(--space-4); }
-.nl-help-case:hover { background: var(--color-surface-hover); }
-.nl-help-fixes > li { line-height: var(--leading-relaxed); }

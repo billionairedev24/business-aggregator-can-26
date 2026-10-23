@@ -1,4 +1,4 @@
-import { type Locale, type TagTone, timeZone } from '@northline/ui';
+import { type Locale, type StatusTone, timeZone } from '@northline/ui';
 import type { ComplianceDoc, Requirement } from './api';
 import type { ComplianceT } from './messages';
 
@@ -69,36 +69,37 @@ export function docNote(d: ComplianceDoc, t: ComplianceT): string {
   }
 }
 
-export interface DocState { text: string; tone: TagTone; action: boolean }
+/** S-176: a status tone (StatusTag) — success verified, warning due soon / to do, danger expired or rejected. */
+export interface DocState { text: string; tone: StatusTone; action: boolean }
 
 /** Tag text + tone, and whether the owner should upload (design: due rows carry an Upload button). */
 export function docState(d: ComplianceDoc, t: ComplianceT, locale: Locale): DocState {
   switch (d.status) {
-    case 'expired': return { text: d.expiresAt ? t(d.checkType === 'wcb' ? 'doc_expired' : 'doc_expiredDoc', { date: monthDay(d.expiresAt, locale) }) : t('doc_todo'), tone: 'accent-2', action: true };
-    case 'todo': return { text: t('doc_todo'), tone: 'accent-2', action: true };
-    case 'rejected': return { text: t('doc_rejected'), tone: 'accent-2', action: true };
+    case 'expired': return { text: d.expiresAt ? t(d.checkType === 'wcb' ? 'doc_expired' : 'doc_expiredDoc', { date: monthDay(d.expiresAt, locale) }) : t('doc_todo'), tone: 'danger', action: true };
+    case 'todo': return { text: t('doc_todo'), tone: 'warning', action: true };
+    case 'rejected': return { text: t('doc_rejected'), tone: 'danger', action: true };
     case 'submitted': return { text: t('doc_submitted'), tone: 'neutral', action: false };
     default: break;
   }
-  if (d.dueSoon && d.expiresAt) return { text: t('doc_dueSoon', { date: monthDay(d.expiresAt, locale) }), tone: 'highlight', action: true };
-  if (isGst(d)) return { text: t('doc_gst'), tone: 'accent', action: false };
-  if (d.checkType === 'attestation') return { text: d.verifiedAt ? t('doc_signed', { month: monthYear(d.verifiedAt, locale) }) : t('doc_verified'), tone: 'accent', action: false };
-  if (d.reference === 'none') return { text: t('doc_none'), tone: 'accent', action: false };
+  if (d.dueSoon && d.expiresAt) return { text: t('doc_dueSoon', { date: monthDay(d.expiresAt, locale) }), tone: 'warning', action: true };
+  if (isGst(d)) return { text: t('doc_gst'), tone: 'success', action: false };
+  if (d.checkType === 'attestation') return { text: d.verifiedAt ? t('doc_signed', { month: monthYear(d.verifiedAt, locale) }) : t('doc_verified'), tone: 'success', action: false };
+  if (d.reference === 'none') return { text: t('doc_none'), tone: 'success', action: false };
   if (d.reference === 'not_applicable') return { text: t('doc_notApplicable'), tone: 'neutral', action: false };
-  if (d.expiresAt) return { text: t(d.checkType === 'insurance' ? 'doc_expires' : 'doc_renews', { month: monthYear(d.expiresAt, locale) }), tone: 'accent', action: false };
-  return { text: t('doc_verified'), tone: 'accent', action: false };
+  if (d.expiresAt) return { text: t(d.checkType === 'insurance' ? 'doc_expires' : 'doc_renews', { month: monthYear(d.expiresAt, locale) }), tone: 'success', action: false };
+  return { text: t('doc_verified'), tone: 'success', action: false };
 }
 
 /** "Due in 12 days" etc. for a Stripe requirement. */
-export function requirementState(r: Requirement, t: ComplianceT, now = Date.now()): { text: string; tone: TagTone } {
+export function requirementState(r: Requirement, t: ComplianceT, now = Date.now()): { text: string; tone: StatusTone } {
   switch (r.state) {
-    case 'verified': return { text: t('state_verified'), tone: 'accent' };
+    case 'verified': return { text: t('state_verified'), tone: 'success' };
     case 'pending': return { text: t('state_pending'), tone: 'neutral' };
-    case 'past_due': return { text: t('state_past_due'), tone: 'accent-2' };
+    case 'past_due': return { text: t('state_past_due'), tone: 'danger' };
     case 'due': {
-      if (!r.dueAt) return { text: t('state_due'), tone: 'accent-2' };
+      if (!r.dueAt) return { text: t('state_due'), tone: 'warning' };
       const days = Math.ceil((new Date(r.dueAt).getTime() - now) / 86_400_000);
-      return { text: days <= 0 ? t('state_dueToday') : t('state_dueIn', { n: days }), tone: 'accent-2' };
+      return { text: days <= 0 ? t('state_dueToday') : t('state_dueIn', { n: days }), tone: days <= 3 ? 'danger' : 'warning' };
     }
   }
 }

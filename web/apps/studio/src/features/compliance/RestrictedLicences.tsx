@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Dialog, Field, FileButton, Select, Tag, TextInput, useFormatters, type TagTone } from '@northline/ui';
+import { Alert, Button, Dialog, Field, FileButton, Select, StatusTag, TextInput, useFormatters, type StatusTone } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useMerchantId } from '../shell/api';
 import { AGE_CLASSES, licencesQuery, useSubmitLicence, type AgeClass, type Licence } from './licences';
@@ -8,7 +8,7 @@ import { useLicenceT, type LicenceT } from './licenceMessages';
 
 const ACCEPT = 'application/pdf,image/png,image/jpeg';
 
-const statusTone = (s: Licence['status']): TagTone => (s === 'approved' ? 'accent' : s === 'pending' ? 'highlight' : s === 'replaced' ? 'neutral' : 'accent-2');
+const statusTone = (s: Licence['status']): StatusTone => (s === 'approved' ? 'success' : s === 'pending' ? 'warning' : s === 'replaced' ? 'neutral' : 'danger');
 
 /**
  * Compliance › Age-restricted sales (2026-10-04): the licences for alcohol, tobacco/vape and cannabis accessories,
@@ -37,7 +37,7 @@ export function RestrictedLicences({ owner }: { owner: boolean }) {
                 {t('row', { cls: t(`cls_${l.ageClass}`), number: l.licenceNumber, expires: date(`${l.expiresOn}T12:00:00Z`, 'long') })}
                 {l.status === 'rejected' ? <span className="nl-small nl-muted"> · {reason(t, l.rejectReason)}{l.note ? ` — ${l.note}` : ''}</span> : null}
               </span>
-              <Tag tone={statusTone(l.status)}>{t(`st_${l.status}`)}</Tag>
+              <StatusTag tone={statusTone(l.status)}>{t(`st_${l.status}`)}</StatusTag>
             </li>
           ))}
         </ul>

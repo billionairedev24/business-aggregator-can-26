@@ -67,6 +67,9 @@ if (photoProblems.length) {
 // `margin-bottom: -1px` under a tab row) stay allowed. In TSX the same goes for inline
 // `style` objects (`fontSize: 13`, `padding: 6`, `color: 'white'`).
 const S175 = ['orders', 'catalogue', 'appointments', 'kitchen'].map(f => `apps/studio/src/features/${f}`);
+// S-176: the Studio's money, messaging, storefront, settings, account and onboarding screens, sign-in and the assistant —
+// with S-175, the dashboard and the shell, every Studio folder (checked below: a new folder must be listed)
+const S176 = ['auth', 'assistant', 'writing', 'pilot', 'finance', 'messages', 'storefront', 'reviews', 'settings', 'compliance', 'standing', 'help', 'availability', 'onboarding'].map(f => `apps/studio/src/features/${f}`);
 const strictRoots = [
   // S-177: every console screen (the console revamp; audit console-sellers / console-seller)
   'apps/console/src', 'packages/ui/src', 'apps/consumer/src/features/shell', 'apps/studio/src/features/shell', 'apps/console/src/features/shell',
@@ -78,12 +81,14 @@ const strictRoots = [
   'apps/studio/src/features/dashboard', 'apps/studio/src/features/storefront/StorefrontPreview.tsx', 'apps/studio/src/features/storefront/StorefrontPreview.css',
   // S-175: the Studio work screens (orders, catalogue and editors, bookings and quotes, the kitchen display and menu)
   ...S175,
+  // S-176: the rest of the Studio
+  ...S176,
   // S-172: the consumer detail pages (product, store, provider and its booking, the kitchen's menu, the quote flow)
   'apps/consumer/src/features/product', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking', 'apps/consumer/src/features/quotes',
   'apps/consumer/src/features/food/RestaurantScreen.tsx', 'apps/consumer/src/features/food/restaurant.css'];
 // S-174: no inline `style` at all in these (a class with the scale tokens instead; the Studio dashboard had a dozen).
 // S-175: the work screens too — except the calendar, whose entries are placed by custom properties from data (--top, --h).
-const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard', ...S175.filter(r => !r.endsWith('/appointments')),
+const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard', ...S175.filter(r => !r.endsWith('/appointments')), ...S176,
   // S-172: the consumer detail pages
   'apps/consumer/src/features/product', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking', 'apps/consumer/src/features/quotes',
   'apps/consumer/src/features/shop/StorePage.tsx', 'apps/consumer/src/features/food/RestaurantScreen.tsx'];
@@ -124,11 +129,13 @@ for (const root of strictRoots) {
   }
 }
 
+const DATA_PROP = /\sstyle=\{\{\s*\[['"]--[\w-]+['"] as string\]:\s*[\w.]+\s*\}\}/;
 for (const root of noStyleRoots) {
   for (const file of walk(path.join(webRoot, root))) {
     const rel = path.relative(webRoot, file).split(path.sep).join('/');
     if (!rel.endsWith('.tsx') || strictSkip.some(r => r.test(rel))) continue;
-    readFileSync(file, 'utf8').split('\n').forEach((line, i) => { if (/\sstyle=\{/.test(line)) raw.push(`${rel}:${i + 1}  inline style (use a class with the scale tokens)`); });
+    // S-176: a custom property carrying merchant data (the business's colour as --nl-brand / --nl-swatch) is not presentation
+    readFileSync(file, 'utf8').split('\n').forEach((line, i) => { if (/\sstyle=\{/.test(line) && !DATA_PROP.test(line)) raw.push(`${rel}:${i + 1}  inline style (use a class with the scale tokens)`); });
   }
 }
 
@@ -142,8 +149,11 @@ const ONE_OFF = [
   [/\btag-(?:accent(?:-2)?|highlight)\b/, 'an old tag tone (use StatusTag or a status tone)'],
   [/className=["'`][^"'`]*\bnl-chip\b/, 'an app-made chip (use Chip / FilterChip)'],
   [/\bformatMoney\(|\bmoney\(/, 'a one-off price format (use Price, formatPrice or useFormatters().price)'],
+  // S-176: the old `Tag` (its accent / highlight tones are the action and commerce colours) and the commerce-coloured alert
+  [/<Tag\b/, 'the old Tag (use StatusTag with a status tone)'],
+  [/<Alert\b[^>]*\btone=["']highlight["']/, 'a commerce-coloured alert (use tone="info" or "neutral")'],
 ];
-for (const root of S175) {
+for (const root of [...S175, ...S176]) {
   for (const file of walk(path.join(webRoot, root))) {
     const rel = path.relative(webRoot, file).split(path.sep).join('/');
     if (!/\.tsx?$/.test(rel) || strictSkip.some(r => r.test(rel))) continue;
@@ -168,6 +178,12 @@ for (const file of walk(path.join(webRoot, 'apps/console/src'))) {
 if (consoleProblems.length) {
   console.error(`Console colour roles and money (S-177): statuses take a status tone, prices formatPrice / formatCompactMoney, buttons primary | secondary | tertiary | destructive:\n${consoleProblems.map(p => '  ' + p).join('\n')}`);
   process.exit(1);
+}
+
+// S-176: every Studio folder is strict; a new one must join a list above (S175 / S176) or this fails.
+const STUDIO_STRICT = new Set(['shell', 'dashboard', ...[...S175, ...S176].map(r => r.split('/').pop())]);
+for (const f of readdirSync(path.join(webRoot, 'apps/studio/src/features'))) {
+  if (statSync(path.join(webRoot, 'apps/studio/src/features', f)).isDirectory() && !STUDIO_STRICT.has(f)) raw.push(`apps/studio/src/features/${f}  a Studio folder outside the strict lists (add it to S176 in scripts/check-legacy-tokens.mjs)`);
 }
 
 if (problems.length || raw.length) {

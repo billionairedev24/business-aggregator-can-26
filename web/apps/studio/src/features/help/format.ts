@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { formatDate, useLocale, type DataTableTone, timeZone } from '@northline/ui';
+import { formatDate, useLocale, type StatusTone, timeZone } from '@northline/ui';
 import { useMerchant } from '../shell/api';
 import { agoParts, useAgo } from '../messages/time';
 import type { CaseSummary } from './api';
@@ -51,7 +51,8 @@ export function useCaseCells() {
           : t('onDate', { date: formatDate(due, locale, 'date'), time });
       next = t('next_reply', { when });
     }
-    const tone: DataTableTone = open ? 'tag-accent-2' : 'tag-neutral';
+    // S-176: an open case is with support (info), a resolved one done (success)
+    const tone: StatusTone = open ? 'info' : 'success';
     return { status, next, tone, open };
   }, [t, ago, locale]);
 }

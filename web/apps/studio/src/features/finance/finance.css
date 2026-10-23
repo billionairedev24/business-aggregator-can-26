@@ -1,98 +1,96 @@
-/* Finance screens (design 02: Earnings, Reports, Payouts, Refunds & disputes). Values from tokens only. */
-.fin-page { display: flex; flex-direction: column; gap: var(--space-5); }
+/*
+ * Finance screens (Earnings, Reports, Payouts, Refunds & disputes), S-176: the Studio dashboard's language from
+ * design/revamp/a.html — the page head, the KPI strip, white panels on hairlines, tables with status tabs, the columns
+ * chart. Semantic tokens and the scale only (`pnpm lint:tokens` checks this folder strictly).
+ */
+.fin-page { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
 .fin-page > .bo-head { margin-bottom: 0; }
-.fin-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: var(--space-3); }
-.fin-kpi-value { font-size: var(--text-3xl); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
-.fin-kpi-label { font-size: var(--text-xs); color: var(--color-text-muted); }
-.fin-card { border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); padding: var(--space-4); min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
-.fin-card > .fin-h3:first-child { margin-top: 0; }
-/* BO:472 payout wallet: balance tiles, then the request row */
+
+.fin-section-title { margin: 0 0 var(--space-3); font-size: var(--type-sub); font-weight: var(--weight-semibold); }
+.fin-lede { max-width: 72ch; margin: 0; font-size: var(--type-body); color: var(--color-text-muted); line-height: var(--leading-relaxed); }
+.fin-muted { font-size: var(--type-label); color: var(--color-text-muted); }
+.fin-small { font-size: var(--type-meta); color: var(--color-text-muted); }
+.fin-body { font-size: var(--type-body); }
+.fin-gap-top { margin-top: var(--space-2-5); }
+.fin-left { text-align: start; }
+.fin-input-sm { max-width: calc(var(--size-control) * 4.2); }
+.fin-input-md { max-width: calc(var(--size-control) * 6.3); }
+.fin-fee { font-size: var(--type-label); white-space: nowrap; }
+
+/* money in motion: four numbered steps, the current one with the ink edge (the selected role, never the action blue) */
+.fin-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); font-size: var(--type-label); margin: 0; padding: 0; list-style: none; }
+.fin-step { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-2-5); align-content: start; padding: var(--space-3); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); min-width: 0; }
+.fin-step-n { grid-row: span 2; display: inline-grid; place-items: center; width: var(--space-6); height: var(--space-6); border-radius: var(--radius-round); background: var(--color-well); color: var(--color-text-muted); font-size: var(--type-meta); font-weight: var(--weight-semibold); }
+.fin-step-k { font-size: var(--type-caps); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); overflow-wrap: anywhere; }
+.fin-step-v { font-weight: var(--weight-semibold); font-size: var(--type-body); margin-top: var(--space-1); }
+.fin-step[data-current="true"] { border-color: var(--color-selected); box-shadow: inset 0 3px 0 var(--color-selected); }
+.fin-step[data-current="true"] .fin-step-n { background: var(--color-selected); color: var(--color-selected-text); }
+.fin-step[data-current="true"] .fin-step-k { color: var(--color-text); }
+@media (max-width: 760px) { .fin-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* payouts: the account panel (where the money goes, then what the owner can do) */
 .fin-wallet { display: flex; flex-direction: column; gap: var(--space-3); }
-.fin-wallet > .fin-h2 { margin: 0; }
-.fin-balance { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--space-3); }
-.fin-tile { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); min-width: 0; }
-.fin-tile-v { font-size: var(--text-2xl); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
-.fin-request { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
-.fin-request-to { display: flex; flex-direction: column; font-size: var(--text-sm); min-width: 0; overflow-wrap: anywhere; }
+.fin-request { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.fin-request-to { display: flex; flex-direction: column; font-size: var(--type-body); min-width: 0; overflow-wrap: anywhere; }
 .fin-request-gap { flex: 1; }
 .fin-request-note { flex-basis: 100%; }
-.fin-h2 { font-family: var(--font-heading); font-size: var(--text-xl); font-weight: var(--weight-semibold); line-height: var(--leading-tight); margin: 0 0 12px; }
-.fin-h3 { font-size: 18px; margin: 24px 0 8px; }
-.fin-muted { font-size: 13px; color: var(--color-text-muted); }
-.fin-small { font-size: 12px; color: var(--color-text-muted); }
-
-.fin-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); font-size: var(--text-sm); margin: 0; padding: 0; list-style: none; }
-.fin-step { position: relative; padding: var(--space-3) var(--space-4); background: var(--color-surface-sunken); border: 1px solid var(--color-border); border-radius: var(--radius-md); min-width: 0; }
-/* a small arrow between the steps */
-.fin-step:not(:last-child)::after { content: ''; position: absolute; right: calc(-1 * var(--space-3) / 2 - 5px); top: 50%; width: 10px; height: 10px; transform: translateY(-50%) rotate(45deg); border-top: 1.5px solid var(--color-border-control); border-right: 1.5px solid var(--color-border-control); background: var(--color-surface); z-index: 1; }
-@media (max-width: 560px) { .fin-step:not(:last-child)::after { display: none; } }
-.fin-step[data-current="true"] { background: var(--color-surface-brand); border-color: var(--color-action-primary); color: var(--color-text); }
-.fin-step-k { font-size: var(--text-2xs); font-weight: var(--weight-bold); letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); overflow-wrap: anywhere; }
-.fin-step[data-current="true"] .fin-step-k { color: inherit; }
-.fin-step-v { font-weight: var(--weight-semibold); font-size: var(--text-md); margin-top: var(--space-1); }
-@media (max-width: 560px) { .fin-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-
-.fin-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 36px clamp(28px, 4vw, 64px); }
-.fin-cols-300 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
-.fin-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
-.fin-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.fin-rows { font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
-.fin-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
-.fin-row-44 { min-height: 44px; }
-.fin-row-40 { min-height: 44px; }
-/* S-143: PDF · CSV are 44 px targets */
-.fin-doc-links a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
-
-.fin-available { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4); background: var(--color-surface-brand); border: 2px solid var(--color-action-primary); border-radius: var(--radius-md); color: var(--color-text); min-width: 0; }
-.fin-available-k { font-size: var(--text-2xs); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
-.fin-available-v { font-size: var(--text-3xl); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; }
-.fin-box { margin-top: 14px; padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
-.fin-box-k { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); }
-.fin-note { margin-top: 10px; padding: 12px 14px; background: var(--color-surface-brand); border-radius: var(--radius-md); color: var(--color-text); font-size: 14px; }
-.fin-warn { margin-top: 10px; padding: 12px 14px; background: var(--color-danger-bg); border-radius: var(--radius-md); color: var(--color-danger); font-size: 13px; }
-.fin-dashed { margin-top: 12px; padding: 18px; border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md); text-align: center; font-size: 14px; color: var(--color-text-muted); }
-.fin-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
-.fin-link { text-decoration: underline; }
-.fin-options { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-.fin-days { display: flex; gap: 6px; flex-wrap: wrap; }
-.fin-bank-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 10px; margin-top: 12px; }
-
-.fin-case { font-size: 14px; display: flex; flex-direction: column; gap: 10px; }
-.fin-quote { padding: 12px 14px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
-.fin-draft { padding: 12px 14px; background: var(--color-surface-brand); border-radius: var(--radius-md); color: var(--color-text); }
-.fin-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.fin-tags a.tag { text-decoration: none; }
-.fin-file { position: relative; }
-.fin-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.fin-file:focus-within { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-md); }
-.fin-case + .fin-case { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--color-border); }
-.fin-sources { font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
-.fin-sources > div { display: flex; justify-content: space-between; gap: 12px; }
-
-/* light direction (2026-10-19): payouts — the wallet card, then history | tax documents */
-.fin-wallet { gap: var(--space-4); }
-.fin-tile { border-color: var(--color-border-card); }
-.fin-available { border-width: 1px; box-shadow: inset 0 0 0 1px var(--color-action-primary); }
-.fin-request { border: 0; border-top: 1px solid var(--color-border); border-radius: 0; padding: var(--space-4) 0 0; }
-.fin-split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: var(--space-4); align-items: start; }
+.fin-split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(min(100%, 280px), 1fr); gap: var(--space-4); align-items: start; }
 @media (max-width: 1099.98px) { .fin-split { grid-template-columns: minmax(0, 1fr); } }
+.fin-split > .bo-card { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+
+.fin-rows { font-size: var(--type-body); display: flex; flex-direction: column; gap: var(--space-1-5); }
+.fin-sum { margin-top: var(--space-2-5); gap: var(--space-1); }
+.fin-row { display: flex; justify-content: space-between; gap: var(--space-3); align-items: center; }
+.fin-row-total { font-weight: var(--weight-semibold); }
+.fin-row-44 { min-height: var(--size-touch); }
 .fin-docs { display: flex; flex-direction: column; }
-.fin-doc { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: var(--space-1) var(--space-3); align-items: center; padding: var(--space-3) 0; }
+.fin-doc { display: grid; grid-template-columns: var(--space-5) minmax(0, 1fr); gap: var(--space-1) var(--space-3); align-items: center; padding: var(--space-3) 0; }
 .fin-doc + .fin-doc { border-top: 1px solid var(--color-border); }
 .fin-doc-icon { color: var(--color-text-muted); }
-.fin-doc-name { font-size: var(--text-md); font-weight: var(--weight-semibold); }
+.fin-doc-name { font-size: var(--type-body); font-weight: var(--weight-semibold); }
+/* S-143: PDF · CSV are 44 px targets */
 .fin-doc .fin-doc-links { grid-column: 2; display: flex; align-items: center; gap: var(--space-1); color: var(--color-text-muted); }
-.fin-doc .fin-doc-links a { font-weight: var(--weight-semibold); color: var(--color-link); margin-left: calc(-1 * var(--space-2)); padding: 0 var(--space-2); justify-content: flex-start; }
+.fin-doc-links a { display: inline-flex; align-items: center; min-width: var(--size-touch); min-height: var(--size-touch); font-weight: var(--weight-semibold); color: var(--color-link); margin-inline-start: calc(-1 * var(--space-2)); padding: 0 var(--space-2); }
 
-/* refunds & disputes: each open case a card, then the history full width */
-.fin-lede { max-width: 72ch; margin: var(--space-2) 0 var(--space-5); font-size: var(--text-md); color: var(--color-text-muted); line-height: var(--leading-relaxed); }
-.fin-cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: var(--space-4); margin-bottom: var(--space-5); align-items: start; }
-.fin-cases .fin-case + .fin-case { margin-top: 0; padding-top: 0; border-top: 0; }
+/* the panels that open under the account row (instant payout, schedule, bank) */
+.fin-box { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-panel); background: var(--color-surface); }
+.fin-box-k { font-size: var(--type-caps); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
+.fin-note { margin-top: var(--space-2-5); padding: var(--space-3) var(--space-3-5); background: var(--color-status-info-bg); border-radius: var(--radius-panel); color: var(--color-text); font-size: var(--type-body); }
+.fin-warn { margin-top: var(--space-2-5); padding: var(--space-3) var(--space-3-5); background: var(--color-status-danger-bg); border-radius: var(--radius-panel); color: var(--color-status-danger-fg); font-size: var(--type-label); }
+.fin-dashed { margin-top: var(--space-3); padding: var(--space-4); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-panel); background: var(--color-well); text-align: center; font-size: var(--type-body); color: var(--color-text-muted); }
+.fin-actions { display: flex; gap: var(--space-2); margin-top: var(--space-3); flex-wrap: wrap; align-items: center; }
+.fin-options { display: flex; flex-direction: column; gap: var(--space-1-5); margin-top: var(--space-2-5); }
+.fin-days { display: flex; gap: var(--space-1-5); flex-wrap: wrap; }
+.fin-bank-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: var(--space-2-5); margin-top: var(--space-3); }
+
+/* refunds & disputes: open cases as cards with an urgency edge, then the history */
+.fin-cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: var(--space-4); align-items: start; }
+.fin-case-card { border-inline-start: 3px solid var(--color-border-control); }
+.fin-case-card[data-tone="danger"] { border-inline-start-color: var(--color-status-danger-fg); }
+.fin-case-card[data-tone="warning"] { border-inline-start-color: var(--color-status-warning-fg); }
+.fin-case-card[data-tone="info"] { border-inline-start-color: var(--color-status-info-fg); }
+.fin-case { font-size: var(--type-body); display: flex; flex-direction: column; gap: var(--space-2-5); }
+.fin-case-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1-5) var(--space-2-5); }
+.fin-case-title { margin: 0; flex: 1 1 100%; font-size: var(--type-sub); font-weight: var(--weight-semibold); line-height: var(--leading-tight); }
+.fin-case-meta { font-size: var(--type-meta); color: var(--color-text-muted); }
+.fin-quote { padding: var(--space-3) var(--space-3-5); background: var(--color-well); border-radius: var(--radius-panel); }
+.fin-draft { padding: var(--space-3) var(--space-3-5); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); color: var(--color-text); }
+.fin-tags { display: flex; gap: var(--space-1-5); flex-wrap: wrap; align-items: center; }
+.fin-evidence { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--size-control-sm); padding: 0 var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); font-size: var(--type-meta); color: var(--color-text); }
+a.fin-evidence-link { color: var(--color-link); font-weight: var(--weight-semibold); text-decoration: none; min-height: var(--size-touch); }
+a.fin-evidence-link:hover { text-decoration: underline; }
+.fin-file { position: relative; }
+.fin-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.fin-file:focus-within { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-control); }
+.fin-history { display: flex; flex-direction: column; gap: var(--space-3); }
 .fin-history .fin-muted { margin: 0; }
 
 /* reports: the chart | by listing + where customers come from */
 .fin-report { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--space-4); align-items: start; }
 @media (max-width: 1099.98px) { .fin-report { grid-template-columns: minmax(0, 1fr); } }
 .fin-report-side { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
-.fin-head { margin-bottom: 0; }
-.fin-sources > div { padding: var(--space-1) 0; }
+.fin-sources { font-size: var(--type-body); display: flex; flex-direction: column; margin: 0; }
+.fin-sources > div { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; }
+.fin-sources > div + div { border-top: 1px solid var(--color-border); }
+.fin-sources dt { color: var(--color-text); }
+.fin-sources dd { margin: 0; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }

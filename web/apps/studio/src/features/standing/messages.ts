@@ -3,6 +3,7 @@ import { defineMessages } from '@northline/ui';
 /** Copy for Studio › Standing (S-156), en + fr-CA. Server messages arrive in the Studio's language (Accept-Language). */
 export const useStandingT = defineMessages({
   en: {
+    kpis: 'Standing figures', kpiInForce: 'In force now', kpiInForceDelta: 'limits what customers can do', kpiClear: 'nothing limits you', kpiAppealable: 'Decisions you can appeal', kpiOpenAppeals: 'Appeals in review', kpiCoaching: 'Coaching tasks done', kpiCoachingDelta: 'finish them to close the plan', inForceTag: 'In force', appealableTag: 'Can appeal',
     kicker: 'Standing',
     title: 'Your standing with {brand}',
     lede: "What {brand}'s trust & safety rules or team changed for your business, why, and how to appeal. Each decision can be appealed once, within 14 days; someone who didn't take it decides.",
@@ -37,6 +38,7 @@ export const useStandingT = defineMessages({
     loadError: "We couldn't load your standing.", actionError: "That didn't work. Try again.",
   },
   fr: {
+    kpis: 'Chiffres du dossier', kpiInForce: 'En vigueur', kpiInForceDelta: 'limite ce que les clients peuvent faire', kpiClear: 'rien ne vous limite', kpiAppealable: 'Décisions contestables', kpiOpenAppeals: 'Appels à l’étude', kpiCoaching: 'Tâches d’accompagnement faites', kpiCoachingDelta: 'terminez-les pour fermer le plan', inForceTag: 'En vigueur', appealableTag: 'Contestable',
     kicker: 'Statut du compte',
     title: 'Votre statut auprès de {brand}',
     lede: 'Ce que les règles ou l’équipe confiance et sécurité de {brand} ont changé pour votre entreprise, pourquoi, et comment faire appel. Chaque décision peut faire l’objet d’un seul appel, dans les 14 jours; une personne qui ne l’a pas prise tranche.',

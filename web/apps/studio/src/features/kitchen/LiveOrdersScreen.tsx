@@ -105,8 +105,8 @@ export function LiveOrdersScreen() {
             <Button variant={paused ? 'secondary' : 'destructive'} aria-pressed={paused} disabled={toggle.isPending} onClick={() => toggle.mutate(paused ? 'resume' : 'pause')}>{paused ? t('resume') : t('pause')}</Button>
           </>
         ) : undefined} />
-      {b.autoPause?.active && b.autoPause.threshold ? <Alert tone="highlight" role="status"><strong>{t('autoPausedStrong')}</strong> {t('autoPausedText', { late: b.autoPause.lateOrders, limit: b.autoPause.threshold })}</Alert> : null}
-      {paused ? <Alert tone="highlight" role="status"><strong>{t('pausedStrong')}</strong> {t('pausedText', { n: Math.max(1, minutesUntil(b.pausedUntil!, now)) })}</Alert> : null}
+      {b.autoPause?.active && b.autoPause.threshold ? <Alert tone="info" role="status"><strong>{t('autoPausedStrong')}</strong> {t('autoPausedText', { late: b.autoPause.lateOrders, limit: b.autoPause.threshold })}</Alert> : null}
+      {paused ? <Alert tone="info" role="status"><strong>{t('pausedStrong')}</strong> {t('pausedText', { n: Math.max(1, minutesUntil(b.pausedUntil!, now)) })}</Alert> : null}
       {act.isError || toggle.isError ? <Alert tone="error" role="alert">{t('actionError')}</Alert> : null}
       {b.items.length === 0 ? <EmptyState>{t('liveEmpty')}</EmptyState> : (
         <div className="nl-k-lanes">

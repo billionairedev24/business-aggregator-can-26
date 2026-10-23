@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChatBubble, ChatLog, DataTable, ErrorState, Skeleton, useFormatters, type DataTableColumn } from '@northline/ui';
+import { ChatBubble, ChatLog, DataTable, ErrorState, Skeleton, useFormatters, type DataTableColumn, type StatusTone } from '@northline/ui';
 import { useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';
 import { AttachmentLinks } from '../messages/AttachmentLinks';
@@ -12,7 +12,7 @@ import { CASE_POLL_MS, CASES_POLL_MS, caseQuery, casesQuery, useReplyToCase, typ
 import { useCaseCells, useSlaNote } from './format';
 import { useHelpT } from './messages';
 
-interface Row { id: string; code: string; title: string; meta: string; sla: string; tone: 'tag-accent-2' | 'tag-neutral' }
+interface Row { id: string; code: string; title: string; meta: string; sla: string; tone: StatusTone }
 
 export interface SentCase { code: string; topic: string; urgent: boolean }
 
@@ -35,7 +35,7 @@ export function HelpCases({ merchantId, caseId, sent, onSelect, onCreate }: { me
   const columns: DataTableColumn<Row>[] = [
     { key: 'code', label: t('col_case'), editable: false },
     { key: 'title', label: t('col_subject'), required: true, primary: true },
-    { key: 'meta', label: t('col_status'), type: 'tag', editable: false, filter: false },
+    { key: 'meta', label: t('col_status'), type: 'tag', editable: false, filter: false, status: r => r.tone },
     { key: 'sla', label: t('col_next'), editable: false },
   ];
 
@@ -43,7 +43,7 @@ export function HelpCases({ merchantId, caseId, sent, onSelect, onCreate }: { me
     <>
       <div className="nl-help-table">
         <DataTable<Row>
-          entity={t('case')} plural={t('cases')} columns={columns} rows={rows} rowTones={r => ({ meta: r.tone })}
+          entity={t('case')} plural={t('cases')} columns={columns} rows={rows}
           can={{ create: true, update: false, delete: false, export: true }} roleName={shellT(`role_${role}` as 'role_owner')}
           createLabel={t('createCase')} searchPlaceholder={t('searchCases')} emptyText={t('noCases')}
           loading={q.isPending} error={q.isError ? t('casesError') : null} onRetry={() => void q.refetch()}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useRegions } from '../shell/place';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { Alert, Button, DataTable, ErrorState, FileButton, PageHeader, PageSkeleton, Tag, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
+import { Alert, BoHeader, Button, DataTable, ErrorState, FileButton, KpiStrip, PageSkeleton, StatusTag, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useMerchantId, useRole } from '../shell/api';
 import { screenHref } from '../shell/nav';
@@ -19,8 +19,8 @@ export function ComplianceScreen() {
   const t = useComplianceT();
   const merchantId = useMerchantId();
   const q = useQuery(complianceQuery(merchantId));
-  if (q.isPending) return <div className="nl-cmp"><PageHeader kicker={t('kicker')} title="…" /><PageSkeleton kpis={0} rows={8} /></div>;
-  if (q.isError) return <div className="nl-cmp"><PageHeader kicker={t('kicker')} title={t('kicker')} /><ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /></div>;
+  if (q.isPending) return <div className="nl-cmp"><BoHeader title={t('kicker')} /><PageSkeleton kpis={3} rows={8} /></div>;
+  if (q.isError) return <div className="nl-cmp"><BoHeader title={t('kicker')} /><ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /></div>;
   return <ComplianceView data={q.data} />;
 }
 
@@ -35,9 +35,21 @@ export function ComplianceView({ data }: { data: Compliance }) {
   const t = useComplianceT();
   const owner = useRole() === 'owner';
   const kitchen = data.business.type === 'kitchen';
+  const { locale } = useLocale();
+  const f = useFormatters();
+  const due = data.documents.filter(x => x.due).length;
+  const verified = data.documents.filter(x => docState(x, t, locale).tone === 'success').length;
+  const open = data.stripe.requirements.filter(r => r.state !== 'verified').length;
   return (
     <div className="nl-cmp">
-      <PageHeader kicker={t('kicker')} title={headline(data, t)} lede={kitchen ? t('ledeKitchen') : t('lede')} />
+      <BoHeader title={t('kicker')} sub={headline(data, t)} />
+      <KpiStrip label={t('kpis')} items={[
+        { key: 'stripe', label: t('kpiStripe'), value: data.stripe.status === 'not_connected' ? t('kpiNotConnected') : data.stripe.payoutsEnabled ? t('kpiPayoutsOn') : t('kpiPayoutsOff'),
+          ...(open ? { delta: t('kpiStripeOpen', { n: open }), trend: 'down' as const } : data.stripe.status === 'connected' ? { delta: t('kpiStripeDone'), trend: 'up' as const } : {}) },
+        { key: 'docs', label: t('kpiDocs'), value: `${f.number(verified)} / ${f.number(data.documents.length)}`, ...(due ? { delta: t('kpiDocsDue', { n: due }), trend: 'down' as const } : { delta: t('kpiDocsNone'), trend: 'up' as const }) },
+        { key: 'ob', label: t('kpiObligations'), value: data.obligations.acceptedVersion ?? '—', ...(data.obligations.upToDate ? { delta: t('kpiObUpToDate'), trend: 'up' as const } : { delta: t('kpiObNew', { version: data.obligations.currentVersion }), trend: 'down' as const }) },
+      ]} />
+      <p className="nl-cmp-lede">{kitchen ? t('ledeKitchen') : t('lede')}</p>
       {!owner && <p className="nl-small nl-muted nl-cmp-viewonly">{t('ownerOnly')}</p>}
       <div className="nl-cmp-grid">
         <div className="nl-cmp-col">
@@ -92,7 +104,7 @@ function StripeSection({ data, owner }: { data: Compliance; owner: boolean }) {
             <ul className="nl-cmp-rows">
               {s.requirements.map(r => {
                 const st = requirementState(r, t);
-                return <li key={r.kind} className="nl-cmp-row"><span>{name(r)}</span><Tag tone={st.tone}>{st.text}</Tag></li>;
+                return <li key={r.kind} className="nl-cmp-row"><span>{name(r)}</span><StatusTag tone={st.tone}>{st.text}</StatusTag></li>;
               })}
             </ul>
           )}
@@ -125,7 +137,7 @@ function PaymentSettings({ data }: { data: Compliance }) {
         <div><dt>{t('escrowModel')}</dt><dd>{t('escrowValue')}</dd></div>
         <div><dt>{t('payoutSchedule')}</dt><dd>{schedule ? <Link to={screenHref(merchantId, 'payouts')}>{schedule}</Link> : '—'}</dd></div>
         <div><dt>{t('statementDescriptor')}</dt><dd>{s.statementDescriptor ?? '—'}</dd></div>
-        <div><dt>{t('radar')}</dt><dd><Tag tone="accent">{t('platformManaged')}</Tag></dd></div>
+        <div><dt>{t('radar')}</dt><dd><StatusTag tone="success">{t('platformManaged')}</StatusTag></dd></div>
         <div><dt>{t('cra')}</dt><dd>{t('craValue')}</dd></div>
       </dl>
     </section>
@@ -142,6 +154,7 @@ function TaxTable({ rows, period, takeRateBps }: { rows: TaxRow[]; period: strin
   const regions = useRegions();
   const provinceName = (code: string) => regions?.provinces.find(p => p.code === code)?.name ?? code;
   const role = useRole();
+  const f = useFormatters();
   const quarter = period.split('-')[1] ?? period;
   const lines: TaxLine[] = rows.map(r => ({
     id: r.jurisdiction,
@@ -153,7 +166,7 @@ function TaxTable({ rows, period, takeRateBps }: { rows: TaxRow[]; period: strin
   }));
   const columns: DataTableColumn<TaxLine>[] = [
     { key: 'name', label: t('colJurisdiction'), primary: true },
-    { key: 'amt', label: t('colCollected', { quarter }), type: 'money' },
+    { key: 'amt', label: t('colCollected', { quarter }), type: 'money', format: v => f.price(v as number) },
     { key: 'note', label: t('colHandling'), filter: 'facet' },
   ];
   return (
@@ -201,7 +214,7 @@ function Documents({ data, owner }: { data: Compliance; owner: boolean }) {
                   {errors[d.id] ? <span id={errId} role="alert" className="nl-error">{errors[d.id]}</span> : null}
                 </span>
                 <span className="nl-cmp-doc-side">
-                  <Tag tone={st.tone}>{st.text}</Tag>
+                  <StatusTag tone={st.tone}>{st.text}</StatusTag>
                   {st.action && owner && (
                     <FileButton accept={ACCEPT} className="nl-cmp-upload" pending={uploading === d.id} aria-describedby={errors[d.id] ? errId : undefined}
                       onFile={file => upload(d, file)}>
@@ -230,7 +243,7 @@ function ObligationsSection({ data, owner }: { data: Compliance; owner: boolean 
     <section aria-labelledby="cmp-ob">
       <h2 id="cmp-ob" className="nl-cmp-h2 nl-cmp-gap">{t('obligationsTitle')}</h2>
       {!o.upToDate && (
-        <Alert tone="highlight" actions={owner ? <Button onClick={() => accept.mutate(o.currentVersion)} disabled={accept.isPending}>{accept.isPending ? t('obAccepting') : t('obAccept', { version: o.currentVersion })}</Button> : undefined}>
+        <Alert tone="info" actions={owner ? <Button onClick={() => accept.mutate(o.currentVersion)} disabled={accept.isPending}>{accept.isPending ? t('obAccepting') : t('obAccept', { version: o.currentVersion })}</Button> : undefined}>
           {t('obNew', { version: o.currentVersion })}
         </Alert>
       )}

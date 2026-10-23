@@ -154,7 +154,7 @@ function PriceCheckNote({ merchantId, item }: { merchantId: string; item: MenuIt
   const values = { price: f.price(item.priceCents), median: f.price(check.medianCents), pct: Math.abs(check.deviationPct) };
   if (check.confirmed) return <p className="nl-hint">{t('priceCheckConfirmed', values)}</p>;
   return (
-    <Alert tone="highlight" role="status" actions={<button type="button" className="btn btn-secondary" disabled={confirm.isPending} onClick={() => confirm.mutate(item.id)}>{t('confirmPrice')}</button>}>
+    <Alert tone="info" role="status" actions={<button type="button" className="btn btn-secondary" disabled={confirm.isPending} onClick={() => confirm.mutate(item.id)}>{t('confirmPrice')}</button>}>
       {t(check.deviationPct > 0 ? 'priceCheckAbove' : 'priceCheckBelow', values)}
       {confirm.isError ? <span role="alert" className="nl-error"> {t('confirmPriceError')}</span> : null}
     </Alert>

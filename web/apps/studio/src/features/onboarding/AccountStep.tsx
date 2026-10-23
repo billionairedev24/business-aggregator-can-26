@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { ForkKnife, Package, Storefront, Wrench, type Icon } from '@phosphor-icons/react';
+import { Check, ForkKnife, Package, Storefront, Wrench, type Icon } from '@phosphor-icons/react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Avatar, Checkbox, Field, FormGrid, OptionCard, RadioGroup, Select, TextInput, useLocale, platformTimeZone } from '@northline/ui';
 import { useSession, useSignOut } from '../../lib/session';
@@ -69,8 +69,10 @@ export function AccountStep({ type, onboarding, isNew, pilot, onTypeChange, onDo
       {pilotInvite ? <Alert tone="info" title={t('pilotTitle', { city: pilotInvite.city })}>{t('pilotBody', { name: pilotInvite.label })}</Alert> : null}
       {invite.data && !pilotInvite ? <Alert tone="error" role="alert">{t(`pilot_${invite.data.state}` as 'pilot_expired')}</Alert> : null}
       {type && !picking ? (
-        <div className="nl-ob-box">
-          <span className="tag tag-brand">{t(`label_${type}`)}</span>
+        <div className="nl-ob-box" role="group" aria-label={t('pickerLabel')}>
+          <span className="nl-ob-box-check" aria-hidden><Check size={14} weight="bold" /></span>
+          <TypeIcon type={type} />
+          <span className="nl-ob-box-label">{t(`label_${type}`)}</span>
           <span className="nl-ob-box-desc">{t(`desc_${type}`)}</span>
           {(onboarding && onboarding.status !== 'applicant') || pilotInvite ? null : <button type="button" className="btn btn-ghost" onClick={() => setPicking(true)}>{t('change')}</button>}
         </div>
