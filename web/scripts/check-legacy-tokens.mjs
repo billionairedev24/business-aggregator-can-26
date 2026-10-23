@@ -68,7 +68,7 @@ if (photoProblems.length) {
 // `style` objects (`fontSize: 13`, `padding: 6`, `color: 'white'`).
 const S175 = ['orders', 'catalogue', 'appointments', 'kitchen'].map(f => `apps/studio/src/features/${f}`);
 // S-176: the Studio's money, messaging, storefront, settings, account and onboarding screens — with S-175, every Studio folder
-const S176 = ['finance'].map(f => `apps/studio/src/features/${f}`);
+const S176 = ['finance', 'messages'].map(f => `apps/studio/src/features/${f}`);
 const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'apps/studio/src/features/shell', 'apps/console/src/features/shell',
   // S-170/S-171: the consumer discovery pages (home, results, the Services / Shop / Food landings and their shared parts)
   'apps/consumer/src/features/home', 'apps/consumer/src/features/search', 'apps/consumer/src/features/pages', 'apps/consumer/src/features/shop',
