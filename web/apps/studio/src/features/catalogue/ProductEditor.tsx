@@ -2,13 +2,13 @@ import { useCallback, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight, ImageSquare, X } from '@phosphor-icons/react';
-import { Alert, Button, Checkbox, Chip, Field, FormGrid, OptionCard, Select, TextArea, TextInput, useFormatters, useLocale } from '@northline/ui';
+import { Alert, Button, Checkbox, Chip, Field, FormGrid, OptionCard, ProductCard, Select, StatusTag, TextArea, TextInput, useFormatters, useLocale } from '@northline/ui';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { tierTag } from '../shell/StudioLayout';
 import { useShellT } from '../shell/messages';
 import { categoriesQuery, lookupGtin, useSaveProduct, useSubmitListing, useUploadImage, type Category, type Fulfilment, type IdentifierType, type Media, type OfferType, type ProductDetail, type VariantTheme } from './api';
 import { BundlePrice, BundleTab, DocumentsField, VariantImages } from './EditorExtras';
-import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, EditorTabs, FeesPanel, PhotoTips, RevetNotice, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
+import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, EditorSaveBar, EditorTabs, FeesPanel, PhotoTips, RevetNotice, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
 import { imageProblem } from './imageFile';
 import { useCatalogueT } from './messages';
 import { SECTIONS, applyMatch, bundleFacts, emptyProduct, linkFromDetail, linkFromMatch, permissions, productCompleteness, productFromDetail, productPayload, rowKey, validateProductDraft, variantReady, variantSku, vettingChecks, type CatalogueLink, type Portal, type ProductForm, type Section, type VariantRow } from './model';
@@ -18,7 +18,7 @@ import { ListingCopyButton } from '../writing/WritingHelp';
 import { FrenchTextPanel } from './FrenchTextPanel';
 import { MemberPriceField } from './MemberPrice';
 
-type Tab = Section | 'preview';
+type Tab = Section;
 const FULFILMENT: Fulfilment[] = ['pooled', 'install', 'pickup', 'ship'];
 const COUNTRIES = ['DE', 'CA', 'US', 'CN', 'JP', 'MX', 'GB', 'IT', 'FR', 'KR', 'OTHER'] as const;
 const SECTION_OF = (field: string): Section => {
@@ -42,7 +42,7 @@ export function ProductEditor({ detail, portal, typePicker, type = 'product' }: 
   const role = useRole();
   const perms = permissions(role);
   const { locale } = useLocale();
-  const { money, date } = useFormatters();
+  const { price, date } = useFormatters();
   const navigate = useNavigate();
   const categoriesQ = useQuery(categoriesQuery(merchantId, 'shop', locale));
   const categories = useMemo(() => categoriesQ.data ?? [], [categoriesQ.data]);
@@ -65,7 +65,7 @@ export function ProductEditor({ detail, portal, typePicker, type = 'product' }: 
 
   const completeness = productCompleteness(form, category, link);
   const canSubmit = !saved || saved.vetting === 'draft' || saved.vetting === 'rejected';
-  const tabName: Record<Tab, string> = { identity: t('tabIdentity'), variants: isBundle ? t('tabBundle') : t('tabVariants'), images: t('tabImages'), offer: t('tabOffer'), compliance: t('tabCompliance'), preview: t('tabPreview') };
+  const tabName: Record<Tab, string> = { identity: t('tabIdentity'), variants: isBundle ? t('tabBundle') : t('tabVariants'), images: t('tabImages'), offer: t('tabOffer'), compliance: t('tabCompliance') };
   const err = (field: string) => mt(error(field));
 
   const firstErrorTab = (errors: Record<string, string>) => { const first = Object.keys(errors)[0]; if (first) setTab(SECTION_OF(first)); };
@@ -105,19 +105,17 @@ export function ProductEditor({ detail, portal, typePicker, type = 'product' }: 
     } catch { setLookup('error'); }
   }
 
-  const tabs = [...SECTIONS.map(s => ({ key: s as Tab, name: tabName[s], done: completeness.done[s] })), { key: 'preview' as Tab, name: tabName.preview, done: true }];
+  const tabs = SECTIONS.map(s => ({ key: s as Tab, name: tabName[s], done: completeness.done[s] }));
   const kicker = t('editorKicker', { section: portal === 'seller' ? t('kickerProducts') : t('kickerListings'), kind: 'product' });
   const time = (iso: string) => date(iso, 'time');
 
   return (
-    <>
-      <EditorHeader kicker={kicker} title={saved?.title || form.title || (isBundle ? t('newBundle') : t('newProduct'))} tag={draftTag(saved, t, time)} canEdit={perms.update} roleName={shellT(`role_${role}` as Parameters<typeof shellT>[0])}
-        saveLabel={saved?.vetting === 'approved' ? t('saveChanges') : t('saveDraft')} saving={save.isPending} submitting={submit.isPending}
-        cannotSubmit={!completeness.complete || !canSubmit} onSave={() => void persist()} onSubmit={() => void onSubmit()} />
+    <div className="nl-cat-page">
+      <EditorHeader kicker={kicker} title={saved?.title || form.title || (isBundle ? t('newBundle') : t('newProduct'))} canEdit={perms.update} roleName={shellT(`role_${role}` as Parameters<typeof shellT>[0])} />
       <EditorTabs tabs={tabs} value={tab} onChange={setTab} label={t('editorTabs')} />
-      {failure && <div style={{ marginBottom: 16 }}><Alert tone="error">{failure}</Alert></div>}
+      {failure && <Alert tone="error">{failure}</Alert>}
       <RevetNotice detail={saved} kind="product" />
-      <div style={{ marginBottom: 16 }}><AttentionSummary errors={fm.visible} t={t} /></div>
+      <AttentionSummary errors={fm.visible} t={t} />
       <div className="nl-cat-editor">
         <fieldset className="nl-cat-main nl-cat-card" disabled={!perms.update} id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
           <h2 className="nl-cat-card-title">{tabName[tab]}</h2>
@@ -134,7 +132,7 @@ export function ProductEditor({ detail, portal, typePicker, type = 'product' }: 
               </div>
             </Field>}
             {link && <div className="nl-cat-match" role="status">
-              <CatalogueThumb media={link.images[0]} size={44} />
+              <CatalogueThumb media={link.images[0]} size="sm" />
               <span><strong>{t('matched', { ref: link.ref })}</strong> · {t('matchedBody', { title: link.title, count: link.sellerCount })}</span>
             </div>}
             {lookup === 'nomatch' && <Alert tone="neutral" role="status">{t('noMatch')}</Alert>}
@@ -195,8 +193,8 @@ export function ProductEditor({ detail, portal, typePicker, type = 'product' }: 
                 </>}
             </FormGrid>
             {isBundle && form.bundle.length > 0 && <BundlePrice separateCents={bundle.separateCents} priceCents={parseMoney(form.price)} />}
-            <Field label={t('skuLabel')} hint={t('skuHint')} error={err('sku')}><TextInput value={form.sku} maxLength={60} onChange={e => update({ sku: e.target.value })} onBlur={() => touch('sku')} style={{ maxWidth: 240 }} /></Field>
-            <div className="field"><span className="nl-label">{t('tax')}</span><div style={{ fontSize: 14 }}>{t('taxAuto')} <strong>{t('taxKind')}</strong> · {t('taxBody')}</div></div>
+            <Field label={t('skuLabel')} hint={t('skuHint')} error={err('sku')}><TextInput className="nl-cat-w-sm" value={form.sku} maxLength={60} onChange={e => update({ sku: e.target.value })} onBlur={() => touch('sku')} /></Field>
+            <div className="field"><span className="nl-label">{t('tax')}</span><div className="nl-cat-body">{t('taxAuto')} <strong>{t('taxKind')}</strong> · {t('taxBody')}</div></div>
             <div className="nl-field" role="group" aria-labelledby="ful-label">
               <span className="nl-label" id="ful-label">{t('fulfilment')}</span>
               <div className="nl-cat-options">
@@ -208,13 +206,13 @@ export function ProductEditor({ detail, portal, typePicker, type = 'product' }: 
               </div>
               {err('fulfilment') && <div role="alert" className="nl-error">{err('fulfilment')}</div>}
             </div>
-            <Field label={t('handling')}><Select style={{ maxWidth: 280 }} value={form.handlingTime} options={(['same_day', 'next_day', 'two_days'] as const).map(h => ({ value: h, label: t(`hand_${h}`) }))} onChange={e => update({ handlingTime: e.target.value as ProductForm['handlingTime'] })} /></Field>
-            <Field label={t('returns')} error={err('returnsPolicy')}><Select style={{ maxWidth: 360 }} value={form.returnsPolicy} options={(['standard_14', 'final_sale'] as const).map(r => ({ value: r, label: t(`ret_${r}`) }))} onChange={e => { update({ returnsPolicy: e.target.value as ProductForm['returnsPolicy'] }); touch('returnsPolicy'); }} /></Field>
+            <Field label={t('handling')}><Select className="nl-cat-w-md" value={form.handlingTime} options={(['same_day', 'next_day', 'two_days'] as const).map(h => ({ value: h, label: t(`hand_${h}`) }))} onChange={e => update({ handlingTime: e.target.value as ProductForm['handlingTime'] })} /></Field>
+            <Field label={t('returns')} error={err('returnsPolicy')}><Select className="nl-cat-w-lg" value={form.returnsPolicy} options={(['standard_14', 'final_sale'] as const).map(r => ({ value: r, label: t(`ret_${r}`) }))} onChange={e => { update({ returnsPolicy: e.target.value as ProductForm['returnsPolicy'] }); touch('returnsPolicy'); }} /></Field>
           </>}
 
           {tab === 'compliance' && <>
             <Field label={t('origin')} error={err('countryOfOrigin')}>
-              <Select style={{ maxWidth: 280 }} placeholder={t('choose')} value={form.countryOfOrigin} options={COUNTRIES.map(c => ({ value: c, label: t(`country_${c}`) }))} onChange={e => { update({ countryOfOrigin: e.target.value }); touch('countryOfOrigin'); }} />
+              <Select className="nl-cat-w-md" placeholder={t('choose')} value={form.countryOfOrigin} options={COUNTRIES.map(c => ({ value: c, label: t(`country_${c}`) }))} onChange={e => { update({ countryOfOrigin: e.target.value }); touch('countryOfOrigin'); }} />
             </Field>
             <div className="nl-field" role="group" aria-labelledby="safety-label">
               <span className="nl-label" id="safety-label">{t('safety')}</span>
@@ -231,17 +229,20 @@ export function ProductEditor({ detail, portal, typePicker, type = 'product' }: 
             <Field label={t('keywords')} error={err('searchKeywords')}><TextInput value={form.searchKeywords} onChange={e => update({ searchKeywords: e.target.value })} onBlur={() => touch('searchKeywords')} /></Field>
           </>}
 
-          {tab === 'preview' && <Preview form={form} link={link} business={merchant.displayName} tier={shellT(tierTag(merchant).key)} />}
         </fieldset>
 
         <Side>
+          <Preview form={form} link={link} business={merchant.displayName} tier={shellT(tierTag(merchant).key)} />
           <CompletenessPanel t={t} percent={completeness.percent} items={SECTIONS.map(s => ({ name: tabName[s], done: completeness.done[s] }))} />
-          <VettingPanel t={t} checks={vettingChecks({ category, priceCents: parseMoney(form.price), images: form.images, imageSource: form.imageSource, link, text: `${form.title} ${form.searchKeywords}`, gtin: isBundle ? null : { type: form.identifierType, value: form.gtin }, money })} />
+          <VettingPanel t={t} checks={vettingChecks({ category, priceCents: parseMoney(form.price), images: form.images, imageSource: form.imageSource, link, text: `${form.title} ${form.searchKeywords}`, gtin: isBundle ? null : { type: form.identifierType, value: form.gtin }, money: price })} />
           <FeesPanel priceCents={parseMoney(form.price)} costCents={parseMoney(form.cost)} tier={merchant.tier} />
           <p className="nl-cat-note"><strong>{t('howImages')}</strong> {t('howImagesBody')}</p>
         </Side>
       </div>
-    </>
+      <EditorSaveBar label={t('saveBarProduct')} tag={draftTag(saved, t, time)} dirty={fm.dirty} canEdit={perms.update}
+        saveLabel={saved?.vetting === 'approved' ? t('saveChanges') : t('saveDraft')} saving={save.isPending} submitting={submit.isPending}
+        cannotSubmit={!completeness.complete || !canSubmit} onSave={() => void persist()} onSubmit={() => void onSubmit()} />
+    </div>
   );
 }
 
@@ -293,7 +294,7 @@ function VariantsTab({ form, update, category, error }: { form: ProductForm; upd
         <span className="nl-label" id="values-label">{t('themeValues', { theme: themeName(form.variantTheme) })}</span>
         <div className="nl-cat-values">
           {form.variants.map(r => (
-            <span key={r.key} className="tag tag-accent nl-cat-value">{r.value}
+            <span key={r.key} className="tag tag-neutral nl-cat-value">{r.value}
               <button type="button" aria-label={t('removeValue', { value: r.value })} onClick={() => update({ variants: form.variants.filter(x => x.key !== r.key) })}>×</button>
             </span>
           ))}
@@ -322,7 +323,7 @@ function VariantsTab({ form, update, category, error }: { form: ProductForm; upd
                   {cell('price', t('colPrice'), 'priceCents', 'decimal')}
                   {cell('stock', t('colStock'), 'stock', 'numeric')}
                   <td data-label={t('colImages')} className="nl-small"><VariantImages row={r} onChange={images => setRow(r.key, { images })} error={error(`variants[${i}].imageIds`)} /></td>
-                  <td data-label={t('colStatus')}><span className={`tag ${ready ? 'tag-accent' : 'tag-neutral'}`}>{ready ? t('ready') : t('needsGtin')}</span></td>
+                  <td data-label={t('colStatus')}><StatusTag tone={ready ? 'success' : 'warning'}>{ready ? t('ready') : t('needsGtin')}</StatusTag></td>
                 </tr>
               );
             })}
@@ -337,10 +338,12 @@ function VariantsTab({ form, update, category, error }: { form: ProductForm; upd
   </>;
 }
 
-export function CatalogueThumb({ media, size = 110, label }: { media?: Media; size?: number; label?: string }) {
+const THUMB = { sm: 44, md: 140 } as const;
+/** A listing's photo at one of two sizes (a class each; S-175: no inline sizes), or the grey well when there is none. */
+export function CatalogueThumb({ media, size = 'md', label }: { media?: Media; size?: keyof typeof THUMB; label?: string }) {
   const [broken, setBroken] = useState(false);
-  if (!media || broken) return <div className="halftone nl-cat-thumb" style={{ width: size, height: size }} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true} />;
-  return <img className="nl-cat-thumb" src={media.url} alt={label ?? ''} width={size} height={size} style={{ width: size, height: size }} onError={() => setBroken(true)} />;
+  if (!media || broken) return <div className={`nl-cat-thumb nl-cat-thumb-${size} nl-cat-thumb-empty`} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true} />;
+  return <img className={`nl-cat-thumb nl-cat-thumb-${size}`} src={media.url} alt={label ?? ''} width={THUMB[size]} height={THUMB[size]} onError={() => setBroken(true)} />;
 }
 
 function ImagesTab({ form, update, link, error }: { form: ProductForm; update: Update; link: CatalogueLink | null; error?: string }) {
@@ -386,6 +389,7 @@ function ImagesTab({ form, update, link, error }: { form: ProductForm; update: U
       </div>
       <div className="nl-cat-note-box">{!link ? t('imgNoteNoMatch') : form.imageSource === 'shared' ? t('imgNoteShared', { count: link.sellerCount, locked: String(link.locked) }) : t('imgNoteOwn')}</div>
     </div>
+    <div className="nl-cat-upload">
     <div className="nl-field" role="group" aria-labelledby="img-label">
       <span className="nl-label" id="img-label">{t('imagesLabel')}</span>
       <ul className="nl-cat-images">
@@ -393,8 +397,8 @@ function ImagesTab({ form, update, link, error }: { form: ProductForm; update: U
           <li key={`${tile.own ? 'o' : 's'}-${tile.media.id}`} className="nl-cat-image" draggable={tile.own}
             onDragStart={() => tile.own && setDrag(tile.index)} onDragOver={(e: DragEvent) => { if (tile.own) e.preventDefault(); }}
             onDrop={() => { if (tile.own && drag !== null) move(drag, tile.index); setDrag(null); }}>
-            <CatalogueThumb media={tile.media} size={140} label={t('imageAlt', { n: pos + 1 })} />
-            {pos === 0 && <span className="tag tag-accent nl-cat-main-tag">{t('main')}</span>}
+            <CatalogueThumb media={tile.media} label={t('imageAlt', { n: pos + 1 })} />
+            {pos === 0 && <span className="tag tag-neutral nl-cat-main-tag">{t('main')}</span>}
             {tile.own && <div className="nl-cat-image-tools">
               <button type="button" aria-label={t('moveLeft', { n: pos + 1 })} disabled={tile.index === 0} onClick={() => move(tile.index, tile.index - 1)}><ArrowLeft size={14} /></button>
               <button type="button" aria-label={t('moveRight', { n: pos + 1 })} disabled={tile.index === form.images.length - 1} onClick={() => move(tile.index, tile.index + 1)}><ArrowRight size={14} /></button>
@@ -417,40 +421,33 @@ function ImagesTab({ form, update, link, error }: { form: ProductForm; update: U
       </ul>
       {(problem || error) && <div role="alert" className="nl-error">{problem ?? error}</div>}
     </div>
-    <p className="nl-cat-note"><strong>{t('standardsTitle')}</strong> {t('standardsBody')}</p>
     <PhotoTips />
+    </div>
+    <p className="nl-cat-note"><strong>{t('standardsTitle')}</strong> {t('standardsBody')}</p>
   </>;
 }
 
+/**
+ * S-175: the live preview beside the form — the card customers see in results (@northline/ui ProductCard: product on
+ * white in the grey well, the one price format), updated as the seller types. Inert: a picture of the card, not links.
+ */
 function Preview({ form, link, business, tier }: { form: ProductForm; link: CatalogueLink | null; business: string; tier: string }) {
   const t = useCatalogueT();
-  const { money } = useFormatters();
   const price = parseMoney(form.price);
   const compare = parseMoney(form.compareAt);
   const image = form.imageSource === 'shared' ? link?.images[0] ?? form.images[0] : form.images[0];
-  const values = form.variants.map(v => v.value);
+  const ok = (n: number | null) => n !== null && !Number.isNaN(n) ? n : null;
   return (
-    <section className="nl-cat-preview" aria-label={t('previewLabel')}>
-      <CatalogueThumb media={image} size={300} />
-      <div className="nl-cat-preview-head">
-        <div>
-          <div className="nl-cat-preview-title">{form.title || t('newProduct')}</div>
-          <div className="nl-small nl-muted">{business} · {tier}{link && link.sellerCount > 1 ? ` · ${t('sellers', { count: link.sellerCount })}` : ''}</div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          {price !== null && !Number.isNaN(price) && <div className="nl-cat-preview-title">{money(price)}</div>}
-          {compare !== null && !Number.isNaN(compare) && <div className="nl-small nl-muted" style={{ textDecoration: 'line-through' }}>{money(compare)}</div>}
-        </div>
+    <section className="nl-cat-side nl-cat-preview" aria-labelledby="cat-preview">
+      <h2 className="nl-cat-side-title" id="cat-preview">{t('previewLive')}</h2>
+      <p className="nl-cat-flush nl-cat-muted">{t('previewNote')}</p>
+      <div className="nl-cat-preview-card" inert>
+        <ProductCard href="#" level={3} name={form.title || t('newProduct')} imageUrl={image?.url} priceCents={ok(price)} compareAtCents={ok(compare)}
+          meta={`${business} · ${tier}${link && link.sellerCount > 1 ? ` · ${t('sellers', { count: link.sellerCount })}` : ''}`}
+          badges={[...(form.fulfilment.includes('pooled') ? [{ label: t('tonightsRun') }] : []), ...(form.fulfilment.includes('install') ? [{ label: t('installedFree') }] : []),
+            ...(form.variantTheme !== 'none' && form.variants.length ? [{ label: `${t(`theme_${form.variantTheme}`)}: ${form.variants.map(v => v.value).join(' · ')}` }] : [])]}
+          onAdd={() => {}} />
       </div>
-      <div className="nl-cat-row" style={{ marginTop: 10 }}>
-        {form.fulfilment.includes('pooled') && <span className="tag tag-accent">{t('tonightsRun')}</span>}
-        {form.fulfilment.includes('install') && <span className="tag tag-neutral">{t('installedFree')}</span>}
-      </div>
-      {form.variantTheme !== 'none' && values.length > 0 && (
-        <div className="nl-small nl-muted" style={{ marginTop: 12 }}>{t(`theme_${form.variantTheme}`)}: <strong style={{ color: 'var(--color-text)' }}>{values[0]}</strong>{values.slice(1).map(v => ` · ${v}`)}</div>
-      )}
-      <div className="nl-cat-preview-cta" aria-hidden>{t('addToCart')}</div>
     </section>
   );
 }
-

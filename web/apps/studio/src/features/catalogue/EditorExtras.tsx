@@ -53,7 +53,7 @@ export function VariantImages({ row, onChange, error }: { row: VariantRow; onCha
 /** "Bundle contents": the business's own products (not bundles), a variant when the product has some, and a quantity. */
 export function BundleTab({ form, update, error, listingId }: { form: ProductForm; update: Update; error: (f: string) => string | undefined; listingId?: string }) {
   const t = useCatalogueT();
-  const { money } = useFormatters();
+  const { price: money } = useFormatters();
   const merchantId = useMerchantId();
   const qc = useQueryClient();
   const listings = useQuery(listingsQuery(merchantId));
@@ -83,7 +83,7 @@ export function BundleTab({ form, update, error, listingId }: { form: ProductFor
     <p className="nl-muted nl-small">{t('bundleIntro')}</p>
     {listings.isSuccess && products.length === 0 && <p className="nl-small">{t('noProducts')}</p>}
     <div className="nl-cat-row">
-      <Select aria-label={t('chooseProduct')} placeholder={t('chooseProduct')} value={choice} style={{ maxWidth: 360 }}
+      <Select aria-label={t('chooseProduct')} placeholder={t('chooseProduct')} value={choice} className="nl-cat-w-lg"
         options={products.map(p => ({ value: p.id, label: p.name }))} onChange={e => setChoice(e.target.value)} />
       <Button variant="secondary" onClick={() => void add()} disabled={!choice || form.bundle.length >= 10}>{t('addItem')}</Button>
     </div>
@@ -125,7 +125,7 @@ function BundleItemRow({ row, index, variants, loadVariants, error, money, onCha
         {(error(`${at}.offerId`) || error(`${at}.variantId`)) && <div role="alert" className="nl-error">{error(`${at}.offerId`) ?? error(`${at}.variantId`)}</div>}
       </td>
       <td data-label={t('colQty')}>
-        <TextInput aria-label={t('itemQty', { name: row.name })} inputMode="numeric" value={row.qty} style={{ maxWidth: 72 }}
+        <TextInput aria-label={t('itemQty', { name: row.name })} inputMode="numeric" value={row.qty} className="nl-cat-w-qty"
           aria-invalid={!!error(`${at}.qty`) || undefined} onChange={e => onChange({ qty: e.target.value })} />
         {error(`${at}.qty`) && <div role="alert" className="nl-error">{error(`${at}.qty`)}</div>}
       </td>
@@ -139,7 +139,7 @@ function BundleItemRow({ row, index, variants, loadVariants, error, money, onCha
 /** Under the bundle's price: what the items cost bought separately, and the saving. */
 export function BundlePrice({ separateCents, priceCents }: { separateCents: number; priceCents: number | null }) {
   const t = useCatalogueT();
-  const { money } = useFormatters();
+  const { price: money } = useFormatters();
   const saving = priceCents !== null && !Number.isNaN(priceCents) ? separateCents - priceCents : 0;
   return (
     <p className="nl-small nl-muted" role="status">
