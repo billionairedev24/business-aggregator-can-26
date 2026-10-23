@@ -94,8 +94,10 @@ describe('Food landing (design 06 food)', () => {
     expect(calls.find(c => c.url.startsWith('/api/v1/public/kitchens'))!.url).toBe('/api/v1/public/kitchens?city=Calgary&lat=51.04000&lng=-114.07000');
     const pho = screen.getByRole('link', { name: /Pho Lucky/ });
     expect(pho).toHaveAttribute('href', '/food/pho-lucky');
-    expect(pho).toHaveTextContent('Vietnamese · $ · 1.2 km · $2.99');
-    expect(pho).toHaveTextContent('★ 4.8 (120)');
+    // E-15: the site's service card — the cuisines, the name, the rating, the time · price level · distance · fee
+    expect(pho).toHaveTextContent('Vietnamese');
+    expect(pho).toHaveTextContent('25–35 min · $ · 1.2 km · $2.99');
+    expect(within(pho).getByRole('img', { name: '4.8 out of 5 stars' })).toBeInTheDocument();
     expect(pho).toHaveTextContent('Halal');
     const nonna = screen.getByRole('link', { name: /Nonna’s/ });
     expect(nonna).toHaveTextContent(/Opens/);
@@ -149,7 +151,8 @@ describe('Food landing (design 06 food)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Restaurants' })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { level: 2, name: '2 cuisines livrent à Beltline' })).toBeInTheDocument();
     expect(screen.getByText(/^1 cuisine ouverte · livraison à Beltline en 25 à 35 min/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Pho Lucky/ })).toHaveTextContent('Vietnamien · $ · 1,2 km');
+    expect(screen.getByRole('link', { name: /Pho Lucky/ })).toHaveTextContent('Vietnamien');
+    expect(screen.getByRole('link', { name: /Pho Lucky/ })).toHaveTextContent('25 à 35 min · $ · 1,2 km');
   });
 });
 

@@ -62,9 +62,9 @@ export function DepartmentPage({ slug, market: explicit }: { slug: string; marke
               <h2 id="dept-products" className="nl-section-title">{t('popularIn', { name: data.name })}</h2>
               <span className="nl-section-lede">{t('sortedBy')} <strong>{t('sortPopular')}</strong></span>
             </div>
-            <TileGrid min={200}>
-              {data.products.map(p => <li key={p.productId}><ProductCardTile product={p} withMarket={link} /></li>)}
-            </TileGrid>
+            <ul className="nl-card-grid nl-card-grid-results" aria-labelledby="dept-products">
+              {data.products.map(p => <li key={p.productId}><ProductCardTile product={p} withMarket={link} next={run} /></li>)}
+            </ul>
           </section>
         </>
       )}

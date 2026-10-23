@@ -1,6 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import './gallery.css';
-import { Bank, ChartBar, ChatCircleText, GearSix, Leaf, MagnifyingGlass, Package, Prohibit, ShoppingCart, SquaresFour, Stack, Storefront, Tag as TagIcon, Warning } from '@phosphor-icons/react';
+import { Bank, ChartBar, ChatCircleText, GearSix, Leaf, MagnifyingGlass, Package, Prohibit, ShoppingCart, SignIn, SquaresFour, Stack, Storefront, Tag as TagIcon, Truck, Warning } from '@phosphor-icons/react';
+import { AccountMenu } from '../AccountMenu';
+import { LocationPill } from '../LocationPill';
+import { PromoStrip, SiteHeader } from '../SiteHeader';
 import { AppShell, WorkspaceSwitcher } from '../AppShell';
 import { ActionCard, ActionGrid, ChartCard, KpiStrip, SummaryTable, Thumb } from '../BackOffice';
 import { ColumnChart } from '../Charts';
@@ -8,8 +11,8 @@ import { Avatar } from '../Layout';
 import { Logo } from '../Logo';
 import { ShellSearch } from '../ShellSearch';
 import { Button } from '../Button';
-import { Checkbox, ChoiceTiles, FilterChip, OptionCard, RadioGroup, Segmented, Switch, UnderlineTabs } from '../Choice';
-import { DealBadge, MediaFallback, Price, ProductCard, QuantityStepper, ServiceCard, Stars, StatusTag, type StatusTone } from '../Commerce';
+import { Checkbox, ChoiceTiles, FilterChip, FilterGroup, OptionCard, RadioGroup, Segmented, Switch, UnderlineTabs } from '../Choice';
+import { DealBadge, MediaFallback, Price, ProductCard, QuantityStepper, RatingFilter, ServiceCard, Stars, StatusTag, type StatusTone } from '../Commerce';
 import { DataTable, type DataTableColumn } from '../DataTable';
 import { FormSection, SaveBar } from '../Editor';
 import { listingActions, listingActionsFr, listingColumns, listingColumnsFr, listings, listingsFr, CAN } from '../DataTable/DataTable.fixtures';
@@ -62,11 +65,17 @@ const useT = defineMessages({
     switchBusiness: 'Switch business', searchStudio: 'Search the Studio', searchPh: 'Search orders, products, customers', ordersMatching: 'Orders matching “{q}”',
     nDashboard: 'Dashboard', gOps: 'Operations', nOrders: 'Orders', nMessages: 'Messages', gCat: 'Catalogue', nProducts: 'Products', nStock: 'Stock', gMoney: 'Money', nPayouts: 'Payouts', nReports: 'Reports', gStore: 'Store', nStorefront: 'Storefront', nSettings: 'Settings', owner: 'Owner',
     fDay: 'A day', fWindow: 'A delivery window', fNight: 'Across midnight', fRange: 'A date range',
+    s_site: 'Site header, department strip and promo strip', s_filters: 'Filter rail',
+    hello: 'Hello, {name}', helloGuest: 'Hello, sign in', accountOrders: 'Account & orders', signIn: 'Sign in',
+    bakery: 'Bakery', butcher: 'Butcher', grocery: 'Grocery', mechanics: 'Mechanics', cleaners: 'Cleaners', deals: 'Today’s deals', sell: 'Sell on {brand}',
+    cutoff: '<b>Tonight’s pooled run closes at 5:30 p.m.</b> Mix any 3 shops for one $2.99 delivery.', cutoffLeft: '2 h 48 min left', cutoffLabel: 'Delivery cut-off',
+    rating: 'Customer rating', distance: 'Distance', price: 'Price', under10: 'Under $10', p10: '$10 to $25', dietary: 'Dietary', glutenFree: 'Gluten-free',
+    any: 'Any',
     s_worktable: 'Work table and editor: status tabs, quick filters, bulk actions, save bar',
     order: 'order', orders: 'orders', colOrder: 'Order', colPlaced: 'Placed', colCustomer: 'Customer', colItems: 'Items', colWindow: 'Window', colTotal: 'Total', colStatus: 'Status',
     qToday: 'Today', qRun: 'Tonight’s run', markPacked: 'Mark packed', printLabel: 'Print label', searchOrders: 'Search order, customer or item',
     wTonight: 'Tonight 6–9 p.m.', wDelivered: 'Delivered 12:05 p.m.', it1: 'Country sourdough ×2, Seeded rye', it2: 'Sandwich loaf, sliced ×2', it3: 'Seeded rye ×2, Focaccia', it4: 'Seeded rye', it5: 'Sandwich loaf, sliced',
-    pricing: 'Price and stock', pricingDesc: 'What customers pay, and how many you have.', price: 'Your price', stockOnHand: 'Stock on hand', saveProduct: 'Save product', draftSaved: 'Draft saved 9:00 a.m.', unsaved: 'Unsaved changes', saveDraft: 'Save draft', submit: 'Submit for review',
+    pricing: 'Price and stock', pricingDesc: 'What customers pay, and how many you have.', yourPrice: 'Your price', stockOnHand: 'Stock on hand', saveProduct: 'Save product', draftSaved: 'Draft saved 9:00 a.m.', unsaved: 'Unsaved changes', saveDraft: 'Save draft', submit: 'Submit for review',
   },
   fr: {
     title: 'Galerie des composants', lede: 'Chaque composant de @northline/ui sur les jetons v2 (A · Plainsight), en anglais et en français.',
@@ -102,11 +111,17 @@ const useT = defineMessages({
     switchBusiness: 'Changer d’entreprise', searchStudio: 'Rechercher dans le Studio', searchPh: 'Rechercher commandes, produits, clients', ordersMatching: 'Commandes correspondant à « {q} »',
     nDashboard: 'Tableau de bord', gOps: 'Opérations', nOrders: 'Commandes', nMessages: 'Messages', gCat: 'Catalogue', nProducts: 'Produits', nStock: 'Stock', gMoney: 'Argent', nPayouts: 'Versements', nReports: 'Rapports', gStore: 'Boutique', nStorefront: 'Vitrine', nSettings: 'Paramètres', owner: 'Propriétaire',
     fDay: 'Un jour', fWindow: 'Une plage de livraison', fNight: 'Après minuit', fRange: 'Une période',
+    s_site: 'En-tête du site, bande des rayons et bande promotionnelle', s_filters: 'Volet de filtres',
+    hello: 'Bonjour, {name}', helloGuest: 'Bonjour, connectez-vous', accountOrders: 'Compte et commandes', signIn: 'Se connecter',
+    bakery: 'Boulangerie', butcher: 'Boucherie', grocery: 'Épicerie', mechanics: 'Mécaniciens', cleaners: 'Ménage', deals: 'Aubaines du jour', sell: 'Vendre sur {brand}',
+    cutoff: '<b>La tournée partagée de ce soir ferme à 17 h 30.</b> Combinez 3 boutiques pour une seule livraison à 2,99 $.', cutoffLeft: 'Encore 2 h 48 min', cutoffLabel: 'Heure limite de livraison',
+    rating: 'Évaluation des clients', distance: 'Distance', price: 'Prix', under10: 'Moins de 10 $', p10: '10 $ à 25 $', dietary: 'Alimentation', glutenFree: 'Sans gluten',
+    any: 'Toutes',
     s_worktable: 'Tableau de travail et éditeur : onglets de statut, filtres rapides, actions groupées, barre d’enregistrement',
     order: 'commande', orders: 'commandes', colOrder: 'Commande', colPlaced: 'Passée', colCustomer: 'Client', colItems: 'Articles', colWindow: 'Plage', colTotal: 'Total', colStatus: 'Statut',
     qToday: 'Aujourd’hui', qRun: 'Tournée de ce soir', markPacked: 'Marquer emballée', printLabel: 'Imprimer l’étiquette', searchOrders: 'Rechercher commande, client ou article',
     wTonight: 'Ce soir 18 h – 21 h', wDelivered: 'Livrée à 12 h 05', it1: 'Pain de campagne ×2, Seigle aux graines', it2: 'Pain de mie tranché ×2', it3: 'Seigle aux graines ×2, Focaccia', it4: 'Seigle aux graines', it5: 'Pain de mie tranché',
-    pricing: 'Prix et stock', pricingDesc: 'Ce que la clientèle paie, et combien vous en avez.', price: 'Votre prix', stockOnHand: 'Stock disponible', saveProduct: 'Enregistrer le produit', draftSaved: 'Brouillon enregistré à 9 h', unsaved: 'Changements non enregistrés', saveDraft: 'Enregistrer le brouillon', submit: 'Soumettre pour vérification',
+    pricing: 'Prix et stock', pricingDesc: 'Ce que la clientèle paie, et combien vous en avez.', yourPrice: 'Votre prix', stockOnHand: 'Stock disponible', saveProduct: 'Enregistrer le produit', draftSaved: 'Brouillon enregistré à 9 h', unsaved: 'Changements non enregistrés', saveDraft: 'Enregistrer le brouillon', submit: 'Soumettre pour vérification',
   },
 });
 type GalleryT = ReturnType<typeof useT>;
@@ -115,6 +130,7 @@ type GalleryT = ReturnType<typeof useT>;
 const SHOP = 'Loaf & Ladder Bakery · Maple Row';
 const FONT = 'IBM Plex Sans';
 const HIVE = 'Hive & Hollow Apiary';
+const PLACE = 'Maple Row T2N';
 
 export interface GallerySection {
   id: string; title: (t: GalleryT) => string; render: (t: GalleryT, photo?: string) => ReactNode;
@@ -237,6 +253,52 @@ function Cards({ t, photo }: { t: GalleryT; photo?: string }) {
         <ServiceCard onSelect={() => {}} selected name={t('brakes')} priceCents={18900} fromPrice={false} mark={<MediaFallback name="PW" icon={Storefront} />} />
       </div>
     </>
+  );
+}
+
+function Site({ t }: { t: GalleryT }) {
+  const [q, setQ] = useState('');
+  const [scope, setScope] = useState('all');
+  const link = (key: string, href: string, extra: Partial<{ current: boolean; group: string; tone: 'deal' }> = {}) => ({ key, href, label: t(key as 'bakery'), ...extra });
+  return (
+    <div className="nl-gallery-frame">
+      <SiteHeader
+        location={<LocationPill status="saved" name="Amara" label={PLACE} onOpen={() => {}} />}
+        search={<SearchBar variant="header" landmark={t('s_site')} value={q} onChange={setQ} onSubmit={() => {}} label={t('q')} placeholder={t('qPlaceholder')}
+          scope={{ value: scope, onChange: setScope, options: [{ value: 'all', label: t('all') }, { value: 'services', label: t('services') }, { value: 'shop', label: t('shop') }, { value: 'food', label: t('food') }] }} />}
+        links={[link('services', '#services'), link('shop', '#shop', { current: true }), link('food', '#food')]}
+        shortcuts={[link('bakery', '#bakery', { group: 'shop' }), link('butcher', '#butcher', { group: 'shop' }), link('grocery', '#grocery', { group: 'shop' }), link('mechanics', '#mechanics', { group: 'services' }), link('cleaners', '#cleaners', { group: 'services' })]}
+        end={[link('deals', '#deals', { tone: 'deal' }), link('sell', '#sell')]}
+        menu={[{ key: 'shop', heading: t('shop'), href: '#shop', links: [link('bakery', '#bakery')] }]}
+        cart={{ count: 4, href: '#cart' }}
+        account={<AccountMenu greeting={{ line1: t('hello', { name: 'Amara' }), line2: t('accountOrders') }} user={{ name: 'Amara Osei', initials: 'AO' }} sections={[{ items: [{ key: 'in', label: t('signIn'), icon: SignIn, href: '#in' }] }]} />} />
+      <PromoStrip icon={<Truck size={18} />} label={t('cutoffLabel')} end={t('cutoffLeft')}><Eta html={t('cutoff')} /></PromoStrip>
+    </div>
+  );
+}
+
+function Filters({ t }: { t: GalleryT }) {
+  const [tonight, setTonight] = useState(true), [vegan, setVegan] = useState(false), [rating, setRating] = useState<number | undefined>(4);
+  const [km, setKm] = useState<'2' | '5' | '10' | 'any'>('5'), [p, setP] = useState('under10');
+  return (
+    <div className="nl-gallery-rail">
+      <FilterGroup label={t('delivery')}>
+        <Checkbox checked={tonight} onChange={setTonight} label={t('tonightOpt')} count={64} />
+        <Checkbox checked={false} onChange={() => {}} label={t('pickup')} count={52} />
+      </FilterGroup>
+      <FilterGroup label={t('rating')}><RatingFilter value={rating} onChange={setRating} /></FilterGroup>
+      <FilterGroup label={t('distance')}>
+        <Segmented name="gallery-km" size="sm" fill aria-label={t('distance')} value={km} onChange={setKm} options={[{ value: '2', label: '2 km' }, { value: '5', label: '5 km' }, { value: '10', label: '10 km' }, { value: 'any', label: t('any') }]} />
+      </FilterGroup>
+      <FilterGroup label={t('price')}>
+        <Checkbox checked={p === 'under10'} onChange={on => setP(on ? 'under10' : '')} label={t('under10')} count={12} />
+        <Checkbox checked={p === 'p10'} onChange={on => setP(on ? 'p10' : '')} label={t('p10')} count={47} />
+      </FilterGroup>
+      <FilterGroup label={t('dietary')}>
+        <Checkbox checked={vegan} onChange={setVegan} label={t('vegan')} count={31} />
+        <Checkbox checked={false} onChange={() => {}} label={t('glutenFree')} count={6} />
+      </FilterGroup>
+    </div>
   );
 }
 
@@ -367,7 +429,7 @@ function WorkTable({ t }: { t: GalleryT }) {
         onAction={() => false} onOpen={() => {}} />
       <FormSection title={t('pricing')} description={t('pricingDesc')}>
         <div className="nl-gallery-pair">
-          <Field label={t('price')}><TextInput defaultValue={formatPrice(850, locale)} /></Field>
+          <Field label={t('yourPrice')}><TextInput defaultValue={formatPrice(850, locale)} /></Field>
           <Field label={t('stockOnHand')}><TextInput defaultValue="14" inputMode="numeric" /></Field>
         </div>
       </FormSection>
@@ -407,6 +469,7 @@ function ShellDemo({ t }: { t: GalleryT }) {
 
 export const GALLERY_SECTIONS: readonly GallerySection[] = [
   { id: 'tokens', title: t => t('s_tokens'), render: t => <Tokens t={t} /> },
+  { id: 'site', title: t => t('s_site'), render: t => <Site t={t} /> },
   {
     id: 'buttons', title: t => t('s_buttons'), render: t => (
       <>
@@ -418,6 +481,7 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
   { id: 'tabs', title: t => t('s_tabs'), render: t => <Tabs t={t} /> },
   { id: 'choice', title: t => t('s_choice'), render: t => <Choices t={t} /> },
   { id: 'chips', title: t => t('s_chips'), render: t => <Chips t={t} /> },
+  { id: 'filters', title: t => t('s_filters'), render: t => <Filters t={t} /> },
   { id: 'checks', title: t => t('s_checks'), render: t => <Checks t={t} /> },
   { id: 'fields', title: t => t('s_fields'), render: t => <Fields t={t} /> },
   { id: 'commerce', title: t => t('s_commerce'), render: t => <Commerce t={t} /> },

@@ -6,7 +6,14 @@ import type { ScreenKey } from './screens';
 export const useShellT = defineMessages({
   en: {
     services: 'Services', shop: 'Shop', food: 'Food',
-    search: 'Search “sourdough”, “mobile mechanic”, “DJ”…',
+    search: 'Search {brand}',
+    hello: 'Hello, {name}', helloSignedIn: 'Hello', helloGuest: 'Hello, sign in', accountOrders: 'Account & orders',
+    deals: 'Today’s deals', returns: 'Returns & refunds', copyright: '© {entity}',
+    // the delivery cut-off strip (shop's next pooled run)
+    cutoffLabel: 'Delivery cut-off',
+    cutoffLead: '{when, select, tonight {Tonight’s} today {Today’s} tomorrow {Tomorrow’s} other {{weekday}’s}} pooled run to {area} closes at {time}.',
+    cutoffRest: 'Mix shops for one {fee} delivery.',
+    cutoffLeft: '{hours, plural, =0 {} other {# h }}{minutes} min left',
     signIn: 'Sign in', createAccount: 'Create account',
     skip: 'Skip to content',
     privacy: 'Privacy', terms: 'Terms', helpLink: 'Help', langSwitch: 'Français', photoCredits: 'Photo credits',
@@ -32,7 +39,13 @@ export const useShellT = defineMessages({
   },
   fr: {
     services: 'Services', shop: 'Boutique', food: 'Restaurants',
-    search: 'Rechercher « pain au levain », « mécanicien mobile », « DJ »…',
+    search: 'Rechercher sur {brand}',
+    hello: 'Bonjour, {name}', helloSignedIn: 'Bonjour', helloGuest: 'Bonjour, connectez-vous', accountOrders: 'Compte et commandes',
+    deals: 'Aubaines du jour', returns: 'Retours et remboursements', copyright: '© {entity}',
+    cutoffLabel: 'Heure limite de livraison',
+    cutoffLead: 'La tournée partagée {when, select, tonight {de ce soir} today {d’aujourd’hui} tomorrow {de demain} other {de {weekday}}} vers {area} ferme à {time}.',
+    cutoffRest: 'Combinez les boutiques pour une seule livraison à {fee}.',
+    cutoffLeft: 'Encore {hours, plural, =0 {} other {# h }}{minutes} min',
     signIn: 'Se connecter', createAccount: 'Créer un compte',
     skip: 'Aller au contenu',
     privacy: 'Confidentialité', terms: 'Conditions', helpLink: 'Aide', langSwitch: 'English', photoCredits: 'Crédits photo',

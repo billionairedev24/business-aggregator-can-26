@@ -29,6 +29,7 @@ async function shoot(page: Page, app: App, r: ShotRoute) {
   // the Studio and the console default to signed in (their screens need a session); the consumer to a guest
   const missing = await mockApi(page, app, { signedIn: r.signedIn ?? app !== 'consumer', down: r.down });
   await libraryPhotos(page);
+  if (r.now) await page.clock.setFixedTime(new Date(r.now));
   const hydration: string[] = [];
   if (app === 'consumer') {
     page.on('console', m => { if ((m.type() === 'error' || m.type() === 'warning') && HYDRATION.test(m.text())) hydration.push(m.text().slice(0, 300)); });

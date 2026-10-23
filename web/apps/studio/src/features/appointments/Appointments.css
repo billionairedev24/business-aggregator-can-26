@@ -6,7 +6,7 @@
 .nl-cal-label { margin: 0; font-size: var(--text-xl); font-weight: var(--weight-bold); flex: 1; min-width: 200px; }
 .nl-cal-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-3); font-size: var(--text-xs); color: var(--color-text-muted); }
 .nl-cal-legend li { display: flex; align-items: center; gap: var(--space-1-5); }
-.nl-cal-swatch { width: 10px; height: 10px; border-radius: 3px; background: var(--nl-ev); }
+.nl-cal-swatch { width: 10px; height: 10px; border-radius: var(--radius-status); background: var(--nl-ev); }
 
 /* status colours: the entry's left edge and tint */
 .nl-appt [data-state] { --nl-ev: var(--color-selected); --nl-ev-bg: var(--color-well); } /* confirmed: ink (S-175: the action colour is never a status) */
@@ -116,7 +116,7 @@
 /* S-153: the customer's photos on a quote request or a job */
 .nl-appt-photos { list-style: none; margin: var(--space-2) 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .nl-appt-photos a { display: inline-flex; min-width: 44px; min-height: 44px; }
-.nl-appt-photos img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm, 6px); border: 1px solid var(--color-border); }
+.nl-appt-photos img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-image); border: 1px solid var(--color-border); }
 /* S-175 */
 .nl-appt-skel { display: flex; flex-direction: column; gap: var(--space-2-5); }
 .nl-appt-gap-top { margin-top: var(--space-3-5); }

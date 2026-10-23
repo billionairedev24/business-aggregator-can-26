@@ -12,10 +12,10 @@ export function testingToolsEnabled(): boolean {
 }
 
 /**
- * The second flag of the redesign's thrash list (§ 3.6–3.7): what the demo hides beyond the testing tools — Food as its
- * own vertical (the department bar's Food, the home's Food row, the search's Food type) and the account's Wallet &
- * points, Dietary, Plus and Language pages. Hidden unless the build sets `VITE_NL_FULL_NAV=1`; the routes and every
- * backend endpoint stay.
+ * The second flag of the redesign's thrash list (§ 3.6): what the demo hides beyond the testing tools — the account's
+ * Wallet & points, Dietary, Plus and Language pages. Hidden unless the build sets `VITE_NL_FULL_NAV=1`; the routes and
+ * every backend endpoint stay. (Food left this flag with E-15, S-170/S-171: the locked mockups show it in the
+ * department strip, the search scope and the home, DECISIONS 2026-10-23.)
  */
 export function fullNavEnabled(): boolean {
   const v: unknown = import.meta.env.VITE_NL_FULL_NAV;
