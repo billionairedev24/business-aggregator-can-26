@@ -100,7 +100,7 @@
 .nl-utab .nl-utab-count[data-tone='danger'] { background: var(--color-status-danger-bg); color: var(--color-status-danger-fg); }
 /* ChipTabs (Studio settings, the preview toggle) draw as these tabs too: one tab style (audit #4) */
 .nl-chips[role='tablist'] { gap: var(--space-1); flex-wrap: nowrap; overflow-x: auto; border-bottom: 1px solid var(--color-border-strong); }
-.nl-chips[role='tablist'] > .nl-chip { min-height: var(--size-touch); padding: 0 var(--space-3); border: 0; border-bottom: 3px solid transparent; border-radius: 0; margin-bottom: -1px; background: transparent; box-shadow: none; color: var(--color-text-muted); font-size: var(--type-body); font-weight: var(--weight-medium); }
+.nl-chips[role='tablist'] > .nl-chip { flex: none; min-height: var(--size-touch); padding: 0 var(--space-3); border: 0; border-bottom: 3px solid transparent; border-radius: 0; margin-bottom: -1px; background: transparent; box-shadow: none; color: var(--color-text-muted); font-size: var(--type-body); font-weight: var(--weight-medium); }
 .nl-chips[role='tablist'] > .nl-chip::before { content: none; }
 .nl-chips[role='tablist'] > .nl-chip:hover { color: var(--color-text); background: transparent; }
 .nl-chips[role='tablist'] > .nl-chip[aria-selected='true'] { border-bottom-color: var(--color-selected); color: var(--color-text); font-weight: var(--weight-bold); background: transparent; box-shadow: none; }

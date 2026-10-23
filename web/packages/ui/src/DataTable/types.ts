@@ -67,6 +67,8 @@ export interface DataTableAction<T> {
   inline?: boolean;
   /** Offer in the bulk bar when rows are selected. Default true. */
   bulk?: boolean;
+  /** A destructive action (Suspend): drawn in the danger colour, red in the bulk bar (E-15: never the action colour). */
+  danger?: boolean;
 }
 
 export interface DataTableProps<T extends object> {

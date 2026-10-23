@@ -301,7 +301,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
     else out.push({ key: 'view', label: t('view'), icon: Eye, run: () => setDialog({ mode: 'view', id: getRowId(r) }) });
     custom
       .filter((a) => a.inline && actionApplies(a, r))
-      .forEach((a) => out.push({ key: `a:${a.id}`, label: a.label, icon: a.icon ?? Lightning, showLabel: true, busy: pendingAction === a.id, run: () => void runAction(a, [r]) }));
+      .forEach((a) => out.push({ key: `a:${a.id}`, label: a.label, icon: a.icon ?? Lightning, showLabel: true, danger: a.danger, busy: pendingAction === a.id, run: () => void runAction(a, [r]) }));
     if (canUpdate) out.push({ key: 'edit', label: t('edit'), icon: PencilSimple, run: () => openEdit(r) });
     if (canDelete) out.push({ key: 'delete', label: t('delete'), icon: Trash, danger: true, run: () => setDialog({ mode: 'delete', ids: [getRowId(r)] }) });
     return out;
@@ -542,7 +542,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
             .map((a) => {
               const I = a.icon ?? Lightning;
               return (
-                <button key={a.id} type="button" className="btn nl-dt-bulk-btn nl-dt-bulk-soft" disabled={pendingAction === a.id} aria-busy={pendingAction === a.id || undefined} onClick={() => void runAction(a, selRows)}>
+                <button key={a.id} type="button" className={clsx('btn nl-dt-bulk-btn', a.danger ? 'nl-dt-bulk-danger' : 'nl-dt-bulk-soft')} disabled={pendingAction === a.id} aria-busy={pendingAction === a.id || undefined} onClick={() => void runAction(a, selRows)}>
                   <I size={16} aria-hidden="true" />
                   {pendingAction === a.id ? t('working') : a.label}
                 </button>
