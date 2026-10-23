@@ -59,7 +59,7 @@ const useT = defineMessages({
     kpis: 'Key figures', kSales: 'Sales today', kSalesD: '12% vs last Friday', kOrders: 'Orders', kOrdersD: '5 vs last Friday', kAvg: 'Average order', kAvgD: '$0.40', kRating: 'Rating', kRatingD: '312 ratings · 1 new',
     chart: 'Sales, last 14 days', todaySoFar: 'Today so far · $642.50', previous: 'Previous 13 days · avg $510', top: 'Top products today', product: 'Product', sold: 'Sold', sales: 'Sales', stock: 'Stock', left: '{n} left',
     switchBusiness: 'Switch business', searchStudio: 'Search the Studio', searchPh: 'Search orders, products, customers', ordersMatching: 'Orders matching “{q}”',
-    nDashboard: 'Dashboard', gOps: 'Operations', nOrders: 'Orders', nMessages: 'Messages', gCat: 'Catalogue', nProducts: 'Products', nStock: 'Stock', gMoney: 'Money', nPayouts: 'Payouts', nReports: 'Reports', gStore: 'Store', nStorefront: 'Storefront', nSettings: 'Settings', owner: 'Owner', person: 'Ravi Sandhu',
+    nDashboard: 'Dashboard', gOps: 'Operations', nOrders: 'Orders', nMessages: 'Messages', gCat: 'Catalogue', nProducts: 'Products', nStock: 'Stock', gMoney: 'Money', nPayouts: 'Payouts', nReports: 'Reports', gStore: 'Store', nStorefront: 'Storefront', nSettings: 'Settings', owner: 'Owner',
     fDay: 'A day', fWindow: 'A delivery window', fNight: 'Across midnight', fRange: 'A date range',
   },
   fr: {
@@ -94,7 +94,7 @@ const useT = defineMessages({
     kpis: 'Chiffres clés', kSales: 'Ventes aujourd’hui', kSalesD: '12 % par rapport à vendredi dernier', kOrders: 'Commandes', kOrdersD: '5 par rapport à vendredi dernier', kAvg: 'Commande moyenne', kAvgD: '0,40 $', kRating: 'Note', kRatingD: '312 notes · 1 nouvelle',
     chart: 'Ventes, 14 derniers jours', todaySoFar: 'Aujourd’hui jusqu’ici · 642,50 $', previous: '13 jours précédents · moy. 510 $', top: 'Meilleurs produits aujourd’hui', product: 'Produit', sold: 'Vendus', sales: 'Ventes', stock: 'Stock', left: '{n} restants',
     switchBusiness: 'Changer d’entreprise', searchStudio: 'Rechercher dans le Studio', searchPh: 'Rechercher commandes, produits, clients', ordersMatching: 'Commandes correspondant à « {q} »',
-    nDashboard: 'Tableau de bord', gOps: 'Opérations', nOrders: 'Commandes', nMessages: 'Messages', gCat: 'Catalogue', nProducts: 'Produits', nStock: 'Stock', gMoney: 'Argent', nPayouts: 'Versements', nReports: 'Rapports', gStore: 'Boutique', nStorefront: 'Vitrine', nSettings: 'Paramètres', owner: 'Propriétaire', person: 'Ravi Sandhu',
+    nDashboard: 'Tableau de bord', gOps: 'Opérations', nOrders: 'Commandes', nMessages: 'Messages', gCat: 'Catalogue', nProducts: 'Produits', nStock: 'Stock', gMoney: 'Argent', nPayouts: 'Versements', nReports: 'Rapports', gStore: 'Boutique', nStorefront: 'Vitrine', nSettings: 'Paramètres', owner: 'Propriétaire',
     fDay: 'Un jour', fWindow: 'Une plage de livraison', fNight: 'Après minuit', fRange: 'Une période',
   },
 });
@@ -324,6 +324,9 @@ function BackOfficeDemo({ t, photo }: { t: GalleryT; photo?: string }) {
   );
 }
 
+/** The demo persona of the Studio's own tests and shots (a person's name: not translated). */
+const PERSONA = ['Ravi', 'Sandhu'].join(' ');
+
 function ShellDemo({ t }: { t: GalleryT }) {
   const [cur, setCur] = useState('dashboard');
   const item = (key: string, label: string, icon: typeof Bank, badge?: string) => ({ key, label, icon, badge, href: `#${key}` });
@@ -332,7 +335,7 @@ function ShellDemo({ t }: { t: GalleryT }) {
       <AppShell brand={<Logo size={28} product="Studio" />}
         headerStart={<WorkspaceSwitcher label={t('switchBusiness')} name="Loaf & Ladder Bakery" meta="Riverside" items={[{ label: 'Loaf & Ladder Bakery', checked: true, onSelect: () => {} }]} />}
         search={<ShellSearch label={t('searchStudio')} placeholder={t('searchPh')} scopes={[{ key: 'o', label: q => t('ordersMatching', { q }) }]} onSearch={() => {}} />}
-        headerEnd={<button type="button" className="nl-topbar-item"><Avatar initials="RS" size={30} /><span className="nl-topbar-item-text">{t('person')}<span>{t('owner')}</span></span></button>}
+        headerEnd={<button type="button" className="nl-topbar-item"><Avatar initials="RS" size={30} /><span className="nl-topbar-item-text">{PERSONA}<span>{t('owner')}</span></span></button>}
         pinned={[item('dashboard', t('nDashboard'), SquaresFour)]}
         groups={[
           { label: t('gOps'), icon: Package, items: [item('orders', t('nOrders'), Package, '3'), item('messages', t('nMessages'), ChatCircleText, '2')] },

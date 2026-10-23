@@ -36,7 +36,7 @@ describe('province switchboard (S-84, design 03)', () => {
     renderConsole('/provinces');
     expect(await screen.findByRole('heading', { level: 1, name: 'Province switchboard' })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
-    const list = screen.getByRole('list');
+    const list = within(screen.getByRole('main')).getByRole('list');
     expect(within(list).getByText('GST 5% + PST 7% · en · fr')).toBeTruthy();
     expect(within(list).getByText('GST 5% + QST 9.975% · fr · en')).toBeTruthy();
     expect(within(list).getAllByText('Live').length).toBe(1);

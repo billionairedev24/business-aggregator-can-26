@@ -8,7 +8,8 @@ import { expectNoAxeViolations } from '@northline/a11y/vitest';
 const sidebar = (name = 'Main navigation') => screen.getByRole('navigation', { name });
 const navLabels = () => within(sidebar()).getAllByRole('link').map(a => a.textContent);
 /** The accordion's group heads (the rail toggle has no text). */
-const groupHeads = (name?: string) => within(sidebar(name)).getAllByRole('button').filter(b => b.hasAttribute('aria-expanded')).map(b => b.textContent);
+// E-15 (S-174): a group is a list named by its caps heading (no collapsing)
+const groupHeads = (name?: string) => [...sidebar(name).querySelectorAll('ul[aria-labelledby]')].map(ul => document.getElementById(ul.getAttribute('aria-labelledby')!)?.textContent);
 
 describe('console shell (S-90, design 03)', () => {
   it('shows the top bar: brand, search pill, the region line from the region model, the person and role', async () => {
