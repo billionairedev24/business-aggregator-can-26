@@ -72,6 +72,9 @@ const useT = defineMessages({
     rating: 'Customer rating', distance: 'Distance', price: 'Price', under10: 'Under $10', p10: '$10 to $25', dietary: 'Dietary', glutenFree: 'Gluten-free',
     any: 'Any',
     s_worktable: 'Work table and editor: status tabs, quick filters, bulk actions, save bar',
+    s_checkout: 'Checkout choices: a stacked segmented control (phones), option cards with a radio mark',
+    outOfStock: 'If an item is out of stock', subsSimilar: 'Replace with similar', subsRefund: 'Refund it', subsAsk: 'Text me first',
+    address: 'Delivery address', addrLine: '1204 17 Ave SW, Apt 804 · T2T 0B8 · Buzz 0804', addrWork: '800 Macleod Trail SE · T2G 2M3 · Front desk',
     order: 'order', orders: 'orders', colOrder: 'Order', colPlaced: 'Placed', colCustomer: 'Customer', colItems: 'Items', colWindow: 'Window', colTotal: 'Total', colStatus: 'Status',
     qToday: 'Today', qRun: 'Tonight’s run', markPacked: 'Mark packed', printLabel: 'Print label', searchOrders: 'Search order, customer or item',
     wTonight: 'Tonight 6–9 p.m.', wDelivered: 'Delivered 12:05 p.m.', it1: 'Country sourdough ×2, Seeded rye', it2: 'Sandwich loaf, sliced ×2', it3: 'Seeded rye ×2, Focaccia', it4: 'Seeded rye', it5: 'Sandwich loaf, sliced',
@@ -118,6 +121,9 @@ const useT = defineMessages({
     rating: 'Évaluation des clients', distance: 'Distance', price: 'Prix', under10: 'Moins de 10 $', p10: '10 $ à 25 $', dietary: 'Alimentation', glutenFree: 'Sans gluten',
     any: 'Toutes',
     s_worktable: 'Tableau de travail et éditeur : onglets de statut, filtres rapides, actions groupées, barre d’enregistrement',
+    s_checkout: 'Choix du paiement : sélecteur segmenté empilé (téléphones), cartes d’option avec bouton radio',
+    outOfStock: 'Si un article est en rupture de stock', subsSimilar: 'Remplacer par un article semblable', subsRefund: 'Me rembourser', subsAsk: 'M’écrire d’abord',
+    address: 'Adresse de livraison', addrLine: '1204, 17e Avenue S.-O., app. 804 · T2T 0B8 · Sonnez au 0804', addrWork: '800, Macleod Trail S.-E. · T2G 2M3 · Réception',
     order: 'commande', orders: 'commandes', colOrder: 'Commande', colPlaced: 'Passée', colCustomer: 'Client', colItems: 'Articles', colWindow: 'Plage', colTotal: 'Total', colStatus: 'Statut',
     qToday: 'Aujourd’hui', qRun: 'Tournée de ce soir', markPacked: 'Marquer emballée', printLabel: 'Imprimer l’étiquette', searchOrders: 'Rechercher commande, client ou article',
     wTonight: 'Ce soir 18 h – 21 h', wDelivered: 'Livrée à 12 h 05', it1: 'Pain de campagne ×2, Seigle aux graines', it2: 'Pain de mie tranché ×2', it3: 'Seigle aux graines ×2, Focaccia', it4: 'Seigle aux graines', it5: 'Pain de mie tranché',
@@ -399,6 +405,28 @@ function BackOfficeDemo({ t, photo }: { t: GalleryT; photo?: string }) {
 
 interface WorkRow { id: string; ref: string; placed: string; who: string; items: string; window: string; total: number; state: string; code: 'to_pack' | 'packed' | 'delivered' | 'issue' }
 
+/** A demo person's name (not translated). */
+const GALLERY_PERSON = 'Amara Osei';
+
+/** S-173: the one-page checkout's choices — the out-of-stock rule as joined boxes that stack on phones, addresses as option cards. */
+function CheckoutChoices({ t }: { t: GalleryT }) {
+  const [subs, setSubs] = useState<'similar' | 'refund' | 'ask'>('similar');
+  const [addr, setAddr] = useState('home');
+  return (
+    <>
+      <Row label={t('outOfStock')}><Segmented name="gallery-subs" stack aria-label={t('outOfStock')} value={subs} onChange={setSubs}
+        options={[{ value: 'similar', label: t('subsSimilar') }, { value: 'refund', label: t('subsRefund') }, { value: 'ask', label: t('subsAsk') }]} /></Row>
+      <Row label={t('address')}>
+        <RadioGroup className="nl-gallery-stack" aria-label={t('address')}>
+          {[['home', t('addrLine')], ['work', t('addrWork')]].map(([v, line]) => (
+            <OptionCard key={v} role="radio" mark="radio" selected={addr === v} onClick={() => setAddr(v!)} title={GALLERY_PERSON} description={line} />
+          ))}
+        </RadioGroup>
+      </Row>
+    </>
+  );
+}
+
 function WorkTable({ t }: { t: GalleryT }) {
   const { locale } = useLocale();
   const s = (code: WorkRow['code']) => (code === 'to_pack' ? t('statusToPack') : code === 'packed' ? t('statusPacked') : code === 'issue' ? t('statusWrong') : t('statusDelivered'));
@@ -492,6 +520,7 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
   { id: 'formats', title: t => t('s_formats'), render: t => <Formats t={t} /> },
   { id: 'backoffice', title: t => t('s_backoffice'), render: (t, photo) => <BackOfficeDemo t={t} photo={photo} /> },
   { id: 'worktable', title: t => t('s_worktable'), render: t => <WorkTable t={t} /> },
+  { id: 'checkout', title: t => t('s_checkout'), render: t => <CheckoutChoices t={t} /> },
   { id: 'shell', title: t => t('s_shell'), render: t => <ShellDemo t={t} />, solo: true },
 ];
 
