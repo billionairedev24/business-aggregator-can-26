@@ -9,12 +9,13 @@ import { Logo } from '../Logo';
 import { ShellSearch } from '../ShellSearch';
 import { Button } from '../Button';
 import { Checkbox, ChoiceTiles, FilterChip, OptionCard, RadioGroup, Segmented, Switch, UnderlineTabs } from '../Choice';
-import { DealBadge, MediaFallback, Price, ProductCard, QuantityStepper, ServiceCard, Stars, StatusTag } from '../Commerce';
-import { DataTable } from '../DataTable';
+import { DealBadge, MediaFallback, Price, ProductCard, QuantityStepper, ServiceCard, Stars, StatusTag, type StatusTone } from '../Commerce';
+import { DataTable, type DataTableColumn } from '../DataTable';
+import { FormSection, SaveBar } from '../Editor';
 import { listingActions, listingActionsFr, listingColumns, listingColumnsFr, listings, listingsFr, CAN } from '../DataTable/DataTable.fixtures';
 import { Pagination, Toast, ToastProvider, useToast } from '../Feedback';
 import { Field, Select, TextInput } from '../Field';
-import { defineMessages, formatDateRange, formatTimeRange, formatWhen, unitCents, useLocale } from '../i18n';
+import { defineMessages, formatDateRange, formatPrice, formatTimeRange, formatWhen, unitCents, useLocale } from '../i18n';
 import { Alert, EmptyState, ErrorState, PageHeader, Skeleton, CardSkeleton } from '../Layout';
 import { Dialog, Drawer } from '../Overlay';
 import { SearchBar } from '../SearchBar';
@@ -61,6 +62,11 @@ const useT = defineMessages({
     switchBusiness: 'Switch business', searchStudio: 'Search the Studio', searchPh: 'Search orders, products, customers', ordersMatching: 'Orders matching “{q}”',
     nDashboard: 'Dashboard', gOps: 'Operations', nOrders: 'Orders', nMessages: 'Messages', gCat: 'Catalogue', nProducts: 'Products', nStock: 'Stock', gMoney: 'Money', nPayouts: 'Payouts', nReports: 'Reports', gStore: 'Store', nStorefront: 'Storefront', nSettings: 'Settings', owner: 'Owner',
     fDay: 'A day', fWindow: 'A delivery window', fNight: 'Across midnight', fRange: 'A date range',
+    s_worktable: 'Work table and editor: status tabs, quick filters, bulk actions, save bar',
+    order: 'order', orders: 'orders', colOrder: 'Order', colPlaced: 'Placed', colCustomer: 'Customer', colItems: 'Items', colWindow: 'Window', colTotal: 'Total', colStatus: 'Status',
+    qToday: 'Today', qRun: 'Tonight’s run', markPacked: 'Mark packed', printLabel: 'Print label', searchOrders: 'Search order, customer or item',
+    wTonight: 'Tonight 6–9 p.m.', wDelivered: 'Delivered 12:05 p.m.', it1: 'Country sourdough ×2, Seeded rye', it2: 'Sandwich loaf, sliced ×2', it3: 'Seeded rye ×2, Focaccia', it4: 'Seeded rye', it5: 'Sandwich loaf, sliced',
+    pricing: 'Price and stock', pricingDesc: 'What customers pay, and how many you have.', price: 'Your price', stockOnHand: 'Stock on hand', saveProduct: 'Save product', draftSaved: 'Draft saved 9:00 a.m.', unsaved: 'Unsaved changes', saveDraft: 'Save draft', submit: 'Submit for review',
   },
   fr: {
     title: 'Galerie des composants', lede: 'Chaque composant de @northline/ui sur les jetons v2 (A · Plainsight), en anglais et en français.',
@@ -96,6 +102,11 @@ const useT = defineMessages({
     switchBusiness: 'Changer d’entreprise', searchStudio: 'Rechercher dans le Studio', searchPh: 'Rechercher commandes, produits, clients', ordersMatching: 'Commandes correspondant à « {q} »',
     nDashboard: 'Tableau de bord', gOps: 'Opérations', nOrders: 'Commandes', nMessages: 'Messages', gCat: 'Catalogue', nProducts: 'Produits', nStock: 'Stock', gMoney: 'Argent', nPayouts: 'Versements', nReports: 'Rapports', gStore: 'Boutique', nStorefront: 'Vitrine', nSettings: 'Paramètres', owner: 'Propriétaire',
     fDay: 'Un jour', fWindow: 'Une plage de livraison', fNight: 'Après minuit', fRange: 'Une période',
+    s_worktable: 'Tableau de travail et éditeur : onglets de statut, filtres rapides, actions groupées, barre d’enregistrement',
+    order: 'commande', orders: 'commandes', colOrder: 'Commande', colPlaced: 'Passée', colCustomer: 'Client', colItems: 'Articles', colWindow: 'Plage', colTotal: 'Total', colStatus: 'Statut',
+    qToday: 'Aujourd’hui', qRun: 'Tournée de ce soir', markPacked: 'Marquer emballée', printLabel: 'Imprimer l’étiquette', searchOrders: 'Rechercher commande, client ou article',
+    wTonight: 'Ce soir 18 h – 21 h', wDelivered: 'Livrée à 12 h 05', it1: 'Pain de campagne ×2, Seigle aux graines', it2: 'Pain de mie tranché ×2', it3: 'Seigle aux graines ×2, Focaccia', it4: 'Seigle aux graines', it5: 'Pain de mie tranché',
+    pricing: 'Prix et stock', pricingDesc: 'Ce que la clientèle paie, et combien vous en avez.', price: 'Votre prix', stockOnHand: 'Stock disponible', saveProduct: 'Enregistrer le produit', draftSaved: 'Brouillon enregistré à 9 h', unsaved: 'Changements non enregistrés', saveDraft: 'Enregistrer le brouillon', submit: 'Soumettre pour vérification',
   },
 });
 type GalleryT = ReturnType<typeof useT>;
@@ -324,6 +335,50 @@ function BackOfficeDemo({ t, photo }: { t: GalleryT; photo?: string }) {
   );
 }
 
+interface WorkRow { id: string; ref: string; placed: string; who: string; items: string; window: string; total: number; state: string; code: 'to_pack' | 'packed' | 'delivered' | 'issue' }
+
+function WorkTable({ t }: { t: GalleryT }) {
+  const { locale } = useLocale();
+  const s = (code: WorkRow['code']) => (code === 'to_pack' ? t('statusToPack') : code === 'packed' ? t('statusPacked') : code === 'issue' ? t('statusWrong') : t('statusDelivered'));
+  const time = (h: number, m: number) => (locale === 'fr' ? `${h} h ${String(m).padStart(2, '0')}` : `${h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')} ${h >= 12 ? 'p.m.' : 'a.m.'}`);
+  const rows: WorkRow[] = [
+    { id: '1', ref: 'NL-48213', placed: time(15, 42), who: 'A. Osei', items: t('it1'), window: t('wTonight'), total: 2625, code: 'to_pack', state: '' },
+    { id: '2', ref: 'NL-48219', placed: time(15, 55), who: 'K. Nguyen', items: t('it2'), window: t('wTonight'), total: 1550, code: 'to_pack', state: '' },
+    { id: '3', ref: 'NL-48201', placed: time(14, 10), who: 'M. Tran', items: t('it3'), window: t('wTonight'), total: 2500, code: 'packed', state: '' },
+    { id: '4', ref: 'NL-48188', placed: time(11, 20), who: 'D. Kowalski', items: t('it4'), window: t('wDelivered'), total: 925, code: 'issue', state: '' },
+    { id: '5', ref: 'NL-48177', placed: time(11, 5), who: 'P. Singh', items: t('it5'), window: t('wDelivered'), total: 775, code: 'delivered', state: '' },
+  ].map(r => ({ ...r, state: s(r.code as WorkRow['code']) })) as WorkRow[];
+  const tone = (r: WorkRow): StatusTone => (r.code === 'to_pack' ? 'warning' : r.code === 'packed' ? 'info' : r.code === 'issue' ? 'danger' : 'success');
+  const columns: DataTableColumn<WorkRow>[] = [
+    { key: 'ref', label: t('colOrder'), primary: true },
+    { key: 'placed', label: t('colPlaced') },
+    { key: 'who', label: t('colCustomer'), card: 'line' },
+    { key: 'items', label: t('colItems'), card: 'line' },
+    { key: 'window', label: t('colWindow'), card: 'meta' },
+    { key: 'total', label: t('colTotal'), type: 'money', format: v => formatPrice(v as number, locale), card: 'end' },
+    { key: 'state', label: t('colStatus'), type: 'tag', status: tone },
+  ];
+  return (
+    <div className="nl-gallery-stack">
+      <DataTable<WorkRow> entity={t('order')} plural={t('orders')} columns={columns} rows={rows} searchPlaceholder={t('searchOrders')} can={{ update: true, export: false }}
+        views={[{ id: 'all', label: t('all') }, { id: 'pack', label: t('toPack'), when: r => r.code === 'to_pack' }, { id: 'packed', label: t('packed'), when: r => r.code === 'packed' }, { id: 'delivered', label: t('delivered'), when: r => r.code === 'delivered' }, { id: 'issues', label: t('issues'), when: r => r.code === 'issue', tone: 'danger' }]}
+        quickFilters={[{ id: 'today', label: t('qToday'), when: () => true }, { id: 'run', label: t('qRun'), when: r => r.window === t('wTonight') }]} initialQuickFilters={['today']}
+        actions={[{ id: 'pack', label: t('markPacked'), inline: true, emphasis: 'primary', when: { key: 'code', in: ['to_pack'] } }, { id: 'label', label: t('printLabel'), inline: true, bulk: false, emphasis: 'secondary', when: { key: 'code', in: ['packed'] } }]}
+        onAction={() => false} onOpen={() => {}} />
+      <FormSection title={t('pricing')} description={t('pricingDesc')}>
+        <div className="nl-gallery-pair">
+          <Field label={t('price')}><TextInput defaultValue={formatPrice(850, locale)} /></Field>
+          <Field label={t('stockOnHand')}><TextInput defaultValue="14" inputMode="numeric" /></Field>
+        </div>
+      </FormSection>
+      <SaveBar sticky={false} label={t('saveProduct')} status={<StatusTag>{t('draftSaved')}</StatusTag>} note={t('unsaved')}>
+        <Button variant="secondary">{t('saveDraft')}</Button>
+        <Button>{t('submit')}</Button>
+      </SaveBar>
+    </div>
+  );
+}
+
 /** The demo persona of the Studio's own tests and shots (a person's name: not translated). */
 const PERSONA = ['Ravi', 'Sandhu'].join(' ');
 
@@ -372,6 +427,7 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
   { id: 'states', title: t => t('s_states'), render: t => <States t={t} /> },
   { id: 'formats', title: t => t('s_formats'), render: t => <Formats t={t} /> },
   { id: 'backoffice', title: t => t('s_backoffice'), render: (t, photo) => <BackOfficeDemo t={t} photo={photo} /> },
+  { id: 'worktable', title: t => t('s_worktable'), render: t => <WorkTable t={t} /> },
   { id: 'shell', title: t => t('s_shell'), render: t => <ShellDemo t={t} />, solo: true },
 ];
 

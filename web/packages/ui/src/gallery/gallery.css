@@ -40,3 +40,4 @@
 .nl-gallery-shell .nl-side { position: static; height: auto; }
 .nl-gallery-shell .nl-shell-menu { position: static; max-height: none; box-shadow: none; }
 .nl-gallery-solo-title { margin: 0; font-size: var(--type-caps); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
+.nl-gallery-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--space-4); }
