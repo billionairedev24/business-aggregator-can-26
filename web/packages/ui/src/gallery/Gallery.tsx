@@ -54,7 +54,7 @@ const useT = defineMessages({
     s_chips: 'Puces de filtre', s_checks: 'Cases à cocher, boutons radio et tuiles d’option', s_fields: 'Recherche et champs', s_commerce: 'Prix, évaluation, rabais et statut',
     s_cards: 'Cartes de produit et de service', s_table: 'Tableau de données', s_overlays: 'Boîte de dialogue, volet et notification', s_states: 'États vide, erreur, chargement et pagination',
     s_formats: 'Dates et heures',
-    r_action: 'Action principale', r_selected: 'Sélection', r_commerce: 'Commerce', r_success: 'Succès', r_warning: 'Avertissement', r_danger: 'Danger', r_info: 'Information', r_line: 'Trait', r_well: 'Fond',
+    r_action: 'Action principale', r_selected: 'Sélection', r_commerce: 'Commerce de détail', r_success: 'Succès', r_warning: 'Avertissement', r_danger: 'Risque', r_info: 'Information', r_line: 'Trait', r_well: 'Fond',
     typeNote: 'IBM Plex Sans 400 · 500 · 600 · 700. Texte 14, méta 12, titres de carte 13,5, titres de page 24.',
     addToCart: 'Ajouter au panier', buyNow: 'Acheter', seeDetails: 'Voir les détails', suspend: 'Suspendre', save: 'Enregistrer', cancel: 'Annuler', small: 'Petit', large: 'Grand', disabled: 'Désactivé',
     tabsLabel: 'Commandes', toPack: 'À emballer', packed: 'Emballées', delivered: 'Livrées', issues: 'Problèmes', all: 'Toutes',
@@ -80,6 +80,7 @@ type GalleryT = ReturnType<typeof useT>;
 
 /** Demo names: data, the same in both languages. */
 const SHOP = 'Loaf & Ladder Bakery · Maple Row';
+const FONT = 'IBM Plex Sans';
 const HIVE = 'Hive & Hollow Apiary';
 
 export interface GallerySection { id: string; title: (t: GalleryT) => string; render: (t: GalleryT, photo?: string) => ReactNode }
@@ -93,9 +94,9 @@ function Tokens({ t }: { t: GalleryT }) {
   return (
     <>
       <ul className="nl-gallery-swatches">
-        {roles.map(([role, label]) => <li key={role}><span className="nl-gallery-swatch" data-role={role} /><span><b>{label}</b><code>--color-{role}</code></span></li>)}
+        {roles.map(([role, label]) => <li key={role}><span className="nl-gallery-swatch" data-role={role} /><span><b>{label}</b><code>{`--color-${role}`}</code></span></li>)}
       </ul>
-      <p className="nl-gallery-type">IBM Plex Sans</p>
+      <p className="nl-gallery-type">{FONT}</p>
       <p className="nl-muted">{t('typeNote')}</p>
     </>
   );
