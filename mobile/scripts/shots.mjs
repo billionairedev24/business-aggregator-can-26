@@ -6,6 +6,11 @@
 //
 //   node scripts/shots.mjs consumer|courier [--only <substring>[,<substring>…]]
 //
+// S-178: the stock photos load too. The fixture build points the photo library at the consumer web's /photos/
+// (EXPO_PUBLIC_SITE_ORIGIN, http://localhost:3000 by default), which isn't running here, so every request for a
+// `…/photos/<slot>/<variant>` is answered from the variants `make photos` builds into web/apps/consumer/public/photos
+// (NL_PHOTOS_DIR to use another folder). Without them the run stops and says so (MOBILE_SHOTS_NO_PHOTOS=1 to go on).
+//
 // Writes shots-out/<app>/<nn>-<screen>.png (what the phone shows) and, when the screen scrolls, <…>-full.png (the
 // whole scroll content in one picture), the French run's screens as <…>-fr.png, and _overflow.txt listing screens
 // that scroll sideways. Native-only parts (maps, camera, the system browser, Keychain) are not on the web build.
@@ -29,6 +34,11 @@ if (!existsSync(join(DIST, 'index.html'))) {
   console.error(`${DIST} is missing: run \`pnpm --filter ${app === 'consumer' ? '@northline/consumer-app' : '@northline/courier'} export:web\` first`);
   process.exit(2);
 }
+const PHOTOS = process.env.NL_PHOTOS_DIR ?? join(MOBILE, '..', 'web', 'apps', 'consumer', 'public', 'photos');
+if (!existsSync(PHOTOS) && !process.env.MOBILE_SHOTS_NO_PHOTOS) {
+  console.error(`${PHOTOS} is missing: run \`make photos\` first (or MOBILE_SHOTS_NO_PHOTOS=1 for shots without stock photos)`);
+  process.exit(2);
+}
 if (!only) rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 
@@ -39,7 +49,13 @@ function chromiumPath() {
   return dir ? join(root, dir, 'chrome-linux', 'chrome') : undefined;
 }
 
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.ttf': 'font/ttf', '.png': 'image/png' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.ttf': 'font/ttf', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.avif': 'image/avif' };
+
+/** A photo variant by its path under /photos/ (`category/x/card-640.<hash>.jpg`), or null. */
+function photoFile(path) {
+  const file = join(PHOTOS, path);
+  return file.startsWith(PHOTOS) && existsSync(file) && extname(file) ? file : null;
+}
 const server = createServer((req, res) => {
   const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   const file = join(DIST, path);
@@ -54,6 +70,17 @@ const W = 390;
 const H = 844;
 const browser = await chromium.launch({ executablePath: chromiumPath(), args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: W, height: H }, locale: 'en-CA', deviceScaleFactor: 2 });
+// the photo library's base is another origin (the consumer web): answer its variants from disk
+const missingPhotos = new Set();
+await page.route(/\/photos\/.+\.(jpg|webp|avif)$/, async (route) => {
+  const path = decodeURIComponent(new URL(route.request().url()).pathname).replace(/^.*?\/photos\//, '');
+  const file = photoFile(path);
+  if (!file) {
+    missingPhotos.add(path);
+    return route.fulfill({ status: 404, body: '' });
+  }
+  return route.fulfill({ status: 200, contentType: TYPES[extname(file)], headers: { 'cache-control': 'max-age=3600' }, body: readFileSync(file) });
+});
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 const overflow = [];
@@ -328,10 +355,11 @@ try {
 } finally {
   writeFileSync(join(OUT, '_overflow.txt'), overflow.join('\n') + (overflow.length ? '\n' : ''));
   if (errors.length) writeFileSync(join(OUT, '_errors.txt'), errors.join('\n') + '\n');
+  if (missingPhotos.size) writeFileSync(join(OUT, '_missing-photos.txt'), [...missingPhotos].sort().join('\n') + '\n');
   await browser.close();
   server.close();
 }
-console.log(`${n} screens → ${OUT}${overflow.length ? ` · ${overflow.length} scroll sideways (_overflow.txt)` : ''}${errors.length ? ` · ${errors.length} page errors (_errors.txt)` : ''}`);
+console.log(`${n} screens → ${OUT}${overflow.length ? ` · ${overflow.length} scroll sideways (_overflow.txt)` : ''}${errors.length ? ` · ${errors.length} page errors (_errors.txt)` : ''}${missingPhotos.size ? ` · ${missingPhotos.size} photo variants not built (_missing-photos.txt; make photos)` : ''}`);
 if (failures.length) {
   console.error(`${failures.length} step(s) failed: ${failures.join(', ')}`);
   process.exit(1);

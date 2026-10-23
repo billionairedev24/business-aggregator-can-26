@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Image, PixelRatio, Platform, StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 
 import { photoFor, type Crop, type ResolvedPhoto } from '../photos/library';
 import { Art, type ArtProps } from './Art';
@@ -25,13 +25,19 @@ export interface PhotoProps {
  */
 export function Photo({ slot, photo, crop = 'card', label, fallback = null, style, testID }: PhotoProps) {
   const p = photo !== undefined ? photo : photoFor(slot, crop);
+  const [width, setWidth] = useState(0);
   if (!p) return <>{fallback}</>;
   const a11y = label
     ? ({ accessible: true, accessibilityRole: 'image', accessibilityLabel: label } as const)
     : ({ accessible: false, importantForAccessibility: 'no-hide-descendants', accessibilityElementsHidden: true } as const);
   return (
-    <View style={[styles.box, p.placeholder ? { backgroundColor: p.placeholder } : null, style]} testID={testID ?? 'photo'} {...a11y}>
-      <Image source={p.sources} style={StyleSheet.absoluteFill} resizeMode="cover" />
+    <View
+      style={[styles.box, p.placeholder ? { backgroundColor: p.placeholder } : null, style]}
+      onLayout={WEB ? (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width) : undefined}
+      testID={testID ?? 'photo'}
+      {...a11y}
+    >
+      <Image source={WEB ? (width > 0 ? sourceFor(p.sources, width) : undefined) : p.sources} style={StyleSheet.absoluteFill} resizeMode="cover" />
     </View>
   );
 }
@@ -45,6 +51,18 @@ export function Scene({ slot, photo, crop, label, style, testID, ...art }: Omit<
     <Photo slot={slot} photo={photo} crop={crop ?? (art.fit === 'contain' ? 'wide' : 'card')} label={label} style={style} testID={testID}
       fallback={<Art {...art} style={style} testID={testID} />} />
   );
+}
+
+/**
+ * S-178: react-native-web's Image takes one source (an array draws nothing — why the web build's screenshots showed only
+ * the placeholder colour), so on the web the view's width picks it: the narrowest variant at least as wide as the
+ * view in device pixels, else the widest (nothing until the view is laid out, so one file loads). iOS and Android get every variant and choose themselves.
+ */
+const WEB = Platform.OS === 'web';
+export function sourceFor<S extends { width: number }>(sources: readonly S[], width: number, ratio = PixelRatio.get()): S | undefined {
+  const sorted = [...sources].sort((a, b) => a.width - b.width);
+  const need = width * ratio;
+  return sorted.find((s) => s.width >= need) ?? sorted[sorted.length - 1];
 }
 
 const styles = StyleSheet.create({ box: { overflow: 'hidden' } });
