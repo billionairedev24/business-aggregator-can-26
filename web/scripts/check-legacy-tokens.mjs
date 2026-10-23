@@ -65,7 +65,9 @@ if (photoProblems.length) {
 // colours from the semantic roles: a raw `13px`, `#fff`, `rgb(…)` or `white` there is a look patched past the tokens.
 // Hairline nudges (0–2px, e.g. `margin-bottom: -1px` under a tab row) stay allowed. In TSX the same goes for inline
 // `style` objects (`fontSize: 13`, `padding: 6`, `color: 'white'`).
-const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'apps/studio/src/features/shell', 'apps/console/src/features/shell',
+const strictRoots = [
+  // S-177: every console screen (the console revamp; audit console-sellers / console-seller)
+  'apps/console/src', 'packages/ui/src', 'apps/consumer/src/features/shell', 'apps/studio/src/features/shell', 'apps/console/src/features/shell',
   // S-174: the Studio dashboard and the storefront's live preview (audit #7 and #10)
   'apps/studio/src/features/dashboard', 'apps/studio/src/features/storefront/StorefrontPreview.tsx', 'apps/studio/src/features/storefront/StorefrontPreview.css'];
 // S-174: no inline `style` at all in these (a class with the scale tokens instead; the Studio dashboard had a dozen)
@@ -113,6 +115,24 @@ for (const root of noStyleRoots) {
     if (!rel.endsWith('.tsx') || strictSkip.some(r => r.test(rel))) continue;
     readFileSync(file, 'utf8').split('\n').forEach((line, i) => { if (/\sstyle=\{/.test(line)) raw.push(`${rel}:${i + 1}  inline style (use a class with the scale tokens)`); });
   }
+}
+
+// ── S-177: the console's colour roles and money (audit console-sellers / console-seller) ─────────────────────────────
+// A status is a semantic pair (`status-*` / `tag-success`… / StatusTag), never the action or commerce colour: the old
+// accent / highlight tones made every status chip blue, magenta or grey. Money goes through the shared formatters
+// (`formatPrice` / `fmt.price`, `formatCompactMoney` / `fmt.compactMoney` for a KPI), never `formatMoney` or a whole-dollar
+// variant, so one amount reads the same on every screen.
+const CONSOLE_ROLE = /\btag-(?:accent(?:-2)?|highlight)\b|\btone=(?:"|\{\s*')(?:accent(?:-2)?|highlight|brand|commerce)\b|\b(?:formatMoney|fmt\.money)\(|variant="(?:ghost|danger|accent|highlight)"/g;
+const consoleProblems = [];
+for (const file of walk(path.join(webRoot, 'apps/console/src'))) {
+  const rel = path.relative(webRoot, file).split(path.sep).join('/');
+  if (!rel.endsWith('.tsx') && !rel.endsWith('.ts')) continue;
+  if (skip.some(r => r.test(rel))) continue;
+  readFileSync(file, 'utf8').split('\n').forEach((line, i) => { for (const m of line.matchAll(CONSOLE_ROLE)) consoleProblems.push(`${rel}:${i + 1}  ${m[0]}`); });
+}
+if (consoleProblems.length) {
+  console.error(`Console colour roles and money (S-177): statuses take a status tone, prices formatPrice / formatCompactMoney, buttons primary | secondary | tertiary | destructive:\n${consoleProblems.map(p => '  ' + p).join('\n')}`);
+  process.exit(1);
 }
 
 if (problems.length || raw.length) {

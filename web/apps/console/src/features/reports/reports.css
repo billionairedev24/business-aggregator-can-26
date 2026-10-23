@@ -6,7 +6,7 @@
 .nl-rp-table { font-size: var(--text-sm); }
 .nl-rp-table summary { cursor: pointer; color: var(--color-link); min-height: var(--size-touch); display: flex; align-items: center; }
 .nl-rp-cohorts { width: 100%; }
-.nl-rp-cell { display: inline-block; min-width: 44px; padding: 2px 6px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--color-action-primary) var(--rate, 0%), var(--color-surface)); color: var(--color-text); font-variant-numeric: tabular-nums; }
+.nl-rp-cell { display: inline-block; min-width: 44px; padding: 2px var(--space-1-5); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--color-action-primary) var(--rate, 0%), var(--color-surface)); color: var(--color-text); font-variant-numeric: tabular-nums; }
 .nl-rp-empty { color: var(--color-text-muted); }
 .nl-rp-gaps { font-size: var(--text-sm); display: flex; flex-direction: column; }
 .nl-rp-gaps > div { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--color-border); }
