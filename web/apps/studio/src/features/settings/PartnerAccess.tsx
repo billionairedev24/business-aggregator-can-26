@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { Button, ErrorState, PageSkeleton, Tag, useFormatters, type TagTone } from '@northline/ui';
+import { Button, ErrorState, PageSkeleton, StatusTag, useFormatters, type StatusTone } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { consentsQuery, useDecideConsent, type Consent } from './integrationsApi';
 import { useIntegrationsT } from './integrationsMessages';
 
-const TONE: Record<Consent['state'], TagTone> = { requested: 'highlight', approved: 'accent', declined: 'neutral', revoked: 'neutral' };
+const TONE: Record<Consent['state'], StatusTone> = { requested: 'warning', approved: 'success', declined: 'neutral', revoked: 'neutral' };
 
 /**
  * S-158 partner access (Settings › API & integrations): the partners {brand} registered that asked to act for this
@@ -32,7 +32,7 @@ export function PartnerAccess() {
                 <li key={c.partnerId}>
                   <span className="nl-set-row">
                     <strong>{c.displayName}</strong>
-                    <Tag tone={TONE[c.state]}>{t(`st_${c.state}`)}</Tag>
+                    <StatusTag tone={TONE[c.state]}>{t(`st_${c.state}`)}</StatusTag>
                   </span>
                   <span className="nl-set-sub"><code>{c.clientId}</code> · {t('scopes', { scopes: scopes(c) })}</span>
                   <span className="nl-set-sub">

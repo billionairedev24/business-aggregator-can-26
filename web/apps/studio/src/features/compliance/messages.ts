@@ -3,6 +3,7 @@ import { defineMessages } from '@northline/ui';
 /** Stripe & compliance (design 02 lines 921–964). French follows design/i18n-fr.js where it has the wording. */
 export const useComplianceT = defineMessages({
   en: {
+    kpis: 'Compliance figures', kpiPayoutsOn: 'Enabled', kpiPayoutsOff: 'Paused', kpiStripe: 'Stripe payouts', kpiNotConnected: 'Not connected', kpiStripeOpen: '{n, plural, one {# item to finish} other {# items to finish}}', kpiStripeDone: 'everything verified', kpiDocs: 'Documents verified', kpiDocsDue: '{n, plural, one {# due} other {# due}}', kpiDocsNone: 'nothing due', kpiObligations: 'Obligations accepted', kpiObUpToDate: 'up to date', kpiObNew: 'version {version} to accept',
     kicker: 'Stripe & compliance',
     titleOne: 'One item due: {doc}',
     titleMany: '{n} items due, starting with {doc}',
@@ -65,6 +66,7 @@ export const useComplianceT = defineMessages({
     loadError: 'We couldn’t load Stripe & compliance.',
   },
   fr: {
+    kpis: 'Chiffres de conformité', kpiPayoutsOn: 'Activés', kpiPayoutsOff: 'Suspendus', kpiStripe: 'Versements Stripe', kpiNotConnected: 'Non connecté', kpiStripeOpen: '{n, plural, one {# élément à terminer} other {# éléments à terminer}}', kpiStripeDone: 'tout est vérifié', kpiDocs: 'Documents vérifiés', kpiDocsDue: '{n, plural, one {# à renouveler} other {# à renouveler}}', kpiDocsNone: 'rien à renouveler', kpiObligations: 'Obligations acceptées', kpiObUpToDate: 'à jour', kpiObNew: 'version {version} à accepter',
     kicker: 'Stripe et conformité',
     titleOne: 'Un élément à faire : {doc}',
     titleMany: '{n} éléments à faire, à commencer par {doc}',

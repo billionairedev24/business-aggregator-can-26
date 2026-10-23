@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, DataTable, Dialog, Drawer, ErrorState, Field, PageSkeleton, Tag, TextInput, useFormatters, codeValue, type DataTableColumn } from '@northline/ui';
+import { Alert, Button, DataTable, Dialog, Drawer, ErrorState, Field, PageSkeleton, StatusTag, TextInput, useFormatters, codeValue, type DataTableColumn } from '@northline/ui';
 import { useSession } from '../../lib/session';
 import { authApi, AuthenticatorSetupForm, ChangePasswordForm, createPasskey, getPasskey, PasskeyError, PasswordField, regenerateBackupCodes, useAuthKitT } from '@northline/auth-kit';
 import { useMerchantId, useRole } from '../shell/api';
@@ -102,12 +102,12 @@ function Factors({ security }: { security: Security }) {
   return (
     <>
       <ul className="nl-set-factors">
-        {security.passkeys.length === 0 && <li><span>{t('passkeyNone')}</span><Tag tone="neutral">{t('notSetUp')}</Tag></li>}
+        {security.passkeys.length === 0 && <li><span>{t('passkeyNone')}</span><StatusTag tone="warning">{t('notSetUp')}</StatusTag></li>}
         {security.passkeys.map(p => (
           <li key={p.id}>
             <span>{t('passkeyRow', { label: p.label })}</span>
             <span className="nl-set-rowside">
-              {p === primary ? <Tag tone="accent">{t('primary')}</Tag> : <Tag tone="outline">{p.createdAt ? `${t('added')} ${f.date(p.createdAt, 'full')}` : t('added')}</Tag>}
+              {p === primary ? <StatusTag tone="success">{t('primary')}</StatusTag> : <StatusTag tone="neutral">{p.createdAt ? `${t('added')} ${f.date(p.createdAt, 'full')}` : t('added')}</StatusTag>}
               <Button variant="ghost" aria-label={t('removeKeyLabel', { label: p.label })} title={lastFactor ? t('err_last_factor') : undefined}
                 disabled={lastFactor} onClick={() => { change.reset(); setRemoving(p); }}>{t('removeKey')}</Button>
             </span>
@@ -121,7 +121,7 @@ function Factors({ security }: { security: Security }) {
         <li>
           <span>{t('authenticator')}</span>
           <span className="nl-set-rowside">
-            <Tag tone={security.authenticator ? 'accent' : 'neutral'}>{security.authenticator ? t('enabled') : t('notSetUp')}</Tag>
+            <StatusTag tone={security.authenticator ? 'success' : 'neutral'}>{security.authenticator ? t('enabled') : t('notSetUp')}</StatusTag>
             <Button variant="ghost" onClick={() => { change.reset(); setFactorMessage(null); setEditing('authenticator'); }}>{security.authenticator ? kit('authenticatorAgain') : kit('authenticatorSetUp')}</Button>
           </span>
         </li>
@@ -133,8 +133,8 @@ function Factors({ security }: { security: Security }) {
           <span>{t('backupCodes', { n: security.backupCodesRemaining })}{change.error && !editing && !removing && <span role="alert" className="nl-error">{t('codesError')}</span>}</span>
           <Button variant="ghost" disabled={change.busy} onClick={() => void newCodes()}>{t('newCodes')}</Button>
         </li>
-        <li><span>{t('payoutReauth')}</span><Tag tone="accent">{t('on')}</Tag></li>
-        <li><span>{security.email ? t('loginAlerts', { email: security.email }) : t('loginAlertsNone')}</span><Tag tone="accent">{t('on')}</Tag></li>
+        <li><span>{t('payoutReauth')}</span><StatusTag tone="success">{t('on')}</StatusTag></li>
+        <li><span>{security.email ? t('loginAlerts', { email: security.email }) : t('loginAlertsNone')}</span><StatusTag tone="success">{t('on')}</StatusTag></li>
         <li>
           <span>{security.sessions.length ? t('sessions', { n: security.sessions.length, devices: devices.join(', ') }) : t('sessionsNone')}</span>
           <Button variant="ghost" onClick={() => { change.reset(); setSessionsOpen(true); }} disabled={!security.sessions.length && !security.signIns.length}>{t('review')}</Button>
@@ -248,7 +248,7 @@ function Sessions({ security, sid, change }: { security: Security; sid: string |
               </span>
               {s.apps.length > 0 && <span className="nl-set-sub">{t('viaApps', { apps: s.apps.join(', ') })}</span>}
             </span>
-            {s.current ? <Tag tone="accent">{t('thisDevice')}</Tag>
+            {s.current ? <StatusTag tone="info">{t('thisDevice')}</StatusTag>
               : <Button variant="ghost" aria-label={t('revokeSessionLabel', { device: deviceName(s.device, t) })} onClick={() => { change.reset(); setDone(null); setConfirm(s); }}>{t('revokeSession')}</Button>}
           </li>
         ))}
