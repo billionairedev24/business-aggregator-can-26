@@ -24,6 +24,7 @@ const useT = defineMessages({
     verified: 'Verified',
     was: 'Was {price}',
     off: '{percent}% off',
+    andUp: '& up', ratingUp: '{rating} stars & up',
   },
   fr: {
     stars: '{rating} sur 5 étoiles',
@@ -36,6 +37,7 @@ const useT = defineMessages({
     verified: 'Vérifié',
     was: 'Avant {price}',
     off: '{percent} % de rabais',
+    andUp: 'et plus', ratingUp: '{rating} étoiles et plus',
   },
 });
 
@@ -128,6 +130,24 @@ export function Stars({ rating, reviewCount, showValue = true, size = 13, classN
       </span>
       {reviewCount != null ? <span className="nl-stars-count"><span aria-hidden>({formatNumber(reviewCount, locale)})</span><span className="nl-sr-only">{t('reviews', { count: reviewCount })}</span></span> : null}
     </span>
+  );
+}
+
+/**
+ * The results rail's "Customer rating" filter (the mockups' "★★★★☆ & up" rows): one toggle a row, the chosen one on
+ * the selected tint with an ink edge; pressing it again clears it. Named "4 stars & up".
+ */
+export function RatingFilter({ value, options = [4, 3], onChange }: { value: number | undefined; options?: readonly number[]; onChange: (rating: number | undefined) => void }) {
+  const t = useT();
+  return (
+    <div className="nl-rate-filter">
+      {options.map(r => (
+        <button key={r} type="button" className="nl-rate-opt" aria-pressed={value === r} aria-label={t('ratingUp', { rating: r })} onClick={() => onChange(value === r ? undefined : r)}>
+          <span className="nl-stars-row" aria-hidden>{[0, 1, 2, 3, 4].map(i => <Star key={i} size={13} fill={i < r ? 1 : 0} />)}</span>
+          <span aria-hidden>{t('andUp')}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 

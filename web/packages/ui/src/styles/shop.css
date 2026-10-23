@@ -52,3 +52,28 @@
 .nl-swatch-4 { background: var(--color-text-muted); }
 .nl-swatch-5 { background: var(--color-success); }
 .nl-swatch-6 { background: var(--color-text); }
+
+/* home tiles (PanelTile, PictureGrid; E-15 design/revamp/a.html): white panels with a hairline edge, a bold title,
+   two-by-two square pictures with captions, "See all …" at the foot; four a row, two on phones */
+.nl-panel-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3-5); }
+.nl-panel-tile { display: flex; flex-direction: column; gap: var(--space-2-5); min-width: 0; padding: var(--space-3-5); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); box-sizing: border-box; }
+.nl-panel-tile-title { margin: 0; font-family: var(--font-sans); font-size: var(--type-sub); font-weight: var(--weight-bold); line-height: 1.25; letter-spacing: -0.005em; }
+.nl-panel-tile-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.nl-panel-tile-more { align-self: flex-start; display: inline-flex; align-items: center; gap: 2px; min-height: var(--size-touch); margin-block: calc(-1 * var(--space-2-5)) calc(-1 * var(--space-2)); font-size: var(--type-card-title); font-weight: var(--weight-semibold); color: var(--color-link); text-decoration: none; }
+.nl-panel-tile-more:hover { text-decoration: underline; }
+.nl-picture-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2-5) var(--space-3); }
+.nl-picture-grid li { min-width: 0; display: flex; }
+.nl-picture-grid-link { flex: 1; display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; color: var(--color-text-muted); text-decoration: none; }
+.nl-picture-grid-link:hover { color: var(--color-text); text-decoration: none; }
+.nl-picture-grid-link:hover .nl-picture-grid-label { text-decoration: underline; }
+.nl-picture-grid-link:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-image); }
+.nl-picture-grid-pic { position: relative; display: block; aspect-ratio: 1 / 1; border-radius: var(--radius-image); overflow: hidden; background: var(--color-well); }
+.nl-picture-grid-pic > * { position: absolute; inset: 0; }
+.nl-picture-grid-label { font-size: var(--type-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 899.98px) { .nl-panel-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2-5); } }
+@media (max-width: 599.98px) {
+  .nl-panel-tile { padding: var(--space-3); gap: var(--space-2); }
+  .nl-panel-tile-title { font-size: var(--type-card-title); }
+  .nl-picture-grid { gap: var(--space-1-5); }
+  .nl-picture-grid-label { font-size: var(--type-caps); }
+}

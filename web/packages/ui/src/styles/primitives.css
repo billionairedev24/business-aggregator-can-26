@@ -61,7 +61,7 @@
 .nl-chip { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1-5); min-height: var(--size-control-sm); min-width: var(--size-control-sm); padding: 0 var(--space-3); font: inherit; font-size: var(--type-label); font-weight: var(--weight-regular); white-space: nowrap; border-radius: var(--radius-control); cursor: pointer; border: 1px solid var(--color-action-secondary-border); background: var(--color-surface); color: var(--color-text); text-decoration: none; }
 .nl-chip::after { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, var(--size-touch)); height: max(100%, var(--size-touch)); transform: translate(-50%, -50%); }
 .nl-chip:hover { background: var(--color-surface-hover); border-color: var(--color-border-control); color: var(--color-text); text-decoration: none; }
-.nl-chip:is([aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], [data-state='on'], [data-state='checked'], [data-state='active'], [data-state='selected'], :has(> input:checked)) {
+.nl-chip:is([aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], [aria-current='page'], [data-state='on'], [data-state='checked'], [data-state='active'], [data-state='selected'], :has(> input:checked)) {
   background: var(--color-selected-tint); border-color: var(--color-selected); box-shadow: inset 0 0 0 1px var(--color-selected); color: var(--color-selected-ink); font-weight: var(--weight-semibold);
 }
 .nl-chip:is([aria-pressed='true'], [aria-checked='true'], [data-state='on'], [data-state='checked'], [data-state='active'], [data-state='selected'], :has(> input:checked))::before {
@@ -299,3 +299,11 @@
 .nl-feedback-attached { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
 .nl-feedback-remove { min-width: var(--size-touch); min-height: var(--size-touch); border: 0; background: none; color: var(--color-text); cursor: pointer; border-radius: var(--radius-control); }
 .nl-feedback-remove:focus-visible { outline: 2px solid var(--color-focus); }
+
+/* ── filter rail groups (FilterGroup): a bold heading over its options. The rail is dense (the mockups' rows), so its
+   rows are full-width 32 px targets (WCAG 2.5.8 asks 24), not 44 px: 44 would double the rail's height. ── */
+.nl-fgroup { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.nl-fgroup-label { margin: 0; font-family: var(--font-sans); font-size: var(--type-card-title); font-weight: var(--weight-bold); }
+.nl-fgroup-items { display: flex; flex-direction: column; min-width: 0; }
+.nl-fgroup-items > .nl-check { display: flex; min-height: var(--size-control-sm); align-items: center; font-size: var(--type-card-title); }
+.nl-fgroup-items > .nl-check .nl-box { margin-top: 0; }

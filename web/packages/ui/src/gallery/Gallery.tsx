@@ -1,9 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import './gallery.css';
-import { Leaf, MagnifyingGlass, Package, Prohibit, ShoppingCart, Storefront } from '@phosphor-icons/react';
+import { Leaf, MagnifyingGlass, Package, Prohibit, ShoppingCart, SignIn, Storefront, Truck } from '@phosphor-icons/react';
+import { AccountMenu } from '../AccountMenu';
+import { LocationPill } from '../LocationPill';
+import { PromoStrip, SiteHeader } from '../SiteHeader';
 import { Button } from '../Button';
-import { Checkbox, ChoiceTiles, FilterChip, OptionCard, RadioGroup, Segmented, Switch, UnderlineTabs } from '../Choice';
-import { DealBadge, MediaFallback, Price, ProductCard, QuantityStepper, ServiceCard, Stars, StatusTag } from '../Commerce';
+import { Checkbox, ChoiceTiles, FilterChip, FilterGroup, OptionCard, RadioGroup, Segmented, Switch, UnderlineTabs } from '../Choice';
+import { DealBadge, MediaFallback, Price, ProductCard, QuantityStepper, RatingFilter, ServiceCard, Stars, StatusTag } from '../Commerce';
 import { DataTable } from '../DataTable';
 import { listingActions, listingActionsFr, listingColumns, listingColumnsFr, listings, listingsFr, CAN } from '../DataTable/DataTable.fixtures';
 import { Pagination, Toast, ToastProvider, useToast } from '../Feedback';
@@ -47,6 +50,12 @@ const useT = defineMessages({
     emptyTitle: 'No orders yet', emptyBody: 'Orders show here once customers buy from you.', start: 'Add a product', errorMsg: 'We couldn’t load your orders.',
     loading: 'Loading', pageHeader: 'Orders', pageLede: 'Tonight’s pickup at 5:30 p.m. · 5 orders, 3 still to pack', export: 'Export', notice: 'Payouts go out every Tuesday.',
     fDay: 'A day', fWindow: 'A delivery window', fNight: 'Across midnight', fRange: 'A date range',
+    s_site: 'Site header, department strip and promo strip', s_filters: 'Filter rail',
+    hello: 'Hello, {name}', helloGuest: 'Hello, sign in', accountOrders: 'Account & orders', signIn: 'Sign in',
+    bakery: 'Bakery', butcher: 'Butcher', grocery: 'Grocery', mechanics: 'Mechanics', cleaners: 'Cleaners', deals: 'Today’s deals', sell: 'Sell on {brand}',
+    cutoff: '<b>Tonight’s pooled run closes at 5:30 p.m.</b> Mix any 3 shops for one $2.99 delivery.', left: '2 h 48 min left', cutoffLabel: 'Delivery cut-off',
+    rating: 'Customer rating', distance: 'Distance', price: 'Price', under10: 'Under $10', p10: '$10 to $25', dietary: 'Dietary', glutenFree: 'Gluten-free',
+    any: 'Any',
   },
   fr: {
     title: 'Galerie des composants', lede: 'Chaque composant de @northline/ui sur les jetons v2 (A · Plainsight), en anglais et en français.',
@@ -74,6 +83,12 @@ const useT = defineMessages({
     emptyTitle: 'Aucune commande pour l’instant', emptyBody: 'Les commandes s’affichent ici dès que la clientèle achète chez vous.', start: 'Ajouter un produit', errorMsg: 'Impossible de charger vos commandes.',
     loading: 'Chargement', pageHeader: 'Commandes', pageLede: 'Cueillette de ce soir à 17 h 30 · 5 commandes, 3 à emballer', export: 'Exporter', notice: 'Les versements partent chaque mardi.',
     fDay: 'Un jour', fWindow: 'Une plage de livraison', fNight: 'Après minuit', fRange: 'Une période',
+    s_site: 'En-tête du site, bande des rayons et bande promotionnelle', s_filters: 'Volet de filtres',
+    hello: 'Bonjour, {name}', helloGuest: 'Bonjour, connectez-vous', accountOrders: 'Compte et commandes', signIn: 'Se connecter',
+    bakery: 'Boulangerie', butcher: 'Boucherie', grocery: 'Épicerie', mechanics: 'Mécaniciens', cleaners: 'Ménage', deals: 'Aubaines du jour', sell: 'Vendre sur {brand}',
+    cutoff: '<b>La tournée partagée de ce soir ferme à 17 h 30.</b> Combinez 3 boutiques pour une seule livraison à 2,99 $.', left: 'Encore 2 h 48 min', cutoffLabel: 'Heure limite de livraison',
+    rating: 'Évaluation des clients', distance: 'Distance', price: 'Prix', under10: 'Moins de 10 $', p10: '10 $ à 25 $', dietary: 'Alimentation', glutenFree: 'Sans gluten',
+    any: 'Toutes',
   },
 });
 type GalleryT = ReturnType<typeof useT>;
@@ -82,6 +97,7 @@ type GalleryT = ReturnType<typeof useT>;
 const SHOP = 'Loaf & Ladder Bakery · Maple Row';
 const FONT = 'IBM Plex Sans';
 const HIVE = 'Hive & Hollow Apiary';
+const PLACE = 'Maple Row T2N';
 
 export interface GallerySection { id: string; title: (t: GalleryT) => string; render: (t: GalleryT, photo?: string) => ReactNode }
 
@@ -203,6 +219,52 @@ function Cards({ t, photo }: { t: GalleryT; photo?: string }) {
   );
 }
 
+function Site({ t }: { t: GalleryT }) {
+  const [q, setQ] = useState('');
+  const [scope, setScope] = useState('all');
+  const link = (key: string, href: string, extra: Partial<{ current: boolean; group: string; tone: 'deal' }> = {}) => ({ key, href, label: t(key as 'bakery'), ...extra });
+  return (
+    <div className="nl-gallery-frame">
+      <SiteHeader
+        location={<LocationPill status="saved" name="Amara" label={PLACE} onOpen={() => {}} />}
+        search={<SearchBar variant="header" value={q} onChange={setQ} onSubmit={() => {}} label={t('q')} placeholder={t('qPlaceholder')}
+          scope={{ value: scope, onChange: setScope, options: [{ value: 'all', label: t('all') }, { value: 'services', label: t('services') }, { value: 'shop', label: t('shop') }, { value: 'food', label: t('food') }] }} />}
+        links={[link('services', '#services'), link('shop', '#shop', { current: true }), link('food', '#food')]}
+        shortcuts={[link('bakery', '#bakery', { group: 'shop' }), link('butcher', '#butcher', { group: 'shop' }), link('grocery', '#grocery', { group: 'shop' }), link('mechanics', '#mechanics', { group: 'services' }), link('cleaners', '#cleaners', { group: 'services' })]}
+        end={[link('deals', '#deals', { tone: 'deal' }), link('sell', '#sell')]}
+        menu={[{ key: 'shop', heading: t('shop'), href: '#shop', links: [link('bakery', '#bakery')] }]}
+        cart={{ count: 4, href: '#cart' }}
+        account={<AccountMenu greeting={{ line1: t('hello', { name: 'Amara' }), line2: t('accountOrders') }} user={{ name: 'Amara Osei', initials: 'AO' }} sections={[{ items: [{ key: 'in', label: t('signIn'), icon: SignIn, href: '#in' }] }]} />} />
+      <PromoStrip icon={<Truck size={18} />} label={t('cutoffLabel')} end={t('left')}><Eta html={t('cutoff')} /></PromoStrip>
+    </div>
+  );
+}
+
+function Filters({ t }: { t: GalleryT }) {
+  const [tonight, setTonight] = useState(true), [vegan, setVegan] = useState(false), [rating, setRating] = useState<number | undefined>(4);
+  const [km, setKm] = useState<'2' | '5' | '10' | 'any'>('5'), [p, setP] = useState('under10');
+  return (
+    <div className="nl-gallery-rail">
+      <FilterGroup label={t('delivery')}>
+        <Checkbox checked={tonight} onChange={setTonight} label={t('tonightOpt')} count={64} />
+        <Checkbox checked={false} onChange={() => {}} label={t('pickup')} count={52} />
+      </FilterGroup>
+      <FilterGroup label={t('rating')}><RatingFilter value={rating} onChange={setRating} /></FilterGroup>
+      <FilterGroup label={t('distance')}>
+        <Segmented name="gallery-km" size="sm" fill aria-label={t('distance')} value={km} onChange={setKm} options={[{ value: '2', label: '2 km' }, { value: '5', label: '5 km' }, { value: '10', label: '10 km' }, { value: 'any', label: t('any') }]} />
+      </FilterGroup>
+      <FilterGroup label={t('price')}>
+        <Checkbox checked={p === 'under10'} onChange={on => setP(on ? 'under10' : '')} label={t('under10')} count={12} />
+        <Checkbox checked={p === 'p10'} onChange={on => setP(on ? 'p10' : '')} label={t('p10')} count={47} />
+      </FilterGroup>
+      <FilterGroup label={t('dietary')}>
+        <Checkbox checked={vegan} onChange={setVegan} label={t('vegan')} count={31} />
+        <Checkbox checked={false} onChange={() => {}} label={t('glutenFree')} count={6} />
+      </FilterGroup>
+    </div>
+  );
+}
+
 function Table() {
   const { locale } = useLocale();
   return locale === 'fr'
@@ -261,6 +323,7 @@ function Formats({ t }: { t: GalleryT }) {
 
 export const GALLERY_SECTIONS: readonly GallerySection[] = [
   { id: 'tokens', title: t => t('s_tokens'), render: t => <Tokens t={t} /> },
+  { id: 'site', title: t => t('s_site'), render: t => <Site t={t} /> },
   {
     id: 'buttons', title: t => t('s_buttons'), render: t => (
       <>
@@ -272,6 +335,7 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
   { id: 'tabs', title: t => t('s_tabs'), render: t => <Tabs t={t} /> },
   { id: 'choice', title: t => t('s_choice'), render: t => <Choices t={t} /> },
   { id: 'chips', title: t => t('s_chips'), render: t => <Chips t={t} /> },
+  { id: 'filters', title: t => t('s_filters'), render: t => <Filters t={t} /> },
   { id: 'checks', title: t => t('s_checks'), render: t => <Checks t={t} /> },
   { id: 'fields', title: t => t('s_fields'), render: t => <Fields t={t} /> },
   { id: 'commerce', title: t => t('s_commerce'), render: t => <Commerce t={t} /> },
