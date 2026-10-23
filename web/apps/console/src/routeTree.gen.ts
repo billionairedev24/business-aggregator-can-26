@@ -37,6 +37,7 @@ import { Route as ConsoleOrdersOrderRefRouteImport } from './routes/_console/ord
 import { Route as ConsoleSellersIndexRouteImport } from './routes/_console/sellers.index'
 import { Route as ConsoleSellersSellerIdRouteImport } from './routes/_console/sellers.$sellerId'
 import { Route as ConsoleTrustAppealsRouteImport } from './routes/_console/trust_.appeals'
+import { Route as ConsoleDisputesKindCaseIdRouteImport } from './routes/_console/disputes_.$kind.$caseId'
 
 const ConsoleRoute = ConsoleRouteImport.update({
   id: '/_console',
@@ -177,6 +178,12 @@ const ConsoleTrustAppealsRoute = ConsoleTrustAppealsRouteImport.update({
   path: '/trust/appeals',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleDisputesKindCaseIdRoute =
+  ConsoleDisputesKindCaseIdRouteImport.update({
+    id: '/disputes_/$kind/$caseId',
+    path: '/disputes/$kind/$caseId',
+    getParentRoute: () => ConsoleRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ConsoleIndexRoute
@@ -206,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/sellers/$sellerId': typeof ConsoleSellersSellerIdRoute
   '/trust/appeals': typeof ConsoleTrustAppealsRoute
   '/sellers/': typeof ConsoleSellersIndexRoute
+  '/disputes/$kind/$caseId': typeof ConsoleDisputesKindCaseIdRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
@@ -235,6 +243,7 @@ export interface FileRoutesByTo {
   '/sellers/$sellerId': typeof ConsoleSellersSellerIdRoute
   '/trust/appeals': typeof ConsoleTrustAppealsRoute
   '/sellers': typeof ConsoleSellersIndexRoute
+  '/disputes/$kind/$caseId': typeof ConsoleDisputesKindCaseIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -266,6 +275,7 @@ export interface FileRoutesById {
   '/_console/sellers/$sellerId': typeof ConsoleSellersSellerIdRoute
   '/_console/trust_/appeals': typeof ConsoleTrustAppealsRoute
   '/_console/sellers/': typeof ConsoleSellersIndexRoute
+  '/_console/disputes_/$kind/$caseId': typeof ConsoleDisputesKindCaseIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/sellers/$sellerId'
     | '/trust/appeals'
     | '/sellers/'
+    | '/disputes/$kind/$caseId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/sign-in'
@@ -326,6 +337,7 @@ export interface FileRouteTypes {
     | '/sellers/$sellerId'
     | '/trust/appeals'
     | '/sellers'
+    | '/disputes/$kind/$caseId'
   id:
     | '__root__'
     | '/_console'
@@ -356,6 +368,7 @@ export interface FileRouteTypes {
     | '/_console/sellers/$sellerId'
     | '/_console/trust_/appeals'
     | '/_console/sellers/'
+    | '/_console/disputes_/$kind/$caseId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -561,6 +574,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleTrustAppealsRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/disputes_/$kind/$caseId': {
+      id: '/_console/disputes_/$kind/$caseId'
+      path: '/disputes/$kind/$caseId'
+      fullPath: '/disputes/$kind/$caseId'
+      preLoaderRoute: typeof ConsoleDisputesKindCaseIdRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
   }
 }
 
@@ -591,6 +611,7 @@ interface ConsoleRouteChildren {
   ConsoleSellersSellerIdRoute: typeof ConsoleSellersSellerIdRoute
   ConsoleTrustAppealsRoute: typeof ConsoleTrustAppealsRoute
   ConsoleSellersIndexRoute: typeof ConsoleSellersIndexRoute
+  ConsoleDisputesKindCaseIdRoute: typeof ConsoleDisputesKindCaseIdRoute
 }
 
 const ConsoleRouteChildren: ConsoleRouteChildren = {
@@ -620,6 +641,7 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleSellersSellerIdRoute: ConsoleSellersSellerIdRoute,
   ConsoleTrustAppealsRoute: ConsoleTrustAppealsRoute,
   ConsoleSellersIndexRoute: ConsoleSellersIndexRoute,
+  ConsoleDisputesKindCaseIdRoute: ConsoleDisputesKindCaseIdRoute,
 }
 
 const ConsoleRouteWithChildren =

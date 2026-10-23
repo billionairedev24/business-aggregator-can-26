@@ -33,41 +33,44 @@ const user = () => userEvent.setup({ delay: null });
 describe('disputes & refunds (S-80, design 03 disputes)', () => {
   afterEach(() => vi.useRealTimers());
 
-  it('shows the desk: KPIs, the cases table, and a case in the sheet with both parties and the evidence', async () => {
+  it('shows the desk: KPIs, the state tabs with counts, status tags, and a case’s page with both parties and the evidence', async () => {
     vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
     api(['trust_safety']);
     const { router } = renderConsole('/disputes');
     expect((await screenReady()).textContent).toBe('Disputes & refunds');
-    expect(screen.getByText(/Every customer refund request opens a case\. The seller has 24 h to accept or respond/)).toBeTruthy();
+    expect(screen.getByText('All markets · 3 cases for an agent · decided within 2 business days')).toBeTruthy();
     const kpis = within(screen.getByRole('list', { name: 'The desk at a glance' }));
     expect(kpis.getByText('For an agent').nextElementSibling?.textContent).toBe('3');
     expect(kpis.getByText('In the seller’s 24 h').nextElementSibling?.textContent).toBe('61');
     expect(kpis.getByText('Closed this week').nextElementSibling?.textContent).toBe('214');
+    expect(within(screen.getByRole('tablist', { name: 'Cases by state' })).getAllByRole('tab').map(x => x.textContent)).toEqual(['For an agent2', 'Waiting for a co-sign1', 'Decided0', 'All3']);
     const ds = screen.getByText('DS-1188').closest('tr, .nl-dt-card') as HTMLElement;
     expect(within(ds).getByText('$160.00')).toBeTruthy();
     expect(within(ds).getByText('opened 2.0 d ago')).toBeTruthy();
-    expect(within(ds).getByText('For an agent')).toBeTruthy();
-    expect(within(screen.getByText('DS-1190').closest('tr, .nl-dt-card') as HTMLElement).getByText('Waiting for a co-sign')).toBeTruthy();
-    expect(screen.queryByRole('dialog')).toBeNull(); // nothing opens until a case is picked
+    expect(within(ds).getByText('For an agent').className).toContain('nl-status-warning');
+    expect(screen.queryByText('DS-1190')).toBeNull(); // the co-sign tab holds it
     await userEvent.setup({ delay: null, advanceTimers: () => {} }).click(within(ds).getByRole('button', { name: /Open/ }));
-    expect(router.state.location.search).toEqual({ case: 'dispute:D1' });
-    expect(await screen.findByRole('heading', { level: 2, name: 'DS-1188 · Pre-purchase inspection · missed leak' })).toBeTruthy();
-    expect(screen.getByText('Amara Osei → Prairie Wrench · $160.00 in escrow · opened 2.0 d ago')).toBeTruthy();
+    await waitFor(() => expect(router.state.location.pathname).toBe('/disputes/dispute/D1'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'DS-1188 · Pre-purchase inspection · missed leak' })).toBeTruthy();
+    expect(screen.getByText('In escrow', { selector: 'dt' }).nextElementSibling?.textContent).toBe('$160.00');
+    expect(screen.getByText('Customer → seller', { selector: 'dt' }).nextElementSibling?.textContent).toBe('Amara Osei → Prairie Wrench');
     expect(await screen.findByText('Quality 91')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('1 prior · 1 won')).toBeTruthy();
     expect(screen.getByText('0 prior disputes')).toBeTruthy();
+    await userEvent.setup({ delay: null, advanceTimers: () => {} }).click(screen.getByRole('tab', { name: /Evidence/ }));
     expect(screen.getByRole('link', { name: 'job-photos.zip' }).getAttribute('href')).toBe('/api/v1/console/disputes/dispute/D1/evidence/E1');
-    for (const o of ['Full refund to customer', 'Partial (50%)', 'Release to seller', 'Goodwill credit (platform pays)']) expect(screen.getByRole('button', { name: o })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Decide: Partial (50%)' })).toBeTruthy();
-    expect(screen.getByText('Both parties get the note; seller may appeal once.')).toBeTruthy();
+    const panel = within(screen.getByRole('complementary', { name: 'Decision' }));
+    for (const o of ['Full refund to customer', 'Partial (50%)', 'Release to seller', 'Goodwill credit (platform pays)']) expect(panel.getByRole('radio', { name: o })).toBeTruthy();
+    expect(panel.getByRole('button', { name: 'Decide: Partial (50%)' })).toBeTruthy();
+    expect(panel.getByText('Both parties get the note; seller may appeal once.')).toBeTruthy();
   });
 
   it('decides with the chosen outcome, amount and note, and the role header', async () => {
     const calls = api(['trust_safety']);
-    renderConsole('/disputes?case=dispute:D1');
-    await screen.findByRole('heading', { level: 2, name: /DS-1188/ });
-    await user().click(screen.getByRole('button', { name: 'Goodwill credit (platform pays)' }));
+    renderConsole('/disputes/dispute/D1');
+    await screen.findByRole('heading', { level: 1, name: /DS-1188/ });
+    await user().click(screen.getByRole('radio', { name: 'Goodwill credit (platform pays)' }));
     const amount = screen.getByRole('textbox', { name: 'Amount to the customer' });
     await user().clear(amount);
     await user().type(amount, '25');
@@ -82,8 +85,8 @@ describe('disputes & refunds (S-80, design 03 disputes)', () => {
 
   it('is view only for a role without decide, and shows the api refusal', async () => {
     api(['support']);
-    renderConsole('/disputes?case=dispute:D1');
-    await screen.findByRole('heading', { level: 2, name: /DS-1188/ });
+    renderConsole('/disputes/dispute/D1');
+    await screen.findByRole('heading', { level: 1, name: /DS-1188/ });
     expect((screen.getByRole('button', { name: 'Decide: Partial (50%)' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getAllByText('View only · Support').length).toBeGreaterThan(0);
   });
@@ -91,7 +94,7 @@ describe('disputes & refunds (S-80, design 03 disputes)', () => {
   it('a finance member co-signs a decision above $500', async () => {
     const calls = api(['finance'], c => (c.method === 'POST' && c.url.includes('cosign') && calls.filter(x => x.method === 'POST').length === 1
       ? { status: 409, body: { code: 'cosign_self', detail: 'Another person must co-sign this decision.' } } : undefined));
-    renderConsole('/disputes?case=dispute:D2');
+    renderConsole('/disputes/dispute/D2');
     expect(await screen.findByText('Waiting for a finance co-sign · Full refund to customer · $640.00')).toBeTruthy();
     await user().click(screen.getByRole('button', { name: 'Co-sign' }));
     expect((await screen.findByRole('alert')).textContent).toBe('Another person must co-sign this decision.');
@@ -102,10 +105,10 @@ describe('disputes & refunds (S-80, design 03 disputes)', () => {
 
   it('a refund case offers a full refund or a release only', async () => {
     api(['admin']);
-    renderConsole('/disputes?case=refund:R1');
-    expect(await screen.findByRole('heading', { level: 2, name: 'RF-2210 · Grocery run · 3 items spoiled' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Full refund to customer' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Partial (50%)' })).toBeNull();
+    renderConsole('/disputes/refund/R1');
+    expect(await screen.findByRole('heading', { level: 1, name: 'RF-2210 · Grocery run · 3 items spoiled' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Full refund to customer' })).toBeTruthy();
+    expect(screen.queryByRole('radio', { name: 'Partial (50%)' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Decide: Full refund to customer' })).toBeTruthy();
   });
 
@@ -118,9 +121,11 @@ describe('disputes & refunds (S-80, design 03 disputes)', () => {
 
   it('speaks French', async () => {
     api(['admin']);
-    renderConsole('/disputes?case=dispute:D1', { locale: 'fr' });
+    const first = renderConsole('/disputes', { locale: 'fr' });
     expect(await screen.findByRole('heading', { level: 1, name: 'Litiges et remboursements' })).toBeTruthy();
     expect(await screen.findByText('Pour un agent', { selector: '.bo-kpi-label' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Libérer au vendeur' })).toBeTruthy();
+    first.unmount();
+    renderConsole('/disputes/dispute/D1', { locale: 'fr' });
+    expect(await screen.findByRole('radio', { name: 'Libérer au vendeur' })).toBeTruthy();
   });
 });

@@ -2,56 +2,63 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import {
-  BoHeader, Button, Chip, DataTable, Drawer, ErrorState, Field, formatMoney, formatNumber, KpiStrip, PageSkeleton, SheetSection, Tag, TextArea, TextInput, useLocale,
-  type DataTableColumn, type DataTableTone,
+  BoHeader, Button, ChoiceTiles, DataTable, ErrorState, Field, formatMoney, formatNumber, KpiStrip, PageSkeleton, Segmented, StatusTag, TextArea, TextInput, UnderlineTabs, useLocale,
+  type DataTableColumn, type StatusTone,
 } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useAge } from '../shell/age';
 import { useGrant } from '../shell/grant';
-import { PlaceFilters, type PlaceFilter } from '../shell/PlaceFilters';
+import { usePlace, usePlaceName } from '../shell/scope';
 import { SCREEN_PATH } from '../shell/screens';
-import { caseQuery, disputesQuery, evidenceUrl, OUTCOMES, useCosign, useDecideCase, type Detail, type Item, type Outcome } from './api';
-import { useDisputesT } from './messages';
+import { SavedViews, statusTone } from '../shell/tables';
+import { disputesQuery, OUTCOMES, useCosign, useDecideCase, type Item, type Outcome } from './api';
+import { useDisputesT, type DisputesKey } from './messages';
 import '../shell/queues.css';
 import './disputes.css';
 
-export interface DisputesSearch extends PlaceFilter { case?: string }
+export const CASE_VIEWS = ['agent', 'cosign', 'decided', 'all'] as const;
+export type CaseView = (typeof CASE_VIEWS)[number];
+export const KINDS = ['all', 'dispute', 'refund'] as const;
+export interface DisputesSearch { province?: string; market?: string; view?: CaseView; kind?: (typeof KINDS)[number] }
 
-type State = 'agent' | 'cosign' | 'decided';
-const isDecided = (row: Item['row']) => row.state === 'decided' || ['approved', 'denied', 'paid'].includes(row.state);
-const stateOf = (row: Item['row']): State => (row.pending ? 'cosign' : isDecided(row) ? 'decided' : 'agent');
-const TONE: Record<State, DataTableTone> = { agent: 'tag-highlight', cosign: 'tag-neutral', decided: 'tag-accent' };
-const caseKey = (i: Item) => `${i.row.kind}:${i.row.id}`;
+export type State = 'agent' | 'cosign' | 'decided';
+export const isDecided = (row: Item['row']) => row.state === 'decided' || ['approved', 'denied', 'paid'].includes(row.state);
+export const stateOf = (row: Item['row']): State => (row.pending ? 'cosign' : isDecided(row) ? 'decided' : 'agent');
+/** E-15 colour roles: waiting for an agent is due (warning), a co-sign is information, decided is done. */
+export const STATE_TONE: Record<State, StatusTone> = { agent: 'warning', cosign: 'info', decided: 'success' };
 
 interface Row { id: string; ref: string; subject: string; parties: string; amount: number; opened: string; state: string; item: Item }
 
 /**
- * Disputes & refunds (S-80; redesign § 2.3 → BO `disputes` table + the BO:811 sheet): disputes with an agent and refund
- * cases escalated after the seller's 24 h, under the KPI strip of the desk. A row opens the case in the right sheet
- * (`?case=kind:id`): both parties' statements, the evidence and the decision — the agent decides (role `decide`) and a
- * decision returning more than $500 waits for a finance co-sign (role `refund`, another person). Admin, trust &
- * safety, finance and support open it.
+ * Disputes & refunds (S-80; E-15 S-177): disputes with an agent and refund cases escalated after the seller's 24 h,
+ * under the KPI strip of the desk — the states as tabs with counts, the kind filter and saved views, dense rows with
+ * status tags. A row opens the case's page (both parties, evidence, history, the decision panel). Admin, trust &
+ * safety, finance and support open it; the top bar's scope narrows it.
  */
 export function Disputes() {
   const t = useDisputesT();
   const search = useSearch({ strict: false }) as DisputesSearch;
-  const filter = { province: search.province, market: search.market };
+  const filter = usePlace();
+  const placeName = usePlaceName();
   const navigate = useNavigate();
   const query = useQuery(disputesQuery(filter));
   const age = useAge();
   const { locale } = useLocale();
   const { roleName } = useGrant();
-  const head = <BoHeader title={t('title')} sub={t('lede')} actions={<><Link className="btn btn-secondary" to="/disputes/card">{t('cardLink')}</Link><PlaceFilters to={SCREEN_PATH.disputes} filter={filter} /></>} />;
-  if (query.isPending) return <div className="bo-page">{head}<PageSkeleton kpis={3} rows={4} /></div>;
+  const head = (sub?: string) => <BoHeader title={t('title')} sub={sub} actions={<Link className="btn btn-secondary" to="/disputes/card">{t('cardLink')}</Link>} />;
+  if (query.isPending) return <div className="bo-page">{head()}<PageSkeleton kpis={3} rows={4} /></div>;
   if (query.isError && !query.data) {
-    return <div className="bo-page">{head}{query.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />}</div>;
+    return <div className="bo-page">{head()}{query.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />}</div>;
   }
   const data = query.data!;
-  const selected = search.case ? data.items.find(i => caseKey(i) === search.case) : undefined;
-  const select = (key: string | undefined) => void navigate({ to: SCREEN_PATH.disputes, search: { ...filter, case: key } as never });
+  const view = search.view ?? 'agent';
+  const kind = search.kind ?? 'all';
+  const go = (next: Partial<DisputesSearch>) => void navigate({ to: SCREEN_PATH.disputes, search: { ...search, ...next } as never, replace: true });
+  const items = data.items.filter(i => kind === 'all' || i.row.kind === kind);
+  const count = (v: CaseView) => formatNumber(items.filter(i => v === 'all' || stateOf(i.row) === v).length, locale);
   const s = data.summary;
-  const rows: Row[] = data.items.map(i => ({
-    id: caseKey(i), ref: i.row.caseNumber, subject: i.row.subject, parties: t('parties', { customer: i.row.customerName ?? '—', seller: i.businessName }),
+  const rows: Row[] = items.filter(i => view === 'all' || stateOf(i.row) === view).map(i => ({
+    id: `${i.row.kind}:${i.row.id}`, ref: i.row.caseNumber, subject: i.row.subject, parties: t('parties', { customer: i.row.customerName ?? '—', seller: i.businessName }),
     amount: i.row.amountCents, opened: t('opened', { age: age(i.row.openedAt) }), state: t(`st_${stateOf(i.row)}`), item: i,
   }));
   const columns: DataTableColumn<Row>[] = [
@@ -59,63 +66,33 @@ export function Disputes() {
     { key: 'parties', label: t('c_parties') },
     { key: 'amount', label: t('c_amount'), type: 'money' },
     { key: 'opened', label: t('c_opened') },
-    { key: 'state', label: t('c_state'), type: 'tag', filter: 'facet' },
+    { key: 'state', label: t('c_state'), type: 'tag', filter: false },
   ];
   return (
     <div className="bo-page">
-      {head}
+      {head(t('sub2', { scope: placeName, n: s.forAgent }))}
       <KpiStrip label={t('kpis')} items={[
-        { key: 'agent', label: t('k_agent'), value: formatNumber(s.forAgent, locale) },
+        { key: 'agent', label: t('k_agent'), value: formatNumber(s.forAgent, locale), onClick: () => go({ view: 'agent' }) },
         { key: 'window', label: t('k_window'), value: formatNumber(s.inSellerWindow, locale) },
         { key: 'closed', label: t('k_closed'), value: formatNumber(s.closedThisWeek, locale) },
       ]} />
-      <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={r => ({ state: TONE[stateOf(r.item.row)] })}
-        can={{ create: false, update: false, delete: false }} roleName={roleName} emptyText={t('empty')} openLabel={t('open')} onOpen={r => select(r.id)} reportName="disputes" />
-      {selected ? (
-        <Drawer open onClose={() => select(undefined)} title={`${selected.row.caseNumber} · ${selected.row.subject}`}>
-          <CaseBody key={caseKey(selected)} item={selected} />
-        </Drawer>
-      ) : null}
+      <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={25}
+        views={<UnderlineTabs aria-label={t('views')} value={view} onChange={v => go({ view: v === 'agent' ? undefined : v })}
+          options={CASE_VIEWS.map(v => ({ value: v, label: t(`v_${v}` as DisputesKey), count: count(v) }))} />}
+        filters={<>
+          <Segmented name="disputes-kind" aria-label={t('kindFilter')} value={kind} onChange={k => go({ kind: k === 'all' ? undefined : k })}
+            options={KINDS.map(k => ({ value: k, label: t(`kd_${k}` as DisputesKey) }))} />
+          <SavedViews screen="disputes" current={{ view: search.view, kind: search.kind }} onApply={v => void navigate({ to: SCREEN_PATH.disputes, search: v as never })} />
+        </>}
+        rowTones={r => ({ state: statusTone(STATE_TONE[stateOf(r.item.row)]) })}
+        can={{ create: false, update: false, delete: false }} roleName={roleName} emptyText={t('empty')} openLabel={t('open')} reportName="disputes"
+        onOpen={r => void navigate({ to: '/disputes/$kind/$caseId', params: { kind: r.item.row.kind, caseId: r.item.row.id } })} />
     </div>
   );
 }
 
-function CaseBody({ item }: { item: Item }) {
-  const t = useDisputesT();
-  const { locale } = useLocale();
-  const age = useAge();
-  const detail = useQuery(caseQuery(item.row.kind, item.row.id));
-  const row = item.row;
-  const money = (c: number) => formatMoney(c, locale);
-  const d: Detail | undefined = detail.data;
-  return (
-    <>
-      <p className="bo-muted">{t('meta', { customer: row.customerName ?? '—', seller: item.businessName, amount: money(row.amountCents), age: age(row.openedAt) })}</p>
-      <SheetSection title={t('secParties')}>
-        <div className="nl-ds-parties">
-          <div className="nl-ds-party"><strong>{t('customer')}</strong><span>{row.customerName ?? '—'} · “{row.customerStatement ?? t('noStatement')}”</span>
-            {d ? <div className="nl-q-chips"><Tag tone="neutral">{t('priorDisputes', { n: d.detail.customerPriorDisputes })}</Tag></div> : null}
-          </div>
-          <div className="nl-ds-party"><strong>{t('seller')}</strong><span>{item.businessName} · “{row.sellerStatement ?? t('noStatement')}”</span>
-            {d ? <div className="nl-q-chips">
-              {d.sellerQuality != null ? <Tag tone="neutral">{t('quality', { score: d.sellerQuality })}</Tag> : null}
-              <Tag tone="neutral">{t('sellerPrior', { n: d.detail.sellerPriorDisputes, won: d.detail.sellerPriorWon })}</Tag>
-            </div> : null}
-          </div>
-        </div>
-      </SheetSection>
-      <SheetSection title={t('secEvidence')}>
-        {d && d.detail.evidence.length
-          ? <ul className="nl-ds-files">{d.detail.evidence.map(e => <li key={e.id}>{e.file ? <a className="nl-ds-file" href={evidenceUrl(row.id, e.id)} target="_blank" rel="noreferrer">{e.name}</a> : e.name}</li>)}</ul>
-          : <p className="bo-muted">{t('noEvidence')}</p>}
-      </SheetSection>
-      <SheetSection title={t('secDecision')}><Decision item={item} /></SheetSection>
-    </>
-  );
-}
-
 /** The agent's decision, the co-sign above $500, or the decided state. */
-function Decision({ item }: { item: Item }) {
+export function Decision({ item }: { item: Item }) {
   const t = useDisputesT();
   const { locale } = useLocale();
   const { can, roleName } = useGrant();
@@ -152,12 +129,10 @@ function Decision({ item }: { item: Item }) {
           </> : null}
         </div>
       ) : isDecided(row) ? (
-        <div className="nl-q-actions"><Button disabled>{t('decided')}</Button><span className="nl-q-note">{t('decidedNote')}</span></div>
+        <div className="nl-q-actions"><StatusTag tone="success">{t('decided')}</StatusTag><span className="nl-q-note">{t('decidedNote')}</span></div>
       ) : (
         <>
-          <div className="nl-q-chips" role="group" aria-label={t('outcome')}>
-            {outcomes.map(o => <Chip key={o} selected={outcome === o} onClick={() => setOutcome(o)}>{t(`o_${o}`)}</Chip>)}
-          </div>
+          <ChoiceTiles aria-label={t('outcome')} layout="grid" value={outcome} onChange={setOutcome} options={outcomes.map(o => ({ value: o, label: t(`o_${o}`) }))} />
           {withAmount ? (
             <Field label={t('amount')} error={errors.refundCents}>
               <TextInput inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} />
@@ -166,7 +141,7 @@ function Decision({ item }: { item: Item }) {
           <TextArea className="nl-ds-note" aria-label={t('notePlaceholder')} placeholder={t('notePlaceholder')} value={note} maxLength={1000} onChange={e => setNote(e.target.value)} />
           {errors.outcome ? <p role="alert" className="nl-q-error">{errors.outcome}</p> : null}
           <div className="nl-q-actions">
-            <Button disabled={!can('decide') || decide.isPending} onClick={submit}>{t('decide', { outcome: t(`o_${outcome}`) })}</Button>
+            <Button block disabled={!can('decide') || decide.isPending} onClick={submit}>{t('decide', { outcome: t(`o_${outcome}`) })}</Button>
             <span className="nl-q-note">{can('decide') ? t('decideNote') : t('viewOnly', { role: roleName })}</span>
           </div>
         </>
