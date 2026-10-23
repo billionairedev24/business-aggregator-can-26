@@ -4,7 +4,8 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { BoHeader, Button, DataTable, Drawer, ErrorState, Field, formatDate, formatMoney, PageSkeleton, Select, SheetSection, TextArea, TextInput, useLocale, type DataTableColumn, type DataTableTone } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
-import { PlaceFilters, type PlaceFilter } from '../shell/PlaceFilters';
+import type { PlaceFilter } from '../shell/PlaceFilters';
+import { usePlace } from '../shell/scope';
 import { evidenceUrl } from './api';
 import { cardDisputeQuery, cardDisputesQuery, FILE_FIELDS, TEXT_FIELDS, useSaveEvidence, useSubmitEvidence, type CardDetail, type CardItem } from './cardApi';
 import { useCardDisputesT, type CardKey } from './cardMessages';
@@ -15,7 +16,7 @@ export interface CardSearch extends PlaceFilter { dispute?: string }
 const PATH = '/disputes/card';
 type State = 'open' | 'submitted' | 'won' | 'lost';
 const stateOf = (r: CardItem['row']): State => (r.decision === 'release' ? 'won' : r.decision ? 'lost' : r.submittedAt ? 'submitted' : 'open');
-const TONE: Record<State, DataTableTone> = { open: 'tag-highlight', submitted: 'tag-neutral', won: 'tag-accent', lost: 'tag-neutral' };
+const TONE: Record<State, DataTableTone> = { open: 'status-warning', submitted: 'status-info', won: 'status-success', lost: 'status-danger' };
 
 interface Row { id: string; ref: string; business: string; amount: number; due: string; state: string; item: CardItem }
 
@@ -28,18 +29,18 @@ export function CardDisputes() {
   const t = useCardDisputesT();
   const { locale } = useLocale();
   const search = useSearch({ strict: false }) as CardSearch;
-  const filter = { province: search.province, market: search.market };
+  const filter = usePlace();
   const navigate = useNavigate();
   const query = useQuery(cardDisputesQuery(filter));
   const { roleName } = useGrant();
-  const head = <BoHeader title={t('title')} sub={t('lede')} actions={<><Link className="btn btn-ghost" to="/disputes">{t('back')}</Link><PlaceFilters to={PATH} filter={filter} /></>} />;
+  const head = <BoHeader title={t('title')} sub={t('lede')} actions={<><Link className="btn btn-secondary" to="/disputes">{t('back')}</Link></>} />;
   if (query.isPending) return <div className="bo-page">{head}<PageSkeleton kpis={0} rows={4} /></div>;
   if (query.isError && !query.data) {
     return <div className="bo-page">{head}{query.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />}</div>;
   }
   const items = query.data!.items;
   const selected = search.dispute ? items.find(i => i.row.id === search.dispute) : undefined;
-  const select = (id: string | undefined) => void navigate({ to: PATH, search: { ...filter, dispute: id } as never });
+  const select = (id: string | undefined) => void navigate({ to: PATH, search: { ...search, dispute: id } as never });
   const rows: Row[] = items.map(i => ({
     id: i.row.id, ref: i.row.caseNumber, business: i.businessName, amount: i.row.amountCents,
     due: i.row.dueBy ? t('due', { date: formatDate(i.row.dueBy, locale, 'dateTime') }) : t('noDue'), state: t(`s_${stateOf(i.row)}`), item: i,
@@ -54,7 +55,7 @@ export function CardDisputes() {
   return (
     <div className="bo-page">
       {head}
-      <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={r => ({ state: TONE[stateOf(r.item.row)] })}
+      <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={r => ({ state: TONE[stateOf(r.item.row)] })}
         can={{ create: false, update: false, delete: false }} roleName={roleName} emptyText={t('empty')} openLabel={t('open')} onOpen={r => select(r.id)} reportName="card-disputes" />
       {selected ? (
         <Drawer open onClose={() => select(undefined)} title={`${selected.row.caseNumber} · ${selected.businessName}`}>

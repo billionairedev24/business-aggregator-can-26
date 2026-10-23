@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { BoHeader, Button, ChartCard, DataTable, Dialog, ErrorState, Field, formatNumber, PageSkeleton, TextArea, TextInput, UnderlineTabs, useLocale, type DataTableColumn } from '@northline/ui';
+import { BoHeader, Button, ChartCard, DataTable, Dialog, ErrorState, Field, formatNumber, PageSkeleton, TextArea, TextInput, UnderlineTabs, useLocale, type DataTableAction, type DataTableColumn, type StatusTone } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
-import { PlaceFilters, type PlaceFilter } from '../shell/PlaceFilters';
+import type { PlaceFilter } from '../shell/PlaceFilters';
+import { usePlace, usePlaceName } from '../shell/scope';
+import { statusTone } from '../shell/tables';
 import { SCREEN_PATH } from '../shell/screens';
 import { flagsQuery, impactOf, rulesQuery, useFlagAction, useFlagDecision, useSaveRule, type Flag, type Impact, type Rule } from './api';
 import { useTrustT, type TrustKey } from './messages';
@@ -39,25 +41,25 @@ export function actionFor(f: Flag): string {
 export type TrustView = 'rules' | 'ai' | 'scan';
 
 /** The screen's views (S-158): rules & flags, the AI screening queue, the weekly anomaly scan. */
-function TrustTabs({ view, filter }: { view: TrustView; filter: PlaceFilter }) {
+function TrustTabs({ view }: { view: TrustView }) {
   const t = useAiT();
   const navigate = useNavigate();
   return (
     <UnderlineTabs aria-label={t('tabs')} value={view} options={[{ value: 'rules', label: t('tabRules') }, { value: 'ai', label: t('tabAi') }, { value: 'scan', label: t('tabScan') }]}
-      onChange={next => void navigate({ to: SCREEN_PATH.trust, search: { ...filter, ...(next === 'rules' ? {} : { view: next }) } as never })} />
+      onChange={next => void navigate({ to: SCREEN_PATH.trust, search: (next === 'rules' ? {} : { view: next }) as never })} />
   );
 }
 
 export function TrustSafety() {
   const t = useTrustT();
   const search = useSearch({ strict: false }) as PlaceFilter & { view?: TrustView };
-  const filter = { province: search.province, market: search.market };
+  const filter = usePlace();
   const view = search.view ?? 'rules';
   if (view !== 'rules') {
     return (
       <div className="bo-page">
         <BoHeader title={t('title')} sub={t('lede')} />
-        <TrustTabs view={view} filter={filter} />
+        <TrustTabs view={view} />
         {view === 'ai' ? <AiScreening /> : <WeeklyScan />}
       </div>
     );
@@ -70,7 +72,8 @@ function RulesAndFlags({ filter }: { filter: PlaceFilter }) {
   const rules = useQuery(rulesQuery);
   const flags = useQuery(flagsQuery(filter));
   const { can, roleName } = useGrant();
-  const head = <><BoHeader title={t('title')} sub={t('lede')} actions={<><Link className="btn btn-secondary" to="/trust/appeals">{t('appeals')}</Link><PlaceFilters to={SCREEN_PATH.trust} filter={filter} /></>} /><TrustTabs view="rules" filter={filter} /></>;
+  const placeName = usePlaceName();
+  const head = <><BoHeader title={t('title')} sub={`${placeName} · ${t('lede')}`} actions={<Link className="btn btn-secondary" to="/trust/appeals">{t('appeals')}</Link>} /><TrustTabs view="rules" /></>;
   if (rules.isPending || flags.isPending) return <div className="bo-page">{head}<PageSkeleton kpis={0} rows={6} /></div>;
   if (rules.isError || (flags.isError && !flags.data)) {
     return <div className="bo-page">{head}{flags.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => { void rules.refetch(); void flags.refetch(); }} />}</div>;
@@ -80,10 +83,9 @@ function RulesAndFlags({ filter }: { filter: PlaceFilter }) {
   return (
     <div className="bo-page">
       {head}
-      <div className="nl-cols-wrap"><div className="nl-cols" data-split="wide">
-        <Flags flags={flags.data!.items} canDecide={can('decide')} />
-        <div className="nl-col">
-          <RatingFloor rule={byKey.rating_floor} filter={filter} canEdit={can('decide')} />
+      <Flags flags={flags.data!.items} canDecide={can('decide')} roleName={roleName} />
+      <div className="nl-cols-wrap"><div className="nl-cols">
+        <RatingFloor rule={byKey.rating_floor} filter={filter} canEdit={can('decide')} />
           <ChartCard id="ts-consequences" title={t('consequences')}>
             <ul className="nl-rows">
               <li>{t('c_floor', { rating: num(v('rating_floor'), 'rating'), days: num(v('rating_floor'), 'days'), recover: num(v('rating_floor'), 'recoverDays') })}</li>
@@ -93,7 +95,6 @@ function RulesAndFlags({ filter }: { filter: PlaceFilter }) {
               <li>{t('c_customer', { count: num(v('customer_no_shows'), 'count') })}</li>
             </ul>
           </ChartCard>
-        </div>
       </div></div>
       <ChartCard id="ts-tiers" title={t('tierRules')}>
         <TierRules byKey={byKey} canEdit={can('decide')} roleName={roleName} />
@@ -180,36 +181,58 @@ function WordList({ rule, field, label, canEdit }: { rule: Rule | undefined; fie
   );
 }
 
-function Flags({ flags, canDecide }: { flags: Flag[]; canDecide: boolean }) {
+const ACTIONS = ['actioned', 'hide_review', 'warn', 'coach', 'confirm', 'suspend_listings', 'escalate'] as const;
+const FLAG_VIEWS = ['open', 'done', 'all'] as const;
+type FlagView = (typeof FLAG_VIEWS)[number];
+/** E-15 colour roles: an open flag is due (warning), an actioned one done (success), a dismissed one neutral. */
+const flagTone = (f: Flag): StatusTone => (f.state === 'open' ? 'warning' : f.state === 'dismissed' ? 'neutral' : 'success');
+interface FlagRow { id: string; who: string; what: string; why: string; state: string; action: string; src: Flag }
+
+/**
+ * The open flags (S-93; E-15 S-177): a dense queue with its views as tabs (open first), status tags, the rule's own
+ * action on each open row (Suspend listing rights in red) and Dismiss, one or many at once (role `decide`).
+ */
+function Flags({ flags, canDecide, roleName }: { flags: Flag[]; canDecide: boolean; roleName: string }) {
   const t = useTrustT();
+  const { locale } = useLocale();
   const act = useFlagAction();
   const decide = useFlagDecision();
-  const open = flags.filter(f => f.state === 'open');
+  const [view, setView] = useState<FlagView>('open');
   const refusal = [act.error, decide.error].find(Boolean) as ApiError | Error | undefined;
   const who = (f: Flag) => f.businessName ?? (f.targetType === 'customer' ? t('customer') : f.targetType === 'courier' ? t('courier') : f.targetType);
   const what = (f: Flag) => { const k = `w_${f.rule}` as TrustKey; const s = t(k); return s === k ? t('w_other') : s; };
+  const inView = (f: Flag, v: FlagView) => v === 'all' || (v === 'open' ? f.state === 'open' : f.state !== 'open');
+  const rows: FlagRow[] = flags.filter(f => inView(f, view)).map(f => ({
+    id: f.id, who: who(f), what: what(f), why: f.explanation, action: actionFor(f), src: f,
+    state: f.state === 'open' ? t('st_open') : f.state === 'dismissed' ? t('dismissed') : t('done', { action: t(`a_${f.action === 'actioned' || !f.action ? actionFor(f) : f.action}` as TrustKey) }),
+  }));
+  const columns: DataTableColumn<FlagRow>[] = [
+    { key: 'who', label: t('colWho'), sub: 'why', subLabel: t('colWhy'), primary: true },
+    { key: 'what', label: t('colWhat') },
+    { key: 'state', label: t('colState'), type: 'tag', filter: false },
+    { key: 'action', label: t('colAction'), hidden: true, editable: false, format: v => t(`a_${String(v)}` as TrustKey) },
+  ];
+  const actions: DataTableAction<FlagRow>[] = [
+    ...ACTIONS.map(a => ({ id: a, label: t(`a_${a}` as TrustKey), perm: 'update' as const, inline: true, bulk: false, danger: a === 'suspend_listings', when: { key: 'action' as const, in: [a] } })),
+    { id: 'dismiss', label: t('dismiss'), perm: 'update', inline: true, when: { key: 'state', in: [t('st_open')] } },
+  ];
+  const count = (v: FlagView) => formatNumber(flags.filter(f => inView(f, v)).length, locale);
   return (
-    <ChartCard id="ts-flags" title={t('openFlags', { n: open.length })}>
-      {flags.length === 0 ? <p className="bo-muted">{t('noFlags')}</p> : null}
-      <ul className="nl-rows">
-        {flags.map(f => {
-          const action = actionFor(f);
-          const label = t(`a_${action}` as TrustKey);
-          return (
-            <li key={f.id}>
-              <span className="nl-row-main"><span><strong>{who(f)}</strong> · {what(f)}</span><span className="nl-row-sub">{f.explanation}</span></span>
-              {f.state === 'open' ? (canDecide ? (
-                <span className="nl-row-actions">
-                  <Button variant="secondary" onClick={() => (action === 'actioned' ? decide.mutate({ id: f.id, decision: 'actioned' }) : act.mutate({ id: f.id, action }))}>{label}</Button>
-                  <Button variant="ghost" onClick={() => decide.mutate({ id: f.id, decision: 'dismissed' })}>{t('dismiss')}</Button>
-                </span>
-              ) : null) : <span className="tag tag-neutral">{f.state === 'dismissed' ? t('dismissed') : t('done', { action: t(`a_${f.action === 'actioned' || !f.action ? action : f.action}` as TrustKey) })}</span>}
-            </li>
-          );
-        })}
-      </ul>
+    <section className="nl-ts-flags" aria-labelledby="ts-flags">
+      <h2 className="bo-card-title" id="ts-flags">{t('openFlags', { n: flags.filter(f => f.state === 'open').length })}</h2>
+      <DataTable<FlagRow> dense entity={t('flagEntity')} plural={t('flagPlural')} columns={columns} rows={rows} pageSize={10} roleName={roleName}
+        views={<UnderlineTabs aria-label={t('flagViews')} value={view} onChange={setView} options={FLAG_VIEWS.map(v => ({ value: v, label: t(`fv_${v}` as TrustKey), count: count(v) }))} />}
+        rowTones={r => ({ state: statusTone(flagTone(r.src)) })} emptyText={t('noFlags')} reportName="trust-flags"
+        can={{ create: false, update: canDecide, delete: false }} actions={actions}
+        onAction={async (a, picked) => {
+          for (const r of picked) {
+            if (a.id === 'dismiss') await decide.mutateAsync({ id: r.id, decision: 'dismissed' });
+            else if (a.id === 'actioned') await decide.mutateAsync({ id: r.id, decision: 'actioned' });
+            else await act.mutateAsync({ id: r.id, action: a.id });
+          }
+        }} />
       {refusal ? <p role="alert" className="nl-q-error">{refusal.message}</p> : null}
-    </ChartCard>
+    </section>
   );
 }
 

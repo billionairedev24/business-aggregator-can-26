@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MagnifyingGlass } from '@phosphor-icons/react';
 import {
-  Button, ChartCard, DataTable, Drawer, ErrorState, Field, PageSkeleton, Segmented, SheetSection, Tag, TextArea, useFormatters,
+  Button, ChartCard, DataTable, Drawer, ErrorState, Field, PageSkeleton, Segmented, SheetSection, StatusTag, Tag, TextArea, useFormatters,
   type DataTableAction, type DataTableColumn, type DataTableTone,
 } from '@northline/ui';
 import { ApiError } from '../../lib/http';
@@ -62,8 +62,8 @@ export function AiScreening() {
       {toast ? <p role="status" className="nl-q-note">{toast}</p> : null}
       {!can('decide') ? <p className="bo-muted">{t('cannot')}</p> : null}
       {q.isPending ? <PageSkeleton kpis={0} rows={5} /> : q.isError ? <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /> : (
-        <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={25} emptyText={t('empty')} roleName={roleName}
-          rowTones={r => ({ state: (r.src.state === 'open' ? 'tag-highlight' : 'tag-neutral') as DataTableTone })}
+        <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={25} emptyText={t('empty')} roleName={roleName}
+          rowTones={r => ({ state: (r.src.state === 'open' ? 'status-warning' : r.src.state === 'dismissed' ? 'status-neutral' : 'status-success') as DataTableTone })}
           can={{ create: false, update: can('decide'), delete: false }} actions={actions} onOpen={r => setOpen(r.id)}
           onAction={(_, hit) => { setOpen(hit[0]!.id); return false; }} />
       )}
@@ -139,7 +139,7 @@ export function WeeklyScan() {
       {q.data.items.length === 0 ? <p className="bo-muted">{t('scanEmpty')}</p> : null}
       {q.data.items.map(s => (
         <ChartCard key={s.id} id={`scan-${s.id}`} title={t('scanTitle', { market: s.market === 'unplaced' ? t('unplaced') : s.market, week: f.date(`${s.weekStart}T12:00:00Z`, 'full') })}>
-          <p className="bo-muted">{t('scanCounts', { merchants: s.merchants, flags: s.flagsRaised })} · <Tag tone={s.aiExplained ? 'accent' : 'neutral'}>{t(s.aiExplained ? 'explainedAi' : 'explainedRules')}</Tag></p>
+          <p className="bo-muted">{t('scanCounts', { merchants: s.merchants, flags: s.flagsRaised })} · <Tag tone={s.aiExplained ? 'info' : 'neutral'}>{t(s.aiExplained ? 'explainedAi' : 'explainedRules')}</Tag></p>
           {s.summary ? <p>{s.summary}</p> : null}
           <ul className="nl-rows">
             {s.flags.map(fl => (
@@ -148,7 +148,7 @@ export function WeeklyScan() {
                   <span><strong>{fl.businessName ?? fl.merchantId}</strong> · {t('signals', { signals: (fl.evidence.signals ?? '').split(',').filter(Boolean).map(signal).join(', ') })}</span>
                   <span className="nl-row-sub">{fl.explanation}</span>
                 </span>
-                <span className="tag tag-neutral">{stateText(fl, t)}</span>
+                <StatusTag tone={fl.state === 'open' ? 'warning' : fl.state === 'dismissed' ? 'neutral' : 'success'}>{stateText(fl, t)}</StatusTag>
               </li>
             ))}
           </ul>
