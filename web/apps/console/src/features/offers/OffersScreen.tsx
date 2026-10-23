@@ -84,7 +84,7 @@ function Composer({ overview }: { overview: Overview }) {
         </FormGrid>
         <div className="nl-of-actions">
           <Button type="submit" variant="secondary" disabled={busy !== null} aria-busy={busy === 'preview' || undefined}>{busy === 'preview' ? t('previewing') : t('preview')}</Button>
-          {can('offers') ? <Button type="button" variant="ghost" disabled={busy !== null} aria-busy={busy === 'test' || undefined} onClick={() => void doTest()}>{busy === 'test' ? t('testing') : t('test')}</Button> : null}
+          {can('offers') ? <Button type="button" variant="tertiary" disabled={busy !== null} aria-busy={busy === 'test' || undefined} onClick={() => void doTest()}>{busy === 'test' ? t('testing') : t('test')}</Button> : null}
         </div>
       </form>
       {!can('offers') ? <p className="bo-muted">{t('noAction')}</p> : null}
@@ -102,7 +102,7 @@ function Composer({ overview }: { overview: Overview }) {
         </div>
       ) : null}
       <Dialog open={confirming} onClose={() => setConfirming(false)} title={t('confirmTitle')}
-        actions={<><Button variant="ghost" onClick={() => setConfirming(false)}>{t('cancel')}</Button><Button onClick={() => void doSend()}>{t('confirm')}</Button></>}>
+        actions={<><Button variant="tertiary" onClick={() => setConfirming(false)}>{t('cancel')}</Button><Button onClick={() => void doSend()}>{t('confirm')}</Button></>}>
         <p>{t('confirmBody', { count, market: draft.market, channel: channelName(draft.channel), perMinute: overview.perMinute })}</p>
       </Dialog>
     </section>

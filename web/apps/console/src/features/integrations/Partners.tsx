@@ -71,8 +71,8 @@ export function Partners() {
         {!allowed ? <span className="bo-muted">{t('cannot')}</span> : null}
       </div>
       {q.isPending ? <PageSkeleton kpis={0} rows={3} /> : q.isError ? <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /> : (
-        <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={10} roleName={roleName} emptyText={t('empty')}
-          rowTones={r => ({ state: (r.src.state === 'active' ? 'tag-accent' : 'tag-neutral') as DataTableTone })}
+        <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={10} roleName={roleName} emptyText={t('empty')}
+          rowTones={r => ({ state: (r.src.state === 'active' ? 'status-success' : 'status-neutral') as DataTableTone })}
           can={{ create: false, update: allowed, delete: false }} actions={actions} onAction={onAction} />
       )}
       {state.isError ? <p role="alert" className="nl-tm-error">{t('failed')}</p> : null}
@@ -80,8 +80,8 @@ export function Partners() {
       {rotating ? <RotateDialog partner={rotating} onClose={() => setRotating(null)} /> : null}
       {disabling ? (
         <Dialog open onClose={() => setDisabling(null)} title={t('disableTitle', { name: disabling.displayName })}
-          actions={<><Button variant="ghost" onClick={() => setDisabling(null)}>{t('cancel')}</Button>
-            <Button variant="danger" disabled={state.isPending} onClick={() => state.mutate({ id: disabling.id, action: 'disable' }, { onSuccess: () => setDisabling(null) })}>{t('confirmDisable')}</Button></>}>
+          actions={<><Button variant="tertiary" onClick={() => setDisabling(null)}>{t('cancel')}</Button>
+            <Button variant="destructive" disabled={state.isPending} onClick={() => state.mutate({ id: disabling.id, action: 'disable' }, { onSuccess: () => setDisabling(null) })}>{t('confirmDisable')}</Button></>}>
           <p className="nl-tm-sub">{t('disableBody', { minutes: Math.round(disabling.tokenTtlSeconds / 60) })}</p>
         </Dialog>
       ) : null}
@@ -107,7 +107,7 @@ function RegisterDialog({ onClose }: { onClose: () => void }) {
   }, { onSuccess: onClose });
   return (
     <Dialog open onClose={onClose} title={t('registerTitle')}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={register.isPending} onClick={submit}>{t('create')}</Button></>}>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button><Button disabled={register.isPending} onClick={submit}>{t('create')}</Button></>}>
       <Field label={t('f_name')} hint={t('f_nameHint', { name: name.trim() || '…' })} error={errors.name}><TextInput value={name} maxLength={50} autoCapitalize="none" spellCheck={false} onChange={e => setName(e.target.value)} /></Field>
       <Field label={t('f_display')} error={errors.displayName}><TextInput value={display} maxLength={80} onChange={e => setDisplay(e.target.value)} /></Field>
       <Field label={t('f_jwks')} hint={t('f_jwksHint')} error={errors.jwkSetUrl}><TextInput type="url" value={jwks} onChange={e => setJwks(e.target.value)} /></Field>
@@ -131,7 +131,7 @@ function RotateDialog({ partner, onClose }: { partner: Partner; onClose: () => v
   const errors = rotate.error instanceof ValidationError ? rotate.error.byField() : {};
   return (
     <Dialog open onClose={onClose} title={t('rotateTitle', { name: partner.displayName })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={rotate.isPending} onClick={() => rotate.mutate({ id: partner.id, jwkSetUrl: url.trim() || undefined }, { onSuccess: onClose })}>{t('confirmRotate')}</Button></>}>
       <p className="nl-tm-sub">{t('rotateBody')}</p>
       <p className="nl-tm-sub"><code>{partner.jwkSetUrl}</code></p>
@@ -141,7 +141,7 @@ function RotateDialog({ partner, onClose }: { partner: Partner; onClose: () => v
   );
 }
 
-const B_TONE = { requested: 'highlight', approved: 'accent', declined: 'neutral', revoked: 'neutral' } as const;
+const B_TONE = { requested: 'warning', approved: 'success', declined: 'neutral', revoked: 'neutral' } as const;
 
 function BusinessesDrawer({ partner, allowed, onClose }: { partner: Partner; allowed: boolean; onClose: () => void }) {
   const t = usePartnersT();
@@ -157,7 +157,7 @@ function BusinessesDrawer({ partner, allowed, onClose }: { partner: Partner; all
           <li key={b.merchantId} className="nl-tm-row">
             <span><strong>{b.businessName ?? b.merchantId}</strong><span className="bo-muted"> · {f.date(b.decidedAt ?? b.requestedAt, 'dateTime')}</span></span>
             <Tag tone={B_TONE[b.state]}>{t(`b_${b.state}`)}</Tag>
-            {allowed ? <Button variant="ghost" aria-label={t('removeLabel', { business: b.businessName ?? b.merchantId })} disabled={remove.isPending}
+            {allowed ? <Button variant="tertiary" aria-label={t('removeLabel', { business: b.businessName ?? b.merchantId })} disabled={remove.isPending}
               onClick={() => remove.mutate({ id: partner.id, merchantId: b.merchantId })}>{t('remove')}</Button> : null}
           </li>
         ))}

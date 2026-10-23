@@ -21,9 +21,9 @@ export function LoyaltyFigures({ data }: { data: Finance }) {
     <ChartCard id="fi-loyalty" title={t('liabTitle')}>
       <p className="bo-muted">{t('liabSub')}</p>
       <dl className="nl-fi-loyalty">
-        <div><dt>{t('outstanding')}</dt><dd>{t('outstandingValue', { points: fmt.number(l.pointsOutstanding), value: fmt.money(l.pointsOutstandingCents), holders: l.pointHolders })}</dd></div>
-        <div><dt>{t('funded')}</dt><dd>{fmt.money(l.rewardsFundedCents)}</dd></div>
-        <div><dt>{t('redeemed')}</dt><dd>{fmt.money(l.pointsRedeemedWeekCents)}</dd></div>
+        <div><dt>{t('outstanding')}</dt><dd>{t('outstandingValue', { points: fmt.number(l.pointsOutstanding), value: fmt.price(l.pointsOutstandingCents), holders: l.pointHolders })}</dd></div>
+        <div><dt>{t('funded')}</dt><dd>{fmt.price(l.rewardsFundedCents)}</dd></div>
+        <div><dt>{t('redeemed')}</dt><dd>{fmt.price(l.pointsRedeemedWeekCents)}</dd></div>
         <div><dt>{t('plusMembers')}</dt><dd>{t('plusMembersValue', { members: fmt.number(l.plusMembers), trialing: fmt.number(l.plusTrialing) })}</dd></div>
         <div><dt>{t('referrals')}</dt><dd>{fmt.number(l.pendingReferrals)}</dd></div>
       </dl>
@@ -90,13 +90,13 @@ function RuleRow({ rule: r, canChange, onEdit }: { rule: Rule; canChange: boolea
         <strong>{r.regionId ? r.regionName ?? r.regionId : t('defaultRule')}</strong>
         <div className="nl-fi-sub">
           {t('c_ppd')} {r.pointsPerDollar} · {r.kinds.map(k => t(`kind_${k}`)).join(', ')} · {t('c_expiry')} {r.expiryMonths ? t('months', { n: r.expiryMonths }) : t('never')}
-          {' · '}{t('c_referral')} {fmt.number(r.referralPoints)} · {t('c_cap')} {r.referralMonthlyCap} · {t('c_min')} {fmt.money(r.referralMinOrderCents)}
+          {' · '}{t('c_referral')} {fmt.number(r.referralPoints)} · {t('c_cap')} {r.referralMonthlyCap} · {t('c_min')} {fmt.price(r.referralMinOrderCents)}
         </div>
       </div>
       {canChange ? (
         <span className="nl-fi-rule-actions">
-          <Button variant="ghost" onClick={onEdit} aria-label={`${t('edit')} — ${r.regionName ?? t('defaultRule')}`}>{t('edit')}</Button>
-          {r.regionId ? <Button variant="ghost" disabled={remove.isPending} onClick={() => remove.mutate()} aria-label={`${t('remove')} — ${r.regionName ?? r.regionId}`}>{t('remove')}</Button> : null}
+          <Button variant="tertiary" onClick={onEdit} aria-label={`${t('edit')} — ${r.regionName ?? t('defaultRule')}`}>{t('edit')}</Button>
+          {r.regionId ? <Button variant="tertiary" disabled={remove.isPending} onClick={() => remove.mutate()} aria-label={`${t('remove')} — ${r.regionName ?? r.regionId}`}>{t('remove')}</Button> : null}
         </span>
       ) : null}
     </div>
@@ -145,7 +145,7 @@ function RuleForm({ rule, regions, onDone }: { rule?: Rule; regions: z.infer<typ
       {save.isError && !(save.error instanceof ValidationError) ? <p className="nl-error" role="alert">{t('saveError')}</p> : null}
       <div className="nl-fi-promo-actions">
         <Button type="submit" disabled={save.isPending}>{t('save')}</Button>
-        <Button variant="ghost" onClick={onDone}>{t('cancel')}</Button>
+        <Button variant="tertiary" onClick={onDone}>{t('cancel')}</Button>
       </div>
     </form>
   );

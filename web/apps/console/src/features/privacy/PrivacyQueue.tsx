@@ -49,7 +49,7 @@ export function PrivacyQueue({ tabs }: { tabs?: ReactNode }) {
     { key: 'state', label: t('colState'), type: 'tag', editable: false },
   ];
   const tones = (r: Row): Partial<Record<keyof Row, DataTableTone>> => ({
-    law: 'tag-neutral', state: r.item.overdue ? 'tag-accent-2' : r.item.state === 'awaiting_verification' ? 'tag-highlight' : 'tag-accent',
+    law: 'tag-neutral', state: r.item.overdue ? 'status-danger' : r.item.state === 'awaiting_verification' ? 'status-warning' : 'status-info',
   });
   const overdue = queue.data.filter(i => i.overdue).length;
   return (
@@ -62,7 +62,7 @@ export function PrivacyQueue({ tabs }: { tabs?: ReactNode }) {
         <Segmented name="privacy-state" aria-label={t('heading')} value={state}
           options={[{ value: 'open', label: t('open') }, { value: 'closed', label: t('closed') }]} onChange={v => go({ state: v })} />
       </div>
-      <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
+      <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
         can={{ create: false, update: false, delete: false }} roleName={roleName} emptyText={t('empty')} onOpen={r => go({ request: r.id })} />
       {search.request ? <RequestDrawer id={search.request} canAct={can('privacy')} t={t} onClose={() => go({ request: undefined })} /> : null}
       {recording ? <RecordDialog t={t} onClose={() => setRecording(false)} onDone={id => { setRecording(false); go({ state: 'open', request: id }); }} /> : null}
@@ -86,7 +86,7 @@ function RequestDrawer({ id, canAct, t, onClose }: { id: string; canAct: boolean
       {detail.isPending ? <PageSkeleton kpis={0} rows={4} />
         : detail.isError || !d ? <ErrorState message={t('loadError')} onRetry={() => void detail.refetch()} />
           : <>
-            <p><Tag tone={d.overdue ? 'accent-2' : 'neutral'}>{t(`s_${d.state}` as PrivacyKey)}</Tag></p>
+            <p><Tag tone={d.overdue ? 'danger' : 'neutral'}>{t(`s_${d.state}` as PrivacyKey)}</Tag></p>
             <p>{t('detailLaw', { law: d.law.name, days: d.law.responseDays, business: String(d.law.businessDays), ext: d.law.extensionDays })}</p>
             <ul className="nl-q-list">
               <li>{t('receivedLine', { date: date(d.receivedAt, 'dateTime'), channel: t(`ch_${d.channel}` as PrivacyKey) })}</li>
@@ -131,9 +131,9 @@ function Actions({ d, t, busy, run, open }: { d: Detail; t: PrivacyT; busy: bool
       {d.type === 'erasure' && d.state === 'verified' ? <Button type="button" disabled={busy} onClick={() => run({ id: d.id, act: 'start' })}>{t('start')}</Button> : null}
       {d.type === 'correction' && d.state === 'verified' && d.corrections.length
         ? <Button type="button" disabled={busy} onClick={() => run({ id: d.id, act: 'corrections', corrections: d.corrections })}>{t('apply')}</Button> : null}
-      {d.steps.some(s => s.status === 'failed' || s.status === 'held') ? <Button type="button" variant="ghost" disabled={busy} onClick={() => run({ id: d.id, act: 'retry' })}>{t('retry')}</Button> : null}
-      {openState && !d.extendedTo && d.law.extensionDays > 0 ? <Button type="button" variant="ghost" disabled={busy} onClick={() => open('extend')}>{t('extend')}</Button> : null}
-      {d.state === 'awaiting_verification' || d.state === 'verified' ? <Button type="button" variant="ghost" className="nl-danger" disabled={busy} onClick={() => open('reject')}>{t('reject')}</Button> : null}
+      {d.steps.some(s => s.status === 'failed' || s.status === 'held') ? <Button type="button" variant="tertiary" disabled={busy} onClick={() => run({ id: d.id, act: 'retry' })}>{t('retry')}</Button> : null}
+      {openState && !d.extendedTo && d.law.extensionDays > 0 ? <Button type="button" variant="tertiary" disabled={busy} onClick={() => open('extend')}>{t('extend')}</Button> : null}
+      {d.state === 'awaiting_verification' || d.state === 'verified' ? <Button type="button" variant="tertiary" className="nl-danger" disabled={busy} onClick={() => open('reject')}>{t('reject')}</Button> : null}
     </div>
   );
 }
@@ -143,7 +143,7 @@ function ExtendDialog({ t, busy, onClose, onSave }: { t: PrivacyT; busy: boolean
   const label: Record<(typeof EXTENSIONS)[number], PrivacyKey> = { volume: 'reasonVolume', consultation: 'reasonConsultation', conversion: 'reasonConversion' };
   return (
     <Dialog open onClose={onClose} title={t('extendTitle')}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={busy} onClick={() => onSave(reason)}>{t('save')}</Button></>}>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button><Button disabled={busy} onClick={() => onSave(reason)}>{t('save')}</Button></>}>
       <Field label={t('extendWhy')}><Select value={reason} onChange={e => setReason(e.target.value)} options={EXTENSIONS.map(r => ({ value: r, label: t(label[r]) }))} /></Field>
     </Dialog>
   );
@@ -154,7 +154,7 @@ function RejectDialog({ t, busy, onClose, onSave }: { t: PrivacyT; busy: boolean
   const [note, setNote] = useState('');
   return (
     <Dialog open onClose={onClose} title={t('rejectTitle')}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={busy} onClick={() => onSave(decision, note.trim() || undefined)}>{t('reject')}</Button></>}>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button><Button disabled={busy} onClick={() => onSave(decision, note.trim() || undefined)}>{t('reject')}</Button></>}>
       <Field label={t('rejectWhy')}><Select value={decision} onChange={e => setDecision(e.target.value)} options={DECISIONS.map(x => ({ value: x, label: t(`d_${x}`) }))} /></Field>
       <Field label={t('rejectNote')}><TextArea value={note} maxLength={500} onChange={e => setNote(e.target.value)} /></Field>
     </Dialog>
@@ -175,7 +175,7 @@ function RecordDialog({ t, onClose, onDone }: { t: PrivacyT; onClose: () => void
   }, { onSuccess: d => onDone(d.id) });
   return (
     <Dialog open onClose={onClose} title={t('recordTitle')}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={record.isPending} onClick={save}>{t('save')}</Button></>}>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button><Button disabled={record.isPending} onClick={save}>{t('save')}</Button></>}>
       <Field label={t('contact')} error={errors.contact}><TextInput value={contact} onChange={e => setContact(e.target.value)} /></Field>
       <Field label={t('type')} error={errors.type}><Select value={type} onChange={e => setType(e.target.value as (typeof TYPES)[number])} options={TYPES.map(x => ({ value: x, label: t(`t_${x}`) }))} /></Field>
       {type === 'correction' ? <>

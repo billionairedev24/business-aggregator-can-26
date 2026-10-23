@@ -7,4 +7,4 @@
 .nl-ds-quote { margin: 0; font-size: var(--text-sm); }
 .nl-ds-note { min-height: 70px; width: 100%; }
 /* S-143: evidence links get a 44 px hit area without moving the line */
-.nl-ds-file { display: inline-block; min-width: 44px; padding-block: 14px; margin-block: -14px; color: var(--color-link); }
+.nl-ds-file { display: inline-block; min-width: 44px; padding-block: var(--space-3-5); margin-block: calc(-1 * var(--space-3-5)); color: var(--color-link); }

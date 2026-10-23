@@ -59,12 +59,13 @@ describe('catalogue taxonomy (S-94, design 03)', () => {
     const mechanic = card('Mobile mechanic');
     expect(within(mechanic).getByText('Services › Automotive')).toBeTruthy();
     expect(within(mechanic).getByText('Yes · AMVIC (AB), BC: none')).toBeTruthy();
-    expect(within(mechanic).getByText('$89')).toBeTruthy();
+    expect(within(mechanic).getByText('$89.00')).toBeTruthy();
     expect(within(card('Electrician')).getByText('Yes · Safety Codes')).toBeTruthy();
-    expect(within(card('Electrician')).getByText('$140/h')).toBeTruthy();
+    expect(within(card('Electrician')).getByText('$140.00/h')).toBeTruthy();
     expect(within(card('Real-estate agent')).getByText('quote')).toBeTruthy();
     expect(within(card('Butcher')).getByText('Shop › Food & grocery')).toBeTruthy();
     expect(within(card('Butcher')).getByText('No')).toBeTruthy();
+    expect(within(screen.getByRole('tablist', { name: 'Categories by department' })).getByRole('tab', { name: /^Shop/ })).toBeTruthy();
     expect(screen.getByText('2 businesses hold more than this; they keep them until they change their categories.')).toBeTruthy();
     expect(screen.getByText('2 businesses · Bow Dent Co., Prairie Dents')).toBeTruthy();
   });

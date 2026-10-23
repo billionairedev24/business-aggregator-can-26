@@ -51,8 +51,8 @@ function RotaView({ rota }: { rota: Rota }) {
                     <span className="nl-row-sub">{t('when', { from: fmt.date(s.startsAt, 'dateTime'), to: fmt.date(s.endsAt, 'dateTime') })}</span>
                   </span>
                   <span className="nl-row-actions">
-                    {onNow.has(s.id) ? <Tag tone="accent">{t('onCall')}</Tag> : null}
-                    {admin ? <Button variant="ghost" disabled={remove.isPending} onClick={() => remove.mutate(s.id)}>{t('remove')}</Button> : null}
+                    {onNow.has(s.id) ? <Tag tone="success">{t('onCall')}</Tag> : null}
+                    {admin ? <Button variant="tertiary" disabled={remove.isPending} onClick={() => remove.mutate(s.id)}>{t('remove')}</Button> : null}
                   </span>
                 </li>
               ))}
@@ -83,7 +83,7 @@ function SwapDialog({ rota, shifts, first, onClose }: { rota: Rota; shifts: Shif
   const [to, setTo] = useState(others[0]?.id ?? '');
   return (
     <Dialog open onClose={onClose} title={t('swapTitle', { duty: shift.duty })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={hand.isPending || !to} onClick={() => hand.mutate({ id: shift.id, userId: to }, { onSuccess: onClose })}>{t('handOver')}</Button></>}>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button><Button disabled={hand.isPending || !to} onClick={() => hand.mutate({ id: shift.id, userId: to }, { onSuccess: onClose })}>{t('handOver')}</Button></>}>
       <Field label={t('f_shift')}>
         <Select value={shiftId} onChange={e => setShiftId(e.target.value)}
           options={shifts.map(s => ({ value: s.id, label: `${s.name} · ${fmt.date(s.startsAt, 'dateTime')} · ${s.duty}` }))} />
@@ -105,7 +105,7 @@ function AddDialog({ rota, onClose }: { rota: Rota; onClose: () => void }) {
   const iso = (local: string) => (local ? new Date(local).toISOString() : '');
   return (
     <Dialog open onClose={onClose} title={t('addTitle')}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={add.isPending} onClick={() => add.mutate({ userId, startsAt: iso(starts), endsAt: iso(ends), duty }, { onSuccess: onClose })}>{t('add')}</Button></>}>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button><Button disabled={add.isPending} onClick={() => add.mutate({ userId, startsAt: iso(starts), endsAt: iso(ends), duty }, { onSuccess: onClose })}>{t('add')}</Button></>}>
       <Field label={t('f_who')} error={errors.userId}><Select value={userId} onChange={e => setUserId(e.target.value)} options={rota.staff.map(m => ({ value: m.id, label: m.name }))} /></Field>
       <Field label={t('f_starts')} error={errors.startsAt}><TextInput type="datetime-local" value={starts} onChange={e => setStarts(e.target.value)} /></Field>
       <Field label={t('f_ends')} error={errors.endsAt}><TextInput type="datetime-local" value={ends} onChange={e => setEnds(e.target.value)} /></Field>

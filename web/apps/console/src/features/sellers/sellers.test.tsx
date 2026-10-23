@@ -42,35 +42,82 @@ function api(roles: Parameters<typeof staffApi>[0], extra?: (c: Call) => { statu
 }
 const card = (text: string) => screen.getAllByText(text).map(e => e.closest('tr, .nl-dt-card') as HTMLElement | null).find(Boolean) as HTMLElement;
 
-describe('sellers & providers (S-82, design 03)', () => {
-  it('lists every business with tier, quality, GMV, disputes, flags and status', async () => {
+describe('sellers & providers (S-82; E-15 S-177)', () => {
+  it('lists every business: KPIs, status views with counts, dense rows with status tags', async () => {
     api(['trust_safety']);
     renderConsole('/sellers');
     expect(await screen.findByRole('heading', { level: 1, name: 'Sellers & providers' })).toBeTruthy();
-    expect(await screen.findByText('1,204 active · 41 at risk')).toBeTruthy();
+    expect(await screen.findByText('All markets · 4 businesses across Services, Shop and Food')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
+    const kpis = within(screen.getByRole('list', { name: 'Against the floors' }));
+    expect(kpis.getByText('Live sellers').nextElementSibling?.textContent).toBe('3');
+    expect(kpis.getByText('At risk').nextElementSibling?.textContent).toBe('41');
+    expect(kpis.getByText('Sales, 90 days').nextElementSibling?.textContent).toBe('$42.9k');
+    const tabs = screen.getByRole('tablist', { name: 'Businesses by status' });
+    expect(within(tabs).getAllByRole('tab').map(x => x.textContent)).toEqual(['All4', 'Live3', 'Under review0', 'Paused0', 'Suspended1']);
     const bow = card('Bow River Mechanics');
-    expect(within(bow).getByText('Services · AB')).toBeTruthy();
+    expect(within(bow).getByText(/Calgary · AB/)).toBeTruthy();
     expect(within(bow).getByText('Trusted')).toBeTruthy();
-    expect(within(bow).getByText('$18.2k')).toBeTruthy();
+    expect(within(bow).getByText('$18,200.00')).toBeTruthy();
     expect(within(bow).getByText('2.4%')).toBeTruthy();
-    expect(within(bow).getByText('Quality < floor · Insurance 21 d')).toBeTruthy();
-    expect(within(card('Fraser Electric')).getByText('Services · BC pilot')).toBeTruthy();
-    expect(within(card('Fraser Electric')).getByText('Licence TSBC pending')).toBeTruthy();
-    expect(within(card('Kensington Garage on Wheels')).getByText('Off-platform payment mention')).toBeTruthy();
-    expect(within(card('Kensington Garage on Wheels')).getByText('Suspended')).toBeTruthy();
+    expect(within(bow).getByText('Active').className).toContain('nl-status-success');
+    expect(within(card('Fraser Electric')).getByText(/Calgary · BC pilot/)).toBeTruthy();
+    expect(within(card('Kensington Garage on Wheels')).getByText('Suspended').className).toContain('nl-status-danger');
   });
 
-  it('suspends from the list with a reason, and support only views', async () => {
+  it('filters by view, department and quick filters, and keeps them in the address', async () => {
+    api(['admin']);
+    const user = userEvent.setup({ delay: null });
+    const { router } = renderConsole('/sellers');
+    await screenReady();
+    await user.click(screen.getByRole('tab', { name: /^Suspended/ }));
+    await waitFor(() => expect(screen.queryByText('Prairie Wrench')).toBeNull());
+    expect(screen.getByText('Kensington Garage on Wheels')).toBeTruthy();
+    expect(router.state.location.search).toEqual({ view: 'suspended' });
+    await user.click(screen.getByRole('tab', { name: /^All/ }));
+    await user.click(screen.getByRole('radio', { name: 'Shop' }));
+    await waitFor(() => expect(screen.queryByText('Prairie Wrench')).toBeNull());
+    await user.click(screen.getByRole('radio', { name: 'All' }));
+    await user.click(screen.getByRole('button', { name: 'Licence expiring' }));
+    await waitFor(() => expect(screen.queryByText('Prairie Wrench')).toBeNull());
+    expect(screen.getByText('Bow River Mechanics')).toBeTruthy();
+    expect(router.state.location.search).toEqual({ expiring: true });
+  });
+
+  it('saves a view on this device and opens it again', async () => {
+    api(['admin']);
+    const user = userEvent.setup({ delay: null });
+    const { router } = renderConsole('/sellers?view=suspended&risk=true');
+    await screenReady();
+    await user.click(screen.getByRole('button', { name: 'Saved views' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Save this view…' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Save this view' });
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name of the view' }), 'Suspended at risk');
+    await user.click(within(dialog).getByRole('button', { name: 'Save view' }));
+    expect(JSON.parse(localStorage.getItem('nl.console.views.sellers') ?? '[]')).toEqual([{ name: 'Suspended at risk', state: { view: 'suspended', risk: true } }]);
+    await user.click(screen.getByRole('tab', { name: /^All/ }));
+    await user.click(screen.getByRole('button', { name: 'Saved views' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Suspended at risk' }));
+    await waitFor(() => expect(router.state.location.search).toEqual({ view: 'suspended', risk: true }));
+  });
+
+  it('suspends selected businesses from the red bulk action, one request each with the reason; support only views', async () => {
     const calls = api(['trust_safety']);
     const user = userEvent.setup({ delay: null });
     const first = renderConsole('/sellers');
     await screenReady();
-    await user.click(within(card('Prairie Wrench')).getByRole('button', { name: /Suspend/ }));
-    const dialog = await screen.findByRole('dialog', { name: 'Suspend · Prairie Wrench' });
+    await user.click(within(card('Prairie Wrench')).getByRole('checkbox'));
+    await user.click(within(card('Bow River Mechanics')).getByRole('checkbox'));
+    const bulk = screen.getByRole('region', { name: '2 selected' });
+    const suspend = within(bulk).getByRole('button', { name: 'Suspend…' });
+    expect(suspend.className).toContain('nl-dt-bulk-danger');
+    await user.click(suspend);
+    const dialog = await screen.findByRole('dialog', { name: 'Suspend · 2 businesses' });
     await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Off-platform payments');
-    await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
-    await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/api/v1/console/merchants/m1/suspend'))).toBe(true));
+    const confirm = within(dialog).getByRole('button', { name: 'Suspend 2' });
+    expect(confirm.className).toContain('btn-destructive');
+    await user.click(confirm);
+    await waitFor(() => expect(calls.filter(c => c.method === 'POST').map(c => c.url.replace(/.*merchants\//, ''))).toEqual(['m1/suspend', 'm2/suspend']));
     const post = calls.find(c => c.method === 'POST')!;
     expect(post.body).toEqual({ reason: 'Off-platform payments' });
     expect(post.headers['X-Console-Role']).toBe('trust_safety');
@@ -79,64 +126,55 @@ describe('sellers & providers (S-82, design 03)', () => {
     renderConsole('/sellers');
     await screenReady();
     expect(screen.getByText(/View only · Support/)).toBeTruthy();
-    expect(within(card('Prairie Wrench')).queryByRole('button', { name: /Suspend/ })).toBeNull();
+    await user.click(within(card('Prairie Wrench')).getByRole('checkbox'));
+    expect(screen.queryByRole('button', { name: 'Suspend…' })).toBeNull();
   });
 
-  it('filters at risk, searches and filters by province', async () => {
+  it('follows the top bar’s scope and the global search', async () => {
     const calls = api(['admin']);
-    const user = userEvent.setup({ delay: null });
-    renderConsole('/sellers');
+    renderConsole('/sellers?q=bow&province=AB');
     await screenReady();
-    await user.click(screen.getByRole('button', { name: 'At risk' }));
-    await waitFor(() => expect(screen.queryByText('Prairie Wrench')).toBeNull());
-    expect(screen.getByText('Bow River Mechanics')).toBeTruthy();
-    await user.type(screen.getByRole('searchbox', { name: 'Search a business' }), 'bow{Enter}');
-    await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/sellers?q=bow'))).toBe(true));
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Province' }), 'AB');
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/sellers?q=bow&province=AB'))).toBe(true));
+    expect((screen.getByRole('searchbox', { name: /Search/ }) as HTMLInputElement).value).toBe('bow');
   });
 
-  it('opens a business in the right sheet from the list, with its figures, flags, checks and the full page', async () => {
-    const calls = api(['trust_safety']);
+  it('opens a business’s page from the list', async () => {
+    api(['trust_safety']);
     const user = userEvent.setup({ delay: null });
     const { router } = renderConsole('/sellers');
     await screenReady();
     await user.click(within(card('Bow River Mechanics')).getByRole('button', { name: /Open/ }));
-    const sheet = await screen.findByRole('dialog', { name: 'Bow River Mechanics' });
-    expect(router.state.location.search).toEqual({ seller: 'm2' });
-    expect(await within(sheet).findByText('4.7 · 88 reviews')).toBeTruthy();
-    expect(within(sheet).getByText('Quality').nextElementSibling?.textContent).toBe('78 · Below the floor');
-    expect(within(sheet).getByText('On time').nextElementSibling?.textContent).toBe('93%');
-    expect(within(sheet).getByText('Insurance 21 d')).toBeTruthy();
-    expect(within(sheet).getByText('AMVIC 51022')).toBeTruthy();
-    expect(within(sheet).getByText('Registered → Trusted by Priya Natarajan · “Quality 84 for 4 weeks”')).toBeTruthy();
-    expect(within(sheet).getByRole('link', { name: 'Open the full page' }).getAttribute('href')).toBe('/sellers/m2');
-    await user.click(within(sheet).getByRole('button', { name: 'Suspend' }));
-    expect(await screen.findByRole('dialog', { name: 'Suspend · Bow River Mechanics' })).toBeTruthy();
-    expect(calls.some(c => c.url.endsWith('/api/v1/console/sellers/m2'))).toBe(true);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/sellers/m2'));
   });
 
-  it('shows the seller detail: KPIs against floors, signals, timeline and verifications', async () => {
+  it('shows the seller page: status, key facts, KPIs against floors, tabs and the action panel', async () => {
     api(['admin']);
+    const user = userEvent.setup({ delay: null });
     renderConsole('/sellers/m2');
     expect(await screen.findByRole('heading', { level: 1, name: 'Bow River Mechanics' })).toBeTruthy();
-    expect(screen.getByText('Services · Mobile mechanic · Calgary · joined Mar 2026 · Stripe acct_1K…')).toBeTruthy();
+    await expectNoAxeViolations(document.body);
+    expect(screen.getByText('Active').className).toContain('nl-status-success');
+    const fact = (label: string) => screen.getByText(label, { selector: 'dt' }).nextElementSibling?.textContent;
+    expect(fact('Type')).toBe('Services · Mobile mechanic');
+    expect(fact('Location')).toBe('Calgary · AB');
+    expect(fact('Joined')).toBe('Mar 2026');
+    expect(fact('Stripe account')).toBe('acct_1K…');
     const kpi = (label: string) => screen.getByText(label).parentElement!;
     expect(kpi('Rating · 88 reviews').querySelector('.bo-kpi-value')?.textContent).toBe('4.7');
-    expect(kpi('Quality · Trusted floor 80').querySelector('.bo-kpi-value')?.textContent).toBe('78');
     expect(kpi('Quality · Trusted floor 80').querySelector('.bo-kpi-delta')?.textContent).toBe('Below the floor');
-    expect(kpi('On time · floor 92').querySelector('.bo-kpi-value')?.textContent).toBe('93%');
     expect(kpi('On time · floor 92').querySelector('.bo-kpi-delta')).toBeNull();
-    expect(kpi('Disputes · floor 1.5').querySelector('.bo-kpi-value')?.textContent).toBe('2.4%');
     expect(kpi('Disputes · floor 1.5').querySelector('.bo-kpi-delta')?.getAttribute('data-trend')).toBe('down');
     expect(kpi('90-day GMV').querySelector('.bo-kpi-value')?.textContent).toBe('$18.2k');
     expect(screen.getByText('On-time arrival')).toBeTruthy();
-    expect(screen.getByText('Completion photos')).toBeTruthy();
-    expect(screen.getByText('Registered → Trusted by Priya Natarajan · “Quality 84 for 4 weeks”')).toBeTruthy();
-    expect(screen.getByText('Approved · Trusted')).toBeTruthy();
+    await user.click(screen.getByRole('tab', { name: /Verification on file/ }));
     expect(screen.getByText('KYC verified')).toBeTruthy();
     expect(screen.getByText('AMVIC 51022')).toBeTruthy();
     expect(screen.getByText('Insurance expires in 21 d')).toBeTruthy();
+    await user.click(screen.getByRole('tab', { name: /Timeline & audit/ }));
+    expect(screen.getByRole('tabpanel').textContent).toContain('Registered → Trusted by Priya Natarajan · “Quality 84 for 4 weeks”');
+    expect(screen.getByText('Approved · Trusted')).toBeTruthy();
+    const panel = within(screen.getByRole('complementary', { name: 'Oversight actions' }));
+    expect(panel.getByRole('button', { name: 'Suspend…' }).className).toContain('btn-destructive');
   });
 
   it('applies an oversight action: change tier and require re-verification', async () => {
@@ -144,17 +182,14 @@ describe('sellers & providers (S-82, design 03)', () => {
     const user = userEvent.setup({ delay: null });
     renderConsole('/sellers/m2');
     await screenReady();
-    await user.click(screen.getByRole('radio', { name: /Change tier/ }));
-    await user.click(screen.getByRole('button', { name: 'Apply: Change tier' }));
+    await user.click(screen.getByRole('button', { name: 'Change tier…' }));
     let dialog = await screen.findByRole('dialog', { name: 'Change tier · Bow River Mechanics' });
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'New tier' }), 'registered');
     await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Quality below floor 3 weeks');
     await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(calls.find(c => c.url.endsWith('/merchants/m2/tier'))?.body).toEqual({ tier: 'registered', reason: 'Quality below floor 3 weeks' }));
-    expect(await screen.findByRole('button', { name: 'Applied · seller notified' })).toBeTruthy();
-    expect(screen.getByText('Logged in audit. Seller can appeal within 14 days.')).toBeTruthy();
-    await user.click(screen.getByRole('radio', { name: /Require re-verification/ }));
-    await user.click(screen.getByRole('button', { name: 'Apply: Require re-verification' }));
+    expect(await screen.findByText('Logged in audit. Seller can appeal within 14 days.')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Require re-verification…' }));
     dialog = await screen.findByRole('dialog', { name: 'Require re-verification · Bow River Mechanics' });
     const options = within(within(dialog).getByRole('combobox', { name: 'Check' })).getAllByRole('option').map(o => o.textContent);
     expect(options).toEqual(['Licence · AMVIC · 51022', 'Insurance']);
@@ -167,36 +202,35 @@ describe('sellers & providers (S-82, design 03)', () => {
   it('hides from search, and shows a business the rating floor hid again', async () => {
     const calls = api(['admin']);
     const user = userEvent.setup({ delay: null });
-    renderConsole('/sellers/m2');
+    const first = renderConsole('/sellers/m2');
     await screenReady();
-    await user.click(screen.getByRole('radio', { name: /Hide from search/ }));
     expect(screen.getByText('Existing customers can still book')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Apply: Hide from search' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Hide from search · Bow River Mechanics' });
+    await user.click(screen.getByRole('button', { name: 'Hide from search…' }));
+    let dialog = await screen.findByRole('dialog', { name: 'Hide from search · Bow River Mechanics' });
     await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Repeated late arrivals');
     await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(calls.find(c => c.url.endsWith('/merchants/m2/search'))?.body).toEqual({ hidden: true, reason: 'Repeated late arrivals' }));
-  });
-
-  it('marks a hidden business in the list and the detail, and names the trust rules in the timeline', async () => {
+    first.unmount();
     const hidden = { ...SELLERS[1]!, searchHidden: 'rating_floor' as const };
-    const calls = api(['admin'], c => {
+    const calls2 = api(['admin'], c => {
       if (c.method === 'GET' && c.url.includes('/api/v1/console/sellers/m2')) return { body: { ...DETAIL, seller: hidden,
         trail: [{ id: 't2', action: 'search_hidden', reason: 'Average rating 3.90 over 90 days is below the floor of 4.2', detail: {}, actorRole: 'system', at: '2026-09-01T05:23:00Z' }] } };
       if (c.method === 'GET' && c.url.includes('/api/v1/console/sellers')) return { body: { ...DIRECTORY, items: [hidden] } };
       return undefined;
     });
-    const user = userEvent.setup({ delay: null });
-    renderConsole('/sellers');
+    const second = renderConsole('/sellers');
     expect(await screen.findByText('Hidden from search · rating floor · Quality < floor · Insurance 21 d')).toBeTruthy();
+    second.unmount();
     renderConsole('/sellers/m2');
-    expect(await screen.findByText('Hidden from search by the trust rules · “Average rating 3.90 over 90 days is below the floor of 4.2”')).toBeTruthy();
-    await user.click(screen.getByRole('radio', { name: /Show in search/ }));
-    await user.click(screen.getByRole('button', { name: 'Apply: Show in search' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Show in search · Bow River Mechanics' });
+    await screenReady();
+    expect(screen.getAllByText('Hidden from search · rating floor').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('tab', { name: /Timeline & audit/ }));
+    expect(screen.getByText('Hidden from search by the trust rules · “Average rating 3.90 over 90 days is below the floor of 4.2”')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Show in search…' }));
+    dialog = await screen.findByRole('dialog', { name: 'Show in search · Bow River Mechanics' });
     await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Reviews checked by hand');
     await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
-    await waitFor(() => expect(calls.find(c => c.url.endsWith('/merchants/m2/search'))?.body).toEqual({ hidden: false, reason: 'Reviews checked by hand' }));
+    await waitFor(() => expect(calls2.find(c => c.url.endsWith('/merchants/m2/search'))?.body).toEqual({ hidden: false, reason: 'Reviews checked by hand' }));
   });
 
   it('shows the api’s validation and conflict messages in the dialog', async () => {
@@ -206,7 +240,7 @@ describe('sellers & providers (S-82, design 03)', () => {
     await screenReady();
     await user.click(screen.getByRole('button', { name: 'Suspend…' }));
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Suspend' }));
     expect(await within(dialog).findByText('Give the reason the business will see.')).toBeTruthy();
   });
 
@@ -215,7 +249,6 @@ describe('sellers & providers (S-82, design 03)', () => {
     const first = renderConsole('/sellers/m2');
     await screenReady();
     expect((screen.getByRole('button', { name: 'Suspend…' }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole('button', { name: 'Apply: Suspend' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText('Your role can’t apply this action.')).toBeTruthy();
     first.unmount();
     staffApi(['dispatch'], c => (c.url.includes('/api/v1/console/overview') ? { status: 500 } : undefined));
@@ -227,7 +260,8 @@ describe('sellers & providers (S-82, design 03)', () => {
     api(['admin']);
     renderConsole('/sellers', { locale: 'fr' });
     expect(await screen.findByRole('heading', { level: 1, name: 'Vendeurs et fournisseurs' })).toBeTruthy();
-    expect(await screen.findByText(/1\s204 actifs · 41 à risque/)).toBeTruthy();
+    expect(await screen.findByText('Tous les marchés · 4 entreprises en Services, Boutique et Repas')).toBeTruthy();
     expect(within(card('Prairie Wrench')).getByText('Mécanicien mobile')).toBeTruthy();
+    expect(within(card('Bow River Mechanics')).getByText('18 200,00 $')).toBeTruthy();
   });
 });

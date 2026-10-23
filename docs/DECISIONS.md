@@ -11576,3 +11576,97 @@ selected state, Publish lost at the bottom; the preview look was fixed in S-174 
 - Full-page `ui-shots` draw the sticky save/continue bars where the window's bottom is, over the content below it; in the
   browser they sit in place at the end of the form.
 - French shots are still not in `make ui-shots` (fr-CA is covered by the tests).
+
+## 2026-10-23 — S-177 Console revamp
+
+Built to `design/revamp/a.html` screen 9 ("Console sellers table", 1280 and 390) and, where the mockups draw no console
+screen (the overview, the detail pages, the other queues), to the same system. No backend, BFF contract or migration
+changed: every figure and action uses an endpoint the console already called.
+
+**Shell (on S-174's `AppShell`).** White top bar: logo + "Console", the **market / province scope** (`WorkspaceSwitcher`:
+"All markets · Alberta + BC pilot", then each open province with its markets indented, from the region model), the
+global search (`ShellSearch`: "Sellers and providers matching …" → `/sellers?q=`, "Orders and bookings with reference …"
+→ `/orders?view=all&q=`, each only when the role opens the screen) and the staff member's full name with the active role.
+- The scope is the console's place filter: every screen that filtered by province/market reads `usePlace()` — a link's
+  own `?province=&market=` (a deep link, a KPI) wins, else the top bar's scope. The per-screen province and market
+  selects are gone (the mockup has none). The choice is remembered on the device (`localStorage nl.console.scope`, a
+  convenience; private mode keeps it for the visit). Choosing a scope drops the screen's own `?province=&market=`.
+- The mockup's notification bell is not built (the console has no notifications endpoint); the overview's queues are
+  the "what needs you" list. The region line text ("Ops · …") left the bar: it is the scope's meta line.
+- Pilot / UAT / Go-live / On-call / API stay out of the sidebar, the account menu and the search unless
+  `VITE_NL_TESTING_TOOLS=1` (unchanged); their routes remain.
+
+**Overview.** KPI strip (unchanged figures), then **Needs attention** as `ActionGrid` cards — one per queue with work
+in it, the SLA and the oldest item, one button into the screen: past the SLA (applications/disputes 48 h, flagged
+listings 4 h), a stuck run or an off-platform-payment flag is urgent; work inside its SLA is due soon; sellers below a
+floor are to know. Most urgent first (its button primary). A queue the active role can't open is left out (the old
+to-do card showed it without the way in); none left → "Nothing needs attention in this scope." The GMV chart's series
+are ink and the 3:1 grey (it used the action blue twice: audit #6).
+
+**Tables.** Every queue/table page: views as `UnderlineTabs` with counts, quick filters in the toolbar, dense rows,
+status tags, the bulk bar.
+| Page | Views (counts) | Quick filters | Bulk |
+|---|---|---|---|
+| Sellers & providers | All · Live · Under review · Paused · Suspended | department (Segmented) · At risk · Licence expiring · saved views | **Suspend…** (red; one audited request per business, same reason) |
+| Applications | Stage 1 · Review · Stage 2 · Decision · Info requested · Approved · All | High risk · saved views | — (the decision is per application, four-eyes) |
+| Orders & bookings | the api's views (needs attention … all) with its counts | type (Segmented) · saved views | — |
+| Disputes & refunds | For an agent · Waiting for a co-sign · Decided · All | kind (Segmented) · saved views | — |
+| Trust & safety flags | Open · Done · All | — | Dismiss (and each rule's action inline; Suspend listing rights red) |
+| Support desk | All · Urgent · Unassigned · Mine · SLA at risk (api counts) | requester (Segmented) | — |
+| Catalogue | All · Services · Shop · Food | Regulated · Not live anywhere | — |
+| Finance reconciliation | All · Mismatch · Matched · Resolved | — | — |
+| Team | People · Roles · Audit log | — | — |
+- Tabs that the api filters (orders, support) keep their server counts; the others count the loaded rows.
+- **Saved views** (`features/shell/tables.tsx`): the viewer names the tab + filters + search they have and gets back to
+  it from a menu; kept on the device (`localStorage nl.console.views.<screen>`), never sent to the api. Built on
+  sellers, applications, orders and disputes (the queues with several filters).
+- The mockup's bulk "Message" is not built: there is no message-a-business endpoint. Export is the DataTable report.
+- Status tones (audit #6, "every status chip is the same grey"; accent/highlight were blue and magenta): a status is
+  a `StatusTag` (dot + semantic pair) — live/approved/done success, waiting/due warning, in review/new info, suspended/
+  failed/escalated danger, paused/neutral grey; a fact (tier, risk, priority) is a plain tag in a status pair. No
+  screen uses the action or commerce colour as a status any more.
+- Destructive actions are red (`btn-destructive`): Suspend… (list bulk bar, seller page), Cancel order…, Suspend
+  listing rights. `ghost`/`danger` button names became `tertiary`/`destructive`.
+- **Money** (audit #8): one format — `formatPrice` ($8.50 / 8,50 $) in tables, facts and sentences; KPI values and
+  chart amounts `formatCompactMoney` ($1.84M, $212k, under $1,000 the price format). The console's three local compact
+  formatters and every `formatMoney(…, { whole })` are gone.
+
+**Detail pages** (new client routes; the old right-hand sheets became pages): `RecordHeader` (back link, h1 + status
+tag, key facts), `RecordLayout` (main column + the 320 px sticky right-hand `ActionPanel`), `RecordTabs`.
+| Page | Route | Tabs | Action panel |
+|---|---|---|---|
+| Seller | `/sellers/$sellerId` (existed) | Standing (signals, consequences, coaching) · Verification on file · Timeline & audit | Suspend… / Reinstate, Require re-verification…, Change tier…, Hide / Show in search… |
+| Application | `/verification/$applicationId` | Business · Checks & identity · History (stages and review above) | Review… / Approve, Request info… (four-eyes reason as the note) |
+| Dispute / refund case | `/disputes/$kind/$caseId` | Both sides · Evidence · History | the decision (outcome tiles, amount, note, co-sign) |
+| Order / booking | `/orders/$orderRef` | Delivery · Cancellations and returns | Cancel order… (support), Open Disputes & refunds |
+| Support case | `/support/$ticketId` | Conversation (with the reply) · Refund requests · Requester context | Assign to me, Request refund…, Escalate to T&S |
+- "Case" is read as the support desk's case (the desk calls its tickets cases); trust appeals and card disputes keep
+  their sheets (not in the brief's list).
+- There is no single-order read endpoint: the order page finds the row through the monitor (`?view=all&q=<ref>`, a
+  reference prefix) and reads the delivery and after-sale endpoints by its id. An unknown reference says so.
+- Notes: no screen has a notes endpoint (sellers, orders, applications). The "notes" of the brief are the support
+  conversation and the dispute statements; no notes tab is invented elsewhere.
+- Old addresses `?seller=`, `?case=`, `?application=`, `?ticket=` are no longer read (the routes' schemas drop them).
+
+**@northline/ui additions** (additive; gallery section `records`, 4 new `test:visual` baselines; the 76 existing ones
+unchanged): `RecordHeader`, `RecordLayout`, `ActionPanel`, `ActionPanelItem`, `RecordTabs` (real ARIA tabs with a
+tabpanel), `RecordHistory`; `formatCompactMoney` (+ `useFormatters().compactMoney`); DataTable `views`, `filters`,
+`dense`, tones `status-*` (drawn as `StatusTag`) and `tag-success|warning|danger|info`. With `filters` the toolbar's
+Filters button reads "More filters" and Columns / Report become named icon buttons, so the row holds at 1280.
+- Fixed in DataTable (all apps): the bulk bar's destructive button rendered ink on ink — base `.btn` won over
+  `.nl-dt-bulk-danger` — so Suspend… was invisible; it now carries `btn-destructive`, and the bulk report button is
+  white (`btn-secondary`) as drawn, instead of the action blue.
+
+**Lint.** `pnpm lint:tokens` now checks all of `apps/console/src` strictly (no raw px sizes/spacing or colours; the
+console's CSS — auth, offers, go-live, UAT … — moved onto the scale) and fails on `tag-accent*`/`tag-highlight`,
+accent/highlight/brand/commerce tag tones, `formatMoney` / `fmt.money` and the `ghost`/`danger` button names anywhere in
+the console.
+
+**ui-shots:** new console routes `verification-registry`, `sellers-selected` (the bulk bar), `order`, `dispute`,
+`disputes-card`, `trust-appeals`, `support-case`, `offers`; the sheets' routes became the pages (`verification-review`
+/`-decide` now `/verification/M2`, `/M1`). A fixture answers an order's after-sale (empty).
+
+**Not done:** the mockup's rows-per-page select (the DataTable keeps its 5/10/25/50 boxes), the bell, bulk Message;
+the secondary sheets (finance day, pilot, partners, AI screening, privacy, retention, UAT feedback, appeals, card
+disputes) keep their drawer layout on the new tones. Storybook stories failing on develop before this story
+(LocationPill "Detected", SiteHeader "Narrow", Gallery "Sections" landmark-unique/banner) are untouched.

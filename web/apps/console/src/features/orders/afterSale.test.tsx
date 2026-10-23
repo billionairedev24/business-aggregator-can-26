@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi, type Call } from '../../test/render';
 import type { Monitor } from './api';
 
-/** S-151: failed deliveries in the orders monitor, an order's after-sale in its sheet, and staff cancelling. */
+/** S-151: failed deliveries in the orders monitor, an order's after-sale on its page (S-177), and staff cancelling. */
 const AS_OF = '2026-09-08T18:00:00Z';
 const row = (o: Partial<Monitor['items'][number]>): Monitor['items'][number] => ({
   id: 'o1', ref: 'NL-48188', kind: 'order', type: 'goods', customer: 'P. Nguyen', sellers: ['Prairie Wrench'], amountCents: 1995, state: 'delivery_failed',
@@ -34,7 +34,7 @@ describe('orders monitor · after-sale (S-151)', () => {
     const calls = api(['dispatch']);
     const user = userEvent.setup({ delay: null });
     const { router } = renderConsole('/orders');
-    const chip = await screen.findByRole('button', { name: 'Delivery failed · 1' });
+    const chip = await screen.findByRole('tab', { name: /^Delivery failed/ });
     expect(screen.getAllByText('The courier couldn’t hand it over · customer choosing re-delivery or a refund').length).toBeGreaterThan(0);
     await user.click(chip);
     await waitFor(() => expect(calls.some(c => c.url.includes('/api/v1/console/orders?view=failed'))).toBe(true));
@@ -44,16 +44,17 @@ describe('orders monitor · after-sale (S-151)', () => {
   it('shows the order’s cancellations, failed delivery and returns; dispatch can’t cancel', async () => {
     api(['dispatch']);
     const user = userEvent.setup({ delay: null });
-    renderConsole('/orders');
-    await user.click(await screen.findByText('P. Nguyen → Prairie Wrench'));
-    const drawer = await screen.findByRole('dialog', { name: 'NL-48188 · Order' });
-    const section = await within(drawer).findByText('Cancellations and returns');
-    const text = section.closest('section')?.textContent ?? drawer.textContent ?? '';
+    renderConsole('/orders/NL-48188');
+    await user.click(await screen.findByRole('tab', { name: 'Cancellations and returns' }));
+    const drawer = screen.getByRole('tabpanel');
+    await within(drawer).findByText(/RT-1001/);
+    const text = drawer.textContent ?? '';
     expect(text).toMatch(/cancelled by the shop \(Bridgeland Butcher\) · out of stock/);
     expect(text).toMatch(/nobody answered · attempt 1/);
     expect(text).toMatch(/Waiting for the customer until/);
     expect(text).toMatch(/RT-1001 · Prairie Wrench · awaiting the shop · \$19\.95/);
-    expect(within(drawer).queryByRole('button', { name: 'Cancel order' })).toBeNull();
+    expect((screen.getByRole('button', { name: 'Cancel order…' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('Your role can’t change orders here.')).toBeTruthy();
   });
 
   it('support cancels with a reason and restock; the api’s refusal is shown', async () => {
@@ -66,10 +67,12 @@ describe('orders monitor · after-sale (S-151)', () => {
       return undefined;
     });
     const user = userEvent.setup({ delay: null });
-    renderConsole('/orders');
-    await user.click(await screen.findByText('P. Nguyen → Prairie Wrench'));
-    const drawer = await screen.findByRole('dialog', { name: 'NL-48188 · Order' });
-    await user.click(await within(drawer).findByRole('button', { name: 'Cancel order' }));
+    renderConsole('/orders/NL-48188');
+    const open = await screen.findByRole('button', { name: 'Cancel order…' });
+    expect(open.className).toContain('btn-destructive');
+    await waitFor(() => expect((open as HTMLButtonElement).disabled).toBe(false));
+    await user.click(open);
+    const drawer = await screen.findByRole('dialog', { name: 'Cancel this order' });
     await user.click(within(drawer).getByRole('button', { name: 'Cancel and refund' }));
     expect(within(drawer).getByRole('alert').textContent).toBe('Choose a reason.');
     await user.click(within(drawer).getByRole('radio', { name: 'Delivery issue' }));
@@ -85,10 +88,12 @@ describe('orders monitor · after-sale (S-151)', () => {
   it('is in French', async () => {
     api(['support']);
     const user = userEvent.setup({ delay: null });
-    renderConsole('/orders', { locale: 'fr' });
-    expect(await screen.findByRole('button', { name: 'Livraison manquée · 1' })).toBeTruthy();
-    await user.click(await screen.findByText('P. Nguyen → Prairie Wrench'));
-    expect(await screen.findByText('Annulations et retours')).toBeTruthy();
-    expect(await screen.findByRole('button', { name: 'Annuler la commande' })).toBeTruthy();
+    const first = renderConsole('/orders', { locale: 'fr' });
+    expect(await screen.findByRole('tab', { name: /^Livraison manquée/ })).toBeTruthy();
+    first.unmount();
+    renderConsole('/orders/NL-48188', { locale: 'fr' });
+    expect(await screen.findByRole('tab', { name: 'Annulations et retours' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Annuler la commande…' })).toBeTruthy();
+    void user;
   });
 });

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Gavel, MagnifyingGlass } from '@phosphor-icons/react';
 import {
-  Button, Checkbox, DataTable, Dialog, Drawer, ErrorState, FactList, Field, formatDate, formatNumber, KpiStrip, OptionCard, PageSkeleton, RadioGroup, SheetSection, Tag, TextArea, useLocale,
+  Button, Checkbox, DataTable, Dialog, ErrorState, FactList, Field, FilterChip, formatDate, formatNumber, KpiStrip, OptionCard, PageSkeleton, RadioGroup, SheetSection, StatusTag, Tag, TextArea, UnderlineTabs, useLocale,
   type DataTableAction, type DataTableColumn, type DataTableTone,
 } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
@@ -11,6 +11,8 @@ import { useAge } from '../shell/age';
 import { meQuery } from '../shell/api';
 import { useGrant } from '../shell/grant';
 import { useRegionName, type PlaceFilter } from '../shell/PlaceFilters';
+import { usePlace } from '../shell/scope';
+import { SavedViews, statusTone } from '../shell/tables';
 import { SCREEN_PATH } from '../shell/screens';
 import {
   detailQuery, queueQuery, useDecideApplication, useDecideIdentity, useDecideRegistry, useReviewApplication,
@@ -22,7 +24,11 @@ import { useVerifyT, type VerifyKey, type VerifyT } from './messages';
 import '../shell/queues.css';
 import './applications.css';
 
-export interface VerifySearch extends PlaceFilter { application?: string; view?: 'registry' }
+export const APP_VIEWS = ['review', 'decision', 'info', 'approved', 'all'] as const;
+export type AppView = (typeof APP_VIEWS)[number];
+export interface VerifySearch extends PlaceFilter { view?: 'registry'; stage?: AppView; risk?: boolean }
+const viewOf = (a: Application): Exclude<AppView, 'all'> =>
+  a.status === 'pending' ? stageOf(a) : a.decision === 'approved' ? 'approved' : 'info';
 
 interface Row {
   id: string; name: string; sub: string; cat: string; region: string; checks: string; risk: string; wait: string; stage: string; status: string;
@@ -50,7 +56,7 @@ export const stageOf = (a: Pick<Application, 'checks' | 'stage'>): Stage =>
 const REC_KEY: Record<Recommendation, VerifyKey> = { approve: 'rec_approve', reject: 'rec_reject', request_info: 'rec_request_info' };
 
 /** Who may do what on one application: the active role's grant, and whether the signed-in person reviewed this round. */
-function useHands(d?: Detail) {
+export function useHands(d?: Detail) {
   const { can } = useGrant();
   const me = useQuery(meQuery).data?.userId;
   const fourEyes = d?.fourEyes ?? true;
@@ -58,9 +64,9 @@ function useHands(d?: Detail) {
   return { canReview: can('verify'), canApprove: can('approve'), fourEyes, reviewedByMe };
 }
 
-const statusText = (a: Application, t: VerifyT) =>
+export const statusText = (a: Application, t: VerifyT) =>
   a.status === 'pending' ? t('pending') : a.decision === 'approved' ? t('approved') : a.decision === 'info_requested' ? t('infoRequested') : a.status;
-const riskText = (a: Application, t: VerifyT) => t(a.risk === 'low' ? 'riskLow' : a.risk === 'medium' ? 'riskMedium' : 'riskHigh');
+export const riskText = (a: Application, t: VerifyT) => t(a.risk === 'low' ? 'riskLow' : a.risk === 'medium' ? 'riskMedium' : 'riskHigh');
 
 /**
  * Applications › Businesses (S-79; redesign § 2.3 → BO `apps` + the BO:811 sheet): submitted applications with their
@@ -71,7 +77,8 @@ const riskText = (a: Application, t: VerifyT) => t(a.risk === 'low' ? 'riskLow' 
 export function VerificationQueue() {
   const search = useSearch({ strict: false }) as VerifySearch;
   // S-158: the registry check queue is the screen's second tab
-  if (search.view === 'registry') return <RegistryQueue filter={{ province: search.province, market: search.market }} />;
+  const place = usePlace();
+  if (search.view === 'registry') return <RegistryQueue filter={place} />;
   return <BusinessQueue />;
 }
 
@@ -79,15 +86,15 @@ function BusinessQueue() {
   const t = useVerifyT();
   const { locale } = useLocale();
   const search = useSearch({ strict: false }) as VerifySearch;
-  const filter = { province: search.province, market: search.market };
+  const filter = usePlace();
   const navigate = useNavigate();
   const query = useQuery(queueQuery(filter));
   const { can, roleName } = useGrant();
   const regionName = useRegionName();
   const age = useAge();
-  const [asking, setAsking] = useState<{ app: Application; keys?: string[]; note?: string } | null>(null);
-  const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
-  const select = (id: string | undefined) => void navigate({ to: SCREEN_PATH.verify, search: { ...filter, application: id } as never });
+  const open = (id: string) => void navigate({ to: '/verification/$applicationId', params: { applicationId: id } });
+  const go = (next: Partial<VerifySearch>) => void navigate({ to: SCREEN_PATH.verify, search: { ...search, ...next } as never, replace: true });
+  const view = search.stage ?? 'all';
 
   if (query.isPending) return <div className="bo-page"><ApplicationsHead tab="businesses" filter={filter} /><PageSkeleton kpis={4} rows={6} /></div>;
   if (query.isError && !query.data) {
@@ -99,14 +106,17 @@ function BusinessQueue() {
     );
   }
   const data = query.data!;
-  const rows: Row[] = data.items.map(a => ({
+  const items = data.items.filter(a => !search.risk || a.risk === 'high');
+  const count = (v: AppView) => formatNumber(items.filter(a => v === 'all' || viewOf(a) === v).length, locale);
+  const rows: Row[] = items.filter(a => view === 'all' || viewOf(a) === view).map(a => ({
     id: a.merchantId, name: a.businessName, sub: a.legalName, cat: a.categories[0] ?? '—', region: regionName(a.province),
     checks: a.checks.map(c => `${checkLabel(c, t)} ${MARK[c.state]}`).join(' · '), risk: riskText(a, t),
     wait: a.status === 'pending' ? age(a.submittedAt) : '—', stage: a.status === 'pending' ? t(`stage_${stageOf(a)}`) : statusText(a, t), status: statusText(a, t), app: a,
   }));
+  // E-15 colour roles: risk is a fact (neutral · warning · danger), the stage a status (who it waits for)
   const tones = (r: Row): Partial<Record<keyof Row, DataTableTone>> => ({
-    risk: r.app.risk === 'low' ? 'tag-accent' : 'tag-accent-2',
-    stage: r.app.status !== 'pending' ? (r.app.decision === 'approved' ? 'tag-accent' : 'tag-neutral') : stageOf(r.app) === 'review' ? 'tag-neutral' : 'tag-highlight',
+    risk: r.app.risk === 'low' ? 'tag-neutral' : r.app.risk === 'medium' ? 'tag-warning' : 'tag-danger',
+    stage: statusTone(({ review: 'info', decision: 'warning', approved: 'success', info: 'neutral' } as const)[viewOf(r.app)]),
   });
   const columns: DataTableColumn<Row>[] = [
     { key: 'name', label: t('colApplicant'), sub: 'sub', subLabel: t('colBusiness'), primary: true },
@@ -125,7 +135,7 @@ function BusinessQueue() {
       when: { key: 'stage', in: fourEyes ? [t('stage_decision')] : [t('stage_review'), t('stage_decision')] } } as const] : []),
   ];
   const onAction = async (_: DataTableAction<Row>, hit: Row[]) => {
-    select(hit[0]!.app.merchantId);
+    open(hit[0]!.app.merchantId);
     return false;
   };
   const pending = data.items.filter(a => a.status === 'pending');
@@ -144,20 +154,21 @@ function BusinessQueue() {
         { key: 'info', label: t('k_info'), value: decided('info_requested'), delta: t('k_infoNote') },
         { key: 'approved', label: t('k_approved'), value: decided('approved'), delta: t('k_approvedNote') },
       ]} />
-      {notice ? <p role={notice.tone === 'error' ? 'alert' : 'status'} className={notice.tone === 'error' ? 'nl-q-error' : 'nl-q-note'}>{notice.text}</p> : null}
-      <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
+      <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones} pageSize={25}
+        tabs={<UnderlineTabs aria-label={t('appViews')} value={view} onChange={v => go({ stage: v === 'all' ? undefined : v })}
+          options={APP_VIEWS.map(v => ({ value: v, label: t(`av_${v}` as VerifyKey), count: count(v) }))} />}
+        filters={<>
+          <FilterChip label={t('highRisk')} applied={!!search.risk} onToggle={() => go({ risk: search.risk ? undefined : true })} />
+          <SavedViews screen="applications" current={{ stage: search.stage, risk: search.risk }} onApply={v => void navigate({ to: SCREEN_PATH.verify, search: v as never })} />
+        </>}
         can={{ create: false, update: can('verify') || can('approve'), delete: false }} roleName={roleName} actions={actions} onAction={onAction}
-        emptyText={t('empty')} openLabel={t('open')} onOpen={r => select(r.id)} />
-      {search.application ? <ApplicationSheet id={search.application} roleName={roleName} onClose={() => select(undefined)}
-        onAsk={setAsking} onDone={text => setNotice({ tone: 'ok', text })} /> : null}
-      {asking ? <RequestInfoDialog app={asking.app} keys={asking.keys} note={asking.note} onClose={() => setAsking(null)}
-        onSent={() => { setNotice({ tone: 'ok', text: t('infoToast', { business: asking.app.businessName }) }); setAsking(null); }} /> : null}
+        emptyText={t('empty')} openLabel={t('open')} onOpen={r => open(r.id)} />
     </div>
   );
 }
 
 /** Review → Decision with the current one marked (BO `apps` "Step 1 of 2 · Review"). */
-function Stages({ stage }: { stage: Stage | 'done' }) {
+export function Stages({ stage }: { stage: Stage | 'done' }) {
   const t = useVerifyT();
   const steps: Stage[] = ['review', 'decision'];
   return (
@@ -178,69 +189,8 @@ function Stages({ stage }: { stage: Stage | 'done' }) {
   );
 }
 
-/**
- * One application in the right sheet (BO:811): the stages, every submitted field, the review, checks, owners, registry
- * and history. The footer is the stage's action: "Review" (stage 1, `verify`) or Approve / Request info (stage 2,
- * `approve`) — disabled, with the reason beside it, for the person who reviewed this round (the api refuses it too).
- */
-function ApplicationSheet({ id, roleName, onClose, onAsk, onDone }: {
-  id: string; roleName: string; onClose: () => void;
-  onAsk: (v: { app: Application; keys?: string[]; note?: string }) => void; onDone: (text: string) => void;
-}) {
-  const t = useVerifyT();
-  const decide = useDecideApplication();
-  const query = useQuery(detailQuery(id));
-  const d = query.data;
-  const a = d?.application;
-  const { canReview, canApprove, fourEyes, reviewedByMe } = useHands(d);
-  const [dialog, setDialog] = useState<'review' | 'override' | null>(null);
-  const [error, setError] = useState<string>();
-  const stage = a ? stageOf(a) : 'review';
-  const current = a?.review ?? null;
-  const approve = async (app: Application) => {
-    setError(undefined);
-    if (current && current.recommendation !== 'approve') { setDialog('override'); return; }
-    try {
-      await decide.mutateAsync({ id: app.merchantId, decision: 'approve' });
-      onDone(t('approvedToast', { business: app.businessName }));
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : String(e));
-    }
-  };
-  const showReview = !!a && canReview && stage === 'review';
-  const showDecide = !!a && canApprove && (stage === 'decision' || !fourEyes);
-  const footer = a?.status === 'pending' ? (
-    showReview || showDecide ? (
-      <div className="nl-ap-footer">
-        <div className="nl-q-actions">
-          {showReview ? <Button onClick={() => setDialog('review')}>{t('review')}</Button> : null}
-          {showDecide ? <>
-            <Button variant={showReview ? 'secondary' : 'primary'} disabled={decide.isPending || reviewedByMe} aria-describedby={reviewedByMe ? 'nl-ap-same' : undefined}
-              onClick={() => void approve(a)}>{t('approve')}</Button>
-            <Button variant="secondary" disabled={reviewedByMe} aria-describedby={reviewedByMe ? 'nl-ap-same' : undefined}
-              onClick={() => onAsk({ app: a, keys: current?.recommendation === 'request_info' ? current.checkKeys : undefined, note: current?.recommendation === 'request_info' ? current.note ?? undefined : undefined })}>{t('requestInfo')}</Button>
-          </> : null}
-        </div>
-        {reviewedByMe && showDecide ? <p id="nl-ap-same" className="nl-q-note">{t('sameReviewer')}</p> : null}
-        {error ? <p role="alert" className="nl-q-error">{error}</p> : null}
-      </div>
-    ) : <span className="nl-q-note">{stage === 'review' && canApprove ? t('waitingReview') : t('viewOnly', { role: roleName })}</span>
-  ) : undefined;
-  return (
-    <Drawer open onClose={onClose} title={a ? a.businessName : t('entity')} footer={footer}>
-      {query.isPending ? <div aria-busy="true" className="nl-q-note">…</div>
-        : query.isError ? <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />
-          : <ApplicationBody d={query.data} canSettle={canReview} />}
-      {dialog === 'review' && a ? <ReviewDialog app={a} onClose={() => setDialog(null)}
-        onSent={() => { setDialog(null); onDone(t('reviewedToast', { business: a.businessName })); }} /> : null}
-      {dialog === 'override' && a ? <OverrideDialog app={a} onClose={() => setDialog(null)}
-        onSent={() => { setDialog(null); onDone(t('approvedToast', { business: a.businessName })); }} /> : null}
-    </Drawer>
-  );
-}
-
 /** The current review (stage 2) or "not reviewed yet" (stage 1): who, what they recommend, when, the checks and note. */
-function ReviewSection({ d }: { d: Detail }) {
+export function ReviewSection({ d }: { d: Detail }) {
   const t = useVerifyT();
   const { locale } = useLocale();
   const r = d.application.review;
@@ -260,39 +210,44 @@ function ReviewSection({ d }: { d: Detail }) {
   );
 }
 
-function ApplicationBody({ d, canSettle: canDecide }: { d: Detail; canSettle: boolean }) {
+/** The application's submitted fields (the page's Business tab). */
+export function BusinessFacts({ d }: { d: Detail }) {
   const t = useVerifyT();
   const { locale } = useLocale();
   const regionName = useRegionName();
   const age = useAge();
+  const a = d.application;
+  const structureKey = `st_${a.structure}` as VerifyKey;
+  const structure = !a.structure ? '—' : t(structureKey) === structureKey ? a.structure : t(structureKey);
+  return (
+    <FactList rows={[
+      [t('f_business'), a.businessName], [t('f_legal'), a.legalName],
+      [t('f_type'), a.type ? t(`t_${a.type}` as VerifyKey) : '—'], [t('f_structure'), structure],
+      [t('f_categories'), a.categories.length ? a.categories.join(', ') : '—'],
+      [t('f_place'), [a.city, a.province ? regionName(a.province) : null].filter(Boolean).join(', ') || '—'],
+      [t('f_submitted'), a.submittedAt ? `${formatDate(a.submittedAt, locale, 'date')} · ${t('submittedAgo', { age: age(a.submittedAt) })}` : '—'],
+      [t('f_risk'), riskText(a, t)],
+      [t('f_decision'), statusText(a, t)],
+    ]} />
+  );
+}
+
+/** The evidence: the automated checks, the owners' identity and the registry lookups, each settled here (role `verify`). */
+export function ChecksEvidence({ d, canSettle: canDecide }: { d: Detail; canSettle: boolean }) {
+  const t = useVerifyT();
   const identity = useDecideIdentity();
   const registry = useDecideRegistry();
   const [error, setError] = useState<string>();
   const run = (p: Promise<unknown>) => { setError(undefined); p.catch(e => setError(e instanceof ApiError ? e.message : String(e))); };
   const a = d.application;
-  const structureKey = `st_${a.structure}` as VerifyKey;
-  const structure = !a.structure ? '—' : t(structureKey) === structureKey ? a.structure : t(structureKey);
   return (
     <>
-      <Stages stage={a.status === 'pending' ? stageOf(a) : 'done'} />
       {error ? <p role="alert" className="nl-q-error">{error}</p> : null}
-      <ReviewSection d={d} />
-      <SheetSection title={t('secBusiness')}>
-        <FactList rows={[
-          [t('f_business'), a.businessName], [t('f_legal'), a.legalName],
-          [t('f_type'), a.type ? t(`t_${a.type}` as VerifyKey) : '—'], [t('f_structure'), structure],
-          [t('f_categories'), a.categories.length ? a.categories.join(', ') : '—'],
-          [t('f_place'), [a.city, a.province ? regionName(a.province) : null].filter(Boolean).join(', ') || '—'],
-          [t('f_submitted'), a.submittedAt ? `${formatDate(a.submittedAt, locale, 'date')} · ${t('submittedAgo', { age: age(a.submittedAt) })}` : '—'],
-          [t('f_risk'), riskText(a, t)],
-          [t('f_decision'), statusText(a, t)],
-        ]} />
-      </SheetSection>
       <SheetSection title={t('checksTitle')}>
         <ul className="nl-ap-list">
           {a.checks.map(c => (
             <li key={c.id} className="nl-ap-row"><span>{checkLabel(c, t)}{c.reference ? ` · ${c.reference}` : ''}</span>
-              <Tag tone={c.state === 'passed' ? 'success' : c.state === 'waiting' ? 'neutral' : 'warning'}>{t(`s_${c.state}` as VerifyKey)}</Tag></li>
+              <StatusTag tone={c.state === 'passed' ? 'success' : c.state === 'waiting' ? 'neutral' : c.state === 'failed' ? 'danger' : 'warning'}>{t(`s_${c.state}` as VerifyKey)}</StatusTag></li>
           ))}
         </ul>
       </SheetSection>
@@ -308,9 +263,9 @@ function ApplicationBody({ d, canSettle: canDecide }: { d: Detail; canSettle: bo
               {o.status === 'review' && o.checkId && canDecide
                 ? <span className="nl-q-actions">
                     <Button variant="secondary" onClick={() => run(identity.mutateAsync({ id: a.merchantId, checkId: o.checkId!, decision: 'approve' }))}>{t('approve')}</Button>
-                    <Button variant="ghost" onClick={() => run(identity.mutateAsync({ id: a.merchantId, checkId: o.checkId!, decision: 'reject' }))}>{t('reject')}</Button>
+                    <Button variant="tertiary" onClick={() => run(identity.mutateAsync({ id: a.merchantId, checkId: o.checkId!, decision: 'reject' }))}>{t('reject')}</Button>
                   </span>
-                : <Tag tone={o.status === 'verified' ? 'success' : o.status === 'review' ? 'warning' : 'neutral'}>{t(`o_${o.status}` as VerifyKey)}</Tag>}
+                : <StatusTag tone={o.status === 'verified' ? 'success' : o.status === 'review' ? 'warning' : 'neutral'}>{t(`o_${o.status}` as VerifyKey)}</StatusTag>}
             </li>
           ))}
         </ul>
@@ -325,33 +280,31 @@ function ApplicationBody({ d, canSettle: canDecide }: { d: Detail; canSettle: bo
                 {r.reviewState === 'open' && canDecide
                   ? <span className="nl-q-actions">
                       <Button variant="secondary" onClick={() => run(registry.mutateAsync({ reviewId: r.id, decision: 'approve' }))}>{t('approve')}</Button>
-                      <Button variant="ghost" onClick={() => run(registry.mutateAsync({ reviewId: r.id, decision: 'reject' }))}>{t('reject')}</Button>
+                      <Button variant="tertiary" onClick={() => run(registry.mutateAsync({ reviewId: r.id, decision: 'reject' }))}>{t('reject')}</Button>
                     </span>
-                  : <Tag tone={r.reviewState === 'approved' ? 'success' : r.reviewState === 'open' ? 'warning' : 'neutral'}>{t(`r_${r.reviewState ?? 'open'}` as VerifyKey)}</Tag>}
+                  : <StatusTag tone={r.reviewState === 'approved' ? 'success' : r.reviewState === 'open' ? 'warning' : 'neutral'}>{t(`r_${r.reviewState ?? 'open'}` as VerifyKey)}</StatusTag>}
               </li>
             ))}
           </ul>
         )}
       </SheetSection>
-      {d.decisions.length || d.reviews.length ? (
-        <SheetSection title={t('historyTitle')}>
-          <ul className="nl-ap-list">
-            {[
-              ...d.decisions.map(h => ({ at: h.decidedAt, id: h.id, text: t(h.decision === 'approved' ? 'h_approved' : 'h_info_requested', { date: formatDate(h.decidedAt, locale, 'date') }), keys: h.checkKeys, note: h.note })),
-              ...d.reviews.map(r => ({ at: r.reviewedAt, id: r.id, text: t('h_reviewed', { name: r.reviewerName, recommendation: t(REC_KEY[r.recommendation]), date: formatDate(r.reviewedAt, locale, 'date') }), keys: r.checkKeys, note: r.note })),
-            ].sort((x, y) => y.at.localeCompare(x.at)).map(h => (
-              <li key={h.id} className="nl-ap-row"><span>{h.text}
-                {h.keys.length ? ` · ${h.keys.map(k => checkLabel({ key: k, registry: null }, t)).join(', ')}` : ''}{h.note ? ` · ${h.note}` : ''}</span></li>
-            ))}
-          </ul>
-        </SheetSection>
-      ) : null}
     </>
   );
 }
 
+/** Decisions and reviews, newest first. */
+export function historyOf(d: Detail, t: VerifyT, locale: 'en' | 'fr') {
+  return [
+    ...d.decisions.map(h => ({ at: h.decidedAt, id: h.id, text: t(h.decision === 'approved' ? 'h_approved' : 'h_info_requested', { date: formatDate(h.decidedAt, locale, 'date') }), keys: h.checkKeys, note: h.note })),
+    ...d.reviews.map(r => ({ at: r.reviewedAt, id: r.id, text: t('h_reviewed', { name: r.reviewerName, recommendation: t(REC_KEY[r.recommendation]), date: formatDate(r.reviewedAt, locale, 'date') }), keys: r.checkKeys, note: r.note })),
+  ].sort((x, y) => y.at.localeCompare(x.at)).map(h => ({
+    key: h.id, at: h.at,
+    text: `${h.text}${h.keys.length ? ` · ${h.keys.map(k => checkLabel({ key: k, registry: null }, t)).join(', ')}` : ''}${h.note ? ` · ${h.note}` : ''}`,
+  }));
+}
+
 /** "Request info": the checks to redo (not passed ones preselected) and the note emailed to the owners. */
-function RequestInfoDialog({ app, keys: reviewed, note: reviewNote, onClose, onSent }: {
+export function RequestInfoDialog({ app, keys: reviewed, note: reviewNote, onClose, onSent }: {
   app: Application; keys?: string[]; note?: string; onClose: () => void; onSent: () => void;
 }) {
   const t = useVerifyT();
@@ -364,7 +317,7 @@ function RequestInfoDialog({ app, keys: reviewed, note: reviewNote, onClose, onS
   const send = () => decide.mutate({ id: app.merchantId, decision: 'request_info', checkKeys: keys, note }, { onSuccess: onSent });
   return (
     <Dialog open onClose={onClose} title={t('infoTitle', { business: app.businessName })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={decide.isPending} onClick={send}>{t('infoSend')}</Button></>}>
+      actions={<><Button variant="secondary" onClick={onClose}>{t('cancel')}</Button><Button disabled={decide.isPending} onClick={send}>{t('infoSend')}</Button></>}>
       <fieldset className="nl-q-field" aria-describedby={fieldErrors.checkKeys ? 'nl-info-keys-err' : undefined}>
         <legend>{t('infoChecks')}</legend>
         {app.checks.map(c => (
@@ -385,7 +338,7 @@ function RequestInfoDialog({ app, keys: reviewed, note: reviewNote, onClose, onS
  * Stage 1 (two-person review): the reviewer's recommendation — approve, reject or request info (with the checks to
  * redo) — and a note for the approver (required to reject or request info; internal, never emailed).
  */
-function ReviewDialog({ app, onClose, onSent }: { app: Application; onClose: () => void; onSent: () => void }) {
+export function ReviewDialog({ app, onClose, onSent }: { app: Application; onClose: () => void; onSent: () => void }) {
   const t = useVerifyT();
   const review = useReviewApplication();
   const [rec, setRec] = useState<Recommendation>('approve');
@@ -397,7 +350,7 @@ function ReviewDialog({ app, onClose, onSent }: { app: Application; onClose: () 
   const options: Recommendation[] = ['approve', 'reject', 'request_info'];
   return (
     <Dialog open onClose={onClose} title={t('reviewDialogTitle', { business: app.businessName })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={review.isPending} onClick={send}>{t('reviewSend')}</Button></>}>
+      actions={<><Button variant="secondary" onClick={onClose}>{t('cancel')}</Button><Button disabled={review.isPending} onClick={send}>{t('reviewSend')}</Button></>}>
       <p className="nl-q-note">{t('reviewLede')}</p>
       <fieldset className="nl-q-field" aria-describedby={fieldErrors.recommendation ? 'nl-rev-rec-err' : undefined}>
         <legend>{t('f_recommendation')}</legend>
@@ -427,7 +380,7 @@ function ReviewDialog({ app, onClose, onSent }: { app: Application; onClose: () 
 }
 
 /** Stage 2, approving against the review (it recommended reject or request info): the approver says why. */
-function OverrideDialog({ app, onClose, onSent }: { app: Application; onClose: () => void; onSent: () => void }) {
+export function OverrideDialog({ app, onClose, onSent }: { app: Application; onClose: () => void; onSent: () => void }) {
   const t = useVerifyT();
   const decide = useDecideApplication();
   const [note, setNote] = useState('');
@@ -436,7 +389,7 @@ function OverrideDialog({ app, onClose, onSent }: { app: Application; onClose: (
   const rec = app.review?.recommendation ?? 'reject';
   return (
     <Dialog open onClose={onClose} title={t('overrideTitle', { business: app.businessName })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="secondary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={decide.isPending} onClick={() => decide.mutate({ id: app.merchantId, decision: 'approve', note }, { onSuccess: onSent })}>{t('approve')}</Button></>}>
       <p className="nl-q-note">{t('overrideLede', { name: app.review?.reviewerName ?? '', recommendation: t(REC_KEY[rec]) })}</p>
       <Field label={t('overrideNote')} hint={t('overrideNoteHint')} error={fieldErrors.note}>

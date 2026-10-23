@@ -42,8 +42,8 @@ function KeysView({ keys }: { keys: Key[] }) {
       <BoHeader title={t('heading')} sub={`${t('summary')} ${t('lede')}`}
         actions={<><Button disabled={!allowed} onClick={() => setIssuing(true)}>{t('issue')}</Button>{!allowed ? <span className="bo-muted">{t('cannot')}</span> : null}</>} />
       <ChartCard id="in-keys" title={t('keysTitle')}>
-      <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={10} roleName={roleName}
-        rowTones={r => ({ status: (r.src.revokedAt ? 'tag-neutral' : 'tag-accent') as DataTableTone })} can={{ create: false, update: allowed, delete: false }}
+      <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={10} roleName={roleName}
+        rowTones={r => ({ status: (r.src.revokedAt ? 'status-neutral' : 'status-success') as DataTableTone })} can={{ create: false, update: allowed, delete: false }}
         actions={[{ id: 'revoke', label: t('revoke'), perm: 'update', inline: true, bulk: false, when: { key: 'status', in: [t('active')] } }]}
         onAction={(action, picked) => { if (action.id === 'revoke' && picked[0]) setRevoking(picked[0].src); return false; }} />
       </ChartCard>
@@ -71,7 +71,7 @@ function IssueDialog({ onClose }: { onClose: () => void }) {
   }
   return (
     <Dialog open onClose={onClose} title={t('issueTitle')}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={issue.isPending} onClick={() => issue.mutate({ merchantId: merchantId.trim(), name, scopes })}>{t('create')}</Button></>}>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button><Button disabled={issue.isPending} onClick={() => issue.mutate({ merchantId: merchantId.trim(), name, scopes })}>{t('create')}</Button></>}>
       <Field label={t('f_business')} error={errors.merchantId}><TextInput value={merchantId} onChange={e => setMerchantId(e.target.value)} /></Field>
       <Field label={t('f_name')} error={errors.name}><TextInput value={name} maxLength={60} onChange={e => setName(e.target.value)} /></Field>
       <Field label={t('f_scopes')} error={errors.scopes}>
@@ -89,7 +89,7 @@ function RevokeDialog({ keyRow, onClose }: { keyRow: Key; onClose: () => void })
   const revoke = useRevokeKey();
   return (
     <Dialog open onClose={onClose} title={t('revokeTitle', { name: keyRow.name })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={revoke.isPending} onClick={() => revoke.mutate(keyRow.id, { onSuccess: onClose })}>{t('confirmRevoke')}</Button></>}>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button><Button disabled={revoke.isPending} onClick={() => revoke.mutate(keyRow.id, { onSuccess: onClose })}>{t('confirmRevoke')}</Button></>}>
       <p className="nl-tm-sub">{t('revokeNote')}</p>
       {revoke.error ? <p role="alert" className="nl-tm-error">{revoke.error instanceof ApiError ? revoke.error.message : String(revoke.error)}</p> : null}
     </Dialog>

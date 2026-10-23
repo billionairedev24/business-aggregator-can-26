@@ -70,7 +70,9 @@ const S175 = ['orders', 'catalogue', 'appointments', 'kitchen'].map(f => `apps/s
 // S-176: the Studio's money, messaging, storefront, settings, account and onboarding screens, sign-in and the assistant —
 // with S-175, the dashboard and the shell, every Studio folder (checked below: a new folder must be listed)
 const S176 = ['auth', 'assistant', 'writing', 'pilot', 'finance', 'messages', 'storefront', 'reviews', 'settings', 'compliance', 'standing', 'help', 'availability', 'onboarding'].map(f => `apps/studio/src/features/${f}`);
-const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'apps/studio/src/features/shell', 'apps/console/src/features/shell',
+const strictRoots = [
+  // S-177: every console screen (the console revamp; audit console-sellers / console-seller)
+  'apps/console/src', 'packages/ui/src', 'apps/consumer/src/features/shell', 'apps/studio/src/features/shell', 'apps/console/src/features/shell',
   // S-170/S-171: the consumer discovery pages (home, results, the Services / Shop / Food landings and their shared parts)
   'apps/consumer/src/features/home', 'apps/consumer/src/features/search', 'apps/consumer/src/features/pages', 'apps/consumer/src/features/shop',
   'apps/consumer/src/features/services/services.css', 'apps/consumer/src/features/services/ServicesLanding.tsx', 'apps/consumer/src/features/services/ServiceCategory.tsx',
@@ -159,6 +161,23 @@ for (const root of [...S175, ...S176]) {
       for (const [re, what] of ONE_OFF) if (re.test(line)) raw.push(`${rel}:${i + 1}  ${what}`);
     });
   }
+}
+// ── S-177: the console's colour roles and money (audit console-sellers / console-seller) ─────────────────────────────
+// A status is a semantic pair (`status-*` / `tag-success`… / StatusTag), never the action or commerce colour: the old
+// accent / highlight tones made every status chip blue, magenta or grey. Money goes through the shared formatters
+// (`formatPrice` / `fmt.price`, `formatCompactMoney` / `fmt.compactMoney` for a KPI), never `formatMoney` or a whole-dollar
+// variant, so one amount reads the same on every screen.
+const CONSOLE_ROLE = /\btag-(?:accent(?:-2)?|highlight)\b|\btone=(?:"|\{\s*')(?:accent(?:-2)?|highlight|brand|commerce)\b|\b(?:formatMoney|fmt\.money)\(|variant="(?:ghost|danger|accent|highlight)"/g;
+const consoleProblems = [];
+for (const file of walk(path.join(webRoot, 'apps/console/src'))) {
+  const rel = path.relative(webRoot, file).split(path.sep).join('/');
+  if (!rel.endsWith('.tsx') && !rel.endsWith('.ts')) continue;
+  if (skip.some(r => r.test(rel))) continue;
+  readFileSync(file, 'utf8').split('\n').forEach((line, i) => { for (const m of line.matchAll(CONSOLE_ROLE)) consoleProblems.push(`${rel}:${i + 1}  ${m[0]}`); });
+}
+if (consoleProblems.length) {
+  console.error(`Console colour roles and money (S-177): statuses take a status tone, prices formatPrice / formatCompactMoney, buttons primary | secondary | tertiary | destructive:\n${consoleProblems.map(p => '  ' + p).join('\n')}`);
+  process.exit(1);
 }
 
 // S-176: every Studio folder is strict; a new one must join a list above (S175 / S176) or this fails.
