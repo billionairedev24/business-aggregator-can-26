@@ -1,163 +1,214 @@
 import { useEffect, type ReactNode } from 'react';
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { MapPin } from '@phosphor-icons/react';
+import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useRouterState } from '@tanstack/react-router';
-import { EmptyState, ErrorState, SiteLink, Skeleton, useLocale } from '@northline/ui';
-import { useDeliveryLocation } from '../location/useDeliveryLocation';
-import { marketOf, railQuery, type Place, type SearchPage } from '../search/api';
-import { ItemCard } from '../search/ItemCard';
-import { categorySlot, departmentSlot } from '@northline/media';
+import { Clock } from '@phosphor-icons/react';
+import {
+  brand, DealBadge, EmptyState, ErrorState, PanelTile, PanelTiles, PictureGrid, Price, ServiceCard, SiteLink, Skeleton, useLocale,
+  type PictureGridItem,
+} from '@northline/ui';
+import { categorySlot, cuisineSlot, departmentSlot } from '@northline/media';
 import { Scene } from '../art/Scene';
-import { RailSection, RailTrack } from '../pages/Rail';
-import { Tile } from '../pages/Tile';
-import { DEPARTMENTS, SERVICE_CATEGORIES, type Tile as CatalogTile } from './catalog';
-import { useHomeT } from './messages';
+import { activityQuery } from '../account/api';
+import { useKitchens, type Card as Kitchen } from '../food/api';
+import { CUISINE_NAMES } from '../food/messages';
+import { useDeliveryLocation } from '../location/useDeliveryLocation';
+import { useZone } from '../location/regions';
 import { rememberInvite } from '../loyalty/api';
 import { RewardsNearYou } from '../loyalty/RewardsNearYou';
+import { RailSection, RailTrack } from '../pages/Rail';
+import { productQuery } from '../product/api';
+import { marketOf, railQuery, type Place, type SearchItem, type SearchPage } from '../search/api';
+import { ItemCard } from '../search/ItemCard';
+import { useViewer } from '../session/api';
+import type { Landing, ProductCard } from '../shop/api';
+import { clock, runWhen, weekday } from '../shop/format';
+import { useNextRun } from '../shop/run';
+import { CUISINES, DEPARTMENTS, SERVICE_CATEGORIES, type Tile as CatalogTile } from './catalog';
+import { MakerHero } from './MakerHero';
+import { useHomeT } from './messages';
 
 type T = ReturnType<typeof useHomeT>;
 
-const SERVICE_TILES = ['mechanic', 'cleaning', 'plumber', 'barber', 'tutor', 'movers'];
-const SHOP_TILES = ['groceries', 'bakery', 'butcher', 'produce', 'pharmacy', 'gifts'];
-const QUICK = ['mechanic', 'cleaning', 'bakery', 'groceries'];
+const SHOP_TILES = ['bakery', 'groceries', 'butcher', 'produce'];
+const SERVICE_TILES = ['mechanic', 'cleaning', 'plumber', 'barber'];
+const FOOD_TILES = ['vietnamese', 'indian', 'pizza', 'ramen'];
 
 /**
- * Home (light & photo-first, phase B; redesign § 1.3 behaviour): a hero that leads with the place — the headline,
- * two ways in (Services, Shop), "Near {place} · Change" (the location dialog) and a few popular entries — beside a photo collage (the library's hero slots; drawn pictures until they have photos) (no search
- * field of its own: the header's is the page's one search, owner 2026-10-19);
- * then photo tiles for services and the shop's departments; then sideways rails of real listings, products and
- * services, where the visitor is; then the sellers' banner. No carousel, no arrows over content. The greeting, the
- * "what do you need" question, live counts, promises, tier tags and "Your week" stay gone (§ 3.2). The server renders
- * the hero and the tiles (the same for everyone); the rails load in the browser once the place is known.
+ * Home (E-15 A · Plainsight, design/revamp/a.html "Consumer home", with Main Street's maker-of-the-week hero from
+ * b.html): under the header and the delivery cut-off strip (the shell's), the hero — one featured local shop and two
+ * side tiles — then four home tiles (departments, services, kitchens, the deal of the day) and rails: order again
+ * (signed in, from the shops of the person's own orders), popular products, the top-rated pros and the popular
+ * kitchens where the visitor is. The tiles are the catalogue's and render on the server; the hero and the rails load in
+ * the browser once the place is known (the server doesn't know where the visitor is), in boxes drawn at their size.
  */
 export function HomeScreen() {
   const t = useHomeT();
+  const { locale } = useLocale();
   const { location, chooser } = useDeliveryLocation();
+  const { user } = useViewer();
   const place: Place | null = location.status === 'locating' ? null
     : { market: marketOf(location.province), lat: location.lat, lng: location.lng };
-  const { locale } = useLocale();
+  const { landing } = useNextRun();
   const products = useQuery({ ...railQuery('product', place ?? {}, locale), enabled: place !== null });
-  const services = useQuery({ ...railQuery('service', place ?? {}, locale), enabled: place !== null });
+  const services = useQuery({ ...railQuery('service', place ?? {}, locale, 'rating'), enabled: place !== null });
+  const kitchens = useKitchens(place ? location.city : undefined, location.lat, location.lng);
+  const activity = useQuery({ ...activityQuery, enabled: !!user });
   const city = location.label?.split(',')[0]?.trim() || location.city;
   const empty = products.data?.items.length === 0 && services.data?.items.length === 0;
-  const name = (tile: CatalogTile) => (locale === 'fr' ? tile.fr : tile.en);
   // S-152: an invite link (/?invite=CODE) is kept until the person uses it in their account
   const searchStr = useRouterState({ select: s => s.location.searchStr });
   useEffect(() => { rememberInvite(searchStr); }, [searchStr]);
-  const pick = <X extends CatalogTile>(all: readonly X[], keys: string[]) => keys.map(k => all.find(x => x.key === k)).filter((x): x is X => !!x);
+
+  // order again: the products of the shops the person has ordered from, from the same rail (no order-line history in the api)
+  const shopsOrdered = new Set((activity.data ?? []).filter(a => a.kind === 'order').flatMap(a => a.with.map(w => w.toLowerCase())));
+  const again = (products.data?.items ?? []).filter(i => shopsOrdered.has(i.merchant.name.toLowerCase()));
 
   return (
     <div className="nl-home">
-      <section className="nl-home-hero" aria-labelledby="home-title">
-        <div className="nl-home-hero-copy">
-          <h1 id="home-title" className="nl-home-title">{t('heroTitle')}</h1>
-          <p className="nl-home-sub">{t('heroSub')}</p>
-          <div className="nl-home-cta">
-            <SiteLink href="/services" className="btn btn-primary btn-lg">{t('ctaServices')}</SiteLink>
-            <SiteLink href="/shop" className="btn btn-neutral btn-lg">{t('ctaShop')}</SiteLink>
-          </div>
-          <p className="nl-home-where">
-            <MapPin size={20} weight="fill" aria-hidden />
-            {location.status === 'locating' ? <Skeleton width={160} height={20} />
-              : city ? <span>{t('near', { place: city })}</span> : <span>{t('noPlace')}</span>}
-            <button type="button" className="btn btn-link nl-home-where-btn" onClick={chooser.show}>{city ? t('changePlace') : t('setPlace')}</button>
-          </p>
-          <div className="nl-home-quick">
-            <span className="nl-home-quick-label" id="home-quick">{t('popular')}</span>
-            <ul aria-labelledby="home-quick">
-              {[...pick(SERVICE_CATEGORIES, QUICK), ...pick(DEPARTMENTS, QUICK)].map(tile => (
-                <li key={tile.key}><SiteLink href={tile.href} className="nl-chip nl-home-chip">{name(tile)}</SiteLink></li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        <div className="nl-home-collage" aria-hidden>
-          <span className="nl-home-pic nl-home-pic-a"><Scene slot="hero/home-main" subject="mobile-mechanic" tone="sage" crop="card" sizes="(min-width: 960px) 34vw, 60vw" priority /></span>
-          <span className="nl-home-pic nl-home-pic-b"><Scene slot="hero/home-side-a" subject="bakery" tone="ember" crop="square" sizes="(min-width: 960px) 16vw, 36vw" priority /></span>
-          <span className="nl-home-pic nl-home-pic-c"><Scene slot="hero/home-side-b" subject="house-cleaning" tone="clay" crop="square" sizes="(min-width: 960px) 16vw, 36vw" priority /></span>
-          <span className="nl-home-badge">{t('badge')}</span>
-        </div>
-      </section>
-
-      <div className="nl-home-body">
-        <TileSection t={t} id="home-services" title={t('tileServices')} more={{ href: '/services', label: t('allServices') }}
-          tiles={pick(SERVICE_CATEGORIES, SERVICE_TILES).map(s => ({ key: s.key, href: s.href, name: name(s), slot: categorySlot(s.ids[0]) ?? 'banner/services', subject: s.ids[0]!.split('.').pop()! }))} />
-        <TileSection t={t} id="home-shop" title={t('tileShop')} more={{ href: '/shop', label: t('allDepartments') }}
-          tiles={pick(DEPARTMENTS, SHOP_TILES).map(d => ({ key: d.key, href: d.href, name: name(d), slot: departmentSlot(d.href.split('/').pop()) ?? 'banner/shop', subject: d.key }))} />
-      </div>
+      <h1 className="nl-sr-only">{t('pageTitle', { brand: brand.name })}</h1>
+      <MakerHero landing={landing} services={services.data?.items} kitchens={kitchens.data?.items} />
+      <HomeTiles t={t} landing={landing} kitchens={kitchens.data?.items} />
 
       {empty ? (
-        <section className="nl-section">
+        <section className="nl-section" aria-label={t('loadError')}>
           <EmptyState title={city ? t('emptyCity', { city }) : t('emptyAnywhere')} action={<button type="button" className="btn btn-primary" onClick={chooser.show}>{t('changeLocation')}</button>}>{t('emptyHint')}</EmptyState>
         </section>
       ) : (
         <>
-          <Rail t={t} id="home-products" title={city ? t('productsNear', { city }) : t('productsAnywhere')} more={{ href: '/shop' }} query={products} loading={place === null} kind="product" />
-          <Rail t={t} id="home-services-rail" title={city ? t('servicesNear', { city }) : t('servicesAnywhere')} more={{ href: '/services' }} query={services} loading={place === null} kind="service" />
+          {user && again.length > 0 ? (
+            <ProductRail t={t} id="home-again" title={t('orderAgain')} more={{ href: '/account/orders', label: t('yourOrders') }} query={products} items={again} loading={false} />
+          ) : null}
+          <ProductRail t={t} id="home-products" title={city ? t('popularNear', { city }) : t('popularAnywhere')} more={{ href: '/shop', label: t('tileShopMore') }}
+            query={products} items={products.data?.items.filter(i => !again.includes(i))} loading={place === null} />
+          <ServiceRail t={t} title={city ? t('prosNear', { city }) : t('prosAnywhere')} query={services} loading={place === null} />
+          <KitchenRail t={t} kitchens={kitchens} loading={place === null} />
           {place !== null ? <RewardsNearYou city={location.city ?? city} lat={location.lat} lng={location.lng} /> : null}
         </>
       )}
-
-      <section className="nl-home-sell" aria-labelledby="home-sell">
-        <div className="nl-home-sell-copy">
-          <h2 id="home-sell" className="nl-home-sell-title">{t('sellTitle')}</h2>
-          <p className="nl-home-sell-text">{t('sellText')}</p>
-          <SiteLink href="/sell" className="btn btn-primary btn-lg">{t('sellCta')}</SiteLink>
-        </div>
-        <span className="nl-home-sell-pic" aria-hidden><Scene slot="banner/sell" subject="storefront" tone="sage" fit="contain" sizes="(min-width: 960px) 40vw, 100vw" /></span>
-      </section>
     </div>
   );
 }
 
-// ── tiles ────────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── the four home tiles ─────────────────────────────────────────────────────────────────────────────────────────
 
-interface TileItem { key: string; href: string; name: string; slot: string; subject: string }
-
-/** A titled row of photo entry tiles (six; a sideways row on phones). */
-function TileSection({ t, id, title, more, tiles }: { t: T; id: string; title: string; more: { href: string; label: string }; tiles: readonly TileItem[] }) {
+function HomeTiles({ t, landing, kitchens }: { t: T; landing: Landing | undefined; kitchens: readonly Kitchen[] | undefined }) {
+  const { locale } = useLocale();
+  const name = (tile: CatalogTile) => (locale === 'fr' ? tile.fr : tile.en);
+  const pick = <X extends CatalogTile>(all: readonly X[], keys: string[]) => keys.map(k => all.find(x => x.key === k)).filter((x): x is X => !!x);
+  const items = (tiles: readonly CatalogTile[], picture: (tile: CatalogTile) => ReactNode): PictureGridItem[] =>
+    tiles.map(tile => ({ key: tile.key, href: tile.href, label: name(tile), picture: picture(tile) }));
+  const shop = items(pick(DEPARTMENTS, SHOP_TILES), d => <Scene slot={[departmentSlot(d.href.split('/').pop()), 'banner/shop']} subject={d.key} crop="square" sizes="(min-width: 900px) 9vw, 22vw" />);
+  const services = items(pick(SERVICE_CATEGORIES, SERVICE_TILES), s => <Scene slot={[categorySlot(s.ids[0]), 'banner/services']} subject={s.ids[0]!.split('.').pop()!} crop="square" sizes="(min-width: 900px) 9vw, 22vw" />);
+  const food = pick(CUISINES, FOOD_TILES).map(c => ({ key: c.key, href: c.href, label: CUISINE_NAMES[c.key]?.[locale] ?? name(c), picture: <Scene slot={[cuisineSlot(c.key), 'banner/food']} subject={c.key} crop="square" sizes="(min-width: 900px) 9vw, 22vw" /> }));
+  const open = kitchens?.filter(k => k.open).length;
   return (
-    <section className="nl-home-tiles" aria-labelledby={id}>
-      <div className="nl-section-head">
-        <h2 id={id} className="nl-section-title">{title}</h2>
-        <SiteLink href={more.href} className="nl-section-more" aria-label={t('seeMoreOf', { title })}>{more.label}</SiteLink>
-      </div>
-      <ul className="nl-home-tile-row">
-        {tiles.map(tile => <li key={tile.key}><Tile href={tile.href} name={tile.name} slot={tile.slot} subject={tile.subject} /></li>)}
-      </ul>
-    </section>
+    <PanelTiles className="nl-home-tiles">
+      <PanelTile title={t('tileShop')} more={{ href: '/shop', label: t('tileShopMore') }}><PictureGrid items={shop} /></PanelTile>
+      <PanelTile title={t('tileServices')} more={{ href: '/services', label: t('tileServicesMore') }}><PictureGrid items={services} /></PanelTile>
+      <PanelTile title={t('tileFood')} more={{ href: '/food', label: open ? t('tileFoodMore', { count: open }) : t('tileFoodMoreAll') }}><PictureGrid items={food} /></PanelTile>
+      <DealTile t={t} landing={landing} />
+    </PanelTiles>
+  );
+}
+
+/**
+ * The deal of the day: the first of the landing's popular products whose offer has an earlier price (the product page's
+ * `compareAtCents`; search and the landing carry none), else the most popular product, titled "Popular today".
+ */
+function DealTile({ t, landing }: { t: T; landing: Landing | undefined }) {
+  const { locale } = useLocale();
+  const zone = useZone(landing?.market);
+  const candidates = (landing?.popular ?? []).slice(0, 3);
+  const pages = useQueries({ queries: candidates.map(p => ({ ...productQuery(p.productId, landing?.market, locale), enabled: !!landing })) });
+  const settled = pages.every(q => !q.isPending);
+  const dealIndex = pages.findIndex(q => q.data?.offers.some(o => o.compareAtCents != null && o.compareAtCents > o.priceCents));
+  const deal = dealIndex >= 0 ? candidates[dealIndex] : undefined;
+  const offer = deal ? pages[dealIndex]!.data!.offers.find(o => o.compareAtCents != null && o.compareAtCents > o.priceCents) : undefined;
+  const product: ProductCard | undefined = deal ?? (settled ? candidates[0] : undefined);
+  const run = landing?.run;
+  const when = run ? runWhen(run, zone) : null;
+  return (
+    <PanelTile title={deal ? t('tileDeal') : t('tilePopular')} className="nl-home-deal" more={product ? { href: `/products/${product.productId}`, label: t('dealMore') } : undefined}>
+      {!product ? (
+        <div aria-busy="true"><span className="nl-home-deal-pic" /><Skeleton width="80%" height={14} /><Skeleton width="40%" height={20} /></div>
+      ) : (
+        <SiteLink href={`/products/${product.productId}`} className="nl-home-deal-link">
+          <span className="nl-home-deal-pic" aria-hidden>
+            {product.imageUrl ? <img src={product.imageUrl} alt="" loading="lazy" decoding="async" />
+              : <Scene slot={[categorySlot(product.categoryId)]} subject={product.name} crop="square" sizes="(min-width: 900px) 22vw, 44vw" />}
+            {offer?.compareAtCents ? <DealBadge className="nl-home-deal-badge" percent={Math.round((1 - offer.priceCents / offer.compareAtCents) * 100)} /> : null}
+          </span>
+          <span className="nl-home-deal-name">{product.name}</span>
+          <span className="nl-home-deal-meta">{product.shopName}</span>
+          <Price cents={offer?.priceCents ?? product.priceCents} compareAtCents={offer?.compareAtCents} size="lg" />
+          {run && when && product.run?.windowId === run.windowId ? (
+            <span className="nl-home-deal-ends"><Clock size={14} aria-hidden />{t('dealOrderBy', { time: clock(run.orderBy, locale, zone), when, weekday: weekday(run.startsAt, locale, zone) })}</span>
+          ) : null}
+        </SiteLink>
+      )}
+    </PanelTile>
   );
 }
 
 // ── rails ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-type RailQuery = UseQueryResult<SearchPage>;
+function ProductRail({ t, id, title, more, query, items, loading }: { t: T; id: string; title: string; more: { href: string; label: string }; query: UseQueryResult<SearchPage>; items: readonly SearchItem[] | undefined; loading: boolean }) {
+  if (query.isSuccess && !items?.length) return null;
+  return (
+    <RailSection id={id} title={title} more={{ ...more, ariaLabel: t('seeMoreOf', { label: more.label, title }) }}>
+      {query.isError ? <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />
+        : loading || query.isPending ? <RailSkeleton kind="product" label={t('loading')} />
+          : <RailTrack size="product">{items!.slice(0, 14).map(item => <li key={item.id}><ItemCard item={item} level={3} /></li>)}</RailTrack>}
+    </RailSection>
+  );
+}
 
-function Rail({ t, id, title, more, query, loading, kind }: { t: T; id: string; title: string; more: { href: string }; query: RailQuery; loading: boolean; kind: 'product' | 'service' }) {
+function ServiceRail({ t, title, query, loading }: { t: T; title: string; query: UseQueryResult<SearchPage>; loading: boolean }) {
   const items = query.data?.items ?? [];
   if (query.isSuccess && items.length === 0) return null;
   return (
-    <RailSection id={id} title={title} more={{ href: more.href, label: t('seeMore'), ariaLabel: t('seeMoreOf', { title }) }}>
+    <RailSection id="home-pros" title={title} more={{ href: '/services', label: t('seeServices'), ariaLabel: t('seeMoreOf', { label: t('seeServices'), title }) }}>
       {query.isError ? <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />
-        : loading || query.isPending ? <RailSkeleton kind={kind} label={t('loading')} />
+        : loading || query.isPending ? <RailSkeleton kind="service" label={t('loading')} />
+          : <RailTrack size="service">{items.slice(0, 10).map(item => <li key={item.id}><ItemCard item={item} level={3} /></li>)}</RailTrack>}
+    </RailSection>
+  );
+}
+
+function KitchenRail({ t, kitchens, loading }: { t: T; kitchens: UseQueryResult<{ items: Kitchen[] }>; loading: boolean }) {
+  const { locale } = useLocale();
+  const items = (kitchens.data?.items ?? []).filter(k => k.open).sort((a, b) => b.rating - a.rating);
+  // no city known (the query never runs) or no kitchen open: no rail
+  if ((kitchens.isSuccess && items.length === 0) || (!loading && kitchens.isPending && kitchens.fetchStatus === 'idle')) return null;
+  const title = t('kitchensTonight');
+  return (
+    <RailSection id="home-kitchens" title={title} more={{ href: '/food', label: t('seeKitchens'), ariaLabel: t('seeMoreOf', { label: t('seeKitchens'), title }) }}>
+      {kitchens.isError ? <ErrorState message={t('loadError')} onRetry={() => void kitchens.refetch()} />
+        : loading || kitchens.isPending ? <RailSkeleton kind="service" label={t('loading')} />
           : (
-            <RailTrack size={kind}>
-              {items.slice(0, kind === 'product' ? 12 : 8).map(item => <li key={item.id}><ItemCard item={item} variant={kind === 'product' ? 'rail' : 'grid'} level={3} /></li>)}
+            <RailTrack size="service">
+              {items.slice(0, 10).map(k => (
+                <li key={k.merchantId}>
+                  <ServiceCard href={k.slug ? `/food/${k.slug}` : '/food'} layout="stack" level={3} name={k.name}
+                    kind={k.cuisines.map(c => CUISINE_NAMES[c]?.[locale] ?? c).join(' · ') || undefined}
+                    mark={<Scene slot={[cuisineSlot(k.cuisines[0]), 'banner/food']} subject={k.cuisines[0] ?? 'food'} crop="card" sizes="(min-width: 900px) 18vw, 44vw" />}
+                    rating={k.reviews > 0 ? k.rating : null} reviewCount={k.reviews}
+                    place={[t('eta', { from: k.etaFromMin, to: k.etaToMin }), k.priceLevel].filter(Boolean).join(' · ')} />
+                </li>
+              ))}
             </RailTrack>
           )}
     </RailSection>
   );
 }
 
-function RailSkeleton({ kind, label }: { kind: 'product' | 'service'; label: string }): ReactNode {
+function RailSkeleton({ kind, label }: { kind: 'product' | 'service'; label: string }) {
   return (
     <div aria-busy="true">
       <span className="nl-sr-only" role="status">{label}</span>
       <ul className={`nl-rail-track nl-rail-${kind}`} aria-hidden>
-        {Array.from({ length: kind === 'product' ? 6 : 4 }, (_, i) => (
-          <li key={i}>{kind === 'product'
-            ? <div><Skeleton height="auto" style={{ aspectRatio: '1 / 1' }} radius="var(--radius-lg)" /><Skeleton width="80%" style={{ marginTop: 8 }} /><Skeleton width="40%" height={22} style={{ marginTop: 6 }} /></div>
-            : <Skeleton height={300} radius="var(--radius-lg)" />}</li>
+        {Array.from({ length: kind === 'product' ? 7 : 5 }, (_, i) => (
+          <li key={i}><div className="nl-home-skel"><span className={`nl-home-skel-pic nl-home-skel-${kind}`} /><Skeleton width="80%" height={14} /><Skeleton width="40%" height={20} /></div></li>
         ))}
       </ul>
     </div>
