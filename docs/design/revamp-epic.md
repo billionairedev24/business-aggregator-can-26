@@ -23,8 +23,10 @@ trade dress (the navy-and-orange chrome, the smile arrow, Amazon wording or asse
 | Back office | Seller Central-style dashboard of actionable cards; dense tables with bulk actions |
 
 ## Order and gates
-1. **S-165 Audit.** Screenshots and root causes. Deploy-level breakage (fonts, CSP, assets) is fixed first, separately.
-2. **S-166 Directions.** Three rendered directions. **The owner picks one; no page work starts before that.**
+1. **S-165 Audit (done, `audit-2026-10.md`).** Deploy is fine; the problem is direction and content first, then the
+   component system. S-182 fixes the one bug found and makes `ui-shots` show what the demo shows.
+2. **S-166 Directions and S-181 photography.** The worst problem is the photos, so a licensed, art-directed set is part
+   of the direction, not an afterthought. **S-166:** Three rendered directions. **The owner picks one; no page work starts before that.**
 3. **S-167–S-169 System.** Tokens v2, the web component library with a gallery and screenshot tests, and the mobile kit.
 4. **S-170–S-179 Screens.** Consumer web, Studio, console, mobile. Each story is checked against the locked mockups at
    1440 and 390 wide, in en and fr-CA.
