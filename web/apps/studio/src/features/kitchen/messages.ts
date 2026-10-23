@@ -17,7 +17,8 @@ export const useKitchenT = defineMessages({
     dt_gluten_free: 'Gluten-free', dt_vegan: 'Vegan', dt_vegetarian: 'Vegetarian', dt_halal: 'Halal', dt_spicy: 'Spicy', dt_popular: 'Popular', dt_vegan_option: 'Vegan option',
 
     // live orders
-    liveKicker: 'Live orders · {name}',
+    liveKicker: 'Live orders · {name}', liveTitleShort: 'Live orders', stageLate: 'Late',
+    laneEmpty_new: 'No new orders.', laneEmpty_cooking: 'Nothing on the stove.', laneEmpty_ready: 'Nothing waiting for pickup.',
     liveTitle: '{day} {meal} · {n} open',
     meal_morning: 'morning', meal_lunch: 'lunch', meal_dinner: 'dinner',
     prepShown: 'Prep time shown to customers:', prepMin: '{min} min', prepBumped: '{min} min (+{bump} busy)',
@@ -50,7 +51,7 @@ export const useKitchenT = defineMessages({
     itemCount: '{n, plural, one {# item} other {# items}}', addItem: 'add item', addItemIn: 'Add item to {section}',
     reorder: 'Reorder {name}: use the arrow keys', renameSection: 'Rename {name}',
     modifiers: 'Modifiers: {list}', none: 'none', noDesc: '—',
-    available: 'Available', soldOut: 'Sold out today',
+    available: 'Available', availableNamed: 'Available: {name}', soldOut: 'Sold out today',
     vis_draft: 'Draft', vis_needs_photo: 'Needs photo', vis_awaiting_approval: 'Hidden until approved',
     emptySection: 'No items in this section yet.', emptyMenus: 'No menus yet. Create your first menu to start adding dishes.', createMenu: 'Create a menu',
     emptyMenu: 'This menu has no sections yet.',
@@ -160,7 +161,8 @@ export const useKitchenT = defineMessages({
     contains: 'Contient : {allergen}',
     dt_gluten_free: 'Sans gluten', dt_vegan: 'Végane', dt_vegetarian: 'Végétarien', dt_halal: 'Halal', dt_spicy: 'Épicé', dt_popular: 'Populaire', dt_vegan_option: 'Option végane',
 
-    liveKicker: 'Commandes en direct · {name}',
+    liveKicker: 'Commandes en direct · {name}', liveTitleShort: 'Commandes en direct', stageLate: 'En retard',
+    laneEmpty_new: 'Aucune nouvelle commande.', laneEmpty_cooking: 'Rien en cuisson.', laneEmpty_ready: 'Rien en attente de remise.',
     liveTitle: '{day} {meal} · {n} ouvertes',
     meal_morning: 'matin', meal_lunch: 'dîner', meal_dinner: 'souper',
     prepShown: 'Temps de préparation affiché aux clients :', prepMin: '{min} min', prepBumped: '{min} min (+{bump} achalandé)',
@@ -192,7 +194,7 @@ export const useKitchenT = defineMessages({
     itemCount: '{n, plural, one {# article} other {# articles}}', addItem: 'ajouter un plat', addItemIn: 'Ajouter un plat à {section}',
     reorder: 'Réordonner {name} : utilisez les flèches', renameSection: 'Renommer {name}',
     modifiers: 'Options : {list}', none: 'aucune', noDesc: '—',
-    available: 'Disponible', soldOut: 'Épuisé aujourd’hui',
+    available: 'Disponible', availableNamed: 'Disponible : {name}', soldOut: 'Épuisé aujourd’hui',
     vis_draft: 'Brouillon', vis_needs_photo: 'Photo requise', vis_awaiting_approval: 'Masqué jusqu’à l’approbation',
     emptySection: 'Aucun plat dans cette section.', emptyMenus: 'Aucun menu pour l’instant. Créez votre premier menu pour ajouter des plats.', createMenu: 'Créer un menu',
     emptyMenu: 'Ce menu n’a pas encore de section.',

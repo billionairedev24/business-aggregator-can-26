@@ -66,7 +66,7 @@ describe('Live orders', () => {
     expect(await screen.findByText('FD-9931')).toBeTruthy();
     const status = () => screen.getAllByRole('status').map(s => s.textContent).join('|');
     expect(status()).toBe(''); // the first load is not news
-    expect(screen.getByRole('list').getAttribute('aria-live')).toBeNull();
+    for (const list of screen.getAllByRole('list')) expect(list.closest('[aria-live]')).toBeNull(); // no lane, ticket or line list is a live region
     expect(screen.getByRole('button', { name: 'Accept · start cooking' }).getAttribute('aria-describedby')).toBeTruthy();
     items = [ticket('o1', 'FD-9931', 'cooking'), ticket('o2', 'FD-9932', 'new'), ticket('o3', 'FD-9933', 'new')];
     await client.refetchQueries();
@@ -138,7 +138,10 @@ describe('Menu builder', () => {
     expect(screen.getByText('Sold out today')).toBeTruthy();
     expect(screen.getAllByText('Contains milk').length).toBe(1);
     expect(screen.getAllByText(/Modifiers: Size/).length).toBe(2);
-    const avail = screen.getByRole('button', { name: 'Available' });
+    // S-175: availability is the shared Switch, named after the dish; sold out reads as a status tag
+    expect(screen.getByRole('switch', { name: 'Available: Fresh lime soda' }).getAttribute('aria-checked')).toBe('false');
+    const avail = screen.getByRole('switch', { name: 'Available: Pho dac biet' });
+    expect(avail.getAttribute('aria-checked')).toBe('true');
     await user.click(avail);
     await waitFor(() => expect(calls.find(c => c.url.endsWith('/i1/sold-out'))?.body).toEqual({ soldOut: true }));
   });
@@ -232,7 +235,7 @@ describe('Modifiers & combos', () => {
     renderWithProviders(<CombosScreen />);
     expect(await screen.findByText('Pick exactly 1 · required')).toBeTruthy();
     expect(screen.getByText('Used by 3 items')).toBeTruthy();
-    expect(screen.getByText('Large · +$3')).toBeTruthy();
+    expect(screen.getByText('Large · +$3.00')).toBeTruthy();
     expect((await screen.findAllByText('Pho for two')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Save $6').length).toBeGreaterThan(0);
     expect(screen.getByText('On · $0.02/pt')).toBeTruthy();

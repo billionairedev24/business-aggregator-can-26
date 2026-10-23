@@ -41,6 +41,8 @@ import {
 import clsx from 'clsx';
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { useLocale } from '../i18n';
+import { FilterChip, UnderlineTabs } from '../Choice';
+import { StatusTag } from '../Commerce';
 import { downloadBlob, openPrintWindow, readThemeVars } from './download';
 import { buildFieldSpecs, initialValues, RecordForm } from './internal/RecordForm';
 import { Chip, ChipRadioGroup, DataTableCheckbox, DataTableDialog, useContainerWidth, useOverflowSqueeze, useToast } from './internal/primitives';
@@ -92,6 +94,7 @@ interface RowAct {
   danger?: boolean;
   showLabel?: boolean;
   busy?: boolean;
+  emphasis?: 'primary' | 'secondary';
 }
 
 const defaultRowId = (row: object) => String((row as { id?: unknown }).id ?? '');
@@ -122,6 +125,20 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   const canExport = can.export !== false;
   const readOnly = !!roleName && !can.create && !can.update && !can.delete;
   const custom = useMemo(() => (props.onAction ? (actions ?? []).filter((a) => actionAllowed(a, can)) : []), [actions, props.onAction, can.create, can.update, can.delete]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── S-175: status tabs and quick filters narrow the rows before search, facets and sorting ──
+  const views = props.views;
+  const [ownView, setOwnView] = useState(views?.[0]?.id ?? '');
+  const viewId = props.view ?? ownView;
+  const current = views?.find((v) => v.id === viewId) ?? views?.[0];
+  const [quick, setQuick] = useState<readonly string[]>(props.initialQuickFilters ?? []);
+  const quickOn = (props.quickFilters ?? []).filter((f) => quick.includes(f.id));
+  const viewCount = (v: { when?: (row: T) => boolean }) => (v.when ? rows.filter(v.when).length : rows.length);
+  const data = useMemo(
+    () => (current?.when || quickOn.length ? rows.filter((r) => (!current?.when || current.when(r)) && quickOn.every((f) => f.when(r))) : rows),
+    [rows, current, quick, props.quickFilters], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const compact = columns.some((c) => c.card);
 
   // ── view state ────────────────────────────────────────────────────────────
   const [query, setQuery] = useState(props.initialSearch ?? '');
@@ -176,7 +193,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   }, [cols, locale]);
 
   const table = useReactTable<T>({
-    data: rows as T[],
+    data: data as T[],
     columns: columnDefs,
     getRowId: (r) => getRowId(r),
     state: { sorting, columnFilters, globalFilter: query, pagination, rowSelection: selection },
@@ -202,7 +219,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
     if (pageIndex > pageCount - 1) setPagination((p) => ({ ...p, pageIndex: pageCount - 1 }));
   }, [pageIndex, pageCount]);
   const page = Math.min(pageIndex, pageCount - 1);
-  const filterKey = JSON.stringify([query, facets, ranges]);
+  const filterKey = JSON.stringify([query, facets, ranges, viewId, quick]);
   const firstFilter = useRef<string | null>(filterKey);
   useEffect(() => {
     if (firstFilter.current === filterKey) return;
@@ -255,6 +272,16 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
     setFacets({});
     setRanges({});
     setQuery('');
+    setQuick([]);
+    firstPage();
+  };
+  const toggleQuick = (id: string) => {
+    setQuick((q) => (q.includes(id) ? q.filter((x) => x !== id) : [...q, id]));
+    firstPage();
+  };
+  const chooseView = (id: string) => {
+    if (props.onViewChange) props.onViewChange(id);
+    if (props.view == null) setOwnView(id);
     firstPage();
   };
   const colByKey = (k: string) => cols.find((c) => c.key === k);
@@ -303,7 +330,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
     else out.push({ key: 'view', label: t('view'), icon: Eye, run: () => setDialog({ mode: 'view', id: getRowId(r) }) });
     custom
       .filter((a) => a.inline && actionApplies(a, r))
-      .forEach((a) => out.push({ key: `a:${a.id}`, label: a.label, icon: a.icon ?? Lightning, showLabel: true, danger: a.danger, busy: pendingAction === a.id, run: () => void runAction(a, [r]) }));
+      .forEach((a) => out.push({ key: `a:${a.id}`, label: a.label, icon: a.icon ?? Lightning, showLabel: true, danger: a.danger, emphasis: a.emphasis, busy: pendingAction === a.id, run: () => void runAction(a, [r]) }));
     if (canUpdate) out.push({ key: 'edit', label: t('edit'), icon: PencilSimple, run: () => openEdit(r) });
     if (canDelete) out.push({ key: 'delete', label: t('delete'), icon: Trash, danger: true, run: () => setDialog({ mode: 'delete', ids: [getRowId(r)] }) });
     return out;
@@ -313,7 +340,9 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   const layout = computeLayout({ width, columns: visible, iconActions: 1 + (canUpdate ? 1 : 0) + (canDelete ? 1 : 0), hasInlineAction: custom.some((a) => a.inline), squeeze });
   const cardMode = layout.cardMode;
   const shown = layout.shown;
-  const firstTag = cols.find((c) => c.type === 'tag' && !c.primary && !hiddenMap[c.key]);
+  const firstTag = cols.find((c) => (c.type === 'tag' || c.status) && !c.primary && !hiddenMap[c.key]);
+  const tagOf = (c: NormalizedColumn<T>, r: T, wrap?: boolean) =>
+    c.status ? <StatusTag tone={c.status(r)}>{cellText(c, r, locale)}</StatusTag> : <span className={clsx('tag', toneOf(c, r), wrap && 'nl-dt-tag-wrap')}>{cellText(c, r, locale)}</span>;
 
   const sortState = (key: string) => {
     const i = sorting.findIndex((s) => s.id === key);
@@ -324,7 +353,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   // ── cells ─────────────────────────────────────────────────────────────────
   const renderValue = (c: NormalizedColumn<T>, r: T, where: 'cell' | 'field') => {
     const v = valueOf(r, c.key);
-    if (c.type === 'tag' && !isBlank(v)) return <span className={clsx('tag', toneOf(c, r), where === 'field' && 'nl-dt-tag-wrap')}>{cellText(c, r, locale)}</span>;
+    if ((c.type === 'tag' || c.status) && !isBlank(v)) return tagOf(c, r, where === 'field');
     const sub = subText(c, r);
     if (where === 'field') return <div className="nl-dt-field-value">{sub ? `${cellText(c, r, locale)} · ${sub}` : cellText(c, r, locale)}</div>;
     const body = (
@@ -355,11 +384,20 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   const fieldSpecs = useMemo(() => buildFieldSpecs(cols, rows, detailLabel), [cols, rows, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── render ────────────────────────────────────────────────────────────────
-  const hasData = rows.length > 0;
+  const hasData = data.length > 0;
+  const narrowed = !!(query.trim() || chips.length || quickOn.length);
   const showBody = !loading && !error;
 
   return (
     <div ref={boxRef} className={clsx('nl-dt', props.className)}>
+      {views && views.length > 0 && (
+        <UnderlineTabs
+          aria-label={tableLabel}
+          value={current?.id ?? ''}
+          onChange={chooseView}
+          options={views.filter((v) => !v.hideEmpty || v.id === current?.id || viewCount(v) > 0).map((v) => ({ value: v.id, label: v.label, count: viewCount(v), tone: v.tone && viewCount(v) > 0 ? v.tone : undefined }))}
+        />
+      )}
       <div className="nl-dt-toolbar">
         <label className="nl-dt-search">
           <MagnifyingGlass size={17} aria-hidden="true" />
@@ -376,6 +414,13 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
             aria-controls={`${uid}-body`}
           />
         </label>
+        {props.quickFilters?.length ? (
+          <div className="nl-dt-quick" role="group" aria-label={t('quickFilters')}>
+            {props.quickFilters.map((f) => (quick.includes(f.id)
+              ? <FilterChip key={f.id} label={f.label} applied onRemove={() => toggleQuick(f.id)} />
+              : <FilterChip key={f.id} label={f.label} applied={false} onToggle={() => toggleQuick(f.id)} />))}
+          </div>
+        ) : null}
         <button
           ref={filtersBtn}
           type="button"
@@ -544,7 +589,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
             .map((a) => {
               const I = a.icon ?? Lightning;
               return (
-                <button key={a.id} type="button" className={clsx('btn nl-dt-bulk-btn', a.danger ? 'nl-dt-bulk-danger' : 'nl-dt-bulk-soft')} disabled={pendingAction === a.id} aria-busy={pendingAction === a.id || undefined} onClick={() => void runAction(a, selRows)}>
+                <button key={a.id} type="button" className={clsx('btn nl-dt-bulk-btn', a.danger ? 'nl-dt-bulk-danger' : a.emphasis === 'primary' ? 'btn-primary' : 'nl-dt-bulk-soft')} disabled={pendingAction === a.id} aria-busy={pendingAction === a.id || undefined} onClick={() => void runAction(a, selRows)}>
                   <I size={16} aria-hidden="true" />
                   {pendingAction === a.id ? t('working') : a.label}
                 </button>
@@ -627,7 +672,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
                       <DataTableCheckbox checked={on} onChange={(v) => setSel([id], v)} label={t('selectRow', { name })} />
                     </td>
                     {shown.map((c) => (
-                      <td key={c.key} className={clsx(c.isNum && 'is-num')}>
+                      <td key={c.key} className={clsx(c.isNum && 'is-num', c.nowrap && 'is-nowrap')}>
                         {renderValue(c, r, 'cell')}
                       </td>
                     ))}
@@ -670,6 +715,43 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
                 const name = primary ? cellText(primary, r, locale) : id;
                 const pSub = primary ? subText(primary, r) : '';
                 const tagV = firstTag ? valueOf(r, firstTag.key) : null;
+                if (compact) {
+                  const top = visible.find((c) => c.card === 'tag') ?? firstTag;
+                  const topV = top ? valueOf(r, top.key) : null;
+                  const cardText = (c: NormalizedColumn<T>) => (c.cardFormat ? c.cardFormat(valueOf(r, c.key), r) : cellText(c, r, locale));
+                  const join = (where: 'line' | 'meta') => visible.filter((c) => c.card === where && !isBlank(valueOf(r, c.key))).map(cardText).join(' · ');
+                  const end = visible.filter((c) => c.card === 'end');
+                  const line = join('line'), meta = join('meta');
+                  return (
+                    <li
+                      key={id}
+                      className={clsx('nl-dt-card nl-dt-card-compact', on && 'is-selected', onOpen && 'is-clickable')}
+                      onClick={onOpen ? (e) => !isInteractive(e.target) && onOpen(r) : undefined}
+                    >
+                      <DataTableCheckbox className="nl-dt-card-check" checked={on} onChange={(v) => setSel([id], v)} label={t('selectRow', { name })} />
+                      {primary?.thumb ? <Thumb src={valueOf(r, primary.thumb)} name={name} /> : null}
+                      <div className="nl-dt-cc-body">
+                        <div className="nl-dt-cc-top">
+                          <span className="nl-dt-cc-title">
+                            <span className="nl-dt-card-name">{name}</span>
+                            {pSub && <span className="nl-dt-sub">{pSub}</span>}
+                          </span>
+                          {top && !isBlank(topV) && tagOf(top, r, true)}
+                        </div>
+                        {line && <div className="nl-dt-cc-line">{line}</div>}
+                        {(meta || end.length > 0) && (
+                          <div className="nl-dt-cc-meta">
+                            <span>{meta}</span>
+                            {end.map((c) => <strong key={c.key} className="nl-dt-cc-end">{cardText(c)}</strong>)}
+                          </div>
+                        )}
+                        <div className="nl-dt-cc-acts">
+                          <RowActions acts={rowActs(r)} name={name} card />
+                        </div>
+                      </div>
+                    </li>
+                  );
+                }
                 return (
                   <li
                     key={id}
@@ -683,7 +765,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
                         <div className="nl-dt-card-name">{name}</div>
                         {pSub && <div className="nl-dt-sub">{pSub}</div>}
                       </div>
-                      {firstTag && !isBlank(tagV) && <span className={clsx('tag nl-dt-tag-wrap', toneOf(firstTag, r))}>{cellText(firstTag, r, locale)}</span>}
+                      {firstTag && !isBlank(tagV) && tagOf(firstTag, r, true)}
                     </div>
                     <dl className="nl-dt-card-fields">
                       {visible
@@ -708,8 +790,8 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
         {showBody && filtered.length === 0 && (
           <div className="nl-dt-empty">
             <MagnifyingGlassMinus size={32} aria-hidden="true" />
-            <p>{hasData ? t('emptyFiltered', { plural }) : (props.emptyText ?? t('emptyNone', { plural }))}</p>
-            {hasData ? (
+            <p>{hasData || narrowed ? t('emptyFiltered', { plural }) : current?.when ? t('emptyView', { plural, view: current.label }) : (props.emptyText ?? t('emptyNone', { plural }))}</p>
+            {hasData || narrowed ? (
               <button type="button" className="btn btn-secondary" onClick={clearAll}>
                 {t('clearSearchFilters')}
               </button>
@@ -896,6 +978,24 @@ function RowActions({ acts, name, card }: { acts: RowAct[]; name: string; card?:
       {acts.map((a) => {
         const I = a.icon;
         const labelled = card || a.showLabel;
+        if (a.emphasis) {
+          return (
+            <button
+              key={a.key}
+              type="button"
+              className={clsx('btn btn-sm nl-dt-act-btn', a.emphasis === 'primary' ? 'btn-primary' : 'btn-secondary')}
+              disabled={a.busy}
+              aria-busy={a.busy || undefined}
+              onClick={(e) => {
+                e.stopPropagation();
+                a.run();
+              }}
+            >
+              {a.label}
+              {!card && <span className="nl-dt-sr"> · {name}</span>}
+            </button>
+          );
+        }
         return (
           <button
             key={a.key}

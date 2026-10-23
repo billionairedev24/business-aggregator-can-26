@@ -11214,6 +11214,77 @@ phone sheet open).
 deals feed need api work; French shots are not in `make ui-shots` (it photographs `?lang=en`; fr-CA is covered by the
 tests and the gallery's fr baselines).
 
+## 2026-10-23 — S-175 Studio work screens
+
+Built to the "Studio orders table" frame of `design/revamp/a.html` (screen 8, 1280 and 390), applied to every Studio work
+screen. No backend, BFF contract, validation or i18n rule changed; every string is en + fr-CA.
+
+**@northline/ui additions (additive; the existing DataTable, tabs and gallery baselines are unchanged).**
+- `DataTable`: `views` (status tabs with counts above the toolbar, drawn with `UnderlineTabs`; a count's `tone: 'danger'`
+  keeps it red; `hideEmpty` drops a tab with nothing in it; controlled with `view` / `onViewChange`), `quickFilters` (toolbar
+  `FilterChip`s, applied ones show ✓ and remove themselves; they combine with *and*), a column's `status` (the cell is a
+  `StatusTag` of that tone; facets and reports still read the text), `nowrap`, and compact phone cards (`card: 'line' |
+  'meta' | 'end' | 'tag'`, `cardFormat`): thumb, primary value and its sub, the tag top right, a body line, a muted meta
+  line with the total at its end, then the row's actions — the mockup's 390 cards. An action's `emphasis: 'primary' |
+  'secondary'` draws it as a small button in the row and in the bulk bar (Mark packed in the action blue). Tag tones gain
+  `tag-success/warning/danger/info`. Counts are over all rows (the mockup's "All 38" with "Today" applied).
+- `UnderlineTabs`: optional `tabId` / `panelId` and a per-tab accessible `name` (the editors' sections).
+- `FormSection` and `SaveBar` (Editor.tsx): a titled editor panel, and the save bar that stays at the bottom of the window
+  (`sticky={false}` draws it in place). Gallery section "worktable" (4 new baselines; 64 total, all others unchanged);
+  `DataTable/worktable.test.tsx`.
+
+**Screens.**
+- *Orders:* tabs All / To pack / Awaiting pickup / Out for delivery (when any) / Delivered / Issues (red) / Cancelled (when
+  any); quick filters Placed today · Today's runs · Tomorrow's runs; columns Order · Placed · Customer · Items · Run ·
+  Total · Status with semantic statuses (to pack warning, awaiting/out for delivery info, delivered success, issue danger,
+  cancelled neutral) in the table and the detail sheet; Mark packed primary inline and in the bulk bar; `?view=` on the
+  route (the dashboard's "orders to pack" card opens the To pack tab). Times through `formatWhen` ("Delivered 12:05 p.m.",
+  "Pack by 5:20 p.m."), amounts through `formatPrice`/`Price`. Returns: statuses (waiting on you warning, refunded
+  success, declined/escalated danger).
+- *KPI deltas (the S-174 note):* in the Studio a delta's colour means good (green) or bad (red), never "went up". Orders
+  had To pack in red; work still to do is not bad, so it is neutral, and only an open issue is red ("none open" green).
+- *Catalogue (products, services, both):* tabs All / Live / Hidden / Drafts / In review / Rejected (when any) / Low stock
+  (products); quick filters No photo · No sales (bookings) in 30 days; vetting and visibility as statuses; stock as a
+  status ("4 in stock" warning, "Out of stock" danger); Publish a secondary button; `?view=` on the route (the dashboard's
+  low-stock card opens Low stock, searched when there is one product).
+- *Stock:* no route of its own (S-174 kept it off the nav); it is the Products table's **Low stock** tab. The list
+  endpoint has no per-listing threshold, so the tab uses the editor's default "Low stock at" (5) — `LOW_STOCK` in the
+  catalogue model. A listing's own threshold still drives its alerts server-side.
+- *Product and service editors:* the hand-made step strip became `UnderlineTabs` with a ✓ on complete sections (ids kept,
+  so `#tab-images` still works); Save draft / Submit for vetting moved from the head into the sticky save bar with the
+  listing's status (draft neutral, in review warning, live success, rejected danger) and "Unsaved changes"; the product's
+  Preview tab is gone — the aside now shows a **live preview** (the real `ProductCard` / `ServiceCard`, inert) updated as
+  the seller types; S-181's photo tips sit beside the uploader (side by side when the form is ≥ 640 px wide); prices
+  through `price`; no inline styles (thumbs and widths are classes). Editors' panels on Plainsight hairlines, no shadow.
+- *Kitchen display:* three lanes New → Cooking → Ready (a refused hand-off stays in Ready), each ticket with its stage
+  colour across the top (new warning, cooking info, ready success, late danger with a "Late" tag and a red timer), the
+  order number at 24 px, dishes at 18 px, one large full-width button; phones stack the lanes. Pause new orders is the
+  destructive (red) button. *Menu builder:* the availability pill became the shared `Switch` (named "Available: dish"),
+  sold out a danger status, prices `Price`, the head `BoHeader`. Modifier prices use the one format ("+$3.00", was "+$3").
+- *Bookings and quotes:* the list view has tabs All / Upcoming / Requested / Done / Disputed / Cancelled and the
+  booking's time range (`formatTimeRange`); quote and approval tags are statuses; the calendar's confirmed bookings and
+  today's date are ink, not the action blue (one role per colour).
+
+**Lint (`pnpm lint:tokens`).** The orders, catalogue, appointments and kitchen folders are now strict (no raw px sizes or
+spacing, no raw colours), with no inline `style` except the calendar's data-driven custom properties (`--top`, `--h`),
+and refuse a hand-made `role="tab"`, the old tag tones (`tag-accent`, `tag-accent-2`, `tag-highlight`), an app-made
+`nl-chip` class, and `formatMoney(`/`money(`.
+
+**Bundle budget.** The Studio's initial JS budget is 260 kB gzip (was 250). The editors' live preview uses
+`ProductCard`/`ServiceCard`; rollup keeps one chunk per module, so they join the `Commerce` chunk the dashboard already
+loads for `Price`/`StatusTag` (+7 kB, 247.1 → 255.6 kB). Splitting `Commerce.tsx` would collide with the consumer stories
+editing it now; S-180 can split the cards into their own module and bring the budget back.
+
+**Departures from the mockup.** No "Print labels", "Message customers" or "Export" header buttons: the Studio has no label
+or bulk-message endpoint, and export is the table's Report. The window column shows the run's start ("Tonight 6:00
+p.m."): orders carry no window end. Rows keep the Open icon (keyboard path to the sheet) and rows are 44 px for the
+target rule where the mockup draws ~40; at 1440 the orders table drops its Placed column to fit (the DataTable layout rule, "Placed hidden to fit"; it is in the sheet and the export). Phone status tabs scroll sideways inside their row, as drawn.
+
+**Left for S-176 and later.** Finance, payouts, messaging, storefront editor, settings and onboarding keep their page
+bodies (and their own raw px, tags and `money`); kitchen Hours and Modifiers & combos got the status tones and the price
+format but not a layout pass; availability is untouched. The DataTable's built-in `money` type still formats with
+`formatMoney` (the same `$8.50` string); the Studio columns pass `formatPrice`.
+
 ## 2026-10-23 — S-178/S-179 Consumer and courier app revamp
 
 **What changed.** Both native apps' screens are rebuilt on the S-169 kit in A · Plainsight (`design/revamp/a.html`'s

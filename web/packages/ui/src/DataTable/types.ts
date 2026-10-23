@@ -1,10 +1,11 @@
 import type { Icon } from '@phosphor-icons/react';
+import type { StatusTone } from '../Commerce';
 
 /** Column value kinds. `money` values are CAD cents (numbers) per the platform convention. */
 export type DataTableColumnType = 'text' | 'num' | 'money' | 'tag';
 
 /** Tag tone classes from the component layer (`base.css`). */
-export type DataTableTone = 'tag-accent' | 'tag-accent-2' | 'tag-neutral' | 'tag-highlight';
+export type DataTableTone = 'tag-accent' | 'tag-accent-2' | 'tag-neutral' | 'tag-highlight' | 'tag-success' | 'tag-warning' | 'tag-danger' | 'tag-info';
 
 export type DataTablePerm = 'create' | 'update' | 'delete';
 
@@ -48,6 +49,42 @@ export interface DataTableColumn<T> {
   hidden?: boolean;
   /** Custom display text (also used for search and reports). */
   format?: (value: unknown, row: T) => string;
+  /**
+   * S-175: the cell is a status (To pack, Delivered, Wrong item): drawn as a `StatusTag` of this tone — the semantic
+   * colour pair with its dot, never the action or commerce colour. Facets and reports still read the text.
+   */
+  status?: (row: T) => StatusTone;
+  /**
+   * S-175: where the value goes on a compact phone card (design/revamp/a.html, the orders table at 390): `line` joins
+   * the body line ("A. Osei · Country sourdough ×2"), `meta` the muted line under it ("Tonight 6–9 p.m."), `end` sits
+   * at the meta line's end in bold (the total), `tag` is the tag at the top line's end (default: the first tag or status
+   * column). When any column sets it the cards are compact: the row's picture, the primary value and the tag on the top
+   * line, only these columns below, then the row's actions; the others stay in the view dialog and the table.
+   */
+  card?: 'line' | 'meta' | 'end' | 'tag';
+  /** S-175: the cell never wraps (an order number, a time): the table drops a column before it breaks one. */
+  nowrap?: boolean;
+  /** S-175: the value's words on a compact card when the bare value would be unclear there ("You get $75.44"). */
+  cardFormat?: (value: unknown, row: T) => string;
+}
+
+/** S-175: a status tab above the table ("To pack 3"): the rows it keeps, with their count. */
+export interface DataTableView<T> {
+  id: string;
+  label: string;
+  /** Rows in this view. Omit for "All". */
+  when?: (row: T) => boolean;
+  /** `danger` keeps the count red (Issues 1). */
+  tone?: 'danger';
+  /** Hidden while it would count 0 (a Cancelled tab with nothing cancelled). */
+  hideEmpty?: boolean;
+}
+
+/** S-175: a quick filter chip in the toolbar ("Today", "Tonight's run"): applied chips combine (and). */
+export interface DataTableQuickFilter<T> {
+  id: string;
+  label: string;
+  when: (row: T) => boolean;
 }
 
 /** Guard: the action only applies to rows whose `key` value (stringified) is one of `in`. */
@@ -69,6 +106,11 @@ export interface DataTableAction<T> {
   bulk?: boolean;
   /** A destructive action (Suspend): drawn in the danger colour, red in the bulk bar (E-15: never the action colour). */
   danger?: boolean;
+  /**
+   * S-175: an inline action drawn as a small button instead of a quiet icon-and-label: `primary` for the row's next job
+   * (Mark packed: the action colour, here and in the bulk bar), `secondary` for a lesser one (Print label).
+   */
+  emphasis?: 'primary' | 'secondary';
 }
 
 export interface DataTableProps<T extends object> {
@@ -87,6 +129,16 @@ export interface DataTableProps<T extends object> {
   /** Localised role name. With no create/update/delete permission, shows "View only · <role>". */
   roleName?: string;
   actions?: readonly DataTableAction<T>[];
+
+  /** S-175: status tabs with counts above the toolbar (the orders table). The first is the default unless `view` says. */
+  views?: readonly DataTableView<T>[];
+  /** The current tab (controlled); with `onViewChange` the caller keeps it (a route's search param). */
+  view?: string;
+  onViewChange?: (id: string) => void;
+  /** S-175: quick filter chips in the toolbar, before Filters. */
+  quickFilters?: readonly DataTableQuickFilter<T>[];
+  /** Quick filters applied on arrival. */
+  initialQuickFilters?: readonly string[];
 
   /** Initial page size (5 | 10 | 25 | 50). Default 10. */
   pageSize?: number;

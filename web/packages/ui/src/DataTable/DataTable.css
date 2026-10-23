@@ -204,3 +204,20 @@ table.nl-dt-table td { vertical-align: middle; overflow-wrap: break-word; } /* o
 .nl-dt-thumb { flex: none; width: 44px; height: 44px; border-radius: var(--radius-control); object-fit: cover; background: var(--color-well); border: 1px solid var(--color-border); box-sizing: border-box; }
 .nl-dt-thumb-lg { width: 56px; height: 56px; }
 .nl-dt-thumb-empty { display: grid; place-items: center; font-family: var(--font-sans); font-weight: var(--weight-semibold); font-size: var(--text-lg); color: var(--color-text-muted); }
+
+/* ── S-175: status tabs, quick filters, emphasised row actions, compact phone cards (design/revamp/a.html § 8) ── */
+.nl-dt > .nl-utabs { margin-bottom: var(--space-1); }
+.nl-dt-quick { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.nl-dt-act-btn { white-space: nowrap; }
+.nl-dt-table .nl-dt-actions-cell .nl-dt-act-btn { white-space: nowrap; }
+.nl-dt-card-compact { flex-direction: row; gap: var(--space-2); padding: var(--space-2-5) var(--space-3) var(--space-2) var(--space-1); }
+.nl-dt-card-compact .nl-dt-card-check { margin: calc(-1 * var(--space-1)) 0 0; }
+.nl-dt-cc-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.nl-dt-cc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); min-height: var(--size-control-sm); }
+.nl-dt-cc-title { display: flex; flex-direction: column; min-width: 0; padding-top: var(--space-1); }
+.nl-dt-cc-top .nl-dt-card-name { font-size: var(--type-body); }
+.nl-dt-cc-line { font-size: var(--type-label); color: var(--color-text); overflow-wrap: anywhere; }
+.nl-dt-cc-meta { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); font-size: var(--type-meta); color: var(--color-text-muted); }
+.nl-dt-cc-end { color: var(--color-text); font-size: var(--type-body); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nl-dt-cc-acts .nl-dt-row-acts { justify-content: flex-end; flex-wrap: wrap; }
+.nl-dt-table td.is-nowrap { white-space: nowrap; overflow-wrap: normal; }

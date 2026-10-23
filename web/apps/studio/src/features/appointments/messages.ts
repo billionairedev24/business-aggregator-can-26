@@ -2,6 +2,7 @@ import { defineMessages } from '@northline/ui';
 
 export const useAppointmentsT = defineMessages({
   en: {
+    viewAll: 'All', viewUpcoming: 'Upcoming', viewDone: 'Done',
     title: 'Calendar', sub: '{count, plural, =0 {Nothing coming up in this view.} one {# booking coming up in this view.} other {# bookings coming up in this view.}}', today: 'Today', legend: 'Booking status', bookingDetail: 'Booking',
     kicker: 'Appointments', weekOf: 'Week of {date}', dayTitle: '{date}',
     view: 'Calendar view', viewDay: 'Day', viewWeek: 'Week', viewList: 'List', prev: 'Previous', next: 'Next', prevWeek: 'Previous week', nextWeek: 'Next week', prevDay: 'Previous day', nextDay: 'Next day', thisWeek: 'This week',
@@ -65,6 +66,7 @@ export const useAppointmentsT = defineMessages({
     approvalDescRequired: 'Describe the extra parts or work.', approvalAmountRequired: 'Enter an amount.', attention: '{n, plural, one {# thing needs} other {# things need}} attention.',
   },
   fr: {
+    viewAll: 'Tous', viewUpcoming: 'À venir', viewDone: 'Terminés',
     title: 'Calendrier', sub: "{count, plural, =0 {Rien à venir dans cette vue.} one {# réservation à venir dans cette vue.} other {# réservations à venir dans cette vue.}}", today: "Aujourd'hui", legend: 'Statut des réservations', bookingDetail: 'Réservation',
     kicker: 'Rendez-vous', weekOf: 'Semaine du {date}', dayTitle: '{date}',
     view: 'Vue du calendrier', viewDay: 'Jour', viewWeek: 'Semaine', viewList: 'Liste', prev: 'Précédent', next: 'Suivant', prevWeek: 'Semaine précédente', nextWeek: 'Semaine suivante', prevDay: 'Jour précédent', nextDay: 'Jour suivant', thisWeek: 'Cette semaine',
