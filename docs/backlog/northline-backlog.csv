@@ -1029,3 +1029,113 @@ S-121,E-13,Story,UAT with pilot merchants and customers; triage feedback,,"Accep
 - blocking issues fixed.
 
 Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-6,pilot,qa,release,Sprint 22,2027-07-26,2027-08-06
+E-15,,Epic,"Full UI revamp (Amazon-style marketplace UX, new visual direction)","Full UI revamp (Amazon-style marketplace UX, new visual direction)","Owner direction 2026-10-23: the UI across every app is an eyesore. The 2026-10-19 light & photo-first / Evergreen direction is reopened, not just re-executed. Reference: Amazon — dense, utility-first, search-led marketplace UX (deliver-to, search with department scope, buy box, filter rail, Seller Central-style back office). Patterns only: Northline keeps its own name, colours, type and logo; no Amazon branding, trade dress or assets. Scope: consumer web, Studio, console, consumer and courier mobile apps. Gate: no page work starts until the owner has picked a direction from rendered mockups (S-166). Backend, BFF, validation, i18n (en + fr-CA) and region-neutrality rules of CLAUDE.md are unchanged.",Highest,,ui-revamp,design,,web,,,
+S-165,E-15,Story,"UI audit with evidence (screenshots of every app, root causes)",,"Screenshot every key route of consumer web, Studio, console and the mobile apps at 1440 and 390 wide, dev and production builds. Check that fonts, token CSS and images load in the deployed build (CSP, asset paths). Rank the problems and name their root causes in code (tokens, components, page layout).
+
+Acceptance criteria:
+- docs/design/audit-2026-10.md with screenshots and a ranked problem list
+- Every deploy-level breakage filed and fixed separately
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",Highest,3,ui-revamp,design,audit,design,Sprint 2,2026-10-19,2026-10-30
+S-166,E-15,Story,Three visual directions as rendered mockups; owner picks one,,"Three distinct directions on Amazon-style marketplace patterns, each with its own palette, type and density: consumer home, search results, product/service page, cart; Studio dashboard and a list; console table. Rendered at desktop and phone. Includes a short rationale and the Amazon patterns each one borrows.
+
+Acceptance criteria:
+- Owner has picked a direction (recorded in DECISIONS.md)
+- docs/design/revamp-epic.md updated with the locked direction
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",Highest,5,ui-revamp,design,direction,design,Sprint 2,2026-10-19,2026-10-30
+S-167,E-15,Story,"Design tokens v2 for the chosen direction (colour, type, density, elevation)",,"Replace the palette files with the chosen direction's tokens; denser spacing and type for marketplace pages; dark-mode-ready semantic roles. WCAG 2.2 AA contrast for every text/UI pair, validated in CI.
+
+Acceptance criteria:
+- One tokens source feeds web (CSS variables) and mobile (TS)
+- Contrast check passes in CI
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",Highest,5,ui-revamp,design-system,tokens,web,Sprint 3,2026-11-02,2026-11-13
+S-168,E-15,Story,Component library rebuild (@northline/ui) with a gallery and screenshot tests,,"Rebuild the primitives and marketplace components on tokens v2: buttons, inputs, select, search bar with department scope, product/service card, price, rating, badges, tabs, data table, dialogs, toasts, empty states, skeletons. A gallery page per component in both locales and widths; Playwright screenshot baselines.
+
+Acceptance criteria:
+- No page-level one-off styles needed for the common cases
+- Screenshot tests run in CI and block regressions
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",Highest,8,ui-revamp,design-system,components,web,Sprint 3,2026-11-02,2026-11-13
+S-169,E-15,Story,Mobile component kit on tokens v2 (Expo),,"The same components for the Expo apps, sharing tokens v2. Native-feeling navigation, bottom tabs, sheets.
+
+Acceptance criteria:
+- Gallery screen in the dev build
+- Both apps compile against the new kit
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",High,5,ui-revamp,design-system,mobile,web,Sprint 3,2026-11-02,2026-11-13
+S-170,E-15,Story,"Consumer web shell: header, department strip, footer",,"Amazon-style header: logo, deliver-to (location dialog), search with Services/Shop/Food scope, account & orders, cart with count; a department strip under it; full footer. Responsive down to 320px.
+
+Acceptance criteria:
+- Every consumer route uses the new shell
+- Keyboard and screen-reader pass
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",High,5,ui-revamp,consumer-web,shell,web,Sprint 4,2026-11-16,2026-11-27
+S-171,E-15,Story,"Consumer discovery: home, search results with filter rail, category pages",,"Home with deal/category tiles and rails; results with a left filter rail (chips on phone), sort, dense result cards; category landing pages for services, shop and food.
+
+Acceptance criteria:
+- Matches the locked mockups at 1440 and 390
+- No layout shift on image load
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",High,8,ui-revamp,consumer-web,discovery,web,Sprint 4,2026-11-16,2026-11-27
+S-172,E-15,Story,"Consumer detail pages: product page with buy box, store and provider pages, service booking, menus",,"Product page with gallery, buy box (price, delivery estimate, Add to cart, Buy now), specs and reviews; provider and store pages; service booking flow; kitchen menu.
+
+Acceptance criteria:
+- Matches the locked mockups
+- Buy box stays reachable on phone
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",High,8,ui-revamp,consumer-web,detail,web,Sprint 4,2026-11-16,2026-11-27
+S-173,E-15,Story,"Consumer cart, checkout, orders, account, sign-in and sign-up",,"Cart with saved-for-later, one-page checkout, order list and detail with tracking, the account hub, and the auth pages (shared look with the auth server's pages).
+
+Acceptance criteria:
+- Every flow works in en and fr-CA at 320px
+- Auth server pages match the shell
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",High,8,ui-revamp,consumer-web,checkout,web,Sprint 5,2026-11-30,2026-12-11
+S-174,E-15,Story,Studio shell and dashboard (Seller Central-style),,"Studio top bar and navigation, a dashboard of actionable cards (orders to ship, bookings today, messages, payouts, listing health) for providers, sellers and kitchens.
+
+Acceptance criteria:
+- Matches the locked mockups
+- Icon rail on tablet, disclosure menu on phone
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",High,5,ui-revamp,studio,shell,web,Sprint 5,2026-11-30,2026-12-11
+S-175,E-15,Story,"Studio work screens: catalogue, editors, orders, bookings, kitchen display",,"Dense data tables with bulk actions, editor forms with a sticky save bar and live preview, order and booking queues, the kitchen display.
+
+Acceptance criteria:
+- All Studio work routes on the new components
+- Tables become cards under 600px
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",High,8,ui-revamp,studio,operations,web,Sprint 5,2026-11-30,2026-12-11
+S-176,E-15,Story,"Studio money and settings: finance, payouts, messaging, storefront, settings, onboarding",,"Finance and payouts, messaging, storefront editor, settings, and the three onboarding flows.
+
+Acceptance criteria:
+- All remaining Studio routes on the new components
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",Medium,5,ui-revamp,studio,settings,web,Sprint 6,2026-12-14,2026-12-25
+S-177,E-15,Story,"Console revamp: shell, queues, tables, detail pages",,"Staff console on the new system: dense tables, saved filters, detail pages with an action panel, trust & safety and registry queues.
+
+Acceptance criteria:
+- Every console route on the new components
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",Medium,8,ui-revamp,console,tables,web,Sprint 6,2026-12-14,2026-12-25
+S-178,E-15,Story,Consumer mobile app revamp,,"Home, search, detail, cart, checkout, orders, account and group orders on the mobile kit, following the locked direction.
+
+Acceptance criteria:
+- Every screen checked on a 390x844 and a small Android size
+- en and fr-CA
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",High,8,ui-revamp,mobile,consumer-app,mobile,Sprint 6,2026-12-14,2026-12-25
+S-179,E-15,Story,Courier app revamp,,"Shift, job offer, navigation hand-off, proof of delivery and earnings on the mobile kit.
+
+Acceptance criteria:
+- Every courier screen on the new kit; glanceable in sunlight (large targets, high contrast)
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",Medium,3,ui-revamp,mobile,courier-app,mobile,Sprint 6,2026-12-14,2026-12-25
+S-180,E-15,Story,"Revamp QA and sign-off: accessibility, both locales, visual regression gate, docs",,"WCAG 2.2 AA pass on the new screens, fr-CA length check, screenshot regression gate on for every app, redesign spec and CLAUDE.md design section replaced by the new direction; owner walkthrough on the demo.
+
+Acceptance criteria:
+- Owner signs off the walkthrough
+- Old palettes and dead styles removed
+
+Refs: docs/design/revamp-epic.md (E-15), docs/design/redesign-spec.md (superseded where they disagree), docs/SCREENS.md",High,5,ui-revamp,qa,a11y,qa,Sprint 6,2026-12-14,2026-12-25
