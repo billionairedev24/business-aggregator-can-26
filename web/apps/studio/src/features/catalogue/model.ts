@@ -18,6 +18,11 @@ export function permissions(role: string) {
 export type VetState = 'approved' | 'pending' | 'review' | 'draft' | 'rejected';
 export const vetState = (l: Pick<ListingItem, 'vetting' | 'vettingFlags'>): VetState =>
   l.vetting === 'pending' ? (l.vettingFlags.length ? 'review' : 'pending') : l.vetting;
+/**
+ * S-175: "low stock" on the catalogue table — the editor's default "Low stock at" (5). The list endpoint carries no
+ * per-listing threshold, so the Low stock tab uses the default; a listing's own threshold still drives its alerts.
+ */
+export const LOW_STOCK = 5;
 export const minutesSince = (iso: string | null | undefined, now = Date.now()) => (iso ? Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000)) : 0);
 
 // ── product form ──────────────────────────────────────────────────────────────────────────────────────────────────

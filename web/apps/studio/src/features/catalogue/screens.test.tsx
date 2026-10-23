@@ -64,8 +64,9 @@ describe('ListingsScreen', () => {
     renderScreen(<ListingsScreen />);
     expect(screen.getByRole('heading', { name: 'Services & products' })).toBeTruthy();
     expect(await screen.findAllByText('Brake inspection')).not.toHaveLength(0);
-    expect(screen.getAllByText('Service').length).toBeGreaterThan(0); // Type column values (card layout in jsdom)
-    expect(screen.getAllByText('Product').length).toBeGreaterThan(0);
+    // Type column values, on the phone card's meta line (card layout in jsdom)
+    expect(screen.getAllByText(/^Service · /).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^Product · /).length).toBeGreaterThan(0);
   });
 
   it('provider portal: Services & prices with the duration and what the provider gets after the fee (PH:139)', async () => {
@@ -75,7 +76,7 @@ describe('ListingsScreen', () => {
     expect(screen.getByRole('heading', { name: 'Services & prices' })).toBeTruthy();
     expect(await screen.findAllByText('Brake inspection')).not.toHaveLength(0);
     expect(screen.getAllByText('60 min · instant book').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('$75.44').length).toBeGreaterThan(0); // $89 − 12% (Trusted) − card processing
+    expect(screen.getAllByText('You get $75.44').length).toBeGreaterThan(0); // $89 − 12% (Trusted) − card processing (the phone card)
     expect(screen.queryByText('Brake pads · ceramic (front)')).toBeNull();
   });
 
