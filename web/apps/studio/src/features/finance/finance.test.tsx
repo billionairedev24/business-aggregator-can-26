@@ -148,7 +148,7 @@ describe('Earnings', () => {
 describe('Reports', () => {
   it('shows the KPIs and switches the period', async () => {
     const ui = renderScreen(<ReportsScreen />);
-    expect(await screen.findByText('$19,440')).toBeTruthy();
+    expect(await screen.findByText('$19,440.00')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('gross sales')).toBeTruthy();
     expect(screen.getByText('+22% vs the period before')).toBeTruthy();
@@ -161,7 +161,7 @@ describe('Reports', () => {
     const year = new Date().getFullYear();
     expect((screen.getByRole('link', { name: 'Tax summary (GST)' })).getAttribute('href')).toBe(`/api/v1/merchants/PWM1/reports/gst-summary.pdf?year=${year}&lang=en`);
     await ui.click(screen.getByRole('radio', { name: '30 d' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Last 30 days' })).toBeTruthy();
+    expect(await screen.findByText(/^Last 30 days/)).toBeTruthy();
     await waitFor(() => expect(calls.some(c => c.path === '/api/v1/merchants/PWM1/reports?period=30d')).toBe(true));
   });
 });
@@ -368,8 +368,11 @@ describe('loading and error states keep the h1 (S-142)', () => {
 describe('Refunds & disputes', () => {
   it('shows the open dispute, evidence and history', async () => {
     renderScreen(<RefundsScreen />);
-    expect(await screen.findByRole('heading', { level: 1, name: '1 open dispute, 2 refunds this month' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Dispute DS-1188 · Pre-purchase inspection · $160' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Refunds & disputes' })).toBeTruthy();
+    expect(await screen.findByText('1 open dispute, 2 refunds this month')).toBeTruthy();
+    // S-176: the one price format, and the case's state as a status
+    expect(screen.getByRole('heading', { level: 3, name: 'Dispute DS-1188 · Pre-purchase inspection · $160.00' })).toBeTruthy();
+    expect(screen.getAllByText('Waiting on you').length).toBeGreaterThan(0);
     expect(screen.getByText('Photos attached · 12')).toBeTruthy();
     expect(screen.getByText('Report PDF')).toBeTruthy();
     expect(screen.getAllByText('Won · evidence')).not.toHaveLength(0);

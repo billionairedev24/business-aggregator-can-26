@@ -67,6 +67,8 @@ if (photoProblems.length) {
 // `margin-bottom: -1px` under a tab row) stay allowed. In TSX the same goes for inline
 // `style` objects (`fontSize: 13`, `padding: 6`, `color: 'white'`).
 const S175 = ['orders', 'catalogue', 'appointments', 'kitchen'].map(f => `apps/studio/src/features/${f}`);
+// S-176: the Studio's money, messaging, storefront, settings, account and onboarding screens — with S-175, every Studio folder
+const S176 = ['finance'].map(f => `apps/studio/src/features/${f}`);
 const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'apps/studio/src/features/shell', 'apps/console/src/features/shell',
   // S-170/S-171: the consumer discovery pages (home, results, the Services / Shop / Food landings and their shared parts)
   'apps/consumer/src/features/home', 'apps/consumer/src/features/search', 'apps/consumer/src/features/pages', 'apps/consumer/src/features/shop',
@@ -75,10 +77,12 @@ const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'app
   // S-174: the Studio dashboard and the storefront's live preview (audit #7 and #10)
   'apps/studio/src/features/dashboard', 'apps/studio/src/features/storefront/StorefrontPreview.tsx', 'apps/studio/src/features/storefront/StorefrontPreview.css',
   // S-175: the Studio work screens (orders, catalogue and editors, bookings and quotes, the kitchen display and menu)
-  ...S175];
+  ...S175,
+  // S-176: the rest of the Studio
+  ...S176];
 // S-174: no inline `style` at all in these (a class with the scale tokens instead; the Studio dashboard had a dozen).
 // S-175: the work screens too — except the calendar, whose entries are placed by custom properties from data (--top, --h).
-const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard', ...S175.filter(r => !r.endsWith('/appointments'))];
+const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard', ...S175.filter(r => !r.endsWith('/appointments')), ...S176];
 // (the server-rendered error page and the printable report are standalone documents with their own fallbacks)
 const strictSkip = [...skip, /\.stories\.tsx$/, /\.fixtures\.ts$/, /\.mdx$/, /(^|\/)server\//, /DataTable\/report\.ts$/];
 const PX = /(-?\d*\.?\d+)px/g;
@@ -135,7 +139,7 @@ const ONE_OFF = [
   [/className=["'`][^"'`]*\bnl-chip\b/, 'an app-made chip (use Chip / FilterChip)'],
   [/\bformatMoney\(|\bmoney\(/, 'a one-off price format (use Price, formatPrice or useFormatters().price)'],
 ];
-for (const root of S175) {
+for (const root of [...S175, ...S176]) {
   for (const file of walk(path.join(webRoot, root))) {
     const rel = path.relative(webRoot, file).split(path.sep).join('/');
     if (!/\.tsx?$/.test(rel) || strictSkip.some(r => r.test(rel))) continue;

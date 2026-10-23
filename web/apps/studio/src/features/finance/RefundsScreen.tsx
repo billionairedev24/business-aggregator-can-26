@@ -1,13 +1,14 @@
 import { useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, DataTable, Dialog, EmptyState, Field, PageSkeleton, Skeleton, TextArea, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
+import { Image, MapPin, Paperclip } from '@phosphor-icons/react';
+import { Alert, BoHeader, Button, DataTable, Dialog, EmptyState, Field, KpiStrip, PageSkeleton, Skeleton, StatusTag, TextArea, useFormatters, useLocale, type DataTableColumn, type DataTableView, type StatusTone } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import {
   actionKey, casesQuery, downloads, useAcceptRefund, useContestDispute, useContestRefund, useFullRefund, useGoodwillOffer, useSaveResponse, useUploadEvidence,
   type CaseDetail, type CaseRow, type CasesOverview,
 } from './api';
-import { dateTime, moneyShort, pctFromBps, timeOf } from './format';
+import { dateTime, pctFromBps, timeOf } from './format';
 import { useFinanceT, type FinanceKey } from './messages';
 import { QueryState } from './QueryState';
 import './finance.css';
@@ -17,39 +18,66 @@ import { screenHref } from '../shell/nav';
 const MAX_BYTES = 10 * 1024 * 1024;
 const TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/heif', 'application/pdf'];
 
-/** Design 02 · Refunds & disputes: open cases with evidence and answers, history, dispute rate. */
+/**
+ * Refunds & disputes (S-176, on the Studio dashboard's language): the page head with the month's count, the KPI strip
+ * (open disputes, refunds, cases waiting on you, the dispute rate against the tier's floor), each open case as a card
+ * with its state, then the history with status tabs.
+ */
 export function RefundsScreen() {
   const merchantId = useMerchantId();
   const t = useFinanceT();
   const cases = useQuery(casesQuery(merchantId));
   return (
-    <>
-      <span className="nl-kicker">{t('refundsKicker')}</span>
-      <QueryState query={cases} skeleton={<PageSkeleton kpis={0} rows={5} />}>{c => <Body c={c} />}</QueryState>
-    </>
+    <div className="fin-page">
+      <QueryState query={cases} skeleton={<><BoHeader title={t('refundsKicker')} /><PageSkeleton kpis={4} rows={5} /></>}>{c => <Body c={c} />}</QueryState>
+    </div>
   );
+}
+
+/** What an open case waits for, as a status: the business (warning, danger once its reply is due within a day), an agent (info), the customer (neutral). */
+export function caseState(d: CaseDetail, now = Date.now()): { key: FinanceKey; tone: StatusTone } {
+  if (d.offer?.state === 'pending') return { key: 'cs_offer', tone: 'neutral' };
+  if (d.state === 'agent') return { key: 'cs_agent', tone: 'info' };
+  if (d.state !== 'open') return { key: 'cs_decided', tone: 'neutral' };
+  const soon = d.dueBy && new Date(d.dueBy).getTime() - now < 86_400_000;
+  return { key: 'cs_you', tone: soon ? 'danger' : 'warning' };
 }
 
 function Body({ c }: { c: CasesOverview }) {
   const t = useFinanceT();
   const { locale } = useLocale();
+  const f = useFormatters();
   const tier = useMerchant()?.tier ?? 'registered';
   const merchantId = useMerchantId();
   // S-156: decisions an agent took against the business can be appealed once, from Standing
   const appealable = useQuery(standingQuery(merchantId)).data?.appealableDisputes.length ?? 0;
+  const waiting = c.open.filter(x => caseState(x).key === 'cs_you').length;
+  const over = c.disputeRateBps > c.disputeRateFloorBps;
   return (
     <>
-      <h1 className="nl-page-title">{t('refundsTitle', { disputes: c.openDisputes, refunds: c.refundsLast30Days })}</h1>
+      <BoHeader title={t('refundsKicker')} sub={t('refundsTitle', { disputes: c.openDisputes, refunds: c.refundsLast30Days })} />
+      <KpiStrip label={t('refundsKpis')} items={[
+        { key: 'open', label: t('kpiOpenDisputes'), value: f.number(c.openDisputes) },
+        { key: 'waiting', label: t('kpiWaitingOnYou'), value: f.number(waiting), ...(waiting ? { delta: t('kpiWaitingDelta'), trend: 'down' as const } : { delta: t('kpiWaitingNone'), trend: 'up' as const }) },
+        { key: 'refunds', label: t('kpiRefunds30'), value: f.number(c.refundsLast30Days) },
+        { key: 'rate', label: t('kpiDisputeRate'), value: pctFromBps(c.disputeRateBps, locale), trend: over ? 'down' : 'up',
+          delta: t('kpiDisputeFloor', { tier: t(`tier_${tier}` as FinanceKey), floor: pctFromBps(c.disputeRateFloorBps, locale) }) },
+      ]} />
       <p className="fin-lede">{t('refundsLede')}</p>
       {appealable ? (
-        <Alert tone="highlight" actions={<a className="btn btn-secondary" href={screenHref(merchantId, 'standing')}>{t('appealOpen')}</a>}>
+        <Alert tone="info" actions={<a className="btn btn-secondary" href={screenHref(merchantId, 'standing')}>{t('appealOpen')}</a>}>
           {t('appealable', { n: appealable })}
         </Alert>
       ) : null}
-      <div className="fin-cases">
-        {c.open.length ? c.open.map(x => <div key={x.id} className="bo-card">{x.type === 'dispute' ? <DisputeCase d={x} /> : <RefundCase r={x} />}</div>)
-          : <EmptyState>{t('noOpenCases')}</EmptyState>}
-      </div>
+      <section className="fin-open" aria-labelledby="fin-open-h">
+        <h2 className="fin-section-title" id="fin-open-h">{t('openCases', { count: c.open.length })}</h2>
+        <div className="fin-cases">
+          {c.open.length ? c.open.map(x => {
+            const st = caseState(x);
+            return <div key={x.id} className="bo-card fin-case-card" data-tone={st.tone}>{x.type === 'dispute' ? <DisputeCase d={x} /> : <RefundCase r={x} />}</div>;
+          }) : <EmptyState>{t('noOpenCases')}</EmptyState>}
+        </div>
+      </section>
       <section className="bo-card fin-history" aria-labelledby="fin-cases-history">
         <h2 className="bo-card-title" id="fin-cases-history">{t('history')}</h2>
         <History rows={c.history} />
@@ -66,15 +94,28 @@ function EvidenceTags({ d }: { d: CaseDetail }) {
   const { locale } = useLocale();
   const merchantId = useMerchantId();
   const photos = d.evidence.filter(e => e.kind === 'photo');
-  const link = (id: string, label: string, downloadable: boolean, tone = 'tag-accent') => downloadable
-    ? <a key={id} className={`tag ${tone}`} href={downloads.evidence(merchantId, d.id, id)} target="_blank" rel="noopener">{label}</a>
-    : <span key={id} className={`tag ${tone}`}>{label}</span>;
+  const link = (id: string, label: string, downloadable: boolean) => downloadable
+    ? <a key={id} className="fin-evidence fin-evidence-link" href={downloads.evidence(merchantId, d.id, id)} target="_blank" rel="noopener"><Paperclip size={14} aria-hidden />{label}</a>
+    : <span key={id} className="fin-evidence"><Paperclip size={14} aria-hidden />{label}</span>;
   return (
     <div className="fin-tags">
-      {photos.length ? <span className="tag tag-accent">{t('photosAttached', { count: photos.length })}</span> : null}
+      {photos.length ? <span className="fin-evidence"><Image size={14} aria-hidden />{t('photosAttached', { count: photos.length })}</span> : null}
       {d.evidence.filter(e => e.kind === 'report').map(e => link(e.id, t('reportPdf'), e.downloadable))}
       {d.evidence.filter(e => e.kind === 'document').map(e => link(e.id, e.name, e.downloadable))}
-      {d.evidence.filter(e => e.kind === 'gps').map(e => <span key={e.id} className="tag tag-neutral">{t('gpsCheckIn', { time: timeOf(e.at, locale) })}</span>)}
+      {d.evidence.filter(e => e.kind === 'gps').map(e => <span key={e.id} className="fin-evidence"><MapPin size={14} aria-hidden />{t('gpsCheckIn', { time: timeOf(e.at, locale) })}</span>)}
+    </div>
+  );
+}
+
+function CaseHead({ id, d, title }: { id: string; d: CaseDetail; title: string }) {
+  const t = useFinanceT();
+  const f = useFormatters();
+  const st = caseState(d);
+  return (
+    <div className="fin-case-head">
+      <h3 id={id} className="fin-case-title">{title}</h3>
+      <StatusTag tone={st.tone}>{t(st.key)}</StatusTag>
+      <span className="fin-case-meta">{t('openedOn', { date: f.when(d.openedAt) })}</span>
     </div>
   );
 }
@@ -135,7 +176,7 @@ function DisputeCase({ d }: { d: CaseDetail }) {
   const hint = offerPending ? t('hintOffer') : d.state === 'agent' ? t('hintAgent') : t('hintOpen');
   return (
     <section className="fin-case" aria-labelledby={`case-${d.id}`}>
-      <h2 id={`case-${d.id}`} className="fin-h2" style={{ margin: 0 }}>{t('disputeHeading', { number: d.caseNumber, subject: d.subject, amount: moneyShort(d.amountCents, f.money) })}</h2>
+      <CaseHead id={`case-${d.id}`} d={d} title={t('disputeHeading', { number: d.caseNumber, subject: d.subject, amount: f.price(d.amountCents) })} />
       {d.customerStatement ? <div className="fin-quote"><strong>{t('customerSays', { name: d.customerName ?? '' })}</strong> “{d.customerStatement}”</div> : null}
       {editing ? (
         <div>
@@ -150,7 +191,7 @@ function DisputeCase({ d }: { d: CaseDetail }) {
       ) : (
         <div className="fin-draft">
           {d.response ? <><strong>{isOpen ? t('yourResponseDraft') : t('yourResponse')}</strong> {d.response}</> : t('noResponse')}
-          {operator && isOpen ? <div><Button variant="ghost" onClick={() => setEditing(true)} style={{ marginTop: 6 }}>{d.response ? t('editResponse') : t('writeResponse')}</Button></div> : null}
+          {operator && isOpen ? <div className="fin-gap-top"><Button variant="ghost" onClick={() => setEditing(true)}>{d.response ? t('editResponse') : t('writeResponse')}</Button></div> : null}
         </div>
       )}
       {responseError && !editing ? <div role="alert" className="nl-error">{responseError}</div> : null}
@@ -161,12 +202,12 @@ function DisputeCase({ d }: { d: CaseDetail }) {
             {upload.isPending ? t('working') : t('addEvidence')}
             <input type="file" accept="image/jpeg,image/png,image/heic,application/pdf" onChange={e => void onFile(e)} aria-describedby={`ev-hint-${d.id}`} />
           </label>
-          <div id={`ev-hint-${d.id}`} className="fin-small" style={{ marginTop: 4 }}>{t('evidenceHint')}</div>
+          <div id={`ev-hint-${d.id}`} className="fin-small fin-gap-top">{t('evidenceHint')}</div>
           {fileError ? <div role="alert" className="nl-error">{fileError}</div> : null}
         </div>
       ) : null}
       {owner && (isOpen || offerPending) ? (
-        <div className="fin-actions" style={{ marginTop: 4 }}>
+        <div className="fin-actions">
           <Button onClick={() => setConfirming('offer')} disabled={!isOpen}>{offerPending ? t('offerSent') : t('sendOffer')}</Button>
           <Button variant="secondary" onClick={() => setConfirming('refund')} disabled={!isOpen}>{t('fullRefund')}</Button>
           <Button variant="secondary" onClick={onContest} disabled={!isOpen || contest.isPending}>{t('contest')}</Button>
@@ -174,19 +215,19 @@ function DisputeCase({ d }: { d: CaseDetail }) {
       ) : null}
       {actionError ? <div role="alert" className="nl-error">{actionError}</div> : null}
       <div className="fin-muted">{hint}{isOpen && d.dueBy ? ` ${t('replyBy', { date: dateTime(d.dueBy, locale) })}` : ''}</div>
-      <Dialog open={confirming === 'offer'} onClose={() => setConfirming(null)} title={t('confirmOfferTitle', { amount: f.money(half) })}
+      <Dialog open={confirming === 'offer'} onClose={() => setConfirming(null)} title={t('confirmOfferTitle', { amount: f.price(half) })}
         actions={<>
           <Button variant="ghost" onClick={() => setConfirming(null)}>{t('cancel')}</Button>
           <Button onClick={() => void run(() => offer.mutateAsync({ disputeId: d.id, amountCents: half, key: offerKey.current.get() }))} disabled={offer.isPending} aria-busy={offer.isPending}>{t('sendOffer')}</Button>
         </>}>
         <p>{t('confirmOffer')}</p>
       </Dialog>
-      <Dialog open={confirming === 'refund'} onClose={() => setConfirming(null)} role="alertdialog" title={t('confirmFullRefundTitle', { amount: f.money(d.amountCents) })}
+      <Dialog open={confirming === 'refund'} onClose={() => setConfirming(null)} role="alertdialog" title={t('confirmFullRefundTitle', { amount: f.price(d.amountCents) })}
         actions={<>
           <Button variant="ghost" onClick={() => setConfirming(null)}>{t('cancel')}</Button>
           <Button onClick={() => void run(() => refund.mutateAsync({ disputeId: d.id, key: refundKey.current.get() }))} disabled={refund.isPending} aria-busy={refund.isPending}>{t('fullRefund')}</Button>
         </>}>
-        <p>{t('confirmFullRefund', { amount: f.money(d.amountCents) })}</p>
+        <p>{t('confirmFullRefund', { amount: f.price(d.amountCents) })}</p>
       </Dialog>
     </section>
   );
@@ -214,8 +255,8 @@ function RefundCase({ r }: { r: CaseDetail }) {
   }
   return (
     <section className="fin-case" aria-labelledby={`case-${r.id}`}>
-      <h2 id={`case-${r.id}`} className="fin-h2" style={{ margin: 0 }}>{t('refundHeading', { number: r.caseNumber, subject: r.subject, amount: moneyShort(r.amountCents, f.money) })}</h2>
-      <div className="fin-quote">{t('customerAsked', { name: r.customerName ?? '', amount: f.money(r.amountCents) })}</div>
+      <CaseHead id={`case-${r.id}`} d={r} title={t('refundHeading', { number: r.caseNumber, subject: r.subject, amount: f.price(r.amountCents) })} />
+      <div className="fin-quote">{t('customerAsked', { name: r.customerName ?? '', amount: f.price(r.amountCents) })}</div>
       {contesting ? (
         <div>
           <Field label={t('contestReason')} error={touched ? (reasonError ?? error) : error}>
@@ -227,7 +268,7 @@ function RefundCase({ r }: { r: CaseDetail }) {
           </div>
         </div>
       ) : owner ? (
-        <div className="fin-actions" style={{ marginTop: 4 }}>
+        <div className="fin-actions">
           <Button onClick={() => accept.mutate({ refundId: r.id, key: key.current.get() }, { onError: e => setError(e.message) })} disabled={accept.isPending} aria-busy={accept.isPending}>{t('acceptRefund')}</Button>
           <Button variant="secondary" onClick={() => setContesting(true)}>{t('contest')}</Button>
         </div>
@@ -238,15 +279,19 @@ function RefundCase({ r }: { r: CaseDetail }) {
   );
 }
 
-interface HistoryRow { id: string; number: string; what: string; amount: string; outcome: string; tone: 'tag-accent' | 'tag-accent-2' | 'tag-neutral' }
+interface HistoryRow { id: string; number: string; what: string; when: string; amount: string; outcome: string; tone: StatusTone; group: 'open' | 'won' | 'refunded' | 'other' }
 const GOOD = new Set(['won']);
 const ATTENTION = new Set(['awaiting_you', 'with_agent', 'offer_sent', 'queued']);
+const REFUNDED = new Set(['auto_refunded', 'refunded', 'lost', 'partial', 'goodwill']);
 
-export function caseRows(rows: CaseRow[], t: ReturnType<typeof useFinanceT>, money: (c: number) => string): HistoryRow[] {
+/** S-176: won success, still moving warning (the business's) or info (an agent's), lost danger, the rest neutral. */
+export function caseRows(rows: CaseRow[], t: ReturnType<typeof useFinanceT>, price: (c: number) => string, date: (iso: string) => string = iso => iso): HistoryRow[] {
   return rows.map(r => ({
-    id: r.id, number: r.caseNumber, what: r.what,
-    amount: r.kind === 'credit' ? t('credit', { amount: money(r.amountCents) }) : money(r.amountCents),
-    outcome: t(`o_${r.outcome}` as FinanceKey), tone: GOOD.has(r.outcome) ? 'tag-accent' : ATTENTION.has(r.outcome) ? 'tag-accent-2' : 'tag-neutral',
+    id: r.id, number: r.caseNumber, what: r.what, when: date(r.openedAt),
+    amount: r.kind === 'credit' ? t('credit', { amount: price(r.amountCents) }) : price(r.amountCents),
+    outcome: t(`o_${r.outcome}` as FinanceKey),
+    tone: GOOD.has(r.outcome) ? 'success' : r.outcome === 'awaiting_you' ? 'warning' : ATTENTION.has(r.outcome) ? 'info' : r.outcome === 'lost' ? 'danger' : 'neutral',
+    group: ATTENTION.has(r.outcome) ? 'open' : GOOD.has(r.outcome) ? 'won' : REFUNDED.has(r.outcome) ? 'refunded' : 'other',
   }));
 }
 
@@ -254,17 +299,24 @@ function History({ rows }: { rows: CaseRow[] }) {
   const t = useFinanceT();
   const f = useFormatters();
   const role = useRole();
-  const data = useMemo(() => caseRows(rows, t, c => f.money(c)), [rows, t, f]);
+  const data = useMemo(() => caseRows(rows, t, c => f.price(c), iso => f.when(iso)), [rows, t, f]);
   const columns: DataTableColumn<HistoryRow>[] = [
-    { key: 'number', label: t('colCase'), primary: true },
-    { key: 'what', label: t('colWhat') },
-    { key: 'amount', label: t('colAmount'), priority: 2 },
-    { key: 'outcome', label: t('colOutcome'), type: 'tag' },
+    { key: 'number', label: t('colCase'), primary: true, nowrap: true },
+    { key: 'what', label: t('colWhat'), card: 'line' },
+    { key: 'when', label: t('colOpened'), priority: 1, nowrap: true, card: 'meta' },
+    { key: 'amount', label: t('colAmount'), priority: 2, card: 'end' },
+    { key: 'outcome', label: t('colOutcome'), type: 'tag', status: r => r.tone },
+  ];
+  const views: DataTableView<HistoryRow>[] = [
+    { id: 'all', label: t('viewAll') },
+    { id: 'open', label: t('viewInProgress'), when: r => r.group === 'open', hideEmpty: true },
+    { id: 'won', label: t('viewWon'), when: r => r.group === 'won', hideEmpty: true },
+    { id: 'refunded', label: t('viewRefunded'), when: r => r.group === 'refunded', hideEmpty: true },
   ];
   if (!rows) return <Skeleton height={200} />;
   return (
-    <DataTable<HistoryRow> entity={t('caseEntity')} plural={t('casePlural')} columns={columns} rows={data} pageSize={5}
-      rowTones={r => ({ outcome: r.tone })} can={{ create: false, update: false, delete: false, export: true }}
+    <DataTable<HistoryRow> entity={t('caseEntity')} plural={t('casePlural')} columns={columns} rows={data} pageSize={5} views={views}
+      can={{ create: false, update: false, delete: false, export: true }}
       roleName={t(`role_${role}` as FinanceKey)} emptyText={t('historyEmpty')} reportName="refunds-disputes" />
   );
 }
