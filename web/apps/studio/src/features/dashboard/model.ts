@@ -125,7 +125,7 @@ export function actions(i: DashboardInputs, t: DashboardT, f: Fmt, locale: Local
   if (sells(i.kind) && c.toPack > 0) {
     const cutoff = c.runCutoff && new Date(c.runCutoff) > i.now ? c.runCutoff : null;
     const soon = cutoff ? new Date(cutoff).getTime() - i.now.getTime() < 3_600_000 : false;
-    out.push({ key: 'pack', tone: soon ? 'danger' : 'warning', icon: Package, title: t('pack', { count: c.toPack }), detail: cutoff && c.runLabel ? t('packBy', { time: formatWhen(cutoff, locale, 'time'), run: c.runLabel }) : t('packSoon'), label: t('startPacking'), to: 'orders' });
+    out.push({ key: 'pack', tone: soon ? 'danger' : 'warning', icon: Package, title: t('pack', { count: c.toPack }), detail: cutoff && c.runLabel ? t('packBy', { time: formatWhen(cutoff, locale, 'time'), run: c.runLabel }) : t('packSoon'), label: t('startPacking'), to: 'orders', search: { view: 'to_pack' } });
   }
   if (books(i.kind) && c.quoteRequestsOpen > 0) {
     const by = c.quoteRespondBy && new Date(c.quoteRespondBy) > i.now ? c.quoteRespondBy : null;
@@ -141,7 +141,7 @@ export function actions(i: DashboardInputs, t: DashboardT, f: Fmt, locale: Local
   const low = sells(i.kind) ? d.lowStock[0] : undefined;
   if (low) {
     const more = d.lowStock.length - 1;
-    out.push({ key: 'stock', tone: low.stock <= 0 ? 'danger' : 'warning', icon: Stack, title: t('lowStock', { name: low.name }), detail: [t('stockLeft', { count: low.stock }), more > 0 ? t('moreLow', { count: more }) : null].filter(Boolean).join(' · '), label: t('updateStock'), to: 'products', search: { q: low.name } });
+    out.push({ key: 'stock', tone: low.stock <= 0 ? 'danger' : 'warning', icon: Stack, title: t('lowStock', { name: low.name }), detail: [t('stockLeft', { count: low.stock }), more > 0 ? t('moreLow', { count: more }) : null].filter(Boolean).join(' · '), label: t('updateStock'), to: 'products', search: more > 0 ? { view: 'stock' } : { view: 'stock', q: low.name } });
   }
   const soldOut = (i.dishes ?? []).filter(x => x.soldOut);
   if (i.kind === 'kitchen' && soldOut.length) out.push({ key: 'soldout', tone: 'warning', icon: Stack, title: t('soldOut', { count: soldOut.length }), detail: soldOut.slice(0, 3).map(x => x.name).join(', '), label: t('openMenu'), to: 'menu' });
