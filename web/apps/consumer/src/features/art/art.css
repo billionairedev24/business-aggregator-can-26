@@ -1,29 +1,8 @@
-/* Illustrated still lifes (Art.tsx): fills its box; each tone is one ramp of the palette (tokens only). */
-.nl-art { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; background: var(--nl-art-50); }
-.nl-art > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.nl-art[data-tone='sage'] { --nl-art-50: var(--primary-50); --nl-art-100: var(--primary-100); --nl-art-200: var(--primary-200); --nl-art-ink: var(--primary-500); --nl-art-deep: var(--primary-700); --nl-art-pop: var(--accent-500); --nl-art-pop-soft: var(--accent-200); }
-.nl-art[data-tone='ember'] { --nl-art-50: var(--accent-50); --nl-art-100: var(--accent-100); --nl-art-200: var(--accent-200); --nl-art-ink: var(--accent-500); --nl-art-deep: var(--accent-700); --nl-art-pop: var(--primary-500); --nl-art-pop-soft: var(--primary-200); }
-.nl-art[data-tone='linen'] { --nl-art-50: var(--color-canvas); --nl-art-100: var(--color-surface-sunken); --nl-art-200: var(--color-border-strong); --nl-art-ink: var(--primary-500); --nl-art-deep: var(--primary-800); --nl-art-pop: var(--accent-500); --nl-art-pop-soft: var(--accent-200); }
-.nl-art[data-tone='mint'] { --nl-art-50: var(--success-50); --nl-art-100: var(--success-100); --nl-art-200: var(--success-200); --nl-art-ink: var(--success-500); --nl-art-deep: var(--success-700); --nl-art-pop: var(--warning-400); --nl-art-pop-soft: var(--warning-200); }
-.nl-art[data-tone='clay'] { --nl-art-50: var(--warning-50); --nl-art-100: var(--warning-100); --nl-art-200: var(--warning-200); --nl-art-ink: var(--warning-500); --nl-art-deep: var(--warning-700); --nl-art-pop: var(--primary-400); --nl-art-pop-soft: var(--primary-200); }
-.nl-art[data-tone='stone'] { --nl-art-50: var(--neutral-50); --nl-art-100: var(--neutral-100); --nl-art-200: var(--neutral-200); --nl-art-ink: var(--neutral-700); --nl-art-deep: var(--neutral-900); --nl-art-pop: var(--accent-500); --nl-art-pop-soft: var(--accent-200); }
-.nl-art-sky-a { stop-color: var(--nl-art-50); }
-.nl-art-sky-b { stop-color: var(--nl-art-100); }
-.nl-art-glow-a { stop-color: var(--color-surface); stop-opacity: .95; }
-.nl-art-glow-b { stop-color: var(--color-surface); stop-opacity: .15; }
-.nl-art-ground { fill: var(--nl-art-200); opacity: .7; }
-.nl-art-shadow { fill: var(--nl-art-deep); opacity: .14; }
-.nl-art-dot { fill: var(--nl-art-pop-soft); }
-.nl-art-dot-b { fill: var(--nl-art-pop); opacity: .7; }
-.nl-art-dot-c { fill: var(--color-surface); opacity: .8; }
-.nl-art-main { color: var(--nl-art-ink); }
-.nl-art-badge { fill: var(--color-surface); stroke: var(--nl-art-200); stroke-width: 2; }
-.nl-art-side { color: var(--nl-art-pop); }
-/* contain: the backdrop drawn here so it runs on past the scene on wide banners (ground line at 74%, as in the SVG) */
-.nl-art-contain {
-  background:
-    radial-gradient(ellipse 34% 62% at 50% 42%, color-mix(in srgb, var(--color-surface) 92%, transparent) 0, transparent 100%),
-    radial-gradient(circle at 12% 30%, var(--nl-art-100) 0 6px, transparent 7px),
-    radial-gradient(circle at 88% 64%, var(--color-surface) 0 8px, transparent 9px),
-    linear-gradient(to bottom, var(--nl-art-50) 0, var(--nl-art-100) 74%, color-mix(in srgb, var(--nl-art-200) 70%, var(--nl-art-100)) 74%);
-}
+/* S-181: the designed photo fallback (PhotoWell.tsx; locked direction A · Plainsight, design/revamp/a.html "Photo and
+   fallback"): a grey well, a dashed inner line, the category's icon. Tokens only. */
+.nl-well { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; min-height: var(--space-12); overflow: hidden; background: var(--color-surface-sunken); color: var(--color-text-subtle); }
+.nl-well::after { content: ''; position: absolute; inset: var(--space-2); border: 1px dashed var(--color-border-control); border-radius: var(--radius-xs); pointer-events: none; }
+.nl-well-icon { width: 28%; max-width: var(--space-16); min-width: var(--space-5); height: auto; aspect-ratio: 1; }
+/* a library photo never shows wider than its pixels (S-181): past its native width it sits centred in the well */
+.nl-scene { position: relative; display: block; width: 100%; height: 100%; background: var(--color-surface-sunken); }
+.nl-scene > .nl-photo { margin-inline: auto; max-width: var(--nl-scene-max, 100%); }
