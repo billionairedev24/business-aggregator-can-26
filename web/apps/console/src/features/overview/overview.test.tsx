@@ -28,39 +28,41 @@ describe('console overview (S-91, design 03)', () => {
     expect(screen.getByText('27k conns')).toBeTruthy();
     expect(screen.getByText('1 offline')).toBeTruthy();
     expect(within(screen.getByText('Kafka lag').closest('.nl-ov-tile') as HTMLElement).getByText('—')).toBeTruthy();
-    const todo = within(screen.getByRole('region', { name: 'To do' }));
-    const applications = todo.getByRole('button', { name: /applications to review/ });
-    expect(applications.textContent).toContain('oldest 3.0 d · SLA 2 d');
-    expect(applications.textContent).toContain('7');
-    expect(todo.getByRole('button', { name: /flagged listings/ }).textContent).toContain('SLA 4 h · oldest 2 h');
-    expect(todo.getByRole('button', { name: /stuck delivery run/ }).textContent).toContain('12 min');
-    expect(todo.getByRole('button', { name: /trust & safety flags/ }).textContent).toContain('includes off-platform payment');
+    // S-177: "Needs attention" — one action card per queue, most urgent first (past the SLA, a stuck run, an off-platform payment)
+    const grid = screen.getByRole('region', { name: /Needs attention/ });
+    const titles = within(grid).getAllByRole('heading', { level: 3 }).map(h => h.textContent);
+    expect(titles).toEqual(['Urgent: 7 applications to review', 'Urgent: 1 stuck delivery run', 'Urgent: 5 trust & safety flags', 'Due soon: 5 flagged listings', 'Due soon: 3 disputes for an agent', '41 sellers below a floor']);
+    const applications = within(grid).getByRole('link', { name: 'Review applications' });
+    expect(applications.className).toContain('btn-primary');
+    expect(grid.textContent).toContain('oldest 3.0 d · SLA 2 d');
+    expect(grid.textContent).toContain('SLA 4 h · oldest 2 h');
+    expect(grid.textContent).toContain('Oldest overdue 12 min');
+    expect(grid.textContent).toContain('includes off-platform payment');
+    expect(within(grid).getByRole('link', { name: 'Vet listings' }).className).toContain('btn-secondary');
     expect(screen.getByText('27 / 41')).toBeTruthy();
     expect(screen.getByText('Orders in tonight’s Calgary pool')).toBeTruthy();
     expect(screen.getByText('312 · closes 5:19 p.m.')).toBeTruthy();
-    expect(screen.getByText('$418,220')).toBeTruthy();
+    expect(screen.getByText('$418,220.00')).toBeTruthy();
     await user.click(applications);
     await waitFor(() => expect(router.state.location.pathname).toBe('/verification'));
   });
 
-  it('lists every work item but opens only the screens the role opens', async () => {
+  it('shows only the queues the role can work, and says when nothing needs attention', async () => {
     staffApi(['analyst'], c => (c.url.includes('/api/v1/console/overview') ? { body: overview() } : undefined));
     renderConsole('/');
-    expect(await screen.findByText('applications to review')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /applications to review/ })).toBeNull();
+    expect(await screen.findByText('Nothing needs attention in this scope.')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Review applications' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Dispute rate/ })).toBeNull();
   });
 
-  it('filters by province and market from the region model', async () => {
+  it('follows the top bar’s scope, and a link’s own province and market (S-177)', async () => {
     const calls = staffApi(['finance'], c => (c.url.includes('/api/v1/console/overview') ? { body: overview() } : undefined));
     const user = userEvent.setup({ delay: null });
-    const { router } = renderConsole('/');
+    renderConsole('/?province=AB');
     await screenReady();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Province' }), 'AB');
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/overview?province=AB'))).toBe(true));
-    expect(router.state.location.search).toEqual({ province: 'AB' });
-    expect(within(screen.getByRole('combobox', { name: 'Market' })).getAllByRole('option').map(o => o.textContent)).toEqual(['All markets', 'Calgary']);
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Market' }), 'calgary');
+    await user.click(screen.getByRole('button', { name: /^Change the market/ }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Calgary' }));
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/overview?province=AB&market=calgary'))).toBe(true));
     const last = calls.filter(c => c.url.includes('/console/overview')).at(-1);
     expect(last?.headers['X-Console-Role']).toBe('finance');
@@ -85,7 +87,7 @@ describe('console overview (S-91, design 03)', () => {
   });
 
   it('formats French figures', () => {
-    expect(compactMoney(21_200_000, 'fr')).toMatch(/212\s?k\s?\$/);
+    expect(compactMoney(21_200_000, 'fr')).toBe('212 k $');
     expect(compactMoney(271, 'en')).toBe('$2.71');
   });
 });
