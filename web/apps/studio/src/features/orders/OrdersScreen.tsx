@@ -49,7 +49,7 @@ export function headline(b: OrderBoard, t: T, locale: Locale, now = new Date()):
   return t('titleLater', { date: formatDate(c, locale), time });
 }
 
-export function OrdersScreen() {
+export function OrdersScreen({ search }: { search?: string } = {}) {
   const merchantId = useMerchantId();
   const role = useRole();
   const t = useOrdersT();
@@ -93,6 +93,7 @@ export function OrdersScreen() {
       </div>
       {pack.isError ? <Alert tone="error">{t('packError')}</Alert> : null}
       <DataTable<OrderRow>
+        initialSearch={search}
         entity={t('entity')} plural={t('plural')} roleName={roleName}
         columns={columns} rows={rows} rowTones={r => ({ state: tone(r) })}
         can={{ create: false, update: role !== 'bookkeeper', delete: false, export: true }}
