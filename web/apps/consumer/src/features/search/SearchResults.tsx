@@ -9,7 +9,7 @@ import {
   useFormatters, useLocale,
 } from '@northline/ui';
 import { categorySlot } from '@northline/media';
-import { useDeliveryLocation } from '../location/useDeliveryLocation';
+import { shortPlace, useDeliveryLocation } from '../location/useDeliveryLocation';
 import { useZone } from '../location/regions';
 import {
   apiQuery, FILTER_KEYS, marketOf, PAGE_SIZE, PRICE_BUCKETS, priceBucketOf, RADII, searchQuery, SORTS,
@@ -131,7 +131,7 @@ function Heading({ t, params, total, page, count }: { t: T; params: SearchParams
   const text = params.q?.trim();
   const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const shownTotal = total >= EXACT_UP_TO ? `${number(EXACT_UP_TO)}+` : number(total);
-  const placeName = location.status === 'locating' ? null : location.zone ?? location.label?.split(',')[0]?.trim() ?? location.city ?? null;
+  const placeName = shortPlace(location);
   return (
     <>
       <strong>{t('rangeOf', { from: number(from), to: number(from + Math.max(count, 1) - 1), total: shownTotal, count: total })}</strong>
@@ -174,7 +174,7 @@ function FilterRail({ t, params, facets, located, go }: { t: T; params: SearchPa
   const count = (n: number | undefined) => (n === undefined ? undefined : number(n));
   const dietary = new Set((params.dietary ?? '').split(',').filter(Boolean));
   const bucket = priceBucketOf(params);
-  const placeName = location.zone ?? location.label?.split(',')[0]?.trim() ?? location.city;
+  const placeName = shortPlace(location);
   const tonight = run && run.day === 'today' ? t('f_tonightWindow', { window: windowRange(run.startsAt, run.endsAt, locale, zone) }) : t('f_tonightRun');
   const prices = facets?.prices.filter(p => p.count > 0 && PRICE_BUCKETS[p.value]) ?? [];
   const diets = facets?.dietary.filter(d => d.count > 0) ?? [];

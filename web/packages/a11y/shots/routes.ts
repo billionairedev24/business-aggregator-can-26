@@ -24,6 +24,9 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'shop-department', path: '/shop/bakery', now: BEFORE_CUTOFF },
     { name: 'search-shop', path: '/search?q=bakery&scope=shop&delivery=tonight', now: BEFORE_CUTOFF },
     { name: 'search-filters', path: '/search?q=bakery&scope=shop', click: '.nl-results-filters-toggle' },
+    // the header, home and results in fr-CA (`?lang=fr` wins over the `lang=en` the shots add)
+    { name: 'home-fr', path: '/?lang=fr', now: BEFORE_CUTOFF },
+    { name: 'search-shop-fr', path: '/search?q=bakery&scope=shop&lang=fr', now: BEFORE_CUTOFF },
     { name: 'product', path: '/products/P1' },
     { name: 'services', path: '/services' },
     { name: 'services-category', path: '/services/mobile-mechanic' },

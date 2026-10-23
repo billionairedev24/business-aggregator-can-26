@@ -11,7 +11,7 @@ import { Scene } from '../art/Scene';
 import { activityQuery } from '../account/api';
 import { useKitchens, type Card as Kitchen } from '../food/api';
 import { CUISINE_NAMES } from '../food/messages';
-import { useDeliveryLocation } from '../location/useDeliveryLocation';
+import { shortPlace, useDeliveryLocation } from '../location/useDeliveryLocation';
 import { useZone } from '../location/regions';
 import { rememberInvite } from '../loyalty/api';
 import { RewardsNearYou } from '../loyalty/RewardsNearYou';
@@ -53,7 +53,7 @@ export function HomeScreen() {
   const services = useQuery({ ...railQuery('service', place ?? {}, locale, 'rating'), enabled: place !== null });
   const kitchens = useKitchens(place ? location.city : undefined, location.lat, location.lng);
   const activity = useQuery({ ...activityQuery, enabled: !!user });
-  const city = location.label?.split(',')[0]?.trim() || location.city;
+  const city = shortPlace(location);
   const empty = products.data?.items.length === 0 && services.data?.items.length === 0;
   // S-152: an invite link (/?invite=CODE) is kept until the person uses it in their account
   const searchStr = useRouterState({ select: s => s.location.searchStr });

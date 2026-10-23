@@ -23,7 +23,7 @@ describe('delivery cut-off strip (E-15)', () => {
     mockFetch(api());
     renderApp('/');
     const strip = await screen.findByRole('complementary', { name: 'Delivery cut-off' });
-    expect(strip).toHaveTextContent(/Tonight’s pooled run to Beltline, Calgary closes at/);
+    expect(strip).toHaveTextContent(/Tonight’s pooled run to Beltline closes at/);
     expect(strip).toHaveTextContent('Mix shops for one $2.99 delivery.');
     expect(within(strip).getByText('2 h 48 min left')).toBeInTheDocument();
   });
