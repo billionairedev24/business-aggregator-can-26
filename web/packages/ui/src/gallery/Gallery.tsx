@@ -120,6 +120,7 @@ type GalleryT = ReturnType<typeof useT>;
 const SHOP = 'Loaf & Ladder Bakery · Maple Row';
 const FONT = 'IBM Plex Sans';
 const HIVE = 'Hive & Hollow Apiary';
+const BAKERY = 'Loaf & Ladder Bakery';
 
 export interface GallerySection {
   id: string; title: (t: GalleryT) => string; render: (t: GalleryT, photo?: string) => ReactNode;
@@ -376,7 +377,7 @@ function RecordsDemo({ t }: { t: GalleryT }) {
         ]}
         rowTones={r => ({ status: r.tone })}
         actions={[{ id: 'message', label: t('rMessage'), perm: 'update' }, { id: 'suspend', label: t('rSuspend'), perm: 'update', danger: true }]} onAction={() => false} />
-      <RecordHeader back={<a href="#sellers">{t('rBack')}</a>} title="Loaf & Ladder Bakery" status={<StatusTag tone="success" size="lg">{t('rLive')}</StatusTag>}
+      <RecordHeader back={<a href="#sellers">{t('rBack')}</a>} title={BAKERY} status={<StatusTag tone="success" size="lg">{t('rLive')}</StatusTag>}
         facts={[{ label: t('rType'), value: t('rTypeV') }, { label: t('rPlace'), value: 'Maple Row' }, { label: t('rJoined'), value: t('rJoinedV') }, { label: t('rTier'), value: t('rTierV') }]}
         actions={<Button variant="destructive">{t('rSuspend')}</Button>} />
       <RecordLayout asideLabel={t('rActions')} aside={

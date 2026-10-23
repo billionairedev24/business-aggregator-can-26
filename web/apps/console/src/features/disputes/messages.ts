@@ -4,6 +4,7 @@ import { defineMessages } from '@northline/ui';
 export const useDisputesT = defineMessages({
   en: {
     cardLink: 'Card disputes',
+    openedAgo: '{age} ago',
     sub2: '{scope} · {n, plural, one {# case} other {# cases}} for an agent · decided within 2 business days',
     views: 'Cases by state', v_agent: 'For an agent', v_cosign: 'Waiting for a co-sign', v_decided: 'Decided', v_all: 'All',
     kindFilter: 'Kind', kd_all: 'All', kd_dispute: 'Disputes', kd_refund: 'Refund cases',
@@ -46,6 +47,7 @@ export const useDisputesT = defineMessages({
   },
   fr: {
     cardLink: 'Contestations de carte',
+    openedAgo: 'il y a {age}',
     sub2: '{scope} · {n, plural, one {# dossier} other {# dossiers}} pour un agent · tranchés en 2 jours ouvrables',
     views: 'Dossiers par état', v_agent: 'Pour un agent', v_cosign: 'En attente d’une cosignature', v_decided: 'Tranchés', v_all: 'Tous',
     kindFilter: 'Genre', kd_all: 'Tous', kd_dispute: 'Litiges', kd_refund: 'Remboursements',

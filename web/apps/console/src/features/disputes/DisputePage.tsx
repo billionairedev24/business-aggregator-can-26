@@ -49,7 +49,7 @@ function CaseView({ d }: { d: Detail }) {
           { label: t('f_kind'), value: t(row.kind === 'refund' ? 'kind_refund' : 'kind_dispute') },
           { label: t('f_parties'), value: t('parties', { customer: row.customerName ?? '—', seller: item.businessName }) },
           { label: t('f_amount'), value: fmt.price(row.amountCents) },
-          { label: t('f_opened'), value: t('opened', { age: age(row.openedAt) }) },
+          { label: t('f_opened'), value: t('openedAgo', { age: age(row.openedAt) }) },
         ]} />
       <RecordLayout asideLabel={t('secDecision')} aside={<ActionPanel title={t('secDecision')}><Decision key={`${row.kind}:${row.id}`} item={item} /></ActionPanel>}>
         <RecordTabs label={t('tabsRecord')} tabs={[
