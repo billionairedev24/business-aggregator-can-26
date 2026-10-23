@@ -1,6 +1,5 @@
 import { ProductTile, ShopTile, Skeleton, useFormatters, useLocale, type TagTone } from '@northline/ui';
-import { categorySlot } from '@northline/media';
-import { Scene } from '../art/Scene';
+import { PhotoWell } from '../art/PhotoWell';
 import { useZone } from '../location/regions';
 import type { ProductCard, Run, ShopCard } from './api';
 import { clock, runWhen, weekday } from './format';
@@ -54,7 +53,7 @@ export function ProductCardTile({ product, withMarket }: { product: ProductCard;
   const meta = <>{age ? <>{shops}<span className="nl-age-chip">{age}</span></> : shops}{plus ? <span className="nl-plus-chip">{plus}</span> : null}</>;
   return (
     <ProductTile href={withMarket(`/products/${product.productId}`)} name={product.name} imageUrl={product.imageUrl}
-      fallback={<Scene slot={[categorySlot(product.categoryId)]} subject={product.name} crop="square" sizes="(min-width: 960px) 220px, 45vw" />}
+      fallback={<PhotoWell subject={`${product.categoryId ?? ''} ${product.name}`} />}
       price={product.sellers > 1 ? t('from', { price }) : price} meta={meta} />
   );
 }

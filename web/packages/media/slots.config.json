@@ -42,6 +42,10 @@
       { "code": "other", "hint": "restaurant dishes on a table" }
     ]
   },
+  "designed": {
+    "$comment": "S-181: categories the library deliberately has no photo for — the source (Open Images, CC BY) had nothing usable: no product shot of insurance that is not a stock cliché, and for the age-restricted tobacco and cannabis accessories no picture that would not advertise the product. They show the designed fallback (the dashed photo well with the category icon), never their group's or the landing's photo, so no photo repeats on a page.",
+    "slots": ["category/service.professional.insurance-broker", "category/shop.restricted.tobacco-and-vape", "category/shop.restricted.cannabis-accessories"]
+  },
   "categoryHints": {
     "$comment": "What to search for when a category's name alone is a poor query (optional; the name is used otherwise).",
     "service.automotive.detailing": "car detailing polishing",

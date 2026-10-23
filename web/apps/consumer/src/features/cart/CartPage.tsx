@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { EmptyState, ErrorState, Price, QuantityStepper, SiteLink, Skeleton, useFormatters } from '@northline/ui';
 import { signInHref, useViewer } from '../session/api';
 import { cartQuery, useChangeCartLine, type Cart, type CartLine } from './api';
-import { Art } from '../art/Art';
+import { PhotoWell } from '../art/PhotoWell';
 import { useCartT } from './messages';
 
 /**
@@ -82,7 +82,7 @@ function CartItem({ item, readOnly }: { item: CartLine; readOnly?: boolean }) {
   const problem = !item.available ? (item.stock > 0 && item.name ? t('notEnough', { count: item.stock }) : t('unavailable')) : null;
   return (
     <li className="cart-line">
-      <span className="cart-line-media" aria-hidden>{item.imageUrl ? <img src={item.imageUrl} alt="" /> : <Art subject={item.name} />}</span>
+      <span className="cart-line-media" aria-hidden>{item.imageUrl ? <img src={item.imageUrl} alt="" /> : <PhotoWell subject={item.name} />}</span>
       <span className="cart-line-body">
         {item.productId ? <SiteLink href={`/products/${item.productId}`} className="cart-line-name">{name}</SiteLink> : <span className="cart-line-name">{name}</span>}
         {meta ? <span className="cart-line-meta">{meta}</span> : null}

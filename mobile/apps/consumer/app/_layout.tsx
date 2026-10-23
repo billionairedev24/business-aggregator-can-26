@@ -6,7 +6,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { LOCALES, colors, fontAssets, type Locale, configurePhotoBase } from '@northline/mobile-kit';
+import { KitProvider, LOCALES, ToastProvider, colors, fontAssets, type Locale, configurePhotoBase } from '@northline/mobile-kit';
 
 import { AccountFlowProvider } from '../src/auth/AccountFlow';
 import { AuthProvider, useAuth } from '../src/auth/AuthProvider';
@@ -51,7 +51,12 @@ function LanguageSync({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   services().setLanguage(locale);
-  return children;
+  // S-169: the shared kit's own words (filter chips, ratings, the sheet's Close) follow the app's language
+  return (
+    <KitProvider locale={locale}>
+      <ToastProvider>{children}</ToastProvider>
+    </KitProvider>
+  );
 }
 
 /** Push (mobile gaps part 1): installed once the sign-in is known; a tap opens the deep link's screen. */

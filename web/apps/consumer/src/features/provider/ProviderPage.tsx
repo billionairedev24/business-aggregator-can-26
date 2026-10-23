@@ -14,6 +14,8 @@ import { moreReviewsQuery, providerQuery, rewardQuery, storefrontQuery, type Pro
 import { useProviderT } from './messages';
 import { categorySlot } from '@northline/media';
 import { Scene } from '../art/Scene';
+import { useZone } from '../location/regions';
+import { useRenderNow } from '../../lib/renderClock';
 import { SealCheck, Star } from '@phosphor-icons/react';
 
 /** Sections the provider page renders in the page's order (hero first, the CTA card beside them). */
@@ -181,13 +183,14 @@ function Reviews({ facts, slug, pageHost, siteOrigin }: { facts: ProviderFacts; 
 function Review({ review: r, name }: { review: PublicReview; name: string }) {
   const t = useProviderT();
   const { locale } = useLocale();
+  const now = useRenderNow();
   return (
     <figure className="nl-prov-review">
       <span className="nl-prov-review-stars" role="img" aria-label={t('stars', { count: r.rating })}>
         {Array.from({ length: 5 }, (_, i) => <Star key={i} size={16} weight={i < r.rating ? 'fill' : 'regular'} aria-hidden />)}
       </span>
       {r.text ? <blockquote className="nl-prov-quote">“{r.text}”</blockquote> : null}
-      <figcaption className="nl-prov-who">{t('reviewWho', { who: r.author ?? t('reviewAnonymous'), ref: r.refType, when: ago(r.createdAt, locale) })}</figcaption>
+      <figcaption className="nl-prov-who">{t('reviewWho', { who: r.author ?? t('reviewAnonymous'), ref: r.refType, when: ago(r.createdAt, locale, now.getTime()) })}</figcaption>
       {r.reply ? <p className="nl-prov-reply"><strong>{t('reply', { name })}</strong> {r.reply}</p> : null}
     </figure>
   );
@@ -207,6 +210,8 @@ function CtaCard({ page, facts, showServices, pageHost, siteOrigin }: { page: St
   const t = useProviderT();
   const s = useServicesT();
   const { locale } = useLocale();
+  const now = useRenderNow();
+  const zone = useZone(facts.city);
   const family = familyOf(facts.kind, facts.category?.slug ?? '', facts.vehicle);
   const keys = copyKeys(family, facts.kind);
   const book = `/providers/${facts.slug}/book`;
@@ -243,7 +248,7 @@ function CtaCard({ page, facts, showServices, pageHost, siteOrigin }: { page: St
         ? quoteLink(facts.category.slug, 'btn btn-primary nl-prov-book', t('cta_request_quote'))
         : bookLink('btn btn-primary nl-prov-book', t(`cta_${page.ctaLabel}`))}
       {facts.quoteable && facts.kind !== 'event' && facts.category ? quoteLink(facts.category.slug, 'btn btn-secondary nl-prov-quote-btn', t('notSure')) : null}
-      <div className="nl-prov-foot">{[t('nextAvailable', { when: nextAvailable(s, locale, facts.nextAvailable) }), note].filter(Boolean).join(' · ')}</div>
+      <div className="nl-prov-foot">{[t('nextAvailable', { when: nextAvailable(s, locale, facts.nextAvailable, now, zone) }), note].filter(Boolean).join(' · ')}</div>
     </aside>
   );
 }

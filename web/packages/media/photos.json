@@ -1,11 +1,11 @@
 {
   "$comment": "The photo library (docs/runbooks/photos.md): one entry per slot that has a photo, keyed by the slot (make photos-slots lists them all). Only real photos picked by a person (Pexels, Unsplash, Openverse or Open Images, under the licences core.mjs SITES lists) — never generated or invented. Fill file, alt (en, fr), focal, site, photographer, sourceUrl, licence and downloaded; make photos adds width, height, hash and placeholder. The credits page (/credits) is built from this file.",
   "photos": {
-    "banner/food": {
-      "file": "source/banner/food.jpg",
+    "banner/booking": {
+      "file": "source/banner/booking.jpg",
       "alt": {
-        "en": "A table of shared dishes",
-        "fr": "Une table de plats à partager"
+        "en": "A wooden front door with a brass knocker",
+        "fr": "Une porte d’entrée en bois avec un heurtoir en laiton"
       },
       "focal": {
         "x": 0.5,
@@ -13,23 +13,47 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "鲍鱼餐",
-      "photographer": "IsaacMao",
-      "photographerUrl": "https://www.flickr.com/people/isaacmao/",
-      "sourceUrl": "https://www.flickr.com/photos/isaacmao/1355375795",
+      "title": "DSC01568",
+      "photographer": "Aranami",
+      "photographerUrl": "https://www.flickr.com/people/z0/",
+      "sourceUrl": "https://www.flickr.com/photos/z0/5227896119",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "8071466f82",
-      "placeholder": "#080808"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 898,
+      "hash": "9cc7ce2477",
+      "placeholder": "#382828"
+    },
+    "banner/food": {
+      "file": "source/banner/food.jpg",
+      "alt": {
+        "en": "A table of shared dishes with rice and flatbread",
+        "fr": "Une table de plats à partager avec du riz et du pain plat"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Indian Food",
+      "photographer": "Francisco Antunes",
+      "photographerUrl": "https://www.flickr.com/people/vilavelosa/",
+      "sourceUrl": "https://www.flickr.com/photos/vilavelosa/8106449332",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 899,
+      "hash": "ecff6474d2",
+      "placeholder": "#581808"
     },
     "banner/help": {
       "file": "source/banner/help.jpg",
       "alt": {
-        "en": "A support agent wearing a headset",
-        "fr": "Un agent de soutien qui porte un casque d'écoute"
+        "en": "A bright room with tables and large windows",
+        "fr": "Une salle lumineuse avec des tables et de grandes fenêtres"
       },
       "focal": {
         "x": 0.5,
@@ -37,23 +61,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Holiday Extras - Contact centre",
-      "photographer": "Holidayextras",
-      "photographerUrl": "https://www.flickr.com/people/holiday-extras/",
-      "sourceUrl": "https://www.flickr.com/photos/holiday-extras/6399470783",
+      "title": "IBM Innovation Center in Cambridge, Massachusetts",
+      "photographer": "Lee Wright",
+      "photographerUrl": "https://www.flickr.com/people/leewrightonflickr/",
+      "sourceUrl": "https://www.flickr.com/photos/leewrightonflickr/12064670025",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 681,
-      "hash": "aeec5b109d",
-      "placeholder": "#e8e8e8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1068,
+      "hash": "9809aaad27",
+      "placeholder": "#281818"
     },
     "banner/order-complete": {
       "file": "source/banner/order-complete.jpg",
       "alt": {
-        "en": "A shopper carrying shopping bags",
-        "fr": "Une personne qui porte des sacs d'achats"
+        "en": "Cardboard boxes packed and ready",
+        "fr": "Des boîtes de carton emballées et prêtes"
       },
       "focal": {
         "x": 0.5,
@@ -61,23 +85,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Shopping at Quba, Salcombe",
-      "photographer": "jespahjoy",
-      "photographerUrl": "https://www.flickr.com/people/francapicc/",
-      "sourceUrl": "https://www.flickr.com/photos/francapicc/16968151522",
+      "title": "Athenz VBS 2013 BL Boynton(79)",
+      "photographer": "Boynton",
+      "photographerUrl": "https://www.flickr.com/people/boyntonartstudio/",
+      "sourceUrl": "https://www.flickr.com/photos/boyntonartstudio/9133536666",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 1024,
-      "hash": "4956a25fce",
-      "placeholder": "#181818"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "948e28d3db",
+      "placeholder": "#685828"
     },
     "banner/sell": {
       "file": "source/banner/sell.jpg",
       "alt": {
-        "en": "A bright independent shop",
-        "fr": "Une boutique indépendante lumineuse"
+        "en": "A small café with a counter and white tables",
+        "fr": "Un petit café avec un comptoir et des tables blanches"
       },
       "focal": {
         "x": 0.5,
@@ -85,23 +109,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Fenton Art Glass",
-      "photographer": "Stevie Rocco",
-      "photographerUrl": "https://www.flickr.com/people/stevier/",
-      "sourceUrl": "https://www.flickr.com/photos/stevier/14279426759",
+      "title": "Beekcakes Burger Bar Cape Town",
+      "photographer": "Gary Bembridge",
+      "photographerUrl": "https://www.flickr.com/people/tipsfortravellers/",
+      "sourceUrl": "https://www.flickr.com/photos/tipsfortravellers/5310802302",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "d5b3070f18",
-      "placeholder": "#482818"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "4c8edbb650",
+      "placeholder": "#f8f8f8"
     },
     "banner/services": {
       "file": "source/banner/services.jpg",
       "alt": {
-        "en": "A tradesperson at work with power tools",
-        "fr": "Un artisan au travail avec des outils électriques"
+        "en": "An old red metal toolbox",
+        "fr": "Un vieux coffre à outils en métal rouge"
       },
       "focal": {
         "x": 0.5,
@@ -109,23 +133,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Architecture Students Create Student Gathering Space at College of DuPage 2014 31",
-      "photographer": "COD Newsroom",
-      "photographerUrl": "https://www.flickr.com/people/codnewsroom/",
-      "sourceUrl": "https://www.flickr.com/photos/codnewsroom/14650620790",
+      "title": "UTILITY CHEST DSC_1914",
+      "photographer": "el cajon yacht club",
+      "photographerUrl": "https://www.flickr.com/people/el_cajon_yacht_club/",
+      "sourceUrl": "https://www.flickr.com/photos/el_cajon_yacht_club/12503830824",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 701,
-      "hash": "b90da439c4",
-      "placeholder": "#e8c8a8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1071,
+      "hash": "c74cbed94e",
+      "placeholder": "#889888"
     },
     "banner/shop": {
       "file": "source/banner/shop.jpg",
       "alt": {
-        "en": "Fresh fruit and vegetables at a market stall",
-        "fr": "Des fruits et légumes frais à un étal de marché"
+        "en": "A heap of fresh red and green peppers",
+        "fr": "Un tas de poivrons rouges et verts frais"
       },
       "focal": {
         "x": 0.5,
@@ -133,17 +157,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Pike-Market-IMG_0054",
-      "photographer": "el cajon yacht club",
-      "photographerUrl": "https://www.flickr.com/people/el_cajon_yacht_club/",
-      "sourceUrl": "https://www.flickr.com/photos/el_cajon_yacht_club/14660221519/",
+      "title": "Russos - Long hot peppers",
+      "photographer": "Bill  Damon",
+      "photographerUrl": "https://www.flickr.com/people/billdamon/",
+      "sourceUrl": "https://www.flickr.com/photos/billdamon/9545607295",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "251ae1627c",
-      "placeholder": "#181808"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1067,
+      "hash": "b71ec19a7c",
+      "placeholder": "#080808"
     },
     "category/food.format": {
       "file": "source/category/food.format.jpg",
@@ -196,8 +220,8 @@
     "category/food.format.ghost-kitchen": {
       "file": "source/category/food.format.ghost-kitchen.jpg",
       "alt": {
-        "en": "A chef preparing food in a commercial kitchen",
-        "fr": "Un chef qui prépare des plats dans une cuisine commerciale"
+        "en": "A clean kitchen with stainless steel appliances",
+        "fr": "Une cuisine propre aux électroménagers en acier inoxydable"
       },
       "focal": {
         "x": 0.5,
@@ -205,17 +229,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "35th U.S. Army Culinary Arts Competition",
-      "photographer": "US Army Africa",
-      "photographerUrl": "https://www.flickr.com/people/usarmyafrica/",
-      "sourceUrl": "https://www.flickr.com/photos/usarmyafrica/4457071196",
+      "title": "SAM_0130",
+      "photographer": "williamskitchenbath",
+      "photographerUrl": "https://www.flickr.com/people/williamskitchen/",
+      "sourceUrl": "https://www.flickr.com/photos/williamskitchen/6194746281",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 680,
-      "hash": "b8378ec3df",
-      "placeholder": "#181818"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "8a0b36d7db",
+      "placeholder": "#f8f8f8"
     },
     "category/food.format.grocery-with-hot-counter": {
       "file": "source/category/food.format.grocery-with-hot-counter.jpg",
@@ -244,8 +268,8 @@
     "category/food.format.home-based-food-business": {
       "file": "source/category/food.format.home-based-food-business.jpg",
       "alt": {
-        "en": "A home cook in their kitchen",
-        "fr": "Un cuisinier à la maison dans sa cuisine"
+        "en": "A home-cooked plate of fried potatoes with an egg",
+        "fr": "Une assiette maison de pommes de terre sautées avec un œuf"
       },
       "focal": {
         "x": 0.5,
@@ -253,23 +277,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "100_3145",
-      "photographer": "Neeta Lind",
-      "photographerUrl": "https://www.flickr.com/people/neeta_lind/",
-      "sourceUrl": "https://www.flickr.com/photos/neeta_lind/171347695",
+      "title": "Sensational Swiss Rosti",
+      "photographer": "Mike Hauser",
+      "photographerUrl": "https://www.flickr.com/people/35314767@N00/",
+      "sourceUrl": "https://www.flickr.com/photos/35314767@N00/5130631197",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "d5ee60a544",
-      "placeholder": "#f8f8f8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "0086096ecd",
+      "placeholder": "#a8b8c8"
     },
     "category/food.format.restaurant-dine-in-and-takeout": {
       "file": "source/category/food.format.restaurant-dine-in-and-takeout.jpg",
       "alt": {
-        "en": "Diners at a long restaurant table",
-        "fr": "Des convives à une longue table de restaurant"
+        "en": "A long dining room set for guests",
+        "fr": "Une longue salle à manger dressée pour les clients"
       },
       "focal": {
         "x": 0.5,
@@ -277,17 +301,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "The dinner table",
-      "photographer": "Scott Schiller",
-      "photographerUrl": "https://www.flickr.com/people/schill/",
-      "sourceUrl": "https://www.flickr.com/photos/schill/5248807688",
+      "title": "Entrance, Sahab hotel, Jabal Al Akhdar Oman April 2012",
+      "photographer": "Kathryn james",
+      "photographerUrl": "https://www.flickr.com/people/42996397@N05/",
+      "sourceUrl": "https://www.flickr.com/photos/42996397@N05/6931794546",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 683,
-      "hash": "a8ba47f974",
-      "placeholder": "#080808"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "74e11ac49d",
+      "placeholder": "#786858"
     },
     "category/food.format.takeout-only": {
       "file": "source/category/food.format.takeout-only.jpg",
@@ -385,6 +409,30 @@
       "hash": "8d2921cc8e",
       "placeholder": "#080808"
     },
+    "category/food.service.caterer": {
+      "file": "source/category/food.service.caterer.jpg",
+      "alt": {
+        "en": "A platter of sandwiches and pastries",
+        "fr": "Un plateau de sandwichs et de pâtisseries"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Afternoon Tean at Craigslands Hotel - Ilkley - Yorkshire",
+      "photographer": "Gary Bembridge",
+      "photographerUrl": "https://www.flickr.com/people/tipsfortravellers/",
+      "sourceUrl": "https://www.flickr.com/photos/tipsfortravellers/6941923096",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "4f14b1a459",
+      "placeholder": "#080808"
+    },
     "category/food.service.coffee-and-dessert": {
       "file": "source/category/food.service.coffee-and-dessert.jpg",
       "alt": {
@@ -460,8 +508,8 @@
     "category/service.automotive": {
       "file": "source/category/service.automotive.jpg",
       "alt": {
-        "en": "Changing a car tire",
-        "fr": "Changer un pneu de voiture"
+        "en": "A car wheel with a polished rim",
+        "fr": "Une roue de voiture à la jante polie"
       },
       "focal": {
         "x": 0.5,
@@ -469,17 +517,65 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "P9200049",
-      "photographer": "robmba",
-      "photographerUrl": "https://www.flickr.com/people/robmba/",
-      "sourceUrl": "https://www.flickr.com/photos/robmba/3185337486",
+      "title": "MBM Inter Auto Club Meet 2009",
+      "photographer": "dbgg1979",
+      "photographerUrl": "https://www.flickr.com/people/dbgg1979/",
+      "sourceUrl": "https://www.flickr.com/photos/dbgg1979/3847802697",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 766,
-      "hash": "6fc1637aff",
-      "placeholder": "#f8f8f8"
+      "height": 768,
+      "hash": "f3edb7b77c",
+      "placeholder": "#282828"
+    },
+    "category/service.automotive.battery-boost-and-replacement": {
+      "file": "source/category/service.automotive.battery-boost-and-replacement.jpg",
+      "alt": {
+        "en": "A car battery with booster cables clipped on",
+        "fr": "Une batterie de voiture avec des câbles de survoltage"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "- Batteria auto scarica, cosa fare -",
+      "photographer": "Automobile Italia",
+      "photographerUrl": "https://www.flickr.com/people/automobileitalia/",
+      "sourceUrl": "https://www.flickr.com/photos/automobileitalia/16110181784",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 640,
+      "hash": "ba2167fea0",
+      "placeholder": "#080808"
+    },
+    "category/service.automotive.brakes-and-suspension": {
+      "file": "source/category/service.automotive.brakes-and-suspension.jpg",
+      "alt": {
+        "en": "A disc brake and caliper on a car hub",
+        "fr": "Un frein à disque et son étrier sur un moyeu de voiture"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "DSC00386",
+      "photographer": "Jason Young",
+      "photographerUrl": "https://www.flickr.com/people/jsnyng/",
+      "sourceUrl": "https://www.flickr.com/photos/jsnyng/5236691770",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "80729ea29d",
+      "placeholder": "#080808"
     },
     "category/service.automotive.detailing": {
       "file": "source/category/service.automotive.detailing.jpg",
@@ -529,6 +625,78 @@
       "hash": "568392ed6f",
       "placeholder": "#888888"
     },
+    "category/service.automotive.mobile-mechanic": {
+      "file": "source/category/service.automotive.mobile-mechanic.jpg",
+      "alt": {
+        "en": "A mechanic’s hand working in a car’s engine bay",
+        "fr": "La main d’un mécanicien dans le compartiment moteur d’une voiture"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Overheated",
+      "photographer": "Todd Huffman",
+      "photographerUrl": "https://www.flickr.com/people/oddwick/",
+      "sourceUrl": "https://www.flickr.com/photos/oddwick/4774991913",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "fb75554d15",
+      "placeholder": "#383838"
+    },
+    "category/service.automotive.oil-change-and-fluids": {
+      "file": "source/category/service.automotive.oil-change-and-fluids.jpg",
+      "alt": {
+        "en": "Fresh oil poured into a car engine through a funnel",
+        "fr": "De l’huile neuve versée dans un moteur à l’aide d’un entonnoir"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "IMG_0298",
+      "photographer": "Jeff Wilcox",
+      "photographerUrl": "https://www.flickr.com/people/jeffwilcox/",
+      "sourceUrl": "https://www.flickr.com/photos/jeffwilcox/1315365072",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "806a329ae5",
+      "placeholder": "#080808"
+    },
+    "category/service.automotive.pre-purchase-inspection": {
+      "file": "source/category/service.automotive.pre-purchase-inspection.jpg",
+      "alt": {
+        "en": "A car with its hood open, the engine in view",
+        "fr": "Une voiture capot ouvert, le moteur en vue"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Skoda Octavia RS",
+      "photographer": "Petr Magera",
+      "photographerUrl": "https://www.flickr.com/people/mpetrucho/",
+      "sourceUrl": "https://www.flickr.com/photos/mpetrucho/8238827868",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 660,
+      "hash": "7f66df91d2",
+      "placeholder": "#080808"
+    },
     "category/service.automotive.tire-change-and-storage": {
       "file": "source/category/service.automotive.tire-change-and-storage.jpg",
       "alt": {
@@ -553,11 +721,11 @@
       "hash": "580d29ae49",
       "placeholder": "#f8f8f8"
     },
-    "category/service.childcare-and-family": {
-      "file": "source/category/service.childcare-and-family.jpg",
+    "category/service.automotive.towing-and-roadside": {
+      "file": "source/category/service.automotive.towing-and-roadside.jpg",
       "alt": {
-        "en": "A caregiver with young children",
-        "fr": "Une gardienne avec de jeunes enfants"
+        "en": "A flatbed tow truck carrying a car",
+        "fr": "Une dépanneuse à plateau qui transporte une voiture"
       },
       "focal": {
         "x": 0.5,
@@ -565,23 +733,71 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "IMG_1927",
-      "photographer": "Shad Bolling",
-      "photographerUrl": "https://www.flickr.com/people/stuttermonkey/",
-      "sourceUrl": "https://www.flickr.com/photos/stuttermonkey/57100933",
+      "title": "AAA Rollback Tow Truck",
+      "photographer": "Arvell Dorsey Jr.",
+      "photographerUrl": "https://www.flickr.com/people/chicagofd1996/",
+      "sourceUrl": "https://www.flickr.com/photos/chicagofd1996/18162559742",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 681,
+      "hash": "9b571a3df4",
+      "placeholder": "#a8a8a8"
+    },
+    "category/service.automotive.windshield-repair": {
+      "file": "source/category/service.automotive.windshield-repair.jpg",
+      "alt": {
+        "en": "A cracked car windshield",
+        "fr": "Un pare-brise de voiture fissuré"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Falling coconut has damaged a car glass",
+      "photographer": "Badri Seshadri",
+      "photographerUrl": "https://www.flickr.com/people/bseshadri/",
+      "sourceUrl": "https://www.flickr.com/photos/bseshadri/3092652030",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
       "width": 1024,
       "height": 768,
-      "hash": "2cfe9469aa",
-      "placeholder": "#d8c8c8"
+      "hash": "af5a392186",
+      "placeholder": "#f8f8f8"
+    },
+    "category/service.childcare-and-family": {
+      "file": "source/category/service.childcare-and-family.jpg",
+      "alt": {
+        "en": "A colourful slide in a playground",
+        "fr": "Une glissoire colorée dans un terrain de jeux"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "slide - scivolo",
+      "photographer": "Alessandra Cimatti",
+      "photographerUrl": "https://www.flickr.com/people/cimatti/",
+      "sourceUrl": "https://www.flickr.com/photos/cimatti/4591715317",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "82b238f434",
+      "placeholder": "#f8f8f8"
     },
     "category/service.childcare-and-family.babysitter": {
       "file": "source/category/service.childcare-and-family.babysitter.jpg",
       "alt": {
-        "en": "A toddler playing with toys",
-        "fr": "Un tout-petit qui joue avec des jouets"
+        "en": "A soft toy bird on a shelf",
+        "fr": "Un oiseau en peluche sur une tablette"
       },
       "focal": {
         "x": 0.5,
@@ -589,23 +805,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Sweeper",
-      "photographer": "Charles Starrett",
-      "photographerUrl": "https://www.flickr.com/people/starrett/",
-      "sourceUrl": "https://www.flickr.com/photos/starrett/8704130477/",
+      "title": "Picture 015",
+      "photographer": "onetalentdog",
+      "photographerUrl": "https://www.flickr.com/people/peacechild/",
+      "sourceUrl": "https://www.flickr.com/photos/peacechild/16814382265",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 683,
-      "hash": "7bc908409f",
-      "placeholder": "#884808"
+      "downloaded": "2026-10-23",
+      "width": 1200,
+      "height": 1600,
+      "hash": "5a9c683342",
+      "placeholder": "#080808"
     },
     "category/service.childcare-and-family.errand-and-shopping-help": {
       "file": "source/category/service.childcare-and-family.errand-and-shopping-help.jpg",
       "alt": {
-        "en": "Grocery shopping with a cart",
-        "fr": "Faire l'épicerie avec un chariot"
+        "en": "A small shopping cart filled with groceries",
+        "fr": "Un petit chariot rempli d’épicerie"
       },
       "focal": {
         "x": 0.5,
@@ -613,23 +829,47 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "supermarket",
-      "photographer": "Yuya Tamai",
-      "photographerUrl": "https://www.flickr.com/people/tamaiyuya/",
-      "sourceUrl": "https://www.flickr.com/photos/tamaiyuya/6187061040",
+      "title": "Green shopping cart.",
+      "photographer": "Polycart",
+      "photographerUrl": "https://www.flickr.com/people/polycart/",
+      "sourceUrl": "https://www.flickr.com/photos/polycart/5783063464",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 768,
-      "hash": "e02c325e20",
-      "placeholder": "#080808"
+      "height": 683,
+      "hash": "f4269a2f5f",
+      "placeholder": "#e8a878"
+    },
+    "category/service.childcare-and-family.nanny": {
+      "file": "source/category/service.childcare-and-family.nanny.jpg",
+      "alt": {
+        "en": "A red stroller on the grass",
+        "fr": "Une poussette rouge sur la pelouse"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "I love the #bugaboo #chameleon - a true live saver. #love #instagood #tweegram #photooftheday #iphonesia #instamood #me #cute #igers #tbt #picoftheday #instagramhub #iphoneonly #instadaily #beautiful #jj #bestoftheday #igdaily #webstagram #follow #instagr",
+      "photographer": "Jakob Montrasio",
+      "photographerUrl": "https://www.flickr.com/people/yakobusan/",
+      "sourceUrl": "https://www.flickr.com/photos/yakobusan/7889813796",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 1024,
+      "hash": "4f94e4eb18",
+      "placeholder": "#f8f8f8"
     },
     "category/service.childcare-and-family.newborn-care": {
       "file": "source/category/service.childcare-and-family.newborn-care.jpg",
       "alt": {
-        "en": "A newborn sleeping in a basket",
-        "fr": "Un nouveau-né qui dort dans un couffin"
+        "en": "A white crib in a bright nursery",
+        "fr": "Un lit de bébé blanc dans une chambre lumineuse"
       },
       "focal": {
         "x": 0.5,
@@ -637,23 +877,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Welcome home Jamie xx",
-      "photographer": "bollocky",
-      "photographerUrl": "https://www.flickr.com/people/petemcgrath/",
-      "sourceUrl": "https://www.flickr.com/photos/petemcgrath/11974404516",
+      "title": "Crib",
+      "photographer": "Rachelle",
+      "photographerUrl": "https://www.flickr.com/people/kenziepoo/",
+      "sourceUrl": "https://www.flickr.com/photos/kenziepoo/3545402898",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 1024,
-      "hash": "6f4a61cd28",
-      "placeholder": "#989888"
+      "height": 683,
+      "hash": "e83ba72b03",
+      "placeholder": "#987858"
     },
     "category/service.childcare-and-family.senior-companionship": {
       "file": "source/category/service.childcare-and-family.senior-companionship.jpg",
       "alt": {
-        "en": "Grandparents spending time with a child",
-        "fr": "Des grands-parents qui passent du temps avec un enfant"
+        "en": "Tea and cake set out on a table",
+        "fr": "Du thé et un gâteau servis sur une table"
       },
       "focal": {
         "x": 0.5,
@@ -661,23 +901,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "IMG_3045",
-      "photographer": "Blake Patterson",
-      "photographerUrl": "https://www.flickr.com/people/blakespot/",
-      "sourceUrl": "https://www.flickr.com/photos/blakespot/2425267799",
+      "title": "Cunard Queen Elizabeth Afternoon Tea Grills Lounge Deck 11",
+      "photographer": "Gary Bembridge",
+      "photographerUrl": "https://www.flickr.com/people/tipsfortravellers/",
+      "sourceUrl": "https://www.flickr.com/photos/tipsfortravellers/7585613686",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "d4045cffd9",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "d13b3648c3",
       "placeholder": "#080808"
     },
     "category/service.cleaning-and-property": {
       "file": "source/category/service.cleaning-and-property.jpg",
       "alt": {
-        "en": "A freshly mowed lawn",
-        "fr": "Une pelouse fraîchement tondue"
+        "en": "Mops and brushes drying against a fence",
+        "fr": "Des vadrouilles et des brosses qui sèchent contre une clôture"
       },
       "focal": {
         "x": 0.5,
@@ -685,23 +925,71 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Kairatie 38",
-      "photographer": "Tomi Knuutila",
-      "photographerUrl": "https://www.flickr.com/people/yourbartender/",
-      "sourceUrl": "https://www.flickr.com/photos/yourbartender/5447245951",
+      "title": "Shanghai 2013",
+      "photographer": "Mr Thinktank",
+      "photographerUrl": "https://www.flickr.com/people/tahini/",
+      "sourceUrl": "https://www.flickr.com/photos/tahini/8910521144",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
       "height": 768,
-      "hash": "2cbd28f60a",
-      "placeholder": "#88b858"
+      "hash": "512ff44264",
+      "placeholder": "#b8a888"
+    },
+    "category/service.cleaning-and-property.carpet-and-upholstery": {
+      "file": "source/category/service.cleaning-and-property.carpet-and-upholstery.jpg",
+      "alt": {
+        "en": "A patterned rug on a floor",
+        "fr": "Un tapis à motifs sur le plancher"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Heriz Pink and Brown Foyer Rug",
+      "photographer": "Carpetbeggers - Discount Persian Rugs",
+      "photographerUrl": "https://www.flickr.com/people/carpetbeggers/",
+      "sourceUrl": "https://www.flickr.com/photos/carpetbeggers/9518679489",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "9b639cb7f1",
+      "placeholder": "#382828"
+    },
+    "category/service.cleaning-and-property.duct-cleaning": {
+      "file": "source/category/service.cleaning-and-property.duct-cleaning.jpg",
+      "alt": {
+        "en": "A roll of aluminium duct tape",
+        "fr": "Un rouleau de ruban adhésif d’aluminium pour conduits"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Aluma-Grip AFT 701",
+      "photographer": "CARLISLE HVAC",
+      "photographerUrl": "https://www.flickr.com/people/carlislehvac/",
+      "sourceUrl": "https://www.flickr.com/photos/carlislehvac/8879763255",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 768,
+      "height": 768,
+      "hash": "21977a8bfc",
+      "placeholder": "#f8f8f8"
     },
     "category/service.cleaning-and-property.house-cleaning": {
       "file": "source/category/service.cleaning-and-property.house-cleaning.jpg",
       "alt": {
-        "en": "Mopping a kitchen floor",
-        "fr": "Laver le plancher d'une cuisine"
+        "en": "A spray mop and a cleaning cloth",
+        "fr": "Une vadrouille à vaporisateur et un chiffon"
       },
       "focal": {
         "x": 0.5,
@@ -709,17 +997,41 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "1M15-scrubber-kitchen-xlarge",
+      "title": "Rubbermaid Reveal Spray Mop",
       "photographer": "Rubbermaid Products",
       "photographerUrl": "https://www.flickr.com/people/rubbermaid/",
-      "sourceUrl": "https://www.flickr.com/photos/rubbermaid/8550160714",
+      "sourceUrl": "https://www.flickr.com/photos/rubbermaid/4595446622",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
       "height": 767,
-      "hash": "939742234e",
+      "hash": "c36a4116bb",
       "placeholder": "#f8f8f8"
+    },
+    "category/service.cleaning-and-property.junk-removal": {
+      "file": "source/category/service.cleaning-and-property.junk-removal.jpg",
+      "alt": {
+        "en": "A green wheelie bin by a garden path",
+        "fr": "Un bac roulant vert près d’une allée de jardin"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Pond Cleaning",
+      "photographer": "Jeff",
+      "photographerUrl": "https://www.flickr.com/people/jeffedoe/",
+      "sourceUrl": "https://www.flickr.com/photos/jeffedoe/3281760929",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 768,
+      "height": 1024,
+      "hash": "916be29f5b",
+      "placeholder": "#688878"
     },
     "category/service.cleaning-and-property.landscaping": {
       "file": "source/category/service.cleaning-and-property.landscaping.jpg",
@@ -748,8 +1060,8 @@
     "category/service.cleaning-and-property.lawn-and-yard": {
       "file": "source/category/service.cleaning-and-property.lawn-and-yard.jpg",
       "alt": {
-        "en": "A lawn mower on green grass",
-        "fr": "Une tondeuse sur l'herbe verte"
+        "en": "A mown lawn in front of a house among trees",
+        "fr": "Une pelouse tondue devant une maison entourée d’arbres"
       },
       "focal": {
         "x": 0.5,
@@ -757,17 +1069,89 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "a. Locke mower (front)",
-      "photographer": "George Rypysc III",
-      "photographerUrl": "https://www.flickr.com/people/george3/",
-      "sourceUrl": "https://www.flickr.com/photos/george3/15140719989",
+      "title": "P1020241",
+      "photographer": "Warren Long",
+      "photographerUrl": "https://www.flickr.com/people/warrenlong/",
+      "sourceUrl": "https://www.flickr.com/photos/warrenlong/7637877842",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 945,
-      "height": 1024,
-      "hash": "6fba205bf5",
-      "placeholder": "#a8a8a8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1067,
+      "hash": "2dd86b9673",
+      "placeholder": "#182808"
+    },
+    "category/service.cleaning-and-property.move-in-move-out-clean": {
+      "file": "source/category/service.cleaning-and-property.move-in-move-out-clean.jpg",
+      "alt": {
+        "en": "An empty, freshly cleaned living room",
+        "fr": "Un salon vide fraîchement nettoyé"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Carl Mattone - Real Estate",
+      "photographer": "Carl Mattone",
+      "photographerUrl": "https://www.flickr.com/people/94455939@N07/",
+      "sourceUrl": "https://www.flickr.com/photos/94455939@N07/9421545611",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 603,
+      "hash": "c95aa1db35",
+      "placeholder": "#f8f8f8"
+    },
+    "category/service.cleaning-and-property.movers": {
+      "file": "source/category/service.cleaning-and-property.movers.jpg",
+      "alt": {
+        "en": "Moving boxes stacked by a wall",
+        "fr": "Des boîtes de déménagement empilées contre un mur"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "starting to load",
+      "photographer": "Mark Wallace",
+      "photographerUrl": "https://www.flickr.com/people/walkering/",
+      "sourceUrl": "https://www.flickr.com/photos/walkering/2275251788",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "4399d340de",
+      "placeholder": "#383838"
+    },
+    "category/service.cleaning-and-property.pest-control": {
+      "file": "source/category/service.cleaning-and-property.pest-control.jpg",
+      "alt": {
+        "en": "A close-up of a grasshopper on stone",
+        "fr": "Une sauterelle en gros plan sur une pierre"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Un criquet aux drôles de dents ... (un jour à Caraman)",
+      "photographer": "Sandrine Rouja",
+      "photographerUrl": "https://www.flickr.com/people/79489755@N02/",
+      "sourceUrl": "https://www.flickr.com/photos/79489755@N02/15086027052",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1077,
+      "hash": "82d6396055",
+      "placeholder": "#d8c8b8"
     },
     "category/service.cleaning-and-property.pool-and-hot-tub-service": {
       "file": "source/category/service.cleaning-and-property.pool-and-hot-tub-service.jpg",
@@ -792,6 +1176,30 @@
       "height": 771,
       "hash": "026bc7bf08",
       "placeholder": "#5898a8"
+    },
+    "category/service.cleaning-and-property.pressure-washing": {
+      "file": "source/category/service.cleaning-and-property.pressure-washing.jpg",
+      "alt": {
+        "en": "A pressure washer cleaning a concrete surface",
+        "fr": "Un nettoyeur haute pression sur une surface de béton"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "image41",
+      "photographer": "TAFE SA TONSLEY",
+      "photographerUrl": "https://www.flickr.com/people/99206485@N02/",
+      "sourceUrl": "https://www.flickr.com/photos/99206485@N02/13684050933",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 664,
+      "hash": "85bf781bb9",
+      "placeholder": "#a8a8b8"
     },
     "category/service.cleaning-and-property.property-management": {
       "file": "source/category/service.cleaning-and-property.property-management.jpg",
@@ -892,8 +1300,8 @@
     "category/service.education-and-coaching": {
       "file": "source/category/service.education-and-coaching.jpg",
       "alt": {
-        "en": "A teacher helping a student at a laptop",
-        "fr": "Une enseignante qui aide une élève à l'ordinateur"
+        "en": "A stack of books with coloured pencils on top",
+        "fr": "Une pile de livres avec des crayons de couleur dessus"
       },
       "focal": {
         "x": 0.5,
@@ -901,23 +1309,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Los maestros contarán con las herramientas para enseñarle a los niños chocoanos",
-      "photographer": "Ministerio TIC Colombia",
-      "photographerUrl": "https://www.flickr.com/people/ministerio_tic/",
-      "sourceUrl": "https://www.flickr.com/photos/ministerio_tic/7024929041",
+      "title": "discover 4 yourself bible studies",
+      "photographer": "Jimmie",
+      "photographerUrl": "https://www.flickr.com/people/jimmiehomeschoolmom/",
+      "sourceUrl": "https://www.flickr.com/photos/jimmiehomeschoolmom/3891864367",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
       "height": 683,
-      "hash": "099fa99391",
-      "placeholder": "#f8f8f8"
+      "hash": "3552255edb",
+      "placeholder": "#e8e8f8"
     },
     "category/service.education-and-coaching.career-coach": {
       "file": "source/category/service.education-and-coaching.career-coach.jpg",
       "alt": {
-        "en": "Two colleagues talking at a table",
-        "fr": "Deux collègues qui discutent à une table"
+        "en": "A laptop, a coffee and a notebook on a desk",
+        "fr": "Un portable, un café et un carnet sur un bureau"
       },
       "focal": {
         "x": 0.5,
@@ -925,17 +1333,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "EIFL General Assembly 2013",
-      "photographer": "EIFL",
-      "photographerUrl": "https://www.flickr.com/people/eifl/",
-      "sourceUrl": "https://www.flickr.com/photos/eifl/10913195653/",
+      "title": "productivity tools",
+      "photographer": "neetalparekh",
+      "photographerUrl": "https://www.flickr.com/people/44313045@N08/",
+      "sourceUrl": "https://www.flickr.com/photos/44313045@N08/8231928276",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 683,
-      "hash": "0c0d30d0e9",
-      "placeholder": "#382818"
+      "height": 771,
+      "hash": "8c3e602901",
+      "placeholder": "#f8f8f8"
     },
     "category/service.education-and-coaching.driving-instructor": {
       "file": "source/category/service.education-and-coaching.driving-instructor.jpg",
@@ -961,11 +1369,11 @@
       "hash": "c2793bb465",
       "placeholder": "#f8f8f8"
     },
-    "category/service.education-and-coaching.music-lessons": {
-      "file": "source/category/service.education-and-coaching.music-lessons.jpg",
+    "category/service.education-and-coaching.language-lessons": {
+      "file": "source/category/service.education-and-coaching.language-lessons.jpg",
       "alt": {
-        "en": "A piano lesson at home",
-        "fr": "Un cours de piano à la maison"
+        "en": "An open book beside a globe and an oil lamp",
+        "fr": "Un livre ouvert à côté d’un globe et d’une lampe"
       },
       "focal": {
         "x": 0.5,
@@ -973,23 +1381,71 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Kunst in de herfst  (144)",
-      "photographer": "Luc Galoppin",
-      "photographerUrl": "https://www.flickr.com/people/lucgaloppin/",
-      "sourceUrl": "https://www.flickr.com/photos/lucgaloppin/8297519589/",
+      "title": "Lucubration",
+      "photographer": "Miltos Gikas",
+      "photographerUrl": "https://www.flickr.com/people/aries_tottle/",
+      "sourceUrl": "https://www.flickr.com/photos/aries_tottle/3880926760",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 685,
-      "hash": "82da83d9c6",
-      "placeholder": "#f8f8f8"
+      "height": 683,
+      "hash": "2c4ba1c4a4",
+      "placeholder": "#584828"
+    },
+    "category/service.education-and-coaching.life-coach": {
+      "file": "source/category/service.education-and-coaching.life-coach.jpg",
+      "alt": {
+        "en": "An open book and a cup of coffee on a table",
+        "fr": "Un livre ouvert et une tasse de café sur une table"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Book and coffee",
+      "photographer": "Nick Webb",
+      "photographerUrl": "https://www.flickr.com/people/nickwebb/",
+      "sourceUrl": "https://www.flickr.com/photos/nickwebb/6046643422",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 680,
+      "hash": "548e11bfc4",
+      "placeholder": "#f8f8e8"
+    },
+    "category/service.education-and-coaching.music-lessons": {
+      "file": "source/category/service.education-and-coaching.music-lessons.jpg",
+      "alt": {
+        "en": "A piano keyboard with sheet music",
+        "fr": "Un clavier de piano et une partition"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Practice",
+      "photographer": "Kai Chan Vong",
+      "photographerUrl": "https://www.flickr.com/people/kaichanvong/",
+      "sourceUrl": "https://www.flickr.com/photos/kaichanvong/15928216412",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 1024,
+      "hash": "8eee884dce",
+      "placeholder": "#e8d8c8"
     },
     "category/service.education-and-coaching.swim-instructor": {
       "file": "source/category/service.education-and-coaching.swim-instructor.jpg",
       "alt": {
-        "en": "A swim lesson in a pool",
-        "fr": "Un cours de natation à la piscine"
+        "en": "An indoor swimming pool with lane ropes",
+        "fr": "Une piscine intérieure avec des câbles de couloir"
       },
       "focal": {
         "x": 0.5,
@@ -997,23 +1453,47 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "DSC02266",
-      "photographer": "Peter &amp; Joyce Grace",
-      "photographerUrl": "https://www.flickr.com/people/gracefamily/",
-      "sourceUrl": "https://www.flickr.com/photos/gracefamily/5254091797/",
+      "title": "vjutsretk sdvsdfv",
+      "photographer": "Thai Handicrafts",
+      "photographerUrl": "https://www.flickr.com/people/thomasthailand/",
+      "sourceUrl": "https://www.flickr.com/photos/thomasthailand/467294550",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 576,
-      "hash": "795b598125",
-      "placeholder": "#182828"
+      "height": 768,
+      "hash": "ac8743f45a",
+      "placeholder": "#f8f8f8"
+    },
+    "category/service.education-and-coaching.test-prep": {
+      "file": "source/category/service.education-and-coaching.test-prep.jpg",
+      "alt": {
+        "en": "Sharpened pencils on an answer sheet",
+        "fr": "Des crayons taillés sur une feuille de réponses"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Get Your Programs Here",
+      "photographer": "Derek Key",
+      "photographerUrl": "https://www.flickr.com/people/derekskey/",
+      "sourceUrl": "https://www.flickr.com/photos/derekskey/3218781545",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 683,
+      "hash": "1d49285d08",
+      "placeholder": "#787878"
     },
     "category/service.education-and-coaching.tutor-k-12": {
       "file": "source/category/service.education-and-coaching.tutor-k-12.jpg",
       "alt": {
-        "en": "A tutor working with a child",
-        "fr": "Une tutrice qui travaille avec un enfant"
+        "en": "A row of coloured pencils",
+        "fr": "Une rangée de crayons de couleur"
       },
       "focal": {
         "x": 0.5,
@@ -1021,23 +1501,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Nassef and Amy",
-      "photographer": "Maureen",
-      "photographerUrl": "https://www.flickr.com/people/amerune/",
-      "sourceUrl": "https://www.flickr.com/photos/amerune/2289495126",
+      "title": "Untitled",
+      "photographer": "Luci Correia",
+      "photographerUrl": "https://www.flickr.com/people/lucorreia/",
+      "sourceUrl": "https://www.flickr.com/photos/lucorreia/4151167801",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 681,
-      "hash": "38e699a4a6",
-      "placeholder": "#181818"
+      "height": 648,
+      "hash": "16e32ffe76",
+      "placeholder": "#d8c8c8"
     },
     "category/service.education-and-coaching.tutor-post-secondary": {
       "file": "source/category/service.education-and-coaching.tutor-post-secondary.jpg",
       "alt": {
-        "en": "Students studying together in a library",
-        "fr": "Des étudiants qui étudient ensemble à la bibliothèque"
+        "en": "Shelves of books in a library",
+        "fr": "Des rayons de livres dans une bibliothèque"
       },
       "focal": {
         "x": 0.5,
@@ -1045,17 +1525,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Sesiunea de feed-back.",
-      "photographer": "Biblioteca Centrală a BM &quot;B.P.Hasdeu&quot;",
-      "photographerUrl": "https://www.flickr.com/people/hasdeu/",
-      "sourceUrl": "https://www.flickr.com/photos/hasdeu/9479497186",
+      "title": "DSC00148",
+      "photographer": "Deutsches Historisches Institut Paris",
+      "photographerUrl": "https://www.flickr.com/people/114359508@N08/",
+      "sourceUrl": "https://www.flickr.com/photos/114359508@N08/13893548673",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "1571b483f3",
-      "placeholder": "#080808"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "64d766eda2",
+      "placeholder": "#281808"
     },
     "category/service.events-and-hospitality": {
       "file": "source/category/service.events-and-hospitality.jpg",
@@ -1108,8 +1588,8 @@
     "category/service.events-and-hospitality.bartender": {
       "file": "source/category/service.events-and-hospitality.bartender.jpg",
       "alt": {
-        "en": "A bartender mixing drinks",
-        "fr": "Un barman qui prépare des boissons"
+        "en": "Three cocktails on a bar",
+        "fr": "Trois cocktails sur un comptoir de bar"
       },
       "focal": {
         "x": 0.5,
@@ -1117,17 +1597,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Park Inn Trysil Mountain Resort",
-      "photographer": "Trysil",
-      "photographerUrl": "https://www.flickr.com/people/trysil/",
-      "sourceUrl": "https://www.flickr.com/photos/trysil/6499096313",
+      "title": "Nubar Cocktails in Didriks Glassware",
+      "photographer": "Didriks",
+      "photographerUrl": "https://www.flickr.com/people/dinnerseries/",
+      "sourceUrl": "https://www.flickr.com/photos/dinnerseries/15176009718",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 681,
-      "hash": "c1e915dc24",
-      "placeholder": "#080808"
+      "height": 682,
+      "hash": "4cfc93197e",
+      "placeholder": "#181818"
     },
     "category/service.events-and-hospitality.catering-server-staff": {
       "file": "source/category/service.events-and-hospitality.catering-server-staff.jpg",
@@ -1180,8 +1660,8 @@
     "category/service.events-and-hospitality.dj": {
       "file": "source/category/service.events-and-hospitality.dj.jpg",
       "alt": {
-        "en": "A DJ at the decks",
-        "fr": "Un DJ derrière ses platines"
+        "en": "A record playing on a turntable",
+        "fr": "Un disque sur une table tournante"
       },
       "focal": {
         "x": 0.5,
@@ -1189,16 +1669,16 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "BMAD",
-      "photographer": "IntangibleArts",
-      "photographerUrl": "https://www.flickr.com/people/intangible/",
-      "sourceUrl": "https://www.flickr.com/photos/intangible/9492105103",
+      "title": "Origin Live Turntable + Moth arm + Ortofon MC20 + Croak Phono Stage",
+      "photographer": "Jacques",
+      "photographerUrl": "https://www.flickr.com/people/alternativeroute/",
+      "sourceUrl": "https://www.flickr.com/photos/alternativeroute/8704700584",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 682,
-      "hash": "e5834f0f2c",
+      "height": 748,
+      "hash": "d75c0ab3b4",
       "placeholder": "#080808"
     },
     "category/service.events-and-hospitality.event-planner": {
@@ -1252,8 +1732,8 @@
     "category/service.events-and-hospitality.kids-party-entertainer": {
       "file": "source/category/service.events-and-hospitality.kids-party-entertainer.jpg",
       "alt": {
-        "en": "A clown entertaining children",
-        "fr": "Un clown qui divertit des enfants"
+        "en": "Cupcakes, a birthday cake and party hats",
+        "fr": "Des petits gâteaux, un gâteau d’anniversaire et des chapeaux de fête"
       },
       "focal": {
         "x": 0.5,
@@ -1261,23 +1741,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "&quot;El Chilajito Junior&quot;",
-      "photographer": "Cliff",
-      "photographerUrl": "https://www.flickr.com/people/nostri-imago/",
-      "sourceUrl": "https://www.flickr.com/photos/nostri-imago/5052629771",
+      "title": "Memorable Child's Birthday",
+      "photographer": "Personal Creations",
+      "photographerUrl": "https://www.flickr.com/people/personalcreations/",
+      "sourceUrl": "https://www.flickr.com/photos/personalcreations/14888734640",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 683,
-      "height": 1024,
-      "hash": "2d3bbe3f44",
-      "placeholder": "#181818"
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 683,
+      "hash": "9b42e62c83",
+      "placeholder": "#e8d8d8"
     },
     "category/service.events-and-hospitality.live-music": {
       "file": "source/category/service.events-and-hospitality.live-music.jpg",
       "alt": {
-        "en": "Musicians playing live",
-        "fr": "Des musiciens qui jouent en direct"
+        "en": "A guitar and amplifiers set up on a stage",
+        "fr": "Une guitare et des amplificateurs installés sur une scène"
       },
       "focal": {
         "x": 0.5,
@@ -1285,23 +1765,71 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Michael Gira live in Leiria, Portugal",
-      "photographer": "Antonio  Matos Silva",
-      "photographerUrl": "https://www.flickr.com/people/fixwhatusee/",
-      "sourceUrl": "https://www.flickr.com/photos/fixwhatusee/2294989690",
+      "title": "Stage",
+      "photographer": "ipanc",
+      "photographerUrl": "https://www.flickr.com/people/ipanc/",
+      "sourceUrl": "https://www.flickr.com/photos/ipanc/528220071",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 947,
-      "hash": "362edc1212",
+      "height": 768,
+      "hash": "3b8ca05a7f",
       "placeholder": "#080808"
+    },
+    "category/service.events-and-hospitality.mc-host": {
+      "file": "source/category/service.events-and-hospitality.mc-host.jpg",
+      "alt": {
+        "en": "A microphone on a stand",
+        "fr": "Un micro sur un pied"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Micro",
+      "photographer": "Frédéric BISSON",
+      "photographerUrl": "https://www.flickr.com/people/zigazou76/",
+      "sourceUrl": "https://www.flickr.com/photos/zigazou76/4121754262",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "bc2ef45757",
+      "placeholder": "#280808"
+    },
+    "category/service.events-and-hospitality.photo-booth": {
+      "file": "source/category/service.events-and-hospitality.photo-booth.jpg",
+      "alt": {
+        "en": "An instant camera",
+        "fr": "Un appareil photo instantané"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "polaroid sx70",
+      "photographer": "Gary Pearce",
+      "photographerUrl": "https://www.flickr.com/people/pearciecouk/",
+      "sourceUrl": "https://www.flickr.com/photos/pearciecouk/6034965717",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 766,
+      "hash": "5af076cfb2",
+      "placeholder": "#181818"
     },
     "category/service.events-and-hospitality.photographer": {
       "file": "source/category/service.events-and-hospitality.photographer.jpg",
       "alt": {
-        "en": "A photographer with a camera",
-        "fr": "Un photographe avec son appareil"
+        "en": "A camera with a zoom lens",
+        "fr": "Un appareil photo avec un zoom"
       },
       "focal": {
         "x": 0.5,
@@ -1309,17 +1837,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Self-Portrait w/ Nikon FM10",
-      "photographer": "Alvin Bueno",
-      "photographerUrl": "https://www.flickr.com/people/alveezybueno/",
-      "sourceUrl": "https://www.flickr.com/photos/alveezybueno/3330104572",
+      "title": "pro-optic 500mm f8.0 mirror lens - with camera angle",
+      "photographer": "David DeHetre",
+      "photographerUrl": "https://www.flickr.com/people/davedehetre/",
+      "sourceUrl": "https://www.flickr.com/photos/davedehetre/4610630364",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 691,
-      "hash": "f03adad7af",
-      "placeholder": "#e8e8e8"
+      "height": 768,
+      "hash": "9946ebda46",
+      "placeholder": "#f8f8f8"
     },
     "category/service.events-and-hospitality.rentals-tents-tables-chairs": {
       "file": "source/category/service.events-and-hospitality.rentals-tents-tables-chairs.jpg",
@@ -1348,8 +1876,8 @@
     "category/service.events-and-hospitality.videographer": {
       "file": "source/category/service.events-and-hospitality.videographer.jpg",
       "alt": {
-        "en": "A camera operator filming",
-        "fr": "Un caméraman qui filme"
+        "en": "A video camera on a small tripod",
+        "fr": "Une caméra vidéo sur un petit trépied"
       },
       "focal": {
         "x": 0.5,
@@ -1357,23 +1885,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "IMG_5170",
-      "photographer": "Partners in Flight",
-      "photographerUrl": "https://www.flickr.com/people/100895489@N06/",
-      "sourceUrl": "https://www.flickr.com/photos/100895489@N06/9711190138",
+      "title": "Axis360 Plus",
+      "photographer": "Cinetics",
+      "photographerUrl": "https://www.flickr.com/people/cinetics/",
+      "sourceUrl": "https://www.flickr.com/photos/cinetics/12780933054",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
       "height": 683,
-      "hash": "16e5544b5f",
-      "placeholder": "#d8d8c8"
+      "hash": "e813cf8fdf",
+      "placeholder": "#f8f8f8"
     },
     "category/service.events-and-hospitality.wedding-planner": {
       "file": "source/category/service.events-and-hospitality.wedding-planner.jpg",
       "alt": {
-        "en": "A bride and groom at their reception",
-        "fr": "Des mariés à leur réception"
+        "en": "A bouquet of roses and peonies on a table",
+        "fr": "Un bouquet de roses et de pivoines sur une table"
       },
       "focal": {
         "x": 0.5,
@@ -1381,23 +1909,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Mr. & Mrs. Lawley",
-      "photographer": "Ernie &amp; Katy Newton Lawley",
-      "photographerUrl": "https://www.flickr.com/people/lawley/",
-      "sourceUrl": "https://www.flickr.com/photos/lawley/5198455",
+      "title": "Puķu pušķis",
+      "photographer": "Kārlis Dambrāns",
+      "photographerUrl": "https://www.flickr.com/people/janitors/",
+      "sourceUrl": "https://www.flickr.com/photos/janitors/15755030915",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 768,
-      "hash": "cb95ccb71d",
-      "placeholder": "#080808"
+      "height": 683,
+      "hash": "f58ac070bc",
+      "placeholder": "#180808"
     },
     "category/service.home-trades": {
       "file": "source/category/service.home-trades.jpg",
       "alt": {
-        "en": "A carpenter cutting wood",
-        "fr": "Un menuisier qui coupe du bois"
+        "en": "Chisels and hammers hung on a workshop wall",
+        "fr": "Des ciseaux à bois et des marteaux accrochés au mur d’un atelier"
       },
       "focal": {
         "x": 0.5,
@@ -1405,23 +1933,47 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Sawing",
-      "photographer": "Bart Everson",
-      "photographerUrl": "https://www.flickr.com/people/editor/",
-      "sourceUrl": "https://www.flickr.com/photos/editor/3308192576",
+      "title": "P1090206",
+      "photographer": "Vujàdé",
+      "photographerUrl": "https://www.flickr.com/people/vujadeltd/",
+      "sourceUrl": "https://www.flickr.com/photos/vujadeltd/14645810192",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 768,
-      "hash": "09f2aa0e98",
-      "placeholder": "#b8a898"
+      "height": 684,
+      "hash": "a0197a4871",
+      "placeholder": "#988878"
+    },
+    "category/service.home-trades.appliance-repair": {
+      "file": "source/category/service.home-trades.appliance-repair.jpg",
+      "alt": {
+        "en": "A front-loading washing machine",
+        "fr": "Une laveuse à chargement frontal"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "For Sale: AEG Lavamat 5410 Clothes Washer",
+      "photographer": "kellinahandbasket",
+      "photographerUrl": "https://www.flickr.com/people/kellinahandbasket/",
+      "sourceUrl": "https://www.flickr.com/photos/kellinahandbasket/121745645",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 683,
+      "height": 1024,
+      "hash": "a7e6f3a954",
+      "placeholder": "#886848"
     },
     "category/service.home-trades.carpentry-and-finishing": {
       "file": "source/category/service.home-trades.carpentry-and-finishing.jpg",
       "alt": {
-        "en": "A woodworker at the bench",
-        "fr": "Un ébéniste à son établi"
+        "en": "Wood planks laid side by side",
+        "fr": "Des planches de bois posées côte à côte"
       },
       "focal": {
         "x": 0.5,
@@ -1429,23 +1981,95 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "IMG_6152choke cherries?",
-      "photographer": "Ted Sakshaug",
-      "photographerUrl": "https://www.flickr.com/people/tsakshaug/",
-      "sourceUrl": "https://www.flickr.com/photos/tsakshaug/8501207193",
+      "title": "IMG_3438 Western Red Cedar Patterns, FP13",
+      "photographer": "A Yee",
+      "photographerUrl": "https://www.flickr.com/people/57412095@N05/",
+      "sourceUrl": "https://www.flickr.com/photos/57412095@N05/11473047863/",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 768,
-      "hash": "89d554833b",
-      "placeholder": "#080808"
+      "height": 683,
+      "hash": "2e63467727",
+      "placeholder": "#582808"
+    },
+    "category/service.home-trades.concrete-and-paving": {
+      "file": "source/category/service.home-trades.concrete-and-paving.jpg",
+      "alt": {
+        "en": "Paving stones being laid",
+        "fr": "Des pavés en cours de pose"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Baustand vom 21.7.07",
+      "photographer": "Kornelia Haslbeck",
+      "photographerUrl": "https://www.flickr.com/people/konny/",
+      "sourceUrl": "https://www.flickr.com/photos/konny/869579989",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 681,
+      "hash": "07d9702a9f",
+      "placeholder": "#c8c8c8"
+    },
+    "category/service.home-trades.drywall-and-taping": {
+      "file": "source/category/service.home-trades.drywall-and-taping.jpg",
+      "alt": {
+        "en": "A drywall seam being taped",
+        "fr": "Un joint de cloison sèche en cours de tirage"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Day Two",
+      "photographer": "damo1977",
+      "photographerUrl": "https://www.flickr.com/people/damo1977/",
+      "sourceUrl": "https://www.flickr.com/photos/damo1977/3742367356",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 683,
+      "hash": "e78a4fbb39",
+      "placeholder": "#888878"
+    },
+    "category/service.home-trades.eavestrough": {
+      "file": "source/category/service.home-trades.eavestrough.jpg",
+      "alt": {
+        "en": "An eavestrough along a porch roof",
+        "fr": "Une gouttière le long du toit d’un porche"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Nearly Time To Clean the Gutters",
+      "photographer": "Thomas &amp; Dianne Jones",
+      "photographerUrl": "https://www.flickr.com/people/freewine/",
+      "sourceUrl": "https://www.flickr.com/photos/freewine/487608919",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 823,
+      "hash": "5bf5aba5b6",
+      "placeholder": "#e8e8e8"
     },
     "category/service.home-trades.electrician": {
       "file": "source/category/service.home-trades.electrician.jpg",
       "alt": {
-        "en": "Electrical wiring being installed",
-        "fr": "Du câblage électrique en cours d'installation"
+        "en": "Coloured electrical wires being connected",
+        "fr": "Des fils électriques de couleur en cours de raccordement"
       },
       "focal": {
         "x": 0.5,
@@ -1453,17 +2077,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Blue Grass Chemical Agent-Destruction Pilot Plant Control and Support Building",
-      "photographer": "PEO ACWA",
-      "photographerUrl": "https://www.flickr.com/people/acwa/",
-      "sourceUrl": "https://www.flickr.com/photos/acwa/8456798426",
+      "title": "Wire",
+      "photographer": "Michael Pereckas",
+      "photographerUrl": "https://www.flickr.com/people/beigephotos/",
+      "sourceUrl": "https://www.flickr.com/photos/beigephotos/11469089563",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 680,
-      "height": 1024,
-      "hash": "14bc26a11f",
-      "placeholder": "#a8a8a8"
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "988e622efe",
+      "placeholder": "#080808"
     },
     "category/service.home-trades.fencing-and-decks": {
       "file": "source/category/service.home-trades.fencing-and-decks.jpg",
@@ -1513,6 +2137,30 @@
       "hash": "ecfae12e10",
       "placeholder": "#888888"
     },
+    "category/service.home-trades.foundation-and-waterproofing": {
+      "file": "source/category/service.home-trades.foundation-and-waterproofing.jpg",
+      "alt": {
+        "en": "An unfinished basement with a support post",
+        "fr": "Un sous-sol non fini avec un poteau de soutien"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "basement plywood walls",
+      "photographer": "Buyfixandprofit.com",
+      "photographerUrl": "https://www.flickr.com/people/47934494@N07/",
+      "sourceUrl": "https://www.flickr.com/photos/47934494@N07/4428028540",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "48f018c8bb",
+      "placeholder": "#784828"
+    },
     "category/service.home-trades.garage-doors": {
       "file": "source/category/service.home-trades.garage-doors.jpg",
       "alt": {
@@ -1537,11 +2185,11 @@
       "hash": "b669f076d6",
       "placeholder": "#989898"
     },
-    "category/service.home-trades.handyman": {
-      "file": "source/category/service.home-trades.handyman.jpg",
+    "category/service.home-trades.gas-fitter": {
+      "file": "source/category/service.home-trades.gas-fitter.jpg",
       "alt": {
-        "en": "A builder measuring a wood frame",
-        "fr": "Un ouvrier qui mesure une charpente en bois"
+        "en": "Red gas pumps and valves",
+        "fr": "Des pompes et des robinets de gaz rouges"
       },
       "focal": {
         "x": 0.5,
@@ -1549,17 +2197,41 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Civil Engineering Training",
-      "photographer": "Georgia National Guard",
-      "photographerUrl": "https://www.flickr.com/people/ganatlguard/",
-      "sourceUrl": "https://www.flickr.com/photos/ganatlguard/13912730554",
+      "title": "DSC_0022[1]",
+      "photographer": "continuousshot",
+      "photographerUrl": "https://www.flickr.com/people/pdf/",
+      "sourceUrl": "https://www.flickr.com/photos/pdf/10503298665",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1071,
+      "hash": "2c749b321f",
+      "placeholder": "#c8b8a8"
+    },
+    "category/service.home-trades.handyman": {
+      "file": "source/category/service.home-trades.handyman.jpg",
+      "alt": {
+        "en": "A screwdriver, wrenches and a ruler on wood",
+        "fr": "Un tournevis, des clés et une règle sur du bois"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "P1070390",
+      "photographer": "Takashi Yamamiya",
+      "photographerUrl": "https://www.flickr.com/people/propella/",
+      "sourceUrl": "https://www.flickr.com/photos/propella/4165539704",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 798,
-      "hash": "e850534f5b",
-      "placeholder": "#f8f8f8"
+      "height": 768,
+      "hash": "cfe61eda70",
+      "placeholder": "#989868"
     },
     "category/service.home-trades.home-inspector": {
       "file": "source/category/service.home-trades.home-inspector.jpg",
@@ -1584,6 +2256,54 @@
       "height": 683,
       "hash": "36349bfbba",
       "placeholder": "#f8f8f8"
+    },
+    "category/service.home-trades.hot-water-tank": {
+      "file": "source/category/service.home-trades.hot-water-tank.jpg",
+      "alt": {
+        "en": "A hot water tank in a utility room",
+        "fr": "Un chauffe-eau dans une salle de service"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "New water heater with a new gas safety valve. It has a sensor in a drip pan that the water heater sits in. If the sensor gets wet the valve shuts. The pan drains out side the house. No flooding from a leak like in 2007.",
+      "photographer": "Tony Alter",
+      "photographerUrl": "https://www.flickr.com/people/78428166@N00/",
+      "sourceUrl": "https://www.flickr.com/photos/78428166@N00/16618011819",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 1024,
+      "hash": "238ff51fbe",
+      "placeholder": "#585848"
+    },
+    "category/service.home-trades.hvac-and-furnace": {
+      "file": "source/category/service.home-trades.hvac-and-furnace.jpg",
+      "alt": {
+        "en": "A wall thermostat",
+        "fr": "Un thermostat mural"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "31°C",
+      "photographer": "Andreas Pizsa",
+      "photographerUrl": "https://www.flickr.com/people/butterseite/",
+      "sourceUrl": "https://www.flickr.com/photos/butterseite/859089151",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "07062d3c87",
+      "placeholder": "#98a8a8"
     },
     "category/service.home-trades.locksmith": {
       "file": "source/category/service.home-trades.locksmith.jpg",
@@ -1660,8 +2380,8 @@
     "category/service.home-trades.roofing": {
       "file": "source/category/service.home-trades.roofing.jpg",
       "alt": {
-        "en": "Roofers working on a house roof",
-        "fr": "Des couvreurs qui travaillent sur le toit d'une maison"
+        "en": "A small house with a red metal roof",
+        "fr": "Une petite maison au toit de métal rouge"
       },
       "focal": {
         "x": 0.5,
@@ -1669,23 +2389,47 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Removing old shingles._6365",
-      "photographer": "Robert Taylor",
-      "photographerUrl": "https://www.flickr.com/people/bobolink/",
-      "sourceUrl": "https://www.flickr.com/photos/bobolink/6944673534",
+      "title": "Nyt tag og ny gavlbeklædning",
+      "photographer": "Tom  Lund",
+      "photographerUrl": "https://www.flickr.com/people/toms_karameller/",
+      "sourceUrl": "https://www.flickr.com/photos/toms_karameller/8186891129",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "6f140e7155",
+      "placeholder": "#e8e8f8"
+    },
+    "category/service.home-trades.siding-and-exterior": {
+      "file": "source/category/service.home-trades.siding-and-exterior.jpg",
+      "alt": {
+        "en": "A window in a house’s siding",
+        "fr": "Une fenêtre dans le revêtement extérieur d’une maison"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Signs of foreclosure, Green Valley Ranch subdivision, Denver",
+      "photographer": "Jo Guldi",
+      "photographerUrl": "https://www.flickr.com/people/landschaft/",
+      "sourceUrl": "https://www.flickr.com/photos/landschaft/2753118971",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
       "width": 1024,
       "height": 683,
-      "hash": "1844efcdb0",
-      "placeholder": "#78b8f8"
+      "hash": "cc4e250749",
+      "placeholder": "#988878"
     },
     "category/service.personal-care-and-wellness": {
       "file": "source/category/service.personal-care-and-wellness.jpg",
       "alt": {
-        "en": "A relaxing massage",
-        "fr": "Un massage relaxant"
+        "en": "Folded towels and a bar of soap at a spa",
+        "fr": "Des serviettes pliées et un savon dans un spa"
       },
       "focal": {
         "x": 0.5,
@@ -1693,23 +2437,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Ayurveda in Sri Lanka",
-      "photographer": "Amila Tennakoon",
-      "photographerUrl": "https://www.flickr.com/people/lakpura/",
-      "sourceUrl": "https://www.flickr.com/photos/lakpura/14608822504",
+      "title": "IMG_4614.JPG",
+      "photographer": "準建築人手札網站 Forgemind ArchiMedia",
+      "photographerUrl": "https://www.flickr.com/people/eager/",
+      "sourceUrl": "https://www.flickr.com/photos/eager/5655051383",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 673,
-      "hash": "580476add3",
-      "placeholder": "#a86848"
+      "height": 683,
+      "hash": "31d705f88f",
+      "placeholder": "#d8b878"
     },
     "category/service.personal-care-and-wellness.barber-and-hair": {
       "file": "source/category/service.personal-care-and-wellness.barber-and-hair.jpg",
       "alt": {
-        "en": "A hairdresser cutting hair",
-        "fr": "Une coiffeuse qui coupe des cheveux"
+        "en": "A red barber chair",
+        "fr": "Un fauteuil de barbier rouge"
       },
       "focal": {
         "x": 0.5,
@@ -1717,17 +2461,41 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "08.01.nigel hair",
-      "photographer": "dolce_evita",
-      "photographerUrl": "https://www.flickr.com/people/astridge/",
-      "sourceUrl": "https://www.flickr.com/photos/astridge/5335975004",
+      "title": "Barber Chair",
+      "photographer": "ultrakickgirl",
+      "photographerUrl": "https://www.flickr.com/people/ultrakickgirl/",
+      "sourceUrl": "https://www.flickr.com/photos/ultrakickgirl/3391481830",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
+      "width": 768,
+      "height": 1024,
+      "hash": "619a1b1f97",
+      "placeholder": "#989898"
+    },
+    "category/service.personal-care-and-wellness.doula": {
+      "file": "source/category/service.personal-care-and-wellness.doula.jpg",
+      "alt": {
+        "en": "A crib with a striped blanket",
+        "fr": "Un lit de bébé avec une couverture rayée"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Beck's Nursery",
+      "photographer": "Abi Porter",
+      "photographerUrl": "https://www.flickr.com/people/vanillaandlaceblog/",
+      "sourceUrl": "https://www.flickr.com/photos/vanillaandlaceblog/13396644615",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 768,
-      "hash": "bbadfbfdf0",
-      "placeholder": "#080808"
+      "height": 683,
+      "hash": "ff52dbe096",
+      "placeholder": "#c8c8c8"
     },
     "category/service.personal-care-and-wellness.esthetician": {
       "file": "source/category/service.personal-care-and-wellness.esthetician.jpg",
@@ -1753,11 +2521,11 @@
       "hash": "2108fd5f91",
       "placeholder": "#381828"
     },
-    "category/service.personal-care-and-wellness.massage-therapist": {
-      "file": "source/category/service.personal-care-and-wellness.massage-therapist.jpg",
+    "category/service.personal-care-and-wellness.home-care-aide": {
+      "file": "source/category/service.personal-care-and-wellness.home-care-aide.jpg",
       "alt": {
-        "en": "A massage therapist at work",
-        "fr": "Une massothérapeute au travail"
+        "en": "An antique wheelchair by a door",
+        "fr": "Un fauteuil roulant ancien près d’une porte"
       },
       "focal": {
         "x": 0.5,
@@ -1765,23 +2533,47 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Massage",
-      "photographer": "Nick Webb",
-      "photographerUrl": "https://www.flickr.com/people/nickwebb/",
-      "sourceUrl": "https://www.flickr.com/photos/nickwebb/3969490098",
+      "title": "Old bath chair",
+      "photographer": "Michael Button",
+      "photographerUrl": "https://www.flickr.com/people/michaeljohnbutton/",
+      "sourceUrl": "https://www.flickr.com/photos/michaeljohnbutton/14709731486",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 680,
+      "downloaded": "2026-10-23",
+      "width": 768,
       "height": 1024,
-      "hash": "d9f8550c9b",
-      "placeholder": "#180808"
+      "hash": "a3d99b4409",
+      "placeholder": "#280808"
+    },
+    "category/service.personal-care-and-wellness.massage-therapist": {
+      "file": "source/category/service.personal-care-and-wellness.massage-therapist.jpg",
+      "alt": {
+        "en": "Two massage tables in a calm room",
+        "fr": "Deux tables de massage dans une pièce calme"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "06",
+      "photographer": "Villa del Palmar Cancun",
+      "photographerUrl": "https://www.flickr.com/people/villadelpalmar/",
+      "sourceUrl": "https://www.flickr.com/photos/villadelpalmar/8610832697",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 683,
+      "hash": "70e71466e8",
+      "placeholder": "#080808"
     },
     "category/service.personal-care-and-wellness.mobile-hair-and-makeup": {
       "file": "source/category/service.personal-care-and-wellness.mobile-hair-and-makeup.jpg",
       "alt": {
-        "en": "Makeup being applied",
-        "fr": "Du maquillage en cours d'application"
+        "en": "Makeup brushes and cosmetics laid out",
+        "fr": "Des pinceaux et des produits de maquillage disposés"
       },
       "focal": {
         "x": 0.5,
@@ -1790,16 +2582,16 @@
       "site": "openimages",
       "source": "flickr",
       "title": "Untitled",
-      "photographer": "A Chilling Soul",
-      "photographerUrl": "https://www.flickr.com/people/chilling_soul/",
-      "sourceUrl": "https://www.flickr.com/photos/65263663@N00/2045916845",
+      "photographer": "skeleton hands",
+      "photographerUrl": "https://www.flickr.com/people/pointlessxforever/",
+      "sourceUrl": "https://www.flickr.com/photos/pointlessxforever/5267290715/",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 683,
-      "hash": "071e567ef8",
-      "placeholder": "#f8d8d8"
+      "height": 736,
+      "hash": "ec389cd975",
+      "placeholder": "#885818"
     },
     "category/service.personal-care-and-wellness.nail-technician": {
       "file": "source/category/service.personal-care-and-wellness.nail-technician.jpg",
@@ -1852,8 +2644,8 @@
     "category/service.personal-care-and-wellness.personal-trainer": {
       "file": "source/category/service.personal-care-and-wellness.personal-trainer.jpg",
       "alt": {
-        "en": "A strength training session",
-        "fr": "Une séance d'entraînement musculaire"
+        "en": "A pile of dumbbells",
+        "fr": "Une pile d’haltères"
       },
       "focal": {
         "x": 0.5,
@@ -1861,23 +2653,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "USFK - United States Forces Korea image archive",
-      "photographer": "Expert Infantry",
-      "photographerUrl": "https://www.flickr.com/people/expertinfantry/",
-      "sourceUrl": "https://www.flickr.com/photos/expertinfantry/5449607333",
+      "title": "Hand Weights",
+      "photographer": "slgckgc",
+      "photographerUrl": "https://www.flickr.com/people/slgc/",
+      "sourceUrl": "https://www.flickr.com/photos/slgc/5443448386",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 610,
-      "hash": "e98aefeddf",
-      "placeholder": "#d8d8c8"
+      "height": 685,
+      "hash": "2578c5770c",
+      "placeholder": "#181818"
     },
     "category/service.personal-care-and-wellness.physiotherapist": {
       "file": "source/category/service.personal-care-and-wellness.physiotherapist.jpg",
       "alt": {
-        "en": "A physiotherapist treating a patient's leg",
-        "fr": "Un physiothérapeute qui soigne la jambe d'un patient"
+        "en": "An exercise ball and a foam roller",
+        "fr": "Un ballon d’exercice et un rouleau de mousse"
       },
       "focal": {
         "x": 0.5,
@@ -1885,17 +2677,41 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Mark Weeds, an NHS physiotherapist from Llanelli helping people who suffered spinal injuries in the Nepal earthquake",
-      "photographer": "DFID - UK Department for International Development",
-      "photographerUrl": "https://www.flickr.com/people/dfid/",
-      "sourceUrl": "https://www.flickr.com/photos/dfid/17203097648",
+      "title": "The Making Of Mikey Step 1",
+      "photographer": "Richard Riley",
+      "photographerUrl": "https://www.flickr.com/people/rileyroxx/",
+      "sourceUrl": "https://www.flickr.com/photos/rileyroxx/2425344689",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 682,
-      "hash": "e49ad54c64",
-      "placeholder": "#f8f8f8"
+      "height": 768,
+      "hash": "c0d4e86998",
+      "placeholder": "#582808"
+    },
+    "category/service.personal-care-and-wellness.registered-dietitian": {
+      "file": "source/category/service.personal-care-and-wellness.registered-dietitian.jpg",
+      "alt": {
+        "en": "A bowl of pears on a checked tablecloth",
+        "fr": "Un bol de poires sur une nappe à carreaux"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Green in green",
+      "photographer": "storebukkebruse",
+      "photographerUrl": "https://www.flickr.com/people/tusnelda/",
+      "sourceUrl": "https://www.flickr.com/photos/tusnelda/5869568736/",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "13f0a37a5a",
+      "placeholder": "#b8b8c8"
     },
     "category/service.personal-care-and-wellness.yoga-pilates-instructor": {
       "file": "source/category/service.personal-care-and-wellness.yoga-pilates-instructor.jpg",
@@ -1924,8 +2740,8 @@
     "category/service.pets": {
       "file": "source/category/service.pets.jpg",
       "alt": {
-        "en": "A dog wearing a red bow",
-        "fr": "Un chien qui porte un nœud rouge"
+        "en": "A spaniel resting on a white bed",
+        "fr": "Un épagneul couché sur un lit blanc"
       },
       "focal": {
         "x": 0.5,
@@ -1933,23 +2749,47 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "dog christmas",
-      "photographer": "Sadie Hart",
-      "photographerUrl": "https://www.flickr.com/people/sadiehart/",
-      "sourceUrl": "https://www.flickr.com/photos/sadiehart/7613133648",
+      "title": "Cavalier King Charles Spaniel",
+      "photographer": "Mário Simoes",
+      "photographerUrl": "https://www.flickr.com/people/56785346@N00/",
+      "sourceUrl": "https://www.flickr.com/photos/56785346@N00/8240053390",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 681,
-      "hash": "67a8951b74",
-      "placeholder": "#b8b8b8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 899,
+      "hash": "270c7d1170",
+      "placeholder": "#d8d8d8"
+    },
+    "category/service.pets.dog-grooming": {
+      "file": "source/category/service.pets.dog-grooming.jpg",
+      "alt": {
+        "en": "Two freshly groomed dogs",
+        "fr": "Deux chiens fraîchement toilettés"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "HMKC Christmas Fun Run 2012",
+      "photographer": "SheltieBoy",
+      "photographerUrl": "https://www.flickr.com/people/montanapets/",
+      "sourceUrl": "https://www.flickr.com/photos/montanapets/8265406248",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1280,
+      "hash": "ccaa3ed980",
+      "placeholder": "#383838"
     },
     "category/service.pets.dog-training": {
       "file": "source/category/service.pets.dog-training.jpg",
       "alt": {
-        "en": "A dog trained to sit and wait",
-        "fr": "Un chien dressé à s'asseoir et attendre"
+        "en": "A dog looking up with snow on its face",
+        "fr": "Un chien qui lève les yeux, de la neige sur le museau"
       },
       "focal": {
         "x": 0.5,
@@ -1957,23 +2797,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "2013 Royal Melbourne Show",
-      "photographer": "Chris Phutully",
-      "photographerUrl": "https://www.flickr.com/people/72562013@N06/",
-      "sourceUrl": "https://www.flickr.com/photos/72562013@N06/10052973456",
+      "title": "Leroy Snowyface",
+      "photographer": "Jake McGee",
+      "photographerUrl": "https://www.flickr.com/people/jakemcgee/",
+      "sourceUrl": "https://www.flickr.com/photos/jakemcgee/5700347119",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 681,
-      "hash": "10db0f8602",
-      "placeholder": "#c8d8d8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "525d007097",
+      "placeholder": "#e8f8f8"
     },
     "category/service.pets.dog-walker": {
       "file": "source/category/service.pets.dog-walker.jpg",
       "alt": {
-        "en": "A woman walking her dog on a boardwalk",
-        "fr": "Une femme qui promène son chien sur une promenade en bois"
+        "en": "Three small dogs on leashes",
+        "fr": "Trois petits chiens en laisse"
       },
       "focal": {
         "x": 0.5,
@@ -1981,17 +2821,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "MKW50034",
-      "photographer": "Mark Wyman",
-      "photographerUrl": "https://www.flickr.com/people/mkwyman/",
-      "sourceUrl": "https://www.flickr.com/photos/mkwyman/21661331255",
+      "title": "Proof",
+      "photographer": "Tony Alter",
+      "photographerUrl": "https://www.flickr.com/people/78428166@N00/",
+      "sourceUrl": "https://www.flickr.com/photos/78428166@N00/5874693849/",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 768,
-      "hash": "4adee9fc10",
-      "placeholder": "#e8e8e8"
+      "height": 683,
+      "hash": "da13f4f19e",
+      "placeholder": "#a8a8a8"
     },
     "category/service.pets.pet-sitter": {
       "file": "source/category/service.pets.pet-sitter.jpg",
@@ -2017,11 +2857,11 @@
       "hash": "ab954c2176",
       "placeholder": "#181818"
     },
-    "category/service.professional": {
-      "file": "source/category/service.professional.jpg",
+    "category/service.pets.pet-taxi": {
+      "file": "source/category/service.pets.pet-taxi.jpg",
       "alt": {
-        "en": "A panel discussion",
-        "fr": "Une table ronde"
+        "en": "A pet resting in a travel carrier",
+        "fr": "Un animal couché dans une cage de transport"
       },
       "focal": {
         "x": 0.5,
@@ -2029,16 +2869,40 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Steve Westly (Westly Group)",
-      "photographer": "Financial Times",
-      "photographerUrl": "https://www.flickr.com/people/financialtimes/",
-      "sourceUrl": "https://www.flickr.com/photos/financialtimes/6478265963",
+      "title": "P1000434",
+      "photographer": "Laurie Sullivan",
+      "photographerUrl": "https://www.flickr.com/people/projectdiscovery/",
+      "sourceUrl": "https://www.flickr.com/photos/projectdiscovery/12880767174/",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 683,
-      "hash": "c3e242b5e0",
+      "downloaded": "2026-10-23",
+      "width": 1200,
+      "height": 1600,
+      "hash": "7f53deb0db",
+      "placeholder": "#282818"
+    },
+    "category/service.professional": {
+      "file": "source/category/service.professional.jpg",
+      "alt": {
+        "en": "An empty meeting room with a long table",
+        "fr": "Une salle de réunion vide avec une longue table"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "DSC01238",
+      "photographer": "University of Salford Press Office",
+      "photographerUrl": "https://www.flickr.com/people/salforduniversity/",
+      "sourceUrl": "https://www.flickr.com/photos/salforduniversity/6188837408",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "56cbda82b7",
       "placeholder": "#080808"
     },
     "category/service.professional.accountant-bookkeeper": {
@@ -2065,6 +2929,102 @@
       "hash": "ec33e00aec",
       "placeholder": "#080808"
     },
+    "category/service.professional.immigration-consultant": {
+      "file": "source/category/service.professional.immigration-consultant.jpg",
+      "alt": {
+        "en": "Old suitcases stacked up",
+        "fr": "De vieilles valises empilées"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Viajeros del tiempo",
+      "photographer": "Julio Romero",
+      "photographerUrl": "https://www.flickr.com/people/juliofromero/",
+      "sourceUrl": "https://www.flickr.com/photos/juliofromero/19024896854",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 683,
+      "hash": "852c53654b",
+      "placeholder": "#381808"
+    },
+    "category/service.professional.legal-document-services": {
+      "file": "source/category/service.professional.legal-document-services.jpg",
+      "alt": {
+        "en": "A pen and glasses on a printed document",
+        "fr": "Un stylo et des lunettes sur un document imprimé"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Muster-Bewerbung",
+      "photographer": "Dirk Vorderstraße",
+      "photographerUrl": "https://www.flickr.com/people/dirkvorderstrasse/",
+      "sourceUrl": "https://www.flickr.com/photos/dirkvorderstrasse/18880585903",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 684,
+      "hash": "ad7c2c8e52",
+      "placeholder": "#d8d8d8"
+    },
+    "category/service.professional.mortgage-broker": {
+      "file": "source/category/service.professional.mortgage-broker.jpg",
+      "alt": {
+        "en": "A stone house with a front porch",
+        "fr": "Une maison de pierre avec une galerie"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "5380, boulevard Gouin Ouest (Ahuntsic-Cartierville)",
+      "photographer": "Parcours riverain - Ville de Montréal",
+      "photographerUrl": "https://www.flickr.com/people/parcoursriverain/",
+      "sourceUrl": "https://www.flickr.com/photos/parcoursriverain/8513391772",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 683,
+      "hash": "ac0e0a7c6f",
+      "placeholder": "#f8f8f8"
+    },
+    "category/service.professional.notary": {
+      "file": "source/category/service.professional.notary.jpg",
+      "alt": {
+        "en": "An envelope closed with a red wax seal",
+        "fr": "Une enveloppe fermée par un sceau de cire rouge"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "sealed",
+      "photographer": "Justin Henry",
+      "photographerUrl": "https://www.flickr.com/people/zappowbang/",
+      "sourceUrl": "https://www.flickr.com/photos/zappowbang/2048577203",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 677,
+      "hash": "8a04e63241",
+      "placeholder": "#180808"
+    },
     "category/service.professional.real-estate-agent": {
       "file": "source/category/service.professional.real-estate-agent.jpg",
       "alt": {
@@ -2089,11 +3049,11 @@
       "hash": "bea6bd1640",
       "placeholder": "#b8c8d8"
     },
-    "category/service.tech-and-digital": {
-      "file": "source/category/service.tech-and-digital.jpg",
+    "category/service.professional.tax-preparer": {
+      "file": "source/category/service.professional.tax-preparer.jpg",
       "alt": {
-        "en": "A person working at a computer",
-        "fr": "Une personne qui travaille à l'ordinateur"
+        "en": "A desk calculator up close",
+        "fr": "Une calculatrice de bureau en gros plan"
       },
       "focal": {
         "x": 0.5,
@@ -2101,17 +3061,65 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "El gondolero de la Gran Corporación",
-      "photographer": "Jorge Correa",
-      "photographerUrl": "https://www.flickr.com/people/jorgecorrea/",
-      "sourceUrl": "https://www.flickr.com/photos/jorgecorrea/147551285",
+      "title": "Numbers",
+      "photographer": "~ezs",
+      "photographerUrl": "https://www.flickr.com/people/missizss/",
+      "sourceUrl": "https://www.flickr.com/photos/missizss/2333859929",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 579,
-      "hash": "f8e2843c94",
-      "placeholder": "#080808"
+      "height": 768,
+      "hash": "fbf2387d87",
+      "placeholder": "#686858"
+    },
+    "category/service.professional.translator": {
+      "file": "source/category/service.professional.translator.jpg",
+      "alt": {
+        "en": "A typewriter in its case",
+        "fr": "Une machine à écrire dans son coffret"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Máquina de escribir FACIT",
+      "photographer": "Aitor Méndez",
+      "photographerUrl": "https://www.flickr.com/people/aitor/",
+      "sourceUrl": "https://www.flickr.com/photos/aitor/2951521078",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 681,
+      "hash": "dfc935d9ba",
+      "placeholder": "#381818"
+    },
+    "category/service.tech-and-digital": {
+      "file": "source/category/service.tech-and-digital.jpg",
+      "alt": {
+        "en": "A laptop on a desk",
+        "fr": "Un ordinateur portable sur un bureau"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "MacBook Air",
+      "photographer": "Antonio Tajuelo",
+      "photographerUrl": "https://www.flickr.com/people/antoniotajuelo/",
+      "sourceUrl": "https://www.flickr.com/photos/antoniotajuelo/12873971495",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 575,
+      "hash": "2ea66c1ee0",
+      "placeholder": "#f8f8f8"
     },
     "category/service.tech-and-digital.computer-repair": {
       "file": "source/category/service.tech-and-digital.computer-repair.jpg",
@@ -2161,6 +3169,30 @@
       "hash": "2e0847a29c",
       "placeholder": "#f8f8f8"
     },
+    "category/service.tech-and-digital.it-support-for-small-business": {
+      "file": "source/category/service.tech-and-digital.it-support-for-small-business.jpg",
+      "alt": {
+        "en": "A network cable on a desk",
+        "fr": "Un câble réseau sur un bureau"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "cat5 patch cable",
+      "photographer": "Kiran Foster",
+      "photographerUrl": "https://www.flickr.com/people/rueful/",
+      "sourceUrl": "https://www.flickr.com/photos/rueful/7716627012",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1065,
+      "hash": "5cc216df12",
+      "placeholder": "#988888"
+    },
     "category/service.tech-and-digital.phone-and-tablet-repair": {
       "file": "source/category/service.tech-and-digital.phone-and-tablet-repair.jpg",
       "alt": {
@@ -2184,6 +3216,54 @@
       "height": 683,
       "hash": "7edd6f2505",
       "placeholder": "#080808"
+    },
+    "category/service.tech-and-digital.photography-editing": {
+      "file": "source/category/service.tech-and-digital.photography-editing.jpg",
+      "alt": {
+        "en": "A camera lens",
+        "fr": "Un objectif d’appareil photo"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Project 365: #25",
+      "photographer": "Julio Greff",
+      "photographerUrl": "https://www.flickr.com/people/juliogreff/",
+      "sourceUrl": "https://www.flickr.com/photos/juliogreff/16210608748",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 678,
+      "hash": "a926eb6203",
+      "placeholder": "#a87858"
+    },
+    "category/service.tech-and-digital.smart-home-install": {
+      "file": "source/category/service.tech-and-digital.smart-home-install.jpg",
+      "alt": {
+        "en": "A smart thermostat’s display",
+        "fr": "L’écran d’un thermostat intelligent"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "BitFenix Prodigy",
+      "photographer": "TJStamp",
+      "photographerUrl": "https://www.flickr.com/people/mogwai_83/",
+      "sourceUrl": "https://www.flickr.com/photos/mogwai_83/8526389248",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 765,
+      "hash": "81cf9b03c6",
+      "placeholder": "#d8b888"
     },
     "category/service.tech-and-digital.tv-mounting": {
       "file": "source/category/service.tech-and-digital.tv-mounting.jpg",
@@ -2209,11 +3289,11 @@
       "hash": "6f2f12c38b",
       "placeholder": "#080808"
     },
-    "category/shop.apparel": {
-      "file": "source/category/shop.apparel.jpg",
+    "category/service.tech-and-digital.web-design": {
+      "file": "source/category/service.tech-and-digital.web-design.jpg",
       "alt": {
-        "en": "Racks of clothing in a store",
-        "fr": "Des présentoirs de vêtements dans un magasin"
+        "en": "A laptop showing a dashboard",
+        "fr": "Un portable qui affiche un tableau de bord"
       },
       "focal": {
         "x": 0.5,
@@ -2221,17 +3301,41 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Kledinguil Den Haag",
-      "photographer": "Little Green Dress",
-      "photographerUrl": "https://www.flickr.com/people/46295417@N08/",
-      "sourceUrl": "https://www.flickr.com/photos/46295417@N08/9271025658",
+      "title": "Gerrit's JavaFX Demo",
+      "photographer": "Stephen Chin",
+      "photographerUrl": "https://www.flickr.com/people/steveonjava/",
+      "sourceUrl": "https://www.flickr.com/photos/steveonjava/8153791588",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 683,
-      "hash": "40783e5de3",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1068,
+      "hash": "c59870e7c5",
       "placeholder": "#080808"
+    },
+    "category/shop.apparel": {
+      "file": "source/category/shop.apparel.jpg",
+      "alt": {
+        "en": "A canvas and leather bag",
+        "fr": "Un sac en toile et en cuir"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "P1150913",
+      "photographer": "芳蘭 徐芳蘭",
+      "photographerUrl": "https://www.flickr.com/people/fanglanhsu/",
+      "sourceUrl": "https://www.flickr.com/photos/fanglanhsu/15802507178",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "f3991a67c1",
+      "placeholder": "#d8e8e8"
     },
     "category/shop.apparel.accessories": {
       "file": "source/category/shop.apparel.accessories.jpg",
@@ -2257,6 +3361,30 @@
       "hash": "5720987fa4",
       "placeholder": "#884838"
     },
+    "category/shop.apparel.clothing": {
+      "file": "source/category/shop.apparel.clothing.jpg",
+      "alt": {
+        "en": "A white jacket on a dress form",
+        "fr": "Une veste blanche sur un mannequin"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "CBF 2015 First Week (SF) (10)",
+      "photographer": "Charles &amp; Adrienne Esseltine",
+      "photographerUrl": "https://www.flickr.com/people/94246383@N00/",
+      "sourceUrl": "https://www.flickr.com/photos/94246383@N00/17027303910",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "d5861ec2c7",
+      "placeholder": "#989898"
+    },
     "category/shop.apparel.footwear": {
       "file": "source/category/shop.apparel.footwear.jpg",
       "alt": {
@@ -2280,6 +3408,30 @@
       "height": 768,
       "hash": "38fb093b41",
       "placeholder": "#181818"
+    },
+    "category/shop.apparel.kids-clothing": {
+      "file": "source/category/shop.apparel.kids-clothing.jpg",
+      "alt": {
+        "en": "A child’s pink coat on a hanger",
+        "fr": "Un manteau rose pour enfant sur un cintre"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Burda Style 02/2004 619",
+      "photographer": "CananZembil",
+      "photographerUrl": "https://www.flickr.com/people/41738141@N06/",
+      "sourceUrl": "https://www.flickr.com/photos/41738141@N06/6888334811",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "af5352f0a6",
+      "placeholder": "#b8b8a8"
     },
     "category/shop.apparel.workwear": {
       "file": "source/category/shop.apparel.workwear.jpg",
@@ -2308,8 +3460,8 @@
     "category/shop.electronics": {
       "file": "source/category/shop.electronics.jpg",
       "alt": {
-        "en": "Two smartphones charging",
-        "fr": "Deux téléphones intelligents en recharge"
+        "en": "A pair of headphones",
+        "fr": "Un casque d’écoute"
       },
       "focal": {
         "x": 0.5,
@@ -2317,17 +3469,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "You know you're at a blogging conference when .... #snapconf",
-      "photographer": "Erin Singleton",
-      "photographerUrl": "https://www.flickr.com/people/erins/",
-      "sourceUrl": "https://www.flickr.com/photos/erins/6948805066/",
+      "title": "ttesports-chao-dracco",
+      "photographer": "Sinchen.Lin",
+      "photographerUrl": "https://www.flickr.com/people/linsinchen/",
+      "sourceUrl": "https://www.flickr.com/photos/linsinchen/8073456932",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 1024,
-      "hash": "9552141548",
-      "placeholder": "#f8f8f8"
+      "height": 680,
+      "hash": "d8bcbe0999",
+      "placeholder": "#e8e8e8"
     },
     "category/shop.electronics.computers": {
       "file": "source/category/shop.electronics.computers.jpg",
@@ -2352,6 +3504,30 @@
       "height": 768,
       "hash": "d918a42716",
       "placeholder": "#787868"
+    },
+    "category/shop.electronics.electronics": {
+      "file": "source/category/shop.electronics.electronics.jpg",
+      "alt": {
+        "en": "A phone and a charging cable",
+        "fr": "Un téléphone et un câble de recharge"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Peak Design Cuff attached to mobile phone",
+      "photographer": "Khairil Yusof",
+      "photographerUrl": "https://www.flickr.com/people/57634952@N00/",
+      "sourceUrl": "https://www.flickr.com/photos/57634952@N00/15397438766",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1067,
+      "hash": "24a115aa18",
+      "placeholder": "#d8d8d8"
     },
     "category/shop.electronics.phones-and-accessories": {
       "file": "source/category/shop.electronics.phones-and-accessories.jpg",
@@ -2404,8 +3580,8 @@
     "category/shop.food-and-grocery": {
       "file": "source/category/shop.food-and-grocery.jpg",
       "alt": {
-        "en": "Fruit and vegetables on display at a market",
-        "fr": "Des fruits et légumes en étalage au marché"
+        "en": "Green apples at a market",
+        "fr": "Des pommes vertes au marché"
       },
       "focal": {
         "x": 0.5,
@@ -2413,23 +3589,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Janvier : des fraises, des cerises et des asperges blanches....",
-      "photographer": "Randalfino",
-      "photographerUrl": "https://www.flickr.com/people/randalfino/",
-      "sourceUrl": "https://www.flickr.com/photos/randalfino/6695955717",
+      "title": "apples",
+      "photographer": "T J",
+      "photographerUrl": "https://www.flickr.com/people/tetjavier/",
+      "sourceUrl": "https://www.flickr.com/photos/tetjavier/5675485799",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "acb02c7444",
-      "placeholder": "#f8f8f8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1067,
+      "hash": "708d7709b9",
+      "placeholder": "#a8b858"
     },
     "category/shop.food-and-grocery.bakery": {
       "file": "source/category/shop.food-and-grocery.bakery.jpg",
       "alt": {
-        "en": "A pile of fresh rustic loaves",
-        "fr": "Une pile de pains rustiques frais"
+        "en": "Slices of fruit bread on a board",
+        "fr": "Des tranches de pain aux fruits sur une planche"
       },
       "focal": {
         "x": 0.5,
@@ -2437,17 +3613,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Pan artesán galego",
-      "photographer": "amaianos",
-      "photographerUrl": "https://www.flickr.com/people/aamaianos/",
-      "sourceUrl": "https://www.flickr.com/photos/aamaianos/4793328304",
+      "title": "Fruited loaf",
+      "photographer": "say_cheddar",
+      "photographerUrl": "https://www.flickr.com/people/29271559@N02/",
+      "sourceUrl": "https://www.flickr.com/photos/29271559@N02/17748036591",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 925,
-      "hash": "c02f56975d",
-      "placeholder": "#786858"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "41bdb2271b",
+      "placeholder": "#180808"
     },
     "category/shop.food-and-grocery.butcher": {
       "file": "source/category/shop.food-and-grocery.butcher.jpg",
@@ -2665,6 +3841,30 @@
       "hash": "b74c888a3d",
       "placeholder": "#181818"
     },
+    "category/shop.hardware-and-auto.hardware": {
+      "file": "source/category/shop.hardware-and-auto.hardware.jpg",
+      "alt": {
+        "en": "Nuts, bolts and screws",
+        "fr": "Des écrous, des boulons et des vis"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Screws / Schrauben II",
+      "photographer": "Christian Schnettelker",
+      "photographerUrl": "https://www.flickr.com/people/manoftaste-de/",
+      "sourceUrl": "https://www.flickr.com/photos/manoftaste-de/10019473736",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 683,
+      "hash": "21ddc56b13",
+      "placeholder": "#e8e8e8"
+    },
     "category/shop.hardware-and-auto.paint": {
       "file": "source/category/shop.hardware-and-auto.paint.jpg",
       "alt": {
@@ -2688,6 +3888,54 @@
       "height": 1024,
       "hash": "564c4ca707",
       "placeholder": "#887868"
+    },
+    "category/shop.hardware-and-auto.plumbing-and-electrical-supply": {
+      "file": "source/category/shop.hardware-and-auto.plumbing-and-electrical-supply.jpg",
+      "alt": {
+        "en": "Pipes and shut-off valves",
+        "fr": "Des tuyaux et des robinets d’arrêt"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "1598",
+      "photographer": "Bob Peters",
+      "photographerUrl": "https://www.flickr.com/people/22179048@N05/",
+      "sourceUrl": "https://www.flickr.com/photos/22179048@N05/6924066707",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 825,
+      "hash": "a16db25005",
+      "placeholder": "#f8f8f8"
+    },
+    "category/shop.hardware-and-auto.tires": {
+      "file": "source/category/shop.hardware-and-auto.tires.jpg",
+      "alt": {
+        "en": "A stack of tires",
+        "fr": "Une pile de pneus"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Themes: Unity of Opposites, Background and Foreground",
+      "photographer": "zeevveez",
+      "photographerUrl": "https://www.flickr.com/people/zeevveez/",
+      "sourceUrl": "https://www.flickr.com/photos/zeevveez/17135488187",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 683,
+      "hash": "14a620356d",
+      "placeholder": "#181818"
     },
     "category/shop.hardware-and-auto.tools": {
       "file": "source/category/shop.hardware-and-auto.tools.jpg",
@@ -2740,8 +3988,8 @@
     "category/shop.health-and-beauty.baby-care": {
       "file": "source/category/shop.health-and-beauty.baby-care.jpg",
       "alt": {
-        "en": "A baby lying on a soft blanket",
-        "fr": "Un bébé couché sur une couverture douce"
+        "en": "Cloth diapers",
+        "fr": "Des couches lavables"
       },
       "focal": {
         "x": 0.5,
@@ -2749,17 +3997,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Con #6 días",
-      "photographer": "eu -",
-      "photographerUrl": "https://www.flickr.com/people/estrelas/",
-      "sourceUrl": "https://www.flickr.com/photos/estrelas/2745928521/",
+      "title": "diapers A B C w",
+      "photographer": "GoGreen Telas",
+      "photographerUrl": "https://www.flickr.com/people/126550093@N03/",
+      "sourceUrl": "https://www.flickr.com/photos/126550093@N03/14885717499",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 768,
-      "hash": "3f5775ff67",
-      "placeholder": "#989898"
+      "height": 733,
+      "hash": "45d26f3d54",
+      "placeholder": "#f8f8f8"
     },
     "category/shop.health-and-beauty.cosmetics-and-skincare": {
       "file": "source/category/shop.health-and-beauty.cosmetics-and-skincare.jpg",
@@ -2784,6 +4032,54 @@
       "height": 683,
       "hash": "472036bd60",
       "placeholder": "#f8d8d8"
+    },
+    "category/shop.health-and-beauty.pharmacy-otc": {
+      "file": "source/category/shop.health-and-beauty.pharmacy-otc.jpg",
+      "alt": {
+        "en": "White tablets on a white background",
+        "fr": "Des comprimés blancs sur fond blanc"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Pills / Pillen II",
+      "photographer": "Christian Schnettelker",
+      "photographerUrl": "https://www.flickr.com/people/manoftaste-de/",
+      "sourceUrl": "https://www.flickr.com/photos/manoftaste-de/17783209085",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 683,
+      "hash": "63898bfd92",
+      "placeholder": "#f8f8f8"
+    },
+    "category/shop.health-and-beauty.vitamins-and-supplements": {
+      "file": "source/category/shop.health-and-beauty.vitamins-and-supplements.jpg",
+      "alt": {
+        "en": "Golden supplement capsules",
+        "fr": "Des capsules de suppléments dorées"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Oil Power",
+      "photographer": "Shakreez",
+      "photographerUrl": "https://www.flickr.com/people/shakreez/",
+      "sourceUrl": "https://www.flickr.com/photos/shakreez/317709540",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "c88cc87b40",
+      "placeholder": "#f8f8f8"
     },
     "category/shop.home": {
       "file": "source/category/shop.home.jpg",
@@ -2832,6 +4128,30 @@
       "height": 683,
       "hash": "7d19d7a655",
       "placeholder": "#c8b8a8"
+    },
+    "category/shop.home.cleaning-supplies": {
+      "file": "source/category/shop.home.cleaning-supplies.jpg",
+      "alt": {
+        "en": "Sponges and a container on a railing",
+        "fr": "Des éponges et un contenant sur une rampe"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Flat field device, with adapters",
+      "photographer": "s58y",
+      "photographerUrl": "https://www.flickr.com/people/s58y/",
+      "sourceUrl": "https://www.flickr.com/photos/s58y/4143286089",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 528,
+      "hash": "addf0a843d",
+      "placeholder": "#487848"
     },
     "category/shop.home.decor": {
       "file": "source/category/shop.home.decor.jpg",
@@ -2908,8 +4228,8 @@
     "category/shop.home.home-and-kitchen": {
       "file": "source/category/shop.home.home-and-kitchen.jpg",
       "alt": {
-        "en": "Pots and pans on a kitchen stove",
-        "fr": "Des casseroles et poêles sur une cuisinière"
+        "en": "A pair of table lamps",
+        "fr": "Une paire de lampes de table"
       },
       "focal": {
         "x": 0.5,
@@ -2917,17 +4237,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Washed Pans",
-      "photographer": "Parker Knight",
-      "photographerUrl": "https://www.flickr.com/people/rocketboom/",
-      "sourceUrl": "https://www.flickr.com/photos/rocketboom/20289947373",
+      "title": "DSC01190",
+      "photographer": "Richard Berg",
+      "photographerUrl": "https://www.flickr.com/people/richardberg/",
+      "sourceUrl": "https://www.flickr.com/photos/richardberg/9732352908",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "59f629f3cb",
-      "placeholder": "#181818"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1067,
+      "hash": "cf96ee5032",
+      "placeholder": "#080808"
     },
     "category/shop.kids-gifts-and-hobbies": {
       "file": "source/category/shop.kids-gifts-and-hobbies.jpg",
@@ -3001,6 +4321,30 @@
       "hash": "37a68cfc4f",
       "placeholder": "#c89838"
     },
+    "category/shop.kids-gifts-and-hobbies.kids": {
+      "file": "source/category/shop.kids-gifts-and-hobbies.kids.jpg",
+      "alt": {
+        "en": "A toy building-brick spaceship",
+        "fr": "Un vaisseau spatial en briques de construction"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Alien Police Fighter",
+      "photographer": "Graham Richardson",
+      "photographerUrl": "https://www.flickr.com/people/didbygraham/",
+      "sourceUrl": "https://www.flickr.com/photos/didbygraham/7235554712",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "59ea9e33a4",
+      "placeholder": "#b87858"
+    },
     "category/shop.kids-gifts-and-hobbies.pet-supplies": {
       "file": "source/category/shop.kids-gifts-and-hobbies.pet-supplies.jpg",
       "alt": {
@@ -3028,8 +4372,8 @@
     "category/shop.kids-gifts-and-hobbies.sporting-goods": {
       "file": "source/category/shop.kids-gifts-and-hobbies.sporting-goods.jpg",
       "alt": {
-        "en": "Cyclists with their bikes and helmets",
-        "fr": "Des cyclistes avec leurs vélos et casques"
+        "en": "A bicycle’s chainring and chain",
+        "fr": "Le plateau et la chaîne d’un vélo"
       },
       "focal": {
         "x": 0.5,
@@ -3037,16 +4381,16 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Taking a break from the heat",
-      "photographer": "Brampton Cyclist",
-      "photographerUrl": "https://www.flickr.com/people/bramptoncyclist/",
-      "sourceUrl": "https://www.flickr.com/photos/bramptoncyclist/14367062690",
+      "title": "Guerciotti Antares Cross / Planet X / Dura Ace",
+      "photographer": "Dave Haygarth",
+      "photographerUrl": "https://www.flickr.com/people/minnellium/",
+      "sourceUrl": "https://www.flickr.com/photos/minnellium/11795346134",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "272937b953",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1063,
+      "hash": "9b7e5e7deb",
       "placeholder": "#080808"
     },
     "category/shop.kids-gifts-and-hobbies.toys": {
@@ -3124,8 +4468,8 @@
     "cuisine/canadian": {
       "file": "source/cuisine/canadian.jpg",
       "alt": {
-        "en": "A burger and fries",
-        "fr": "Un hamburger et des frites"
+        "en": "A steak with mashed potatoes and asparagus",
+        "fr": "Un steak avec purée de pommes de terre et asperges"
       },
       "focal": {
         "x": 0.5,
@@ -3133,23 +4477,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Pub Burger, Elephant Bar",
-      "photographer": "Jim G",
-      "photographerUrl": "https://www.flickr.com/people/jimg944/",
-      "sourceUrl": "https://www.flickr.com/photos/jimg944/16350158664",
+      "title": "Milestone - Top Sirloin with Peppercorn Sauce",
+      "photographer": "Calgary Reviews",
+      "photographerUrl": "https://www.flickr.com/people/calgaryreviews/",
+      "sourceUrl": "https://www.flickr.com/photos/calgaryreviews/5853156226",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 1024,
-      "hash": "320cce137a",
-      "placeholder": "#080808"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "415d6b6cba",
+      "placeholder": "#c8c8b8"
     },
     "cuisine/dessert": {
       "file": "source/cuisine/dessert.jpg",
       "alt": {
-        "en": "A chocolate cake topped with berries",
-        "fr": "Un gâteau au chocolat garni de petits fruits"
+        "en": "Meringue-topped pastries",
+        "fr": "Des pâtisseries garnies de meringue"
       },
       "focal": {
         "x": 0.5,
@@ -3157,17 +4501,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Súkkulaaðikaka",
-      "photographer": "Sivva Eysteins",
-      "photographerUrl": "https://www.flickr.com/people/sivvamyndir/",
-      "sourceUrl": "https://www.flickr.com/photos/sivvamyndir/10060874753",
+      "title": "Presentación de las carolinas",
+      "photographer": "Las Carolinas de Bilbao",
+      "photographerUrl": "https://www.flickr.com/people/132691389@N02/",
+      "sourceUrl": "https://www.flickr.com/photos/132691389@N02/17254634222",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 878,
-      "hash": "b1f5926025",
-      "placeholder": "#080808"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1064,
+      "hash": "937eb41d4b",
+      "placeholder": "#281818"
     },
     "cuisine/ethiopian": {
       "file": "source/cuisine/ethiopian.jpg",
@@ -3268,8 +4612,8 @@
     "cuisine/mexican": {
       "file": "source/cuisine/mexican.jpg",
       "alt": {
-        "en": "Tacos with salsa",
-        "fr": "Des tacos avec de la salsa"
+        "en": "A burrito with salsa and sour cream",
+        "fr": "Un burrito avec salsa et crème sure"
       },
       "focal": {
         "x": 0.5,
@@ -3277,17 +4621,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Lamb Barbacoa Tacos with Mango Salsa and Cilantro Rice",
-      "photographer": "Eugene Kim",
-      "photographerUrl": "https://www.flickr.com/people/eekim/",
-      "sourceUrl": "https://www.flickr.com/photos/eekim/5766348667",
+      "title": "Breakfast burrito",
+      "photographer": "Barry Pousman",
+      "photographerUrl": "https://www.flickr.com/people/castle_life/",
+      "sourceUrl": "https://www.flickr.com/photos/castle_life/6525355619",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "e226a70652",
-      "placeholder": "#c8d8f8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "f459c1acd4",
+      "placeholder": "#d8c8c8"
     },
     "cuisine/middle_eastern": {
       "file": "source/cuisine/middle_eastern.jpg",
@@ -3316,8 +4660,8 @@
     "cuisine/other": {
       "file": "source/cuisine/other.jpg",
       "alt": {
-        "en": "A restaurant dish with rice",
-        "fr": "Un plat de restaurant avec du riz"
+        "en": "Rolls of sushi",
+        "fr": "Des rouleaux de sushi"
       },
       "focal": {
         "x": 0.5,
@@ -3325,17 +4669,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "PB264778",
-      "photographer": "Crosa",
-      "photographerUrl": "https://www.flickr.com/people/facing-my-life/",
-      "sourceUrl": "https://www.flickr.com/photos/facing-my-life/6406627091",
+      "title": "Makizushi",
+      "photographer": "studio tdes",
+      "photographerUrl": "https://www.flickr.com/people/thedailyenglishshow/",
+      "sourceUrl": "https://www.flickr.com/photos/thedailyenglishshow/5498113682",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "83c185c5d6",
-      "placeholder": "#c8c8b8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 900,
+      "hash": "61fdea8459",
+      "placeholder": "#a8b8c8"
     },
     "cuisine/pizza": {
       "file": "source/cuisine/pizza.jpg",
@@ -3364,8 +4708,8 @@
     "cuisine/ramen": {
       "file": "source/cuisine/ramen.jpg",
       "alt": {
-        "en": "A bowl of ramen with egg",
-        "fr": "Un bol de ramen avec un œuf"
+        "en": "A bowl of ramen with a soft egg",
+        "fr": "Un bol de ramen avec un œuf mollet"
       },
       "focal": {
         "x": 0.5,
@@ -3373,23 +4717,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Special Tesugama Ramen",
-      "photographer": "Zanpei",
-      "photographerUrl": "https://www.flickr.com/people/quimix/",
-      "sourceUrl": "https://www.flickr.com/photos/quimix/2143363502",
+      "title": "Prk Bone Raman Taste Ball on Ramen Street TOkyo Station Japan",
+      "photographer": "amanderson2",
+      "photographerUrl": "https://www.flickr.com/people/amanderson/",
+      "sourceUrl": "https://www.flickr.com/photos/amanderson/14687516687",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "885113f49e",
-      "placeholder": "#080818"
+      "downloaded": "2026-10-23",
+      "width": 1200,
+      "height": 1600,
+      "hash": "997b4bc969",
+      "placeholder": "#080808"
     },
     "cuisine/vietnamese": {
       "file": "source/cuisine/vietnamese.jpg",
       "alt": {
-        "en": "A bowl of pho with beef and herbs",
-        "fr": "Un bol de pho au bœuf et aux herbes"
+        "en": "A bowl of pho with herbs and lemon",
+        "fr": "Un bol de pho avec des herbes et du citron"
       },
       "focal": {
         "x": 0.5,
@@ -3397,17 +4741,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Houston-pho-resto",
-      "photographer": "Andrea Nguyen",
-      "photographerUrl": "https://www.flickr.com/people/andrea_nguyen/",
-      "sourceUrl": "https://www.flickr.com/photos/andrea_nguyen/5865567012",
+      "title": "鶏肉のフォー Pho Ga",
+      "photographer": "ume-y",
+      "photographerUrl": "https://www.flickr.com/people/ume-y/",
+      "sourceUrl": "https://www.flickr.com/photos/ume-y/9477774765",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 765,
-      "hash": "06692c4b8e",
-      "placeholder": "#f8f8f8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1067,
+      "hash": "cc0edcc478",
+      "placeholder": "#e8e8e8"
     },
     "demo/listing/bakery.baguette": {
       "file": "source/demo/listing/bakery.baguette.jpg",
@@ -3484,8 +4828,8 @@
     "demo/listing/bakery.pie": {
       "file": "source/demo/listing/bakery.pie.jpg",
       "alt": {
-        "en": "A crumble pie",
-        "fr": "Une tarte crumble"
+        "en": "A golden apple crumble pie",
+        "fr": "Une tarte croustillante aux pommes dorée"
       },
       "focal": {
         "x": 0.5,
@@ -3493,17 +4837,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Petsi Pie's pie",
-      "photographer": "Didriks",
-      "photographerUrl": "https://www.flickr.com/people/dinnerseries/",
-      "sourceUrl": "https://www.flickr.com/photos/dinnerseries/5958651586",
+      "title": "Franken pie",
+      "photographer": "Charles Hutchins",
+      "photographerUrl": "https://www.flickr.com/people/celesteh/",
+      "sourceUrl": "https://www.flickr.com/photos/celesteh/7600326944",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 683,
-      "hash": "9da21ea337",
-      "placeholder": "#a87848"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "daf4a6e816",
+      "placeholder": "#c8a868"
     },
     "demo/listing/bakery.sourdough": {
       "file": "source/demo/listing/bakery.sourdough.jpg",
@@ -3532,8 +4876,8 @@
     "demo/listing/barber.beard": {
       "file": "source/demo/listing/barber.beard.jpg",
       "alt": {
-        "en": "A man with a trimmed beard",
-        "fr": "Un homme à la barbe taillée"
+        "en": "A shaving brush and a razor",
+        "fr": "Un blaireau et un rasoir"
       },
       "focal": {
         "x": 0.5,
@@ -3541,23 +4885,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "IMG_0121",
-      "photographer": "VOCAL-NY (Voices Of Community Activists &amp; Leaders)",
-      "photographerUrl": "https://www.flickr.com/people/vocal-ny/",
-      "sourceUrl": "https://www.flickr.com/photos/vocal-ny/16662217621",
+      "title": "Penhaligon's Castile",
+      "photographer": "Dharion",
+      "photographerUrl": "https://www.flickr.com/people/dharion/",
+      "sourceUrl": "https://www.flickr.com/photos/dharion/3082526623",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
       "height": 683,
-      "hash": "6be51070d3",
+      "hash": "4a85ed0c4a",
       "placeholder": "#080808"
     },
     "demo/listing/barber.cut": {
       "file": "source/demo/listing/barber.cut.jpg",
       "alt": {
-        "en": "A haircut in a barbershop",
-        "fr": "Une coupe de cheveux chez le barbier"
+        "en": "Barber’s scissors on a table",
+        "fr": "Des ciseaux de barbier sur une table"
       },
       "focal": {
         "x": 0.5,
@@ -3565,23 +4909,47 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "sunday hair cut in the mission",
-      "photographer": "irina slutsky",
-      "photographerUrl": "https://www.flickr.com/people/irinaslutsky/",
-      "sourceUrl": "https://www.flickr.com/photos/irinaslutsky/1283030600",
+      "title": "Scissors",
+      "photographer": "Yandle",
+      "photographerUrl": "https://www.flickr.com/people/yandle/",
+      "sourceUrl": "https://www.flickr.com/photos/yandle/3493158311",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 768,
-      "hash": "b2f786a4da",
-      "placeholder": "#282828"
+      "height": 680,
+      "hash": "a69c019f32",
+      "placeholder": "#482808"
+    },
+    "demo/listing/barber.fade": {
+      "file": "source/demo/listing/barber.fade.jpg",
+      "alt": {
+        "en": "Hair-cutting scissors on a white towel",
+        "fr": "Des ciseaux de coiffure sur une serviette blanche"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "IMG_4985",
+      "photographer": "Steven Depolo",
+      "photographerUrl": "https://www.flickr.com/people/stevendepolo/",
+      "sourceUrl": "https://www.flickr.com/photos/stevendepolo/3211399746",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 683,
+      "hash": "651b4648ce",
+      "placeholder": "#f8f8f8"
     },
     "demo/listing/barber.shave": {
       "file": "source/demo/listing/barber.shave.jpg",
       "alt": {
-        "en": "A shave with a razor",
-        "fr": "Un rasage au rasoir"
+        "en": "A shaving brush in a bowl",
+        "fr": "Un blaireau dans un bol"
       },
       "focal": {
         "x": 0.5,
@@ -3589,17 +4957,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Close Shave",
-      "photographer": "SeaDave",
-      "photographerUrl": "https://www.flickr.com/people/seadave/",
-      "sourceUrl": "https://www.flickr.com/photos/seadave/522093670",
+      "title": "badger brush",
+      "photographer": "scott feldstein",
+      "photographerUrl": "https://www.flickr.com/people/scottfeldstein/",
+      "sourceUrl": "https://www.flickr.com/photos/scottfeldstein/358310105",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 768,
-      "hash": "ca8e05d366",
-      "placeholder": "#d8e8e8"
+      "height": 772,
+      "hash": "c0807d16a7",
+      "placeholder": "#b89868"
     },
     "demo/listing/catering.canapes": {
       "file": "source/demo/listing/catering.canapes.jpg",
@@ -3652,8 +5020,8 @@
     "demo/listing/catering.server": {
       "file": "source/demo/listing/catering.server.jpg",
       "alt": {
-        "en": "A banquet room with set tables",
-        "fr": "Une salle de banquet aux tables dressées"
+        "en": "Round tables set for a banquet",
+        "fr": "Des tables rondes dressées pour un banquet"
       },
       "focal": {
         "x": 0.5,
@@ -3661,17 +5029,89 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "5dmk2_-1677-81",
-      "photographer": "Robert Freiberger",
-      "photographerUrl": "https://www.flickr.com/people/robscomputer/",
-      "sourceUrl": "https://www.flickr.com/photos/robscomputer/4744449645",
+      "title": "Grand opening Conference Center 2013 by Cinderella 125",
+      "photographer": "JBLM  MWR",
+      "photographerUrl": "https://www.flickr.com/people/jblmmwr/",
+      "sourceUrl": "https://www.flickr.com/photos/jblmmwr/9735059176",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1064,
+      "hash": "263dd2d099",
+      "placeholder": "#f8f8f8"
+    },
+    "demo/listing/cleaning.deep": {
+      "file": "source/demo/listing/cleaning.deep.jpg",
+      "alt": {
+        "en": "A clean bathroom with a bathtub",
+        "fr": "Une salle de bain propre avec une baignoire"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Suite Novotel Hamburg City",
+      "photographer": "Torsten Maue",
+      "photographerUrl": "https://www.flickr.com/people/erwinrommel/",
+      "sourceUrl": "https://www.flickr.com/photos/erwinrommel/7773067504/",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "77989f9356",
+      "placeholder": "#b8a898"
+    },
+    "demo/listing/cleaning.moveout": {
+      "file": "source/demo/listing/cleaning.moveout.jpg",
+      "alt": {
+        "en": "An empty room with wood floors",
+        "fr": "Une pièce vide au plancher de bois"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Vacant Hair Salon",
+      "photographer": "walknboston",
+      "photographerUrl": "https://www.flickr.com/people/walkn/",
+      "sourceUrl": "https://www.flickr.com/photos/walkn/4811479499",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1020,
+      "height": 1024,
+      "hash": "27c775a6cd",
+      "placeholder": "#d8b898"
+    },
+    "demo/listing/cleaning.standard": {
+      "file": "source/demo/listing/cleaning.standard.jpg",
+      "alt": {
+        "en": "A vacuum cleaner on a carpet",
+        "fr": "Un aspirateur sur un tapis"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "365.294: Vacuum",
+      "photographer": "Jessica Spengler",
+      "photographerUrl": "https://www.flickr.com/people/wordridden/",
+      "sourceUrl": "https://www.flickr.com/photos/wordridden/5336027413",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 683,
-      "hash": "bc89d087e4",
-      "placeholder": "#080808"
+      "height": 768,
+      "hash": "a61c1c4937",
+      "placeholder": "#e8d8d8"
     },
     "demo/listing/coffee.decaf": {
       "file": "source/demo/listing/coffee.decaf.jpg",
@@ -3720,6 +5160,30 @@
       "height": 683,
       "hash": "9476c4d0f4",
       "placeholder": "#181808"
+    },
+    "demo/listing/coffee.house": {
+      "file": "source/demo/listing/coffee.house.jpg",
+      "alt": {
+        "en": "A coffee grinder with whole beans",
+        "fr": "Un moulin à café et des grains entiers"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Bodegón cafetero",
+      "photographer": "Jonathan Rubio H.",
+      "photographerUrl": "https://www.flickr.com/people/jonathanrh/",
+      "sourceUrl": "https://www.flickr.com/photos/jonathanrh/6939218411",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 1024,
+      "hash": "45c26c87ec",
+      "placeholder": "#d8d8d8"
     },
     "demo/listing/coffee.tea": {
       "file": "source/demo/listing/coffee.tea.jpg",
@@ -3772,8 +5236,8 @@
     "demo/listing/events.dj": {
       "file": "source/demo/listing/events.dj.jpg",
       "alt": {
-        "en": "A DJ spinning records",
-        "fr": "Un DJ qui fait tourner des disques"
+        "en": "A turntable’s tonearm on a record",
+        "fr": "Le bras d’une table tournante sur un disque"
       },
       "focal": {
         "x": 0.5,
@@ -3781,23 +5245,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "渚音楽祭2011_大阪_春 NAGISA_029",
-      "photographer": "MIXTRIBE",
-      "photographerUrl": "https://www.flickr.com/people/mixtribe/",
-      "sourceUrl": "https://www.flickr.com/photos/mixtribe/5740018630",
+      "title": "Grado GC on Micro(Seiki) MR-322",
+      "photographer": "Piano Piano!",
+      "photographerUrl": "https://www.flickr.com/people/hansthijs/",
+      "sourceUrl": "https://www.flickr.com/photos/hansthijs/4627551125",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 682,
-      "hash": "604b34ffe1",
-      "placeholder": "#d8d8d8"
+      "height": 683,
+      "hash": "fdc56b0b20",
+      "placeholder": "#181818"
     },
     "demo/listing/events.portrait": {
       "file": "source/demo/listing/events.portrait.jpg",
       "alt": {
-        "en": "An outdoor portrait in warm light",
-        "fr": "Un portrait en extérieur sous une lumière chaude"
+        "en": "A camera with a flash",
+        "fr": "Un appareil photo avec un flash"
       },
       "focal": {
         "x": 0.5,
@@ -3805,23 +5269,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "_DSC0881",
-      "photographer": "herman yahaya",
-      "photographerUrl": "https://www.flickr.com/people/youharman/",
-      "sourceUrl": "https://www.flickr.com/photos/youharman/16433120658",
+      "title": "CES2011 FujiFilm FinePix X100 Prototype Hans-on",
+      "photographer": "246-You",
+      "photographerUrl": "https://www.flickr.com/people/fotois/",
+      "sourceUrl": "https://www.flickr.com/photos/fotois/5338677144",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 683,
-      "hash": "3daebf65ab",
-      "placeholder": "#282808"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "18ad59ab84",
+      "placeholder": "#181818"
     },
     "demo/listing/grocer.apples": {
       "file": "source/demo/listing/grocer.apples.jpg",
       "alt": {
-        "en": "Red apples on the tree",
-        "fr": "Des pommes rouges dans l'arbre"
+        "en": "A crate of red apples",
+        "fr": "Une caisse de pommes rouges"
       },
       "focal": {
         "x": 0.5,
@@ -3829,17 +5293,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Recolta.......",
-      "photographer": "Nicu Farcaş",
-      "photographerUrl": "https://www.flickr.com/people/46486132@N08/",
-      "sourceUrl": "https://www.flickr.com/photos/46486132@N08/5595458190",
+      "title": "'Heart Apples' - Viktualienmkt",
+      "photographer": "MrT HK",
+      "photographerUrl": "https://www.flickr.com/people/mrthk/",
+      "sourceUrl": "https://www.flickr.com/photos/mrthk/15813199258",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "08c6b89674",
-      "placeholder": "#888858"
+      "downloaded": "2026-10-23",
+      "width": 1064,
+      "height": 1600,
+      "hash": "6b1b42ed09",
+      "placeholder": "#080808"
     },
     "demo/listing/grocer.eggs": {
       "file": "source/demo/listing/grocer.eggs.jpg",
@@ -3964,8 +5428,8 @@
     "demo/listing/handyman.assembly": {
       "file": "source/demo/listing/handyman.assembly.jpg",
       "alt": {
-        "en": "Assembling furniture with a drill",
-        "fr": "Assembler un meuble à la perceuse"
+        "en": "An armchair and a side table",
+        "fr": "Un fauteuil et une table d’appoint"
       },
       "focal": {
         "x": 0.5,
@@ -3973,23 +5437,47 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Building shelves",
-      "photographer": "Øystein Vidnes",
-      "photographerUrl": "https://www.flickr.com/people/oysteinv/",
-      "sourceUrl": "https://www.flickr.com/photos/oysteinv/8173362529",
+      "title": "IRR10A_1",
+      "photographer": "Bonsoni.com",
+      "photographerUrl": "https://www.flickr.com/people/bonsoni_uk/",
+      "sourceUrl": "https://www.flickr.com/photos/bonsoni_uk/12682514733",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 768,
-      "hash": "d2218a4290",
-      "placeholder": "#080808"
+      "height": 1024,
+      "hash": "46c3e10b5e",
+      "placeholder": "#e8e8e8"
+    },
+    "demo/listing/handyman.drywall": {
+      "file": "source/demo/listing/handyman.drywall.jpg",
+      "alt": {
+        "en": "A room with new drywall",
+        "fr": "Une pièce aux cloisons sèches neuves"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Office - New Drywall",
+      "photographer": "diana",
+      "photographerUrl": "https://www.flickr.com/people/dianahsieh/",
+      "sourceUrl": "https://www.flickr.com/photos/dianahsieh/8530738311",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 768,
+      "height": 1024,
+      "hash": "ad0fa4b2ab",
+      "placeholder": "#887868"
     },
     "demo/listing/handyman.hourly": {
       "file": "source/demo/listing/handyman.hourly.jpg",
       "alt": {
-        "en": "Two handymen repairing equipment",
-        "fr": "Deux hommes à tout faire qui réparent un appareil"
+        "en": "Hand tools laid out in a row: pliers, screwdrivers and wrenches",
+        "fr": "Des outils à main alignés : pinces, tournevis et clés"
       },
       "focal": {
         "x": 0.5,
@@ -3997,23 +5485,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "DSC_5376.JPG",
-      "photographer": "LVL1 Hackerspace",
-      "photographerUrl": "https://www.flickr.com/people/lvl1/",
-      "sourceUrl": "https://www.flickr.com/photos/lvl1/19195648664",
+      "title": "Lost & Found",
+      "photographer": "Andrew Kuznetsov",
+      "photographerUrl": "https://www.flickr.com/people/-cavin-/",
+      "sourceUrl": "https://www.flickr.com/photos/-cavin-/13763245314",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 2048,
-      "height": 1371,
-      "hash": "6d5980ac23",
-      "placeholder": "#b8a888"
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 683,
+      "hash": "8d9555b1e9",
+      "placeholder": "#d8d8d8"
     },
     "demo/listing/handyman.tv": {
       "file": "source/demo/listing/handyman.tv.jpg",
       "alt": {
-        "en": "A television mounted on a wall",
-        "fr": "Un téléviseur fixé au mur"
+        "en": "A living room with a wall-mounted TV",
+        "fr": "Un salon avec un téléviseur fixé au mur"
       },
       "focal": {
         "x": 0.5,
@@ -4021,23 +5509,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Nerds getting excited.",
-      "photographer": "Meagan Fisher",
-      "photographerUrl": "https://www.flickr.com/people/meaganfisher/",
-      "sourceUrl": "https://www.flickr.com/photos/meaganfisher/9011564356",
+      "title": "Interior by Crown Interiors",
+      "photographer": "Crown Interiors",
+      "photographerUrl": "https://www.flickr.com/people/131464036@N08/",
+      "sourceUrl": "https://www.flickr.com/photos/131464036@N08/17338380809",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 1024,
-      "hash": "29badddd56",
-      "placeholder": "#d8c8a8"
+      "height": 680,
+      "hash": "bd3a76ad90",
+      "placeholder": "#e8d8c8"
     },
     "demo/listing/music.guitar": {
       "file": "source/demo/listing/music.guitar.jpg",
       "alt": {
-        "en": "An acoustic guitar being played",
-        "fr": "Une guitare acoustique dont on joue"
+        "en": "An acoustic guitar",
+        "fr": "Une guitare acoustique"
       },
       "focal": {
         "x": 0.5,
@@ -4045,23 +5533,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Roman Hands",
-      "photographer": "Andy Jou",
-      "photographerUrl": "https://www.flickr.com/people/andyjou/",
-      "sourceUrl": "https://www.flickr.com/photos/andyjou/84248970",
+      "title": "IMG_2040",
+      "photographer": "Dr. Tuxedo",
+      "photographerUrl": "https://www.flickr.com/people/87395707@N04/",
+      "sourceUrl": "https://www.flickr.com/photos/87395707@N04/8069968169",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 768,
-      "hash": "a255dcad0b",
-      "placeholder": "#080808"
+      "height": 780,
+      "hash": "a1b8a75779",
+      "placeholder": "#383838"
     },
     "demo/listing/music.piano30": {
       "file": "source/demo/listing/music.piano30.jpg",
       "alt": {
-        "en": "A pianist at an upright piano",
-        "fr": "Un pianiste à un piano droit"
+        "en": "Piano keys up close",
+        "fr": "Des touches de piano en gros plan"
       },
       "focal": {
         "x": 0.5,
@@ -4069,23 +5557,47 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "John_3_24_0932.jpg",
-      "photographer": "scott anderson",
-      "photographerUrl": "https://www.flickr.com/people/guruscotty/",
-      "sourceUrl": "https://www.flickr.com/photos/guruscotty/3385048633",
+      "title": "Piano Keys",
+      "photographer": "Raquel G. Cabañas",
+      "photographerUrl": "https://www.flickr.com/people/99638106@N04/",
+      "sourceUrl": "https://www.flickr.com/photos/99638106@N04/12027889604",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 680,
-      "hash": "6d3a49a3b5",
+      "downloaded": "2026-10-23",
+      "width": 1067,
+      "height": 1600,
+      "hash": "72c65ff5d9",
       "placeholder": "#080808"
+    },
+    "demo/listing/music.piano60": {
+      "file": "source/demo/listing/music.piano60.jpg",
+      "alt": {
+        "en": "A digital piano keyboard",
+        "fr": "Le clavier d’un piano numérique"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Le piano",
+      "photographer": "Ruurd Zeinstra",
+      "photographerUrl": "https://www.flickr.com/people/ruurdz/",
+      "sourceUrl": "https://www.flickr.com/photos/ruurdz/13946390771",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "b1e6f00317",
+      "placeholder": "#b8b8b8"
     },
     "demo/listing/tutoring.exam": {
       "file": "source/demo/listing/tutoring.exam.jpg",
       "alt": {
-        "en": "Students writing an exam",
-        "fr": "Des étudiants qui écrivent un examen"
+        "en": "A pencil on graph paper",
+        "fr": "Un crayon sur du papier quadrillé"
       },
       "focal": {
         "x": 0.5,
@@ -4093,23 +5605,47 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Fakultatean ikasten hasi aurreko lantegia 2015",
-      "photographer": "HUHEZI (Mondragon Unibertsitatea)",
-      "photographerUrl": "https://www.flickr.com/people/huhezi/",
-      "sourceUrl": "https://www.flickr.com/photos/huhezi/16625269620",
+      "title": "Isolated Pencil on quad-ruled paper / cross section paper",
+      "photographer": "photosteve101",
+      "photographerUrl": "https://www.flickr.com/people/42931449@N07/",
+      "sourceUrl": "https://www.flickr.com/photos/42931449@N07/5418394438",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 683,
-      "hash": "021792c7a3",
-      "placeholder": "#080808"
+      "height": 768,
+      "hash": "5ef3fd8c48",
+      "placeholder": "#d8b898"
+    },
+    "demo/listing/tutoring.math": {
+      "file": "source/demo/listing/tutoring.math.jpg",
+      "alt": {
+        "en": "A calculator and a pencil",
+        "fr": "Une calculatrice et un crayon"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Calculator with a Pencil",
+      "photographer": "Jacob Edward",
+      "photographerUrl": "https://www.flickr.com/people/126131780@N08/",
+      "sourceUrl": "https://www.flickr.com/photos/126131780@N08/14713851228/",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "7fb418cc0a",
+      "placeholder": "#a86818"
     },
     "demo/listing/tutoring.reading": {
       "file": "source/demo/listing/tutoring.reading.jpg",
       "alt": {
-        "en": "Reading a picture book with a child",
-        "fr": "Lire un album illustré avec un enfant"
+        "en": "Shelves of children’s books",
+        "fr": "Des rayons de livres pour enfants"
       },
       "focal": {
         "x": 0.5,
@@ -4117,17 +5653,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Pub Sticker Book",
-      "photographer": "Jason Cartwright",
-      "photographerUrl": "https://www.flickr.com/people/jasoncartwright/",
-      "sourceUrl": "https://www.flickr.com/photos/jasoncartwright/19203430833",
+      "title": "Rayonnage salle monographies",
+      "photographer": "Bibliothèques de l&#x27;Université d&#x27;Artois",
+      "photographerUrl": "https://www.flickr.com/people/bu_arras/",
+      "sourceUrl": "https://www.flickr.com/photos/bu_arras/6978653315",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 760,
-      "hash": "7595a581cc",
-      "placeholder": "#080808"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1065,
+      "hash": "16a5b53aaa",
+      "placeholder": "#483828"
     },
     "demo/listing/wine.beer": {
       "file": "source/demo/listing/wine.beer.jpg",
@@ -4252,8 +5788,8 @@
     "demo/merchant/barber": {
       "file": "source/demo/merchant/barber.jpg",
       "alt": {
-        "en": "Barbers cutting hair in a salon",
-        "fr": "Des barbiers qui coupent les cheveux dans un salon"
+        "en": "A red barber chair against a wall",
+        "fr": "Un fauteuil de barbier rouge contre un mur"
       },
       "focal": {
         "x": 0.5,
@@ -4261,17 +5797,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Das Missverständnis_Florian Köhler, Nikolaus Habjan (c) Nikolaus Habjan",
-      "photographer": "Graz Schauspielhaus",
-      "photographerUrl": "https://www.flickr.com/people/schauspielhaus-graz/",
-      "sourceUrl": "https://www.flickr.com/photos/schauspielhaus-graz/15494004135",
+      "title": "Eastern State Penitentiary",
+      "photographer": "Lulu Hoeller",
+      "photographerUrl": "https://www.flickr.com/people/toaireisdivine/",
+      "sourceUrl": "https://www.flickr.com/photos/toaireisdivine/7783442180",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "0e60e86d66",
-      "placeholder": "#f8f8f8"
+      "downloaded": "2026-10-23",
+      "width": 767,
+      "height": 1024,
+      "hash": "51d13e56d7",
+      "placeholder": "#685858"
     },
     "demo/merchant/catering": {
       "file": "source/demo/merchant/catering.jpg",
@@ -4297,11 +5833,11 @@
       "hash": "4e3bc71e70",
       "placeholder": "#a8a898"
     },
-    "demo/merchant/coffee": {
-      "file": "source/demo/merchant/coffee.jpg",
+    "demo/merchant/cleaning": {
+      "file": "source/demo/merchant/cleaning.jpg",
       "alt": {
-        "en": "A barista making espresso",
-        "fr": "Un barista qui prépare un espresso"
+        "en": "A spray mop",
+        "fr": "Une vadrouille à vaporisateur"
       },
       "focal": {
         "x": 0.5,
@@ -4309,17 +5845,41 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "85/365 Expresso",
-      "photographer": "Mike Poresky",
-      "photographerUrl": "https://www.flickr.com/people/mikeporesky/",
-      "sourceUrl": "https://www.flickr.com/photos/mikeporesky/5325468034",
+      "title": "Reveal Refillable Bottle",
+      "photographer": "Rubbermaid Products",
+      "photographerUrl": "https://www.flickr.com/people/rubbermaid/",
+      "sourceUrl": "https://www.flickr.com/photos/rubbermaid/4733180242",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 680,
-      "hash": "9ce770fe48",
-      "placeholder": "#080808"
+      "downloaded": "2026-10-23",
+      "width": 767,
+      "height": 1024,
+      "hash": "74bd3f4dbf",
+      "placeholder": "#f8f8f8"
+    },
+    "demo/merchant/coffee": {
+      "file": "source/demo/merchant/coffee.jpg",
+      "alt": {
+        "en": "A cup of black coffee",
+        "fr": "Une tasse de café noir"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "DSC01489",
+      "photographer": "Daniel Garrido",
+      "photographerUrl": "https://www.flickr.com/people/iloveui/",
+      "sourceUrl": "https://www.flickr.com/photos/iloveui/13936899250",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1065,
+      "hash": "65881dd5a9",
+      "placeholder": "#c8b8a8"
     },
     "demo/merchant/events": {
       "file": "source/demo/merchant/events.jpg",
@@ -4372,8 +5932,8 @@
     "demo/merchant/handyman": {
       "file": "source/demo/merchant/handyman.jpg",
       "alt": {
-        "en": "A handyman drilling at a workbench",
-        "fr": "Un homme à tout faire qui perce à l'établi"
+        "en": "A hammer up close",
+        "fr": "Un marteau en gros plan"
       },
       "focal": {
         "x": 0.5,
@@ -4381,23 +5941,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "I think the drill might be easier",
-      "photographer": "Phil and Pam Gradwell (to be)",
-      "photographerUrl": "https://www.flickr.com/people/philandpam/",
-      "sourceUrl": "https://www.flickr.com/photos/philandpam/2159441291",
+      "title": "IMGP2730.jpg",
+      "photographer": "DaveBleasdale",
+      "photographerUrl": "https://www.flickr.com/people/sidelong/",
+      "sourceUrl": "https://www.flickr.com/photos/sidelong/14458677528",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 768,
-      "height": 1024,
-      "hash": "cbdd403fe4",
-      "placeholder": "#080808"
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 678,
+      "hash": "f12fc72ceb",
+      "placeholder": "#282828"
     },
     "demo/merchant/music": {
       "file": "source/demo/merchant/music.jpg",
       "alt": {
-        "en": "A piano student at a grand piano",
-        "fr": "Une élève au piano à queue"
+        "en": "A double bass in a studio",
+        "fr": "Une contrebasse dans un studio"
       },
       "focal": {
         "x": 0.5,
@@ -4405,23 +5965,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Haciendo como si me acordase de algo",
-      "photographer": "chispita_666",
-      "photographerUrl": "https://www.flickr.com/people/gusilu/",
-      "sourceUrl": "https://www.flickr.com/photos/gusilu/409475020",
+      "title": "Cello",
+      "photographer": "Thomas Quine",
+      "photographerUrl": "https://www.flickr.com/people/quinet/",
+      "sourceUrl": "https://www.flickr.com/photos/quinet/8517116881",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "93dff0d967",
-      "placeholder": "#080808"
+      "downloaded": "2026-10-23",
+      "width": 768,
+      "height": 1024,
+      "hash": "3e16827d37",
+      "placeholder": "#c8a898"
     },
     "demo/merchant/tutoring": {
       "file": "source/demo/merchant/tutoring.jpg",
       "alt": {
-        "en": "A tutor helping a student with homework",
-        "fr": "Un tuteur qui aide une élève avec ses devoirs"
+        "en": "A roll of coloured pencils",
+        "fr": "Une trousse de crayons de couleur"
       },
       "focal": {
         "x": 0.5,
@@ -4429,23 +5989,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Early College Initiative Students Welcomed to College of DuPage 2015 9",
-      "photographer": "COD Newsroom",
-      "photographerUrl": "https://www.flickr.com/people/codnewsroom/",
-      "sourceUrl": "https://www.flickr.com/photos/codnewsroom/20897458313",
+      "title": "Not a Christmas present.",
+      "photographer": "Rich Bowen",
+      "photographerUrl": "https://www.flickr.com/people/rbowen/",
+      "sourceUrl": "https://www.flickr.com/photos/rbowen/6560280905",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 690,
-      "hash": "02f5c7a37a",
-      "placeholder": "#381808"
+      "height": 765,
+      "hash": "8b69079e88",
+      "placeholder": "#f8f8f8"
     },
     "demo/merchant/wine": {
       "file": "source/demo/merchant/wine.jpg",
       "alt": {
-        "en": "A wine shop with shelves of bottles",
-        "fr": "Un magasin de vin avec des étagères de bouteilles"
+        "en": "Wooden barrels in a cellar",
+        "fr": "Des barriques de bois dans un cellier"
       },
       "focal": {
         "x": 0.5,
@@ -4453,16 +6013,16 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Olio bistro - market - caterer in Richmond, VA",
-      "photographer": "Eli Christman",
-      "photographerUrl": "https://www.flickr.com/people/gammaman/",
-      "sourceUrl": "https://www.flickr.com/photos/gammaman/8233214733",
+      "title": "DSC07147",
+      "photographer": "Loxy!!",
+      "photographerUrl": "https://www.flickr.com/people/loxy/",
+      "sourceUrl": "https://www.flickr.com/photos/loxy/21201062544",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 683,
-      "hash": "1922f89a58",
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1067,
+      "hash": "c9f4c403aa",
       "placeholder": "#080808"
     },
     "empty/cart": {
@@ -4540,8 +6100,8 @@
     "empty/not-found": {
       "file": "source/empty/not-found.jpg",
       "alt": {
-        "en": "An empty road under a wide sky",
-        "fr": "Une route déserte sous un grand ciel"
+        "en": "A snowy country road with a curve sign",
+        "fr": "Une route de campagne enneigée et un panneau de courbe"
       },
       "focal": {
         "x": 0.5,
@@ -4549,17 +6109,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "A road in Shark Valley",
-      "photographer": "Milan Boers",
-      "photographerUrl": "https://www.flickr.com/people/milanboers/",
-      "sourceUrl": "https://www.flickr.com/photos/milanboers/3507454046",
+      "title": "DSC_2443",
+      "photographer": "Fort George G. Meade Public Affairs Office",
+      "photographerUrl": "https://www.flickr.com/people/ftmeade/",
+      "sourceUrl": "https://www.flickr.com/photos/ftmeade/16245714886",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "8b287f2fa2",
-      "placeholder": "#c8d8e8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1068,
+      "hash": "968c3774ee",
+      "placeholder": "#98a8a8"
     },
     "empty/proof-photo": {
       "file": "source/empty/proof-photo.jpg",
@@ -4609,11 +6169,11 @@
       "hash": "1be08c02af",
       "placeholder": "#787878"
     },
-    "hero/courier": {
-      "file": "source/hero/courier.jpg",
+    "empty/signed-out": {
+      "file": "source/empty/signed-out.jpg",
       "alt": {
-        "en": "A cyclist carrying a delivery through the city",
-        "fr": "Un cycliste qui transporte une livraison en ville"
+        "en": "A set of keys",
+        "fr": "Un trousseau de clés"
       },
       "focal": {
         "x": 0.5,
@@ -4621,17 +6181,41 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Post by Mail",
-      "photographer": "Amy Kellogg",
-      "photographerUrl": "https://www.flickr.com/people/akellogg/",
-      "sourceUrl": "https://www.flickr.com/photos/akellogg/356902035",
+      "title": "Chaveiro do escritório",
+      "photographer": "Daniel Bender",
+      "photographerUrl": "https://www.flickr.com/people/17778769@N00/",
+      "sourceUrl": "https://www.flickr.com/photos/17778769@N00/4642423752",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 768,
+      "downloaded": "2026-10-23",
+      "width": 1024,
+      "height": 768,
+      "hash": "3be9eb76ae",
+      "placeholder": "#c8c8c8"
+    },
+    "hero/courier": {
+      "file": "source/hero/courier.jpg",
+      "alt": {
+        "en": "Parcels packed in the back of a vehicle",
+        "fr": "Des colis chargés à l’arrière d’un véhicule"
+      },
+      "focal": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "site": "openimages",
+      "source": "flickr",
+      "title": "Discovery Full #EpicFireworks",
+      "photographer": "Epic Fireworks",
+      "photographerUrl": "https://www.flickr.com/people/epicfireworks/",
+      "sourceUrl": "https://www.flickr.com/photos/epicfireworks/20924171716",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "downloaded": "2026-10-23",
+      "width": 1024,
       "height": 1024,
-      "hash": "32edeae839",
-      "placeholder": "#080808"
+      "hash": "b6ab80f83a",
+      "placeholder": "#f8f8f8"
     },
     "hero/home-main": {
       "file": "source/hero/home-main.jpg",
@@ -4660,8 +6244,8 @@
     "hero/home-side-a": {
       "file": "source/hero/home-side-a.jpg",
       "alt": {
-        "en": "Crusty loaves of bread on a bakery shelf",
-        "fr": "Des miches de pain croustillantes sur une étagère de boulangerie"
+        "en": "Croissants and pastries on a stand",
+        "fr": "Des croissants et des pâtisseries sur un présentoir"
       },
       "focal": {
         "x": 0.5,
@@ -4669,17 +6253,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "White Chocolate Orange Royal Bread",
-      "photographer": "Gloria Oliver",
-      "photographerUrl": "https://www.flickr.com/people/gloriaoliver/",
-      "sourceUrl": "https://www.flickr.com/photos/gloriaoliver/7700578180",
+      "title": "Iceland Adventure 2014",
+      "photographer": "Sidney SL Lam",
+      "photographerUrl": "https://www.flickr.com/people/24329615@N07/",
+      "sourceUrl": "https://www.flickr.com/photos/24329615@N07/16432886156",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 765,
-      "hash": "6e07c5b0a6",
-      "placeholder": "#481808"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1067,
+      "hash": "92de2a6245",
+      "placeholder": "#282828"
     },
     "hero/home-side-b": {
       "file": "source/hero/home-side-b.jpg",
@@ -4693,23 +6277,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "DSCF7197",
-      "photographer": "thekirbster",
-      "photographerUrl": "https://www.flickr.com/people/kirbyurner/",
-      "sourceUrl": "https://www.flickr.com/photos/kirbyurner/16975169267",
+      "title": "Living room",
+      "photographer": "Iain and Sarah",
+      "photographerUrl": "https://www.flickr.com/people/sarahandiain/",
+      "sourceUrl": "https://www.flickr.com/photos/sarahandiain/14851508965",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "a499c958ab",
-      "placeholder": "#f8f8f8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "f8a61a95a6",
+      "placeholder": "#080808"
     },
     "hero/register": {
       "file": "source/hero/register.jpg",
       "alt": {
-        "en": "A shop owner behind the counter",
-        "fr": "Un commerçant derrière son comptoir"
+        "en": "A small shop’s counter and stools",
+        "fr": "Le comptoir et les tabourets d’un petit commerce"
       },
       "focal": {
         "x": 0.5,
@@ -4717,23 +6301,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "A Happy Merchant",
-      "photographer": "Muhammad Ghouri",
-      "photographerUrl": "https://www.flickr.com/people/etobicokesouth/",
-      "sourceUrl": "https://www.flickr.com/photos/etobicokesouth/92926389",
+      "title": "Courtyard lobby bar",
+      "photographer": "Marriott Sandestin",
+      "photographerUrl": "https://www.flickr.com/people/marriottsandestin/",
+      "sourceUrl": "https://www.flickr.com/photos/marriottsandestin/3682187364",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
+      "downloaded": "2026-10-23",
       "width": 1024,
-      "height": 768,
-      "hash": "870185c7e9",
-      "placeholder": "#786848"
+      "height": 681,
+      "hash": "479678871d",
+      "placeholder": "#282828"
     },
     "hero/sign-in": {
       "file": "source/hero/sign-in.jpg",
       "alt": {
-        "en": "The front door of a house",
-        "fr": "La porte d'entrée d'une maison"
+        "en": "A picnic table on a lawn by a river",
+        "fr": "Une table de pique-nique sur une pelouse au bord d’une rivière"
       },
       "focal": {
         "x": 0.5,
@@ -4741,23 +6325,23 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "P8087794",
-      "photographer": "Larry Wilder",
-      "photographerUrl": "https://www.flickr.com/people/lcwilder/",
-      "sourceUrl": "https://www.flickr.com/photos/lcwilder/3802402330/",
+      "title": "North Umpqua River, Douglas County, Oregon",
+      "photographer": "Rick Obst",
+      "photographerUrl": "https://www.flickr.com/people/discoveroregon/",
+      "sourceUrl": "https://www.flickr.com/photos/discoveroregon/16192917334",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "f2847b5bed",
-      "placeholder": "#f8f8f8"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1200,
+      "hash": "ad8c6de900",
+      "placeholder": "#98f8f8"
     },
     "sell/kitchen": {
       "file": "source/sell/kitchen.jpg",
       "alt": {
-        "en": "A cook preparing food in a restaurant kitchen",
-        "fr": "Un cuisinier qui prépare des plats dans une cuisine de restaurant"
+        "en": "A range with its oven doors open",
+        "fr": "Une cuisinière aux portes de four ouvertes"
       },
       "focal": {
         "x": 0.5,
@@ -4765,17 +6349,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "IMG_1389",
-      "photographer": "Sodexo USA",
-      "photographerUrl": "https://www.flickr.com/people/sodexousa/",
-      "sourceUrl": "https://www.flickr.com/photos/sodexousa/5781627846",
+      "title": "Le nouveau gaz à four électrique",
+      "photographer": "Stephane Mignon",
+      "photographerUrl": "https://www.flickr.com/people/topsteph53/",
+      "sourceUrl": "https://www.flickr.com/photos/topsteph53/9380009862",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 682,
-      "hash": "06c4b5a9da",
-      "placeholder": "#080808"
+      "downloaded": "2026-10-23",
+      "width": 1600,
+      "height": 1068,
+      "hash": "9c5c4edd5a",
+      "placeholder": "#181818"
     },
     "sell/provider": {
       "file": "source/sell/provider.jpg",
@@ -4804,8 +6388,8 @@
     "sell/seller": {
       "file": "source/sell/seller.jpg",
       "alt": {
-        "en": "A shopkeeper in front of stocked shelves",
-        "fr": "Un commerçant devant des étagères bien garnies"
+        "en": "Shelves of jars in a small shop",
+        "fr": "Des tablettes de bocaux dans un petit commerce"
       },
       "focal": {
         "x": 0.5,
@@ -4813,17 +6397,17 @@
       },
       "site": "openimages",
       "source": "flickr",
-      "title": "Pharmacist",
-      "photographer": "John Pavelka",
-      "photographerUrl": "https://www.flickr.com/people/28705377@N04/",
-      "sourceUrl": "https://www.flickr.com/photos/28705377@N04/3828302680",
+      "title": "Snake oil for sale",
+      "photographer": "Scott Edmunds",
+      "photographerUrl": "https://www.flickr.com/people/30557460@N05/",
+      "sourceUrl": "https://www.flickr.com/photos/30557460@N05/8637733898",
       "licence": "CC BY 2.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
-      "downloaded": "2026-10-20",
-      "width": 1024,
-      "height": 768,
-      "hash": "4e2ef03a83",
-      "placeholder": "#181818"
+      "downloaded": "2026-10-23",
+      "width": 768,
+      "height": 1024,
+      "hash": "117c6f67d5",
+      "placeholder": "#f8f8f8"
     }
   }
 }

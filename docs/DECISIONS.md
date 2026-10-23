@@ -10916,6 +10916,127 @@ and dusk still build (and pass the contrast gate) until every screen has moved.
 pages still using their own chip/tab/price markup (e.g. the Studio catalogue's step tabs) move with their page; the
 mobile kit is S-169.
 
+## 2026-10-23 — S-181/S-182 Photography, the image pipeline and screenshot fidelity
+**S-182, the hydration bug (#418).** It came from two places, both fixed in the consumer:
+- *The time zone.* `regionsQuery` configured the platform time zone inside its `queryFn`, which only runs where the
+  query is fetched (the server). The browser received the data hydrated and kept UTC, so "Order by 5:20 p.m." (`/shop`,
+  `/shop/<department>`) and "Next available" (provider page) were written in two zones. The root now configures the
+  platform zone from the hydrated region data before anything renders.
+- *The clock.* A render clock (`lib/renderClock.tsx`): the root loader takes `Date.now()` once on the server
+  (`renderedAt`, hydrated with the loader data) and `ago()`, next-available, order dates, the booking calendar's
+  "today" and the review edit window read it instead of the system clock. Navigations in the browser run the loader
+  again, so the clock moves on with the visit. (Chosen over client-only rendering: the text stays in the server HTML.)
+- *The proof.* `shots/hydration.spec.ts` (`make ui-hydration`) opens every consumer route of `routes.ts` at 1440 and
+  390 in English and French and fails on any hydration warning or React #418–#425; every `make ui-shots` run fails a
+  consumer route with one too. 48/48 routes pass (before the fix: `/shop`, `/shop/bakery`, the provider page failed).
+
+**S-182, screenshot fidelity.** `make ui-shots` no longer draws SVG stand-ins (`shots/photos.mjs` removed):
+fixture listings name photo library slots and `shots/photos.ts` serves the library's source files — the bytes
+`make demo-data` uploads. Stock photos were already the consumer build's real `/photos/` variants. Products of the
+fixtures were renamed to the demo plan's (eggs, croissants, baguette…) so the photo matches the name.
+
+**S-181, the image set.**
+- *Source.* Only Open Images V7 via its CVDF mirror is reachable (Unsplash, Pexels, Openverse, Flickr, Wikimedia are
+  blocked). Its files are mostly 1024 px, but ~1,400 of 1.9 M are the originals; they were found by listing the bucket
+  with sizes and their labels/metadata streamed from Google's CSVs (docs/runbooks/photos.md § 9). Everything is
+  CC BY 2.0 (asserted on import), attributed in `photos.json` (title, photographer, profile, Flickr page, deed, date).
+- *Picks.* 155 photos picked by eye from contact sheets (labels Person/Text/Flag/Logo/Drawing/… excluded up front),
+  product and place shots preferred: 66 fill slots that had none, 89 replace existing ones (the US-flag sign-in hero, the
+  hero/banner set, cuisines, the demo listings). The library has 267 photos for 270 slots; **all 162 leaf categories
+  have their own photo except three that show the designed fallback by choice** (`slots.config.json` `designed`:
+  insurance broker — nothing that is not a cliché; tobacco & vape and cannabis accessories — nothing that would not
+  advertise an age-restricted product). Designed slots have no fallback chain, so they never borrow their group's
+  photo. No photo is used for two slots (`manifest.test.ts`, and the demo test for the uploads).
+- *Size.* Originals saved at ≤ 1600 px long side, JPEG q80; 1024 px files kept as they are. `source/` grew from 23 MB
+  to 35 MB (+12 MB). Originals are not in git; they are refetched by id from the mirror.
+- *Not met everywhere: ≥ 1200 px.* Only 56 of 267 photos are ≥ 1200 px on the long edge (the originals the mirror has
+  for these subjects); the rest are 1024 px. The pipeline therefore never enlarges: variants exist only up to the
+  source's width, and `Scene` caps the displayed picture at its widest variant (`--nl-scene-max`, set from data like
+  Photo's placeholder colour) so a wider box frames it on the photo well. The build lists banner/hero photos under 1440
+  px: hero/courier, hero/home-main, hero/register (all shown far narrower than 1024 px). Replacing the 1024 px files with
+  ≥ 2000 px stock is the follow-up once a photo host is reachable (runbook § 3–5).
+- *People.* New picks avoid identifiable people. Some older library photos (S-151 era) still show people (workwear,
+  paint, sell/provider and a few service categories); flagged, not replaced in this story.
+- *Pipeline.* Already in place (S-151): AVIF/WebP/JPEG srcset at 320–1440, focal-point crops, content-hashed names.
+  Added: `credits.json` written next to the variants (machine-readable attribution, linked from `/credits`), the banner
+  width report, the `designed` slots, the never-upscale cap.
+- *Fallback.* `features/art/PhotoWell.tsx`: grey well, dashed inner line, the category icon (Phosphor light), per
+  design/revamp/a.html. It replaces the illustrated `Art` scenes everywhere (Art.tsx removed): listing cards without
+  a photo (search, shop tiles, "more from"), cart/checkout/menu thumbnails and slots without a photo. Listings no
+  longer fall back to the category's stock photo — that is what repeated one image up to six times on a page.
+  `pnpm lint:tokens` now fails on `fallback={<Scene` / `mark={<Scene` in the consumer. Scene's `tone` prop is kept but
+  no longer drawn (75 callers; removing it is churn for the screen stories).
+- *Demo data.* Every demo business and listing has its own library photo (new test); a product without one stops the
+  run instead of uploading a drawn picture of its name; the presenter's live-listing pictures are library photos. The
+  drawn logo stays only as the path for a business without a photo (none in the plan). No server code changed.
+- *Studio.* "Photo tips" (light, background, size; en + fr-CA) beside the product and service uploaders.
+- Stayed out of `web/packages/tokens` and `web/packages/ui` (S-167/S-168 in flight): the cap and the well live in the
+  consumer's `features/art`.
+
+## 2026-10-23 — S-169 Mobile component kit on tokens v2
+
+**The kit.** `mobile/packages/mobile-kit/src/ui/kit` (exported from `@northline/mobile-kit`) holds the phone apps' components
+on tokens v2 (Plainsight, the phone frames of `design/revamp/a.html`), shared by the consumer and courier apps:
+- Actions and choices: `Button` (`primary | secondary | tertiary | destructive | dark`), `IconButton`, `UnderlineTabs`
+  (with counts), `Segmented` (joined boxes; `stack` for long labels, `fill`, `role="tab"` for modes), `FilterChip` (square;
+  applied = ink edge on the selected tint with ✓, removable ×, named "Remove filter: …"), `ChoiceTiles` (one choice,
+  solid ink), `OptionCard` (radio mark, 2 pt ink edge), `Checkbox`, `Switch`, `Mark`.
+- Commerce: `PhotoWell` (1:1 well, 12 pt inset, product contained; dashed fallback with the category icon and the shop),
+  `ProductCard`, `ServiceCard`, `Price`, `Rating`/`Stars`, `DealBadge`, `StatusTag`, `CountBadge`, `QuantityStepper`,
+  `MetaLine`; formatters `formatPrice` / `formatUnitPrice` / `unitCents` / `formatTime` / `formatTimeRange` /
+  `formatDateRange`, the same rules and strings as the web's `@northline/ui` (`$8.50` / `8,50 $`; "6–9 p.m."). The kit
+  falls back to "start – end" where an engine has no `Intl.DateTimeFormat#formatRange` (older Hermes).
+- Inputs: `TextField`, `SearchBar` (the department scope opens a bottom sheet of scopes; without a field the whole bar
+  is one `search` button that opens the search screen).
+- Feedback: `BottomSheet` (RN `Modal`, slide, grabber, Close), `ToastProvider`/`useToast`/`Toast` (ink, announced,
+  4 s), `EmptyState` (well grey, icon), `Skeleton`/`CardSkeleton`.
+- Navigation: `AppHeader` (44 pt Back, title, actions, optional large title) and `BottomTabBar` (current tab in ink with
+  the filled icon and a 2 pt ink bar on top; the cart count in the round commerce badge). Expo Router's js-tabs and
+  Stack stay the navigators; the kit draws them.
+- Text roles `textStyles` (page title 24, section 18, sub 16, card title 13.5, body 14, label 13, meta 12, caps 11,
+  prices 15/17/28), `TYPE`, `SIZE`, `LINE`, `CAP`, `slopFor`.
+- Its own words (labels for screen readers, the gallery) live in `kit/messages.ts` (en + fr-CA, a test checks keys and
+  parameters); `KitProvider` gives them the app's locale (both apps mount it inside their I18nProvider).
+
+**Decisions the spec didn't make.**
+- **Round stays round:** tokens v2 already emits `radius.round` (999); S-167 mapped `radius.pill` to 3 pt. Circles
+  (avatars, radio dots, switches, the cart count, status dots, the empty-state disc) now use `radius.round`; every other
+  `radius.pill` in the apps became `radius.control` (they were controls), progress tracks `radius.status`. Both apps'
+  conventions tests now refuse `radius.pill`. No token change, so web/packages/tokens is untouched.
+- **Button heights on a phone:** `md` is drawn 44 pt (the project's target rule over the mockup's 38), `lg` 46 (the
+  mockup's sticky bar), `sm` 32 drawn with a vertical hit slop to 44 (`slopFor`), as the web's 38 + 44 hit area.
+- **Dynamic Type:** sizes are points and scale with the system setting (React Native's default); nothing has a fixed
+  text height (controls use `minHeight` and wrap). One-line labels inside a bar cap growth (`CAP`: tab labels 1.3,
+  badges 1.2, control labels 1.6).
+- **The apps' primitives became wrappers:** consumer `src/ui/{primitives,screen,states,TabBar}.tsx`, the shop/services
+  `Chip` and `Stepper`, and courier `src/components/ui.tsx` + its tab bar keep their props and draw with the kit, so
+  every existing screen picked up the new look without page changes. Tone mapping: `accent` → primary (one action
+  blue), `ghost` → tertiary, `danger` → destructive (red, solid: cancel, remove, delete, refuse, sign out everywhere).
+  Account's plain Sign out is not destructive, so it moved from `danger` to `secondary` (the one page edit).
+  The round 44 pt buttons (Back, Share, the bell) are square `IconButton`s with the control edge; Cards are flat white
+  panels with the hairline (no shadow); sunken panels and empty states are the well grey; tags take the status
+  colours; the consumer's illustrated empty-state scenes are replaced by the kit's icon empty state (an icon chosen from
+  the `art` / `draw` words the screens already pass); Account's language switch is the kit `Segmented`.
+- **The kit's lint:** `__tests__/kitRules.test.ts` is the native `lint:tokens`: no raw colour, font size, spacing
+  (beyond 0–2 pt nudges), corner radius or line height, and no `radius.pill`, in `src/ui/kit`. The apps' shared chrome
+  files are checked for raw font sizes and the retired display face.
+- **Gallery:** `KitGallery` (every component and state, an English/Français switch, fixed sample instants in UTC so the
+  pictures don't drift) on `/dev/gallery` in both apps, shown when `__DEV__` (a development build on Metro) or the
+  fixture build; any other build redirects home. It is not a design screen, so it is not in `src/screens.ts`.
+- **Screenshots:** `make mobile-shots` now photographs the gallery (English, the sheet open, French) in both apps. The
+  courier run had been broken since S-159 (the "Sign in" name matched two buttons and the email form needs a
+  password); it now signs in with the fixture's browser passkey and completes all 19 steps.
+
+**Not done here (S-178 consumer screens, S-179 courier screens):** page layouts and page-level markup — the home hero,
+results with the filter rail, product buy box, checkout (still its own blue radio cards and numbered steps), provider,
+orders and the courier's run and stop screens — are unchanged apart from what the primitives draw; screens still format
+money with their own `formatMoney`/`money` (same `$8.50` string) and should move to `Price`/`formatPrice` with their
+page; `ProductCard`/`ServiceCard`/`PhotoWell` are not yet used by the screens (their own `Thumb` and cards stay until
+the page stories). Stock photos don't load in the web shots (the fixture build points at the consumer web's `/photos/`,
+which `shots.mjs` doesn't serve), so photo slots show their placeholder colour in the pictures, before and after; that is
+S-181/S-182's area. Nothing was run on a real device or simulator (no macOS or Android SDK here): native rendering of
+`Modal`, dashed borders and `fontVariant` was checked only in react-native-web and Jest.
+
 ## 2026-10-23 — S-174 Studio shell and dashboard
 
 Built to `design/revamp/a.html` screens 7 (Studio dashboard, 1280 and 390) and 8 (the Studio chrome of the orders
