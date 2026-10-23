@@ -134,3 +134,39 @@ button.bo-kpi:hover { border-color: var(--color-border-strong); box-shadow: var(
 .bo-savebar-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-left: auto; }
 @media (max-width: 599.98px) { .bo-savebar-actions { width: 100%; } .bo-savebar-actions > * { flex: 1 1 0; } }
 .bo-savebar-static { position: static; border-radius: var(--radius-panel); box-shadow: none; }
+
+/* Record pages (S-177; BackOffice.tsx RecordHeader / RecordLayout / ActionPanel / RecordTabs): a seller, an application,
+   a dispute, an order, a case. The head: back link, h1 + status tag, key facts as label · value pairs. */
+.bo-rec-head { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.bo-rec-head > .bo-head { margin-bottom: 0; }
+.bo-rec-back { font-size: var(--type-label); }
+.bo-rec-back a { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--size-touch); color: var(--color-link); font-weight: var(--weight-semibold); text-decoration: none; }
+.bo-rec-back a:hover { text-decoration: underline; }
+.bo-rec-titlerow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0; }
+.bo-rec-facts { margin: var(--space-2) 0 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); font-size: var(--type-label); }
+.bo-rec-fact { display: flex; gap: var(--space-1-5); min-width: 0; }
+.bo-rec-fact dt { color: var(--color-text-muted); }
+.bo-rec-fact dd { margin: 0; font-weight: var(--weight-semibold); overflow-wrap: anywhere; min-width: 0; }
+/* the body: main column + the 320px action panel (sticky), stacked under 880px of room */
+.bo-rec-wrap { container-type: inline-size; min-width: 0; }
+.bo-rec { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.bo-rec-main { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.bo-rec-aside { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+@container (min-width: 880px) {
+  .bo-rec[data-aside] { grid-template-columns: minmax(0, 1fr) 320px; }
+  .bo-rec-aside { position: sticky; top: calc(var(--nl-shell-top, 0px) + var(--space-4)); }
+}
+.bo-actpanel-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.bo-actpanel-item { display: flex; flex-direction: column; gap: var(--space-1); }
+.bo-actpanel-item .btn-block { margin-top: 0; }
+.bo-actpanel-desc { margin: 0; font-size: var(--type-meta); color: var(--color-text-muted); line-height: var(--leading-normal); }
+/* tabs over one white panel */
+.bo-rec-tabs { display: flex; flex-direction: column; min-width: 0; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); }
+.bo-rec-tabs > .nl-utabs { padding: 0 var(--space-2); }
+.bo-rec-panel { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.bo-rec-panel:focus-visible { outline-offset: -2px; }
+.bo-rec-history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; font-size: var(--type-label); }
+.bo-rec-history li { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--color-border); overflow-wrap: anywhere; }
+.bo-rec-history li:first-child { border-top: 0; padding-top: 0; }
+.bo-rec-when { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 419.98px) { .bo-rec-history li { grid-template-columns: minmax(0, 1fr); gap: 2px; } }

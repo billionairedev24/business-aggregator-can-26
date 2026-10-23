@@ -4,6 +4,13 @@ import { defineMessages } from '@northline/ui';
 export const useOrdersT = defineMessages({
   en: {
     title: 'Orders & bookings',
+    tab_attention: 'Needs attention', tab_live: 'Live', tab_escrow: 'Escrow > 48 h', tab_late: 'Late', tab_failed: 'Delivery failed', tab_all: 'All',
+    typeFilter: 'Type', ty_all: 'All', ty_goods: 'Shop', ty_food: 'Food', ty_service: 'Services',
+    sub2: '{scope} · {week} this week · {attention} need attention',
+    close: 'Close', back: '← All orders', f_who: 'Customer → seller', f_amount: 'Amount', f_market: 'Market', f_kind: 'Type',
+    tabsRecord: 'Order record', tabHistory: 'Cancellations and returns', actions: 'Actions', notFound: 'No order or booking has that reference.',
+    noAction: 'Your role can’t change orders here.', bookingNote: 'A booking’s money is decided on Disputes & refunds.', openDisputes: 'Open Disputes & refunds', cancelOrderDots: 'Cancel order…',
+    cancelDesc: 'Cancels every open line and refunds the customer',
     sub: '{week} this week · {attention} need attention',
     kpis: 'Right now', k_attention: 'Needs attention', k_live: 'Live', k_escrow: 'Escrow > 48 h', k_late: 'Late',
     secOrder: 'Order', secIssue: 'Needs attention',
@@ -61,6 +68,13 @@ export const useOrdersT = defineMessages({
   },
   fr: {
     title: 'Commandes et réservations',
+    tab_attention: 'À traiter', tab_live: 'En cours', tab_escrow: 'Fiducie > 48 h', tab_late: 'En retard', tab_failed: 'Livraison manquée', tab_all: 'Tout',
+    typeFilter: 'Type', ty_all: 'Tous', ty_goods: 'Boutique', ty_food: 'Repas', ty_service: 'Services',
+    sub2: '{scope} · {week} cette semaine · {attention} à traiter',
+    close: 'Fermer', back: '← Toutes les commandes', f_who: 'Client → vendeur', f_amount: 'Montant', f_market: 'Marché', f_kind: 'Type',
+    tabsRecord: 'Dossier de la commande', tabHistory: 'Annulations et retours', actions: 'Actions', notFound: 'Aucune commande ni réservation n’a cette référence.',
+    noAction: 'Votre rôle ne peut pas modifier les commandes ici.', bookingNote: 'L’argent d’une réservation se décide dans Litiges et remboursements.', openDisputes: 'Ouvrir Litiges et remboursements', cancelOrderDots: 'Annuler la commande…',
+    cancelDesc: 'Annule chaque ligne ouverte et rembourse le client',
     sub: '{week} cette semaine · {attention} à traiter',
     kpis: 'En ce moment', k_attention: 'À traiter', k_live: 'En cours', k_escrow: 'Fiducie > 48 h', k_late: 'En retard',
     secOrder: 'Commande', secIssue: 'À traiter',

@@ -3,7 +3,7 @@ import { defineMessages } from '@northline/ui';
 /** Catalogue taxonomy (S-94, design 03 lines 376–381). en = the design's copy where it has one; fr-CA after design/i18n-fr.js. */
 export const useTaxonomyT = defineMessages({
   en: {
-    heading: 'Catalogue taxonomy',
+    heading: 'Catalogue taxonomy', rootViews: 'Categories by department', rv_all: 'All', regulatedChip: 'Regulated', notLiveChip: 'Not live anywhere',
     summary: '{services} service categories · {departments} shop departments · per-province rules',
     entity: 'category', plural: 'categories',
     c_name: 'Category', c_root: 'Root', c_reg: 'Regulated · registry', c_live: 'Live in', c_sellers: 'Sellers', c_price: 'Median price',
@@ -38,7 +38,7 @@ export const useTaxonomyT = defineMessages({
     cannot: 'Your role can’t change the taxonomy.',
   },
   fr: {
-    heading: 'Taxonomie du catalogue',
+    heading: 'Taxonomie du catalogue', rootViews: 'Catégories par rayon', rv_all: 'Toutes', regulatedChip: 'Réglementées', notLiveChip: 'Offertes nulle part',
     summary: '{services} catégories de services · {departments} rayons de boutique · règles par province',
     entity: 'catégorie', plural: 'catégories',
     c_name: 'Catégorie', c_root: 'Racine', c_reg: 'Réglementé · registre', c_live: 'Offert en', c_sellers: 'Vendeurs', c_price: 'Prix médian',

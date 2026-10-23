@@ -1,7 +1,9 @@
-import { useId, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { ArrowRight, type Icon } from '@phosphor-icons/react';
 import clsx from 'clsx';
 import type { StatusTone } from './Commerce';
+import { Button, type ButtonVariant } from './Button';
+import { tablistKeyDown } from './Choice';
 import { defineMessages } from './i18n';
 
 const useT = defineMessages({
@@ -183,4 +185,122 @@ export function SummaryTable<T>({ caption, columns, rows, rowKey, empty }: { cap
 /** A small square thumbnail in a grey well (a table's product photo); without a photo, the name's initial. */
 export function Thumb({ src, name }: { src?: string | null; name: string }) {
   return <span className="bo-thumb" aria-hidden>{src ? <img src={src} alt="" loading="lazy" /> : name.trim().charAt(0).toUpperCase()}</span>;
+}
+
+// ── Record pages (S-177): a seller, an application, a dispute, an order, a case ──────────────────────────────────
+
+/** A key fact in a record's head ("Type · Services", "Joined · Apr 2026"). */
+export interface RecordFact { label: ReactNode; value: ReactNode }
+export interface RecordHeaderProps {
+  /** The way back to the list ("← All sellers"), above the title. */
+  back?: ReactNode;
+  title: ReactNode;
+  /** The record's state: a `StatusTag` beside the title. */
+  status?: ReactNode;
+  facts?: readonly (RecordFact | null | false | undefined)[];
+  /** The head's own buttons (Export, a destructive Suspend…); the record's work is in its `ActionPanel`. */
+  actions?: ReactNode;
+}
+/**
+ * A record page's head (the back office's detail pages): the way back, the h1 with the record's status tag, then its
+ * key facts as a wrapping row of label · value pairs; buttons on the right.
+ */
+export function RecordHeader({ back, title, status, facts, actions }: RecordHeaderProps) {
+  const shown = (facts ?? []).filter((f): f is RecordFact => !!f);
+  return (
+    <div className="bo-rec-head">
+      {back ? <div className="bo-rec-back">{back}</div> : null}
+      <div className="bo-head">
+        <div className="bo-head-text">
+          <div className="bo-rec-titlerow"><h1 className="bo-title">{title}</h1>{status}</div>
+          {shown.length ? <dl className="bo-rec-facts">{shown.map((f, i) => <div key={i} className="bo-rec-fact"><dt>{f.label}</dt><dd>{f.value}</dd></div>)}</dl> : null}
+        </div>
+        {actions ? <div className="bo-head-actions">{actions}</div> : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A record page's body: the main column (figures, tabs) and the right-hand action panel. Two columns from 880px of
+ * room (the panel 320px and sticky under the shell's top bar), one below, the panel after the main column.
+ */
+export function RecordLayout({ children, aside, asideLabel }: { children: ReactNode; aside?: ReactNode; /** The panel's landmark name ("Actions"). */ asideLabel?: string }) {
+  return (
+    <div className="bo-rec-wrap">
+      <div className="bo-rec" data-aside={aside ? '' : undefined}>
+        <div className="bo-rec-main">{children}</div>
+        {aside ? <aside className="bo-rec-aside" aria-label={asideLabel}>{aside}</aside> : null}
+      </div>
+    </div>
+  );
+}
+
+/** The right-hand action panel: its title, then each action (`ActionPanelItem`) stacked, then a note (who may act). */
+export function ActionPanel({ title, children, note }: { title: ReactNode; children: ReactNode; note?: ReactNode }) {
+  const id = useId();
+  return (
+    <section className="bo-card bo-actpanel" aria-labelledby={id}>
+      <h2 className="bo-card-title" id={id}>{title}</h2>
+      <div className="bo-actpanel-list">{children}</div>
+      {note ? <p className="bo-muted">{note}</p> : null}
+    </section>
+  );
+}
+
+export interface ActionPanelItemProps {
+  label: ReactNode;
+  /** What it does, under the button ("Page, listings and checkout go offline at once"). */
+  description?: ReactNode;
+  /** `destructive` (red) for Suspend and every action that takes something away; `primary` for the record's next step. */
+  variant?: ButtonVariant;
+  disabled?: boolean;
+  onClick?: () => void;
+  /** A link instead of a button (an action on another screen). */
+  href?: string;
+}
+/** One action of the panel: a full-width button and what it does under it. */
+export function ActionPanelItem({ label, description, variant = 'secondary', disabled, onClick, href }: ActionPanelItemProps) {
+  const id = useId();
+  return (
+    <div className="bo-actpanel-item">
+      {href && !disabled
+        ? <a className={`btn btn-${variant} btn-block`} href={href} aria-describedby={description ? id : undefined}>{label}</a>
+        : <Button variant={variant} block disabled={disabled} onClick={onClick} aria-describedby={description ? id : undefined}>{label}</Button>}
+      {description ? <p className="bo-actpanel-desc" id={id}>{description}</p> : null}
+    </div>
+  );
+}
+
+export interface RecordTab<V extends string = string> { value: V; label: ReactNode; count?: ReactNode; render: () => ReactNode }
+/**
+ * A record's tabs (history, evidence, notes): the underline tabs with counts over one tab panel, wired as ARIA tabs
+ * (each tab controls the panel; ← → move, Home/End). Uncontrolled unless `value` is given.
+ */
+export function RecordTabs<V extends string>({ label, tabs, value, onChange }: { label: string; tabs: readonly RecordTab<V>[]; value?: V; onChange?: (v: V) => void }) {
+  const id = useId();
+  const [own, setOwn] = useState<V | undefined>(tabs[0]?.value);
+  const current = tabs.find(x => x.value === (value ?? own)) ?? tabs[0];
+  if (!current) return null;
+  const pick = (v: V) => { setOwn(v); onChange?.(v); };
+  const tabId = (v: string) => `${id}-tab-${v}`;
+  return (
+    <div className="bo-rec-tabs">
+      <div className="nl-utabs" role="tablist" aria-label={label} onKeyDown={tablistKeyDown(tabs.map(x => x.value), current.value, pick)}>
+        {tabs.map(x => (
+          <button key={x.value} id={tabId(x.value)} type="button" role="tab" aria-selected={x.value === current.value} aria-controls={`${id}-panel`}
+            tabIndex={x.value === current.value ? 0 : -1} className="nl-utab" onClick={() => pick(x.value)}>
+            {x.label}{x.count != null ? <span className="nl-utab-count">{x.count}</span> : null}
+          </button>
+        ))}
+      </div>
+      <div id={`${id}-panel`} role="tabpanel" aria-labelledby={tabId(current.value)} tabIndex={0} className="bo-rec-panel">{current.render()}</div>
+    </div>
+  );
+}
+
+/** A record's history (a timeline or an audit trail): the date, then what happened and who did it, newest first. */
+export function RecordHistory({ items, empty }: { items: readonly { key: string; when: ReactNode; text: ReactNode }[]; empty?: ReactNode }) {
+  if (!items.length) return <p className="bo-muted">{empty}</p>;
+  return <ol className="bo-rec-history">{items.map(e => <li key={e.key}><span className="bo-rec-when">{e.when}</span><span>{e.text}</span></li>)}</ol>;
 }

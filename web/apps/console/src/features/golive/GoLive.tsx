@@ -18,7 +18,7 @@ import './golive.css';
 export interface GoLiveSearch { market?: string }
 
 const errorOf = (e: unknown) => (e instanceof ValidationError ? Object.values(e.byField())[0] : e instanceof ApiError ? e.message : e ? String(e) : undefined);
-const TONE = { pass: 'accent', fail: 'accent-2', pending: 'neutral', not_applicable: 'neutral' } as const;
+const TONE = { pass: 'success', fail: 'danger', pending: 'warning', not_applicable: 'neutral' } as const;
 
 /** What a gate's evidence says, in words: the recorded text, else the platform's code with its values. */
 export function evidenceText(g: Gate, t: GoLiveT, when: (iso: string) => string): string {
@@ -119,7 +119,7 @@ function RecordDialog({ market, gate, onClose }: { market: string; gate: Gate; o
   const error = errorOf(record.error);
   return (
     <Dialog open onClose={onClose} title={t('recordTitle', { gate: t(`g_${gate.key}` as GoLiveKey) })} actions={<>
-      <Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      <Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
       <Button disabled={record.isPending} onClick={() => record.mutate({ gate: gate.key, status, evidence, evidenceUrl: url || undefined }, { onSuccess: onClose })}>{t('save')}</Button>
     </>}>
       <Field label={t('status')}>
@@ -166,11 +166,11 @@ function LaunchPanel({ c, canSwitch }: { c: Checklist; canSwitch: boolean }) {
           <Field label={t('confirm', { city: c.market.city })}><TextInput value={confirm} onChange={e => setConfirm(e.target.value)} /></Field>
           <div className="nl-q-actions">
             <Button disabled={approve.isPending || !confirm.trim()} onClick={() => approve.mutate({ id: r.id, confirm })}>{t('approve')}</Button>
-            <Button variant="ghost" disabled={close.isPending} onClick={() => close.mutate({ id: r.id })}>{t('reject')}</Button>
+            <Button variant="tertiary" disabled={close.isPending} onClick={() => close.mutate({ id: r.id })}>{t('reject')}</Button>
           </div>
         </> : canSwitch ? <>
           <p className="nl-q-note">{t('ownRequest')}</p>
-          <Button variant="ghost" disabled={close.isPending} onClick={() => close.mutate({ id: r.id })}>{t('withdraw')}</Button>
+          <Button variant="tertiary" disabled={close.isPending} onClick={() => close.mutate({ id: r.id })}>{t('withdraw')}</Button>
         </> : null}
       </> : <>
         <p className="nl-q-note">{t('launchLede')}</p>
@@ -196,7 +196,7 @@ function RollbackDialog({ c, pending, error, onClose, onSubmit }: { c: Checklist
   const [confirm, setConfirm] = useState('');
   return (
     <Dialog open onClose={onClose} title={t('rollbackTitle')} actions={<>
-      <Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      <Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
       <Button disabled={pending || !confirm.trim()} onClick={() => onSubmit({ reason, confirm })}>{t('rollback')}</Button>
     </>}>
       <p>{t('rollbackLede')}</p>

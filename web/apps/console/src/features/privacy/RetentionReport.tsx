@@ -75,7 +75,7 @@ export function RetentionReport({ tabs }: { tabs?: ReactNode }) {
   ];
   const tones = (row: Row): Partial<Record<keyof Row, DataTableTone>> => {
     const s = stateOf(row.c);
-    return { action: 'tag-neutral', state: s === 'overdue' || s === 'failed' ? 'tag-accent-2' : s === 'never' || row.c.enforcement === 'blocked' ? 'tag-highlight' : s ? 'tag-accent' : 'tag-neutral' };
+    return { action: 'tag-neutral', state: s === 'overdue' || s === 'failed' ? 'status-danger' : s === 'never' || row.c.enforcement === 'blocked' ? 'status-warning' : s ? 'status-success' : 'tag-neutral' };
   };
   const overdue = r.categories.filter(c => c.overdue).length;
   const selected = r.categories.find(c => c.code === open);
@@ -84,7 +84,7 @@ export function RetentionReport({ tabs }: { tabs?: ReactNode }) {
       <BoHeader title={t('heading')} sub={t('lede')} actions={<>
         {can('privacy') ? <>
           <Button type="button" variant="secondary" disabled={run.isPending} onClick={() => start(true)}>{t('dryRunAll')}</Button>
-          <Button type="button" variant="ghost" disabled={run.isPending} onClick={() => setConfirming({})}>{t('runAll')}</Button>
+          <Button type="button" variant="tertiary" disabled={run.isPending} onClick={() => setConfirming({})}>{t('runAll')}</Button>
         </> : null}
         <a className="btn btn-secondary" href={EXPORT_URL} download>{t('exportCsv')}</a>
       </>} />
@@ -95,7 +95,7 @@ export function RetentionReport({ tabs }: { tabs?: ReactNode }) {
       </div>
       {notice && !selected ? <p role="status" className="nl-q-note">{notice}</p> : null}
       {run.error ? <p role="alert" className="nl-q-error">{run.error.message}</p> : null}
-      <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
+      <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
         can={{ create: false, update: false, delete: false, export: false }} roleName={roleName} emptyText={t('empty')} pageSize={25}
         onOpen={row => setOpen(row.id)} />
       <div className="nl-cols-wrap"><div className="nl-cols">
@@ -117,7 +117,7 @@ export function RetentionReport({ tabs }: { tabs?: ReactNode }) {
         onRun={dryRun => (dryRun ? start(true, selected.code) : setConfirming({ category: selected.code }))} notice={notice} /> : null}
       {confirming ? (
         <Dialog open onClose={() => setConfirming(undefined)} title={t('confirmTitle')}
-          actions={<><Button variant="ghost" onClick={() => setConfirming(undefined)}>{t('cancel')}</Button>
+          actions={<><Button variant="tertiary" onClick={() => setConfirming(undefined)}>{t('cancel')}</Button>
             <Button className="nl-danger" disabled={run.isPending} onClick={() => start(false, confirming.category)}>{t('confirm')}</Button></>}>
           <p>{t('confirmBody')}</p>
         </Dialog>
@@ -137,10 +137,10 @@ function CategoryDrawer({ c, t, canRun, busy, onClose, onRun, notice }: {
       footer={canRun && runs ? (
         <div className="nl-q-actions">
           <Button type="button" variant="secondary" disabled={busy} onClick={() => onRun(true)}>{t('dryRun')}</Button>
-          <Button type="button" variant="ghost" disabled={busy} onClick={() => onRun(false)}>{t('runNow')}</Button>
+          <Button type="button" variant="tertiary" disabled={busy} onClick={() => onRun(false)}>{t('runNow')}</Button>
         </div>
       ) : null}>
-      <p><Tag tone="neutral">{t(`e_${c.enforcement}`)}</Tag> <Tag tone="accent">{t(`a_${c.action}`)}</Tag></p>
+      <p><Tag tone="neutral">{t(`e_${c.enforcement}`)}</Tag> <Tag tone="info">{t(`a_${c.action}`)}</Tag></p>
       <p>{c.clause && c.policy ? t('detailPolicy', { clause: c.clause, policy: c.policy }) : t('notInPolicy')}</p>
       <ul className="nl-q-list">
         <li><strong>{t('starts')}</strong>: {c.starts}</li>

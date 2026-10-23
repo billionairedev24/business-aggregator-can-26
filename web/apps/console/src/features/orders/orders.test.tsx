@@ -22,12 +22,13 @@ describe('orders & bookings (S-81, design 03)', () => {
     const calls = staffApi(['dispatch'], c => (c.url.includes('/api/v1/console/orders') ? { body: monitor() } : undefined));
     renderConsole('/orders');
     expect(await screen.findByRole('heading', { level: 1, name: 'Orders & bookings' })).toBeTruthy();
-    expect(await screen.findByText('6,812 this week · 14 need attention')).toBeTruthy();
+    expect(await screen.findByText('All markets · 6,812 this week · 14 need attention')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     const kpis = within(screen.getByRole('list', { name: 'Right now' }));
     for (const [label, n] of [['Needs attention', '14'], ['Live', '431'], ['Escrow > 48 h', '6'], ['Late', '9']]) expect(kpis.getByRole('button', { name: `${label} ${n}` })).toBeTruthy();
-    for (const chip of ['Needs attention · 14', 'Live · 431', 'Escrow > 48 h · 6', 'Late · 9', 'All']) expect(screen.getByRole('button', { name: chip })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Needs attention · 14' }).getAttribute('aria-pressed')).toBe('true');
+    const tabs = within(screen.getByRole('tablist', { name: 'Show' }));
+    expect(tabs.getAllByRole('tab').map(x => x.textContent)).toEqual(['Needs attention14', 'Live431', 'Escrow > 48 h6', 'Late9', 'Delivery failed2', 'All']);
+    expect(tabs.getByRole('tab', { name: /Needs attention/ }).getAttribute('aria-selected')).toBe('true');
     const table = document.querySelector('.nl-dt') as HTMLElement;
     for (const header of ['Customer → seller', 'Issue']) expect(within(table).getAllByText(header).length).toBeGreaterThan(0);
     expect(within(table).getByText('P. Nguyen → Prairie Wrench')).toBeTruthy();
@@ -35,27 +36,33 @@ describe('orders & bookings (S-81, design 03)', () => {
     expect(within(table).getByText('Provider 34 min late')).toBeTruthy();
     expect(within(table).getByText('Courier run has a stop more than 10 min overdue')).toBeTruthy();
     expect(within(table).getByText('Customer hasn’t signed off · job ended 3.0 d ago')).toBeTruthy();
-    expect(within(table).getByText('Escrow > 48 h')).toBeTruthy();
+    expect(within(table).getByText('Escrow > 48 h', { selector: '.nl-status' }).className).toContain('nl-status-warning');
+    expect(within(table).getByText('Stuck', { selector: '.nl-status' }).className).toContain('nl-status-danger');
     expect(within(table).getByText('$640.00')).toBeTruthy();
     expect(calls.find(c => c.url.includes('/api/v1/console/orders'))?.url).toContain('view=attention');
     // nothing to change here: view only
     expect(screen.getByText(/View only · Ops dispatcher/)).toBeTruthy();
   });
 
-  it('switches views and searches a reference', async () => {
+  it('switches views, filters the type and takes a reference from the global search', async () => {
     const calls = staffApi(['support'], c => (c.url.includes('/api/v1/console/orders') ? { body: monitor() } : undefined));
     const user = userEvent.setup({ delay: null });
     const { router } = renderConsole('/orders');
     await screenReady();
-    await user.click(screen.getByRole('button', { name: 'Late · 9' }));
+    await user.click(screen.getByRole('tab', { name: /^Late/ }));
     await waitFor(() => expect(calls.some(c => c.url.includes('/api/v1/console/orders?view=late'))).toBe(true));
     expect(router.state.location.search).toMatchObject({ view: 'late' });
-    await user.type(screen.getByRole('searchbox', { name: /Search a reference/ }), 'BK-77{Enter}');
-    await waitFor(() => expect(calls.some(c => c.url.includes('view=late&q=BK-77'))).toBe(true));
+    await user.click(screen.getByRole('radio', { name: 'Services' }));
+    await waitFor(() => expect(screen.queryByText('P. Nguyen → Prairie Wrench')).toBeNull());
+    expect(screen.getByText('L. Cardinal → Bow River Mechanics')).toBeTruthy();
+    const box = screen.getByRole('combobox', { name: 'Search the console' });
+    await user.type(box, 'BK-77');
+    await user.click(screen.getByRole('option', { name: 'Orders and bookings with reference “BK-77”' }));
+    await waitFor(() => expect(calls.some(c => c.url.includes('view=all&q=BK-77'))).toBe(true));
     expect(calls.filter(c => c.url.includes('/console/orders')).at(-1)?.headers['X-Console-Role']).toBe('support');
   });
 
-  it('opens an order’s delivery', async () => {
+  it('opens an order’s page with its status, facts and delivery', async () => {
     staffApi(['admin'], c => {
       if (c.url.includes('/api/v1/console/fulfilment/orders/o2')) {
         return { body: { orderId: 'o2', orderRef: 'NL-48102', kind: 'pooled', market: 'Calgary', state: 'picked_up', run: { id: 'r1', label: 'R-608', state: 'en_route', courier: { name: 'Sam T.' }, late: true },
@@ -64,15 +71,21 @@ describe('orders & bookings (S-81, design 03)', () => {
       return c.url.includes('/api/v1/console/orders') ? { body: monitor() } : undefined;
     });
     const user = userEvent.setup({ delay: null });
-    renderConsole('/orders');
+    const { router } = renderConsole('/orders');
     await user.click(await screen.findByText('R. Diaz → 3 shops'));
-    const drawer = await screen.findByRole('dialog', { name: 'NL-48102 · Order' });
+    await waitFor(() => expect(router.state.location.pathname).toBe('/orders/NL-48102'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'NL-48102' })).toBeTruthy();
+    await expectNoAxeViolations(document.body);
+    const drawer = document.body;
+    expect(within(drawer).getByText('Stuck').className).toContain('nl-status-danger');
     expect(await within(drawer).findByText('R-608')).toBeTruthy();
     expect(within(drawer).getByText('Sam T.')).toBeTruthy();
     expect(within(drawer).getByText('late')).toBeTruthy();
     expect(within(drawer).getByText('Bridgeland Butcher')).toBeTruthy();
     expect(within(drawer).getByText('Courier run has a stop more than 10 min overdue')).toBeTruthy(); // the sheet's "Needs attention"
-    expect(within(drawer).getByText('Customer → seller').nextElementSibling?.textContent).toBe('R. Diaz → A, B, C');
+    expect(within(drawer).getByText('Customer → seller', { selector: 'dt' }).nextElementSibling?.textContent).toBe('R. Diaz → A, B, C');
+    expect(within(drawer).getByText('Amount', { selector: 'dt' }).nextElementSibling?.textContent).toBe('$88.40');
+    expect(within(drawer).getAllByText('Market', { selector: 'dt' })[0]!.nextElementSibling?.textContent).toBe('Calgary');
   });
 
   it('opens a view from its KPI card', async () => {
@@ -89,7 +102,7 @@ describe('orders & bookings (S-81, design 03)', () => {
     staffApi(['dispatch'], c => (c.url.includes('/api/v1/console/orders') ? { body: monitor([]) } : undefined));
     const first = renderConsole('/orders', { locale: 'fr' });
     expect(await screen.findByRole('heading', { level: 1, name: 'Commandes et réservations' })).toBeTruthy();
-    expect(await screen.findByText(/6\s812 cette semaine · 14 à traiter/)).toBeTruthy();
+    expect(await screen.findByText(/Tous les marchés · 6\s812 cette semaine · 14 à traiter/)).toBeTruthy();
     expect(screen.getByText('Rien pour l’instant.')).toBeTruthy();
     first.unmount();
     staffApi(['dispatch'], c => (c.url.includes('/api/v1/console/orders') ? { status: 500, body: { detail: 'boom' } } : undefined));

@@ -5,7 +5,7 @@ import { AccountMenu } from '../AccountMenu';
 import { LocationPill } from '../LocationPill';
 import { PromoStrip, SiteHeader } from '../SiteHeader';
 import { AppShell, WorkspaceSwitcher } from '../AppShell';
-import { ActionCard, ActionGrid, ChartCard, KpiStrip, SummaryTable, Thumb } from '../BackOffice';
+import { ActionCard, ActionGrid, ActionPanel, ActionPanelItem, ChartCard, KpiStrip, RecordHeader, RecordHistory, RecordLayout, RecordTabs, SummaryTable, Thumb } from '../BackOffice';
 import { ColumnChart } from '../Charts';
 import { Avatar } from '../Layout';
 import { Logo } from '../Logo';
@@ -18,7 +18,7 @@ import { FormSection, SaveBar } from '../Editor';
 import { listingActions, listingActionsFr, listingColumns, listingColumnsFr, listings, listingsFr, CAN } from '../DataTable/DataTable.fixtures';
 import { Pagination, Toast, ToastProvider, useToast } from '../Feedback';
 import { Field, Select, TextInput } from '../Field';
-import { defineMessages, formatDateRange, formatPrice, formatTimeRange, formatWhen, unitCents, useLocale } from '../i18n';
+import { defineMessages, formatCompactMoney, formatDateRange, formatPrice, formatTimeRange, formatWhen, unitCents, useLocale } from '../i18n';
 import { Alert, EmptyState, ErrorState, PageHeader, Skeleton, CardSkeleton } from '../Layout';
 import { Dialog, Drawer } from '../Overlay';
 import { SearchBar } from '../SearchBar';
@@ -64,6 +64,14 @@ const useT = defineMessages({
     chart: 'Sales, last 14 days', todaySoFar: 'Today so far · $642.50', previous: 'Previous 13 days · avg $510', top: 'Top products today', product: 'Product', sold: 'Sold', sales: 'Sales', stock: 'Stock', left: '{n} left',
     switchBusiness: 'Switch business', searchStudio: 'Search the Studio', searchPh: 'Search orders, products, customers', ordersMatching: 'Orders matching “{q}”',
     nDashboard: 'Dashboard', gOps: 'Operations', nOrders: 'Orders', nMessages: 'Messages', gCat: 'Catalogue', nProducts: 'Products', nStock: 'Stock', gMoney: 'Money', nPayouts: 'Payouts', nReports: 'Reports', gStore: 'Store', nStorefront: 'Storefront', nSettings: 'Settings', owner: 'Owner',
+    s_records: 'Back office: a queue table and a record page',
+    sellers: 'Sellers', rAll: 'All', rLive: 'Live', rReview: 'Under review', rPaused: 'Paused', rSuspended: 'Suspended', rDept: 'Department', rDisputes: 'Has open disputes',
+    rBusiness: 'Business', rDepartment: 'Department', rStatus: 'Status', rSales: 'Sales 30 d', rSeller: 'seller', rSellers: 'sellers', rMessage: 'Message', rSuspend: 'Suspend…',
+    rBack: '← All sellers', rType: 'Type', rTypeV: 'Shop · Bakery', rPlace: 'Market', rJoined: 'Joined', rJoinedV: 'Apr 2026', rTier: 'Tier', rTierV: 'Trusted',
+    rKpis: 'Against the floors', rRating: 'Rating · 88 reviews', rQuality: 'Quality · floor 80', rBelow: 'Below the floor', rGmv: 'Sales, 90 days',
+    rTabs: 'Record', rHistory: 'History', rEvidence: 'Evidence', rNotes: 'Notes', rH1: 'Tier changed Registered → Trusted by P. Natarajan', rH2: 'Approved · Trusted', rH3: 'Joined',
+    rActions: 'Actions', rSuspendD: 'Page, listings and checkout go offline at once; escrow held', rReverify: 'Require re-verification…', rReverifyD: 'The check shows as expired until a current one is uploaded',
+    rNote: 'Every action is logged and the business is emailed.', rEvidenceE: 'Food handling permit · valid to Nov 30', rNotesE: 'No notes yet.',
     fDay: 'A day', fWindow: 'A delivery window', fNight: 'Across midnight', fRange: 'A date range',
     s_site: 'Site header, department strip and promo strip', s_filters: 'Filter rail',
     hello: 'Hello, {name}', helloGuest: 'Hello, sign in', accountOrders: 'Account & orders', signIn: 'Sign in',
@@ -113,6 +121,14 @@ const useT = defineMessages({
     chart: 'Ventes, 14 derniers jours', todaySoFar: 'Aujourd’hui jusqu’ici · 642,50 $', previous: '13 jours précédents · moy. 510 $', top: 'Meilleurs produits aujourd’hui', product: 'Produit', sold: 'Vendus', sales: 'Ventes', stock: 'Stock', left: '{n} restants',
     switchBusiness: 'Changer d’entreprise', searchStudio: 'Rechercher dans le Studio', searchPh: 'Rechercher commandes, produits, clients', ordersMatching: 'Commandes correspondant à « {q} »',
     nDashboard: 'Tableau de bord', gOps: 'Opérations', nOrders: 'Commandes', nMessages: 'Messages', gCat: 'Catalogue', nProducts: 'Produits', nStock: 'Stock', gMoney: 'Argent', nPayouts: 'Versements', nReports: 'Rapports', gStore: 'Boutique', nStorefront: 'Vitrine', nSettings: 'Paramètres', owner: 'Propriétaire',
+    s_records: 'Arrière-boutique : tableau de file et page de dossier',
+    sellers: 'Commerces', rAll: 'Tous', rLive: 'En ligne', rReview: 'En examen', rPaused: 'En pause', rSuspended: 'Suspendus', rDept: 'Rayon', rDisputes: 'Litiges ouverts',
+    rBusiness: 'Entreprise', rDepartment: 'Rayon', rStatus: 'Statut', rSales: 'Ventes 30 j', rSeller: 'commerce', rSellers: 'commerces', rMessage: 'Écrire', rSuspend: 'Suspendre…',
+    rBack: '← Tous les commerces', rType: 'Type', rTypeV: 'Boutique · Boulangerie', rPlace: 'Marché', rJoined: 'Inscription', rJoinedV: 'avr. 2026', rTier: 'Niveau', rTierV: 'Fiable',
+    rKpis: 'Par rapport aux seuils', rRating: 'Note · 88 avis', rQuality: 'Qualité · seuil 80', rBelow: 'Sous le seuil', rGmv: 'Ventes, 90 jours',
+    rTabs: 'Dossier', rHistory: 'Historique', rEvidence: 'Preuves', rNotes: 'Notes', rH1: 'Niveau changé de Inscrit à Fiable par P. Natarajan', rH2: 'Approuvé · Fiable', rH3: 'Inscription',
+    rActions: 'Actions', rSuspendD: 'La page, les annonces et le paiement passent hors ligne; séquestre retenu', rReverify: 'Exiger une nouvelle vérification…', rReverifyD: 'La vérification paraît expirée jusqu’au dépôt d’une pièce à jour',
+    rNote: 'Chaque action est journalisée et l’entreprise reçoit un courriel.', rEvidenceE: 'Permis de manipulation des aliments · valide jusqu’au 30 nov.', rNotesE: 'Aucune note pour l’instant.',
     fDay: 'Un jour', fWindow: 'Une plage de livraison', fNight: 'Après minuit', fRange: 'Une période',
     s_site: 'En-tête du site, bande des rayons et bande promotionnelle', s_filters: 'Volet de filtres',
     hello: 'Bonjour, {name}', helloGuest: 'Bonjour, connectez-vous', accountOrders: 'Compte et commandes', signIn: 'Se connecter',
@@ -136,6 +152,7 @@ type GalleryT = ReturnType<typeof useT>;
 const SHOP = 'Loaf & Ladder Bakery · Maple Row';
 const FONT = 'IBM Plex Sans';
 const HIVE = 'Hive & Hollow Apiary';
+const BAKERY = 'Loaf & Ladder Bakery';
 const PLACE = 'Maple Row T2N';
 
 export interface GallerySection {
@@ -403,6 +420,67 @@ function BackOfficeDemo({ t, photo }: { t: GalleryT; photo?: string }) {
   );
 }
 
+
+interface QueueRow { id: string; name: string; owner: string; dept: string; area: string; status: string; tone: 'status-success' | 'status-info' | 'status-neutral' | 'status-danger'; sales: number; d: 'services' | 'shop' | 'food' }
+/** S-177: the console's queue table (views with counts, quick filters, dense rows, status tags, a red Suspend in the
+ *  bulk bar) and a record page (head with status and facts, tabs, the right-hand action panel). */
+function RecordsDemo({ t }: { t: GalleryT }) {
+  const { locale } = useLocale();
+  const [view, setView] = useState('all');
+  const [dept, setDept] = useState<'all' | QueueRow['d']>('all');
+  const [disputes, setDisputes] = useState(false);
+  const all: QueueRow[] = [
+    { id: '1', name: 'Loaf & Ladder Bakery', owner: 'M. Tanaka', dept: t('shop'), area: 'Maple Row', status: t('rLive'), tone: 'status-success', sales: 1487240, d: 'shop' },
+    { id: '2', name: HIVE, owner: 'T. Grant', dept: t('shop'), area: 'Riverside', status: t('rSuspended'), tone: 'status-danger', sales: 195000, d: 'shop' },
+    { id: '3', name: 'Prairie Wrench', owner: 'R. S.', dept: t('services'), area: 'North Hill', status: t('rLive'), tone: 'status-success', sales: 3141000, d: 'services' },
+    { id: '4', name: 'Tuxedo Grocer', owner: 'H. Yusuf', dept: t('shop'), area: 'Tuxedo', status: t('rReview'), tone: 'status-info', sales: 0, d: 'shop' },
+    { id: '5', name: 'Bow & Crumb', owner: 'S. Okoro', dept: t('food'), area: 'Bridgeland', status: t('rPaused'), tone: 'status-neutral', sales: 0, d: 'food' },
+  ];
+  const count = (st?: string) => all.filter(r => !st || r.status === st).length;
+  const views = [{ value: 'all', label: t('rAll'), st: undefined }, { value: 'live', label: t('rLive'), st: t('rLive') }, { value: 'review', label: t('rReview'), st: t('rReview') }, { value: 'suspended', label: t('rSuspended'), st: t('rSuspended') }];
+  const st = views.find(v => v.value === view)?.st;
+  const rows = all.filter(r => (!st || r.status === st) && (dept === 'all' || r.d === dept) && (!disputes || r.tone === 'status-danger'));
+  return (
+    <div className="nl-gallery-stack">
+      <DataTable<QueueRow> dense entity={t('rSeller')} plural={t('rSellers')} rows={rows} pageSize={5} can={{ create: false, update: true, delete: false }}
+        tabs={<UnderlineTabs aria-label={t('sellers')} value={view} onChange={setView} options={views.map(v => ({ value: v.value, label: v.label, count: count(v.st) }))} />}
+        filters={<>
+          <Segmented name="gallery-dept" aria-label={t('rDept')} value={dept} onChange={setDept} options={[{ value: 'all', label: t('rAll') }, { value: 'services', label: t('services') }, { value: 'shop', label: t('shop') }, { value: 'food', label: t('food') }]} />
+          <FilterChip label={t('rDisputes')} applied={disputes} onToggle={() => setDisputes(x => !x)} />
+        </>}
+        columns={[
+          { key: 'name', label: t('rBusiness'), sub: 'owner', primary: true },
+          { key: 'dept', label: t('rDepartment'), sub: 'area' },
+          { key: 'status', label: t('rStatus'), type: 'tag' },
+          { key: 'sales', label: t('rSales'), type: 'money' },
+        ]}
+        rowTones={r => ({ status: r.tone })}
+        actions={[{ id: 'message', label: t('rMessage'), perm: 'update' }, { id: 'suspend', label: t('rSuspend'), perm: 'update', danger: true }]} onAction={() => false} />
+      <RecordHeader back={<a href="#sellers">{t('rBack')}</a>} title={BAKERY} status={<StatusTag tone="success" size="lg">{t('rLive')}</StatusTag>}
+        facts={[{ label: t('rType'), value: t('rTypeV') }, { label: t('rPlace'), value: 'Maple Row' }, { label: t('rJoined'), value: t('rJoinedV') }, { label: t('rTier'), value: t('rTierV') }]}
+        actions={<Button variant="destructive">{t('rSuspend')}</Button>} />
+      <RecordLayout asideLabel={t('rActions')} aside={
+        <ActionPanel title={t('rActions')} note={t('rNote')}>
+          <ActionPanelItem variant="destructive" label={t('rSuspend')} description={t('rSuspendD')} onClick={() => {}} />
+          <ActionPanelItem label={t('rReverify')} description={t('rReverifyD')} onClick={() => {}} />
+        </ActionPanel>}>
+        <KpiStrip label={t('rKpis')} items={[
+          { key: 'r', label: t('rRating'), value: locale === 'fr' ? '4,8' : '4.8' },
+          { key: 'q', label: t('rQuality'), value: '78', delta: t('rBelow'), trend: 'down' },
+          { key: 'g', label: t('rGmv'), value: formatCompactMoney(1840000, locale), delta: formatPrice(14872_40, locale) },
+        ]} />
+        <RecordTabs label={t('rTabs')} tabs={[
+          { value: 'history', label: t('rHistory'), count: 3, render: () => <RecordHistory items={[
+            { key: '1', when: formatWhen('2026-09-26', locale), text: t('rH1') }, { key: '2', when: formatWhen('2026-04-28', locale), text: t('rH2') }, { key: '3', when: formatWhen('2026-04-20', locale), text: t('rH3') },
+          ]} /> },
+          { value: 'evidence', label: t('rEvidence'), count: 1, render: () => <p>{t('rEvidenceE')}</p> },
+          { value: 'notes', label: t('rNotes'), render: () => <p className="bo-muted">{t('rNotesE')}</p> },
+        ]} />
+      </RecordLayout>
+    </div>
+  );
+}
+
 interface WorkRow { id: string; ref: string; placed: string; who: string; items: string; window: string; total: number; state: string; code: 'to_pack' | 'packed' | 'delivered' | 'issue' }
 
 /** A demo person's name (not translated). */
@@ -520,6 +598,7 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
   { id: 'formats', title: t => t('s_formats'), render: t => <Formats t={t} /> },
   { id: 'backoffice', title: t => t('s_backoffice'), render: (t, photo) => <BackOfficeDemo t={t} photo={photo} /> },
   { id: 'worktable', title: t => t('s_worktable'), render: t => <WorkTable t={t} /> },
+  { id: 'records', title: t => t('s_records'), render: t => <RecordsDemo t={t} /> },
   { id: 'checkout', title: t => t('s_checkout'), render: t => <CheckoutChoices t={t} /> },
   { id: 'shell', title: t => t('s_shell'), render: t => <ShellDemo t={t} />, solo: true },
 ];

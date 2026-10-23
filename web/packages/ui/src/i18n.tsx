@@ -146,6 +146,18 @@ export function formatPrice(cents: number, locale: Locale = 'en'): string {
   return plainSpaces(formatMoney(cents, locale));
 }
 
+/**
+ * A large amount at a glance (a back-office KPI, never a price someone pays): `$1.84M`, `$212k`, `$24.1k` ·
+ * `1,84 M $`, `212 k $`. Under $1,000 it is the price format itself (`$8.50`). Three significant figures, so $1,840,000
+ * reads $1.84M and $212,000 reads $212k.
+ */
+export function formatCompactMoney(cents: number, locale: Locale = 'en'): string {
+  const dollars = cents / 100;
+  if (Math.abs(dollars) < 1000) return formatPrice(cents, locale);
+  const s = new Intl.NumberFormat(INTL_LOCALE[locale], { style: 'currency', currency: 'CAD', currencyDisplay: 'narrowSymbol', notation: 'compact', maximumSignificantDigits: 3 }).format(dollars);
+  return plainSpaces(s).replace(/(\d)K\b/, '$1k');
+}
+
 /** A unit a price can be quoted per: weight or volume per 100 g / 100 mL / kg / L, or each. */
 export type PriceUnit = '100g' | 'kg' | '100ml' | 'l' | 'each' | 'hour';
 const UNIT_LABEL: Record<Locale, Record<PriceUnit, string>> = {
@@ -312,6 +324,8 @@ export function useFormatters() {
     money: (cents: number, opts?: { whole?: boolean }) => formatMoney(cents, locale, opts),
     /** The one price format: $8.50 / 8,50 $ (Price draws it). */
     price: (cents: number) => formatPrice(cents, locale),
+    /** A KPI's amount at a glance: $1.84M, $212k (never a price someone pays). */
+    compactMoney: (cents: number) => formatCompactMoney(cents, locale),
     unitPrice: (cents: number, unit: PriceUnit) => formatUnitPrice(cents, unit, locale),
     timeRange: (start: string | number | Date, end: string | number | Date, zone?: string) => formatTimeRange(start, end, locale, zone),
     dateRange: (start: string | number | Date, end: string | number | Date, style?: 'date' | 'full', zone?: string) => formatDateRange(start, end, locale, style, zone),

@@ -61,7 +61,7 @@ export function RegistryQueue({ filter }: { filter: PlaceFilter }) {
     { key: 'outcome', label: t('colOutcome'), type: 'tag', editable: false },
     { key: 'checked', label: t('colChecked'), editable: false },
   ];
-  const tones = (r: Row): Partial<Record<keyof Row, DataTableTone>> => ({ outcome: r.src.outcome === 'unavailable' || r.src.outcome === 'manual' ? 'tag-neutral' : 'tag-accent-2' });
+  const tones = (r: Row): Partial<Record<keyof Row, DataTableTone>> => ({ outcome: r.src.outcome === 'unavailable' || r.src.outcome === 'manual' ? 'status-neutral' : 'status-danger' });
   const actions: DataTableAction<Row>[] = can('verify') ? [
     { id: 'recheck', label: t('recheck'), icon: ArrowClockwise, perm: 'update', inline: true, bulk: false },
     { id: 'approve', label: t('approve'), icon: CheckIcon, perm: 'update', inline: true, bulk: false },
@@ -89,7 +89,7 @@ export function RegistryQueue({ filter }: { filter: PlaceFilter }) {
     <div className="bo-page">
       <ApplicationsHead tab="registry" filter={filter} sub={t('sub', { n: q.data.length })} />
       {notice ? <p role={notice.tone === 'error' ? 'alert' : 'status'} className={notice.tone === 'error' ? 'nl-q-error' : 'nl-q-note'}>{notice.text}</p> : null}
-      <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones} pageSize={25}
+      <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones} pageSize={25}
         can={{ create: false, update: can('verify'), delete: false }} roleName={roleName} actions={actions} onAction={onAction} emptyText={t('empty')} />
       {deciding ? <DecideDialog row={deciding.row} decision={deciding.decision} check={checkLabel({ key: deciding.row.checkKey, registry: deciding.row.registry ?? null }, tv)}
         onClose={() => setDeciding(null)} onDone={text => { setDeciding(null); setNotice({ tone: 'ok', text }); }} /> : null}
@@ -112,7 +112,7 @@ function DecideDialog({ row, decision, check, onClose, onDone }: { row: Registry
   );
   return (
     <Dialog open onClose={onClose} title={t('decideTitle', { decision: t(decision), check, business: row.businessName })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button variant={decision === 'reject' ? 'danger' : 'primary'} disabled={decide.isPending} onClick={submit}>{t(decision === 'approve' ? 'confirmApprove' : 'confirmReject')}</Button></>}>
       {decision === 'approve' ? <>
         <Field label={t('reference')} hint={t('referenceHint')} error={errors.reference}><TextInput value={reference} maxLength={120} onChange={e => setReference(e.target.value)} /></Field>

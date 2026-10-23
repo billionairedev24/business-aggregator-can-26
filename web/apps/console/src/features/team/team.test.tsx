@@ -41,11 +41,14 @@ describe('team, roles & audit (S-96, design 03)', () => {
     renderConsole('/team');
     expect(await screen.findByRole('heading', { level: 1, name: 'Team, roles & audit' })).toBeTruthy();
     await screen.findAllByText('Marc Leblanc');
+    await expectNoAxeViolations(document.body); // S-109
+    const tabs = within(screen.getByRole('tablist', { name: 'Team, roles & audit' }));
+    await user.click(tabs.getByRole('tab', { name: /^Roles/ }));
     const finance = screen.getAllByText('Finance').map(e => e.closest('tr, .nl-dt-card')).find(Boolean) as HTMLElement;
     expect(within(finance).getByText('2')).toBeTruthy();
+    await user.click(tabs.getByRole('tab', { name: /^Audit log/ }));
     expect(await screen.findByText('payments.reconciliation_exported')).toBeTruthy();
-    await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getAllByText('Marc Leblanc').length).toBeGreaterThan(1);
+    expect(screen.getAllByText('Marc Leblanc').length).toBeGreaterThan(0);
     expect(screen.getByText('payments.reconciliation_exported')).toBeTruthy();
     expect(screen.getByText('Northline (automatic)')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Invite' }).hasAttribute('disabled')).toBe(true);

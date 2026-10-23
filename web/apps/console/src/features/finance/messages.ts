@@ -3,6 +3,7 @@ import { defineMessages } from '@northline/ui';
 /** Finance (S-85, design 03 lines 297–323). en = the design's copy; fr-CA after design/i18n-fr.js. */
 export const useFinanceT = defineMessages({
   en: {
+    reconViews: 'Days by result', rv_all: 'All',
     heading: 'Finance',
     summary: 'Escrow, payouts and reconciliation',
     kpis: 'Money this week',
@@ -48,6 +49,7 @@ export const useFinanceT = defineMessages({
     decisionNote: 'Note (optional)', approve: 'Approve', decline: 'Decline', staff: '{brand} staff',
   },
   fr: {
+    reconViews: 'Jours par résultat', rv_all: 'Tous',
     heading: 'Finances',
     summary: 'Fiducie, versements et rapprochement',
     kpis: 'L’argent cette semaine',

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSearch } from '@tanstack/react-router';
 import { CheckCircle, XCircle } from '@phosphor-icons/react';
-import { Button, Checkbox, DataTable, Dialog, ErrorState, Field, formatMoney, formatNumber, PageSkeleton, TextArea, useLocale, type DataTableAction, type DataTableColumn, type DataTableTone, type Locale } from '@northline/ui';
+import { Button, Checkbox, DataTable, Dialog, ErrorState, Field, formatPrice, formatNumber, PageSkeleton, TextArea, useLocale, type DataTableAction, type DataTableColumn, type DataTableTone, type Locale } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import type { PlaceFilter } from '../shell/PlaceFilters';
+import { usePlace } from '../shell/scope';
 import { REJECT_REASONS, useDecideVetting, vettingQuery, type Item, type RejectReason } from './api';
 import { useVettingT, type VettingKey, type VettingT } from './messages';
 import '../shell/queues.css';
@@ -30,7 +30,7 @@ export function ruleText(i: Item, t: VettingT, locale: Locale): string {
 export function evidenceText(i: Item, t: VettingT, locale: Locale): string {
   const parts: string[] = [];
   for (const f of i.flags) {
-    if ((f === 'price_outlier' || f === 'price_check') && i.medianCents != null) parts.push(t(f === 'price_check' ? 'e_cuisineMedian' : 'e_median', { median: formatMoney(i.medianCents, locale, { whole: i.medianCents % 100 === 0 }) }));
+    if ((f === 'price_outlier' || f === 'price_check') && i.medianCents != null) parts.push(t(f === 'price_check' ? 'e_cuisineMedian' : 'e_median', { median: formatPrice(i.medianCents, locale) }));
     if (f === 'missing_licence') parts.push(i.regulator ? t('e_licence', { registry: i.regulator }) : t('e_licenceAny'));
     if (f === 'banned_category') parts.push(i.category ? t('e_banned', { category: i.category }) : t('e_bannedAny'));
     if (f === 'duplicate_image') parts.push(t('e_duplicate'));
@@ -49,8 +49,7 @@ export function evidenceText(i: Item, t: VettingT, locale: Locale): string {
 export function ListingVetting() {
   const t = useVettingT();
   const { locale } = useLocale();
-  const search = useSearch({ strict: false }) as PlaceFilter;
-  const filter = { province: search.province, market: search.market };
+  const filter = usePlace();
   const query = useQuery(vettingQuery(filter));
   const { can, roleName } = useGrant();
   const decide = useDecideVetting();
@@ -64,11 +63,11 @@ export function ListingVetting() {
   const data = query.data!;
   const status = (i: Item) => (i.state === 'pending' ? t('pending') : i.state === 'approved' ? t('approved') : i.state === 'rejected' ? t('rejected') : i.state);
   const rows: Row[] = data.items.map(i => ({
-    id: i.id, name: i.name, price: i.priceCents == null ? t('quote') : formatMoney(i.priceCents, locale), seller: i.businessName,
+    id: i.id, name: i.name, price: i.priceCents == null ? t('quote') : formatPrice(i.priceCents, locale), seller: i.businessName,
     rule: ruleText(i, t, locale), evidence: evidenceText(i, t, locale), status: status(i), item: i,
   }));
   const tones = (r: Row): Partial<Record<keyof Row, DataTableTone>> => ({
-    rule: 'tag-accent-2', status: r.item.state === 'pending' ? 'tag-highlight' : r.item.state === 'approved' ? 'tag-accent' : 'tag-neutral',
+    rule: 'tag-danger', status: r.item.state === 'pending' ? 'status-warning' : r.item.state === 'approved' ? 'status-success' : r.item.state === 'rejected' ? 'status-danger' : 'status-neutral',
   });
   const columns: DataTableColumn<Row>[] = [
     { key: 'name', label: t('colListing'), sub: 'price', subLabel: t('colPrice'), primary: true },
@@ -101,7 +100,7 @@ export function ListingVetting() {
         <p className="nl-q-lede">{t('lede')}</p>
       </div>
       {notice ? <p role={notice.tone === 'error' ? 'alert' : 'status'} className={notice.tone === 'error' ? 'nl-q-error' : 'nl-q-note'}>{notice.text}</p> : null}
-      <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
+      <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
         can={{ create: false, update: can('vet'), delete: false }} roleName={roleName} actions={actions} onAction={onAction} emptyText={t('empty')} />
       {rejecting ? <RejectDialog item={rejecting} onClose={() => setRejecting(null)}
         onDone={() => { setNotice({ tone: 'ok', text: t('rejectedToast', { name: rejecting.name }) }); setRejecting(null); }} /> : null}
@@ -119,7 +118,7 @@ function RejectDialog({ item, onClose, onDone }: { item: Item; onClose: () => vo
   const other = decide.error && !(decide.error instanceof ValidationError) ? (decide.error as Error).message : undefined;
   return (
     <Dialog open onClose={onClose} title={t('rejectTitle', { name: item.name })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={decide.isPending} onClick={() => decide.mutate({ item, decision: 'reject', reasons, note: note || undefined }, { onSuccess: onDone })}>{t('rejectSend')}</Button></>}>
       <fieldset className="nl-q-field">
         <legend>{t('rejectWhy')}</legend>

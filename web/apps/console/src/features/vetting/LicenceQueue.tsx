@@ -33,7 +33,7 @@ export function LicenceQueue({ filter }: { filter: PlaceFilter }) {
     expires: formatDate(`${i.licence.expiresOn}T12:00:00Z`, locale, 'long'), province: i.licence.province, status: st(i.licence.status), item: i,
   }));
   const tones = (r: Row): Partial<Record<keyof Row, DataTableTone>> => ({
-    status: r.item.licence.status === 'pending' ? 'tag-highlight' : r.item.licence.status === 'approved' ? 'tag-accent' : 'tag-neutral',
+    status: r.item.licence.status === 'pending' ? 'status-warning' : r.item.licence.status === 'approved' ? 'status-success' : r.item.licence.status === 'rejected' ? 'status-danger' : 'status-neutral',
   });
   const columns: DataTableColumn<Row>[] = [
     { key: 'business', label: t('colBusiness'), sub: 'cls', subLabel: t('colClass'), primary: true },
@@ -69,11 +69,11 @@ export function LicenceQueue({ filter }: { filter: PlaceFilter }) {
           <h2 className="nl-q-h2">{t('licTitle', { n: status === 'pending' ? items.length : '…' })}</h2>
           <p className="nl-q-lede">{t('licLede')}</p>
         </div>
-        <Segmented name="licence-status" aria-label={t('filter')} value={status} onChange={v => setStatus(v)} options={FILTERS.map(f => ({ value: f, label: t(`f_${f}`) }))} />
       </div>
       {elsewhere.map(i => <p key={i.licence.id} className="nl-q-note">{i.businessName}: {t('otherProvince', { licence: i.licence.province, business: i.businessProvince ?? '' })}</p>)}
       {notice ? <p role={notice.tone === 'error' ? 'alert' : 'status'} className={notice.tone === 'error' ? 'nl-q-error' : 'nl-q-note'}>{notice.text}</p> : null}
-      <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
+      <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
+        filters={<Segmented name="licence-status" aria-label={t('filter')} value={status} onChange={v => setStatus(v)} options={FILTERS.map(f => ({ value: f, label: t(`f_${f}`) }))} />}
         can={{ create: false, update: can('vet'), delete: false }} roleName={roleName} actions={actions} onAction={onAction} emptyText={t('empty')} />
       {rejecting ? <RejectLicence item={rejecting} onClose={() => setRejecting(null)}
         onDone={() => { setNotice({ tone: 'ok', text: t('rejectedToast', { name: rejecting.businessName }) }); setRejecting(null); }} /> : null}
@@ -89,7 +89,7 @@ function RejectLicence({ item, onClose, onDone }: { item: LicenceItem; onClose: 
   const errors = decide.error instanceof ValidationError ? decide.error.byField() : {};
   return (
     <Dialog open onClose={onClose} title={t('rejectTitle', { name: item.businessName })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={decide.isPending} onClick={() => decide.mutate({ id: item.licence.id, decision: 'reject', reason, note: note || undefined }, { onSuccess: onDone })}>{t('rejectSend')}</Button></>}>
       <Field label={t('why')} error={errors.reason}>
         <Select value={reason} onChange={e => setReason(e.target.value as LicenceReason)} options={LICENCE_REASONS.map(r => ({ value: r, label: t(`why_${r}`) }))} />

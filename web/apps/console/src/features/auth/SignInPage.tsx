@@ -162,7 +162,7 @@ export function SignInPage({ next, error, navigate = url => window.location.assi
               <RateLimitNotice left={limit.left} />
               <div className="nl-auth-row">
                 <Button type="submit" disabled={busy || limit.limited} aria-busy={busy || undefined}>{t(FACTORS.find(f => f.key === factor)!.cta)}</Button>
-                <Button type="button" variant="ghost" onClick={() => { setStep('id'); setFailure(''); }}>{t('back')}</Button>
+                <Button type="button" variant="tertiary" onClick={() => { setStep('id'); setFailure(''); }}>{t('back')}</Button>
               </div>
             </form>
           )}

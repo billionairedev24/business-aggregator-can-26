@@ -49,29 +49,36 @@ const rowOf = (text: string) => screen.getAllByText(text)[0]!.closest('tr, .nl-d
 describe('support desk (S-83, design 03 support)', () => {
   afterEach(() => vi.useRealTimers());
 
-  it('shows the design copy, KPIs, chips with counts, the queue and the requester context', async () => {
+  it('shows the design copy, KPIs, the case tabs with counts, the queue and a case’s page with the requester’s context', async () => {
     vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
     api(['support']);
-    renderConsole('/support');
+    const first = renderConsole('/support');
     expect(await screen.findByRole('heading', { level: 1, name: 'Support desk' })).toBeTruthy();
     expect(await screen.findByText('23 open · 3 urgent · median first reply 38 min')).toBeTruthy();
-    for (const k of ['Open · 3 urgent', 'Median first reply · SLA 1 h Master / 4 h', 'SLA at risk', 'Resolved without escalation · 30 d', 'CSAT · 30 d', 'In French']) expect(screen.getByText(k)).toBeTruthy();
+    for (const k of ['Open · 3 urgent', 'Median first reply · SLA 1 h Master / 4 h', 'Resolved without escalation · 30 d', 'CSAT · 30 d', 'In French']) expect(screen.getByText(k)).toBeTruthy();
     expect(screen.getByText('94%')).toBeTruthy();
     expect(screen.getByText('4.7')).toBeTruthy();
-    const chips = screen.getByRole('group', { name: 'Filter cases' });
-    for (const c of ['All · 23', 'Urgent · 3', 'Unassigned · 6', 'Mine · 5', 'SLA at risk · 2', 'Providers', 'Kitchens', 'Customers']) expect(within(chips).getByRole('button', { name: c })).toBeTruthy();
+    expect(within(screen.getByRole('tablist', { name: 'Cases' })).getAllByRole('tab').map(x => x.textContent)).toEqual(['All23', 'Urgent3', 'Unassigned6', 'Mine5', 'SLA at risk2']);
+    const requester = within(screen.getByRole('radiogroup', { name: 'Requester' }));
+    for (const c of ['Everyone', 'Providers', 'Sellers', 'Kitchens', 'Customers']) expect(requester.getByRole('radio', { name: c })).toBeTruthy();
     const row = rowOf('HD-4472');
-    expect(within(row).getByText('R. Diaz · Order NL-48102 arrived late')).toBeTruthy();
-    expect(within(row).getByText('Dev K.')).toBeTruthy();
-    expect(within(row).getByText('Urgent')).toBeTruthy();
+    expect(within(row).getByText(/Order NL-48102 arrived late/)).toBeTruthy();
+    expect(within(row).getByText(/Dev K\./)).toBeTruthy();
+    expect(within(row).getByText('Urgent').className).toContain('tag-danger');
     expect(within(row).getByText('10 min')).toBeTruthy();
-    expect(within(rowOf('HD-4471')).getByText('Unassigned')).toBeTruthy();
-    expect(await screen.findByRole('heading', { level: 2, name: 'Prairie Wrench · master' })).toBeTruthy();
+    expect(within(row).getByText('In progress').className).toContain('nl-status-info');
+    expect(within(rowOf('HD-4471')).getByText(/Unassigned/)).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByText('Portal: provider · tier master · role owner')).toBeTruthy();
-    expect(screen.getByText('HD-4471 · Unassigned · Document · WCB clearance')).toBeTruthy();
+    first.unmount();
+    renderConsole('/support/T1');
+    expect(await screen.findByRole('heading', { level: 1, name: 'HD-4471 · WCB letter uploaded — restore instant book?' })).toBeTruthy();
+    await expectNoAxeViolations(document.body);
+    expect(screen.getByText('Requester', { selector: 'dt' }).nextElementSibling?.textContent).toBe('Prairie Wrench · master');
+    expect(screen.getByText('About', { selector: 'dt' }).nextElementSibling?.textContent).toBe('Document · WCB clearance');
     expect(screen.getByText('Can instant book be turned back on today?')).toBeTruthy();
     expect(screen.getByText(/Every action is logged to the audit trail and visible to the requester as a case update\./)).toBeTruthy();
+    await user().click(screen.getByRole('tab', { name: /Requester context/ }));
+    expect(screen.getByText('Portal: provider')).toBeTruthy();
   });
 
   it('shows the photos a customer attached to a report, opened through the ticket (mobile gaps part 1)', async () => {
@@ -82,7 +89,7 @@ describe('support desk (S-83, design 03 support)', () => {
     api(['support'], c => (c.method === 'GET' && c.url.endsWith('/api/v1/console/support/tickets/T1')
       ? { body: detail(HD4471, { notes: [{ by: 'customer', name: null, body: 'Reported: Damaged', at: '2026-09-08T17:20:00Z', attachments: files }] }) }
       : undefined));
-    renderConsole('/support');
+    renderConsole('/support/T1');
     const list = await screen.findByRole('list', { name: '2 files attached' });
     const photo = within(list).getByRole('img', { name: 'Photo kale.jpg (opens full size)' });
     expect(photo.getAttribute('src')).toBe('/api/v1/console/support/tickets/T1/attachments/UP1');
@@ -90,20 +97,25 @@ describe('support desk (S-83, design 03 support)', () => {
     await expectNoAxeViolations(document.body);
   });
 
-  it('filters by chip through the api', async () => {
+  it('filters by tab and requester through the api, and opens a case', async () => {
     const calls = api(['support']);
     const { router } = renderConsole('/support');
-    await user().click(await screen.findByRole('button', { name: 'Urgent · 3' }));
+    await user().click(await screen.findByRole('radio', { name: 'Kitchens' }));
+    await waitFor(() => expect(calls.some(c => c.url.includes('/api/v1/console/support/tickets?filter=kitchens'))).toBe(true));
+    await user().click(await screen.findByRole('tab', { name: /^Urgent/ }));
     await waitFor(() => expect(router.state.location.search).toEqual({ filter: 'urgent' }));
     await waitFor(() => expect(calls.some(c => c.url.includes('/api/v1/console/support/tickets?filter=urgent'))).toBe(true));
+    await user().click(within(rowOf('HD-4472')).getByRole('button', { name: /Open case/ }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/support/T2'));
   });
 
   it('inserts a macro in the requester’s language and sends it, keeping the case open or resolving it', async () => {
     const calls = api(['support']);
-    renderConsole('/support?ticket=T2');
-    expect(await screen.findByRole('heading', { level: 2, name: 'R. Diaz' })).toBeTruthy();
+    renderConsole('/support/T2');
+    expect(await screen.findByRole('heading', { level: 1, name: /HD-4472/ })).toBeTruthy();
     expect(screen.getByText('Requester writes in French')).toBeTruthy();
-    expect(screen.getByText('HD-4472 · Dev K. · Order NL-48102 · 1 refund case attached')).toBeTruthy();
+    expect(screen.getByText('Agent', { selector: 'dt' }).nextElementSibling?.textContent).toBe('Dev K.');
+    await screen.findByRole('option', { name: 'Payout hold — policy explanation' });
     await user().selectOptions(screen.getByRole('combobox', { name: 'Insert macro…' }), 'support.payout_hold');
     const reply = screen.getByPlaceholderText("Reply in the requester's language (EN/FR auto-detected)…") as HTMLTextAreaElement;
     expect(reply.value).toBe('Après un litige, les versements sont retenus 7 jours.');
@@ -118,7 +130,7 @@ describe('support desk (S-83, design 03 support)', () => {
 
   it('assigns, escalates and shows the api refusal inline', async () => {
     const calls = api(['support'], c => (c.url.endsWith('/escalate') ? { status: 409, body: { code: 'already_escalated', detail: 'This case is already with trust & safety.' } } : undefined));
-    renderConsole('/support');
+    renderConsole('/support/T1');
     await user().click(await screen.findByRole('button', { name: 'Assign to me' }));
     await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/tickets/T1/take'))).toBe(true));
     await user().click(screen.getByRole('button', { name: 'Escalate to T&S' }));
@@ -131,8 +143,8 @@ describe('support desk (S-83, design 03 support)', () => {
       if (c.url.endsWith('/refund-requests') && first) { first = false; return { status: 422, body: { errors: [{ field: 'amountCents', code: 'range', message: 'Enter an amount more than $0.' }] } }; }
       return undefined;
     });
-    renderConsole('/support');
-    await user().click(await screen.findByRole('button', { name: 'Request refund (finance approves)' }));
+    renderConsole('/support/T1');
+    await user().click(await screen.findByRole('button', { name: 'Request refund (finance approves)…' }));
     const dialog = await screen.findByRole('dialog', { name: 'Request a refund — HD-4471' });
     await user().click(within(dialog).getByRole('button', { name: 'Send to finance' }));
     expect(await within(dialog).findByText('Enter an amount more than $0.')).toBeTruthy();
@@ -147,7 +159,8 @@ describe('support desk (S-83, design 03 support)', () => {
     const pending = (id: string, by: string) => ({ id, amountCents: 3100, note: 'Late delivery', requestedBy: by, requestedAt: '2026-09-08T17:00:00Z', state: 'pending', requestedByName: by === ME ? 'Priya N.' : 'Dev K.' });
     const calls = api(['admin'], c => (c.method === 'GET' && c.url.endsWith('/tickets/T1')
       ? { body: detail(HD4471, { refundRequests: [pending('RR1', 'U9'), pending('RR2', ME)] }) } : undefined));
-    renderConsole('/support');
+    renderConsole('/support/T1');
+    await user().click(await screen.findByRole('tab', { name: /Refund requests/ }));
     expect(await screen.findByText(/\$31\.00 · asked by Dev K\./)).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'Approve' })).toHaveLength(1);
     await user().click(screen.getByRole('button', { name: 'Approve' }));
@@ -156,7 +169,11 @@ describe('support desk (S-83, design 03 support)', () => {
 
   it('is view only for dispatch, and macros are kept by support leads only', async () => {
     api(['dispatch']);
-    renderConsole('/support');
+    const first = renderConsole('/support');
+    await screen.findByRole('heading', { level: 1, name: 'Support desk' });
+    expect(screen.queryByRole('button', { name: 'Manage macros' })).toBeNull();
+    first.unmount();
+    renderConsole('/support/T1');
     expect(await screen.findByText('View only · Ops dispatcher')).toBeTruthy();
     expect((await screen.findByRole('button', { name: 'Send & keep open' }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole('button', { name: 'Assign to me' }) as HTMLButtonElement).disabled).toBe(true);
@@ -184,10 +201,12 @@ describe('support desk (S-83, design 03 support)', () => {
 
   it('speaks French', async () => {
     api(['support']);
-    renderConsole('/support', { locale: 'fr' });
+    const first = renderConsole('/support', { locale: 'fr' });
     expect(await screen.findByRole('heading', { level: 1, name: 'Centre de soutien' })).toBeTruthy();
     expect(await screen.findByText('23 ouverts · 3 urgents · première réponse médiane 38 min')).toBeTruthy();
-    expect(await screen.findByRole('button', { name: 'Envoyer et garder ouvert' })).toBeTruthy();
     expect(screen.getByText(/94\s?%/)).toBeTruthy();
+    first.unmount();
+    renderConsole('/support/T1', { locale: 'fr' });
+    expect(await screen.findByRole('button', { name: 'Envoyer et garder ouvert' })).toBeTruthy();
   });
 });

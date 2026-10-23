@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from '@tanstack/react-router';
-import { BoHeader, Button, ChartCard, ErrorState, formatNumber, KpiStrip, OptionCard, PageSkeleton, RadioGroup, Tag, useFormatters, useLocale, type Locale, type TagTone } from '@northline/ui';
+import { ActionPanel, ActionPanelItem, ErrorState, formatCompactMoney, formatNumber, KpiStrip, PageSkeleton, RecordHeader, RecordHistory, RecordLayout, RecordTabs, StatusTag, Tag, useFormatters, useLocale, type Locale, type TagTone } from '@northline/ui';
 import { ApiError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { sellerQuery, type Check, type Detail, type OversightAction, type Trail } from './api';
-import { checkName, compactMoney } from './format';
+import { checkName, regionName } from './format';
+import { useRegions } from '../shell/api';
+import { STATUS_TONE } from './SellersDirectory';
 import { StandingCard } from './StandingCard';
 import { useSellersT, type SellersKey, type SellersT } from './messages';
 import { OversightDialog } from './OversightDialog';
@@ -54,10 +56,11 @@ export function SellerDetail() {
   const t = useSellersT();
   const { sellerId } = useParams({ strict: false }) as { sellerId: string };
   const query = useQuery(sellerQuery(sellerId));
-  if (query.isPending) return <div className="bo-page"><Link to="/sellers" className="btn btn-ghost nl-sl-back">{t('back')}</Link><PageSkeleton kpis={5} rows={6} /></div>;
+  const back = <div className="bo-rec-back"><Link to="/sellers">{t('back')}</Link></div>;
+  if (query.isPending) return <div className="bo-page">{back}<PageSkeleton kpis={5} rows={6} /></div>;
   if (query.isError) {
     const missing = query.error instanceof ApiError && query.error.status === 404;
-    return <div className="bo-page"><Link to="/sellers" className="btn btn-ghost nl-sl-back">{t('back')}</Link>{missing ? <p role="alert">{t('notFound')}</p> : <ErrorState message={t('detailError')} onRetry={() => void query.refetch()} />}</div>;
+    return <div className="bo-page">{back}{missing ? <p role="alert">{t('notFound')}</p> : <ErrorState message={t('detailError')} onRetry={() => void query.refetch()} />}</div>;
   }
   return <DetailView data={query.data} />;
 }
@@ -66,22 +69,14 @@ function DetailView({ data }: { data: Detail }) {
   const t = useSellersT();
   const { locale } = useLocale();
   const fmt = useFormatters();
+  const regions = useRegions(locale).data;
   const { can } = useGrant();
   const s = data.seller;
   const suspended = s.status === 'suspended';
-  const actions: { id: OversightAction; name: SellersKey; desc: SellersKey; allowed: boolean }[] = [
-    suspended ? { id: 'reinstate', name: 'o_reinstate', desc: 'o_reinstateDesc', allowed: can('suspend') } : { id: 'suspend', name: 'o_suspend', desc: 'o_suspendDesc', allowed: can('suspend') },
-    { id: 'reverification', name: 'o_reverify', desc: 'o_reverifyDesc', allowed: can('verify') },
-    { id: 'tier', name: 'o_tier', desc: 'o_tierDesc', allowed: can('suspend') && !!s.tier },
-    s.searchHidden ? { id: 'search', name: 'o_show', desc: s.searchHidden === 'rating_floor' ? 'o_showFloorDesc' : 'o_showDesc', allowed: can('suspend') }
-      : { id: 'search', name: 'o_hide', desc: 'o_hideDesc', allowed: can('suspend') },
-  ];
-  const [pick, setPick] = useState<OversightAction>(actions[0]!.id);
   const [dialog, setDialog] = useState<OversightAction | null>(null);
   const [applied, setApplied] = useState(false);
-  const chosen = actions.find(a => a.id === pick) ?? actions[0]!;
-  const meta = sellerMeta(data, t, locale);
   const tierName = s.tier ? t(`tier_${s.tier}` as SellersKey) : '';
+  const category = s.category ? (s.category.names[locale] ?? s.category.names.en) : undefined;
   const below = (m: { value?: number | null; floor?: number | null }, inverted = false) => m.value != null && m.floor != null && (inverted ? m.value > m.floor : m.value < m.floor);
   const timeline = [
     ...data.trail.map(e => ({ key: e.id, at: e.at, text: trailText(e, t) })),
@@ -89,56 +84,58 @@ function DetailView({ data }: { data: Detail }) {
     { key: 'joined', at: data.joinedAt, text: t('t_joined') },
   ].sort((a, b) => b.at.localeCompare(a.at));
   const low = (on: boolean) => (on ? { delta: t('belowFloor'), trend: 'down' as const } : {});
+  const act = (id: OversightAction) => () => { setApplied(false); setDialog(id); };
   return (
     <div className="bo-page">
-      <div>
-        <Link to="/sellers" className="btn btn-ghost nl-sl-back">{t('back')}</Link>
-        <BoHeader title={s.name} sub={meta} actions={
-          <Button variant="secondary" className={suspended ? 'nl-sl-unsuspend' : undefined} disabled={!can('suspend')}
-            onClick={() => setDialog(suspended ? 'reinstate' : 'suspend')}>{suspended ? t('unsuspendCta') : t('suspendCta')}</Button>} />
-        {s.searchHidden ? <Tag tone="warning">{t(s.searchHidden === 'rating_floor' ? 'hiddenFloor' : 'hidden')}</Tag> : null}
-      </div>
-      <KpiStrip label={t('kpis')} items={[
-        { key: 'rating', label: t('k_rating', { n: data.ratingCount }), value: fmt1(data.ratingAverage, locale) },
-        { key: 'quality', label: data.quality.floor == null ? t('k_quality') : t('k_qualityFloor', { tier: tierName, floor: data.quality.floor }),
-          value: data.quality.value == null ? t('none') : formatNumber(data.quality.value, locale), ...low(below(data.quality)) },
-        { key: 'onTime', label: data.onTime.floor == null ? t('k_onTime') : t('k_onTimeFloor', { floor: fmt1(data.onTime.floor, locale) }),
-          value: data.onTime.value == null ? t('none') : `${fmt1(data.onTime.value, locale)}%`, ...low(below(data.onTime)) },
-        { key: 'disputes', label: data.disputes.floor == null ? t('k_disputes') : t('k_disputesFloor', { floor: fmt1(data.disputes.floor, locale) }),
-          value: data.disputes.value == null ? t('none') : `${fmt1(data.disputes.value, locale)}%`, ...low(below(data.disputes, true)) },
-        { key: 'gmv', label: t('k_gmv'), value: compactMoney(s.gmv90Cents, locale) },
-      ]} />
-      <div className="nl-cols-wrap"><div className="nl-cols" data-split="wide">
-        <div className="nl-col">
-        <ChartCard id="sl-signals" title={t('signalsTitle')}>
-          {data.signals.length ? data.signals.map(sg => (
-            <div key={sg.key} className="nl-sl-signal">
-              <span>{t(`s_${sg.key}` as SellersKey)}</span>
-              <div className="nl-sl-track"><div className="nl-sl-fill" data-low={sg.bar < sg.barFloor || undefined} style={{ width: `${Math.max(0, Math.min(100, sg.bar))}%` }} /></div>
-              <strong>{`${fmt1(sg.value, locale)}%`}</strong>
-            </div>
-          )) : <p className="bo-muted">{t('noSignals')}</p>}
-        </ChartCard>
-        <ChartCard id="sl-checks" title={t('checksTitle')}>
-          {data.checks.length ? <div className="nl-sl-tags">{data.checks.map(c => { const tag = checkTag(c, data.asOf, t); return <Tag key={c.id} tone={tag.tone}>{tag.text}</Tag>; })}</div> : <p className="bo-muted">{t('noChecksOnFile')}</p>}
-        </ChartCard>
-        <ChartCard id="sl-timeline" title={t('timelineTitle')}>
-          <ol className="nl-sl-timeline">
-            {timeline.map(e => <li key={e.key}><span>{fmt.date(e.at)}</span><span>{e.text}</span></li>)}
-          </ol>
-        </ChartCard>
-        <StandingCard businessId={s.id} />
-        </div>
-        <ChartCard id="sl-oversight" title={t('oversightTitle')} className="nl-sl-oversight">
-          <RadioGroup className="nl-sl-options" aria-label={t('oversightTitle')}>
-            {actions.map(a => <OptionCard key={a.id} role="radio" aria-checked={pick === a.id} selected={pick === a.id} title={t(a.name)} description={t(a.desc)} onClick={() => { setPick(a.id); setApplied(false); }} />)}
-          </RadioGroup>
-          <div className="nl-sl-apply">
-            <Button disabled={!chosen.allowed || applied} onClick={() => setDialog(chosen.id)}>{applied ? t('applied') : t('apply', { action: t(chosen.name) })}</Button>
-            <span className="nl-sl-note">{!chosen.allowed ? t('cannot') : applied ? t('noteApplied') : t('noteNow')}</span>
-          </div>
-        </ChartCard>
-      </div></div>
+      <RecordHeader back={<Link to="/sellers">{t('back')}</Link>} title={s.name}
+        status={<>{s.status ? <StatusTag tone={STATUS_TONE[s.status]} size="lg">{t(`st_${s.status}` as SellersKey)}</StatusTag> : null}
+          {s.searchHidden ? <StatusTag tone="warning" size="lg">{t(s.searchHidden === 'rating_floor' ? 'hiddenFloor' : 'hidden')}</StatusTag> : null}</>}
+        facts={[
+          { label: t('f_type'), value: [t(`type_${s.type}` as SellersKey), category].filter(Boolean).join(' · ') },
+          { label: t('f_place'), value: [s.city, regionName(s.province, regions, t)].filter(Boolean).join(' · ') },
+          s.tier ? { label: t('f_tier'), value: tierName } : null,
+          { label: t('f_joined'), value: monthYear(data.joinedAt, locale) },
+          data.stripeAccount ? { label: t('f_stripe'), value: data.stripeAccount } : null,
+        ]} />
+      <RecordLayout asideLabel={t('oversightTitle')} aside={
+        <ActionPanel title={t('oversightTitle')} note={applied ? t('noteApplied') : can('suspend') ? t('noteNow') : t('cannot')}>
+          {suspended
+            ? <ActionPanelItem label={t('o_reinstate')} description={t('o_reinstateDesc')} variant="primary" disabled={!can('suspend')} onClick={act('reinstate')} />
+            : <ActionPanelItem label={t('suspendCta')} description={t('o_suspendDesc')} variant="destructive" disabled={!can('suspend')} onClick={act('suspend')} />}
+          <ActionPanelItem label={`${t('o_reverify')}…`} description={t('o_reverifyDesc')} disabled={!can('verify')} onClick={act('reverification')} />
+          {s.tier ? <ActionPanelItem label={`${t('o_tier')}…`} description={t('o_tierDesc')} disabled={!can('suspend')} onClick={act('tier')} /> : null}
+          {s.searchHidden
+            ? <ActionPanelItem label={`${t('o_show')}…`} description={t(s.searchHidden === 'rating_floor' ? 'o_showFloorDesc' : 'o_showDesc')} disabled={!can('suspend')} onClick={act('search')} />
+            : <ActionPanelItem label={`${t('o_hide')}…`} description={t('o_hideDesc')} disabled={!can('suspend')} onClick={act('search')} />}
+        </ActionPanel>}>
+        <KpiStrip label={t('kpis')} items={[
+          { key: 'rating', label: t('k_rating', { n: data.ratingCount }), value: fmt1(data.ratingAverage, locale) },
+          { key: 'quality', label: data.quality.floor == null ? t('k_quality') : t('k_qualityFloor', { tier: tierName, floor: data.quality.floor }),
+            value: data.quality.value == null ? t('none') : formatNumber(data.quality.value, locale), ...low(below(data.quality)) },
+          { key: 'onTime', label: data.onTime.floor == null ? t('k_onTime') : t('k_onTimeFloor', { floor: fmt1(data.onTime.floor, locale) }),
+            value: data.onTime.value == null ? t('none') : `${fmt1(data.onTime.value, locale)}%`, ...low(below(data.onTime)) },
+          { key: 'disputes', label: data.disputes.floor == null ? t('k_disputes') : t('k_disputesFloor', { floor: fmt1(data.disputes.floor, locale) }),
+            value: data.disputes.value == null ? t('none') : `${fmt1(data.disputes.value, locale)}%`, ...low(below(data.disputes, true)) },
+          { key: 'gmv', label: t('k_gmv'), value: formatCompactMoney(s.gmv90Cents, locale) },
+        ]} />
+        <RecordTabs label={s.name} tabs={[
+          { value: 'standing', label: t('tabStanding'), render: () => <>
+            <h2 className="bo-card-title">{t('signalsTitle')}</h2>
+            {data.signals.length ? data.signals.map(sg => (
+              <div key={sg.key} className="nl-sl-signal">
+                <span>{t(`s_${sg.key}` as SellersKey)}</span>
+                <div className="nl-sl-track"><div className="nl-sl-fill" data-low={sg.bar < sg.barFloor || undefined} style={{ width: `${Math.max(0, Math.min(100, sg.bar))}%` }} /></div>
+                <strong>{`${fmt1(sg.value, locale)}%`}</strong>
+              </div>
+            )) : <p className="bo-muted">{t('noSignals')}</p>}
+            <StandingCard businessId={s.id} />
+          </> },
+          { value: 'evidence', label: t('checksTitle'), count: data.checks.length, render: () => (data.checks.length
+            ? <div className="nl-sl-tags">{data.checks.map(c => { const tag = checkTag(c, data.asOf, t); return <Tag key={c.id} tone={tag.tone}>{tag.text}</Tag>; })}</div>
+            : <p className="bo-muted">{t('noChecksOnFile')}</p>) },
+          { value: 'history', label: t('timelineTitle'), count: timeline.length, render: () => <RecordHistory items={timeline.map(e => ({ key: e.key, when: fmt.date(e.at), text: e.text }))} /> },
+        ]} />
+      </RecordLayout>
       {dialog ? <OversightDialog seller={s} action={dialog} checks={data.checks} onClose={() => setDialog(null)} onDone={() => setApplied(true)} /> : null}
     </div>
   );
