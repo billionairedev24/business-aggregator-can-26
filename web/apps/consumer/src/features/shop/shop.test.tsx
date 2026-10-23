@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,6 +8,8 @@ import { mockFetch, renderApp, type Call } from '../../test/render';
 import { DepartmentPage } from './DepartmentPage';
 import { ShopSkeleton } from './parts';
 import { ShopLanding } from './ShopLanding';
+import { StorePage } from './StorePage';
+import { loadStore } from './store';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 // Tonight's run: 6–9 pm in Edmonton (MDT = UTC−6), order by 5:20 pm.
@@ -47,9 +50,18 @@ function Department() {
   const { market } = useSearch({ strict: false }) as { market?: string };
   return <Suspense fallback={<ShopSkeleton />}><DepartmentPage slug={department} market={market} /></Suspense>;
 }
+/** The store route's loader (features/shop/store.ts) and its page. */
+function StoreData() {
+  const { merchantId } = useParams({ strict: false }) as { merchantId: string };
+  const search = useSearch({ strict: false }) as { market?: string; dept?: string };
+  const qc = useQueryClient();
+  const { data } = useSuspenseQuery({ queryKey: ['test-store', merchantId], queryFn: () => loadStore(qc, merchantId, search, 'en') });
+  return data ? <StorePage data={data} market={search.market} /> : <h1>Not found</h1>;
+}
+const Store = () => <Suspense fallback={<ShopSkeleton />}><StoreData /></Suspense>;
 const open = (path: string, locale: 'en' | 'fr' = 'en') => {
   const calls = mockFetch(server);
-  const view = renderApp(path, { locale, routes: { shop: () => <Landing />, category: () => <Department /> } });
+  const view = renderApp(path, { locale, routes: { shop: () => <Landing />, category: () => <Department />, store: () => <Store /> } });
   return { calls, ...view };
 };
 const url = (c: Call) => new URL(c.url, 'http://x');
@@ -83,7 +95,7 @@ describe('Shop landing (design 06 shop)', () => {
 
     const run = screen.getByRole('region', { name: 'All shops on tonight’s run' });
     expect(within(run).getByText('One courier, one fee — every shop below packs for the same run.')).toBeInTheDocument();
-    expect(within(run).getByRole('link', { name: /Glenmore Bakery.*Bakery · 5 products.*Order by 5:20 p\.m\./ })).toHaveAttribute('href', '/shop/bakery');
+    expect(within(run).getByRole('link', { name: /Glenmore Bakery.*Bakery · 5 products.*Order by 5:20 p\.m\./ })).toHaveAttribute('href', '/shop/stores/M1?dept=bakery');
     expect(within(run).getByRole('link', { name: /Little Sprouts.*Tomorrow/ })).toBeInTheDocument();
     expect(within(run).getByRole('link', { name: /Empty Shelf.*Not on a run/ })).toBeInTheDocument();
 
@@ -188,7 +200,7 @@ describe('Department page (design 06 category)', () => {
     expect(within(chips).getByRole('link', { name: 'Butcher' })).toHaveAttribute('href', '/shop/butcher');
 
     const shops = screen.getByRole('region', { name: 'Shops · Bakery' });
-    expect(within(shops).getByRole('link', { name: /Glenmore Bakery.*5 products.*Master.*On tonight’s run/ })).toHaveAttribute('href', '/search?scope=shop&q=Glenmore%20Bakery');
+    expect(within(shops).getByRole('link', { name: /Glenmore Bakery.*5 products.*Master.*On tonight’s run/ })).toHaveAttribute('href', '/shop/stores/M1?dept=bakery');
     expect(within(shops).getByRole('link', { name: /Sidewalk Citizen.*Trusted.*Tomorrow/ })).toBeInTheDocument();
 
     const products = screen.getByRole('region', { name: 'Popular in Bakery' });
@@ -215,5 +227,48 @@ describe('Department page (design 06 category)', () => {
     open('/shop/bakery');
     expect(await screen.findByText('No shops in Bakery deliver to Calgary yet.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to Shop' })).toHaveAttribute('href', '/shop');
+  });
+});
+
+describe('a shop’s page (E-15 S-172)', () => {
+  const hit = (id: string, name: string, merchant: { id: string; name: string }) => ({
+    id, kind: 'product', name, description: null, merchant: { ...merchant, type: 'seller', slug: null, tier: 'master' }, category: { id: 'shop.bakery', name: 'Bakery' },
+    priceCents: 925, pricingMode: 'fixed', rating: 4.7, reviewCount: 12, trustTier: 'master', distanceKm: null, instantBook: false, fulfilment: ['pooled'],
+    openNow: false, soldOut: false, onTonightsRun: true, prepMinutes: null, dietary: [], imageKey: null,
+  });
+
+  it('shows the shop’s header and its goods from the search, kept to this merchant', async () => {
+    const base = api;
+    api = c => (url(c).pathname === '/api/v1/search'
+      ? { body: { items: [hit('O9', 'Seeded rye, 750 g', { id: 'M1', name: 'Glenmore Bakery' }), hit('O8', 'Glenmore-style bagels', { id: 'M9', name: 'Other Bakery' })], total: 2, facets: null, next: null } }
+      : base(c));
+    const { calls } = open('/shop/stores/M1?dept=bakery');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Glenmore Bakery' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
+    const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(crumbs).getByRole('link', { name: 'Bakery' })).toHaveAttribute('href', '/shop/bakery');
+    expect(screen.getByText('Bakery · Calgary')).toBeInTheDocument();
+    expect(screen.getByText('Master')).toBeInTheDocument();
+    expect(screen.getByText('On tonight’s run · order by 5:20 p.m.')).toBeInTheDocument();
+    const goods = screen.getByRole('region', { name: 'Products' });
+    expect(within(goods).getByRole('link', { name: 'Seeded rye, 750 g' })).toBeInTheDocument();
+    expect(within(goods).queryByText('Glenmore-style bagels')).not.toBeInTheDocument();
+    const search = calls.find(c => url(c).pathname === '/api/v1/search')!;
+    expect(url(search).searchParams.get('q')).toBe('Glenmore Bakery');
+    expect(url(search).searchParams.get('kind')).toBe('product');
+  });
+
+  it('falls back to the products the Shop pages list for it, and is a 404 when no page lists the shop', async () => {
+    open('/shop/stores/M1?dept=bakery');
+    const goods = await screen.findByRole('region', { name: 'Products' });
+    expect(within(goods).getByRole('link', { name: 'Country sourdough' })).toBeInTheDocument();
+    open('/shop/stores/M77');
+    expect(await screen.findByRole('heading', { name: 'Not found' })).toBeInTheDocument();
+  });
+
+  it('is in French', async () => {
+    open('/shop/stores/M1?dept=bakery', 'fr');
+    expect(await screen.findByRole('link', { name: 'Chercher dans cette boutique' })).toBeInTheDocument();
+    expect(screen.getByText(/Sur la tournée de ce soir · commandez avant 17 h 20/)).toBeInTheDocument();
   });
 });

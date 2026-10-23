@@ -11368,3 +11368,101 @@ font-size setting (Dynamic Type: text uses the kit's roles and scales; one-line 
 Android size of the acceptance criteria were not looked at on a phone. The results' filter sheet with counts (the
 mockup's "Filters (3)") isn't built: the search api answers two goods filters, kept as chips. The cut-off countdown
 doesn't show in the shots because the fixture's run closes before the screenshot time.
+
+## 2026-10-23 — S-172 Consumer detail pages
+
+Built from `design/revamp/a.html` ("Product page with buy box", "Service provider with booking") and, for the pages it
+does not draw, the same system: a breadcrumb, a header with a 1:1 photo well, kicker, the 24 px name, trust badges,
+underline tabs or links, one-choice option cards and tiles, and a bordered 4 px box on the right that is a sticky bar on
+phones. No api or BFF change; what the api does not return is derived or left out, as listed here.
+
+**Product page (`/products/<id>`).**
+- Breadcrumb Shop › department › the shop (its page) › the product; a 58 px thumbnail column (the chosen one has an ink
+  edge) and the 1:1 photo well (reserved, `PhotoWell` without a photo; "1 / 3" and a thumbnail row on phones).
+- Details: "Visit <shop>" (the store page), the 24 px title, the stars, badges (the run tag, a Plus price), the price
+  with its unit price, the GST note, the variant as joined boxes (`Segmented`, "900 g · $8.50"; a sold-out variant
+  stays choosable and reads "· sold out", the buy box then says out of stock), "About this item" and a spec table
+  (brand, size, department, condition, sold by, returns).
+- Buy box: price and unit price; "Delivery tonight, 6–9 p.m.", "Pooled run · $2.99 · or tomorrow, 8–11 a.m.", the
+  cut-off ("Order by 5:20 p.m." in the server's HTML, "Order within 2 h 48 min" once the browser counts — no clock in
+  the markup, `make ui-hydration` stays green), the direct courier, stock (success / warning / danger colours), the
+  ID notice, quantity, Add to cart (action blue) and Buy now (secondary), Sold by / Payment / Returns, other sellers.
+  Phones: price, window and Add to cart in a sticky bottom bar.
+- **Derived or left out (no contract change):**
+  - *Unit price:* `unitPriceOf` over the variant's value, the record's `unit` and the title (S-171's rule; never a
+    guess).
+  - *Rating and "Customer reviews":* the api has no product reviews, only the shop's rating on the offer. The page shows
+    the shop's stars and "4.8 out of 5 · 211 ratings of Glenmore Bakery", and links to the store. **No histogram and no
+    review list** (no distribution or texts exist for products or shops).
+  - *"Often bought with":* no co-purchase data. The rail is the offer's `more` ("More from <shop>"), as results cards
+    without a photo (MoreItem has no image) and without Add to cart (no offer id).
+  - *Allergens, ingredients, storage, "May contain":* not in the product record. Not shown. Bullets and description
+    are shown as written.
+  - *Pickup option:* the product page has no pickup data. Not shown.
+  - *GST:* the api doesn't say whether a product is zero-rated. The note now reads "GST, if any, added at checkout"
+    (was "GST included at checkout", which read as tax-inclusive). Checkout prices the tax.
+  - *"Add to a list":* not built. Favourites are for businesses only.
+  - *Stock count ("14 left today"):* only low stock says a number ("Only 2 left"), as before.
+
+**Store page (`/shop/stores/<merchantId>?dept=&market=`, new route).** The api has no store endpoint. The shop's card
+comes from its department page (`dept`, which every link to it carries) or the Shop landing. Its goods come from the
+public search by its name (`kind=product`), kept to results whose `merchant.id` is the shop's. When the search has none,
+the page shows the products the Shop pages list for it. A shop that neither lists is a 404. The header shows the photo
+well, department · market, the name, tier, product count and the next run with its order-by time, plus "Search this
+store". Shop tiles on the Shop landing and the department pages now open it (they went to a name search or the
+department). Screen `store` (section Shop).
+
+**Provider page (`/providers/<slug>`).**
+- Breadcrumb Services › category › the business. Header: the 136 px photo (logo, else its own service photo, else the
+  category's), kicker category · zones, the name, tagline · since · tier, stars, "98% on time · 71% book again". The
+  api has no job count or reply time, so the track record is the on-time and re-book figures. Verified facts are
+  success badges with a shield, plus the booking mode and a running reward.
+- Underline tabs Services (count) / Reviews (count) / About. Services: "Choose a service" as one-choice option cards
+  (radio mark, duration · what's included, the price). Quoted services can be chosen too, and the box then asks for a
+  quote. Below them come "Recent work" and "What neighbours say" (the first two reviews, "See all N reviews"). About
+  holds the four figures, the about text, FAQ, area and policies, in the page builder's order. A business with no
+  services section keeps the plain booking card.
+- **Booking box** (`BookBox`): the chosen service, the month, five days as one-choice tiles (a day with nothing free is
+  disabled) with earlier/later, that day's times as tiles (taken ones struck through), "Comes to you" with the zones
+  (or "At <business>"), the price lines (service, travel included, tax estimate at the provider's `taxBps`), and "Book
+  Sat, Oct 24 at 9:30 a.m.". It writes the choice into the wizard's per-business draft (`seedDraft`: service, day,
+  time, the calendar's zone and terms) and opens the wizard. The calendar is the public `slots` read, fetched in the
+  browser. "Today" is the render clock's.
+- **Not as drawn:** the mockup's price lines are "Labour / Parts / Call-out fee". The api has a service price and a tax
+  rate, so we show the service, "Travel: Included" and the tax estimate. Its no-charge note reads "Your card is held,
+  not charged, until you confirm the job is done" (escrow: the card is authorized at booking). On phones the box
+  follows the page, not the service list (the mockup puts it between the services and recent work), and the sticky
+  Book bar keeps it in reach. The "21 more photos" tile is not built (no photo count in the api). "Recent work" shows
+  the business's own service photos and is left out when there are none: never its category's stock photos (S-181).
+- The booking wizard (`/providers/<slug>/book`) keeps its steps and behaviour. Done/current steps, options, days and
+  times now show the selected ink, the summary is the bordered box, and the type uses the scale.
+
+**Kitchen page (`/food/<slug>`).** The header in the provider page's system (cuisine picture, cuisine · address, name,
+stars, ETA · fee, the food-permit badge, minimum). The menu's sections are underline links (anchors). Dishes are cards,
+two a row, with a 1:1 photo well and an action-blue "+" in its corner (ink while open), the price in the one format,
+and the dietary and allergen tags. The bordered "Your order" box keeps the group order entry at its top. Phones get a
+sticky "View your order" bar once something is in it. The `.nl-rest-*` rules moved from `food.css` to `restaurant.css`.
+The food checkout and the group order share its line and total rules, so they load it too, and their summary box is
+now the bordered panel (no shadow). Dishes have no photos in the api, so every dish shows the designed well.
+
+**Quote request flow (`/services/<category>/quote`) and the quote pages.** Same system: the step rail in ink, the
+24 px title, providers as checkbox rows that turn ink when picked (tier as a success / neutral tag), the bordered
+accept box. Behaviour is unchanged.
+
+**Library.** No new components. One fix in `primitives.css`: a chosen `ChoiceTiles` tile under the pointer kept the hover
+grey with the white text of the selected state, so the chosen day disappeared. It now stays ink. The baselines don't
+hover, so none change. Also: `pages.css`'s category grid shares the `.nl-tiles` class name with `ChoiceTiles`, which
+gave the booking box's day tiles the category grid's 150 px columns. The box sets its own columns. Renaming one of the
+two is left to the owner of the shared parts. The pages compose
+`Segmented`, `ChoiceTiles`, `OptionCard`, `UnderlineTabs`, `Stars`, `Price`, `ProductCard` (through `OfferCard`).
+
+**Lint and tooling.** `pnpm lint:tokens` now enforces no raw sizes, spacing, radii or colours and no inline `style` in
+`features/product`, `provider`, `booking`, `quotes`, the kitchen screen and `restaurant.css`, and the store page
+(skeletons moved off inline margins). `make ui-shots`: the product, provider and booking shots fix the clock (the
+cut-off countdown, the calendar's today), plus new `store` and `provider-day` shots (a day chosen in the box). The
+fixtures answer the provider's `slots` for any week, give the product bullets and the shop's other products their demo
+names, and give search hits the Shop pages' merchant ids.
+
+**Not done here:** product and shop reviews, a co-purchase rail, allergens and pickup on products, the provider's job
+count and reply time, and a store endpoint all need api work. French shots are still not in `make ui-shots` (fr-CA is
+covered by the tests).

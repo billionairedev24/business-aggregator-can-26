@@ -75,10 +75,16 @@ const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'app
   // S-174: the Studio dashboard and the storefront's live preview (audit #7 and #10)
   'apps/studio/src/features/dashboard', 'apps/studio/src/features/storefront/StorefrontPreview.tsx', 'apps/studio/src/features/storefront/StorefrontPreview.css',
   // S-175: the Studio work screens (orders, catalogue and editors, bookings and quotes, the kitchen display and menu)
-  ...S175];
+  ...S175,
+  // S-172: the consumer detail pages (product, store, provider and its booking, the kitchen's menu, the quote flow)
+  'apps/consumer/src/features/product', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking', 'apps/consumer/src/features/quotes',
+  'apps/consumer/src/features/food/RestaurantScreen.tsx', 'apps/consumer/src/features/food/restaurant.css'];
 // S-174: no inline `style` at all in these (a class with the scale tokens instead; the Studio dashboard had a dozen).
 // S-175: the work screens too — except the calendar, whose entries are placed by custom properties from data (--top, --h).
-const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard', ...S175.filter(r => !r.endsWith('/appointments'))];
+const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard', ...S175.filter(r => !r.endsWith('/appointments')),
+  // S-172: the consumer detail pages
+  'apps/consumer/src/features/product', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking', 'apps/consumer/src/features/quotes',
+  'apps/consumer/src/features/shop/StorePage.tsx', 'apps/consumer/src/features/food/RestaurantScreen.tsx'];
 // (the server-rendered error page and the printable report are standalone documents with their own fallbacks)
 const strictSkip = [...skip, /\.stories\.tsx$/, /\.fixtures\.ts$/, /\.mdx$/, /(^|\/)server\//, /DataTable\/report\.ts$/];
 const PX = /(-?\d*\.?\d+)px/g;

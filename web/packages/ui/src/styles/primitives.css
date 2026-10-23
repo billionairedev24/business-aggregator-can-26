@@ -82,6 +82,8 @@
 .nl-tile-choice { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: var(--size-touch); padding: var(--space-1-5) var(--space-3-5); font: inherit; font-size: var(--type-label); color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-border-control); border-radius: var(--radius-control); cursor: pointer; text-align: center; line-height: var(--leading-tight); }
 .nl-tile-choice:hover:not(:disabled) { background: var(--color-surface-hover); }
 .nl-tile-choice:is([aria-pressed='true'], [aria-checked='true'], [aria-selected='true'], [data-state='on'], [data-state='checked'], [data-state='selected'], :has(> input:checked)) { background: var(--color-selected); border-color: var(--color-selected); color: var(--color-selected-text); font-weight: var(--weight-bold); }
+/* S-172: a chosen tile stays ink under the pointer (the hover rule above is more specific and greyed it out, white on grey) */
+.nl-tile-choice:is([aria-pressed='true'], [aria-checked='true'], [aria-selected='true'], [data-state='on'], [data-state='checked'], [data-state='selected'], :has(> input:checked)):hover { background: var(--color-selected); }
 .nl-tile-choice:disabled, .nl-tile-choice[aria-disabled='true'] { opacity: .45; cursor: not-allowed; text-decoration: line-through; }
 .nl-tile-choice-sub { font-size: var(--type-meta); font-weight: var(--weight-regular); opacity: .85; }
 .nl-tile-choice > input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }

@@ -66,6 +66,11 @@ const SHOP = {
     metaDescription: 'Groceries and goods from {city} shops, delivered together on one pooled run. Every seller vetted, every order paid into escrow.',
     deptMetaDescription: '{name} from {city} shops, delivered on {brand}’s pooled run. Every seller vetted, paid only after delivery.',
     deptTitle: '{name} · Shop · {brand}',
+    // E-15 S-172: a shop's page
+    storeKicker: '{department} · {city}', storeProducts: 'Products', storeSearch: 'Search this store',
+    storeRun: '{when, select, tonight {On tonight’s run} today {On today’s run} tomorrow {On tomorrow’s run} other {On {weekday}’s run}} · order by {time}',
+    storeEmpty: 'Nothing from {shop} is listed right now.', storeTitle: '{shop} · Shop · {brand}',
+    storeMetaDescription: '{shop}: {department} in {city}, delivered on {brand}’s pooled run.',
   },
   fr: {
     kicker: 'Boutique · épicerie et produits',
@@ -124,6 +129,10 @@ const SHOP = {
     metaDescription: 'Épicerie et produits des commerces de {city}, livrés ensemble sur une tournée groupée. Chaque vendeur contrôlé, chaque commande payée en fiducie.',
     deptMetaDescription: '{name} des commerces de {city}, livré sur la tournée groupée de {brand}. Chaque vendeur contrôlé, payé seulement après la livraison.',
     deptTitle: '{name} · Boutique · {brand}',
+    storeKicker: '{department} · {city}', storeProducts: 'Produits', storeSearch: 'Chercher dans cette boutique',
+    storeRun: '{when, select, tonight {Sur la tournée de ce soir} today {Sur la tournée d’aujourd’hui} tomorrow {Sur la tournée de demain} other {Sur la tournée de {weekday}}} · commandez avant {time}',
+    storeEmpty: 'Rien de {shop} n’est offert pour le moment.', storeTitle: '{shop} · Boutique · {brand}',
+    storeMetaDescription: '{shop} : {department} à {city}, livré par la tournée groupée de {brand}.',
   },
 };
 
