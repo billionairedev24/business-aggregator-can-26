@@ -129,6 +129,42 @@ const SELLER_DASHBOARD = {
   cases: [{ kind: 'refund', customerName: 'A. Osei', subject: 'Wrong size wiper blade' }],
 };
 
+/** The kitchen's dashboard: no visits or runs; its permit renewal and one refund to look at. */
+const KITCHEN_DASHBOARD = {
+  ...DASHBOARD, jobsToday: [], run: [],
+  counts: { ...DASHBOARD.counts, visitsToday: 0, quoteRequestsOpen: 0, quoteRespondBy: null, toPack: 0, runCutoff: null, runLabel: null, jobsThisMonth: 0, ordersThisMonth: 412, itemsThisMonth: 980 },
+  lowStock: [], cases: [{ kind: 'refund', customerName: 'Dev P.', subject: 'Missing spring rolls' }],
+  compliance: [{ checkType: 'ahs_permit', registry: null, status: 'valid', expiresAt: '2026-11-30T18:00:00Z', pausesAt: null }],
+};
+
+/**
+ * S-174: the dashboard's day happens today, whatever day the shots run: the visits at 9:00, 1:30 and 3:00 local, the run
+ * closing at 5:20 p.m., quotes due in three hours (a Prairie day, as the calendar's: local = UTC − 6).
+ */
+function todayDashboard(base) {
+  const d = new Date(); const day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  const local = (h, m = 0) => new Date(day + (h + 6) * 3600000 + m * 60000).toISOString();
+  const hours = [[9, 0], [13, 30], [15, 0]];
+  return {
+    ...base, today: new Date(day).toISOString().slice(0, 10),
+    jobsToday: base.jobsToday.map((j, i) => ({ ...j, startsAt: local(...hours[i % hours.length]) })),
+    counts: { ...base.counts, quoteRespondBy: base.counts.quoteRespondBy ? new Date(Date.now() + 3 * 3600000).toISOString() : null, runCutoff: base.counts.runCutoff ? local(17, 20) : null },
+  };
+}
+
+/** The sales report the dashboard reads: the last 30 days by day (today so far last), or 12 months by month. */
+function salesReport(path) {
+  const yearly = path.includes('period=12mo');
+  const b = rec('GET /api/v1/merchants/:id/reports');
+  const d = new Date(); const day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  const daily = [41000, 38500, 45200, 49800, 69000, 74100, 35600, 42500, 40200, 47100, 51600, 70200, 81000, 64250];
+  const series = yearly
+    ? Array.from({ length: 12 }, (_, i) => ({ start: new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 11 + i, 1)).toISOString().slice(0, 10), currentCents: 1200000 + i * 60000 + (i % 4) * 90000, previousCents: 1000000 + i * 40000 }))
+    : Array.from({ length: 30 }, (_, i) => ({ start: new Date(day - (29 - i) * DAY).toISOString().slice(0, 10), currentCents: i >= 16 ? daily[i - 16] : Math.round(daily[(i + 12) % 14] * 0.92), previousCents: 42000 + (i % 7) * 2500 }));
+  return { ...b, period: yearly ? '12mo' : '30d', granularity: yearly ? 'month' : 'day', series, count: yearly ? 9800 : 899, grossCents: series.reduce((n, x) => n + x.currentCents, 0), averageTicketCents: 1691, grossChangePct: 6,
+    byListing: [{ name: 'Washer fluid, −40 °C, 4 L', grossCents: 34800 }, { name: 'Wiper blades, 22 in. pair', grossCents: 58900 }, { name: 'Synthetic oil 5W-30, 5 L', grossCents: 94578 }, { name: 'Brake pads (front, ceramic)', grossCents: 76800 }, { name: 'Brake pads and rotors', grossCents: 582000 }, { name: null, grossCents: 40100 }] };
+}
+
 // ── the calendar: a week of jobs relative to the week asked for (`from`, the zone's midnight), so the shots stay full
 // whatever day they run. [hour, minute, minutes, title, state, customer, area, cents, member]
 const WEEK = {
@@ -335,15 +371,15 @@ function menu() {
   const item = (id, sectionId, name, description, priceCents, over = {}) => ({ ...base, id, sectionId, name, description, priceCents, hasPhoto: true, soldOut: false, allergens: [], dietary: [], ...over });
   b.sections = [
     { id: 's1', name: 'Pho', sort: 0, items: [
-      item('i1', 's1', 'Pho dac biet', 'Rare beef, brisket, tendon and beef balls in a 12-hour broth', 1700, { dietary: ['gluten_free'] }),
-      item('i3', 's1', 'Pho ga', 'Poached chicken, ginger and scallion', 1550, { dietary: ['gluten_free'] }),
+      item('i1', 's1', 'Pho dac biet', 'Rare beef, brisket, tendon and beef balls in a 12-hour broth', 1700, { dietary: ['gluten_free'], soldToday: 18 }),
+      item('i3', 's1', 'Pho ga', 'Poached chicken, ginger and scallion', 1550, { dietary: ['gluten_free'], soldToday: 9 }),
       item('i4', 's1', 'Pho chay', 'Tofu, mushrooms and greens in a vegetable broth', 1450, { dietary: ['vegan', 'gluten_free'] }),
     ] },
     { id: 's2', name: 'Rolls & sides', sort: 1, items: [
-      item('i5', 's2', 'Fresh spring rolls ×2', 'Shrimp, herbs and vermicelli, peanut sauce', 750, { allergens: ['peanuts', 'shellfish'] }),
-      item('i6', 's2', 'Crispy imperial rolls ×3', 'Pork and taro, nuoc cham', 800, { soldOut: true }),
+      item('i5', 's2', 'Fresh spring rolls ×2', 'Shrimp, herbs and vermicelli, peanut sauce', 750, { allergens: ['peanuts', 'shellfish'], soldToday: 12 }),
+      item('i6', 's2', 'Crispy imperial rolls ×3', 'Pork and taro, nuoc cham', 800, { soldOut: true, soldToday: 7 }),
     ] },
-    { id: 's3', name: 'Drinks', sort: 2, items: [item('i2', 's3', 'Fresh lime soda', 'Salted or sweet', 500, { modifierGroups: [] }), item('i7', 's3', 'Vietnamese iced coffee', 'Condensed milk', 600, { allergens: ['milk'], modifierGroups: [] })] },
+    { id: 's3', name: 'Drinks', sort: 2, items: [item('i2', 's3', 'Fresh lime soda', 'Salted or sweet', 500, { modifierGroups: [], soldToday: 6 }), item('i7', 's3', 'Vietnamese iced coffee', 'Condensed milk', 600, { allergens: ['milk'], modifierGroups: [] })] },
   ];
   return b;
 }
@@ -539,14 +575,17 @@ export const SHOTS = {
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/earnings/ledger`) ? { body: ledger() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/payouts/overview`) ? { body: payoutOverview() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/payouts`) ? { body: payoutHistory() } : undefined),
+    (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/reports$/.test(p.split('?')[0]) && /period=(30d|12mo)/.test(p) ? { body: salesReport(p) } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/reports`) ? { body: report() } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${SELLER_ID}/threads`) ? { body: threads() } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${SELLER_ID}/payouts/overview`) ? { body: payoutOverview() } : undefined),
     (m, p) => (m === 'GET' && p.startsWith(`/api/v1/merchants/${PROVIDER_ID}/reviews?`) ? { body: reviews() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/storefront`) ? { body: storefront() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${KITCHEN_ID}/menus/mn1`) ? { body: menu() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/quote-requests`) ? { body: quoteRequests() } : undefined),
     (m, p) => { const id = /^\/api\/v1\/merchants\/([^/]+)\/onboarding$/.exec(p)?.[1]; return m === 'GET' && APPLICATIONS[id] ? { body: APPLICATIONS[id] } : undefined; },
     (m, p) => { const id = /^\/api\/v1\/merchants\/([^/]+)\/onboarding\/legal-forms$/.exec(p)?.[1]; const province = APPLICATIONS[id]?.province; return m === 'GET' && LEGAL_FORMS[province] ? { body: LEGAL_FORMS[province] } : undefined; },
-    (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/dashboard$/.test(p) ? { body: p.includes('PWP1') ? SELLER_DASHBOARD : DASHBOARD } : undefined),
+    (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/dashboard$/.test(p) ? { body: todayDashboard(p.includes('PWP1') ? SELLER_DASHBOARD : p.includes(KITCHEN_ID) ? KITCHEN_DASHBOARD : DASHBOARD) } : undefined),
     // the live stream (EventSource) has nothing to say in a screenshot
     (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/live$/.test(p) ? { status: 204, body: null } : undefined),
     (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/availability\/time-off/.test(p) ? { body: { items: [] } } : undefined),

@@ -54,7 +54,7 @@ export function StackedBarChart({ series, data, height = 180, title, format = St
   const plotH = height - 20, n = Math.max(data.length, 1), slot = (W - 12) / n, bw = Math.min(32, slot * 0.62), step = labelStep(n, W);
   const max = Math.max(1, ...data.map(d => series.reduce((s, x) => s + (d.values[x.key] ?? 0), 0)));
   return (
-    <figure style={{ margin: 0 }} ref={ref}>
+    <figure className="nl-chart-figure" ref={ref}>
       <Legend items={series.map(s => ({ label: s.label, color: s.color }))} />
       <svg viewBox={`0 0 ${W} ${height}`} className="nl-chart" role="img" aria-label={title}>
         {data.map((d, i) => {
@@ -70,6 +70,69 @@ export function StackedBarChart({ series, data, height = 180, title, format = St
         })}
       </svg>
       <DataTableAlt caption={title} head={[t('period'), ...series.map(s => s.label)]} rows={data.map(d => [d.label, ...series.map(s => format(d.values[s.key] ?? 0))])} />
+    </figure>
+  );
+}
+
+export interface ColumnPoint { /** The axis label ("M", "Oct 12"). */ label: string; /** The full name for the tooltip and the table ("Monday, Oct 12"). */ name?: string; value: number }
+export interface ColumnChartProps {
+  title: string;
+  data: readonly ColumnPoint[];
+  /** The last column is the current period so far (today, this month): drawn in ink, the others grey. */
+  highlightLast?: boolean;
+  legend?: { current: ReactNode; past: ReactNode };
+  height?: number;
+  format?: (n: number) => string;
+  /** The y-axis labels ("$750"); `format` when omitted. */
+  axisFormat?: (n: number) => string;
+}
+
+/** A round axis top above `max` (1, 2, 2.5, 5 × a power of ten) and its four steps. */
+function niceTop(max: number): number {
+  if (max <= 0) return 4;
+  const p = 10 ** Math.floor(Math.log10(max));
+  return ([1, 2, 2.5, 5, 10].map(m => m * p).find(v => v >= max) ?? 10 * p);
+}
+
+/**
+ * Daily or monthly sales as columns (design/revamp/a.html Studio dashboard "Sales, last 14 days"): a light grid with
+ * y-axis figures, the current period in ink (`highlightLast`) and the earlier ones grey (the 3:1 control grey, WCAG
+ * 1.4.11). Each column has a tooltip and the numbers are also a hidden table for screen readers.
+ */
+export function ColumnChart({ title, data, highlightLast, legend, height = 190, format = String, axisFormat }: ColumnChartProps) {
+  const t = useT();
+  const [ref, W] = useChartWidth();
+  const axis = axisFormat ?? format;
+  const left = 44, bottom = 22, top = 8;
+  const plotH = height - bottom - top, n = Math.max(data.length, 1), slot = (W - left) / n, bw = Math.max(3, Math.min(28, slot * 0.66));
+  const max = niceTop(Math.max(0, ...data.map(d => d.value)));
+  // every label that fits: single letters (weekdays) all show; longer ones every k-th
+  const longest = Math.max(1, ...data.map(d => d.label.length));
+  const step = Math.max(1, Math.ceil(n / Math.max(2, Math.floor((W - left) / (longest * 7 + 12)))));
+  const y = (v: number) => top + plotH - (v / max) * plotH;
+  return (
+    <figure className="nl-chart-figure" ref={ref}>
+      <svg viewBox={`0 0 ${W} ${height}`} className="nl-chart nl-columns" role="img" aria-label={title}>
+        {[0, 0.25, 0.5, 0.75, 1].map(f => (
+          <g key={f}>
+            <path d={`M${left} ${y(max * f).toFixed(1)} H${W}`} className="nl-columns-grid" />
+            <text x={left - 6} y={y(max * f) + 3.5} textAnchor="end" className="nl-columns-axis">{axis(max * f)}</text>
+          </g>
+        ))}
+        {data.map((d, i) => {
+          const x = left + i * slot + (slot - bw) / 2;
+          const h = Math.max(d.value > 0 ? 1 : 0, (d.value / max) * plotH);
+          const now = highlightLast && i === data.length - 1;
+          return (
+            <g key={`${d.label}${i}`}>
+              <rect x={x} y={top + plotH - h} width={bw} height={h} rx={1} className="nl-columns-bar" data-now={now || undefined}><title>{`${d.name ?? d.label}: ${format(d.value)}`}</title></rect>
+              {i % step === 0 || i === data.length - 1 ? <text x={x + bw / 2} y={height - 6} textAnchor="middle" className="nl-columns-axis">{d.label}</text> : null}
+            </g>
+          );
+        })}
+      </svg>
+      {legend ? <div className="nl-legend nl-columns-legend"><span><span className="nl-legend-swatch nl-columns-key" data-now="" />{legend.current}</span><span><span className="nl-legend-swatch nl-columns-key" />{legend.past}</span></div> : null}
+      <DataTableAlt caption={title} head={[t('period'), title]} rows={data.map(d => [d.name ?? d.label, format(d.value)])} />
     </figure>
   );
 }
@@ -90,7 +153,7 @@ export function LineChart({ current, previous, labels, height = 200, title, lege
   const path = (arr: readonly (number | null)[]) => arr.map((v, i) => (v == null ? '' : `${i && arr[i - 1] != null ? 'L' : 'M'}${px(i).toFixed(1)} ${py(v).toFixed(1)}`)).filter(Boolean).join(' ');
   const grid = [0.25, 0.5, 0.75, 1].map(f => `M20 ${py(max * f / 1.1).toFixed(1)} H${W - 20}`).join(' ');
   return (
-    <figure style={{ margin: 0 }} ref={ref}>
+    <figure className="nl-chart-figure" ref={ref}>
       {legend ? <Legend items={[{ label: legend.current, color: 'var(--color-action-primary)' }, ...(legend.previous ? [{ label: legend.previous, color: 'var(--color-border-control)', dashed: true }] : [])]} /> : null}
       <svg viewBox={`0 0 ${W} ${height}`} className="nl-chart" role="img" aria-label={title}>
         <path d={grid} stroke="var(--neutral-100)" strokeWidth={1} fill="none" />

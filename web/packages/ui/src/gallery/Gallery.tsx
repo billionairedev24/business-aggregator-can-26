@@ -1,6 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import './gallery.css';
-import { Leaf, MagnifyingGlass, Package, Prohibit, ShoppingCart, Storefront } from '@phosphor-icons/react';
+import { Bank, ChartBar, ChatCircleText, GearSix, Leaf, MagnifyingGlass, Package, Prohibit, ShoppingCart, SquaresFour, Stack, Storefront, Tag as TagIcon, Warning } from '@phosphor-icons/react';
+import { AppShell, WorkspaceSwitcher } from '../AppShell';
+import { ActionCard, ActionGrid, ChartCard, KpiStrip, SummaryTable, Thumb } from '../BackOffice';
+import { ColumnChart } from '../Charts';
+import { Avatar } from '../Layout';
+import { Logo } from '../Logo';
+import { ShellSearch } from '../ShellSearch';
 import { Button } from '../Button';
 import { Checkbox, ChoiceTiles, FilterChip, OptionCard, RadioGroup, Segmented, Switch, UnderlineTabs } from '../Choice';
 import { DealBadge, MediaFallback, Price, ProductCard, QuantityStepper, ServiceCard, Stars, StatusTag } from '../Commerce';
@@ -46,6 +52,14 @@ const useT = defineMessages({
     sheet: 'Order NL-48213', sheetBody: 'Two items, packed by 5:30 p.m. for tonight’s run.', toast: 'Saved. Your changes are live.', undo: 'Undo', showToast: 'Show a toast',
     emptyTitle: 'No orders yet', emptyBody: 'Orders show here once customers buy from you.', start: 'Add a product', errorMsg: 'We couldn’t load your orders.',
     loading: 'Loading', pageHeader: 'Orders', pageLede: 'Tonight’s pickup at 5:30 p.m. · 5 orders, 3 still to pack', export: 'Export', notice: 'Payouts go out every Tuesday.',
+    s_backoffice: 'Back office: needs you now, figures, sales and a summary table', s_shell: 'Back-office shell',
+    needsYou: 'Needs you now', packTitle: '3 orders to pack', packDetail: 'Pack by 5:20 p.m. for tonight’s 5:30 pickup', startPacking: 'Start packing',
+    msgTitle: '2 messages waiting', msgDetail: 'Oldest 38 min · K. Nguyen asks about slicing', reply: 'Reply', issueTitle: '1 issue to resolve', issueDetail: 'NL-48188 · the customer reports the wrong item', resolve: 'Resolve',
+    payoutTitle: 'Payout on Monday, Oct 26', payoutDetail: '$1,284.60 to RBC ••• 0412', viewPayout: 'View payout',
+    kpis: 'Key figures', kSales: 'Sales today', kSalesD: '12% vs last Friday', kOrders: 'Orders', kOrdersD: '5 vs last Friday', kAvg: 'Average order', kAvgD: '$0.40', kRating: 'Rating', kRatingD: '312 ratings · 1 new',
+    chart: 'Sales, last 14 days', todaySoFar: 'Today so far · $642.50', previous: 'Previous 13 days · avg $510', top: 'Top products today', product: 'Product', sold: 'Sold', sales: 'Sales', stock: 'Stock', left: '{n} left',
+    switchBusiness: 'Switch business', searchStudio: 'Search the Studio', searchPh: 'Search orders, products, customers', ordersMatching: 'Orders matching “{q}”',
+    nDashboard: 'Dashboard', gOps: 'Operations', nOrders: 'Orders', nMessages: 'Messages', gCat: 'Catalogue', nProducts: 'Products', nStock: 'Stock', gMoney: 'Money', nPayouts: 'Payouts', nReports: 'Reports', gStore: 'Store', nStorefront: 'Storefront', nSettings: 'Settings', owner: 'Owner',
     fDay: 'A day', fWindow: 'A delivery window', fNight: 'Across midnight', fRange: 'A date range',
   },
   fr: {
@@ -73,6 +87,14 @@ const useT = defineMessages({
     sheet: 'Commande NL-48213', sheetBody: 'Deux articles, emballés avant 17 h 30 pour la tournée de ce soir.', toast: 'Enregistré. Vos changements sont en ligne.', undo: 'Annuler', showToast: 'Afficher une notification',
     emptyTitle: 'Aucune commande pour l’instant', emptyBody: 'Les commandes s’affichent ici dès que la clientèle achète chez vous.', start: 'Ajouter un produit', errorMsg: 'Impossible de charger vos commandes.',
     loading: 'Chargement', pageHeader: 'Commandes', pageLede: 'Cueillette de ce soir à 17 h 30 · 5 commandes, 3 à emballer', export: 'Exporter', notice: 'Les versements partent chaque mardi.',
+    s_backoffice: 'Arrière-boutique : à faire maintenant, chiffres, ventes et tableau résumé', s_shell: 'Cadre de l’arrière-boutique',
+    needsYou: 'À faire maintenant', packTitle: '3 commandes à emballer', packDetail: 'Emballer avant 17 h 20 pour la cueillette de 17 h 30', startPacking: 'Commencer l’emballage',
+    msgTitle: '2 messages en attente', msgDetail: 'Le plus ancien : 38 min · K. Nguyen demande le tranchage', reply: 'Répondre', issueTitle: '1 problème à régler', issueDetail: 'NL-48188 · mauvais article signalé', resolve: 'Régler',
+    payoutTitle: 'Versement le lundi 26 oct.', payoutDetail: '1 284,60 $ vers RBC ••• 0412', viewPayout: 'Voir le versement',
+    kpis: 'Chiffres clés', kSales: 'Ventes aujourd’hui', kSalesD: '12 % par rapport à vendredi dernier', kOrders: 'Commandes', kOrdersD: '5 par rapport à vendredi dernier', kAvg: 'Commande moyenne', kAvgD: '0,40 $', kRating: 'Note', kRatingD: '312 notes · 1 nouvelle',
+    chart: 'Ventes, 14 derniers jours', todaySoFar: 'Aujourd’hui jusqu’ici · 642,50 $', previous: '13 jours précédents · moy. 510 $', top: 'Meilleurs produits aujourd’hui', product: 'Produit', sold: 'Vendus', sales: 'Ventes', stock: 'Stock', left: '{n} restants',
+    switchBusiness: 'Changer d’entreprise', searchStudio: 'Rechercher dans le Studio', searchPh: 'Rechercher commandes, produits, clients', ordersMatching: 'Commandes correspondant à « {q} »',
+    nDashboard: 'Tableau de bord', gOps: 'Opérations', nOrders: 'Commandes', nMessages: 'Messages', gCat: 'Catalogue', nProducts: 'Produits', nStock: 'Stock', gMoney: 'Argent', nPayouts: 'Versements', nReports: 'Rapports', gStore: 'Boutique', nStorefront: 'Vitrine', nSettings: 'Paramètres', owner: 'Propriétaire',
     fDay: 'Un jour', fWindow: 'Une plage de livraison', fNight: 'Après minuit', fRange: 'Une période',
   },
 });
@@ -83,7 +105,11 @@ const SHOP = 'Loaf & Ladder Bakery · Maple Row';
 const FONT = 'IBM Plex Sans';
 const HIVE = 'Hive & Hollow Apiary';
 
-export interface GallerySection { id: string; title: (t: GalleryT) => string; render: (t: GalleryT, photo?: string) => ReactNode }
+export interface GallerySection {
+  id: string; title: (t: GalleryT) => string; render: (t: GalleryT, photo?: string) => ReactNode;
+  /** Shown only on its own (`?section=<id>`): a whole page shell brings its own landmarks (banner, main). */
+  solo?: boolean;
+}
 
 const Row = ({ children, label }: { children: ReactNode; label?: string }) => (
   <div className="nl-gallery-row">{label ? <span className="nl-gallery-label">{label}</span> : null}<div className="nl-gallery-items">{children}</div></div>
@@ -240,7 +266,7 @@ function States({ t }: { t: GalleryT }) {
       <Alert tone="info">{t('notice')}</Alert>
       <EmptyState icon={ShoppingCart} title={t('emptyTitle')} action={<Button>{t('start')}</Button>}>{t('emptyBody')}</EmptyState>
       <ErrorState message={t('errorMsg')} onRetry={() => {}} />
-      <div className="nl-gallery-cards-skel" aria-label={t('loading')}>{[0, 1, 2, 3].map(i => <CardSkeleton key={i} />)}</div>
+      <div className="nl-gallery-cards-skel" role="group" aria-label={t('loading')}>{[0, 1, 2, 3].map(i => <CardSkeleton key={i} />)}</div>
       <Skeleton className="nl-skel-text" width="60%" />
       <Pagination page={page} pages={4} onChange={setPage} range={{ from: 25, to: 48, total: 86 }} />
     </div>
@@ -257,6 +283,71 @@ function Formats({ t }: { t: GalleryT }) {
     [t('fRange'), formatDateRange('2026-10-30', '2026-11-02', locale)],
   ];
   return <dl className="bo-facts">{rows.map(([k, v]) => <div key={k} className="bo-fact"><dt>{k}</dt><dd>{v}</dd></div>)}</dl>;
+}
+
+const SALES = [410, 380, 450, 495, 690, 740, 355, 425, 400, 470, 515, 700, 810, 642.5];
+const DAYS = { en: ['S', 'S', 'M', 'T', 'W', 'T', 'F', 'S', 'S', 'M', 'T', 'W', 'T', 'F'], fr: ['S', 'D', 'L', 'M', 'M', 'J', 'V', 'S', 'D', 'L', 'M', 'M', 'J', 'V'] };
+interface TopRow { id: string; name: string; sold: number; cents: number; stock: number; photo?: string }
+
+function BackOfficeDemo({ t, photo }: { t: GalleryT; photo?: string }) {
+  const { locale } = useLocale();
+  const money = (c: number) => (locale === 'fr' ? `${(c / 100).toFixed(2).replace('.', ',')} $` : `$${(c / 100).toFixed(2)}`);
+  const rows: TopRow[] = [{ id: 'a', name: t('sourdough'), sold: 22, cents: 18700, stock: 14, photo }, { id: 'b', name: t('honey'), sold: 11, cents: 15400, stock: 4 }, { id: 'c', name: t('buns'), sold: 9, cents: 9900, stock: 21 }];
+  return (
+    <div className="nl-gallery-stack">
+      <ActionGrid title={t('needsYou')} count={4}>
+        <ActionCard tone="danger" icon={Warning} title={t('issueTitle')} detail={t('issueDetail')} action={{ label: t('resolve'), onClick: () => {} }} primary />
+        <ActionCard tone="warning" icon={Package} title={t('packTitle')} detail={t('packDetail')} action={{ label: t('startPacking'), onClick: () => {} }} />
+        <ActionCard tone="info" icon={ChatCircleText} title={t('msgTitle')} detail={t('msgDetail')} action={{ label: t('reply'), onClick: () => {} }} />
+        <ActionCard tone="success" icon={Bank} title={t('payoutTitle')} detail={t('payoutDetail')} action={{ label: t('viewPayout'), onClick: () => {} }} />
+      </ActionGrid>
+      <KpiStrip label={t('kpis')} items={[
+        { key: 's', label: t('kSales'), value: money(64250), delta: t('kSalesD'), trend: 'up', arrow: true },
+        { key: 'o', label: t('kOrders'), value: '38', delta: t('kOrdersD'), trend: 'up', arrow: true },
+        { key: 'a', label: t('kAvg'), value: money(1691), delta: t('kAvgD'), trend: 'down', arrow: true },
+        { key: 'r', label: t('kRating'), value: locale === 'fr' ? '4,8' : '4.8', delta: t('kRatingD') },
+      ]} />
+      <div className="bo-cols">
+        <ChartCard id="gallery-chart" title={t('chart')} actions={<Segmented name="gallery-sales-range" aria-label={t('range')} value="14" onChange={() => {}} options={[{ value: '14', label: '14' }, { value: '30', label: '30' }]} />}>
+          <ColumnChart title={t('chart')} data={SALES.map((v, i) => ({ label: DAYS[locale][i]!, value: Math.round(v * 100) }))} highlightLast legend={{ current: t('todaySoFar'), past: t('previous') }} format={money} axisFormat={c => money(c).replace(/[.,]00/, '')} />
+        </ChartCard>
+        <ChartCard id="gallery-top" title={t('top')}>
+          <SummaryTable<TopRow> caption={t('top')} rows={rows} rowKey={r => r.id} columns={[
+            { key: 'n', label: t('product'), render: r => <span className="bo-item"><Thumb src={r.photo} name={r.name} /><span>{r.name}</span></span> },
+            { key: 's', label: t('sold'), align: 'end', render: r => r.sold },
+            { key: 'c', label: t('sales'), align: 'end', hideOnPhone: true, render: r => money(r.cents) },
+            { key: 'k', label: t('stock'), align: 'end', render: r => <StatusTag tone={r.stock < 5 ? 'warning' : 'neutral'}>{r.stock < 5 ? t('left', { n: r.stock }) : r.stock}</StatusTag> },
+          ]} />
+        </ChartCard>
+      </div>
+    </div>
+  );
+}
+
+/** The demo persona of the Studio's own tests and shots (a person's name: not translated). */
+const PERSONA = ['Ravi', 'Sandhu'].join(' ');
+
+function ShellDemo({ t }: { t: GalleryT }) {
+  const [cur, setCur] = useState('dashboard');
+  const item = (key: string, label: string, icon: typeof Bank, badge?: string) => ({ key, label, icon, badge, href: `#${key}` });
+  return (
+    <div className="nl-gallery-shell">
+      <AppShell brand={<Logo size={28} product="Studio" />}
+        headerStart={<WorkspaceSwitcher label={t('switchBusiness')} name="Loaf & Ladder Bakery" meta="Riverside" items={[{ label: 'Loaf & Ladder Bakery', checked: true, onSelect: () => {} }]} />}
+        search={<ShellSearch label={t('searchStudio')} placeholder={t('searchPh')} scopes={[{ key: 'o', label: q => t('ordersMatching', { q }) }]} onSearch={() => {}} />}
+        headerEnd={<button type="button" className="nl-topbar-item"><Avatar initials="RS" size={30} /><span className="nl-topbar-item-text">{PERSONA}<span>{t('owner')}</span></span></button>}
+        pinned={[item('dashboard', t('nDashboard'), SquaresFour)]}
+        groups={[
+          { label: t('gOps'), icon: Package, items: [item('orders', t('nOrders'), Package, '3'), item('messages', t('nMessages'), ChatCircleText, '2')] },
+          { label: t('gCat'), icon: TagIcon, items: [item('products', t('nProducts'), TagIcon), item('stock', t('nStock'), Stack, '1')] },
+          { label: t('gMoney'), icon: Bank, items: [item('payouts', t('nPayouts'), Bank), item('reports', t('nReports'), ChartBar)] },
+          { label: t('gStore'), icon: Storefront, items: [item('storefront', t('nStorefront'), Storefront), item('settings', t('nSettings'), GearSix)] },
+        ]}
+        currentKey={cur} onNavigate={i => setCur(i.key)}>
+        <PageHeader title={t('nDashboard')} lede={t('pageLede')} />
+      </AppShell>
+    </div>
+  );
 }
 
 export const GALLERY_SECTIONS: readonly GallerySection[] = [
@@ -280,6 +371,8 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
   { id: 'overlays', title: t => t('s_overlays'), render: t => <Overlays t={t} /> },
   { id: 'states', title: t => t('s_states'), render: t => <States t={t} /> },
   { id: 'formats', title: t => t('s_formats'), render: t => <Formats t={t} /> },
+  { id: 'backoffice', title: t => t('s_backoffice'), render: (t, photo) => <BackOfficeDemo t={t} photo={photo} /> },
+  { id: 'shell', title: t => t('s_shell'), render: t => <ShellDemo t={t} />, solo: true },
 ];
 
 /**
@@ -289,17 +382,21 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
  */
 export function Gallery({ section, open, photo }: { section?: string | null; open?: string | null; photo?: string }) {
   const t = useT();
-  const shown = section ? GALLERY_SECTIONS.filter(s => s.id === section) : GALLERY_SECTIONS;
+  const shown = section ? GALLERY_SECTIONS.filter(s => s.id === section) : GALLERY_SECTIONS.filter(s => !s.solo);
+  const solo = shown.length === 1 && !!shown[0]!.solo;
   return (
     <ToastProvider>
       <div className="nl-gallery">
-        <header className="nl-gallery-head"><h1>{t('title')}</h1><p className="nl-muted">{t('lede')}</p></header>
-        {shown.map(s => (
-          <section key={s.id} className="nl-gallery-section" data-gallery={s.id} aria-labelledby={`gallery-${s.id}`}>
-            <h2 id={`gallery-${s.id}`}>{s.title(t)}</h2>
-            {s.id === 'overlays' ? <Overlays t={t} open={open} /> : s.render(t, photo)}
-          </section>
-        ))}
+        {solo ? null : <header className="nl-gallery-head"><h1>{t('title')}</h1><p className="nl-muted">{t('lede')}</p></header>}
+        {shown.map(s => (s.solo
+          // a page shell is the page: no region or banner around its own banner and main
+          ? <div key={s.id} className="nl-gallery-section" data-gallery={s.id}><p className="nl-gallery-solo-title" id={`gallery-${s.id}`}>{s.title(t)}</p>{s.render(t, photo)}</div>
+          : (
+            <section key={s.id} className="nl-gallery-section" data-gallery={s.id} aria-labelledby={`gallery-${s.id}`}>
+              <h2 id={`gallery-${s.id}`}>{s.title(t)}</h2>
+              {s.id === 'overlays' ? <Overlays t={t} open={open} /> : s.render(t, photo)}
+            </section>
+          )))}
       </div>
     </ToastProvider>
   );

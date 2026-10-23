@@ -1,13 +1,13 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { formatMoney, useLocale } from '@northline/ui';
+import { formatPrice, StatusTag, useLocale } from '@northline/ui';
 import { tierTag } from '../shell/StudioLayout';
 import { useShellT } from '../shell/messages';
 import { listingsQuery, type Listing } from '../onboarding/listingsApi';
 import type { Storefront } from './api';
 import { sectionText, useStorefrontT, type StorefrontT } from './messages';
 import type { SectionKind } from './sections';
-import './PageBuilder.css';
+import './StorefrontPreview.css';
 
 type Row = { a: string; b: string };
 type Block =
@@ -62,36 +62,41 @@ function blocksFor(s: Storefront, services: Listing[], products: Listing[], t: S
   return s.sections.filter(x => x.enabled).map(x => block(x.kind));
 }
 
-/** What customers see: the enabled sections in page order, in a phone frame or full width. */
+/**
+ * What customers see: the enabled sections in page order, in a phone frame or full width — drawn like the real
+ * provider / store page (E-15 A · Plainsight, design/revamp/a.html screen 4; audit #10): a white header with the logo tile
+ * (the business's colour as its edge), the name, the tagline and the verified tier, the figures, then the sections as
+ * titled blocks and the action-blue book / order button. The business's colour is the tile's edge only, as on the page.
+ */
 export function StorefrontPreview({ storefront: s, device }: { storefront: Storefront; device: 'phone' | 'web' }) {
   const t = useStorefrontT();
   const shellT = useShellT();
   const { locale } = useLocale();
-  const money = (c: number) => formatMoney(c, locale, { whole: c % 100 === 0 });
+  const money = (c: number) => formatPrice(c, locale);
   const type = s.business.type;
   const services = useQuery({ ...listingsQuery(s.merchantId, 'service', 3), enabled: type === 'provider' || type === 'both' }).data ?? [];
   const products = useQuery({ ...listingsQuery(s.merchantId, 'product', 3), enabled: type === 'seller' || type === 'both' }).data ?? [];
   const brand = { ['--nl-brand' as string]: s.brandColor } as CSSProperties;
   const initial = s.business.displayName.trim().charAt(0).toUpperCase() || 'N';
   const tier = tierTag({ tier: s.business.tier, status: s.business.status });
-  const heading = (k: SectionKind): ReactNode => <div className="nl-pv-kicker">{sectionText(t, k, 'name')}</div>;
+  const heading = (k: SectionKind): ReactNode => <div className="nl-pv-title">{sectionText(t, k, 'name')}</div>;
 
   return (
     <div className="nl-pv-frame" data-device={device} style={brand} aria-label={t('preview')} role="region">
       {blocksFor(s, services, products, t, money).map(b => (
         <div key={b.kind} className={b.type === 'cta' ? 'nl-pv-sticky' : undefined}>
-          {b.type === 'hero' && <>
-            <div className="nl-pv-hero">
-              <div className="nl-pv-hero-top">
-                <div className="nl-pv-logo">{s.logo ? <img src={s.logo.url} alt={t('logoAlt', { name: s.business.displayName })} /> : initial}</div>
-                <span className="tag nl-pv-tier">{shellT(tier.key)}</span>
+          {b.type === 'hero' && <div className="nl-pv-hero">
+            <div className="nl-pv-id">
+              <div className="nl-pv-logo">{s.logo ? <img src={s.logo.url} alt={t('logoAlt', { name: s.business.displayName })} /> : initial}</div>
+              <div className="nl-pv-idtext">
+                <div className="nl-pv-name">{s.business.displayName}</div>
+                {s.tagline ? <div className="nl-pv-tagline">{s.tagline}</div> : null}
               </div>
-              <div className="nl-pv-name">{s.business.displayName}</div>
-              {s.tagline ? <div className="nl-pv-tagline">{s.tagline}</div> : null}
             </div>
-            <div className="nl-pv-stats">{heroStats(s, t).map(st => <div key={st.k}><strong>{st.v}</strong><br />{st.k}</div>)}</div>
-          </>}
-          {b.type === 'rows' && <div className="nl-pv-block">{heading(b.kind)}{b.rows.map((r, i) => <div key={i} className="nl-pv-row"><span>{r.a}</span><strong>{r.b}</strong></div>)}</div>}
+            <div className="nl-pv-badges"><StatusTag tone={tier.cls === 'tag-success' ? 'success' : tier.cls === 'tag-warning' ? 'warning' : 'neutral'}>{shellT(tier.key)}</StatusTag></div>
+            <dl className="nl-pv-stats">{heroStats(s, t).map(st => <div key={st.k}><dt>{st.k}</dt><dd>{st.v}</dd></div>)}</dl>
+          </div>}
+          {b.type === 'rows' && <div className="nl-pv-block">{heading(b.kind)}<div className="nl-pv-rows">{b.rows.map((r, i) => <div key={i} className="nl-pv-row"><span>{r.a}</span><strong>{r.b}</strong></div>)}</div></div>}
           {b.type === 'text' && <div className="nl-pv-block">{heading(b.kind)}<div className="nl-pv-text">{b.text}</div></div>}
           {b.type === 'map' && <div className="nl-pv-block">{heading(b.kind)}<div className="nl-pv-map">{b.text}</div></div>}
           {b.type === 'cta' && <div className="nl-pv-cta-wrap"><div className="nl-pv-cta">{t(`cta_${s.ctaLabel}`)}</div></div>}

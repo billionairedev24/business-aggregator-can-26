@@ -21,7 +21,7 @@ interface Row {
  * prices"). Sellers see products ("Products & variants"), providers services with their duration and what they get
  * after {brand}'s fee, both see everything with a Type column. Inline Publish / Hide, role-gated CRUD.
  */
-export function ListingsScreen() {
+export function ListingsScreen({ search }: { search?: string } = {}) {
   const t = useCatalogueT();
   const shellT = useShellT();
   const merchantId = useMerchantId();
@@ -71,6 +71,7 @@ export function ListingsScreen() {
       <BoHeader title={t(`title_${portal}`)} sub={t(`sub_${portal}`)}
         actions={<Button variant="secondary" onClick={() => void navigate({ to: '/b/$merchantId/listings/bulk', params: { merchantId } })}>{t(`bulk_${portal}`)}</Button>} />
       <DataTable<Row>
+        initialSearch={search}
         entity={t(`entity_${portal}`)} plural={t(`plural_${portal}`)} columns={columns} rows={rows}
         rowTones={r => ({ vet: r.vetTone })}
         can={{ create: can.create, update: can.update, delete: can.delete, export: true }}
