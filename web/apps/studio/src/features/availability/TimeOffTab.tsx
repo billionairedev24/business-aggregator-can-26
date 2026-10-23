@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, ErrorState, Field, FormGrid, PageSkeleton, Select, TextInput, formatMoney, useLocale, type Locale } from '@northline/ui';
+import { Alert, Chip, ErrorState, Field, FormGrid, PageSkeleton, Select, StatusTag, TextInput, formatPrice, useLocale, type Locale } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { ValidationError } from '../../lib/http';
 import { hhmmLabel, today } from '../../lib/time';
@@ -64,7 +64,7 @@ export function TimeOffTab() {
               <li key={e.id} className="nl-av-item">
                 <span><strong>{whenText(e, locale)}</strong> · {e.memberName ?? t('wholeTeam')}<span className="nl-av-sub">{e.reason ?? '—'}</span></span>
                 <span className="nl-av-itemactions">
-                  <span className={`tag ${e.kind === 'closed' ? 'tag-neutral' : 'tag-accent-2'}`}>{e.kind === 'closed' ? t('closed') : t('specialHours', { range: e.specialRanges.map(r => rangeText(r, locale)).join(', ') })}</span>
+                  <StatusTag tone={e.kind === 'closed' ? 'neutral' : 'info'}>{e.kind === 'closed' ? t('closed') : t('specialHours', { range: e.specialRanges.map(r => rangeText(r, locale)).join(', ') })}</StatusTag>
                   {canEdit ? <button type="button" className="btn btn-ghost" aria-label={t('removeEntry', { when: whenText(e, locale) })} onClick={() => remove.mutate(e.id)}>{t('remove')}</button> : null}
                 </span>
               </li>
@@ -99,9 +99,9 @@ export function TimeOffTab() {
           {q.data.holidays.map(h => (
             <li key={h.date} className="nl-av-item nl-av-holiday">
               <span>{h.name?.[locale] ?? t(`h_${h.key}` as Parameters<T>[0])} · {md(h.date, locale)}</span>
-              <button type="button" className="nl-chip nl-av-smallchip" aria-pressed={h.open} disabled={!canEdit} onClick={() => holiday.mutate({ date: h.date, open: !h.open })}>
-                {h.open ? (premium > 0 ? t('holidayOpen', { money: formatMoney(premium, locale, { whole: true }) }) : t('holidayOpenNoPremium')) : t('holidayClosed')}
-              </button>
+              <Chip className="nl-av-smallchip" selected={h.open} disabled={!canEdit} onClick={() => holiday.mutate({ date: h.date, open: !h.open })}>
+                {h.open ? (premium > 0 ? t('holidayOpen', { money: formatPrice(premium, locale) }) : t('holidayOpenNoPremium')) : t('holidayClosed')}
+              </Chip>
             </li>
           ))}
         </ul>
