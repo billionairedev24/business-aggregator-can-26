@@ -77,3 +77,11 @@ export function ScopeSwitcher() {
   const { name, meta } = scopeLabel(scope, regions, t);
   return <WorkspaceSwitcher label={t('scopeLabel')} name={name} meta={meta} items={items} />;
 }
+
+/** The place a screen shows, by name ("Calgary", "Alberta", "All markets"), for its head's sub line. */
+export function usePlaceName(): string {
+  const t = useShellT();
+  const { locale } = useLocale();
+  const regions = useRegions(locale).data;
+  return scopeLabel(usePlace(), regions, t).name;
+}
