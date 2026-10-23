@@ -8,7 +8,7 @@ import { tierTag } from '../shell/StudioLayout';
 import { useShellT } from '../shell/messages';
 import { categoriesQuery, lookupGtin, useSaveProduct, useSubmitListing, useUploadImage, type Category, type Fulfilment, type IdentifierType, type Media, type OfferType, type ProductDetail, type VariantTheme } from './api';
 import { BundlePrice, BundleTab, DocumentsField, VariantImages } from './EditorExtras';
-import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, EditorTabs, FeesPanel, RevetNotice, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
+import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, EditorTabs, FeesPanel, PhotoTips, RevetNotice, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
 import { imageProblem } from './imageFile';
 import { useCatalogueT } from './messages';
 import { SECTIONS, applyMatch, bundleFacts, emptyProduct, linkFromDetail, linkFromMatch, permissions, productCompleteness, productFromDetail, productPayload, rowKey, validateProductDraft, variantReady, variantSku, vettingChecks, type CatalogueLink, type Portal, type ProductForm, type Section, type VariantRow } from './model';
@@ -418,6 +418,7 @@ function ImagesTab({ form, update, link, error }: { form: ProductForm; update: U
       {(problem || error) && <div role="alert" className="nl-error">{problem ?? error}</div>}
     </div>
     <p className="nl-cat-note"><strong>{t('standardsTitle')}</strong> {t('standardsBody')}</p>
+    <PhotoTips />
   </>;
 }
 

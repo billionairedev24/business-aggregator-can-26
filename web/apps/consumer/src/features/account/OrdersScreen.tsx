@@ -8,6 +8,7 @@ import { activityQuery, myRequestsQuery, type ActivityItem } from './api';
 import { statusText, titleText, whenText, withText } from './format';
 import { Crumbs } from '../pages/Crumbs';
 import { useAccountT } from './messages';
+import { useRenderNow } from '../../lib/renderClock';
 
 export const ORDER_VIEWS = ['active', 'past', 'cases'] as const;
 export type OrderView = (typeof ORDER_VIEWS)[number];
@@ -157,13 +158,14 @@ function OrderCard({ item: i }: { item: ActivityItem }) {
   const t = useAccountT();
   const { locale } = useLocale();
   const zone = useZone();
+  const now = useRenderNow();
   const { money } = useFormatters();
   const navigate = useNavigate();
   const open = () => { if (i.href) void navigate({ href: i.href }); };
   return (
     <li className="nl-ocard">
       <dl className="nl-ocard-head">
-        <div><dt>{t('colWhen')}</dt><dd>{whenText(i, t, locale, new Date(), zone)}</dd></div>
+        <div><dt>{t('colWhen')}</dt><dd>{whenText(i, t, locale, now, zone)}</dd></div>
         <div><dt>{t('colAmount')}</dt><dd>{i.amountCents > 0 ? money(i.amountCents) : t('noAmount')}</dd></div>
         {i.ref ? <div className="nl-ocard-ref"><dt>{t('colRef')}</dt><dd>{i.ref}</dd></div> : null}
       </dl>

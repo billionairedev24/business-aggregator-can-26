@@ -8,6 +8,7 @@ import {
   type Review, type ReviewKind, type Target, type TipStarted,
 } from './api';
 import { useAftercareT } from './messages';
+import { useRenderNow } from '../../lib/renderClock';
 
 type T = ReturnType<typeof useAftercareT>;
 
@@ -29,7 +30,8 @@ function ReviewTarget({ kind, id, target }: { kind: ReviewKind; id: string; targ
   const { date } = useFormatters();
   const [editing, setEditing] = useState(false);
   const review = target.review;
-  const editable = !!review?.editUntil && new Date(review.editUntil).getTime() > Date.now();
+  const now = useRenderNow();
+  const editable = !!review?.editUntil && new Date(review.editUntil).getTime() > now.getTime();
   return (
     <section className="nl-after" aria-labelledby={`rv-${target.merchantId}`}>
       <h2 id={`rv-${target.merchantId}`} className="nl-after-h2">{t('reviewTitle', { name: target.merchantName })}</h2>

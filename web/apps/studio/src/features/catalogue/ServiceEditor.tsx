@@ -9,7 +9,7 @@ import { useShellT } from '../shell/messages';
 import { categoriesQuery, useSaveService, useSubmitListing, useUploadImage, type PricingMode, type ServiceDetail } from './api';
 import { CatalogueThumb } from './ProductEditor';
 import { imageProblem } from './imageFile';
-import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, FeesPanel, RevetNotice, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
+import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, FeesPanel, PhotoTips, RevetNotice, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
 import { useCatalogueT } from './messages';
 import { emptyService, permissions, serviceCompleteness, serviceFromDetail, servicePayload, validateServiceDraft, vettingChecks, type Portal, type ServiceForm } from './model';
 import { parseMoney, useMessageT } from './validation';
@@ -144,6 +144,7 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
           <h2 className="nl-cat-card-title" id="svc-photos">{t('secPhotos')}</h2>
           <p className="nl-hint">{t('photosHint')}</p>
           <ServicePhotos images={form.images} onChange={images => update({ images }, ['imageIds'])} error={err('imageIds')} />
+          <PhotoTips />
           </section>
         </fieldset>
         <Side>

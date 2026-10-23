@@ -217,3 +217,21 @@ export function FeesPanel({ priceCents, costCents, tier }: { priceCents: number 
 }
 
 export const Side = ({ children }: { children: ReactNode }) => <aside className="nl-cat-aside">{children}</aside>;
+
+/**
+ * S-181: the photo guidelines beside every uploader (products and services): light, background and size, so what a
+ * business uploads looks like the rest of the marketplace (a clean, evenly lit picture large enough for a banner).
+ */
+export function PhotoTips() {
+  const t = useCatalogueT();
+  return (
+    <section className="nl-cat-note-box nl-cat-tips" aria-labelledby="photo-tips">
+      <h3 className="nl-cat-tips-title" id="photo-tips">{t('photoTipsTitle')}</h3>
+      <ul className="nl-cat-tips-list">
+        <li>{t('photoTipLight')}</li>
+        <li>{t('photoTipBackground')}</li>
+        <li>{t('photoTipSize')}</li>
+      </ul>
+    </section>
+  );
+}

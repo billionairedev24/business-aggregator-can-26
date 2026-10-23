@@ -11,8 +11,11 @@ real pictures, because in production we will have to use real pictures"). There 
   without a merchant photo shows its category's stock photo; a slot without a photo shows its fallback slot's
   (a category → its group → the landing's banner), and only when none has one, the drawn picture of before.
 
-So nothing breaks while the library is empty: every page draws what it drew before, and each photo added replaces a
-drawing at once.
+Since S-181 every slot has a photo except three categories that show the **designed fallback** by choice
+(`slots.config.json` → `designed`): the grey photo well with a dashed inner line and the category's icon
+(`features/art/PhotoWell.tsx`, the locked direction's "Photo and fallback"). A listing without a photo of its own shows
+that well too — never its category's stock photo (which repeated one picture across a page of cards) and never a
+drawn picture of its name. `pnpm lint:tokens` fails on a `fallback={<Scene …>}` or `mark={<Scene …>}`.
 
 ## Contents
 
@@ -159,6 +162,12 @@ make photos
   Variants already built are kept; variants nothing links any more are removed. About 3 s a photo the first time.
 - writes each entry's `width`, `height`, `hash` and `placeholder` (its dominant colour, shown while it loads) into
   `photos.json`;
+- writes `credits.json` next to the variants (`/photos/credits.json`): the machine-readable attribution — slot, source
+  file, title, photographer, the photo's page, licence and deed — that CC BY asks for, shipped with the images (and to a
+  CDN with `--out`); the `/credits` page links it;
+- lists the banner and hero photos whose 16:9 crop is narrower than 1440 px. Nothing is ever upscaled: variants are
+  only cut at widths the source has, and the consumer's `Scene` caps the picture at its widest variant
+  (`--nl-scene-max`), so in a wider box it sits centred on the photo well instead of being stretched;
 - regenerates the native apps' list (`mobile/packages/mobile-kit/src/photos/library.generated.ts`).
 
 ## 7. Where the pages use them
@@ -198,6 +207,17 @@ access → allowed domains** setting (claude.ai → the environment's settings):
 
 ### The Open Images route (what filled the library in October 2026)
 
+**S-181 (2026-10-23), originals instead of 1024 px copies.** Most files on the CVDF mirror are resized to 1024 px, but
+about 1,400 of its 1.9 million are the photographers' originals (2,000–7,000 px). They were found by listing the bucket
+with sizes (`?list-type=2`, files over 1.6 MB), their human-verified labels and Flickr metadata streamed from
+`storage.googleapis.com/openimages/v7/oidv7-train-annotations-human-imagelabels.csv` and
+`v6/oidv6-train-images-with-labels-with-rotation.csv` (filtered on the fly; nothing that size is kept), photos labelled
+Person, Text, Flag, Logo, Drawing and the like were dropped, and a person picked from contact sheets. Originals are
+saved at most **1600 px** on the long side, JPEG q80; 1024 px copies are kept as they are (never enlarged). Every
+entry keeps its Flickr page, photographer, profile, title and the CC BY 2.0 deed. The originals themselves are not in
+git: the photo id is the last part of the file name on the mirror, so `https://open-images-dataset.s3.amazonaws.com/<train|test|validation>/<id>.jpg`
+fetches one again.
+
 Openverse throttled the owner's Mac and the photo hosts are blocked here, but Google's Open Images dataset is
 reachable (its metadata on `storage.googleapis.com/openimages/`, its files on `open-images-dataset.s3.amazonaws.com`).
 Each slot's query was mapped to the dataset's human-verified labels (Bakery, Barber, Snowplow, …), photos with text,
@@ -213,4 +233,6 @@ Each demo business and listing of `scripts/demo/data/marketplace.json` names a `
 and `demo/listing/<business>.<listing>`; listed by `make photos-slots`). `make demo-data` uploads a slot's photo
 through the product's own upload flow — the product image, the service's photo of the work, the business's logo (a
 square PNG made from its photo when `web/` is installed) — and, while a slot has no photo, draws a picture as before
-(products and logos; services then have none and show their category's photo).
+(logos only). Since S-181 every demo business and listing has its own photo (a test in
+`scripts/demo/demo-data.test.mjs` checks it, and that no two are the same); a product without one stops the run instead
+of uploading a drawn picture of its name. The pictures for the listing the presenter adds live are library photos too.
