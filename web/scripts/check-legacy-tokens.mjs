@@ -67,6 +67,8 @@ if (photoProblems.length) {
 // `margin-bottom: -1px` under a tab row) stay allowed. In TSX the same goes for inline
 // `style` objects (`fontSize: 13`, `padding: 6`, `color: 'white'`).
 const S175 = ['orders', 'catalogue', 'appointments', 'kitchen'].map(f => `apps/studio/src/features/${f}`);
+const S173 = [...['cart', 'checkout', 'orders', 'tracking', 'account', 'auth', 'help', 'consent', 'promotions'].map(f => `apps/consumer/src/features/${f}`),
+  ...['CheckoutScreen.tsx', 'GroupScreen.tsx', 'TrackScreen.tsx', 'food.css'].map(f => `apps/consumer/src/features/food/${f}`), 'packages/auth-kit/src'];
 const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'apps/studio/src/features/shell', 'apps/console/src/features/shell',
   // S-170/S-171: the consumer discovery pages (home, results, the Services / Shop / Food landings and their shared parts)
   'apps/consumer/src/features/home', 'apps/consumer/src/features/search', 'apps/consumer/src/features/pages', 'apps/consumer/src/features/shop',
@@ -78,13 +80,17 @@ const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'app
   ...S175,
   // S-172: the consumer detail pages (product, store, provider and its booking, the kitchen's menu, the quote flow)
   'apps/consumer/src/features/product', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking', 'apps/consumer/src/features/quotes',
-  'apps/consumer/src/features/food/RestaurantScreen.tsx', 'apps/consumer/src/features/food/restaurant.css'];
+  'apps/consumer/src/features/food/RestaurantScreen.tsx', 'apps/consumer/src/features/food/restaurant.css',
+  // S-173: the consumer cart, checkouts, orders and tracking, the account and the sign-in pages
+  ...S173];
 // S-174: no inline `style` at all in these (a class with the scale tokens instead; the Studio dashboard had a dozen).
 // S-175: the work screens too — except the calendar, whose entries are placed by custom properties from data (--top, --h).
 const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard', ...S175.filter(r => !r.endsWith('/appointments')),
   // S-172: the consumer detail pages
   'apps/consumer/src/features/product', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking', 'apps/consumer/src/features/quotes',
-  'apps/consumer/src/features/shop/StorePage.tsx', 'apps/consumer/src/features/food/RestaurantScreen.tsx'];
+  'apps/consumer/src/features/shop/StorePage.tsx', 'apps/consumer/src/features/food/RestaurantScreen.tsx',
+  // S-173
+  ...S173];
 // (the server-rendered error page and the printable report are standalone documents with their own fallbacks)
 const strictSkip = [...skip, /\.stories\.tsx$/, /\.fixtures\.ts$/, /\.mdx$/, /(^|\/)server\//, /DataTable\/report\.ts$/];
 const PX = /(-?\d*\.?\d+)px/g;
@@ -126,7 +132,8 @@ for (const root of noStyleRoots) {
   for (const file of walk(path.join(webRoot, root))) {
     const rel = path.relative(webRoot, file).split(path.sep).join('/');
     if (!rel.endsWith('.tsx') || strictSkip.some(r => r.test(rel))) continue;
-    readFileSync(file, 'utf8').split('\n').forEach((line, i) => { if (/\sstyle=\{/.test(line)) raw.push(`${rel}:${i + 1}  inline style (use a class with the scale tokens)`); });
+    // a data-driven custom property (`style={{ ['--h' as string]: … }}`, a bar's height) is allowed: the look stays in CSS
+    readFileSync(file, 'utf8').split('\n').forEach((line, i) => { if (/\sstyle=\{/.test(line) && !/\sstyle=\{\{\s*\['--[\w-]+'/.test(line)) raw.push(`${rel}:${i + 1}  inline style (use a class with the scale tokens)`); });
   }
 }
 

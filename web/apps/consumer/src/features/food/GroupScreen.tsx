@@ -38,7 +38,7 @@ export function GroupScreen({ code }: { code: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
-  if (loading || (user && preview.isPending)) return <div className="nl-page"><Skeleton width={360} height={36} /><Skeleton height={200} style={{ marginTop: 20 }} /></div>;
+  if (loading || (user && preview.isPending)) return <div className="nl-page nl-skel-stack"><Skeleton width={360} height={36} /><Skeleton height={200} /></div>;
   if (!user) {
     return (
       <div className="nl-page nl-grp">
@@ -105,7 +105,7 @@ function GroupPanel({ id }: { id: string }) {
   const [copied, setCopied] = useState(false);
   const keys = useRef({ start: newIdempotencyKey(), confirm: newIdempotencyKey() });
 
-  if (q.isPending) return <div className="nl-page"><Skeleton width={360} height={36} /><Skeleton height={200} style={{ marginTop: 20 }} /></div>;
+  if (q.isPending) return <div className="nl-page nl-skel-stack"><Skeleton width={360} height={36} /><Skeleton height={200} /></div>;
   if (q.isError) return <div className="nl-page"><ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /></div>;
   const g = q.data;
   const set = (view: GroupView) => qc.setQueryData(groupQuery(id).queryKey, view);

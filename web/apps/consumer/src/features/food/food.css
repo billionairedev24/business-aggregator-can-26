@@ -74,3 +74,5 @@
 .nl-grp-tip { flex-basis: 100%; }
 .nl-grp-code { display: flex; gap: var(--space-2); align-items: flex-end; flex-wrap: wrap; }
 .nl-grp-start { display: grid; gap: var(--space-3); }
+.nl-skel-stack { display: flex; flex-direction: column; gap: var(--space-3); max-width: 760px; }
+.nl-skel-stack { display: flex; flex-direction: column; gap: var(--space-3); max-width: 760px; }

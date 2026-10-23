@@ -92,7 +92,7 @@ export function CheckoutScreen() {
     staleTime: 30_000,
   });
 
-  if (loading) return <div className="nl-page"><Skeleton width={320} height={36} /><Skeleton height={200} style={{ marginTop: 20 }} /></div>;
+  if (loading) return <div className="nl-page nl-skel-stack"><Skeleton width={320} height={36} /><Skeleton height={200} /></div>;
   if (!cart || cart.lines.length === 0) {
     return (
       <div className="nl-page nl-fco-empty">

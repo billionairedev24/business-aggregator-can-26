@@ -88,14 +88,22 @@ const CARDS = [
   { key: 'sell', href: '/sell', icon: Storefront },
 ] as const;
 
-/** "Your Account" (AT Shop:596): max-width 1100, a card grid minmax(300px,1fr) — a 48px icon circle, title, one line. */
+/**
+ * "Your account" (E-15 S-173, audit #9: the old 1100 px grid left a dead right column): the account's sections as a grid
+ * of cards across the page — four a row at 1440, one on a phone — each a square icon in the well grey, the title and one
+ * line; "Sell or offer services" is a line under the grid, not a card.
+ */
 function AccountHome() {
   const t = useAccountT();
+  const { user } = useViewer();
   return (
     <div className="nl-page nl-acct nl-acct-home">
-      <h1 className="nl-acct-h1">{t('homeTitle')}</h1>
+      <div className="nl-acct-head">
+        <h1 className="nl-acct-h1">{t('homeTitle')}</h1>
+        {user ? <span className="nl-acct-hello">{t('homeHello', { name: user.firstName })}</span> : null}
+      </div>
       <ul className="nl-acct-cards" aria-label={t('homeLabel')}>
-        {CARDS.map(c => (
+        {CARDS.filter(c => c.key !== 'sell').map(c => (
           <li key={c.key}>
             <SiteLink href={c.href} className="nl-acct-card">
               <span className="nl-acct-card-icon" aria-hidden><c.icon size={24} /></span>
@@ -107,6 +115,7 @@ function AccountHome() {
           </li>
         ))}
       </ul>
+      <p className="nl-acct-sell"><Storefront size={18} aria-hidden /> <SiteLink href="/sell">{t('card_sell')}</SiteLink> <span className="nl-acct-card-desc">{t('card_sell_desc')}</span></p>
     </div>
   );
 }
@@ -134,7 +143,7 @@ export function AccountSide({ current }: { current?: string }) {
         {CARDS.filter(c => c.key !== 'sell').map(c => (
           <li key={c.key}>
             <SiteLink href={c.href} className="nl-acct-side-item" aria-current={c.key === current ? 'page' : undefined}>
-              <c.icon size={20} weight={c.key === current ? 'fill' : 'regular'} aria-hidden />{t(`card_${c.key}`)}
+              <c.icon size={18} weight={c.key === current ? 'bold' : 'regular'} aria-hidden />{t(`card_${c.key}`)}
             </SiteLink>
           </li>
         ))}
@@ -159,8 +168,8 @@ export function AccountSkeleton() {
     <div className="nl-page nl-acct" aria-busy="true">
       <span className="nl-sr-only">{t('loading')}</span>
       <div className="nl-acct-grid">
-        <Skeleton width="40%" height={40} />
-        <div className="nl-acct-cards">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} height={96} radius={8} />)}</div>
+        <Skeleton width="40%" height={32} />
+        <div className="nl-acct-cards">{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} height={88} />)}</div>
       </div>
     </div>
   );

@@ -95,9 +95,8 @@ function NotificationsForm({ initial, consents }: { initial: NotificationPrefs; 
                   const locked = e === 'security';
                   return (
                     <td key={c} className="nl-center">
-                      <button type="button" role="switch" aria-checked={on} className="nl-toggle" disabled={locked}
-                        aria-label={t('cell', { channel: t(`ch_${c}`), event: t(`ev_${e}`), state: t(on ? 'on' : 'off') })}
-                        onClick={() => toggle(e, c)} />
+                      <Switch checked={on} disabled={locked} onChange={() => toggle(e, c)}
+                        label={t('cell', { channel: t(`ch_${c}`), event: t(`ev_${e}`), state: t(on ? 'on' : 'off') })} />
                     </td>
                   );
                 })}

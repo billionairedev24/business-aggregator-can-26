@@ -69,8 +69,8 @@ describe('Orders & bookings (redesign § 2.1, AT Shop:688)', () => {
   it('opens on Orders: tabs, the view chips, order cards and the help / order-again column', async () => {
     orders();
     expect(await screen.findByRole('heading', { level: 1, name: 'Orders & bookings' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Orders · 2' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Bookings · 3' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('tab', { name: /^Orders\s*2$/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /^Bookings\s*3$/ })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByRole('button', { name: 'Active · 1' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Past' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Refunds & cases · 1' })).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe('Orders & bookings (redesign § 2.1, AT Shop:688)', () => {
 
   it('switches to Bookings: jobs and quotes', async () => {
     const { router } = orders();
-    await userEvent.click(await screen.findByRole('button', { name: 'Bookings · 3' }));
+    await userEvent.click(await screen.findByRole('tab', { name: /^Bookings\s*3$/ }));
     await waitFor(() => expect(router.state.location.search).toEqual({ tab: 'bookings' }));
     expect(await screen.findByText('Brake inspection')).toBeInTheDocument();
     expect(screen.getByText('Prairie Wrench · Ravi')).toBeInTheDocument();
@@ -115,7 +115,7 @@ describe('Orders & bookings (redesign § 2.1, AT Shop:688)', () => {
     expect(screen.getByRole('button', { name: 'Re-book' })).toBeInTheDocument();
     expect(screen.queryByText('Brake inspection')).not.toBeInTheDocument();
     expect(router.state.location.search).toEqual({ tab: 'bookings', view: 'past' });
-    await userEvent.click(screen.getByRole('button', { name: 'Orders · 2' }));
+    await userEvent.click(screen.getByRole('tab', { name: /^Orders\s*2$/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'Refunds & cases · 1' }));
     expect(await screen.findByText('Case RF-2201')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Grocery run · 2 shops' })).toBeInTheDocument();
@@ -157,11 +157,11 @@ describe('Orders & bookings (redesign § 2.1, AT Shop:688)', () => {
   it('in French', async () => {
     orders('/account/orders?tab=bookings', 'fr');
     expect(await screen.findByRole('heading', { level: 1, name: 'Commandes et réservations' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Réservations · 3' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('tab', { name: /^Réservations\s*3$/ })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('button', { name: 'En cours · 2' })).toBeInTheDocument();
     expect(await screen.findByText('Fiducie')).toBeInTheDocument();
     expect(screen.getByText('Devis prêt')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Commandes · 2' }));
+    await userEvent.click(screen.getByRole('tab', { name: /^Commandes\s*2$/ }));
     expect(await screen.findByText('Tournée d’épicerie · 3 commerces')).toBeInTheDocument();
     expect(screen.getByText('Emballage')).toBeInTheDocument();
   });
@@ -176,8 +176,10 @@ describe('Your account (redesign § 2.1, AT Shop:596)', () => {
     expect(cards.map(c => c.getAttribute('href'))).toEqual([
       '/account/orders', '/account/orders?tab=bookings', '/account?tab=addresses', '/account?tab=payments', '/account?tab=security',
       '/account?tab=notifications', '/account?tab=favourites', '/account?tab=wallet', '/account?tab=plus', '/account?tab=invite',
-      '/account?tab=profile', '/account?tab=help', '/sell',
+      '/account?tab=profile', '/account?tab=help',
     ]);
+    // audit #9: "Sell or offer services" is a line under the grid, not a 13th card
+    expect(screen.getByRole('link', { name: 'Sell or offer services' })).toHaveAttribute('href', '/sell');
     expect(cards[0]).toHaveTextContent('OrdersTrack, return or buy things again');
     expect(cards[6]).toHaveTextContent('Saved');
     expect(screen.queryByRole('navigation', { name: 'Your account' })).toBeNull(); // the eleven-tab rail is gone

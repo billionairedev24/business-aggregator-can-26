@@ -199,7 +199,7 @@ export function ProblemSkeleton() {
     <div className="nl-page nl-problem" aria-busy="true">
       <span className="nl-sr-only">{t('loading')}</span>
       <Skeleton width="50%" height={40} />
-      {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={44} style={{ marginTop: 12, maxWidth: 560 }} />)}
+      <div className="nl-skel-stack">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={44} />)}</div>
     </div>
   );
 }
