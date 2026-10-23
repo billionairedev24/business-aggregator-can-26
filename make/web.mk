@@ -82,6 +82,11 @@ ui-shots: $(WEB_INSTALLED) ## Full-page screenshots of every consumer, Studio an
 	export UI_SHOTS_APPS=$$apps; pnpm --filter @northline/a11y shots $(if $(UI_SHOTS_GREP),--grep "$(UI_SHOTS_GREP)")
 	@echo "ui-shots: $(ROOT)/ui-shots/<app>/<route>-<d|m>.png (d 1440×900, m 390×844); unanswered api requests in ui-shots/<app>/_missing-api.txt"
 
+.PHONY: ui-hydration
+ui-hydration: $(WEB_INSTALLED) ## S-182: fail on any React hydration error on every consumer route (1440 and 390 wide, en and fr; the ui-shots servers and data; UI_SHOTS_SKIP_BUILD=1 reuses the last build)
+	@cd $(ROOT)/web && if [ -z "$(UI_SHOTS_SKIP_BUILD)" ]; then pnpm --filter @northline/consumer build || exit 1; fi; \
+	UI_SHOTS_APPS=consumer UI_SHOTS_HYDRATION=1 pnpm --filter @northline/a11y shots $(if $(UI_SHOTS_GREP),--grep "$(UI_SHOTS_GREP)")
+
 .PHONY: csp-check
 csp-check: $(WEB_INSTALLED) ## S104-09: the consumer site's CSP in Chromium — a fresh nonce per page, none of its inline scripts without it, zero violations (checkout with a Stripe.js stand-in)
 	$(PNPM) --filter @northline/consumer build
