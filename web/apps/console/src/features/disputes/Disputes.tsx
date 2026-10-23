@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import {
-  BoHeader, Button, ChoiceTiles, DataTable, ErrorState, Field, formatMoney, formatNumber, KpiStrip, PageSkeleton, Segmented, StatusTag, TextArea, TextInput, UnderlineTabs, useLocale,
+  BoHeader, Button, ChoiceTiles, DataTable, ErrorState, Field, formatPrice, formatNumber, KpiStrip, PageSkeleton, Segmented, StatusTag, TextArea, TextInput, UnderlineTabs, useLocale,
   type DataTableColumn, type StatusTone,
 } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
@@ -105,7 +105,7 @@ export function Decision({ item }: { item: Item }) {
   const [amount, setAmount] = useState((half / 100).toFixed(2));
   const [note, setNote] = useState('');
   const [cosignNote, setCosignNote] = useState('');
-  const money = (c: number) => formatMoney(c, locale);
+  const money = (c: number) => formatPrice(c, locale);
   const errors = decide.error instanceof ValidationError ? decide.error.byField() : {};
   const refusal = [decide.error, cosign.error].find(e => e && !(e instanceof ValidationError)) as ApiError | Error | undefined;
   const withAmount = outcome === 'partial' || outcome === 'goodwill_credit';

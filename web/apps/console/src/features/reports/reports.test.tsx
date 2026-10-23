@@ -40,7 +40,7 @@ describe('reports & analytics (S-95, design 03)', () => {
     expect(within(may).getByText('58%')).toBeTruthy();
     expect(within(screen.getByText('Jul').closest('tr') as HTMLElement).getByText('fewer than 5')).toBeTruthy();
     expect(screen.getByText('Groceries')).toBeTruthy();
-    expect(screen.getByText('$612,000')).toBeTruthy();
+    expect(screen.getByText('$612,000.00')).toBeTruthy();
     expect(screen.getByText('Waitlist demand · Ontario')).toBeTruthy();
     expect(screen.getByText('2,140')).toBeTruthy();
     expect(screen.getAllByText('fewer than 5').length).toBeGreaterThan(1); // the withheld week, in the table view

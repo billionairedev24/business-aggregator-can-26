@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle, XCircle } from '@phosphor-icons/react';
-import { Button, Checkbox, DataTable, Dialog, ErrorState, Field, formatMoney, formatNumber, PageSkeleton, TextArea, useLocale, type DataTableAction, type DataTableColumn, type DataTableTone, type Locale } from '@northline/ui';
+import { Button, Checkbox, DataTable, Dialog, ErrorState, Field, formatPrice, formatNumber, PageSkeleton, TextArea, useLocale, type DataTableAction, type DataTableColumn, type DataTableTone, type Locale } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import type { PlaceFilter } from '../shell/PlaceFilters';
@@ -30,7 +30,7 @@ export function ruleText(i: Item, t: VettingT, locale: Locale): string {
 export function evidenceText(i: Item, t: VettingT, locale: Locale): string {
   const parts: string[] = [];
   for (const f of i.flags) {
-    if ((f === 'price_outlier' || f === 'price_check') && i.medianCents != null) parts.push(t(f === 'price_check' ? 'e_cuisineMedian' : 'e_median', { median: formatMoney(i.medianCents, locale, { whole: i.medianCents % 100 === 0 }) }));
+    if ((f === 'price_outlier' || f === 'price_check') && i.medianCents != null) parts.push(t(f === 'price_check' ? 'e_cuisineMedian' : 'e_median', { median: formatPrice(i.medianCents, locale) }));
     if (f === 'missing_licence') parts.push(i.regulator ? t('e_licence', { registry: i.regulator }) : t('e_licenceAny'));
     if (f === 'banned_category') parts.push(i.category ? t('e_banned', { category: i.category }) : t('e_bannedAny'));
     if (f === 'duplicate_image') parts.push(t('e_duplicate'));
@@ -63,7 +63,7 @@ export function ListingVetting() {
   const data = query.data!;
   const status = (i: Item) => (i.state === 'pending' ? t('pending') : i.state === 'approved' ? t('approved') : i.state === 'rejected' ? t('rejected') : i.state);
   const rows: Row[] = data.items.map(i => ({
-    id: i.id, name: i.name, price: i.priceCents == null ? t('quote') : formatMoney(i.priceCents, locale), seller: i.businessName,
+    id: i.id, name: i.name, price: i.priceCents == null ? t('quote') : formatPrice(i.priceCents, locale), seller: i.businessName,
     rule: ruleText(i, t, locale), evidence: evidenceText(i, t, locale), status: status(i), item: i,
   }));
   const tones = (r: Row): Partial<Record<keyof Row, DataTableTone>> => ({
@@ -118,7 +118,7 @@ function RejectDialog({ item, onClose, onDone }: { item: Item; onClose: () => vo
   const other = decide.error && !(decide.error instanceof ValidationError) ? (decide.error as Error).message : undefined;
   return (
     <Dialog open onClose={onClose} title={t('rejectTitle', { name: item.name })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={decide.isPending} onClick={() => decide.mutate({ item, decision: 'reject', reasons, note: note || undefined }, { onSuccess: onDone })}>{t('rejectSend')}</Button></>}>
       <fieldset className="nl-q-field">
         <legend>{t('rejectWhy')}</legend>

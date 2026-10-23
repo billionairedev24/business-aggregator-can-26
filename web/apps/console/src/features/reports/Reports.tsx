@@ -92,7 +92,7 @@ function ReportView({ data, province }: { data: Report; province?: string }) {
         <ChartCard id="rp-top" title={t('topTitle')}>
           {data.topCategories.length ? (
             <BarList items={data.topCategories.map(c => ({ label: c.names[locale] ?? c.names.en ?? c.categoryId, value: c.salesCents }))}
-              format={v => fmt.money(v, { whole: true })} />
+              format={v => fmt.compactMoney(v)} />
           ) : <p className="bo-muted">{t('noTop')}</p>}
         </ChartCard>
         <ChartCard id="rp-gaps" title={t('gapsTitle')}>

@@ -3,13 +3,6 @@ import type { Regions } from '../shell/api';
 import type { Flag, Seller } from './api';
 import type { SellersKey, SellersT } from './messages';
 
-/** "$19.4k", "$1.9k", "$640": the design's compact GMV. */
-export function compactMoney(cents: number, locale: Locale): string {
-  const dollars = cents / 100;
-  return new Intl.NumberFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { style: 'currency', currency: 'CAD', currencyDisplay: 'narrowSymbol',
-    notation: Math.abs(dollars) >= 1000 ? 'compact' : 'standard', maximumFractionDigits: Math.abs(dollars) >= 1000 ? 1 : 0 }).format(dollars).replace('K', 'k');
-}
-
 export const percent = (ratio: number, locale: Locale) => formatNumber(ratio, locale, { style: 'percent', maximumFractionDigits: 1 });
 
 /** "AB", "BC pilot": the province as the console names it, from the region model. */

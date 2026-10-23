@@ -54,11 +54,11 @@ function TeamView({ team }: { team: Team }) {
       <BoHeader title={t('heading')} sub={t('summary')}
         actions={<><Button disabled={!admin} onClick={() => setInviting(true)}>{t('invite')}</Button>{!admin ? <span className="bo-muted">{t('cannot')}</span> : null}</>} />
       <ChartCard id="tm-roles" title={t('rolesTitle')}>
-        <DataTable<RoleRowView> entity={t('roleEntity')} plural={t('rolePlural')} columns={roleColumns} rows={roleRows} pageSize={10} roleName={roleName}
+        <DataTable<RoleRowView> dense entity={t('roleEntity')} plural={t('rolePlural')} columns={roleColumns} rows={roleRows} pageSize={10} roleName={roleName}
           can={{ create: false, update: false, delete: false }} />
       </ChartCard>
       <ChartCard id="tm-people" title={t('peopleTitle')}>
-        <DataTable<PersonRow> entity={t('personEntity')} plural={t('personPlural')} columns={peopleColumns} rows={people} pageSize={10} roleName={roleName}
+        <DataTable<PersonRow> dense entity={t('personEntity')} plural={t('personPlural')} columns={peopleColumns} rows={people} pageSize={10} roleName={roleName}
           can={{ create: false, update: false, delete: false }} openLabel={t('manage')} onOpen={admin ? r => setManaging(r.src) : undefined} />
       </ChartCard>
       <ChartCard id="tm-audit" title={t('auditTitle')}>
@@ -79,7 +79,7 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
   const errors = invite.error instanceof ValidationError ? invite.error.byField() : {};
   return (
     <Dialog open onClose={onClose} title={t('inviteTitle')}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={invite.isPending} onClick={() => invite.mutate({ email, role }, { onSuccess: onClose })}>{t('grant')}</Button></>}>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button><Button disabled={invite.isPending} onClick={() => invite.mutate({ email, role }, { onSuccess: onClose })}>{t('grant')}</Button></>}>
       <p className="nl-tm-sub">{t('inviteNote')}</p>
       <Field label={t('f_email')} error={errors.email}><TextInput type="email" value={email} onChange={e => setEmail(e.target.value)} /></Field>
       <Field label={t('f_role')} error={errors.role}>
@@ -100,10 +100,10 @@ function ManageDialog({ member, onClose }: { member: Member; onClose: () => void
   const [role, setRole] = useState<string>(missing[0] ?? '');
   const error = errorOf(grant.error) ?? errorOf(revoke.error);
   return (
-    <Dialog open onClose={onClose} title={t('manageTitle', { name: member.name })} actions={<Button variant="ghost" onClick={onClose}>{t('close')}</Button>}>
+    <Dialog open onClose={onClose} title={t('manageTitle', { name: member.name })} actions={<Button variant="tertiary" onClick={onClose}>{t('close')}</Button>}>
       <div className="nl-tm-tags">
         {held.map(r => (
-          <Tag key={r} tone="accent">{shell(`role_${r}` as ShellKey)}
+          <Tag key={r} tone="info">{shell(`role_${r}` as ShellKey)}
             <button type="button" className="nl-tm-x" aria-label={t('remove', { role: shell(`role_${r}` as ShellKey) })} disabled={revoke.isPending}
               onClick={() => revoke.mutate({ userId: member.id, role: r })}>×</button>
           </Tag>

@@ -49,7 +49,7 @@ export function Participants() {
               {p.signoffs.map(s => (
                 <div key={s.script} className="nl-q-row">
                   <div>
-                    <Tag tone={s.outcome === 'blocked' ? 'accent-2' : s.outcome === 'pending' ? 'highlight' : 'accent'}>{t(`o_${s.outcome}`)}</Tag>{' '}
+                    <Tag tone={s.outcome === 'blocked' ? 'danger' : s.outcome === 'pending' ? 'warning' : 'success'}>{t(`o_${s.outcome}`)}</Tag>{' '}
                     {t('signoffLine', { script: s.scriptTitle, version: s.scriptVersion, outcome: t(`o_${s.outcome}`) })}
                     {s.recordedAt ? <div className="nl-q-note">{t('signoffBy', { who: s.recordedByName ?? '—', date: date(s.recordedAt, 'dateTime') })}</div> : null}
                     {s.blockingRefs.length ? <div className="nl-q-note">{t('blockingRefs', { refs: s.blockingRefs.join(', ') })}</div> : null}
@@ -59,7 +59,7 @@ export function Participants() {
               ))}
               {can('uat') && p.active ? <div className="nl-q-actions">
                 <Button type="button" variant="secondary" onClick={() => setSigning(p)}>{t('record')}</Button>
-                {p.who === 'user' ? <Button type="button" variant="ghost" disabled={act.isPending} onClick={() => act.mutate({ id: p.id, deactivate: true })}>{t('deactivate')}</Button> : null}
+                {p.who === 'user' ? <Button type="button" variant="tertiary" disabled={act.isPending} onClick={() => act.mutate({ id: p.id, deactivate: true })}>{t('deactivate')}</Button> : null}
               </div> : null}
             </li>
           ))}
@@ -79,7 +79,7 @@ function AddDialog({ t, onClose }: { t: UatT; onClose: () => void }) {
   const errors = add.error instanceof ValidationError ? add.error.byField() : {};
   return (
     <Dialog open onClose={onClose} title={t('add')}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={add.isPending} onClick={() => add.mutate({ persona, label: label.trim(), contact: contact.trim() }, { onSuccess: onClose })}>{t('save')}</Button></>}>
       <p className="nl-q-note">{t('businessHint')}</p>
       <Field label={t('persona')} error={errors.persona}>
@@ -105,7 +105,7 @@ function SignoffDialog({ t, p, onClose }: { t: UatT; p: Participant; onClose: ()
   const errors = act.error instanceof ValidationError ? act.error.byField() : {};
   return (
     <Dialog open onClose={onClose} title={`${t('record')} · ${p.label}`}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={act.isPending || !script} onClick={() => script && act.mutate(
           { id: p.id, script: script.code, outcome, comments: comments.trim() || undefined, blockingIds: outcome === 'blocked' ? blocking : [] },
           { onSuccess: onClose })}>{t('save')}</Button></>}>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { BoHeader, Button, DataTable, Drawer, ErrorState, Field, formatDate, formatMoney, PageSkeleton, Select, SheetSection, TextArea, TextInput, useLocale, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { BoHeader, Button, DataTable, Drawer, ErrorState, Field, formatDate, formatPrice, PageSkeleton, Select, SheetSection, TextArea, TextInput, useLocale, type DataTableColumn, type DataTableTone } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import type { PlaceFilter } from '../shell/PlaceFilters';
@@ -80,7 +80,7 @@ function CardBody({ item }: { item: CardItem }) {
   const row = d?.item.row ?? item.row;
   const state = stateOf(row);
   const editable = state === 'open';
-  const money = (c: number) => formatMoney(c, locale);
+  const money = (c: number) => formatPrice(c, locale);
   const errors = save.error instanceof ValidationError ? save.error.byField() : {};
   const refusal = [save.error, submit.error].find(e => e && !(e instanceof ValidationError)) as ApiError | Error | undefined;
   const stored = (d?.detail.caseEvidence ?? []).filter(e => e.file);
@@ -104,7 +104,7 @@ function CardBody({ item }: { item: CardItem }) {
           </Field>
         ))}
         {editable && can('decide') && d?.detail.merchantResponse && !fields.uncategorized_text ? (
-          <Button variant="ghost" onClick={() => setFields(x => ({ ...x, uncategorized_text: d.detail.merchantResponse ?? '' }))}>{t('useResponse')}</Button>
+          <Button variant="tertiary" onClick={() => setFields(x => ({ ...x, uncategorized_text: d.detail.merchantResponse ?? '' }))}>{t('useResponse')}</Button>
         ) : null}
       </SheetSection>
       <SheetSection title={t('secFiles')}>

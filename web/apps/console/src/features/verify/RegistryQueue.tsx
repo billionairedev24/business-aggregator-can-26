@@ -112,7 +112,7 @@ function DecideDialog({ row, decision, check, onClose, onDone }: { row: Registry
   );
   return (
     <Dialog open onClose={onClose} title={t('decideTitle', { decision: t(decision), check, business: row.businessName })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button variant={decision === 'reject' ? 'danger' : 'primary'} disabled={decide.isPending} onClick={submit}>{t(decision === 'approve' ? 'confirmApprove' : 'confirmReject')}</Button></>}>
       {decision === 'approve' ? <>
         <Field label={t('reference')} hint={t('referenceHint')} error={errors.reference}><TextInput value={reference} maxLength={120} onChange={e => setReference(e.target.value)} /></Field>

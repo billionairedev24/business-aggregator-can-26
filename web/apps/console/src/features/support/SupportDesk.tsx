@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import {
-  ActionPanel, ActionPanelItem, BoHeader, Button, DataTable, Dialog, ErrorState, FactList, Field, formatMoney, formatNumber, KpiStrip, PageSkeleton, RecordHeader, RecordLayout, RecordTabs,
+  ActionPanel, ActionPanelItem, BoHeader, Button, DataTable, Dialog, ErrorState, FactList, Field, formatPrice, formatNumber, KpiStrip, PageSkeleton, RecordHeader, RecordLayout, RecordTabs,
   Segmented, Select, StatusTag, TextArea, TextInput, UnderlineTabs, useLocale, type DataTableColumn, type DataTableTone, type StatusTone,
 } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
@@ -222,7 +222,7 @@ function TicketView({ d }: { d: Detail }) {
             <ul className="nl-q-list">
               {d.refundRequests.map(r => (
                 <li key={r.id} className="nl-q-row">
-                  <span>{t('rr_line', { amount: formatMoney(r.amountCents, locale), who: r.requestedByName ?? t('none'), age: age(r.requestedAt) })}
+                  <span>{t('rr_line', { amount: formatPrice(r.amountCents, locale), who: r.requestedByName ?? t('none'), age: age(r.requestedAt) })}
                     {r.note ? <><br /><span className="nl-q-note">{r.note}</span></> : null}</span>
                   <StatusTag tone={r.state === 'approved' ? 'success' : r.state === 'declined' ? 'neutral' : 'warning'}>{t(`rr_${r.state}` as SupportKey)}</StatusTag>
                   {r.state === 'pending' && can('refund') && r.requestedBy !== me ? (
@@ -303,7 +303,7 @@ function MacrosDialog({ onClose }: { onClose: () => void }) {
             <span>{m.title[locale] ?? m.key}<br /><span className="nl-q-note">{m.key}</span></span>
             <span className="nl-q-actions">
               <Button variant="secondary" onClick={() => edit(m)}>{t('editMacro')}</Button>
-              <Button variant="ghost" disabled={remove.isPending} onClick={() => remove.mutate(m.id, { onSuccess: () => setNotice(t('macroDeleted')) })}>{t('deleteMacro')}</Button>
+              <Button variant="tertiary" disabled={remove.isPending} onClick={() => remove.mutate(m.id, { onSuccess: () => setNotice(t('macroDeleted')) })}>{t('deleteMacro')}</Button>
             </span>
           </li>
         ))}

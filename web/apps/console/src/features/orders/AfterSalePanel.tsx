@@ -34,7 +34,7 @@ function History({ a }: { a: AfterSale }) {
         ? t('as_failedChoice', { choice: t(`ch_${a.deliveryFailure.choice}` as OrdersKey) })
         : t('as_failedWaiting', { when: fmt.date(a.deliveryFailure.decideBy, 'dateTime') }),
     ] : []),
-    ...a.returns.map(r => t('as_return', { ref: r.ref, shop: r.merchantName ?? '—', state: t(`rs_${r.state}` as OrdersKey), amount: fmt.money(r.amountCents) })),
+    ...a.returns.map(r => t('as_return', { ref: r.ref, shop: r.merchantName ?? '—', state: t(`rs_${r.state}` as OrdersKey), amount: fmt.price(r.amountCents) })),
   ];
   return items.length ? <ul className="nl-or-list">{items.map(i => <li key={i}>{i}</li>)}</ul> : <p className="nl-or-note">{t('as_none')}</p>;
 }

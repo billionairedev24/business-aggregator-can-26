@@ -121,7 +121,7 @@ function TierRules({ byKey, canEdit, roleName }: { byKey: Record<string, Rule>; 
   const rule = editing ? byKey[editing] : undefined;
   return (
     <>
-      <DataTable<TierRow> entity={t('tierEntity')} plural={t('tierPlural')} columns={columns} rows={rows} pageSize={5}
+      <DataTable<TierRow> dense entity={t('tierEntity')} plural={t('tierPlural')} columns={columns} rows={rows} pageSize={5}
         can={{ create: false, update: canEdit, delete: false }} roleName={roleName} onEditClick={row => setEditing(row.id)} />
       {rule ? <RuleDialog rule={rule} title={t('editTier', { tier: rows.find(x => x.id === rule.key)!.tier })} onClose={() => setEditing(null)} /> : null}
     </>
@@ -138,7 +138,7 @@ function RuleDialog({ rule, title, onClose }: { rule: Rule; title: string; onClo
   const submit = () => save.mutate({ key: rule.key, value: Object.fromEntries(numeric.map(f => [f.name, Number(values[f.name])])) }, { onSuccess: onClose });
   return (
     <Dialog open onClose={onClose} title={title}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={save.isPending} onClick={submit}>{t('save')}</Button></>}>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button><Button disabled={save.isPending} onClick={submit}>{t('save')}</Button></>}>
       {numeric.map(f => (
         <Field key={f.name} label={t(`f_${f.name}` as TrustKey)} error={errors[`value.${f.name}`]}>
           <TextInput inputMode="decimal" value={values[f.name] ?? ''} onChange={e => setValues(x => ({ ...x, [f.name]: e.target.value }))} />

@@ -89,7 +89,7 @@ function RejectLicence({ item, onClose, onDone }: { item: LicenceItem; onClose: 
   const errors = decide.error instanceof ValidationError ? decide.error.byField() : {};
   return (
     <Dialog open onClose={onClose} title={t('rejectTitle', { name: item.businessName })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={decide.isPending} onClick={() => decide.mutate({ id: item.licence.id, decision: 'reject', reason, note: note || undefined }, { onSuccess: onDone })}>{t('rejectSend')}</Button></>}>
       <Field label={t('why')} error={errors.reason}>
         <Select value={reason} onChange={e => setReason(e.target.value as LicenceReason)} options={LICENCE_REASONS.map(r => ({ value: r, label: t(`why_${r}`) }))} />

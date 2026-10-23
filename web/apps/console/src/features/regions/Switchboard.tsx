@@ -10,7 +10,7 @@ import { useRegionsT, type RegionsKey, type RegionsT } from './messages';
 import './regions.css';
 import { LanguageToggles } from './LanguageToggles';
 
-const TONE: Record<Stage, 'neutral' | 'accent-2' | 'accent'> = { off: 'neutral', waitlist: 'neutral', pilot: 'accent-2', live: 'accent' };
+const TONE: Record<Stage, 'neutral' | 'warning' | 'info' | 'success'> = { off: 'neutral', waitlist: 'warning', pilot: 'info', live: 'success' };
 const CHECKS = ['taxProfile', 'holidays', 'registries', 'marketWithZones'] as const;
 
 /** "GST 5% + PST 7%", "HST 13%", "GST 5% + QST 9.975%": the tax profile's rates (basis points). */
@@ -95,7 +95,7 @@ function ProvincePanel({ province: p }: { province: Province }) {
       <div className="nl-rg-fields nl-rg-facts">
         <div className="nl-rg-field"><span className="nl-rg-label">{t('taxProfile')}</span><div>{taxText(p.tax, locale, t)}</div></div>
         <div className="nl-rg-field"><span className="nl-rg-label">{t('languages')}</span>
-          <div className="nl-rg-tags"><Tag tone={p.languages.includes('en') ? 'accent' : 'neutral'}>{t('english')}</Tag><Tag tone={p.languages.includes('fr') ? 'accent' : 'neutral'}>{t('french')}</Tag></div></div>
+          <div className="nl-rg-tags"><Tag tone={p.languages.includes('en') ? 'success' : 'neutral'}>{t('english')}</Tag><Tag tone={p.languages.includes('fr') ? 'success' : 'neutral'}>{t('french')}</Tag></div></div>
         <div className="nl-rg-field"><span className="nl-rg-label" id={`cm-${p.code}`}>{t('courierModel')}</span>
           <Segmented name={`cm-${p.code}`} aria-label={t('courierModel')} value={p.courierModel ?? ''}
             options={(['own', 'contracted', 'hybrid'] as const).map(m => ({ value: m, label: t(`cm_${m}` as RegionsKey) }))}
@@ -181,7 +181,7 @@ function Zones({ province: p, name, allowed }: { province: Province; name: strin
   const [geo, setGeo] = useState(false);
   const [removing, setRemoving] = useState<Zone | null>(null);
   const city = (id: string) => p.markets.find(m => m.id === id)?.city ?? '';
-  const money = (c: number | null | undefined) => (c == null ? t('free') : c === 0 ? t('free') : fmt.money(c));
+  const money = (c: number | null | undefined) => (c == null ? t('free') : c === 0 ? t('free') : fmt.price(c));
   const edit = (z?: Zone) => {
     setGeo(false);
     change.reset();
@@ -205,11 +205,11 @@ function Zones({ province: p, name, allowed }: { province: Province; name: strin
       {p.zones.map(z => (
         <div key={z.id} className="nl-rg-zone">
           <span><strong>{z.name}</strong> <span className="nl-rg-meta">· {city(z.marketId)}</span>
-            <span className="nl-rg-meta nl-rg-block">{t('zoneMeta', { runs: z.runsPerDay ?? 0, fee: money(z.feeStdCents), plus: money(z.feePlusCents), min: z.minBasketCents == null ? t('free') : fmt.money(z.minBasketCents),
+            <span className="nl-rg-meta nl-rg-block">{t('zoneMeta', { runs: z.runsPerDay ?? 0, fee: money(z.feeStdCents), plus: money(z.feePlusCents), min: z.minBasketCents == null ? t('free') : fmt.price(z.minBasketCents),
               boundary: z.areaKm2 == null ? t('noBoundary') : t('polygon', { area: fmt.number(z.areaKm2, { maximumFractionDigits: 1 }) }) })}</span></span>
           <div className="nl-rg-zone-actions">
-            <Button variant="ghost" aria-label={`${t('edit')} ${z.name}`} disabled={!allowed} onClick={() => edit(z)}>{t('edit')}</Button>
-            <Button variant="ghost" className="nl-rg-danger" aria-label={`${t('remove')} ${z.name}`} disabled={!allowed} onClick={() => setRemoving(z)}>{t('remove')}</Button>
+            <Button variant="tertiary" aria-label={`${t('edit')} ${z.name}`} disabled={!allowed} onClick={() => edit(z)}>{t('edit')}</Button>
+            <Button variant="tertiary" className="nl-rg-danger" aria-label={`${t('remove')} ${z.name}`} disabled={!allowed} onClick={() => setRemoving(z)}>{t('remove')}</Button>
           </div>
         </div>
       ))}
@@ -233,7 +233,7 @@ function Zones({ province: p, name, allowed }: { province: Province; name: strin
           </div>
           {conflict ? <p role="alert" className="nl-rg-error">{conflict}</p> : null}
           <div className="nl-rg-tags"><Button disabled={!form.name.trim() || !form.marketId || change.isPending} onClick={save}>{form.id ? t('saveZone') : t('createZone')}</Button>
-            <Button variant="ghost" onClick={() => setForm(null)}>{t('cancel')}</Button></div>
+            <Button variant="tertiary" onClick={() => setForm(null)}>{t('cancel')}</Button></div>
         </div>
       ) : (
         <div className="nl-rg-tags">
@@ -244,7 +244,7 @@ function Zones({ province: p, name, allowed }: { province: Province; name: strin
       <div className="nl-rg-note">{t('zonesNote')}</div>
       {removing ? (
         <Dialog open role="alertdialog" onClose={() => setRemoving(null)} title={t('removeTitle', { name: removing.name })}
-          actions={<><Button variant="ghost" onClick={() => setRemoving(null)}>{t('cancel')}</Button>
+          actions={<><Button variant="tertiary" onClick={() => setRemoving(null)}>{t('cancel')}</Button>
             <Button onClick={() => change.mutate({ kind: 'removeZone', zoneId: removing.id }, { onSuccess: () => setRemoving(null) })}>{t('remove')}</Button></>}>
           <p>{t('removeBody')}</p>
           {conflictOf(change.error) ? <p role="alert" className="nl-rg-error">{conflictOf(change.error)}</p> : null}
@@ -263,7 +263,7 @@ function ConfirmStage({ province: p, name, stage, onClose }: { province: Provinc
   const lowers = STAGES.indexOf(stage) < STAGES.indexOf(p.stage) && p.markets.some(m => STAGES.indexOf(m.stage) > STAGES.indexOf(stage));
   return (
     <Dialog open role="alertdialog" onClose={onClose} title={t('confirmTitle', { name, stage: t(`st_${stage}` as RegionsKey) })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={typed.trim().toUpperCase() !== p.code || change.isPending}
           onClick={() => change.mutate({ kind: 'provinceStage', code: p.code, stage, confirm: typed.trim() }, { onSuccess: onClose })}>{t('confirm')}</Button></>}>
       {goingLive ? (
@@ -290,7 +290,7 @@ function ConfirmMarket({ market, stage, onClose }: { market: Market; stage: Stag
   const errors = errorOf(change.error);
   return (
     <Dialog open role="alertdialog" onClose={onClose} title={t('confirmMarketTitle', { city: market.city, stage: t(`st_${stage}` as RegionsKey) })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={typed.trim().toLowerCase() !== market.city.toLowerCase() || change.isPending}
           onClick={() => change.mutate({ kind: 'marketStage', marketId: market.id, stage, confirm: typed.trim() }, { onSuccess: onClose })}>{t('confirm')}</Button></>}>
       <Field label={t('confirmField')} hint={t('confirmMarket', { city: market.city })} error={errors.confirm ?? errors.stage}>

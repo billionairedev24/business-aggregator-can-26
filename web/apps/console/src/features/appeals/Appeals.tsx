@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { BoHeader, Button, DataTable, Drawer, ErrorState, Field, formatDate, formatMoney, PageSkeleton, SheetSection, TextArea, useLocale, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { BoHeader, Button, DataTable, Drawer, ErrorState, Field, formatDate, formatPrice, PageSkeleton, SheetSection, TextArea, useLocale, type DataTableColumn, type DataTableTone } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useAge } from '../shell/age';
 import { useGrant } from '../shell/grant';
@@ -82,7 +82,7 @@ function AppealBody({ item }: { item: QueueItem }) {
   const decided = a.state === 'granted' || a.state === 'denied';
   const errors = decide.error instanceof ValidationError ? decide.error.byField() : {};
   const refusal = [assign.error, decide.error].find(e => e && !(e instanceof ValidationError)) as ApiError | Error | undefined;
-  const money = (c: number) => formatMoney(c, locale);
+  const money = (c: number) => formatPrice(c, locale);
   const date = (s: string) => formatDate(s, locale);
   return (
     <>

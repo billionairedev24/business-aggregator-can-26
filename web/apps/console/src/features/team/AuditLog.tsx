@@ -48,7 +48,7 @@ export function AuditLog({ mine = false, staff = [] }: { mine?: boolean; staff?:
         <>
           {query.data?.items.length ? <ol className="nl-tm-log">{query.data.items.map(e => <Entry key={e.id} entry={e} />)}</ol> : <p className="nl-tm-sub">{t('noEntries')}</p>}
           <div className="nl-tm-actions">
-            {pages.length ? <Button variant="ghost" onClick={() => setPages([])}>{t('newest')}</Button> : null}
+            {pages.length ? <Button variant="tertiary" onClick={() => setPages([])}>{t('newest')}</Button> : null}
             {query.data?.next ? <Button variant="secondary" onClick={() => setPages(p => [...p, query.data!.next!])}>{t('older')}</Button> : null}
           </div>
         </>

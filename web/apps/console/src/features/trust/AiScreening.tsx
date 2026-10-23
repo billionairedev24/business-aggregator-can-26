@@ -91,9 +91,9 @@ function FlagSheet({ flag, canDecide, onClose, onDone }: { flag: AiFlag; canDeci
         <div className="nl-q-actions">
           <Button variant="secondary" disabled={decide.isPending || act.isPending} title={t('approveHint')}
             onClick={() => decide.mutate({ id: flag.id, decision: 'dismissed', note: text(note) }, { onSuccess: () => done(t('st_dismissed')) })}>{t('approve')}</Button>
-          {hideable ? <Button variant="danger" disabled={decide.isPending || act.isPending} title={t(`hideHint_${flag.targetType as 'listing' | 'review' | 'message'}`)}
+          {hideable ? <Button variant="destructive" disabled={decide.isPending || act.isPending} title={t(`hideHint_${flag.targetType as 'listing' | 'review' | 'message'}`)}
             onClick={() => act.mutate({ id: flag.id, action: 'hide', note: text(note) }, { onSuccess: () => done(t('a_hide')) })}>{t('hide')}</Button> : null}
-          <Button variant="ghost" disabled={decide.isPending || act.isPending}
+          <Button variant="tertiary" disabled={decide.isPending || act.isPending}
             onClick={() => act.mutate({ id: flag.id, action: 'escalate', note: text(note) }, { onSuccess: () => done(t('a_escalate')) })}>{t('escalate')}</Button>
         </div>
       ) : undefined}>

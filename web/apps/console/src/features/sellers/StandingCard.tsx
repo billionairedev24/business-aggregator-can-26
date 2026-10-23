@@ -31,7 +31,7 @@ export function StandingCard({ businessId }: { businessId: string }) {
                   <span>{t('since', { what: what(c), by: c.cause === 'staff' ? t('by_staff') : t('by_rules'), date: formatDate(c.startedAt, locale) })}</span>
                   <span className="bo-muted"> — {c.reason}</span>
                   {c.appeal ? <span className="bo-muted"> · {t('appeal', { number: c.appeal.number, state: c.appeal.state })}</span> : null}
-                  {can('suspend') ? <> <Button variant="ghost" onClick={() => setLifting(c)}>{t('lift')}</Button></> : null}
+                  {can('suspend') ? <> <Button variant="tertiary" onClick={() => setLifting(c)}>{t('lift')}</Button></> : null}
                 </li>
               ))}
             </ul>
@@ -44,7 +44,7 @@ export function StandingCard({ businessId }: { businessId: string }) {
               {can('decide') ? (
                 <div className="nl-q-actions">
                   <Button variant="secondary" disabled={close.isPending} onClick={() => close.mutate({ planId: s.coaching!.id, completed: true })}>{t('complete')}</Button>
-                  <Button variant="ghost" disabled={close.isPending} onClick={() => close.mutate({ planId: s.coaching!.id, completed: false })}>{t('cancelPlan')}</Button>
+                  <Button variant="tertiary" disabled={close.isPending} onClick={() => close.mutate({ planId: s.coaching!.id, completed: false })}>{t('cancelPlan')}</Button>
                 </div>
               ) : null}
             </>

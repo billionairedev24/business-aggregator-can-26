@@ -36,7 +36,7 @@ describe('loyalty on the Finance screen (S-152)', () => {
     api(['finance']);
     renderConsole('/finance');
     const plus = await screen.findAllByText('Plus subscriptions');
-    expect(plus.map(e => e.nextElementSibling?.textContent)).toContain('$419');
+    expect(plus.map(e => e.nextElementSibling?.textContent)).toContain('$419.40');
     expect(screen.getByText('6 households')).toBeTruthy();
     expect(screen.getByText('Points outstanding').nextElementSibling?.textContent).toBe('184,200 points · $18.42 off at checkout · 61 customers');
     expect(screen.getByText('Held from businesses’ rewards').nextElementSibling?.textContent).toBe('$34.00');

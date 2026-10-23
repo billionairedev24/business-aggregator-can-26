@@ -36,14 +36,14 @@ describe('listing vetting (S-92, design 03 vetting)', () => {
     expect(screen.getByRole('tab', { name: 'Listings' }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByText(/Rules: banned categories, price ±60% from category median/)).toBeTruthy();
     expect(within(row('Full brake job')).getByText('Price −73% vs median')).toBeTruthy();
-    expect(within(row('Full brake job')).getByText('Median $180')).toBeTruthy();
+    expect(within(row('Full brake job')).getByText('Median $180.00')).toBeTruthy();
     expect(within(row('Full brake job')).getByText('$49.00')).toBeTruthy();
     expect(within(row('Guaranteed to pass inspection')).getByText('Restricted claim')).toBeTruthy();
     expect(within(row('Guaranteed to pass inspection')).getByText('Guarantee language without terms')).toBeTruthy();
     expect(within(row('Electrical panel upgrade')).getByText('Missing licence')).toBeTruthy();
     expect(within(row('Electrical panel upgrade')).getByText('Regulated · no Safety Codes licence on file · Changed: category')).toBeTruthy();
     expect(within(row('Wagyu pho')).getByText('Price +70% vs median')).toBeTruthy();
-    expect(within(row('Wagyu pho')).getByText('Cuisine median $20')).toBeTruthy();
+    expect(within(row('Wagyu pho')).getByText('Cuisine median $20.00')).toBeTruthy();
     expect(within(row('Sourdough')).getByText('Approved')).toBeTruthy();
     expect(within(row('Sourdough')).queryByRole('button', { name: /Approve/ })).toBeNull();
   });
