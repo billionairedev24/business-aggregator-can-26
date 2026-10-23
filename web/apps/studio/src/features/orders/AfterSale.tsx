@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Checkbox, DataTable, Drawer, ErrorState, FactList, Field, Segmented, SheetSection, TextArea, useFormatters, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { Alert, Checkbox, DataTable, Drawer, ErrorState, FactList, Field, Segmented, SheetSection, StatusTag, TextArea, useFormatters, type DataTableColumn, type StatusTone } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import {
   SELLER_CANCEL_REASONS, returnPhotoUrl, returnsQuery, useCancelOrder, useReturnDecision,
@@ -61,11 +61,16 @@ export function CancelOrderPanel({ merchantId, order, onDone }: { merchantId: st
   );
 }
 
+/** S-175: waiting on the shop is a warning, a refund done is success, a decline or an escalation is danger. */
+export const returnTone = (s: SellerReturn['state']): StatusTone =>
+  s === 'requested' || s === 'collected' ? 'warning' : s === 'refunded' || s === 'received' ? 'success' : s === 'declined' || s === 'escalated' ? 'danger' : s === 'approved' ? 'info' : 'neutral';
+
 interface ReturnRow { id: string; ref: string; order: string; items: string; reason: string; amount: number; state: string; raw: SellerReturn['state'] }
 
 /** S-151: the shop's returns — a table, and a sheet to approve (how it comes back, restock), decline or receive. */
 export function ReturnsPanel({ merchantId, canDecide, roleName }: { merchantId: string; canDecide: boolean; roleName: string }) {
   const t = useOrdersT();
+  const f = useFormatters();
   const q = useQuery(returnsQuery(merchantId));
   const [open, setOpen] = useState<string | null>(null);
   const rows = useMemo<ReturnRow[]>(() => (q.data ?? []).map(r => ({
@@ -81,10 +86,9 @@ export function ReturnsPanel({ merchantId, canDecide, roleName }: { merchantId: 
     { key: 'order', label: t('retOrder') },
     { key: 'items', label: t('retItems') },
     { key: 'reason', label: t('retReason') },
-    { key: 'amount', label: t('retAmount'), type: 'money' },
-    { key: 'state', label: t('colStatus'), type: 'tag' },
+    { key: 'amount', label: t('retAmount'), type: 'money', format: v => f.price(v as number) },
+    { key: 'state', label: t('colStatus'), type: 'tag', status: r => returnTone(r.raw) },
   ];
-  const tone = (r: ReturnRow): DataTableTone => (r.raw === 'requested' || r.raw === 'collected' ? 'tag-accent' : 'tag-neutral');
   const detail = q.data.find(r => r.id === open);
   return (
     <section className="nl-orders-returns" aria-labelledby="studio-returns">
@@ -92,7 +96,7 @@ export function ReturnsPanel({ merchantId, canDecide, roleName }: { merchantId: 
       <p className="nl-orders-foot">{t('returnsLede')}</p>
       <DataTable<ReturnRow>
         entity={t('returnsTitle')} plural={t('returnsTitle')} roleName={roleName}
-        columns={columns} rows={rows} rowTones={r => ({ state: tone(r) })}
+        columns={columns} rows={rows}
         can={{ create: false, update: false, delete: false, export: true }}
         onOpen={r => setOpen(r.id)} emptyText={t('returnsEmpty')}
       />
@@ -119,14 +123,14 @@ function ReturnSheet({ merchantId, r, canDecide, onDone }: { merchantId: string;
   const receivable = r.state === 'collected' || (r.state === 'approved' && r.method === 'dropoff');
   return (
     <>
-      <div className="nl-orders-status"><span className="tag tag-neutral">{t(`rs_${r.state}` as K)}</span></div>
+      <div className="nl-orders-status"><StatusTag tone={returnTone(r.state)}>{t(`rs_${r.state}` as K)}</StatusTag></div>
       <SheetSection title={t('retItems')}>
         <FactList rows={[
           [t('retOrder'), r.orderRef ?? r.orderId],
           [t('retItems'), r.lines.map(l => `${l.qty} × ${l.title}`).join(', ')],
           [t('retReason'), t(`rr_${r.reason}` as K)],
           r.note ? [t('retNote'), r.note] : null,
-          [t('retAmount'), f.money(r.amountCents)],
+          [t('retAmount'), f.price(r.amountCents)],
           r.method ? [t('approveTitle'), t(`m_${r.method}` as K)] : null,
           r.declineReason ? [t('decline'), r.declineReason] : null,
         ]} />
@@ -151,7 +155,7 @@ function ReturnSheet({ merchantId, r, canDecide, onDone }: { merchantId: string;
               <Field label={t('declineReason')}>
                 <TextArea value={why} rows={2} maxLength={500} onChange={e => setWhy(e.target.value)} />
               </Field>
-              <button type="button" className="btn btn-danger" disabled={decide.isPending}
+              <button type="button" className="btn btn-destructive" disabled={decide.isPending}
                 onClick={() => (why.trim() ? run({ returnId: r.id, action: 'decline', reason: why.trim() }) : setError(t('declineNeeded')))}>
                 {t('confirmDecline')}
               </button>

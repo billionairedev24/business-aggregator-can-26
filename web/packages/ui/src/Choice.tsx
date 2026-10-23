@@ -166,17 +166,20 @@ export function Segmented<V extends string>({ name, options, value, onChange, si
 
 export interface UnderlineTabsProps<V extends string> {
   /** `count`: a number after the label in a small box (solid ink on the current tab); `tone: 'danger'` keeps it red (Issues 1). */
-  options: readonly { value: V; label: ReactNode; count?: ReactNode; tone?: 'danger' }[];
+  options: readonly { value: V; label: ReactNode; count?: ReactNode; tone?: 'danger'; /** S-175: the tab's own accessible name ("Images · complete"). */ name?: string }[];
   value: V; onChange: (v: V) => void; 'aria-label': string;
   /** The tabs share the row's width (auth: Sign in | Create account). */
   fill?: boolean;
+  /** S-175: each tab's id, and the id of the panel the current tab controls (an editor's sections). */
+  tabId?: (v: V) => string;
+  panelId?: (v: V) => string;
 }
 /** Underline tabs — the one tab style: the current tab bold ink with a 3 px ink underline, counts in boxes. */
-export function UnderlineTabs<V extends string>({ options, value, onChange, fill, ...aria }: UnderlineTabsProps<V>) {
+export function UnderlineTabs<V extends string>({ options, value, onChange, fill, tabId, panelId, ...aria }: UnderlineTabsProps<V>) {
   return (
     <div className={clsx('nl-utabs', fill && 'nl-utabs-fill')} role="tablist" aria-label={aria['aria-label']} onKeyDown={tablistKeyDown(options.map(o => o.value), value, onChange)}>
       {options.map((o, i) => (
-        <button key={o.value} type="button" role="tab" aria-selected={o.value === value} tabIndex={rovingIndex(options, value, i)} className="nl-utab" onClick={() => onChange(o.value)}>
+        <button key={o.value} type="button" role="tab" id={tabId?.(o.value)} aria-controls={panelId && o.value === value ? panelId(o.value) : undefined} aria-label={o.name} aria-selected={o.value === value} tabIndex={rovingIndex(options, value, i)} className="nl-utab" onClick={() => onChange(o.value)}>
           {o.label}{o.count != null ? <span className="nl-utab-count" data-tone={o.tone}>{o.count}</span> : null}
         </button>
       ))}

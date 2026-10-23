@@ -2,14 +2,14 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, ImageSquare, X } from '@phosphor-icons/react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Alert, Checkbox, Field, FormGrid, Segmented, Select, TextArea, TextInput, useFormatters, useLocale } from '@northline/ui';
+import { Alert, Checkbox, Field, FormGrid, Segmented, Select, ServiceCard, TextArea, TextInput, useFormatters, useLocale } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';
 import { categoriesQuery, useSaveService, useSubmitListing, useUploadImage, type PricingMode, type ServiceDetail } from './api';
 import { CatalogueThumb } from './ProductEditor';
 import { imageProblem } from './imageFile';
-import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, FeesPanel, PhotoTips, RevetNotice, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
+import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, EditorSaveBar, FeesPanel, PhotoTips, RevetNotice, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
 import { useCatalogueT } from './messages';
 import { emptyService, permissions, serviceCompleteness, serviceFromDetail, servicePayload, validateServiceDraft, vettingChecks, type Portal, type ServiceForm } from './model';
 import { parseMoney, useMessageT } from './validation';
@@ -34,7 +34,7 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
   const role = useRole();
   const perms = permissions(role);
   const { locale } = useLocale();
-  const { money, date } = useFormatters();
+  const { price: fmtPrice, date } = useFormatters();
   const navigate = useNavigate();
   const categoriesQ = useQuery(categoriesQuery(merchantId, 'service', locale));
   const categories = useMemo(() => categoriesQ.data ?? [], [categoriesQ.data]);
@@ -82,13 +82,11 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
   const kicker = t('editorKicker', { section: portal === 'seller' ? t('kickerProducts') : t('kickerListings'), kind: 'service' });
 
   return (
-    <>
-      <EditorHeader kicker={kicker} title={saved?.name || form.name || t('newService')} tag={draftTag(saved, t, iso => date(iso, 'time'))} canEdit={perms.update}
-        roleName={shellT(`role_${role}` as Parameters<typeof shellT>[0])} saveLabel={saved?.vetting === 'approved' ? t('saveChanges') : t('saveDraft')}
-        saving={save.isPending} submitting={submit.isPending} cannotSubmit={!completeness.complete || !canSubmit} onSave={() => void persist()} onSubmit={() => void onSubmit()} />
-      {failure && <div style={{ marginBottom: 16 }}><Alert tone="error">{failure}</Alert></div>}
+    <div className="nl-cat-page">
+      <EditorHeader kicker={kicker} title={saved?.name || form.name || t('newService')} canEdit={perms.update} roleName={shellT(`role_${role}` as Parameters<typeof shellT>[0])} />
+      {failure && <Alert tone="error">{failure}</Alert>}
       <RevetNotice detail={saved} kind="service" />
-      <div style={{ marginBottom: 16 }}><AttentionSummary errors={fm.visible} t={t} /></div>
+      <AttentionSummary errors={fm.visible} t={t} />
       <div className="nl-cat-editor">
         <fieldset className="nl-cat-main" disabled={!perms.update}>
           <section className="nl-cat-card" aria-labelledby="svc-details">
@@ -112,7 +110,7 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
               {err('pricingMode') && <div role="alert" className="nl-error">{err('pricingMode')}</div>}
             </div>
             {form.pricingMode === 'quote'
-              ? <p className="nl-hint" style={{ alignSelf: 'end' }}>{t('quoteHint')}</p>
+              ? <p className="nl-hint nl-cat-self-end">{t('quoteHint')}</p>
               : <Field label={form.pricingMode === 'hourly' ? t('pricePerHour') : t('priceInclTravel')} error={err('priceCents')}>
                   <TextInput inputMode="decimal" placeholder="$0" value={form.price} onChange={e => update({ price: e.target.value }, ['priceCents'])} onBlur={() => touch('priceCents')} />
                 </Field>}
@@ -137,23 +135,39 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
             onUse={c => update({ name: c.title, included: [c.description, ...c.bullets.map(b => `• ${b}`)].join('\n') }, ['name', 'included'])} />
           <FrenchTextPanel merchantId={merchantId} listingId={saved?.id} disabled={!perms.update} />
           <Field label={t('skuLabel')} hint={t('skuHint')} error={err('sku')}>
-            <TextInput value={form.sku} maxLength={60} style={{ maxWidth: 240 }} onChange={e => update({ sku: e.target.value })} onBlur={() => touch('sku')} />
+            <TextInput className="nl-cat-w-sm" value={form.sku} maxLength={60} onChange={e => update({ sku: e.target.value })} onBlur={() => touch('sku')} />
           </Field>
           </section>
           <section className="nl-cat-card" aria-labelledby="svc-photos">
           <h2 className="nl-cat-card-title" id="svc-photos">{t('secPhotos')}</h2>
           <p className="nl-hint">{t('photosHint')}</p>
-          <ServicePhotos images={form.images} onChange={images => update({ images }, ['imageIds'])} error={err('imageIds')} />
-          <PhotoTips />
+          <div className="nl-cat-upload">
+            <ServicePhotos images={form.images} onChange={images => update({ images }, ['imageIds'])} error={err('imageIds')} />
+            <PhotoTips />
+          </div>
           </section>
         </fieldset>
         <Side>
+          {/* S-175: the live preview — the service as customers see it on the provider page and in results */}
+          <section className="nl-cat-side nl-cat-preview" aria-labelledby="svc-preview">
+            <h2 className="nl-cat-side-title" id="svc-preview">{t('previewLive')}</h2>
+            <p className="nl-cat-flush nl-cat-muted">{t('previewNote')}</p>
+            <div className="nl-cat-preview-card" inert>
+              <ServiceCard layout="stack" name={form.name || t('newService')} kind={category?.name} imageUrl={form.images[0]?.url}
+                place={merchant.displayName} note={t(`dur_${form.durationMin}` as Parameters<typeof t>[0])}
+                priceCents={form.pricingMode === 'quote' || price === null || Number.isNaN(price) ? null : price}
+                priceText={form.pricingMode === 'quote' ? t('quote') : undefined} priceSuffix={form.pricingMode === 'hourly' ? t('perHour') : undefined} />
+            </div>
+          </section>
           <CompletenessPanel t={t} percent={completeness.percent} items={sections} />
-          <VettingPanel t={t} checks={vettingChecks({ category, priceCents: price, images: [], imageSource: 'own', link: null, text: form.name, gtin: null, money }).filter(c => !c.key.startsWith('vpImages'))} />
+          <VettingPanel t={t} checks={vettingChecks({ category, priceCents: price, images: [], imageSource: 'own', link: null, text: form.name, gtin: null, price: fmtPrice }).filter(c => !c.key.startsWith('vpImages'))} />
           <FeesPanel priceCents={price} costCents={null} tier={merchant.tier} />
         </Side>
       </div>
-    </>
+      <EditorSaveBar label={t('saveBarService')} tag={draftTag(saved, t, iso => date(iso, 'time'))} dirty={fm.dirty} canEdit={perms.update}
+        saveLabel={saved?.vetting === 'approved' ? t('saveChanges') : t('saveDraft')} saving={save.isPending} submitting={submit.isPending}
+        cannotSubmit={!completeness.complete || !canSubmit} onSave={() => void persist()} onSubmit={() => void onSubmit()} />
+    </div>
   );
 }
 
@@ -192,8 +206,8 @@ function ServicePhotos({ images, onChange, error }: { images: ServiceForm['image
       <ul className="nl-cat-images">
         {images.map((m, i) => (
           <li key={m.id} className="nl-cat-image">
-            <CatalogueThumb media={m} size={140} label={t('photoAlt', { n: i + 1 })} />
-            {i === 0 && <span className="tag tag-accent nl-cat-main-tag">{t('main')}</span>}
+            <CatalogueThumb media={m} label={t('photoAlt', { n: i + 1 })} />
+            {i === 0 && <span className="tag tag-neutral nl-cat-main-tag">{t('main')}</span>}
             <div className="nl-cat-image-tools">
               <button type="button" aria-label={t('moveLeft', { n: i + 1 })} disabled={i === 0} onClick={() => move(i, i - 1)}><ArrowLeft size={14} /></button>
               <button type="button" aria-label={t('moveRight', { n: i + 1 })} disabled={i === images.length - 1} onClick={() => move(i, i + 1)}><ArrowRight size={14} /></button>

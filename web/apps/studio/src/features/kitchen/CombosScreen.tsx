@@ -11,7 +11,7 @@ import { dollars, optionText, parseDollars, ruleText } from './model';
 import './Kitchen.css';
 
 interface ComboRow { id: string; name: string; save: string; rule: string; price: number; state: string; status: Combo['status'] }
-const TONE: Record<Combo['status'], DataTableTone> = { live: 'tag-accent', scheduled: 'tag-accent-2', paused: 'tag-neutral', draft: 'tag-neutral' };
+const TONE: Record<Combo['status'], DataTableTone> = { live: 'tag-success', scheduled: 'tag-info', paused: 'tag-warning', draft: 'tag-neutral' };
 
 /** Kitchen · Modifiers & combos (design 02 lines 876–897, `combos`, `dt.combos`). */
 export function CombosScreen() {
@@ -88,7 +88,7 @@ export function CombosScreen() {
                 <div key={p.promo} className="nl-k-row">
                   <span>{t(`promo_${p.promo}`)}</span>
                   <span className="nl-k-row-end">
-                    {p.enabled ? <span className="tag tag-accent">{t(`promoOn_${p.promo}`)}</span> : null}
+                    {p.enabled ? <span className="tag tag-success">{t(`promoOn_${p.promo}`)}</span> : null}
                     {role === 'owner'
                       ? <button type="button" className="btn btn-ghost nl-k-small-btn" aria-pressed={p.enabled} disabled={setPromo.isPending} onClick={() => setPromo.mutate({ promo: p.promo, enabled: !p.enabled })}>{p.enabled ? t('turnOff') : t('turnOn')}</button>
                       : null}

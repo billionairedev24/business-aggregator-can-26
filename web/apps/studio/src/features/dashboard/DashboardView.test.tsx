@@ -83,7 +83,7 @@ describe('Dashboard (E-15)', () => {
     expect(within(needs).getByRole('link', { name: 'Start packing' }).className).toContain('btn-secondary');
     expect(within(needs).getByRole('link', { name: 'Reply' }).getAttribute('href')).toBe('/b/m1/messages?thread=t1');
     await userEvent.click(within(needs).getByRole('link', { name: 'Update stock' }));
-    expect(navigate).toHaveBeenCalledWith({ to: '/b/m1/listings', search: { q: 'Seeded rye' } });
+    expect(navigate).toHaveBeenCalledWith({ to: '/b/m1/listings', search: { view: 'stock', q: 'Seeded rye' } }); // S-175: the Low stock tab, searched
 
     const kpis = within(screen.getByRole('list', { name: 'Key figures' }));
     expect(kpis.getByRole('button', { name: /Sales today \$642\.50 \+12% vs last Tuesday/ })).toBeTruthy();

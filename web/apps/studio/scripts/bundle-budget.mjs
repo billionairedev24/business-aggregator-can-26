@@ -1,12 +1,14 @@
 // S-69 bundle budget, run after `vite build`: the initial JS — the entry script in dist/index.html, the chunks it
-// preloads (<link rel="modulepreload">), and every chunk those import statically — must stay under 250 kB gzip. Fails the build otherwise and names the biggest files.
+// preloads (<link rel="modulepreload">), and every chunk those import statically — must stay under 260 kB gzip (250 until
+// S-175: the editors' live preview uses ProductCard / ServiceCard, which rollup keeps in the Commerce chunk the dashboard
+// loads; DECISIONS 2026-10-23 S-175). Fails the build otherwise and names the biggest files.
 // Usage: node scripts/bundle-budget.mjs [dist] [budget kB]
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { join } from 'node:path';
 
 const dist = process.argv[2] ?? join(import.meta.dirname, '..', 'dist');
-const budgetKb = Number(process.argv[3] ?? 250);
+const budgetKb = Number(process.argv[3] ?? 260);
 const html = readFileSync(join(dist, 'index.html'), 'utf8');
 const entry = /<script type="module"[^>]*src="\/assets\/([^"]+\.js)"/.exec(html)?.[1];
 if (!entry) throw new Error(`No module entry script in ${dist}/index.html`);
