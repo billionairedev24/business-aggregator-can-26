@@ -10833,3 +10833,13 @@ Amazon's marketplace patterns (search-led header with deliver-to, dense results 
 Central-style back office). We copy patterns only, never Amazon's brand or trade dress. Epic E-15 (S-165–S-180) in
 `docs/backlog/northline-backlog.csv`; brief in `docs/design/revamp-epic.md`. Gate: page work waits until the owner
 picks one of three rendered directions (S-166).
+
+## 2026-10-23 — E-15 direction locked: A · Plainsight, with Main Street's maker-of-the-week hero (S-166)
+
+The owner picked direction **A · Plainsight** (product on white, dense, IBM Plex Sans, near-square corners, blue action,
+ink selection, magenta commerce) and asked for direction B's **maker-of-the-week hero** on the consumer home. The
+mockups are in `design/revamp/`; the locked values are in `docs/design/revamp-epic.md` § Locked direction. This retires
+the Evergreen palette, Fraunces and DM Sans, and the pill-shaped buttons of the 2026-10-19 light direction. The mockup
+photos (Open Images, CC BY 2.0, `design/revamp/CREDITS.md`) are for the design review only: people photos have no model
+releases, and S-181 replaces them.
+
