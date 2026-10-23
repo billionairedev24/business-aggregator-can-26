@@ -10915,3 +10915,99 @@ and dusk still build (and pass the contrast gate) until every screen has moved.
 **Not done here (later stories):** page layouts (results rail, buy box, home hero, back-office dashboards) are S-170+;
 pages still using their own chip/tab/price markup (e.g. the Studio catalogue's step tabs) move with their page; the
 mobile kit is S-169.
+
+## 2026-10-23 — S-174 Studio shell and dashboard
+
+Built to `design/revamp/a.html` screens 7 (Studio dashboard, 1280 and 390) and 8 (the Studio chrome of the orders
+table), on @northline/ui. No backend or BFF contract changed: every figure comes from an endpoint the Studio already
+calls.
+
+**Shell (`AppShell`, rebuilt for the Studio and the console alike).**
+- One white top bar: logo + "Studio", the business switcher (`WorkspaceSwitcher`: name and city in a bordered box; its
+  menu lists the account's businesses with city, type and tier, then "+ Add another business"), the global search
+  (`ShellSearch`, "/" focuses it from anywhere outside a field), the assistant, the account menu (name and role). The
+  tier tag left the bar (it is in the switcher's menu and on Standing); tier tags are now `tag-success` / `tag-warning`
+  instead of the commerce/accent colour (audit #6). "Switch business" left the account menu (the switcher replaces it).
+- The mockup's notification bell is not built: the Studio has no notifications endpoint (the nav badges are the
+  counts). The assistant button stays where it was.
+- Sidebar: every group is a caps heading with all its items visible (the collapsible groups are gone), the current item
+  on the grey tint with the 3 px ink bar. Groups for every portal: Dashboard · Operations · Catalogue · Money · Store ·
+  Account. Sellers: Orders, Messages / Products / Earnings, Payouts, Reports, Refunds & disputes / Store, Reviews,
+  Settings / Standing, Stripe & compliance, Help. Providers swap in Appointments and Services & prices + Availability;
+  kitchens Live orders (the kitchen display) and Menu builder, Modifiers & combos, Hours. Routes and `screensFor`
+  permissions are unchanged except one addition: **kitchens get the Dashboard** (pinned first, as everyone) so the
+  brief's kitchen variant exists; a kitchen still lands on Live orders (`homeScreen`).
+- The mockup's "Runs & pickups" and "Stock" items have no route: runs are on Orders, stock on Products. Not added (no new
+  routes in this story).
+- Items are 44 px tall (the project's target rule) where the mockup draws 36 px; the sidebar is 228 px (scale
+  `size.sidebar` 264 → 228, the mockup's width; the console's sidebar follows).
+- < 1024 px: the 72 px icon rail (label as tooltip and accessible name, "label, badge" when there is one, a dot for a
+  badge); its toggle expands it for the moment. < 768 px: a **disclosure** menu (not a modal sheet any more): the menu
+  button (`aria-expanded`/`aria-controls`) opens a panel under the bar with the switcher, the search, then the
+  navigation; Escape or choosing an item closes it and focus returns to the button. Desktops keep the remembered
+  collapse-to-rail toggle, now at the foot of the sidebar.
+- The page ground is `--color-surface-muted` (the mockup's #F6F7F9) under white panels.
+- Global search has no search API to call, so the query goes where the Studio can already search: "Orders and
+  customers matching …" opens Orders with `?q=` (the orders table searches refs, customers and items), "Products /
+  Services / Listings matching …" opens the catalogue with `?q=`, "Messages from …" opens the first conversation whose
+  name, subject or reference matches. `DataTable` gained `initialSearch`; the orders and listings routes gained an
+  optional `q`. Kitchens have no searchable table: their search is messages only.
+
+**Dashboard.** Order: greeting + date line and the store's state · Needs you now · key figures · sales chart and the
+second panel.
+- Greeting by the hour where the business is ("Good afternoon, Ravi"); the line after the date names the next run's
+  cut-off (sellers), the next booking (providers) or the open tickets (kitchens).
+- Store open/pause: only kitchens can pause themselves (`POST/DELETE …/kitchen/pause`), so only kitchens get the
+  Pause / Resume button; their "until" time comes from today's kitchen hours. Sellers and providers show their state
+  from the merchant status (open / paused), without a button — there is no pause endpoint for them.
+- "Needs you now" cards and their sources, most urgent first (the first card's button is primary, the others
+  secondary; urgent and due-soon cards say so to screen readers):
+  | Card | Source | Urgency |
+  |---|---|---|
+  | n orders to pack, pack by … for run … | dashboard `counts.toPack`, `runCutoff`, `runLabel` | warning; danger within the hour |
+  | n quote requests, reply by … | dashboard `counts.quoteRequestsOpen`, `quoteRespondBy` | warning |
+  | n messages waiting, oldest … | `GET …/threads` (unread customer and case threads) | info |
+  | … is running low | dashboard `lowStock` (first, + "n more") → Products `?q=name` | warning; danger at 0 |
+  | n issues to resolve | dashboard `cases` | danger |
+  | Payout on … to bank ••• last4 | `GET …/payouts/overview` (`nextPayoutAt`, `payableCents`, `account`); a returned payout replaces it | success / danger |
+  | Permit or licence expiry | dashboard `compliance[0]` | danger expired · warning ≤ 30 days or `expiring` · neutral |
+  | n new orders to accept / ready for handoff | `GET …/kitchen/live` counts | danger / info |
+  | n dishes sold out | the live menu's items (`GET …/menus`, `…/menus/{id}`) | warning |
+  | Set up / publish your page, add your first listing | storefront and listings (the former "Get set up" card) | info |
+- Key figures: **Sales today** = the last day of `GET …/reports?period=30d` (day buckets, the business's zone) against
+  the same weekday a week earlier (the mockup's "vs last Friday"); **Orders today** = orders on the order board placed
+  today (sellers); **Bookings today** = `jobsToday` (providers); **Open tickets** (kitchens); **Average order · 30
+  days** = the report's `averageTicketCents` (there is no per-day average), its delta the report's sales change against
+  the 30 days before, labelled as such; **Rating** with the review count. A role that cannot read the report gets the
+  month's net from the dashboard instead, and the chart falls back to the dashboard's 12 weeks of net earnings.
+- The chart: 14 days (the report's last 14 days), 30 days, or 12 months (`period=12mo`, loaded when chosen), today (or
+  this month) in ink, the earlier columns in the 3:1 control grey (`--color-border-control`) instead of the mockup's
+  lighter #C4CAD3 (WCAG 1.4.11, as S-167 did for lines); the numbers are also a hidden table.
+- Second panel: sellers **Top products · 30 days** (units from the listings' `sales30d`, money from the report's
+  `byListing` by name, stock as a status) — the mockup's "today" has no per-listing daily source; providers **Today's
+  bookings**; kitchens **Top dishes today** (`soldToday` of the live menu); "both" shows top products and today's
+  bookings.
+- Left the dashboard (still on their screens): tonight's run list (Orders), the quality score and refund rate
+  (Standing / Reports), "releasing next" (Payouts), the weekly trend line.
+- Audit items fixed here: the dashboard's raw px and inline styles (#7, `Dashboard.css` is tokens only and
+  `pnpm lint:tokens` now checks the dashboard folder strictly and forbids inline `style` in the Studio shell and the
+  dashboard); the storefront preview (#10) is drawn like the real provider page in Plainsight (white header, logo tile
+  with the business colour as its edge only, ink type, verified tier as a success tag, bordered service rows, the
+  action-blue book button, `formatPrice`), in its own token-only `StorefrontPreview.css` (also strictly linted).
+
+**@northline/ui additions** (gallery sections "backoffice" and "shell", 16 new `test:visual` baselines; the 60
+existing ones are unchanged): `ActionGrid`/`ActionCard`, `SummaryTable` (+ `hideOnPhone`), `Thumb`, `ColumnChart`,
+`ShellSearch`, `WorkspaceSwitcher`, `DataTable initialSearch`; `KpiStrip` values are semibold, as drawn, and a delta
+that is a change over time (`arrow`) carries ▲/▼ (aria-hidden) — opt-in, because other screens use `trend` to mean
+good/bad (a low dispute rate is "up"). The shell section is shown on its own gallery page (`?section=shell`, `solo`) because a page
+shell brings its own banner and main landmarks.
+
+**ui-shots:** the dashboard fixtures now happen today (visits, cut-off, quotes), the 30-day/12-month sales report, seller
+threads and payouts, a kitchen dashboard and dishes sold today; new routes `dashboard-kitchen` and `dashboard-menu`
+(the phone's disclosure menu open).
+
+**Not done (later stories):** the work screens' own headers, tables and bulk bars (S-175: orders, catalogue, editors,
+bookings, kitchen display) and money/settings/storefront editor/onboarding screens (S-176) keep their current page
+bodies inside the new chrome; the onboarding wizard's own top bar (S-176). Storybook stories that already failed on
+develop before this story (LocationPill "Detected", SiteHeader "Narrow", Gallery "Sections" landmark-unique) are not
+touched here.
