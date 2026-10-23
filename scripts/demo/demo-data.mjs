@@ -13,7 +13,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'n
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { AppSession, HttpError, request, CookieJar } from './lib/http.mjs';
-import { demoPdf, listingPicture, logoPicture } from './lib/images.mjs';
+import { demoPdf, logoPicture } from './lib/images.mjs';
 import { libraryPhoto, logoFromPhoto, photoBlob } from './lib/photos.mjs';
 import { AccountExists, emailCode } from './lib/mail.mjs';
 import { freshTotp } from './lib/totp.mjs';
@@ -96,13 +96,19 @@ function saveQr(key, dataUri) {
   writeFileSync(join(dir, `${key}.png`), Buffer.from(m[1], 'base64'), { mode: 0o600 });
 }
 
-/** Pictures for the listing the presenter adds live (each unique: vetting flags a reused image). */
+/**
+ * Photos for the listing the presenter adds live (S-181: real photos of the library, none drawn): slots no demo
+ * listing uploads, so vetting's reused-image check stays quiet.
+ */
+const PRESENTER_SLOTS = ['category/service.events-and-hospitality.florist', 'category/shop.home.garden', 'category/shop.kids-gifts-and-hobbies.gifts-and-crafts',
+  'category/shop.kids-gifts-and-hobbies.toys', 'category/shop.kids-gifts-and-hobbies.books-and-stationery', 'category/shop.kids-gifts-and-hobbies.pet-supplies'];
 async function presenterPhotos() {
   const dir = STATE_FILE.replace(/\.json$/, '') + '-photos';
   if (existsSync(dir)) return dir;
   mkdirSync(dir, { recursive: true });
-  for (const [i, title] of ['Autumn bouquet', 'Sunflower bunch', 'Potted fern', 'Gift card, $25', 'Holiday wreath', 'Succulent trio'].entries()) {
-    writeFileSync(join(dir, `${i + 1}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '')}.png`), Buffer.from(await listingPicture(title, 'Demo listing', ['#8E3B46', '#B8860B', '#2E7D32', '#1565C0', '#6D4C41', '#00897B'][i]).arrayBuffer()));
+  for (const [i, slot] of PRESENTER_SLOTS.entries()) {
+    const photo = libraryPhoto(slot);
+    if (photo) writeFileSync(join(dir, `${i + 1}-${slot.split('.').pop()}.jpg`), photo.bytes);
   }
   return dir;
 }
@@ -472,8 +478,9 @@ async function listings(owner, id, plan) {
       // the listing's photo from the photo library (its `photo` slot), through the product's own upload
       const photo = libraryPhoto(l.photo);
       if (l.kind === 'product') {
-        const picture = photo ? file(photoBlob(photo), photo.name) : file(listingPicture(l.title, plan.name, plan.colour), `${l.key}.png`);
-        const image = await owner.call('POST', `${m}/media`, { multipart: picture });
+        // S-181: never a drawn picture of the name — a product without a library photo is a plan error (the test checks)
+        if (!photo) throw new Error(`${plan.name}: ${l.title} has no photo in the library (${l.photo}): make photos-slots`);
+        const image = await owner.call('POST', `${m}/media`, { multipart: file(photoBlob(photo), photo.name) });
         body = {
           title: l.title, brand: plan.name, categoryId: l.category, attributes: l.attributes ?? {}, priceCents: l.priceCents, stock: l.stock, sku,
           description: fill(l.description), bullets: l.bullets ?? [], imageIds: [image.id], identifierType: 'none',
@@ -481,7 +488,7 @@ async function listings(owner, id, plan) {
           returnsPolicy: PERISHABLE.test(l.category) ? 'final_sale' : 'standard_14', lowStockAt: 3,
         };
       } else {
-        // a service shows its photo when the library has one; none is drawn (the category's photo stands in)
+        // a service shows its photo when the library has one; none is drawn (the designed photo well stands in)
         const image = photo ? await owner.call('POST', `${m}/media`, { multipart: file(photoBlob(photo), photo.name) }) : null;
         body = {
           name: l.title, categoryId: l.category, pricingMode: l.pricingMode ?? 'fixed', priceCents: l.priceCents,

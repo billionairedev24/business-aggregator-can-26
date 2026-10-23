@@ -114,6 +114,19 @@ test('real photos: every business and listing has a photo slot of the slot list,
   assert.equal(libraryPhoto('demo/listing/bakery.baguette', root), null);
 });
 
+test('S-181: the library has a photo for every demo business and listing — nothing is drawn, every one is its own', () => {
+  const seen = new Map();
+  for (const m of plan.merchants) {
+    for (const slot of [m.photo, ...m.listings.map(l => l.photo)]) {
+      const photo = libraryPhoto(slot);
+      assert.ok(photo, `${slot}: no processed photo in web/packages/media (make photos)`);
+      const key = photo.bytes.toString('base64').slice(0, 200) + photo.bytes.length;
+      assert.ok(!seen.has(key), `${slot} is the same photo as ${seen.get(key)}`);
+      seen.set(key, slot);
+    }
+  }
+});
+
 test('S-159: the emailed code is read from Mailpit\'s search (newest first, after the sign-up) or the dev outbox', () => {
   const since = Date.parse('2026-10-21T10:00:00Z');
   const body = { messages: [

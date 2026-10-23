@@ -33,6 +33,17 @@ describe('the photo library (photos.json)', () => {
     expect(e.hash, 'the source changed since make photos ran').toBe(hashOf(readFileSync(file), e.focal));
   });
 
+  it('S-181: every photo is its own (no source page twice), and every leaf category has one or is a designed fallback', () => {
+    const photos = Object.entries(manifest.photos as Record<string, PhotoEntry>);
+    const pages = photos.map(([, e]) => e.sourceUrl);
+    expect(pages.filter((u, i) => pages.indexOf(u) !== i)).toEqual([]);
+    const slots = (slotList.slots as { slot: string; group: string; designed?: boolean }[]);
+    const leaves = slots.filter(s => s.group === 'category' && s.slot.split('.').length === 3);
+    expect(leaves).toHaveLength(162);
+    expect(leaves.filter(s => !s.designed && !(manifest.photos as Record<string, unknown>)[s.slot]).map(s => s.slot)).toEqual([]);
+    expect(leaves.filter(s => s.designed).every(s => photoFor(s.slot) === null)).toBe(true);
+  });
+
   it('refuses an entry without its licence, source, photographer or alt text', () => {
     expect(problems('category/x.y', GOOD, { processed: true })).toEqual([]);
     const without = (key: keyof PhotoEntry) => problems('category/x.y', { ...GOOD, [key]: undefined });
