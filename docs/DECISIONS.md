@@ -11097,7 +11097,9 @@ S-181/S-182's area. Nothing was run on a real device or simulator (no macOS or A
   ("Get it Tonight, 6–9 p.m."). Low stock ("Only 4 left") isn't shown: search items carry only `soldOut`.
 - Services, Shop and Food landings: the same system — a white landing head (kicker, 24 px title, lede, a 21:9 picture),
   square category tiles, 7-up rails with the 18 px section head, Shop products as the results' cards (Add to cart
-  where one shop sells it), kitchens as service cards. Tier tags moved off the commerce colour to the success pair
+  where one shop sells it), kitchens as service cards. Kitchens have no photo of their own, so their cards show S-181's
+  designed `PhotoWell` with the cuisine's icon (S-181: a listing never borrows its category's stock photo); the home's
+  "Kitchens open now" tile and the cuisines strip keep the cuisine photos (they are categories, not listings). Tier tags moved off the commerce colour to the success pair
   (one role per colour); the current sibling department is a selected chip (chips now show `aria-current`).
 - Density vs targets: filter-rail rows are 32 px full-width targets (WCAG 2.5.8 asks 24) — the project's 44 px rule
   would double the rail; buttons, links and chips elsewhere keep 44 px hit areas.
