@@ -19,6 +19,7 @@ export * from './Layout';
 export * from './Charts';
 export * from './BackOffice';
 export * from './AppShell';
+export * from './ShellSearch';
 export * from './DataTable';
 export * from './GroupedMultiSelect';
 export * from './FileButton';
