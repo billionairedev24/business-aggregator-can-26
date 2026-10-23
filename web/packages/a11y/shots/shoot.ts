@@ -41,6 +41,7 @@ async function shoot(page: Page, app: App, r: ShotRoute) {
   // the Studio and the console default to signed in (their screens need a session); the consumer to a guest
   const missing = await mockApi(page, app, { signedIn: r.signedIn ?? app !== 'consumer', down: r.down });
   await photos(page);
+  if (r.now) await page.clock.setFixedTime(new Date(r.now));
   if (app !== 'consumer') await page.addInitScript(() => { try { localStorage.setItem('nl.locale', 'en'); } catch { /* ignore */ } });
   for (const s of SIZES) {
     await page.setViewportSize({ width: s.width, height: s.height });
