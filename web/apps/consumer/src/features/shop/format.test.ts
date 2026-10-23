@@ -3,7 +3,7 @@ import { clock, weekday, windowRange } from './format';
 
 /**
  * Engineering follow-ups (S-117 finding): Node's ICU wrote "6–9 p.m." where Chrome writes "6–9 p.m.", so the
- * server-rendered product page and the browser's first render differed (React error #418 on every load). Times are
+ * server-rendered product page and the browser's first render differed (React error 418 on every load). Times are
  * written with plain spaces whatever the ICU version.
  */
 describe('times on server-rendered pages', () => {
