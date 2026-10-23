@@ -10824,3 +10824,12 @@ MiB, plus metaspace, code cache and the C heap: peak RSS 1019 MiB, the OOMKill. 
 - **Measurements are local** (JDK 25 on Ubuntu, `-XX:MaxRAM` standing in for the pod limit, `ActiveProcessorCount=1`, a
   shared and loaded 4-CPU machine, so times vary ±30 %); never measured in a real pod. RSS is not all of cgroup memory
   (page cache counts too, but is reclaimable).
+
+## 2026-10-23 — E-15 Full UI revamp: direction reopened, Amazon as the reference
+
+Owner direction: the UI across every app is an eyesore, and the 2026-10-19 light & photo-first / Evergreen direction
+is reopened, not just re-executed. Scope: consumer web, Studio, console, and the consumer and courier apps. Reference:
+Amazon's marketplace patterns (search-led header with deliver-to, dense results with a filter rail, buy box, Seller
+Central-style back office). We copy patterns only, never Amazon's brand or trade dress. Epic E-15 (S-165–S-180) in
+`docs/backlog/northline-backlog.csv`; brief in `docs/design/revamp-epic.md`. Gate: page work waits until the owner
+picks one of three rendered directions (S-166).
