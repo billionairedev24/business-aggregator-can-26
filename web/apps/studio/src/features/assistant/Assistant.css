@@ -4,7 +4,6 @@
 .nl-assistant-empty p { margin: 0; }
 .nl-assistant-try { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
 .nl-assistant-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.nl-assistant-chips .nl-chip { min-height: 44px; }
 .nl-assistant-log { min-height: 120px; }
 .nl-assistant-form { display: grid; gap: 8px; width: 100%; }
 .nl-assistant-form-row { display: flex; justify-content: space-between; gap: 8px; }

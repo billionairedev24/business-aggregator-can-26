@@ -1,14 +1,11 @@
 /* Food (design 06 `food`, `restaurant`, `foodCheckout`, `foodTrack`). Tokens only. */
 .nl-food { min-width: 0; }
-.nl-food-actions .seg { background: var(--color-surface); }
 .nl-food-title { font-size: var(--text-4xl); margin: 0; letter-spacing: var(--tracking-tight); }
 .nl-food-sub { font-size: var(--text-md); color: var(--color-text-muted); margin: var(--space-1) 0 0; }
 .nl-food-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.nl-food-actions .btn { min-height: 44px; }
 .nl-food-panel { margin: 14px 0 0; padding: 12px 14px; background: var(--color-surface); border-radius: var(--radius-md); font-size: 14px; }
 .nl-food-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 18px; }
 .nl-food-chips + .nl-food-chips { margin-top: 10px; }
-.nl-food-chips .nl-chip { min-height: 44px; }
 .nl-food-heading { font-size: var(--text-2xl); margin: var(--space-10) 0 var(--space-4); letter-spacing: var(--tracking-tight); }
 .nl-food-block { margin-top: 32px; }
 .nl-food-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: var(--space-6) var(--space-5); margin-top: var(--space-3); }
@@ -24,7 +21,6 @@
 .nl-food-card-name { font-weight: var(--weight-bold); font-size: var(--text-lg); }
 .nl-food-card-meta { font-size: var(--text-sm); color: var(--color-text-muted); }
 .nl-food-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
-.nl-food-tags .tag { font-size: var(--text-xs); padding: 1px var(--space-2); }
 .nl-food-info { margin-top: var(--space-12); padding: var(--space-8); background: var(--color-surface-sunken); border-radius: var(--radius-lg); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--space-5) var(--space-10); }
 .nl-food-info h3 { font-size: var(--text-lg); margin: 0 0 var(--space-1); }
 .nl-food-info p { font-size: var(--text-md); color: var(--color-text-muted); margin: 0; }
@@ -37,7 +33,6 @@
 .nl-rest-banner h1 { font-size: var(--text-4xl); margin: 0; letter-spacing: var(--tracking-tight); }
 .nl-rest-banner p { font-size: var(--text-md); margin: var(--space-1) 0 0; color: var(--color-text-muted); }
 .nl-rest-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-.nl-rest-badges .tag { font-size: var(--text-sm); padding: var(--space-1) var(--space-3); }
 .nl-rest-alert { margin-top: 14px; }
 .nl-rest-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 28px 64px; margin-top: 24px; align-items: start; }
 @media (min-width: 900px) { .nl-rest-layout { grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); } }
@@ -59,9 +54,7 @@
 .nl-rest-group legend { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 6px; padding: 0; }
 .nl-rest-rule { opacity: .7; }
 .nl-rest-options { display: flex; gap: 6px; flex-wrap: wrap; }
-.nl-rest-options .nl-chip { min-height: 44px; }
 .nl-rest-editor-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.nl-rest-editor-actions .btn { min-height: 44px; }
 .nl-rest-stepper { display: flex; align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
 .nl-rest-stepper button { width: 44px; height: 44px; border: 0; background: transparent; font: inherit; font-size: 18px; color: var(--color-action-primary); cursor: pointer; }
 .nl-rest-stepper button:disabled { opacity: .4; cursor: not-allowed; }
@@ -89,7 +82,6 @@
 .nl-fco-muted { font-size: 13px; color: var(--color-text-muted); margin: 6px 0 0; }
 .nl-fco-chips { border: 0; padding: 0; margin: 12px 0 0; display: flex; gap: 8px; flex-wrap: wrap; max-width: 640px; }
 .nl-fco-chips legend { font-size: 14px; font-weight: 600; margin-bottom: 6px; padding: 0; width: 100%; }
-.nl-fco-chips .nl-chip { min-height: 44px; }
 .nl-fco-note { font-size: 12px; color: var(--color-text-muted); margin: 0; line-height: 1.5; }
 .nl-fco-bank { padding: var(--space-4); background: var(--color-surface-sunken); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: var(--space-2); }
 .nl-fco-kicker { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-muted); }
@@ -113,7 +105,6 @@
 .nl-promo-form .nl-field { flex: 1 1 180px; }
 .nl-promo-applied { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .nl-promo-note { margin: 0; font-size: 13px; color: var(--color-text-muted); }
-.nl-tip-chips .nl-chip { min-height: 44px; }
 
 @media (max-width: 599.98px) {
   .nl-food-title, .nl-rest-banner h1, .nl-track h1 { font-size: var(--text-3xl); }

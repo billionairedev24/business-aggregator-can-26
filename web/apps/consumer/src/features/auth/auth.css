@@ -36,7 +36,7 @@
 .nl-auth-primary { width: 100%; min-height: 46px; margin-top: 14px; }
 .nl-auth-passkey { width: 100%; min-height: 44px; margin-top: 8px; }
 .nl-auth-social { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-.nl-auth-social > .btn { flex: 1 1 0; min-height: 44px; gap: 8px; text-decoration: none; }
+.nl-auth-social > .btn { flex: 1 1 0; text-decoration: none; }
 .nl-auth-switch { text-align: center; font-size: 13px; margin-top: 14px; color: var(--color-text-muted); }
 .nl-auth-hint { font-size: 13px; color: var(--color-text-muted); margin-top: 6px; }
 .nl-auth-link { font: inherit; color: var(--color-link); text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0; cursor: pointer; min-height: 44px; }
