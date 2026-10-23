@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nProvider, type Locale } from './i18n';
-import { Price, ProductCard, QuantityStepper, ServiceCard, Stars, StatusTag } from './Commerce';
+import { Price, QuantityStepper, Stars, StatusTag } from './Commerce';
+import { ProductCard, ServiceCard } from './Cards';
 
 const page = (ui: React.ReactNode, locale: Locale = 'en') => render(<I18nProvider initial={locale}>{ui}</I18nProvider>);
 
