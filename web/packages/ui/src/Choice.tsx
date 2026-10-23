@@ -155,10 +155,12 @@ export interface SegmentedProps<V extends string> {
   size?: 'sm';
   /** The boxes share the full width (a narrow rail, a phone). */
   fill?: boolean;
+  /** S-173: on phones (< 600 px) the boxes stack, full width, one per row (long choices: checkout's out-of-stock rule). */
+  stack?: boolean;
 }
-export function Segmented<V extends string>({ name, options, value, onChange, size, fill, ...aria }: SegmentedProps<V>) {
+export function Segmented<V extends string>({ name, options, value, onChange, size, fill, stack, ...aria }: SegmentedProps<V>) {
   return (
-    <div className={clsx('seg', size === 'sm' && 'seg-sm', fill && 'seg-fill')} role="radiogroup" aria-label={aria['aria-label']}>
+    <div className={clsx('seg', size === 'sm' && 'seg-sm', fill && 'seg-fill', stack && 'seg-stack')} role="radiogroup" aria-label={aria['aria-label']}>
       {options.map(o => <label key={o.value} className="seg-opt"><input type="radio" name={name} checked={o.value === value} onChange={() => onChange(o.value)} /><span>{o.label}</span></label>)}
     </div>
   );

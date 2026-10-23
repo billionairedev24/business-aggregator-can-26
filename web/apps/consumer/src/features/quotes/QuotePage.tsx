@@ -197,7 +197,7 @@ function AcceptPanel({ page }: { page: Page }) {
 
   const others = page.others.length > 0 ? (
     <p className="nl-qt-muted nl-qt-others">
-      {t('others', { count: page.others.length })} {page.others.map(o => `${o.providerName} ${money(o.totalCents, { whole: o.totalCents % 100 === 0 })}`).join(' · ')}.{' '}
+      {t('others', { count: page.others.length })} {page.others.map(o => `${o.providerName} ${money(o.totalCents)}`).join(' · ')}.{' '}
       <Link to="/quotes/requests/$requestId" params={{ requestId: q.requestId }}>{t('compare')}</Link>
     </p>
   ) : null;

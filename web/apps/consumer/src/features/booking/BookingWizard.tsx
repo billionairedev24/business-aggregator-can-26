@@ -170,7 +170,7 @@ function Details({ facts, draft, update, kind, vehicle, cleaning, services, onNe
           {services.map(sv => (
             <button key={sv.id} type="button" className="nl-bk-option" aria-pressed={draft.serviceId === sv.id} onClick={() => update({ serviceId: sv.id, hold: undefined, startsAt: undefined })}>
               <span className="nl-bk-option-text"><span className="nl-bk-option-name">{sv.name}</span>{sv.included ? <span className="nl-bk-option-desc">{sv.included}</span> : null}</span>
-              <span className="nl-bk-option-price">{sv.pricingMode === 'quote' ? (sv.kind === 'consult' ? s('priceFree') : t('quoteOnly')) : sv.pricingMode === 'hourly' ? s('perHour', { price: money(sv.priceCents ?? 0, { whole: true }) }) : money(sv.priceCents ?? 0, { whole: (sv.priceCents ?? 0) % 100 === 0 })}</span>
+              <span className="nl-bk-option-price">{sv.pricingMode === 'quote' ? (sv.kind === 'consult' ? s('priceFree') : t('quoteOnly')) : sv.pricingMode === 'hourly' ? s('perHour', { price: money(sv.priceCents ?? 0) }) : money(sv.priceCents ?? 0)}</span>
             </button>
           ))}
           {facts.quoteable && categoryHref ? (
@@ -213,7 +213,7 @@ function Details({ facts, draft, update, kind, vehicle, cleaning, services, onNe
             {VALUES.addons.map((v, i) => <button key={v} type="button" className="nl-chip" aria-pressed={draft.home.addons.includes(i)} onClick={() => update({ home: { ...draft.home, addons: draft.home.addons.includes(i) ? draft.home.addons.filter(x => x !== i) : [...draft.home.addons, i] } })}>{t(`addon_${i}` as 'addon_0')}</button>)}
           </div></fieldset>
           <Chips label={t('pets')} options={[0, 1, 2, 3].map(i => t(`pet_${i}` as 'pet_0'))} value={draft.home.pets} onChange={i => update({ home: { ...draft.home, pets: i } })} />
-          {hours > 0 ? <p className="nl-bk-note">{t('estimate', { hours: hours.toFixed(1), total: money(Math.round(rate * hours)), rate: money(rate, { whole: true }) })}</p> : null}
+          {hours > 0 ? <p className="nl-bk-note">{t('estimate', { hours: hours.toFixed(1), total: money(Math.round(rate * hours)), rate: money(rate) })}</p> : null}
         </section>
       ) : null}
       {kind === 'home' && !cleaning ? (
