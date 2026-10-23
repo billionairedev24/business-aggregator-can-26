@@ -15,7 +15,7 @@ export function QuoteCompare({ requestId }: { requestId: string }) {
   const { locale } = useLocale();
   const { date } = useFormatters();
   const q = useQuery(comparisonQuery(requestId, locale));
-  if (q.isPending) return <div className="nl-page nl-qt" aria-busy="true"><Skeleton width="50%" height={36} style={{ marginTop: 28 }} /><Skeleton height={220} style={{ marginTop: 16 }} /></div>;
+  if (q.isPending) return <div className="nl-page nl-qt nl-qt-skeleton" aria-busy="true"><Skeleton width="50%" height={36} /><Skeleton height={220} /></div>;
   if (q.isError) return isNotFound(q.error) ? <NotFound /> : <div className="nl-page nl-qt"><ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /></div>;
   const c = q.data;
   const quoted = c.offers.filter(o => o.status === 'quoted').length;
@@ -53,7 +53,7 @@ function Row({ offer: o }: { offer: Offer }) {
   return (
     <tr data-state={q.state}>
       {who}
-      <td className="nl-qt-price" data-label={t('thQuote')}>{money(q.totalCents)}{q.version > 1 ? <span className="tag nl-qt-vtag">{t('versionTag', { version: q.version })}</span> : null}<br /><span className="nl-qt-muted">{q.depositCents > 0 ? t('depositOf', { amount: money(q.depositCents) }) : t('noDeposit')}</span></td>
+      <td className="nl-qt-price" data-label={t('thQuote')}>{money(q.totalCents)}{q.version > 1 ? <span className="tag tag-neutral nl-qt-vtag">{t('versionTag', { version: q.version })}</span> : null}<br /><span className="nl-qt-muted">{q.depositCents > 0 ? t('depositOf', { amount: money(q.depositCents) }) : t('noDeposit')}</span></td>
       <td data-label={t('thEarliest')}>{q.proposedAt ? date(q.proposedAt, 'dateTime') : '—'}</td>
       <td className="nl-qt-small" data-label={t('thIncludes')}>{includes}{q.expired ? <> · <span className="tag">{t('expiredTag')}</span></> : null}</td>
       <td className="nl-qt-small" data-label={t('thTrust')}>{trust}</td>

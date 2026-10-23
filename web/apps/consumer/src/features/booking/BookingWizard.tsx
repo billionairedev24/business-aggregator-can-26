@@ -561,8 +561,8 @@ export function BookingSkeleton() {
     <div className="nl-page nl-bk" aria-busy="true">
       <Skeleton width={260} height={12} />
       <div className="nl-bk-split">
-        <div className="nl-bk-main"><Skeleton width="60%" height={36} style={{ marginTop: 16 }} /><Skeleton height={60} style={{ marginTop: 14 }} />{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={52} style={{ marginTop: 8 }} />)}</div>
-        <Skeleton height={320} radius="var(--radius-md)" />
+        <div className="nl-bk-main nl-bk-skeleton"><Skeleton width="60%" height={36} /><Skeleton height={60} />{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={52} />)}</div>
+        <Skeleton height={320} radius="var(--radius-panel)" />
       </div>
     </div>
   );

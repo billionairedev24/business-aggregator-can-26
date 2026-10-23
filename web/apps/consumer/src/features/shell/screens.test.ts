@@ -9,6 +9,8 @@ describe('screenFor', () => {
     expect(screenFor('/services/plumber/providers')).toBe('providers');
     expect(screenFor('/services/plumber/')).toBe('svcCategory');
     expect(screenFor('/account/orders')).toBe('orders');
+    expect(screenFor('/shop/stores/M1')).toBe('store');
+    expect(screenFor('/shop/bakery')).toBe('category');
     expect(screenFor('/nowhere/at/all')).toBeUndefined();
   });
 

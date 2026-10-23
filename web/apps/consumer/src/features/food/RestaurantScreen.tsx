@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { ValidationError } from '@northline/client';
-import { Alert, Button, Dialog, Field, OptionCard, RadioGroup, Tag, TextInput, useFormatters, useLocale } from '@northline/ui';
+import { Alert, Button, Dialog, Field, OptionCard, Price, RadioGroup, Stars, Tag, TextInput, useFormatters, useLocale } from '@northline/ui';
+import { Plus, ShieldCheck } from '@phosphor-icons/react';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { signInHref, useViewer } from '../session/api';
 import { addToGroup, groupQuery, startGroup, type GroupDish } from './groupApi';
@@ -20,9 +21,12 @@ import { choiceNames, defaults, deltaOf, pickProblems, toggle, visibleGroups } f
 type T = ReturnType<typeof useFoodT>;
 
 /**
- * Restaurant (design 06 `restaurant`, S-57): the kitchen's banner, its live menus by section (combos first), a dish's
- * modifier groups with their pick rules, special instructions and quantity, and "Your order" — the food cart, one
- * kitchen at a time, with the $15 minimum. Server-rendered (SEO); the order lives in the browser.
+ * Restaurant (E-15 S-172 in the system of design/revamp/a.html's provider page; design 06 `restaurant`, S-57): the
+ * header (the cuisine's picture, cuisine · address, the name, rating, delivery and permit badges), the menu's sections
+ * as underline links, the dishes as cards (photo well, price, dietary and allergen tags, "+" adds), a dish's modifier
+ * groups with their pick rules, special instructions and quantity, and the bordered "Your order" box with the group
+ * order entry — the food cart, one kitchen at a time, with the minimum. Server-rendered (SEO); the order lives in the
+ * browser. Phones: a sticky "View your order" bar once something is in it.
  */
 export function RestaurantScreen({ slug, group }: { slug: string; group?: string }) {
   const t = useFoodT();
@@ -65,16 +69,17 @@ export function RestaurantScreen({ slug, group }: { slug: string; group?: string
   return (
     <div className="nl-rest">
       <Crumbs label={t('breadcrumb')} items={[{ label: t('home'), href: '/' }, { label: t('title'), href: '/food' }, ...(cuisine ? [{ label: cuisine, href: '/food' }] : []), { label: k.name }]} />
-      <span className="nl-rest-cover" aria-hidden><Scene slot={[cuisineSlot(k.cuisines[0]), 'banner/food']} subject={k.cuisines[0] ?? 'food'} fit="contain" sizes="(min-width: 1200px) 1140px, 100vw" priority /></span>
-      <header className="nl-rest-banner">
-        <div>
-          <h1>{k.name}</h1>
-          <p>{[cuisine, data.address, k.reviews > 0 ? t('rating', { rating: k.rating.toFixed(1), count: k.reviews }) : null].filter(Boolean).join(' · ')}</p>
-        </div>
-        <div className="nl-rest-badges">
-          <span className="tag tag-neutral">{t('etaRange', { from: k.etaFromMin, to: k.etaToMin })} · {money(k.deliveryFeeCents)}</span>
-          {data.ahsVerified && <span className="tag tag-success">{t('ahs')}</span>}
-          <span className="tag tag-neutral">{t('minOrder', { amount: money(data.minOrderCents, { whole: true }) })}</span>
+      <header className="nl-rest-head">
+        <span className="nl-rest-photo" aria-hidden><Scene slot={[cuisineSlot(k.cuisines[0]), 'banner/food']} subject={k.cuisines[0] ?? 'food'} sizes="160px" priority /></span>
+        <div className="nl-rest-id">
+          {cuisine || data.address ? <span className="nl-rest-kicker">{[cuisine, data.address].filter(Boolean).join(' · ')}</span> : null}
+          <h1 className="nl-rest-name">{k.name}</h1>
+          {k.reviews > 0 ? <Stars rating={k.rating} reviewCount={k.reviews} /> : null}
+          <ul className="nl-rest-badges">
+            <li><span className="tag tag-neutral">{t('etaRange', { from: k.etaFromMin, to: k.etaToMin })} · {money(k.deliveryFeeCents)}</span></li>
+            {data.ahsVerified ? <li><span className="tag tag-success nl-rest-badge"><ShieldCheck size={14} aria-hidden />{t('ahs')}</span></li> : null}
+            <li><span className="tag tag-neutral">{t('minOrder', { amount: money(data.minOrderCents, { whole: true }) })}</span></li>
+          </ul>
         </div>
       </header>
       {!k.open && (
@@ -87,27 +92,31 @@ export function RestaurantScreen({ slug, group }: { slug: string; group?: string
 
       <div className="nl-rest-layout">
         <div>
-          <nav className="nl-rest-sections" aria-label={t('sections')}>
-            {sections.map(s => <a key={s.id} href={`#sec-${s.id}`} className="tag tag-outline">{s.name}</a>)}
+          <nav className="nl-rest-sections nl-utabs" aria-label={t('sections')}>
+            {sections.map(s => <a key={s.id} href={`#sec-${s.id}`} className="nl-utab">{s.name}</a>)}
           </nav>
           {data.combos.length > 0 && (
-            <section id="sec-combos" aria-labelledby="h-combos">
+            <section id="sec-combos" aria-labelledby="h-combos" className="nl-rest-section">
               <h2 id="h-combos">{t('combos')}</h2>
+              <div className="nl-rest-dishes">
               {data.combos.map(c => (
                 <ComboRow key={c.id} t={t} c={c} data={data} open={openId === c.id} onToggle={() => setOpenId(openId === c.id ? null : c.id)}
                   disabled={!orderable || !c.availableNow}
                   onAdd={(qty, itemIds, names, unit) => addCombo(c, qty, itemIds, names, unit)} />
               ))}
+              </div>
             </section>
           )}
           {data.sections.map(s => (
-            <section key={s.id} id={`sec-${s.id}`} aria-labelledby={`h-${s.id}`}>
+            <section key={s.id} id={`sec-${s.id}`} aria-labelledby={`h-${s.id}`} className="nl-rest-section">
               <h2 id={`h-${s.id}`}>{s.name}</h2>
+              <div className="nl-rest-dishes">
               {s.items.map(d => (
                 <DishRow key={d.id} t={t} d={d} open={openId === d.id} onToggle={() => setOpenId(openId === d.id ? null : d.id)}
                   disabled={!orderable || d.soldOut}
                   onAdd={(qty, optionIds, note) => addItem(d, qty, optionIds, note)} />
               ))}
+              </div>
             </section>
           ))}
         </div>
@@ -115,6 +124,12 @@ export function RestaurantScreen({ slug, group }: { slug: string; group?: string
           ? <GroupAside groupAdd={groupAdd} />
           : <OrderAside t={t} data={data} cart={cart && cart.merchantId === k.merchantId ? cart : null} onRemove={remove} />}
       </div>
+      {!groupAdd.active && cart && cart.merchantId === k.merchantId && cart.lines.length > 0 ? (
+        <div className="nl-stickybar nl-rest-stickybar">
+          <span className="nl-stickybar-sum"><strong>{money(subtotalOf(cart))}</strong><span>{t('itemsInOrder', { count: cart.lines.reduce((n, l) => n + l.qty, 0) })}</span></span>
+          <a href="#order-title" className="btn btn-primary btn-lg">{t('viewOrder')}</a>
+        </div>
+      ) : null}
 
       {pending && (
         <Dialog open onClose={() => setPending(null)} title={t('otherKitchenTitle')}
@@ -138,14 +153,15 @@ function DishRow({ t, d, open, disabled, onToggle, onAdd }: { t: T; d: Dish; ope
   return (
     <div className="nl-rest-dish">
       <div>
-        <div className="nl-rest-dish-head"><strong>{d.name}</strong><span>{money(d.priceCents)}</span></div>
+        <h3 className="nl-rest-dish-name">{d.name}</h3>
+        <Price cents={d.priceCents} size="sm" />
         {d.description && <p className="nl-rest-dish-desc">{d.description}</p>}
         <DishTags d={d} />
         {unavailable && <p className="nl-rest-muted">{unavailable}</p>}
         {open && <DishEditor t={t} d={d} onAdd={onAdd} onCancel={onToggle} />}
       </div>
       <button type="button" className="nl-rest-plus" aria-expanded={open} aria-label={t('add', { name: d.name })}
-        disabled={disabled || !d.availableNow} onClick={onToggle}><PhotoWell subject={d.name} /><span className="nl-rest-plus-sign" aria-hidden>+</span></button>
+        disabled={disabled || !d.availableNow} onClick={onToggle}><PhotoWell subject={d.name} /><span className="nl-rest-plus-sign" aria-hidden><Plus size={16} weight="bold" /></span></button>
     </div>
   );
 }
@@ -216,7 +232,8 @@ function ComboRow({ t, c, data, open, disabled, onToggle, onAdd }: {
   return (
     <div className="nl-rest-dish">
       <div>
-        <div className="nl-rest-dish-head"><strong>{c.name}</strong><span>{money(c.fromCents)}</span></div>
+        <h3 className="nl-rest-dish-name">{c.name}</h3>
+        <Price cents={c.fromCents} size="sm" />
         <p className="nl-rest-dish-desc">{c.slots.map(s => s.label).join(' + ')}</p>
         {c.saveCents > 0 && <div className="nl-food-tags"><Tag tone="highlight">{t('combosSave', { price: money(c.fromCents), save: money(c.saveCents) })}</Tag></div>}
         {!c.availableNow && <p className="nl-rest-muted">{t('notNow')}</p>}
@@ -238,7 +255,7 @@ function ComboRow({ t, c, data, open, disabled, onToggle, onAdd }: {
           </div>
         )}
       </div>
-      <button type="button" className="nl-rest-plus" aria-expanded={open} aria-label={t('add', { name: c.name })} disabled={disabled} onClick={onToggle}><PhotoWell subject={c.name} /><span className="nl-rest-plus-sign" aria-hidden>+</span></button>
+      <button type="button" className="nl-rest-plus" aria-expanded={open} aria-label={t('add', { name: c.name })} disabled={disabled} onClick={onToggle}><PhotoWell subject={c.name} /><span className="nl-rest-plus-sign" aria-hidden><Plus size={16} weight="bold" /></span></button>
     </div>
   );
 }

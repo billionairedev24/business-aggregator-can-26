@@ -72,14 +72,14 @@ export const useShellT = defineMessages({
 /** Screen names (page titles, ScreenPending). */
 export const SCREEN_NAMES: { en: Record<ScreenKey, string>; fr: Record<ScreenKey, string> } = {
   en: {
-    home: 'Home', location: 'Where should we bring things?', search: 'Search', shop: 'Shop', category: 'Department',
+    home: 'Home', location: 'Where should we bring things?', search: 'Search', shop: 'Shop', category: 'Department', store: 'Store',
     product: 'Product', cart: 'Cart', checkout: 'Secure checkout', checkoutComplete: 'Order placed', confirmed: 'Your order', food: 'Food', restaurant: 'Restaurant',
     foodCheckout: 'Checkout', foodTrack: 'Track order', foodGroup: 'Group order', services: 'Services', svcCategory: 'Service category',
     providers: 'Providers', provider: 'Provider', book: 'Book a service', booking: 'Your booking', quote: 'Quote', quoteRequest: 'Request quotes', quoteCompare: 'Compare quotes', orders: 'Orders & bookings', messages: 'Messages',
     account: 'Account', accountDelete: 'Delete account', accountDeletion: 'Deleting your account', problem: 'Report a problem', signIn: 'Sign in', register: 'Create account', sell: 'Sell or offer a service', help: 'Help', credits: 'Photo credits',
   },
   fr: {
-    home: 'Accueil', location: 'Où devons-nous livrer ?', search: 'Rechercher', shop: 'Boutique', category: 'Rayon',
+    home: 'Accueil', location: 'Où devons-nous livrer ?', search: 'Rechercher', shop: 'Boutique', category: 'Rayon', store: 'Commerce',
     product: 'Produit', cart: 'Panier', checkout: 'Paiement sécurisé', checkoutComplete: 'Commande passée', confirmed: 'Votre commande', food: 'Restaurants', restaurant: 'Restaurant',
     foodCheckout: 'Paiement', foodTrack: 'Suivre la commande', foodGroup: 'Commande de groupe', services: 'Services', svcCategory: 'Catégorie de service',
     providers: 'Prestataires', provider: 'Prestataire', book: 'Réserver un service', booking: 'Votre réservation', quote: 'Devis', quoteRequest: 'Demander des devis', quoteCompare: 'Comparer les devis', orders: 'Commandes et réservations', messages: 'Messages',

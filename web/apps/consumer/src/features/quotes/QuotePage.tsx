@@ -277,9 +277,9 @@ const clean = (v: Visit): Visit => ({
 export function QuoteSkeleton() {
   return (
     <div className="nl-page nl-qt" aria-busy="true">
-      <Skeleton width={220} height={12} style={{ marginTop: 28 }} />
+      <Skeleton width={220} height={12} />
       <div className="nl-qt-split">
-        <div className="nl-qt-main"><Skeleton width="70%" height={36} style={{ marginTop: 16 }} />{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} height={36} style={{ marginTop: 8 }} />)}</div>
+        <div className="nl-qt-main nl-qt-skeleton"><Skeleton width="70%" height={36} />{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} height={36} />)}</div>
         <Skeleton height={320} radius="var(--radius-md)" />
       </div>
     </div>
