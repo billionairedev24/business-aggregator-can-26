@@ -117,6 +117,27 @@ async function step(name, fn) {
 /** Screens reached by a route alone: [name, href]. */
 const screens = (list) => list.map(([name, href]) => [name, async () => { await go(href); await shot(name); }]);
 
+/** S-169: the shared kit's gallery (dev builds and this fixture build): English, the bottom sheet open, then French. */
+async function gallery() {
+  await step('gallery', async () => {
+    await go('/dev/gallery');
+    await vis('kit-gallery').waitFor({ timeout: 10_000 });
+    await shot('gallery');
+  });
+  await step('gallery-sheet', async () => {
+    await tap('gallery-open-sheet');
+    await settle(700);
+    await shot('gallery-sheet', { full: false });
+    await page.getByRole('button', { name: 'Close' }).filter({ visible: true }).last().click();
+    await settle(500);
+  });
+  await step('gallery-fr', async () => {
+    await page.getByRole('radio', { name: 'Français' }).filter({ visible: true }).first().click();
+    await settle(600);
+    await shot('gallery-fr');
+  });
+}
+
 async function consumer() {
   await page.goto(base);
   await page.getByTestId('welcome').or(page.getByTestId('home')).first().waitFor({ timeout: 60_000 });
@@ -227,6 +248,7 @@ async function consumer() {
     ]),
   ];
   for (const [name, fn] of signedIn) await step(name, fn);
+  await gallery();
   // French (Account › Language), then a few screens again
   await step('french', async () => {
     await go('/account');
@@ -243,11 +265,11 @@ async function consumer() {
 
 async function courier() {
   await page.goto(base);
-  await page.getByRole('button', { name: 'Sign in' }).waitFor({ timeout: 60_000 });
+  await page.getByRole('button', { name: 'Sign in', exact: true }).waitFor({ timeout: 60_000 });
   await settle(1200);
   await step('sign-in', async () => { await shot('sign-in'); });
   await step('today', async () => {
-    await page.getByRole('button', { name: 'Sign in' }).click();
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await settle(1500);
     await shot('today');
   });
@@ -274,6 +296,7 @@ async function courier() {
     ['profile', '/account'],
   ]))
     await step(name, fn);
+  await gallery();
   await step('dropoff-pin', async () => {
     await go('/stops/st-3/dropoff');
     await page.getByRole('tab', { name: 'PIN' }).filter({ visible: true }).first().click();
