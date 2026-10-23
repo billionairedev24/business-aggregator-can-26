@@ -18,6 +18,9 @@ const CART = {
     { merchantId: 'M2', shopName: 'Glenmore Bakery', items: [line('I2', 'M2', 'Country sourdough', 750, 2, { option: 'Sliced', unit: '900 g' }), line('I3', 'M2', 'Baguette', 640, 1, { stock: 2 })] },
   ],
 };
+// tonight's run: 6–9 pm (UTC−6), order by 5:20 pm
+const RUN = { windowId: 'W1', label: 'R-611', day: 'today', startsAt: '2026-10-01T00:00:00Z', endsAt: '2026-10-01T03:00:00Z', orderBy: '2026-09-30T23:20:00Z', feeCents: 299, households: 5 };
+const LANDING = { market: 'Calgary', served: true, run: RUN, shopCount: 3, departments: [], shops: [], popular: [] };
 
 type Reply = { status?: number; body?: unknown } | undefined;
 let user: typeof AMARA | null;
@@ -84,6 +87,30 @@ describe('Cart (redesign § 1.3, AT Shop:425)', () => {
     await waitFor(() => expect(calls.some(c => c.method === 'DELETE' && c.url === '/api/v1/cart/items/I1')).toBe(true));
   });
 
+  it('S-173: saves a line for later (kept in this browser) and moves it back to the cart', async () => {
+    const { calls } = open();
+    routes['DELETE /api/v1/cart/items/I3'] = () => ({ body: { ...CART, itemCount: 3 } });
+    routes['POST /api/v1/cart/items'] = () => ({ status: 201, body: CART });
+    const u = userEvent.setup({ delay: null });
+    await u.click(await screen.findByRole('button', { name: 'Save Baguette for later' }));
+    await waitFor(() => expect(calls.some(c => c.method === 'DELETE' && c.url === '/api/v1/cart/items/I3')).toBe(true));
+    const saved = await screen.findByRole('region', { name: 'Saved for later (1)' });
+    expect(within(saved).getByRole('link', { name: 'Baguette' })).toHaveAttribute('href', '/products/p-I3');
+    expect(within(saved).getByText('Glenmore Bakery')).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('nl.savedForLater')!)).toEqual([expect.objectContaining({ offerId: 'o-I3', qty: 1, unitCents: 640 })]);
+    await u.click(within(saved).getByRole('button', { name: 'Move Baguette to cart' }));
+    await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url === '/api/v1/cart/items')?.body).toEqual({ offerId: 'o-I3', qty: 1 }));
+    await waitFor(() => expect(screen.queryByRole('region', { name: /Saved for later/ })).toBeNull());
+    expect(localStorage.getItem('nl.savedForLater')).toBeNull();
+  });
+
+  it('S-173: names the pooled run every shop rides, with its fee and order-by time', async () => {
+    routes['GET /api/v1/public/shop'] = () => ({ body: LANDING });
+    open();
+    expect(await screen.findByText('Pooled run: Tonight, 6–9 p.m.')).toBeInTheDocument();
+    expect(screen.getByText('All 2 shops deliver together for one $2.99 fee. Order by 5:20 p.m.')).toBeInTheDocument();
+  });
+
   it('goes to the checkout', async () => {
     open();
     await userEvent.setup({ delay: null }).click(await screen.findByRole('link', { name: 'Proceed to checkout' }));
@@ -119,6 +146,7 @@ describe('Cart (redesign § 1.3, AT Shop:425)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Panier' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Passer à la caisse' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Supprimer Baguette' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Garder Baguette pour plus tard' })).toBeInTheDocument();
     expect(screen.getAllByText('Sous-total (4 articles) :')).toHaveLength(2);
   });
 

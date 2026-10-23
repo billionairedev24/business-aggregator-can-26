@@ -21,6 +21,7 @@
 .co-section-title:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .co-change { font-weight: var(--weight-bold); }
 .co-lede { margin: calc(-1 * var(--space-2)) 0 0; }
+.co-section > .seg { align-self: flex-start; }
 
 .co-choices { display: flex; flex-direction: column; gap: var(--space-2); }
 .co-choice { align-items: flex-start; }
@@ -80,8 +81,12 @@
   .co-section { padding: var(--space-4); }
   .co-item { grid-template-columns: 48px minmax(0, 1fr) auto; }
   .co-thumb { width: 48px; }
+  .co-item { align-items: start; }
   .co-qty { grid-column: 2; grid-row: 2; }
-  .co-item-price { grid-column: 3; grid-row: 1 / span 2; }
+  .co-item-price { grid-column: 3; grid-row: 1; }
+  /* the five tip boxes share the row (320 px wide too) */
+  .co-tip-seg-host .seg { display: flex; width: 100%; }
+  .co-tip-seg-host .seg-opt { flex: 1 1 0; min-width: 0; padding-inline: var(--space-1); white-space: nowrap; }
 }
 
 /* order placed: the panel beside the order's summary box */
@@ -93,6 +98,7 @@
 .co-done-sub { margin: 0; font-size: var(--type-sub); font-weight: var(--weight-semibold); }
 .co-done-when { margin: 0; color: var(--color-success); font-weight: var(--weight-semibold); }
 .co-done-h2 { margin: var(--space-2) 0 0; font-size: var(--type-section); font-weight: var(--weight-bold); }
+.co-done-summary { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-panel); background: var(--color-surface); min-width: 0; }
 .co-done-summary .co-done-h2 { margin: 0; }
 .co-done-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--type-body); }
 .co-done-steps li { display: flex; gap: var(--space-2-5); align-items: center; }
@@ -102,7 +108,6 @@
 .co-done-shops li { display: flex; justify-content: space-between; gap: var(--space-3); }
 @media (max-width: 899.98px) {
   .co-done-grid { grid-template-columns: minmax(0, 1fr); }
-  .co-done-summary { position: static; }
 }
 @media (max-width: 599.98px) {
   .co-done-card { padding: var(--space-4); }

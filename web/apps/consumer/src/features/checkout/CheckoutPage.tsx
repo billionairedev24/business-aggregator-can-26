@@ -80,7 +80,8 @@ function Checkout({ cart, name }: { cart: Cart; name: string }) {
   const tp = usePromoT();
   const tAge = useAgeT();
   const { locale } = useLocale();
-  const { price } = useFormatters();
+  // tip amounts are choices drawn in whole dollars ($2 · $3 · $5, the mockup's); every price uses `price`
+  const { price, money } = useFormatters();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { location } = useDeliveryLocation();
@@ -280,10 +281,10 @@ function Checkout({ cart, name }: { cart: Cart; name: string }) {
               options={SUBSTITUTIONS.map(s => ({ value: s, label: t(`subs_${s}`) }))} />
           </Section>
 
-          <Section n={4} id="co-tip" title={t('s_tip')}>
+          <Section n={4} id="co-tip" title={t('s_tip')} className="co-tip-seg-host">
             <p className="co-muted co-lede">{t('tipLede')}</p>
             <Segmented name="co-tip" aria-label={t('s_tip')} value={tipKey} onChange={setTipKey}
-              options={TIP_CHOICES.map(k => ({ value: k, label: k === 'none' ? t('tipNone') : k === 'other' ? t('tipOther') : price(Number(k)) }))} />
+              options={TIP_CHOICES.map(k => ({ value: k, label: k === 'none' ? t('tipNone') : k === 'other' ? t('tipOther') : money(Number(k), { whole: true }) }))} />
             {tipKey === 'other' ? (
               <Field label={t('tipAmount')} className="co-tip-other">
                 <TextInput inputMode="decimal" value={otherTip} onChange={e => setOtherTip(e.target.value.replace(/[^\d.,]/g, ''))} />
@@ -353,11 +354,11 @@ function Checkout({ cart, name }: { cart: Cart; name: string }) {
 }
 
 /** A numbered section of the one page: the ink number box, the 18 px title, an action at the right ("Change"). */
-function Section({ n, id, title, action, headingRef, children }: {
-  n: number; id: string; title: string; action?: ReactNode; headingRef?: React.Ref<HTMLHeadingElement>; children: ReactNode;
+function Section({ n, id, title, action, headingRef, className, children }: {
+  n: number; id: string; title: string; action?: ReactNode; headingRef?: React.Ref<HTMLHeadingElement>; className?: string; children: ReactNode;
 }) {
   return (
-    <section className="co-section" aria-labelledby={id}>
+    <section className={className ? `co-section ${className}` : 'co-section'} aria-labelledby={id}>
       <div className="co-section-head">
         <span className="co-num" aria-hidden>{n}</span>
         <h2 id={id} ref={headingRef} tabIndex={-1} className="co-section-title">{title}</h2>

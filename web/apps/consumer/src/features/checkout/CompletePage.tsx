@@ -60,7 +60,7 @@ export function CompletePage({ orderId, refCode }: { orderId?: string; refCode?:
           </div>
         </section>
         {order.data ? (
-          <aside className="co-summary co-done-summary" aria-label={t('summary')}>
+          <aside className="co-done-summary" aria-label={t('summary')}>
             <h2 className="co-done-h2">{t('summary')}</h2>
             <dl className="co-totals">
               <div className="co-row"><dt>{o('items')}</dt><dd>{price(order.data.subtotalCents)}</dd></div>

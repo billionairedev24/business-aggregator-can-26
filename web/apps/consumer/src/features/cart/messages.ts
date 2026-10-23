@@ -70,6 +70,11 @@ export const useCartT = defineMessages({
     emptyBody: 'Shops near you deliver together on one run — add something to get started.', continueShopping: 'Continue shopping',
     loading: 'Loading your cart…', loadError: 'We couldn’t load your cart.',
     stepUpNeeded: 'Paying asks for a second factor.',
+    // S-173: save for later, the pooled-run note
+    save: 'Save for later', saveNamed: 'Save {name} for later', moveToCart: 'Move to cart', moveNamed: 'Move {name} to cart',
+    savedTitle: 'Saved for later ({count})', savedFailed: 'That didn’t work. Try again.',
+    shopItems: '{count, plural, one {# item} other {# items}}',
+    runTitle: 'Pooled run: {when}.', runBody: '{count, plural, one {Your shop delivers} other {All # shops deliver}} together for one {fee} fee. Order by {time}.',
   },
   fr: {
     title: 'Paiement',
@@ -138,6 +143,10 @@ export const useCartT = defineMessages({
     emptyBody: 'Les commerces près de chez vous livrent ensemble en une tournée — ajoutez un article pour commencer.', continueShopping: 'Continuer mes achats',
     loading: 'Chargement de votre panier…', loadError: 'Impossible de charger votre panier.',
     stepUpNeeded: 'Le paiement demande un deuxième facteur.',
+    save: 'Garder pour plus tard', saveNamed: 'Garder {name} pour plus tard', moveToCart: 'Remettre au panier', moveNamed: 'Remettre {name} au panier',
+    savedTitle: 'Gardés pour plus tard ({count})', savedFailed: 'Cela n’a pas fonctionné. Réessayez.',
+    shopItems: '{count, plural, one {# article} other {# articles}}',
+    runTitle: 'Tournée groupée : {when}.', runBody: '{count, plural, one {Votre commerce livre} other {Les # commerces livrent}} ensemble pour un seul frais de {fee}. Commandez avant {time}.',
   },
 });
 

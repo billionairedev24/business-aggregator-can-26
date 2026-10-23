@@ -128,8 +128,8 @@ describe('one-page checkout (E-15, design/revamp/a.html)', () => {
     const { calls } = open();
     const u = userEvent.setup({ delay: null });
     await u.click(await within(await screen.findByRole('region', { name: 'If an item is out of stock' })).findByRole('radio', { name: 'Text me first' }));
-    await u.click(within(section('Courier tip')).getByRole('radio', { name: '$3.00' }));
-    expect(within(section('Courier tip')).getByRole('radio', { name: '$3.00' })).toBeChecked();
+    await u.click(within(section('Courier tip')).getByRole('radio', { name: '$3' }));
+    expect(within(section('Courier tip')).getByRole('radio', { name: '$3' })).toBeChecked();
     await u.click(within(section('Courier tip')).getByRole('radio', { name: 'Other' }));
     await u.type(screen.getByLabelText('Tip amount ($)'), '4.50');
     await u.selectOptions(within(section('Review items')).getByRole('combobox', { name: 'Quantity of Country sourdough' }), '3');
@@ -379,7 +379,7 @@ describe('promo code, points and tip at checkout (mobile gaps part 2)', () => {
     };
     const { calls } = open();
     const u = userEvent.setup({ delay: null });
-    await u.click(await within(await screen.findByRole('region', { name: 'Courier tip' })).findByRole('radio', { name: '$5.00' }));
+    await u.click(await within(await screen.findByRole('region', { name: 'Courier tip' })).findByRole('radio', { name: '$5' }));
     await u.click(within(summary()).getByText('Promo code or points'));
     await u.type(await screen.findByLabelText('Promo code'), 'fall10');
     await u.click(screen.getByRole('button', { name: 'Apply' }));
