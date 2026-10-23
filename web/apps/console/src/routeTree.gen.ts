@@ -33,9 +33,13 @@ import { Route as ConsoleUatRouteImport } from './routes/_console/uat'
 import { Route as ConsoleVerificationRouteImport } from './routes/_console/verification'
 import { Route as ConsoleVettingRouteImport } from './routes/_console/vetting'
 import { Route as ConsoleDisputesCardRouteImport } from './routes/_console/disputes_.card'
+import { Route as ConsoleOrdersOrderRefRouteImport } from './routes/_console/orders_.$orderRef'
 import { Route as ConsoleSellersIndexRouteImport } from './routes/_console/sellers.index'
 import { Route as ConsoleSellersSellerIdRouteImport } from './routes/_console/sellers.$sellerId'
+import { Route as ConsoleSupportTicketIdRouteImport } from './routes/_console/support_.$ticketId'
 import { Route as ConsoleTrustAppealsRouteImport } from './routes/_console/trust_.appeals'
+import { Route as ConsoleVerificationApplicationIdRouteImport } from './routes/_console/verification_.$applicationId'
+import { Route as ConsoleDisputesKindCaseIdRouteImport } from './routes/_console/disputes_.$kind.$caseId'
 
 const ConsoleRoute = ConsoleRouteImport.update({
   id: '/_console',
@@ -156,6 +160,11 @@ const ConsoleDisputesCardRoute = ConsoleDisputesCardRouteImport.update({
   path: '/disputes/card',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleOrdersOrderRefRoute = ConsoleOrdersOrderRefRouteImport.update({
+  id: '/orders_/$orderRef',
+  path: '/orders/$orderRef',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 const ConsoleSellersIndexRoute = ConsoleSellersIndexRouteImport.update({
   id: '/sellers/',
   path: '/sellers/',
@@ -166,11 +175,28 @@ const ConsoleSellersSellerIdRoute = ConsoleSellersSellerIdRouteImport.update({
   path: '/sellers/$sellerId',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleSupportTicketIdRoute = ConsoleSupportTicketIdRouteImport.update({
+  id: '/support_/$ticketId',
+  path: '/support/$ticketId',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 const ConsoleTrustAppealsRoute = ConsoleTrustAppealsRouteImport.update({
   id: '/trust_/appeals',
   path: '/trust/appeals',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleVerificationApplicationIdRoute =
+  ConsoleVerificationApplicationIdRouteImport.update({
+    id: '/verification_/$applicationId',
+    path: '/verification/$applicationId',
+    getParentRoute: () => ConsoleRoute,
+  } as any)
+const ConsoleDisputesKindCaseIdRoute =
+  ConsoleDisputesKindCaseIdRouteImport.update({
+    id: '/disputes_/$kind/$caseId',
+    path: '/disputes/$kind/$caseId',
+    getParentRoute: () => ConsoleRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ConsoleIndexRoute
@@ -196,9 +222,13 @@ export interface FileRoutesByFullPath {
   '/verification': typeof ConsoleVerificationRoute
   '/vetting': typeof ConsoleVettingRoute
   '/disputes/card': typeof ConsoleDisputesCardRoute
+  '/orders/$orderRef': typeof ConsoleOrdersOrderRefRoute
   '/sellers/$sellerId': typeof ConsoleSellersSellerIdRoute
+  '/support/$ticketId': typeof ConsoleSupportTicketIdRoute
   '/trust/appeals': typeof ConsoleTrustAppealsRoute
+  '/verification/$applicationId': typeof ConsoleVerificationApplicationIdRoute
   '/sellers/': typeof ConsoleSellersIndexRoute
+  '/disputes/$kind/$caseId': typeof ConsoleDisputesKindCaseIdRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
@@ -224,9 +254,13 @@ export interface FileRoutesByTo {
   '/vetting': typeof ConsoleVettingRoute
   '/': typeof ConsoleIndexRoute
   '/disputes/card': typeof ConsoleDisputesCardRoute
+  '/orders/$orderRef': typeof ConsoleOrdersOrderRefRoute
   '/sellers/$sellerId': typeof ConsoleSellersSellerIdRoute
+  '/support/$ticketId': typeof ConsoleSupportTicketIdRoute
   '/trust/appeals': typeof ConsoleTrustAppealsRoute
+  '/verification/$applicationId': typeof ConsoleVerificationApplicationIdRoute
   '/sellers': typeof ConsoleSellersIndexRoute
+  '/disputes/$kind/$caseId': typeof ConsoleDisputesKindCaseIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -254,9 +288,13 @@ export interface FileRoutesById {
   '/_console/vetting': typeof ConsoleVettingRoute
   '/_console/': typeof ConsoleIndexRoute
   '/_console/disputes_/card': typeof ConsoleDisputesCardRoute
+  '/_console/orders_/$orderRef': typeof ConsoleOrdersOrderRefRoute
   '/_console/sellers/$sellerId': typeof ConsoleSellersSellerIdRoute
+  '/_console/support_/$ticketId': typeof ConsoleSupportTicketIdRoute
   '/_console/trust_/appeals': typeof ConsoleTrustAppealsRoute
+  '/_console/verification_/$applicationId': typeof ConsoleVerificationApplicationIdRoute
   '/_console/sellers/': typeof ConsoleSellersIndexRoute
+  '/_console/disputes_/$kind/$caseId': typeof ConsoleDisputesKindCaseIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -284,9 +322,13 @@ export interface FileRouteTypes {
     | '/verification'
     | '/vetting'
     | '/disputes/card'
+    | '/orders/$orderRef'
     | '/sellers/$sellerId'
+    | '/support/$ticketId'
     | '/trust/appeals'
+    | '/verification/$applicationId'
     | '/sellers/'
+    | '/disputes/$kind/$caseId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/sign-in'
@@ -312,9 +354,13 @@ export interface FileRouteTypes {
     | '/vetting'
     | '/'
     | '/disputes/card'
+    | '/orders/$orderRef'
     | '/sellers/$sellerId'
+    | '/support/$ticketId'
     | '/trust/appeals'
+    | '/verification/$applicationId'
     | '/sellers'
+    | '/disputes/$kind/$caseId'
   id:
     | '__root__'
     | '/_console'
@@ -341,9 +387,13 @@ export interface FileRouteTypes {
     | '/_console/vetting'
     | '/_console/'
     | '/_console/disputes_/card'
+    | '/_console/orders_/$orderRef'
     | '/_console/sellers/$sellerId'
+    | '/_console/support_/$ticketId'
     | '/_console/trust_/appeals'
+    | '/_console/verification_/$applicationId'
     | '/_console/sellers/'
+    | '/_console/disputes_/$kind/$caseId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -521,6 +571,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleDisputesCardRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/orders_/$orderRef': {
+      id: '/_console/orders_/$orderRef'
+      path: '/orders/$orderRef'
+      fullPath: '/orders/$orderRef'
+      preLoaderRoute: typeof ConsoleOrdersOrderRefRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
     '/_console/sellers/': {
       id: '/_console/sellers/'
       path: '/sellers'
@@ -535,11 +592,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleSellersSellerIdRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/support_/$ticketId': {
+      id: '/_console/support_/$ticketId'
+      path: '/support/$ticketId'
+      fullPath: '/support/$ticketId'
+      preLoaderRoute: typeof ConsoleSupportTicketIdRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
     '/_console/trust_/appeals': {
       id: '/_console/trust_/appeals'
       path: '/trust/appeals'
       fullPath: '/trust/appeals'
       preLoaderRoute: typeof ConsoleTrustAppealsRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/verification_/$applicationId': {
+      id: '/_console/verification_/$applicationId'
+      path: '/verification/$applicationId'
+      fullPath: '/verification/$applicationId'
+      preLoaderRoute: typeof ConsoleVerificationApplicationIdRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/disputes_/$kind/$caseId': {
+      id: '/_console/disputes_/$kind/$caseId'
+      path: '/disputes/$kind/$caseId'
+      fullPath: '/disputes/$kind/$caseId'
+      preLoaderRoute: typeof ConsoleDisputesKindCaseIdRouteImport
       parentRoute: typeof ConsoleRoute
     }
   }
@@ -568,9 +646,13 @@ interface ConsoleRouteChildren {
   ConsoleVettingRoute: typeof ConsoleVettingRoute
   ConsoleIndexRoute: typeof ConsoleIndexRoute
   ConsoleDisputesCardRoute: typeof ConsoleDisputesCardRoute
+  ConsoleOrdersOrderRefRoute: typeof ConsoleOrdersOrderRefRoute
   ConsoleSellersSellerIdRoute: typeof ConsoleSellersSellerIdRoute
+  ConsoleSupportTicketIdRoute: typeof ConsoleSupportTicketIdRoute
   ConsoleTrustAppealsRoute: typeof ConsoleTrustAppealsRoute
+  ConsoleVerificationApplicationIdRoute: typeof ConsoleVerificationApplicationIdRoute
   ConsoleSellersIndexRoute: typeof ConsoleSellersIndexRoute
+  ConsoleDisputesKindCaseIdRoute: typeof ConsoleDisputesKindCaseIdRoute
 }
 
 const ConsoleRouteChildren: ConsoleRouteChildren = {
@@ -596,9 +678,13 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleVettingRoute: ConsoleVettingRoute,
   ConsoleIndexRoute: ConsoleIndexRoute,
   ConsoleDisputesCardRoute: ConsoleDisputesCardRoute,
+  ConsoleOrdersOrderRefRoute: ConsoleOrdersOrderRefRoute,
   ConsoleSellersSellerIdRoute: ConsoleSellersSellerIdRoute,
+  ConsoleSupportTicketIdRoute: ConsoleSupportTicketIdRoute,
   ConsoleTrustAppealsRoute: ConsoleTrustAppealsRoute,
+  ConsoleVerificationApplicationIdRoute: ConsoleVerificationApplicationIdRoute,
   ConsoleSellersIndexRoute: ConsoleSellersIndexRoute,
+  ConsoleDisputesKindCaseIdRoute: ConsoleDisputesKindCaseIdRoute,
 }
 
 const ConsoleRouteWithChildren =

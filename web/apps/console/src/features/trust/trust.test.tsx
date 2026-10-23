@@ -52,21 +52,23 @@ describe('trust & safety (S-93, design 03 trust)', () => {
     expect(screen.getByRole('heading', { name: 'Open flags · 2' })).toBeTruthy();
     const f1 = screen.getByText('Kensington Garage on Wheels').closest('li') as HTMLElement;
     expect(within(f1).getByText(/Off-platform payment mention/)).toBeTruthy();
-    expect(within(f1).getByRole('button', { name: 'Warn' })).toBeTruthy();
-    expect(within(screen.getByText('Handy Hal').closest('li') as HTMLElement).getByRole('button', { name: 'Reject listing' })).toBeTruthy();
-    expect(within(screen.getByText('Bow River Mechanics').closest('li') as HTMLElement).getByText('Dismissed')).toBeTruthy();
+    expect(within(f1).getByRole('button', { name: /^Warn/ })).toBeTruthy();
+    expect(within(screen.getByText('Handy Hal').closest('li') as HTMLElement).getByRole('button', { name: /^Reject listing/ })).toBeTruthy();
+    expect(within(f1).getByText('Open').className).toContain('nl-status-warning');
+    await user().click(screen.getByRole('tab', { name: /^Done/ }));
+    expect(within((await screen.findByText('Bow River Mechanics')).closest('li') as HTMLElement).getByText('Dismissed')).toBeTruthy();
   });
 
   it('acts on flags with the role header', async () => {
     const calls = api(['trust_safety']);
     renderConsole('/trust');
     const f1 = (await screen.findByText('Kensington Garage on Wheels')).closest('li') as HTMLElement;
-    await user().click(within(f1).getByRole('button', { name: 'Warn' }));
+    await user().click(within(f1).getByRole('button', { name: /^Warn/ }));
     await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/api/v1/console/trust/flags/F1/action'))).toBe(true));
     const post = calls.find(c => c.method === 'POST')!;
     expect(post.body).toEqual({ action: 'warn' });
     expect(post.headers['X-Console-Role']).toBe('trust_safety');
-    await user().click(within(screen.getByText('Handy Hal').closest('li') as HTMLElement).getByRole('button', { name: 'Dismiss' }));
+    await user().click(within(screen.getByText('Handy Hal').closest('li') as HTMLElement).getByRole('button', { name: /^Dismiss/ }));
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/flags/F2/decision') && (c.body as { decision: string }).decision === 'dismissed')).toBe(true));
   });
 
@@ -77,7 +79,7 @@ describe('trust & safety (S-93, design 03 trust)', () => {
     renderConsole('/trust');
     const f9 = (await screen.findByText('Sample Wrench')).closest('li') as HTMLElement;
     expect(within(f9).getByText(/Review with masked words/)).toBeTruthy();
-    await user().click(within(f9).getByRole('button', { name: 'Hide review' }));
+    await user().click(within(f9).getByRole('button', { name: /^Hide review/ }));
     await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url.endsWith('/flags/F9/action'))?.body).toEqual({ action: 'hide_review' }));
   });
 

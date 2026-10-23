@@ -4,8 +4,10 @@ import { defineMessages } from '@northline/ui';
 export const useShellT = defineMessages({
   en: {
     console: 'Console',
-    searchPlaceholder: 'Search sellers, orders, customers, cases…',
+    searchPlaceholder: 'Search sellers, orders, people',
     searchLabel: 'Search the console',
+    scope_sellers: 'Sellers and providers matching “{q}”', scope_orders: 'Orders and bookings with reference “{q}”',
+    scopeLabel: 'Change the market', everyMarket: 'every market', launch_pilot: 'pilot', launch_waitlist: 'waitlist',
     ops: 'Ops',
     pilotIn: '{codes} pilot',
     accountMenu: 'Account menu',
@@ -49,8 +51,10 @@ export const useShellT = defineMessages({
   },
   fr: {
     console: 'Console',
-    searchPlaceholder: 'Rechercher vendeurs, commandes, clients, dossiers…',
+    searchPlaceholder: 'Rechercher commerces, commandes, personnes',
     searchLabel: 'Rechercher dans la console',
+    scope_sellers: 'Commerces et prestataires correspondant à « {q} »', scope_orders: 'Commandes et réservations de référence « {q} »',
+    scopeLabel: 'Changer de marché', everyMarket: 'tous les marchés', launch_pilot: 'pilote', launch_waitlist: 'liste d’attente',
     ops: 'Opérations',
     pilotIn: '{codes} pilote',
     accountMenu: 'Menu du compte',

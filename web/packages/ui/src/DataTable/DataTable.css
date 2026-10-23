@@ -205,6 +205,22 @@ table.nl-dt-table td { vertical-align: middle; overflow-wrap: break-word; } /* o
 .nl-dt-thumb-lg { width: 56px; height: 56px; }
 .nl-dt-thumb-empty { display: grid; place-items: center; font-family: var(--font-sans); font-weight: var(--weight-semibold); font-size: var(--text-lg); color: var(--color-text-muted); }
 
+/* ── S-177: views, quick filters, dense rows (the console's queues; design/revamp/a.html screen 9) ── */
+/* the views row (UnderlineTabs with counts) sits on the table's hairline, above the toolbar */
+.nl-dt-views { min-width: 0; }
+.nl-dt-toolbar > .seg { flex: none; }
+/* dense: 13 px type, the cells' padding halved, the checkbox cell flush — rows about 46 px with a 44 px checkbox target */
+.nl-dt-dense table.nl-dt-table td { padding-top: var(--space-1); padding-bottom: var(--space-1); line-height: var(--leading-tight); }
+.nl-dt-dense table.nl-dt-table th { padding-top: var(--space-1-5); padding-bottom: var(--space-1-5); color: var(--color-text); }
+.nl-dt-dense .nl-dt-table .nl-dt-check-cell { padding-top: 0; padding-bottom: 0; }
+.nl-dt-dense .nl-dt-sub { margin-top: 2px; }
+.nl-dt-dense .nl-dt-card { padding: var(--space-2-5) var(--space-3); gap: var(--space-2); }
+.nl-status.nl-dt-tag-wrap { white-space: normal; max-width: 100%; }
+/* S-177: the toolbar with quick filters — Columns and Report as 44 px icon buttons (named for screen readers), the
+   search a little narrower, so the views, the search and the filters hold on one line at 1280 */
+.nl-dt-tool-icon { min-width: var(--size-touch); padding-inline: 0; justify-content: center; }
+.nl-dt-toolbar:has(> .seg) .nl-dt-search { flex-basis: 180px; max-width: 280px; }
+
 /* ── S-175: status tabs, quick filters, emphasised row actions, compact phone cards (design/revamp/a.html § 8) ── */
 .nl-dt > .nl-utabs { margin-bottom: var(--space-1); }
 .nl-dt-quick { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }

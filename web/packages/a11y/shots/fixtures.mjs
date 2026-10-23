@@ -648,6 +648,9 @@ export const SHOTS = {
         row('m9', 'Sable & Soda', cat('c9', 'Events & bar'), 'provider', 'trusted', 82, 2140000, 0.012, [], 'paused')];
       return { body: rebase(b) };
     },
+    // S-177: an order's page asks for its cancellations and returns (none on the demo orders)
+    (m, p) => (m === 'GET' && /^\/api\/v1\/console\/orders\/[^/]+\/after-sale$/.test(p.split('?')[0])
+      ? { body: { orderId: p.split('/')[5], state: 'picked_up', cancellations: [], deliveryFailure: null, returns: [] } } : undefined),
     // tonight's runs: the stuck one is 14 minutes past its next stop's ETA (the recording had it at the minute)
     (m, p) => {
       if (m !== 'GET' || p.split('?')[0] !== '/api/v1/console/fulfilment/runs') return undefined;

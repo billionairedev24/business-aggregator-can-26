@@ -21,7 +21,7 @@ export function GoNoGo() {
       <span className="nl-q-kicker">{t('rKicker')}</span>
       <h1 className="nl-q-title">{r.verdict === 'go' ? t('go') : t('noGo')}</h1>
       <p className="nl-q-lede">{t('rLede', { date: date(r.generatedAt, 'dateTime') })}</p>
-      {r.reasons.length ? <Alert tone="highlight" role="status"><ul className="nl-q-list">{r.reasons.map(x => <li key={`${x.code}-${x.persona ?? ''}`}>{x.text}</li>)}</ul></Alert> : null}
+      {r.reasons.length ? <Alert tone="info" role="status"><ul className="nl-q-list">{r.reasons.map(x => <li key={`${x.code}-${x.persona ?? ''}`}>{x.text}</li>)}</ul></Alert> : null}
       <div className="nl-q-actions nl-q-gap"><a className="btn btn-secondary" href={REPORT_CSV} download>{t('reportCsv')}</a></div>
       <KpiRow>
         <Kpi value={r.blockingOpen} label={t('kpiOpen')} />
@@ -34,7 +34,7 @@ export function GoNoGo() {
           {r.blockingItems.length === 0 ? <p className="nl-q-note">{t('noBlocking')}</p> : (
             <ul className="nl-q-list">
               {r.blockingItems.map(b => <li key={b.id}>
-                <strong>{b.reference}</strong> <Tag tone="accent-2">{t(`s_${b.state}` as UatKey)}</Tag> · {t(`p_${b.persona}` as UatKey)} · {b.summary}
+                <strong>{b.reference}</strong> <Tag tone="danger">{t(`s_${b.state}` as UatKey)}</Tag> · {t(`p_${b.persona}` as UatKey)} · {b.summary}
                 <div className="nl-q-note">{b.ownerName ?? t('unassigned')} · {t('reports', { n: b.reports })}{b.trackerUrl ? <> · <a href={b.trackerUrl} target="_blank" rel="noreferrer noopener">{t('openTracker')}</a></> : null}</div>
               </li>)}
             </ul>
@@ -44,7 +44,7 @@ export function GoNoGo() {
           <h2 className="nl-q-h2">{t('coverageTitle')}</h2>
           <ul className="nl-q-list">
             {r.coverage.map(c => <li key={c.persona}>
-              <strong>{t(`p_${c.persona}`)}</strong> <Tag tone={c.complete ? 'accent' : 'highlight'}>{c.complete ? t('complete') : t('incomplete')}</Tag>
+              <strong>{t(`p_${c.persona}`)}</strong> <Tag tone={c.complete ? 'success' : 'warning'}>{c.complete ? t('complete') : t('incomplete')}</Tag>
               <div className="nl-q-note">{c.scriptTitle} v{c.scriptVersion} · {t('coverageLine', { signed: c.signedOff + c.withComments, total: c.participants, comments: c.withComments, blocked: c.blocked, pending: c.pending })}</div>
             </li>)}
           </ul>

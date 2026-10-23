@@ -4,6 +4,13 @@ import { defineMessages } from '@northline/ui';
 export const useDisputesT = defineMessages({
   en: {
     cardLink: 'Card disputes',
+    openedAgo: '{age} ago',
+    sub2: '{scope} · {n, plural, one {# case} other {# cases}} for an agent · decided within 2 business days',
+    views: 'Cases by state', v_agent: 'For an agent', v_cosign: 'Waiting for a co-sign', v_decided: 'Decided', v_all: 'All',
+    kindFilter: 'Kind', kd_all: 'All', kd_dispute: 'Disputes', kd_refund: 'Refund cases',
+    back: '← All cases', f_kind: 'Kind', f_parties: 'Customer → seller', f_amount: 'In escrow', f_opened: 'Opened', f_business: 'Seller',
+    kind_dispute: 'Dispute', kind_refund: 'Refund case', tabsRecord: 'Case record', tabHistory: 'History', notFound: 'This case doesn’t exist.', detailError: "This case couldn't load. Try again.",
+    h_opened: 'Case opened', h_decided: 'Decided by an agent: {outcome} · {amount}', h_pending: 'Decision waiting for a co-sign: {outcome} · {amount}', h_cosigned: 'Co-signed',
     title: 'Disputes & refunds',
     kpis: 'The desk at a glance', k_agent: 'For an agent', k_window: 'In the seller’s 24 h', k_closed: 'Closed this week',
     entity: 'case', plural: 'cases', open: 'Open',
@@ -40,6 +47,13 @@ export const useDisputesT = defineMessages({
   },
   fr: {
     cardLink: 'Contestations de carte',
+    openedAgo: 'il y a {age}',
+    sub2: '{scope} · {n, plural, one {# dossier} other {# dossiers}} pour un agent · tranchés en 2 jours ouvrables',
+    views: 'Dossiers par état', v_agent: 'Pour un agent', v_cosign: 'En attente d’une cosignature', v_decided: 'Tranchés', v_all: 'Tous',
+    kindFilter: 'Genre', kd_all: 'Tous', kd_dispute: 'Litiges', kd_refund: 'Remboursements',
+    back: '← Tous les dossiers', f_kind: 'Genre', f_parties: 'Client → vendeur', f_amount: 'En fiducie', f_opened: 'Ouvert', f_business: 'Vendeur',
+    kind_dispute: 'Litige', kind_refund: 'Demande de remboursement', tabsRecord: 'Dossier', tabHistory: 'Historique', notFound: 'Ce dossier n’existe pas.', detailError: 'Ce dossier n’a pas pu être chargé. Réessayez.',
+    h_opened: 'Dossier ouvert', h_decided: 'Tranché par un agent : {outcome} · {amount}', h_pending: 'Décision en attente d’une cosignature : {outcome} · {amount}', h_cosigned: 'Cosigné',
     title: 'Litiges et remboursements',
     kpis: 'Le bureau en bref', k_agent: 'Pour un agent', k_window: 'Dans les 24 h du vendeur', k_closed: 'Fermés cette semaine',
     entity: 'dossier', plural: 'dossiers', open: 'Ouvrir',
@@ -76,3 +90,4 @@ export const useDisputesT = defineMessages({
   },
 });
 export type DisputesT = ReturnType<typeof useDisputesT>;
+export type DisputesKey = Parameters<DisputesT>[0];

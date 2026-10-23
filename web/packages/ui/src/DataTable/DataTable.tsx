@@ -155,6 +155,8 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   const [busy, setBusy] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [toast, flash] = useToast();
+  // S-177: with quick filters in the toolbar, Columns and Report are icon buttons (named) so the row holds on one line
+  const compactTools = !!props.filters;
   const [boxRef, width] = useContainerWidth<HTMLDivElement>();
   const [tableRef, squeeze] = useOverflowSqueeze<HTMLTableElement>(width);
   const uid = useId();
@@ -342,7 +344,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   const shown = layout.shown;
   const firstTag = cols.find((c) => (c.type === 'tag' || c.status) && !c.primary && !hiddenMap[c.key]);
   const tagOf = (c: NormalizedColumn<T>, r: T, wrap?: boolean) =>
-    c.status ? <StatusTag tone={c.status(r)}>{cellText(c, r, locale)}</StatusTag> : <span className={clsx('tag', toneOf(c, r), wrap && 'nl-dt-tag-wrap')}>{cellText(c, r, locale)}</span>;
+    c.status ? <StatusTag tone={c.status(r)}>{cellText(c, r, locale)}</StatusTag> : <span className={clsx(tagClass(toneOf(c, r)), wrap && 'nl-dt-tag-wrap')}>{cellText(c, r, locale)}</span>;
 
   const sortState = (key: string) => {
     const i = sorting.findIndex((s) => s.id === key);
@@ -389,7 +391,8 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   const showBody = !loading && !error;
 
   return (
-    <div ref={boxRef} className={clsx('nl-dt', props.className)}>
+    <div ref={boxRef} className={clsx('nl-dt', props.dense && 'nl-dt-dense', props.className)}>
+      {props.tabs ? <div className="nl-dt-views">{props.tabs}</div> : null}
       {views && views.length > 0 && (
         <UnderlineTabs
           aria-label={tableLabel}
@@ -414,6 +417,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
             aria-controls={`${uid}-body`}
           />
         </label>
+        {props.filters}
         {props.quickFilters?.length ? (
           <div className="nl-dt-quick" role="group" aria-label={t('quickFilters')}>
             {props.quickFilters.map((f) => (quick.includes(f.id)
@@ -430,7 +434,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
           onClick={() => setPanel((p) => (p === 'filters' ? null : 'filters'))}
         >
           <Funnel size={17} aria-hidden="true" />
-          {t('filters')}
+          {props.filters ? t('moreFilters') : t('filters')}
           {chips.length > 0 && (
             <span className="tag tag-accent nl-dt-count">
               <span aria-hidden="true">{chips.length}</span>
@@ -441,18 +445,19 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
         <button
           ref={colsBtn}
           type="button"
-          className="btn btn-secondary"
+          className={clsx('btn btn-secondary', compactTools && 'nl-dt-tool-icon')}
+          title={compactTools ? t('columns') : undefined}
           aria-expanded={panel === 'cols'}
           aria-controls={`${uid}-cols`}
           onClick={() => setPanel((p) => (p === 'cols' ? null : 'cols'))}
         >
           <Columns size={17} aria-hidden="true" />
-          {t('columns')}
+          {compactTools ? <span className="nl-dt-sr">{t('columns')}</span> : t('columns')}
         </button>
         {canExport && (
-          <button type="button" className="btn btn-secondary" onClick={() => openReport(selCount ? 'selected' : 'filtered')} disabled={!showBody || !hasData}>
+          <button type="button" className={clsx('btn btn-secondary', compactTools && 'nl-dt-tool-icon')} title={compactTools ? t('report') : undefined} onClick={() => openReport(selCount ? 'selected' : 'filtered')} disabled={!showBody || !hasData}>
             <FileArrowDown size={17} aria-hidden="true" />
-            {t('report')}
+            {compactTools ? <span className="nl-dt-sr">{t('report')}</span> : t('report')}
           </button>
         )}
         {readOnly && (
@@ -579,7 +584,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
           )}
           <span className="nl-dt-spacer" />
           {canExport && (
-            <button type="button" className="btn btn-highlight nl-dt-bulk-btn" onClick={() => openReport('selected')}>
+            <button type="button" className="btn btn-secondary nl-dt-bulk-btn nl-dt-bulk-soft" onClick={() => openReport('selected')}>
               <FileArrowDown size={16} aria-hidden="true" />
               {t('generateReport')}
             </button>
@@ -589,14 +594,14 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
             .map((a) => {
               const I = a.icon ?? Lightning;
               return (
-                <button key={a.id} type="button" className={clsx('btn nl-dt-bulk-btn', a.danger ? 'nl-dt-bulk-danger' : a.emphasis === 'primary' ? 'btn-primary' : 'nl-dt-bulk-soft')} disabled={pendingAction === a.id} aria-busy={pendingAction === a.id || undefined} onClick={() => void runAction(a, selRows)}>
+                <button key={a.id} type="button" className={clsx('btn nl-dt-bulk-btn', a.danger ? 'btn-destructive nl-dt-bulk-danger' : a.emphasis === 'primary' ? 'btn-primary' : 'btn-secondary nl-dt-bulk-soft')} disabled={pendingAction === a.id} aria-busy={pendingAction === a.id || undefined} onClick={() => void runAction(a, selRows)}>
                   <I size={16} aria-hidden="true" />
                   {pendingAction === a.id ? t('working') : a.label}
                 </button>
               );
             })}
           {canDelete && (
-            <button type="button" className="btn nl-dt-bulk-btn nl-dt-bulk-danger" onClick={() => setDialog({ mode: 'delete', ids: selRows.map(getRowId) })}>
+            <button type="button" className="btn btn-destructive nl-dt-bulk-btn nl-dt-bulk-danger" onClick={() => setDialog({ mode: 'delete', ids: selRows.map(getRowId) })}>
               <Trash size={16} aria-hidden="true" />
               {t('delete')}
             </button>
@@ -963,6 +968,9 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
 }
 
 // ── pieces ──────────────────────────────────────────────────────────────────
+
+/** A tag cell's classes: a `status-*` tone is a StatusTag (`nl-status`, with its dot); the others a plain `tag`. */
+const tagClass = (tone: string) => (tone.startsWith('status-') ? clsx('nl-status', tone !== 'status-neutral' && `nl-${tone}`) : clsx('tag', tone));
 
 function FiltersPanel({ id, t, children, onEscape }: { id: string; t: DataTableT; children: ReactNode; onEscape: () => void }) {
   return (

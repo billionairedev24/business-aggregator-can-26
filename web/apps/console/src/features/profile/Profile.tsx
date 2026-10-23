@@ -94,12 +94,12 @@ function Factors({ security, sid }: { security: Security; sid: string | null }) 
           <li key={p.id}>
             <span>{t('passkey', { label: p.label })}</span>
             <span className="nl-tm-actions">
-              <Tag tone={i === 0 ? 'accent' : 'neutral'}>{i === 0 ? t('primary') : t('backup')}</Tag>
-              <Button variant="ghost" disabled={busy} onClick={() => void run(async () => { await removePasskey(p.id); })}>{t('removePasskey')}</Button>
+              <Tag tone={i === 0 ? 'info' : 'neutral'}>{i === 0 ? t('primary') : t('backup')}</Tag>
+              <Button variant="tertiary" disabled={busy} onClick={() => void run(async () => { await removePasskey(p.id); })}>{t('removePasskey')}</Button>
             </span>
           </li>
         ))}
-        <li><span>{t('authenticator')}</span><Tag tone={security.authenticator ? 'accent' : 'neutral'}>{security.authenticator ? t('on') : t('off')}</Tag></li>
+        <li><span>{t('authenticator')}</span><Tag tone={security.authenticator ? 'success' : 'neutral'}>{security.authenticator ? t('on') : t('off')}</Tag></li>
         <li><span>{t('backupCodes')}</span><span className="nl-tm-sub">{t('codesLeft', { n: security.backupCodesRemaining })}</span></li>
       </ul>
       <div className="nl-tm-actions">
@@ -109,7 +109,7 @@ function Factors({ security, sid }: { security: Security; sid: string | null }) 
           await addPasskey(credential, t('keyLabel'));
           return t('keyAdded');
         })}>{t('addPasskey')}</Button>
-        <Button variant="ghost" className="nl-pf-danger" disabled={busy} onClick={() => void run(async () => {
+        <Button variant="tertiary" className="nl-pf-danger" disabled={busy} onClick={() => void run(async () => {
           const r = await revokeOtherSessions(sid);
           return t('signedOutOthers', { n: r.revoked });
         })}>{t('signOutEverywhere')}</Button>
@@ -129,8 +129,8 @@ function Sessions({ security, sid }: { security: Security; sid: string | null })
         {security.sessions.map(s => (
           <li key={s.id}>
             <span><strong>{s.device ?? t('unknown')}</strong><span className="nl-tm-sub"> · {s.city ?? '—'} · {s.current ? t('now') : fmt.date(s.lastSeenAt ?? s.signedInAt, 'dateTime')}</span></span>
-            {s.current ? <Tag tone="accent">{t('thisDevice')}</Tag>
-              : <Button variant="ghost" disabled={busy} onClick={() => void run(async () => { await revokeSession(s.id, sid); })}>{t('signOut')}</Button>}
+            {s.current ? <Tag tone="info">{t('thisDevice')}</Tag>
+              : <Button variant="tertiary" disabled={busy} onClick={() => void run(async () => { await revokeSession(s.id, sid); })}>{t('signOut')}</Button>}
           </li>
         ))}
       </ul>

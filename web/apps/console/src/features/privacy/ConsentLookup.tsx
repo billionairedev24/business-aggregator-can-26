@@ -33,7 +33,7 @@ export function ConsentLookup() {
         : records.data.length === 0 ? <p>{t('empty')}</p> : (
           <>
             {can('privacy') ? grantedNow(records.data).map(g => (
-              <Button key={`${g.userId}|${g.category}`} type="button" variant="ghost" disabled={withdraw.isPending}
+              <Button key={`${g.userId}|${g.category}`} type="button" variant="tertiary" disabled={withdraw.isPending}
                 onClick={() => withdraw.mutate(g)}>{t('withdraw', { what: label(`cat_${g.category}`), account: g.userId })}</Button>
             )) : null}
             {withdraw.isSuccess ? <p role="status">{t('withdrawn')}</p> : null}

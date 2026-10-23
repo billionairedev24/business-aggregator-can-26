@@ -45,5 +45,5 @@
 .nl-rg-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
 .nl-rg-note { font-size: var(--text-xs); color: var(--color-text-muted); }
 .nl-rg-error { font-size: var(--text-xs); color: var(--color-danger); }
-.nl-rg-checklist { margin: 0; padding-left: 18px; }
+.nl-rg-checklist { margin: 0; padding-left: var(--space-4); }
 .nl-rg-checklist li[data-done='false'] { color: var(--color-danger); }

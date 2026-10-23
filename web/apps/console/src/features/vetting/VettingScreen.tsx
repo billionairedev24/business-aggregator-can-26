@@ -4,6 +4,7 @@ import type { PlaceFilter } from '../shell/PlaceFilters';
 import { AgeChecks } from './AgeChecks';
 import { LicenceQueue } from './LicenceQueue';
 import { ListingVetting } from './ListingVetting';
+import { usePlace } from '../shell/scope';
 import '../shell/queues.css';
 
 type View = 'listings' | 'licences' | 'age';
@@ -15,7 +16,7 @@ type View = 'listings' | 'licences' | 'age';
 export function VettingScreen() {
   const search = useSearch({ strict: false }) as PlaceFilter & { view?: View };
   const view = search.view ?? 'listings';
-  const filter = { province: search.province, market: search.market };
+  const filter = usePlace();
   return (
     <div className="bo-page">
       <ApplicationsHead tab={view} filter={filter} />

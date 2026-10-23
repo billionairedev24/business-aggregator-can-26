@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BoHeader, Button, ChartCard, DataTable, Drawer, ErrorState, Field, formatNumber, KpiStrip, PageSkeleton, TextArea, TextInput, useFormatters, useLocale, type DataTableColumn, type DataTableTone, type Locale } from '@northline/ui';
+import { BoHeader, Button, ChartCard, DataTable, Drawer, ErrorState, Field, formatNumber, KpiStrip, PageSkeleton, TextArea, TextInput, UnderlineTabs, useFormatters, useLocale, type DataTableColumn, type DataTableTone, type Locale } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { dayQuery, daysQuery, exportUrl, financeQuery, ledgerExportUrl, useReconcileTax, useResolveDay, useRunDay, type Day, type Finance, type Item } from './api';
@@ -10,7 +10,7 @@ import { PromoCodes } from './PromoCodes';
 import { LoyaltyFigures, LoyaltyRules } from './Loyalty';
 import './finance.css';
 
-const STATUS_TONE: Record<Day['status'], DataTableTone> = { matched: 'tag-accent', mismatch: 'tag-accent-2', resolved: 'tag-neutral' };
+const STATUS_TONE: Record<Day['status'], DataTableTone> = { matched: 'status-success', mismatch: 'status-danger', resolved: 'status-neutral' };
 const errText = (e: unknown) => (e instanceof ValidationError ? Object.values(e.byField())[0] : e instanceof ApiError ? e.message : undefined);
 /** A date in the platform zone, ISO (YYYY-MM-DD). */
 const isoDay = (at: number, zone: string) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(at));
@@ -50,12 +50,12 @@ function FinanceView({ data, days }: { data: Finance; days: Day[] }) {
     <div className="bo-page">
       <BoHeader title={t('heading')} sub={t('summary')} />
       <KpiStrip label={t('kpis')} items={[
-        { key: 'escrow', label: t('k_escrow', { n: data.escrowItems }), value: fmt.money(data.escrowHeldCents, { whole: true }) },
-        { key: 'payouts', label: t('k_payouts', { n: data.payoutsInFlightSellers }), value: fmt.money(data.payoutsInFlightCents, { whole: true }) },
-        { key: 'revenue', label: t('k_revenue'), value: fmt.money(data.revenueWeekCents, { whole: true }) },
-        { key: 'plus', label: t('k_plus'), value: data.mix.plusCents == null ? t('notRecorded') : fmt.money(data.mix.plusCents, { whole: true }),
+        { key: 'escrow', label: t('k_escrow', { n: data.escrowItems }), value: fmt.compactMoney(data.escrowHeldCents) },
+        { key: 'payouts', label: t('k_payouts', { n: data.payoutsInFlightSellers }), value: fmt.compactMoney(data.payoutsInFlightCents) },
+        { key: 'revenue', label: t('k_revenue'), value: fmt.compactMoney(data.revenueWeekCents) },
+        { key: 'plus', label: t('k_plus'), value: data.mix.plusCents == null ? t('notRecorded') : fmt.compactMoney(data.mix.plusCents),
           delta: data.loyalty ? t('k_plusHouseholds', { n: data.loyalty.plusMembers }) : undefined, trend: 'flat' },
-        { key: 'variance', label: latest ? t('k_variance') : t('k_varianceNone'), value: latest ? fmt.money(latest.varianceCents) : t('notRecorded'),
+        { key: 'variance', label: latest ? t('k_variance') : t('k_varianceNone'), value: latest ? fmt.price(latest.varianceCents) : t('notRecorded'),
           delta: latest ? (variance === 0 ? t('k_varianceOk', { day: dayLabel(latest.day, locale) }) : t('k_varianceOff', { day: dayLabel(latest.day, locale) })) : undefined,
           trend: variance == null ? 'flat' : variance === 0 ? 'up' : 'down' },
       ]} />
@@ -67,7 +67,7 @@ function FinanceView({ data, days }: { data: Finance; days: Day[] }) {
               <div key={m.key} className="nl-fi-bar">
                 <span>{t(m.key)}</span>
                 <div className="nl-fi-track"><div className="nl-fi-fill" data-pass={m.pass || undefined} style={{ width: `${(Math.abs(m.cents ?? 0) / max) * 100}%` }} /></div>
-                <strong>{m.cents == null ? t('notRecorded') : fmt.money(m.cents, { whole: true })}</strong>
+                <strong>{m.cents == null ? t('notRecorded') : fmt.price(m.cents)}</strong>
               </div>
             ))}
           </div>
@@ -101,7 +101,7 @@ function Tiers({ data }: { data: Finance }) {
     { key: 'tier', label: t('t_tier'), primary: true }, { key: 'sellers', label: t('t_sellers'), type: 'num' },
     { key: 'rate', label: t('t_rate') }, { key: 'share', label: t('t_share') },
   ];
-  return <DataTable<TierRow> entity={t('tierEntity')} plural={t('tierPlural')} columns={columns} rows={rows} pageSize={5}
+  return <DataTable<TierRow> dense entity={t('tierEntity')} plural={t('tierPlural')} columns={columns} rows={rows} pageSize={5}
     can={{ create: false, update: false, delete: false }} roleName={roleName} />;
 }
 
@@ -115,7 +115,9 @@ function Reconciliation({ days, zone }: { days: Day[]; zone: string }) {
   const yesterday = isoDay(Date.now() - 86_400_000, zone);
   const [day, setDay] = useState(yesterday);
   const [open, setOpen] = useState<string | null>(null);
-  const rows: DayRow[] = days.map(d => ({
+  const [view, setView] = useState<'all' | Day['status']>('all');
+  const count = (v: 'all' | Day['status']) => formatNumber(days.filter(d => v === 'all' || d.status === v).length, locale);
+  const rows: DayRow[] = days.filter(d => view === 'all' || d.status === view).map(d => ({
     id: d.day, date: dayLabel(d.day, locale), stripe: d.stripeCents, ledger: d.ledgerCents, variance: d.varianceCents,
     status: d.status === 'resolved' && d.resolvedNote ? t('s_resolvedNote', { note: d.resolvedNote }) : t(`s_${d.status}` as FinanceKey), src: d,
   }));
@@ -127,7 +129,9 @@ function Reconciliation({ days, zone }: { days: Day[]; zone: string }) {
   const to = days[0]?.day ?? yesterday;
   return (
     <>
-      <DataTable<DayRow> entity={t('dayEntity')} plural={t('dayPlural')} columns={columns} rows={rows} pageSize={10} emptyText={t('noDays')}
+      <DataTable<DayRow> dense entity={t('dayEntity')} plural={t('dayPlural')} columns={columns} rows={rows} pageSize={10} emptyText={t('noDays')}
+        tabs={<UnderlineTabs aria-label={t('reconViews')} value={view} onChange={setView}
+          options={(['all', 'mismatch', 'matched', 'resolved'] as const).map(v => ({ value: v, label: v === 'all' ? t('rv_all') : t(`s_${v}` as FinanceKey), count: count(v), tone: v === 'mismatch' && days.some(d => d.status === 'mismatch') ? 'danger' as const : undefined }))} />}
         rowTones={r => ({ status: STATUS_TONE[r.src.status] })} can={{ create: false, update: false, delete: false }} roleName={roleName}
         openLabel={t('open')} onOpen={r => setOpen(r.id)} reportName="reconciliation" />
       <div className="nl-fi-actions">
@@ -157,7 +161,7 @@ function DayDrawer({ day, onClose }: { day: string; onClose: () => void }) {
   const rerun = useRunDay();
   const [note, setNote] = useState('');
   const d = detail.data?.day;
-  const money = (c: number | null | undefined) => (c == null ? t('notRecorded') : fmt.money(c));
+  const money = (c: number | null | undefined) => (c == null ? t('notRecorded') : fmt.price(c));
   const rows: ItemRow[] = (detail.data?.items ?? []).map((i, n) => ({
     id: `${n}`, kind: t(`k_${i.kind}` as FinanceKey), status: t(`is_${i.status}` as FinanceKey), src: i,
     stripe: i.stripeId ? `${i.stripeId} · ${money(i.stripeCents)}` : t('notRecorded'),
@@ -173,8 +177,8 @@ function DayDrawer({ day, onClose }: { day: string; onClose: () => void }) {
         <>
           <p className="nl-fi-sub">{t('d_summary', { stripe: money(d.stripeCents), ledger: money(d.ledgerCents), variance: money(d.varianceCents), fees: money(d.feeCents) })}</p>
           <p className="nl-fi-sub">{t('d_items', { n: d.items, m: d.mismatches })}</p>
-          <DataTable<ItemRow> entity={t('k_charge')} columns={columns} rows={rows} pageSize={10} roleName={roleName}
-            rowTones={r => ({ status: r.src.status === 'matched' ? 'tag-accent' : 'tag-accent-2' })} can={{ create: false, update: false, delete: false }} />
+          <DataTable<ItemRow> dense entity={t('k_charge')} columns={columns} rows={rows} pageSize={10} roleName={roleName}
+            rowTones={r => ({ status: r.src.status === 'matched' ? 'status-success' : 'status-danger' })} can={{ create: false, update: false, delete: false }} />
           {d.status === 'resolved' && d.resolvedNote ? <p className="nl-fi-sub">{t('resolvedBy', { date: fmt.date(d.resolvedAt ?? d.computedAt), note: d.resolvedNote })}</p> : null}
           {can('payouts') ? (
             <div className="nl-fi-resolve">
@@ -211,8 +215,8 @@ function TaxBlock({ data }: { data: Finance }) {
   return (
     <>
       <dl className="nl-fi-tax">
-        <div><dt>{t('tax_fees', { quarter })}</dt><dd>{fmt.money(data.tax.platformFeeCents, { whole: true })}</dd></div>
-        <div><dt>{t('tax_goods', { quarter })}</dt><dd>{fmt.money(data.tax.facilitatorCents, { whole: true })}</dd></div>
+        <div><dt>{t('tax_fees', { quarter })}</dt><dd>{fmt.price(data.tax.platformFeeCents)}</dd></div>
+        <div><dt>{t('tax_goods', { quarter })}</dt><dd>{fmt.price(data.tax.facilitatorCents)}</dd></div>
         <div><dt>{t('tax_next')}</dt><dd>{filing}</dd></div>
       </dl>
       <div className="nl-fi-actions">
