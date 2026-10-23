@@ -19,51 +19,6 @@
 .nl-food-info p { font-size: var(--type-body); color: var(--color-text-muted); margin: 0; }
 .nl-food-info a { font-size: var(--type-body); display: inline-flex; min-height: var(--size-touch); align-items: center; }
 
-.nl-rest { padding-top: var(--space-6); }
-.nl-rest-crumbs { font-size: var(--text-sm); color: var(--color-text-muted); }
-.nl-rest-cover { position: relative; display: block; height: 200px; margin-top: var(--space-4); border-radius: var(--radius-lg); overflow: hidden; }
-.nl-rest-banner { margin-top: var(--space-5); display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
-.nl-rest-banner h1 { font-size: var(--text-4xl); margin: 0; letter-spacing: var(--tracking-tight); }
-.nl-rest-banner p { font-size: var(--text-md); margin: var(--space-1) 0 0; color: var(--color-text-muted); }
-.nl-rest-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-.nl-rest-alert { margin-top: 14px; }
-.nl-rest-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 28px 64px; margin-top: 24px; align-items: start; }
-@media (min-width: 900px) { .nl-rest-layout { grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); } }
-.nl-rest-sections { display: flex; gap: var(--space-2); flex-wrap: wrap; position: sticky; top: var(--nl-header-h, 0px); background: var(--color-canvas); padding: var(--space-2) 0; z-index: 2; }
-.nl-rest-sections a { text-decoration: none; min-height: 32px; }
-.nl-rest h2 { font-size: var(--text-2xl); margin: var(--space-8) 0 var(--space-2); }
-.nl-rest-dish { display: grid; grid-template-columns: minmax(0, 1fr) 104px; gap: var(--space-4); padding: var(--space-4) 0; align-items: start; border-bottom: 1px solid var(--color-border); }
-.nl-rest-dish-head { display: flex; justify-content: space-between; gap: 12px; }
-.nl-rest-dish-head span { font-weight: 600; }
-.nl-rest-dish-desc { font-size: 13px; color: var(--color-text-muted); margin: 2px 0 0; line-height: 1.45; }
-.nl-rest-muted { font-size: 13px; color: var(--color-text-muted); margin: 6px 0 0; }
-.nl-rest-plus { width: 104px; height: 104px; border-radius: var(--radius-lg); border: 0; cursor: pointer; background: var(--color-surface-sunken); position: relative; overflow: hidden; padding: 0; }
-.nl-rest-plus > .nl-art, .nl-rest-plus > .nl-photo { position: absolute; inset: 0; }
-.nl-rest-plus-sign { position: absolute; right: var(--space-2); bottom: var(--space-2); width: 32px; height: 32px; border-radius: 50%; background: var(--color-surface); display: grid; place-items: center; font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--color-action-primary); box-shadow: var(--shadow-md); }
-.nl-rest-plus:disabled { cursor: not-allowed; opacity: .5; }
-.nl-rest-plus:focus-visible { outline: 2px solid var(--color-action-primary); outline-offset: 2px; }
-.nl-rest-editor { margin-top: var(--space-3); padding: var(--space-4); background: var(--color-surface-sunken); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: var(--space-3); }
-.nl-rest-group { border: 0; padding: 0; margin: 0; }
-.nl-rest-group legend { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 6px; padding: 0; }
-.nl-rest-rule { opacity: .7; }
-.nl-rest-options { display: flex; gap: 6px; flex-wrap: wrap; }
-.nl-rest-editor-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.nl-rest-stepper { display: flex; align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
-.nl-rest-stepper button { width: 44px; height: 44px; border: 0; background: transparent; font: inherit; font-size: 18px; color: var(--color-action-primary); cursor: pointer; }
-.nl-rest-stepper button:disabled { opacity: .4; cursor: not-allowed; }
-.nl-rest-stepper span { min-width: 20px; text-align: center; font-weight: 600; }
-.nl-rest-aside { position: sticky; top: calc(var(--nl-header-h, var(--size-header)) + var(--space-4)); padding: var(--space-6); background: var(--color-surface); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: var(--space-3); }
-.nl-rest-aside h2 { font-size: 22px; margin: 0; }
-.nl-rest-lines { list-style: none; margin: 0; padding: 0; }
-.nl-rest-lines li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; font-size: 14px; }
-.nl-rest-line-sub { display: block; font-size: 12px; color: var(--color-text-muted); }
-.nl-rest-line-end { display: flex; gap: 4px; align-items: center; white-space: nowrap; }
-.nl-rest-line-end button { border: 0; background: transparent; font: inherit; color: var(--color-text-muted); cursor: pointer; min-width: 44px; min-height: 44px; }
-.nl-rest-totals { margin: 0; border-top: 1px solid var(--color-border); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
-.nl-rest-totals div { display: flex; justify-content: space-between; }
-.nl-rest-totals dt, .nl-rest-totals dd { margin: 0; }
-.nl-rest-total { font-weight: 600; font-size: 18px; padding-top: 6px; }
-.nl-rest-aside .btn { min-height: 48px; }
 
 .nl-fco { padding-top: var(--space-8); display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--space-8) var(--space-12); align-items: start; }
 @media (min-width: 900px) { .nl-fco { grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr); } }
@@ -90,8 +45,6 @@
 .nl-track-map { aspect-ratio: 4 / 3; position: relative; border-radius: var(--radius-lg); background-color: var(--color-surface-sunken); background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 44px 44px; box-shadow: inset 0 0 0 1px var(--color-border-card); overflow: hidden; }
 .nl-track-map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .nl-track-caption { position: absolute; left: 16px; bottom: 16px; background: var(--color-surface); padding: 8px 12px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-size: 13px; }
-/* S-143: breadcrumb links get a 44 px target without moving the line */
-.nl-rest-crumbs a { display: inline-block; min-width: 44px; padding-block: 14px; margin-block: -14px; text-align: center; }
 /* mobile gaps part 2: promo code, points, tip (features/promotions) */
 .nl-promo { display: grid; gap: 10px; }
 .nl-promo-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
@@ -100,16 +53,11 @@
 .nl-promo-note { margin: 0; font-size: 13px; color: var(--color-text-muted); }
 
 @media (max-width: 599.98px) {
-  .nl-food-title, .nl-rest-banner h1, .nl-track h1 { font-size: var(--text-3xl); }
+  .nl-food-title, .nl-track h1 { font-size: var(--text-3xl); }
   .nl-food-chips { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; margin-inline: calc(-1 * var(--page-gutter)); padding-inline: var(--page-gutter); }
   .nl-food-chips .nl-chip { flex: none; }
   .nl-food-info { padding: var(--space-5); }
-  .nl-rest-cover { height: 140px; }
-  .nl-rest-dish { grid-template-columns: minmax(0, 1fr) 88px; }
-  .nl-rest-plus { width: 88px; height: 88px; }
 }
-/* a dish's picture is small: the main pictogram only, the "+" in the corner */
-.nl-rest-plus .nl-art-badge, .nl-rest-plus .nl-art-side { display: none; }
 .nl-fco-empty .nl-empty { margin-top: var(--space-5); }
 /* S-159: group food orders */
 .nl-grp { display: grid; gap: var(--space-4); max-width: 760px; }
@@ -127,4 +75,3 @@
 .nl-grp-actions .nl-fco-chips { flex-basis: 100%; }
 .nl-grp-code { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
 .nl-grp-start { display: grid; gap: var(--space-3); }
-.nl-rest-group-bar { display: grid; gap: 8px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface-sunken); }

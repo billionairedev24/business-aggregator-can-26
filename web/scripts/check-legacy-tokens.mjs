@@ -72,9 +72,15 @@ const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'app
   'apps/consumer/src/features/services/services.css', 'apps/consumer/src/features/services/ServicesLanding.tsx', 'apps/consumer/src/features/services/ServiceCategory.tsx',
   'apps/consumer/src/features/food/FoodScreen.tsx',
   // S-174: the Studio dashboard and the storefront's live preview (audit #7 and #10)
-  'apps/studio/src/features/dashboard', 'apps/studio/src/features/storefront/StorefrontPreview.tsx', 'apps/studio/src/features/storefront/StorefrontPreview.css'];
+  'apps/studio/src/features/dashboard', 'apps/studio/src/features/storefront/StorefrontPreview.tsx', 'apps/studio/src/features/storefront/StorefrontPreview.css',
+  // S-172: the consumer detail pages (product, store, provider and its booking, the kitchen's menu, the quote flow)
+  'apps/consumer/src/features/product', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking', 'apps/consumer/src/features/quotes',
+  'apps/consumer/src/features/food/RestaurantScreen.tsx', 'apps/consumer/src/features/food/restaurant.css'];
 // S-174: no inline `style` at all in these (a class with the scale tokens instead; the Studio dashboard had a dozen)
-const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard'];
+const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard',
+  // S-172: the consumer detail pages
+  'apps/consumer/src/features/product', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking', 'apps/consumer/src/features/quotes',
+  'apps/consumer/src/features/shop/StorePage.tsx', 'apps/consumer/src/features/food/RestaurantScreen.tsx'];
 // (the server-rendered error page and the printable report are standalone documents with their own fallbacks)
 const strictSkip = [...skip, /\.stories\.tsx$/, /\.fixtures\.ts$/, /\.mdx$/, /(^|\/)server\//, /DataTable\/report\.ts$/];
 const PX = /(-?\d*\.?\d+)px/g;

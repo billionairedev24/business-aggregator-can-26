@@ -25,6 +25,7 @@ export const useFoodT = defineMessages({
     // restaurant
     home: 'Home', breadcrumb: 'Breadcrumb', ahs: 'Food permit verified', minOrder: 'Min order {amount}',
     sections: 'Menu sections', combos: 'Combos', combosSave: 'from {price} · save {save}',
+    itemsInOrder: '{count, plural, one {# item} other {# items}} in your order', viewOrder: 'View your order',
     add: 'Add {name}', addLine: 'Add · {total}', cancel: 'Cancel', soldOut: 'Sold out', notNow: 'Not available now',
     rule_exactly: 'pick {count}', rule_at_least: 'at least {count}', rule_up_to: 'up to {count}', required: 'required', optional: 'optional',
     pickExactly: 'Pick {count} for {group}.', pickAtLeast: 'Pick at least {count} for {group}.', pickUpTo: 'Pick up to {count} for {group}.',
@@ -87,6 +88,7 @@ export const useFoodT = defineMessages({
     points: 'Points et Plus', pointsText: '1 pt par 1 $ · Les membres Plus n’ont aucuns frais de service et gagnent 2× les points. Les frais de livraison restent — un vrai livreur s’est déplacé.',
     home: 'Accueil', breadcrumb: 'Fil d’Ariane', ahs: 'Permis alimentaire vérifié', minOrder: 'Commande min. {amount}',
     sections: 'Sections du menu', combos: 'Combos', combosSave: 'dès {price} · économisez {save}',
+    itemsInOrder: '{count, plural, one {# article} other {# articles}} dans votre commande', viewOrder: 'Voir votre commande',
     add: 'Ajouter {name}', addLine: 'Ajouter · {total}', cancel: 'Annuler', soldOut: 'Épuisé', notNow: 'Non offert en ce moment',
     rule_exactly: 'choisir {count}', rule_at_least: 'au moins {count}', rule_up_to: 'jusqu’à {count}', required: 'obligatoire', optional: 'facultatif',
     pickExactly: 'Choisissez {count} pour {group}.', pickAtLeast: 'Choisissez au moins {count} pour {group}.', pickUpTo: 'Choisissez jusqu’à {count} pour {group}.',

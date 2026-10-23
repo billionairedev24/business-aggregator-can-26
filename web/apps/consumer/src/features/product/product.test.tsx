@@ -81,33 +81,52 @@ describe('Product detail (redesign § 1.3 PDP)', () => {
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(within(crumbs).getByRole('link', { name: 'Shop' })).toHaveAttribute('href', '/shop');
     expect(within(crumbs).getByRole('link', { name: 'Bakery' })).toHaveAttribute('href', '/shop/bakery');
-    expect(screen.getByRole('link', { name: 'Visit the Glenmore Bakery store' })).toHaveAttribute('href', '/search?scope=shop&q=Glenmore%20Bakery');
-    expect(screen.getByRole('img', { name: '4.8 out of 5 stars' })).toBeInTheDocument();
+    expect(within(crumbs).getByRole('link', { name: 'Glenmore Bakery' })).toHaveAttribute('href', '/shop/stores/M1?dept=bakery');
+    expect(screen.getByRole('link', { name: 'Visit Glenmore Bakery' })).toHaveAttribute('href', '/shop/stores/M1?dept=bakery');
+    expect(screen.getAllByRole('img', { name: '4.8 out of 5 stars' }).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Master/)).toBeNull(); // § 3.13: stars and reviews, not tier tags
     expect(screen.getByText('On tonight’s run')).toBeInTheDocument();
-    expect(screen.getAllByText('$7.50')).toHaveLength(2); // the info column and the buy box
+    expect(screen.getAllByText('$7.50')).toHaveLength(3); // the info column, the buy box and the phone's sticky bar
+    expect(screen.getAllByText('$0.83/100 g').length).toBeGreaterThan(0); // the unit price from "900 g loaf"
     const buy = screen.getByRole('complementary', { name: 'Buy' });
     expect(within(buy).getByText('In stock')).toBeInTheDocument();
+    expect(within(buy).getByText('Delivery tonight, 6–9 p.m.')).toBeInTheDocument();
+    expect(within(buy).getByText('Pooled run · $2.99 · or tomorrow, 8–11 a.m.')).toBeInTheDocument();
+    expect(within(buy).getByText('Direct courier in 45 min · $9.99')).toBeInTheDocument();
     expect(within(buy).getByRole('button', { name: 'Add to cart' })).toBeEnabled();
     expect(within(buy).getByRole('button', { name: 'Buy now' })).toBeEnabled();
     expect(within(buy).getByText('Held until you confirm delivery')).toBeInTheDocument();
-    expect(screen.getAllByText('Final sale', { selector: 'dd' })).toHaveLength(2);
-    expect(screen.getByText('900 g loaf · GST included at checkout')).toBeInTheDocument();
+    expect(within(buy).getByText('Final sale')).toBeInTheDocument();
+    const specs = screen.getByRole('table', { name: 'Product details' });
+    expect(within(specs).getByRole('rowheader', { name: 'Size' })).toBeInTheDocument();
+    expect(within(specs).getByRole('cell', { name: '900 g loaf' })).toBeInTheDocument();
+    expect(within(specs).getByRole('cell', { name: 'Final sale' })).toBeInTheDocument();
+    expect(screen.getByText('900 g loaf · GST, if any, added at checkout')).toBeInTheDocument();
     expect(screen.getByText(/36-hour ferment/)).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Options' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Whole' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Half' })).toBeDisabled();
-    expect(screen.getByText(/Order by 5:20 p\.m\. for tonight 6–9 p\.m\. pooled \(\$2\.99\), tomorrow 8–11 a\.m\., or direct courier in 45 min\. Glenmore Bakery packs at 5:45 p\.m\.; the shop is paid only after you confirm delivery\./)).toBeInTheDocument();
-    const more = screen.getByRole('region', { name: 'Also from Glenmore Bakery' });
-    expect(within(more).getByRole('link', { name: 'Rye · $8.00' })).toHaveAttribute('href', '/products/P2');
+    const size = screen.getByRole('radiogroup', { name: 'Size' });
+    expect(within(size).getByRole('radio', { name: 'Whole · $7.50' })).toBeChecked();
+    expect(within(size).getByRole('radio', { name: 'Half · sold out' })).toBeInTheDocument();
+    const more = screen.getByRole('region', { name: 'More from Glenmore Bakery' });
+    expect(within(more).getByRole('link', { name: 'Rye' })).toHaveAttribute('href', '/products/P2');
+    expect(screen.getByRole('region', { name: 'Customer reviews' })).toHaveTextContent('4.8 out of 5 · 211 ratings of Glenmore Bakery');
+  });
+
+  it('counts down to the run’s order-by time in the buy box (E-15: "Order within 2 h 48 min")', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T20:32:00Z'));
+    try {
+      open('/products/P1');
+      const buy = await screen.findByRole('complementary', { name: 'Buy' });
+      expect(await within(buy).findByText('Order within 2 h 48 min')).toBeInTheDocument();
+    } finally { vi.useRealTimers(); }
   });
 
   it('adds the chosen option and quantity to the cart', async () => {
     const { calls } = open('/products/P1');
     const user = userEvent.setup({ delay: null });
-    await user.click(await screen.findByRole('button', { name: 'Sliced' }));
+    await user.click(await screen.findByRole('radio', { name: 'Sliced · $7.50' }));
     await user.click(screen.getByRole('button', { name: 'One more Country sourdough' }));
-    await user.click(screen.getByRole('button', { name: 'Add to cart' }));
+    await user.click(within(screen.getByRole('complementary', { name: 'Buy' })).getByRole('button', { name: 'Add to cart' }));
     expect(await screen.findByRole('heading', { name: 'Cart page' })).toBeInTheDocument();
     expect(calls.find(c => c.url === '/api/v1/cart/items')?.body).toEqual({ offerId: 'O1', variantId: 'V2', qty: 2 });
   });
@@ -124,7 +143,7 @@ describe('Product detail (redesign § 1.3 PDP)', () => {
     api = c => (c.url.startsWith('/api/v1/public/shop/products/P1') ? { body: { ...PRODUCT, offers: [withPhotos] } } : undefined);
     open('/products/P1');
     expect(await screen.findByRole('img', { name: 'Country sourdough' })).toHaveAttribute('src', '/img/loaf.jpg');
-    await userEvent.setup({ delay: null }).click(screen.getByRole('button', { name: 'Sliced' }));
+    await userEvent.setup({ delay: null }).click(screen.getByRole('radio', { name: 'Sliced · $7.50' }));
     expect(screen.getByRole('img', { name: 'Country sourdough' })).toHaveAttribute('src', '/img/sliced.jpg');
     expect(within(screen.getByRole('group', { name: 'Photos' })).getByRole('button', { name: 'Show photo 2' })).toBeInTheDocument();
   });
@@ -136,7 +155,7 @@ describe('Product detail (redesign § 1.3 PDP)', () => {
     await user.click(screen.getByRole('button', { name: 'One more Country sourdough' }));
     expect(screen.getByRole('button', { name: 'One more Country sourdough' })).toBeDisabled();
     expect(screen.getByRole('group', { name: 'Quantity of Country sourdough' })).toHaveTextContent('2');
-    expect(screen.getByRole('button', { name: 'Add to cart' })).toBeEnabled();
+    expect(within(screen.getByRole('complementary', { name: 'Buy' })).getByRole('button', { name: 'Add to cart' })).toBeEnabled();
   });
 
   it('lists the other shops selling it and switches to one', async () => {
@@ -147,7 +166,8 @@ describe('Product detail (redesign § 1.3 PDP)', () => {
     await userEvent.setup({ delay: null }).click(within(sellers).getByRole('link', { name: 'Choose — Sidewalk Citizen' }));
     await waitFor(() => expect(router.state.location.search).toEqual({ offer: 'O2' }));
     expect((await screen.findAllByText('$7.00')).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Order by 7:05 a\.m\. for tomorrow 8–11 a\.m\. pooled \(\$1\.99\), or direct courier in 45 min\. Sidewalk Citizen packs at 7:30 a\.m\./)).toBeInTheDocument();
+    expect(screen.getByText('Delivery tomorrow, 8–11 a.m.')).toBeInTheDocument();
+    expect(screen.getByText('Pooled run · $1.99')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Other sellers' })).getByText('Glenmore Bakery')).toBeInTheDocument();
   });
 
@@ -155,26 +175,28 @@ describe('Product detail (redesign § 1.3 PDP)', () => {
     api = () => ({ body: { ...PRODUCT, offers: [{ ...GLENMORE, stock: 0, variants: [], runs: [] }] } });
     open('/products/P1');
     expect(await screen.findByText('Out of stock at Glenmore Bakery right now.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add to cart' })).toBeDisabled();
+    for (const add of screen.getAllByRole('button', { name: 'Add to cart' })) expect(add).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Buy now' })).toBeDisabled();
   });
 
   it('shows an error when the cart refuses', async () => {
     api = c => (c.url === '/api/v1/cart/items' ? { status: 500, body: { detail: 'no' } } : { body: PRODUCT });
     open('/products/P1');
-    await userEvent.setup({ delay: null }).click(await screen.findByRole('button', { name: 'Add to cart' }));
+    await userEvent.setup({ delay: null }).click(within(await screen.findByRole('complementary', { name: 'Buy' })).getByRole('button', { name: 'Add to cart' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('We couldn’t add it to your cart. Try again.');
   });
 
   it('is in French', async () => {
     open('/products/P1', 'fr');
-    expect(await screen.findByRole('link', { name: 'Visiter la boutique Glenmore Bakery' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: '4,8 sur 5 étoiles' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Visiter Glenmore Bakery' })).toBeInTheDocument();
+    expect(screen.getAllByRole('img', { name: '4,8 sur 5 étoiles' }).length).toBeGreaterThan(0);
     expect(screen.getByText('Sur la tournée de ce soir')).toBeInTheDocument();
-    expect(screen.getByText('900 g loaf · TPS calculée au paiement')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ajouter au panier' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Acheter maintenant' })).toBeInTheDocument();
-    expect(screen.getByText(/Commandez avant 17 h 20 pour ce soir 18 h – 21 h en tournée groupée \(2,99\s\$\)/)).toBeInTheDocument();
+    expect(screen.getByText('900 g loaf · TPS, s’il y a lieu, ajoutée au paiement')).toBeInTheDocument();
+    const buy = screen.getByRole('complementary', { name: 'Acheter' });
+    expect(within(buy).getByRole('button', { name: 'Ajouter au panier' })).toBeInTheDocument();
+    expect(within(buy).getByRole('button', { name: 'Acheter maintenant' })).toBeInTheDocument();
+    expect(within(buy).getByText('Livraison ce soir, 18 h – 21 h')).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Format' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Autres vendeurs' })).toBeInTheDocument();
   });
 
