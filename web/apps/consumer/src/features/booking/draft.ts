@@ -115,3 +115,15 @@ export function toRequest(d: Draft, holdId: string, serviceId: string, opts: { v
     photoIds: d.photos?.length ? d.photos.map(p => p.id) : undefined,
   };
 }
+
+/**
+ * E-15 S-172: the provider page's booking box hands its choice (service, day, time, the calendar's zone and terms) to
+ * the wizard through the same per-business draft, so the wizard opens with them chosen.
+ */
+export function seedDraft(slug: string, patch: Partial<Draft>) {
+  try {
+    const raw = sessionStorage.getItem(key(slug));
+    const prev = raw ? (JSON.parse(raw) as Partial<Draft>) : {};
+    sessionStorage.setItem(key(slug), JSON.stringify({ ...EMPTY, ...prev, ...patch, hold: undefined }));
+  } catch { /* private mode: the wizard starts from the service in its URL */ }
+}

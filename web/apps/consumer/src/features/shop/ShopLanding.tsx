@@ -11,6 +11,7 @@ import { useArea, useMarketFollowsLocation, withMarket } from './market';
 import { useShopT } from './messages';
 import { PlaceButton } from '../pages/PlaceButton';
 import { ProductCardTile, ShopCardTile } from './parts';
+import { storeHref } from './store';
 
 /**
  * Shop landing (S-49, design 06 `shop`): a landing page, not results — the next pooled run, departments, the shops on
@@ -65,7 +66,7 @@ export function ShopLanding({ market: explicit }: { market?: string }) {
               {run ? <span className="nl-section-lede">{t('runNote')}</span> : null}
             </div>
             <TileGrid min={240}>
-              {data.shops.map(s => <li key={s.merchantId}><ShopCardTile shop={s} next={run} look="dot" href={link(`/shop/${s.departmentSlug}`)} /></li>)}
+              {data.shops.map(s => <li key={s.merchantId}><ShopCardTile shop={s} next={run} look="dot" href={storeHref(s.merchantId, s.departmentSlug, explicit)} /></li>)}
             </TileGrid>
           </section>
 

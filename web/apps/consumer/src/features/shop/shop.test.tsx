@@ -83,7 +83,7 @@ describe('Shop landing (design 06 shop)', () => {
 
     const run = screen.getByRole('region', { name: 'All shops on tonight’s run' });
     expect(within(run).getByText('One courier, one fee — every shop below packs for the same run.')).toBeInTheDocument();
-    expect(within(run).getByRole('link', { name: /Glenmore Bakery.*Bakery · 5 products.*Order by 5:20 p\.m\./ })).toHaveAttribute('href', '/shop/bakery');
+    expect(within(run).getByRole('link', { name: /Glenmore Bakery.*Bakery · 5 products.*Order by 5:20 p\.m\./ })).toHaveAttribute('href', '/shop/stores/M1?dept=bakery');
     expect(within(run).getByRole('link', { name: /Little Sprouts.*Tomorrow/ })).toBeInTheDocument();
     expect(within(run).getByRole('link', { name: /Empty Shelf.*Not on a run/ })).toBeInTheDocument();
 
@@ -188,7 +188,7 @@ describe('Department page (design 06 category)', () => {
     expect(within(chips).getByRole('link', { name: 'Butcher' })).toHaveAttribute('href', '/shop/butcher');
 
     const shops = screen.getByRole('region', { name: 'Shops · Bakery' });
-    expect(within(shops).getByRole('link', { name: /Glenmore Bakery.*5 products.*Master.*On tonight’s run/ })).toHaveAttribute('href', '/search?scope=shop&q=Glenmore%20Bakery');
+    expect(within(shops).getByRole('link', { name: /Glenmore Bakery.*5 products.*Master.*On tonight’s run/ })).toHaveAttribute('href', '/shop/stores/M1?dept=bakery');
     expect(within(shops).getByRole('link', { name: /Sidewalk Citizen.*Trusted.*Tomorrow/ })).toBeInTheDocument();
 
     const products = screen.getByRole('region', { name: 'Popular in Bakery' });
