@@ -90,7 +90,12 @@ export const colors = {
  */
 export const ramp = theme.ramp;
 
-/** Radii of brand.json (xs 4 · sm 6 · md 8 · lg 12 · pill). */
+/**
+ * Radii of the palette (tokens v2, Plainsight): `control` 3 (buttons, inputs, chips, segments), `panel` 4 (cards,
+ * sheets), `image` 2, `status` 2 (tags, badges) and `round` 999 for what is a circle (avatars, radio dots, switches,
+ * the cart count). The as-built names map onto them (xs 2 · sm 3 · md 4 · lg 4) and `pill` is 3: never pills. A shape
+ * meant to stay round uses `round`, never `pill` (S-169; the apps' conventions test refuses `radius.pill`).
+ */
 export const radius = { ...theme.radius } as const;
 
 /** The 4px spacing scale (scale.json): 0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64. */

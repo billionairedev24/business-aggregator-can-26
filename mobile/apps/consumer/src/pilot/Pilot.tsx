@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     minHeight: MIN_TARGET,
     paddingHorizontal: space[4],
     justifyContent: 'center',
-    borderRadius: radius.pill,
+    borderRadius: radius.control,
     borderWidth: 1,
     borderColor: colors.accent,
     backgroundColor: colors.bg,

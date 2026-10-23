@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, type RefreshControlProps } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon, MIN_TARGET, colors, fonts, radius, semantic, shadow, space, type IconName } from '@northline/mobile-kit';
+import { CAP, Icon, IconButton, LINE, MIN_TARGET, SearchBar, colors, radius, semantic, space, textStyles, type IconName } from '@northline/mobile-kit';
 
 import { useI18n } from '../i18n';
 import { OfflineBanner } from './states';
@@ -80,7 +80,10 @@ function SafeBottom() {
   return <View style={{ height: insets.bottom }} />;
 }
 
-/** A 44 pt round icon button (Back, Share, Save, the bell): white with the card edge, or plain on a picture (`onPhoto`). */
+/**
+ * A 44 pt icon button (Back, Share, Save, the bell): the kit's square `IconButton` with the control edge (Plainsight:
+ * 3 pt corners, never a disc), or a white square with a shadow over a picture (`onPhoto`).
+ */
 export function RoundButton({
   icon,
   label,
@@ -97,23 +100,11 @@ export function RoundButton({
   hint?: string;
   filled?: boolean;
   color?: string;
-  /** Over a picture: a white disc with a shadow so it reads on any photo. */
+  /** Over a picture: a white square with a shadow so it reads on any photo. */
   onPhoto?: boolean;
   testID?: string;
 }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityHint={hint}
-      onPress={onPress}
-      hitSlop={4}
-      style={({ pressed }) => [styles.round, onPhoto && styles.roundOnPhoto, pressed && styles.roundPressed]}
-      testID={testID}
-    >
-      <Icon name={icon} size={20} filled={filled} color={color} />
-    </Pressable>
-  );
+  return <IconButton icon={icon} label={label} onPress={onPress} hint={hint} filled={filled} color={color} boxed={!onPhoto} onPhoto={onPhoto} testID={testID} />;
 }
 
 /** The compact sub-page header: the round Back button, the title (the display face, one line), an optional action. */
@@ -123,7 +114,7 @@ export function Header({ title, back = true, onBack, action }: { title: string; 
   return (
     <View style={styles.header}>
       {back ? <RoundButton icon="caret-left" label={t('common.back')} onPress={goBack} testID="header-back" /> : null}
-      <Text accessibilityRole="header" numberOfLines={1} maxFontSizeMultiplier={1.4} style={[styles.headerTitle, !back && styles.headerTitleAlone]}>
+      <Text accessibilityRole="header" numberOfLines={1} maxFontSizeMultiplier={CAP.control} style={[styles.headerTitle, !back && styles.headerTitleAlone]}>
         {title}
       </Text>
       {action}
@@ -171,11 +162,11 @@ export function TopBar({
         >
           <Icon name="map-pin" size={22} filled color={semantic['action-primary']} />
           <View style={styles.placeText}>
-            <Text style={styles.placeKicker} numberOfLines={1} maxFontSizeMultiplier={1.4}>
+            <Text style={styles.placeKicker} numberOfLines={1} maxFontSizeMultiplier={CAP.control}>
               {kicker}
             </Text>
             <View style={styles.placeLine}>
-              <Text style={styles.placeName} numberOfLines={1} maxFontSizeMultiplier={1.4}>
+              <Text style={styles.placeName} numberOfLines={1} maxFontSizeMultiplier={CAP.control}>
                 {place}
               </Text>
               <Icon name="caret-down" size={14} />
@@ -189,18 +180,9 @@ export function TopBar({
   );
 }
 
-/** The one search pill (every tab that searches): a magnifier, the hint, and the round brand-coloured search button. */
+/** The one search bar of a tab's top (opens the search screen): the kit's SearchBar without a field, the ink search button. */
 export function SearchPill({ label, onPress, testID }: { label: string; onPress: () => void; testID?: string }) {
-  return (
-    <Pressable accessibilityRole="search" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.search, pressed && styles.searchPressed]} testID={testID}>
-      <Text style={styles.searchText} numberOfLines={1}>
-        {label}
-      </Text>
-      <View style={styles.searchGo}>
-        <Icon name="magnifying-glass" size={18} color={semantic['action-primary-text']} />
-      </View>
-    </Pressable>
-  );
+  return <SearchBar placeholder={label} onPress={onPress} testID={testID} />;
 }
 
 const styles = StyleSheet.create({
@@ -214,12 +196,9 @@ const styles = StyleSheet.create({
     gap: space[2],
     paddingTop: space[3],
     paddingHorizontal: GUTTER,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: LINE.hair,
     borderTopColor: colors.borderStrong,
     backgroundColor: colors.surface,
-    ...shadow.md,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
   },
   barRow: { flexDirection: 'row', alignItems: 'center' },
   header: {
@@ -233,20 +212,8 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     backgroundColor: colors.surface,
   },
-  headerTitle: { flex: 1, fontFamily: fonts.display, fontSize: 20, lineHeight: 26, color: colors.text },
+  headerTitle: { ...StyleSheet.flatten(textStyles.sub), flex: 1 },
   headerTitleAlone: { paddingVertical: space[2] },
-  round: {
-    width: MIN_TARGET,
-    height: MIN_TARGET,
-    borderRadius: MIN_TARGET / 2,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  roundOnPhoto: { borderWidth: 0, ...shadow.md },
-  roundPressed: { backgroundColor: semantic['surface-hover'] },
   top: {
     gap: space[3],
     paddingHorizontal: GUTTER,
@@ -257,26 +224,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  place: { flex: 1, minWidth: 0, minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: space[2], borderRadius: radius.md, paddingRight: space[2] },
+  place: { flex: 1, minWidth: 0, minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: space[2], borderRadius: radius.control, paddingRight: space[2] },
   placePressed: { backgroundColor: semantic['surface-hover'] },
   placeText: { flex: 1, minWidth: 0 },
-  placeKicker: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 15, color: colors.textMuted },
-  placeLine: { flexDirection: 'row', alignItems: 'center', gap: 4, minWidth: 0 },
-  placeName: { flexShrink: 1, fontFamily: fonts.bold, fontSize: 16, lineHeight: 21, color: colors.text },
-  search: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[2],
-    minHeight: 52,
-    paddingLeft: space[5],
-    paddingRight: 5,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.borderControl,
-    backgroundColor: colors.surface,
-    ...shadow.sm,
-  },
-  searchPressed: { backgroundColor: semantic['surface-hover'] },
-  searchText: { flex: 1, fontFamily: fonts.regular, fontSize: 15, color: colors.textMuted },
-  searchGo: { width: 42, height: 42, borderRadius: 21, backgroundColor: semantic['action-primary'], alignItems: 'center', justifyContent: 'center' },
+  placeKicker: textStyles.meta,
+  placeLine: { flexDirection: 'row', alignItems: 'center', gap: space[1], minWidth: 0 },
+  placeName: { ...StyleSheet.flatten(textStyles.label), flexShrink: 1 },
 });

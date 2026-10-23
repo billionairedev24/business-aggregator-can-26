@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   headText: { flex: 1, fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
-  chip: { flexDirection: 'row', alignItems: 'center', paddingLeft: space[3], borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.canvas },
+  chip: { flexDirection: 'row', alignItems: 'center', paddingLeft: space[3], borderRadius: radius.control, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.canvas },
   chipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
   x: { minWidth: MIN_TARGET, minHeight: MIN_TARGET, alignItems: 'center', justifyContent: 'center' },
   quiet: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },

@@ -63,6 +63,8 @@ export { Art, TONES, subjectFor, toneFor, type ArtProps, type Subject, type Tone
 export { Photo, Scene, type PhotoProps } from './ui/Photo';
 export { categorySlot, configurePhotoBase, cuisineSlot, photoBase, photoFor, slugSlot, type Crop, type ResolvedPhoto } from './photos/library';
 export { PushHooks, setPushRegistrar, type PushRegistrar } from './push/hooks';
+// S-169: the component kit on tokens v2 (Plainsight), shared by the consumer and courier apps
+export * from './ui/kit';
 // mobile gaps part 1: photos from the apps (pilot feedback screenshots, problem-report photos) and pilot feedback
 export {
   REPORT_PHOTO_MAX,

@@ -177,6 +177,6 @@ const styles = StyleSheet.create({
   next: { flexDirection: 'row', alignItems: 'center', gap: space[3], padding: space[3], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
   small: { fontSize: 13, lineHeight: 18 },
   link: { color: semantic.link },
-  track: { height: 6, borderRadius: radius.pill, backgroundColor: semantic['surface-muted'], overflow: 'hidden' },
-  fill: { height: 6, borderRadius: radius.pill, backgroundColor: colors.actionPrimary },
+  track: { height: 6, borderRadius: radius.status, backgroundColor: semantic['surface-muted'], overflow: 'hidden' },
+  fill: { height: 6, borderRadius: radius.status, backgroundColor: colors.actionPrimary },
 });

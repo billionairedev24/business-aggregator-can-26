@@ -7,7 +7,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { LOCALES, colors, fontAssets, type Locale, configurePhotoBase } from '@northline/mobile-kit';
+import { KitProvider, LOCALES, ToastProvider, colors, fontAssets, type Locale, configurePhotoBase } from '@northline/mobile-kit';
 
 import { AuthProvider, useAuth } from '../src/auth';
 import { Loading } from '../src/components/ui';
@@ -44,7 +44,12 @@ function LanguageSync({ children }: { children: ReactNode }) {
   useEffect(() => {
     services().setLanguage(locale);
   }, [locale]);
-  return children;
+  // S-169: the shared kit's own words follow the app's language
+  return (
+    <KitProvider locale={locale}>
+      <ToastProvider>{children}</ToastProvider>
+    </KitProvider>
+  );
 }
 
 /** Push (mobile gaps part 1): installed once the sign-in is known; a tap opens the run. */
@@ -84,6 +89,7 @@ function Routes() {
         <Stack.Screen name="sign-in" />
       </Stack.Protected>
       <Stack.Screen name="oauth2redirect" />
+      <Stack.Screen name="dev/gallery" />
       </Stack>
     </>
   );

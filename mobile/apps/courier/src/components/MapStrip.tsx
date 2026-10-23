@@ -35,6 +35,6 @@ export function MapStrip({ label, kind, action }: { label: string; kind: 'pickup
 const styles = StyleSheet.create({
   box: { gap: space[3] },
   map: { height: 150, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: semantic['surface-sunken'] },
-  pill: { position: 'absolute', left: space[3], bottom: space[3], maxWidth: '90%', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.surface, ...shadow.md },
+  pill: { position: 'absolute', left: space[3], bottom: space[3], maxWidth: '90%', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.control, backgroundColor: colors.surface, ...shadow.md },
   pillText: { flexShrink: 1, fontFamily: fonts.bold, fontSize: 14, color: colors.text },
 });
