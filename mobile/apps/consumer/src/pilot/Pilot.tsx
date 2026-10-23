@@ -15,6 +15,7 @@ import {
   space,
   textStyles,
   type PickedImage,
+  semantic,
 } from '@northline/mobile-kit';
 
 import { pilotApi, screenOf, type FeedbackCategory, type FeedbackSeverity } from '../api/pilot';
@@ -162,11 +163,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.control,
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: semantic.selected,
     backgroundColor: colors.bg,
   },
   fabPressed: { backgroundColor: colors.accent100 },
-  fabText: { ...StyleSheet.flatten(textStyles.bodyStrong), color: colors.accent },
+  fabText: { ...StyleSheet.flatten(textStyles.bodyStrong) },
   form: { gap: space[3] },
   legend: { ...StyleSheet.flatten(textStyles.bodyStrong), color: colors.neutral900 },
   options: { gap: space[2] },

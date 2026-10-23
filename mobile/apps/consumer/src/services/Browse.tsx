@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { radius, semantic, slugSlot, space, textStyles } from '@northline/mobile-kit';
+import { SIZE, radius, semantic, slugSlot, space, textStyles } from '@northline/mobile-kit';
 
 import { nameIn, type Landing, type ServiceItem } from '../api/services';
 import { useI18n } from '../i18n';
@@ -68,7 +68,7 @@ function Groups({ data, text, setText }: { data: Landing; text: string; setText:
   const popular = [...data.groups.flatMap((g) => g.items)].filter((i) => i.providers > 0).sort((a, b) => b.providers - a.providers).slice(0, 6);
   const sub = (i: ServiceItem) => (i.providers > 0 ? t('lt.home.pros', { n: i.providers }) : t('lt.home.soon'));
   const tile = (i: ServiceItem, testID?: string) => (
-    <Tile key={i.slug} label={nameIn(i.names, locale)} sub={sub(i)} slot={slugSlot('service', i.slug)} subject={i.slug} width={148} onPress={() => router.push(`/services/${i.slug}`)} testID={testID} />
+    <Tile key={i.slug} label={nameIn(i.names, locale)} sub={sub(i)} slot={slugSlot('service', i.slug)} icon="wrench" width={SIZE.rail * 2 + space[1]} onPress={() => router.push(`/services/${i.slug}`)} testID={testID} />
   );
   return (
     <>
@@ -136,7 +136,7 @@ function ShopDepartments() {
               key={d.slug}
               label={d.name}
               sub={d.shops > 0 ? t('lt.home.shops', { n: d.shops }) : undefined}
-              subject={d.slug}
+              slot={slugSlot('shop', d.slug)}
               onPress={() => router.push({ pathname: '/search', params: { department: d.slug, name: d.name } })}
               testID={`department-${d.slug}`}
             />

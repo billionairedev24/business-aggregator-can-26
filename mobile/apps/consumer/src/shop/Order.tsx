@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { colors, fonts, Icon, LINE, radius, semantic, shadow, space, textStyles } from '@northline/mobile-kit';
+import { colors, fonts, Icon, LINE, TYPE, radius, semantic, shadow, space, textStyles } from '@northline/mobile-kit';
 
 import { CancelOrder, Cancellations, FailedDelivery, Returns } from '../aftercare/AfterSale';
 import { CourierTip } from '../aftercare/CourierTip';
@@ -173,10 +173,10 @@ export function Track() {
                 {/* a quiet street grid under the run (no map SDK: a schematic) */}
                 <Path d="M0 60 H402 M0 140 H402 M70 0 V200 M180 0 V200 M300 0 V200" stroke={colors.surface} strokeWidth={10} />
                 <Path d="M0 100 H402 M240 0 V200" stroke={colors.surface} strokeWidth={6} />
-                <Path d="M30 170 L110 170 L110 110 L240 110 L240 50 L340 50" fill="none" stroke={colors.actionPrimary} strokeWidth={4} strokeDasharray="8 6" />
+                <Path d="M30 170 L110 170 L110 110 L240 110 L240 50 L340 50" fill="none" stroke={semantic.selected} strokeWidth={4} strokeDasharray="8 6" />
                 <Circle cx={30} cy={170} r={8} fill={colors.textMuted} />
                 <Circle cx={110} cy={110} r={8} fill={colors.textMuted} />
-                <Circle cx={240} cy={c && c.stopsBefore === 0 ? 70 : 110} r={11} fill={semantic['action-accent']} stroke={colors.surface} strokeWidth={3} />
+                <Circle cx={240} cy={c && c.stopsBefore === 0 ? 70 : 110} r={11} fill={semantic.selected} stroke={colors.surface} strokeWidth={3} />
                 <Circle cx={340} cy={50} r={9} fill={colors.surface} stroke={colors.text} strokeWidth={3} />
               </Svg>
               <View style={styles.etaPill}>
@@ -200,7 +200,7 @@ export function Track() {
             <View style={styles.courier} testID="track-courier">
               <View style={styles.courierRow}>
               <View style={styles.courierAvatar}>
-                {c?.courierName ? <Text style={styles.courierInitials}>{initialsOf(c.courierName)}</Text> : <Icon name="truck" size={22} color={semantic['action-accent-text']} />}
+                {c?.courierName ? <Text style={styles.courierInitials}>{initialsOf(c.courierName)}</Text> : <Icon name="truck" size={TYPE.price} color={semantic['selected-text']} />}
               </View>
               <View style={styles.flex}>
                 <Text style={styles.courierName}>{c?.courierName ? t('shop.track.courier', { name: c.courierName }) : t('shop.track.noCourier')}</Text>
@@ -341,15 +341,15 @@ const styles = StyleSheet.create({
   strong: { fontFamily: fonts.bold },
   stateRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   etaPill: { position: 'absolute', right: 12, bottom: 12, paddingHorizontal: space[3], paddingVertical: space[1.5], borderRadius: radius.control, backgroundColor: semantic.surface, ...shadow.md },
-  etaText: { ...StyleSheet.flatten(textStyles.label), color: semantic['action-primary'] },
+  etaText: { ...StyleSheet.flatten(textStyles.label), color: semantic['status-info-fg'] },
   courier: { gap: space[3], padding: space[4], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-card'], backgroundColor: semantic.surface, ...shadow.sm },
   courierRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  courierAvatar: { width: 48, height: 48, borderRadius: radius.round, backgroundColor: semantic['action-primary'], alignItems: 'center', justifyContent: 'center' },
-  courierInitials: { ...StyleSheet.flatten(textStyles.sub), color: semantic['action-primary-text'] },
+  courierAvatar: { width: 48, height: 48, borderRadius: radius.round, backgroundColor: semantic.selected, alignItems: 'center', justifyContent: 'center' },
+  courierInitials: { ...StyleSheet.flatten(textStyles.sub), color: semantic['selected-text'] },
   courierName: { ...StyleSheet.flatten(textStyles.sub) },
   courierSub: { ...StyleSheet.flatten(textStyles.meta), color: semantic['text-muted'] },
-  pinBox: { alignItems: 'center', paddingVertical: space[3], borderRadius: radius.panel, backgroundColor: semantic['surface-brand'] },
-  pin: { ...StyleSheet.flatten(textStyles.pageTitle), color: semantic['badge-brand-text'] },
+  pinBox: { alignItems: 'center', paddingVertical: space[3], borderRadius: radius.panel, backgroundColor: semantic.well },
+  pin: { ...StyleSheet.flatten(textStyles.priceLg), letterSpacing: space[2] },
   gapSmall: { gap: space[1] },
   confirmArt: { width: '100%', aspectRatio: 16 / 9 },
   photo: { height: 240, borderRadius: radius.panel, backgroundColor: semantic.well },

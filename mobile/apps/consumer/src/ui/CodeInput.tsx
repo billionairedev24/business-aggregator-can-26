@@ -63,8 +63,8 @@ const styles = StyleSheet.create({
   wrap: { gap: space[2] },
   row: { flexDirection: 'row', gap: space[2] },
   box: { flex: 1, height: 56, alignItems: 'center', justifyContent: 'center', borderRadius: radius.panel, backgroundColor: semantic.surface, borderWidth: LINE.hair, borderColor: colors.divider },
-  boxNext: { borderColor: colors.accent },
-  boxError: { borderColor: colors.accent2 },
+  boxNext: { borderColor: semantic.selected, borderWidth: LINE.bold },
+  boxError: { borderColor: semantic.danger, borderWidth: LINE.bold },
   digit: { ...StyleSheet.flatten(textStyles.pageTitle) },
   // over the boxes, invisible, so a tap anywhere focuses it and the OS autofill bar targets it
   hidden: { position: 'absolute', left: 0, right: 0, top: 0, height: 56, opacity: 0.011, color: 'transparent' },

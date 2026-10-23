@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.overlay },
   sheetWrap: { maxHeight: '94%' },
-  sheet: { borderTopLeftRadius: radius.round, borderTopRightRadius: radius.round, backgroundColor: semantic.surface, ...shadow.lg, maxHeight: '100%' },
+  sheet: { borderTopLeftRadius: radius.panel, borderTopRightRadius: radius.panel, backgroundColor: semantic.surface, ...shadow.lg, maxHeight: '100%' },
   grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: radius.control, marginTop: space[2], backgroundColor: semantic['border-strong'] },
   head: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingHorizontal: space[4], paddingTop: space[2], paddingBottom: space[2] },
   title: { ...StyleSheet.flatten(textStyles.pageTitle), flex: 1 },

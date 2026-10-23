@@ -20,6 +20,7 @@ import {
   type FeedbackCategory,
   type FeedbackSeverity,
   type PickedImage,
+  semantic,
 } from '@northline/mobile-kit';
 
 import { Banner, Body, Button, Heading, Screen } from '../components/ui';
@@ -181,9 +182,9 @@ function Choices<T extends string>({ label, options, value, onChange, testID }: 
 const styles = StyleSheet.create({
   choices: { gap: space[2] },
   choice: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET, paddingHorizontal: space[3], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: colors.divider },
-  choiceOn: { borderColor: colors.accent, backgroundColor: colors.accent100 },
+  choiceOn: { borderColor: semantic.selected, backgroundColor: semantic['selected-tint'] },
   dot: { width: 18, height: 18, borderRadius: radius.round, borderWidth: LINE.bold, borderColor: colors.neutral500 },
-  dotOn: { borderColor: colors.accent, backgroundColor: colors.accent },
+  dotOn: { borderColor: semantic.selected, backgroundColor: semantic.selected },
   choiceText: { ...StyleSheet.flatten(textStyles.body), flex: 1 },
   input: { ...StyleSheet.flatten(textStyles.body), minHeight: MIN_TARGET * 3, borderWidth: LINE.hair, borderColor: colors.divider, borderRadius: radius.panel, padding: space[3], textAlignVertical: 'top' },
   shotRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },

@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   section: { gap: space[2], paddingTop: space[3] },
   pad: { paddingHorizontal: space[4] },
   card: { width: 200, gap: space[1], borderRadius: radius.panel },
-  mult: { ...StyleSheet.flatten(textStyles.pageTitle), color: semantic['action-primary'] },
+  mult: { ...StyleSheet.flatten(textStyles.pageTitle), color: semantic.commerce },
   name: { ...StyleSheet.flatten(textStyles.bodyStrong) },
   sub: { ...StyleSheet.flatten(textStyles.meta), color: semantic['text-muted'] },
 });

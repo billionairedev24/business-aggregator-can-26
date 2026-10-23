@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, colors, radius, space } from '@northline/mobile-kit';
+import { ApiError, colors, radius, space, semantic } from '@northline/mobile-kit';
 
 import type { ActiveSession, Security as SecurityData } from '../api/account';
 import { useAuth } from '../auth/AuthProvider';
@@ -224,6 +224,6 @@ function Overview({ s, phone, f }: { s: SecurityData; phone?: string | null; f: 
 const styles = StyleSheet.create({
   confirm: { gap: space[3] },
   summary: { padding: space[4], borderRadius: radius.panel, backgroundColor: colors.accent100 },
-  summaryWeak: { backgroundColor: colors.highlight100 },
+  summaryWeak: { backgroundColor: semantic['status-warning-bg'] },
   summaryText: { color: colors.accent900 },
 });

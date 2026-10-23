@@ -18,6 +18,7 @@ import {
   space,
   textStyles,
   type PickedImage,
+  semantic,
 } from '@northline/mobile-kit';
 
 import type { ProblemContext, ProblemItem, Reported } from '../api/shop';
@@ -246,10 +247,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   items: { gap: space[1.5] },
   item: { flexDirection: 'row', alignItems: 'center', gap: space[2.5], minHeight: MIN_TARGET, paddingHorizontal: space[3.5], paddingVertical: space[2], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: colors.divider },
-  itemOn: { borderColor: colors.accent, backgroundColor: colors.accent100 },
+  itemOn: { borderColor: semantic.selected, backgroundColor: semantic['selected-tint'] },
   itemOff: { opacity: 0.55 },
   box: { width: 18, height: 18, borderRadius: radius.control, borderWidth: 1.5, borderColor: colors.divider },
-  boxOn: { borderColor: colors.accent, backgroundColor: colors.accent },
+  boxOn: { borderColor: semantic.selected, backgroundColor: semantic.selected },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[1.5] },
   body: { ...StyleSheet.flatten(textStyles.body) },
   small: { ...StyleSheet.flatten(textStyles.meta) },

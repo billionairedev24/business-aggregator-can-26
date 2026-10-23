@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, space, textStyles } from '@northline/mobile-kit';
+import { colors, radius, space, textStyles, semantic } from '@northline/mobile-kit';
 
 import type { Wallet as WalletData } from '../api/account';
 import { useAuth } from '../auth/AuthProvider';
@@ -109,6 +109,6 @@ const styles = StyleSheet.create({
   value: { ...StyleSheet.flatten(textStyles.body) },
   bars: { flexDirection: 'row', gap: space[1], height: 60, marginTop: space[2] },
   bar: { flex: 1, height: 60, justifyContent: 'flex-end', backgroundColor: colors.neutral200, borderRadius: radius.status, overflow: 'hidden' },
-  fill: { backgroundColor: colors.accent },
+  fill: { backgroundColor: semantic.selected },
   rows: { marginTop: space[4] },
 });

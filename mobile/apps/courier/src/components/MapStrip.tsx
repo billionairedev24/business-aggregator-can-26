@@ -16,10 +16,10 @@ export function MapStrip({ label, kind, action }: { label: string; kind: 'pickup
         <Svg width="100%" height="100%" viewBox="0 0 400 150" preserveAspectRatio="xMidYMid slice">
           <Path d="M0 40 H400 M0 112 H400 M60 0 V150 M170 0 V150 M300 0 V150" stroke={semantic.surface} strokeWidth={12} />
           <Path d="M0 76 H400 M236 0 V150" stroke={semantic.surface} strokeWidth={6} />
-          <Path d="M60 130 L60 76 L236 76 L236 52" fill="none" stroke={semantic['action-primary']} strokeWidth={4} strokeDasharray="8 6" />
-          <Circle cx={60} cy={130} r={8} fill={semantic['action-primary']} stroke={semantic.surface} strokeWidth={3} />
-          <Circle cx={236} cy={40} r={20} fill={kind === 'pickup' ? semantic.selected : semantic['action-primary']} opacity={0.18} />
-          <Circle cx={236} cy={40} r={10} fill={kind === 'pickup' ? semantic.selected : semantic['action-primary']} stroke={semantic.surface} strokeWidth={3} />
+          <Path d="M60 130 L60 76 L236 76 L236 52" fill="none" stroke={semantic.selected} strokeWidth={4} strokeDasharray="8 6" />
+          <Circle cx={60} cy={130} r={8} fill={semantic.selected} stroke={semantic.surface} strokeWidth={3} />
+          <Circle cx={236} cy={40} r={20} fill={kind === 'pickup' ? semantic.selected : semantic.selected} opacity={0.18} />
+          <Circle cx={236} cy={40} r={10} fill={kind === 'pickup' ? semantic.selected : semantic.selected} stroke={semantic.surface} strokeWidth={3} />
         </Svg>
         <View style={styles.pill}>
           <Icon name="clock" size={TYPE.sub} color={semantic['selected-text']} />

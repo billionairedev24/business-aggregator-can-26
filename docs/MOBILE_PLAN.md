@@ -156,8 +156,8 @@ signed in only. Paths are under `/api/v1` unless they start with `/api/auth` or 
 | `search` | `/search` (`?q=`, `?department=&name=` from a Home tile) | | `GET /search` (kind=product, the province and position), `GET /public/shop/departments/{slug}` |
 | `product` | `/product/[id]` (`?offer=`) | | `GET /public/shop/products/{id}?market=`, `POST /cart/items` |
 | `cart` | `/cart` (tab) | | `GET /cart`, `PATCH`/`DELETE /cart/items/{id}` (guest-keyed by `X-Northline-Guest`) |
-| `checkout` | `/checkout` | ✓ | `GET /me/checkout?market=`, `POST /me/checkout/quote` |
-| `pay` | `/pay` (`?kind&window&sub&address`) | ✓ | `GET /me/payment-methods`, `POST /me/checkouts` (Idempotency-Key, X-Step-Up), `POST /me/checkouts/{id}/place`; `POST /api/auth/step-up/totp`; Stripe's React Native SDK (PaymentSheet, 3-D Secure; return link `/stripe-redirect`) |
+| `checkout` | `/checkout` | ✓ | `GET /me/checkout?market=`, `POST /me/checkout/quote`; S-178: one page — payment and the items are on it, and Place your order runs `pay`'s calls |
+| `pay` | `/pay` (S-178: opens `/checkout`) | ✓ | `GET /me/payment-methods`, `POST /me/checkouts` (Idempotency-Key, X-Step-Up), `POST /me/checkouts/{id}/place`; `POST /api/auth/step-up/totp`; Stripe's React Native SDK (PaymentSheet, 3-D Secure; return link `/stripe-redirect`) |
 | `confirmed` | `/orders/[id]/confirmed` | ✓ | `GET /me/orders/{id}` |
 | `track` | `/orders/[id]/track` (and `/orders/[id]`, where S-102's order links land) | ✓ | `GET /me/orders/{id}`, read again every 15 s (no EventSource in React Native) |
 | `delivered` | `/orders/[id]/delivered` | ✓ | `GET /me/orders/{id}`, `POST /me/orders/{id}/confirm` |

@@ -148,7 +148,7 @@ export function Strip({ children, edge, testID }: { children: ReactNode; edge?: 
  * icon — the name (two lines at most) and a muted line under it ("22 pros", "Coming soon"). `width` sets a rail's
  * tile; without it the tile fills its column (grids).
  */
-export function Tile({ label, sub, slot, icon = 'storefront', onPress, width, testID }: { label: string; sub?: string; slot?: string | null; subject?: string; icon?: IconName; onPress: () => void; width?: number; testID?: string }) {
+export function Tile({ label, sub, slot, icon = 'storefront', onPress, width, testID }: { label: string; sub?: string; slot?: string | null; icon?: IconName; onPress: () => void; width?: number; testID?: string }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -200,16 +200,16 @@ const styles = StyleSheet.create({
   rung: { flexDirection: 'row', gap: space[3] },
   rail: { width: 24, alignItems: 'center' },
   dot: { width: space[4], height: space[4], borderRadius: radius.round, marginTop: space[1] },
-  dotDone: { backgroundColor: semantic['action-primary'], borderWidth: LINE.bold, borderColor: semantic['action-primary'] },
-  dotCurrent: { backgroundColor: semantic.surface, borderWidth: 3, borderColor: semantic['action-primary'] },
+  dotDone: { backgroundColor: semantic['status-success-fg'], borderWidth: LINE.bold, borderColor: semantic['status-success-fg'] },
+  dotCurrent: { backgroundColor: semantic.surface, borderWidth: LINE.bold + 1, borderColor: semantic.selected },
   dotTodo: { backgroundColor: semantic.surface, borderWidth: LINE.bold, borderColor: semantic['border-strong'] },
   line: { flex: 1, width: 2, minHeight: 22, backgroundColor: semantic['border-strong'] },
-  lineDone: { backgroundColor: semantic['action-primary'] },
+  lineDone: { backgroundColor: semantic['status-success-fg'] },
   rungText: { flex: 1, paddingBottom: space[3.5], gap: 2 },
   muted: { color: semantic['text-muted'] },
   panel: { padding: space[4], borderRadius: radius.panel, backgroundColor: semantic.well, gap: space[2] },
-  panelAccent: { backgroundColor: semantic['surface-brand'] },
-  panelDark: { backgroundColor: semantic['surface-brand'] },
+  panelAccent: { backgroundColor: semantic['status-info-bg'] },
+  panelDark: { backgroundColor: semantic['status-info-bg'] },
   info: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   strip: { marginHorizontal: -GUTTER },
   stripBox: { flexGrow: 0 },

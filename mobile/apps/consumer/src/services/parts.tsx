@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   panelAccent: { backgroundColor: semantic['status-info-bg'] },
   steps: { flexDirection: 'row', gap: space[1.5] },
   step: { flex: 1, height: 4, borderRadius: radius.status, backgroundColor: semantic['border-strong'] },
-  stepOn: { backgroundColor: semantic['action-primary'] },
+  stepOn: { backgroundColor: semantic.selected },
   row: { minHeight: MIN_TARGET, padding: space[4], gap: space[2], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-strong'], backgroundColor: semantic.surface },
   rowPressed: { backgroundColor: semantic['surface-hover'] },
 });

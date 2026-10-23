@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   now: { color: semantic.link, fontFamily: fonts.bold },
   photos: { flexDirection: 'row', gap: space[2] },
   photo: { flex: 1, minHeight: 80, alignItems: 'center', justifyContent: 'center' },
-  released: { color: semantic['badge-brand-text'] },
+  released: { color: semantic['status-success-fg'] },
   heldRow: { flexDirection: 'row', justifyContent: 'space-between' },
   actions: { flexDirection: 'row', gap: space[2.5] },
   stars: { flexDirection: 'row', gap: space[1.5] },
