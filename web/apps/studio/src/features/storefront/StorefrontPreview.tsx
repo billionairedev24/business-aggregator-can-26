@@ -93,8 +93,8 @@ export function StorefrontPreview({ storefront: s, device }: { storefront: Store
             <dl className="nl-pv-stats">{heroStats(s, t).map(st => <div key={st.k}><dt>{st.k}</dt><dd>{st.v}</dd></div>)}</dl>
           </div>}
           {b.type === 'rows' && <div className="nl-pv-block">{heading(b.kind)}<div className="nl-pv-rows">{b.rows.map((r, i) => <div key={i} className="nl-pv-row"><span>{r.a}</span><strong>{r.b}</strong></div>)}</div></div>}
-          {b.type === 'services' && <div className="nl-pv-block">{heading(b.kind)}<div className="nl-pv-cards" inert>{b.items.map(l => (
-            <ServiceCard key={l.id} layout="row" level={4} name={l.name} kind={l.meta ?? undefined} place={s.business.displayName}
+          {b.type === 'services' && <div className="nl-pv-block">{heading(b.kind)}<div className="nl-pv-cards" data-device={device} inert>{b.items.map(l => (
+            <ServiceCard key={l.id} layout={device === 'web' ? 'row' : 'stack'} level={4} name={l.name} kind={l.meta ?? undefined} place={s.business.displayName}
               priceCents={l.priceCents ?? null} priceText={l.priceCents == null ? t('quote') : undefined} />
           ))}</div></div>}
           {b.type === 'products' && <div className="nl-pv-block">{heading(b.kind)}<div className="nl-pv-products" data-device={device} inert>{b.items.map(l => (

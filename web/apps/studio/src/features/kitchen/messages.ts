@@ -129,6 +129,7 @@ export const useKitchenT = defineMessages({
     v_slotItems: 'Pick a section or items for this slot.', v_discount: 'Enter a discount from 1 to 90 %.', v_days: 'Pick at least one day.', v_endAfter: 'End time must be after start time.',
 
     // hours, prep & capacity
+    hoursKpis: 'Hours and capacity figures', kpiOpenDays: 'Open', kpiDaysValue: '{n, plural, one {# day a week} other {# days a week}}', kpiWays: 'Ways to get food', viewAll: 'All', optionsOf: 'Options of {name}',
     hoursKicker: 'Hours, prep & capacity', hoursTitle: 'When you take orders and how many',
     hoursLede: 'Opening hours per menu, default prep time, and throttles so the kitchen never gets buried. Scheduled and group orders are planned around these.',
     openingTitle: 'Opening hours · delivery & pickup', closed: 'Closed', editHours: 'Edit hours', holidayHours: 'Holiday hours',
@@ -269,6 +270,7 @@ export const useKitchenT = defineMessages({
     v_comboName: 'Entrez un nom de combo.', v_slots: 'Ajoutez au moins un emplacement.', v_slotLabel: 'Décrivez cet emplacement, p. ex. 2 plats au choix.', v_slotQty: 'Entrez une quantité de 1 à 20.',
     v_slotItems: 'Choisissez une section ou des plats pour cet emplacement.', v_discount: 'Entrez un rabais de 1 à 90 %.', v_days: 'Choisissez au moins un jour.', v_endAfter: 'L’heure de fin doit suivre l’heure de début.',
 
+    hoursKpis: 'Chiffres des heures et de la capacité', kpiOpenDays: 'Ouvert', kpiDaysValue: '{n, plural, one {# jour par semaine} other {# jours par semaine}}', kpiWays: 'Façons d’obtenir les plats', viewAll: 'Tous', optionsOf: 'Options de {name}',
     hoursKicker: 'Heures, préparation et capacité', hoursTitle: 'Quand vous prenez des commandes, et combien',
     hoursLede: 'Heures d’ouverture par menu, temps de préparation par défaut et limites pour que la cuisine ne soit jamais débordée. Les commandes planifiées et de groupe en tiennent compte.',
     openingTitle: 'Heures d’ouverture · livraison et cueillette', closed: 'Fermé', editHours: 'Modifier les heures', holidayHours: 'Heures des fêtes',

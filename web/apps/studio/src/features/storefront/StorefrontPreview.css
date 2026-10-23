@@ -34,3 +34,4 @@
 .nl-pv-cards { display: flex; flex-direction: column; gap: var(--space-2); }
 .nl-pv-products { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
 .nl-pv-products[data-device='web'] { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.nl-pv-cards[data-device='phone'] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }

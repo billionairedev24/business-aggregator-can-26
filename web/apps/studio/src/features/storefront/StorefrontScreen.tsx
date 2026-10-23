@@ -59,7 +59,6 @@ function Loaded({ storefront: s, title, canEdit, role }: { storefront: Storefron
       <BoHeader title={title} sub={<>{lede} <strong className="nl-pp-url">{s.url}</strong></>}
         actions={<>
           {canEdit ? null : <StatusTag tone="neutral">{t('viewOnly', { role: roleName })}</StatusTag>}
-          <button type="button" className="btn btn-secondary" onClick={() => setDialog('preview')}>{t('previewAsCustomer')}</button>
           <button type="button" className="btn btn-secondary" onClick={() => setDialog('embed')}>{t('embedCode')}</button>
         </>} />
       <PublicPageForm storefront={s} canEdit={canEdit}>
