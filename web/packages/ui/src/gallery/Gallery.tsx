@@ -253,7 +253,7 @@ function Site({ t }: { t: GalleryT }) {
     <div className="nl-gallery-frame">
       <SiteHeader
         location={<LocationPill status="saved" name="Amara" label={PLACE} onOpen={() => {}} />}
-        search={<SearchBar variant="header" value={q} onChange={setQ} onSubmit={() => {}} label={t('q')} placeholder={t('qPlaceholder')}
+        search={<SearchBar variant="header" landmark={t('s_site')} value={q} onChange={setQ} onSubmit={() => {}} label={t('q')} placeholder={t('qPlaceholder')}
           scope={{ value: scope, onChange: setScope, options: [{ value: 'all', label: t('all') }, { value: 'services', label: t('services') }, { value: 'shop', label: t('shop') }, { value: 'food', label: t('food') }] }} />}
         links={[link('services', '#services'), link('shop', '#shop', { current: true }), link('food', '#food')]}
         shortcuts={[link('bakery', '#bakery', { group: 'shop' }), link('butcher', '#butcher', { group: 'shop' }), link('grocery', '#grocery', { group: 'shop' }), link('mechanics', '#mechanics', { group: 'services' }), link('cleaners', '#cleaners', { group: 'services' })]}
