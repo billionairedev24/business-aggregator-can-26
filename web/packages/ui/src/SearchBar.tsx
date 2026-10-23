@@ -1,11 +1,11 @@
 import { Fragment, useId, useState, type KeyboardEvent, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { MagnifyingGlass } from '@phosphor-icons/react';
+import { CaretDown, MagnifyingGlass } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
 
 const useT = defineMessages({
-  en: { label: 'Search', button: 'Search', suggestions: 'Search suggestions' },
-  fr: { label: 'Rechercher', button: 'Rechercher', suggestions: 'Suggestions de recherche' },
+  en: { label: 'Search', button: 'Search', suggestions: 'Search suggestions', scope: 'Search in' },
+  fr: { label: 'Rechercher', button: 'Rechercher', suggestions: 'Suggestions de recherche', scope: 'Rechercher dans' },
 });
 
 /** A part of `text` to set in bold: UTF-16 offsets, as the search API's `highlight` (S-44). */
@@ -39,7 +39,14 @@ export interface SearchBarProps {
    */
   suggestions?: readonly SearchSuggestionGroup[];
   onPick?: (suggestion: SearchSuggestion) => void;
+  /**
+   * The department scope before the field (E-15: "search with a Services / Shop / Food scope"): a native select, so the
+   * keyboard and screen readers get the platform's own control. `label` names it ("Search in").
+   */
+  scope?: SearchScope;
 }
+
+export interface SearchScope { value: string; options: readonly { value: string; label: string }[]; onChange: (value: string) => void; label?: string }
 
 /** `text` with the highlighted ranges in <strong> (ranges outside the text are ignored). */
 export function Highlighted({ text, ranges = [] }: { text: string; ranges?: readonly TextRange[] }) {
@@ -56,8 +63,8 @@ export function Highlighted({ text, ranges = [] }: { text: string; ranges?: read
   return <>{parts}</>;
 }
 
-/** Search field (role=search). Enter or the button submits; with `suggestions` it predicts as you type. The header variant is AfroTransact's search bar: one rounded control, the field and an accent search button. */
-export function SearchBar({ value, onChange, onSubmit, variant = 'hero', placeholder, label, suggestions, onPick }: SearchBarProps) {
+/** Search field (role=search). Enter or the button submits; with `suggestions` it predicts as you type. The header variant is the mockups' search bar: one box with an ink edge — the department scope (`scope`), the field and a solid ink button. */
+export function SearchBar({ value, onChange, onSubmit, variant = 'hero', placeholder, label, suggestions, onPick, scope }: SearchBarProps) {
   const t = useT();
   const id = useId();
   const listId = `${id}-list`;
@@ -93,7 +100,16 @@ export function SearchBar({ value, onChange, onSubmit, variant = 'hero', placeho
   return (
     <form role="search" className={clsx('nl-search', `nl-search-${variant}`)}
       onSubmit={e => { e.preventDefault(); setDismissed(true); onSubmit(value.trim()); }}>
-      {variant === 'hero' ? <MagnifyingGlass size={22} className="nl-search-icon" aria-hidden /> : null}
+      {scope ? (
+        <span className="nl-search-scope">
+          <label htmlFor={`${id}-scope`} className="nl-sr-only">{scope.label ?? t('scope')}</label>
+          <select id={`${id}-scope`} value={scope.value} onChange={e => scope.onChange(e.target.value)}>
+            {scope.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <CaretDown size={12} aria-hidden />
+        </span>
+      ) : null}
+      {variant === 'hero' && !scope ? <MagnifyingGlass size={22} className="nl-search-icon" aria-hidden /> : null}
       <label htmlFor={id} className="nl-sr-only">{label ?? t('label')}</label>
       <input id={id} type="search" className={clsx(variant === 'header' && 'input', 'nl-search-input')} value={value} placeholder={placeholder}
         enterKeyHint="search" autoComplete="off"

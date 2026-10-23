@@ -11,7 +11,6 @@
 .nl-after-star[aria-checked='true'] { border-color: var(--color-action-primary); }
 .nl-after-tags { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .nl-after-tags legend { margin-bottom: 6px; font-weight: 600; }
-.nl-after-tags .nl-chip { min-height: 44px; }
 .nl-after-eta { margin: 0; font-size: 18px; font-weight: 600; }
 .nl-after-title { font-size: var(--text-3xl); letter-spacing: var(--tracking-tight); margin: 0 0 var(--space-1); }
 

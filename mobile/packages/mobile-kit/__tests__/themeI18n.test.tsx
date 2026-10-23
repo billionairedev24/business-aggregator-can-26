@@ -47,7 +47,8 @@ describe('theme from @northline/tokens', () => {
   });
 
   it('takes radii, spacing and type from the tokens', () => {
-    expect(radius).toEqual({ xs: 4, sm: 6, md: 8, lg: 12, pill: 999 });
+    // the Plainsight corners (E-15, palettes/plainsight.json): 3 px controls, 4 px panels, never pills; `round` for what is a circle
+    expect(radius).toEqual({ xs: 2, sm: 3, md: 4, lg: 4, pill: 3, control: 3, panel: 4, image: 2, status: 2, round: 999 });
     expect(space[4]).toBe(16);
     expect(text.base).toBe(15);
   });

@@ -104,6 +104,33 @@ export function semanticColours(p, { chrome = 'light' } = {}) {
     selection: accent[200], 'mark-highlight': c.markHighlight ?? c.accent,
     'placeholder-a': neutral[100], 'placeholder-b': neutral[50],
   };
+  // ── tokens v2 (S-167, E-15): the roles the Plainsight components draw with, derived for every palette so the older
+  // palettes keep building; a palette's `roles` then pins any of them (and any role above) to an exact value ──
+  const tint = mix(c.ground, c.ink, 0.04);
+  Object.assign(colours, {
+    // selected: segments, chips, tabs, checkboxes, the current page turn solid ink; the tint is a chip's applied state
+    selected: c.ink, 'selected-text': WHITE, 'selected-tint': tint, 'selected-ink': c.ink,
+    // commerce: deals, the cart count, the cut-off timer — never a button
+    commerce: c.accent, 'commerce-on': c.accentText, 'commerce-text': readableOnAll(c.accentInk ?? c.accent, surfaces, 4.5), 'commerce-bg': accentTint,
+    // the photo well: product on white sits in a grey well; the fallback is a dashed well with the category icon
+    well: c.ground, 'well-ink': readable(c.textSubtle ?? c.textMuted, c.ground, 3), 'well-line': c.borderStrong,
+    star: readableOnAll(c.accent, surfaces, 3), 'star-empty': c.borderStrong,
+    info: c.info ?? c.primary, 'info-bg': c.infoBg ?? primary[50],
+    'neutral-fg': readable(c.textMuted, neutral[100], 4.5), 'neutral-bg': neutral[100],
+    'promo-bg': primary[50], 'promo-text': readable(primaryHover, primary[50], 4.5),
+  });
+  Object.assign(colours, p.roles ?? {});
+  // status tags read one pattern, `--color-status-<tone>-{fg,bg}` (aliases of the roles above, after the pins)
+  for (const [tone, fg, bg] of [['success', 'success', 'success-bg'], ['warning', 'warning', 'warning-bg'], ['danger', 'danger', 'danger-bg'], ['info', 'info', 'info-bg'], ['neutral', 'neutral-fg', 'neutral-bg']]) {
+    colours[`status-${tone}-fg`] = colours[fg];
+    colours[`status-${tone}-bg`] = colours[bg];
+  }
+  // the secondary and tertiary buttons are the neutral and the link roles, named as the components use them
+  Object.assign(colours, {
+    'action-secondary': colours['action-neutral'], 'action-secondary-hover': colours['action-neutral-hover'],
+    'action-secondary-text': colours['action-neutral-text'], 'action-secondary-border': colours['action-neutral-border'],
+    'action-tertiary-text': colours.link, 'action-tertiary-hover': colours['link-hover'],
+  });
   return { colours, ramps: { primary, accent, neutral, danger, success, warning } };
 }
 
@@ -111,7 +138,8 @@ export function semanticColours(p, { chrome = 'light' } = {}) {
 export function resolveTheme(brand, palette, scale) {
   const { colours, ramps } = semanticColours(palette, { chrome: brand.chrome });
   const ink = palette.color.ink;
-  const shadow = Object.fromEntries(Object.entries(scale.shadow).map(([k, layers]) => [k, {
+  // a palette may flatten or soften the shadows (Plainsight: flat cards, a shadow only for what floats)
+  const shadow = Object.fromEntries(Object.entries({ ...scale.shadow, ...palette.shadow }).map(([k, layers]) => [k, {
     css: layers.map(l => `0 ${l.y}px ${l.blur}px rgb(${channels(ink)} / ${l.alpha})`).join(', '),
     native: { shadowColor: ink, shadowOffset: { width: 0, height: layers[0].y }, shadowOpacity: layers[0].alpha, shadowRadius: layers[0].blur / 2, elevation: Math.max(1, Math.round(layers[0].y * 1.5)) },
   }]));
@@ -125,8 +153,10 @@ export function resolveTheme(brand, palette, scale) {
     },
     color: colours,
     ramp: ramps,
-    radius: brand.radius,
-    space: scale.space, text: scale.text, weight: scale.weight, leading: scale.leading, tracking: scale.tracking,
+    // a palette's own corners replace brand.json's (Plainsight: 3 px controls, 4 px panels); control/panel/image/status/round
+    // are the v2 names, derived from the older steps for palettes that predate them
+    radius: { control: brand.radius.sm, panel: brand.radius.lg, image: brand.radius.xs, status: brand.radius.xs, round: brand.radius.pill, ...brand.radius, ...palette.radius },
+    space: scale.space, text: scale.text, type: scale.type, density: scale.density, weight: scale.weight, leading: scale.leading, tracking: scale.tracking,
     size: scale.size, page: scale.page, z: scale.z, motion: scale.motion,
     shadow,
     logo: { wordmark: brand.identity.wordmark ?? brand.identity.name, mark: palette.mark, markOnDark: palette.markOnDark ?? palette.mark },

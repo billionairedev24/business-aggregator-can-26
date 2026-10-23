@@ -67,6 +67,7 @@ function paletteVars(t) {
     ...Object.entries(t.color).map(([k, v]) => decl(`--color-${k}`, v)),
     decl('--color-overlay', 'rgb(0 0 0 / 0.55)'),
     decl('--font-sans', t.font.sans), decl('--font-display', t.font.display), decl('--font-heading', t.font.heading),
+    ...Object.entries(t.radius).map(([k, v]) => decl(`--radius-${k}`, px(v))),
     ...Object.entries(t.shadow).map(([k, v]) => decl(`--shadow-${k}`, v.css)),
     decl('--shadow-focus', '0 0 0 3px var(--color-focus-ring)'),
   ];
@@ -80,7 +81,8 @@ const scaleVars = [
   ...Object.entries(scale.tracking).map(([k, v]) => decl(`--tracking-${k}`, v)),
   ...Object.entries(scale.size).map(([k, v]) => decl(`--size-${k}`, px(v))),
   decl('--page-max', px(scale.page.max)), decl('--page-gutter', scale.page.gutter),
-  ...Object.entries(brand.radius).map(([k, v]) => decl(`--radius-${k}`, px(v))),
+  ...Object.entries(scale.type ?? {}).map(([k, v]) => decl(`--type-${k}`, px(v))),
+  ...Object.entries(scale.density ?? {}).map(([k, v]) => decl(`--density-${k}`, px(v))),
   ...Object.entries(scale.z).map(([k, v]) => decl(`--z-${k}`, v)),
   decl('--duration-fast', scale.motion.fast), decl('--duration', scale.motion.base), decl('--ease', scale.motion.ease),
 ];
@@ -122,7 +124,7 @@ ${fonts.css}
 :root {
   /* palette: ${theme.brand.paletteName} (${theme.brand.direction}) — layer 1 primitives, layer 2 semantic roles */
 ${paletteVars(theme).join('\n')}
-  /* scale (fixed rhythm) and brand radii */
+  /* scale (fixed rhythm), the v2 type roles and density */
 ${scaleVars.join('\n')}
   /* layer 3: store theme */
 ${storeVars.join('\n')}

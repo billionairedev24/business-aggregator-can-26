@@ -32,7 +32,6 @@ a.cart-line-name:focus-visible { outline: 2px solid var(--color-focus); outline-
 .cart-line-delete { min-height: var(--size-touch); font-size: var(--text-sm); }
 .cart-line-total { font-size: var(--text-lg); font-weight: var(--weight-bold); white-space: nowrap; }
 .cart-subtotal { margin: var(--space-4) 0 0; padding: var(--space-3) 0; text-align: right; font-size: var(--text-lg); }
-.cart-subtotal .nl-price { vertical-align: top; }
 .cart-subtotal-aside { text-align: left; border-top: 0; padding: 0; }
 
 .cart-summary { position: sticky; top: calc(var(--nl-header-h, var(--size-header)) + var(--space-4)); padding: var(--space-6); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }

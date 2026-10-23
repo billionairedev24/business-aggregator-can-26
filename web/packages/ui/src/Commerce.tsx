@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
-import { Minus, Package, Plus, SealCheck, Trash, Wrench, type Icon } from '@phosphor-icons/react';
-import { defineMessages, formatMoney, formatNumber, langTag, useLocale, type Locale } from './i18n';
+import { Minus, Package, Plus, SealCheck, Trash, Truck, Warning, Wrench, type Icon } from '@phosphor-icons/react';
+import { defineMessages, formatNumber, formatPrice, formatUnitPrice, useLocale, type PriceUnit } from './i18n';
 import { SiteLink } from './SiteLink';
 import type { TagTone } from './Tag';
 
 /**
- * The consumer commerce kit in AfroTransact's card language (redesign § 1.3, Shop:313–332 and Shop:891; impl
- * `ui/src/commerce/{Price,Stars,ProductCard}.tsx`): Price (whole-dollar figure with superscript currency and cents),
- * Stars (fractional, in the rating colour, with the review count), QuantityStepper (− 2 in cart +), ProductCard (results
- * grid and home rail) and ServiceCard (a provider's or a service's card: 96px thumbnail | name, stars, place | "from"
- * price). Semantic tokens only; every target ≥ 44px; every string in en and fr-CA.
+ * The commerce kit in the locked E-15 direction, A · Plainsight (design/revamp/a.html "Design system at a glance"):
+ * Price (the one format, $8.50 / 8,50 $, with the unit price as meta), Stars (ink, with the value and the count),
+ * DealBadge (the commerce colour), StatusTag (a semantic colour pair), QuantityStepper, MediaFallback (the dashed well
+ * with the category icon), ProductCard (product on white in a 1:1 grey well) and ServiceCard. Semantic tokens only;
+ * every target ≥ 44px; every string in en and fr-CA.
  */
 const useT = defineMessages({
   en: {
@@ -23,6 +23,7 @@ const useT = defineMessages({
     soldOut: 'Currently unavailable', onlyLeft: 'Only {count} left',
     verified: 'Verified',
     was: 'Was {price}',
+    off: '{percent}% off',
   },
   fr: {
     stars: '{rating} sur 5 étoiles',
@@ -34,28 +35,19 @@ const useT = defineMessages({
     soldOut: 'Non disponible pour le moment', onlyLeft: 'Plus que {count}',
     verified: 'Vérifié',
     was: 'Avant {price}',
+    off: '{percent} % de rabais',
   },
 });
 
 // ── Price ───────────────────────────────────────────────────────────────────────────────────────────────────────
-
-function priceParts(cents: number, locale: Locale) {
-  const parts = new Intl.NumberFormat(langTag(locale), { style: 'currency', currency: 'CAD', currencyDisplay: 'narrowSymbol' }).formatToParts(Math.abs(cents) / 100);
-  const symbolAt = parts.findIndex(p => p.type === 'currency');
-  const integerAt = parts.findIndex(p => p.type === 'integer');
-  return {
-    symbol: parts.find(p => p.type === 'currency')?.value ?? '$',
-    whole: parts.filter(p => p.type === 'integer' || p.type === 'group').map(p => p.value).join(''),
-    cents: parts.find(p => p.type === 'fraction')?.value ?? '00',
-    after: symbolAt > integerAt,
-  };
-}
 
 export interface PriceProps {
   /** CAD cents. */
   cents: number;
   /** A higher earlier price, struck through ("Was $9.00"). */
   compareAtCents?: number | null;
+  /** The unit price as meta after the figure: per-unit cents and the unit ("$0.94/100 g", "$3.75 each"). */
+  unit?: { cents: number; per: PriceUnit } | null;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   /** Before the figure: "from", "/ hr" goes in `suffix`. */
   prefix?: ReactNode;
@@ -64,28 +56,37 @@ export interface PriceProps {
 }
 
 /**
- * A storefront price: the whole-dollar figure with the currency sign and the cents in superscript ($7⁵⁰ in en-CA,
- * 7⁵⁰ $ in fr-CA). Screen readers get the plain formatted amount.
+ * A price in the one format (E-15; the audit found three styles on the same pages): `$8.50` / `8,50 $` in tabular
+ * bold, the unit price and the earlier price as 12 px meta beside it.
  */
-export function Price({ cents, compareAtCents, size = 'md', prefix, suffix, className }: PriceProps) {
+export function Price({ cents, compareAtCents, unit, size = 'md', prefix, suffix, className }: PriceProps) {
   const t = useT();
   const { locale } = useLocale();
-  const p = priceParts(cents, locale);
   const was = compareAtCents && compareAtCents > cents ? compareAtCents : null;
   return (
     <span className={clsx('nl-price', `nl-price-${size}`, className)}>
       {prefix ? <span className="nl-price-prefix">{prefix}</span> : null}
-      <span className="nl-price-amount" aria-hidden>
-        {p.after ? null : <span className="nl-price-sup">{p.symbol}</span>}
-        <span className="nl-price-whole">{p.whole}</span>
-        <span className="nl-price-sup">{p.cents}</span>
-        {p.after ? <span className="nl-price-sup">{` ${p.symbol}`}</span> : null}
-      </span>
-      <span className="nl-sr-only">{formatMoney(cents, locale)}</span>
+      <span className="nl-price-amount">{formatPrice(cents, locale)}</span>
       {suffix ? <span className="nl-price-suffix">{suffix}</span> : null}
-      {was ? <s className="nl-price-was">{t('was', { price: formatMoney(was, locale) })}</s> : null}
+      {unit ? <span className="nl-price-unit">{formatUnitPrice(unit.cents, unit.per, locale)}</span> : null}
+      {was ? <s className="nl-price-was">{t('was', { price: formatPrice(was, locale) })}</s> : null}
     </span>
   );
+}
+
+/** The deal badge: the commerce colour, white, bold ("12% off"); on a photo well's corner or beside a price. */
+export function DealBadge({ percent, children, className }: { percent?: number; children?: ReactNode; className?: string }) {
+  const t = useT();
+  return <span className={clsx('nl-deal', className)}>{children ?? t('off', { percent: percent ?? 0 })}</span>;
+}
+
+export type StatusTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+/**
+ * A status (Delivered, Packed, To pack, Wrong item, Paused): the semantic colour pair of its tone with a square dot —
+ * never the action or the commerce colour (one role per colour).
+ */
+export function StatusTag({ tone = 'neutral', size, children }: { tone?: StatusTone; size?: 'lg'; children: ReactNode }) {
+  return <span className={clsx('nl-status', tone !== 'neutral' && `nl-status-${tone}`, size === 'lg' && 'nl-status-lg')}>{children}</span>;
 }
 
 // ── Stars ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -94,7 +95,7 @@ const STAR = 'M12 2.5l2.94 6.24 6.81.79-5.04 4.66 1.35 6.73L12 17.52 5.94 20.92l
 
 function Star({ fill, size }: { fill: number; size: number }) {
   return (
-    <span className="nl-star" style={{ width: size, height: size }}>
+    <span className="nl-star">
       <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden focusable="false" className="nl-star-track"><path fill="currentColor" d={STAR} /></svg>
       <span className="nl-star-fill" style={{ width: `${fill * 100}%` }}>
         <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden focusable="false"><path fill="currentColor" d={STAR} /></svg>
@@ -107,14 +108,14 @@ export interface StarsProps {
   rating: number;
   /** Shown after the stars in the link colour; 0 with `showNew` reads "New". */
   reviewCount?: number | null;
-  /** The number before the stars (product page). */
+  /** The value before the stars ("4.8"); on by default, as the mockups show it. */
   showValue?: boolean;
   size?: number;
   className?: string;
 }
 
-/** Read-only rating: five stars filled to the nearest half in the rating colour, announced as "4.5 out of 5 stars". */
-export function Stars({ rating, reviewCount, showValue, size = 14, className }: StarsProps) {
+/** Read-only rating: the value, five ink stars filled to the nearest half, the count; announced as "4.5 out of 5 stars". */
+export function Stars({ rating, reviewCount, showValue = true, size = 13, className }: StarsProps) {
   const t = useT();
   const { locale } = useLocale();
   const r = Math.max(0, Math.min(5, rating));
@@ -169,16 +170,14 @@ export function QuantityStepper({ value, max, onChange, name, busy, inCart, remo
 // ── MediaFallback ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /**
- * What a card shows where its photo would be when it has none — never a blank box: the name's first letter in the
- * display face on the linen ground, a quiet icon of the kind of thing (a parcel for goods, a wrench for services).
- * Decorative (the card's title names it).
+ * What a card shows where its photo would be when it has none — never a blank box: a dashed well with the category's
+ * icon and, when there is room, the seller's or item's name as a quiet caption. Decorative (the card's title names it).
  */
-export function MediaFallback({ name, icon: I = Package, className }: { name: string; icon?: Icon; className?: string }) {
-  const initial = name.trim().charAt(0).toUpperCase() || '·';
+export function MediaFallback({ name, caption, icon: I = Package, className }: { name: string; caption?: ReactNode; icon?: Icon; className?: string }) {
   return (
-    <span className={clsx('nl-media-fallback', className)} aria-hidden>
-      <span className="nl-media-fallback-initial">{initial}</span>
-      <I size={22} className="nl-media-fallback-icon" />
+    <span className={clsx('nl-media-fallback', className)} aria-hidden data-name={name}>
+      <I size={34} weight="light" className="nl-media-fallback-icon" />
+      {caption ? <span className="nl-media-fallback-caption">{caption}</span> : null}
     </span>
   );
 }
@@ -195,19 +194,23 @@ export interface ProductCardProps {
   priceCents?: number | null;
   priceText?: ReactNode;
   compareAtCents?: number | null;
-  /** "Glenmore Bakery · 900 g". */
+  /** The unit price as meta beside the price ("$0.94/100 g"). */
+  unit?: PriceProps['unit'];
+  /** The deal badge on the photo well's corner ("12% off"); shown automatically from `compareAtCents` when omitted. */
+  deal?: ReactNode | false;
+  /** "Loaf & Ladder Bakery · Inglewood". */
   meta?: ReactNode;
   rating?: number | null;
   reviewCount?: number | null;
   badges?: readonly CardBadge[];
-  /** The delivery promise ("Get it <strong>tonight</strong>"). */
+  /** The delivery promise ("Get it <strong>tonight, 6–9 p.m.</strong>"), after a truck icon. */
   eta?: ReactNode;
-  /** What the picture shows without a photo (an app's illustration); the initial on linen (MediaFallback) by default. */
+  /** What the picture shows without a photo (an app's illustration); the dashed well with the icon (MediaFallback) by default. */
   fallback?: ReactNode;
-  /** Shows "Only N left" in the low-stock colour. */
+  /** Shows "Only N left" in the warning colour. */
   lowStock?: number | null;
   soldOut?: boolean;
-  /** `grid` (results, bordered, 1:1 padded image, the cart action) or `rail` (home rows: borderless, title clamped). */
+  /** `grid` (results: the cart action) or `rail` (home rows: no action, the title clamped). Both are flat on white. */
   variant?: 'grid' | 'rail';
   /** Units of this offer already in the cart: the action becomes a stepper. */
   inCart?: number;
@@ -221,36 +224,40 @@ export interface ProductCardProps {
 }
 
 /**
- * A product in a results grid or a home rail (AT ProductCard): image on the sunken surface, title (link colour on
- * hover), meta, stars, price, badges, delivery promise, low stock, then a full-width 32px "Add to cart" pill that turns
- * into "− 2 in cart +". The image repeats the title's link and is hidden from assistive technology (one link per card).
+ * A product in a results grid or a home rail (the mockups' card): product on white in a 1:1 grey well with a 12 px
+ * inset (the deal badge on its corner), the title (13.5, two lines), the seller in meta, the rating, the price with its
+ * unit price, the delivery promise, low stock, then a full-width "Add to cart" in the action colour that turns into
+ * "− 2 in cart +". The image repeats the title's link and is hidden from assistive technology (one link per card).
  */
 export function ProductCard(p: ProductCardProps) {
   const t = useT();
   const variant = p.variant ?? 'grid';
   const H = `h${p.level ?? 3}` as 'h3';
+  const off = p.compareAtCents && p.priceCents != null && p.compareAtCents > p.priceCents ? Math.round((1 - p.priceCents / p.compareAtCents) * 100) : 0;
+  const deal = p.deal === false ? null : p.deal ?? (off > 0 ? <DealBadge percent={off} /> : null);
   const price = p.priceCents != null
-    ? <Price cents={p.priceCents} compareAtCents={p.compareAtCents} size={variant === 'rail' ? 'md' : 'lg'} />
+    ? <Price cents={p.priceCents} compareAtCents={p.compareAtCents} unit={p.unit} size={variant === 'rail' ? 'sm' : 'md'} />
     : p.priceText ? <span className="nl-card-price-text">{p.priceText}</span> : null;
   return (
     <article className={clsx('nl-pcard', `nl-pcard-${variant}`, p.className)} aria-label={p.name}>
       <SiteLink href={p.href} className="nl-pcard-media" tabIndex={-1} aria-hidden="true">
         <span className="nl-pcard-img">{p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" decoding="async" /> : p.fallback ?? <MediaFallback name={p.name} />}</span>
+        {deal ? <span className="nl-pcard-deal">{deal}</span> : null}
       </SiteLink>
       <div className="nl-pcard-body">
         <H className="nl-pcard-heading"><SiteLink href={p.href} className="nl-pcard-title">{p.name}</SiteLink></H>
         {p.meta ? <span className="nl-pcard-meta">{p.meta}</span> : null}
-        {p.rating ? <Stars rating={p.rating} reviewCount={p.reviewCount ?? undefined} size={variant === 'rail' ? 12 : 14} /> : null}
+        {p.rating ? <Stars rating={p.rating} reviewCount={p.reviewCount ?? undefined} /> : null}
         {price ? <span className="nl-pcard-price">{price}</span> : null}
         {p.badges?.length ? <span className="nl-pcard-badges">{p.badges.map((b, i) => <span key={i} className={clsx('tag', `tag-${b.tone ?? 'neutral'}`)}>{b.label}</span>)}</span> : null}
-        {p.eta && !p.soldOut ? <span className="nl-pcard-eta">{p.eta}</span> : null}
-        {p.lowStock && !p.soldOut ? <span className="nl-pcard-low">{t('onlyLeft', { count: p.lowStock })}</span> : null}
+        {p.eta && !p.soldOut ? <span className="nl-pcard-eta"><Truck size={15} aria-hidden className="nl-pcard-eta-icon" /><span>{p.eta}</span></span> : null}
+        {p.lowStock && !p.soldOut ? <span className="nl-pcard-low"><Warning size={14} aria-hidden />{t('onlyLeft', { count: p.lowStock })}</span> : null}
         {variant === 'grid' && (p.onAdd || p.soldOut) ? (
           <div className="nl-pcard-actions">
             {p.soldOut ? <span className="nl-pcard-unavailable">{t('soldOut')}</span>
               : (p.inCart ?? 0) > 0 && p.onQuantity
                 ? <QuantityStepper block inCart value={p.inCart!} max={Math.min(99, p.max ?? 99)} name={p.name} busy={p.busy} onChange={p.onQuantity} />
-                : <button type="button" className="btn btn-accent btn-sm btn-block" disabled={p.busy} aria-busy={p.busy || undefined} aria-label={t('addNamed', { name: p.name })} onClick={p.onAdd}>
+                : <button type="button" className="btn btn-primary btn-sm btn-block" disabled={p.busy} aria-busy={p.busy || undefined} aria-label={t('addNamed', { name: p.name })} onClick={p.onAdd}>
                   {p.busy ? t('adding') : t('addToCart')}
                 </button>}
           </div>

@@ -87,6 +87,10 @@ ui-hydration: $(WEB_INSTALLED) ## S-182: fail on any React hydration error on ev
 	@cd $(ROOT)/web && if [ -z "$(UI_SHOTS_SKIP_BUILD)" ]; then pnpm --filter @northline/consumer build || exit 1; fi; \
 	UI_SHOTS_APPS=consumer UI_SHOTS_HYDRATION=1 pnpm --filter @northline/a11y shots $(if $(UI_SHOTS_GREP),--grep "$(UI_SHOTS_GREP)")
 
+.PHONY: ui-visual
+ui-visual: $(WEB_INSTALLED) ## S-168: screenshot baselines of the component gallery (every @northline/ui section, en + fr-CA, 1440 + 390); UI_VISUAL_UPDATE=1 rewrites them
+	$(PNPM) --filter @northline/gallery $(if $(UI_VISUAL_UPDATE),test:visual:update,test:visual)
+
 .PHONY: csp-check
 csp-check: $(WEB_INSTALLED) ## S104-09: the consumer site's CSP in Chromium — a fresh nonce per page, none of its inline scripts without it, zero violations (checkout with a Stripe.js stand-in)
 	$(PNPM) --filter @northline/consumer build

@@ -28,6 +28,7 @@ class EmailBrandTest {
         assertThat(colour(palette, "textMuted")).isEqualToIgnoringCase(EmailBrand.MUTED);
         assertThat(colour(palette, "accentTint")).isEqualToIgnoringCase(EmailBrand.HIGHLIGHT_100);
         assertThat(colour(palette, "primaryText")).isEqualToIgnoringCase(EmailBrand.ON_ACCENT);
+        assertThat(colour(palette, "warning")).isEqualToIgnoringCase(EmailBrand.WARNING);
         assertThat(EmailBrand.FONT_BODY.replace("'", "")).startsWith(value(palette, "family", "[^\"]+"));
     }
 

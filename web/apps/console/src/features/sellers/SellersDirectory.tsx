@@ -89,7 +89,7 @@ function DirectoryView({ data, search, onSearch }: { data: Directory; search: Se
         can={{ create: false, update: can('suspend'), delete: false }} emptyText={t('empty')} openLabel={t('open')} reportName="sellers"
         onOpen={r => onSearch({ seller: r.id })}
         actions={[
-          { id: 'suspend', label: t('suspend'), perm: 'update', inline: true, bulk: false, when: { key: 'status', in: suspendable } },
+          { id: 'suspend', label: t('suspend'), perm: 'update', inline: true, bulk: false, danger: true, when: { key: 'status', in: suspendable } },
           { id: 'reinstate', label: t('reinstate'), perm: 'update', inline: true, bulk: false, when: { key: 'status', in: [t('st_suspended')] } },
         ]}
         onAction={(a, picked) => { const s = picked[0]?.src; if (s) setActing({ seller: s, action: a.id as 'suspend' | 'reinstate' }); return false; }} />

@@ -1,6 +1,6 @@
 /* Sellers & providers, the sheet and the seller detail (S-82; redesign § 2.3 → BO `orgs`). Semantic tokens only. */
 .nl-sl-bar { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-.nl-sl-search .input { min-height: var(--size-touch); width: min(320px, 100%); border-radius: var(--radius-sm); }
+.nl-sl-search .input { min-height: var(--size-touch); width: min(320px, 100%); }
 .nl-sl-note { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
 .nl-sl-error { margin: 0; color: var(--color-danger); font-size: var(--text-md); }
 .nl-sl-low { color: var(--color-danger); font-weight: var(--weight-semibold); }
