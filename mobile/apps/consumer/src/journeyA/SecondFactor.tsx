@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Image, Share, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, space } from '@northline/mobile-kit';
+import { radius, semantic, space } from '@northline/mobile-kit';
 
 import { HandoffError, useAccountFlow } from '../auth/AccountFlow';
 import { fieldErrors, flowError, isRestart, validateCode } from '../auth/rules';
@@ -167,9 +167,9 @@ export function SecondFactor() {
 }
 
 const styles = StyleSheet.create({
-  options: { gap: 8 },
-  qr: { alignItems: 'center', padding: space[3], backgroundColor: colors.surface, borderRadius: radius.md },
+  options: { gap: space[2] },
+  qr: { alignItems: 'center', padding: space[3], backgroundColor: semantic.surface, borderRadius: radius.panel },
   qrImage: { width: 180, height: 180 },
-  codes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: space[3], backgroundColor: colors.surface, borderRadius: radius.md },
+  codes: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2], padding: space[3], backgroundColor: semantic.surface, borderRadius: radius.panel },
   code: { width: '45%', fontVariant: ['tabular-nums'] },
 });

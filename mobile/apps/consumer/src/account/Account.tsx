@@ -4,13 +4,12 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, MIN_TARGET, Segmented, colors, fonts, radius, semantic, space, type Locale } from '@northline/mobile-kit';
+import { colors, formatPrice, Icon, LINE, MIN_TARGET, radius, Segmented, semantic, space, textStyles, type Locale } from '@northline/mobile-kit';
 
 import { useAuth } from '../auth/AuthProvider';
 import { config, fullNav, legalUrl } from '../config';
 import { useI18n } from '../i18n';
 import { useDeliveryLocation } from '../location/DeliveryLocation';
-import { formatMoney } from '../shop/common';
 import { Body, Button, Link, Notice, Row, Tag, Title, type } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { ErrorState, SignInPrompt, Skeleton } from '../ui/states';
@@ -179,7 +178,7 @@ export function Account() {
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={[t('account.you.wallet'), s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatMoney(s.points.valueCents, locale) }) : '', s ? t(s.plus ? 'account.you.plus' : 'account.you.standard') : ''].filter(Boolean).join(', ')}
+        accessibilityLabel={[t('account.you.wallet'), s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatPrice(s.points.valueCents, locale) }) : '', s ? t(s.plus ? 'account.you.plus' : 'account.you.standard') : ''].filter(Boolean).join(', ')}
         onPress={() => router.push('/wallet')}
         style={({ pressed }) => [styles.wallet, pressed && styles.walletPressed]}
         testID="you-wallet"
@@ -190,7 +189,7 @@ export function Account() {
             <Skeleton height={22} width="60%" />
           ) : (
             <Text style={styles.walletPoints}>
-              {s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatMoney(s.points.valueCents, locale) }) : t('account.you.walletOpen')}
+              {s?.points ? t('account.you.points', { points: count(s.points.balance, locale), value: formatPrice(s.points.valueCents, locale) }) : t('account.you.walletOpen')}
             </Text>
           )}
         </View>
@@ -231,28 +230,17 @@ export function Account() {
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET },
   headText: { flex: 1, minWidth: 0, gap: 2 },
-  avatar: { width: 64, height: 64, borderRadius: radius.round, backgroundColor: semantic['action-primary'], alignItems: 'center', justifyContent: 'center' },
-  initials: { fontFamily: fonts.display, fontSize: 24, color: semantic['action-primary-text'] },
-  hi: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34, color: colors.text },
+  avatar: { width: 64, height: 64, borderRadius: radius.round, backgroundColor: semantic.selected, alignItems: 'center', justifyContent: 'center' },
+  initials: { ...StyleSheet.flatten(textStyles.pageTitle), color: semantic['action-primary-text'] },
+  hi: { ...StyleSheet.flatten(textStyles.pageTitle) },
   section: { gap: space[2] },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  h3: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26, color: colors.text },
-  orderRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56, paddingHorizontal: 14, paddingVertical: space[3], borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
-  wallet: {
-    marginTop: space[2],
-    paddingHorizontal: space[4],
-    paddingVertical: 14,
-    minHeight: MIN_TARGET,
-    borderRadius: radius.md,
-    backgroundColor: semantic['surface-brand'],
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space[3],
-  },
+  h3: { ...StyleSheet.flatten(textStyles.section) },
+  orderRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56, paddingHorizontal: space[3.5], paddingVertical: space[3], borderWidth: LINE.hair, borderColor: semantic.border, borderRadius: radius.panel },
+  wallet: { marginTop: space[2], paddingHorizontal: space[4], paddingVertical: space[3.5], minHeight: MIN_TARGET, borderRadius: radius.panel, backgroundColor: semantic.well, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[3] },
   walletPressed: { backgroundColor: semantic['surface-hover'] },
-  walletKicker: { ...StyleSheet.flatten(type.kicker), fontSize: 11, color: semantic['badge-brand-text'] },
-  walletPoints: { fontFamily: fonts.bold, fontSize: 18, color: semantic['badge-brand-text'] },
+  walletKicker: { ...StyleSheet.flatten(textStyles.caps) },
+  walletPoints: { ...StyleSheet.flatten(textStyles.section), color: semantic.commerce },
   rows: { paddingTop: space[2] },
   language: { gap: space[2], paddingTop: space[3] },
   legal: { paddingTop: space[6] },

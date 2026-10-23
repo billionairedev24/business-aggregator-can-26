@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { colors, radius } from '@northline/mobile-kit';
+import { colors, LINE, radius, semantic } from '@northline/mobile-kit';
 
 import type { Stroke } from '../signature/png';
 
@@ -63,6 +63,6 @@ export function SignaturePad({
 }
 
 const styles = StyleSheet.create({
-  box: { backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderControl, overflow: 'hidden' },
-  baseline: { position: 'absolute', left: 24, right: 24, bottom: 40, height: 1, backgroundColor: colors.borderStrong },
+  box: { backgroundColor: semantic.surface, borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-control'], overflow: 'hidden' },
+  baseline: { position: 'absolute', left: 24, right: 24, bottom: 40, height: 1, backgroundColor: semantic['border-strong'] },
 });

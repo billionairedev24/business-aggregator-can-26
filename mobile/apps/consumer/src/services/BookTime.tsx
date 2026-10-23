@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
+import { ApiError, ChoiceTiles, LINE, MIN_TARGET, radius, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import type { Calendar, ProviderPage } from '../api/services';
 import { useAuth } from '../auth/AuthProvider';
@@ -121,34 +121,27 @@ function Form({ p, cal, refetch }: { p: ProviderPage; cal: Calendar; refetch: ()
               style={[styles.day, on && styles.dayOn]}
               testID={`day-${d.date}`}
             >
-              <Text style={styles.dow}>{parts.dow}</Text>
-              <Text style={styles.num}>{parts.num}</Text>
-              <Text style={styles.free}>{free}</Text>
+              <Text style={[styles.dow, on && styles.on]}>{parts.dow}</Text>
+              <Text style={[styles.num, on && styles.on]}>{parts.num}</Text>
+              <Text style={[styles.free, on && styles.on]}>{free}</Text>
             </Pressable>
           );
         })}
       </View>
-      <View style={styles.times} accessibilityLabel={t('services.book.times')}>
-        {day && day.slots.length > 0 ? (
-          day.slots.map((s) => (
-            <View key={s.startsAt} style={styles.time}>
-              <Chip
-                label={time(s.startsAt, cal.timeZone)}
-                selected={draft.startsAt === s.startsAt}
-                disabled={!s.free}
-                hint={s.free ? undefined : t('services.book.taken')}
-                onPress={() => {
-                  update({ startsAt: s.startsAt });
-                  setErrors((e) => ({ ...e, slot: undefined }));
-                }}
-                testID={`slot-${s.startsAt}`}
-              />
-            </View>
-          ))
-        ) : (
-          <Body tone="muted">{t('services.book.noTimes')}</Body>
-        )}
-      </View>
+      {day && day.slots.length > 0 ? (
+        <ChoiceTiles
+          label={t('services.book.times')}
+          options={day.slots.map((s) => ({ value: s.startsAt, label: time(s.startsAt, cal.timeZone), disabled: !s.free }))}
+          value={draft.startsAt ?? null}
+          onChange={(startsAt) => {
+            update({ startsAt });
+            setErrors((e) => ({ ...e, slot: undefined }));
+          }}
+          testID="slot"
+        />
+      ) : (
+        <Body tone="muted">{t('services.book.noTimes')}</Body>
+      )}
       {errors.slot ? <Text accessibilityRole="alert" style={type.error}>{errors.slot}</Text> : null}
       <Panel>
         <Body tone="small">{t('services.book.instant', { name: p.name })}</Body>
@@ -205,14 +198,13 @@ function SlotsSkeleton() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   form: { gap: space[3], paddingTop: space[3] },
-  days: { flexDirection: 'row', gap: 6 },
-  day: { flex: 1, minHeight: MIN_TARGET, paddingVertical: space[2], paddingHorizontal: 6, borderRadius: radius.md, borderWidth: 1, borderColor: colors.divider },
-  dayOn: { borderColor: colors.accent, backgroundColor: colors.accent100 },
-  dow: { fontFamily: fonts.body, fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: colors.neutral700 },
-  num: { fontFamily: fonts.bodyStrong, fontSize: 20, color: colors.text },
-  free: { fontFamily: fonts.body, fontSize: 10, color: colors.neutral700 },
-  times: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
-  time: { width: '31%' },
-  label: { fontFamily: fonts.body, fontSize: 13, color: colors.neutral800 },
-  spots: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  days: { flexDirection: 'row', gap: space[1.5] },
+  day: { flex: 1, minHeight: MIN_TARGET, paddingVertical: space[2], paddingHorizontal: space[1.5], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-control'] },
+  dayOn: { borderColor: semantic.selected, backgroundColor: semantic.selected },
+  on: { color: semantic['selected-text'] },
+  dow: { ...StyleSheet.flatten(textStyles.caps), color: semantic['text-muted'] },
+  num: { ...StyleSheet.flatten(textStyles.section) },
+  free: { ...StyleSheet.flatten(textStyles.caps), color: semantic['text-muted'] },
+  label: { ...StyleSheet.flatten(textStyles.label) },
+  spots: { flexDirection: 'row', flexWrap: 'wrap', gap: space[1.5] },
 });

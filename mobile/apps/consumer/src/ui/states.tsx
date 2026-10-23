@@ -5,6 +5,7 @@ import { ActivityIndicator, StyleSheet, Text, View, type DimensionValue } from '
 
 import {
   ApiError,
+  CardSkeleton as KitCardSkeleton,
   EmptyState as KitEmptyState,
   Icon,
   LINE,
@@ -60,6 +61,16 @@ export function LoadingList({ rows = 4, height = 64 }: { rows?: number; height?:
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton key={i} height={height} />
       ))}
+    </View>
+  );
+}
+
+/** S-178: product or service cards waiting (a results grid, a rail): the kit's card skeletons, announced as "Loading…". */
+export function CardSkeleton({ count = 4 }: { count?: number }) {
+  const { t } = useI18n();
+  return (
+    <View accessibilityRole="progressbar" accessibilityLabel={t('common.loading')} testID="loading">
+      <KitCardSkeleton count={count} />
     </View>
   );
 }

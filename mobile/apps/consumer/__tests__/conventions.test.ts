@@ -1,6 +1,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { screenRuleHits } from '@northline/mobile-kit';
+
 import { createConfig, HTTPS_REDIRECT_PATH, PERMISSION_TEXT, REDIRECT_URI } from '../app.config';
 import { en } from '../src/i18n/en';
 import { frCA } from '../src/i18n/fr-CA';
@@ -60,6 +62,14 @@ describe('code rules', () => {
   // S-169: `radius.pill` is 3 pt in Plainsight (never pills); what is a circle says `radius.round`, a control `radius.control`
   it('never asks for a pill radius', () => {
     expect(source.filter((f) => /radius\.pill/.test(readFileSync(f, 'utf8')))).toEqual([]);
+  });
+
+  // S-178/S-179: every screen on the kit's roles, scale and components (the native lint:tokens, mobile-kit's rules.ts):
+  // no raw colours, font sizes, line heights, spacing or radii, no retired display face, linen, drawings, hand-made
+  // prices or the native switch
+  it('uses the kit’s tokens and components only, on every screen', () => {
+    const hits = source.filter((f) => /\.tsx$/.test(f)).flatMap((f) => screenRuleHits(f.slice(ROOT.length + 1), readFileSync(f, 'utf8')));
+    expect(hits).toEqual([]);
   });
 
   // S-169: the shared chrome draws with the kit's type roles (textStyles / TYPE), never a raw font size or the retired display face

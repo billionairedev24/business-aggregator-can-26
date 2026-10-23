@@ -14,6 +14,7 @@ import { screens } from './screens';
 import { services } from './services';
 import { shop } from './shop';
 import { s159 } from './s159';
+import { revamp } from './revamp';
 
 /** Canadian French: design/i18n-fr.js's wording where it has the phrase, ours otherwise. */
-export const frCA: { [k in keyof typeof en]: string } = { ...common, ...screens, ...journeyA, ...shop, ...services, ...account, ...pilot, ...aftercare, ...afterSale, ...redesign, ...light, ...loyalty, ...hire, ...ai, ...s159 };
+export const frCA: { [k in keyof typeof en]: string } = { ...common, ...screens, ...journeyA, ...shop, ...services, ...account, ...pilot, ...aftercare, ...afterSale, ...redesign, ...light, ...loyalty, ...hire, ...ai, ...s159, ...revamp };

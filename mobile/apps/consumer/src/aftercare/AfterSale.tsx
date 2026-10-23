@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, colors, fonts, radius, semantic, space, type PickedImage } from '@northline/mobile-kit';
+import { ApiError, colors, LINE, radius, semantic, space, textStyles, type PickedImage } from '@northline/mobile-kit';
 
 import { CANCEL_REASONS, RETURN_REASONS, type OrderReturn, type OrderTracking, type Returnable } from '../api/shop';
 import type { MessageKey } from '../i18n';
@@ -288,11 +288,11 @@ const styles = StyleSheet.create({
   gapSmall: { gap: space[1] },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   flex: { flex: 1 },
-  item: { flexDirection: 'row', alignItems: 'center', gap: space[3], padding: space[3], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'] },
-  itemOn: { borderColor: semantic['action-primary'] },
-  box: { width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: colors.textMuted },
-  boxOn: { backgroundColor: semantic['action-primary'], borderColor: semantic['action-primary'] },
-  photo: { height: 160, borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
-  small: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
-  error: { fontFamily: fonts.body, fontSize: 13, color: colors.accent2_700 },
+  item: { flexDirection: 'row', alignItems: 'center', gap: space[3], padding: space[3], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-card'] },
+  itemOn: { borderColor: semantic.selected, backgroundColor: semantic['selected-tint'] },
+  box: { width: 20, height: 20, borderRadius: radius.panel, borderWidth: LINE.bold, borderColor: semantic['text-muted'] },
+  boxOn: { backgroundColor: semantic.selected, borderColor: semantic.selected },
+  photo: { height: 160, borderRadius: radius.panel, backgroundColor: semantic.well },
+  small: { ...StyleSheet.flatten(textStyles.meta), color: semantic['text-muted'] },
+  error: { ...StyleSheet.flatten(textStyles.meta), color: colors.accent2_700 },
 });

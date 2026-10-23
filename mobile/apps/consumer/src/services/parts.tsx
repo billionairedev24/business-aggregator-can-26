@@ -2,7 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { FilterChip, MIN_TARGET, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
+import { colors, FilterChip, LINE, MIN_TARGET, radius, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import { KEYS as ACCOUNT_KEYS } from '../account/common';
 import { servicesApi } from '../api/services';
@@ -113,17 +113,17 @@ export function Kicker({ children }: { children: ReactNode }) {
 export type T = (key: MessageKey, params?: Record<string, string | number>) => string;
 
 const styles = StyleSheet.create({
-  mark: { borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
-  markText: { fontFamily: fonts.display, color: colors.onAccent },
+  mark: { borderRadius: radius.panel, alignItems: 'center', justifyContent: 'center' },
+  markText: { fontFamily: textStyles.section.fontFamily, color: semantic['action-primary-text'] },
   line: { flexDirection: 'row', justifyContent: 'space-between', gap: space[3] },
   lineLeft: { flex: 1 },
-  lineStrong: { fontFamily: fonts.bold, fontSize: 17 },
-  muted: { color: colors.textMuted },
+  lineStrong: { ...StyleSheet.flatten(textStyles.sub) },
+  muted: { color: semantic['text-muted'] },
   panel: { padding: space[4], borderRadius: radius.panel, backgroundColor: semantic.well, gap: space[2] },
   panelAccent: { backgroundColor: semantic['status-info-bg'] },
-  steps: { flexDirection: 'row', gap: 6 },
-  step: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong },
-  stepOn: { backgroundColor: colors.actionPrimary },
-  row: { minHeight: MIN_TARGET, padding: space[4], gap: space[2], borderRadius: radius.panel, borderWidth: 1, borderColor: semantic['border-strong'], backgroundColor: colors.surface },
+  steps: { flexDirection: 'row', gap: space[1.5] },
+  step: { flex: 1, height: 4, borderRadius: radius.status, backgroundColor: semantic['border-strong'] },
+  stepOn: { backgroundColor: semantic.selected },
+  row: { minHeight: MIN_TARGET, padding: space[4], gap: space[2], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-strong'], backgroundColor: semantic.surface },
   rowPressed: { backgroundColor: semantic['surface-hover'] },
 });

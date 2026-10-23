@@ -100,4 +100,4 @@ export function ForgotPassword() {
   );
 }
 
-const styles = StyleSheet.create({ fields: { gap: 14, paddingTop: space[2] } });
+const styles = StyleSheet.create({ fields: { gap: space[3.5], paddingTop: space[2] } });

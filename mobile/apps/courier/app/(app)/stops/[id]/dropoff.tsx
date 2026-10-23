@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Image, Linking, StyleSheet, TextInput, View } from 'react-native';
 
-import { MIN_TARGET, colors, fonts, radius, randomId, space, semantic, Scene } from '@northline/mobile-kit';
+import { LINE, MIN_TARGET, PhotoWell, radius, randomId, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import { FAIL_REASONS, REFUSE_REASONS, type FailReason, type IdCheckAnswer, type ProofKind, type RefuseReason } from '../../../../src/api/courier';
 import { SignaturePad } from '../../../../src/components/SignaturePad';
@@ -136,7 +136,9 @@ export default function DropoffScreen() {
         </Banner>
       ) : (
         <>
-          <Scene slot="empty/proof-photo" subject="photo" draw={{ main: 'Camera', side: 'House' }} tone="sage" fit="contain" style={styles.cameraArt} />
+          <View style={styles.cameraArt}>
+            <PhotoWell icon="camera" inset={0} caption={t('dropoff.photo')} />
+          </View>
           <Button tone="secondary" label={t('dropoff.allowCamera')} onPress={() => void requestPermission()} testID="allow-camera" />
         </>
       )}
@@ -297,33 +299,29 @@ export default function DropoffScreen() {
 }
 
 const styles = StyleSheet.create({
-  preview: { width: '100%', aspectRatio: 3 / 4, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: semantic['surface-sunken'] },
+  preview: { width: '100%', aspectRatio: 3 / 4, borderRadius: radius.panel, overflow: 'hidden', backgroundColor: semantic.well },
   pin: {
-    minHeight: MIN_TARGET + 16,
-    borderWidth: 1,
-    borderColor: colors.borderControl,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    fontFamily: fonts.display,
-    fontSize: 34,
-    letterSpacing: 16,
+    ...StyleSheet.flatten(textStyles.priceLg),
+    minHeight: MIN_TARGET + space[4],
+    borderWidth: LINE.bold,
+    borderColor: semantic['border-control'],
+    borderRadius: radius.control,
+    backgroundColor: semantic.surface,
+    letterSpacing: space[4],
     textAlign: 'center',
-    color: colors.text,
     paddingHorizontal: space[4],
   },
-  pinError: { borderColor: semantic['danger-border'], borderWidth: 2 },
+  pinError: { borderColor: semantic.danger },
   list: { gap: space[2] },
   note: {
-    minHeight: 96,
-    borderWidth: 1,
-    borderColor: colors.borderControl,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    fontFamily: fonts.regular,
-    fontSize: 16,
-    color: colors.text,
+    ...StyleSheet.flatten(textStyles.body),
+    minHeight: space[16] + space[8],
+    borderWidth: LINE.hair,
+    borderColor: semantic['border-control'],
+    borderRadius: radius.control,
+    backgroundColor: semantic.surface,
     padding: space[3],
     textAlignVertical: 'top',
   },
-  cameraArt: { height: 170, borderRadius: radius.lg },
+  cameraArt: { width: '60%', alignSelf: 'center' },
 });

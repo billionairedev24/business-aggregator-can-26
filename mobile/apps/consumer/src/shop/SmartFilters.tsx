@@ -1,29 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { Icon, MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
+import { FilterChip, Icon, LINE, TYPE, radius, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import { Button } from '../ui/primitives';
 import { shop, useShopFormat } from './common';
 import { chipLabel, looksNatural, proposals, type Proposal } from './smartSearch';
 
-/** Removable chips (the suggestions, or the applied filters): × on each, at least 44 pt. */
+/** Removable chips (the suggestions, or the applied filters): the kit's applied FilterChip — ink edge, ✓ and ×, one 44 pt target named "Remove filter: …". */
 export function ProposalChips({ chips, onRemove, testID }: { chips: Proposal[]; onRemove: (c: Proposal) => void; testID: string }) {
   const f = useShopFormat();
   return (
     <View style={styles.chips} testID={testID}>
-      {chips.map((c) => {
-        const label = chipLabel(c, f.t, f.money);
-        return (
-          <View key={c.id} style={styles.chip}>
-            <Text style={styles.chipText}>{label}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel={f.t('ai.search.remove', { chip: label })} onPress={() => onRemove(c)} style={styles.x} testID={`chip-remove-${c.id}`}>
-              <Icon name="x" size={14} />
-            </Pressable>
-          </View>
-        );
-      })}
+      {chips.map((c) => (
+        <FilterChip key={c.id} label={chipLabel(c, f.t, f.money)} onRemove={() => onRemove(c)} testID={`chip-remove-${c.id}`} />
+      ))}
     </View>
   );
 }
@@ -57,7 +49,7 @@ export function SmartFilters({ text, located, onApply }: { text: string; located
   return (
     <View style={styles.box} accessibilityLabel={t('ai.search.label')} testID="smart-filters">
       <View style={styles.head}>
-        <Icon name="sparkle" size={18} />
+        <Icon name="sparkle" size={TYPE.price} />
         <Text style={styles.headText} accessibilityLiveRegion="polite">{t('ai.search.understood', { explanation: reading.data.explanation })}</Text>
       </View>
       <ProposalChips chips={chips} onRemove={(c) => setRemoved({ of: reading.data, ids: [...gone, c.id] })} testID="smart-chips" />
@@ -71,13 +63,10 @@ export function SmartFilters({ text, located, onApply }: { text: string; located
 }
 
 const styles = StyleSheet.create({
-  box: { gap: space[2], padding: space[3], borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, backgroundColor: colors.surface },
+  box: { gap: space[2], padding: space[3], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-strong'], backgroundColor: semantic.surface },
   head: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  headText: { flex: 1, fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
+  headText: { ...StyleSheet.flatten(textStyles.bodyStrong), flex: 1 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
-  chip: { flexDirection: 'row', alignItems: 'center', paddingLeft: space[3], borderRadius: radius.control, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.canvas },
-  chipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
-  x: { minWidth: MIN_TARGET, minHeight: MIN_TARGET, alignItems: 'center', justifyContent: 'center' },
-  quiet: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
+  quiet: textStyles.meta,
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
 });
