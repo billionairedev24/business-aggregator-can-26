@@ -116,9 +116,9 @@ function PosReview({ merchantId, preview, onClose }: { merchantId: string; previ
     if (i.change === 'problem') return i.problem ?? '';
     if (i.change === 'changed') {
       const fields = i.fields.map(x => t(`df_${x}` as 'df_name')).join(', ');
-      return i.fields.includes('price') && i.priceCents != null && i.previousPriceCents != null ? `${fields} · ${t('priceChange', { from: f.money(i.previousPriceCents), to: f.money(i.priceCents) })}` : fields;
+      return i.fields.includes('price') && i.priceCents != null && i.previousPriceCents != null ? `${fields} · ${t('priceChange', { from: f.price(i.previousPriceCents), to: f.price(i.priceCents) })}` : fields;
     }
-    return i.priceCents != null ? f.money(i.priceCents) : '';
+    return i.priceCents != null ? f.price(i.priceCents) : '';
   };
   return (
     <section className="nl-k-stack" aria-label={t('previewTitle', { pos })}>
@@ -130,7 +130,7 @@ function PosReview({ merchantId, preview, onClose }: { merchantId: string; previ
         <ul className="nl-k-diff">
           {shown.map(i => (
             <li key={i.externalId} data-change={i.change}>
-              <span className={`tag ${i.change === 'problem' || i.change === 'removed' ? 'tag-accent-2' : i.change === 'new' ? 'tag-accent' : 'tag-neutral'} nl-k-small-tag`}>{t(`ch_${i.change}`)}</span>
+              <span className={`tag ${i.change === 'problem' || i.change === 'removed' ? 'tag-danger' : i.change === 'new' ? 'tag-success' : 'tag-neutral'}`}>{t(`ch_${i.change}`)}</span>
               <strong>{i.name}</strong>{i.section ? <span className="nl-k-muted"> · {i.section}</span> : null}
               <span className="nl-k-diff-detail">{detail(i)}</span>
             </li>
