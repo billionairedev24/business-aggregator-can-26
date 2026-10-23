@@ -88,7 +88,7 @@ describe('Sell or offer a service (design 06 account › sell)', () => {
     open('/');
     const footer = await screen.findByRole('contentinfo');
     expect(within(footer).getByRole('link', { name: 'Offer a service' })).toHaveAttribute('href', '/sell?type=provider');
-    await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Account & orders/ }));
     expect(await screen.findByRole('menuitem', { name: /Sell or offer a service/ })).toHaveAttribute('href', '/sell');
   });
 });

@@ -14,40 +14,38 @@ beforeEach(() => { document.cookie = 'nl.locale=; max-age=0; path=/'; document.c
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('consumer header', () => {
-  it('shows the logo, Deliver to, the search (home included), the avatar menu, the cart and the nav row — no language switch', async () => {
+  it('shows the logo, Deliver to, the search with its scope, Account & orders, the cart and the department strip — no language switch', async () => {
     mockFetch(guest);
     renderApp('/');
     const header = await screen.findByRole('banner');
     await expectNoAxeViolations(document.body); // S-109
     expect(within(header).getByRole('link', { name: `${brand.name} — home` })).toHaveAttribute('href', '/');
     const nav = within(header).getByRole('navigation', { name: 'Main' });
-    // owner 2026-10-19 (after AfroTransact's): All (the categories sheet) · the sections · the main categories and
-    // departments · Help. Redesign § 3.7: Food as its own vertical is hidden for the demo (VITE_NL_FULL_NAV brings it back)
+    // E-15 (design/revamp/a.html): All (the categories sheet) · Services Shop Food · the main departments | the busiest
+    // service categories · Today's deals and Sell on … at the right end
     expect(within(nav).getAllByRole('button').map(b => b.textContent)).toEqual(['All']);
     expect(within(nav).getAllByRole('link').map(a => a.textContent)).toEqual([
-      'Services', 'Shop', 'Mobile mechanic', 'Home cleaning', 'Plumber', 'Movers', 'Barber & hair',
-      'Groceries', 'Bakery', 'Butcher', 'Produce', 'Pharmacy', 'Clothing', 'Help',
+      'Services', 'Shop', 'Food', 'Bakery', 'Butcher', 'Groceries', 'Pharmacy', 'Clothing',
+      'Mobile mechanic', 'Home cleaning', 'Barber & hair', 'Tutor', 'Plumber', 'Today’s deals', `Sell on ${brand.name}`,
     ]);
-    expect(within(nav).getAllByRole('link').slice(0, 4).map(a => a.getAttribute('href'))).toEqual(['/services', '/shop', '/services/mobile-mechanic', '/services/house-cleaning']);
-    // redesign § 3.3: search is always in the header; FR/EN moved to the footer and the account menu
+    expect(within(nav).getAllByRole('link').slice(0, 4).map(a => a.getAttribute('href'))).toEqual(['/services', '/shop', '/food', '/shop/bakery']);
+    expect(within(nav).getByRole('link', { name: 'Today’s deals' })).toHaveAttribute('href', '/search?scope=shop&delivery=tonight');
+    // the search is always in the header, with its department scope; FR/EN is in the footer and the account menu
     expect(within(header).getByRole('search')).toBeInTheDocument();
+    expect(within(header).getByRole('combobox', { name: 'Search in' })).toHaveValue('all');
+    expect(within(within(header).getByRole('combobox', { name: 'Search in' })).getAllByRole('option').map(o => o.textContent)).toEqual(['All', 'Services', 'Shop', 'Food']);
     expect(within(header).queryByRole('button', { name: /language|Français/ })).toBeNull();
-    expect(within(header).getByRole('button', { name: 'Account menu' })).toBeInTheDocument();
+    expect(within(header).getByRole('button', { name: 'Hello, sign in Account & orders' })).toBeInTheDocument();
+    expect(within(header).getByRole('button', { name: 'Menu' })).toHaveAttribute('aria-haspopup', 'dialog');
     expect(within(header).getByRole('link', { name: 'Cart, empty' })).toHaveAttribute('href', '/cart');
   });
 
-  it('brings Food back into the nav row and the All sheet with the full navigation', async () => {
-    vi.stubEnv('VITE_NL_FULL_NAV', '1');
-    try {
-      mockFetch(guest);
-      renderApp('/');
-      const nav = within(await screen.findByRole('banner')).getByRole('navigation', { name: 'Main' });
-      expect(within(nav).getAllByRole('link').slice(0, 3).map(a => a.getAttribute('href'))).toEqual(['/services', '/shop', '/food']);
-      await userEvent.click(within(nav).getByRole('button', { name: 'All categories' }));
-      expect(within(screen.getByRole('dialog', { name: 'All categories' })).getByRole('navigation', { name: 'Food' })).toBeInTheDocument();
-    } finally {
-      vi.unstubAllEnvs();
-    }
+  it('greets the signed-in person by name, over the place they deliver to', async () => {
+    mockFetch(signedIn());
+    renderApp('/');
+    const header = await screen.findByRole('banner');
+    expect(await within(header).findByRole('button', { name: 'Hello, Amara Account & orders' })).toHaveAttribute('aria-haspopup', 'menu');
+    expect(within(header).getByRole('button', { name: /^Deliver to Amara/ })).toHaveAttribute('aria-haspopup', 'dialog');
   });
 
   it('opens every category by section from "All", and closes on a pick', async () => {
@@ -57,7 +55,7 @@ describe('consumer header', () => {
     expect(all).toHaveAttribute('aria-haspopup', 'dialog');
     await userEvent.click(all);
     const sheet = screen.getByRole('dialog', { name: 'All categories' });
-    expect(within(sheet).getAllByRole('navigation').map(n => n.getAttribute('aria-label'))).toEqual(['Services', 'Shop']);
+    expect(within(sheet).getAllByRole('navigation').map(n => n.getAttribute('aria-label'))).toEqual(['Services', 'Shop', 'Food']);
     expect(within(sheet).getByRole('link', { name: 'See all — Shop' })).toHaveAttribute('href', '/shop');
     expect(within(sheet).getByRole('link', { name: 'Snow removal' })).toHaveAttribute('href', '/services/snow-removal');
     expect(within(sheet).getByRole('button', { name: 'Français' })).toBeInTheDocument();
@@ -70,19 +68,24 @@ describe('consumer header', () => {
     mockFetch(signedIn());
     renderApp('/shop');
     const header = await screen.findByRole('banner');
-    await screen.findByRole('button', { name: 'Account menu' });
+    await screen.findByRole('button', { name: /Account & orders/ });
     expect(within(within(header).getByRole('navigation', { name: 'Main' })).queryByText(/Orders/)).toBeNull();
     expect(within(header).queryByRole('link', { name: /Orders/ })).toBeNull();
   });
 
-  it('has the search field off the home page and searches on Enter', async () => {
+  it('searches on Enter in the current section\'s scope, or the one picked', async () => {
     mockFetch(guest);
     const { router } = renderApp('/shop');
     const box = await screen.findByRole('combobox', { name: 'Search' });
-    expect(box).toHaveAttribute('placeholder', 'Search “sourdough”, “mobile mechanic”, “DJ”…');
+    expect(box).toHaveAttribute('placeholder', `Search ${brand.name}`);
+    expect(screen.getByRole('combobox', { name: 'Search in' })).toHaveValue('shop');
     await userEvent.type(box, 'sourdough{Enter}');
     await waitFor(() => expect(router.state.location.pathname).toBe('/search'));
-    expect(router.state.location.search).toEqual({ q: 'sourdough' });
+    expect(router.state.location.search).toEqual({ q: 'sourdough', scope: 'shop' });
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Search in' }), 'all');
+    await userEvent.clear(box);
+    await userEvent.type(box, 'mechanic{Enter}');
+    await waitFor(() => expect(router.state.location.search).toEqual({ q: 'mechanic' }));
   });
 
   it('marks the current section, or the current category when it has a shortcut (one current item)', async () => {
@@ -108,24 +111,24 @@ describe('consumer header', () => {
     renderApp('/cart');
     await userEvent.click(within(await screen.findByRole('contentinfo')).getByRole('button', { name: 'Français' }));
     const nav = screen.getByRole('navigation', { name: 'Principale' });
-    expect(within(nav).getAllByRole('link').slice(0, 4).map(a => a.textContent)).toEqual(['Services', 'Boutique', 'Mécanicien mobile', 'Ménage']);
+    expect(within(nav).getAllByRole('link').slice(0, 4).map(a => a.textContent)).toEqual(['Services', 'Boutique', 'Restaurants', 'Boulangerie']);
     expect(within(nav).getByRole('button', { name: 'Toutes les catégories' })).toHaveTextContent('Tout');
     expect(within(screen.getByRole('contentinfo')).getByRole('button', { name: 'English' })).toHaveAttribute('lang', 'en-CA');
-    await userEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Menu du compte' }));
+    await userEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Bonjour, connectez-vous Compte et commandes' }));
     expect(screen.getByRole('menuitem', { name: 'Se connecter' })).toBeInTheDocument();
     expect(screen.getByRole('menu')).toHaveTextContent('Bienvenue');
     expect(screen.queryByRole('note')).toBeNull();
-    expect(within(screen.getByRole('banner')).getByRole('combobox')).toHaveAttribute('placeholder', 'Rechercher « pain au levain », « mécanicien mobile », « DJ »…');
+    expect(within(screen.getByRole('banner')).getByRole('combobox', { name: 'Rechercher' })).toHaveAttribute('placeholder', `Rechercher sur ${brand.name}`);
     expect(document.cookie).toContain('nl.locale=fr');
     expect(document.documentElement.lang).toBe('fr-CA');
   });
 });
 
 describe('guests', () => {
-  it('get the avatar menu — "Welcome, guest", Sign in and Create account coming back to the page, the language', async () => {
+  it('get the account menu — "Welcome, guest", Sign in and Create account coming back to the page, the language', async () => {
     mockFetch(guest);
     renderApp('/providers/prairie-wrench');
-    await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Account & orders/ }));
     const menu = screen.getByRole('menu', { name: 'Account menu' });
     expect(menu).toHaveTextContent('Welcome, guest');
     expect(within(menu).getByRole('menuitem', { name: 'Sign in' })).toHaveAttribute('href', '/sign-in?next=%2Fproviders%2Fprairie-wrench');
@@ -146,7 +149,7 @@ describe('guests', () => {
     renderApp('/sign-in');
     await screen.findByRole('heading', { name: 'Sign in' });
     const banner = screen.getByRole('banner');
-    expect(within(banner).queryByRole('button', { name: 'Account menu' })).toBeNull();
+    expect(within(banner).queryByRole('button', { name: /Account & orders/ })).toBeNull();
     expect(within(banner).queryByRole('navigation')).toBeNull();
     expect(within(banner).queryByRole('search')).toBeNull();
     expect(within(banner).getByRole('link', { name: `${brand.name} — home` })).toBeInTheDocument();
@@ -155,7 +158,7 @@ describe('guests', () => {
   it('are assumed while the session cannot be read (the header still works)', async () => {
     mockFetch(c => (c.url === '/bff/session' ? { status: 503, body: { detail: 'down' } } : undefined));
     renderApp('/');
-    await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Account & orders/ }));
     expect(screen.getByRole('menuitem', { name: 'Sign in' })).toBeInTheDocument();
   });
 });
@@ -168,7 +171,7 @@ describe('the account menu', () => {
       dietary: ['Halal', 'step-free'], province: 'AB',
     } } : undefined));
     renderApp('/');
-    await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Account & orders/ }));
     const menu = screen.getByRole('menu', { name: 'Account menu' });
     await within(menu).findByText('amara@example.ca · reliability 4.9');
     const items = within(menu).getAllByRole('menuitem');
@@ -190,7 +193,7 @@ describe('the account menu', () => {
     vi.stubEnv('VITE_NL_FULL_NAV', '1');
     mockFetch(signedIn(c => c.url === '/api/v1/me/account-summary' ? { body: { points: { balance: 12480, valueCents: 12480 }, plus: false } } : undefined));
     renderApp('/');
-    await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Account & orders/ }));
     const menu = screen.getByRole('menu', { name: 'Account menu' });
     expect(await within(menu).findByText('12,480 pts', { selector: 'strong' })).toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: /Wallet & points/ })).toHaveAttribute('href', '/account?tab=wallet');
@@ -202,7 +205,7 @@ describe('the account menu', () => {
   it('works without the summary (values hidden)', async () => {
     mockFetch(signedIn());
     renderApp('/');
-    await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Account & orders/ }));
     const orders = await screen.findByRole('menuitem', { name: /^Orders/ });
     expect(orders).toHaveTextContent(/^Orders$/);
   });
@@ -215,7 +218,7 @@ describe('the account menu', () => {
     expect(within(banner).getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
     expect(within(banner).getByRole('search')).toBeInTheDocument();
     expect(within(banner).getByRole('combobox', { name: 'Search' })).toBeInTheDocument();
-    const account = await within(banner).findByRole('button', { name: 'Account menu' });
+    const account = await within(banner).findByRole('button', { name: /Account & orders/ });
     expect(account).toHaveAttribute('aria-expanded', 'false');
     expect(account).toHaveAttribute('aria-haspopup', 'menu');
     await userEvent.click(account);
@@ -233,7 +236,7 @@ describe('the account menu', () => {
   it('opens Orders & bookings', async () => {
     mockFetch(signedIn());
     const { router } = renderApp('/');
-    await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Account & orders/ }));
     await userEvent.click(screen.getByRole('menuitem', { name: /^Orders/ }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/account/orders'));
     expect(screen.queryByRole('menu')).toBeNull();
@@ -245,7 +248,7 @@ describe('the account menu', () => {
     vi.stubGlobal('location', { ...window.location, assign, protocol: 'http:' });
     const calls = mockFetch(signedIn(c => (c.method === 'POST' ? { status: 204 } : undefined)));
     renderApp('/');
-    await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Account & orders/ }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
     const logout = calls.find(c => c.url === '/bff/logout')!;
@@ -274,18 +277,9 @@ describe('screens and states', () => {
     expect(within(footer).getByRole('link', { name: 'Help' })).toHaveAttribute('href', '/help'); // S-145: for guests too
     expect(within(footer).getByRole('link', { name: 'Offer a service' })).toHaveAttribute('href', '/sell?type=provider');
     expect(within(footer).getByRole('link', { name: `Sell on ${brand.name}` })).toHaveAttribute('href', '/sell?type=seller');
-    // Food is hidden for the demo, so is "Run a kitchen" (demo rehearsal 2026-10-19)
-    expect(within(footer).queryByRole('link', { name: 'Run a kitchen' })).toBeNull();
-    expect(within(footer).getByText(brand.legalName)).toBeInTheDocument();
-  });
-
-  it('offers "Run a kitchen" in the footer when the full navigation (Food) is on', async () => {
-    vi.stubEnv('VITE_NL_FULL_NAV', '1');
-    mockFetch(guest);
-    renderApp('/');
-    const footer = await screen.findByRole('contentinfo');
-    expect(within(footer).getByRole('link', { name: 'Run a kitchen' })).toHaveAttribute('href', '/sell?type=kitchen');
-    vi.unstubAllEnvs();
+    expect(within(footer).getByRole('link', { name: 'Returns & refunds' })).toHaveAttribute('href', '/account/orders');
+    expect(within(footer).getByRole('link', { name: 'Photo credits' })).toHaveAttribute('href', '/credits');
+    expect(within(footer).getByText(`© ${brand.legalName}`)).toBeInTheDocument();
   });
 
   it('has the footer in French', async () => {
@@ -295,7 +289,6 @@ describe('screens and states', () => {
     for (const name of ['Confidentialité', 'Conditions', 'Aide', `Vendre sur ${brand.name}`, 'Offrir un service']) {
       expect(within(footer).getByRole('link', { name })).toBeInTheDocument();
     }
-    expect(within(footer).queryByRole('link', { name: 'Gérer une cuisine' })).toBeNull(); // Food is hidden for the demo
     expect(within(footer).getByRole('button', { name: 'English' })).toHaveAttribute('lang', 'en-CA');
   });
 });

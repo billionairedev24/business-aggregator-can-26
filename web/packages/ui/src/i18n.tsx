@@ -165,6 +165,32 @@ export function unitCents(priceCents: number, size: number, per: PriceUnit): num
   return size > 0 ? Math.round((priceCents * base) / size) : priceCents;
 }
 
+/**
+ * The unit price a pack's own words state ("Country sourdough, 900 g", "2 lb", "1.5 L", "4-pack", "×4", "dozen"): per 100 g
+ * or 100 mL up to 999, per kg or L from 1 kg / 1 L (and pounds), "each" for a pack of several. Null when the words
+ * name no size, so a card shows no unit price rather than a guessed one.
+ */
+export function unitPriceOf(priceCents: number, ...texts: readonly (string | null | undefined)[]): { cents: number; per: PriceUnit } | null {
+  for (const text of texts) {
+    if (!text) continue;
+    const w = text.toLowerCase();
+    const n = (v: string) => Number(v.replace(',', '.'));
+    const mass = /(\d+(?:[.,]\d+)?)\s*(kg|g|lb|lbs|ml|l)\b/.exec(w);
+    if (mass) {
+      const v = n(mass[1]!);
+      const u = mass[2]!;
+      if (!(v > 0)) continue;
+      const grams = u === 'kg' || u === 'l' ? v * 1000 : u === 'lb' || u === 'lbs' ? v * 453.592 : v;
+      const liquid = u === 'ml' || u === 'l';
+      const per: PriceUnit = grams >= 1000 || u === 'lb' || u === 'lbs' ? (liquid ? 'l' : 'kg') : (liquid ? '100ml' : '100g');
+      return { cents: unitCents(priceCents, Math.round(grams), per), per };
+    }
+    const pack = /(\d+)\s*-?\s*(?:pack|pk|ct|count|pieces|pcs)\b/.exec(w) ?? /[×x]\s*(\d+)\s*$/.exec(w) ?? (/\bdozen\b/.test(w) ? ['', '12'] : null);
+    if (pack && Number(pack[1]) > 1) return { cents: unitCents(priceCents, Number(pack[1]), 'each'), per: 'each' };
+  }
+  return null;
+}
+
 /** Intl puts narrow no-break spaces in times and amounts ("6:00 p.m.", "8,50 $"); copy and tests read plain spaces. */
 const plainSpaces = (s: string) => s.replace(/[   ]/g, ' ');
 

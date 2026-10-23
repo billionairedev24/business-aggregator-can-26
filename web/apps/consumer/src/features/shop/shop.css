@@ -1,15 +1,16 @@
-/* Shop landing and department pages (light & photo-first, phase B): a band with a picture, illustrated department
-   tiles, the shops on the run (the kit's ShopTiles), popular products in a rail or a grid. Tokens only. */
+/* Shop landing and department pages (E-15 A · Plainsight): the landing head with a picture, department tiles, the
+   shops on the run (the kit's ShopTiles), popular products as the results' cards in a rail or a grid. Tokens only. */
 .shop-page { min-width: 0; }
-.shop-depts { grid-template-columns: repeat(auto-fill, minmax(min(100%, 176px), 1fr)); }
-/* sibling departments: chips under the band, one sideways row on phones */
-.shop-chips { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-5); }
+.shop-depts { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
+/* sibling departments: chips under the head (the current one in the chip's selected state), one sideways row on phones */
+.shop-chips { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-4); }
 .shop-chip { text-decoration: none; }
 .shop-chip:hover { text-decoration: none; color: var(--color-text); }
-.shop-chip[aria-current='page'] { border-color: var(--color-action-primary); background: var(--color-action-primary); color: var(--color-action-primary-text); }
-.shop-chip[aria-current='page']:hover { color: var(--color-action-primary-text); background: var(--color-action-primary-hover); }
+.shop-skeleton-head { display: flex; flex-direction: column; gap: var(--space-2-5); margin-top: var(--space-2); }
 .shop-skeleton-grid { display: grid; margin-top: var(--space-8); }
-.shop-skeleton-depts { grid-template-columns: repeat(auto-fill, minmax(min(100%, 176px), 1fr)); gap: var(--space-4); }
+.shop-skeleton-pic { display: block; aspect-ratio: 1 / 1; border-radius: var(--radius-panel); background: var(--color-well); }
+.shop-skeleton-card { display: flex; flex-direction: column; gap: var(--space-2-5); }
+.shop-skeleton-depts { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: var(--space-4); }
 .shop-skeleton-products { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: var(--space-5); }
 @media (max-width: 599.98px) {
   .shop-depts { grid-template-columns: repeat(2, minmax(0, 1fr)); }

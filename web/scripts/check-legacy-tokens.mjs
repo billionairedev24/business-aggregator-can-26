@@ -63,9 +63,14 @@ if (photoProblems.length) {
 // ── tokens v2 (S-167/S-168): no raw values in the component library and the app shells ──────────────────────────
 // Font sizes and spacing (padding, margin, gap) come from the scale (`var(--text-*)`, `var(--type-*)`, `var(--space-*)`),
 // colours from the semantic roles: a raw `13px`, `#fff`, `rgb(…)` or `white` there is a look patched past the tokens.
-// Hairline nudges (0–2px, e.g. `margin-bottom: -1px` under a tab row) stay allowed. In TSX the same goes for inline
+// Corners come from the radius roles (S-170: no raw `999px` pills either). Hairline nudges (0–2px, e.g.
+// `margin-bottom: -1px` under a tab row) stay allowed. In TSX the same goes for inline
 // `style` objects (`fontSize: 13`, `padding: 6`, `color: 'white'`).
 const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'apps/studio/src/features/shell', 'apps/console/src/features/shell',
+  // S-170/S-171: the consumer discovery pages (home, results, the Services / Shop / Food landings and their shared parts)
+  'apps/consumer/src/features/home', 'apps/consumer/src/features/search', 'apps/consumer/src/features/pages', 'apps/consumer/src/features/shop',
+  'apps/consumer/src/features/services/services.css', 'apps/consumer/src/features/services/ServicesLanding.tsx', 'apps/consumer/src/features/services/ServiceCategory.tsx',
+  'apps/consumer/src/features/food/FoodScreen.tsx',
   // S-174: the Studio dashboard and the storefront's live preview (audit #7 and #10)
   'apps/studio/src/features/dashboard', 'apps/studio/src/features/storefront/StorefrontPreview.tsx', 'apps/studio/src/features/storefront/StorefrontPreview.css'];
 // S-174: no inline `style` at all in these (a class with the scale tokens instead; the Studio dashboard had a dozen)
@@ -74,7 +79,7 @@ const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/feature
 const strictSkip = [...skip, /\.stories\.tsx$/, /\.fixtures\.ts$/, /\.mdx$/, /(^|\/)server\//, /DataTable\/report\.ts$/];
 const PX = /(-?\d*\.?\d+)px/g;
 const tooBig = v => Math.abs(parseFloat(v)) > 2;
-const CSS_SIZE = /(?:^|[\s;{])(font-size|font|padding(?:-[a-z-]+)?|margin(?:-[a-z-]+)?|gap|row-gap|column-gap)\s*:\s*([^;}]+)/g;
+const CSS_SIZE = /(?:^|[\s;{])(font-size|font|padding(?:-[a-z-]+)?|margin(?:-[a-z-]+)?|gap|row-gap|column-gap|border(?:-[a-z]+)*-radius)\s*:\s*([^;}]+)/g;
 const COLOUR_PROPS = /(?:^|[\s;{])((?:background(?:-color)?|color|border(?:-[a-z-]+)?|outline(?:-color)?|box-shadow|fill|stroke|caret-color|text-decoration(?:-color)?|accent-color))\s*:\s*([^;}]+)/g;
 const RAW_COLOUR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|lab|lch)\(|\b(?:white|black|red|green|blue|gray|grey|silver|orange|yellow|purple|pink)\b/;
 const TSX_SIZE = /\b(fontSize|padding(?:Top|Right|Bottom|Left|Inline|Block)?|margin(?:Top|Right|Bottom|Left|Inline|Block)?|gap|rowGap|columnGap)\s*:\s*(['"`]?)(-?\d*\.?\d+)(px)?\2(?=\s*[,}])/g;
@@ -93,7 +98,7 @@ for (const root of strictRoots) {
         for (const m of line.matchAll(CSS_SIZE)) {
           if (m[1] === 'font' && !/\dpx/.test(m[2])) continue;
           const bad = [...m[2].matchAll(PX)].map(x => x[0]).filter(tooBig);
-          if (bad.length) raw.push(`${at}  ${m[1]}: ${bad.join(' ')} (use var(--space-*) / var(--text-*) / var(--type-*))`);
+          if (bad.length) raw.push(`${at}  ${m[1]}: ${bad.join(' ')} (use ${m[1].endsWith('radius') ? 'var(--radius-control / panel / image / round): never pills' : 'var(--space-*) / var(--text-*) / var(--type-*)'})`);
         }
         for (const m of line.matchAll(COLOUR_PROPS)) {
           const c = RAW_COLOUR.exec(m[2].replace(/var\([^)]*\)/g, ''));

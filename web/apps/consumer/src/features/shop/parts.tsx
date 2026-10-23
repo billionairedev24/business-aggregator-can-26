@@ -1,13 +1,13 @@
-import { ProductTile, ShopTile, Skeleton, useFormatters, useLocale, type TagTone } from '@northline/ui';
+import { ShopTile, Skeleton, useFormatters, useLocale, type TagTone } from '@northline/ui';
 import { PhotoWell } from '../art/PhotoWell';
 import { useZone } from '../location/regions';
 import type { ProductCard, Run, ShopCard } from './api';
 import { clock, runWhen, weekday } from './format';
 import { useShopT } from './messages';
-import { usePlusBadge } from '../loyalty/PlusBadge';
+import { OfferCard } from '../search/ItemCard';
 
-/** Design 06 tier tags: Master = accent, Trusted = rosehip, Registered = neutral. */
-export const TIER_TONE: Record<string, TagTone> = { master: 'accent', trusted: 'accent-2', registered: 'neutral' };
+/** Tier tags (E-15: one role per colour — a tier is a verification status, never the commerce colour): Master and Trusted in the success pair, Registered neutral. */
+export const TIER_TONE: Record<string, TagTone> = { master: 'success', trusted: 'success', registered: 'neutral' };
 
 export function useTierLabel() {
   const t = useShopT();
@@ -39,22 +39,28 @@ export function useOrderByTag() {
   };
 }
 
-export function ProductCardTile({ product, withMarket }: { product: ProductCard; withMarket: (path: string) => string }) {
+/**
+ * A popular product of a Shop page as the results' card (E-15: one card everywhere): the price with its unit price
+ * (from the product's unit or name), "Get it Tonight" when it rides the market's next run, "Add to cart" (its offer).
+ * Sold by several shops: "from $6.50" and the product page picks the offer. Age-restricted products and a shop's Plus
+ * price say so under the shop's name.
+ */
+export function ProductCardTile({ product, withMarket, next }: { product: ProductCard; withMarket: (path: string) => string; next?: Run | null }) {
   const t = useShopT();
   const { money } = useFormatters();
-  const price = money(product.priceCents);
-  const shops = product.sellers > 1
-    ? t('productMetaMany', { shop: product.shopName, others: product.sellers - 1 })
+  const many = product.sellers > 1;
+  const shops = many ? t('productMetaMany', { shop: product.shopName, others: product.sellers - 1 })
     : product.unit ? t('productMeta', { shop: product.shopName, unit: product.unit }) : product.shopName;
   // an age-restricted product says so on its card, before the checkout's ID check
   const age = product.age ? (product.age.minimumAge ? t('ageCard', { age: product.age.minimumAge }) : t('ageCardNoAge')) : null;
-  // S-152: the shop's Plus member price, under the meta line
-  const plus = usePlusBadge(product.offerId, product.sellers > 1 ? null : product.priceCents);
-  const meta = <>{age ? <>{shops}<span className="nl-age-chip">{age}</span></> : shops}{plus ? <span className="nl-plus-chip">{plus}</span> : null}</>;
+  const meta = <>{shops}{age ? <span className="nl-age-chip">{age}</span> : null}</>;
+  const href = withMarket(`/products/${product.productId}`);
   return (
-    <ProductTile href={withMarket(`/products/${product.productId}`)} name={product.name} imageUrl={product.imageUrl}
+    <OfferCard offerId={many ? null : product.offerId} href={href} name={product.name} image={product.imageUrl}
       fallback={<PhotoWell subject={`${product.categoryId ?? ''} ${product.name}`} />}
-      price={product.sellers > 1 ? t('from', { price }) : price} meta={meta} />
+      priceCents={product.priceCents} priceText={many ? t('from', { price: money(product.priceCents) }) : undefined}
+      sizeWords={[product.unit, product.name]} meta={meta}
+      onTonight={!!(next && next.day === 'today' && product.run?.windowId === next.windowId)} />
   );
 }
 
@@ -71,17 +77,19 @@ export function ShopCardTile({ shop, next, look, href }: { shop: ShopCard; next:
     : <ShopTile id={shop.merchantId} href={href} name={shop.name} imageUrl={imageUrl} meta={products} tier={{ label: tier(shop.tier), tone: TIER_TONE[shop.tier] ?? 'neutral' }} tag={runTag(shop.run, next)} />;
 }
 
-/** Skeleton of a Shop page while it loads (kicker, title, a tile grid, a product grid). */
+/** Skeleton of a Shop page while it loads (the landing head, a tile grid, a product grid): the boxes of the page. */
 export function ShopSkeleton() {
   const t = useShopT();
   return (
     <div className="nl-page shop-page" aria-busy="true">
       <span className="nl-sr-only">{t('loading')}</span>
-      <Skeleton width={200} height={12} />
-      <Skeleton width="min(520px, 90%)" height={40} style={{ marginTop: 10 }} />
-      <Skeleton width="min(360px, 70%)" height={14} style={{ marginTop: 10 }} />
-      <div className="shop-skeleton-grid shop-skeleton-depts">{Array.from({ length: 9 }, (_, i) => <Skeleton key={i} height={88} radius={12} />)}</div>
-      <div className="shop-skeleton-grid shop-skeleton-products">{Array.from({ length: 4 }, (_, i) => <div key={i}><Skeleton height={0} style={{ aspectRatio: '1 / 1', height: 'auto' }} radius={12} /><Skeleton width="70%" height={14} style={{ marginTop: 10 }} /></div>)}</div>
+      <div className="shop-skeleton-head">
+        <Skeleton width={200} height={12} />
+        <Skeleton width="min(520px, 90%)" height={28} />
+        <Skeleton width="min(360px, 70%)" height={14} />
+      </div>
+      <div className="shop-skeleton-grid shop-skeleton-depts">{Array.from({ length: 9 }, (_, i) => <span key={i} className="shop-skeleton-pic" />)}</div>
+      <div className="shop-skeleton-grid shop-skeleton-products">{Array.from({ length: 5 }, (_, i) => <div key={i} className="shop-skeleton-card"><span className="shop-skeleton-pic" /><Skeleton width="70%" height={14} /></div>)}</div>
     </div>
   );
 }

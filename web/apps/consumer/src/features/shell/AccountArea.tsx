@@ -26,7 +26,7 @@ export const ACCOUNT_LINKS = {
 } as const;
 
 /** Signed in: the design's account menu. Values come from the account summary when the api has it. */
-export function AccountArea({ user, onSignOut, onToggleLocale }: { user: SessionUser; onSignOut: () => void; onToggleLocale: () => void }) {
+export function AccountArea({ user, onSignOut, onToggleLocale, greeting }: { user: SessionUser; onSignOut: () => void; onToggleLocale: () => void; greeting?: { line1: string; line2: string } }) {
   const t = useShellT();
   const { locale } = useLocale();
   const { data: s } = useAccountSummary(true);
@@ -50,7 +50,7 @@ export function AccountArea({ user, onSignOut, onToggleLocale }: { user: Session
       {s.plus != null && <span className="tag tag-highlight">{t(s.plus ? 'plusTag' : 'standardTag')}</span>}
     </>
   ) : undefined;
-  return <AccountMenu user={{ name, initials: user.initials, detail }} headerAction={{ label: t('addPhoto'), href: ACCOUNT_LINKS.profile }} card={card} sections={sections} />;
+  return <AccountMenu greeting={greeting} user={{ name, initials: user.initials, detail }} headerAction={{ label: t('addPhoto'), href: ACCOUNT_LINKS.profile }} card={card} sections={sections} />;
 }
 
 type T = ReturnType<typeof useShellT>;

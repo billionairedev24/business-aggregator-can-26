@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import clsx from 'clsx';
 import { CaretDown, User, type Icon } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
 import { SiteLink } from './SiteLink';
@@ -25,6 +26,11 @@ export interface AccountMenuProps {
   /** Shown under the name (points and Plus status). */
   card?: ReactNode;
   sections: readonly AccountMenuSection[];
+  /**
+   * The mockups' trigger (E-15): two lines, "Hello, Amara" over "Account & orders ▾", in place of the avatar; on phones
+   * the user icon alone, the two lines then read by screen readers only. The visible words name the button.
+   */
+  greeting?: { line1: string; line2: string };
 }
 
 /**
@@ -33,7 +39,7 @@ export interface AccountMenuProps {
  * guest", an optional card, grouped items (icon · label · value). Orders, bookings and returns live here only, never in
  * the top navigation. Arrow keys move between items, Escape closes and returns focus, clicking outside closes.
  */
-export function AccountMenu({ user, headerAction, card, sections }: AccountMenuProps) {
+export function AccountMenu({ user, headerAction, card, sections, greeting }: AccountMenuProps) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
@@ -58,10 +64,22 @@ export function AccountMenu({ user, headerAction, card, sections }: AccountMenuP
   };
   return (
     <div className="nl-account" ref={wrap} onKeyDown={onKeyDown}>
-      <button ref={button} type="button" className="nl-account-button" aria-label={t('open')} aria-haspopup="menu" aria-expanded={open}
+      <button ref={button} type="button" className={clsx('nl-account-button', greeting && 'nl-account-button-greeting')} aria-label={greeting ? undefined : t('open')} aria-haspopup="menu" aria-expanded={open}
         aria-controls={open ? id : undefined} onClick={() => setOpen(o => !o)}>
-        {user ? <span className="nl-account-avatar" aria-hidden>{user.initials}</span> : <span className="nl-account-avatar nl-account-guest" aria-hidden><User size={20} /></span>}
-        <CaretDown size={13} aria-hidden />
+        {greeting ? (
+          <>
+            <User size={26} className="nl-account-icon-phone" aria-hidden />
+            <span className="nl-account-greeting">
+              <span className="nl-account-line1">{greeting.line1}</span>{' '}
+              <span className="nl-account-line2">{greeting.line2}<CaretDown size={13} aria-hidden /></span>
+            </span>
+          </>
+        ) : (
+          <>
+            {user ? <span className="nl-account-avatar" aria-hidden>{user.initials}</span> : <span className="nl-account-avatar nl-account-guest" aria-hidden><User size={20} /></span>}
+            <CaretDown size={13} aria-hidden />
+          </>
+        )}
       </button>
       {open && (
         <div id={id} role="menu" aria-label={t('open')} className="nl-account-panel">

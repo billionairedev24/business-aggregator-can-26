@@ -88,8 +88,16 @@ describe('Shop landing (design 06 shop)', () => {
     expect(within(run).getByRole('link', { name: /Empty Shelf.*Not on a run/ })).toBeInTheDocument();
 
     const popular = screen.getByRole('region', { name: 'Popular tonight' });
-    expect(within(popular).getByRole('link', { name: /Country sourdough\s*\$7\.50\s*Glenmore Bakery · 900 g/ })).toHaveAttribute('href', '/products/P1');
-    expect(within(popular).getByRole('link', { name: /Free-run eggs\s*from \$6\.50\s*Bow Valley Dairy \+ 1 more shop/ })).toBeInTheDocument();
+    // E-15: the results' card — the price with its unit price, the shop and size, Add to cart (one seller)
+    const sourdough = within(popular).getByRole('article', { name: 'Country sourdough' });
+    expect(within(sourdough).getByRole('link', { name: 'Country sourdough' })).toHaveAttribute('href', '/products/P1');
+    expect(sourdough).toHaveTextContent(/\$7\.50\$0\.83\/100 g/);
+    expect(sourdough).toHaveTextContent('Glenmore Bakery · 900 g');
+    expect(within(sourdough).getByRole('button', { name: 'Add to cart: Country sourdough' })).toBeInTheDocument();
+    const eggs = within(popular).getByRole('article', { name: 'Free-run eggs' });
+    expect(eggs).toHaveTextContent('from $6.50');
+    expect(eggs).toHaveTextContent('Bow Valley Dairy + 1 more shop');
+    expect(within(eggs).queryByRole('button', { name: /Add to cart/ })).toBeNull(); // several shops: the product page picks
     expect(within(popular).getByRole('link', { name: 'Search everything' })).toHaveAttribute('href', '/search?scope=shop');
   });
 
@@ -98,11 +106,11 @@ describe('Shop landing (design 06 shop)', () => {
     api = c => (url(c).pathname === '/api/v1/public/shop' ? { body: { ...LANDING, popular: [...LANDING.popular, lager] } } : undefined);
     const first = open('/shop');
     const popular = await screen.findByRole('region', { name: 'Popular tonight' });
-    expect(within(popular).getByRole('link', { name: /Craft lager 6-pack.*Bow Valley Market · 6 × 355 ml\s*18\+ · photo ID checked/ })).toBeInTheDocument();
-    expect(within(popular).getByRole('link', { name: /Country sourdough/ })).not.toHaveTextContent('photo ID');
+    expect(within(popular).getByRole('article', { name: 'Craft lager 6-pack' })).toHaveTextContent(/Bow Valley Market · 6 × 355 ml\s*18\+ · photo ID checked/);
+    expect(within(popular).getByRole('article', { name: 'Country sourdough' })).not.toHaveTextContent('photo ID');
     first.unmount();
     open('/shop', 'fr');
-    expect(await screen.findByRole('link', { name: /Craft lager 6-pack.*18 ans et plus · pièce d’identité vérifiée/ })).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'Craft lager 6-pack' })).toHaveTextContent(/18 ans et plus · pièce d’identité vérifiée/);
   });
 
   it('is in French', async () => {
@@ -112,7 +120,7 @@ describe('Shop landing (design 06 shop)', () => {
     expect(screen.getByText('commandez avant 17 h 20 · 3 commerces · 5 voisins inscrits · Calgary')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Magasiner par rayon' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Tous les commerces de la tournée' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Country sourdough\s*7,50\s\$/ })).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'Country sourdough' })).toHaveTextContent(/7,50\s\$/);
     expect(screen.getByRole('link', { name: /Glenmore Bakery.*Commandez avant 17 h 20/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Little Sprouts.*Demain/ })).toBeInTheDocument();
   });
@@ -124,7 +132,7 @@ describe('Shop landing (design 06 shop)', () => {
     expect(calls.some(c => url(c).searchParams.get('market') === 'Edmonton')).toBe(true);
     expect(router.state.location.search).toEqual({ market: 'Edmonton' });
     expect(screen.getByRole('link', { name: /Bakery\s*2 shops/ })).toHaveAttribute('href', '/shop/bakery?market=Edmonton');
-    expect(screen.getByRole('link', { name: /Country sourdough/ })).toHaveAttribute('href', '/products/P1?market=Edmonton');
+    expect(screen.getByRole('link', { name: 'Country sourdough' })).toHaveAttribute('href', '/products/P1?market=Edmonton');
   });
 
   it('keeps a market given in the link', async () => {
@@ -185,7 +193,10 @@ describe('Department page (design 06 category)', () => {
 
     const products = screen.getByRole('region', { name: 'Popular in Bakery' });
     expect(within(products).getByText('Sorted by')).toBeInTheDocument();
-    expect(within(products).getByRole('link', { name: /Croissant ×4\s*\$12\.00\s*Sidewalk Citizen · box/ })).toHaveAttribute('href', '/products/P3');
+    const croissant = within(products).getByRole('article', { name: 'Croissant ×4' });
+    expect(within(croissant).getByRole('link', { name: 'Croissant ×4' })).toHaveAttribute('href', '/products/P3');
+    expect(croissant).toHaveTextContent(/\$12\.00\$3\.00 each/);
+    expect(croissant).toHaveTextContent('Sidewalk Citizen · box');
   });
 
   it('is in French', async () => {

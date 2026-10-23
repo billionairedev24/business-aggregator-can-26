@@ -213,7 +213,7 @@ customer; single-factor like a real consumer) — or `NL_DEV_GUEST=1` to browse 
 the dev server. Location: the header asks for the browser's position once per visit (Chrome DevTools › Sensors
 overrides it); `localStorage['nl.location']` holds an address chosen on the Location screen. Language: the FR/EN
 toggle writes the `nl.locale` cookie, so the server renders the next page in French. The redesign's demo navigation
-hides Food as its own vertical and the account's Wallet & points, Dietary, Plus and Language (§ 3.6–3.7):
+hides the account's Wallet & points, Dietary, Plus and Language (§ 3.6; Food is shown since E-15):
 `VITE_NL_FULL_NAV=1` in `.env` brings them back (their routes answer a typed URL either way). `NL_DEV_HOST=0.0.0.0`
 (optional, in `.env` or the environment) makes the dev server listen on your network, so the native apps on a phone
 reach its sign-in page and `/app/oauth2redirect` ([mobile-local.md](mobile-local.md); `make mobile-dev` sets it when
