@@ -131,7 +131,7 @@ export function BookBox({ facts, choice, pageHost, siteOrigin }: { facts: Provid
             <div className="nl-prov-where">
               <MapPin size={16} aria-hidden className="nl-prov-chosen-icon" />
               <span><strong>{comes ? t('comesToYou') : t('atTheirs', { name: facts.name })}</strong>
-                <span className="nl-prov-muted">{comes ? (facts.zones.length ? t('areaComes', { zones: facts.zones.join(' · ') }) : t('addressNext')) : facts.city ?? ''}</span></span>
+                <span className="nl-prov-muted">{comes ? (facts.zones.length ? facts.zones.join(' · ') : t('addressNext')) : facts.city ?? ''}</span></span>
             </div>
             <dl className="nl-prov-sum">
               <div><dt>{service?.name}</dt><dd>{priceText}</dd></div>

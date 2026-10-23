@@ -230,7 +230,7 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
               {offer.more.map(m => (
                 <li key={m.productId}>
                   <OfferCard offerId={null} href={link(`/products/${m.productId}`)} name={m.name} image={null} variant="rail"
-                    fallback={<PhotoWell subject={`${data.departmentSlug} ${m.name}`} />} priceCents={m.priceCents} meta={offer.shopName} />
+                    fallback={<PhotoWell subject={data.departmentSlug} />} priceCents={m.priceCents} meta={offer.shopName} />
                 </li>
               ))}
             </RailTrack>

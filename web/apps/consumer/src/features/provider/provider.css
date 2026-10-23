@@ -83,8 +83,11 @@
 .nl-prov-nav { width: var(--size-touch); height: var(--size-touch); display: grid; place-items: center; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--color-text); cursor: pointer; }
 .nl-prov-nav:hover:not(:disabled) { background: var(--color-surface-hover); }
 .nl-prov-nav:disabled { opacity: .35; cursor: default; }
-.nl-prov-days { --nl-tile-min: 48px; }
-.nl-prov-times { --nl-tile-min: 88px; }
+.nl-prov-days, .nl-prov-times { --nl-tile-min: 0px; }
+/* explicit columns: pages.css's category grid shares the `.nl-tiles` name */
+.nl-prov-days .nl-tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-1-5); }
+.nl-prov-times .nl-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1-5); }
+.nl-prov-days .nl-tile-choice { padding-inline: var(--space-1); }
 .nl-prov-days-skeleton { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
 .nl-prov-dow { display: block; font-size: var(--type-meta); font-weight: var(--weight-regular); }
 .nl-prov-dnum { display: block; font-size: var(--type-sub); font-weight: var(--weight-bold); }

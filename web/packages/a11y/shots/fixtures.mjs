@@ -525,6 +525,8 @@ export const SHOTS = {
       b.nextAvailable = '2026-10-21T16:00:00Z';
       return { body: b };
     },
+    // S-172: the kitchen takes group orders (its order box shows the group order entry)
+    (m, p) => (live(m, p, '/api/v1/public/kitchens/pho-lucky') ? { body: { ...body('GET /api/v1/public/kitchens/pho-lucky'), groupOrders: true } } : undefined),
     // S-172: the provider's live calendar for any week the booking box asks (slots every 90 min, two taken a day, Sundays closed)
     (m, p) => {
       if (!live(m, p, '/api/v1/public/providers/prairie-wrench/slots')) return undefined;
