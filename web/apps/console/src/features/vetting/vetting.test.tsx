@@ -88,11 +88,12 @@ describe('listing vetting (S-92, design 03 vetting)', () => {
     expect((await screen.findByRole('alert')).textContent).toBe("This listing isn't waiting for a decision.");
   });
 
-  it('filters by province from the region model', async () => {
+  it('follows the top bar’s scope (S-177)', async () => {
     const calls = api(['admin']);
     renderConsole('/vetting');
     await screenReady();
-    await user().selectOptions(screen.getByRole('combobox', { name: 'Province' }), 'AB');
+    await user().click(screen.getByRole('button', { name: /^Change the market/ }));
+    await user().click(screen.getByRole('menuitemradio', { name: 'Alberta' }));
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/vetting?province=AB'))).toBe(true));
   });
 

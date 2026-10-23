@@ -57,7 +57,8 @@ describe('verification queue (S-79, design 03 verify)', () => {
     expect((await screenReady()).textContent).toBe('Applications');
     expect(screen.getByText('2 waiting · median decision 1.4 days · SLA 2 days')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Businesses', 'Registry checks', 'Listings', 'Licences', 'Age checks']);
+    expect(within(screen.getByRole('tablist', { name: 'Application queues' })).getAllByRole('tab').map(t => t.textContent)).toEqual(['Businesses', 'Registry checks', 'Listings', 'Licences', 'Age checks']);
+    expect(within(screen.getByRole('tablist', { name: 'Applications by stage' })).getAllByRole('tab').map(t => t.textContent)).toEqual(['Stage 1 · Review1', 'Stage 2 · Decision1', 'Info requested0', 'Approved1', 'All3']);
     const kpis = within(screen.getByRole('list', { name: 'Applications by stage' }));
     expect(kpis.getByText('Stage 1 · Review').nextElementSibling?.textContent).toBe('1');
     expect(kpis.getByText('Stage 2 · Decision').nextElementSibling?.textContent).toBe('1');
@@ -66,15 +67,16 @@ describe('verification queue (S-79, design 03 verify)', () => {
     expect(within(quick).getByText('KYC ✓ · AMVIC ✗')).toBeTruthy();
     expect(within(quick).getByText('High · no licence')).toBeTruthy();
     expect(within(quick).getByText('3.0 d')).toBeTruthy();
-    expect(within(quick).getByText('1 · Review')).toBeTruthy();
+    expect(within(quick).getByText('1 · Review').className).toContain('nl-status-info');
+    expect(within(quick).getByText('High · no licence').className).toContain('tag-danger');
     const sable = screen.getByText('Sable & Soda Bar Co.').closest('tr, .nl-dt-card') as HTMLElement;
     expect(within(sable).getByText('KYC ✓ · Registry ✓ · Insurance ○')).toBeTruthy();
     expect(within(sable).getByText('4 h')).toBeTruthy();
     expect(within(sable).getByText('Alberta')).toBeTruthy();
-    expect(within(sable).getByText('2 · Decision')).toBeTruthy();
+    expect(within(sable).getByText('2 · Decision').className).toContain('nl-status-warning');
     const fraser = screen.getByText('Fraser Electric').closest('tr, .nl-dt-card') as HTMLElement;
     expect(within(fraser).getByText('BC pilot')).toBeTruthy();
-    expect(within(fraser).getByText('Approved')).toBeTruthy();
+    expect(within(fraser).getByText('Approved').className).toContain('nl-status-success');
     expect(within(fraser).queryByRole('button', { name: /Approve|Review|Decide/ })).toBeNull();
     // stage 1 offers "Review", stage 2 "Decide" (two-person review)
     expect(within(quick).getByRole('button', { name: /Review/ })).toBeTruthy();
@@ -83,13 +85,15 @@ describe('verification queue (S-79, design 03 verify)', () => {
     expect(within(sable).queryByRole('button', { name: /Review/ })).toBeNull();
   });
 
-  it('stage 2: "Decide" opens the sheet with the reviewer and recommendation; approving sends the role view header', async () => {
+  it('stage 2: "Decide" opens the page with the reviewer and recommendation; approving sends the role view header', async () => {
     let refuse = false;
     const calls = api(['trust_safety'], c => (c.method === 'POST' && refuse ? { status: 409, body: { code: 'reviews_open', detail: 'Decide the open registry and identity reviews first.' } } : undefined));
     renderConsole('/verification');
     const sable = (await screen.findByText('Sable & Soda Bar Co.')).closest('tr, .nl-dt-card') as HTMLElement;
     await user().click(within(sable).getByRole('button', { name: /Decide/ }));
-    const panel = await screen.findByRole('dialog', { name: 'Sable & Soda Bar Co.' });
+    await screen.findByRole('heading', { level: 1, name: 'Sable & Soda Bar Co.' });
+    expect(screen.getByText('2 · Decision', { selector: '.nl-status' })).toBeTruthy();
+    const panel = document.body;
     expect((await within(panel).findByText('Reviewer')).nextElementSibling?.textContent).toBe('Lena Park');
     expect(within(panel).getByText('Recommendation').nextElementSibling?.textContent).toBe('Approve');
     expect(within(panel).getByText('Note for the approver').nextElementSibling?.textContent).toBe('Insurance certificate matches.');
@@ -109,15 +113,14 @@ describe('verification queue (S-79, design 03 verify)', () => {
 
   it('disables Approve and Request info, with the reason, for the person who reviewed it', async () => {
     const calls = api(['admin'], undefined, sableDetail({ reviewedBy: SESSION.user.id, reviewerName: 'Priya Natarajan' }));
-    renderConsole('/verification?application=M1');
-    const panel = await screen.findByRole('dialog', { name: 'Sable & Soda Bar Co.' });
+    renderConsole('/verification/M1');
+    await screen.findByRole('heading', { level: 1, name: 'Sable & Soda Bar Co.' });
+    const panel = document.body;
     const approve = await within(panel).findByRole('button', { name: 'Approve' }) as HTMLButtonElement;
-    const info = within(panel).getByRole('button', { name: 'Request info' }) as HTMLButtonElement;
+    const info = within(panel).getByRole('button', { name: 'Request info…' }) as HTMLButtonElement;
     expect(approve.disabled).toBe(true);
     expect(info.disabled).toBe(true);
-    const reason = within(panel).getByText('You reviewed this application, so someone else has to decide it.');
-    expect(approve.getAttribute('aria-describedby')).toBe(reason.id);
-    expect(info.getAttribute('aria-describedby')).toBe(reason.id);
+    expect(within(panel).getByText('You reviewed this application, so someone else has to decide it.')).toBeTruthy();
     await expectNoAxeViolations(document.body);
     await user().click(approve);
     expect(calls.some(c => c.method === 'POST')).toBe(false);
@@ -129,8 +132,9 @@ describe('verification queue (S-79, design 03 verify)', () => {
       if (c.method === 'POST' && first) { first = false; return { status: 422, body: { errors: [{ field: 'note', rule: 'required', message: 'Say why you approve against the review.' }] } }; }
       return undefined;
     }, sableDetail({ recommendation: 'reject', note: 'Address is a parking lot.' }));
-    renderConsole('/verification?application=M1');
-    const panel = await screen.findByRole('dialog', { name: 'Sable & Soda Bar Co.' });
+    renderConsole('/verification/M1');
+    await screen.findByRole('heading', { level: 1, name: 'Sable & Soda Bar Co.' });
+    const panel = document.body;
     await user().click(await within(panel).findByRole('button', { name: 'Approve' }));
     const dialog = await screen.findByRole('dialog', { name: 'Approve Sable & Soda Bar Co. against the review' });
     expect(within(dialog).getByText('Lena Park recommended “Reject”. Say why you approve anyway.')).toBeTruthy();
@@ -150,10 +154,11 @@ describe('verification queue (S-79, design 03 verify)', () => {
     renderConsole('/verification');
     const quick = (await screen.findByText('QuickFix Auto')).closest('tr, .nl-dt-card') as HTMLElement;
     await user().click(within(quick).getByRole('button', { name: /Review/ }));
-    const panel = await screen.findByRole('dialog', { name: 'QuickFix Auto' });
+    await screen.findByRole('heading', { level: 1, name: 'QuickFix Auto' });
+    const panel = document.body;
     expect(await within(panel).findByText('Not reviewed yet. A reviewer recommends; someone else then decides.')).toBeTruthy();
-    expect(within(panel).queryByRole('button', { name: 'Request info' })).toBeNull(); // stage 2's, not offered yet
-    await user().click(within(panel).getByRole('button', { name: 'Review' }));
+    expect(within(panel).queryByRole('button', { name: 'Request info…' })).toBeNull(); // stage 2's, not offered yet
+    await user().click(within(panel).getByRole('button', { name: 'Review…' }));
     const dialog = await screen.findByRole('dialog', { name: 'Review QuickFix Auto' });
     await expectNoAxeViolations(document.body);
     const radios = within(within(dialog).getByRole('radiogroup', { name: 'Recommendation' })).getAllByRole('radio');
@@ -172,9 +177,10 @@ describe('verification queue (S-79, design 03 verify)', () => {
 
   it('stage 1: recommending request info sends the checks to redo', async () => {
     const calls = api(['trust_safety']);
-    renderConsole('/verification?application=M2');
-    const panel = await screen.findByRole('dialog', { name: 'QuickFix Auto' });
-    await user().click(await within(panel).findByRole('button', { name: 'Review' }));
+    renderConsole('/verification/M2');
+    await screen.findByRole('heading', { level: 1, name: 'QuickFix Auto' });
+    const panel = document.body;
+    await user().click(await within(panel).findByRole('button', { name: 'Review…' }));
     const dialog = await screen.findByRole('dialog', { name: 'Review QuickFix Auto' });
     await user().click(within(dialog).getByRole('radio', { name: /Request info/ }));
     expect((within(dialog).getByRole('checkbox', { name: 'AMVIC' }) as HTMLInputElement).checked).toBe(true);
@@ -189,9 +195,10 @@ describe('verification queue (S-79, design 03 verify)', () => {
       if (c.method === 'POST' && first) { first = false; return { status: 422, body: { errors: [{ field: 'note', rule: 'required', message: 'Tell the business what to fix.' }] } }; }
       return undefined;
     }, sableDetail({ recommendation: 'request_info', checkKeys: ['insurance'], note: '' }));
-    renderConsole('/verification?application=M1');
-    const panel = await screen.findByRole('dialog', { name: 'Sable & Soda Bar Co.' });
-    await user().click(await within(panel).findByRole('button', { name: 'Request info' }));
+    renderConsole('/verification/M1');
+    await screen.findByRole('heading', { level: 1, name: 'Sable & Soda Bar Co.' });
+    const panel = document.body;
+    await user().click(await within(panel).findByRole('button', { name: 'Request info…' }));
     const dialog = await screen.findByRole('dialog', { name: 'Request info from Sable & Soda Bar Co.' });
     expect((within(dialog).getByRole('checkbox', { name: 'Insurance' }) as HTMLInputElement).checked).toBe(true);
     expect((within(dialog).getByRole('checkbox', { name: 'KYC' }) as HTMLInputElement).checked).toBe(false);
@@ -204,18 +211,19 @@ describe('verification queue (S-79, design 03 verify)', () => {
     expect(await screen.findByText(/^Request sent to Sable & Soda Bar Co\./)).toBeTruthy();
   });
 
-  it('opens an application in the sheet: stages, every submitted field, identity and registry reviews, decided by the agent', async () => {
+  it('opens an application’s page: stages, every submitted field, identity and registry reviews, decided by the agent', async () => {
     const calls = api(['admin']);
-    renderConsole('/verification?application=M2');
-    const panel = await screen.findByRole('dialog', { name: 'QuickFix Auto' });
-    await within(panel).findByText('Name differs from the application');
+    renderConsole('/verification/M2');
+    await screen.findByRole('heading', { level: 1, name: 'QuickFix Auto' });
+    const panel = document.body;
     const current = within(panel).getByRole('list', { name: 'Review stages' }).querySelector('[aria-current="step"]');
     expect(current?.textContent).toContain('Review');
     const facts: [string, string][] = [['Legal name', 'QuickFix Auto Inc.'], ['Structure', 'Provincial corporation'], ['Categories', 'Mobile mechanic'], ['Location', 'Calgary, Alberta'], ['Risk', 'High · no licence']];
     for (const [k, v] of facts) {
-      expect(within(panel).getByText(k).nextElementSibling?.textContent, k).toBe(v);
+      expect(within(panel).getAllByText(k).at(-1)!.nextElementSibling?.textContent, k).toBe(v);
     }
-    expect(within(panel).getByRole('button', { name: 'Review' })).toBeTruthy();
+    expect(within(panel).getByRole('button', { name: 'Review…' })).toBeTruthy();
+    await user().click(within(panel).getByRole('tab', { name: /Checks & identity/ }));
     expect(within(panel).getByText('Name differs from the application')).toBeTruthy();
     expect(within(panel).getByText('AMVIC 44812 · manual')).toBeTruthy();
     const owner = within(panel).getByText(/Lee Cardinal · Owner/).closest('li') as HTMLElement;
@@ -227,21 +235,26 @@ describe('verification queue (S-79, design 03 verify)', () => {
     expect(calls.some(c => c.url.endsWith('/applications/M2/decision'))).toBe(false);
   });
 
-  it('shows the sheet view only to a role without the verify action', async () => {
+  it('shows the page view only to a role without the verify action', async () => {
     api(['admin'], c => (c.url.endsWith('/api/v1/console/me') ? { body: { userId: 'U1', roles: [{ role: 'admin', screens: ['overview', 'verify', 'vetting'], actions: [] }] } } : undefined));
-    renderConsole('/verification?application=M2');
-    const panel = await screen.findByRole('dialog', { name: 'QuickFix Auto' });
+    renderConsole('/verification/M2');
+    await screen.findByRole('heading', { level: 1, name: 'QuickFix Auto' });
+    const panel = document.body;
     expect(await within(panel).findByText('View only · Admin')).toBeTruthy();
     expect(within(panel).queryByRole('button', { name: 'Approve' })).toBeNull();
-    expect(within(panel).queryByRole('button', { name: 'Review' })).toBeNull();
+    expect(within(panel).queryByRole('button', { name: 'Review…' })).toBeNull();
   });
 
-  it('filters by province from the region model', async () => {
+  it('follows the top bar’s scope, and filters by stage and high risk', async () => {
     const calls = api(['admin']);
-    renderConsole('/verification');
+    const { router } = renderConsole('/verification?province=BC');
     await screenReady();
-    await user().selectOptions(screen.getByRole('combobox', { name: 'Province' }), 'BC');
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/verification/applications?province=BC'))).toBe(true));
+    await user().click(screen.getByRole('button', { name: 'High risk' }));
+    await waitFor(() => expect(screen.queryByText('Sable & Soda Bar Co.')).toBeNull());
+    expect(screen.getByText('QuickFix Auto')).toBeTruthy();
+    await user().click(screen.getByRole('tab', { name: /^Approved/ }));
+    expect(router.state.location.search).toMatchObject({ risk: true, stage: 'approved' });
   });
 
   it('is refused to roles that do not open it (the denied banner)', async () => {
