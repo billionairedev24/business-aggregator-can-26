@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 import { Bank, Briefcase, CalendarCheck, ChartBar, ChartLineUp, ChatCircleText, Clock, GearSix, Lifebuoy, ShieldCheck, SquaresFour, Star, Storefront, Tag, UserCircle, Wallet, ArrowUUpLeft } from '@phosphor-icons/react';
-import { AppShell, type NavGroup, type NavItem } from './AppShell';
+import { AppShell, WorkspaceSwitcher, type NavGroup, type NavItem } from './AppShell';
+import { ShellSearch } from './ShellSearch';
 import { Avatar, PageHeader } from './Layout';
 import { Logo } from './Logo';
 
@@ -22,9 +23,10 @@ type S = StoryObj<typeof meta>;
 function Demo({ rail }: { rail?: boolean }) {
   const [cur, setCur] = useState('appointments');
   return (
-    <AppShell rail={rail} brand={<Logo size={28} onDark product="Studio" />}
-      headerStart={<><span className="nl-topbar-meta"><strong>Prairie Wrench</strong> · Calgary</span><span className="tag tag-accent">Master tier</span></>}
-      headerEnd={<button type="button" className="nl-topbar-item"><Avatar initials="RS" size={32} /><span className="nl-topbar-item-text">Ravi Sandhu<span>Owner</span></span></button>} pinned={pinned} groups={groups} currentKey={cur} onNavigate={i => setCur(i.key)}>
+    <AppShell rail={rail} brand={<Logo size={28} product="Studio" />}
+      headerStart={<WorkspaceSwitcher label="Switch business" name="Prairie Wrench" meta="Calgary" items={[{ label: 'Prairie Wrench', checked: true, onSelect: () => {} }, { label: 'Prairie Wrench Parts', checked: false, onSelect: () => {} }]} />}
+      search={<ShellSearch label="Search the Studio" placeholder="Search orders, products, customers" scopes={[{ key: 'orders', label: q => `Orders matching “${q}”` }, { key: 'products', label: q => `Products matching “${q}”` }]} onSearch={() => {}} />}
+      headerEnd={<button type="button" className="nl-topbar-item"><Avatar initials="RS" size={30} /><span className="nl-topbar-item-text">Ravi Sandhu<span>Owner</span></span></button>} pinned={pinned} groups={groups} currentKey={cur} onNavigate={i => setCur(i.key)}>
       <PageHeader kicker="Operations" title={cur} />
     </AppShell>
   );

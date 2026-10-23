@@ -74,7 +74,7 @@ function App() {
   const { renderedAt } = Route.useLoaderData() ?? {};
   // S-182: the platform zone from the region model the page was rendered with, before anything below formats a time.
   // regionsQuery's own call only runs where the query is fetched (the server); the browser gets the data hydrated,
-  // so it kept UTC while the server wrote the market's zone — "Order by 5:20 p.m." became "11:20 p.m." (#418).
+  // so it kept UTC while the server wrote the market's zone — "Order by 5:20 p.m." became "11:20 p.m." (React error 418).
   configurePlatformTimeZone(queryClient.getQueryData(regionsQuery(locale).queryKey)?.platformTimeZone);
   configureAuthOrigin(config.authOrigin); // idempotent; server and browser render the same auth links
   configurePhotoBase(config.photosBaseUrl); // the stock photos' CDN when set (NL_PHOTOS_BASE_URL), else /photos/

@@ -17,11 +17,20 @@ describe('portal navigation (design navAll / navKitchen)', () => {
     const s = screensFor('both');
     expect(s).toEqual(expect.arrayContaining(['appointments', 'orders', 'availability'])); expect(s).not.toContain('kds');
   });
-  it('kitchen opens on live orders with no dashboard', () => {
+  it('kitchen opens on live orders; its dashboard is pinned first (E-15)', () => {
     expect(homeScreen('kitchen')).toBe('kds');
     const nav = buildNav('kitchen', 'm1', t, {});
-    expect(nav.pinned).toHaveLength(0);
-    expect(nav.groups.map(g => g.label)).toEqual(['g_kitchen', 'g_finance', 'g_account', 'g_help']);
+    expect(nav.pinned.map(i => i.key)).toEqual(['dashboard']);
+    expect(nav.groups.map(g => g.label)).toEqual(['g_operations', 'g_catalogue', 'g_money', 'g_store', 'g_account']);
+    expect(nav.groups[0]!.items.map(i => i.key)).toEqual(['kds', 'messages']);
+    expect(nav.groups[1]!.items.map(i => i.key)).toEqual(['menu', 'combos', 'kitchenHours']);
+  });
+  it('every screen of a portal is in its menu exactly once', () => {
+    for (const type of ['provider', 'seller', 'kitchen', 'both'] as const) {
+      const nav = buildNav(type, 'm', t, {});
+      const keys = [...nav.pinned, ...nav.groups.flatMap(g => g.items)].map(i => i.key);
+      expect([...keys].sort()).toEqual([...screensFor(type)].sort());
+    }
   });
   it('labels follow the portal', () => {
     const label = (type: 'provider' | 'seller' | 'both', key: string) => buildNav(type, 'm', t, {}).groups.flatMap(g => g.items).find(i => i.key === key)?.label;
@@ -33,6 +42,7 @@ describe('portal navigation (design navAll / navKitchen)', () => {
   it('badges attach to items', () => {
     const nav = buildNav('provider', 'm', t, { appointments: '3' });
     expect(nav.groups[0]!.items[0]).toMatchObject({ key: 'appointments', badge: '3', href: '/b/m/appointments' });
+    expect(nav.groups.map(g => g.label)).toEqual(['g_operations', 'g_catalogue', 'g_money', 'g_store', 'g_account']);
   });
   it('sub-pages highlight their parent', () => {
     expect(screenFromPath('/b/m/listings/new')).toBe('products');

@@ -70,7 +70,11 @@ const strictRoots = ['packages/ui/src', 'apps/consumer/src/features/shell', 'app
   // S-170/S-171: the consumer discovery pages (home, results, the Services / Shop / Food landings and their shared parts)
   'apps/consumer/src/features/home', 'apps/consumer/src/features/search', 'apps/consumer/src/features/pages', 'apps/consumer/src/features/shop',
   'apps/consumer/src/features/services/services.css', 'apps/consumer/src/features/services/ServicesLanding.tsx', 'apps/consumer/src/features/services/ServiceCategory.tsx',
-  'apps/consumer/src/features/food/FoodScreen.tsx'];
+  'apps/consumer/src/features/food/FoodScreen.tsx',
+  // S-174: the Studio dashboard and the storefront's live preview (audit #7 and #10)
+  'apps/studio/src/features/dashboard', 'apps/studio/src/features/storefront/StorefrontPreview.tsx', 'apps/studio/src/features/storefront/StorefrontPreview.css'];
+// S-174: no inline `style` at all in these (a class with the scale tokens instead; the Studio dashboard had a dozen)
+const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard'];
 // (the server-rendered error page and the printable report are standalone documents with their own fallbacks)
 const strictSkip = [...skip, /\.stories\.tsx$/, /\.fixtures\.ts$/, /\.mdx$/, /(^|\/)server\//, /DataTable\/report\.ts$/];
 const PX = /(-?\d*\.?\d+)px/g;
@@ -105,6 +109,14 @@ for (const root of strictRoots) {
         for (const m of line.matchAll(TSX_COLOUR)) raw.push(`${at}  ${m[1]}: ${m[2]} inline (use a var(--color-*) role)`);
       }
     });
+  }
+}
+
+for (const root of noStyleRoots) {
+  for (const file of walk(path.join(webRoot, root))) {
+    const rel = path.relative(webRoot, file).split(path.sep).join('/');
+    if (!rel.endsWith('.tsx') || strictSkip.some(r => r.test(rel))) continue;
+    readFileSync(file, 'utf8').split('\n').forEach((line, i) => { if (/\sstyle=\{/.test(line)) raw.push(`${rel}:${i + 1}  inline style (use a class with the scale tokens)`); });
   }
 }
 

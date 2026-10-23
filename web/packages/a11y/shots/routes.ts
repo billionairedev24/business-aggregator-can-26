@@ -79,6 +79,9 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'invite', path: '/invite/tok', signedIn: true },
     { name: 'dashboard', path: `/b/${PROVIDER}` },
     { name: 'dashboard-seller', path: `/b/${SELLER}` },
+    { name: 'dashboard-kitchen', path: `/b/${KITCHEN}` },
+    // the phone's disclosure menu open (on a desktop there is no menu button: the window as it is)
+    { name: 'dashboard-menu', path: `/b/${SELLER}`, click: '.nl-topbar-menu' },
     { name: 'appointments', path: `/b/${PROVIDER}/appointments` },
     { name: 'appointments-job', path: `/b/${PROVIDER}/appointments`, click: '.nl-appt-job[aria-pressed]' },
     { name: 'availability', path: `/b/${PROVIDER}/availability` },

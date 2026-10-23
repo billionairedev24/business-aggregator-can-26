@@ -91,6 +91,8 @@ export interface DataTableProps<T extends object> {
   /** Initial page size (5 | 10 | 25 | 50). Default 10. */
   pageSize?: number;
   searchPlaceholder?: string;
+  /** The search box's text on arrival (the Studio's global search opens a screen with `?q=`). */
+  initialSearch?: string;
   createLabel?: string;
   emptyText?: string;
   /** File name stem for reports. Default: `plural`. */

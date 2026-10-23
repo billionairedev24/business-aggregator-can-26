@@ -10,5 +10,7 @@ type S = StoryObj;
 export const English: S = { render: () => <I18nProvider initial="en"><Gallery /></I18nProvider> };
 export const French: S = { render: () => <I18nProvider initial="fr"><Gallery /></I18nProvider> };
 export const Sections: S = {
-  render: () => <I18nProvider initial="en">{GALLERY_SECTIONS.map(s => <Gallery key={s.id} section={s.id} />)}</I18nProvider>,
+  render: () => <I18nProvider initial="en">{GALLERY_SECTIONS.filter(s => !s.solo).map(s => <Gallery key={s.id} section={s.id} />)}</I18nProvider>,
 };
+/** The back-office shell on its own (its banner and main would repeat inside the full gallery page). */
+export const Shell: S = { render: () => <I18nProvider initial="en"><Gallery section="shell" /></I18nProvider> };

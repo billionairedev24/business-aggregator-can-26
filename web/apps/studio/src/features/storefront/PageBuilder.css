@@ -52,29 +52,5 @@
 .nl-dns-record code { font-size: 12px; }
 
 /* preview */
-.nl-pv-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-.nl-pv-caption { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); }
-.nl-pv-frame { background: var(--color-surface); box-shadow: var(--shadow-lg); overflow: hidden; max-height: 560px; overflow-y: auto; }
-.nl-pv-frame[data-device='phone'] { width: min(100%, 340px); border-radius: 28px; }
-.nl-pv-frame[data-device='web'] { width: 100%; border-radius: var(--radius-md); }
-.nl-pv-hero { padding: 44px 20px 22px; background: var(--nl-brand); }
-.nl-pv-hero-top { display: flex; justify-content: space-between; align-items: flex-start; }
-.nl-pv-logo { width: 44px; height: 44px; border-radius: var(--radius-md); background: color-mix(in oklch, var(--color-surface) 92%, transparent); color: var(--color-text); display: grid; place-items: center; font-weight: 600; font-size: 20px; overflow: hidden; }
-.nl-pv-logo img { width: 100%; height: 100%; object-fit: contain; }
-.nl-pv-tier { background: color-mix(in oklch, var(--color-surface) 92%, transparent); color: var(--color-text); }
-.nl-pv-name { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; color: var(--color-text-inverse); margin-top: 22px; }
-.nl-pv-tagline { font-size: 13px; color: color-mix(in oklch, var(--color-text-inverse) 85%, transparent); }
-.nl-pv-stats { padding: 14px 20px 4px; display: flex; gap: 20px; font-size: 12px; flex-wrap: wrap; }
-.nl-pv-stats strong { font-size: 18px; }
-.nl-pv-block { padding: 14px 20px 4px; }
-.nl-pv-kicker { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); }
-.nl-pv-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 14px; }
-.nl-pv-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nl-pv-row strong { flex: none; }
-.nl-pv-text { font-size: 13px; line-height: 1.55; color: var(--color-text-muted); margin-top: 6px; }
-.nl-pv-map { margin-top: 8px; height: 90px; border-radius: var(--radius-md); background: repeating-linear-gradient(45deg, var(--color-surface-muted) 0 6px, var(--color-surface-sunken) 6px 12px); display: grid; place-items: center; font-size: 12px; color: var(--color-text-muted); text-align: center; padding: 0 12px; }
-.nl-pv-sticky { position: sticky; bottom: 0; background: var(--color-surface); }
-.nl-pv-cta-wrap { padding: 16px 20px 20px; }
-.nl-pv-cta { padding: 12px; text-align: center; border-radius: var(--radius-md); color: var(--color-text-inverse); font-weight: 600; background: var(--nl-brand); }
 .nl-embed-code { white-space: pre-wrap; word-break: break-all; background: var(--color-surface-sunken); padding: 12px; border-radius: var(--radius-md); font-size: 13px; }
 @media (max-width: 699.98px) { .nl-builder-preview { position: static; } }

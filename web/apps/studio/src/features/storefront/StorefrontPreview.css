@@ -1,0 +1,31 @@
+/* The storefront's live preview (StorefrontPreview.tsx; E-15, audit #10): the real provider / store page in miniature,
+   in A · Plainsight — white, ink type, a hairline-bordered header, the business's colour only as the logo tile's edge
+   (`--nl-brand`, merchant data), the action-blue button. Semantic tokens only (`pnpm lint:tokens` checks this file). */
+.nl-pv-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-2-5); }
+.nl-pv-caption { font-size: var(--type-caps); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
+.nl-pv-frame { background: var(--color-surface); border: 1px solid var(--color-border-strong); overflow: hidden; max-height: calc(var(--size-touch) * 13); overflow-y: auto; color: var(--color-text); font-family: var(--font-sans); }
+.nl-pv-frame[data-device='phone'] { width: min(100%, 340px); border-radius: var(--radius-panel); box-shadow: var(--shadow-md); }
+.nl-pv-frame[data-device='web'] { width: 100%; border-radius: var(--radius-panel); }
+.nl-pv-hero { display: flex; flex-direction: column; gap: var(--space-2-5); padding: var(--space-5) var(--space-4) var(--space-3-5); border-bottom: 1px solid var(--color-border); }
+.nl-pv-id { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.nl-pv-logo { flex: none; width: var(--size-touch); height: var(--size-touch); box-sizing: border-box; border: 2px solid var(--nl-brand, var(--color-border-strong)); border-radius: var(--radius-panel); background: var(--color-surface); color: var(--color-text); display: grid; place-items: center; font-weight: var(--weight-bold); font-size: var(--type-section); overflow: hidden; }
+.nl-pv-logo img { width: 100%; height: 100%; object-fit: contain; }
+.nl-pv-idtext { min-width: 0; }
+.nl-pv-name { font-size: var(--type-section); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight); line-height: var(--leading-tight); overflow-wrap: anywhere; }
+.nl-pv-tagline { margin-top: 2px; font-size: var(--type-meta); color: var(--color-text-muted); overflow-wrap: anywhere; }
+.nl-pv-badges { display: flex; flex-wrap: wrap; gap: var(--space-1-5); }
+.nl-pv-stats { margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); }
+.nl-pv-stats > div { display: flex; flex-direction: column-reverse; }
+.nl-pv-stats dt { font-size: var(--type-meta); color: var(--color-text-muted); }
+.nl-pv-stats dd { margin: 0; font-size: var(--type-sub); font-weight: var(--weight-bold); }
+.nl-pv-block { padding: var(--space-3-5) var(--space-4) var(--space-1); }
+.nl-pv-title { font-size: var(--type-body); font-weight: var(--weight-bold); margin-bottom: var(--space-2); }
+.nl-pv-rows { display: flex; flex-direction: column; gap: var(--space-1-5); }
+.nl-pv-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-2-5) var(--space-3); border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); font-size: var(--type-label); }
+.nl-pv-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--weight-semibold); }
+.nl-pv-row strong { flex: none; font-variant-numeric: tabular-nums; }
+.nl-pv-text { font-size: var(--type-label); line-height: var(--leading-relaxed); color: var(--color-text-muted); }
+.nl-pv-map { height: calc(var(--size-touch) * 2); border: 1px dashed var(--color-well-line); border-radius: var(--radius-image); background: var(--color-well); display: grid; place-items: center; padding: 0 var(--space-3); font-size: var(--type-meta); color: var(--color-well-ink); text-align: center; }
+.nl-pv-sticky { position: sticky; bottom: 0; background: var(--color-surface); border-top: 1px solid var(--color-border); margin-top: var(--space-3); }
+.nl-pv-cta-wrap { padding: var(--space-3) var(--space-4); }
+.nl-pv-cta { display: grid; place-items: center; min-height: var(--size-control); border-radius: var(--radius-control); background: var(--color-action-primary); color: var(--color-action-primary-text); font-size: var(--type-body); font-weight: var(--weight-bold); }

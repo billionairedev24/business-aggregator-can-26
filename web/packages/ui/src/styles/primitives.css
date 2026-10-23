@@ -307,3 +307,13 @@
 .nl-fgroup-items { display: flex; flex-direction: column; min-width: 0; }
 .nl-fgroup-items > .nl-check { display: flex; min-height: var(--size-control-sm); align-items: center; font-size: var(--type-card-title); }
 .nl-fgroup-items > .nl-check .nl-box { margin-top: 0; }
+
+/* ColumnChart (Charts.tsx): grid, axis figures, the grey columns and the current one in ink */
+.nl-chart-figure { margin: 0; min-width: 0; }
+.nl-columns .nl-columns-grid { stroke: var(--color-border); stroke-width: 1; fill: none; }
+.nl-columns .nl-columns-axis { font-size: var(--type-caps); fill: var(--color-text-subtle); }
+.nl-columns-bar { fill: var(--color-border-control); }
+.nl-columns-bar[data-now] { fill: var(--color-selected); }
+.nl-columns-legend { margin: var(--space-2) 0 0; font-size: var(--type-meta); }
+.nl-columns-key { background: var(--color-border-control); }
+.nl-columns-key[data-now] { background: var(--color-selected); }

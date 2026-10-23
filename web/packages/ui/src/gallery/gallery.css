@@ -38,3 +38,10 @@
   .nl-gallery-section { padding: var(--space-3); }
   .nl-gallery-row { grid-template-columns: minmax(0, 1fr); }
 }
+/* the back-office shell in a frame: as tall as its content, the sidebar in the flow (layout only) */
+.nl-gallery-shell { border: 1px solid var(--color-border); border-radius: var(--radius-panel); overflow: hidden; }
+.nl-gallery-shell .nl-shell { min-height: 0; }
+.nl-gallery-shell .nl-topbar { position: static; }
+.nl-gallery-shell .nl-side { position: static; height: auto; }
+.nl-gallery-shell .nl-shell-menu { position: static; max-height: none; box-shadow: none; }
+.nl-gallery-solo-title { margin: 0; font-size: var(--type-caps); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }

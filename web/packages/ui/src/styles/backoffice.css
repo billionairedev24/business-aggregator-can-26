@@ -46,8 +46,8 @@
 button.bo-kpi { cursor: pointer; }
 button.bo-kpi:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-sm); }
 .bo-kpi-label { font-size: var(--type-meta); color: var(--color-text-muted); }
-.bo-kpi-value { font-size: var(--type-page-title); font-weight: var(--weight-bold); line-height: var(--leading-tight); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.bo-kpi-delta { font-size: var(--type-meta); font-weight: var(--weight-semibold); color: var(--color-text-muted); }
+.bo-kpi-value { font-size: var(--type-page-title); font-weight: var(--weight-semibold); line-height: var(--leading-tight); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.bo-kpi-delta { font-size: var(--type-meta); font-weight: var(--weight-semibold); color: var(--color-text-subtle); }
 .bo-kpi-delta[data-trend='up'] { color: var(--color-success); }
 .bo-kpi-delta[data-trend='down'] { color: var(--color-danger); }
 
@@ -76,3 +76,46 @@ button.bo-kpi:hover { border-color: var(--color-border-strong); box-shadow: var(
 .bo-fact dt { color: var(--color-text-muted); }
 .bo-fact dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 419.98px) { .bo-fact { grid-template-columns: minmax(0, 1fr); } }
+
+/* "Needs you now" (BackOffice.tsx ActionGrid / ActionCard; design/revamp/a.html `acts`): a titled count, then cards
+   three across — an icon tile in the status tint, the job, the deadline, one button; a 3 px edge in the urgency colour. */
+.bo-acts-wrap { display: flex; flex-direction: column; gap: var(--space-2-5); min-width: 0; }
+.bo-sec-title { margin: 0; display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-base); font-weight: var(--weight-bold); }
+.bo-count { font-size: var(--type-caps); font-weight: var(--weight-bold); padding: 1px var(--space-1-5); border-radius: var(--radius-status); background: var(--color-selected); color: var(--color-selected-text); font-variant-numeric: tabular-nums; }
+.bo-acts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.bo-act { display: grid; grid-template-columns: var(--size-control-sm) minmax(0, 1fr); align-content: start; gap: var(--space-2-5) var(--space-3); padding: var(--space-3-5); background: var(--color-surface); border: 1px solid var(--color-border); border-left: 3px solid var(--color-border-strong); border-radius: var(--radius-panel); min-width: 0; }
+.bo-act[data-tone='warning'] { border-left-color: var(--color-status-warning-fg); }
+.bo-act[data-tone='danger'] { border-left-color: var(--color-status-danger-fg); }
+.bo-act[data-tone='success'] { border-left-color: var(--color-status-success-fg); }
+.bo-act[data-tone='info'] { border-left-color: var(--color-status-info-fg); }
+.bo-act-icon { width: var(--size-control-sm); height: var(--size-control-sm); display: grid; place-items: center; border-radius: var(--radius-control); background: var(--color-status-neutral-bg); color: var(--color-status-neutral-fg); }
+.bo-act[data-tone='warning'] .bo-act-icon { background: var(--color-status-warning-bg); color: var(--color-status-warning-fg); }
+.bo-act[data-tone='danger'] .bo-act-icon { background: var(--color-status-danger-bg); color: var(--color-status-danger-fg); }
+.bo-act[data-tone='success'] .bo-act-icon { background: var(--color-status-success-bg); color: var(--color-status-success-fg); }
+.bo-act[data-tone='info'] .bo-act-icon { background: var(--color-status-info-bg); color: var(--color-status-info-fg); }
+.bo-act-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bo-act-title { margin: 0; font-size: var(--type-body); font-weight: var(--weight-bold); line-height: var(--leading-tight); overflow-wrap: anywhere; }
+.bo-act-detail { margin: 0; font-size: var(--type-meta); color: var(--color-text-muted); line-height: var(--leading-normal); overflow-wrap: anywhere; }
+.bo-act-btn { grid-column: 2; justify-self: start; }
+@media (max-width: 1199.98px) { .bo-acts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 767.98px) { .bo-acts { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); } }
+
+/* a short read-only table in a panel (SummaryTable): grey head, hairlines, figures right-aligned */
+.bo-table-wrap { overflow-x: auto; margin: 0 calc(-1 * var(--space-4)); }
+.bo-table { width: 100%; border-collapse: collapse; font-size: var(--type-label); font-variant-numeric: tabular-nums; }
+.bo-table th { text-align: left; font-size: var(--type-meta); font-weight: var(--weight-semibold); color: var(--color-text-muted); padding: var(--space-2) var(--space-2-5); background: var(--color-surface-muted); border-bottom: 1px solid var(--color-border-strong); white-space: nowrap; }
+.bo-table td { padding: var(--space-2) var(--space-2-5); border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+.bo-table tbody tr:last-child td { border-bottom: 0; }
+.bo-table th:first-child, .bo-table td:first-child { padding-left: var(--space-4); }
+.bo-table th:last-child, .bo-table td:last-child { padding-right: var(--space-4); }
+.bo-table [data-align='end'] { text-align: right; white-space: nowrap; }
+.bo-item { display: flex; align-items: center; gap: var(--space-2); min-width: 0; font-weight: var(--weight-semibold); }
+.bo-item > span:last-child { min-width: 0; overflow-wrap: break-word; }
+@media (max-width: 599.98px) { .bo-table [data-phone='hide'] { display: none; } }
+.bo-thumb { flex: none; width: var(--size-control-sm); height: var(--size-control-sm); display: grid; place-items: center; overflow: hidden; border-radius: var(--radius-control); background: var(--color-well); color: var(--color-well-ink); font-size: var(--type-meta); font-weight: var(--weight-bold); }
+.bo-thumb img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+
+/* a panel with a title row and actions (ChartCard), the dashboard's two-up rows */
+.bo-card-head .seg { flex: none; }
+.bo-cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--space-3); align-items: start; }
+@media (max-width: 1099.98px) { .bo-cols { grid-template-columns: minmax(0, 1fr); } }
