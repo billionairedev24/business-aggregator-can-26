@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
 
@@ -70,27 +70,30 @@ export function HomeHero({
   departmentsLabel: string;
   testID?: string;
 }) {
+  // gradient ids unique per hero: a stack keeps an earlier screen mounted but hidden, and a browser draws no gradient
+  // whose definition sits in a hidden subtree
+  const id = `nl-hero-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <View style={styles.hero} testID={testID}>
       <View style={styles.band} pointerEvents="none">
         <Svg width="100%" height="100%" preserveAspectRatio="none" accessible={false} importantForAccessibility="no-hide-descendants">
           <Defs>
-            <LinearGradient id="nl-hero-bg" x1="0" y1="0" x2="0" y2="1">
+            <LinearGradient id={`${id}-bg`} x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor={semantic['hero-bg']} />
               <Stop offset="1" stopColor={semantic['hero-scrim']} />
             </LinearGradient>
-            <RadialGradient id="nl-hero-glow" cx="86%" cy="-10%" rx="70%" ry="60%" fx="86%" fy="-10%">
+            <RadialGradient id={`${id}-glow`} cx="86%" cy="-10%" rx="70%" ry="60%" fx="86%" fy="-10%">
               <Stop offset="0" stopColor={semantic['hero-glow']} stopOpacity={0.55} />
               <Stop offset="0.7" stopColor={semantic['hero-glow']} stopOpacity={0} />
             </RadialGradient>
-            <RadialGradient id="nl-hero-glow-low" cx="4%" cy="100%" rx="60%" ry="40%" fx="4%" fy="100%">
+            <RadialGradient id={`${id}-low`} cx="4%" cy="100%" rx="60%" ry="40%" fx="4%" fy="100%">
               <Stop offset="0" stopColor={semantic['hero-glow']} stopOpacity={0.3} />
               <Stop offset="0.7" stopColor={semantic['hero-glow']} stopOpacity={0} />
             </RadialGradient>
           </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#nl-hero-bg)" />
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#nl-hero-glow)" />
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#nl-hero-glow-low)" />
+          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id}-bg)`} />
+          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id}-glow)`} />
+          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id}-low)`} />
         </Svg>
       </View>
 
@@ -159,13 +162,13 @@ export function HomeHero({
                 <View style={styles.tilePhoto}>{d.photo}</View>
                 <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" preserveAspectRatio="none" accessible={false} importantForAccessibility="no-hide-descendants">
                   <Defs>
-                    <LinearGradient id={`nl-hero-scrim-${d.key}`} x1="0" y1="0" x2="0" y2="1">
+                    <LinearGradient id={`${id}-scrim-${d.key}`} x1="0" y1="0" x2="0" y2="1">
                       <Stop offset="0.28" stopColor={semantic['hero-scrim']} stopOpacity={0} />
                       <Stop offset="0.62" stopColor={semantic['hero-scrim']} stopOpacity={0.62} />
                       <Stop offset="1" stopColor={semantic['hero-scrim']} stopOpacity={0.9} />
                     </LinearGradient>
                   </Defs>
-                  <Rect x="0" y="0" width="100%" height="100%" fill={`url(#nl-hero-scrim-${d.key})`} />
+                  <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id}-scrim-${d.key})`} />
                 </Svg>
                 <View style={styles.tileCopy}>
                   <View style={styles.tileK}>
