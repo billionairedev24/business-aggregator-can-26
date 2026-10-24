@@ -1,6 +1,7 @@
 /**
  * S-178 (E-15 A · Plainsight, design/revamp/a.html's phone frames; the home hero is Main Street's maker of the week
- * from b.html): the home's header, department strip, cut-off strip, hero and tiles, the results' filters, the product's
+ * from b.html): the home's header, department strip, hero and tiles (S-188 folded the cut-off strip into the hero band's
+ * run card, i18n/en/brand.ts), the results' filters, the product's
  * buy box, the provider's tabs and the one-page checkout. Places, times, prices and counts are parameters
  * (region-neutral); the maker of the week is derived from the shops' own fields (the api has no such feature).
  */
@@ -12,15 +13,6 @@ export const revamp = {
   'rv.dept.all': 'All',
   'rv.dept.services': 'Services',
   'rv.dept.shop': 'Shop',
-
-  'rv.cutoff.tonight': 'Tonight’s pooled run to {place} closes at {time}',
-  'rv.cutoff.today': 'Today’s pooled run to {place} closes at {time}',
-  'rv.cutoff.tomorrow': 'Tomorrow’s pooled run to {place} closes at {time}',
-  'rv.cutoff.later': 'The next pooled run to {place} closes {weekday} at {time}',
-  'rv.cutoff.sub': 'Mix any shops for a single {fee} delivery.',
-  'rv.cutoff.leftHours': '{h} h {m} min left',
-  'rv.cutoff.leftMinutes': '{m} min left',
-  'rv.cutoff.label': '{title} {sub} {left}',
 
   'rv.hero.label': 'Maker of the week',
   'rv.hero.kicker': 'Maker of the week · {department}',
