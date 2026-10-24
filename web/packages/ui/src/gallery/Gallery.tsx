@@ -609,14 +609,17 @@ export const GALLERY_SECTIONS: readonly GallerySection[] = [
  * photograph. `open` starts the overlays section with its dialog or sheet open; `photo` is a product photo's URL for
  * the cards (the app serves one; without it the cards show their fallback).
  */
-export function Gallery({ section, open, photo }: { section?: string | null; open?: string | null; photo?: string }) {
+/**
+ * `head={false}` leaves out the gallery's title and `toasts={false}` its toast region (Storybook "Sections" draws every
+ * section under one title and one notifications region: one banner, unique landmarks).
+ */
+export function Gallery({ section, open, photo, head = true, toasts = true }: { section?: string | null; open?: string | null; photo?: string; head?: boolean; toasts?: boolean }) {
   const t = useT();
   const shown = section ? GALLERY_SECTIONS.filter(s => s.id === section) : GALLERY_SECTIONS.filter(s => !s.solo);
   const solo = shown.length === 1 && !!shown[0]!.solo;
-  return (
-    <ToastProvider>
+  const page = (
       <div className="nl-gallery">
-        {solo ? null : <header className="nl-gallery-head"><h1>{t('title')}</h1><p className="nl-muted">{t('lede')}</p></header>}
+        {solo || !head ? null : <header className="nl-gallery-head"><h1>{t('title')}</h1><p className="nl-muted">{t('lede')}</p></header>}
         {shown.map(s => (s.solo
           // a page shell is the page: no region or banner around its own banner and main
           ? <div key={s.id} className="nl-gallery-section" data-gallery={s.id}><p className="nl-gallery-solo-title" id={`gallery-${s.id}`}>{s.title(t)}</p>{s.render(t, photo)}</div>
@@ -627,8 +630,9 @@ export function Gallery({ section, open, photo }: { section?: string | null; ope
             </section>
           )))}
       </div>
-    </ToastProvider>
   );
+  // with toasts={false} the caller provides them (one notifications region for the page)
+  return toasts ? <ToastProvider>{page}</ToastProvider> : page;
 }
 
 /** One section by id, for Storybook. */
