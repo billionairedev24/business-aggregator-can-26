@@ -128,6 +128,9 @@ button.bo-kpi:hover { border-color: var(--color-border-strong); box-shadow: var(
 .bo-fsection-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
 @media (max-width: 599.98px) { .bo-fsection { padding: var(--space-4); } }
 .bo-savebar { position: sticky; bottom: 0; z-index: var(--z-sticky); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel) var(--radius-panel) 0 0; box-shadow: var(--shadow-md); }
+/* S-180 (WCAG 2.4.11): a field reached with Tab scrolls clear of the sticky save bar, never under it */
+html:has(.bo-savebar:not(.bo-savebar-static)) { scroll-padding-bottom: calc(var(--size-control-lg) + var(--space-10)); }
+@media (max-width: 599.98px) { html:has(.bo-savebar:not(.bo-savebar-static)) { scroll-padding-bottom: calc(2 * var(--size-control-lg) + var(--space-12)); } }
 .bo-savebar-state { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0; font-size: var(--type-label); }
 .bo-savebar-note { color: var(--color-text-muted); }
 .bo-savebar-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-left: auto; }

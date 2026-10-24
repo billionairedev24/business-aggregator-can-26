@@ -66,7 +66,7 @@ export function SyncTab({ returned, onReturnSeen }: { returned?: CalendarReturn;
             {t(`result_${banner.result}`, { provider: t(`cal_${banner.calendar}`) })}
           </Alert>
         ) : null}
-        <h3 className="nl-av-h3">{t('calendars')}</h3>
+        <h2 className="nl-av-h3">{t('calendars')}</h2>
         <ul className="nl-av-list">
           {q.data.calendars.map(c => {
             const reconnect = c.state === 'reconnect';
@@ -87,14 +87,14 @@ export function SyncTab({ returned, onReturnSeen }: { returned?: CalendarReturn;
           })}
         </ul>
         {toggle.isError ? <Alert tone="error">{t('saveError')}</Alert> : null}
-        <h3 className="nl-av-h3 nl-av-how">{t('howSync')}</h3>
+        <h2 className="nl-av-h3 nl-av-how">{t('howSync')}</h2>
         <ul className="nl-av-bullets">
           <li>{t('sync1')}</li><li>{t('sync2')}</li><li>{t('sync3')}</li>
           <li>{ical?.feedUrl ? <>{t('sync4')} <code className="nl-av-code">{ical.feedUrl}</code></> : t('sync4none')}</li>
         </ul>
       </div>
       <div className="nl-av-card">
-        <h3 className="nl-av-h3">{t('team')}</h3>
+        <h2 className="nl-av-h3">{t('team')}</h2>
         <ul className="nl-av-list">
           {q.data.team.map(m => (
             <li key={m.userId} className="nl-av-item">

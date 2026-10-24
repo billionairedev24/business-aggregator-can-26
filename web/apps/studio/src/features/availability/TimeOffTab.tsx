@@ -57,7 +57,7 @@ export function TimeOffTab() {
   return (
     <div className="nl-av-rules">
       <div className="nl-av-card">
-        <h3 className="nl-av-h3">{t('timeOffTitle')}</h3>
+        <h2 className="nl-av-h3">{t('timeOffTitle')}</h2>
         {q.data.entries.length === 0 ? <p className="nl-muted nl-small">{t('noTimeOff')}</p> : (
           <ul className="nl-av-list">
             {q.data.entries.map(e => (
@@ -94,7 +94,7 @@ export function TimeOffTab() {
         ) : null}
       </div>
       <div className="nl-av-card">
-        <h3 className="nl-av-h3">{q.data.province?.[locale] ? t('holidaysTitle', { province: q.data.province[locale] }) : t('holidaysTitle')}</h3>
+        <h2 className="nl-av-h3">{q.data.province?.[locale] ? t('holidaysTitle', { province: q.data.province[locale] }) : t('holidaysTitle')}</h2>
         <ul className="nl-av-list">
           {q.data.holidays.map(h => (
             <li key={h.date} className="nl-av-item nl-av-holiday">

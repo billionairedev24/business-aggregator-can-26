@@ -157,7 +157,7 @@ function PreviewPanel({ t, name, day, setDay, duration, serviceId, setServiceId,
       + (preview.busyBlocks ? ` · ${t('previewBusy', { n: preview.busyBlocks })}` : '');
   return (
     <section aria-labelledby="av-preview" className="nl-av-card">
-      <h3 id="av-preview" className="nl-av-h3">{t('previewTitle')}</h3>
+      <h2 id="av-preview" className="nl-av-h3">{t('previewTitle')}</h2>
       <p className="nl-small nl-muted nl-av-help">{t('previewHelp')}</p>
       <Select aria-label={t('previewService')} className="nl-av-svc" value={serviceId ?? ''} onChange={e => setServiceId(e.target.value)}
         options={services.map(s => ({ value: s.id, label: s.name ? t('serviceDuration', { name: s.name, min: s.durationMin }) : t('durationOnly', { min: s.durationMin }) }))} />
