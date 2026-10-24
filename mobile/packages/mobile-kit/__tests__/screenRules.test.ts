@@ -6,7 +6,10 @@ describe('screen rules', () => {
   it.each([
     ['raw font size', 'title: { fontSize: 28, color },'],
     ['raw line height', 'body: { lineHeight: 21 },'],
-    ['the retired display face', 'h: { fontFamily: fonts.display },'],
+    ['the display face by name', 'h: { fontFamily: fonts.display },'],
+    ['the display face outside the home hero', 'h: textStyles.displayHero,'],
+    ['a fill-only colour as text', "timer: { color: semantic.commerce },"],
+    ['a fill-only colour as text', "<Icon name=\"heart\" color={on ? semantic['cart-badge'] : undefined} />"],
     ['raw spacing', 'row: { gap: 6 },'],
     ['raw corner radius', 'card: { borderRadius: 12 },'],
     ['an older radius name', 'card: { borderRadius: radius.lg },'],
@@ -20,6 +23,16 @@ describe('screen rules', () => {
 
   it('refuses the native switch, even imported over several lines', () => {
     expect(screenRuleHits('x.tsx', "import {\n  Pressable,\n  Switch,\n} from 'react-native';")).toEqual(['the native switch (use the kit’s Switch) in x.tsx']);
+  });
+
+  it('allows the display roles in the home hero and the maker headline only (S-188)', () => {
+    expect(screenRuleHits('src/shop/HomeBand.tsx', 'title: textStyles.displayHero,')).toEqual([]);
+    expect(screenRuleHits('src/shop/Home.tsx', 'h: textStyles.displayMaker,')).toEqual([]);
+    expect(screenRuleHits('src/shop/Home.tsx', 'h: { fontFamily: fonts.display },')).toHaveLength(1);
+  });
+
+  it('allows the yellow as a fill (S-188)', () => {
+    expect(screenRuleHits('x.tsx', "pill: { backgroundColor: semantic.commerce, borderColor: semantic['sticker-edge'] },\ntext: { color: semantic['commerce-on'] },")).toEqual([]);
   });
 
   it('allows tokens, 0–2 pt nudges, zero corners and comments', () => {

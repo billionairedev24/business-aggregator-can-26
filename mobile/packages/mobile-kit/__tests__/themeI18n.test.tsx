@@ -59,6 +59,11 @@ describe('theme from @northline/tokens', () => {
     expect(fonts.body).toBe(fonts.regular);
     expect(fonts.bodyStrong).toBe(fonts.semibold);
     expect(Object.keys(fontAssets).sort()).toEqual([...new Set(Object.values(fonts))].sort());
+    // S-188: the display role has its own family, theme.json `font.display` at its width (Archivo, 125 % → Expanded)
+    const display = /^\s*"([^"]+)"/.exec(theme.font.display)?.[1];
+    expect(display).toBe('Archivo');
+    expect(fonts.display).toBe('ArchivoExpanded_800ExtraBold');
+    expect(fonts.heading).not.toBe(fonts.display);
   });
 
   it('keeps every touch target at the redesign\'s 44 pt', () => {

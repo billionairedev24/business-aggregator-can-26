@@ -1,5 +1,5 @@
 // S-169: the component kit of both phone apps on tokens v2 (Plainsight). See KitGallery for every component.
-export { CAP, DENSITY, LEADING, LINE, SIZE, TYPE, slopFor, textStyles, type TextRole } from './tokens';
+export { CAP, DENSITY, LEADING, LINE, SIZE, STICKER, TYPE, slopFor, textStyles, type TextRole } from './tokens';
 export { KitProvider, kitTranslator, useKit } from './KitProvider';
 export { kitEn, kitFrCA, type KitKey } from './messages';
 export { formatDateRange, formatPrice, formatTime, formatTimeRange, formatUnitPrice, unitCents, type PriceUnit } from './format';
@@ -11,4 +11,4 @@ export { SearchBar, type SearchScope } from './SearchBar';
 export { BottomSheet, CardSkeleton, EmptyState, Skeleton, Toast, ToastProvider, useToast } from './Feedback';
 export { AppHeader, BottomTabBar, type TabItem } from './Navigation';
 export { KitGallery } from './Gallery';
-export { SCREEN_RULES, SOURCE_RULES, screenRuleHits } from './rules';
+export { DISPLAY_FACE_FILES, SCREEN_RULES, SOURCE_RULES, screenRuleHits } from './rules';
