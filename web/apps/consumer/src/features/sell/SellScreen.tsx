@@ -70,7 +70,7 @@ export function SellScreen({ type }: { type?: BusinessType }) {
               <p>{card.body}</p>
               <p className="nl-sell-verify">{card.verify}</p>
               {loading
-                ? <Skeleton height={44} radius="var(--radius-md)" style={{ marginTop: 'auto' }} />
+                ? <Skeleton height={44} radius="var(--radius-md)" className="nl-sell-skel-end" />
                 : <a className="btn btn-primary nl-sell-cta" href={studioStart(studioOrigin, key, !!user)}>
                     {card.cta}<span className="nl-sr-only"> {t('opensStudio')}</span>
                   </a>}

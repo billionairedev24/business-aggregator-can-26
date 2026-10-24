@@ -1,0 +1,2 @@
+/* the frame every story is drawn in (Storybook only) */
+.nl-story-frame { padding: var(--space-6); background: var(--color-canvas); color: var(--color-text); font-family: var(--font-sans); min-height: 100vh; }

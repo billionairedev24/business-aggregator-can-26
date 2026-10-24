@@ -177,7 +177,7 @@
 .nl-account-value { font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; }
 
 /* BrandMark — a business's initial on its brand colour (merchant layer 3) */
-.nl-brandmark { display: inline-grid; place-items: center; flex: none; border-radius: var(--radius-sm); color: var(--color-text-inverse); font-family: var(--font-sans); font-weight: var(--weight-bold); line-height: 1; overflow: hidden; }
+.nl-brandmark { display: inline-grid; place-items: center; flex: none; width: var(--nl-mark-size, 64px); height: var(--nl-mark-size, 64px); font-size: calc(var(--nl-mark-size) * 0.38); background: var(--nl-mark-bg, var(--color-selected)); border-radius: var(--radius-sm); color: var(--color-text-inverse); font-family: var(--font-sans); font-weight: var(--weight-bold); line-height: 1; overflow: hidden; }
 .nl-brandmark img { width: 100%; height: 100%; object-fit: cover; background: var(--color-surface); }
 
 /* the promo strip under the header (the delivery cut-off): the promo tint, the message, the time left at the end */

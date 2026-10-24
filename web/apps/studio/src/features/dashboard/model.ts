@@ -195,7 +195,7 @@ export function kpis(i: DashboardInputs, t: DashboardT, f: Fmt, locale: Locale, 
     const e = d.earnings;
     const pct = e.netLastMonthCents > 0 ? Math.round(((e.netThisMonthCents - e.netLastMonthCents) / e.netLastMonthCents) * 100) : null;
     const month = new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, Number(d.today.slice(5, 7)) - 2, 15))).replace('.', '');
-    items.push({ key: 'net', label: t('netMonth'), value: f.money(e.netThisMonthCents, { whole: true }), ...(pct === null ? {} : { delta: t('vsMonth', { pct: pctText(pct), month }), trend: trendOf(pct), arrow: true }), onClick: go('earnings') });
+    items.push({ key: 'net', label: t('netMonth'), value: f.price(e.netThisMonthCents), ...(pct === null ? {} : { delta: t('vsMonth', { pct: pctText(pct), month }), trend: trendOf(pct), arrow: true }), onClick: go('earnings') });
   }
   if (i.kind === 'kitchen' && i.live) items.push({ key: 'tickets', label: t('ticketsOpen'), value: f.number(i.live.counts.open), delta: t('ticketsDelta', { fresh: i.live.counts.fresh, cooking: i.live.counts.cooking }), onClick: go('kds') });
   if (sells(i.kind)) {
@@ -236,8 +236,8 @@ export function salesSeries(range: Range, report: Report | undefined, t: Dashboa
   return {
     title: t(`sales_${range}`), points,
     legend: monthly
-      ? { current: t('monthSoFar', { amount: f.price(last) }), past: t('previousMonths', { count: past.length, amount: f.money(avg, { whole: true }) }) }
-      : { current: t('todaySoFar', { amount: f.price(last) }), past: t('previousDays', { count: past.length, amount: f.money(avg, { whole: true }) }) },
+      ? { current: t('monthSoFar', { amount: f.price(last) }), past: t('previousMonths', { count: past.length, amount: f.price(avg) }) }
+      : { current: t('todaySoFar', { amount: f.price(last) }), past: t('previousDays', { count: past.length, amount: f.price(avg) }) },
   };
 }
 
@@ -250,7 +250,7 @@ export function weeklySeries(i: DashboardInputs, t: DashboardT, f: Fmt, locale: 
   }));
   const past = points.slice(0, -1);
   const avg = past.length ? Math.round(past.reduce((n, p) => n + p.value, 0) / past.length) : 0;
-  return { title: t('weeklyNet'), points, legend: { current: t('thisWeek', { amount: f.money(points[points.length - 1]?.value ?? 0, { whole: true }) }), past: t('previousWeeks', { count: past.length, amount: f.money(avg, { whole: true }) }) } };
+  return { title: t('weeklyNet'), points, legend: { current: t('thisWeek', { amount: f.price(points[points.length - 1]?.value ?? 0) }), past: t('previousWeeks', { count: past.length, amount: f.price(avg) }) } };
 }
 
 // ── top products, services and dishes ───────────────────────────────────────────────────────────────────────────

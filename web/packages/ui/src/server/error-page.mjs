@@ -3,7 +3,7 @@
 // the three apps' dev proxies (vite.config.ts) when the BFF behind them is down. Before this, such an error reached the
 // browser as h3's default `{"status":500,"unhandled":true,"message":"HTTPError"}` (or Vite's empty 500).
 //
-// Light Evergreen look from the theme (generated/theme.json: colours, fonts, the mark), bilingual (`?lang=`, the
+// The brand's look from the theme (generated/theme.json: colours, fonts, the mark), bilingual (`?lang=`, the
 // `nl.locale` cookie, Accept-Language), the status kept (404, 500, 502, 503, 504…), "Try again" (a link to the same
 // address: no script needed), "Go to home", the support address with a short reference that is also in the server's
 // log line. 502/503/504 try again on their own with a backoff (2, 4, 8, 16, 30 s; five times). In development the page

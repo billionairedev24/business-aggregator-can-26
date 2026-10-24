@@ -1,9 +1,13 @@
 #!/usr/bin/env node
-// Lint (redesign 2026-10-18): the shared components and the three app shells use the semantic tokens only
-// (--color-action-primary, --color-text-muted, …; docs/design/redesign-spec.md § 5). The "Spruce & Honey" names
-// (--color-accent*, --color-highlight*, --color-neutral-*, --color-bg, --font-body, …) are deprecated aliases kept in
-// dist/tokens.css for the screens later phases rebuild; this keeps them out of what is already rebuilt. Add a
-// directory here once its screens are rebuilt.
+// Lint (`pnpm lint:tokens`): the component library and every app use the design system's tokens only — tokens v2,
+// Plainsight (docs/design/revamp-epic.md, CLAUDE.md § Design system). S-180 made it strict everywhere: every folder of
+// @northline/ui, @northline/auth-kit and the consumer, Studio, console and gallery apps (the docs site is Docusaurus,
+// with its own theme). It fails on
+//   - the retired "Spruce & Honey" token names (--color-accent*, --color-highlight*, --color-neutral-*, --color-bg,
+//     --font-body, …): S-180 removed their aliases from dist/tokens.css, so they would resolve to nothing;
+//   - raw px font sizes, spacing and corner radii (0–2 px nudges allowed) and raw colours in CSS and inline styles;
+//   - an inline `style` that sets a CSS property (a custom property carrying data is fine: `['--pct' as string]: …`);
+//   - the per-app rules the E-15 stories added (one tab, status, chip and price style; the console's colour roles).
 //
 //   node scripts/check-legacy-tokens.mjs        (from web/, or `pnpm lint:tokens`)
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -11,22 +15,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const roots = ['packages/ui/src', 'apps/consumer/src/features/shell',
-  // redesign phase 1: the consumer demo path (§ 4)
-  'apps/consumer/src/features/home', 'apps/consumer/src/features/search', 'apps/consumer/src/features/product',
-  'apps/consumer/src/features/cart', 'apps/consumer/src/features/checkout', 'apps/consumer/src/features/orders',
-  'apps/consumer/src/features/aftercare', 'apps/consumer/src/features/tracking', 'apps/consumer/src/features/account',
-  'apps/consumer/src/features/services', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking',
-  // the light foundation (2026-10-19): the location dialog
-  'apps/consumer/src/features/location',
-  // phase B (the consumer pages): the illustrated scenes and the shared page parts
-  'apps/consumer/src/features/art', 'apps/consumer/src/features/pages',
-  ...['shop', 'quotes', 'food', 'help', 'sell', 'auth', 'promotions'].map(f => `apps/consumer/src/features/${f}`),
-  'apps/studio/src/features/shell', 'apps/console/src/features/shell', 'apps/studio/src/studio.css', 'apps/console/src/console.css',
-  // every Studio screen (the Studio pages redesign, 2026-10-19)
-  'apps/studio/src/features',
-  // every console screen (the console pages redesign, 2026-10-19)
-  'apps/console/src/features'];
+const ALL = ['packages/ui/src', 'packages/auth-kit/src', 'apps/consumer/src', 'apps/studio/src', 'apps/console/src', 'apps/gallery/src'];
+const roots = ALL;
 const LEGACY = /var\(\s*--(?:color-(?:accent(?:-2)?(?:-\d{3})?|on-accent|highlight(?:-\d{3})?|on-highlight|process-yellow|bg|surface-2|divider|neutral-\d{3}|ink)|font-body|font-heading-weight)\s*[,)]/g;
 const skip = [/\.test\.tsx?$/, /(^|\/)test\//];
 
@@ -67,37 +57,10 @@ if (photoProblems.length) {
 // `margin-bottom: -1px` under a tab row) stay allowed. In TSX the same goes for inline
 // `style` objects (`fontSize: 13`, `padding: 6`, `color: 'white'`).
 const S175 = ['orders', 'catalogue', 'appointments', 'kitchen'].map(f => `apps/studio/src/features/${f}`);
-const S173 = [...['cart', 'checkout', 'orders', 'tracking', 'account', 'auth', 'help', 'consent', 'promotions'].map(f => `apps/consumer/src/features/${f}`),
-  ...['CheckoutScreen.tsx', 'GroupScreen.tsx', 'TrackScreen.tsx', 'food.css'].map(f => `apps/consumer/src/features/food/${f}`), 'packages/auth-kit/src'];
-// S-176: the Studio's money, messaging, storefront, settings, account and onboarding screens, sign-in and the assistant —
-// with S-175, the dashboard and the shell, every Studio folder (checked below: a new folder must be listed)
 const S176 = ['auth', 'assistant', 'writing', 'pilot', 'finance', 'messages', 'storefront', 'reviews', 'settings', 'compliance', 'standing', 'help', 'availability', 'onboarding'].map(f => `apps/studio/src/features/${f}`);
-const strictRoots = [
-  // S-177: every console screen (the console revamp; audit console-sellers / console-seller)
-  'apps/console/src', 'packages/ui/src', 'apps/consumer/src/features/shell', 'apps/studio/src/features/shell', 'apps/console/src/features/shell',
-  // S-170/S-171: the consumer discovery pages (home, results, the Services / Shop / Food landings and their shared parts)
-  'apps/consumer/src/features/home', 'apps/consumer/src/features/search', 'apps/consumer/src/features/pages', 'apps/consumer/src/features/shop',
-  'apps/consumer/src/features/services/services.css', 'apps/consumer/src/features/services/ServicesLanding.tsx', 'apps/consumer/src/features/services/ServiceCategory.tsx',
-  'apps/consumer/src/features/food/FoodScreen.tsx',
-  // S-174: the Studio dashboard and the storefront's live preview (audit #7 and #10)
-  'apps/studio/src/features/dashboard', 'apps/studio/src/features/storefront/StorefrontPreview.tsx', 'apps/studio/src/features/storefront/StorefrontPreview.css',
-  // S-175: the Studio work screens (orders, catalogue and editors, bookings and quotes, the kitchen display and menu)
-  ...S175,
-  // S-176: the rest of the Studio
-  ...S176,
-  // S-172: the consumer detail pages (product, store, provider and its booking, the kitchen's menu, the quote flow)
-  'apps/consumer/src/features/product', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking', 'apps/consumer/src/features/quotes',
-  'apps/consumer/src/features/food/RestaurantScreen.tsx', 'apps/consumer/src/features/food/restaurant.css',
-  // S-173: the consumer cart, checkouts, orders and tracking, the account and the sign-in pages
-  ...S173];
-// S-174: no inline `style` at all in these (a class with the scale tokens instead; the Studio dashboard had a dozen).
-// S-175: the work screens too — except the calendar, whose entries are placed by custom properties from data (--top, --h).
-const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard', ...S175.filter(r => !r.endsWith('/appointments')), ...S176,
-  // S-172: the consumer detail pages
-  'apps/consumer/src/features/product', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking', 'apps/consumer/src/features/quotes',
-  'apps/consumer/src/features/shop/StorePage.tsx', 'apps/consumer/src/features/food/RestaurantScreen.tsx',
-  // S-173
-  ...S173];
+// S-180: everything (it grew folder by folder through S-167–S-177)
+const strictRoots = ALL;
+const noStyleRoots = ALL;
 // (the server-rendered error page and the printable report are standalone documents with their own fallbacks)
 const strictSkip = [...skip, /\.stories\.tsx$/, /\.fixtures\.ts$/, /\.mdx$/, /(^|\/)server\//, /DataTable\/report\.ts$/];
 const PX = /(-?\d*\.?\d+)px/g;
@@ -135,14 +98,25 @@ for (const root of strictRoots) {
   }
 }
 
-const DATA_PROP = /\sstyle=\{\{\s*\[['"]--[\w-]+['"] as string\]:\s*[\w.]+\s*\}\}/;
+// An inline style may carry data as custom properties (`style={{ ['--pct' as string]: `${n}%` }}`, a merchant's colour,
+// a calendar entry's place from a helper), or pass a caller's `style` prop on (the library's `style={style}`); it may not
+// set a CSS property (`style={{ marginTop: 16 }}`, `{ width: … }`): that is a look, and belongs in a class.
+const styleExpr = (text, from) => {
+  let depth = 0, i = from;
+  for (; i < text.length; i++) { if (text[i] === '{') depth++; else if (text[i] === '}' && --depth === 0) break; }
+  return text.slice(from + 1, i);
+};
+const SETS_PROPERTY = /(?:^|[{,]\s*)([A-Za-z_$][\w$]*)\s*:(?!:)/;
 for (const root of noStyleRoots) {
   for (const file of walk(path.join(webRoot, root))) {
     const rel = path.relative(webRoot, file).split(path.sep).join('/');
     if (!rel.endsWith('.tsx') || strictSkip.some(r => r.test(rel))) continue;
-    // S-176: a custom property carrying merchant data (the business's colour as --nl-brand / --nl-swatch) is not presentation;
-    // S-173: nor a data-driven one (`style={{ ['--h' as string]: … }}`, a bar's height): the look stays in CSS
-    readFileSync(file, 'utf8').split('\n').forEach((line, i) => { if (/\sstyle=\{/.test(line) && !DATA_PROP.test(line) && !/\sstyle=\{\{\s*\['--[\w-]+'/.test(line)) raw.push(`${rel}:${i + 1}  inline style (use a class with the scale tokens)`); });
+    const text = readFileSync(file, 'utf8');
+    for (const m of text.matchAll(/\sstyle=\{/g)) {
+      const expr = styleExpr(text, m.index + m[0].length - 1).replace(/`[^`]*`|'[^']*'|"[^"]*"/g, '""');
+      const hit = SETS_PROPERTY.exec(expr);
+      if (hit) raw.push(`${rel}:${text.slice(0, m.index).split('\n').length}  inline style sets ${hit[1]} (use a class with the scale tokens; data goes in a custom property)`);
+    }
   }
 }
 
@@ -160,7 +134,8 @@ const ONE_OFF = [
   [/<Tag\b/, 'the old Tag (use StatusTag with a status tone)'],
   [/<Alert\b[^>]*\btone=["']highlight["']/, 'a commerce-coloured alert (use tone="info" or "neutral")'],
 ];
-for (const root of [...S175, ...S176]) {
+// S-180: the whole Studio (the shell and the dashboard too)
+for (const root of ['apps/studio/src']) {
   for (const file of walk(path.join(webRoot, root))) {
     const rel = path.relative(webRoot, file).split(path.sep).join('/');
     if (!/\.tsx?$/.test(rel) || strictSkip.some(r => r.test(rel))) continue;
@@ -197,15 +172,9 @@ for (const file of walk(path.join(webRoot, 'apps/consumer/src'))) {
   });
 }
 
-// S-176: every Studio folder is strict; a new one must join a list above (S175 / S176) or this fails.
-const STUDIO_STRICT = new Set(['shell', 'dashboard', ...[...S175, ...S176].map(r => r.split('/').pop())]);
-for (const f of readdirSync(path.join(webRoot, 'apps/studio/src/features'))) {
-  if (statSync(path.join(webRoot, 'apps/studio/src/features', f)).isDirectory() && !STUDIO_STRICT.has(f)) raw.push(`apps/studio/src/features/${f}  a Studio folder outside the strict lists (add it to S176 in scripts/check-legacy-tokens.mjs)`);
-}
-
 if (problems.length || raw.length) {
   if (problems.length) console.error(`Deprecated token names in rebuilt code (use the semantic roles of @northline/tokens):\n${problems.map(p => '  ' + p).join('\n')}`);
-  if (raw.length) console.error(`Raw font sizes, spacing or colours in the component library or a shell (tokens only, docs/design/revamp-epic.md):\n${raw.map(p => '  ' + p).join('\n')}`);
+  if (raw.length) console.error(`Raw font sizes, spacing, radii or colours, or a presentational inline style (tokens only, CLAUDE.md § Design system):\n${raw.map(p => '  ' + p).join('\n')}`);
   process.exit(1);
 }
-console.log(`No deprecated token names in ${roots.join(', ')}; no raw sizes, spacing or colours in ${strictRoots.join(', ')}.`);
+console.log(`lint:tokens: no retired token names, raw sizes, spacing, radii or colours, or presentational inline styles in ${ALL.join(', ')}.`);

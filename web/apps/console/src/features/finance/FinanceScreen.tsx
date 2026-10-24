@@ -66,7 +66,7 @@ function FinanceView({ data, days }: { data: Finance; days: Day[] }) {
             {mix.map(m => (
               <div key={m.key} className="nl-fi-bar">
                 <span>{t(m.key)}</span>
-                <div className="nl-fi-track"><div className="nl-fi-fill" data-pass={m.pass || undefined} style={{ width: `${(Math.abs(m.cents ?? 0) / max) * 100}%` }} /></div>
+                <div className="nl-fi-track"><div className="nl-fi-fill" data-pass={m.pass || undefined} style={{ ['--pct' as string]: `${(Math.abs(m.cents ?? 0) / max) * 100}%` }} /></div>
                 <strong>{m.cents == null ? t('notRecorded') : fmt.price(m.cents)}</strong>
               </div>
             ))}

@@ -69,10 +69,10 @@ describe.each(['en', 'fr'] as const)('axe · primitives (%s)', locale => {
 
   it('charts and the bar list', async () => {
     const { container } = page(<>
-      <StackedBarChart title="Net earnings · 12 weeks" series={[{ key: 'svc', label: 'Services', color: 'var(--color-accent)' }, { key: 'tips', label: 'Tips', color: 'var(--color-highlight)' }]}
+      <StackedBarChart title="Net earnings · 12 weeks" series={[{ key: 'svc', label: 'Services', color: 'var(--color-selected)' }, { key: 'tips', label: 'Tips', color: 'var(--color-border-control)' }]}
         data={[{ label: 'W1', values: { svc: 400, tips: 20 } }, { label: 'W2', values: { svc: 520, tips: 0 } }]} />
       <LineChart title="Weekly gross" current={[3, 5, 4]} previous={[2, 4, 4]} labels={['Mon', 'Tue', 'Wed']} legend={{ current: 'This period', previous: 'Previous' }} />
-      <Legend items={[{ label: 'Goods', color: 'var(--color-accent)' }]} />
+      <Legend items={[{ label: 'Goods', color: 'var(--color-selected)' }]} />
       <BarList items={[{ label: 'Brake job', value: 1200 }, { label: 'Oil change', value: 400 }]} />
     </>, locale);
     await expectNoAxeViolations(container);

@@ -177,19 +177,19 @@ export function LineChart({ current, previous, labels, height = 200, title, lege
 }
 
 export function Legend({ items }: { items: readonly { label: ReactNode; color: string; dashed?: boolean }[] }) {
-  return <div className="nl-legend">{items.map((it, i) => <span key={i}><span className="nl-legend-swatch" style={{ background: it.dashed ? 'transparent' : it.color, border: it.dashed ? `1.5px dashed ${it.color}` : undefined }} />{it.label}</span>)}</div>;
+  return <div className="nl-legend">{items.map((it, i) => <span key={i}><span className="nl-legend-swatch" data-dashed={it.dashed || undefined} style={{ ['--nl-swatch' as string]: it.color }} />{it.label}</span>)}</div>;
 }
 
 /** Horizontal bar list ("By listing"). */
 export function BarList({ items, format = String }: { items: readonly { label: ReactNode; value: number }[]; format?: (n: number) => string }) {
   const max = Math.max(1, ...items.map(i => i.value));
   return (
-    <div>
+    <div className="nl-barlist">
       {items.map((it, i) => (
         <div key={i} className="nl-meter">
-          <span className="nl-meter-label" style={{ width: 170 }}>{it.label}</span>
-          <div className="nl-meter-track" style={{ height: 10 }}><div className="nl-meter-fill" style={{ width: `${(it.value / max) * 100}%` }} /></div>
-          <span className="nl-meter-value" style={{ width: 70 }}>{format(it.value)}</span>
+          <span className="nl-meter-label">{it.label}</span>
+          <div className="nl-meter-track"><div className="nl-meter-fill" style={{ ['--pct' as string]: `${(it.value / max) * 100}%` }} /></div>
+          <span className="nl-meter-value">{format(it.value)}</span>
         </div>
       ))}
     </div>

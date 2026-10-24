@@ -1045,7 +1045,7 @@ function Skeleton<T>({ cardMode, columns, rows, label, actionsLabel }: { cardMod
             <div key={i} className="nl-dt-card">
               <div className="nl-dt-card-head">
                 <span className="nl-dt-sk nl-dt-sk-box" />
-                <span className="nl-dt-sk" style={{ width: `${55 + ((i * 17) % 30)}%` }} />
+                <span className="nl-dt-sk" style={{ ['--nl-sk-w' as string]: `${55 + ((i * 17) % 30)}%` }} />
               </div>
               <div className="nl-dt-card-fields">
                 {columns.slice(1, 5).map((c) => (
@@ -1078,7 +1078,7 @@ function Skeleton<T>({ cardMode, columns, rows, label, actionsLabel }: { cardMod
                 </td>
                 {columns.map((c, ci) => (
                   <td key={c.key} className={clsx(c.isNum && 'is-num')}>
-                    <span className={clsx('nl-dt-sk', c.type === 'tag' && 'nl-dt-sk-pill')} style={{ width: c.isNum ? '3.5em' : c.type === 'tag' ? '5em' : `${60 + (((i + 1) * (ci + 3) * 13) % 35)}%` }} />
+                    <span className={clsx('nl-dt-sk', c.type === 'tag' && 'nl-dt-sk-pill')} style={{ ['--nl-sk-w' as string]: c.isNum ? '3.5em' : c.type === 'tag' ? '5em' : `${60 + (((i + 1) * (ci + 3) * 13) % 35)}%` }} />
                   </td>
                 ))}
                 <td className="nl-dt-actions-cell">

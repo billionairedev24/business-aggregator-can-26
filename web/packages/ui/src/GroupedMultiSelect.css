@@ -14,6 +14,7 @@
 .nl-gms-opt-active { box-shadow: inset 3px 0 0 var(--color-selected); background: var(--color-surface-muted); }
 .nl-gms-opt[aria-selected='true'].nl-gms-opt-active { background: var(--primary-100); }
 .nl-gms-opt[aria-disabled='true'] { cursor: not-allowed; opacity: .45; }
+.nl-gms-name { flex: 1; }
 .nl-gms-box { width: 16px; height: 16px; flex: none; border-radius: var(--radius-xs); border: 1.5px solid var(--color-border-control); display: grid; place-items: center; color: var(--color-selected-text); }
 .nl-gms-box[data-on='true'] { border-color: var(--color-selected); background: var(--color-selected); }
 .nl-gms-badge { font-size: var(--type-caps); }

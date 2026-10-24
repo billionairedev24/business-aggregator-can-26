@@ -64,7 +64,7 @@ function ReportView({ data, province }: { data: Report; province?: string }) {
           {data.funnel.map(f => (
             <div key={f.step} className="nl-meter nl-rp-step">
               <span className="nl-meter-label">{t(`step_${f.step}` as ReportsKey)}</span>
-              <div className="nl-meter-track"><div className="nl-meter-fill" style={{ width: `${firstCount && f.count != null ? Math.min(100, (f.count / firstCount) * 100) : 0}%` }} /></div>
+              <div className="nl-meter-track"><div className="nl-meter-fill" style={{ ['--pct' as string]: `${firstCount && f.count != null ? Math.min(100, (f.count / firstCount) * 100) : 0}%` }} /></div>
               <span className="nl-meter-value">{count(f.count, locale, t, f.recorded)}</span>
             </div>
           ))}

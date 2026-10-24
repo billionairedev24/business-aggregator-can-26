@@ -159,7 +159,7 @@ describe('Meter and charts', () => {
 
   it('charts carry their numbers as a table for screen readers', () => {
     wrap(<>
-      <StackedBarChart title="Net earnings" format={n => `$${n}`} series={[{ key: 'a', label: 'Services', color: 'var(--color-accent)' }, { key: 'b', label: 'Tips', color: 'var(--color-highlight)' }]}
+      <StackedBarChart title="Net earnings" format={n => `$${n}`} series={[{ key: 'a', label: 'Services', color: 'var(--color-selected)' }, { key: 'b', label: 'Tips', color: 'var(--color-border-control)' }]}
         data={[{ label: 'W1', values: { a: 400, b: 20 } }]} />
       <LineChart title="Weekly gross" current={[3, 5]} previous={[2, 4]} labels={['Mon', 'Tue']} />
     </>);

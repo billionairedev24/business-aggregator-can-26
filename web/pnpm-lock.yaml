@@ -485,19 +485,7 @@ importers:
 
   packages/tokens:
     dependencies:
-      '@fontsource/dm-sans':
-        specifier: 5.3.0
-        version: 5.3.0
-      '@fontsource/fraunces':
-        specifier: 5.3.0
-        version: 5.3.0
       '@fontsource/ibm-plex-sans':
-        specifier: 5.3.0
-        version: 5.3.0
-      '@fontsource/manrope':
-        specifier: 5.3.0
-        version: 5.3.0
-      '@fontsource/plus-jakarta-sans':
         specifier: 5.3.0
         version: 5.3.0
 
@@ -2257,20 +2245,8 @@ packages:
   '@floating-ui/vue@1.1.9':
     resolution: {integrity: sha512-BfNqNW6KA83Nexspgb9DZuz578R7HT8MZw1CfK9I6Ah4QReNWEJsXWHN+SdmOVLNGmTPDi+fDT535Df5PzMLbQ==}
 
-  '@fontsource/dm-sans@5.3.0':
-    resolution: {integrity: sha512-lYJtMXXO28q1z+yz+z8XKd0s4hXaa9QdkETzkyD760sidCv5heI86weYA0sx0Nc4pAMAQTUuyf4gO44cYKKS9g==}
-
-  '@fontsource/fraunces@5.3.0':
-    resolution: {integrity: sha512-LEHTOBiZufQzAvnAe2rZ8ZknbDS28Q9kzwb0L+gZJEmjLGr8hhZ/5NuHXwDuHBWhVXYoiGGXmrb0H6Ko/RrHTg==}
-
   '@fontsource/ibm-plex-sans@5.3.0':
     resolution: {integrity: sha512-CbE4CbbEEZJX860XyUiRpsksXIQR8Rp2XDva2VO53NJox9tVNtusrysd2x5YkUEY3ErQ66W1IiiQL8/wihhw5w==}
-
-  '@fontsource/manrope@5.3.0':
-    resolution: {integrity: sha512-obJ1Dv3+uCA6HlHgW8u4BGYxJR9In2HW7gjJhlflEvkrj1X1iSEwu0fToL+JYGC/FEKFfIz1sBuPduvcL2gIAA==}
-
-  '@fontsource/plus-jakarta-sans@5.3.0':
-    resolution: {integrity: sha512-9WRw3G74Ve4cyPApAZSXLPY5DiLOZXDn7Q7dIBjFBpA0Pj56ljDItEdy2UUajjJxRuTg2HkMLO5C3K2nAQORWg==}
 
   '@formatjs/ecma402-abstract@2.3.6':
     resolution: {integrity: sha512-HJnTFeRM2kVFVr5gr5kH1XP6K0JcJtE7Lzvtr3FS/so5f1kpsqqqxy5JF+FRaO6H2qmcMfAUIox7AJteieRtVw==}
@@ -11517,15 +11493,7 @@ snapshots:
       - '@vue/composition-api'
       - vue
 
-  '@fontsource/dm-sans@5.3.0': {}
-
-  '@fontsource/fraunces@5.3.0': {}
-
   '@fontsource/ibm-plex-sans@5.3.0': {}
-
-  '@fontsource/manrope@5.3.0': {}
-
-  '@fontsource/plus-jakarta-sans@5.3.0': {}
 
   '@formatjs/ecma402-abstract@2.3.6':
     dependencies:

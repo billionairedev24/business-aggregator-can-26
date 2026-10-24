@@ -127,7 +127,7 @@ function ProviderRowsSkeleton({ label }: { label: string }) {
       {Array.from({ length: 4 }, (_, i) => (
         <div key={i} className="nl-scard nl-svc-row-skel">
           <Skeleton width={96} height={96} radius="var(--radius-sm)" />
-          <span><Skeleton width="50%" height={18} /><Skeleton width="70%" height={12} style={{ marginTop: 8 }} /></span>
+          <span><Skeleton width="50%" height={18} /><Skeleton width="70%" height={12} className="nl-skel-gap" /></span>
           <Skeleton width={70} height={16} />
         </div>
       ))}

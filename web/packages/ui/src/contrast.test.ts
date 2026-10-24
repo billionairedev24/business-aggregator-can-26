@@ -1,6 +1,6 @@
 /**
  * S-109 / redesign 2026-10-18: WCAG contrast of the colour pairs the components use, on every brand palette
- * (web/packages/tokens/palettes/*.json), resolved by the token build's own code — the same check that fails
+ * (web/packages/tokens/palettes/*.json: Plainsight since S-180), resolved by the token build's own code — the same check that fails
  * `pnpm --filter @northline/tokens build` (lib/contrast.mjs, the port of AfroTransact's vet()). Text 4.5:1 (1.4.3);
  * control outlines, focus indicators and icons 3:1 (1.4.11). One light theme per palette; no dark mode (docs/a11y/audit.md).
  */
@@ -29,7 +29,7 @@ describe('the contrast gate', () => {
     expect(contrast('#777777', '#FFFFFF')).toBeCloseTo(4.48, 2);
   });
   it('fails an unreadable brand colour instead of adjusting it', () => {
-    const p = json('palettes/lakeshore.json');
+    const p = json(`palettes/${brand.palette}.json`);
     const t = resolveTheme(brand, { ...p, color: { ...p.color, primaryText: '#2A4F86' } }, scale);
     expect(vet(t.color).map(f => `${f.fg}/${f.bg}`)).toContain('action-primary-text/action-primary');
   });

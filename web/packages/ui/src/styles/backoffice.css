@@ -62,7 +62,6 @@ button.bo-kpi:hover { border-color: var(--color-border-strong); box-shadow: var(
 .bo-todo-row { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: var(--size-touch); padding: var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; text-align: left; font: inherit; font-size: var(--type-body); color: var(--color-text); cursor: pointer; }
 .bo-todo-row:not([data-static]):hover { background: var(--color-surface-hover); }
 .bo-todo-row[data-static] { cursor: default; }
-.bo-todo-sub { display: block; font-size: var(--type-meta); color: var(--color-text-muted); }
 .bo-todo-icon { flex: none; color: var(--color-text-muted); }
 .bo-todo-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .bo-todo-meta { flex: none; font-size: var(--type-meta); font-weight: var(--weight-semibold); padding: 0 var(--space-1-5); border-radius: var(--radius-status); background: var(--color-status-neutral-bg); color: var(--color-status-neutral-fg); }

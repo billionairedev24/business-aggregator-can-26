@@ -110,7 +110,7 @@ export function Menu({ trigger, items, align = 'end', width, label }: MenuProps)
     <div className="nl-menu-anchor" ref={wrap} onKeyDown={onKeyDown}>
       {trigger({ open, toggle, props: { 'aria-haspopup': 'menu', 'aria-expanded': open, 'aria-controls': open ? menuId : undefined, onClick: toggle } })}
       {open && (
-        <div id={menuId} role="menu" aria-label={label} className="nl-menu" data-align={align} style={width ? { width } : undefined}>
+        <div id={menuId} role="menu" aria-label={label} className="nl-menu" data-align={align} style={width ? { ['--nl-menu-w' as string]: typeof width === 'number' ? `${width}px` : width } : undefined}>
           {items.map((it, i) => {
             if (it.kind === 'separator') return <div key={i} className="nl-menu-sep" role="separator" />;
             if (it.kind === 'custom') return <div key={i}>{it.render}</div>;
