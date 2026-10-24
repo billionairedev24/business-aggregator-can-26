@@ -7,7 +7,8 @@
 //     --font-body, …): S-180 removed their aliases from dist/tokens.css, so they would resolve to nothing;
 //   - raw px font sizes, spacing and corner radii (0–2 px nudges allowed) and raw colours in CSS and inline styles;
 //   - an inline `style` that sets a CSS property (a custom property carrying data is fine: `['--pct' as string]: …`);
-//   - the per-app rules the E-15 stories added (one tab, status, chip and price style; the console's colour roles).
+//   - the per-app rules the E-15 stories added (one tab, status, chip and price style; the console's colour roles);
+//   - S-188: the commerce yellow as text, and the action violet as text on the consumer's violet chrome.
 //
 //   node scripts/check-legacy-tokens.mjs        (from web/, or `pnpm lint:tokens`)
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -170,6 +171,44 @@ for (const file of walk(path.join(webRoot, 'apps/consumer/src'))) {
   readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
     if (/whole:\s*[^,}]*%\s*100/.test(line)) raw.push(`${rel}:${i + 1}  a price drawn without cents when round (use formatPrice / Price: $89.00)`);
   });
+}
+
+// ── S-188 brand layer (design/revamp/hybrid § Contrast): yellow is a fill, never text; no violet text on the violet chrome ──
+// The commerce yellow (#FFD23F) on white is 1.44:1, so `commerce`, `cart-badge`, `mark-highlight` and `hero-glow` are
+// fills only: never the `color`, `fill`, `stroke`, `outline-color` or `text-decoration-color` of anything. On the violet
+// department strip the yellow reads (10.11:1): that is its own role, `subheader-deal`, used by the site header only. On
+// the consumer's violet chrome (the header, the strip, the footer, the hero band) the action violet is 2.59:1, so a rule
+// there may not colour text with `link`, `action-primary`, `focus` or `link-hover` unless it sets its own background.
+const FILL_ONLY = /(?:^|[\s;{])(color|fill|stroke|outline(?:-color)?|text-decoration(?:-color)?|caret-color|-webkit-text-fill-color)\s*:\s*[^;}]*var\(\s*--color-(commerce|cart-badge|mark-highlight|hero-glow)\s*\)/g;
+const TSX_FILL_ONLY = /\b(color|fill|stroke)\s*:\s*['"`]var\(--color-(commerce|cart-badge|mark-highlight|hero-glow)\)['"`]|\b(?:fill|stroke)=["']var\(--color-(commerce|cart-badge|hero-glow)\)["']/g;
+const DEAL_TEXT = /var\(\s*--color-subheader-deal\s*\)/;
+const CHROME = /\.nl-site-(?:header|bar|subnav|nav|link|item|deal|all|section|end|brand|cart)|\.nl-location\b|\.nl-account-(?:button|greeting|line)|\.nl-footer|\.nl-hhero/;
+const VIOLET_TEXT = /(?:^|[\s;{])(color|outline(?:-color)?)\s*:\s*[^;}]*var\(\s*--color-(link|link-hover|action-primary|action-primary-hover|focus)\s*\)/;
+const brandProblems = [];
+for (const root of ALL) {
+  for (const file of walk(path.join(webRoot, root))) {
+    const rel = path.relative(webRoot, file).split(path.sep).join('/');
+    if (skip.some(r => r.test(rel))) continue;
+    const text = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '));
+    const lineOf = i => text.slice(0, i).split('\n').length;
+    if (rel.endsWith('.css')) {
+      for (const m of text.matchAll(FILL_ONLY)) brandProblems.push(`${rel}:${lineOf(m.index)}  ${m[1]}: var(--color-${m[2]}) (yellow is a fill: on white use the ink-on-yellow pill, CutoffPill / .nl-cutoff)`);
+      if (rel !== 'packages/ui/src/styles/site.css') for (const m of text.matchAll(new RegExp(DEAL_TEXT, 'g'))) brandProblems.push(`${rel}:${lineOf(m.index)}  var(--color-subheader-deal) outside the department strip`);
+      for (const m of text.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const [, selector, body] = m;
+        // a rule with its own background is judged against it; a focus ring with the soft halo (`focus-ring`) reads on violet
+        if (!CHROME.test(selector) || /(?:^|[\s;{])background(?:-color)?\s*:/.test(body) || /var\(\s*--color-focus-ring\s*\)/.test(body)) continue;
+        const v = VIOLET_TEXT.exec(body);
+        if (v) brandProblems.push(`${rel}:${lineOf(m.index + selector.length)}  ${v[1]}: var(--color-${v[2]}) on the violet chrome (${selector.trim().slice(0, 60)}): use white, header-focus or hero-accent`);
+      }
+    } else if (/\.tsx?$/.test(rel)) {
+      for (const m of text.matchAll(TSX_FILL_ONLY)) brandProblems.push(`${rel}:${lineOf(m.index)}  ${m[0]} (yellow is a fill, never text or a stroke)`);
+    }
+  }
+}
+if (brandProblems.length) {
+  console.error(`Brand layer (S-188): yellow is never text on white, violet is never text on the violet chrome:\n${brandProblems.map(p => '  ' + p).join('\n')}`);
+  process.exit(1);
 }
 
 if (problems.length || raw.length) {

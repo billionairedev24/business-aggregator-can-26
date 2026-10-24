@@ -5,9 +5,9 @@
  */
 .nl-ob-shell { background: var(--color-surface-muted); min-height: 100vh; }
 .nl-ob-top { position: sticky; top: 0; z-index: var(--z-sticky); }
-.nl-ob-biz { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; font-size: var(--type-label); color: var(--color-header-muted); }
+.nl-ob-biz { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; font-size: var(--type-label); color: var(--color-topbar-muted); }
 .nl-ob-biz-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nl-ob-account { display: flex; align-items: center; gap: var(--space-2); border: 1px solid transparent; border-radius: var(--radius-control); background: transparent; font: inherit; font-size: var(--type-label); cursor: pointer; color: var(--color-header-text); padding: var(--space-1) var(--space-2); min-height: var(--size-touch); }
+.nl-ob-account { display: flex; align-items: center; gap: var(--space-2); border: 1px solid transparent; border-radius: var(--radius-control); background: transparent; font: inherit; font-size: var(--type-label); cursor: pointer; color: var(--color-topbar-text); padding: var(--space-1) var(--space-2); min-height: var(--size-touch); }
 .nl-ob-account:hover { border-color: var(--color-border); }
 .nl-ob-later { flex: none; }
 @media (max-width: 599.98px) { .nl-ob-account-name { display: none; } }

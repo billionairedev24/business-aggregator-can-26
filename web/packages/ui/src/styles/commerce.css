@@ -12,9 +12,12 @@
 .nl-price-was { font-size: var(--type-meta); color: var(--color-text-subtle); font-weight: var(--weight-regular); }
 .nl-card-price-text { font-size: var(--type-body); font-weight: var(--weight-bold); color: var(--color-text); }
 
-/* ── deal badge: the commerce colour (deals, the cart count, the cut-off — never a button) ── */
-.nl-deal { display: inline-flex; align-items: center; padding: 2px var(--space-1-5); border-radius: var(--radius-status); background: var(--color-commerce); color: var(--color-commerce-on); font-size: var(--type-meta); font-weight: var(--weight-bold); letter-spacing: 0.01em; line-height: var(--leading-tight); white-space: nowrap; }
-.nl-cutoff { color: var(--color-commerce-text); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+/* ── deal sticker (S-188 brand layer): yellow, ink, bold, tilted, a 1.5 px hard ink edge (deals, discounts — never a
+   button). The cut-off pill: ink on yellow with a clock, a 1 px edge, upright. The hero's sticker: larger and tilted. ── */
+.nl-deal { display: inline-flex; align-items: center; padding: 2px var(--space-1-5); border-radius: var(--radius-status); background: var(--color-commerce); color: var(--color-commerce-on); font-size: var(--type-meta); font-weight: var(--weight-bold); letter-spacing: 0.01em; line-height: var(--leading-tight); white-space: nowrap; transform: rotate(var(--sticker-tilt)); box-shadow: var(--shadow-sticker); }
+.nl-cutoff { display: inline-flex; align-self: flex-start; align-items: center; gap: var(--space-1); padding: 2px var(--space-2) 2px var(--space-1-5); border-radius: var(--radius-status); background: var(--color-commerce); color: var(--color-commerce-text); box-shadow: var(--shadow-sticker-sm); font-size: var(--type-meta); font-weight: var(--weight-bold); line-height: var(--leading-normal); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nl-cutoff > svg { flex: none; }
+.nl-sticker { display: inline-block; padding: var(--space-1) var(--space-2); border-radius: var(--radius-status); background: var(--color-commerce); color: var(--color-commerce-on); font-size: var(--type-label); font-weight: var(--weight-bold); white-space: nowrap; font-variant-numeric: tabular-nums; transform: rotate(calc(var(--sticker-tilt) - 0.5deg)); box-shadow: 2px 2px 0 var(--color-hero-scrim); }
 
 /* ── stars: the value bold, five ink stars, the count muted ── */
 .nl-stars { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--space-1); max-width: 100%; font-size: var(--type-meta); line-height: 1; color: var(--color-text-muted); white-space: nowrap; }

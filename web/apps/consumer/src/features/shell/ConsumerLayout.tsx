@@ -12,7 +12,7 @@ import { useShellT } from './messages';
 import { PilotControl } from '../pilot/PilotControl';
 
 /**
- * Header (and, on the home and Shop pages, the delivery cut-off strip), the screen, footer. Every consumer route renders
+ * Header (and, on the Shop pages, the delivery cut-off strip), the screen, footer. Every consumer route renders
  * inside it (routes/__root.tsx). No guest banner (redesign
  * § 3.4: guests sign in at the checkout or booking step, or from the avatar menu); the pilot's "Send feedback" control
  * only where the testing tools are on (§ 3.5, `VITE_NL_TESTING_TOOLS`).
@@ -20,9 +20,10 @@ import { PilotControl } from '../pilot/PilotControl';
 export function ConsumerLayout({ children }: { children: ReactNode }) {
   const t = useShellT();
   const { user, session, loading } = useViewer();
-  // the delivery cut-off strip: on the home and the Shop pages, where the next pooled run is the point
+  // the delivery cut-off strip: on the Shop pages, where the next pooled run is the point (S-188: the home has the run
+  // card in its hero band instead)
   const pathname = useRouterState({ select: s => s.location.pathname });
-  const cutoff = pathname === '/' || pathname === '/shop' || pathname.startsWith('/shop/');
+  const cutoff = pathname === '/shop' || pathname.startsWith('/shop/');
   return (
     <DeliveryLocationProvider ipCity={session?.location?.city} signedIn={loading ? undefined : !!user}>
       <VisitorPlace>

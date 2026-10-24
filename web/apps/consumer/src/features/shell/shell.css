@@ -8,14 +8,18 @@ body { text-wrap: pretty; }
 .nl-skip { position: absolute; left: 12px; top: -60px; z-index: var(--z-toast); display: inline-flex; align-items: center; min-height: var(--size-touch); padding: 0 var(--space-4); background: var(--color-surface); color: var(--color-link); border-radius: var(--radius-pill); box-shadow: var(--shadow-md); font-weight: var(--weight-bold); }
 .nl-skip:focus { top: 12px; }
 
-/* footer (E-15, audit #9): one compact grey band — the company line, then the links in one wrapping row */
+/* footer (E-15, audit #9; S-188 brand layer): one compact deep-violet band that bookends the page with the header — the
+   logo and the company line in the light violet meta, then the links in white in one wrapping row (never the action
+   violet: no violet text on violet) */
 .nl-footer { background: var(--color-footer-bg); color: var(--color-footer-muted); font-size: var(--type-label); }
-.nl-footer-in { max-width: var(--page-max); margin: 0 auto; padding: var(--space-2) var(--page-gutter); box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-5); }
-.nl-footer-legal { margin: 0 auto 0 0; }
+.nl-footer-in { max-width: var(--page-max); margin: 0 auto; padding: var(--space-4) var(--page-gutter); box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-5); }
+.nl-footer-legal { margin: 0 auto 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.nl-footer-copy { margin: 0; }
+.nl-footer-logo { color: var(--color-footer-text); font-size: var(--text-base); font-weight: var(--weight-bold); }
 .nl-footer-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-5); }
-.nl-footer a, .nl-footer-lang { display: inline-flex; align-items: center; min-height: var(--size-touch); color: var(--color-footer-muted); text-decoration: none; }
-.nl-footer a:hover, .nl-footer-lang:hover { color: var(--color-link); text-decoration: underline; }
-.nl-footer :focus-visible { outline-color: var(--color-focus); }
+.nl-footer a, .nl-footer-lang { display: inline-flex; align-items: center; min-height: var(--size-touch); color: var(--color-footer-text); text-decoration: none; }
+.nl-footer a:hover, .nl-footer-lang:hover { color: var(--color-footer-text); text-decoration: underline; text-underline-offset: 3px; }
+.nl-footer :focus-visible { outline: 2px solid var(--color-header-focus); outline-offset: 2px; }
 .nl-footer-lang { font: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 @media (max-width: 599.98px) {
   .nl-footer-in { padding-block: var(--space-3); }

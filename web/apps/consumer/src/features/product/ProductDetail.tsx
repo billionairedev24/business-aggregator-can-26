@@ -3,7 +3,7 @@ import { useZone } from '../location/regions';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Check, Lock, Receipt, Storefront, Truck, Warning } from '@phosphor-icons/react';
-import { Alert, EmptyState, Price, QuantityStepper, Segmented, SiteLink, Skeleton, Stars, swatchOf, unitPriceOf, useFormatters, useLocale } from '@northline/ui';
+import { Alert, CutoffPill, EmptyState, Price, QuantityStepper, Segmented, SiteLink, Skeleton, Stars, swatchOf, unitPriceOf, useFormatters, useLocale } from '@northline/ui';
 import { clock, runWhen, weekday, windowRange } from '../shop/format';
 import { useMarketFollowsLocation, withMarket } from '../shop/market';
 import { minutesUntil, useNow } from '../shop/run';
@@ -259,7 +259,7 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
 }
 
 /**
- * "Order within 2 h 48 min" — the time left before the run closes. The server and the browser's first render say "Order
+ * "Order within 2 h 48 min" — the time left before the run closes, an ink-on-yellow pill (S-188). The server and the browser's first render say "Order
  * by 5:20 p.m." (a clock read at render would differ between them); the browser then counts down.
  */
 function OrderWithin({ orderBy, by }: { orderBy: string; by: string }) {
@@ -267,7 +267,7 @@ function OrderWithin({ orderBy, by }: { orderBy: string; by: string }) {
   const now = useNow();
   const left = now === null ? null : minutesUntil(orderBy, now);
   if (left !== null && left <= 0) return null;
-  return <span className="product-buy-cutoff">{left === null ? t('orderBy', { time: by }) : t('orderWithin', { hours: Math.floor(left / 60), minutes: left % 60 })}</span>;
+  return <CutoffPill className="product-buy-cutoff">{left === null ? t('orderBy', { time: by }) : t('orderWithin', { hours: Math.floor(left / 60), minutes: left % 60 })}</CutoffPill>;
 }
 
 export function ProductSkeleton() {

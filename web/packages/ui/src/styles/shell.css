@@ -1,28 +1,28 @@
 /* Studio / Console shell (E-15 A · Plainsight, design/revamp/a.html screens 7–9; AppShell.tsx): one white top bar with
    a hairline (logo + portal name · workspace switcher · global search · account), a white sidebar whose groups are caps
-   headings with every item visible, the current item on the grey tint with a 3 px ink bar; the page on the muted grey.
+   headings with every item visible, the current item on the violet tint with a 3 px violet marker and a violet icon (S-188); the page on the muted grey.
    A 72px icon rail at 768–1023px, a disclosure menu on phones. Semantic tokens only. */
 .nl-shell { --nl-shell-top: var(--size-touch); min-height: 100vh; display: flex; flex-direction: column; font-family: var(--font-sans); color: var(--color-text); background: var(--color-surface-muted); }
 
 /* ── top bar ── */
 .nl-topbar { min-height: calc(var(--size-touch) + 2 * var(--space-1-5)); padding: var(--space-1-5) var(--space-5); box-sizing: border-box; gap: var(--space-1) var(--space-4); flex-wrap: wrap; }
-.nl-topbar-menu { flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--size-touch); height: var(--size-touch); margin-left: calc(-1 * var(--space-2)); border: 0; border-radius: var(--radius-control); background: none; color: var(--color-header-text); cursor: pointer; }
-.nl-topbar-menu:hover, .nl-topbar-menu[aria-expanded='true'] { background: var(--color-header-hover-bg); }
-.nl-topbar-brand { flex: none; display: inline-flex; align-items: center; min-height: var(--size-touch); color: var(--color-header-text); }
+.nl-topbar-menu { flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--size-touch); height: var(--size-touch); margin-left: calc(-1 * var(--space-2)); border: 0; border-radius: var(--radius-control); background: none; color: var(--color-topbar-text); cursor: pointer; }
+.nl-topbar-menu:hover, .nl-topbar-menu[aria-expanded='true'] { background: var(--color-topbar-hover-bg); }
+.nl-topbar-brand { flex: none; display: inline-flex; align-items: center; min-height: var(--size-touch); color: var(--color-topbar-text); }
 .nl-topbar-start { flex: none; display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .nl-topbar-search { flex: 1 1 auto; max-width: 440px; min-width: 0; margin-left: auto; }
 .nl-topbar-end { margin-left: auto; flex: none; display: flex; align-items: center; gap: var(--space-2); }
 .nl-topbar-search + .nl-topbar-end { margin-left: 0; }
 /* text and controls on the top bar */
-.nl-topbar-meta { font-size: var(--type-label); color: var(--color-header-muted); min-width: 0; overflow-wrap: anywhere; }
-.nl-topbar-meta strong { color: var(--color-header-text); font-weight: var(--weight-bold); }
+.nl-topbar-meta { font-size: var(--type-label); color: var(--color-topbar-muted); min-width: 0; overflow-wrap: anywhere; }
+.nl-topbar-meta strong { color: var(--color-topbar-text); font-weight: var(--weight-bold); }
 /* top bar items (the account menu, the assistant): a soft fill on hover; keyboard focus = the primary ring */
-.nl-topbar-item { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); padding: var(--space-1) var(--space-2); border: 1px solid transparent; border-radius: var(--radius-control); background: none; color: var(--color-header-text); font: inherit; font-size: var(--type-label); cursor: pointer; text-decoration: none; }
-.nl-topbar-item:hover { background: var(--color-header-hover-bg); color: var(--color-header-text); text-decoration: none; }
-.nl-topbar-item:focus-visible { outline: 2px solid var(--color-header-focus); outline-offset: 2px; }
+.nl-topbar-item { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); padding: var(--space-1) var(--space-2); border: 1px solid transparent; border-radius: var(--radius-control); background: none; color: var(--color-topbar-text); font: inherit; font-size: var(--type-label); cursor: pointer; text-decoration: none; }
+.nl-topbar-item:hover { background: var(--color-topbar-hover-bg); color: var(--color-topbar-text); text-decoration: none; }
+.nl-topbar-item:focus-visible { outline: 2px solid var(--color-topbar-focus); outline-offset: 2px; }
 .nl-topbar-item-text { font-size: var(--type-label); font-weight: var(--weight-bold); text-align: left; line-height: var(--leading-tight); white-space: nowrap; }
-.nl-topbar-item-text > span { display: block; font-size: var(--type-meta); font-weight: var(--weight-regular); color: var(--color-header-muted); }
-.nl-topbar :focus-visible { outline-color: var(--color-header-focus); }
+.nl-topbar-item-text > span { display: block; font-size: var(--type-meta); font-weight: var(--weight-regular); color: var(--color-topbar-muted); }
+.nl-topbar :focus-visible { outline-color: var(--color-topbar-focus); }
 
 /* the workspace switcher: name and place in a bordered box with a caret (a.html `bo-biz`) */
 .nl-switcher { display: inline-flex; align-items: center; gap: var(--space-1-5); min-height: var(--size-control); max-width: 320px; padding: 0 var(--space-2-5); border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text); font: inherit; font-size: var(--type-label); cursor: pointer; text-align: left; position: relative; }
@@ -58,11 +58,13 @@
 .nl-side-toggle { width: var(--size-touch); height: var(--size-touch); flex: none; display: grid; place-items: center; border: 0; border-radius: var(--radius-control); cursor: pointer; background: transparent; color: var(--color-text-muted); }
 .nl-side-toggle:hover { background: var(--color-surface-hover); color: var(--color-text); }
 .nl-side-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-/* items: body text, muted until hovered; the current one on the grey tint, bold, its icon filled, an ink bar on its left */
+/* items: body text, muted until hovered; the current one on the violet tint, bold, its icon filled in violet, a 3 px
+   violet marker on its left (S-188 brand layer; the label stays ink) */
 .nl-side-item { position: relative; display: flex; align-items: center; gap: var(--space-2-5); width: 100%; box-sizing: border-box; font-size: var(--type-body); font-weight: var(--weight-medium); padding: 0 var(--space-2-5); min-height: var(--size-touch); border-radius: var(--radius-control); color: var(--color-text-muted); text-decoration: none; }
 .nl-side-item:hover { background: var(--color-surface-hover); color: var(--color-text); text-decoration: none; }
 .nl-side-item[aria-current='page'] { color: var(--color-nav-active-text); background: var(--color-nav-active-bg); font-weight: var(--weight-bold); }
-.nl-side-item[aria-current='page']::before { content: ''; position: absolute; left: calc(-1 * var(--space-2-5)); top: var(--space-1-5); bottom: var(--space-1-5); width: 3px; background: var(--color-selected); }
+.nl-side-item[aria-current='page']::before { content: ''; position: absolute; left: calc(-1 * var(--space-2-5)); top: var(--space-1-5); bottom: var(--space-1-5); width: 3px; border-radius: 0 2px 2px 0; background: var(--color-nav-active-marker); }
+.nl-side-item[aria-current='page'] .nl-side-icon { color: var(--color-nav-active-marker); }
 .nl-side-icon { flex: none; }
 .nl-side-label { flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: var(--leading-tight); }
 .nl-side-badge { flex: none; font-size: var(--type-caps); font-weight: var(--weight-bold); padding: 1px var(--space-1-5); border-radius: var(--radius-status); white-space: nowrap; background: var(--color-status-neutral-bg); color: var(--color-status-neutral-fg); font-variant-numeric: tabular-nums; }
@@ -77,7 +79,7 @@
 .nl-rail-group { margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--color-border); }
 .nl-rail-item { position: relative; width: var(--size-touch); height: var(--size-touch); flex: none; display: grid; place-items: center; border-radius: var(--radius-control); color: var(--color-text-muted); }
 .nl-rail-item:hover { background: var(--color-surface-hover); color: var(--color-text); }
-.nl-rail-item[aria-current='page'] { color: var(--color-nav-active-text); background: var(--color-nav-active-bg); box-shadow: inset 3px 0 0 var(--color-selected); }
+.nl-rail-item[aria-current='page'] { color: var(--color-nav-active-marker); background: var(--color-nav-active-bg); box-shadow: inset 3px 0 0 var(--color-nav-active-marker); }
 .nl-rail-dot { position: absolute; top: var(--space-2); right: var(--space-2); width: 7px; height: 7px; border-radius: var(--radius-round); background: var(--color-selected); }
 
 /* phones (< 768px): the menu button opens a panel under the bar — the workspace, the search, then the navigation */
