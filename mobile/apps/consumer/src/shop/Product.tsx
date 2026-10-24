@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
 import {
   ApiError,
   Button as KitButton,
+  CutoffPill,
+  DealBadge,
   Icon,
   LINE,
   MIN_TARGET,
@@ -29,19 +31,9 @@ import { iconFor, photoSource, unitOf } from '../ui/commerce';
 import { GUTTER, Header, RoundButton, Screen } from '../ui/screen';
 import { EmptyState, QueryView, Skeleton, errorMessage } from '../ui/states';
 import { config } from '../config';
-import { serverMessage, shop, useAddToCart, useMarket, useShopFormat } from './common';
+import { serverMessage, shop, useAddToCart, useMarket, useMinutesLeft, useShopFormat } from './common';
 import { SectionHead, Strip } from './parts';
 
-/** Minutes until an instant (at least 0), re-read every minute. */
-function useMinutesLeft(iso: string | null | undefined) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!iso) return;
-    const id = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(id);
-  }, [iso]);
-  return iso ? Math.max(0, Math.round((Date.parse(iso) - now) / 60_000)) : null;
-}
 
 /**
  * Product (E-15 A · Plainsight, design/revamp/a.html "Product page with buy box" on a phone): the photo first, edge to
@@ -203,7 +195,10 @@ export function Product() {
 
               <View style={styles.pad}>
                 <View style={styles.box} testID="buy-box">
-                  <Price cents={unitCents} unit={unitOf(unitCents, p.unit)} size="lg" />
+                  {offer.compareAtCents && offer.compareAtCents > unitCents ? (
+                    <DealBadge label={t('product.dealOff', { n: Math.round((1 - unitCents / offer.compareAtCents) * 100) })} testID="product-deal" />
+                  ) : null}
+                  <Price cents={unitCents} unit={unitOf(unitCents, p.unit)} was={offer.compareAtCents && offer.compareAtCents > unitCents ? offer.compareAtCents : undefined} size="lg" />
                   {next ? (
                     <View style={styles.boxLine}>
                       <Icon name="truck" size={TYPE.price} color={semantic.text} />
@@ -211,7 +206,9 @@ export function Product() {
                         <Text style={textStyles.bodyStrong}>{t('rv.product.delivery', { when: f.window(next, 'shop.when') })}</Text>
                         <Text style={textStyles.meta}>{t('rv.product.deliveryTo', { place: market.label ?? p.market, fee: f.fee(next.feeCents) })}</Text>
                         {left !== null && left > 0 ? (
-                          <Text style={styles.orderWithin}>{left >= 60 ? t('rv.product.withinHours', { h: Math.floor(left / 60), m: left % 60 }) : t('rv.product.withinMinutes', { m: left })}</Text>
+                          <View style={styles.orderWithin}>
+                            <CutoffPill label={left >= 60 ? t('rv.product.withinHours', { h: Math.floor(left / 60), m: left % 60 }) : t('rv.product.withinMinutes', { m: left })} testID="product-cutoff" />
+                          </View>
                         ) : null}
                       </View>
                     </View>
@@ -303,7 +300,7 @@ const styles = StyleSheet.create({
   specKey: { width: space[16] + space[8], color: semantic['text-muted'] },
   box: { gap: space[3], padding: space[4], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-strong'], backgroundColor: semantic.surface },
   boxLine: { flexDirection: 'row', gap: space[3] },
-  orderWithin: { ...StyleSheet.flatten(textStyles.label), color: semantic.commerce },
+  orderWithin: { paddingTop: space[1] },
   qty: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   qtyStepper: { minWidth: space[16] * 2 },
   section: { gap: space[2] },

@@ -216,7 +216,7 @@ describe('the brand layer (S-188: Plainsight + Chinook)', () => {
     expect(textStyles.displayMaker.fontSize).toBe(24);
     expect(textStyles.runTime.fontSize).toBe(18);
     expect(flat(screen.getByText(' tonight.').props.style).color).toBe(semantic['hero-accent']);
-    expect(screen.getByRole('summary', { name: /Next pooled run\. Tonight’s pooled run\. Closes 5:20 p\.m\.\. 2 h 48 min left/ })).toBeTruthy();
+    expect(screen.getByRole('summary', { name: 'Next pooled run, Tonight’s pooled run, Closes 5:20 p.m., 2 h 48 min left, Mix shops for one $2.99 delivery' })).toBeTruthy();
     expect(tree('hero-left')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Shop local, 12 stores · one pooled delivery' }));
     expect(onShop).toHaveBeenCalled();

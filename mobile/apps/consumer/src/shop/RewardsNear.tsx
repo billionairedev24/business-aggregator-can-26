@@ -3,7 +3,7 @@ import * as Linking from 'expo-linking';
 import { router, type Href } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { radius, semantic, space, textStyles } from '@northline/mobile-kit';
+import { DealBadge, radius, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import type { NearbyReward } from '../api/account';
 import { accountApi } from '../api/account';
@@ -63,9 +63,9 @@ function RewardCard({ r, f }: { r: NearbyReward; f: ReturnType<typeof useShopFor
     : undefined;
   return (
     <Card onPress={open} label={[r.businessName, what, until].join(', ')} style={styles.card} testID={`reward-${r.merchantId}`}>
-      <Text style={styles.mult} accessibilityElementsHidden importantForAccessibility="no">
-        {r.multiplier}×
-      </Text>
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <DealBadge label={`${r.multiplier}×`} />
+      </View>
       <Text style={styles.name} numberOfLines={2}>
         {r.businessName}
       </Text>
@@ -80,7 +80,6 @@ const styles = StyleSheet.create({
   section: { gap: space[2], paddingTop: space[3] },
   pad: { paddingHorizontal: space[4] },
   card: { width: 200, gap: space[1], borderRadius: radius.panel },
-  mult: { ...StyleSheet.flatten(textStyles.pageTitle), color: semantic.commerce },
   name: { ...StyleSheet.flatten(textStyles.bodyStrong) },
   sub: { ...StyleSheet.flatten(textStyles.meta), color: semantic['text-muted'] },
 });

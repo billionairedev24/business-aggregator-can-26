@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ApiError, formatPrice, formatTimeRange } from '@northline/mobile-kit';
 
@@ -196,4 +196,18 @@ export function appRoute(href: string): string | null {
 export function backToTab(path: '/home' | '/orders' | '/cart') {
   if (router.canDismiss()) router.dismissAll();
   router.navigate(path);
+}
+
+/**
+ * Minutes until an instant (at least 0): read from the clock on the first render, then again every minute — the app's
+ * render clock for the cut-off countdowns (the home's run card, the product's cut-off pill; S-188).
+ */
+export function useMinutesLeft(iso: string | null | undefined) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!iso) return;
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [iso]);
+  return iso ? Math.max(0, Math.round((Date.parse(iso) - now) / 60_000)) : null;
 }

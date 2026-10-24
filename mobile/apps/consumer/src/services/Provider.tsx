@@ -229,7 +229,7 @@ function Favourite({ p }: { p: ProviderPage }) {
     <IconButton
       icon="heart"
       filled={isFavourite}
-      color={isFavourite ? semantic.commerce : undefined}
+      color={isFavourite ? semantic.selected : undefined}
       boxed
       label={isFavourite ? t('services.provider.favourited') : t('services.provider.favourite')}
       hint={signedIn ? (toggle.isError ? errorMessage(toggle.error, t) : undefined) : t('services.signInFirst')}

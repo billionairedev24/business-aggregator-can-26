@@ -115,7 +115,7 @@ export function HomeHero({
           style={styles.run}
           accessible
           accessibilityRole="summary"
-          accessibilityLabel={run ? [runLabel, run.kicker, run.title, run.left, run.note].filter(Boolean).join('. ') : (loadingLabel ?? runLabel)}
+          accessibilityLabel={run ? [runLabel, run.kicker, run.title, run.left, run.note].filter(Boolean).join(', ') : (loadingLabel ?? runLabel)}
           accessibilityState={{ busy: run === undefined }}
           testID={testID ? `${testID}-run` : undefined}
         >
