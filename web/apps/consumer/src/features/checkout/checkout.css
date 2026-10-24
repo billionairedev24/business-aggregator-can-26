@@ -87,6 +87,8 @@
   /* the five tip boxes share the row (320 px wide too) */
   .co-tip-seg-host .seg { display: flex; width: 100%; }
   .co-tip-seg-host .seg-opt { flex: 1 1 0; min-width: 0; padding-inline: var(--space-1); white-space: nowrap; }
+  /* as the library's own `fill` boxes: the ink fill alone marks the choice when five share a phone's row */
+  .co-tip-seg-host .seg-opt:has(input:checked)::before { content: none; }
 }
 
 /* order placed: the panel beside the order's summary box */

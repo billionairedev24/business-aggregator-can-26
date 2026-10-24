@@ -206,7 +206,7 @@ describe('Account › Quote requests', () => {
     ] } });
     mockFetch(server);
     renderApp('/account/orders?tab=quotes', { routes: { orders: () => <OrdersScreen /> } });
-    expect(await screen.findByRole('button', { name: 'Quote requests · 2' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByRole('tab', { name: /^Quote requests\s*2$/ })).toHaveAttribute('aria-selected', 'true');
     const list = await screen.findByRole('list', { name: 'Quote requests · 2' });
     const [waiting, accepted] = within(list).getAllByRole('listitem');
     expect(waiting).toHaveTextContent('Waiting for quotes');
