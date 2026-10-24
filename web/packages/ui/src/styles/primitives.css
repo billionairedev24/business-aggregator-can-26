@@ -179,9 +179,14 @@
 
 /* ── skeleton / empty / error ── */
 @keyframes nl-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
-.nl-skel { display: block; width: var(--nl-skel-w, auto); height: var(--nl-skel-h, auto); background: var(--color-well); border-radius: var(--nl-skel-r, var(--radius-xs)); animation: nl-pulse 1.4s ease-in-out infinite; }
+.nl-skel { display: block; background: var(--color-well); border-radius: var(--radius-xs); animation: nl-pulse 1.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .nl-skel { animation: none; } }
 .nl-skel-text { height: 12px; }
+/* a one-off box: the size of what is loading is data (Skeleton width / height / radius), and wins over a shape class as
+   the inline style did */
+.nl-skel[style*='--nl-skel-w'] { width: var(--nl-skel-w); }
+.nl-skel[style*='--nl-skel-h'] { height: var(--nl-skel-h); }
+.nl-skel[style*='--nl-skel-r'] { border-radius: var(--nl-skel-r); }
 /* a placeholder under another one (S-180: was an inline margin on each screen) */
 .nl-skel-gap { margin-top: var(--space-2); }
 .nl-skel-gap-lg { margin-top: var(--space-4); }
