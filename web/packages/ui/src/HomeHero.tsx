@@ -39,6 +39,8 @@ export interface HomeHeroProps {
   title: ReactNode;
   accent?: ReactNode;
   titleId?: string;
+  /** The headline's heading level: 1 on the home (the page's title), lower where it is shown inside another page. */
+  level?: 1 | 2 | 3;
   trust?: readonly HomeHeroTrust[];
   /** `undefined` while it loads (its box is held at its size), `null` for none. */
   run: HomeHeroRun | null | undefined;
@@ -59,12 +61,13 @@ export interface HomeHeroProps {
  * from the first render (the run card holds its place while it loads; the headline holds two lines, three on phones), so
  * nothing moves when the data and the photos arrive. No violet text on violet: text there is white, `hero-text` or `hero-accent`.
  */
-export function HomeHero({ title, accent, titleId = 'home-hero-band-title', trust = [], run, runLabel, loadingLabel, departments, departmentsLabel, className }: HomeHeroProps) {
+export function HomeHero({ title, accent, titleId = 'home-hero-band-title', level = 1, trust = [], run, runLabel, loadingLabel, departments, departmentsLabel, className }: HomeHeroProps) {
+  const H = `h${level}` as const;
   return (
     <section className={clsx('nl-hhero', className)} aria-labelledby={titleId}>
       <div className="nl-hhero-top">
         <div className="nl-hhero-lead">
-          <h1 id={titleId} className="nl-hhero-title">{title}{accent ? <>{' '}<em>{accent}</em></> : null}</h1>
+          <H id={titleId} className="nl-hhero-title">{title}{accent ? <>{' '}<em>{accent}</em></> : null}</H>
           {trust.length ? (
             <ul className="nl-hhero-trust">
               {trust.map(i => <li key={i.key} className={clsx(i.wide && 'nl-hhero-wide')}><span className="nl-hhero-trust-icon" aria-hidden>{i.icon}</span>{i.label}</li>)}

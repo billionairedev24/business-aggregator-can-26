@@ -59,8 +59,18 @@ describe('home (E-15: maker of the week, home tiles, rails)', () => {
   it('features one local shop, then the home tiles and rails of real products, pros and kitchens', async () => {
     const calls = mockFetch(api());
     renderApp('/', { routes: home });
-    // the page's name for screen readers; one search on the page — the header's, with its scope
-    expect(await screen.findByRole('heading', { level: 1, name: `${brand.name}: everything local, from people you can trust` })).toBeInTheDocument();
+    // S-188: the hero band's headline names the visitor's place (a message parameter); one search on the page — the
+    // header's, with its scope
+    expect(await screen.findByRole('heading', { level: 1, name: 'Everything Beltline needs, tonight.' })).toBeInTheDocument();
+    const band = screen.getByRole('region', { name: 'Everything Beltline needs, tonight.' });
+    expect(within(band).getByText('Payment held until you confirm delivery')).toBeInTheDocument();
+    const depts = within(band).getByRole('list', { name: 'Departments' });
+    expect(within(depts).getAllByRole('link').map(a => a.getAttribute('href'))).toEqual(['/services', '/shop', '/food']);
+    await waitFor(() => expect(within(depts).getByRole('link', { name: /Shop local/ })).toHaveTextContent('2 stores · one pooled delivery'));
+    // the run card replaces the cut-off strip on the home: no strip here
+    expect(await within(band).findByRole('complementary', { name: 'Next pooled run' })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Delivery cut-off' })).toBeNull();
+    expect(brand.name).toBeTruthy();
     expect(screen.getAllByRole('search')).toHaveLength(1);
     expect(screen.getByRole('banner')).toContainElement(screen.getByRole('search'));
     // the maker of the week: the Master shop with a photo, on tonight's run
@@ -139,7 +149,8 @@ describe('home (E-15: maker of the week, home tiles, rails)', () => {
   it('speaks French', async () => {
     mockFetch(api());
     renderApp('/', { routes: home, locale: 'fr' });
-    expect(await screen.findByRole('heading', { level: 1, name: `${brand.name} : tout le local, par des gens de confiance` })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Tout ce dont Beltline a besoin, ce soir.' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Réserver un pro/ })).toHaveAttribute('href', '/services');
     expect(await screen.findByRole('region', { name: 'Glenmore Bakery, sur la tournée partagée de ce soir' })).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Les rayons du quartier' })).getByRole('link', { name: 'Boulangerie' })).toHaveAttribute('href', '/shop/bakery');
     expect(await screen.findByRole('region', { name: 'Aubaine du jour' })).toHaveTextContent('17 % de rabais');

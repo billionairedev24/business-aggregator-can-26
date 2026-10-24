@@ -30,6 +30,8 @@
 .nl-gallery-swatch[data-role='well'] { background: var(--color-well); }
 /* the site header shown in place, not stuck to the window (it is sticky on the site) */
 .nl-gallery-frame { margin-inline: calc(-1 * var(--space-5)); border-block: 1px solid var(--color-border); }
+/* the hero band's colour stops at the frame here (on the home it reaches the window's edges) */
+.nl-gallery-hero { padding: 0 var(--space-5) var(--space-4); overflow: hidden; }
 .nl-gallery-frame .nl-site-header, .nl-gallery-frame .nl-site-header[data-tucked] { position: relative; top: 0; }
 .nl-gallery-rail { display: flex; flex-direction: column; gap: var(--space-4); width: min(100%, 224px); }
 @media (max-width: 599.98px) {
