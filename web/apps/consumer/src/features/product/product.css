@@ -46,7 +46,7 @@
 .product-buy-icon { flex: none; margin-top: 2px; color: var(--color-text-muted); }
 .product-buy-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--type-label); line-height: var(--leading-normal); }
 .product-buy-meta { color: var(--color-text-muted); font-size: var(--type-meta); }
-.product-buy-cutoff { color: var(--color-commerce-text); font-weight: var(--weight-semibold); }
+.product-buy-cutoff { margin-block: 2px; }
 .product-stock { display: inline-flex; align-items: center; gap: var(--space-1-5); font-size: var(--type-label); font-weight: var(--weight-semibold); }
 .product-stock-in { color: var(--color-status-success-fg); }
 .product-stock-low { color: var(--color-status-warning-fg); }

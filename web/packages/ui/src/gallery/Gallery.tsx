@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import './gallery.css';
-import { Bank, ChartBar, ChatCircleText, GearSix, Leaf, MagnifyingGlass, Package, Prohibit, ShoppingCart, SignIn, SquaresFour, Stack, Storefront, Tag as TagIcon, Truck, Warning } from '@phosphor-icons/react';
+import { ArrowsClockwise, Bank, BowlFood, ChartBar, ChatCircleText, GearSix, Leaf, MagnifyingGlass, Package, Prohibit, ShieldCheck, ShoppingBag, ShoppingCart, SignIn, SquaresFour, Stack, Storefront, Tag as TagIcon, Truck, Warning, Wrench } from '@phosphor-icons/react';
 import { AccountMenu } from '../AccountMenu';
 import { LocationPill } from '../LocationPill';
 import { PromoStrip, SiteHeader } from '../SiteHeader';
+import { HomeHero } from '../HomeHero';
 import { AppShell, WorkspaceSwitcher } from '../AppShell';
 import { ActionCard, ActionGrid, ActionPanel, ActionPanelItem, ChartCard, KpiStrip, RecordHeader, RecordHistory, RecordLayout, RecordTabs, SummaryTable, Thumb } from '../BackOffice';
 import { ColumnChart } from '../Charts';
@@ -12,7 +13,7 @@ import { Logo } from '../Logo';
 import { ShellSearch } from '../ShellSearch';
 import { Button } from '../Button';
 import { Checkbox, ChoiceTiles, FilterChip, FilterGroup, OptionCard, RadioGroup, Segmented, Switch, UnderlineTabs } from '../Choice';
-import { DealBadge, MediaFallback, Price, QuantityStepper, RatingFilter, Stars, StatusTag, type StatusTone } from '../Commerce';
+import { CutoffPill, DealBadge, MediaFallback, Price, QuantityStepper, RatingFilter, Stars, StatusTag, type StatusTone } from '../Commerce';
 import { ProductCard, ServiceCard } from '../Cards';
 import { DataTable, type DataTableColumn } from '../DataTable';
 import { FormSection, SaveBar } from '../Editor';
@@ -40,6 +41,7 @@ const useT = defineMessages({
     s_formats: 'Dates and times',
     r_action: 'Action', r_selected: 'Selected', r_commerce: 'Commerce', r_success: 'Success', r_warning: 'Warning', r_danger: 'Danger', r_info: 'Info', r_line: 'Line', r_well: 'Well',
     typeNote: 'IBM Plex Sans 400 · 500 · 600 · 700. Body 14, meta 12, card titles 13.5, page titles 24.',
+    displayNote: 'Archivo, width 125 %, 800: the home hero, the department tiles and the maker-of-the-week headline only.',
     addToCart: 'Add to cart', buyNow: 'Buy now', seeDetails: 'See details', suspend: 'Suspend', save: 'Save', cancel: 'Cancel', small: 'Small', large: 'Large', disabled: 'Disabled',
     tabsLabel: 'Orders', toPack: 'To pack', packed: 'Packed', delivered: 'Delivered', issues: 'Issues', all: 'All',
     tip: 'Tip', noTip: 'No tip', time: 'Delivery time', range: 'Period', d7: '7 days', d30: '30 days', d90: '90 days',
@@ -74,7 +76,11 @@ const useT = defineMessages({
     rActions: 'Actions', rSuspendD: 'Page, listings and checkout go offline at once; escrow held', rReverify: 'Require re-verification…', rReverifyD: 'The check shows as expired until a current one is uploaded',
     rNote: 'Every action is logged and the business is emailed.', rEvidenceE: 'Food handling permit · valid to Nov 30', rNotesE: 'No notes yet.',
     fDay: 'A day', fWindow: 'A delivery window', fNight: 'Across midnight', fRange: 'A date range',
-    s_site: 'Site header, department strip and promo strip', s_filters: 'Filter rail',
+    r_chrome: 'Consumer chrome',
+    s_site: 'Site header, department strip and promo strip', s_filters: 'Filter rail', s_hero: 'Home hero band',
+    heroTitle: 'Everything Maple Row needs,', heroAccent: 'tonight.', heroHeld: 'Payment held until you confirm delivery', heroRefund: 'Missing items refunded automatically', heroShops: '380 verified shops nearby',
+    heroRun: 'Next pooled run', heroRunK: 'Tonight’s pooled run', heroRunT: 'Closes 5:20 p.m.', heroRunNote: 'Mix shops for one $2.99 delivery', heroDepts: 'Departments',
+    heroSvcK: 'Services', heroSvc: 'Book a pro', heroSvcM: '1,240 services · book instantly', heroShopK: 'Shop', heroShop: 'Shop local', heroShopM: '380 stores · one pooled delivery', heroFoodK: 'Food', heroFood: 'Order in', heroFoodM: '160 kitchens · group orders', orderWithin: 'Order within 2 h 48 min',
     hello: 'Hello, {name}', helloGuest: 'Hello, sign in', accountOrders: 'Account & orders', signIn: 'Sign in',
     bakery: 'Bakery', butcher: 'Butcher', grocery: 'Grocery', mechanics: 'Mechanics', cleaners: 'Cleaners', deals: 'Today’s deals', sell: 'Sell on {brand}',
     cutoff: '<b>Tonight’s pooled run closes at 5:30 p.m.</b> Mix any 3 shops for one $2.99 delivery.', cutoffLeft: '2 h 48 min left', cutoffLabel: 'Delivery cut-off',
@@ -97,6 +103,7 @@ const useT = defineMessages({
     s_formats: 'Dates et heures',
     r_action: 'Action principale', r_selected: 'Sélection', r_commerce: 'Commerce de détail', r_success: 'Succès', r_warning: 'Avertissement', r_danger: 'Risque', r_info: 'Information', r_line: 'Trait', r_well: 'Fond',
     typeNote: 'IBM Plex Sans 400 · 500 · 600 · 700. Texte 14, méta 12, titres de carte 13,5, titres de page 24.',
+    displayNote: 'Archivo, largeur 125 %, 800 : le bandeau d’accueil, les tuiles des rayons et le titre de l’artisan de la semaine seulement.',
     addToCart: 'Ajouter au panier', buyNow: 'Acheter', seeDetails: 'Voir les détails', suspend: 'Suspendre', save: 'Enregistrer', cancel: 'Annuler', small: 'Petit', large: 'Grand', disabled: 'Désactivé',
     tabsLabel: 'Commandes', toPack: 'À emballer', packed: 'Emballées', delivered: 'Livrées', issues: 'Problèmes', all: 'Toutes',
     tip: 'Pourboire', noTip: 'Aucun', time: 'Heure de livraison', range: 'Période', d7: '7 jours', d30: '30 jours', d90: '90 jours',
@@ -131,7 +138,11 @@ const useT = defineMessages({
     rActions: 'Actions', rSuspendD: 'La page, les annonces et le paiement passent hors ligne; séquestre retenu', rReverify: 'Exiger une nouvelle vérification…', rReverifyD: 'La vérification paraît expirée jusqu’au dépôt d’une pièce à jour',
     rNote: 'Chaque action est journalisée et l’entreprise reçoit un courriel.', rEvidenceE: 'Permis de manipulation des aliments · valide jusqu’au 30 nov.', rNotesE: 'Aucune note pour l’instant.',
     fDay: 'Un jour', fWindow: 'Une plage de livraison', fNight: 'Après minuit', fRange: 'Une période',
-    s_site: 'En-tête du site, bande des rayons et bande promotionnelle', s_filters: 'Volet de filtres',
+    r_chrome: 'Habillage du site',
+    s_site: 'En-tête du site, bande des rayons et bande promotionnelle', s_filters: 'Volet de filtres', s_hero: 'Bandeau d’accueil',
+    heroTitle: 'Tout ce dont Maple Row a besoin,', heroAccent: 'ce soir.', heroHeld: 'Paiement retenu jusqu’à ce que vous confirmiez la livraison', heroRefund: 'Articles manquants remboursés automatiquement', heroShops: '380 boutiques vérifiées près de chez vous',
+    heroRun: 'Prochaine tournée partagée', heroRunK: 'Tournée partagée de ce soir', heroRunT: 'Ferme à 17 h 20', heroRunNote: 'Combinez les boutiques pour une seule livraison à 2,99 $', heroDepts: 'Rayons',
+    heroSvcK: 'Services', heroSvc: 'Réserver un pro', heroSvcM: '1 240 services · réservation immédiate', heroShopK: 'Boutique', heroShop: 'Achat local', heroShopM: '380 boutiques · une livraison partagée', heroFoodK: 'Restaurants', heroFood: 'Commander', heroFoodM: '160 cuisines · commandes de groupe', orderWithin: 'Commandez d’ici 2 h 48 min',
     hello: 'Bonjour, {name}', helloGuest: 'Bonjour, connectez-vous', accountOrders: 'Compte et commandes', signIn: 'Se connecter',
     bakery: 'Boulangerie', butcher: 'Boucherie', grocery: 'Épicerie', mechanics: 'Mécaniciens', cleaners: 'Ménage', deals: 'Aubaines du jour', sell: 'Vendre sur {brand}',
     cutoff: '<b>La tournée partagée de ce soir ferme à 17 h 30.</b> Combinez 3 boutiques pour une seule livraison à 2,99 $.', cutoffLeft: 'Encore 2 h 48 min', cutoffLabel: 'Heure limite de livraison',
@@ -152,6 +163,7 @@ type GalleryT = ReturnType<typeof useT>;
 /** Demo names: data, the same in both languages. */
 const SHOP = 'Loaf & Ladder Bakery · Maple Row';
 const FONT = 'IBM Plex Sans';
+const DISPLAY_FONT = 'Archivo';
 const HIVE = 'Hive & Hollow Apiary';
 const BAKERY = 'Loaf & Ladder Bakery';
 const PLACE = 'Maple Row T2N';
@@ -167,7 +179,7 @@ const Row = ({ children, label }: { children: ReactNode; label?: string }) => (
 );
 
 function Tokens({ t }: { t: GalleryT }) {
-  const roles: [string, string][] = [['action-primary', t('r_action')], ['selected', t('r_selected')], ['commerce', t('r_commerce')], ['success', t('r_success')], ['warning', t('r_warning')], ['danger', t('r_danger')], ['info', t('r_info')], ['border-strong', t('r_line')], ['well', t('r_well')]];
+  const roles: [string, string][] = [['action-primary', t('r_action')], ['selected', t('r_selected')], ['commerce', t('r_commerce')], ['success', t('r_success')], ['warning', t('r_warning')], ['danger', t('r_danger')], ['info', t('r_info')], ['border-strong', t('r_line')], ['well', t('r_well')], ['header-bg', t('r_chrome')]];
   return (
     <>
       <ul className="nl-gallery-swatches">
@@ -175,6 +187,8 @@ function Tokens({ t }: { t: GalleryT }) {
       </ul>
       <p className="nl-gallery-type">{FONT}</p>
       <p className="nl-muted">{t('typeNote')}</p>
+      <p className="nl-gallery-type nl-gallery-display">{DISPLAY_FONT}</p>
+      <p className="nl-muted">{t('displayNote')}</p>
     </>
   );
 }
@@ -250,7 +264,7 @@ function Fields({ t }: { t: GalleryT }) {
 function Commerce({ t }: { t: GalleryT }) {
   return (
     <>
-      <Row><Price cents={850} size="xl" unit={{ cents: unitCents(850, 900, '100g'), per: '100g' }} /><Stars rating={4.8} reviewCount={312} /><DealBadge percent={12} /><Price cents={1400} compareAtCents={1600} unit={{ cents: 233, per: 'each' }} /></Row>
+      <Row><Price cents={850} size="xl" unit={{ cents: unitCents(850, 900, '100g'), per: '100g' }} /><Stars rating={4.8} reviewCount={312} /><DealBadge percent={12} /><CutoffPill>{t('orderWithin')}</CutoffPill><Price cents={1400} compareAtCents={1600} unit={{ cents: 233, per: 'each' }} /></Row>
       <Row><StatusTag tone="success">{t('statusDelivered')}</StatusTag><StatusTag tone="info">{t('statusPacked')}</StatusTag><StatusTag tone="warning">{t('statusToPack')}</StatusTag><StatusTag tone="danger">{t('statusWrong')}</StatusTag><StatusTag>{t('statusPaused')}</StatusTag></Row>
       <Row><Tag tone="neutral">{t('vegetarian')}</Tag><Tag tone="brand">{t('newTag')}</Tag><Tag tone="commerce">{t('deal')}</Tag><QuantityStepper value={1} max={9} onChange={() => {}} name={t('sourdough')} inCart /></Row>
     </>
@@ -296,7 +310,23 @@ function Site({ t }: { t: GalleryT }) {
         menu={[{ key: 'shop', heading: t('shop'), href: '#shop', links: [link('bakery', '#bakery')] }]}
         cart={{ count: 4, href: '#cart' }}
         account={<AccountMenu greeting={{ line1: t('hello', { name: 'Amara' }), line2: t('accountOrders') }} user={{ name: 'Amara Osei', initials: 'AO' }} sections={[{ items: [{ key: 'in', label: t('signIn'), icon: SignIn, href: '#in' }] }]} />} />
-      <PromoStrip icon={<Truck size={18} />} label={t('cutoffLabel')} end={t('cutoffLeft')}><Eta html={t('cutoff')} /></PromoStrip>
+      <PromoStrip icon={<Truck size={18} />} label={t('cutoffLabel')} end={<CutoffPill>{t('cutoffLeft')}</CutoffPill>}><Eta html={t('cutoff')} /></PromoStrip>
+    </div>
+  );
+}
+
+function Hero({ t, photo }: { t: GalleryT; photo?: string }) {
+  const pic = photo ? <img src={photo} alt="" /> : <MediaFallback name={SHOP} icon={Package} />;
+  return (
+    <div className="nl-gallery-frame nl-gallery-hero">
+      <HomeHero title={t('heroTitle')} accent={t('heroAccent')} titleId="gallery-hero-title" level={3} runLabel={t('heroRun')} departmentsLabel={t('heroDepts')}
+        trust={[{ key: 'h', icon: <ShieldCheck size={18} />, label: t('heroHeld') }, { key: 'r', icon: <ArrowsClockwise size={18} />, label: t('heroRefund') }, { key: 's', icon: <Storefront size={18} />, label: t('heroShops'), wide: true }]}
+        run={{ icon: <Truck size={16} />, kicker: t('heroRunK'), title: t('heroRunT'), left: t('cutoffLeft'), note: t('heroRunNote') }}
+        departments={[
+          { key: 's', href: '#services', icon: <Wrench size={15} />, kicker: t('heroSvcK'), title: t('heroSvc'), meta: t('heroSvcM'), picture: pic },
+          { key: 'p', href: '#shop', icon: <ShoppingBag size={15} />, kicker: t('heroShopK'), title: t('heroShop'), meta: t('heroShopM'), picture: pic },
+          { key: 'f', href: '#food', icon: <BowlFood size={15} />, kicker: t('heroFoodK'), title: t('heroFood'), meta: t('heroFoodM'), picture: pic },
+        ]} />
     </div>
   );
 }
@@ -577,6 +607,7 @@ function ShellDemo({ t }: { t: GalleryT }) {
 export const GALLERY_SECTIONS: readonly GallerySection[] = [
   { id: 'tokens', title: t => t('s_tokens'), render: t => <Tokens t={t} /> },
   { id: 'site', title: t => t('s_site'), render: t => <Site t={t} /> },
+  { id: 'hero', title: t => t('s_hero'), render: (t, photo) => <Hero t={t} photo={photo} /> },
   {
     id: 'buttons', title: t => t('s_buttons'), render: t => (
       <>

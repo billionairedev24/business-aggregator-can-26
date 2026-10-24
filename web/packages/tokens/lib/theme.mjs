@@ -23,14 +23,13 @@ const readableOnAll = (fg, bgs, min, toward = BLACK) => {
 
 const stack = (font, fallback) => `"${font.family}", ${font.fallback ?? fallback}`;
 const SANS_FALLBACK = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
-const SERIF_FALLBACK = 'Georgia, "Times New Roman", serif';
 
 /**
  * The npm package that ships a family's font files, self-hosted (no Google Fonts: nothing is fetched from a third
  * party, and the CSPs allow fonts from 'self' only). build.mjs copies the latin + latin-ext woff2 files of the palette's
  * weights into dist/fonts/ and writes their @font-face rules into tokens.css.
  */
-export const fontPackage = family => `@fontsource/${family.toLowerCase().replace(/ /g, '-')}`;
+export const fontPackage = (family, variable) => `@fontsource${variable ? '-variable' : ''}/${family.toLowerCase().replace(/ /g, '-')}`;
 
 /** Semantic colours (layer 2) from a palette's brand colours. Keys become `--color-<key>`. */
 export function semanticColours(p, { chrome = 'light' } = {}) {
@@ -144,12 +143,15 @@ export function resolveTheme(brand, palette, scale) {
     native: { shadowColor: ink, shadowOffset: { width: 0, height: layers[0].y }, shadowOpacity: layers[0].alpha, shadowRadius: layers[0].blur / 2, elevation: Math.max(1, Math.round(layers[0].y * 1.5)) },
   }]));
   const sans = stack(palette.font.sans, SANS_FALLBACK);
+  // S-188: the display face (Archivo, expanded) is for the home hero, the department tiles and the maker-of-the-week
+  // headline only; it falls back to the sans. Headings (`heading`) stay the sans: Plainsight has no display headings.
+  const display = palette.font.display ? stack(palette.font.display, sans) : sans;
   return {
     brand: { ...brand.identity, palette: brand.palette, paletteName: palette.name, direction: palette.direction, chrome: brand.chrome ?? 'light' },
     font: {
-      sans, display: palette.font.display ? stack(palette.font.display, SERIF_FALLBACK) : sans,
-      heading: palette.font.display ? stack(palette.font.display, SERIF_FALLBACK) : sans,
-      families: [palette.font.sans, palette.font.display].filter(Boolean).map(f => ({ ...f, package: fontPackage(f.family) })),
+      sans, display, heading: sans,
+      displayStretch: palette.font.display?.stretch ?? '100%',
+      families: [palette.font.sans, palette.font.display].filter(Boolean).map(f => ({ ...f, package: fontPackage(f.family, f.variable) })),
     },
     color: colours,
     ramp: ramps,

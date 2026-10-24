@@ -1,8 +1,10 @@
-/* Consumer site header (E-15 A · Plainsight, design/revamp/a.html): a white search-led bar — logo, deliver-to, the
-   search with its department scope, "Hello, … / Account & orders", the cart with its count in the commerce colour — and
-   the grey department strip under it: All, the sections (the current one underlined in ink), the departments and
-   service categories in groups, "Today's deals" (commerce) and "Sell on …" at the right end. Under 900px a compact bar
-   (menu, logo, account, cart), the search on its own row, then the place on one line. Every item ≥ 44px (S-143).
+/* Consumer site header (E-15 A · Plainsight, design/revamp/a.html, in the S-188 brand layer's violet chrome,
+   design/revamp/hybrid/index.html): a deep violet search-led bar — logo, deliver-to, the white search field joined to the
+   violet search button, "Hello, … / Account & orders", the cart with its yellow count — and the violet department strip
+   under it: All, the sections (the current one underlined in white), the departments and service categories in groups,
+   "Today's deals" (yellow, the one place yellow is text: on violet) and "Sell on …" at the right end. No violet text on
+   violet: text, icons and focus there are white or the light violet `header-focus`. Under 900px a compact bar (menu,
+   logo, account, cart), the search on its own row, then the place on one line. Every item ≥ 44px (S-143).
    Semantic tokens only. */
 .nl-site-header { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--color-header-bg); color: var(--color-header-text); padding-top: env(safe-area-inset-top, 0px); border-bottom: 1px solid var(--color-header-border); transition: top var(--duration) var(--ease); }
 /* short phone screens, scrolling down: the first row tucks away above the top edge (useStickyOffset `tuckTo`) */
@@ -20,7 +22,7 @@
   padding: 0 var(--space-1-5); border: 0; border-radius: var(--radius-control); background: none; box-sizing: border-box;
   color: var(--color-header-text); font: inherit; text-decoration: none; cursor: pointer; white-space: nowrap;
 }
-.nl-site-item:hover, .nl-location:hover, .nl-account-button:hover { background: var(--color-header-hover-bg); color: var(--color-header-text); text-decoration: none; }
+.nl-site-item:hover, .nl-location:hover, .nl-account-button:hover { background: var(--color-header-hover-bg); color: var(--color-header-text); text-decoration: none; box-shadow: inset 0 0 0 1px var(--color-header-ring); }
 .nl-site-header :focus-visible { outline: 2px solid var(--color-header-focus); outline-offset: 2px; }
 .nl-site-brand { padding-inline: var(--space-1); margin-left: calc(-1 * var(--space-1)); }
 .nl-site-brand .nl-logo-word { font-family: var(--font-sans); font-weight: var(--weight-bold); letter-spacing: -0.02em; }
@@ -35,7 +37,7 @@
 
 /* the department strip: All · the sections · the departments | the service categories · deals and selling at the end.
    One line that scrolls sideways by itself (a finger or a trackpad; no scrollbar drawn), never the page. */
-.nl-site-subnav { background: var(--color-subheader-bg); border-top: 1px solid var(--color-border); }
+.nl-site-subnav { background: var(--color-subheader-bg); color: var(--color-subheader-text); }
 .nl-site-nav {
   display: flex; align-items: center; gap: 2px; max-width: var(--page-max); margin: 0 auto; padding: 0 var(--page-gutter); box-sizing: border-box;
   list-style: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-padding-inline: var(--space-8); scrollbar-width: none; white-space: nowrap; font-size: var(--type-card-title);
@@ -44,21 +46,21 @@
 .nl-site-nav > li { flex: none; display: flex; }
 .nl-site-nav > li:first-child { margin-left: calc(-1 * var(--space-2-5)); }
 .nl-site-nav > li:last-child { margin-right: calc(-1 * var(--space-2-5)); }
-.nl-site-nav-sep { width: 1px; height: 18px; margin-inline: var(--space-1-5); background: var(--color-border-strong); }
+.nl-site-nav-sep { width: 1px; height: 18px; margin-inline: var(--space-1-5); background: var(--color-subheader-line); }
 .nl-site-nav-fill { flex: 1 1 auto !important; min-width: var(--space-4); }
 .nl-site-link {
   position: relative; display: inline-flex; align-items: center; gap: var(--space-1-5); min-height: var(--size-touch); padding: 0 var(--space-2-5);
-  border: 0; background: none; font: inherit; cursor: pointer; color: var(--color-subheader-text); font-weight: var(--weight-regular); text-decoration: none; border-radius: 0;
+  border: 0; background: none; font: inherit; cursor: pointer; color: var(--color-subheader-text); font-weight: var(--weight-medium); text-decoration: none; border-radius: 0;
 }
 .nl-site-link:hover { color: var(--color-subheader-text); background: var(--color-subheader-hover-bg); text-decoration: none; }
 .nl-site-link:focus-visible { outline-offset: -2px; }
 .nl-site-link::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 0; background: transparent; }
-.nl-site-link[aria-current='page'] { color: var(--color-text); font-weight: var(--weight-bold); }
+.nl-site-link[aria-current='page'] { color: var(--color-subheader-text); font-weight: var(--weight-bold); }
 .nl-site-link[aria-current='page']::after { background: var(--color-header-indicator); }
 .nl-site-all, .nl-site-section, .nl-site-end { font-weight: var(--weight-semibold); }
-.nl-site-all svg { color: var(--color-text); }
-/* "Today's deals": the commerce colour (a deal is commerce, never a button) */
-.nl-site-deal, .nl-site-deal:hover { color: var(--color-commerce-text); }
+.nl-site-all svg { color: var(--color-subheader-text); }
+/* "Today's deals": yellow on the violet strip (10.11:1) — the one place the commerce yellow is text; never on white */
+.nl-site-deal, .nl-site-deal:hover { color: var(--color-subheader-deal); }
 
 /* the "All" sheet: a group per section (its heading, "See all", the categories), then help, sell, the language */
 .nl-site-menu-group { display: flex; flex-direction: column; gap: var(--space-1); }
@@ -91,7 +93,7 @@
 
 /* the location control: a pin, "Deliver to (Amara)" over the place in bold; on phones one line. Ellipsed, never hidden */
 .nl-location { min-width: 0; max-width: 220px; text-align: left; gap: var(--space-1); }
-.nl-location-pin { color: var(--color-text); flex: none; }
+.nl-location-pin { color: var(--color-header-text); flex: none; }
 .nl-location-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; min-width: 0; }
 .nl-location-kicker { font-size: var(--type-meta); color: var(--color-header-muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .nl-location-place { font-size: var(--type-card-title); font-weight: var(--weight-semibold); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -102,20 +104,24 @@
   .nl-location-kicker { flex: none; }
 }
 
-/* search: one box with a 2 px ink edge and 4 px corners — the department scope, the field, a solid ink button with the
-   magnifier (header); the page's larger box with a labelled button (hero) */
+/* search: the header's box is the white field itself (S-188: no edge on the violet bar, a soft drop shadow) — the
+   department scope on its violet tint, the field, the violet button with the magnifier joined to it (6.57:1 against
+   the white field); the page's larger box keeps its 2 px ink edge and a labelled button (hero) */
 .nl-search { position: relative; display: flex; align-items: center; }
-.nl-search-header { height: var(--size-touch); box-sizing: border-box; border-radius: var(--radius-panel); background: var(--color-surface); border: 2px solid var(--color-selected); padding: 0; overflow: visible; }
+.nl-search-header { height: var(--size-touch); box-sizing: border-box; border-radius: var(--radius-panel); background: var(--color-surface); border: 0; padding: 0; overflow: visible; box-shadow: var(--shadow-md); }
 .nl-search-header:focus-within { box-shadow: var(--shadow-focus); }
 .nl-search-header .nl-search-input { flex: 1; min-width: 0; height: 100%; min-height: 0; border: 0; border-radius: 0; padding: 0 var(--space-3); font-size: var(--text-base); background: transparent; box-shadow: none; color: var(--color-text); }
 .nl-search-header .nl-search-input::placeholder { color: var(--color-text-subtle); opacity: 1; }
 .nl-search-header .nl-search-input:focus, .nl-search-header .nl-search-input:focus-visible { box-shadow: none; outline: none; }
-.nl-search-submit { position: relative; flex: none; width: 52px; height: 100%; border: 0; border-radius: 0 var(--radius-control) var(--radius-control) 0; background: var(--color-action-dark); color: var(--color-action-dark-text); cursor: pointer; display: grid; place-items: center; }
-.nl-search-submit:hover { background: var(--color-action-dark-hover); }
+.nl-search-submit { position: relative; flex: none; width: 56px; height: 100%; border: 0; border-radius: 0 var(--radius-panel) var(--radius-panel) 0; background: var(--color-action-primary); color: var(--color-action-primary-text); cursor: pointer; display: grid; place-items: center; transition: background var(--duration-fast) var(--ease); }
+.nl-search-submit:hover { background: var(--color-action-primary-hover); }
 .nl-search-submit:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.nl-site-header .nl-search-submit:focus-visible { outline-color: var(--color-header-focus); }
 /* the department scope (Services / Shop / Food): a native select on the well, a hairline before the field */
 .nl-search-scope { position: relative; flex: none; display: flex; align-items: stretch; height: 100%; background: var(--color-well); border-right: 1px solid var(--color-border-strong); border-radius: var(--radius-control) 0 0 var(--radius-control); }
 .nl-search-scope select { appearance: none; border: 0; background: transparent; font: inherit; font-size: var(--type-label); color: var(--color-text-muted); padding: 0 var(--space-6) 0 var(--space-3); cursor: pointer; max-width: 9em; text-overflow: ellipsis; }
+.nl-search-header .nl-search-scope { background: var(--color-header-scope-bg); border-right-color: var(--color-border); border-radius: var(--radius-panel) 0 0 var(--radius-panel); }
+.nl-search-header .nl-search-scope select, .nl-search-header .nl-search-scope > svg { color: var(--color-header-scope-text); font-weight: var(--weight-medium); }
 .nl-search-scope select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
 .nl-search-scope > svg { position: absolute; right: var(--space-2); top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--color-text-muted); }
 .nl-search-icon { color: var(--color-text-muted); pointer-events: none; }

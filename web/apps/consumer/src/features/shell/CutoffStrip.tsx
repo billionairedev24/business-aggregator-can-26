@@ -1,5 +1,5 @@
 import { Truck } from '@phosphor-icons/react';
-import { PromoStrip, useFormatters, useLocale } from '@northline/ui';
+import { CutoffPill, PromoStrip, useFormatters, useLocale } from '@northline/ui';
 import { useZone } from '../location/regions';
 import { clock, runWhen, weekday } from '../shop/format';
 import { shortPlace, useDeliveryLocation } from '../location/useDeliveryLocation';
@@ -34,7 +34,7 @@ function CutoffLine({ run, market, now }: { run: NonNullable<ReturnType<typeof u
   const left = now === null ? null : minutesUntil(run.orderBy, now);
   return (
     <PromoStrip icon={<Truck size={18} />} label={t('cutoffLabel')}
-      end={left !== null ? t('cutoffLeft', { hours: Math.floor(left / 60), minutes: left % 60 }) : null}>
+      end={left !== null ? <CutoffPill>{t('cutoffLeft', { hours: Math.floor(left / 60), minutes: left % 60 })}</CutoffPill> : null}>
       <strong>{t('cutoffLead', { when, weekday: weekday(run.startsAt, locale, zone), area, time: clock(run.orderBy, locale, zone) })}</strong>{' '}
       {t('cutoffRest', { fee: money(run.feeCents) })}
     </PromoStrip>

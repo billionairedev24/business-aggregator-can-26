@@ -25,7 +25,7 @@ export const PAIRS = [
   ['header-text', 'header-hover-bg', 4.5, 'header items, hovered'], ['subheader-text', 'subheader-bg', 4.5, 'department bar'],
   ['subheader-text', 'subheader-hover-bg', 4.5, 'department bar, hovered'], ['footer-text', 'footer-bg', 4.5, 'footer links'], ['footer-muted', 'footer-bg', 4.5, 'footer meta'],
   ['header-text', 'subheader-hover-bg', 4.5, 'header tabs, hovered'], ['header-muted', 'header-hover-bg', 4.5, 'header labels, hovered'],
-  ['footer-text', 'footer-bg', 4.5, 'footer headings'], ['link', 'footer-bg', 4.5, 'links in the footer'],
+  ['footer-text', 'footer-bg', 4.5, 'footer headings and links (S-188: white on violet, never the action colour)'],
   ['inverse-text', 'inverse-bg', 4.5, 'dark panels (sign-in advertorial)'], ['inverse-muted', 'inverse-bg', 4.5, 'dark panels, muted'],
   ['inverse-text', 'inverse-hover-bg', 4.5, 'dark panels, numbered points'],
   ['text', 'surface-sunken', 4.5, 'text on linen bands'], ['text-muted', 'surface-sunken', 4.5, 'muted text on linen bands'],
@@ -66,7 +66,49 @@ export const PAIRS = [
   ['action-secondary-text', 'action-secondary', 4.5, 'secondary buttons'], ['action-tertiary-text', 'surface', 4.5, 'tertiary buttons'],
   ['action-dark-text', 'action-dark', 4.5, 'bulk-action bar'], ['promo-text', 'promo-bg', 4.5, 'promo strip'],
   ['text-muted', 'selected-tint', 4.5, 'muted text in an applied chip or a selected row'],
+  // S-188 brand layer: every pair of the hybrid mockup's contrast table (design/revamp/hybrid/index.html § Contrast)
+  ['link', 'well', 4.5, 'action link on the well'], ['link', 'surface-muted', 4.5, 'action link on the Studio and console page'],
+  ['commerce-text', 'commerce', 4.5, 'ink on deal yellow: the cut-off and deal-timer pills'], ['text', 'commerce-bg', 4.5, 'ink on the soft deal surface'],
+  ['subheader-deal', 'subheader-bg', 4.5, '"Today\'s deals" in yellow on the department strip'],
+  ['header-focus', 'subheader-bg', 3, 'focus on the department strip'], ['header-scope-text', 'header-scope-bg', 4.5, 'search scope on its tint'],
+  ['header-muted', 'subheader-bg', 4.5, 'header meta over the strip'],
+  ['hero-accent', 'hero-bg', 3, 'hero accent ("tonight.", icons) on violet'], ['hero-accent', 'hero-glow-peak', 3, 'hero accent at the brightest glow'],
+  ['hero-text', 'hero-bg', 4.5, 'hero trust line on violet'], ['hero-text', 'hero-glow-peak', 4.5, 'hero trust line at the brightest glow'],
+  ['header-text', 'hero-bg', 4.5, 'hero headline and run time'], ['header-text', 'hero-glow-peak', 4.5, 'hero headline at the brightest glow'],
+  ['header-muted', 'hero-bg', 4.5, 'run card caption'],
+  ['hero-tile-text', 'hero-scrim', 4.5, 'department tile title on the photo scrim'], ['hero-tile-meta', 'hero-scrim', 4.5, 'department tile meta on the scrim'],
+  ['mark-text', 'mark', 3, 'the mark\'s glyph on its disc'],
+  ['nav-active-marker', 'nav-active-bg', 3, 'Studio and console current-page marker and icon'], ['text', 'nav-active-bg', 4.5, 'current page label'],
+  ['nav-active-marker', 'surface', 3, 'current-page marker on white'],
+  ['topbar-text', 'topbar-bg', 4.5, 'back-office top bar'], ['topbar-muted', 'topbar-bg', 4.5, 'top bar meta'],
+  ['topbar-text', 'topbar-hover-bg', 4.5, 'top bar items, hovered'], ['topbar-focus', 'topbar-bg', 3, 'focus in the top bar'],
+  ['topbar-ring', 'topbar-bg', 3, 'top bar outlines'], ['focus-on-dark', 'header-bg', 3, 'focus on the violet chrome'],
+  ['sticker-edge', 'surface', 3, 'the sticker\'s hard edge on white and pale wells'], ['sticker-edge', 'well', 3, 'the sticker\'s edge on the well'],
 ];
+
+/**
+ * Fill-only roles (S-188): yellow is a fill, never text on white (#FFD23F on white is 1.44:1). They may be the
+ * background of a pair, or text on the violet chrome (`subheader-deal` is its own role for that), never the text of a
+ * pair on a light surface. `vetRoles` fails a palette or a PAIRS edit that would use one as text; the web lint
+ * (scripts/check-legacy-tokens.mjs) refuses `color: var(--color-commerce)` and the like in CSS.
+ */
+export const FILL_ONLY = ['commerce', 'cart-badge', 'mark-highlight', 'subheader-deal', 'hero-glow'];
+/** Pairs the mockup rejects: they must stay below their minimum, so nothing can be tuned into using them. */
+export const REJECTED = [
+  ['commerce', 'surface', 4.5, 'yellow text on white'], ['action-primary', 'header-bg', 4.5, 'violet text on the violet chrome'],
+];
+const LIGHT = ['surface', 'canvas', 'surface-muted', 'surface-sunken', 'well', 'commerce-bg', 'selected-tint', 'nav-active-bg', 'promo-bg'];
+export function vetRoles(colours, pairs = PAIRS) {
+  const failures = [];
+  for (const [fg, bg, min, where] of pairs) {
+    if (FILL_ONLY.includes(fg) && LIGHT.includes(bg)) failures.push({ fg, bg, min, where, ratio: NaN, reason: `${fg} is a fill, never text on a light surface` });
+  }
+  for (const [fg, bg, min, where] of REJECTED) {
+    const ratio = Math.round(contrast(colours[fg], colours[bg]) * 100) / 100;
+    if (ratio >= min) failures.push({ fg, bg, min, where, ratio, reason: `a rejected pair now passes (${ratio}:1): make it a role of its own instead of reusing ${fg}` });
+  }
+  return failures;
+}
 
 /** Every pair below its minimum, for one resolved theme. */
 export function vet(colours, pairs = PAIRS) {

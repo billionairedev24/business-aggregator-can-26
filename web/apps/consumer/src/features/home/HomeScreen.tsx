@@ -1,9 +1,8 @@
 import { useEffect, type ReactNode } from 'react';
 import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useRouterState } from '@tanstack/react-router';
-import { Clock } from '@phosphor-icons/react';
 import {
-  brand, DealBadge, EmptyState, ErrorState, PanelTile, PanelTiles, PictureGrid, Price, ServiceCard, SiteLink, Skeleton, useLocale,
+  CutoffPill, DealBadge, EmptyState, ErrorState, PanelTile, PanelTiles, PictureGrid, Price, ServiceCard, SiteLink, Skeleton, useLocale,
   type PictureGridItem,
 } from '@northline/ui';
 import { categorySlot, cuisineSlot, departmentSlot } from '@northline/media';
@@ -25,6 +24,7 @@ import type { Landing, ProductCard } from '../shop/api';
 import { clock, runWhen, weekday } from '../shop/format';
 import { useNextRun } from '../shop/run';
 import { CUISINES, DEPARTMENTS, SERVICE_CATEGORIES, type Tile as CatalogTile } from './catalog';
+import { HomeBand } from './HomeBand';
 import { MakerHero } from './MakerHero';
 import { useHomeT } from './messages';
 
@@ -36,8 +36,9 @@ const FOOD_TILES = ['vietnamese', 'indian', 'pizza', 'ramen'];
 
 /**
  * Home (E-15 A · Plainsight, design/revamp/a.html "Consumer home", with Main Street's maker-of-the-week hero from
- * b.html): under the header and the delivery cut-off strip (the shell's), the hero — one featured local shop and two
- * side tiles — then four home tiles (departments, services, kitchens, the deal of the day) and rails: order again
+ * b.html, under the S-188 "tonight" hero band, design/revamp/hybrid): the band (the headline with the place, the trust
+ * line, the run card that replaces the shell's cut-off strip here, three department photo tiles straddling its edge),
+ * then the maker hero — one featured local shop and two side tiles — then four home tiles (departments, services, kitchens, the deal of the day) and rails: order again
  * (signed in, from the shops of the person's own orders), popular products, the top-rated pros and the popular
  * kitchens where the visitor is. The tiles are the catalogue's and render on the server; the hero and the rails load in
  * the browser once the place is known (the server doesn't know where the visitor is), in boxes drawn at their size.
@@ -66,7 +67,7 @@ export function HomeScreen() {
 
   return (
     <div className="nl-home">
-      <h1 className="nl-sr-only">{t('pageTitle', { brand: brand.name })}</h1>
+      <HomeBand place={city} landing={landing} services={services.data?.total} kitchens={kitchens.data?.items.length} />
       <MakerHero landing={landing} services={services.data?.items} kitchens={kitchens.data?.items} />
       <HomeTiles t={t} landing={landing} kitchens={kitchens.data?.items} />
 
@@ -143,7 +144,7 @@ function DealTile({ t, landing }: { t: T; landing: Landing | undefined }) {
           <span className="nl-home-deal-meta">{product.shopName}</span>
           <Price cents={offer?.priceCents ?? product.priceCents} compareAtCents={offer?.compareAtCents} size="lg" />
           {run && when && product.run?.windowId === run.windowId ? (
-            <span className="nl-home-deal-ends"><Clock size={14} aria-hidden />{t('dealOrderBy', { time: clock(run.orderBy, locale, zone), when, weekday: weekday(run.startsAt, locale, zone) })}</span>
+            <CutoffPill className="nl-home-deal-ends">{t('dealOrderBy', { time: clock(run.orderBy, locale, zone), when, weekday: weekday(run.startsAt, locale, zone) })}</CutoffPill>
           ) : null}
         </SiteLink>
       )}

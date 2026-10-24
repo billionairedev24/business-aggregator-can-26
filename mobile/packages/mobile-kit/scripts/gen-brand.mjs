@@ -256,7 +256,9 @@ const exportOf = (family, w) => `${family.replace(/\s+/g, '')}_${w}${WEIGHT_NAME
 
 function fontsFile() {
   const sans = firstFamily(theme.font.sans);
-  const display = firstFamily(theme.font.display);
+  // S-188: the heading role is theme.json `font.heading` (the sans in Plainsight); `font.display` (Archivo) is the web's
+  // hero face only, picked up by the apps in their own story
+  const display = firstFamily(theme.font.heading ?? theme.font.display);
   if (!sans) throw new Error('theme.json has no sans family');
   const weightsOf = (family) => theme.font.families.find((f) => f.family === family)?.weights ?? [];
   /** The closest weight the palette loads, preferring the lighter side (DM Sans has no 800: black falls back to 700). */

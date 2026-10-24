@@ -9,7 +9,7 @@
 import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import { vet } from './lib/contrast.mjs';
+import { vet, vetRoles } from './lib/contrast.mjs';
 import { markSvg, resolveTheme } from './lib/theme.mjs';
 
 const here = p => new URL(p, import.meta.url);
@@ -24,7 +24,7 @@ const themes = Object.fromEntries(Object.entries(palettes).map(([k, p]) => [k, r
 const theme = themes[brand.palette];
 
 // ── the contrast gate ─────────────────────────────────────────────────────────────────────────────────────────────
-const failures = Object.entries(themes).flatMap(([k, t]) => vet(t.color).map(f => ({ palette: k, ...f })));
+const failures = Object.entries(themes).flatMap(([k, t]) => [...vet(t.color), ...vetRoles(t.color)].map(f => ({ palette: k, ...f })));
 if (failures.length) {
   console.error('Contrast gate: these colour pairs are below WCAG AA (palettes/*.json; docs/design/revamp-epic.md § Locked direction):');
   for (const f of failures) console.error(`  ${f.palette}: --color-${f.fg} on --color-${f.bg} = ${f.ratio}:1, needs ${f.min}:1 (${f.where})${f.reason ? ` — ${f.reason}` : ` [${f.a} on ${f.b}]`}`);
@@ -40,6 +40,22 @@ function fontFaces(t) {
   const faces = [], files = [];
   for (const f of t.font.families) {
     const dir = dirname(require.resolve(`${f.package}/package.json`));
+    // a variable family (@fontsource-variable, S-188 Archivo): one file per subset carries every weight and the named
+    // axis (`wdth`: widths 62–125 %); declared with its weight and stretch ranges
+    if (f.variable) {
+      const css = readFileSync(join(dir, `${f.variable}.css`), 'utf8');
+      for (const subset of SUBSETS) {
+        const file = `${f.package.split('/')[1]}-${subset}-${f.variable}-normal.woff2`;
+        const block = css.split('@font-face').find(b => b.includes(`/${file}`));
+        const range = /unicode-range:\s*([^;]+);/.exec(block ?? '')?.[1];
+        const weight = /font-weight:\s*([^;]+);/.exec(block ?? '')?.[1];
+        const stretch = /font-stretch:\s*([^;]+);/.exec(block ?? '')?.[1];
+        if (!range || !weight) throw new Error(`fonts: no ${subset} ${f.variable} face in ${f.package}`);
+        files.push([join(dir, 'files', file), file]);
+        faces.push(`@font-face { font-family: '${f.family}'; font-style: normal; font-display: swap; font-weight: ${weight}; ${stretch ? `font-stretch: ${stretch}; ` : ''}src: url(./fonts/${file}) format('woff2-variations'); unicode-range: ${range}; }`);
+      }
+      continue;
+    }
     for (const w of f.weights) {
       const css = readFileSync(join(dir, `${w}.css`), 'utf8');
       for (const subset of SUBSETS) {
@@ -66,7 +82,10 @@ function paletteVars(t) {
     ...Object.entries(t.ramp).flatMap(([name, steps]) => Object.entries(steps).map(([k, v]) => decl(`--${name}-${k}`, v))),
     ...Object.entries(t.color).map(([k, v]) => decl(`--color-${k}`, v)),
     decl('--color-overlay', 'rgb(0 0 0 / 0.55)'),
-    decl('--font-sans', t.font.sans), decl('--font-display', t.font.display), decl('--font-heading', t.font.heading),
+    decl('--font-sans', t.font.sans), decl('--font-display', t.font.display), decl('--font-display-stretch', t.font.displayStretch), decl('--font-heading', t.font.heading),
+    // S-188: the deal sticker's hard ink edge (1.5 px, no blur) and its tilt; the cut-off pill's 1 px edge
+    decl('--shadow-sticker', '1.5px 1.5px 0 var(--color-sticker-edge)'), decl('--shadow-sticker-sm', '1px 1px 0 var(--color-sticker-edge)'),
+    decl('--sticker-tilt', '-2.5deg'),
     ...Object.entries(t.radius).map(([k, v]) => decl(`--radius-${k}`, px(v))),
     ...Object.entries(t.shadow).map(([k, v]) => decl(`--shadow-${k}`, v.css)),
     decl('--shadow-focus', '0 0 0 3px var(--color-focus-ring)'),

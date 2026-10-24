@@ -192,7 +192,7 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ESCAPES[c])
 const fill = (text, values) => text.replace(/\{(\w+)\}/g, (_, k) => (values[k] === undefined ? `{${k}}` : String(values[k])));
 
 /** The theme's colours this page uses, as the same custom properties the apps use (tokens.css). */
-const COLOURS = ['canvas', 'surface', 'surface-sunken', 'footer-bg', 'text', 'text-muted', 'border', 'border-card', 'action-primary', 'action-primary-hover', 'action-primary-text', 'action-accent', 'action-neutral', 'action-neutral-hover', 'action-neutral-text', 'action-neutral-border', 'link', 'focus', 'focus-ring', 'danger', 'danger-bg', 'surface-brand'];
+const COLOURS = ['canvas', 'surface', 'surface-sunken', 'footer-bg', 'footer-text', 'footer-muted', 'mark', 'mark-text', 'mark-highlight', 'selected', 'selected-text', 'text', 'text-muted', 'border', 'border-card', 'action-primary', 'action-primary-hover', 'action-primary-text', 'action-accent', 'action-neutral', 'action-neutral-hover', 'action-neutral-text', 'action-neutral-border', 'link', 'focus', 'focus-ring', 'danger', 'danger-bg', 'surface-brand'];
 
 function themeCss() {
   const colours = COLOURS.filter(c => theme.color[c]).map(c => `--color-${c}:${theme.color[c]}`).join(';');
@@ -214,13 +214,13 @@ body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:var
 a{color:var(--color-link)}
 a:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
 .top{display:flex;align-items:center;min-height:64px;padding:0 24px;border-bottom:1px solid var(--color-border);background:var(--color-surface)}
-.brand{display:inline-flex;align-items:center;gap:10px;min-height:44px;color:var(--color-text);text-decoration:none;font:700 20px/1 var(--font-display);letter-spacing:-.01em}
+.brand{display:inline-flex;align-items:center;gap:10px;min-height:44px;color:var(--color-text);text-decoration:none;font:700 20px/1 var(--font-sans);letter-spacing:-.01em}
 main{flex:1;display:flex;justify-content:center;padding:56px 24px 64px}
 .card{width:100%;max-width:600px;text-align:center}
 .art{display:flex;justify-content:center;margin:0 auto 24px}
 .art span{display:grid;place-items:center;width:112px;height:112px;border-radius:50%;background:var(--color-surface-brand);color:var(--color-action-primary)}
 .chip{display:inline-block;margin:0 0 12px;padding:4px 12px;border-radius:999px;border:1px solid var(--color-border-card);color:var(--color-text-muted);font-size:14px;font-weight:600}
-h1{margin:0;font:700 clamp(28px,5vw,40px)/1.15 var(--font-display);letter-spacing:-.02em}
+h1{margin:0;font:700 clamp(28px,5vw,40px)/1.15 var(--font-sans);letter-spacing:-.02em}
 .body{margin:12px auto 0;max-width:34em;color:var(--color-text-muted);font-size:18px}
 .retry{min-height:1.5em;margin:12px 0 0;color:var(--color-text-muted);font-size:15px}
 .actions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:28px}
@@ -241,7 +241,7 @@ h1{margin:0;font:700 clamp(28px,5vw,40px)/1.15 var(--font-display);letter-spacin
 .dev ul{margin:0;padding-left:20px}
 .dev li{margin:4px 0}
 .dev pre{margin:12px 0 0;padding:12px;max-width:100%;max-height:420px;overflow:auto;border-radius:8px;background:var(--color-surface);border:1px solid var(--color-border);font-size:12px;line-height:1.5;white-space:pre}
-footer{padding:24px;background:var(--color-footer-bg);border-top:1px solid var(--color-border);color:var(--color-text-muted);font-size:14px;text-align:center}
+footer{padding:24px;background:var(--color-footer-bg);color:var(--color-footer-muted);font-size:14px;text-align:center}
 @media (max-width:599.98px){main{padding:32px 16px 48px}.top{padding:0 16px}.actions{flex-direction:column;align-items:stretch}.body{font-size:17px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 `;

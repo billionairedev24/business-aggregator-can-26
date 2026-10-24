@@ -3,9 +3,9 @@
 body { text-wrap: pretty; }
 
 /* S-69: the boot screen in index.html, shown until the app renders (no script needed to paint it). */
-.nl-boot { min-height: 100vh; display: grid; place-items: center; background: var(--color-header-bg); }
-.nl-boot-brand { font-family: var(--font-sans); font-size: var(--text-2xl); font-weight: var(--weight-black); color: var(--color-header-text); }
-.nl-boot-brand span { font-weight: var(--weight-medium); color: var(--color-header-muted); }
+.nl-boot { min-height: 100vh; display: grid; place-items: center; background: var(--color-topbar-bg); }
+.nl-boot-brand { font-family: var(--font-sans); font-size: var(--text-2xl); font-weight: var(--weight-black); color: var(--color-topbar-text); }
+.nl-boot-brand span { font-weight: var(--weight-medium); color: var(--color-topbar-muted); }
 
 /* Console pages (light direction, 2026-10-19; the Studio's grammar, DECISIONS "Studio pages on the light direction"): a
    page is its head (kicker · title · muted sub, the place filters on the right), then white cards (`bo-card`, via

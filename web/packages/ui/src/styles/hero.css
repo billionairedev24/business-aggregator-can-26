@@ -1,0 +1,89 @@
+/* The consumer home's hero band (HomeHero.tsx; S-188 brand layer, design/revamp/hybrid/index.html screens 1–2): the deep
+   violet band with its glow and dot grain, the display headline, the trust line, the run card, then three department
+   photo tiles straddling the band's lower edge. The band's colour reaches both window edges (a spread shadow clipped to
+   the band's height, so nothing is wider than the page). Every box is sized from the first render (no layout shift).
+   Display line heights are rounded to whole pixels (no fractional offsets for everything below). Widths in the
+   display face are in em, not ch: Chromium can resolve `ch` against the fallback face before Archivo
+   arrives and keep it (17ch of Archivo expanded is 13.4em). Semantic tokens only; the display face is for this band, the department tiles and the maker-of-the-week headline. */
+.nl-hhero { --nl-hhero-tile: 248px; --nl-hhero-edge: calc(var(--nl-hhero-tile) / 2); position: relative; isolation: isolate; color: var(--color-header-text); padding-top: var(--space-8); }
+.nl-hhero::before, .nl-hhero::after { content: ''; position: absolute; inset: 0 0 var(--nl-hhero-edge) 0; z-index: -1; pointer-events: none; }
+.nl-hhero::before {
+  background:
+    radial-gradient(46% 120% at 86% -10%, color-mix(in srgb, var(--color-hero-glow) 55%, transparent), transparent 70%),
+    radial-gradient(38% 90% at 4% 110%, color-mix(in srgb, var(--color-hero-glow) 30%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--color-hero-bg), var(--color-hero-scrim));
+  box-shadow: 0 0 0 100vmax var(--color-hero-bg);
+  clip-path: inset(0 -100vmax);
+}
+.nl-hhero::after {
+  background-image: radial-gradient(color-mix(in srgb, var(--color-header-text) 10%, transparent) 1px, transparent 1.2px);
+  background-size: 22px 22px; opacity: 0.55;
+  -webkit-mask: linear-gradient(105deg, transparent 35%, var(--color-header-text) 75%); mask: linear-gradient(105deg, transparent 35%, var(--color-header-text) 75%);
+}
+.nl-hhero-top { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: var(--space-10); align-items: end; }
+.nl-hhero-lead { min-width: 0; }
+.nl-hhero-title {
+  margin: 0; max-width: 13.4em; min-height: calc(2 * round(0.95em, 1px)); font-family: var(--font-display); font-stretch: var(--font-display-stretch); font-weight: var(--weight-black);
+  font-size: var(--type-display-hero); line-height: round(0.95em, 1px); letter-spacing: -0.035em; text-wrap: balance; color: var(--color-header-text); overflow-wrap: anywhere;
+}
+.nl-hhero-title em { font-style: normal; color: var(--color-hero-accent); }
+.nl-hhero-trust { list-style: none; margin: var(--space-5) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); font-size: var(--type-body); color: var(--color-hero-text); }
+.nl-hhero-trust > li { display: flex; gap: var(--space-2); align-items: center; }
+.nl-hhero-trust-icon { display: inline-flex; color: var(--color-hero-accent); }
+/* the run card: a frosted panel on the band — the run in caps, the closing time, the yellow sticker, the fee */
+.nl-hhero-run {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-3); min-height: 124px; box-sizing: border-box; align-content: center;
+  padding: var(--space-4) var(--space-4); margin-bottom: var(--space-1-5); border-radius: var(--radius-panel);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--color-header-text) 10%, transparent), color-mix(in srgb, var(--color-header-text) 4%, transparent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-header-text) 16%, transparent), 0 18px 40px -20px var(--color-hero-scrim);
+}
+.nl-hhero-run-k { grid-column: 1 / -1; min-height: 16px; display: flex; gap: var(--space-1-5); align-items: center; font-size: var(--type-caps); font-weight: var(--weight-bold); letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-header-muted); }
+.nl-hhero-run-icon { display: inline-flex; color: var(--color-hero-accent); }
+.nl-hhero-run-t { min-height: 1.2em; font-size: var(--type-run-time); font-weight: var(--weight-bold); letter-spacing: -0.01em; line-height: var(--leading-tight); }
+.nl-hhero-run-left { justify-self: end; }
+.nl-hhero-run-s { grid-column: 1 / -1; font-size: var(--type-label); color: var(--color-hero-text); }
+/* the three department tiles: half on the band, half on the page */
+.nl-hhero-depts { list-style: none; margin: var(--space-8) 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.nl-hhero-depts > li { display: flex; min-width: 0; }
+.nl-hhero-dept {
+  position: relative; flex: 1; display: block; height: var(--nl-hhero-tile); border-radius: var(--radius-panel); overflow: hidden; isolation: isolate; color: var(--color-hero-tile-text); text-decoration: none;
+  background: var(--color-hero-scrim);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-hero-scrim) 35%, transparent), 0 22px 44px -18px color-mix(in srgb, var(--color-hero-scrim) 60%, transparent);
+  transition: transform var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
+}
+.nl-hhero-dept:hover, .nl-hhero-dept:focus-visible { color: var(--color-hero-tile-text); text-decoration: none; transform: translateY(-3px); box-shadow: 0 2px 4px color-mix(in srgb, var(--color-hero-scrim) 35%, transparent), 0 30px 56px -18px color-mix(in srgb, var(--color-hero-scrim) 72%, transparent); }
+.nl-hhero-dept:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; box-shadow: 0 0 0 6px var(--color-focus-ring); }
+.nl-hhero-dept-pic { position: absolute; inset: 0; z-index: -2; transition: transform 0.4s var(--ease); }
+.nl-hhero-dept-pic > * { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.nl-hhero-dept:hover .nl-hhero-dept-pic { transform: scale(1.045); }
+.nl-hhero-dept::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent 28%, color-mix(in srgb, var(--color-hero-scrim) 62%, transparent) 62%, color-mix(in srgb, var(--color-hero-scrim) 90%, transparent) 100%); }
+.nl-hhero-dept-c { position: absolute; left: var(--space-5); right: 76px; bottom: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
+.nl-hhero-dept-k { display: inline-flex; gap: var(--space-1-5); align-items: center; font-size: var(--type-caps); font-weight: var(--weight-bold); text-transform: uppercase; letter-spacing: 0.09em; color: var(--color-hero-tile-meta); }
+.nl-hhero-dept-k > span { display: inline-flex; }
+.nl-hhero-dept-t { font-family: var(--font-display); font-stretch: var(--font-display-stretch); font-weight: var(--weight-black); font-size: var(--type-display-tile); letter-spacing: -0.03em; line-height: round(1.02em, 1px); }
+.nl-hhero-dept-m { font-size: var(--type-card-title); color: var(--color-hero-tile-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nl-hhero-dept-go { position: absolute; right: var(--space-5); bottom: var(--space-5); width: 42px; height: 42px; display: grid; place-items: center; border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-action-primary); transition: background var(--duration) var(--ease), color var(--duration) var(--ease); }
+.nl-hhero-dept:hover .nl-hhero-dept-go, .nl-hhero-dept:focus-visible .nl-hhero-dept-go { background: var(--color-action-primary); color: var(--color-action-primary-text); }
+@media (prefers-reduced-motion: reduce) {
+  .nl-hhero-dept:hover, .nl-hhero-dept:focus-visible { transform: none; }
+  .nl-hhero-dept:hover .nl-hhero-dept-pic { transform: none; }
+}
+@media (max-width: 1099.98px) {
+  .nl-hhero-top { grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-6); }
+  .nl-hhero-title { font-size: var(--text-5xl); }
+}
+/* phones: the headline over the trust points (in a column, the third dropped), the run card, then the tiles one under the other */
+@media (max-width: 767.98px) {
+  .nl-hhero { --nl-hhero-tile: 136px; --nl-hhero-edge: 70px; padding-top: var(--space-5); }
+  .nl-hhero-top { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+  .nl-hhero-title { font-size: var(--type-display-hero-sm); line-height: round(0.98em, 1px); min-height: calc(3 * round(0.98em, 1px)); }
+  .nl-hhero-trust { flex-direction: column; gap: var(--space-1-5) var(--space-3-5); margin-top: var(--space-3-5); font-size: var(--type-label); }
+  .nl-hhero-wide { display: none !important; }
+  .nl-hhero-run { min-height: 112px; padding: var(--space-3) var(--space-3-5); margin: 0; }
+  .nl-hhero-run-t { font-size: var(--type-run-time-sm); }
+  .nl-hhero-depts { grid-template-columns: minmax(0, 1fr); gap: var(--space-2-5); margin-top: var(--space-4); }
+  .nl-hhero-dept-c { left: var(--space-4); bottom: var(--space-3-5); right: 64px; }
+  .nl-hhero-dept-t { font-size: var(--type-display-tile-sm); }
+  .nl-hhero-dept-m { font-size: var(--type-label); }
+  .nl-hhero-dept-go { right: var(--space-3-5); bottom: var(--space-3-5); width: 38px; height: 38px; }
+}

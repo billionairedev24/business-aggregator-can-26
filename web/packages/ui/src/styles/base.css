@@ -51,6 +51,8 @@ html { scroll-padding-top: var(--nl-sticky-top, 0px); }
 .btn::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, var(--size-touch)); height: max(100%, var(--size-touch)); transform: translate(-50%, -50%); }
 @media (hover: hover) { .btn:hover { text-decoration: none; } }
 .btn:disabled, .btn[aria-disabled='true'] { opacity: 0.45; cursor: not-allowed; }
+/* S-188 (design/revamp/hybrid § States): a button's focus is the 2 px violet outline, 2 px out, with the soft violet halo */
+.btn:focus-visible { box-shadow: 0 0 0 6px var(--color-focus-ring); }
 .btn-sm { min-height: var(--size-control-sm); padding: 0 var(--space-3); font-size: var(--type-label); }
 .btn-lg { min-height: var(--size-control-lg); padding: 0 var(--space-6); font-size: var(--text-base); }
 /* primary: the action colour. accent and highlight are its older names (Add to cart, Search) — one action colour now */
@@ -133,8 +135,8 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .tag-info { background: var(--color-status-info-bg); color: var(--color-status-info-fg); }
 .tag-outline { box-shadow: inset 0 0 0 1px var(--color-border-strong); color: var(--color-text-muted); }
 
-/* ── navigation bar (the top bar of every shell) ── */
-.nav { display: flex; align-items: center; gap: var(--space-3); background: var(--color-header-bg); color: var(--color-header-text); position: sticky; top: 0; z-index: var(--z-sticky); border-bottom: 1px solid var(--color-header-border); }
+/* ── navigation bar (the top bar of the Studio and the console: white, S-188 `topbar-*`; the consumer's violet header is SiteHeader) ── */
+.nav { display: flex; align-items: center; gap: var(--space-3); background: var(--color-topbar-bg); color: var(--color-topbar-text); position: sticky; top: 0; z-index: var(--z-sticky); border-bottom: 1px solid var(--color-topbar-border); }
 .nav-brand { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-xl); font-weight: var(--weight-bold); color: inherit; text-decoration: none; background: none; border: 0; cursor: pointer; padding: 0; }
 
 /* ── table: dense rows, sentence-case 12 px headers on the muted surface, hairlines ── */

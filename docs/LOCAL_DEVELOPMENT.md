@@ -256,8 +256,8 @@ snapshots of the journeys.
 `make ui-visual` compares the component gallery (`web/apps/gallery`, every `@northline/ui` section in en and fr-CA at
 1440 and 390, the dialog and the sheet open) with its committed baselines (`apps/gallery/visual/__screenshots__`) and
 fails past 0.1 % of changed pixels; `UI_VISUAL_UPDATE=1 make ui-visual` rewrites them after an intended change — commit
-them with it, and only the ones your change meant to move. The run is deterministic: IBM Plex Sans is self-hosted and
-must load, the clock is pinned (2026-10-23 18:00 UTC), the zone is UTC, motion is reduced, and the baselines are
+them with it, and only the ones your change meant to move. The run is deterministic: IBM Plex Sans and Archivo (the hero's display
+face, S-188) are self-hosted, every face is loaded before a picture and must load, the clock is pinned (2026-10-23 18:00 UTC), the zone is UTC, motion is reduced, and the baselines are
 renders of Playwright 1.56.1's Chromium (build 1194) with the fonts of Playwright's Ubuntu 24.04 image — which is why
 CI runs it in `mcr.microsoft.com/playwright:v1.56.1-noble`. `make ui-hydration` is the other half of the gate (no React
 hydration error on any consumer route). Both run in the web CI's `visual` job (GitHub Actions `web` workflow, input

@@ -21,7 +21,7 @@ export const DEALS_HREF = '/search?scope=shop&delivery=tonight';
  * The consumer header (E-15 A · Plainsight, design/revamp/a.html): logo · "Deliver to" (opens the location dialog,
  * never a geolocation prompt on load) · the search with its All / Services / Shop / Food scope (the current section's
  * by default) · "Hello, … / Account & orders" (the account menu, where orders, bookings and the FR/EN switch live) ·
- * cart with its count; then the grey department strip: "All" (every category by section, in a sheet — the menu button
+ * cart with its count; then the violet department strip (S-188): "All" (every category by section, in a sheet — the menu button
  * opens it on phones), Services · Shop · Food, the main departments | the busiest service categories, "Today's deals"
  * and "Sell on …" at the right end. The sign-in pages show the logo alone.
  */

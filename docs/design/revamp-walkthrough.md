@@ -16,13 +16,20 @@ switch to **Français** once per app (footer or account menu): every screen is b
 
 **Sign-off.** For each step, "as drawn" or a note. The open questions at the end need an answer either way.
 
+**Brand layer (S-188, 2026-10-24).** On top of Plainsight the web now wears the approved Plainsight + Chinook layer
+(`design/revamp/hybrid/index.html`, `revamp-epic.md` § Brand layer): the consumer header, department strip and footer
+in deep violet, the home's "tonight" hero band, violet buttons, links and focus in all three apps, yellow deal stickers
+and ink-on-yellow cut-off pills. Compare each step below with the hybrid mockup's frames; the S-188 before / after
+pictures are `s188-shots/before/<app>-<route>-<1440|390>.png` and `s188-shots/after/…` (the lead shares them). The
+phone apps get the layer in the next story.
+
 ## 1. Consumer web (signed out, then as a customer)
 
 | # | Go to | Look at | Before → after |
 |---|---|---|---|
-| 1 | Home | One white header: logo · "Deliver to …" · search with its All / Services / Shop / Food scope · "Hello, sign in" · cart with its count; the grey department strip; the delivery cut-off strip; the **maker-of-the-week hero** (photo, story, two actions, two side tiles); category and deal tiles; rails of 7. IBM Plex Sans everywhere, no serif, no pills. | `consumer-home-1440` → `consumer/home-d` |
+| 1 | Home | The violet header: logo · "Deliver to …" · the white search (All / Services / Shop / Food scope) joined to the violet search button · "Hello, sign in" · cart with its yellow count; the violet department strip ("Today's deals" in yellow); the **hero band** — "Everything *your place* needs, tonight." in Archivo, the trust line, the run card with the time left on a yellow sticker, three department photo tiles across the violet edge (hover one: it lifts, its arrow turns violet); then the **maker-of-the-week hero** (its headline in Archivo); category and deal tiles; rails of 7; the violet footer. IBM Plex Sans for every other word, no pills. | `s188-shots/before/consumer-home-1440` → `s188-shots/after/consumer-home-1440` |
 | 2 | Search "sourdough", then Shop scope | 5 results a row; the left filter rail with counts; a rating filter turns into a removable chip (✓ … ×); one price format (`$8.50`, unit price as meta). Phone: Filters (n) opens a sheet. | `consumer-search-1440` → `consumer/search-shop-d`, `search-filters-m` |
-| 3 | A product | Photo in the 1:1 grey well; the **buy box** (price, delivery tonight with the cut-off, stock, quantity, Add to cart in blue, Buy now); on a phone the sticky bar keeps the price and Add to cart. | `consumer-product-1440` → `consumer/product-d`, `product-m` |
+| 3 | A product | Photo in the 1:1 grey well; the **buy box** (price, delivery tonight with the cut-off as an ink-on-yellow pill, stock, quantity, Add to cart in violet, Buy now); on a phone the sticky bar keeps the price and Add to cart. | `consumer-product-1440` → `consumer/product-d`, `product-m` |
 | 4 | Services → Mobile mechanic → a provider | The booking box: five days and the times as one-choice tiles (solid ink when chosen), "Book Sat … at 9:30 a.m."; trust badges in green; prices `$89.00`. | `consumer-provider-1440` → `consumer/provider-day-d` |
 | 5 | Food → a kitchen → checkout | Dishes two a row, "Your order" box; the food checkout's numbered sections. | `consumer-food-kitchen-1440` → `consumer/food-kitchen-d`, `food-checkout-d` |
 | 6 | Cart → Checkout (signed in) | Saved for later in the cart; the **one-page checkout**: six numbered sections, every choice shows its selected ink, the sticky summary with Place your order (a sticky bar on phones). | `consumer-checkout-1440` → `consumer/cart-d`, `checkout-d`, `checkout-m` |
@@ -32,7 +39,7 @@ switch to **Français** once per app (footer or account menu): every screen is b
 
 | # | Go to | Look at | Before → after |
 |---|---|---|---|
-| 1 | Dashboard (seller) | White top bar with the business switcher and "/" search; grouped sidebar with the ink bar on the current page; **Needs you now** cards (one job, one button, urgency edge); key figures; the sales columns (round axis steps: $50 · $100 · $150). Phone: the menu opens under the bar. | `studio-dashboard-1440` → `studio/dashboard-seller-d`, `dashboard-menu-m` |
+| 1 | Dashboard (seller) | White top bar with the business switcher and "/" search; grouped sidebar with the violet marker and icon on the current page (S-188); violet buttons, links and focus; **Needs you now** cards (one job, one button, urgency edge); key figures; the sales columns (round axis steps: $50 · $100 · $150). Phone: the menu opens under the bar. | `studio-dashboard-1440` → `studio/dashboard-seller-d`, `dashboard-menu-m` |
 | 2 | Orders | Status tabs with counts, quick filters, dense rows with coloured statuses; tick two rows: the bulk bar with **Mark packed**. Phone: compact cards. | `studio-orders-1440` → `studio/orders-d`, `orders-m` |
 | 3 | Products → a product | The editor's sections as underline tabs, the live preview card, the sticky save bar with the listing's status. | `studio-listing-editor-1440` → `studio/listing-editor-d` |
 | 4 | Earnings, Payouts, Reports | Page head + KPI strip, columns charts with the current period in ink, statuses by meaning, one price format. | `studio-earnings-1440` → `studio/earnings-d`, `payouts-d` |
@@ -69,3 +76,5 @@ phone, if you have the Expo build: the same screens.
 3. **Saved for later** lives in the browser until the cart api has a saved list (S-183).
 4. A **device pass** of both phone apps before launch (S-184).
 5. Sign-off of the walkthrough above (backlog S-180's acceptance criterion).
+6. **Hero copy (S-188).** The trust line says "Payment held until you confirm delivery" and "Missing items refunded
+   automatically", as in the approved mockup; confirm both are promises the operations team keeps.

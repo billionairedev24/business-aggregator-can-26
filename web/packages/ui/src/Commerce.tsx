@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
-import { Minus, Package, Plus, Trash, type Icon } from '@phosphor-icons/react';
+import { Clock, Minus, Package, Plus, Trash, type Icon } from '@phosphor-icons/react';
 import { formatNumber, formatPrice, formatUnitPrice, useLocale, type PriceUnit } from './i18n';
 import { useCommerceT } from './commerceText';
 
 /**
  * The commerce kit in the locked E-15 direction, A · Plainsight (design/revamp/a.html "Design system at a glance"):
  * Price (the one format, $8.50 / 8,50 $, with the unit price as meta), Stars (ink, with the value and the count),
- * DealBadge (the commerce colour), StatusTag (a semantic colour pair), QuantityStepper, MediaFallback (the dashed well
+ * DealBadge (S-188: the yellow sticker), CutoffPill and Sticker (ink on yellow), StatusTag (a semantic colour pair), QuantityStepper, MediaFallback (the dashed well
  * with the category icon); ProductCard and ServiceCard are in Cards.tsx (S-176: their own chunk). Semantic tokens only;
  * every target ≥ 44px; every string in en and fr-CA.
  */
@@ -48,10 +48,27 @@ export function Price({ cents, compareAtCents, unit, size = 'md', prefix, suffix
   );
 }
 
-/** The deal badge: the commerce colour, white, bold ("12% off"); on a photo well's corner or beside a price. */
+/**
+ * The deal sticker (S-188 brand layer, design/revamp/hybrid): yellow with ink text, slightly tilted, with a 1.5 px hard
+ * ink edge that keeps it readable on a white or pale photo well ("12% off"); on a photo well's corner or beside a price.
+ * Every deal and discount on the site is this sticker.
+ */
 export function DealBadge({ percent, children, className }: { percent?: number; children?: ReactNode; className?: string }) {
   const t = useT();
   return <span className={clsx('nl-deal', className)}>{children ?? t('off', { percent: percent ?? 0 })}</span>;
+}
+
+/**
+ * A cut-off or deal timer on white ("Order within 2 h 48 min", "Ends in 6 h 12 min"): an ink-on-yellow pill with a clock
+ * (12.77:1) — never yellow text on white (1.44:1, the contrast gate refuses it).
+ */
+export function CutoffPill({ children, className, icon = true }: { children: ReactNode; className?: string; icon?: boolean }) {
+  return <span className={clsx('nl-cutoff', className)}>{icon ? <Clock size={14} weight="bold" aria-hidden /> : null}{children}</span>;
+}
+
+/** The larger tilted sticker of the home hero's run card ("2 h 48 min left"): ink on yellow, a hard dark edge. */
+export function Sticker({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={clsx('nl-sticker', className)}>{children}</span>;
 }
 
 export type StatusTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';

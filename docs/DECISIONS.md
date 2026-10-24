@@ -11888,3 +11888,87 @@ UI/UX". The lead recommended keeping Plainsight's pages and adding Chinook's bra
 look (Chinook's large photos expose the demo photos' quality, and a full switch redoes every screen). The owner approved
 the side-by-side mockup `design/revamp/hybrid/index.html`. Values are in `docs/design/revamp-epic.md` § Brand layer.
 
+
+## 2026-10-24 — S-188 Plainsight + Chinook brand layer (web)
+
+The web half of S-188 (the phone apps follow in a story of their own): the token diff of `design/revamp/hybrid/index.html`
+applied to `palettes/plainsight.json`, the consumer's violet chrome, the home's "tonight" hero band, yellow deal stickers,
+the violet current-page marker of the Studio and the console. Everything the diff does not list stays Plainsight.
+Not marked Done in the backlog: the lead does that after the mobile part.
+
+- **Tokens.** `color.primary/link/focus` #5B34F0 (hover #4A25D6), `focus-ring` and `selection` #D6CCFF; `color.accent`
+  (commerce) #FFD23F with `accentText`/`accentInk` ink, `accentTint` #FFF3C4; the roles `commerce*`, `cart-badge*`,
+  `badge-accent-*`, `surface-accent` follow. The consumer chrome: `header-bg` #1D1442, `header-text` white, `header-muted`
+  #C3BBE6, `header-focus` #B9A8FF, `header-hover-bg` #2A1E5C, `header-indicator` white; `subheader-bg` #2A1E5C,
+  `subheader-hover-bg` #3A2C78; `footer-bg` #1D1442 with white links and #C3BBE6 text. New roles: `subheader-deal` (the
+  yellow "Today's deals" on the strip, the one place yellow is text), `subheader-line`, `header-scope-bg/-text` (the
+  search scope's tint), `hero-bg/-glow/-glow-peak/-accent/-text/-scrim/-tile-text/-tile-meta/-card-line`,
+  `nav-active-marker` (#5B34F0; `nav-active-bg` #F2EFFD, label ink), `mark` / `mark-text` (the logo's disc and glyph;
+  the dot `mark-highlight` is yellow, r 3.2 as drawn), `sticker-edge` (ink). `promo-bg/-text` #EFEBFF / #2A1E5C where a
+  strip remains (the Shop pages' cut-off strip, the cart's run note, the account card).
+- **`header-*` is the consumer's chrome; the back office got `topbar-*`.** The Studio and console top bar used the same
+  `header-*` roles as the consumer header. Turning them violet would have turned the back office violet, which the
+  mockup forbids, so the white bar now reads `topbar-bg/-text/-muted/-hover-bg/-ring/-focus/-border` (the old values;
+  focus violet), as do the SPAs' boot screens and the Studio's onboarding bar. The mobile agent should read
+  `header-*` as the consumer app's chrome and `topbar-*` where the courier app wants the white bar.
+- **Not in the diff, changed for consistency:** `surface-brand` and `badge-brand-*` were Plainsight's blue tint
+  (#EAF0FD / #0E2B7A) — the "New" tag, the store theme's tint, the booking wizard's done circle; next to the violet
+  action they read as a second brand colour, so they are the violet tint #F2EFFD with #2A1E5C text. `focus-on-dark` /
+  `focus-on-inverse` (focus on the ink toasts and the bulk bar) were derived from the old magenta; they are #B9A8FF, the
+  mockup's focus on violet.
+- **`font.display`** is Archivo from `@fontsource-variable/archivo` 5.3.0 (the `wdth` file: weights 100–900, widths
+  62–125 %, latin + latin-ext), declared with its ranges in `tokens.css`; `--font-display-stretch` 125 %. `font.heading`
+  stays the sans (Plainsight has no display headings), so the console's and docs' `--font-heading` users are unchanged.
+  `theme.font.display` now names Archivo; the native kit's `gen-brand` reads `font.heading` for its heading role, so the
+  apps' fonts and `brandFonts.ts` are unchanged until the mobile story adds `@expo-google-fonts/archivo`.
+  The home route preloads the latin face (the same hashed asset `tokens.css` points to) so the headline draws in it
+  at once. Display widths are in `em` (17ch of Archivo expanded = 13.4em, 20ch = 15.8em): Chromium could resolve `ch`
+  against the fallback face before Archivo arrived and keep it, which wrapped the headline onto a third line now and
+  then. Display line heights are rounded to whole pixels.
+- **Contrast.** Every pair of the mockup's table is in the gate (`lib/contrast.mjs`); all pass with the mockup's ratios
+  (white on #5B34F0 6.57, link on the well 5.97, on the Studio page 6.13, ink on yellow 12.77, yellow on the strip 10.11,
+  #C3BBE6 on #1D1442 9.40, hero accent / trust line at the brightest glow #37218B 5.77 / 8.55, nav marker on its tint
+  5.80, tile text on the scrim 17.70 …). The old pair "link on the footer" is gone: footer links are white. The gate
+  refuses a fill-only role as the text of a pair on a light surface and fails if a rejected pair (yellow on white
+  1.44, violet on violet 2.59) ever passes; `lint:tokens` refuses `color`/`fill`/`stroke`/`outline` in a fill-only
+  role, `subheader-deal` outside the site header, and `link`/`action-primary`/`focus` as text or outline in a rule of
+  the violet chrome that sets no background of its own (a focus ring with the `focus-ring` halo is allowed: the halo
+  carries the 3:1 on violet).
+- **Consumer chrome.** The header's search box is the white field itself (no 2 px ink edge on violet; a soft drop
+  shadow), the scope on #EFEDF6, the violet button 56 px. Header items hover with a light ring on the darker violet.
+  The footer shows the logo (the same mark on violet and on white, as drawn). The standalone server error page keeps
+  its white top and gets the violet footer; its wordmark and title are the sans.
+- **Hero band (`HomeHero`, `features/home/HomeBand.tsx`).** Headline `bandTitle` "Everything {place} needs," +
+  `bandAccent` "tonight." (fr "Tout ce dont {place} a besoin," + "ce soir."); the place is the visitor's neighbourhood or
+  city (`shortPlace`), "Everything you need, tonight." until it is known. It is the page's `h1`; the screen-reader-only
+  "{brand}: everything local…" heading is gone (the page `<title>` keeps the brand). The trust line is the mockup's copy
+  ("Payment held until you confirm delivery", "Missing items refunded automatically") plus "{n} verified shops in {market}"
+  from the Shop landing's `shopCount` on wide screens (the mockup's "1,780 verified businesses" has no count in the api).
+  The department tiles' meta use counts the page already loads — the services rail's `total` ("1,240 services · book
+  instantly": services, not pros, because the api has no count of providers), the landing's `shopCount`, the open
+  kitchens — and drop the number until it arrives. Photos: the barber / produce / Vietnamese slots, falling back to the
+  banners. The run card is the next pooled run (`useNextRun`): kicker by day ("Tonight's / Tomorrow's / Tuesday's pooled
+  run"), "Closes {time}", the time left on the yellow sticker, the fee; the countdown starts from the render clock
+  (`lib/renderClock`, server and first browser render agree) and ticks in the browser. With no open run it says "No run
+  open right now"; while it loads it holds its size. It replaces the cut-off strip on the home; the Shop pages keep the
+  strip, its time left now an ink-on-yellow pill.
+- **Layout shift.** Measured with a layout-shift observer on the ui-shots build (1440 and 390, en and fr): the band and
+  its tiles do not move; only the run card's text replaces its skeleton inside its fixed box (≤ 0.004). The whole page
+  is lower than develop (1440 en 0.012 vs 0.033). A shift of 0.37 on phones is the header's first row settling after
+  hydration; it is the same on develop (measured) and outside this story — a follow-up for the lead.
+- **Stickers.** `DealBadge` is the sticker (yellow, ink, bold, −2.5° tilt, 1.5 px ink edge) wherever a deal or discount
+  shows (cards, the deal tile, the gallery). New `CutoffPill` (ink on yellow, a clock, a 1 px edge, upright; it wraps on a
+  phone) replaces commerce-coloured cut-off text on the product's buy box, the home deal tile and the Shop strip; new
+  `Sticker` is the hero's larger countdown. `tag-commerce` / `tag-highlight` are ink on #FFF3C4.
+- **Back office.** The current page: violet tint, a 3 px violet marker, the icon violet, the label ink (side bar and
+  icon rail). Buttons get the violet focus with the #D6CCFF halo (`.btn:focus-visible`); the rest keep the 2 px violet
+  outline. Every Studio and console route passed `ui-a11y` with the violet actions.
+- **Maker of the week.** Its headline is Archivo 800 at 30 px (24 on phones), the panel 500 px / 1fr / 300 px with a
+  1.55:1 photo, as drawn; copy and data unchanged.
+- **Visual gate.** All gallery baselines that moved were re-baselined and reviewed (the violet action, links and focus,
+  yellow stickers, the violet site header, the tokens section's Archivo line and chrome swatch, the new hero section).
+  Three fixes made the gate stable in this container: the spec loads every face before photographing; DataTable's
+  overflow squeeze (S-141, `useOverflowSqueeze`) only ever grew, so a table measured before IBM Plex Sans arrived stayed
+  squeezed (cards at 1440) for good — it now starts over when the fonts finish loading; and the record page's sticky
+  action panel sits in place inside the gallery (its offset depended on the scroll a screenshot made).
+- **Not done here:** the phone apps (the next agent), the 0.37 phone header shift above.

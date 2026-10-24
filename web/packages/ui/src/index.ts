@@ -6,6 +6,7 @@ export * from './LocationPill';
 export * from './SearchBar';
 export * from './AccountMenu';
 export * from './SiteHeader';
+export * from './HomeHero';
 export * from './SiteLink';
 export * from './BrandMark';
 export * from './Logo';

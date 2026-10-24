@@ -13,9 +13,14 @@ test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(NOW); });
 
 async function ready(page: Page, url: string) {
   await page.goto(url, { waitUntil: 'networkidle' });
-  await page.evaluate(() => document.fonts.ready);
-  // the font is IBM Plex Sans, self-hosted: a fallback face in a baseline would hide a broken font load
-  expect(await page.evaluate(() => document.fonts.check('14px "IBM Plex Sans"'))).toBe(true);
+  // S-188: a face loads only once something draws in it, which can be after `fonts.ready` first settles (the display
+  // face of the hero band, a weight further down): ask for every one, so a baseline never catches a face mid-swap
+  await page.evaluate(async () => {
+    await Promise.all([...['400', '500', '600', '700'].map(w => document.fonts.load(`${w} 14px "IBM Plex Sans"`)), document.fonts.load('800 66px "Archivo"')]);
+    await document.fonts.ready;
+  });
+  // the fonts are IBM Plex Sans and Archivo, self-hosted: a fallback face in a baseline would hide a broken font load
+  expect(await page.evaluate(() => document.fonts.check('14px "IBM Plex Sans"') && document.fonts.check('800 66px "Archivo"'))).toBe(true);
 }
 
 for (const w of WIDTHS) {

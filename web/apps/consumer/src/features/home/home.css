@@ -1,20 +1,23 @@
 /* Home (E-15 A · Plainsight, design/revamp/a.html, with Main Street's maker-of-the-week hero from b.html): the hero
    panel (photo · story · two side tiles), the four home tiles, then the rails (features/pages). Tokens only; every
    picture box has its size before its photo arrives (no layout shift). */
-.nl-home { min-width: 0; padding-top: var(--space-4); }
+.nl-home { min-width: 0; }
+/* the band runs straight on from the department strip; the maker hero follows it */
+.nl-home > .nl-hero { margin-top: var(--space-6); }
 
-/* ── hero: one white panel with a hairline edge — the photo (4:3), the copy, two side tiles ── */
-.nl-hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 290px); gap: var(--space-6); align-items: center; padding: var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); }
-.nl-hero-media { position: relative; display: block; aspect-ratio: 4 / 3; border-radius: var(--radius-panel); overflow: hidden; background: var(--color-well); }
+/* ── maker hero: one white panel with a hairline edge — the photo (1.55:1), the copy (its headline in the display face,
+   S-188), two side tiles ── */
+.nl-hero { display: grid; grid-template-columns: minmax(0, 500px) minmax(0, 1fr) minmax(0, 300px); gap: var(--space-8); align-items: center; padding: var(--space-3-5); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); }
+.nl-hero-media { position: relative; display: block; aspect-ratio: 1.55 / 1; border-radius: var(--radius-image); overflow: hidden; background: var(--color-well); }
 .nl-hero-media > img, .nl-hero-media > span { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .nl-hero-copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); min-width: 0; padding-block: var(--space-2); }
 .nl-hero-kicker { font-size: var(--type-caps); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
-.nl-hero-title { margin: 0; font-size: var(--text-3xl); font-weight: var(--weight-bold); line-height: 1.1; letter-spacing: -0.02em; overflow-wrap: anywhere; }
-.nl-hero-story { margin: 0; font-size: var(--text-base); line-height: var(--leading-normal); color: var(--color-text-muted); max-width: 46ch; }
+.nl-hero-title { margin: 0; max-width: 15.8em; font-family: var(--font-display); font-stretch: var(--font-display-stretch); font-size: var(--type-display-maker); font-weight: var(--weight-black); line-height: round(1.04em, 1px); letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.nl-hero-story { margin: 0; font-size: var(--text-base); line-height: var(--leading-normal); color: var(--color-text-muted); max-width: 56ch; }
 .nl-hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-2-5); margin-top: var(--space-1); }
 .nl-hero-side { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
 .nl-hero-side > li { display: flex; min-width: 0; }
-.nl-hero-tile { flex: 1; display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: var(--space-3); align-items: center; padding: var(--space-2-5); background: var(--color-well); border-radius: var(--radius-panel); color: var(--color-text); text-decoration: none; min-width: 0; }
+.nl-hero-tile { flex: 1; display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: var(--space-3); align-items: center; padding: var(--space-2-5); background: var(--color-well); border-radius: var(--radius-panel); color: var(--color-text); text-decoration: none; min-width: 0; }
 .nl-hero-tile:hover { color: var(--color-text); text-decoration: none; }
 .nl-hero-tile:hover strong { text-decoration: underline; }
 .nl-hero-tile:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
@@ -29,7 +32,9 @@
 }
 @media (max-width: 767.98px) {
   .nl-hero { grid-template-columns: minmax(0, 1fr); gap: var(--space-3-5); padding: var(--space-3); }
-  .nl-hero-title { font-size: var(--text-2xl); }
+  .nl-hero-title { font-size: var(--type-display-maker-sm); }
+  .nl-hero-actions > .btn { flex: 1; }
+  .nl-hero-tile { grid-template-columns: 64px minmax(0, 1fr); }
   .nl-hero-story { font-size: var(--type-body); }
   .nl-hero-side { flex-direction: column; }
 }
@@ -45,7 +50,7 @@
 .nl-home-deal-badge { position: absolute; left: var(--space-2); top: var(--space-2); z-index: 1; }
 .nl-home-deal-name { font-size: var(--type-card-title); line-height: 1.3; overflow-wrap: anywhere; }
 .nl-home-deal-meta { font-size: var(--type-meta); color: var(--color-text-subtle); }
-.nl-home-deal-ends { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--type-meta); font-weight: var(--weight-semibold); color: var(--color-commerce-text); }
+.nl-home-deal-ends { margin-top: var(--space-1); }
 
 /* rail placeholders: the cards' own boxes (a 1:1 well, a 4:3 photo) */
 .nl-home-skel { display: flex; flex-direction: column; gap: var(--space-2); }
