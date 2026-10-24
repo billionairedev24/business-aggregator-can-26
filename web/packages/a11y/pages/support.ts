@@ -124,7 +124,9 @@ export async function targetsUnder(page: Page, min: number): Promise<string[]> {
       });
     };
     const out: string[] = [];
-    const all = [...document.querySelectorAll<HTMLElement>('a[href],button,input:not([type=hidden]),select,textarea,summary,[role=button],[role=tab],[role=menuitem],[role=radio],[role=checkbox],[role=switch],[role=link]')];
+    // S-180: with a modal open, only its own controls are targets (the page behind it is under the backdrop)
+    const modal = [...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')].filter(d => d.getClientRects().length).pop();
+    const all = [...(modal ?? document).querySelectorAll<HTMLElement>('a[href],button,input:not([type=hidden]),select,textarea,summary,[role=button],[role=tab],[role=menuitem],[role=radio],[role=checkbox],[role=switch],[role=link]')];
     for (const el of all) {
       const r = r0(el);
       if (r.width <= 1 || r.height <= 1 || getComputedStyle(el).visibility === 'hidden') continue;
