@@ -7,7 +7,10 @@ import {
   BottomTabBar,
   Button,
   CountBadge,
+  CutoffPill,
+  DealBadge,
   FilterChip,
+  HomeHero,
   KitGallery,
   KitProvider,
   OptionCard,
@@ -16,6 +19,7 @@ import {
   SearchBar,
   Segmented,
   StatusTag,
+  Sticker,
   Switch,
   UnderlineTabs,
   formatDateRange,
@@ -24,6 +28,7 @@ import {
   formatUnitPrice,
   kitEn,
   kitFrCA,
+  textStyles,
   unitCents,
 } from '../src/ui/kit';
 
@@ -164,10 +169,105 @@ describe('shapes and states (Plainsight)', () => {
   });
 });
 
+describe('the brand layer (S-188: Plainsight + Chinook)', () => {
+  const tree = (id: string) => screen.getByTestId(id);
+
+  it('draws deals as the tilted yellow sticker and cut-offs as the upright pill, ink on yellow with an ink edge', () => {
+    render(
+      <>
+        <DealBadge label="20% off" testID="deal" />
+        <CutoffPill label="Order within 2 h 48 min" testID="pill" />
+        <Sticker label="2 h 48 min left" testID="sticker" />
+      </>,
+    );
+    const deal = flat(tree('deal').props.style);
+    expect(deal.backgroundColor).toBe(semantic.commerce);
+    expect(deal.transform).toEqual([{ rotate: '-2.5deg' }]);
+    expect(deal.boxShadow).toBe(`1.5px 1.5px 0 ${semantic['sticker-edge']}`);
+    expect(flat(screen.getByText('20% off').props.style).color).toBe(semantic['commerce-on']);
+    const pill = flat(tree('pill').props.style);
+    expect(pill.backgroundColor).toBe(semantic.commerce);
+    expect(pill.transform).toBeUndefined();
+    expect(flat(screen.getByText('Order within 2 h 48 min').props.style).color).toBe(semantic['commerce-text']);
+    expect(flat(tree('sticker').props.style).transform).toEqual([{ rotate: '-3deg' }]);
+    // yellow is never text (12.77:1 ink on yellow; yellow on white is 1.44:1)
+    expect(semantic['commerce-text']).toBe(semantic.text);
+  });
+
+  it('draws the hero band: the headline in the display face with its accent, the trust line, the run card, the tiles', () => {
+    const onShop = jest.fn();
+    render(
+      <HomeHero
+        title="Everything Sampleville needs,"
+        accent="tonight."
+        trust={[{ key: 'held', icon: 'shield-check', label: 'Payment held until you confirm delivery' }]}
+        run={{ kicker: 'Tonight’s pooled run', title: 'Closes 5:20 p.m.', left: '2 h 48 min left', note: 'Mix shops for one $2.99 delivery' }}
+        runLabel="Next pooled run"
+        departmentsLabel="Departments"
+        departments={[{ key: 'shop', icon: 'shopping-bag', kicker: 'Shop', title: 'Shop local', meta: '12 stores · one pooled delivery', onPress: onShop }]}
+        testID="hero"
+      />,
+    );
+    const h = screen.getByRole('header');
+    expect(flat(h.props.style).fontFamily).toBe(textStyles.displayHero.fontFamily);
+    expect(textStyles.displayHero.fontFamily).toMatch(/^ArchivoExpanded_800/);
+    expect(textStyles.displayHero.fontSize).toBe(36);
+    expect(textStyles.displayTile.fontSize).toBe(24);
+    expect(textStyles.displayMaker.fontSize).toBe(24);
+    expect(textStyles.runTime.fontSize).toBe(18);
+    expect(flat(screen.getByText(' tonight.').props.style).color).toBe(semantic['hero-accent']);
+    expect(screen.getByRole('summary', { name: /Next pooled run\. Tonight’s pooled run\. Closes 5:20 p\.m\.\. 2 h 48 min left/ })).toBeTruthy();
+    expect(tree('hero-left')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Shop local, 12 stores · one pooled delivery' }));
+    expect(onShop).toHaveBeenCalled();
+  });
+
+  it('holds the run card while it loads and drops it when there is no run', () => {
+    const props = { title: 'Everything you need,', runLabel: 'Next pooled run', loadingLabel: 'Loading the next pooled run…', departments: [], departmentsLabel: 'Departments' } as const;
+    const { rerender } = render(<HomeHero {...props} run={undefined} testID="hero" />);
+    expect(screen.getByRole('summary', { name: 'Loading the next pooled run…' }).props.accessibilityState.busy).toBe(true);
+    rerender(<HomeHero {...props} run={null} testID="hero" />);
+    expect(screen.queryByTestId('hero-run')).toBeNull();
+  });
+
+  it('puts white on the violet chrome: the department strip, the search field, the search button', () => {
+    render(
+      <>
+        <UnderlineTabs chrome label="Departments" options={[{ value: 'all', label: 'All' }, { value: 'shop', label: 'Shop' }]} value="all" onChange={() => undefined} testID="strip" />
+        <SearchBar placeholder="Search" onPress={() => undefined} onChrome testID="search" />
+      </>,
+    );
+    expect(flat(tree('strip').props.style).backgroundColor).toBe(semantic['subheader-bg']);
+    expect(flat(screen.getByText('All').props.style).color).toBe(semantic['subheader-text']);
+    expect(flat(tree('strip-all').props.style).borderBottomColor).toBe(semantic['header-indicator']);
+    expect(flat(tree('search').props.style).borderWidth).toBe(0);
+  });
+
+  it('marks the consumer’s current tab with the violet marker (brand), the courier’s in ink', () => {
+    const items = [{ key: 'home', label: 'Home', icon: 'house' as const }];
+    const { rerender, toJSON } = render(<BottomTabBar tone="brand" current="home" onSelect={() => undefined} items={items} />);
+    expect(JSON.stringify(toJSON())).toContain(semantic['nav-active-marker']);
+    rerender(<BottomTabBar current="home" onSelect={() => undefined} items={items} />);
+    expect(JSON.stringify(toJSON())).not.toContain(semantic['nav-active-marker']);
+  });
+
+  it('gives the courier an ink tertiary (`plain`) and everyone the violet primary', () => {
+    render(
+      <>
+        <Button label="Go" onPress={() => undefined} testID="p" />
+        <Button label="Later" variant="plain" onPress={() => undefined} testID="q" />
+      </>,
+    );
+    expect(flat(tree('p').props.style).backgroundColor).toBe(semantic['action-primary']);
+    expect(semantic['action-primary']).toBe(theme.color['action-primary']);
+    expect(flat(screen.getByText('Later').props.style).color).toBe(semantic.text);
+  });
+});
+
 describe('the gallery (dev builds)', () => {
   it('shows every section and switches language', () => {
     render(<KitGallery initialLocale="en" />);
-    for (const h of ['Buttons', 'Underline tabs', 'Segmented control', 'Filter chips', 'One-choice tiles', 'Commerce', 'Status tags', 'Formats', 'Search', 'Feedback', 'Navigation']) expect(screen.getByRole('header', { name: h })).toBeTruthy();
+    for (const h of ['Buttons', 'Underline tabs', 'Segmented control', 'Filter chips', 'One-choice tiles', 'Commerce', 'Status tags', 'Formats', 'Search', 'Feedback', 'Navigation', 'Home hero (S-188)']) expect(screen.getByRole('header', { name: h })).toBeTruthy();
     expect(screen.getAllByText('$8.50').length).toBeGreaterThan(0);
     fireEvent.press(screen.getByRole('radio', { name: 'Français' }));
     expect(screen.getAllByText('Trousse de composants').length).toBeGreaterThan(0);

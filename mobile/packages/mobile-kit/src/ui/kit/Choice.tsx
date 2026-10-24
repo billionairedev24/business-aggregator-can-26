@@ -23,10 +23,14 @@ export interface ChoiceOption<T extends string> {
   disabled?: boolean;
 }
 
-/** The one tab style: underline tabs with counts, scrolling sideways when they don't fit. */
-export function UnderlineTabs<T extends string>({ options, value, onChange, label, testID }: { options: ChoiceOption<T>[]; value: T; onChange: (v: T) => void; label: string; testID?: string }) {
+/**
+ * The one tab style: underline tabs with counts, scrolling sideways when they don't fit. `chrome` (S-188): on the
+ * consumer's violet department strip — white words, the current one bold over a 3 pt white bar (`header-indicator`),
+ * the strip's lighter violet when pressed; no violet text on violet.
+ */
+export function UnderlineTabs<T extends string>({ options, value, onChange, label, chrome, testID }: { options: ChoiceOption<T>[]; value: T; onChange: (v: T) => void; label: string; chrome?: boolean; testID?: string }) {
   return (
-    <View style={styles.tabsRule} testID={testID}>
+    <View style={[styles.tabsRule, chrome && styles.tabsRuleChrome]} testID={testID}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityRole="tablist" accessibilityLabel={label} contentContainerStyle={styles.tabs}>
         {options.map((o) => {
           const on = o.value === value;
@@ -38,10 +42,10 @@ export function UnderlineTabs<T extends string>({ options, value, onChange, labe
               accessibilityLabel={o.count !== undefined ? `${o.label}, ${o.count}` : o.label}
               disabled={o.disabled}
               onPress={() => onChange(o.value)}
-              style={({ pressed }) => [styles.tab, on && styles.tabOn, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.tab, on && styles.tabOn, chrome && styles.tabChrome, chrome && on && styles.tabOnChrome, pressed && (chrome ? styles.pressedChrome : styles.pressed)]}
               testID={testID ? `${testID}-${o.value}` : undefined}
             >
-              <Text style={[styles.tabText, on && styles.tabTextOn]} maxFontSizeMultiplier={CAP.control}>
+              <Text style={[styles.tabText, on && styles.tabTextOn, chrome && styles.tabTextChrome]} maxFontSizeMultiplier={CAP.control}>
                 {o.label}
               </Text>
               {o.count !== undefined ? (
@@ -319,6 +323,11 @@ const styles = StyleSheet.create({
     marginBottom: -LINE.hair,
   },
   tabOn: { borderBottomColor: semantic['selected'] },
+  tabsRuleChrome: { borderBottomWidth: 0, backgroundColor: semantic['subheader-bg'] },
+  tabChrome: { borderBottomWidth: LINE.bold + LINE.hair, marginBottom: 0 },
+  tabOnChrome: { borderBottomColor: semantic['header-indicator'] },
+  tabTextChrome: { color: semantic['subheader-text'] },
+  pressedChrome: { backgroundColor: semantic['subheader-hover-bg'] },
   tabText: { ...StyleSheet.flatten(textStyles.body), color: semantic['text-muted'], fontFamily: textStyles.label.fontFamily },
   tabTextOn: { color: semantic.text, fontFamily: textStyles.section.fontFamily },
   count: { paddingHorizontal: space[1] + LINE.bold, borderRadius: radius.status, backgroundColor: semantic['neutral-bg'] },

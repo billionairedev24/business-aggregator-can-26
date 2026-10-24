@@ -33,6 +33,7 @@ export const ICONS = {
   basket: 'Basket',
   bell: 'Bell',
   'bookmark-simple': 'BookmarkSimple',
+  'bowl-food': 'BowlFood',
   broom: 'Broom',
   'calendar-blank': 'CalendarBlank',
   'calendar-check': 'CalendarCheck',

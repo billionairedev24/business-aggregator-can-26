@@ -12,7 +12,8 @@ import { CAP, LINE, TYPE, textStyles } from './tokens';
  * Native navigation patterns on Plainsight: a white header with a hairline (a 44 pt Back, the title in the sans, up
  * to two actions; `large` adds the page title under it, as iOS does) and the bottom tab bar (a Phosphor icon over a
  * short label; the current tab in ink with the filled icon and a 2 pt ink bar on top, like an underline tab turned
- * over; the cart's count in the round commerce badge).
+ * over; the cart's count in the round commerce badge). `tone="brand"` (S-188, the consumer app): the current tab as the
+ * web's current page — a 3 pt violet bar (`nav-active-marker`) and the violet filled icon over the ink label.
  */
 
 export function AppHeader({
@@ -69,7 +70,25 @@ export interface TabItem<K extends string = string> {
   testID?: string;
 }
 
-export function BottomTabBar<K extends string>({ items, current, onSelect, bottomInset = 0, label, testID }: { items: TabItem<K>[]; current: K; onSelect: (k: K) => void; bottomInset?: number; label?: string; testID?: string }) {
+export function BottomTabBar<K extends string>({
+  items,
+  current,
+  onSelect,
+  bottomInset = 0,
+  label,
+  tone = 'ink',
+  testID,
+}: {
+  items: TabItem<K>[];
+  current: K;
+  onSelect: (k: K) => void;
+  bottomInset?: number;
+  label?: string;
+  /** `ink` (the courier: ink on white in sunlight) or `brand` (the consumer: the violet current-page marker). */
+  tone?: 'ink' | 'brand';
+  testID?: string;
+}) {
+  const mark = tone === 'brand' ? semantic['nav-active-marker'] : semantic['selected'];
   const { t } = useKit();
   return (
     <View accessibilityRole="tablist" accessibilityLabel={label ?? t('kit.tabs')} style={[styles.bar, { paddingBottom: Math.max(bottomInset, space[2]) }]} testID={testID}>
@@ -86,9 +105,9 @@ export function BottomTabBar<K extends string>({ items, current, onSelect, botto
             style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
             testID={it.testID ?? `tab-${it.key}`}
           >
-            {on ? <View style={styles.marker} /> : null}
+            {on ? <View style={[styles.marker, tone === 'brand' && styles.markerBrand, { backgroundColor: mark }]} /> : null}
             <View>
-              <Icon name={it.icon} size={TYPE.section + space[1] + LINE.hair} filled={on} color={on ? semantic['selected'] : semantic['text-muted']} />
+              <Icon name={it.icon} size={TYPE.section + space[1] + LINE.hair} filled={on} color={on ? mark : semantic['text-muted']} />
               {badge > 0 ? (
                 <View style={styles.badge}>
                   <CountBadge count={badge} />
@@ -115,7 +134,8 @@ const styles = StyleSheet.create({
   largeTitle: { paddingHorizontal: space[4], paddingBottom: space[3] },
   bar: { flexDirection: 'row', paddingTop: space[1], paddingHorizontal: space[1], backgroundColor: semantic.surface, borderTopWidth: LINE.hair, borderTopColor: semantic['border-strong'] },
   tab: { flex: 1, minHeight: MIN_TARGET + space[2], alignItems: 'center', justifyContent: 'center', gap: LINE.bold + LINE.hair },
-  marker: { position: 'absolute', top: -space[1], left: '25%', right: '25%', height: LINE.bold, backgroundColor: semantic['selected'] },
+  marker: { position: 'absolute', top: -space[1], left: '25%', right: '25%', height: LINE.bold },
+  markerBrand: { height: LINE.bold + LINE.hair },
   tabLabel: { ...StyleSheet.flatten(textStyles.caps), textTransform: 'none', letterSpacing: 0, fontFamily: textStyles.cardTitle.fontFamily, color: semantic['text-muted'] },
   tabLabelOn: { fontFamily: textStyles.section.fontFamily, color: semantic['selected'] },
   badge: { position: 'absolute', top: -space[1], left: '60%' },

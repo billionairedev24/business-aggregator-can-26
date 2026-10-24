@@ -15,8 +15,10 @@ export interface SearchScope<T extends string = string> {
 
 /**
  * The search bar of the revamp's header (Amazon's pattern): the department scope on the left ("Shop ▾", opening a
- * bottom sheet of scopes), the field, and the ink search button. 44 pt tall, 3 pt corners, the 3:1 control edge.
- * Without `onChangeText` it is a button that opens the search screen (`onPress`), as on a tab's top bar.
+ * bottom sheet of scopes), the field, and the violet search button (S-188). 44 pt tall, 3 pt corners, the 3:1 control
+ * edge, the 2 pt violet focus edge while typing. `onChrome` (the consumer's violet header): the white field is the
+ * edge, with a soft drop shadow. Without `onChangeText` it is a button that opens the search screen (`onPress`), as on
+ * a tab's top bar.
  */
 export function SearchBar<T extends string>({
   placeholder,
@@ -28,6 +30,7 @@ export function SearchBar<T extends string>({
   scope,
   onScope,
   autoFocus,
+  onChrome,
   testID,
 }: {
   placeholder: string;
@@ -40,29 +43,33 @@ export function SearchBar<T extends string>({
   scope?: T;
   onScope?: (s: T) => void;
   autoFocus?: boolean;
+  /** On the violet header: no edge (the white field is the edge), a soft shadow. */
+  onChrome?: boolean;
   testID?: string;
 }) {
   const { t } = useKit();
   const [picking, setPicking] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const bar = [styles.bar, onChrome && styles.barChrome, focused && !onChrome && styles.barFocused];
   const current = scopes?.find((s) => s.value === scope) ?? scopes?.[0];
   const field = onChangeText !== undefined;
   if (!field && !(scopes && onScope)) {
     // a button that opens search: one target, the ink square drawn inside it
     return (
-      <Pressable accessibilityRole="search" accessibilityLabel={placeholder} onPress={onPress} style={({ pressed }) => [styles.bar, pressed && styles.pressed]} testID={testID}>
+      <Pressable accessibilityRole="search" accessibilityLabel={placeholder} onPress={onPress} style={({ pressed }) => [...bar, pressed && styles.pressed]} testID={testID}>
         <View style={styles.fake}>
           <Text style={styles.placeholder} numberOfLines={1}>
             {value || placeholder}
           </Text>
         </View>
         <View style={styles.go}>
-          <Icon name="magnifying-glass" size={TYPE.section} color={semantic['action-dark-text']} />
+          <Icon name="magnifying-glass" size={TYPE.section} color={semantic['action-primary-text']} />
         </View>
       </Pressable>
     );
   }
   return (
-    <View style={styles.bar} testID={testID}>
+    <View style={bar} testID={testID}>
       {scopes && current && onScope ? (
         <Pressable
           accessibilityRole="button"
@@ -87,6 +94,8 @@ export function SearchBar<T extends string>({
           placeholderTextColor={semantic['text-subtle']}
           returnKeyType="search"
           autoFocus={autoFocus}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           style={styles.input}
           testID={testID ? `${testID}-input` : undefined}
         />
@@ -109,7 +118,7 @@ export function SearchBar<T extends string>({
         style={({ pressed }) => [styles.go, pressed && styles.goPressed]}
         testID={testID ? `${testID}-go` : undefined}
       >
-        <Icon name="magnifying-glass" size={TYPE.section} color={semantic['action-dark-text']} />
+        <Icon name="magnifying-glass" size={TYPE.section} color={semantic['action-primary-text']} />
       </Pressable>
       {scopes && onScope ? (
         <BottomSheet visible={picking} onClose={() => setPicking(false)} title={t('kit.scopeTitle')}>
@@ -141,6 +150,8 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.surface,
     overflow: 'hidden',
   },
+  barChrome: { borderWidth: 0, boxShadow: `0 ${LINE.hair}px ${LINE.bold}px ${semantic['hero-scrim']}` },
+  barFocused: { borderWidth: LINE.bold, borderColor: semantic.focus },
   pressed: { backgroundColor: semantic['surface-hover'] },
   scope: {
     flexDirection: 'row',
@@ -157,6 +168,6 @@ const styles = StyleSheet.create({
   fake: { flex: 1, minWidth: 0, justifyContent: 'center', paddingHorizontal: space[3] },
   placeholder: { ...StyleSheet.flatten(textStyles.body), fontSize: TYPE['price-sm'], color: semantic['text-subtle'] },
   clear: { width: MIN_TARGET, alignItems: 'center', justifyContent: 'center' },
-  go: { width: MIN_TARGET + space[1], alignItems: 'center', justifyContent: 'center', backgroundColor: semantic['action-dark'] },
-  goPressed: { backgroundColor: semantic['action-dark-hover'] },
+  go: { width: MIN_TARGET + space[1], alignItems: 'center', justifyContent: 'center', backgroundColor: semantic['action-primary'] },
+  goPressed: { backgroundColor: semantic['action-primary-hover'] },
 });
