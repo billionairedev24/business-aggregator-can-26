@@ -321,7 +321,7 @@ function Suggestions({ t }: { t: T }): ReactNode {
   return (
     <section className="nl-section nl-results-suggest" aria-labelledby="results-suggest">
       <div className="nl-section-head"><h2 id="results-suggest" className="nl-section-title">{t('suggestTitle')}</h2></div>
-      <ul className="nl-tiles">
+      <ul className="nl-cat-tiles">
         {tiles.map(tile => <li key={tile.key}><Tile href={tile.href} name={locale === 'fr' ? tile.fr : tile.en} slot={categorySlot(tile.ids[0]) ?? 'empty/search'} subject={tile.ids[0]!.split('.').pop()!} /></li>)}
       </ul>
     </section>

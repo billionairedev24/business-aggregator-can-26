@@ -645,6 +645,13 @@ export const SHOTS = {
   ],
   console: [
     (m, p) => (live(m, p, '/api/v1/console/promotions/codes') ? { body: { items: rebase(PROMOS) } } : undefined),
+    // S-180: a business's consequences and coaching on its page (the seller page's Standing tab was an empty panel)
+    (m, p) => (m === 'GET' && /^\/api\/v1\/console\/standing\/[^/]+$/.test(p.split('?')[0]) ? { body: rebase({
+      active: [{ id: 'sc1', kind: 'instant_book_off', cause: 'rules', reason: 'Quality 78, under the Trusted floor of 80, for 2 weeks', startedAt: '2026-09-01T16:00:00Z', endsAt: null, active: true, liftedAt: null, liftReason: null, liftedByStaff: false, appeal: null }],
+      past: [], appeals: [],
+      coaching: { id: 'cp1', title: 'Completion photos on every job', note: null, dueOn: '2026-09-30', state: 'open', createdAt: '2026-09-02T16:00:00Z',
+        tasks: [{ id: 'ct1', title: 'Add a photo when a job is done', done: true }, { id: 'ct2', title: 'Reply to the two open reviews', done: false }, { id: 'ct3', title: 'Keep on-time arrival above 92%', done: false }] },
+    }) } : undefined),
     // the signed-in person's email on My profile (the recorded session has none)
     (m, p) => (m === 'GET' && p === '/bff/session' && state.console ? { body: { user: { id: '01J9ZD3V00000000000000PNA1', firstName: 'Priya', lastName: 'Natarajan', initials: 'PN', email: 'priya.natarajan@example.test', locale: 'en-CA' }, acr: 'mfa' } } : undefined),
     (m, p) => (m === 'GET' && p.split('?')[0] === '/api/v1/console/verification/applications' ? { body: applications() } : undefined),
@@ -677,6 +684,9 @@ export const SHOTS = {
         row('m7', 'Pho Dau Bo', cat('c7', 'Vietnamese'), 'kitchen', 'registered', 81, 640000, 0.006, [{ kind: 'check_expiring', checkType: 'inspection', days: 12 }]),
         row('m8', 'Chinook Home Care', cat('c8', 'House cleaning'), 'provider', 'registered', null, 0, null, [], 'pending'),
         row('m9', 'Sable & Soda', cat('c9', 'Events & bar'), 'provider', 'trusted', 82, 2140000, 0.012, [], 'paused')];
+      // S-180: the api counts these over the rows it returns (the recording said 1,204 live and 41 at risk beside 9 rows)
+      const approved = b.items.filter(s => s.status === 'active');
+      b.active = approved.length; b.atRisk = approved.filter(s => s.flags.length).length;
       return { body: rebase(b) };
     },
     // S-177: an order's page asks for its cancellations and returns (none on the demo orders)

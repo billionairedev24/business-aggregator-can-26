@@ -6,9 +6,10 @@ const meta = { title: 'Site/LocationPill', component: LocationPill, args: { stat
 export default meta;
 type S = StoryObj<typeof meta>;
 
+/** The name starts with the words on screen (WCAG 2.5.3) and says what the control does (S-170's wording). */
 export const Detected: S = {
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('link')).toHaveAccessibleName(/Detected · deliver to Calgary, Detected from your device/);
+    await expect(within(canvasElement).getByRole('link')).toHaveAccessibleName('Deliver to Calgary. Change location');
   },
 };
 export const Locating: S = { args: { status: 'locating', label: undefined } };

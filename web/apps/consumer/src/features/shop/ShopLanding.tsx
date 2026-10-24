@@ -55,7 +55,7 @@ export function ShopLanding({ market: explicit }: { market?: string }) {
         <>
           <section className="nl-section" aria-labelledby="shop-depts">
             <div className="nl-section-head"><h2 id="shop-depts" className="nl-section-title">{t('byDept')}</h2></div>
-            <ul className="nl-tiles shop-depts">
+            <ul className="nl-cat-tiles shop-depts">
               {data.departments.map(d => <li key={d.slug}><Tile href={link(`/shop/${d.slug}`)} name={d.name} slot={departmentSlot(d.slug) ?? 'banner/shop'} subject={d.slug} meta={t('shopsCount', { count: d.shops })} /></li>)}
             </ul>
           </section>

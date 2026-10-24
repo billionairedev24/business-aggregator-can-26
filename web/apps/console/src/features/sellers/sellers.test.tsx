@@ -18,7 +18,8 @@ const SELLERS = [
   seller({ id: 'm4', name: 'Kensington Garage on Wheels', tier: 'registered', status: 'suspended', quality: 71, gmv90Cents: 190_000, disputeRate: 0.041,
     flags: [{ kind: 'trust_flag', rule: 'off_platform_payment' }] }),
 ];
-const DIRECTORY = { asOf: '2026-09-08T18:00:00Z', active: 1204, atRisk: 41, items: SELLERS, truncated: false };
+// the api counts both over the rows it returns (SellersService: the live ones, and those of them with a flag)
+const DIRECTORY = { asOf: '2026-09-08T18:00:00Z', active: 3, atRisk: 2, items: SELLERS, truncated: false };
 const DETAIL: Detail = {
   asOf: '2026-09-08T18:00:00Z', seller: SELLERS[1]!, joinedAt: '2026-03-14T18:00:00Z', approvedAt: '2026-03-14T20:00:00Z', stripeAccount: 'acct_1K…',
   ratingAverage: 4.7, ratingCount: 88, quality: { value: 78, floor: 80 }, onTime: { value: 93, floor: 92 }, disputes: { value: 2.4, floor: 1.5 },
@@ -51,7 +52,7 @@ describe('sellers & providers (S-82; E-15 S-177)', () => {
     await expectNoAxeViolations(document.body); // S-109
     const kpis = within(screen.getByRole('list', { name: 'Against the floors' }));
     expect(kpis.getByText('Live sellers').nextElementSibling?.textContent).toBe('3');
-    expect(kpis.getByText('At risk').nextElementSibling?.textContent).toBe('41');
+    expect(kpis.getByText('At risk').nextElementSibling?.textContent).toBe('2');
     expect(kpis.getByText('Sales, 90 days').nextElementSibling?.textContent).toBe('$42.9k');
     const tabs = screen.getByRole('tablist', { name: 'Businesses by status' });
     expect(within(tabs).getAllByRole('tab').map(x => x.textContent)).toEqual(['All4', 'Live3', 'Under review0', 'Paused0', 'Suspended1']);

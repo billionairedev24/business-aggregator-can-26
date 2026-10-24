@@ -49,8 +49,8 @@
   .nl-results-chips > * { flex: none; }
   .nl-results-filters-toggle { display: inline-flex; }
 }
-.nl-results-suggest .nl-tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
-@media (max-width: 599.98px) { .nl-results-suggest .nl-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.nl-results-suggest .nl-cat-tiles { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
+@media (max-width: 599.98px) { .nl-results-suggest .nl-cat-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* S-158 natural-language search: the model's suggested filters (square chips, as every chip), never applied on their own */
 .nl-smart { display: grid; gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-panel); background: var(--color-surface); }

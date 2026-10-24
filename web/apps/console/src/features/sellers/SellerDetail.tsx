@@ -124,7 +124,7 @@ function DetailView({ data }: { data: Detail }) {
             {data.signals.length ? data.signals.map(sg => (
               <div key={sg.key} className="nl-sl-signal">
                 <span>{t(`s_${sg.key}` as SellersKey)}</span>
-                <div className="nl-sl-track"><div className="nl-sl-fill" data-low={sg.bar < sg.barFloor || undefined} style={{ width: `${Math.max(0, Math.min(100, sg.bar))}%` }} /></div>
+                <div className="nl-sl-track"><div className="nl-sl-fill" data-low={sg.bar < sg.barFloor || undefined} style={{ ['--pct' as string]: `${Math.max(0, Math.min(100, sg.bar))}%` }} /></div>
                 <strong>{`${fmt1(sg.value, locale)}%`}</strong>
               </div>
             )) : <p className="bo-muted">{t('noSignals')}</p>}

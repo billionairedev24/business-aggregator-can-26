@@ -2,6 +2,7 @@ import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { ApiError, http } from '@northline/client';
 import { endAuthSession } from '@northline/auth-kit';
+import { useHydrated } from '../../lib/hydrated';
 
 /**
  * The consumer-bff session (docs/CONSUMER_WEB_PLAN.md § Session): `GET /bff/session` answers 200 for everyone —
@@ -35,10 +36,16 @@ export const sessionQuery = queryOptions({
 
 export const useSession = () => useQuery(sessionQuery);
 
-/** Signed in, a guest, or not known yet (still loading, or the session couldn't be read: treated as a guest). */
+/**
+ * Signed in, a guest, or not known yet (still loading, or the session couldn't be read: treated as a guest). Not known
+ * while the page hydrates, even when the session's answer is already in (S-180, lib/hydrated.ts): the server drew the
+ * page for a guest, so the browser's first render must too.
+ */
 export function useViewer() {
   const q = useSession();
-  return { user: q.data?.user ?? null, loading: q.isPending, session: q.data ?? null };
+  const hydrated = useHydrated();
+  const data = hydrated ? q.data : undefined;
+  return { user: data?.user ?? null, loading: !hydrated || q.isPending, session: data ?? null };
 }
 
 /** The sign-in page, coming back to `next` (a local path) afterwards. */
