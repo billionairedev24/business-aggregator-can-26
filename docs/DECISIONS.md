@@ -11783,3 +11783,100 @@ the wallet chart's bars) is allowed by the no-style rule.
 need an api for the shop checkout. French shots are still not in `make ui-shots` (fr-CA covered by the tests and the
 gallery's baselines). Storybook stories failing on develop before this story (LocationPill "Detected", SiteHeader
 "Narrow", Gallery "Sections") are untouched.
+
+## 2026-10-24 — S-180 Revamp QA and sign-off
+
+The last story of E-15: the lead's QA list, WCAG 2.2 AA on every revamped route, both locales in `make ui-shots`, the
+visual regression gate in the web CI, the cleanup of what E-15 retired, the docs, and the owner's walkthrough. No
+backend, BFF contract, migration, validation or i18n rule changed (every new string is en + fr-CA).
+
+**The lead's QA list.**
+| Item | Outcome |
+|---|---|
+| Console seller: empty "Standing" panel | Fixed. The panel rendered nothing while its query loaded and for good when it failed (the shots had no answer for `GET /console/standing/{id}`). It now shows a skeleton, an error with Retry, and is titled "Consequences and coaching" (it repeated the tab's name); `make ui-shots` has a standing fixture (a consequence in force and a coaching plan). |
+| Console sellers: "At risk 41" with 9 businesses | Not an api bug: `SellersService` counts at-risk over the same rows it returns (live and flagged, in scope). The 41 (and 1,204 live) came from the vitest data the shots replay; the test and the shots fixture now count over their rows (2 / 6). The KPI opened every flagged row (a suspended one too); it now opens Live + At risk — exactly what it counts. |
+| "$89" vs "$89.00" | Verified fixed by S-173 (services' `price()` uses `formatPrice`; lint refuses `whole` for a round price). Whole dollars remain only where they are choices or thresholds (tip boxes, "Under $10", a kitchen's minimum order). The Studio dashboard's net-month KPI and chart legends still drew whole dollars; they use `price` now and the axis `axisDollars`. |
+| Storybook: LocationPill Detected, SiteHeader Narrow, Gallery Sections | Fixed (below). |
+| `.nl-tiles` clash | The consumer category grid is `.nl-cat-tiles`; `.nl-tiles` is ChoiceTiles' alone. |
+| French not in `make ui-shots` | Every route is shot in en and fr (below). |
+| Studio initial JS 260 → 250 kB | Done by S-176 (Cards split out); verified: 248.8 kB, budget 250. |
+| Old console sheet links | `/sellers?seller=`, `/verification?application=`, `/disputes?case=kind:id`, `/support?ticket=` redirect (replace) to the record pages. |
+| Mobile apps never on a device | Not a bug we can fix here: backlog S-184 (device pass, iOS + small Android, screen readers). |
+| ColumnChart uneven ticks | `niceTop` picks a round step (1/2/5 × 10ⁿ, 2.5 from 25 up) and the top is four of them: $188 → 0 · 50 · 100 · 150 · 200. Unit test. |
+| Flaky #418 on `provider-book` | Cause: the session is fetched in the browser only; when its answer arrived before the wizard's streamed part hydrated, that part's first render drew the signed-in photo picker the server had not. `useViewer()` now reports "not known" until hydration is over (`lib/hydrated.ts`, `useSyncExternalStore` with a server snapshot), so the browser's first render is the server's. Not reproducible on demand (a race); `make ui-hydration` passes. |
+| Food checkout "Add the address" / "Pay $0.00" | The fixture: saved addresses carry no coordinates (real api too), and the food checkout needs a point. The shot now has a place chosen in the location dialog (`nl.location` with lat/lng), so the quote and the price block are photographed. The real-world gap — the header says "Deliver to 1204 17 Ave SW" while the food checkout asks for an address — is backlog S-186. |
+| Save for later browser-only | Not a bug (S-173's documented scope, no contract change in E-15): backlog S-183. |
+| Food visibility web vs mobile | Left as is, waiting for the owner: the web shows Food (S-170, the mockups), the consumer app hides it (S-178). Backlog S-185; walkthrough § 5. |
+
+**Accessibility (WCAG 2.2 AA).** `make ui-a11y` (new, `shots/a11y.spec.ts` + `shots/keyboard.spec.ts`) runs the S-109
+checks on all 148 `ui-shots` routes (consumer 51, Studio 56, console 41) at 1440 (mouse) and 390 (touch, so
+`pointer: coarse` holds as on a phone), in en and fr — 592 page checks — plus the keyboard paths. Fails on critical /
+serious WCAG, heading order, page language, text-spacing overflow, focus hidden by a sticky bar, running animation under
+reduced motion, a target under 24 px; lists 24–43 px against the project's 44 px rule. Found and fixed: two unnamed
+selects (results sort on phones, Studio bulk template), the sign-in logo's contrast on the dark panel (Studio, console),
+sideways-scrolling tables that could not take focus (consumer notifications/consents, console age checks/cohorts, the
+Studio preview frame), an unmarked link in text (Studio compliance), heading levels (console record pages, Studio
+availability, auth-kit's steps), focus escaping open dialogs (now brought back, topmost dialog only), focus not
+returning to a bulk button that turned busy as its dialog opened (the opener is read while rendering), fields hidden
+under the Studio's sticky save bar and the onboarding's Continue bar (scroll padding), the Studio phone menu staying open
+when Tab left it, a department-strip link focused off-screen, sub-24 px links and the saved-card radios, and
+`/location?lang=fr` losing its language. Final: nothing failing on any route, every keyboard path passes; details and
+the documented 24–43 px exceptions in `docs/a11y/audit.md` § S-180. **`make a11y` now fails under 24 px instead of
+44 px** (the revamp's mockups draw the header search 40, chips 32 and the back-office bar 36–38 px on a mouse screen; on
+touch the tokens make them 44): one rule for both sweeps, with the 44 px list kept as a report and follow-up S-187
+(tickets.csv) for the two bars. The journeys' ARIA snapshots were re-recorded on the revamp after review.
+- Not done: the manual screen-reader pass (S-148 stays In Progress; it should be run on this build) and the phone apps
+  on a device (S-184).
+
+**Both locales.** `make ui-shots` shoots every route in English and French (`<route>-fr-<d|m>.png`; the Studio and the
+console get their language from `nl.locale`, a fresh page per language; `UI_SHOTS_LANGS=en` keeps one) and writes
+`_truncated.txt` (ellipsis, clamp, clipped box) and `_untranslated.txt` (English-looking text on a French page) beside
+`_overflow.txt`. The two French-only routes it had (`home-fr`, `search-shop-fr`) are gone. Fixed: the home's picture-grid
+labels ("Mécanicien mobile", "Fruits et légumes") and the product cards' shop line ("+ 1 autre commerce") now take two
+lines before an ellipsis. `_untranslated.txt` lists only the fixtures' own data (business, product, review and help-article
+texts, the CASL wording and the retention names the api sends per language, recorded in English): no UI string without
+French; `frenchCoverage.test.ts` passes. Ellipses left by design: calendar entries and message previews. One console
+French page (`support-case-fr-d`) measured 1449 px wide in one run; no element reaches past the window when probed, not
+reproduced.
+
+**Visual regression gate.** `.github/workflows/web.yml` job `visual` (input `visual`, default on) and GitLab `web:visual`
+run `make ui-visual` and `make ui-hydration` in `mcr.microsoft.com/playwright:v1.56.1-noble`: Playwright 1.56.1's
+Chromium (build 1194, the baselines') with that Ubuntu 24.04 image's fallback fonts — the same as this sandbox
+(`/opt/pw-browsers`, Ubuntu 24.04). Determinism: IBM Plex Sans self-hosted and checked, the clock pinned
+(2026-10-23 18:00 UTC), zone UTC, reduced motion, 0.1 % tolerance; ran 3× in a row green. Optional `a11y-routes` /
+`web:a11y-routes` (RUN_A11Y) runs `make ui-a11y`. Both workflows stay `workflow_dispatch` / manual pipelines only; CI was
+not run. Never verified in the CI image itself (no CI run): if the first run differs, re-baseline from that job's diffs.
+Baselines changed (intended): `cards-*-m` (the shop line wraps), and the phone sections drawn below it
+(`backoffice`, `checkout`, `formats`, `overlays`, `records`, `states`, `table`, `worktable` `-m`), which the taller card
+section moves by a fraction of a pixel; `records-fr-d` (the DataTable's fitted columns). A failing screenshot stops its
+test, so a change high on the gallery page hides the sections under it until it is re-baselined.
+
+**Cleanup.**
+- Palettes: lakeshore, evergreen and dusk removed (nothing read them), with Storybook's palette switch and
+  `dist/palettes.css`; the four unused `@fontsource` families left `@northline/tokens`. The pre-E-15 aliases
+  (`--color-accent*`, `--color-highlight*`, `--color-neutral-*`, `--color-bg`, `--color-surface-2`, `--color-divider`,
+  `--color-ink`, `--font-body`, `--font-heading-weight` …) are no longer emitted; `generated/theme.json` and the email
+  colours are unchanged (Plainsight's values did not move). `packages/legal/pages/northline.css` keeps its own copies of
+  those names: it is the verbatim legal pages' self-contained stylesheet, not the tokens.
+- The mobile kit still lists `@expo-google-fonts/{dm-sans,fraunces,manrope,plus-jakarta-sans}`; `gen-brand` imports only
+  the palette's family, so they are unused dependencies. Not removed here (mobile was not otherwise touched; a mobile
+  lockfile change needs its own install and test run).
+- `lint:tokens` is strict over all of `packages/ui`, `packages/auth-kit` and the consumer, Studio, console and gallery
+  apps (it grew folder by folder in S-167–S-177): no retired names, raw px sizes/spacing/radii, raw colours, or an inline
+  `style` that sets a CSS property — data goes in a custom property (`--pct`, `--nl-skel-w/h/r`, `--nl-photo-pos`,
+  `--nl-mark-size/bg`, `--nl-swatch`, `--nl-menu-w`, `--nl-sk-w`), passing a caller's `style` on is allowed. The Studio's
+  one-off rules (tabs, tags, chips, `formatMoney`) cover the whole Studio. 79 places moved onto tokens or classes.
+- Dead CSS removed: `.card-kicker`, `.card-meta`, `.elev-*`, `.dialog-backdrop`, `.cmyk`, `.bo-todo-sub`,
+  `.order-crumbs` (no reference). `design/*.dc.html` stay: CLAUDE.md keeps them as the behavioural spec (copy, states,
+  ordering), only their look is superseded. `design/revamp/` kept.
+- Storybook: LocationPill "Detected" (its name is "Deliver to Calgary. Change location" since S-170), SiteHeader
+  "Narrow" (the phone layout follows the window, so the test sizes the window to 320 px) and Gallery "Sections" (one
+  title and one toast region for the page: unique landmarks) pass; all 104 stories pass.
+
+**Docs.** CLAUDE.md § Design system describes the system as built (tokens, roles, components, native kit, rules and
+lints, how to look at it, the page patterns); the source-of-truth and working-order lines point at `revamp-epic.md` and
+the mockups. `redesign-spec.md` is marked superseded. SCREENS.md (shells, sidebar, record pages, courier, status),
+LOCAL_DEVELOPMENT.md (`ui-a11y`, `ui-visual`, French shots, the lists), the CI runbook. The backlog CSV takes the
+trailing `Status` column of `docs/a11y/tickets.csv` (S-165–S-182 Done) and S-181/S-182 regained their empty Epic Name
+cell; follow-ups S-183 (saved for later api), S-184 (device pass), S-185 (Food on the app, owner), S-186 (coordinates on
+saved addresses), a11y S-187. The owner's walkthrough: `docs/design/revamp-walkthrough.md`.

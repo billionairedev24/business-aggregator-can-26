@@ -9,7 +9,7 @@ import { LANGS, prepare, visit } from './shoot';
  * <html lang>, text spacing, focus hidden by a sticky bar, motion under reduced motion, target sizes) on EVERY route
  * that `make ui-shots` photographs — the same built apps, demo data, pinned clocks and clicks (a sheet or a dialog
  * open) — at 1440 and 390 wide, in English and in French (UI_SHOTS_LANGS). One line per page and width goes to
- * ui-shots/<app>/_a11y.txt; the JSON of each check to a11y-results/pages/.
+ * ui-shots/<app>/_a11y-<width>.txt and _keyboard.txt; the JSON of each check to a11y-results/pages/.
  *
  * Fails on: a critical or serious WCAG violation, a heading out of order or no h1, the wrong page language, a sideways
  * scroll with the 1.4.12 text spacing, a focused control hidden under a sticky bar (2.4.11), an animation still

@@ -5,6 +5,9 @@ Audit of the Studio (`web/apps/studio`), the consumer web (`web/apps/consumer`) 
 Done 2026-10-02 on main at S-107. Result: **no critical or serious issue left**; 2 moderate and 6 minor issues are
 ticketed in [tickets.csv](tickets.csv).
 
+**Revamp 2026-10-24 (S-180):** every route of the three web apps re-checked on the E-15 build, at 1440 and 390 in both
+languages, with its keyboard paths: no critical or serious issue left; one low follow-up (S-187). § S-180.
+
 **Follow-up 2026-10-04 (S-140–S-148):** the eight ticketed issues are fixed and each has a test (§ Follow-ups); the
 page sweep now fails on them. The screen-reader pass (S-148) has its automated part done — ARIA snapshots of the key
 journeys and Testing Library checks of names, roles and states — and a [manual script](screen-reader-script.md);
@@ -166,14 +169,71 @@ Not run yet. To be filled by whoever runs [the script](screen-reader-script.md):
 | VoiceOver (iOS) | | | | | |
 | TalkBack (Android) | | | | | |
 
+## S-180: the E-15 revamp, every route (2026-10-24)
+
+The revamp (E-15, A · Plainsight) rebuilt every screen, so the sweep was redone on **every route `make ui-shots`
+photographs** (the consumer site 51, the Studio 56, the console 41: `web/packages/a11y/shots/routes.ts`), not only the
+32 journey screens of S-109: `make ui-a11y` (`shots/a11y.spec.ts`) runs this page's checks (axe WCAG 2.0–2.2 A/AA and
+best practice, `<html lang>`, text spacing 1.4.12, focus hidden by a sticky bar 2.4.11, motion under reduced motion,
+pointer targets) at **1440 (mouse) and 390 (touch)**, **in English and in French**, with the shots' demo data, pinned
+clocks and clicks (sheets and dialogs open). `shots/keyboard.spec.ts` walks the keyboard paths: the consumer header and
+its search scope, the location dialog and the account menu, the results' filter rail and the phone's filter sheet, the
+buy box, the booking box, the checkout's choices, the Studio's orders table and bulk bar, the console's sellers table
+with Suspend… and its dialog, the seller page's action dialogs (focus moves in, Tab stays inside, Escape closes, focus
+returns, every stop shows its focus). Results per page and width: `ui-shots/<app>/_a11y-<width>.txt`, `_keyboard.txt`.
+
+**Found and fixed (critical / serious / blocking first).**
+| Found (rule, where) | Fix |
+|---|---|
+| critical `select-name`: the results' Sort select on phones (its label was `display: none`) | the label is visually hidden instead (consumer search) |
+| critical `select-name`: the Studio bulk upload's template select | named by its step |
+| serious `color-contrast`: "Studio" / "Console" in the logo on the dark sign-in panel (1.9:1) | the inverse muted text |
+| serious `scrollable-region-focusable`: tables that scroll sideways (consumer notifications and consents, console age checks and cohorts, the Studio storefront preview frame) | the scroll box takes focus (`tabIndex=0`, a named group, a focus ring) |
+| serious `link-in-text-block`: the Studio compliance page's "Read the terms" link | underlined |
+| moderate `heading-order` (the sweep fails on it): record pages (application, order, support case: h1 → h3), Studio availability tabs, the auth steps of `@northline/auth-kit` (forgot password, enrolment, backup codes) | the headings are h2 (`SheetSection level={2}`) |
+| 2.4.3 / 2.4.11: the phone filter sheet (and every `Dialog` / `Drawer`) let focus that left it reach the page behind | focus that lands behind an open dialog comes back into it (`useModal`, topmost dialog only) |
+| 2.4.3: Suspend… in the console's bulk bar did not get focus back when its dialog closed (the button turned busy while the dialog opened) | the dialog reads its opener while rendering, before the commit |
+| 2.4.11: fields under the Studio's sticky save bar and the onboarding's sticky Continue bar when reached with Tab | `scroll-padding-bottom` on the page while a sticky bar is shown |
+| 2.4.11: the Studio phone menu stayed open when Tab left it, so focus sat on the page hidden under it | Tab out of the menu closes it |
+| 2.4.11: a department-strip link focused at the edge of the phone strip | the strip scrolls a focused link fully into view (`scroll-padding-inline`) |
+| 2.5.8: links and link-buttons under 24 px ("Forgot password?", the registry link, "Need help with a document?", the Go-live link, appeal files, compliance links) | a 24 px target by padding, the line unmoved |
+| 2.5.8: saved-card radios (quote and booking payment) 13 px | the radio and its words are one 44 px row |
+| 3.1.1: `/location?lang=fr` opened the dialog over an English page | the redirect keeps `?lang=` |
+| (harness) the target probe counted the page behind an open dialog; motion was measured after a transition had started | the probe checks the dialog only; reduced motion is set before the page opens |
+
+**Result.** on the final builds, **no critical or serious WCAG violation, no heading-order failure, no wrong page language, no
+sideways scroll with text spacing, no focus hidden by a sticky bar, no running animation under reduced motion and no
+target under 24 px on any of the 148 routes × 2 widths × 2 languages (592 page checks)**; every keyboard path passes.
+Left (best practice, moderate/minor, not failing): `region` (content outside a landmark on a few error and onboarding
+pages, and the gallery-only section titles), `aria-allowed-role` (minor, the console's province switchboard).
+
+**Targets between 24 and 44 px (documented exceptions to the project's 44 px rule; WCAG 2.5.8 AA asks 24).**
+- The consumer header's search field and button (40 px) and scope select (40 px), and the back-office top bar's
+  market / business switcher (38 px) and search (36 px) on a **mouse** screen: the mockups' heights. On a touch screen
+  (`pointer: coarse`) the tokens make every control 44 px, which the 390 px run (touch) confirms.
+- Filter-rail rows (32 px, full width) and filter chips in a row at 1440: S-171's density decision.
+- Inline text links in footers and meta lines (Help, Terms, a file name): ≥ 24 px tall, narrower than 44 when the word
+  is short; WCAG's inline exception.
+
+**`make a11y` (S-109's 32 journey screens) since S-180:** a target under 24 px fails it; 24–43 px targets are listed in
+the page reports (`smallTargets`) against the 44 px rule, as above; the journeys' ARIA snapshots were re-recorded on the
+revamp (names, roles and states reviewed: no control lost its name). Both sweeps, the gallery's visual baselines and
+`make ui-hydration` pass.
+
+**Not automated (unchanged):** the manual screen-reader pass (S-148, `screen-reader-script.md`) and the phone apps on
+a device (S-184). The revamp changed every screen, so S-148's pass should be done on this build.
+
 ## Re-running
 
 - Component level: `cd web && pnpm test` (runs in `make web-test`).
 - Page level: `make a11y` (builds the three apps, then `pnpm --filter @northline/a11y a11y`): the sweep, the ARIA
   snapshots of the journeys (S-148) and the consumer CSP check (S104-09; alone: `make csp-check`). Chromium: `CHROMIUM=…`, the
   sandbox's `/opt/pw-browsers/chromium`, or `pnpm --filter @northline/ui exec playwright install chromium`.
+- Every route (S-180): `make ui-a11y` — or, to keep the memory down, one app and one width at a time:
+  `make ui-a11y UI_SHOTS_APPS=console UI_A11Y_WIDTHS=1440` (then `390`, then `UI_A11Y_KEYBOARD=1` for the keyboard
+  paths); the lists in `ui-shots/<app>/_a11y-<width>.txt` and `_keyboard.txt` add up across runs.
 - After a screen's api changes, `make a11y-record` refreshes the fixtures from the apps' tests.
-- CI: GitHub `web.yml` input `a11y`, GitLab `RUN_A11Y=true` — manual only, like every pipeline here.
+- CI: GitHub `web.yml` inputs `a11y` and `a11y_routes`, GitLab `RUN_A11Y=true` — manual only, like every pipeline here.
 
 ## Accessibility statement (draft for the sites' footer)
 

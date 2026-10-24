@@ -145,7 +145,7 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # S-180: the accessibility check of every route `make ui-shots` photographs (findings in ui-shots/<app>/_a11y.txt).
+  # S-180: the accessibility check of every route `make ui-shots` photographs (findings in ui-shots/<app>/_a11y-<width>.txt and _keyboard.txt).
   a11y-routes:
     name: accessibility of every ui-shots route (make ui-a11y)
     if: ${{ inputs.a11y_routes }}
@@ -165,7 +165,8 @@ jobs:
         with:
           name: ui-a11y
           path: |
-            ui-shots/*/_a11y.txt
+            ui-shots/*/_a11y-*.txt
+            ui-shots/*/_keyboard.txt
             web/packages/a11y/a11y-results/pages/
           retention-days: 7
           if-no-files-found: ignore

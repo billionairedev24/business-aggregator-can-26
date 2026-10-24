@@ -114,4 +114,4 @@ web:a11y-routes:
   artifacts:
     when: always
     expire_in: 7 days
-    paths: [ui-shots/consumer/_a11y.txt, ui-shots/studio/_a11y.txt, ui-shots/console/_a11y.txt, web/packages/a11y/a11y-results/pages/]
+    paths: [ui-shots/consumer/, ui-shots/studio/, ui-shots/console/, web/packages/a11y/a11y-results/pages/]

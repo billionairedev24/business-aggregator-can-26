@@ -184,7 +184,7 @@ The profiles are docker-compose.yml's: `db`, `cache`, `events` (Kafka + topic cr
 | `make e2e` · `e2e-smoke` · `e2e-target ENV=staging` | the end-to-end suite (S-117): its own disposable Postgres, the whole stack under `local`, Playwright journeys + the Studio smoke sweep · only the sweep · against a deployed environment ([runbooks/e2e.md](runbooks/e2e.md)) |
 | `make a11y` | the accessibility page sweep (S-109): builds the three web apps, Playwright + axe against them with a mock api ([a11y/audit.md](a11y/audit.md)); `make a11y-record` refreshes its fixtures |
 | `make ui-shots` | full-page screenshots of every web route, desktop and phone, English and French, without a backend ([below](#look-at-the-ui-make-ui-shots)) |
-| `make ui-a11y` | S-180: the WCAG 2.2 AA check (axe, focus, targets, motion, text spacing) of every `ui-shots` route at 1440 and 390, English and French; one line per page in `ui-shots/<app>/_a11y.txt` ([below](#accessibility-of-every-route-make-ui-a11y)) |
+| `make ui-a11y` | S-180: the WCAG 2.2 AA check (axe, focus, targets, motion, text spacing) of every `ui-shots` route at 1440 and 390, English and French; one line per page in `ui-shots/<app>/_a11y-<width>.txt and _keyboard.txt` ([below](#accessibility-of-every-route-make-ui-a11y)) |
 | `make ui-hydration` | S-182: fails on any React hydration error on every consumer route (desktop and phone, en and fr), on the ui-shots servers and data |
 | `make ui-visual` | S-168/S-180: the component gallery's screenshot baselines (`pnpm test:visual`, en + fr-CA, 1440 + 390); `UI_VISUAL_UPDATE=1` rewrites them after an intended change. With `ui-hydration`, the web CI's manual `visual` job |
 | `make mobile-shots` | screenshots of every consumer and courier app screen at 390×844, without a phone or a backend ([below](#the-native-apps-make-mobile-shots)) |
@@ -240,8 +240,11 @@ lists candidates to read, not failures; `frenchCoverage.test.ts` is the gate for
 the page language, text spacing, focus hidden by a sticky bar, motion under reduced motion, pointer target sizes) on
 every route of `routes.ts` — the same builds, data, pinned clocks and clicks as `make ui-shots` — at 1440 and 390, in
 English and French (`UI_SHOTS_LANGS`, `UI_SHOTS_APPS`, `UI_SHOTS_GREP` and `UI_SHOTS_SKIP_BUILD=1` work as for the
-shots; about an hour for everything). `ui-shots/<app>/_a11y.txt` has one line per page and width (`ok`, or the
-findings); the JSON of each check is in `web/packages/a11y/a11y-results/pages/`. It fails on a critical or serious
+shots; about 20 minutes an app; `UI_A11Y_WIDTHS=1440` or `390` runs one width, `UI_A11Y_KEYBOARD=1` only the keyboard
+paths — the phone width runs with touch, so the tokens' 44 px touch sizes apply). `ui-shots/<app>/_a11y-<width>.txt` has
+one line per page (`ok`, or the findings) and `_keyboard.txt` one per keyboard path (the header and its search scope,
+dialogs and sheets: focus in, Tab stays inside, Escape, focus back; the filter rail, buy box, booking box, checkout
+choices, the bulk bars); the JSON of each check is in `web/packages/a11y/a11y-results/pages/`. It fails on a critical or serious
 WCAG violation, a heading out of order, the wrong page language, a sideways scroll with the 1.4.12 text spacing, a
 focused control hidden under a sticky bar, an animation running under reduced motion, or a target under 24 × 24 px;
 targets between 24 and 44 px are listed against the project's 44 px rule (the documented exceptions are in
