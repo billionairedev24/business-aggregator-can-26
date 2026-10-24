@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 import homeCss from '../features/home/home.css?url';
 import loyaltyCss from '../features/loyalty/loyalty.css?url';
+// S-188: the hero band's display face (Archivo, latin), preloaded so the headline draws in it at once (no swap, no shift)
+import archivoLatin from '@northline/tokens/fonts/archivo-latin-wdth-normal.woff2?url';
 import { HomeScreen } from '../features/home/HomeScreen';
 import { seo } from '../lib/seo';
 import { siteJsonLd } from '../lib/structuredData';
@@ -19,7 +21,7 @@ export const Route = createFileRoute('/')({
       title: locale === 'fr' ? `${brand.name} · Tous les commerçants de confiance, à un geste de votre porte` : `${brand.name} · Every trusted local, one tap from the door`,
       description: DESCRIPTION[locale], path: '/', jsonLd: siteJsonLd(config.siteOrigin, config.legalEntity),
     });
-    return { ...tags, links: [...tags.links, { rel: 'stylesheet', href: homeCss }, { rel: 'stylesheet', href: loyaltyCss }] };
+    return { ...tags, links: [...tags.links, { rel: 'preload', href: archivoLatin, as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' }, { rel: 'stylesheet', href: homeCss }, { rel: 'stylesheet', href: loyaltyCss }] };
   },
   component: HomeScreen,
 });

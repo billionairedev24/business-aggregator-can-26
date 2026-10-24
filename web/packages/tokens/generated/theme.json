@@ -310,7 +310,15 @@
     "caps": 11,
     "price": 17,
     "price-sm": 15,
-    "price-lg": 28
+    "price-lg": 28,
+    "display-hero": 66,
+    "display-hero-sm": 36,
+    "display-tile": 32,
+    "display-tile-sm": 24,
+    "display-maker": 30,
+    "display-maker-sm": 24,
+    "run-time": 22,
+    "run-time-sm": 18
   },
   "density": {
     "results-cols": "5",

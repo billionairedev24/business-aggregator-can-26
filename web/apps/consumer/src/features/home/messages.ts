@@ -1,14 +1,26 @@
 import { defineMessages } from '@northline/ui';
 
 /**
- * Home copy (E-15 A · Plainsight with Main Street's maker-of-the-week hero, design/revamp/a.html and b.html): the
- * page's name for screen readers, the hero (a featured local shop, two side tiles), the four home tiles and the rails.
+ * Home copy (E-15 A · Plainsight with Main Street's maker-of-the-week hero, design/revamp/a.html and b.html, and the
+ * S-188 "tonight" hero band, design/revamp/hybrid): the page's name, the band (headline, trust line, run card, department
+ * tiles), the maker hero (a featured local shop, two side tiles), the four home tiles and the rails.
  * Region-neutral: a place is a parameter (`{area}`, `{city}`), never written in. The hero's words are built from the
  * shop's own fields (DECISIONS 2026-10-23 S-170/S-171: no "maker of the week" exists in the api).
  */
 export const useHomeT = defineMessages({
   en: {
     pageTitle: '{brand}: everything local, from people you can trust',
+    bandTitle: 'Everything {place} needs,', bandTitleAnywhere: 'Everything you need,', bandAccent: 'tonight.',
+    trustHeld: 'Payment held until you confirm delivery', trustRefund: 'Missing items refunded automatically',
+    trustShops: '{count, plural, one {# verified shop} other {# verified shops}} in {area}',
+    runLabel: 'Next pooled run', runLoading: 'Loading the next pooled run…',
+    runKicker: '{when, select, tonight {Tonight’s} today {Today’s} tomorrow {Tomorrow’s} other {{weekday}’s}} pooled run',
+    runCloses: 'Closes {time}', runLeft: '{hours, plural, =0 {} other {# h }}{minutes} min left', runNote: 'Mix shops for one {fee} delivery',
+    runNoneKicker: 'Pooled delivery', runNoneTitle: 'No run open right now', runNoneNote: 'Shops near you deliver together on the next run',
+    deptsLabel: 'Departments',
+    deptServicesKicker: 'Services', deptServices: 'Book a pro', deptServicesMeta: '{count, plural, one {# service} other {# services}} · book instantly', deptServicesMetaAny: 'Verified pros · book instantly',
+    deptShopKicker: 'Shop', deptShop: 'Shop local', deptShopMeta: '{count, plural, one {# store} other {# stores}} · one pooled delivery', deptShopMetaAny: 'Local stores · one pooled delivery',
+    deptFoodKicker: 'Food', deptFood: 'Order in', deptFoodMeta: '{count, plural, one {# kitchen} other {# kitchens}} · group orders', deptFoodMetaAny: 'Local kitchens · group orders',
     heroLabel: 'Maker of the week',
     makerKicker: 'Maker of the week · {department}',
     makerTitle: '{name}, on {when, select, tonight {tonight’s} today {today’s} tomorrow {tomorrow’s} other {{weekday}’s}} pooled run',
@@ -37,6 +49,17 @@ export const useHomeT = defineMessages({
   },
   fr: {
     pageTitle: '{brand} : tout le local, par des gens de confiance',
+    bandTitle: 'Tout ce dont {place} a besoin,', bandTitleAnywhere: 'Tout ce qu’il vous faut,', bandAccent: 'ce soir.',
+    trustHeld: 'Paiement retenu jusqu’à ce que vous confirmiez la livraison', trustRefund: 'Articles manquants remboursés automatiquement',
+    trustShops: '{count, plural, one {# boutique vérifiée} other {# boutiques vérifiées}} à {area}',
+    runLabel: 'Prochaine tournée partagée', runLoading: 'Chargement de la prochaine tournée…',
+    runKicker: 'Tournée partagée {when, select, tonight {de ce soir} today {d’aujourd’hui} tomorrow {de demain} other {de {weekday}}}',
+    runCloses: 'Ferme à {time}', runLeft: 'Encore {hours, plural, =0 {} other {# h }}{minutes} min', runNote: 'Combinez les boutiques pour une seule livraison à {fee}',
+    runNoneKicker: 'Livraison partagée', runNoneTitle: 'Aucune tournée ouverte', runNoneNote: 'Les boutiques près de chez vous livrent ensemble à la prochaine tournée',
+    deptsLabel: 'Rayons',
+    deptServicesKicker: 'Services', deptServices: 'Réserver un pro', deptServicesMeta: '{count, plural, one {# service} other {# services}} · réservation immédiate', deptServicesMetaAny: 'Pros vérifiés · réservation immédiate',
+    deptShopKicker: 'Boutique', deptShop: 'Achat local', deptShopMeta: '{count, plural, one {# boutique} other {# boutiques}} · une livraison partagée', deptShopMetaAny: 'Boutiques locales · une livraison partagée',
+    deptFoodKicker: 'Restaurants', deptFood: 'Commander', deptFoodMeta: '{count, plural, one {# cuisine} other {# cuisines}} · commandes de groupe', deptFoodMetaAny: 'Cuisines locales · commandes de groupe',
     heroLabel: 'Artisan de la semaine',
     makerKicker: 'Artisan de la semaine · {department}',
     makerTitle: '{name}, sur la tournée partagée {when, select, tonight {de ce soir} today {d’aujourd’hui} tomorrow {de demain} other {de {weekday}}}',
