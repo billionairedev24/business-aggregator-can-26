@@ -4,6 +4,6 @@ import { rmSync } from 'node:fs';
 export default function setup() {
   for (const app of ['consumer', 'studio', 'console']) {
     rmSync(new URL(`../../../../ui-shots/${app}/_missing-api.txt`, import.meta.url), { force: true });
-    for (const list of ['_overflow', '_truncated', '_untranslated', '_a11y']) rmSync(new URL(`../../../../ui-shots/${app}/${list}.txt`, import.meta.url), { force: true });
+    for (const list of ['_overflow', '_truncated', '_untranslated', '_a11y', '_keyboard']) rmSync(new URL(`../../../../ui-shots/${app}/${list}.txt`, import.meta.url), { force: true });
   }
 }

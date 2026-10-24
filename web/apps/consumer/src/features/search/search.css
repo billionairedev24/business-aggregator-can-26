@@ -44,7 +44,8 @@
   .nl-results-aside { display: none; }
   .nl-results-bar { flex-wrap: wrap; }
   .nl-results-h1 { flex-basis: 100%; }
-  .nl-results-sort-label { display: none; }
+  /* S-180: hidden from sight only — the select keeps "Sort by" as its name (axe select-name) */
+  .nl-results-sort-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .nl-results-chips, .nl-results-chips:not(:has(.nl-chip, .nl-results-clear)) { display: flex; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; margin-right: calc(-1 * var(--page-gutter)); padding: var(--space-1) var(--page-gutter) var(--space-1) 0; scrollbar-width: none; }
   .nl-results-chips > * { flex: none; }
   .nl-results-filters-toggle { display: inline-flex; }

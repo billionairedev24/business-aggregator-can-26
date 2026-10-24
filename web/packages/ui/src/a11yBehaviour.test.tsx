@@ -45,6 +45,17 @@ describe('Dialog focus', () => {
     await user.tab();
     expect(screen.getByRole('dialog', { name: 'Notice' })).toHaveFocus();
   });
+
+  it('brings focus that lands behind the open dialog back into it (S-180: the phone filter sheet let Tab reach the header)', async () => {
+    const user = userEvent.setup();
+    wrap(<DialogDemo withActions />);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    (document.activeElement as HTMLElement).blur();
+    screen.getByRole('button', { name: 'Open', hidden: true }).focus();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus();
+  });
 });
 
 describe('Menu keys', () => {

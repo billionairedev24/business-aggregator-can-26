@@ -45,7 +45,7 @@ export default defineConfig({
     ] : []),
   ],
   projects: hydration ? [{ name: 'hydration', testMatch: /hydration\.spec\.ts/, use: { baseURL: BASE.consumer } }]
-    : a11y ? (['consumer', 'studio', 'console'] as const).filter(wanted).map(app => ({ name: `a11y-${app}`, testMatch: /a11y\.spec\.ts/, use: { baseURL: BASE[app] } })) : [
+    : a11y ? (['consumer', 'studio', 'console'] as const).filter(wanted).map(app => ({ name: `a11y-${app}`, testMatch: /(a11y|keyboard)\.spec\.ts/, use: { baseURL: BASE[app] } })) : [
     ...(wanted('consumer') ? [{ name: 'consumer', testMatch: /consumer\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4644' } }] : []),
     ...(wanted('studio') ? [{ name: 'studio', testMatch: /studio\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4641' } }] : []),
     ...(wanted('console') ? [{ name: 'console', testMatch: /console\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4642' } }] : []),

@@ -105,7 +105,7 @@ export async function check(page: Page, name: string, path: string, locale: Loca
  * its centre. Exempt (as WCAG's): links and link-styled buttons inside a sentence, and visually hidden elements
  * (≤ 1 px: screen-reader-only controls). S-143.
  */
-async function targetsUnder(page: Page, min: number): Promise<string[]> {
+export async function targetsUnder(page: Page, min: number): Promise<string[]> {
   const found: string[] = await page.evaluate(async m => {
     const r0 = (el: Element) => el.getBoundingClientRect();
     // WCAG 2.5.8's inline exception: a link or link-styled button inside a sentence (its parent has text of its own)
