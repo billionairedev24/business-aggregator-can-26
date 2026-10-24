@@ -30,14 +30,14 @@
 .nl-hhero-trust-icon { display: inline-flex; color: var(--color-hero-accent); }
 /* the run card: a frosted panel on the band — the run in caps, the closing time, the yellow sticker, the fee */
 .nl-hhero-run {
-  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-3); min-height: 104px; box-sizing: border-box;
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-3); min-height: 124px; box-sizing: border-box; align-content: center;
   padding: var(--space-4) var(--space-4); margin-bottom: var(--space-1-5); border-radius: var(--radius-panel);
   background: linear-gradient(160deg, color-mix(in srgb, var(--color-header-text) 10%, transparent), color-mix(in srgb, var(--color-header-text) 4%, transparent));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-header-text) 16%, transparent), 0 18px 40px -20px var(--color-hero-scrim);
 }
-.nl-hhero-run-k { grid-column: 1 / -1; display: flex; gap: var(--space-1-5); align-items: center; font-size: var(--type-caps); font-weight: var(--weight-bold); letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-header-muted); }
+.nl-hhero-run-k { grid-column: 1 / -1; min-height: 16px; display: flex; gap: var(--space-1-5); align-items: center; font-size: var(--type-caps); font-weight: var(--weight-bold); letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-header-muted); }
 .nl-hhero-run-icon { display: inline-flex; color: var(--color-hero-accent); }
-.nl-hhero-run-t { font-size: var(--type-run-time); font-weight: var(--weight-bold); letter-spacing: -0.01em; line-height: var(--leading-tight); }
+.nl-hhero-run-t { min-height: 1.2em; font-size: var(--type-run-time); font-weight: var(--weight-bold); letter-spacing: -0.01em; line-height: var(--leading-tight); }
 .nl-hhero-run-left { justify-self: end; }
 .nl-hhero-run-s { grid-column: 1 / -1; font-size: var(--type-label); color: var(--color-hero-text); }
 /* the three department tiles: half on the band, half on the page */
@@ -77,7 +77,7 @@
   .nl-hhero-title { font-size: var(--type-display-hero-sm); line-height: 0.98; min-height: calc(3 * 0.98em); }
   .nl-hhero-trust { flex-direction: column; gap: var(--space-1-5) var(--space-3-5); margin-top: var(--space-3-5); font-size: var(--type-label); }
   .nl-hhero-wide { display: none !important; }
-  .nl-hhero-run { min-height: 88px; padding: var(--space-3) var(--space-3-5); margin: 0; }
+  .nl-hhero-run { min-height: 112px; padding: var(--space-3) var(--space-3-5); margin: 0; }
   .nl-hhero-run-t { font-size: var(--type-run-time-sm); }
   .nl-hhero-depts { grid-template-columns: minmax(0, 1fr); gap: var(--space-2-5); margin-top: var(--space-4); }
   .nl-hhero-dept-c { left: var(--space-4); bottom: var(--space-3-5); right: 64px; }
