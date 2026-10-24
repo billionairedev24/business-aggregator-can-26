@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChipTabs, PageHeader } from '@northline/ui';
+import { BoHeader, UnderlineTabs } from '@northline/ui';
 import { useMerchant, useMerchantId } from '../shell/api';
 import type { Channel } from '../messages/validation';
 import { casesQuery } from './api';
@@ -29,18 +29,18 @@ export function HelpScreen({ search, onNavigate }: { search: HelpSearch; onNavig
   const [channel, setChannel] = useState<Channel>('chat');
   const [sent, setSent] = useState<SentCase | null>(null);
 
-  const tabs: { value: HelpTab; label: string }[] = [
+  const tabs: { value: HelpTab; label: string; count?: number; name?: string }[] = [
     { value: 'home', label: t('tab_home') },
-    { value: 'cases', label: open > 0 ? t('tab_casesOpen', { count: open }) : t('tab_cases') },
+    { value: 'cases', label: t('tab_cases'), count: open > 0 ? open : undefined, name: open > 0 ? t('tab_casesOpen', { count: open }) : undefined },
     { value: 'new', label: t('tab_new') },
     { value: 'status', label: t('tab_status') },
   ];
 
   return (
     <>
-      <PageHeader kicker={t('kicker')} title={t('title', { name: merchant.displayName })} />
-      <div className="nl-help-tabs"><ChipTabs aria-label={t('tabs')} options={tabs} value={tab} onChange={v => { setSent(null); onNavigate({ tab: v }); }} /></div>
-      <div role="tabpanel" aria-label={tabs.find(x => x.value === tab)?.label}>
+      <BoHeader title={t('kicker')} sub={t('title', { name: merchant.displayName })} />
+      <div className="nl-help-tabs"><UnderlineTabs aria-label={t('tabs')} options={tabs} value={tab} tabId={v => `help-tab-${v}`} panelId={v => `help-panel-${v}`} onChange={v => { setSent(null); onNavigate({ tab: v }); }} /></div>
+      <div role="tabpanel" id={`help-panel-${tab}`} aria-labelledby={`help-tab-${tab}`} className="nl-help-panel">
         {tab === 'home' ? (
           <HelpHome merchantId={merchantId}
             onContact={p => { setChannel(p.channel ?? 'chat'); onNavigate({ tab: 'new', topic: p.topic }); }}

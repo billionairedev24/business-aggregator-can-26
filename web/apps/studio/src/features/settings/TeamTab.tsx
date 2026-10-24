@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, DataTable, Dialog, ErrorState, Field, PageSkeleton, Segmented, Select, Tag, TextInput, useFormatters, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { Alert, Button, DataTable, Dialog, ErrorState, Field, PageSkeleton, Segmented, Select, StatusTag, TextInput, useFormatters, type DataTableColumn, type StatusTone } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useMerchantId, useRole } from '../shell/api';
 import { teamQuery, useChangeRole, useInvite, useRemoveMember, useWithdrawInvitation, type InvitationCreated, type Member, type Role } from './api';
 import { useSettingsT, type SettingsT } from './messages';
 import { inviteErrors, localizeServerErrors, type InviteForm } from './validation';
 
-interface MemberRow { id: string; name: string; note: string; role: string; can: string; fa: string; faTone: DataTableTone; member: Member }
+interface MemberRow { id: string; name: string; note: string; role: string; can: string; fa: string; faTone: StatusTone; member: Member }
 
-const faOf = (m: Member, t: SettingsT): [string, DataTableTone] => {
+/** S-176: a passkey or an authenticator is good (success), a text-message code weak (warning), none bad (danger). */
+const faOf = (m: Member, t: SettingsT): [string, StatusTone] => {
   switch (m.secondFactor) {
-    case 'passkey': return [t('fa_passkey'), 'tag-accent'];
-    case 'totp': return [t('fa_totp'), 'tag-accent'];
-    case 'sms': return [t('fa_sms'), 'tag-accent-2'];
-    default: return [t('fa_none'), 'tag-accent-2'];
+    case 'passkey': return [t('fa_passkey'), 'success'];
+    case 'totp': return [t('fa_totp'), 'success'];
+    case 'sms': return [t('fa_sms'), 'warning'];
+    default: return [t('fa_none'), 'danger'];
   }
 };
 
@@ -45,14 +46,14 @@ export function TeamTab() {
     { key: 'name', label: t('colMember'), sub: 'note', primary: true, editable: false },
     { key: 'role', label: t('colRole'), options: q.data.roles.map(roleLabel), required: true, filter: 'facet' },
     { key: 'can', label: t('colCan'), editable: false },
-    { key: 'fa', label: t('col2fa'), type: 'tag', editable: false },
+    { key: 'fa', label: t('col2fa'), type: 'tag', editable: false, status: r => r.faTone },
   ];
 
   return (
     <div className="nl-set-team">
       <div className="nl-set-table">
         <DataTable<MemberRow>
-          entity={t('teamEntity')} plural={t('teamPlural')} columns={columns} rows={rows} rowTones={r => ({ fa: r.faTone })}
+          entity={t('teamEntity')} plural={t('teamPlural')} columns={columns} rows={rows}
           roleName={roleLabel(role as Role)} can={{ create: false, update: owner, delete: owner, export: true }}
           onUpdate={async (row, values) => {
             const next = byLabel.get(String(values.role ?? row.role));
@@ -74,7 +75,7 @@ export function TeamTab() {
                 <li key={i.id} className="nl-set-row">
                   <span><strong>{contact}</strong> · {roleLabel(i.role)}</span>
                   <span className="nl-set-rowside">
-                    <Tag tone={i.state === 'pending' ? 'neutral' : 'accent-2'}>{i.state === 'pending' ? t('pendingState', { date: f.date(i.expiresAt) }) : t('expiredState')}</Tag>
+                    <StatusTag tone={i.state === 'pending' ? 'warning' : 'danger'}>{i.state === 'pending' ? t('pendingState', { date: f.date(i.expiresAt) }) : t('expiredState')}</StatusTag>
                     {owner && <Button variant="ghost" aria-label={t('withdrawLabel', { contact })} disabled={withdraw.isPending} onClick={() => withdraw.mutate(i.id)}>{t('withdraw')}</Button>}
                   </span>
                 </li>

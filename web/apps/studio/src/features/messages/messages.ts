@@ -5,6 +5,7 @@ export const useMessagesT = defineMessages({
   en: {
     kicker: 'Messages',
     conversations: 'Conversations',
+    unreadSub: '{count, plural, one {# unread conversation} other {# unread conversations}}', allRead: 'All caught up.', show: 'Show', tabAll: 'All', noUnread: 'No unread conversations.',
     masked: 'Phone numbers are masked; messages are kept for disputes.',
     title: '{name} · {subject}',
     ref_booking: 'Booking {code}', ref_order: 'Order {code}', ref_dispute: 'Dispute {code}', ref_quote: 'Quote {code}',
@@ -26,6 +27,7 @@ export const useMessagesT = defineMessages({
   fr: {
     kicker: 'Messages',
     conversations: 'Conversations',
+    unreadSub: '{count, plural, one {# conversation non lue} other {# conversations non lues}}', allRead: 'Tout est lu.', show: 'Afficher', tabAll: 'Toutes', noUnread: 'Aucune conversation non lue.',
     masked: 'Les numéros de téléphone sont masqués; les messages sont conservés en cas de litige.',
     title: '{name} · {subject}',
     ref_booking: 'Réservation {code}', ref_order: 'Commande {code}', ref_dispute: 'Litige {code}', ref_quote: 'Devis {code}',

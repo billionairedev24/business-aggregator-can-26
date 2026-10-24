@@ -237,7 +237,7 @@ describe('Modifiers & combos', () => {
     expect(screen.getByText('Used by 3 items')).toBeTruthy();
     expect(screen.getByText('Large · +$3.00')).toBeTruthy();
     expect((await screen.findAllByText('Pho for two')).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Save $6').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Save $6.00').length).toBeGreaterThan(0);
     expect(screen.getByText('On · $0.02/pt')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Turn on' }));
     await waitFor(() => expect(calls.find(c => c.method === 'PUT')?.body).toEqual({ enabled: true }));

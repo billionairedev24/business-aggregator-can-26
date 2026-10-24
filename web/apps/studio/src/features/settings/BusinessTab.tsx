@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { Alert, Button, ErrorState, Field, PageSkeleton, Segmented, Select, Tag, TextInput, useLocale } from '@northline/ui';
+import { X } from '@phosphor-icons/react';
+import { Alert, Button, Chip, ErrorState, Field, FormSection, PageSkeleton, SaveBar, Segmented, Select, StatusTag, TextInput, useLocale } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { complianceQuery, type ComplianceDoc } from '../compliance/api';
 import { docName, docState, yearMonth } from '../compliance/docs';
@@ -67,41 +68,53 @@ function BusinessEditor({ business }: { business: Business }) {
 
   const addable = LANGUAGES.filter(l => !form.languages.includes(l));
   const serverCount = Object.keys(server).length;
+  const initial = toForm(business);
+  const dirty = JSON.stringify(form) !== JSON.stringify(initial);
   return (
     <form className="nl-set-business" onSubmit={submit} noValidate>
-      {!owner && <p className="nl-small nl-muted">{t('viewOnly', { role: t(`role_${role}` as Parameters<SettingsT>[0]) })}</p>}
+      {!owner && <p className="nl-set-muted">{t('viewOnly', { role: t(`role_${role}` as Parameters<SettingsT>[0]) })}</p>}
       {(submitted && count > 0) || serverCount > 0 ? <Alert tone="error" role="alert">{t('attention', { n: submitted && count ? count : serverCount })}</Alert> : null}
-      <fieldset className="nl-set-fields" disabled={!owner}>
-        <Field label={t('businessName')} error={shown('displayName')}>
-          <TextInput value={form.displayName} onChange={e => set('displayName', e.target.value)} onBlur={touch('displayName')} autoComplete="organization" />
-        </Field>
-        <Field label={t('legalEntity')} error={shown('legalName')}>
-          <TextInput value={form.legalName} onChange={e => set('legalName', e.target.value)} onBlur={touch('legalName')} />
-        </Field>
-        <Field label={t('gstNumber')} note={business.gstRequired ? undefined : t('gstOptional')} error={shown('gstNumber')}>
-          <TextInput value={form.gstNumber} onChange={e => set('gstNumber', e.target.value)} onBlur={touch('gstNumber')} inputMode="text" placeholder="123456789 RT0001" />
-        </Field>
-        <Field label={t('serviceArea')} error={shown('serviceArea')}>
-          <TextInput value={form.serviceArea} onChange={e => set('serviceArea', e.target.value)} onBlur={touch('serviceArea')} />
-        </Field>
-        <Field label={t('cancellationPolicy')}>
-          <Segmented name="cancellation-policy" aria-label={t('cancellationPolicy')} value={form.cancellationPolicy} onChange={v => set('cancellationPolicy', v)}
-            options={(['flexible', '12h', '24h'] as const).map(v => ({ value: v, label: t(`policy_${v}`) }))} />
-        </Field>
-        {quotes && (
-          <Field label={t('autoAccept')} hint={t('autoAcceptHint')} error={shown('autoAcceptQuoteCents')}>
-            <TextInput value={form.autoAccept} onChange={e => set('autoAccept', e.target.value)} onBlur={touch('autoAcceptQuoteCents')} inputMode="decimal" placeholder="$150" />
+      <FormSection title={t('secDetails')} description={t('secDetailsNote')}>
+        <fieldset className="nl-set-fields" disabled={!owner}>
+          <Field label={t('businessName')} error={shown('displayName')}>
+            <TextInput value={form.displayName} onChange={e => set('displayName', e.target.value)} onBlur={touch('displayName')} autoComplete="organization" />
           </Field>
-        )}
-        <div className="nl-field nl-set-langs" role="group" aria-labelledby="set-langs-label">
-          <span id="set-langs-label" className="nl-label">{t('languages')}</span>
+          <Field label={t('legalEntity')} error={shown('legalName')}>
+            <TextInput value={form.legalName} onChange={e => set('legalName', e.target.value)} onBlur={touch('legalName')} />
+          </Field>
+          <Field label={t('gstNumber')} note={business.gstRequired ? undefined : t('gstOptional')} error={shown('gstNumber')}>
+            <TextInput value={form.gstNumber} onChange={e => set('gstNumber', e.target.value)} onBlur={touch('gstNumber')} inputMode="text" placeholder="123456789 RT0001" />
+          </Field>
+        </fieldset>
+        <p className="nl-set-muted">{t('legalReview')}</p>
+      </FormSection>
+      <FormSection title={t('secService')} description={t('secServiceNote')}>
+        <fieldset className="nl-set-fields" disabled={!owner}>
+          <Field label={t('serviceArea')} error={shown('serviceArea')}>
+            <TextInput value={form.serviceArea} onChange={e => set('serviceArea', e.target.value)} onBlur={touch('serviceArea')} />
+          </Field>
+          <Field label={t('cancellationPolicy')}>
+            <Segmented name="cancellation-policy" aria-label={t('cancellationPolicy')} value={form.cancellationPolicy} onChange={v => set('cancellationPolicy', v)}
+              options={(['flexible', '12h', '24h'] as const).map(v => ({ value: v, label: t(`policy_${v}`) }))} />
+          </Field>
+          {quotes && (
+            <Field label={t('autoAccept')} hint={t('autoAcceptHint')} error={shown('autoAcceptQuoteCents')}>
+              <TextInput value={form.autoAccept} onChange={e => set('autoAccept', e.target.value)} onBlur={touch('autoAcceptQuoteCents')} inputMode="decimal" placeholder="$150" />
+            </Field>
+          )}
+        </fieldset>
+      </FormSection>
+      <FormSection title={t('secLanguages')} description={t('secLanguagesNote')} id="set-langs-label">
+        <fieldset className="nl-set-langs" disabled={!owner} aria-labelledby="set-langs-label">
           <div className="nl-set-langrow">
             {form.languages.map(l => (
-              <button key={l} type="button" className="tag tag-accent nl-set-lang" aria-label={t('removeLanguage', { language: langName(l, t) })}
-                onClick={() => { set('languages', form.languages.filter(x => x !== l)); setTouched(x => ({ ...x, languages: true })); }}>{langName(l, t)}</button>
+              <Chip key={l} selected aria-label={t('removeLanguage', { language: langName(l, t) })}
+                onClick={() => { set('languages', form.languages.filter(x => x !== l)); setTouched(x => ({ ...x, languages: true })); }}>
+                {langName(l, t)}<X size={12} aria-hidden className="nl-set-lang-x" />
+              </Chip>
             ))}
             {!form.languages.includes('fr') && (
-              <button type="button" className="tag tag-neutral nl-set-lang" onClick={() => set('languages', [...form.languages, 'fr'])}>{t('addLanguage', { language: t('lang_fr') })}</button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => set('languages', [...form.languages, 'fr'])}>{t('addLanguage', { language: t('lang_fr') })}</button>
             )}
             {addable.filter(l => l !== 'fr').length > 0 && (
               <Select aria-label={t('moreLanguages')} className="nl-set-langselect" value="" placeholder={t('moreLanguages')}
@@ -110,16 +123,16 @@ function BusinessEditor({ business }: { business: Business }) {
             )}
           </div>
           {shown('languages') ? <div role="alert" className="nl-error">{shown('languages')}</div> : null}
-        </div>
-      </fieldset>
-      {owner && (
-        <div className="nl-set-actions">
-          <Button type="submit" disabled={save.isPending}>{save.isPending ? t('saving') : t('save')}</Button>
-          <span role="status" className="nl-small nl-muted">{saved ? t('saved') : t('legalReview')}</span>
-          {save.isError && !(save.error instanceof ValidationError) && <span role="alert" className="nl-error">{t('saveError')}</span>}
-        </div>
-      )}
+        </fieldset>
+      </FormSection>
       <Licences />
+      {owner && (
+        <SaveBar label={t('saveBusiness')}
+          status={dirty ? <StatusTag tone="warning">{t('unsaved')}</StatusTag> : <StatusTag tone="success">{saved ? t('saved') : t('upToDate')}</StatusTag>}
+          note={save.isError && !(save.error instanceof ValidationError) ? <span role="alert" className="nl-error">{t('saveError')}</span> : <span role="status">{saved ? t('saved') : ''}</span>}>
+          <Button type="submit" disabled={save.isPending}>{save.isPending ? t('saving') : t('save')}</Button>
+        </SaveBar>
+      )}
     </form>
   );
 }
@@ -134,26 +147,24 @@ function Licences() {
   const shown = (d: ComplianceDoc) => ['licence', 'insurance', 'ahs_permit', 'food_cert'].includes(d.checkType) && d.reference !== 'none' && d.reference !== 'not_applicable';
   const state = (d: ComplianceDoc) => {
     if (d.status === 'verified' && !d.dueSoon) {
-      return { text: d.expiresAt ? t(d.checkType === 'insurance' ? 'lic_to' : 'lic_renews', { month: yearMonth(d.expiresAt) }) : t('lic_verified'), tone: 'accent' as const };
+      return { text: d.expiresAt ? t(d.checkType === 'insurance' ? 'lic_to' : 'lic_renews', { month: yearMonth(d.expiresAt) }) : t('lic_verified'), tone: 'success' as const };
     }
     return docState(d, ct, locale);
   };
   return (
-    <section className="nl-set-licences" aria-labelledby="set-lic">
-      <h2 id="set-lic" className="nl-set-h3">{t('licencesTitle')}</h2>
+    <FormSection title={t('licencesTitle')} id="set-lic" actions={<Link className="nl-set-tolink" to={screenHref(merchantId, 'compliance')}>{t('manageCompliance')}</Link>}>
       {q.isPending ? <PageSkeleton kpis={0} rows={3} /> : q.isError ? <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /> : (
         <>
-          {q.data.documents.filter(shown).length === 0 ? <p className="nl-muted nl-small">{t('noLicences')}</p> : (
+          {q.data.documents.filter(shown).length === 0 ? <p className="nl-set-muted">{t('noLicences')}</p> : (
             <ul className="nl-set-rows">
               {q.data.documents.filter(shown).map(d => {
                 const st = state(d);
-                return <li key={d.id} className="nl-set-row"><span>{docName(d, ct)}</span><Tag tone={st.tone}>{st.text}</Tag></li>;
+                return <li key={d.id} className="nl-set-row"><span>{docName(d, ct)}</span><StatusTag tone={st.tone}>{st.text}</StatusTag></li>;
               })}
             </ul>
           )}
-          <Link className="nl-small nl-set-tolink" to={screenHref(merchantId, 'compliance')}>{t('manageCompliance')}</Link>
         </>
       )}
-    </section>
+    </FormSection>
   );
 }

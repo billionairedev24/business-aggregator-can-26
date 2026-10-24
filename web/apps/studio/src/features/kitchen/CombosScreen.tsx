@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, DataTable, Dialog, EmptyState, ErrorState, Field, PageSkeleton, Skeleton, TextInput, useLocale, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { Alert, BoHeader, DataTable, Dialog, EmptyState, ErrorState, Field, FormSection, PageSkeleton, Skeleton, StatusTag, TextInput, formatPrice, useLocale, type DataTableColumn, type DataTableView, type StatusTone } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useMerchantId, useRole } from '../shell/api';
 import { combosQuery, groupsQuery, promosQuery, useAddOption, useDeleteCombo, useSetPromo, type Combo, type ModifierGroup } from './api';
@@ -11,9 +11,9 @@ import { dollars, optionText, parseDollars, ruleText } from './model';
 import './Kitchen.css';
 
 interface ComboRow { id: string; name: string; save: string; rule: string; price: number; state: string; status: Combo['status'] }
-const TONE: Record<Combo['status'], DataTableTone> = { live: 'tag-success', scheduled: 'tag-info', paused: 'tag-warning', draft: 'tag-neutral' };
+const TONE: Record<Combo['status'], StatusTone> = { live: 'success', scheduled: 'info', paused: 'warning', draft: 'neutral' };
 
-/** Kitchen · Modifiers & combos (design 02 lines 876–897, `combos`, `dt.combos`). */
+/** Kitchen · Modifiers & combos (design 02 lines 876–897, `combos`, `dt.combos`; S-176: page head, FormSection panels, status tabs and tags). */
 export function CombosScreen() {
   const merchantId = useMerchantId();
   const role = useRole();
@@ -30,25 +30,32 @@ export function CombosScreen() {
   const [comboDialog, setComboDialog] = useState<{ combo?: Combo } | null>(null);
 
   const rows = useMemo<ComboRow[]>(() => (combos.data ?? []).map(c => ({
-    id: c.id, name: c.name, save: t('saveAmount', { amount: new Intl.NumberFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: c.savingCents % 100 ? 2 : 0 }).format(c.savingCents / 100) }),
+    id: c.id, name: c.name, save: t('saveAmount', { amount: formatPrice(c.savingCents, locale) }),
     rule: c.rule, price: c.priceCents, state: t(`cs_${c.status}`), status: c.status,
   })), [combos.data, t, locale]);
   const columns: DataTableColumn<ComboRow>[] = [
     { key: 'name', label: t('col_combo'), sub: 'save', subLabel: t('col_saving'), primary: true },
     { key: 'rule', label: t('col_rule') },
-    { key: 'price', label: t('col_price'), type: 'money' },
-    { key: 'state', label: t('col_status'), type: 'tag', options: [t('cs_live'), t('cs_scheduled'), t('cs_paused'), t('cs_draft')] },
+    { key: 'price', label: t('col_price'), type: 'money', format: v => formatPrice(v as number, locale) },
+    { key: 'state', label: t('col_status'), type: 'tag', options: [t('cs_live'), t('cs_scheduled'), t('cs_paused'), t('cs_draft')], status: r => TONE[r.status] },
   ];
 
-  if (groups.isPending && combos.isPending) return <PageSkeleton kpis={0} rows={6} />;
+  const is = (st: Combo['status']) => (r: ComboRow) => r.status === st;
+  const views: DataTableView<ComboRow>[] = [
+    { id: 'all', label: t('viewAll') },
+    { id: 'live', label: t('cs_live'), when: is('live') },
+    { id: 'scheduled', label: t('cs_scheduled'), when: is('scheduled'), hideEmpty: true },
+    { id: 'paused', label: t('cs_paused'), when: is('paused'), hideEmpty: true },
+    { id: 'draft', label: t('cs_draft'), when: is('draft'), hideEmpty: true },
+  ];
+
+  if (groups.isPending && combos.isPending) return <div className="nl-kitchen"><BoHeader title={t('combosKicker')} /><PageSkeleton kpis={0} rows={6} /></div>;
   return (
     <div className="nl-kitchen">
-      <span className="nl-k-kicker">{t('combosKicker')}</span>
-      <h1 className="nl-k-title nl-k-title-gap">{t('combosTitle')}</h1>
+      <BoHeader title={t('combosKicker')} sub={t('combosTitle')} />
       <p className="nl-k-lede">{t('combosLede')}</p>
       <div className="nl-k-two">
-        <section aria-labelledby="k-groups">
-          <div className="nl-k-subhead"><h2 id="k-groups">{t('groupsTitle')}</h2>{canEdit ? <button type="button" className="btn btn-secondary nl-k-small-btn" onClick={() => setGroupDialog({})}>{t('newGroup')}</button> : null}</div>
+        <FormSection title={t('groupsTitle')} id="k-groups" actions={canEdit ? <button type="button" className="btn btn-secondary btn-sm" onClick={() => setGroupDialog({})}>{t('newGroup')}</button> : undefined}>
           {groups.isPending ? <Skeleton height={120} /> : groups.isError ? <ErrorState message={t('loadError')} onRetry={() => void groups.refetch()} />
             : groups.data.length === 0 ? <EmptyState action={canEdit ? <button type="button" className="btn btn-primary" onClick={() => setGroupDialog({})}>{t('newGroup')}</button> : undefined}>{t('groupsEmpty')}</EmptyState>
             : groups.data.map(g => (
@@ -58,20 +65,20 @@ export function CombosScreen() {
                   <span className="nl-k-small">{t('usedBy', { n: g.usedBy })}</span>
                 </div>
                 <div className="nl-k-small">{ruleText(g, t)}</div>
-                <div className="nl-chips nl-k-group-opts">
-                  {g.options.map(o => <span key={o.id} className="tag tag-neutral">{optionText(o, t, locale)}</span>)}
-                  {canEdit ? <button type="button" className="tag tag-outline nl-k-tag-btn" onClick={() => setOptionFor(g)}>{t('addOption')}</button> : null}
-                </div>
+                <ul className="nl-k-group-opts" aria-label={t('optionsOf', { name: g.name })}>
+                  {g.options.map(o => <li key={o.id} className="nl-k-opt">{optionText(o, t, locale)}</li>)}
+                  {canEdit ? <li><button type="button" className="btn btn-secondary btn-sm" onClick={() => setOptionFor(g)}>{t('addOption')}</button></li> : null}
+                </ul>
               </div>
             ))}
           <div className="nl-k-note"><strong>{t('rulesBox')}</strong> {t('rulesText')}</div>
-        </section>
-        <section aria-labelledby="k-combos">
-          {/* one "New combo": the table's own create button */}
-          <div className="nl-k-subhead"><h2 id="k-combos">{t('combosTitle2')}</h2></div>
+        </FormSection>
+        <div className="nl-k-col">
+        {/* one "New combo": the table's own create button */}
+        <FormSection title={t('combosTitle2')} id="k-combos">
           <DataTable<ComboRow>
             entity={t('combo')} plural={t('combosPlural')} roleName={t(`role_${role}` as 'role_owner')}
-            columns={columns} rows={rows} rowTones={r => ({ state: TONE[r.status] })}
+            columns={columns} rows={rows} views={views}
             can={{ create: canEdit, update: canEdit, delete: role === 'owner', export: true }}
             loading={combos.isPending} error={combos.isError ? t('loadError') : null} onRetry={() => void combos.refetch()}
             createLabel={t('newCombo')} emptyText={t('combosEmpty')}
@@ -81,14 +88,15 @@ export function CombosScreen() {
             onDelete={async hit => { await Promise.all(hit.map(r => removeCombo.mutateAsync(r.id))); }}
           />
           <div className="nl-k-note"><strong>{t('builderBox')}</strong> {t('builderText')}</div>
-          <h2 className="nl-k-h2-gap">{t('promosTitle')}</h2>
+        </FormSection>
+        <FormSection title={t('promosTitle')} id="k-promos">
           {promos.isError ? <ErrorState message={t('loadError')} onRetry={() => void promos.refetch()} /> : (
             <div className="nl-k-rows">
               {(promos.data ?? []).map(p => (
                 <div key={p.promo} className="nl-k-row">
                   <span>{t(`promo_${p.promo}`)}</span>
                   <span className="nl-k-row-end">
-                    {p.enabled ? <span className="tag tag-success">{t(`promoOn_${p.promo}`)}</span> : null}
+                    {p.enabled ? <StatusTag tone="success">{t(`promoOn_${p.promo}`)}</StatusTag> : <StatusTag tone="neutral">{t('off')}</StatusTag>}
                     {role === 'owner'
                       ? <button type="button" className="btn btn-ghost nl-k-small-btn" aria-pressed={p.enabled} disabled={setPromo.isPending} onClick={() => setPromo.mutate({ promo: p.promo, enabled: !p.enabled })}>{p.enabled ? t('turnOff') : t('turnOn')}</button>
                       : null}
@@ -99,7 +107,8 @@ export function CombosScreen() {
               {setPromo.isError ? <Alert tone="error" role="alert">{t('saveError')}</Alert> : null}
             </div>
           )}
-        </section>
+        </FormSection>
+        </div>
       </div>
       {groupDialog ? <GroupDialog merchantId={merchantId} group={groupDialog.group} groups={groups.data ?? []} canDelete={role === 'owner'} onClose={() => setGroupDialog(null)} /> : null}
       {optionFor ? <AddOptionDialog merchantId={merchantId} group={optionFor} onClose={() => setOptionFor(null)} /> : null}

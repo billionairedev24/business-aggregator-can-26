@@ -1,7 +1,7 @@
 import { X } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Chip, ErrorState, Select, Skeleton, Switch, TextInput, useLocale } from '@northline/ui';
+import { Alert, Chip, ErrorState, Select, Skeleton, Switch, TextInput, useLocale, SaveBar, StatusTag } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { useSession } from '../../lib/session';
 import { ValidationError } from '../../lib/http';
@@ -77,7 +77,7 @@ export function HoursTab({ onState }: { onState: (s: SaveState) => void }) {
   const previewDate = (() => { const d0 = today(); const diff = (DAYS.indexOf(previewDay) + 1 - isoWeekday(d0) + 7) % 7; return addDays(d0, diff); })();
   const preview = useQuery({ ...previewQuery(merchantId, { memberUserId: current ?? '', date: previewDate, durationMin: duration, ranges: days?.[previewDay] ?? [], intervalMin: interval, bufferMin: buffer }), enabled: !!current && !!days });
 
-  if (hours.isPending) return <div aria-busy="true">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} height={44} style={{ marginBottom: 8 }} />)}</div>;
+  if (hours.isPending) return <div aria-busy="true" className="nl-av-skel">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} height={44} />)}</div>;
   if (hours.isError) return <ErrorState message={t('loadError')} onRetry={() => void hours.refetch()} />;
   const name = members.find(m => m.userId === current)?.name ?? '';
   const summaryCount = allErrorCount + Object.keys(serverErrors).length;
@@ -124,12 +124,11 @@ export function HoursTab({ onState }: { onState: (s: SaveState) => void }) {
         {tried && summaryCount > 0 ? <Alert tone="error">{t('attention', { n: summaryCount })}</Alert> : null}
         {save.isError && !(save.error instanceof ValidationError) ? <Alert tone="error">{t('saveError')}</Alert> : null}
         {canEdit ? (
-          <div className="nl-av-save">
-            <button type="button" className="btn btn-primary" onClick={onSave} disabled={save.isPending || !dirty}>{t('saveHours')}</button>
+          <SaveBar label={t('saveHours')} status={<StatusTag tone={dirty ? 'warning' : 'success'}>{dirty ? t('statusDirty') : t('upToDate')}</StatusTag>} note={t('neverMoved')}>
             <Select aria-label={t('applyFrom')} className="nl-av-apply" value={apply} onChange={e => setApply(e.target.value as Apply)} options={[{ value: 'today', label: t('applyToday') }, { value: 'monday', label: t('applyMonday') }, { value: 'date', label: t('applyDate') }]} />
             {apply === 'date' ? <TextInput type="date" aria-label={t('applyDateLabel')} min={today()} value={applyDate} onChange={e => setApplyDate(e.target.value)} className="nl-av-apply" /> : null}
-            <span className="nl-small nl-muted">{t('neverMoved')}</span>
-          </div>
+            <button type="button" className="btn btn-primary" onClick={onSave} disabled={save.isPending || !dirty}>{t('saveHours')}</button>
+          </SaveBar>
         ) : null}
       </div>
 

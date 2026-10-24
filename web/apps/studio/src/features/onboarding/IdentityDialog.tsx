@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Dialog, ErrorState, Field, Skeleton, TextInput } from '@northline/ui';
+import { Alert, Dialog, ErrorState, Field, Skeleton, TextInput, StatusTag, type StatusTone } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { ownerIdentityQuery, useStartOwnerSession, type OwnerIdentity } from './api';
 import { useOnboardingT, type OnboardingT } from './messages';
@@ -38,7 +38,7 @@ export function IdentityDialog({ merchantId, title, onClose, navigate = url => w
 
   return (
     <Dialog open onClose={onClose} title={title} width={620} actions={<button type="button" className="btn btn-ghost" onClick={onClose}>{t('idClose')}</button>}>
-      <p className="nl-ob-note" style={{ marginTop: 0 }}>{t('idIntro')}</p>
+      <p className="nl-ob-note nl-ob-flush">{t('idIntro')}</p>
       {owners.isPending ? <Skeleton height={120} /> : owners.isError ? <ErrorState message={t('loadError')} onRetry={() => void owners.refetch()} /> : (
         owners.data.length === 0 ? <p className="nl-ob-note">{t('idNoOwners')}</p> : (
           <ul className="nl-ob-idlist">
@@ -52,7 +52,7 @@ export function IdentityDialog({ merchantId, title, onClose, navigate = url => w
                       <div className="nl-ob-check-name">{o.legalName}{o.you ? ` · ${t('idYou')}` : ''}</div>
                       <div className="nl-ob-check-desc">{t(`role_${o.role}` as Parameters<OnboardingT>[0])}{o.ownershipPct != null ? ` · ${o.ownershipPct} %` : ''}</div>
                     </div>
-                    <span className={`tag ${tone(o)}`}>{statusText(o, t)}</span>
+                    <StatusTag tone={tone(o)}>{statusText(o, t)}</StatusTag>
                   </div>
                   {open && (
                     <div className="nl-ob-idrow-actions">
@@ -75,19 +75,20 @@ export function IdentityDialog({ merchantId, title, onClose, navigate = url => w
           </ul>
         )
       )}
-      {sentTo ? <div style={{ marginTop: 12 }}><Alert tone="info" role="status">{t('idSent', { email: sentTo })}</Alert></div> : null}
-      {otherError ? <div style={{ marginTop: 12 }}><Alert tone="error">{otherError}</Alert></div> : null}
+      {sentTo ? <div className="nl-ob-gap"><Alert tone="info" role="status">{t('idSent', { email: sentTo })}</Alert></div> : null}
+      {otherError ? <div className="nl-ob-gap"><Alert tone="error">{otherError}</Alert></div> : null}
       <p className="nl-ob-note">{t('idPrivacy')}</p>
     </Dialog>
   );
 }
 
-function tone(o: OwnerIdentity): string {
+/** S-176: verified success, to redo danger, in progress warning, not started neutral. */
+function tone(o: OwnerIdentity): StatusTone {
   switch (o.status) {
-    case 'verified': return 'tag-accent';
-    case 'retry': case 'canceled': return 'tag-accent-2';
-    case 'processing': case 'review': case 'pending': return 'tag-highlight';
-    default: return 'tag-neutral';
+    case 'verified': return 'success';
+    case 'retry': case 'canceled': return 'danger';
+    case 'processing': case 'review': case 'pending': return 'warning';
+    default: return 'neutral';
   }
 }
 

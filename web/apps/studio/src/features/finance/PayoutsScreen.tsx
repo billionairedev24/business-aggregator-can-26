@@ -1,7 +1,7 @@
 import { FileText } from '@phosphor-icons/react';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Chip, DataTable, Field, OptionCard, PageSkeleton, RadioGroup, Select, Skeleton, TextInput, useFormatters, useLocale, type DataTableColumn, BoHeader } from '@northline/ui';
+import { Alert, Button, Chip, ColumnChart, DataTable, Field, KpiStrip, OptionCard, PageSkeleton, RadioGroup, Select, Skeleton, StatusTag, TextInput, useFormatters, useLocale, type DataTableColumn, type DataTableView, type StatusTone, BoHeader } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { attentionCount } from '../../lib/forms';
 import { useMerchantId, useRole } from '../shell/api';
@@ -9,7 +9,7 @@ import {
   actionKey, downloads, payoutHistoryQuery, payoutOverviewQuery, schedulePreviewQuery, useConfirmBank, useInstantPayout, useLinkSession,
   usePrepareBank, useSaveSchedule, type Account, type Frequency, type MonthlyAnchor, type PayoutLine, type PayoutOverview, type Reserve, type Schedule,
 } from './api';
-import { dateTime, dayDate, timeOf, toCents, toDollars } from './format';
+import { axisDollars, dateTime, dayDate, timeOf, toCents, toDollars } from './format';
 import { useFinanceT, type FinanceKey } from './messages';
 import { QueryState } from './QueryState';
 import { StepUpPanel } from './StepUpPanel';
@@ -17,15 +17,18 @@ import './finance.css';
 
 type Panel = null | 'instant' | 'schedule' | 'bank';
 
-/** Payouts (redesign § 2.2, BO:472 payout wallet): the balance, instant payout and schedule, bank account, tax documents, history. */
+/**
+ * Payouts (S-176, on the Studio dashboard's language): the page head with where the money goes next, the balance as the
+ * KPI strip, the payout account with instant payout / schedule / bank change, then the last payouts as columns, the
+ * history with status tabs and the tax documents.
+ */
 export function PayoutsScreen() {
   const merchantId = useMerchantId();
   const t = useFinanceT();
   const overview = useQuery(payoutOverviewQuery(merchantId));
   return (
     <div className="fin-page">
-      <BoHeader title={t('payoutsKicker')} sub={t('payoutsTitle')} />
-      <QueryState query={overview} skeleton={<PageSkeleton kpis={3} rows={2} />}>{o => <Money o={o} />}</QueryState>
+      <QueryState query={overview} skeleton={<><BoHeader title={t('payoutsKicker')} /><PageSkeleton kpis={3} rows={2} /></>}>{o => <Money o={o} />}</QueryState>
       <div className="fin-split">
         <section className="bo-card" aria-labelledby="fin-history"><h2 className="bo-card-title" id="fin-history">{t('payoutHistory')}</h2><History /></section>
         <TaxDocuments />
@@ -57,60 +60,60 @@ function Money({ o }: { o: PayoutOverview }) {
   const pending = o.pendingAccount;
   const ended = [pending, account].find(a => a?.disconnectedAt);
   return (
-    <section className="bo-card fin-wallet" aria-labelledby="fin-balance">
-      <h2 className="bo-card-title" id="fin-balance">{t('balanceTitle')}</h2>
+    <>
+      <BoHeader title={t('payoutsKicker')} sub={line} />
       {o.returned ? (
         <Alert tone="error" role="alert" title={t('returnedTitle')}
           actions={owner ? (panel !== 'bank' ? <Button onClick={() => setPanel('bank')}>{t('returnedCta')}</Button> : null) : <span className="fin-small">{t('returnedAskOwner')}</span>}>
-          {t('returnedBody', { amount: f.money(o.returned.amountCents), date: dayDate(o.returned.sentAt, locale), reason: t(returnedReason(o.returned.failureCode)) })}{' '}
+          {t('returnedBody', { amount: f.price(o.returned.amountCents), date: dayDate(o.returned.sentAt, locale), reason: t(returnedReason(o.returned.failureCode)) })}{' '}
           {t('returnedAction')}
         </Alert>
       ) : null}
-      <ul className="fin-balance" aria-label={t('balanceTitle')}>
-        <li className="fin-available">
-          <span className="fin-available-k">{t('availableNow')}</span>
-          <span className="fin-available-v">{f.money(o.availableCents)}</span>
-          <span className="fin-small">{line}</span>
-        </li>
-        {o.reserveCents > 0 ? <>
-          <li className="fin-tile"><span className="fin-available-k">{t('payableNow')}</span><span className="fin-tile-v">{f.money(o.payableCents)}</span><span className="fin-small">{t('payableNote')}</span></li>
-          <li className="fin-tile"><span className="fin-available-k">{t('reserveHeld')}</span><span className="fin-tile-v">{f.money(o.reserveCents)}</span><span className="fin-small">{t('reserveNote')}</span></li>
-        </> : null}
-        <li className="fin-tile"><span className="fin-available-k">{t('nextPayoutTile')}</span><span className="fin-tile-v">{o.schedule.frequency !== 'manual' && o.nextPayoutAt ? dayDate(o.nextPayoutAt, locale) : t('manualTile')}</span><span className="fin-small">{t(`freq_${o.schedule.frequency}` as FinanceKey)}</span></li>
-      </ul>
-      {/* where the money goes (one line, with Change for the owner), then what the owner can do with it */}
-      <div className="fin-request">
-        <span className="fin-request-to"><span className="fin-small">{t('paidTo')}</span><strong>{pending?.effectiveAt
-          ? t('bankPendingLabel', { bank: bankName(pending), last4: pending.last4, holder: pending.holderName, date: dateTime(pending.effectiveAt, locale) })
-          : account ? t('bankLabel', { bank: bankName(account), last4: account.last4, holder: account.holderName }) : t('noAccount')}</strong></span>
-        {owner ? <Button variant="ghost" onClick={() => setPanel(p => (p === 'bank' ? null : 'bank'))} aria-expanded={panel === 'bank'}>{t('change')}</Button> : null}
-        <span className="fin-request-gap" />
-        {owner ? <>
-          <Button variant="secondary" onClick={() => setPanel(p => (p === 'schedule' ? null : 'schedule'))} aria-expanded={panel === 'schedule'}>{t('changeSchedule')}</Button>
-          <Button onClick={() => setPanel(p => (p === 'instant' ? null : 'instant'))} disabled={!canInstant} aria-expanded={panel === 'instant'}>{t('instantButton')}</Button>
-          {!o.instant.eligible ? <span className="fin-small fin-request-note">{t('ineligible')}</span> : null}
-        </> : null}
-      </div>
-      {ended?.disconnectedAt ? (
-        <div className="fin-row fin-row-44" role="status">
-          <span className="fin-small">{t('connectionEnded', { date: dateTime(ended.disconnectedAt, locale) })}</span>
-          {owner && panel !== 'bank' ? <Button variant="ghost" onClick={() => setPanel('bank')}>{t('reconnect')}</Button> : null}
+      <KpiStrip label={t('balanceTitle')} items={[
+        { key: 'available', label: t('availableNow'), value: f.price(o.availableCents) },
+        ...(o.reserveCents > 0 ? [
+          { key: 'payable', label: t('payableNow'), value: f.price(o.payableCents), delta: t('payableNote') },
+          { key: 'reserve', label: t('reserveHeld'), value: f.price(o.reserveCents), delta: t('reserveNote') },
+        ] : []),
+        { key: 'next', label: t('nextPayoutTile'), value: o.schedule.frequency !== 'manual' && o.nextPayoutAt ? f.when(o.nextPayoutAt) : t('manualTile'), delta: t(`freq_${o.schedule.frequency}` as FinanceKey) },
+      ]} />
+      <section className="bo-card fin-wallet" aria-labelledby="fin-balance">
+        <h2 className="bo-card-title" id="fin-balance">{t('payoutAccount')}</h2>
+        {/* where the money goes (one line, with Change for the owner), then what the owner can do with it */}
+        <div className="fin-request">
+          <span className="fin-request-to"><span className="fin-small">{t('paidTo')}</span><strong>{pending?.effectiveAt
+            ? t('bankPendingLabel', { bank: bankName(pending), last4: pending.last4, holder: pending.holderName, date: dateTime(pending.effectiveAt, locale) })
+            : account ? t('bankLabel', { bank: bankName(account), last4: account.last4, holder: account.holderName }) : t('noAccount')}</strong></span>
+          {pending?.effectiveAt ? <StatusTag tone="warning">{t('bankPendingTag')}</StatusTag> : account ? <StatusTag tone="success">{t('bankActiveTag')}</StatusTag> : null}
+          {owner ? <Button variant="ghost" onClick={() => setPanel(p => (p === 'bank' ? null : 'bank'))} aria-expanded={panel === 'bank'}>{t('change')}</Button> : null}
+          <span className="fin-request-gap" />
+          {owner ? <>
+            <Button variant="secondary" onClick={() => setPanel(p => (p === 'schedule' ? null : 'schedule'))} aria-expanded={panel === 'schedule'}>{t('changeSchedule')}</Button>
+            <Button onClick={() => setPanel(p => (p === 'instant' ? null : 'instant'))} disabled={!canInstant} aria-expanded={panel === 'instant'}>{t('instantButton')}</Button>
+            {!o.instant.eligible ? <span className="fin-small fin-request-note">{t('ineligible')}</span> : null}
+          </> : null}
         </div>
-      ) : null}
-      {panel === 'instant' && account ? <InstantPanel o={o} account={account} onClose={() => setPanel(null)} /> : null}
-      {panel === 'schedule' ? <SchedulePanel o={o} onClose={() => setPanel(null)} /> : null}
-      {panel === 'bank' ? <BankPanel o={o} onClose={() => setPanel(null)} /> : null}
-    </section>
+        {ended?.disconnectedAt ? (
+          <div className="fin-row fin-row-44" role="status">
+            <span className="fin-small">{t('connectionEnded', { date: dateTime(ended.disconnectedAt, locale) })}</span>
+            {owner && panel !== 'bank' ? <Button variant="ghost" onClick={() => setPanel('bank')}>{t('reconnect')}</Button> : null}
+          </div>
+        ) : null}
+        {panel === 'instant' && account ? <InstantPanel o={o} account={account} onClose={() => setPanel(null)} /> : null}
+        {panel === 'schedule' ? <SchedulePanel o={o} onClose={() => setPanel(null)} /> : null}
+        {panel === 'bank' ? <BankPanel o={o} onClose={() => setPanel(null)} /> : null}
+      </section>
+    </>
   );
 }
 
 // ── instant payout ────────────────────────────────────────────────────────────────────────────────────────────────
 
-export function instantAmountError(input: string, maxCents: number, t: ReturnType<typeof useFinanceT>, money: (c: number) => string): string | undefined {
+export function instantAmountError(input: string, maxCents: number, t: ReturnType<typeof useFinanceT>, price: (c: number) => string): string | undefined {
   if (!input.trim()) return t('amountRequired');
   const cents = toCents(input);
   if (!Number.isFinite(cents) || cents < 100) return t('amountMin');
-  if (cents > maxCents) return t('amountMax', { amount: money(maxCents) });
+  if (cents > maxCents) return t('amountMax', { amount: price(maxCents) });
   return undefined;
 }
 const instantFee = (cents: number) => Math.max(50, Math.round(cents / 100));
@@ -126,7 +129,7 @@ function InstantPanel({ o, account, onClose }: { o: PayoutOverview; account: Acc
   const [touched, setTouched] = useState(false);
   const [step, setStep] = useState<'amount' | 'confirm' | 'done'>('amount');
   const [serverError, setServerError] = useState<string>();
-  const error = instantAmountError(amount, o.payableCents, t, c => f.money(c)) ?? serverError;
+  const error = instantAmountError(amount, o.payableCents, t, c => f.price(c)) ?? serverError;
   const cents = toCents(amount);
   const fee = Number.isFinite(cents) ? instantFee(cents) : 0;
   const net = Number.isFinite(cents) ? Math.max(0, cents - fee) : 0;
@@ -136,7 +139,7 @@ function InstantPanel({ o, account, onClose }: { o: PayoutOverview; account: Acc
   function next(e: FormEvent) {
     e.preventDefault();
     setTouched(true);
-    if (!instantAmountError(amount, o.payableCents, t, c => f.money(c))) { key.current.renew(); setStep('confirm'); }
+    if (!instantAmountError(amount, o.payableCents, t, c => f.price(c))) { key.current.renew(); setStep('confirm'); }
   }
   async function confirm(proof: string) {
     try {
@@ -153,14 +156,14 @@ function InstantPanel({ o, account, onClose }: { o: PayoutOverview; account: Acc
       {step === 'amount' ? (
         <form onSubmit={next} noValidate>
           <Field label={t('amount')} error={touched ? error : undefined} className="fin-field" >
-            <TextInput inputMode="decimal" value={amount} onBlur={() => setTouched(true)} onChange={e => { setAmount(e.target.value.replace(/[^\d.,]/g, '')); setServerError(undefined); }} style={{ maxWidth: 160 }} />
+            <TextInput inputMode="decimal" value={amount} onBlur={() => setTouched(true)} onChange={e => { setAmount(e.target.value.replace(/[^\d.,]/g, '')); setServerError(undefined); }} className="fin-input-sm" />
           </Field>
-          <Button type="button" variant="ghost" onClick={() => { setAmount(toDollars(o.payableCents)); setServerError(undefined); }}>{t('max', { amount: f.money(o.payableCents) })}</Button>
-          <div className="fin-rows" style={{ marginTop: 10, gap: 4 }}>
-            <div className="fin-row"><span>{t('feeLine')}</span><span>−{f.money(fee)}</span></div>
-            <div className="fin-row" style={{ fontWeight: 600 }}><span>{t('arrivesLine', { account: account.label })}</span><span>{f.money(net)}</span></div>
+          <Button type="button" variant="ghost" onClick={() => { setAmount(toDollars(o.payableCents)); setServerError(undefined); }}>{t('max', { amount: f.price(o.payableCents) })}</Button>
+          <div className="fin-rows fin-sum">
+            <div className="fin-row"><span>{t('feeLine')}</span><span>−{f.price(fee)}</span></div>
+            <div className="fin-row fin-row-total"><span>{t('arrivesLine', { account: account.label })}</span><span>{f.price(net)}</span></div>
           </div>
-          <div className="fin-small" style={{ marginTop: 8 }}>{o.schedule.frequency === 'weekly' && o.schedule.weekday === 5 ? t('instantNote') : t('instantNoteGeneric')}</div>
+          <div className="fin-small fin-gap-top">{o.schedule.frequency === 'weekly' && o.schedule.weekday === 5 ? t('instantNote') : t('instantNoteGeneric')}</div>
           <div className="fin-actions">
             <Button type="submit" disabled={!!error}>{t('continue')}</Button>
             <Button type="button" variant="ghost" onClick={onClose}>{t('cancel')}</Button>
@@ -173,8 +176,8 @@ function InstantPanel({ o, account, onClose }: { o: PayoutOverview; account: Acc
         />
       ) : (
         <>
-          <div className="fin-note" role="status"><strong>{t('onItsWay', { amount: f.money(result?.netCents ?? net) })}</strong> {t('onItsWayMore', { ref: result?.reference ?? '', account: result?.destination ?? account.label, eta })}</div>
-          <Button variant="ghost" onClick={onClose} style={{ marginTop: 8 }}>{t('done')}</Button>
+          <div className="fin-note" role="status"><strong>{t('onItsWay', { amount: f.price(result?.netCents ?? net) })}</strong> {t('onItsWayMore', { ref: result?.reference ?? '', account: result?.destination ?? account.label, eta })}</div>
+          <div className="fin-actions"><Button variant="ghost" onClick={onClose}>{t('done')}</Button></div>
         </>
       )}
     </section>
@@ -200,7 +203,7 @@ function SchedulePanel({ o, onClose }: { o: PayoutOverview; onClose: () => void 
   const preview = useQuery(schedulePreviewQuery(merchantId, schedule));
   const change = (fn: () => void) => { fn(); setSaved(false); save.reset(); };
   const next = preview.data?.nextPayoutAt;
-  const amount = f.money(preview.data?.amountCents ?? o.payableCents);
+  const amount = f.price(preview.data?.amountCents ?? o.payableCents);
   const text = saved
     ? (frequency === 'manual' || !next ? t('previewSavedManual') : t('previewSaved', { date: dayDate(next, locale) }))
     : frequency === 'manual' ? t('previewManual')
@@ -216,11 +219,11 @@ function SchedulePanel({ o, onClose }: { o: PayoutOverview; onClose: () => void 
         {FREQS.map(fr => (
           <OptionCard key={fr} role="radio" aria-checked={frequency === fr} selected={frequency === fr} onClick={() => change(() => setFrequency(fr))}
             title={t(`f_${fr}` as FinanceKey)} description={t(`f_${fr}_desc` as FinanceKey)}
-            trailing={<span style={{ fontSize: 13, whiteSpace: 'nowrap' }}>{t(`f_${fr}_fee` as FinanceKey)}</span>} />
+            trailing={<span className="fin-fee">{t(`f_${fr}_fee` as FinanceKey)}</span>} />
         ))}
       </RadioGroup>
       {frequency === 'weekly' ? (
-        <div className="nl-field" style={{ marginTop: 10 }}>
+        <div className="nl-field fin-gap-top">
           <span className="nl-label" id="fin-dow">{t('dayOfWeek')}</span>
           <RadioGroup className="fin-days" aria-labelledby="fin-dow">
             {[1, 2, 3, 4, 5].map(d => <Chip key={d} role="radio" aria-checked={weekday === d} selected={weekday === d} onClick={() => change(() => setWeekday(d))}>{t(`d${d}` as FinanceKey)}</Chip>)}
@@ -228,20 +231,20 @@ function SchedulePanel({ o, onClose }: { o: PayoutOverview; onClose: () => void 
         </div>
       ) : null}
       {frequency === 'monthly' ? (
-        <div style={{ marginTop: 10 }}>
+        <div className="fin-gap-top">
           <Field label={t('dayOfMonth')}>
-            <Select value={anchor} onChange={e => change(() => setAnchor(e.target.value as MonthlyAnchor))} style={{ maxWidth: 160 }}
+            <Select value={anchor} onChange={e => change(() => setAnchor(e.target.value as MonthlyAnchor))} className="fin-input-sm"
               options={(['first', 'fifteenth', 'last'] as const).map(a => ({ value: a, label: t(`m_${a}`) }))} />
           </Field>
         </div>
       ) : null}
-      <div style={{ marginTop: 10 }}>
+      <div className="fin-gap-top">
         <Field label={t('reserveLabel')} hint={t('reserveHint')}>
-          <Select value={reserve} onChange={e => change(() => setReserve(e.target.value as Reserve))} style={{ maxWidth: 240 }}
+          <Select value={reserve} onChange={e => change(() => setReserve(e.target.value as Reserve))} className="fin-input-md"
             options={(['none', 'keep_500', 'percent_10'] as const).map(r => ({ value: r, label: t(`r_${r}`) }))} />
         </Field>
       </div>
-      <div className="fin-muted" style={{ marginTop: 10 }} aria-live="polite">{preview.isPending && !saved ? <Skeleton width={260} /> : text}</div>
+      <div className="fin-muted fin-gap-top" aria-live="polite">{preview.isPending && !saved ? <Skeleton width={260} /> : text}</div>
       {error ? <div role="alert" className="nl-error">{error}</div> : null}
       <div className="fin-actions">
         <Button onClick={() => save.mutate(schedule, { onSuccess: () => setSaved(true) })} disabled={save.isPending || saved} aria-busy={save.isPending}>
@@ -301,8 +304,8 @@ function FakeBankPicker({ busy, onLink, onCancel }: { busy: boolean; onLink: (li
   return (
     <div className="fin-dashed" role="group" aria-label={t('fakeTitle')}>
       <strong>{t('fakeTitle')}</strong>
-      <div className="fin-small" style={{ marginTop: 4 }}>{t('fakeText')}</div>
-      <div style={{ marginTop: 10, textAlign: 'left' }}>
+      <div className="fin-small">{t('fakeText')}</div>
+      <div className="fin-gap-top fin-left">
         <Field label={t('fakeBank')}>
           <Select value={String(choice)} onChange={e => setChoice(Number(e.target.value))}
             options={FAKE_BANKS.map(([, l4, name], i) => ({ value: String(i), label: `${name} ··${l4}` }))} />
@@ -384,7 +387,7 @@ function BankPanel({ o, onClose }: { o: PayoutOverview; onClose: () => void }) {
       <div className="fin-warn"><strong>{t('security')}</strong> {t('securityText')}</div>
       {step === 'form' ? (
         <form onSubmit={next} noValidate>
-          <RadioGroup className="fin-days" style={{ marginTop: 12 }} aria-label={t('bankPanelTitle')}>
+          <RadioGroup className="fin-days fin-gap-top" aria-label={t('bankPanelTitle')}>
             <Chip role="radio" aria-checked={mode === 'instant'} selected={mode === 'instant'} onClick={() => setMode('instant')}>{t('connectInstantly')}</Chip>
             <Chip role="radio" aria-checked={mode === 'manual'} selected={mode === 'manual'} onClick={() => { setMode('manual'); setPicking(false); }}>{t('enterManually')}</Chip>
           </RadioGroup>
@@ -392,17 +395,17 @@ function BankPanel({ o, onClose }: { o: PayoutOverview; onClose: () => void }) {
             ? <FakeBankPicker busy={busy} onCancel={() => setPicking(false)} onLink={l => { setFormError(undefined); linkAccount(l).catch(failed); }} />
             : <div className="fin-dashed">{t('fcText')}</div>) : (
             <>
-              {attention > 0 ? <div role="alert" className="nl-error" style={{ marginTop: 12 }}>{t('attention', { count: attention })}</div> : null}
+              {attention > 0 ? <div role="alert" className="nl-error fin-gap-top">{t('attention', { count: attention })}</div> : null}
               <div className="fin-bank-fields">
                 <Field label={t('institution')} error={shown.institution}><TextInput inputMode="numeric" placeholder="004" value={values.institution} onChange={set('institution')} onBlur={() => setTouched(x => ({ ...x, institution: true }))} /></Field>
                 <Field label={t('transit')} error={shown.transit}><TextInput inputMode="numeric" placeholder="12345" value={values.transit} onChange={set('transit')} onBlur={() => setTouched(x => ({ ...x, transit: true }))} /></Field>
                 <Field label={t('accountNumber')} error={shown.accountNumber}><TextInput inputMode="numeric" autoComplete="off" placeholder={t('accountPlaceholder')} value={values.accountNumber} onChange={set('accountNumber')} onBlur={() => setTouched(x => ({ ...x, accountNumber: true }))} /></Field>
                 <Field label={t('holder')} error={shown.holderName}><TextInput value={values.holderName} onChange={set('holderName')} onBlur={() => setTouched(x => ({ ...x, holderName: true }))} /></Field>
               </div>
-              <div className="fin-small" style={{ marginTop: 6 }}>{t('manualNote')}</div>
+              <div className="fin-small fin-gap-top">{t('manualNote')}</div>
             </>
           )}
-          {formError ? <div role="alert" className="nl-error" style={{ marginTop: 10 }}>{formError}</div> : null}
+          {formError ? <div role="alert" className="nl-error fin-gap-top">{formError}</div> : null}
           {picking ? null : (
             <div className="fin-actions">
               <Button type="submit" disabled={busy} aria-busy={busy}>{busy ? t('working') : t('continue')}</Button>
@@ -412,16 +415,16 @@ function BankPanel({ o, onClose }: { o: PayoutOverview; onClose: () => void }) {
         </form>
       ) : step === 'confirm' && draft ? (
         <>
-          <div style={{ marginTop: 12, fontSize: 14 }}>{t('newAccount')} <strong>{draft.institutionName} · ··{draft.last4} · {draft.holderName}</strong> · {t('verifiedVia')}</div>
+          <div className="fin-gap-top fin-body">{t('newAccount')} <strong>{draft.institutionName} · ··{draft.last4} · {draft.holderName}</strong> · {t('verifiedVia')}</div>
           <StepUpPanel confirmLabel={t('confirmWithPasskey')} onCancel={onClose} busy={confirm.isPending}
             onProof={async proof => { await confirm.mutateAsync({ accountId: draft.id, key: key.current.get(), proof }); setStep('done'); }} />
         </>
       ) : (
         <>
-          <div className="fin-note" role="status" style={{ marginTop: 12 }}>
+          <div className="fin-note" role="status">
             <strong>{t('accountChanged')}</strong> {t('accountChangedMore', { date: confirm.data?.effectiveAt ? dateTime(confirm.data.effectiveAt, locale) : '', account: draft?.label ?? '' })}
           </div>
-          <Button variant="ghost" onClick={onClose} style={{ marginTop: 8 }}>{t('done')}</Button>
+          <div className="fin-actions"><Button variant="ghost" onClick={onClose}>{t('done')}</Button></div>
         </>
       )}
     </section>
@@ -446,13 +449,33 @@ function TaxDocuments() {
   );
 }
 
-interface HistoryRow { id: string; date: string; amount: number; jobs: number; status: string; tone: 'tag-accent' | 'tag-accent-2' | 'tag-neutral' }
+type PayoutState = PayoutLine['state'];
+interface HistoryRow { id: string; date: string; arrives: string; amount: number; fee: number; jobs: number; status: string; state: PayoutState; to: string }
+
+/** S-176: paid success, on its way info, failed danger, canceled neutral. */
+export const payoutTone = (s: PayoutState): StatusTone => (s === 'paid' ? 'success' : s === 'failed' ? 'danger' : s === 'canceled' ? 'neutral' : 'info');
 
 export function historyRows(lines: PayoutLine[], t: ReturnType<typeof useFinanceT>, date: (iso: string) => string): HistoryRow[] {
   return lines.map(p => ({
-    id: p.id, date: p.kind === 'instant' ? `${date(p.createdAt)} · ${t('instantTag')}` : date(p.createdAt), amount: p.amountCents, jobs: p.itemCount,
-    status: t(`ps_${p.state}` as FinanceKey), tone: p.state === 'paid' ? 'tag-accent' : p.state === 'failed' ? 'tag-accent-2' : 'tag-neutral',
+    id: p.id, date: p.kind === 'instant' ? `${date(p.createdAt)} · ${t('instantTag')}` : date(p.createdAt), arrives: date(p.arrivesAt),
+    amount: p.amountCents, fee: p.feeCents, jobs: p.itemCount, status: t(`ps_${p.state}` as FinanceKey), state: p.state, to: p.destination ?? '',
   }));
+}
+
+/** The last 12 payouts (oldest first) as columns, the latest in ink. */
+function PayoutChart({ lines }: { lines: PayoutLine[] }) {
+  const t = useFinanceT();
+  const f = useFormatters();
+  const { locale } = useLocale();
+  const last = lines.filter(p => p.state !== 'canceled' && p.state !== 'failed').slice(0, 12).reverse();
+  if (last.length < 2) return null;
+  const points = last.map(p => ({ label: f.when(p.arrivesAt), name: f.when(p.arrivesAt, 'full'), value: p.netCents }));
+  const past = points.slice(0, -1);
+  const avg = Math.round(past.reduce((n, p) => n + p.value, 0) / past.length);
+  return (
+    <ColumnChart title={t('payoutChart')} data={points} highlightLast format={c => f.price(c)} axisFormat={c => axisDollars(c, locale)} height={160}
+      legend={{ current: t('chartLatestPayout', { amount: f.price(points[points.length - 1]!.value) }), past: t('chartPastPayouts', { count: past.length, amount: f.price(avg) }) }} />
+  );
 }
 
 function History() {
@@ -461,18 +484,32 @@ function History() {
   const merchantId = useMerchantId();
   const role = useRole();
   const history = useQuery(payoutHistoryQuery(merchantId));
-  const rows = useMemo(() => historyRows(history.data ?? [], t, iso => f.date(iso)), [history.data, t, f]);
+  const rows = useMemo(() => historyRows(history.data ?? [], t, iso => f.when(iso)), [history.data, t, f]);
+  const price = (v: unknown) => f.price(v as number);
   const columns: DataTableColumn<HistoryRow>[] = [
-    { key: 'date', label: t('colDate'), primary: true },
-    { key: 'amount', label: t('colAmount'), type: 'money' },
+    { key: 'date', label: t('colDate'), primary: true, nowrap: true },
+    { key: 'arrives', label: t('colArrives'), priority: 2, nowrap: true, card: 'meta' },
+    { key: 'to', label: t('colTo'), priority: 1, card: 'line' },
     { key: 'jobs', label: t('colJobs'), type: 'num', priority: 1 },
-    { key: 'status', label: t('colStatus'), type: 'tag' },
+    { key: 'fee', label: t('colFee'), type: 'money', format: price, priority: 1 },
+    { key: 'amount', label: t('colAmount'), type: 'money', format: price, card: 'end' },
+    { key: 'status', label: t('colStatus'), type: 'tag', status: r => payoutTone(r.state) },
+  ];
+  const is = (...s: PayoutState[]) => (r: HistoryRow) => s.includes(r.state);
+  const views: DataTableView<HistoryRow>[] = [
+    { id: 'all', label: t('viewAll') },
+    { id: 'paid', label: t('ps_paid'), when: is('paid') },
+    { id: 'moving', label: t('viewOnItsWay'), when: is('pending', 'in_transit'), hideEmpty: true },
+    { id: 'failed', label: t('ps_failed'), when: is('failed'), tone: 'danger', hideEmpty: true },
   ];
   if (history.isPending) return <Skeleton height={300} />;
   return (
-    <DataTable<HistoryRow> entity={t('payoutEntity')} plural={t('payoutPlural')} columns={columns} rows={rows} pageSize={10}
-      rowTones={r => ({ status: r.tone })} can={{ create: false, update: false, delete: false, export: true }}
-      roleName={t(`role_${role}` as FinanceKey)} emptyText={t('payoutsEmpty')} reportName="payouts"
-      error={history.isError ? t('loadError') : null} onRetry={() => void history.refetch()} />
+    <>
+      {history.data ? <PayoutChart lines={history.data} /> : null}
+      <DataTable<HistoryRow> entity={t('payoutEntity')} plural={t('payoutPlural')} columns={columns} rows={rows} pageSize={10} views={views}
+        can={{ create: false, update: false, delete: false, export: true }}
+        roleName={t(`role_${role}` as FinanceKey)} emptyText={t('payoutsEmpty')} reportName="payouts"
+        error={history.isError ? t('loadError') : null} onRetry={() => void history.refetch()} />
+    </>
   );
 }

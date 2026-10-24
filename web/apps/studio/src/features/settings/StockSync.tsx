@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { Button, ErrorState, Field, PageSkeleton, Select, Tag, useFormatters } from '@northline/ui';
+import { Button, ErrorState, Field, PageSkeleton, Select, StatusTag, useFormatters } from '@northline/ui';
 import { integrationsQuery, type CommerceProvider } from '../catalogue/api';
 import { useMerchantId, useRole } from '../shell/api';
 import { locationsQuery, stockQuery, useChooseLocation, usePushAction, type PushView } from './integrationsApi';
@@ -70,7 +70,7 @@ function StoreStock({ provider }: { provider: CommerceProvider }) {
                       <span className="nl-set-sub">{f.date(p.createdAt, 'dateTime')} · {conflictText(p, platform, t)}</span>
                       {p.applied ? <span className="nl-set-sub">{t('fixedByHand', { platform })}</span> : null}
                       <span className="nl-set-hookactions">
-                        {p.conflict === 'oversold' ? <Tag tone="warning">{platform}</Tag> : null}
+                        {p.conflict === 'oversold' ? <StatusTag tone="warning">{platform}</StatusTag> : null}
                         {canEdit && !p.applied && <Button variant="secondary" aria-label={t('retryLabel', { change })} disabled={action.isPending} onClick={() => action.mutate({ id: p.id, action: 'retry' })}>{t('retry')}</Button>}
                         {canEdit && <Button variant="ghost" aria-label={t('dismissLabel', { change })} disabled={action.isPending} onClick={() => action.mutate({ id: p.id, action: 'dismiss' })}>{t('dismiss')}</Button>}
                       </span>

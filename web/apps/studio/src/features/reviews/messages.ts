@@ -5,6 +5,7 @@ export const useReviewsT = defineMessages({
   en: {
     kicker: 'Reviews',
     title: '{average} from {count, plural, one {# verified customer} other {# verified customers}}',
+    sub: 'Verified customers only · you reply once, publicly.', kpis: 'Review figures', kpiRating: 'Average rating', kpiCount: 'Reviews', kpiReplied: 'Replied', kpiOfShown: 'of the {count} newest', kpiWaiting: 'Waiting for a reply', kpiWaitingDelta: 'a reply shows customers you care', kpiWaitingNone: 'all answered', listTitle: 'Reviews', show: 'Show', tabAll: 'All', tabReply: 'Needs a reply', tabReplied: 'Replied', tabLow: '1–3 stars', noneHere: 'No reviews here.',
     titleNone: 'No reviews yet',
     distribution: 'Rating distribution',
     starsRow: '{stars} stars: {count}',
@@ -36,6 +37,7 @@ export const useReviewsT = defineMessages({
   fr: {
     kicker: 'Avis',
     title: '{average} de {count, plural, one {# client vérifié} other {# clients vérifiés}}',
+    sub: 'Clients vérifiés seulement · vous répondez une fois, publiquement.', kpis: 'Chiffres des avis', kpiRating: 'Note moyenne', kpiCount: 'Avis', kpiReplied: 'Répondus', kpiOfShown: 'des {count} plus récents', kpiWaiting: 'En attente d’une réponse', kpiWaitingDelta: 'répondre montre que vous êtes à l’écoute', kpiWaitingNone: 'tous répondus', listTitle: 'Avis', show: 'Afficher', tabAll: 'Tous', tabReply: 'À répondre', tabReplied: 'Répondus', tabLow: '1 à 3 étoiles', noneHere: 'Aucun avis ici.',
     titleNone: 'Aucun avis pour le moment',
     distribution: 'Répartition des notes',
     starsRow: '{stars} étoiles : {count}',

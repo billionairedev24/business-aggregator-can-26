@@ -395,6 +395,20 @@ function productDetail() {
     completeness: { percent: 83, done: 5, total: 6, missing: [] } };
 }
 
+/** S-176: Standing — one consequence in force, a dispute decision to appeal, a coaching plan, an appeal in review (none recorded). */
+function standing() {
+  const at = d => new Date(Date.now() + d * DAY).toISOString();
+  return {
+    active: [{ id: 'C1', kind: 'instant_book_off', cause: 'rules', reason: 'Two late cancellations in 30 days', detail: {}, startedAt: at(-3), endsAt: at(11), active: true, liftedAt: null, liftReason: null, liftedByStaff: false, appealable: true, appealBy: at(11), appeal: null }],
+    past: [{ id: 'C0', kind: 'photo_delay', cause: 'staff', reason: 'Completion photos missing on three jobs', detail: {}, startedAt: at(-60), endsAt: at(-46), active: false, liftedAt: at(-46), liftReason: 'Photos added', liftedByStaff: false, appealable: false, appealBy: null, appeal: null }],
+    appeals: [{ id: 'A1', number: 'AP-1042', subjectType: 'dispute', subjectId: 'D9', subjectKind: 'dispute', subjectLabel: 'DS-1102', statement: 'The inspection report shows the leak was not present at the visit.', state: 'in_review', filedAt: at(-2), decidedAt: null, decisionReason: null, compensationCents: 0, files: [{ id: 'F1', name: 'inspection-report.pdf', contentType: 'application/pdf', size: 182000 }] }],
+    appealableDisputes: [{ disputeId: 'D7', caseNumber: 'DS-1171', subject: 'Battery replacement', decision: 'partial', refundCents: 6000, decidedAt: at(-4), appealBy: at(10), note: 'The customer showed the old battery was still under warranty.' }],
+    coaching: { id: 'P1', title: 'Fewer late cancellations', note: 'Keep at least 2 hours between jobs across the city for the next 30 days.', dueOn: at(26).slice(0, 10), state: 'active', createdAt: at(-3), closedAt: null, closeReason: null,
+      tasks: [{ id: 'T1', title: 'Turn on travel buffers in Availability', done: true, doneAt: at(-2) }, { id: 'T2', title: 'Read “Running late? Tell the customer first”', done: true, doneAt: at(-1) }, { id: 'T3', title: 'Finish 5 jobs on time', done: false, doneAt: null }] },
+    pastCoaching: [],
+  };
+}
+
 /** An application at the business step (a valid ULID: the wizard drops an `m` that is not one) and one in review (the gate). */
 const ONB = '01J9ZD3V00000000000000NB01', GATE = '01J9ZD3V00000000000000GATE';
 const chk = (id, key, checkType, action, status, registry = null) => ({ id, key, checkType, action, registry, status, reference: null, document: null, expiresOn: null, updatedAt: '2026-10-17T16:00:00Z' });
@@ -621,6 +635,7 @@ export const SHOTS = {
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/storefront`) ? { body: storefront() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${KITCHEN_ID}/menus/mn1`) ? { body: menu() } : undefined),
     (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/quote-requests`) ? { body: quoteRequests() } : undefined),
+    (m, p) => (live(m, p, `/api/v1/merchants/${PROVIDER_ID}/standing`) ? { body: standing() } : undefined),
     (m, p) => { const id = /^\/api\/v1\/merchants\/([^/]+)\/onboarding$/.exec(p)?.[1]; return m === 'GET' && APPLICATIONS[id] ? { body: APPLICATIONS[id] } : undefined; },
     (m, p) => { const id = /^\/api\/v1\/merchants\/([^/]+)\/onboarding\/legal-forms$/.exec(p)?.[1]; const province = APPLICATIONS[id]?.province; return m === 'GET' && LEGAL_FORMS[province] ? { body: LEGAL_FORMS[province] } : undefined; },
     (m, p) => (m === 'GET' && /^\/api\/v1\/merchants\/[^/]+\/dashboard$/.test(p) ? { body: todayDashboard(p.includes('PWP1') ? SELLER_DASHBOARD : p.includes(KITCHEN_ID) ? KITCHEN_DASHBOARD : DASHBOARD) } : undefined),

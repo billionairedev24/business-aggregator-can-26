@@ -1,6 +1,6 @@
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { FilePdf, Image, Paperclip, X } from '@phosphor-icons/react';
-import { Button } from '@northline/ui';
+import { Button, Chip } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { uploadAttachment, type Attachment, type QuickReply } from './api';
 import { useMessagesT } from './messages';
@@ -91,7 +91,7 @@ export function Composer({ merchantId, label, quickReplies = [], attach = 'icon'
       {quickReplies.length > 0 && (
         <div className="nl-msg-quick" role="group" aria-label={t('quickReplies')}>
           {quickReplies.map(q => (
-            <button key={q.key} type="button" className="tag tag-outline nl-msg-quick-tag" onClick={() => { setBody(q.text); setTemplate(q); setServerError(undefined); }}>{q.text}</button>
+            <Chip key={q.key} selected={template?.key === q.key && body === q.text} onClick={() => { setBody(q.text); setTemplate(q); setServerError(undefined); }}>{q.text}</Chip>
           ))}
         </div>
       )}

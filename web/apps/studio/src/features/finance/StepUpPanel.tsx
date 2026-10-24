@@ -49,22 +49,22 @@ export function StepUpPanel({ intro, confirmLabel, onProof, onCancel, busy }: {
   return (
     <div>
       {intro}
-      {error ? <div role="alert" className="nl-error" style={{ marginTop: 10 }}>{error}</div> : null}
+      {error ? <div role="alert" className="nl-error fin-gap-top">{error}</div> : null}
       {mode === 'passkey' ? (
         <div className="fin-actions">
           <Button type="button" onClick={() => void run(stepUpWithPasskey)} disabled={working} aria-busy={working}>{working ? t('working') : confirmLabel}</Button>
           <Button type="button" variant="ghost" onClick={onCancel} disabled={working}>{t('cancel')}</Button>
-          <Button type="button" variant="ghost" className="fin-link" onClick={() => { setMode('code'); setError(undefined); }}>{t('useCode')}</Button>
+          <Button type="button" variant="ghost" onClick={() => { setMode('code'); setError(undefined); }}>{t('useCode')}</Button>
         </div>
       ) : (
-        <form onSubmit={submitCode} noValidate style={{ marginTop: 12 }}>
+        <form onSubmit={submitCode} noValidate className="fin-gap-top">
           <Field label={t('code')} error={codeError}>
-            <TextInput inputMode="numeric" autoComplete="one-time-code" value={code} onChange={e => setCode(codeValue(e.target.value))} style={{ maxWidth: 160 }} />
+            <TextInput inputMode="numeric" autoComplete="one-time-code" value={code} onChange={e => setCode(codeValue(e.target.value))} className="fin-input-sm" />
           </Field>
           <div className="fin-actions">
             <Button type="submit" disabled={working} aria-busy={working}>{working ? t('working') : t('confirm')}</Button>
             <Button type="button" variant="ghost" onClick={onCancel} disabled={working}>{t('cancel')}</Button>
-            <Button type="button" variant="ghost" className="fin-link" onClick={() => { setMode('passkey'); setCodeError(undefined); }}>{t('usePasskeyInstead')}</Button>
+            <Button type="button" variant="ghost" onClick={() => { setMode('passkey'); setCodeError(undefined); }}>{t('usePasskeyInstead')}</Button>
           </div>
         </form>
       )}

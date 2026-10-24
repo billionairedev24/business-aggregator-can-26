@@ -133,3 +133,14 @@
 .nl-k-rows { gap: 0; }
 .nl-k-row { min-height: 48px; }
 @media (max-width: 599.98px) { .nl-k-two > section, .nl-k-section { padding: var(--space-4); } }
+/* S-176: Hours, and Modifiers & combos — FormSection panels in two columns (the panel is FormSection's own, not
+   the section rule above), the head and the KPI strip on the Studio dashboard's language */
+.nl-kitchen > .bo-head { margin-bottom: 0; }
+.nl-kitchen { display: flex; flex-direction: column; gap: var(--space-4); }
+.nl-kitchen > .nl-k-lede { margin: 0; }
+.nl-k-two > section.bo-fsection { padding: var(--space-5); }
+.nl-k-col { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.nl-k-hours-row[data-closed] dt { color: var(--color-text-muted); }
+.nl-k-group-opts { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1-5); align-items: center; }
+.nl-k-opt { display: inline-flex; align-items: center; min-height: var(--size-control-sm); padding: 0 var(--space-2-5); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-well); font-size: var(--type-label); }
+@media (max-width: 599.98px) { .nl-k-two > section.bo-fsection { padding: var(--space-4); } }
