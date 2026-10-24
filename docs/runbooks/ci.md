@@ -38,6 +38,8 @@ Docker executor that allows `docker:dind` (GitLab), plus public images and packa
 
 | loadtest | `loadtest.yml` › `local` (inputs `profile`, `scale`, `scenarios`, `duration`) | `loadtest:local` (`PIPELINE_PART=loadtest` only, never in `all`; a shell runner tagged `loadtest`) | S-119: the api and worker boot jars, `make load-k6` (k6 with xk6-sse), `make load-stack-up` (Postgres, Elasticsearch, the api, seeded data), the chosen profile (`make load-smoke` / `load` / `load-stress` / `soak`); `report.md` in the run summary, every result in the `loadtest-results` artifact. Staging is load-tested from a pod in the cluster, never from CI ([load-testing.md](load-testing.md)). |
 | web | `web.yml` › `studio-smoke` (optional) | `web:studio-smoke` (optional) | `ci/studio-smoke.sh`: PostGIS service → `:api:flywayMigrate -Pdb.devSeed=true` + `:api:seedCategories` → api and auth with the `local` profile → studio dev server (dev auth as Ravi Sandhu) → `scripts/studio-smoke.mjs` (135 screen/width/locale checks). Screenshots and logs in the `studio-smoke` artifact. |
+| web | `web.yml` › `visual` | `web:visual` | S-180, the visual regression gate, in `mcr.microsoft.com/playwright:v1.56.1-noble` (the Chromium and fonts the baselines were made with): `make ui-visual` (the component gallery's screenshot baselines, en + fr-CA, 1440 + 390, 0.1 % tolerance, pinned clock) and `make ui-hydration` (no React hydration error on any consumer route, en + fr, 1440 + 390). Diffs in the `visual-diffs` artifact on failure. Re-baseline with `UI_VISUAL_UPDATE=1 make ui-visual` (docs/LOCAL_DEVELOPMENT.md). |
+| web | `web.yml` › `a11y-routes` (optional) | `web:a11y-routes` (optional, `RUN_A11Y=true`) | S-180, `make ui-a11y`: the accessibility check of every `ui-shots` route at 1440 and 390, en + fr (about an hour); findings in the `ui-a11y` artifact. |
 | web | `web.yml` › `a11y` (optional) | `web:a11y` (optional) | `make a11y` (S-109): builds the Studio, console and consumer, then Playwright + axe on 32 journey screens at 1280 px (en) and 320 px (fr-CA) against a mock api replaying the apps' test fixtures — no backend. Critical/serious WCAG 2.2 A/AA violations, a wrong `<html lang>` or horizontal scroll at 320 px fail. Page reports in the `a11y-results` artifact; findings in [docs/a11y/audit.md](../a11y/audit.md). |
 
 Expected durations (hosted runners; first run in brackets, before caches are warm):
@@ -70,6 +72,8 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 | server | `rerun-tasks` | `false` | ignore the Gradle build cache (`--rerun-tasks`) |
 | web | `storybook` | `true` | run the Storybook job |
 | web | `a11y` | `false` | run the accessibility page sweep job (S-109) |
+| web | `visual` | `true` | run the visual regression gate (S-180: gallery baselines + hydration) |
+| web | `a11y_routes` | `false` | run the accessibility check of every ui-shots route (S-180) |
 | infra | `cloud` | `all` | `all`, `aws`, `gcp` or `azure`: which modules and env roots to validate |
 | infra | `tflint` | `true` | run the tflint job |
 | deploy | `registry` | — | registry including its path (required to push) |
@@ -160,6 +164,8 @@ The jobs call make targets (S-124), so the same targets run them on a laptop:
 | web checks | `make web-check` (= `web-lint` + `web-test` + `web-build-studio`) |
 | web storybook | `make web-storybook-test` |
 | web a11y (S-109) | `make a11y` |
+| web visual (S-180) | `make ui-visual` + `make ui-hydration` |
+| web a11y-routes (S-180) | `make ui-a11y` |
 | e2e (S-117) | `make e2e` (starts its own disposable Postgres in Docker) · `make e2e-target ENV=staging` |
 | infra validate / tflint | `make tf-validate CLOUD=…` / `make tf-lint` |
 | chart / gitops validate | `make helm-validate` / `make argocd-validate` |

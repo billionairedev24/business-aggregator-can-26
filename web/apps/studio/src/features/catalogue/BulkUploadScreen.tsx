@@ -74,7 +74,7 @@ export function BulkUploadScreen({ returned, onReturnSeen }: { returned?: Commer
         <section className="bo-card nl-bulk-steps" aria-label={t('bulkTitle')}>
           <Field label={t('step1')}>
             <div className="nl-cat-row">
-              <Select className="nl-cat-w-lg" value={template} options={templates.map(v => ({ value: v, label: t(`tpl_${v}`) }))} onChange={e => setTemplate(e.target.value as ImportTemplate)} />
+              <Select className="nl-cat-w-lg" aria-label={t('step1')} value={template} options={templates.map(v => ({ value: v, label: t(`tpl_${v}`) }))} onChange={e => setTemplate(e.target.value as ImportTemplate)} />
               <Button variant="secondary" onClick={() => downloadTemplate(template)}>{t('downloadXlsx')}</Button>
             </div>
           </Field>

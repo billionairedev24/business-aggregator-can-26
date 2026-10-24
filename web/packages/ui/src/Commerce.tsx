@@ -71,7 +71,7 @@ function Star({ fill, size }: { fill: number; size: number }) {
   return (
     <span className="nl-star">
       <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden focusable="false" className="nl-star-track"><path fill="currentColor" d={STAR} /></svg>
-      <span className="nl-star-fill" style={{ width: `${fill * 100}%` }}>
+      <span className="nl-star-fill" style={{ ['--pct' as string]: `${fill * 100}%` }}>
         <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden focusable="false"><path fill="currentColor" d={STAR} /></svg>
       </span>
     </span>

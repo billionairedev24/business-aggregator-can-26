@@ -38,7 +38,7 @@
 .nl-site-subnav { background: var(--color-subheader-bg); border-top: 1px solid var(--color-border); }
 .nl-site-nav {
   display: flex; align-items: center; gap: 2px; max-width: var(--page-max); margin: 0 auto; padding: 0 var(--page-gutter); box-sizing: border-box;
-  list-style: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; white-space: nowrap; font-size: var(--type-card-title);
+  list-style: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-padding-inline: var(--space-8); scrollbar-width: none; white-space: nowrap; font-size: var(--type-card-title);
 }
 .nl-site-nav::-webkit-scrollbar { display: none; }
 .nl-site-nav > li { flex: none; display: flex; }
@@ -177,7 +177,7 @@
 .nl-account-value { font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; }
 
 /* BrandMark — a business's initial on its brand colour (merchant layer 3) */
-.nl-brandmark { display: inline-grid; place-items: center; flex: none; border-radius: var(--radius-sm); color: var(--color-text-inverse); font-family: var(--font-sans); font-weight: var(--weight-bold); line-height: 1; overflow: hidden; }
+.nl-brandmark { display: inline-grid; place-items: center; flex: none; width: var(--nl-mark-size, 64px); height: var(--nl-mark-size, 64px); font-size: calc(var(--nl-mark-size) * 0.38); background: var(--nl-mark-bg, var(--color-selected)); border-radius: var(--radius-sm); color: var(--color-text-inverse); font-family: var(--font-sans); font-weight: var(--weight-bold); line-height: 1; overflow: hidden; }
 .nl-brandmark img { width: 100%; height: 100%; object-fit: cover; background: var(--color-surface); }
 
 /* the promo strip under the header (the delivery cut-off): the promo tint, the message, the time left at the end */

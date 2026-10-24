@@ -11,7 +11,7 @@
 .nl-sl-signal { display: grid; grid-template-columns: minmax(96px, 180px) minmax(0, 1fr) 52px; align-items: center; gap: var(--space-3); padding: var(--space-1-5) 0; font-size: var(--text-md); }
 .nl-sl-signal strong { text-align: right; }
 .nl-sl-track { height: 6px; background: var(--color-badge-neutral-bg); border-radius: var(--radius-pill); position: relative; overflow: hidden; }
-.nl-sl-fill { position: absolute; inset: 0 auto 0 0; border-radius: var(--radius-pill); background: var(--color-success); }
+.nl-sl-fill { position: absolute; inset: 0 auto 0 0; width: var(--pct, 0%); border-radius: var(--radius-pill); background: var(--color-success); }
 .nl-sl-fill[data-low] { background: var(--color-danger); }
 .nl-sl-timeline { list-style: none; margin: 0; padding: 0; font-size: var(--text-md); display: flex; flex-direction: column; gap: var(--space-2); }
 .nl-sl-timeline li { display: flex; gap: var(--space-3); min-width: 0; }

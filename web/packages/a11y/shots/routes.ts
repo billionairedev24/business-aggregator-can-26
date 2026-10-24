@@ -7,7 +7,8 @@
  * that status to everything (the BFF or the api down: the error states); `now` fixes the page's clock (Date.now) at that
  * instant, for what depends on the time of day (the delivery cut-off strip counts down to the fixtures' run, E-15);
  * `storage` sets localStorage entries first (S-173: the food order being built, saved-for-later lines).
- * A new route goes here too: shots.spec.ts photographs whatever this lists.
+ * A new route goes here too: shots.spec.ts photographs whatever this lists, in English and in French (S-180: every
+ * route, `<route>-fr-<d|m>.png`), and `make ui-a11y` checks it (a11y.spec.ts).
  */
 export interface ShotRoute { name: string; path: string; signedIn?: boolean; ready?: string; click?: string; sheet?: boolean; down?: number; now?: string; /** S-173: localStorage entries set before the page loads (a food order being built). */ storage?: Record<string, string> }
 
@@ -16,6 +17,11 @@ const BEFORE_CUTOFF = '2026-09-30T20:32:00Z';
 /** S-173: the food order being built (features/food/foodCart.ts), for the food checkout shot. */
 const FOOD_CART = JSON.stringify({ merchantId: 'K1', slug: 'pho-lucky', name: 'Pho Lucky', lines: [
   { key: 'D1:O2', kind: 'item', itemId: 'D1', title: 'Pho tai · Large', qty: 2, unitCents: 1900, optionIds: ['O2'], choices: ['Large'], itemIds: [] }] });
+/**
+ * S-180: the place chosen in the location dialog (features/location/sources.ts `nl.location`): the food checkout needs a
+ * street with coordinates (saved addresses carry none), so without it the shot showed "Add the address" and Pay $0.00.
+ */
+const PLACE = JSON.stringify({ label: '1204 17 Ave SW, Calgary', city: 'Calgary', street: '1204 17 Ave SW', unit: 'Apt 804', province: 'AB', postalCode: 'T2T 0B8', lat: 51.0379, lng: -114.0894, marketId: 'mkt-calgary' });
 /** S-173: a line saved for later (features/cart/saved.ts). */
 const SAVED = JSON.stringify([{ offerId: 'o-saved', variantId: null, productId: 'P2', name: 'Free-run eggs, dozen', option: null, unit: 'dozen', imageUrl: null, unitCents: 650, qty: 1, shopName: 'Bow Valley Dairy' }]);
 const PROVIDER = '01J9ZD3V00000000000000PWM1', SELLER = '01J9ZD3V00000000000000PWP1', KITCHEN = '01J9ZD3V00000000000000PDB1';
@@ -30,9 +36,6 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'shop-department', path: '/shop/bakery', now: BEFORE_CUTOFF },
     { name: 'search-shop', path: '/search?q=bakery&scope=shop&delivery=tonight', now: BEFORE_CUTOFF },
     { name: 'search-filters', path: '/search?q=bakery&scope=shop', click: '.nl-results-filters-toggle' },
-    // the header, home and results in fr-CA (`?lang=fr` wins over the `lang=en` the shots add)
-    { name: 'home-fr', path: '/?lang=fr', now: BEFORE_CUTOFF },
-    { name: 'search-shop-fr', path: '/search?q=bakery&scope=shop&lang=fr', now: BEFORE_CUTOFF },
     { name: 'product', path: '/products/P1', now: BEFORE_CUTOFF },
     // S-172: a shop's page; the provider page with a day chosen in its booking box
     { name: 'store', path: '/shop/stores/M1?dept=bakery', now: BEFORE_CUTOFF },
@@ -58,7 +61,7 @@ export const ROUTES: Record<'consumer' | 'studio' | 'console', ShotRoute[]> = {
     { name: 'account-problem', path: '/account/problem/order/O1', signedIn: true },
     { name: 'food', path: '/food' },
     { name: 'food-kitchen', path: '/food/pho-lucky' },
-    { name: 'food-checkout', path: '/food/checkout', signedIn: true, storage: { 'nl.foodCart': FOOD_CART } },
+    { name: 'food-checkout', path: '/food/checkout', signedIn: true, storage: { 'nl.foodCart': FOOD_CART, 'nl.location': PLACE } },
     { name: 'food-group', path: '/food/group/PHO123', signedIn: true },
     { name: 'food-order', path: '/food/orders/F1', signedIn: true },
     { name: 'help', path: '/help' },

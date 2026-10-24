@@ -165,9 +165,13 @@
 .nl-meter { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-1-5) 0; font-size: var(--type-body); }
 .nl-meter-label { width: 150px; flex: none; }
 .nl-meter-track { flex: 1; height: 6px; background: var(--color-well); border-radius: var(--radius-xs); position: relative; box-shadow: inset 0 0 0 1px var(--color-border); }
-.nl-meter-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--radius-xs); background: var(--color-selected); }
+.nl-meter-fill { position: absolute; left: 0; top: 0; bottom: 0; width: var(--pct, 0%); border-radius: var(--radius-xs); background: var(--color-selected); }
 .nl-meter-fill[data-low='true'] { background: var(--color-danger); }
 .nl-meter-value { width: 48px; text-align: right; font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+/* BarList ("By listing"): wider label and value columns, a thicker track */
+.nl-barlist .nl-meter-label { width: 170px; }
+.nl-barlist .nl-meter-track { height: 10px; }
+.nl-barlist .nl-meter-value { width: 70px; }
 
 /* ── avatar: a circle with initials on the neutral grey ── */
 .nl-avatar { border-radius: var(--radius-round); background: var(--color-status-neutral-bg); color: var(--color-text); display: grid; place-items: center; font-weight: var(--weight-bold); flex: none; --nl-avatar: 34px; width: var(--nl-avatar); height: var(--nl-avatar); font-size: calc(var(--nl-avatar) * 0.38); }
@@ -178,6 +182,14 @@
 .nl-skel { display: block; background: var(--color-well); border-radius: var(--radius-xs); animation: nl-pulse 1.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .nl-skel { animation: none; } }
 .nl-skel-text { height: 12px; }
+/* a one-off box: the size of what is loading is data (Skeleton width / height / radius), and wins over a shape class as
+   the inline style did */
+.nl-skel[style*='--nl-skel-w'] { width: var(--nl-skel-w); }
+.nl-skel[style*='--nl-skel-h'] { height: var(--nl-skel-h); }
+.nl-skel[style*='--nl-skel-r'] { border-radius: var(--nl-skel-r); }
+/* a placeholder under another one (S-180: was an inline margin on each screen) */
+.nl-skel-gap { margin-top: var(--space-2); }
+.nl-skel-gap-lg { margin-top: var(--space-4); }
 .nl-page-skel > .nl-skel-kicker { width: 180px; height: 12px; margin-bottom: var(--space-3); }
 .nl-page-skel > .nl-skel-title { width: min(420px, 80%); height: 30px; margin-bottom: var(--space-6); }
 .nl-page-skel > .nl-kpis { margin-bottom: var(--space-8); }
@@ -262,6 +274,7 @@
 /* ── menu: 4 px corners, shadow-lg, items 8 × 16 ── */
 .nl-menu-anchor { position: relative; display: inline-flex; }
 .nl-menu { position: absolute; top: calc(100% + var(--space-1)); z-index: var(--z-dropdown); min-width: 220px; background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); box-shadow: var(--shadow-lg); border-radius: var(--radius-panel); padding: var(--space-1) 0; }
+.nl-menu[style] { width: var(--nl-menu-w, auto); }
 .nl-menu[data-align='end'] { right: 0; }
 .nl-menu[data-align='start'] { left: 0; }
 .nl-menu-item { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); width: 100%; text-align: left; font: inherit; font-size: var(--type-body); padding: var(--space-2) var(--space-4); min-height: var(--size-touch); border: 0; background: transparent; color: var(--color-text); cursor: pointer; text-decoration: none; }
@@ -279,6 +292,9 @@
 .nl-chart text { font-family: var(--font-sans); fill: var(--color-text-muted); }
 .nl-legend { display: flex; gap: var(--space-4); flex-wrap: wrap; font-size: var(--type-label); color: var(--color-text-muted); margin-bottom: var(--space-3); }
 .nl-legend-swatch { display: inline-block; width: 10px; height: 10px; border-radius: var(--radius-xs); margin-right: var(--space-1-5); vertical-align: -1px; }
+/* Legend: the series' colour is data (`--nl-swatch`) */
+.nl-legend-swatch[style] { background: var(--nl-swatch); }
+.nl-legend-swatch[style][data-dashed] { background: transparent; border: 1.5px dashed var(--nl-swatch); }
 
 /* ── visually hidden ── */
 .nl-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

@@ -45,6 +45,17 @@ describe('Dialog focus', () => {
     await user.tab();
     expect(screen.getByRole('dialog', { name: 'Notice' })).toHaveFocus();
   });
+
+  it('brings focus that lands behind the open dialog back into it (S-180: the phone filter sheet let Tab reach the header)', async () => {
+    const user = userEvent.setup();
+    wrap(<DialogDemo withActions />);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    (document.activeElement as HTMLElement).blur();
+    screen.getByRole('button', { name: 'Open', hidden: true }).focus();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus();
+  });
 });
 
 describe('Menu keys', () => {
@@ -66,7 +77,7 @@ describe('Menu keys', () => {
 const shell = (
   <AppShell brand={<span>Northline</span>} pinned={[{ key: 'home', label: 'Dashboard', icon: House, href: '/' }]}
     groups={[{ label: 'Finance', icon: Bank, items: [{ key: 'payouts', label: 'Payouts', icon: Bank, href: '/payouts' }] }]} currentKey="home" onNavigate={() => {}}>
-    <h1>Dashboard</h1>
+    <h1>Dashboard</h1><button type="button">Page action</button>
   </AppShell>
 );
 
@@ -106,6 +117,13 @@ describe('AppShell', () => {
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull();
     expect(opener).toHaveFocus();
+    // S-180: Tab past the panel's last link closes it (focus never sits on the page hidden under the panel)
+    await user.click(opener);
+    const links = within(screen.getByRole('navigation', { name: 'Main navigation' })).getAllByRole('link');
+    links[links.length - 1]!.focus();
+    await user.tab();
+    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull();
+    expect(opener).toHaveAttribute('aria-expanded', 'false');
     mm.mockRestore();
   });
 });
@@ -159,7 +177,7 @@ describe('Meter and charts', () => {
 
   it('charts carry their numbers as a table for screen readers', () => {
     wrap(<>
-      <StackedBarChart title="Net earnings" format={n => `$${n}`} series={[{ key: 'a', label: 'Services', color: 'var(--color-accent)' }, { key: 'b', label: 'Tips', color: 'var(--color-highlight)' }]}
+      <StackedBarChart title="Net earnings" format={n => `$${n}`} series={[{ key: 'a', label: 'Services', color: 'var(--color-selected)' }, { key: 'b', label: 'Tips', color: 'var(--color-border-control)' }]}
         data={[{ label: 'W1', values: { a: 400, b: 20 } }]} />
       <LineChart title="Weekly gross" current={[3, 5]} previous={[2, 4]} labels={['Mon', 'Tue']} />
     </>);

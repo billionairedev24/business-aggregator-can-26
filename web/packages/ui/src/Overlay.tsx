@@ -4,22 +4,47 @@ import { X } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
 
 const useT = defineMessages({ en: { close: 'Close' }, fr: { close: 'Fermer' } });
+/** The open dialogs and drawers, the topmost last (S-180). */
+const OPEN: HTMLElement[] = [];
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 /**
  * Focus trap + Escape + focus restore shared by Dialog and Drawer. With nothing focusable inside (a read-only notice),
- * focus goes to the dialog itself (tabIndex -1), so Tab cannot leave it for the page behind (S-109).
+ * focus goes to the dialog itself (tabIndex -1), so Tab cannot leave it for the page behind (S-109). S-180: focus that
+ * lands behind the dialog anyway (it left the dialog — a click on its padding, a blur — and the next Tab went to the
+ * header under the backdrop) is brought back to the dialog's first control. The page behind is not made `inert`: a
+ * toast announced while the dialog is open must still be heard.
  */
 function useModal(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);
+  // S-180: the opener is read while rendering the open dialog, before the commit — the same commit can disable it (a
+  // table's bulk button turns busy while its dialog opens), which would hand focus to <body> before the effect runs
+  const opener = useRef<HTMLElement | null>(null);
+  const wasOpen = useRef(false);
+  if (open && !wasOpen.current && typeof document !== 'undefined') opener.current = document.activeElement as HTMLElement | null;
+  wasOpen.current = open;
   useEffect(() => {
     if (!open) return;
-    const prev = document.activeElement as HTMLElement | null;
+    const prev = opener.current;
     const first = ref.current?.querySelector<HTMLElement>('[data-autofocus]') ?? ref.current?.querySelector<HTMLElement>(FOCUSABLE) ?? ref.current;
     first?.focus();
     const { overflow } = document.body.style;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = overflow; prev?.focus?.(); };
+    const box = ref.current;
+    if (box) OPEN.push(box);
+    const back = (e: FocusEvent) => {
+      const to = e.target as Node | null;
+      // only the topmost dialog pulls focus back (one opened from this dialog owns the focus while it is open)
+      if (!box || !to || OPEN[OPEN.length - 1] !== box || box.contains(to)) return;
+      (box.querySelector<HTMLElement>(FOCUSABLE) ?? box).focus();
+    };
+    document.addEventListener('focusin', back);
+    return () => {
+      document.removeEventListener('focusin', back);
+      if (box) OPEN.splice(OPEN.lastIndexOf(box), 1);
+      document.body.style.overflow = overflow;
+      prev?.focus?.();
+    };
   }, [open]);
   const onKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') { e.stopPropagation(); onClose(); return; }
@@ -110,7 +135,7 @@ export function Menu({ trigger, items, align = 'end', width, label }: MenuProps)
     <div className="nl-menu-anchor" ref={wrap} onKeyDown={onKeyDown}>
       {trigger({ open, toggle, props: { 'aria-haspopup': 'menu', 'aria-expanded': open, 'aria-controls': open ? menuId : undefined, onClick: toggle } })}
       {open && (
-        <div id={menuId} role="menu" aria-label={label} className="nl-menu" data-align={align} style={width ? { width } : undefined}>
+        <div id={menuId} role="menu" aria-label={label} className="nl-menu" data-align={align} style={width ? { ['--nl-menu-w' as string]: typeof width === 'number' ? `${width}px` : width } : undefined}>
           {items.map((it, i) => {
             if (it.kind === 'separator') return <div key={i} className="nl-menu-sep" role="separator" />;
             if (it.kind === 'custom') return <div key={i}>{it.render}</div>;

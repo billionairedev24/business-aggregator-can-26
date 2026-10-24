@@ -84,7 +84,7 @@
 .nl-prov-nav:hover:not(:disabled) { background: var(--color-surface-hover); }
 .nl-prov-nav:disabled { opacity: .35; cursor: default; }
 .nl-prov-days, .nl-prov-times { --nl-tile-min: 0px; }
-/* explicit columns: pages.css's category grid shares the `.nl-tiles` name */
+/* the day and time tiles (ChoiceTiles) in five and three columns */
 .nl-prov-days .nl-tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-1-5); }
 .nl-prov-times .nl-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1-5); }
 .nl-prov-days .nl-tile-choice { padding-inline: var(--space-1); }

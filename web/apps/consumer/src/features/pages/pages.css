@@ -50,11 +50,11 @@
 .nl-tile-name { font-weight: var(--weight-medium); font-size: var(--type-card-title); line-height: 1.3; overflow-wrap: anywhere; }
 .nl-tile-meta { font-size: var(--type-meta); color: var(--color-text-subtle); margin-top: -2px; }
 .nl-tile:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-.nl-tiles { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--density-grid-gap-y) var(--density-grid-gap-x); grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
-.nl-tiles > li { min-width: 0; display: flex; }
-.nl-tiles > li > * { flex: 1; }
+.nl-cat-tiles { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--density-grid-gap-y) var(--density-grid-gap-x); grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
+.nl-cat-tiles > li { min-width: 0; display: flex; }
+.nl-cat-tiles > li > * { flex: 1; }
 @media (max-width: 599.98px) {
-  .nl-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-2-5); }
+  .nl-cat-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-2-5); }
 }
 
 /* ── landing head (Services, Shop, Food, a category): the kicker, a 24 px title and the lede beside a short picture

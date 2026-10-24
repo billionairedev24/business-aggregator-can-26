@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi, onTestFinished } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderWithProviders } from '../../test/ops';
@@ -45,6 +45,9 @@ describe('Orders · products', () => {
   });
 
   it('S-175: status tabs with counts narrow the table, quick filters combine, statuses wear their colour', async () => {
+    // S-180: a fixed midday — the fixtures' run is 3 h from now, which is "tomorrow" when the suite runs late in the evening
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-01T18:00:00Z') });
+    onTestFinished(() => { vi.useRealTimers(); });
     mockFetch({ 'GET /api/v1/merchants/m1/returns': () => ({ items: [] }), 'GET /api/v1/merchants/m1/orders': () => board() });
     const user = userEvent.setup({ delay: null });
     renderWithProviders(<OrdersScreen />);

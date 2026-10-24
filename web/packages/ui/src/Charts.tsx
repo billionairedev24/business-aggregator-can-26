@@ -87,11 +87,18 @@ export interface ColumnChartProps {
   axisFormat?: (n: number) => string;
 }
 
-/** A round axis top above `max` (1, 2, 2.5, 5 × a power of ten) and its four steps. */
-function niceTop(max: number): number {
+/**
+ * The axis top above `max` for four even steps, each a round number: 1, 2 or 5 × a power of ten (2.5 from 25 up, so a
+ * step is never a fraction of the axis's unit). S-180: the top used to be the round number (250 → steps of 62.5, drawn
+ * "$63 · $125 · $188"); now the step is, and the top is four of them (0 · 50 · 100 · 150 · 200).
+ */
+export function niceTop(max: number): number {
   if (max <= 0) return 4;
-  const p = 10 ** Math.floor(Math.log10(max));
-  return ([1, 2, 2.5, 5, 10].map(m => m * p).find(v => v >= max) ?? 10 * p);
+  const raw = max / 4;
+  const p = 10 ** Math.floor(Math.log10(raw));
+  const steps = (p >= 10 ? [1, 2, 2.5, 5, 10] : [1, 2, 5, 10]).map(m => m * p);
+  const step = steps.find(v => v >= raw - 1e-9) ?? 10 * p;
+  return 4 * Math.max(step, 1);
 }
 
 /**
@@ -170,19 +177,19 @@ export function LineChart({ current, previous, labels, height = 200, title, lege
 }
 
 export function Legend({ items }: { items: readonly { label: ReactNode; color: string; dashed?: boolean }[] }) {
-  return <div className="nl-legend">{items.map((it, i) => <span key={i}><span className="nl-legend-swatch" style={{ background: it.dashed ? 'transparent' : it.color, border: it.dashed ? `1.5px dashed ${it.color}` : undefined }} />{it.label}</span>)}</div>;
+  return <div className="nl-legend">{items.map((it, i) => <span key={i}><span className="nl-legend-swatch" data-dashed={it.dashed || undefined} style={{ ['--nl-swatch' as string]: it.color }} />{it.label}</span>)}</div>;
 }
 
 /** Horizontal bar list ("By listing"). */
 export function BarList({ items, format = String }: { items: readonly { label: ReactNode; value: number }[]; format?: (n: number) => string }) {
   const max = Math.max(1, ...items.map(i => i.value));
   return (
-    <div>
+    <div className="nl-barlist">
       {items.map((it, i) => (
         <div key={i} className="nl-meter">
-          <span className="nl-meter-label" style={{ width: 170 }}>{it.label}</span>
-          <div className="nl-meter-track" style={{ height: 10 }}><div className="nl-meter-fill" style={{ width: `${(it.value / max) * 100}%` }} /></div>
-          <span className="nl-meter-value" style={{ width: 70 }}>{format(it.value)}</span>
+          <span className="nl-meter-label">{it.label}</span>
+          <div className="nl-meter-track"><div className="nl-meter-fill" style={{ ['--pct' as string]: `${(it.value / max) * 100}%` }} /></div>
+          <span className="nl-meter-value">{format(it.value)}</span>
         </div>
       ))}
     </div>

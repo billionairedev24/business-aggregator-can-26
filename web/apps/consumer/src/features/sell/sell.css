@@ -12,3 +12,4 @@
 .nl-sell-account { margin-top: var(--space-6); font-size: var(--text-md); max-width: 62ch; }
 .nl-sell-account a { min-height: var(--size-touch); }
 .nl-sell-footnote { font-size: var(--text-sm); color: var(--color-text-muted); margin-top: var(--space-3); max-width: 62ch; }
+.nl-sell-skel-end { margin-top: auto; }

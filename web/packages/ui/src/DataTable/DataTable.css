@@ -141,7 +141,7 @@ table.nl-dt-table td { vertical-align: middle; overflow-wrap: break-word; } /* o
 .nl-dt-error > svg { flex: none; }
 .nl-dt-error-text { flex: 1 1 200px; }
 .nl-dt-error-detail { color: var(--color-text); }
-.nl-dt-sk { display: block; height: 12px; width: 100%; border-radius: var(--radius-xs); background: var(--color-well); animation: nl-dt-pulse 1.4s ease-in-out infinite; }
+.nl-dt-sk { display: block; height: 12px; width: var(--nl-sk-w, 100%); border-radius: var(--radius-xs); background: var(--color-well); animation: nl-dt-pulse 1.4s ease-in-out infinite; }
 .nl-dt-sk-box { width: 20px; height: 20px; border-radius: var(--radius-xs); margin: var(--space-2); flex: none; }
 .nl-dt-sk-pill { height: 20px; }
 .nl-dt-table .is-num .nl-dt-sk { margin-left: auto; }

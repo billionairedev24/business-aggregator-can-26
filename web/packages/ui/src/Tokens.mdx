@@ -4,10 +4,10 @@ import { Meta, ColorPalette, ColorItem } from '@storybook/addon-docs/blocks';
 
 # Tokens
 
-The brand is one file: `packages/tokens/brand.json` (name, identity, radii and which palette — A `lakeshore`, B `evergreen`,
-C `dusk` in `packages/tokens/palettes/`). Change it → `pnpm --filter @northline/tokens build`; the build fails when a
-text pair drops below WCAG AA. The toolbar's paintbrush previews the other palettes. Components use the semantic roles
-below, never a ramp step or a colour.
+The brand is one file: `packages/tokens/brand.json` (name, identity, radii and which palette: `plainsight`, the E-15
+locked direction, in `packages/tokens/palettes/`). Change it → `pnpm --filter @northline/tokens build`; the build fails
+when a text pair drops below WCAG AA. Components use the semantic roles (CLAUDE.md § Design system: action, selected,
+commerce, status, well, border), never a ramp step or a colour; `pnpm lint:tokens` checks it.
 
 <ColorPalette>
   <ColorItem title="Primary ramp" colors={{ 50: 'var(--primary-50)', 200: 'var(--primary-200)', 500: 'var(--primary-500)', 700: 'var(--primary-700)', 900: 'var(--primary-900)' }} />
@@ -20,7 +20,8 @@ below, never a ramp step or a colour.
   <ColorItem title="Status" colors={{ success: 'var(--color-success)', warning: 'var(--color-warning)', danger: 'var(--color-danger)', info: 'var(--color-info)', rating: 'var(--color-rating)' }} />
 </ColorPalette>
 
-Spacing `--space-0…16` (4px base), type `--text-2xs…5xl` (body 15px), controls `--size-control-sm/-/lg` (32/40/48,
-drawn; every target still ≥ 44px), radii `--radius-xs/sm/md/lg/pill`, shadows `--shadow-sm/md/lg/focus`, z-index
+Spacing `--space-0…16` (4px base, with `--space-1-5/2-5/3-5`), type roles `--type-*` (page title 24, section 18, sub 16,
+card title 13.5, body 14, label 13, meta 12, caps 11, prices 15/17/28), controls drawn 38 px (32 sm, 46 lg) with a 44 px
+hit area, radii `--radius-control` (3) / `--radius-panel` (4) / `--radius-image` / `--radius-round` (circles only), shadows `--shadow-sm/md/lg/focus`, z-index
 `--z-dropdown…toast` and motion `--duration-fast/--duration/--ease` come from `packages/tokens/scale.json` — fixed, not
 brand.

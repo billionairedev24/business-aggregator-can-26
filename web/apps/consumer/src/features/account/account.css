@@ -102,6 +102,7 @@
 .nl-acct-wide { max-width: 640px; margin-top: var(--space-3); }
 .nl-acct-note { font-size: var(--type-label); color: var(--color-text-muted); margin-top: var(--space-4); }
 .nl-acct-table { max-width: 760px; width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; }
+.nl-acct-table[tabindex]:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .nl-acct-fieldset { border: 0; padding: 0; margin: var(--space-4) 0 0; max-width: 520px; }
 .nl-danger { color: var(--color-danger); }
 .nl-profile-head { display: flex; gap: var(--space-4); align-items: center; margin-top: var(--space-4); }

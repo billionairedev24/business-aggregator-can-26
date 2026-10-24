@@ -54,7 +54,7 @@ export function Photo({ slot, photo, crop = 'card', sizes = '100vw', alt, decora
         <img
           src={p.src(crop)} srcSet={jpg?.srcSet} sizes={sizes} alt={text}
           loading={priority ? 'eager' : 'lazy'} decoding={priority ? 'sync' : 'async'} {...(priority ? { fetchPriority: 'high' as const } : {})}
-          style={{ objectPosition: p.position }}
+          style={{ ['--nl-photo-pos' as string]: p.position }}
         />
       </picture>
     </span>

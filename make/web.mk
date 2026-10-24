@@ -76,11 +76,18 @@ a11y: $(WEB_INSTALLED) ## Accessibility page sweep (S-109): builds Studio, conso
 
 UI_SHOTS_ALL := consumer,studio,console
 .PHONY: ui-shots
-ui-shots: $(WEB_INSTALLED) ## Full-page screenshots of every consumer, Studio and console route at 1440×900 and 390×844 into ui-shots/ (no backend; UI_SHOTS_APPS=consumer,studio · UI_SHOTS_SKIP_BUILD=1 · UI_SHOTS_GREP=route · UI_SHOTS_WIDTHS=2560,1920,390)
+ui-shots: $(WEB_INSTALLED) ## Full-page screenshots of every consumer, Studio and console route at 1440×900 and 390×844, in English and French, into ui-shots/ (no backend; UI_SHOTS_APPS=consumer,studio · UI_SHOTS_SKIP_BUILD=1 · UI_SHOTS_GREP=route · UI_SHOTS_WIDTHS=2560,1920,390 · UI_SHOTS_LANGS=en)
 	@cd $(ROOT)/web && apps="$(or $(UI_SHOTS_APPS),$(UI_SHOTS_ALL))"; \
 	if [ -z "$(UI_SHOTS_SKIP_BUILD)" ]; then for a in $$(echo $$apps | tr ',' ' '); do pnpm --filter @northline/$$a build || exit 1; done; fi; \
 	export UI_SHOTS_APPS=$$apps; pnpm --filter @northline/a11y shots $(if $(UI_SHOTS_GREP),--grep "$(UI_SHOTS_GREP)")
-	@echo "ui-shots: $(ROOT)/ui-shots/<app>/<route>-<d|m>.png (d 1440×900, m 390×844); unanswered api requests in ui-shots/<app>/_missing-api.txt"
+	@echo "ui-shots: $(ROOT)/ui-shots/<app>/<route>[-fr]-<d|m>.png (d 1440×900, m 390×844); unanswered api requests in _missing-api.txt, sideways scroll _overflow.txt, cut-off text _truncated.txt, English on French pages _untranslated.txt"
+
+.PHONY: ui-a11y
+ui-a11y: $(WEB_INSTALLED) ## S-180: WCAG 2.2 AA check (axe, focus, targets, motion, text spacing) of every ui-shots route, 1440 + 390, en + fr; findings in ui-shots/<app>/_a11y-<width>.txt and _keyboard.txt (UI_SHOTS_APPS · UI_A11Y_WIDTHS=1440|390 · UI_A11Y_KEYBOARD=1 · UI_SHOTS_SKIP_BUILD=1 · UI_SHOTS_GREP · UI_SHOTS_LANGS=en)
+	@cd $(ROOT)/web && apps="$(or $(UI_SHOTS_APPS),$(UI_SHOTS_ALL))"; \
+	if [ -z "$(UI_SHOTS_SKIP_BUILD)" ]; then for a in $$(echo $$apps | tr ',' ' '); do pnpm --filter @northline/$$a build || exit 1; done; fi; \
+	export UI_SHOTS_APPS=$$apps UI_SHOTS_A11Y=1; pnpm --filter @northline/a11y shots $(if $(UI_SHOTS_GREP),--grep "$(UI_SHOTS_GREP)")
+	@echo "ui-a11y: one line per page in $(ROOT)/ui-shots/<app>/_a11y-<width>.txt and _keyboard.txt; each check's JSON in web/packages/a11y/a11y-results/pages/"
 
 .PHONY: ui-hydration
 ui-hydration: $(WEB_INSTALLED) ## S-182: fail on any React hydration error on every consumer route (1440 and 390 wide, en and fr; the ui-shots servers and data; UI_SHOTS_SKIP_BUILD=1 reuses the last build)

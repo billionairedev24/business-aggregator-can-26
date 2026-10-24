@@ -11,6 +11,7 @@ import { useMerchant, useMerchantId, type MerchantType } from '../shell/api';
 import { screenHref, type ScreenKey } from '../shell/nav';
 import { listingsQuery } from '../catalogue/api';
 import { payoutOverviewQuery, reportQuery, type Report } from '../finance/api';
+import { axisDollars } from '../finance/format';
 import { liveQuery, menuQuery, menusQuery, setupQuery, useKitchenToggle } from '../kitchen/api';
 import { threadsQuery } from '../messages/api';
 import { ordersQuery } from '../orders/api';
@@ -104,7 +105,7 @@ export function DashboardView({ inputs: i, merchantId, range = '14d', onRange, y
         <ChartCard id="dash-sales" title={series?.title ?? t(`sales_${range}`)}
           actions={i.report && onRange ? <Segmented name="dash-range" aria-label={t('range')} value={range} onChange={onRange} options={(['14d', '30d', '12mo'] as const).map(r => ({ value: r, label: t(`r_${r}`) }))} /> : null}>
           {series
-            ? <ColumnChart title={series.title} data={series.points} highlightLast legend={series.legend} format={c => f.price(c)} axisFormat={c => f.money(c, { whole: true })} />
+            ? <ColumnChart title={series.title} data={series.points} highlightLast legend={series.legend} format={c => f.price(c)} axisFormat={c => axisDollars(c, locale)} />
             : <Skeleton className="nl-dash-chart-skel" />}
         </ChartCard>
         <SecondPanel i={i} t={t} href={href} go={go} />

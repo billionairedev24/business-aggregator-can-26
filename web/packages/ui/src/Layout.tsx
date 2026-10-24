@@ -80,7 +80,7 @@ export function Meter({ label, value, display, floor = 0 }: { label: ReactNode; 
     <div className="nl-meter">
       <span className="nl-meter-label" id={`${id}-label`}>{label}</span>
       <div className="nl-meter-track" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-labelledby={`${id}-label`}
-        aria-valuetext={typeof display === 'string' || typeof display === 'number' ? String(display) : undefined}><div className="nl-meter-fill" data-low={pct < floor} style={{ width: `${pct}%` }} /></div>
+        aria-valuetext={typeof display === 'string' || typeof display === 'number' ? String(display) : undefined}><div className="nl-meter-fill" data-low={pct < floor} style={{ ['--pct' as string]: `${pct}%` }} /></div>
       <span className="nl-meter-value">{display ?? pct}</span>
     </div>
   );
@@ -96,7 +96,10 @@ export const Avatar = ({ initials, size = 34, tone = 'accent' }: { initials: str
  */
 export const Skeleton = ({ width, height, radius, className, style }: { width?: number | string; height?: number | string; radius?: number | string; className?: string; style?: CSSProperties }) => {
   const box = width != null || height != null || radius != null;
-  return <span className={clsx('nl-skel', !className && height == null && 'nl-skel-text', className)} aria-hidden style={box || style ? { width, height, borderRadius: radius, ...style } : undefined} />;
+  const len = (v: number | string | undefined) => (typeof v === 'number' ? `${v}px` : v);
+  // the size of what is loading is data: custom properties the class reads (base CSS: .nl-skel)
+  const shape = { ['--nl-skel-w' as string]: len(width), ['--nl-skel-h' as string]: len(height), ['--nl-skel-r' as string]: len(radius) };
+  return <span className={clsx('nl-skel', !className && height == null && 'nl-skel-text', className)} aria-hidden style={box || style ? { ...shape, ...style } : undefined} />;
 };
 
 /** A card's skeleton: the photo well, two lines, the price (results grids and rails while they load). */

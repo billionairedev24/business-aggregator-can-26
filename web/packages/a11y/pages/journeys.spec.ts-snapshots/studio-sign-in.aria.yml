@@ -19,11 +19,14 @@
       - tab "Create account"
     - heading "Sign in" [level=2]
     - progressbar "Progress"
-    - paragraph: Business accounts require a passkey or authenticator app — you handle customer addresses and payouts.
-    - text: Email or mobile
-    - textbox "Email or mobile":
+    - paragraph: Sign in with your email and password. Business accounts then confirm with a passkey or an authenticator app.
+    - textbox "Email":
       - /placeholder: you@example.ca
-    - button "Continue" [disabled]
+    - text: Password
+    - textbox "Password"
+    - button "Show password"
+    - button "Forgot password?"
+    - button "Sign in" [disabled]
     - text: or continue with
     - button "Passkey"
     - link "Google":

@@ -81,7 +81,7 @@ export function EmailCodeStep({ sent, onVerified, onBack, onRestart }: {
   };
   return (
     <form noValidate onSubmit={e => void submit(e)} className="nl-acct-step">
-      <h3 className="nl-acct-h">{t('verifyTitle')}</h3>
+      <h2 className="nl-acct-h">{t('verifyTitle')}</h2>
       <p className="nl-acct-p">{t('verifyBody', { email: info.email })}</p>
       <Field label={t('verifyCodeLabel')} error={error || undefined}>
         <TextInput className="nl-acct-code" name="code" inputMode="numeric" autoComplete="one-time-code" placeholder="123456" value={code}
@@ -145,7 +145,7 @@ export function EnrolSecondFactor({ email, required, onDone, onSkip }: {
   if (enrolled) return <BackupCodesStep email={email} codes={enrolled.backupCodes} onContinue={() => onDone(enrolled.session)} />;
   return (
     <div className="nl-acct-step">
-      <h3 className="nl-acct-h">{t('enrolTitle')}</h3>
+      <h2 className="nl-acct-h">{t('enrolTitle')}</h2>
       <p className="nl-acct-p">{t(required ? 'enrolRequired' : 'enrolOptional')}</p>
       {!setup ? (
         <>
@@ -203,7 +203,7 @@ export function BackupCodesStep({ email, codes, onContinue }: { email: string; c
   };
   return (
     <div className="nl-acct-step">
-      <h3 className="nl-acct-h">{t('backupTitle')}</h3>
+      <h2 className="nl-acct-h">{t('backupTitle')}</h2>
       <p className="nl-acct-p">{t('backupBody')}</p>
       <ol className="nl-acct-codes" aria-label={t('backupTitle')}>{codes.map(c => <li key={c}><code>{c}</code></li>)}</ol>
       <div className="nl-acct-row">
@@ -269,7 +269,7 @@ export function ForgotPasswordFlow({ app, initialEmail = '', onDone, onCancel }:
 
   return (
     <div className="nl-acct-step">
-      <h3 className="nl-acct-h">{t('forgotTitle')}</h3>
+      <h2 className="nl-acct-h">{t('forgotTitle')}</h2>
       {!sent ? (
         <form noValidate onSubmit={e => void send(e)}>
           <p className="nl-acct-p">{t('forgotLede')}</p>
@@ -336,7 +336,7 @@ export function ResetWithLink({ token, onDone }: { token: string; onDone: (email
   };
   return (
     <form noValidate onSubmit={e => void submit(e)} className="nl-acct-step">
-      <h3 className="nl-acct-h">{t('forgotTitle')}</h3>
+      <h2 className="nl-acct-h">{t('forgotTitle')}</h2>
       <PasswordField label={t('newPassword')} hint={t('passwordHint')} autoComplete="new-password" value={password} error={errors.password} onChange={setPassword} />
       <PasswordField label={t('passwordConfirmLabel')} name="passwordConfirm" autoComplete="new-password" value={confirm} error={errors.passwordConfirm} onChange={setConfirm} />
       {failure && <Alert tone="error">{failure}</Alert>}

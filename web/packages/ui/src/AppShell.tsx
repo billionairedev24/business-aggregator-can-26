@@ -44,7 +44,8 @@ function useMedia(query: string) {
  * - ≥ 1024px: the full sidebar, which the person may collapse to the rail (remembered through `rail`).
  * - 768–1023px: the 72px icon rail (labels as tooltips and accessible names); its toggle expands it for the moment.
  * - < 768px: a disclosure menu under the bar's menu button — the workspace switcher, the search and the navigation in
- *   one panel. Not modal: Escape or choosing an item closes it and focus goes back to the button.
+ *   one panel. Not modal: Escape or choosing an item closes it and focus goes back to the button; Tab out of it
+ *   closes it too (S-180).
  * The top bar's height is published as `--nl-shell-top` (and as scroll padding, WCAG 2.4.11).
  */
 export function AppShell({ brand, headerStart, search, headerEnd, pinned, groups, currentKey, onNavigate, children, rail: railProp, onRailChange }: AppShellProps) {
@@ -108,7 +109,9 @@ export function AppShell({ brand, headerStart, search, headerEnd, pinned, groups
         {headerEnd ? <div className="nl-topbar-end">{headerEnd}</div> : null}
       </header>
       {narrow ? (
-        <div id={menuId} className="nl-shell-menu" hidden={!menu} onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); closeMenu(true); } }}>
+        <div id={menuId} className="nl-shell-menu" hidden={!menu} onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); closeMenu(true); } }}
+          // S-180 (WCAG 2.4.11): Tab past the panel's last link closes it, so focus never sits on the page hidden under it
+          onBlur={e => { const to = e.relatedTarget as Node | null; if (to && !e.currentTarget.contains(to) && to !== menuButton.current) closeMenu(false); }}>
           {headerStart || search ? <div className="nl-shell-menu-tools">{headerStart}{search}</div> : null}
           <nav aria-label={t('nav')} className="nl-shell-menu-nav">{fullNav('m')}</nav>
         </div>

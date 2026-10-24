@@ -78,9 +78,17 @@ export const French: S = {
 /** 320 px: logo · place · account · cart, the search under them, the nav row scrolling by itself; the page never scrolls sideways. */
 export const Narrow: S = {
   args: { account: signedIn, search: <SearchBar variant="header" value="" onChange={() => {}} onSubmit={() => {}} /> },
-  decorators: [Story => <div style={{ width: 320, overflow: 'hidden' }}><Story /></div>],
+  // S-180: the phone layout comes from the window's width (media queries), not from a 320 px box, so the test sizes the
+  // window itself (Vitest's browser mode); in the Storybook UI pick a 320 px viewport to see it
   play: async ({ canvasElement }) => {
+    try {
+      const { page } = await import('@vitest/browser/context');
+      await page.viewport(320, 720);
+    } catch { /* the Storybook UI: no browser control */ }
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     const header = canvasElement.querySelector('header')!;
+    if (window.innerWidth > 340) return; // not at phone width (the Storybook UI on a desktop)
     await expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth);
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   },
 };

@@ -91,9 +91,13 @@ export function TodoCard({ title, id, items, empty }: { title: ReactNode; id: st
   );
 }
 
-/** A titled block inside the right sheet (BO:827): `md` bold title, then its content. */
-export function SheetSection({ title, children }: { title: ReactNode; children: ReactNode }) {
-  return <section className="bo-sheet-section"><h3 className="bo-sheet-h3">{title}</h3>{children}</section>;
+/**
+ * A titled block inside the right sheet (BO:827): `md` bold title, then its content. `level` 2 when it sits right under a
+ * page's h1 (a record page's tabs, S-180) instead of under a sheet's h2.
+ */
+export function SheetSection({ title, children, level = 3 }: { title: ReactNode; children: ReactNode; level?: 2 | 3 }) {
+  const H = level === 2 ? 'h2' : 'h3';
+  return <section className="bo-sheet-section"><H className="bo-sheet-h3">{title}</H>{children}</section>;
 }
 
 /** Facts as a two-column definition list (BO:830): `minmax(120px, 38%) | 1fr`, bordered, `sm` text. */

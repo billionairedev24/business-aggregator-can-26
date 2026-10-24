@@ -183,8 +183,10 @@ The profiles are docker-compose.yml's: `db`, `cache`, `events` (Kafka + topic cr
 | `make docs [DOCS_VARIANT=public]` · `docs-serve` · `docs-dev` | build the documentation site and check every page · serve it · live dev server |
 | `make e2e` · `e2e-smoke` · `e2e-target ENV=staging` | the end-to-end suite (S-117): its own disposable Postgres, the whole stack under `local`, Playwright journeys + the Studio smoke sweep · only the sweep · against a deployed environment ([runbooks/e2e.md](runbooks/e2e.md)) |
 | `make a11y` | the accessibility page sweep (S-109): builds the three web apps, Playwright + axe against them with a mock api ([a11y/audit.md](a11y/audit.md)); `make a11y-record` refreshes its fixtures |
-| `make ui-shots` | full-page screenshots of every web route, desktop and phone, without a backend ([below](#look-at-the-ui-make-ui-shots)) |
+| `make ui-shots` | full-page screenshots of every web route, desktop and phone, English and French, without a backend ([below](#look-at-the-ui-make-ui-shots)) |
+| `make ui-a11y` | S-180: the WCAG 2.2 AA check (axe, focus, targets, motion, text spacing) of every `ui-shots` route at 1440 and 390, English and French; one line per page in `ui-shots/<app>/_a11y-<width>.txt and _keyboard.txt` ([below](#accessibility-of-every-route-make-ui-a11y)) |
 | `make ui-hydration` | S-182: fails on any React hydration error on every consumer route (desktop and phone, en and fr), on the ui-shots servers and data |
+| `make ui-visual` | S-168/S-180: the component gallery's screenshot baselines (`pnpm test:visual`, en + fr-CA, 1440 + 390); `UI_VISUAL_UPDATE=1` rewrites them after an intended change. With `ui-hydration`, the web CI's manual `visual` job |
 | `make mobile-shots` | screenshots of every consumer and courier app screen at 390×844, without a phone or a backend ([below](#the-native-apps-make-mobile-shots)) |
 | `make all` · `make build` · `make test` · `make lint` · `make format` | both stacks |
 | `make clean` · `make clean-all` | build outputs and runner logs · also `node_modules` and `server/.gradle` |
@@ -196,17 +198,19 @@ unless `MAVEN_MIRROR_URL` is set).
 
 Every UI change gets looked at, on a desktop and on a phone, before it is reviewed. `make ui-shots` builds the
 consumer site, the Studio and the console and photographs **every route** of the three, full page, at 1440×900 and
-390×844:
+390×844, **in English and in French** (S-180):
 
 ```
-make ui-shots                                   # all three apps (about 8 minutes)
+make ui-shots                                   # all three apps, en + fr (about 15 minutes)
+make ui-shots UI_SHOTS_LANGS=en                 # one language (en or fr)
 make ui-shots UI_SHOTS_APPS=consumer            # one app (or consumer,studio)
 make ui-shots UI_SHOTS_SKIP_BUILD=1 UI_SHOTS_GREP=home   # reuse the last build, only the routes matching "home"
 make ui-shots UI_SHOTS_WIDTHS=2560,1920,1440,390,360    # those widths instead (<route>-<width>.png)
 ```
 
-The pictures land in `ui-shots/<app>/<route>-d.png` (desktop) and `<route>-m.png` (phone) at the repository root
-(git-ignored). The route list is `web/packages/a11y/shots/routes.ts` — a new route goes there too. A route with `click`
+The pictures land in `ui-shots/<app>/<route>-d.png` (desktop) and `<route>-m.png` (phone), and `<route>-fr-d.png` /
+`<route>-fr-m.png` in French, at the repository root (git-ignored). The consumer is opened with `?lang=`, the Studio and
+the console with their stored language (`nl.locale`). The route list is `web/packages/a11y/shots/routes.ts` — a new route goes there too. A route with `click`
 (a Playwright selector) presses it once the page is ready and photographs the window, for a state behind a click: a
 detail sheet, an editor step.
 
@@ -224,7 +228,40 @@ Sandhu, Priya Natarajan), the consumer is a guest unless the route says `signedI
 usually lacks an answer: `ui-shots/<app>/_missing-api.txt` lists the requests nothing answered — add one to
 `shots/fixtures.mjs`. A page wider than the screen (a sideways scroll on a phone) is named in
 `ui-shots/<app>/_overflow.txt` with the outermost elements that stick out past the right edge (and `page Npx > Mpx`
-when the document itself is wider than the window, measured with the html/body clip lifted).
+when the document itself is wider than the window, measured with the html/body clip lifted). Two more lists help with
+French, which runs about 20 % longer (S-180): `_truncated.txt` names text cut off by an ellipsis, a line clamp or its
+box (a long shop name ellipsed in a card is by design; a cut button, tab or heading is a bug), and `_untranslated.txt`
+the English-looking text left on a French page (the fixtures' own business, product and review texts are English, so it
+lists candidates to read, not failures; `frenchCoverage.test.ts` is the gate for the strings).
+
+### Accessibility of every route: `make ui-a11y`
+
+`make ui-a11y` runs the accessibility sweep's checks (`web/packages/a11y/pages/support.ts`: axe for WCAG 2.0–2.2 A/AA,
+the page language, text spacing, focus hidden by a sticky bar, motion under reduced motion, pointer target sizes) on
+every route of `routes.ts` — the same builds, data, pinned clocks and clicks as `make ui-shots` — at 1440 and 390, in
+English and French (`UI_SHOTS_LANGS`, `UI_SHOTS_APPS`, `UI_SHOTS_GREP` and `UI_SHOTS_SKIP_BUILD=1` work as for the
+shots; about 20 minutes an app; `UI_A11Y_WIDTHS=1440` or `390` runs one width, `UI_A11Y_KEYBOARD=1` only the keyboard
+paths — the phone width runs with touch, so the tokens' 44 px touch sizes apply). `ui-shots/<app>/_a11y-<width>.txt` has
+one line per page (`ok`, or the findings) and `_keyboard.txt` one per keyboard path (the header and its search scope,
+dialogs and sheets: focus in, Tab stays inside, Escape, focus back; the filter rail, buy box, booking box, checkout
+choices, the bulk bars); the JSON of each check is in `web/packages/a11y/a11y-results/pages/`. It fails on a critical or serious
+WCAG violation, a heading out of order, the wrong page language, a sideways scroll with the 1.4.12 text spacing, a
+focused control hidden under a sticky bar, an animation running under reduced motion, or a target under 24 × 24 px;
+targets between 24 and 44 px are listed against the project's 44 px rule (the documented exceptions are in
+[a11y/audit.md](a11y/audit.md) § S-180). `make a11y` (S-109) stays the shorter sweep of 32 key screens with the ARIA
+snapshots of the journeys.
+
+### The visual regression gate: `make ui-visual` and `make ui-hydration`
+
+`make ui-visual` compares the component gallery (`web/apps/gallery`, every `@northline/ui` section in en and fr-CA at
+1440 and 390, the dialog and the sheet open) with its committed baselines (`apps/gallery/visual/__screenshots__`) and
+fails past 0.1 % of changed pixels; `UI_VISUAL_UPDATE=1 make ui-visual` rewrites them after an intended change — commit
+them with it, and only the ones your change meant to move. The run is deterministic: IBM Plex Sans is self-hosted and
+must load, the clock is pinned (2026-10-23 18:00 UTC), the zone is UTC, motion is reduced, and the baselines are
+renders of Playwright 1.56.1's Chromium (build 1194) with the fonts of Playwright's Ubuntu 24.04 image — which is why
+CI runs it in `mcr.microsoft.com/playwright:v1.56.1-noble`. `make ui-hydration` is the other half of the gate (no React
+hydration error on any consumer route). Both run in the web CI's `visual` job (GitHub Actions `web` workflow, input
+`visual`; GitLab `web:visual`), which, like every workflow here, starts only by hand.
 
 Sticky bars (a phone's "Add to cart", a wizard's "Continue") sit at the bottom of the 844 px screen in a full-page
 picture, over the content that happens to be there: that is where a phone shows them, not an overlap.

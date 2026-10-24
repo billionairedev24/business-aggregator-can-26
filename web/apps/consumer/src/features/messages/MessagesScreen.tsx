@@ -18,7 +18,7 @@ export function MessagesScreen() {
   const open = typeof search.thread === 'string' ? search.thread : undefined;
   const q = useQuery({ ...threadsQuery, enabled: !!user });
   useCustomerLive(!!user);
-  if (loading || (user && q.isPending)) return <div className="nl-page nl-msg" aria-busy="true"><Skeleton width="40%" height={40} /><Skeleton height={200} style={{ marginTop: 16 }} /></div>;
+  if (loading || (user && q.isPending)) return <div className="nl-page nl-msg" aria-busy="true"><Skeleton width="40%" height={40} /><Skeleton height={200} className="nl-skel-gap-lg" /></div>;
   if (!user) {
     return (
       <div className="nl-page nl-msg">

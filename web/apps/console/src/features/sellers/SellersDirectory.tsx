@@ -97,13 +97,14 @@ function DirectoryView({ data, search }: { data: Directory; search: SellersSearc
   const live = data.items.filter(s => s.status === 'active').length;
   const review = data.items.filter(s => s.status === 'pending' || s.status === 'applicant').length;
   const gmv = data.items.reduce((sum, s) => sum + s.gmv90Cents, 0);
+  // At risk is the api's count of live businesses with a flag in this scope, so its link opens exactly those (S-180)
   const suspendable = [t('st_active'), t('st_paused')];
   return (
     <>
       <KpiStrip label={t('kpis')} items={[
         { key: 'live', label: t('kLive'), value: formatNumber(live, locale), onClick: () => go({ view: 'live' }) },
         { key: 'review', label: t('kReview'), value: formatNumber(review, locale), onClick: () => go({ view: 'review' }) },
-        { key: 'risk', label: t('kRisk'), value: formatNumber(data.atRisk, locale), delta: t('kRiskD'), trend: data.atRisk ? 'down' : 'flat', onClick: () => go({ risk: true, view: 'all' }) },
+        { key: 'risk', label: t('kRisk'), value: formatNumber(data.atRisk, locale), delta: t('kRiskD'), trend: data.atRisk ? 'down' : 'flat', onClick: () => go({ risk: true, view: 'live' }) },
         { key: 'gmv', label: t('kGmv'), value: formatCompactMoney(gmv, locale), delta: t('kGmvD', { n: data.items.length }) },
       ]} />
       <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={25} roleName={roleName}

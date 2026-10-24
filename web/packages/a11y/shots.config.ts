@@ -7,7 +7,9 @@ import { defineConfig } from '@playwright/test';
  * ports (4641 Studio, 4642 console, 4644 consumer, 4643 the mock api behind the consumer's server-side rendering), so
  * both can run side by side; the mock api adds the demo-like data of shots/fixtures.mjs (NL_MOCK_SHOTS=1). No backend.
  * UI_SHOTS_APPS=consumer,studio limits the apps; `--grep <route>` limits the routes. UI_SHOTS_HYDRATION=1 (`make
- * ui-hydration`) runs the hydration check of every consumer route instead (shots/hydration.spec.ts, S-182).
+ * ui-hydration`) runs the hydration check of every consumer route instead (shots/hydration.spec.ts, S-182), and
+ * UI_SHOTS_A11Y=1 (`make ui-a11y`) the accessibility check of every route (shots/a11y.spec.ts, S-180). UI_SHOTS_LANGS=en
+ * keeps one language (both by default).
  */
 // read by pages/support.ts and scripts/responder.mjs in the test workers
 process.env.NL_A11Y_MOCK_URL = 'http://127.0.0.1:4643';
@@ -18,6 +20,11 @@ const nowhere = 'http://127.0.0.1:4699';
 const only = process.env.UI_SHOTS_APPS?.split(',');
 const wanted = (app: string) => !only || only.includes(app);
 const hydration = process.env.UI_SHOTS_HYDRATION === '1';
+// S-180 (`make ui-a11y`): the accessibility check of every route instead of the pictures (shots/a11y.spec.ts)
+const a11y = process.env.UI_SHOTS_A11Y === '1';
+// UI_A11Y_WIDTHS=1440 (or 390) runs only the page checks at that width; UI_A11Y_KEYBOARD=1 only the keyboard paths
+const A11Y_SPECS = process.env.UI_A11Y_WIDTHS ? /a11y\.spec\.ts/ : process.env.UI_A11Y_KEYBOARD === '1' ? /keyboard\.spec\.ts/ : /(a11y|keyboard)\.spec\.ts/;
+const BASE = { consumer: 'http://127.0.0.1:4644', studio: 'http://127.0.0.1:4641', console: 'http://127.0.0.1:4642' } as const;
 
 export default defineConfig({
   testDir: 'shots',
@@ -39,7 +46,8 @@ export default defineConfig({
       },
     ] : []),
   ],
-  projects: hydration ? [{ name: 'hydration', testMatch: /hydration\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4644' } }] : [
+  projects: hydration ? [{ name: 'hydration', testMatch: /hydration\.spec\.ts/, use: { baseURL: BASE.consumer } }]
+    : a11y ? (['consumer', 'studio', 'console'] as const).filter(wanted).map(app => ({ name: `a11y-${app}`, testMatch: A11Y_SPECS, use: { baseURL: BASE[app] } })) : [
     ...(wanted('consumer') ? [{ name: 'consumer', testMatch: /consumer\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4644' } }] : []),
     ...(wanted('studio') ? [{ name: 'studio', testMatch: /studio\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4641' } }] : []),
     ...(wanted('console') ? [{ name: 'console', testMatch: /console\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4642' } }] : []),

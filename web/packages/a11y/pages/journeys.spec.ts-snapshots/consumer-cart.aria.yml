@@ -1,8 +1,11 @@
 - main:
   - heading "Shopping cart" [level=1]
   - text: 4 items · 2 shops · one delivery
+  - note:
+    - strong: "/Pooled run: Tonight, 6–9 p[\\d,.]+[bkmBKM]+\\./"
+    - text: /All 2 shops deliver together for one \$\d+\.\d+ fee\. Order by 5:\d+ p[\d,.]+[bkmBKM]+\./
   - region "Bridgeland Butcher":
-    - heading "Bridgeland Butcher" [level=2]
+    - heading "Bridgeland Butcher 1 item" [level=2]
     - list:
       - listitem:
         - link "Ribeye, AAA":
@@ -12,9 +15,10 @@
           - button "Remove Ribeye, AAA"
           - button "One more Ribeye, AAA"
         - button "Delete Ribeye, AAA"
+        - button "Save Ribeye, AAA for later"
         - text: /\$\d+\.\d+/
   - region "Glenmore Bakery":
-    - heading "Glenmore Bakery" [level=2]
+    - heading "Glenmore Bakery 3 items" [level=2]
     - list:
       - listitem:
         - link "Country sourdough":
@@ -24,6 +28,7 @@
           - button "One less Country sourdough"
           - button "One more Country sourdough"
         - button "Delete Country sourdough"
+        - button "Save Country sourdough for later"
         - text: /\$\d+\.\d+/
       - listitem:
         - link "Baguette":
@@ -33,6 +38,7 @@
           - button "Remove Baguette"
           - button "One more Baguette"
         - button "Delete Baguette"
+        - button "Save Baguette for later"
         - text: /\$\d+\.\d+/
   - paragraph:
     - text: "Subtotal (4 items):"

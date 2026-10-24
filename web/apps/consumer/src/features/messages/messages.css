@@ -1,21 +1,21 @@
 /* S-153: messages with providers (Account › Messages, the quote and booking pages). Tokens only. */
-.nl-msg-muted { color: var(--color-text-muted); margin: 0 0 8px; }
-.nl-msg-h2 { font-size: var(--text-lg, 1.125rem); margin: 0 0 4px; }
-.nl-msg-ref { display: inline-block; margin-bottom: 12px; color: var(--color-link); }
-.nl-msg-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); margin-top: 12px; }
+.nl-msg-muted { color: var(--color-text-muted); margin: 0 0 var(--space-2); }
+.nl-msg-h2 { font-size: var(--text-lg, 1.125rem); margin: 0 0 var(--space-1); }
+.nl-msg-ref { display: inline-block; margin-bottom: var(--space-3); color: var(--color-link); }
+.nl-msg-grid { display: grid; gap: var(--space-4); grid-template-columns: minmax(0, 1fr); margin-top: var(--space-3); }
 @media (min-width: 900px) { .nl-msg-grid { grid-template-columns: 320px minmax(0, 1fr); } }
-.nl-msg-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.nl-msg-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .nl-msg-item {
-  display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 44px; text-align: start; padding: 12px;
+  display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 44px; text-align: start; padding: var(--space-3);
   border: 1px solid var(--color-border-card, var(--color-border)); border-radius: var(--radius-md); background: var(--color-surface);
   color: var(--color-text); cursor: pointer;
 }
 .nl-msg-item[aria-current='true'] { border-color: var(--color-action-primary); }
 .nl-msg-item:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-.nl-msg-item-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.nl-msg-item-head { display: flex; justify-content: space-between; gap: var(--space-2); align-items: center; }
 .nl-msg-last { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nl-msg-open, .nl-msg-thread { min-width: 0; }
-.nl-msg-open { border: 1px solid var(--color-border-card, var(--color-border)); border-radius: var(--radius-md); background: var(--color-surface); padding: 16px; }
-.nl-msg-composer { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; align-items: flex-start; }
+.nl-msg-open { border: 1px solid var(--color-border-card, var(--color-border)); border-radius: var(--radius-md); background: var(--color-surface); padding: var(--space-4); }
+.nl-msg-composer { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-3); align-items: flex-start; }
 .nl-msg-composer .nl-field, .nl-msg-composer label { width: 100%; }
-.nl-msg-flag { margin: 6px 0 0; font-size: var(--text-sm, 0.875rem); color: var(--color-warning, var(--color-text)); }
+.nl-msg-flag { margin: var(--space-1-5) 0 0; font-size: var(--text-sm, 0.875rem); color: var(--color-warning, var(--color-text)); }

@@ -31,6 +31,8 @@
 .nl-cmp-obligations li { position: relative; padding-left: var(--space-4); line-height: var(--leading-relaxed); }
 .nl-cmp-obligations li::before { content: ''; position: absolute; left: 0; top: .6em; width: var(--space-1-5); height: var(--space-1-5); border-radius: var(--radius-round); background: var(--color-text-muted); }
 .nl-cmp-versions { margin-top: var(--space-3-5); }
+/* S-180: links in a line of text are underlined (WCAG 1.4.1) and 24 px targets (2.5.8) */
+.nl-cmp-versions a, .nl-cmp-meta a, .nl-cmp-dl dd a { text-decoration: underline; display: inline-block; padding-block: var(--space-1); margin-block: calc(-1 * var(--space-1)); }
 .nl-cmp .nl-alert { margin-bottom: var(--space-3); }
 @media (max-width: 420px) {
   .nl-cmp-doc { grid-template-columns: minmax(0, 1fr); }

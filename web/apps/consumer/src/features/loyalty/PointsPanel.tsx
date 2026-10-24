@@ -13,7 +13,7 @@ export function PointsPanel() {
   const t = useLoyaltyT();
   const { date, number } = useFormatters();
   const points = useQuery(pointsQuery);
-  if (points.isPending) return <div aria-busy="true"><span className="nl-sr-only">{t('loading')}</span><Skeleton height={120} style={{ maxWidth: 640 }} /></div>;
+  if (points.isPending) return <div aria-busy="true"><span className="nl-sr-only">{t('loading')}</span><Skeleton height={120} className="nl-points-skel" /></div>;
   if (points.isError) return <ErrorState message={t('loadError')} onRetry={() => void points.refetch()} />;
   const p = points.data;
   return (
