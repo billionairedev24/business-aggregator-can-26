@@ -19,13 +19,22 @@ const route = (app: App, name: string): ShotRoute => {
   return { ...r, click: undefined };
 };
 
-/** The focused element and whether it draws a focus indicator (an outline, or a ring as a box shadow). */
+/**
+ * The focused element and whether focus is visible: its outline, border or box shadow — or a wrapper's, drawn with
+ * :focus-within (the search bar rings its box, not the input) — differs from how it looks without focus.
+ */
 async function focused(page: Page) {
   return page.evaluate(() => {
     const el = document.activeElement as HTMLElement | null;
     if (!el || el === document.body) return { name: '(body)', visible: false, inDialog: false };
-    const cs = getComputedStyle(el);
-    const ring = (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) || (cs.boxShadow !== 'none' && cs.boxShadow !== '');
+    const chain: HTMLElement[] = [];
+    for (let p: HTMLElement | null = el; p && chain.length < 4; p = p.parentElement) chain.push(p);
+    const look = () => chain.map(x => { const c = getComputedStyle(x); return `${c.outlineStyle} ${c.outlineWidth} ${c.outlineColor}|${c.boxShadow}|${c.borderColor}`; }).join('§');
+    const on = look();
+    el.blur();
+    const off = look();
+    el.focus({ preventScroll: true });
+    const ring = on !== off;
     const label = (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 40);
     return { name: `${el.tagName.toLowerCase()} "${label}"`, visible: ring, inDialog: !!el.closest('[role="dialog"], [role="alertdialog"]') };
   });
@@ -125,11 +134,14 @@ test.describe('consumer keyboard', () => {
       const rating = page.locator('.nl-rate-opt').first();
       const unseen = await tabTo(page, rating, 80);
       await page.keyboard.press('Enter');
-      await page.waitForURL(/minRating=/);
-      const chip = page.getByRole('button', { name: /^Remove filter/ }).first();
+      await expect(rating).toHaveAttribute('aria-pressed', 'true');
+      const chip = page.getByRole('button', { name: /^Remove filter.*(★|star)/i }).first();
+      await expect(chip).toBeVisible();
+      const chips = await page.getByRole('button', { name: /^Remove filter/ }).count();
       await chip.focus();
       await page.keyboard.press('Enter');
-      await page.waitForURL(url => !url.searchParams.has('minRating'));
+      await expect(page.getByRole('button', { name: /^Remove filter/ })).toHaveCount(chips - 1);
+      await expect(page.locator('.nl-rate-opt').first()).toHaveAttribute('aria-pressed', 'false');
       expect(unseen, 'every stop shows its focus').toEqual([]);
     }));
     test('buy box: quantity and Add to cart', ({ page }) => path('consumer', 'buy-box', async () => {
