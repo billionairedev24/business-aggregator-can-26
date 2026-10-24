@@ -72,7 +72,7 @@ function ReportView({ data, province }: { data: Report; province?: string }) {
           <p className="bo-muted">{t('funnelNote')}</p>
         </ChartCard>
         <ChartCard id="rp-cohorts" title={t('cohortsTitle')}>
-          <div className="nl-scroll" role="region" tabIndex={0} aria-label={t('cohortsTitle')}><table className="table nl-rp-cohorts">
+          <div className="nl-scroll" role="group" tabIndex={0} aria-label={t('cohortsTitle')}><table className="table nl-rp-cohorts">
             <thead><tr><th>{t('c_month')}</th><th>{t('c_customers')}</th><th>{t('c_m1')}</th><th>{t('c_m2')}</th><th>{t('c_m3')}</th></tr></thead>
             <tbody>
               {data.cohorts.map(c => (

@@ -78,7 +78,7 @@ export function StorefrontPreview({ storefront: s, device }: { storefront: Store
   const heading = (k: SectionKind): ReactNode => <div className="nl-pv-title">{sectionText(t, k, 'name')}</div>;
 
   return (
-    <div className="nl-pv-frame" data-device={device} style={{ ['--nl-brand' as string]: s.brandColor }} aria-label={t('preview')} role="region" tabIndex={0}>
+    <div className="nl-pv-frame" data-device={device} style={{ ['--nl-brand' as string]: s.brandColor }} aria-label={t('preview')} role="group" tabIndex={0}>
       {blocksFor(s, services, products, t).map(b => (
         <div key={b.kind} className={b.type === 'cta' ? 'nl-pv-sticky' : undefined}>
           {b.type === 'hero' && <div className="nl-pv-hero">
