@@ -163,6 +163,7 @@ type GalleryT = ReturnType<typeof useT>;
 /** Demo names: data, the same in both languages. */
 const SHOP = 'Loaf & Ladder Bakery · Maple Row';
 const FONT = 'IBM Plex Sans';
+const DISPLAY_FONT = 'Archivo';
 const HIVE = 'Hive & Hollow Apiary';
 const BAKERY = 'Loaf & Ladder Bakery';
 const PLACE = 'Maple Row T2N';
@@ -186,7 +187,7 @@ function Tokens({ t }: { t: GalleryT }) {
       </ul>
       <p className="nl-gallery-type">{FONT}</p>
       <p className="nl-muted">{t('typeNote')}</p>
-      <p className="nl-gallery-type nl-gallery-display">Archivo</p>
+      <p className="nl-gallery-type nl-gallery-display">{DISPLAY_FONT}</p>
       <p className="nl-muted">{t('displayNote')}</p>
     </>
   );
