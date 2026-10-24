@@ -2,7 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
-import { parseDeepLink, routeOf } from '@northline/mobile-kit';
+import { StyleSheet } from 'react-native';
+
+import { parseDeepLink, routeOf, semantic } from '@northline/mobile-kit';
 
 import type { Started } from '../src/api/shop';
 import { FIXTURE_PROOF, seedOrder } from '../src/fixtures/shop';
@@ -67,14 +69,27 @@ async function withOrder(orderState: Parameters<typeof seedOrder>[2], url: strin
   return started;
 }
 
+/** S-188: 14:31 UTC today, 2 h 48 min before the fixture's tonight run closes (18:00 − 41 min), so the run card counts down. */
+const beforeCutoff = () => jest.spyOn(Date, 'now').mockReturnValue(Date.parse(`${new Date().toISOString().slice(0, 10)}T14:31:00Z`));
+
 describe('B1 Home', () => {
-  it('shows where you deliver, the search bar, the department strip, the cut-off strip, the maker of the week, the tiles and the rails — to a guest', async () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('shows where you deliver, the search bar, the department strip, the hero band, the maker of the week, the tiles and the rails — to a guest', async () => {
+    beforeCutoff();
     const { server, view } = await start({ welcomed: true, store: saved() });
     expect(await screen.findByRole('button', { name: 'Delivery address: 1204 Example Ave, Sampleville' })).toBeTruthy();
     expect(screen.getByText('Deliver to', { exact: false })).toBeTruthy();
     expect(screen.getByRole('image', { name: 'Northline' })).toBeTruthy(); // the logo, from brand.json
-    // S-178: the cut-off strip of the next pooled run, in the market's zone
-    expect(await screen.findByText(/^Tonight’s pooled run to Sampleville closes at 5:19 p\.m\. Mix any shops for a single \$2\.99 delivery\.$/)).toBeTruthy();
+    // S-188: the hero band — the headline with the market's city, the trust line, the run card with the next pooled
+    // run's cut-off in the market's zone and the time left, the three department tiles (the cut-off strip is gone)
+    expect(await screen.findByRole('header', { name: 'Everything Sampleville needs, tonight.' })).toBeTruthy();
+    expect(screen.getByText('Payment held until you confirm delivery')).toBeTruthy();
+    expect(await screen.findByRole('summary', { name: 'Next pooled run, Tonight’s pooled run, Closes 5:19 p.m., 2 h 48 min left, Mix shops for a single $2.99 delivery' })).toBeTruthy();
+    expect(screen.queryByText(/^Tonight’s pooled run to Sampleville/)).toBeNull();
+    expect(screen.getByRole('button', { name: /^Book a pro, (Verified pros|\d+ verified pros?) · book instantly$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Shop local, \d+ stores? · one pooled delivery$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Order in, Local kitchens · group orders' })).toBeTruthy();
     // the maker of the week: the market's top shop on the run, with its own numbers
     expect(screen.getByText('Maker of the week · Bakery')).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Maple Lane Bakery, on tonight’s pooled run' })).toBeTruthy();
@@ -125,15 +140,15 @@ describe('B1 Home', () => {
     expect(await screen.findByText('Northline is having trouble right now. Try again in a moment.', {}, { timeout: 8000 })).toBeTruthy();
     fail = false;
     fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByText(/^Tonight’s pooled run to Sampleville/)).toBeTruthy();
+    expect(await screen.findByText('Maker of the week · Bakery')).toBeTruthy();
   }, 15000);
 
   it('offline: the banner, and what was shown stays', async () => {
     await start({ welcomed: true, store: saved() });
-    await screen.findByText(/^Tonight’s pooled run to Sampleville/);
+    await screen.findByText('Maker of the week · Bakery');
     act(() => netinfo().__emit({ isConnected: false, isInternetReachable: false }));
     expect(await screen.findByText("You're offline. Northline will catch up when you're back online.")).toBeTruthy();
-    expect(screen.getByText(/^Tonight’s pooled run to Sampleville/)).toBeTruthy();
+    expect(screen.getByText('Maker of the week · Bakery')).toBeTruthy();
     act(() => netinfo().__emit({ isConnected: true, isInternetReachable: true }));
   });
 
@@ -146,8 +161,10 @@ describe('B1 Home', () => {
   it('is in French on a French phone', async () => {
     const { getLocales } = jest.requireMock('expo-localization') as { getLocales: jest.Mock };
     getLocales.mockReturnValueOnce([{ languageTag: 'fr-CA' }]);
+    beforeCutoff();
     await start({ welcomed: true, store: saved() });
-    expect(await screen.findByText(/^La tournée partagée de ce soir vers Sampleville ferme à 17 h 19\. Combinez les boutiques pour une seule livraison à 2,99 \$\.$/)).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'Tout ce dont Sampleville a besoin, ce soir.' })).toBeTruthy();
+    expect(await screen.findByRole('summary', { name: 'Prochaine tournée partagée, Tournée partagée de ce soir, Ferme à 17 h 19, Encore 2 h 48 min, Combinez les boutiques pour une seule livraison à 2,99 $' })).toBeTruthy();
     expect(screen.getByText('Artisan de la semaine · Bakery')).toBeTruthy();
     expect(screen.getByRole('header', { name: 'Maple Lane Bakery, sur la tournée partagée de ce soir' })).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'Événements et bar' }).length).toBeGreaterThan(0);
@@ -224,6 +241,16 @@ describe('B2 Search', () => {
 });
 
 describe('B3 Product and B4 Cart', () => {
+  it('shows the cut-off as the ink-on-yellow pill in the buy box (S-188)', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(Date.parse(`${new Date().toISOString().slice(0, 10)}T14:31:00Z`));
+    await start({ welcomed: true, store: saved(), url: '/product/p-sourdough' });
+    const pill = await screen.findByTestId('product-cutoff');
+    expect(within(pill).getByText('Order within 2 h 48 min')).toBeTruthy();
+    expect(StyleSheet.flatten(pill.props.style).backgroundColor).toBe(semantic.commerce);
+    expect(StyleSheet.flatten(within(pill).getByText('Order within 2 h 48 min').props.style).color).toBe(semantic['commerce-text']);
+    now.mockRestore();
+  });
+
   it('shows the product as the design does and adds it — a guest, by the guest id — then opens the cart with its badge', async () => {
     const { server, view, services } = await start({ welcomed: true, store: saved(), url: '/product/p-sourdough' });
     expect(await screen.findByText('Country sourdough')).toBeTruthy();

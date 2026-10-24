@@ -6,8 +6,9 @@ import { radius, semantic, space } from '../../theme';
 import { Photo } from '../Photo';
 import { Button, IconButton } from './Button';
 import { Checkbox, ChoiceTiles, FilterChip, OptionCard, Segmented, Switch, UnderlineTabs } from './Choice';
-import { DealBadge, Price, ProductCard, QuantityStepper, Rating, ServiceCard, StatusTag } from './Commerce';
+import { CutoffPill, DealBadge, Price, ProductCard, QuantityStepper, Rating, ServiceCard, StatusTag, Sticker } from './Commerce';
 import { BottomSheet, CardSkeleton, EmptyState, Skeleton, Toast } from './Feedback';
+import { HomeHero } from './Hero';
 import { formatDateRange, formatPrice, formatTime, formatTimeRange, formatUnitPrice, unitCents } from './format';
 import { KitProvider, useKit } from './KitProvider';
 import { AppHeader, BottomTabBar } from './Navigation';
@@ -213,6 +214,7 @@ function GalleryBody({ locale, setLocale, onBack, bottomInset, testID }: { local
             <Price cents={850} unit={{ cents: 94, per: '100g' }} size="lg" />
             <Rating value={4.8} count={312} />
             <DealBadge label={t('gallery.deal', { n: 12 })} />
+            <CutoffPill label={t('gallery.orderWithin', { h: 2, m: 48 })} testID="gallery-cutoff" />
           </View>
           <QuantityStepper value={qty} onLess={() => setQty((q) => Math.max(0, q - 1))} onMore={() => setQty((q) => q + 1)} size="lg" />
         </Section>
@@ -279,6 +281,48 @@ function GalleryBody({ locale, setLocale, onBack, bottomInset, testID }: { local
               ]}
             />
           </View>
+          <View style={styles.frame}>
+            <View style={styles.chrome}>
+              <SearchBar placeholder={t('gallery.searchPlaceholder')} onPress={noop} onChrome testID="gallery-search-chrome" />
+            </View>
+            <UnderlineTabs chrome label={t('gallery.departments')} options={[{ value: 'all', label: t('gallery.all') }, { value: 'shop', label: t('gallery.shop') }, { value: 'bakery', label: t('gallery.bakery') }]} value="all" onChange={noop} testID="gallery-chrome-tabs" />
+            <View style={styles.frameBody} />
+            <BottomTabBar
+              tone="brand"
+              current={navTab}
+              onSelect={setNavTab}
+              items={[
+                { key: 'home', label: t('gallery.home'), icon: 'house' },
+                { key: 'browse', label: t('gallery.browse'), icon: 'squares-four' },
+                { key: 'cart', label: t('gallery.cart'), icon: 'shopping-cart', badge: 4 },
+                { key: 'account', label: t('gallery.account'), icon: 'user-circle' },
+              ]}
+            />
+          </View>
+        </Section>
+
+        <Section title={t('gallery.hero')}>
+          <View style={styles.heroFrame}>
+            <HomeHero
+              title={t('gallery.heroTitle', { place: t('gallery.heroPlace') })}
+              accent={t('gallery.heroAccent')}
+              trust={[
+                { key: 'held', icon: 'shield-check', label: t('gallery.heroHeld') },
+                { key: 'refund', icon: 'arrows-clockwise', label: t('gallery.heroRefund') },
+              ]}
+              run={{ kicker: t('gallery.heroKicker'), title: t('gallery.heroCloses', { time: formatTime('2026-10-23T17:20:00Z', locale, ZONE) }), left: t('gallery.heroLeft', { h: 2, m: 48 }), note: t('gallery.heroNote', { fee: formatPrice(299, locale) }) }}
+              runLabel={t('gallery.heroRun')}
+              departmentsLabel={t('gallery.departments')}
+              departments={[
+                { key: 'services', icon: 'wrench', kicker: t('gallery.services'), title: t('gallery.heroPro'), meta: t('gallery.mechanicMeta'), photo: <Photo slot="demo/merchant/handyman" crop="wide" style={StyleSheet.absoluteFill} />, onPress: noop },
+                { key: 'shop', icon: 'shopping-bag', kicker: t('gallery.shop'), title: t('gallery.heroShop'), meta: t('gallery.bakery'), photo: <Photo slot="demo/merchant/bakery" crop="wide" style={StyleSheet.absoluteFill} />, onPress: noop },
+              ]}
+              testID="gallery-hero"
+            />
+            <View style={styles.sticker}>
+              <Sticker label={t('gallery.heroLeft', { h: 2, m: 48 })} />
+            </View>
+          </View>
         </Section>
         <View style={{ height: bottomInset }} />
       </ScrollView>
@@ -333,4 +377,7 @@ const styles = StyleSheet.create({
   inlineToast: { position: 'relative', left: 0, right: 0 },
   frame: { borderWidth: LINE.hair, borderColor: semantic['border-strong'], borderRadius: radius.panel, overflow: 'hidden' },
   frameBody: { height: space[16], backgroundColor: semantic.well },
+  chrome: { padding: space[3], backgroundColor: semantic['header-bg'] },
+  heroFrame: { marginHorizontal: -space[4], gap: space[3] },
+  sticker: { paddingHorizontal: space[4] },
 });

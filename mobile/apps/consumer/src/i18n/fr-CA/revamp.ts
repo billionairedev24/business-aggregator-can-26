@@ -10,15 +10,6 @@ export const revamp: { [k in keyof typeof en]: string } = {
   'rv.dept.services': 'Services',
   'rv.dept.shop': 'Boutiques',
 
-  'rv.cutoff.tonight': 'La tournée partagée de ce soir vers {place} ferme à {time}.',
-  'rv.cutoff.today': 'La tournée partagée d’aujourd’hui vers {place} ferme à {time}.',
-  'rv.cutoff.tomorrow': 'La tournée partagée de demain vers {place} ferme à {time}.',
-  'rv.cutoff.later': 'La prochaine tournée partagée vers {place} ferme {weekday} à {time}.',
-  'rv.cutoff.sub': 'Combinez les boutiques pour une seule livraison à {fee}.',
-  'rv.cutoff.leftHours': 'Il reste {h} h {m} min',
-  'rv.cutoff.leftMinutes': 'Il reste {m} min',
-  'rv.cutoff.label': '{title} {sub} {left}',
-
   'rv.hero.label': 'Artisan de la semaine',
   'rv.hero.kicker': 'Artisan de la semaine · {department}',
   'rv.hero.tonight': '{name}, sur la tournée partagée de ce soir',

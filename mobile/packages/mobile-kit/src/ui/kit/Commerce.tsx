@@ -6,12 +6,13 @@ import { Icon, type IconName } from '../Icon';
 import { Button } from './Button';
 import { formatPrice, formatUnitPrice, type PriceUnit } from './format';
 import { useKit } from './KitProvider';
-import { CAP, DENSITY, LINE, SIZE, TYPE, slopFor, textStyles } from './tokens';
+import { CAP, DENSITY, LINE, SIZE, STICKER, TYPE, slopFor, textStyles } from './tokens';
 
 /**
  * Commerce pieces (Plainsight): product on white in a 1:1 grey well with a 12 pt inset, the dashed well with the
- * category icon when there is no photo; one price format; ink stars; the magenta deal badge and cart count (the
- * commerce colour is never a button); status tags with a square dot, one colour per status.
+ * category icon when there is no photo; one price format; ink stars; S-188's yellow commerce — the tilted deal sticker,
+ * the cut-off pill, the hero's countdown sticker and the cart count, always ink on yellow (yellow is never text, never a
+ * button); status tags with a square dot, one colour per status.
  */
 
 /** The photo well: 1:1, the well grey, the photo inset and contained (product on white); no photo = the dashed fallback. */
@@ -115,11 +116,40 @@ export function Rating({ value, count, testID }: { value: number; count?: number
   );
 }
 
-/** The deal badge: commerce magenta, 2 pt corners ("12% off"). */
+/**
+ * The deal sticker (S-188, the web's `DealBadge`): yellow, ink, bold, tilted −2.5° on a 1.5 pt hard ink edge
+ * (`sticker-edge`) — every deal and discount ("20% off").
+ */
 export function DealBadge({ label, testID }: { label: string; testID?: string }) {
   return (
     <View style={styles.deal} testID={testID}>
       <Text style={styles.dealText} maxFontSizeMultiplier={CAP.badge}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * A cut-off or deal timer on white (S-188, the web's `CutoffPill`): ink on yellow with a clock and a 1 pt ink edge,
+ * upright; it wraps on a narrow phone ("Order within 2 h 48 min", "Ends in 6 h 12 min"). Never yellow text on white.
+ */
+export function CutoffPill({ label, icon = true, testID }: { label: string; icon?: boolean; testID?: string }) {
+  return (
+    <View style={styles.cutoff} testID={testID}>
+      {icon ? <Icon name="clock" size={TYPE.body} color={semantic['commerce-text']} /> : null}
+      <Text style={styles.cutoffText} maxFontSizeMultiplier={CAP.control}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+/** The home hero's countdown on the run card (S-188, the web's `Sticker`): larger, ink on yellow, a hard dark edge, tilted. */
+export function Sticker({ label, testID }: { label: string; testID?: string }) {
+  return (
+    <View style={styles.sticker} testID={testID}>
+      <Text style={styles.stickerText} maxFontSizeMultiplier={CAP.control} numberOfLines={1}>
         {label}
       </Text>
     </View>
@@ -141,7 +171,7 @@ export function StatusTag({ label, tone = 'neutral', large, testID }: { label: s
   );
 }
 
-/** A round count (the cart's): commerce magenta, `radius.round` — a circle stays a circle. */
+/** A round count (the cart's): ink on the commerce yellow, `radius.round` — a circle stays a circle. */
 export function CountBadge({ count, max = 99, testID }: { count: number; max?: number; testID?: string }) {
   if (count <= 0) return null;
   return (
@@ -380,8 +410,40 @@ const styles = StyleSheet.create({
   was: { textDecorationLine: 'line-through' },
   stars: { flexDirection: 'row', gap: LINE.hair },
   rating: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
-  deal: { alignSelf: 'flex-start', paddingHorizontal: space[2] - LINE.hair, paddingVertical: LINE.bold, borderRadius: radius.status, backgroundColor: semantic.commerce },
-  dealText: { ...StyleSheet.flatten(textStyles.caps), textTransform: 'none', letterSpacing: 0, color: semantic['commerce-on'] },
+  deal: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: space[1.5],
+    paddingVertical: LINE.bold,
+    borderRadius: radius.status,
+    backgroundColor: semantic.commerce,
+    transform: [{ rotate: STICKER.tilt }],
+    boxShadow: `${STICKER.edge}px ${STICKER.edge}px 0 ${semantic['sticker-edge']}`,
+  },
+  dealText: { ...StyleSheet.flatten(textStyles.metaStrong), fontFamily: textStyles.section.fontFamily, letterSpacing: TYPE.meta * 0.01, color: semantic['commerce-on'] },
+  cutoff: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    gap: space[1],
+    paddingVertical: LINE.bold,
+    paddingLeft: space[1.5],
+    paddingRight: space[2],
+    borderRadius: radius.status,
+    backgroundColor: semantic.commerce,
+    boxShadow: `${STICKER.edgeSm}px ${STICKER.edgeSm}px 0 ${semantic['sticker-edge']}`,
+  },
+  cutoffText: { ...StyleSheet.flatten(textStyles.metaStrong), fontFamily: textStyles.section.fontFamily, color: semantic['commerce-text'], fontVariant: ['tabular-nums'], flexShrink: 1 },
+  sticker: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: space[2],
+    paddingVertical: space[1],
+    borderRadius: radius.status,
+    backgroundColor: semantic.commerce,
+    transform: [{ rotate: STICKER.heroTilt }],
+    boxShadow: `${STICKER.heroEdge}px ${STICKER.heroEdge}px 0 ${semantic['hero-scrim']}`,
+  },
+  stickerText: { ...StyleSheet.flatten(textStyles.label), fontFamily: textStyles.section.fontFamily, color: semantic['commerce-on'], fontVariant: ['tabular-nums'] },
   tag: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: space[1] + LINE.hair, minHeight: space[6], paddingHorizontal: space[2], borderRadius: radius.status },
   tagLarge: { minHeight: space[6] + space[1], paddingHorizontal: space[2] + LINE.bold },
   tagDot: { width: DOT, height: DOT, borderRadius: LINE.hair },

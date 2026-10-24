@@ -1,9 +1,10 @@
-import { router } from 'expo-router';
-import type { ReactNode, Ref } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { setStatusBarStyle } from 'expo-status-bar';
+import { useCallback, type ReactNode, type Ref } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, type RefreshControlProps } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CAP, Icon, IconButton, LINE, MIN_TARGET, SearchBar, TYPE, colors, radius, semantic, space, textStyles, type IconName } from '@northline/mobile-kit';
+import { CAP, Icon, IconButton, LINE, LogoMark, MIN_TARGET, SIZE, SearchBar, TYPE, brand, colors, radius, semantic, space, textStyles, type IconName } from '@northline/mobile-kit';
 
 import { useI18n } from '../i18n';
 import { OfflineBanner } from './states';
@@ -16,7 +17,8 @@ export const GUTTER = space[4];
  * line) when `title` is given, otherwise `top` (a tab's own top bar — {@link TopBar}) or a thin band; 16 pt side
  * padding; content that scrolls; an offline banner while the phone has no connection. `footer` is the sticky bottom
  * action bar: it stays above the home indicator and rises with the keyboard. `action` puts one more round button on
- * the right of the header.
+ * the right of the header. `chrome` (S-188): `top` is the violet consumer chrome ({@link TopBar}), so the status bar's
+ * strip is violet too and its text turns light while the screen is in front.
  */
 export function Screen({
   title,
@@ -30,6 +32,7 @@ export function Screen({
   padded = true,
   refreshControl,
   scrollRef,
+  chrome,
   testID,
 }: {
   /** The header's title; no title = no header. */
@@ -47,14 +50,23 @@ export function Screen({
   refreshControl?: React.ReactElement<RefreshControlProps>;
   /** The content's ScrollView (S-178: a provider's tabs scroll to their section). */
   scrollRef?: Ref<ScrollView>;
+  /** `top` is the violet chrome (Home, Browse). */
+  chrome?: boolean;
   testID?: string;
 }) {
+  useFocusEffect(
+    useCallback(() => {
+      if (!chrome) return undefined;
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle('dark');
+    }, [chrome]),
+  );
   const body = <View style={[styles.body, padded && styles.padded]}>{children}</View>;
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']} testID={testID}>
+    <SafeAreaView style={[styles.screen, chrome && styles.screenChrome]} edges={['top', 'left', 'right']} testID={testID}>
       {title !== undefined ? <Header title={title} back={back} onBack={onBack} action={action} /> : (top ?? <View style={styles.band} />)}
       <OfflineBanner />
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={[styles.flex, styles.page]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {scroll ? (
           <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
             {body}
@@ -126,10 +138,12 @@ export function Header({ title, back = true, onBack, action }: { title: string; 
 }
 
 /**
- * A tab's top (E-15 Plainsight, design/revamp/a.html's phone header): the brand (`lead`) and the round actions on one
- * row, the one search bar under it (full width, the ink search button), then "Deliver to <place>" on one line with an
- * ellipsis — the person's place opens the location sheet. Never asks for the phone's position (that happens only in
- * the sheet, on "Use my current location").
+ * A tab's top (S-188 Plainsight + Chinook, design/revamp/hybrid's "Consumer home · phone (390)"): the consumer's violet
+ * header (`header-*`) — the brand (`lead`, the mark on violet, the white name) and the white icon actions on one row,
+ * the white search field joined to the violet search button under it, then "Deliver to <place>" on one line (the
+ * muted `header-muted`, the place in white) with an ellipsis — the person's place opens the location sheet — and
+ * `below` (Home's violet department strip). No violet text on violet. Never asks for the phone's position (that
+ * happens only in the sheet, on "Use my current location").
  */
 export function TopBar({
   lead,
@@ -173,12 +187,12 @@ export function TopBar({
           style={({ pressed }) => [styles.place, pressed && styles.placePressed]}
           testID="home-place"
         >
-          <Icon name="map-pin" size={TYPE.sub} color={semantic.text} />
+          <Icon name="map-pin" size={TYPE.sub} color={semantic['header-text']} />
           <Text style={styles.placeLine} numberOfLines={1} maxFontSizeMultiplier={CAP.control}>
             <Text style={styles.placeKicker}>{kicker} </Text>
             <Text style={styles.placeName}>{place}</Text>
           </Text>
-          <Icon name="caret-down" size={TYPE.meta} color={semantic['text-muted']} />
+          <Icon name="caret-down" size={TYPE.meta} color={semantic['header-muted']} />
         </Pressable>
       </View>
       {below}
@@ -186,14 +200,33 @@ export function TopBar({
   );
 }
 
-/** The one search bar of a tab's top (opens the search screen): the kit's SearchBar without a field, the ink search button. */
+/** The one search bar of a tab's top (opens the search screen): the kit's SearchBar without a field, on the violet chrome. */
 export function SearchPill({ label, onPress, testID }: { label: string; onPress: () => void; testID?: string }) {
-  return <SearchBar placeholder={label} onPress={onPress} testID={testID} />;
+  return <SearchBar placeholder={label} onPress={onPress} onChrome testID={testID} />;
+}
+
+/** The brand on the violet header: the mark (the same violet disc, white glyph, yellow dot as on white) and the white name. */
+export function ChromeLogo() {
+  return (
+    <View accessible accessibilityRole="image" accessibilityLabel={brand.name} style={styles.logo} testID="logo">
+      <LogoMark size={SIZE['header-mark']} onDark />
+      <Text style={styles.wordmark} numberOfLines={1} maxFontSizeMultiplier={CAP.control} importantForAccessibility="no">
+        {brand.name}
+      </Text>
+    </View>
+  );
+}
+
+/** A 44 pt icon action on the violet header (the bell): a white icon, the darker violet when pressed. */
+export function ChromeButton({ icon, label, onPress, testID }: { icon: IconName; label: string; onPress: () => void; testID?: string }) {
+  return <IconButton icon={icon} label={label} onPress={onPress} onChrome testID={testID} />;
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surface },
+  screenChrome: { backgroundColor: semantic['header-bg'] },
   flex: { flex: 1 },
+  page: { backgroundColor: colors.surface },
   band: { height: space[2] },
   scroll: { flexGrow: 1 },
   body: { flexGrow: 1, gap: space[4], paddingTop: space[3], paddingBottom: space[8] },
@@ -220,13 +253,15 @@ const styles = StyleSheet.create({
   },
   headerTitle: { ...StyleSheet.flatten(textStyles.sub), flex: 1 },
   headerTitleAlone: { paddingVertical: space[2] },
-  top: { borderBottomWidth: LINE.hair, borderBottomColor: semantic.border, backgroundColor: semantic.surface },
+  top: { backgroundColor: semantic['header-bg'] },
   topIn: { gap: space[2], paddingHorizontal: GUTTER, paddingTop: space[2], paddingBottom: space[1] },
+  logo: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: MIN_TARGET },
+  wordmark: { ...StyleSheet.flatten(textStyles.section), color: semantic['header-text'], flexShrink: 1 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   topLead: { flex: 1, minWidth: 0 },
   place: { minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: space[1], borderRadius: radius.control },
-  placePressed: { backgroundColor: semantic['surface-hover'] },
+  placePressed: { backgroundColor: semantic['header-hover-bg'] },
   placeLine: { ...StyleSheet.flatten(textStyles.meta), flexShrink: 1 },
-  placeKicker: { color: semantic['text-muted'] },
-  placeName: { fontFamily: textStyles.metaStrong.fontFamily, color: semantic.text },
+  placeKicker: { color: semantic['header-muted'] },
+  placeName: { fontFamily: textStyles.metaStrong.fontFamily, color: semantic['header-text'] },
 });

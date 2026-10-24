@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { MIN_TARGET, radius, semantic, space } from '../../theme';
@@ -13,9 +13,11 @@ export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
 
 /**
  * A labelled text field: the label (13 / 600) above a 44 pt input with the 3:1 control edge and 3 pt corners (16 pt
- * text, so nothing zooms), the danger edge and the message under it when wrong (announced).
+ * text, so nothing zooms), the 2 pt violet focus edge while typing (S-188: violet is the focus colour), the danger edge
+ * and the message under it when wrong (announced).
  */
-export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField({ label, error, hint, testID, ...input }, ref) {
+export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField({ label, error, hint, testID, onFocus, onBlur, ...input }, ref) {
+  const [focused, setFocused] = useState(false);
   return (
     <View style={styles.field}>
       <Text style={textStyles.label} nativeID={testID ? `${testID}-label` : undefined}>
@@ -27,8 +29,16 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
         accessibilityHint={hint}
         aria-invalid={!!error}
         placeholderTextColor={semantic['text-subtle']}
-        style={[styles.input, !!error && styles.inputError]}
+        style={[styles.input, focused && styles.inputFocused, !!error && styles.inputError]}
         testID={testID}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
         {...input}
       />
       {error ? (
@@ -54,6 +64,7 @@ const styles = StyleSheet.create({
     borderColor: semantic['border-control'],
     borderRadius: radius.control,
   },
+  inputFocused: { borderColor: semantic.focus, borderWidth: LINE.bold, paddingHorizontal: space[3] - LINE.hair },
   inputError: { borderColor: semantic['danger-border'], borderWidth: LINE.bold, paddingHorizontal: space[3] - LINE.hair },
   error: { ...StyleSheet.flatten(textStyles.label), fontFamily: textStyles.cardTitle.fontFamily, color: semantic.danger },
 });

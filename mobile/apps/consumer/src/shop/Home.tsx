@@ -1,15 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import {
   ApiError,
   Button,
-  CAP,
   Icon,
   LINE,
-  LogoMark,
   MIN_TARGET,
   PhotoWell,
   Photo,
@@ -17,7 +14,6 @@ import {
   ServiceCard,
   TYPE,
   UnderlineTabs,
-  brand,
   photoFor,
   radius,
   semantic,
@@ -34,9 +30,10 @@ import type { MessageKey } from '../i18n';
 import { PlaceBar } from '../location/PlaceBar';
 import { Body, Card } from '../ui/primitives';
 import { ShopProductCard, iconFor, photoSource } from '../ui/commerce';
-import { RoundButton, Screen } from '../ui/screen';
+import { ChromeButton, ChromeLogo, Screen } from '../ui/screen';
 import { ErrorState, Skeleton } from '../ui/states';
 import { appRoute, shop, useMarket, useShopFormat } from './common';
+import { HomeBand } from './HomeBand';
 import { SectionHead, Strip } from './parts';
 import { RewardsNear } from './RewardsNear';
 
@@ -75,25 +72,17 @@ export function pickMaker(shops: readonly ShopCard[], run: Run | null | undefine
   return [...shops].sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name))[0] ?? null;
 }
 
-/** Minutes until an instant (at least 0), re-read every minute. */
-function useMinutesLeft(iso: string | null | undefined) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!iso) return;
-    const id = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(id);
-  }, [iso]);
-  return iso ? Math.max(0, Math.round((Date.parse(iso) - now) / 60_000)) : null;
-}
 
 /**
- * Home (E-15 A · Plainsight, design/revamp/a.html "Consumer home" on a phone, with Main Street's maker of the week
- * from b.html as the hero): the header — the brand, the inbox, the one search bar and "Deliver to" (the location
- * sheet) — with the department strip under it; what's under way (`GET /me/upcoming`) for a signed-in person; the
- * delivery cut-off strip of the next pooled run (`GET /public/shop` → `run`, its order-by time counting down in the
- * commerce colour); the maker of the week (one featured local shop: its photo, story and two actions) and its two side
- * tiles (book a pro, start a group order); the departments and services tiles; S-152's rewards near you; "Popular
- * near …" as product cards with Add to cart; top-rated pros; the sellers' line.
+ * Home (E-15 A · Plainsight with S-188's Plainsight + Chinook brand layer, design/revamp/hybrid "Consumer home · phone
+ * (390)"): the violet header — the mark on violet, the inbox, the white search field with its violet button and
+ * "Deliver to" (the location sheet) — with the violet department strip under it; the "tonight" hero band (the
+ * headline with the place, the trust line, the run card with the next pooled run's cut-off counting down on the
+ * yellow sticker, three department photo tiles, the last one reaching onto the white page; it replaces the cut-off
+ * strip); what's under way (`GET /me/upcoming`) for a signed-in person; the maker of the week (one featured local
+ * shop: its photo, story in Archivo and two actions) and its two side tiles (book a pro, start a group order); the
+ * departments and services tiles; S-152's rewards near you; "Popular near …" as product cards with Add to cart;
+ * top-rated pros; the sellers' line.
  */
 export function Home() {
   const f = useShopFormat();
@@ -119,23 +108,19 @@ export function Home() {
     <Screen
       testID="home"
       padded={false}
+      chrome
       top={
         <PlaceBar
-          lead={
-            <View accessible accessibilityRole="image" accessibilityLabel={brand.name} style={styles.brand} testID="logo">
-              <LogoMark size={SIZE['header-mark']} />
-              <Text style={styles.wordmark} numberOfLines={1} maxFontSizeMultiplier={CAP.control} importantForAccessibility="no">
-                {brand.name}
-              </Text>
-            </View>
-          }
-          actions={<RoundButton icon="bell" label={t('shop.home.notifications')} onPress={() => router.push('/notifications')} testID="home-inbox" />}
+          lead={<ChromeLogo />}
+          actions={<ChromeButton icon="bell" label={t('shop.home.notifications')} onPress={() => router.push('/notifications')} testID="home-inbox" />}
           below={<DepartmentStrip departments={departments} />}
         />
       }
       refreshControl={<RefreshControl refreshing={landing.isRefetching} onRefresh={refresh} />}
     >
-      {landing.data?.run && landing.data.served ? <CutoffStrip run={landing.data.run} place={place ?? landing.data.market} /> : null}
+      <View style={styles.band}>
+        <HomeBand place={place} landing={landing.isPending ? undefined : (landing.data ?? null)} />
+      </View>
 
       {active?.to ? (
         <View style={styles.pad}>
@@ -282,8 +267,9 @@ function PopularServices() {
 const openDepartment = (d: DepartmentTile) => router.push({ pathname: '/search', params: { department: d.slug, name: d.name } });
 
 /**
- * The department strip under the header (a.html's grey strip): All · Services · Shop, then the market's departments —
- * the kit's underline tabs on the well grey, "All" current on Home; each opens its landing.
+ * The department strip under the header (S-188: the violet `subheader-*` strip): All · Services · Shop, then the
+ * market's departments — the kit's underline tabs on the chrome, white words, "All" current on Home with the white
+ * bar; each opens its landing.
  */
 function DepartmentStrip({ departments }: { departments: readonly DepartmentTile[] }) {
   const { t } = useShopFormat();
@@ -296,6 +282,7 @@ function DepartmentStrip({ departments }: { departments: readonly DepartmentTile
   return (
     <View style={styles.strip} testID="home-dept-strip">
       <UnderlineTabs
+        chrome
         label={t('rv.dept.label')}
         options={options}
         value="all"
@@ -312,35 +299,6 @@ function DepartmentStrip({ departments }: { departments: readonly DepartmentTile
   );
 }
 
-/**
- * The delivery cut-off strip (a.html's promo strip): "Tonight's pooled run to <place> closes at 5:30 p.m. Mix any
- * shops for one $2.99 delivery." and the time left in the commerce colour (the cut-off timer's role).
- */
-function CutoffStrip({ run, place }: { run: Run; place: string }) {
-  const f = useShopFormat();
-  const { t } = f;
-  const left = useMinutesLeft(run.orderBy);
-  const when = f.which(run);
-  const title = when === 'later' ? t('rv.cutoff.later', { place, time: f.time(run.orderBy), weekday: f.weekday(run.orderBy) }) : t(`rv.cutoff.${when}` as MessageKey, { place, time: f.time(run.orderBy) });
-  const sub = t('rv.cutoff.sub', { fee: f.fee(run.feeCents) });
-  const leftText = left === null ? '' : left >= 60 ? t('rv.cutoff.leftHours', { h: Math.floor(left / 60), m: left % 60 }) : t('rv.cutoff.leftMinutes', { m: left });
-  return (
-    <View style={styles.cutoff} accessible accessibilityRole="summary" accessibilityLabel={[title, sub, leftText].join(' ')} testID="home-run">
-      <Icon name="truck" size={TYPE.price} color={semantic['status-info-fg']} />
-      <View style={styles.flex}>
-        <Text style={styles.cutoffText}>
-          <Text style={styles.cutoffStrong}>{title}</Text> {sub}
-        </Text>
-        {left !== null && left > 0 ? (
-          <View style={styles.cutoffLeft}>
-            <Icon name="timer" size={TYPE.body} color={semantic.commerce} />
-            <Text style={styles.cutoffTimer}>{leftText}</Text>
-          </View>
-        ) : null}
-      </View>
-    </View>
-  );
-}
 
 /**
  * The maker of the week (b.html's hero in Plainsight): the shop's photo in the grey well, the caps kicker, the
@@ -459,21 +417,15 @@ const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0, gap: LINE.bold },
   pad: { paddingHorizontal: space[4], gap: space[4] },
   pressed: { opacity: 0.85 },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: MIN_TARGET },
-  wordmark: { ...StyleSheet.flatten(textStyles.section), flexShrink: 1 },
-  strip: { backgroundColor: semantic.well, borderTopWidth: LINE.hair, borderTopColor: semantic.border },
-  cutoff: { flexDirection: 'row', alignItems: 'flex-start', gap: space[2], marginTop: -space[3], paddingHorizontal: space[4], paddingVertical: space[3], backgroundColor: semantic['status-info-bg'] },
-  cutoffText: { ...StyleSheet.flatten(textStyles.label), fontFamily: textStyles.body.fontFamily, color: semantic['status-info-fg'] },
-  cutoffStrong: { fontFamily: textStyles.section.fontFamily },
-  cutoffLeft: { flexDirection: 'row', alignItems: 'center', gap: space[1], paddingTop: space[1] },
-  cutoffTimer: { ...StyleSheet.flatten(textStyles.label), fontFamily: textStyles.section.fontFamily, color: semantic.commerce },
+  band: { marginTop: -space[3] },
+  strip: { borderTopWidth: LINE.hair, borderTopColor: semantic['subheader-line'] },
   active: { flexDirection: 'row', alignItems: 'center', gap: space[3], backgroundColor: semantic['status-info-bg'], borderColor: semantic['status-info-bg'] },
   hero: { gap: space[3], padding: space[3], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-strong'], backgroundColor: semantic.surface },
   heroMedia: { borderRadius: radius.image, overflow: 'hidden' },
   heroWell: { aspectRatio: 4 / 3 },
   heroPhoto: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.image },
   heroCopy: { gap: space[2] },
-  heroTitle: textStyles.pageTitle,
+  heroTitle: textStyles.displayMaker,
   heroActions: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2], paddingTop: space[1] },
   side: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET, padding: space[2], borderRadius: radius.panel, backgroundColor: semantic.well },
   sidePic: { width: SIZE.rail, height: SIZE.rail, borderRadius: radius.image, overflow: 'hidden', backgroundColor: semantic.well },

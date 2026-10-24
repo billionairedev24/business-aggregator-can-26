@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   wallet: { marginTop: space[2], paddingHorizontal: space[4], paddingVertical: space[3.5], minHeight: MIN_TARGET, borderRadius: radius.panel, backgroundColor: semantic.well, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[3] },
   walletPressed: { backgroundColor: semantic['surface-hover'] },
   walletKicker: { ...StyleSheet.flatten(textStyles.caps) },
-  walletPoints: { ...StyleSheet.flatten(textStyles.section), color: semantic.commerce },
+  walletPoints: { ...StyleSheet.flatten(textStyles.section) },
   rows: { paddingTop: space[2] },
   language: { gap: space[2], paddingTop: space[3] },
   legal: { paddingTop: space[6] },

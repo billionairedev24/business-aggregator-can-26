@@ -11972,3 +11972,93 @@ Not marked Done in the backlog: the lead does that after the mobile part.
   squeezed (cards at 1440) for good — it now starts over when the fonts finish loading; and the record page's sticky
   action panel sits in place inside the gallery (its offset depended on the scroll a screenshot made).
 - **Not done here:** the phone apps (the next agent), the 0.37 phone header shift above.
+
+## 2026-10-24 — S-188 Plainsight + Chinook brand layer (mobile)
+
+The phone half of S-188, on the web part's tokens (#253; no token changed here, `theme.json` already carried every
+colour and scale role): the consumer app's violet chrome, the home's "tonight" hero band, yellow deal stickers and
+cut-off pills, violet actions, links and focus in both apps, the courier app's sunlight rules kept. Checked against
+`design/revamp/hybrid/index.html`'s "Consumer home · phone (390)" frame by eye in react-native-web shots at 390 × 844.
+
+- **The display face is a static instance the kit ships.** `@expo-google-fonts/archivo` has the normal width only, and
+  React Native can't set a variable font's width, so `font.display` (Archivo, `stretch` 125 %, 800) is
+  `mobile-kit/assets/fonts/archivo-expanded/800ExtraBold/ArchivoExpanded_800ExtraBold.ttf`: the web's own
+  `@fontsource-variable/archivo` 5.3.0 `wdth` files (latin + latin-ext) instanced at wght 800 / wdth 125 by
+  `scripts/gen-display-font.py` (fontTools; run again only when the web's Archivo changes), laid out like an
+  `@expo-google-fonts` package (an `index.js` that requires the file, its `.d.ts`), OFL 1.1 beside it (Archivo declares
+  no Reserved Font Name). `gen-brand` reads `font.display` and its `stretch` and imports it like the sans, so
+  `fonts.display` is `ArchivoExpanded_800ExtraBold` (it was the heading face at 600, used nowhere) and the apps load it
+  with the other faces; `fonts.heading` stays the sans. 85 KB in each app.
+- **Type roles.** `textStyles.displayHero` 36 / 35, `displayTile` 24 / 24, `displayMaker` 24 / 25 (Archivo; tracking
+  −0.035 / −0.03 em as on the web; whole-point line heights) and `runTime` 18 (the sans, bold, tabular): the scale's
+  `-sm` phone sizes. **The rule** (`mobile-kit/src/ui/kit/rules.ts`): `fonts.display` by name stays refused on every
+  screen; the display roles are allowed only in `src/shop/HomeBand.tsx` and `src/shop/Home.tsx` (the maker headline)
+  — `DISPLAY_FACE_FILES`; the kit's `HomeHero` uses them inside the kit. New rule: a fill-only colour (`commerce`,
+  `cart-badge`, `mark-highlight`, `subheader-deal`, `hero-glow`) as `color` / `fill` / `stroke` / `tintColor` is refused
+  on every screen of both apps (the web's lint:tokens rule); it found four on develop (below).
+- **Consumer chrome.** Home and Browse (the two tabs with the brand, the search and the place) wear the violet header:
+  the mark on violet (the same mark as on white), the white name, the white bell (`IconButton onChrome`), the white
+  search field with no edge and a soft shadow joined to the violet search button (`SearchBar onChrome`), "Deliver to"
+  in `header-muted` with the place in white; Home's department strip is `subheader-bg` with white words and the current
+  one over a 3 pt white bar (`UnderlineTabs chrome`). The status bar's strip is violet with light text while those
+  tabs are in front (`Screen chrome`, `setStatusBarStyle` on focus). Sub-pages keep the white compact header with Back:
+  it is the phone's navigation bar, which the mockup doesn't draw; on the web every page has the violet header, here
+  only the tabs that carry it. No violet text on violet anywhere: text there is white, `header-muted`, `hero-text` or
+  `hero-accent`.
+- **Bottom tab bar: white**, with the current tab marked as the web's back office marks the current page —
+  `nav-active-marker`: a 3 pt violet bar and the violet filled icon over the ink label (`BottomTabBar tone="brand"`);
+  the cart count is the yellow badge with ink. A violet bar would have put a second band of chrome at the bottom of
+  every screen, which the web (one header, a footer you scroll to) doesn't have. The courier's tab bar stays ink.
+- **Hero band** (`HomeBand.tsx` → the kit's `HomeHero`, the web's `HomeHero` on a phone): "Everything {place} needs,"
+  + "tonight." with the web's words (fr "Tout ce dont {place} a besoin," + "ce soir."); the place is the market's city
+  (`useMarket`), "Everything you need, tonight." until it is known. The band is `hero-bg` with the violet glow drawn
+  in react-native-svg (radial gradients; the web's dot grain is left out); its gradient ids are unique per instance
+  (a stack keeps a hidden Home mounted, and a browser draws no gradient defined in a hidden subtree). Trust line: the
+  web's two phone points. Run card: the frosted panel on a `hero-card-line` edge, the kicker by day ("Tonight's /
+  Today's / Tomorrow's / {weekday}'s pooled run"), "Closes {time}", the time left on the yellow `Sticker` (−3°, 2 pt
+  dark edge), the fee; it holds 112 pt while loading and says "No run open right now" when none is open. The
+  countdown is `useMinutesLeft` (now in `shop/common.ts`, shared with the product): the clock read on the first
+  render, then every minute — the app's equivalent of the web's render clock (no server render to agree with). The
+  home's cut-off strip is gone (folded into the run card, as on the web; its `rv.cutoff.*` messages removed). The
+  three tiles are 136 pt photos stacked 10 pt apart under a `hero-scrim` gradient, the band ending 70 pt above the last
+  tile's foot so it reaches onto the white page as drawn; kicker in caps with its icon, the name in `displayTile`, one
+  line of meta, the white arrow square (violet when pressed).
+- **The tiles' words and counts.** Services: "Book a pro", "{n} verified pros · book instantly" — the services
+  landing's `providers` count (the mockup's own words; the web says services because its api call has no provider
+  count). Shop: "Shop local", the landing's `shopCount` stores. **Food is the group order:** the app has no Food
+  vertical (hidden, thrash item 7), so the third tile, "Order in · Local kitchens · group orders", opens `/group` (join
+  or start a group order). Photos: the barber / produce / Vietnamese slots, falling back to the banners (as the web).
+  "Mix shops for a single {fee} delivery" says "a single", not the web's "one": the apps' message test reads
+  "one {" as a plural branch.
+- **Order on Home:** the band, then what's under way (signed in), then the maker of the week (its headline in
+  `displayMaker`), then the tiles and rails as before.
+- **Deals and cut-offs.** `DealBadge` is the sticker (yellow, ink, bold, −2.5°, a 1.5 pt `sticker-edge` hard shadow as
+  RN `boxShadow`); new `CutoffPill` (ink on yellow, a clock, a 1 pt edge, upright, wraps) and `Sticker`. The tilt and
+  edges are the kit's `STICKER` (the web's `--sticker-tilt` / `--shadow-sticker` live in the tokens' CSS build only, not
+  in `theme.json`; not moved there to keep web/packages/tokens untouched). Where they show: the product's buy box
+  ("Order within 2 h 48 min" as the pill; a deal sticker and the struck price when the offer has `compareAtCents`, which
+  the api already returns and the app now reads), the home's run card, rewards near you (the points multiplier on the
+  sticker), the kit's product card (`deal`). The app has no other deal or cut-off on screen (no deals page; search
+  results carry no discount).
+- **Yellow as text, fixed** (develop already drew them, the brand layer having turned `commerce` yellow): the home
+  strip's "2 h 48 min left", the product's "Order within …", the account wallet's points (now ink), the rewards
+  multiplier (now the sticker), the provider's favourite heart (now ink, a choice made).
+- **Violet everywhere else.** Buttons, links and tertiaries were already violet through the theme. The kit's search
+  button is violet everywhere (it was ink: the token diff's `search-button`), as is the search screen's own; text
+  fields and the search field draw a 2 pt violet `focus` edge while typing (the phones' focus; there was none).
+- **Courier:** ink on white and large numbers unchanged; violet only on the primary action. Its ghost buttons map to the
+  kit's new `plain` (an ink tertiary: "Forgot password?", "Open settings", "Retry now"…), Today's "Open run" link and
+  the loading spinner are ink, the tab bar stays ink. A courier conventions test refuses link and action colours, a
+  violet tertiary, the display roles and the brand tab bar.
+- **Screenshots** (`mobile/scripts/shots.mjs`): the page clock is pinned (`page.clock.setFixedTime`, 14:31 UTC today by
+  default, `NL_SHOTS_NOW` to change it), 2 h 48 min before the fixture's tonight run closes, so the run card and the
+  product's pill show their countdown (S-178's shots never did) and the pictures don't depend on when they're taken.
+  The before pictures were retaken with it from develop's build. Tests that read the run card pin `Date.now` the
+  same way.
+- **Not done / not verified.** No device or simulator here: everything was looked at in react-native-web at 390 × 844
+  and in Jest. Not seen on a phone: the Archivo TTF loading natively (expo-font with a local asset, as the sans), RN
+  `boxShadow` for the sticker edges and the tiles' shadow (new architecture; Android draws it since RN 0.76), the
+  react-native-svg gradients natively, the status bar turning light on the violet tabs, Dynamic Type at its largest on
+  the hero (the headline wraps; the tile names are one line and cap at 1.6×). The web's "Today's deals" link on the
+  strip isn't drawn: the app has no deals destination. The kit's `HomeHero` holds no minimum headline height (no
+  server render to shift against).

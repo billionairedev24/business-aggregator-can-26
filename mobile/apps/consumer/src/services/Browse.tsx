@@ -32,6 +32,7 @@ export function Browse() {
     <Screen
       testID="services"
       padded={false}
+      chrome
       top={<PlaceBar searchTestID="browse-search" />}
       refreshControl={<RefreshControl refreshing={landing.isRefetching} onRefresh={() => void landing.refetch()} accessibilityLabel={t('common.retry')} />}
     >
