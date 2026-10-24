@@ -205,5 +205,14 @@ export function useOverflowSqueeze<E extends HTMLElement>(width: number) {
     ro.observe(el);
     return () => ro.disconnect();
   });
+  // a table measured before the web font arrived (the fallback is wider) stayed squeezed for good — S-188 found it as a
+  // flaky gallery baseline (cards at 1440): start over once the fonts finish loading, and measure again
+  useEffect(() => {
+    const fonts = typeof document === 'undefined' ? undefined : document.fonts;
+    if (!fonts?.addEventListener) return;
+    const reset = () => setState((s) => (s.n ? { width: s.width, n: 0 } : s));
+    fonts.addEventListener('loadingdone', reset);
+    return () => fonts.removeEventListener('loadingdone', reset);
+  }, []);
   return [ref, state.width === width ? state.n : 0] as const;
 }

@@ -41,6 +41,7 @@ const useT = defineMessages({
     s_formats: 'Dates and times',
     r_action: 'Action', r_selected: 'Selected', r_commerce: 'Commerce', r_success: 'Success', r_warning: 'Warning', r_danger: 'Danger', r_info: 'Info', r_line: 'Line', r_well: 'Well',
     typeNote: 'IBM Plex Sans 400 · 500 · 600 · 700. Body 14, meta 12, card titles 13.5, page titles 24.',
+    displayNote: 'Archivo, width 125 %, 800: the home hero, the department tiles and the maker-of-the-week headline only.',
     addToCart: 'Add to cart', buyNow: 'Buy now', seeDetails: 'See details', suspend: 'Suspend', save: 'Save', cancel: 'Cancel', small: 'Small', large: 'Large', disabled: 'Disabled',
     tabsLabel: 'Orders', toPack: 'To pack', packed: 'Packed', delivered: 'Delivered', issues: 'Issues', all: 'All',
     tip: 'Tip', noTip: 'No tip', time: 'Delivery time', range: 'Period', d7: '7 days', d30: '30 days', d90: '90 days',
@@ -75,6 +76,7 @@ const useT = defineMessages({
     rActions: 'Actions', rSuspendD: 'Page, listings and checkout go offline at once; escrow held', rReverify: 'Require re-verification…', rReverifyD: 'The check shows as expired until a current one is uploaded',
     rNote: 'Every action is logged and the business is emailed.', rEvidenceE: 'Food handling permit · valid to Nov 30', rNotesE: 'No notes yet.',
     fDay: 'A day', fWindow: 'A delivery window', fNight: 'Across midnight', fRange: 'A date range',
+    r_chrome: 'Consumer chrome',
     s_site: 'Site header, department strip and promo strip', s_filters: 'Filter rail', s_hero: 'Home hero band',
     heroTitle: 'Everything Maple Row needs,', heroAccent: 'tonight.', heroHeld: 'Payment held until you confirm delivery', heroRefund: 'Missing items refunded automatically', heroShops: '380 verified shops nearby',
     heroRun: 'Next pooled run', heroRunK: 'Tonight’s pooled run', heroRunT: 'Closes 5:20 p.m.', heroRunNote: 'Mix shops for one $2.99 delivery', heroDepts: 'Departments',
@@ -101,6 +103,7 @@ const useT = defineMessages({
     s_formats: 'Dates et heures',
     r_action: 'Action principale', r_selected: 'Sélection', r_commerce: 'Commerce de détail', r_success: 'Succès', r_warning: 'Avertissement', r_danger: 'Risque', r_info: 'Information', r_line: 'Trait', r_well: 'Fond',
     typeNote: 'IBM Plex Sans 400 · 500 · 600 · 700. Texte 14, méta 12, titres de carte 13,5, titres de page 24.',
+    displayNote: 'Archivo, largeur 125 %, 800 : le bandeau d’accueil, les tuiles des rayons et le titre de l’artisan de la semaine seulement.',
     addToCart: 'Ajouter au panier', buyNow: 'Acheter', seeDetails: 'Voir les détails', suspend: 'Suspendre', save: 'Enregistrer', cancel: 'Annuler', small: 'Petit', large: 'Grand', disabled: 'Désactivé',
     tabsLabel: 'Commandes', toPack: 'À emballer', packed: 'Emballées', delivered: 'Livrées', issues: 'Problèmes', all: 'Toutes',
     tip: 'Pourboire', noTip: 'Aucun', time: 'Heure de livraison', range: 'Période', d7: '7 jours', d30: '30 jours', d90: '90 jours',
@@ -135,6 +138,7 @@ const useT = defineMessages({
     rActions: 'Actions', rSuspendD: 'La page, les annonces et le paiement passent hors ligne; séquestre retenu', rReverify: 'Exiger une nouvelle vérification…', rReverifyD: 'La vérification paraît expirée jusqu’au dépôt d’une pièce à jour',
     rNote: 'Chaque action est journalisée et l’entreprise reçoit un courriel.', rEvidenceE: 'Permis de manipulation des aliments · valide jusqu’au 30 nov.', rNotesE: 'Aucune note pour l’instant.',
     fDay: 'Un jour', fWindow: 'Une plage de livraison', fNight: 'Après minuit', fRange: 'Une période',
+    r_chrome: 'Habillage du site',
     s_site: 'En-tête du site, bande des rayons et bande promotionnelle', s_filters: 'Volet de filtres', s_hero: 'Bandeau d’accueil',
     heroTitle: 'Tout ce dont Maple Row a besoin,', heroAccent: 'ce soir.', heroHeld: 'Paiement retenu jusqu’à ce que vous confirmiez la livraison', heroRefund: 'Articles manquants remboursés automatiquement', heroShops: '380 boutiques vérifiées près de chez vous',
     heroRun: 'Prochaine tournée partagée', heroRunK: 'Tournée partagée de ce soir', heroRunT: 'Ferme à 17 h 20', heroRunNote: 'Combinez les boutiques pour une seule livraison à 2,99 $', heroDepts: 'Rayons',
@@ -174,7 +178,7 @@ const Row = ({ children, label }: { children: ReactNode; label?: string }) => (
 );
 
 function Tokens({ t }: { t: GalleryT }) {
-  const roles: [string, string][] = [['action-primary', t('r_action')], ['selected', t('r_selected')], ['commerce', t('r_commerce')], ['success', t('r_success')], ['warning', t('r_warning')], ['danger', t('r_danger')], ['info', t('r_info')], ['border-strong', t('r_line')], ['well', t('r_well')]];
+  const roles: [string, string][] = [['action-primary', t('r_action')], ['selected', t('r_selected')], ['commerce', t('r_commerce')], ['success', t('r_success')], ['warning', t('r_warning')], ['danger', t('r_danger')], ['info', t('r_info')], ['border-strong', t('r_line')], ['well', t('r_well')], ['header-bg', t('r_chrome')]];
   return (
     <>
       <ul className="nl-gallery-swatches">
@@ -182,6 +186,8 @@ function Tokens({ t }: { t: GalleryT }) {
       </ul>
       <p className="nl-gallery-type">{FONT}</p>
       <p className="nl-muted">{t('typeNote')}</p>
+      <p className="nl-gallery-type nl-gallery-display">Archivo</p>
+      <p className="nl-muted">{t('displayNote')}</p>
     </>
   );
 }

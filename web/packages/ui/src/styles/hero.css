@@ -2,7 +2,9 @@
    violet band with its glow and dot grain, the display headline, the trust line, the run card, then three department
    photo tiles straddling the band's lower edge. The band's colour reaches both window edges (a spread shadow clipped to
    the band's height, so nothing is wider than the page). Every box is sized from the first render (no layout shift).
-   Semantic tokens only; the display face is for this band, the department tiles and the maker-of-the-week headline. */
+   Display line heights are rounded to whole pixels (no fractional offsets for everything below). Widths in the
+   display face are in em, not ch: Chromium can resolve `ch` against the fallback face before Archivo
+   arrives and keep it (17ch of Archivo expanded is 13.4em). Semantic tokens only; the display face is for this band, the department tiles and the maker-of-the-week headline. */
 .nl-hhero { --nl-hhero-tile: 248px; --nl-hhero-edge: calc(var(--nl-hhero-tile) / 2); position: relative; isolation: isolate; color: var(--color-header-text); padding-top: var(--space-8); }
 .nl-hhero::before, .nl-hhero::after { content: ''; position: absolute; inset: 0 0 var(--nl-hhero-edge) 0; z-index: -1; pointer-events: none; }
 .nl-hhero::before {
@@ -21,8 +23,8 @@
 .nl-hhero-top { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: var(--space-10); align-items: end; }
 .nl-hhero-lead { min-width: 0; }
 .nl-hhero-title {
-  margin: 0; max-width: 17ch; min-height: calc(2 * 0.95em); font-family: var(--font-display); font-stretch: var(--font-display-stretch); font-weight: var(--weight-black);
-  font-size: var(--type-display-hero); line-height: 0.95; letter-spacing: -0.035em; text-wrap: balance; color: var(--color-header-text); overflow-wrap: anywhere;
+  margin: 0; max-width: 13.4em; min-height: calc(2 * round(0.95em, 1px)); font-family: var(--font-display); font-stretch: var(--font-display-stretch); font-weight: var(--weight-black);
+  font-size: var(--type-display-hero); line-height: round(0.95em, 1px); letter-spacing: -0.035em; text-wrap: balance; color: var(--color-header-text); overflow-wrap: anywhere;
 }
 .nl-hhero-title em { font-style: normal; color: var(--color-hero-accent); }
 .nl-hhero-trust { list-style: none; margin: var(--space-5) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); font-size: var(--type-body); color: var(--color-hero-text); }
@@ -58,7 +60,7 @@
 .nl-hhero-dept-c { position: absolute; left: var(--space-5); right: 76px; bottom: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
 .nl-hhero-dept-k { display: inline-flex; gap: var(--space-1-5); align-items: center; font-size: var(--type-caps); font-weight: var(--weight-bold); text-transform: uppercase; letter-spacing: 0.09em; color: var(--color-hero-tile-meta); }
 .nl-hhero-dept-k > span { display: inline-flex; }
-.nl-hhero-dept-t { font-family: var(--font-display); font-stretch: var(--font-display-stretch); font-weight: var(--weight-black); font-size: var(--type-display-tile); letter-spacing: -0.03em; line-height: 1.02; }
+.nl-hhero-dept-t { font-family: var(--font-display); font-stretch: var(--font-display-stretch); font-weight: var(--weight-black); font-size: var(--type-display-tile); letter-spacing: -0.03em; line-height: round(1.02em, 1px); }
 .nl-hhero-dept-m { font-size: var(--type-card-title); color: var(--color-hero-tile-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nl-hhero-dept-go { position: absolute; right: var(--space-5); bottom: var(--space-5); width: 42px; height: 42px; display: grid; place-items: center; border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-action-primary); transition: background var(--duration) var(--ease), color var(--duration) var(--ease); }
 .nl-hhero-dept:hover .nl-hhero-dept-go, .nl-hhero-dept:focus-visible .nl-hhero-dept-go { background: var(--color-action-primary); color: var(--color-action-primary-text); }
@@ -74,7 +76,7 @@
 @media (max-width: 767.98px) {
   .nl-hhero { --nl-hhero-tile: 136px; --nl-hhero-edge: 70px; padding-top: var(--space-5); }
   .nl-hhero-top { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
-  .nl-hhero-title { font-size: var(--type-display-hero-sm); line-height: 0.98; min-height: calc(3 * 0.98em); }
+  .nl-hhero-title { font-size: var(--type-display-hero-sm); line-height: round(0.98em, 1px); min-height: calc(3 * round(0.98em, 1px)); }
   .nl-hhero-trust { flex-direction: column; gap: var(--space-1-5) var(--space-3-5); margin-top: var(--space-3-5); font-size: var(--type-label); }
   .nl-hhero-wide { display: none !important; }
   .nl-hhero-run { min-height: 112px; padding: var(--space-3) var(--space-3-5); margin: 0; }

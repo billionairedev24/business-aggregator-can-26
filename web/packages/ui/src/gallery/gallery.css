@@ -14,6 +14,7 @@
 .nl-gallery-cards { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); max-width: 900px; }
 .nl-gallery-cards-skel { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)); gap: var(--space-4); max-width: 640px; }
 .nl-gallery-type { margin: 0; font-size: var(--text-3xl); font-weight: var(--weight-bold); letter-spacing: -0.02em; }
+.nl-gallery-display { margin-top: var(--space-4); font-family: var(--font-display); font-stretch: var(--font-display-stretch); font-weight: var(--weight-black); letter-spacing: -0.035em; }
 .nl-gallery-swatches { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: var(--space-3); }
 .nl-gallery-swatches li { display: flex; gap: var(--space-2-5); align-items: center; font-size: var(--type-label); }
 .nl-gallery-swatches b { display: block; }
@@ -22,12 +23,15 @@
 .nl-gallery-swatch[data-role='action-primary'] { background: var(--color-action-primary); }
 .nl-gallery-swatch[data-role='selected'] { background: var(--color-selected); }
 .nl-gallery-swatch[data-role='commerce'] { background: var(--color-commerce); }
+.nl-gallery-swatch[data-role='header-bg'] { background: var(--color-header-bg); }
 .nl-gallery-swatch[data-role='success'] { background: var(--color-success); }
 .nl-gallery-swatch[data-role='warning'] { background: var(--color-warning); }
 .nl-gallery-swatch[data-role='danger'] { background: var(--color-danger); }
 .nl-gallery-swatch[data-role='info'] { background: var(--color-info); }
 .nl-gallery-swatch[data-role='border-strong'] { background: var(--color-border-strong); }
 .nl-gallery-swatch[data-role='well'] { background: var(--color-well); }
+/* the record page's action panel in place too: sticky, its offset would depend on where a screenshot scrolled to */
+[data-gallery] .bo-rec-aside { position: static; }
 /* the site header shown in place, not stuck to the window (it is sticky on the site) */
 .nl-gallery-frame { margin-inline: calc(-1 * var(--space-5)); border-block: 1px solid var(--color-border); }
 /* the hero band's colour stops at the frame here (on the home it reaches the window's edges) */

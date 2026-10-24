@@ -12,7 +12,7 @@
 .nl-hero-media > img, .nl-hero-media > span { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .nl-hero-copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); min-width: 0; padding-block: var(--space-2); }
 .nl-hero-kicker { font-size: var(--type-caps); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
-.nl-hero-title { margin: 0; max-width: 20ch; font-family: var(--font-display); font-stretch: var(--font-display-stretch); font-size: var(--type-display-maker); font-weight: var(--weight-black); line-height: 1.04; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.nl-hero-title { margin: 0; max-width: 15.8em; font-family: var(--font-display); font-stretch: var(--font-display-stretch); font-size: var(--type-display-maker); font-weight: var(--weight-black); line-height: round(1.04em, 1px); letter-spacing: -0.03em; overflow-wrap: anywhere; }
 .nl-hero-story { margin: 0; font-size: var(--text-base); line-height: var(--leading-normal); color: var(--color-text-muted); max-width: 56ch; }
 .nl-hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-2-5); margin-top: var(--space-1); }
 .nl-hero-side { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
