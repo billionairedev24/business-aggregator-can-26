@@ -33,7 +33,7 @@ describe('commerce kit', () => {
   it('stars: rounded to the half, announced, with the review count', () => {
     const { container } = page(<Stars rating={4.26} reviewCount={1240} />, 'fr');
     expect(screen.getByRole('img', { name: '4,3 sur 5 étoiles' })).toBeInTheDocument();
-    const fills = [...container.querySelectorAll<HTMLElement>('.nl-star-fill')].map(f => f.style.width);
+    const fills = [...container.querySelectorAll<HTMLElement>('.nl-star-fill')].map(f => f.style.getPropertyValue('--pct'));
     expect(fills).toEqual(['100%', '100%', '100%', '100%', '50%']);
     expect(screen.getByText('1 240 avis')).toBeInTheDocument();
   });

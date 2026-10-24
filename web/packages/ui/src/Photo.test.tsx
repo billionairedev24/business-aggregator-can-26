@@ -19,7 +19,7 @@ describe('Photo', () => {
     expect(img).toHaveAttribute('loading', 'lazy');
     expect(img).toHaveAttribute('sizes', '200px');
     expect(img.getAttribute('src')).toMatch(/square-640\.0123456789\.jpg$/);
-    expect(img.style.objectPosition).toBe('50% 40%');
+    expect(img.style.getPropertyValue('--nl-photo-pos')).toBe('50% 40%');
     const box = container.querySelector<HTMLElement>('.nl-photo')!;
     expect(box.style.getPropertyValue('--nl-photo-bg')).toBe('#b08a5a');
     expect(box.style.getPropertyValue('--nl-photo-ratio')).toBe('1 / 1');

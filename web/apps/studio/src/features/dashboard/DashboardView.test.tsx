@@ -106,7 +106,7 @@ describe('Dashboard (E-15)', () => {
     expect(onRange).toHaveBeenCalledWith('30d');
     rerender(<DashboardView inputs={base()} merchantId="m1" range="30d" onRange={onRange} />);
     expect(screen.getByRole('img', { name: 'Sales, last 30 days' })).toBeTruthy();
-    expect(screen.getByText('Previous 29 days · avg $531')).toBeTruthy();
+    expect(screen.getByText(/^Previous 29 days · avg \$531\.\d\d$/)).toBeTruthy();
   });
 
   it('provider: the next booking, quotes to send and today’s bookings; no orders or stock', () => {
@@ -151,7 +151,7 @@ describe('Dashboard (E-15)', () => {
     const needs = screen.getByRole('region', { name: /Needs you now/ });
     expect(within(needs).getByRole('heading', { name: 'Set up your store page' })).toBeTruthy();
     expect(within(needs).getByRole('link', { name: 'Add a listing' }).getAttribute('href')).toBe('/b/m1/listings');
-    expect(within(screen.getByRole('list', { name: 'Key figures' })).getByRole('button', { name: /Net this month \$6,820 \+18% vs Aug/ })).toBeTruthy();
+    expect(within(screen.getByRole('list', { name: 'Key figures' })).getByRole('button', { name: /Net this month \$6,820\.00 \+18% vs Aug/ })).toBeTruthy();
     expect(screen.getByRole('img', { name: 'Net earnings, last 12 weeks' })).toBeTruthy();
     expect(screen.queryByRole('radiogroup', { name: 'Period' })).toBeNull();
   });
