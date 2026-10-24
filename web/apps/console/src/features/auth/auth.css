@@ -22,6 +22,8 @@
 .nl-auth-intro { background: var(--color-inverse-bg); color: var(--color-inverse-text); padding: var(--space-10) var(--space-8); display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
 @media (max-width: 599.98px) { .nl-auth-intro { padding: var(--space-6) var(--space-4); gap: var(--space-4); } }
 .nl-auth-brand { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+/* the logo's "Console" on the dark panel: the inverse muted text (the muted grey was 1.9:1 there, S-180) */
+.nl-auth-intro .nl-logo-product { color: var(--color-inverse-muted); }
 .nl-auth-signedout { margin-left: auto; font-size: var(--text-sm); color: var(--color-inverse-muted); }
 .nl-auth-kicker { font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-inverse-muted); }
 .nl-auth-hero { color: inherit; font-size: var(--text-4xl); line-height: 1.08; font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); margin: 0; max-width: 18ch; }
@@ -57,6 +59,8 @@
 .nl-auth-hint .nl-auth-link, .nl-auth-switch .nl-auth-link, .nl-auth-footer .nl-auth-link {
   font: inherit; color: var(--color-link); text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer;
 }
+/* S-180: a 24 px target for the link-buttons under a field ("Forgot password?"), the line unmoved (WCAG 2.5.8) */
+.nl-auth-hint .nl-auth-link { display: inline-block; padding-block: var(--space-1); margin-block: calc(-1 * var(--space-1)); }
 .nl-auth-link:hover:not(:disabled) { color: var(--color-link-hover); }
 .nl-auth-link:disabled { color: var(--color-text-subtle); text-decoration: none; cursor: default; }
 .nl-auth-options { display: flex; flex-direction: column; gap: var(--space-2); }

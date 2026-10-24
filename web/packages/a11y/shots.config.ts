@@ -22,6 +22,8 @@ const wanted = (app: string) => !only || only.includes(app);
 const hydration = process.env.UI_SHOTS_HYDRATION === '1';
 // S-180 (`make ui-a11y`): the accessibility check of every route instead of the pictures (shots/a11y.spec.ts)
 const a11y = process.env.UI_SHOTS_A11Y === '1';
+// UI_A11Y_WIDTHS=1440 (or 390) runs only the page checks at that width; UI_A11Y_KEYBOARD=1 only the keyboard paths
+const A11Y_SPECS = process.env.UI_A11Y_WIDTHS ? /a11y\.spec\.ts/ : process.env.UI_A11Y_KEYBOARD === '1' ? /keyboard\.spec\.ts/ : /(a11y|keyboard)\.spec\.ts/;
 const BASE = { consumer: 'http://127.0.0.1:4644', studio: 'http://127.0.0.1:4641', console: 'http://127.0.0.1:4642' } as const;
 
 export default defineConfig({
@@ -45,7 +47,7 @@ export default defineConfig({
     ] : []),
   ],
   projects: hydration ? [{ name: 'hydration', testMatch: /hydration\.spec\.ts/, use: { baseURL: BASE.consumer } }]
-    : a11y ? (['consumer', 'studio', 'console'] as const).filter(wanted).map(app => ({ name: `a11y-${app}`, testMatch: /(a11y|keyboard)\.spec\.ts/, use: { baseURL: BASE[app] } })) : [
+    : a11y ? (['consumer', 'studio', 'console'] as const).filter(wanted).map(app => ({ name: `a11y-${app}`, testMatch: A11Y_SPECS, use: { baseURL: BASE[app] } })) : [
     ...(wanted('consumer') ? [{ name: 'consumer', testMatch: /consumer\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4644' } }] : []),
     ...(wanted('studio') ? [{ name: 'studio', testMatch: /studio\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4641' } }] : []),
     ...(wanted('console') ? [{ name: 'console', testMatch: /console\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4642' } }] : []),

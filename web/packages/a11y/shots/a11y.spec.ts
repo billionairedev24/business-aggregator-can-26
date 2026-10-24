@@ -18,7 +18,9 @@ import { LANGS, prepare, visit } from './shoot';
  */
 const OUT = new URL('../../../../ui-shots/', import.meta.url).pathname;
 /** A desktop, and a phone with touch (so `(pointer: coarse)` holds: the tokens' 44 px controls on touch screens, as on a real phone). */
-const SIZES = [{ width: 1440, height: 900, touch: false }, { width: 390, height: 844, touch: true }] as const;
+const ALL_SIZES = [{ width: 1440, height: 900, touch: false }, { width: 390, height: 844, touch: true }] as const;
+/** `UI_A11Y_WIDTHS=390` checks one width (a run per app and width keeps the memory down; each writes its own list). */
+const SIZES = ALL_SIZES.filter(s => !process.env.UI_A11Y_WIDTHS || process.env.UI_A11Y_WIDTHS.split(',').includes(String(s.width)));
 const HEADINGS = new Set(['heading-order', 'page-has-heading-one']);
 
 for (const app of ['consumer', 'studio', 'console'] as const satisfies readonly App[]) {
@@ -60,7 +62,7 @@ async function checkRoute(page: Page, app: App, r: ShotRoute, width: number) {
       small.length ? `24-43px (${report.targetsUnder44}) ${small.slice(0, 12).join(' ; ')}` : '',
       minor.length ? `minor ${[...new Set(minor)].join(', ')}` : '',
     ].filter(Boolean);
-    appendFileSync(`${OUT}${app}/_a11y.txt`, `${r.name}-${lang}-${width}: ${lines.length ? lines.join(' | ') : 'ok'}\n`);
+    appendFileSync(`${OUT}${app}/_a11y-${width}.txt`, `${r.name}-${lang}-${width}: ${lines.length ? lines.join(' | ') : 'ok'}\n`);
     expect.soft(blockers, `${name}: critical/serious WCAG violations, heading order`).toEqual([]);
     expect.soft(report.lang, `${name}: <html lang>`).toBe(lang === 'fr' ? 'fr-CA' : 'en-CA');
     expect.soft(tiny, `${name}: pointer targets under 24 px (WCAG 2.5.8)`).toEqual([]);

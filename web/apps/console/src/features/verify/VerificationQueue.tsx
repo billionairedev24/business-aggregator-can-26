@@ -196,7 +196,7 @@ export function ReviewSection({ d }: { d: Detail }) {
   const r = d.application.review;
   if (d.application.status !== 'pending') return null;
   return (
-    <SheetSection title={t('reviewTitle')}>
+    <SheetSection level={2} title={t('reviewTitle')}>
       {!r ? <p className="bo-muted">{t('notReviewed')}</p> : (
         <FactList rows={[
           [t('f_reviewer'), r.reviewerName],
@@ -243,7 +243,7 @@ export function ChecksEvidence({ d, canSettle: canDecide }: { d: Detail; canSett
   return (
     <>
       {error ? <p role="alert" className="nl-q-error">{error}</p> : null}
-      <SheetSection title={t('checksTitle')}>
+      <SheetSection level={2} title={t('checksTitle')}>
         <ul className="nl-ap-list">
           {a.checks.map(c => (
             <li key={c.id} className="nl-ap-row"><span>{checkLabel(c, t)}{c.reference ? ` · ${c.reference}` : ''}</span>
@@ -251,7 +251,7 @@ export function ChecksEvidence({ d, canSettle: canDecide }: { d: Detail; canSett
           ))}
         </ul>
       </SheetSection>
-      <SheetSection title={t('ownersTitle')}>
+      <SheetSection level={2} title={t('ownersTitle')}>
         <ul className="nl-ap-list">
           {d.owners.map(o => (
             <li key={o.checkId ?? o.principalName} className="nl-ap-row">
@@ -270,7 +270,7 @@ export function ChecksEvidence({ d, canSettle: canDecide }: { d: Detail; canSett
           ))}
         </ul>
       </SheetSection>
-      <SheetSection title={t('registryTitle')}>
+      <SheetSection level={2} title={t('registryTitle')}>
         {d.registryReviews.length === 0 ? <p className="bo-muted">{t('noReviews')}</p> : (
           <ul className="nl-ap-list">
             {d.registryReviews.map(r => (

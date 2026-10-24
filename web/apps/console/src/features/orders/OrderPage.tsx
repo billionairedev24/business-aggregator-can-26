@@ -87,7 +87,7 @@ function DeliveryTab({ query }: { query: ReturnType<typeof useQuery<import('./ap
         d.deliveredAt ? [t('d_delivered'), fmt.date(d.deliveredAt, 'dateTime')] : null,
         d.proofKind ? [t('d_proof'), t(`proof_${d.proofKind}` as OrdersKey)] : null,
       ]} />
-      <h3 className="bo-sheet-h3">{t('d_pickups')}</h3>
+      <h2 className="bo-sheet-h3">{t('d_pickups')}</h2>
       <ul className="nl-or-list">
         {d.pickups.map(p => (
           <li key={p.merchantId}><strong>{p.name ?? p.merchantId}</strong> · {p.packedAt ? t('d_packed', { time: fmt.date(p.packedAt, 'time') }) : t('d_notPacked')}

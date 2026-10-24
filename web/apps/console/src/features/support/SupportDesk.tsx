@@ -202,7 +202,7 @@ function TicketView({ d }: { d: Detail }) {
                 </li>
               ))}
             </ol>
-            <h3 className="bo-sheet-h3">{t('replyTitle')}</h3>
+            <h2 className="bo-sheet-h3">{t('replyTitle')}</h2>
             {resolved ? <p className="nl-q-note">{t('resolvedNote')}</p> : (
               <div className="nl-sd-replybox">
                 <Select aria-label={t('macroPick')} placeholder={t('macroPick')} value={macroKey ?? ''} disabled={!acts}
