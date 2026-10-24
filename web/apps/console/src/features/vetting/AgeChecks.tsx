@@ -38,7 +38,7 @@ export function AgeChecks({ province }: { province?: string }) {
         </ChartCard>
         <ChartCard id="age-recent" title={t('recentTitle')}>
           {r.recent.length === 0 ? <p className="bo-muted">{t('none')}</p> : (
-            <div className="nl-scroll">
+            <div className="nl-scroll" role="region" tabIndex={0} aria-label={t('recentTitle')}>
               <table className="table">
                 <thead><tr><th scope="col">{t('colOrder')}</th><th scope="col">{t('colWhere')}</th><th scope="col">{t('colAge')}</th><th scope="col">{t('colReason')}</th><th scope="col">{t('colWhen')}</th></tr></thead>
                 <tbody>{r.recent.map(x => (
@@ -52,7 +52,7 @@ export function AgeChecks({ province }: { province?: string }) {
       <ChartCard id="age-rules" title={t('rulesTitle')}>
         <p className="bo-muted">{t('rulesLede')}</p>
         {rules.data ? (
-          <div className="nl-scroll">
+          <div className="nl-scroll" role="region" tabIndex={0} aria-label={t('rulesTitle')}>
             <table className="table">
               <thead><tr><th scope="col">{t('colRule')}</th><th scope="col">{t('colMin')}</th><th scope="col">{t('colHours')}</th><th scope="col">{t('colSource')}</th></tr></thead>
               <tbody>{rules.data.items.map(x => (

@@ -31,6 +31,8 @@ body { text-wrap: pretty; }
 .nl-row-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
 /* a wide table inside a card: the card keeps its edge, the table scrolls inside it rather than widening the page */
 .nl-scroll { overflow-x: auto; min-width: 0; }
+/* S-180: a table that scrolls sideways takes focus, so a keyboard can scroll it (axe scrollable-region-focusable) */
+.nl-scroll[tabindex]:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 @media (max-width: 599.98px) { .nl-main .bo-card { padding: var(--space-4); } }
 .nl-cols > .nl-q-field { margin-top: 0; }
 /* the place filters (province · market) and a screen's server-side search: one row of 44px controls, wrapping */
