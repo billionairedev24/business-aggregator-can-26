@@ -65,3 +65,10 @@ Acceptance criteria:
 - the accessibility statement's ""last reviewed"" date updated
 
 Refs: docs/a11y/audit.md, docs/DECISIONS.md (S-109), docs/SCREENS.md",Medium,3,phase-5,a11y,qa,compliance,Sprint 22,2027-07-26,2027-08-06,In Progress
+S-187,E-11,Story,Revamp: 44 px for the desktop header search and the back-office top bar controls,,"S-180 audit (docs/a11y/audit.md § S-180): on a mouse screen the consumer header's search field, button and scope select are drawn 40 px and the back-office top bar's switcher 38 px and search 36 px (the locked mockups' heights). WCAG 2.5.8 AA (24 px) passes and touch screens get 44 px from the tokens (pointer: coarse); the project's own rule is 44 px everywhere. Give them a 44 px hit area (or height) without changing the bars' look, then refresh the gallery baselines.
+
+Acceptance criteria:
+- make ui-a11y lists no 24–43 px target in the two bars at 1440
+- make ui-visual baselines updated for the site and shell sections only
+
+Refs: docs/a11y/audit.md (S-180), docs/design/revamp-epic.md",Low,1,ui-revamp,a11y,qa,web,Sprint 7,2026-12-28,2027-01-08,To Do

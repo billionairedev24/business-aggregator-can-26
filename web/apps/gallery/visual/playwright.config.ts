@@ -20,6 +20,6 @@ export default defineConfig({
   timeout: 60_000,
   reporter: [['list']],
   expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.001, animations: 'disabled', caret: 'hide', scale: 'css' } },
-  use: { baseURL: 'http://127.0.0.1:4677', launchOptions: { executablePath: chromium }, deviceScaleFactor: 1, colorScheme: 'light', reducedMotion: 'reduce', locale: 'en-CA', timezoneId: 'UTC' },
+  use: { baseURL: 'http://127.0.0.1:4677', launchOptions: { executablePath: chromium }, deviceScaleFactor: 1, colorScheme: 'light', contextOptions: { reducedMotion: 'reduce' }, locale: 'en-CA', timezoneId: 'UTC' },
   webServer: { command: 'pnpm build && pnpm exec vite preview --port 4677 --strictPort --host 127.0.0.1', cwd: here, url: 'http://127.0.0.1:4677/', reuseExistingServer: false, timeout: 180_000 },
 });
