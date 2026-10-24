@@ -77,7 +77,7 @@ describe('Menu keys', () => {
 const shell = (
   <AppShell brand={<span>Northline</span>} pinned={[{ key: 'home', label: 'Dashboard', icon: House, href: '/' }]}
     groups={[{ label: 'Finance', icon: Bank, items: [{ key: 'payouts', label: 'Payouts', icon: Bank, href: '/payouts' }] }]} currentKey="home" onNavigate={() => {}}>
-    <h1>Dashboard</h1>
+    <h1>Dashboard</h1><button type="button">Page action</button>
   </AppShell>
 );
 
@@ -117,6 +117,13 @@ describe('AppShell', () => {
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull();
     expect(opener).toHaveFocus();
+    // S-180: Tab past the panel's last link closes it (focus never sits on the page hidden under the panel)
+    await user.click(opener);
+    const links = within(screen.getByRole('navigation', { name: 'Main navigation' })).getAllByRole('link');
+    links[links.length - 1]!.focus();
+    await user.tab();
+    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull();
+    expect(opener).toHaveAttribute('aria-expanded', 'false');
     mm.mockRestore();
   });
 });
