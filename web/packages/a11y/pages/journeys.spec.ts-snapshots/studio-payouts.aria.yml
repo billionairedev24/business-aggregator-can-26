@@ -1,39 +1,51 @@
 - main:
   - heading "Payouts" [level=1]
-  - paragraph: Getting your money
-  - region "Your balance":
-    - heading "Your balance" [level=2]
-    - list "Your balance":
-      - listitem: /Available now \$\d+\.\d+ Scheduled Sun Oct 4 → TD ··\d+ · free/
-      - listitem: Next payout Sun Oct 4 weekly schedule
+  - paragraph: /Scheduled Sunday, October 4 → TD ··\d+ · free/
+  - list "Your balance":
+    - listitem: /Available now \$\d+\.\d+/
+    - listitem: Next payout Oct 4 weekly schedule
+  - region "Payout account":
+    - heading "Payout account" [level=2]
     - strong: /TD Canada Trust · ··\d+ · Prairie Wrench Mobile Mechanics Ltd\./
     - button "Change"
     - button "Change schedule"
     - button "Instant payout · 1% fee"
   - region "Payout history":
     - heading "Payout history" [level=2]
+    - tablist "Payouts":
+      - tab "All 1" [selected]
+      - tab "Paid 1"
     - searchbox "Search table"
     - button "Filters"
     - button "Columns"
     - button "Report"
     - text: View only · Owner
-    - checkbox "Select all"
-    - text: Select all Sort
-    - group "Sort":
-      - button "Date"
-      - button "Amount"
-      - button "Jobs"
-      - button "Status"
-    - list "Payouts":
-      - listitem:
-        - checkbox "Select Sep 4"
-        - text: Sep 4 Paid
-        - term: Amount
-        - definition: /\$\d+,\d+\.\d+/
-        - term: Jobs
-        - definition: /\d+/
-        - button "View"
+    - table "Payouts":
+      - rowgroup:
+        - row "Select all rows Date Arrives Amount Status Actions":
+          - columnheader "Select all rows":
+            - checkbox "Select all rows"
+          - columnheader "Date":
+            - button "Date"
+          - columnheader "Arrives":
+            - button "Arrives"
+          - columnheader "Amount":
+            - button "Amount"
+          - columnheader "Status":
+            - button "Status"
+          - columnheader "Actions"
+      - rowgroup:
+        - row /Select Sep 4 Sep 4 Sep 7 \$\d+,\d+\.\d+ Paid View · Sep 4/:
+          - cell "Select Sep 4":
+            - checkbox "Select Sep 4"
+          - cell "Sep 4"
+          - cell "Sep 7"
+          - cell /\$\d+,\d+\.\d+/
+          - cell "Paid"
+          - cell "View · Sep 4":
+            - button "View · Sep 4"
     - navigation "Pagination · Payouts":
+      - text: 1–1 of 1 payout · Fee, Jobs, To hidden to fit · open a row to see all
       - group "Rows per page":
         - button "5"
         - button /\d+/ [pressed]

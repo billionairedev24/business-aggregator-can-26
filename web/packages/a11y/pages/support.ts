@@ -192,15 +192,18 @@ const HEADINGS = new Set(['heading-order', 'page-has-heading-one']);
 /**
  * What fails the sweep: WCAG violations rated critical or serious, a page without its language, horizontal scroll at
  * 320 px (1.4.10) or with the 1.4.12 text spacing at any width (S-141), skipped heading levels or no h1 (S-142), and any
- * control under the 44 px target (S-143).
+ * control under 24 px (S-143's 44 px since S-180 is the listed target, `smallTargets`).
  */
-export function expectNoBlockers(report: PageReport, expectedLang: string) {
+export async function expectNoBlockers(report: PageReport, expectedLang: string, page?: Page) {
   const blockers = report.violations.filter(v => (v.wcag && (v.impact === 'critical' || v.impact === 'serious')) || HEADINGS.has(v.id));
   expect.soft(blockers.map(b => `${b.impact} ${b.id} (${b.nodes}): ${b.targets.join(' | ')}`), `${report.name}: critical/serious WCAG violations, heading order`).toEqual([]);
   expect.soft(report.lang, `${report.name}: <html lang>`).toBe(expectedLang);
   if (report.width <= 320) expect.soft(report.reflowOverflow, `${report.name}: horizontal scroll at ${report.width} px`).toBe(false);
   expect.soft(report.textSpacingOverflow, `${report.name}: horizontal scroll with the 1.4.12 text spacing`).toBe(false);
-  expect.soft(report.smallTargets, `${report.name}: controls under 44 px`).toEqual([]);
+  // S-180: the revamp's mockups draw some controls 32–40 px on a mouse screen (the header search, chips, the back-office
+  // top bar; touch screens get 44 px from the tokens): those are listed in the page's report (smallTargets) against the
+  // project's 44 px rule, and what fails is a target under WCAG 2.5.8's 24 px (docs/a11y/audit.md § S-180)
+  if (report.smallTargets.length && page) expect.soft(await targetsUnder(page, 24), `${report.name}: controls under 24 px`).toEqual([]);
 }
 
 /** One journey screen: desktop in English, then a 320 px phone in French. */
@@ -208,8 +211,8 @@ export async function sweep(page: Page, app: App, name: string, path: string, op
   const missing = await mockApi(page, app, { signedIn: opts.signedIn, down: opts.down });
   await page.setViewportSize({ width: 1280, height: 900 });
   await open(page, app, path, 'en', opts.ready);
-  expectNoBlockers(await check(page, `${app}-${name}-en-1280`, path, 'en', missing), 'en-CA');
+  await expectNoBlockers(await check(page, `${app}-${name}-en-1280`, path, 'en', missing), 'en-CA', page);
   await page.setViewportSize({ width: 320, height: 720 });
   await open(page, app, path, 'fr', opts.ready);
-  expectNoBlockers(await check(page, `${app}-${name}-fr-320`, path, 'fr', missing), 'fr-CA');
+  await expectNoBlockers(await check(page, `${app}-${name}-fr-320`, path, 'fr', missing), 'fr-CA', page);
 }

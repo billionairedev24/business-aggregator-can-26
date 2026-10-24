@@ -1,46 +1,33 @@
 - main:
-  - heading "4 results for “sourdough”" [level=1]:
+  - heading "1–4 of 4 results for “sourdough”" [level=1]:
+    - strong: 1–4 of 4 results
     - strong: “sourdough”
-  - text: Sorted by
-  - combobox "Sorted by":
-    - option "relevance" [selected]
-    - option "price, low to high"
-    - option "price, high to low"
-    - option "rating"
+  - text: Sort by
+  - combobox "Sort by":
+    - option "Featured" [selected]
+    - 'option "Price: low to high"'
+    - 'option "Price: high to low"'
+    - option "Customer rating"
   - complementary "Filters":
-    - region "Type":
-      - heading "Type" [level=2]
-      - radio "Products and services" [checked]
-      - text: Products and services
-      - radio "Products 2"
-      - text: Products 2
-      - radio "Services 1"
+    - region "Department":
+      - heading "Department" [level=2]
+      - checkbox "Shop 2"
+      - checkbox "Services 1"
       - text: Services 1
-    - region "Categories":
-      - heading "Categories" [level=2]
-      - checkbox "Bakery 2"
+      - checkbox "Food 1"
+    - region "Delivery":
+      - heading "Delivery" [level=2]
+      - checkbox /Tonight, 6–9 p[\d,.]+[bkmBKM]+\./
+      - text: /Tonight, 6–9 p[\d,.]+[bkmBKM]+\./
+    - region "Customer rating":
+      - heading "Customer rating" [level=2]
+      - button "4 stars & up"
+      - button "3 stars & up"
     - region "Distance":
       - heading "Distance" [level=2]
       - paragraph:
         - text: Set your location to sort and filter by distance.
         - button "Set location"
-    - region "Availability":
-      - heading "Availability" [level=2]
-      - checkbox "Open now"
-      - checkbox "On tonight’s run"
-      - text: On tonight’s run
-    - region "Price":
-      - heading "Price" [level=2]
-      - radio "Any price" [checked]
-      - text: Any price
-      - radio /Under \$\d+/
-      - text: /Under \$\d+/
-      - radio /Under \$\d+/
-      - text: /Under \$\d+/
-      - radio /Under \$\d+/
-      - text: /Under \$\d+/
-      - radio /Under \$\d+/
-      - text: /Under \$\d+/
   - list "Results":
     - listitem:
       - article "Country sourdough":
@@ -48,7 +35,7 @@
           - link "Country sourdough":
             - /url: /products/O1?offer=O1
         - text: /Glenmore Bakery · Bakery \$\d+\.\d+ Get it/
-        - strong: tonight
+        - strong: /Tonight, 6–9 p[\d,.]+[bkmBKM]+\./
         - 'button "Add to cart: Country sourdough"'
     - listitem:
       - link /Mobile mechanic Brake pads 4\.9 out of 5 stars \d+ reviews Prairie Wrench Instant book Verified Quote/:
@@ -60,10 +47,9 @@
         - heading "Pho tai" [level=2]:
           - link "Pho tai":
             - /url: /food/pho-dau-bo
-        - text: /Pho Dau Bo · Vietnamese · 1\.2 km \$\d+\.\d+/
+        - text: /Pho Dau Bo · 1\.2 km \$\d+\.\d+/
         - strong: Open now
     - listitem:
       - link /Shop Sidewalk Citizen New Verified from \$\d+\.\d+/:
         - /url: /search?scope=shop&q=Sidewalk+Citizen
         - heading "Sidewalk Citizen" [level=2]
-  - status: You’ve seen all 4

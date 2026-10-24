@@ -7,34 +7,52 @@
       - listitem:
         - link "Bakery":
           - /url: /shop/bakery
+      - listitem:
+        - link "Glenmore Bakery":
+          - /url: /shop/stores/M1?dept=bakery
       - listitem: Country sourdough
   - group "Photos"
+  - link "Visit Glenmore Bakery":
+    - /url: /shop/stores/M1?dept=bakery
   - heading "Country sourdough" [level=1]
-  - link "Visit the Glenmore Bakery store":
-    - /url: /search?scope=shop&q=Glenmore%20Bakery
   - img "4.8 out of 5 stars"
-  - text: /\d+ reviews/
+  - text: /\d+ reviews On tonight’s run/
   - separator
-  - text: /\$\d+\.\d+ \d+ g loaf · GST included at checkout On tonight’s run/
-  - group "Options":
-    - button "Whole" [pressed]
-    - button "Sliced"
-    - button "Half" [disabled]
-  - term: Size
-  - definition: /\d+ g loaf/
-  - term: Department
-  - definition: Bakery
-  - term: Sold by
-  - definition: Glenmore Bakery
-  - term: Returns
-  - definition: Final sale
+  - text: /\$\d+\.\d+ \$\d+\.\d+\/\d+ g \d+ g loaf · GST, if any, added at checkout/
+  - 'group "Size: Whole"':
+    - strong: Whole
+    - radiogroup "Size":
+      - radio /Whole · \$\d+\.\d+/ [checked]
+      - text: /Whole · \$\d+\.\d+/
+      - radio /Sliced · \$\d+\.\d+/
+      - text: /Sliced · \$\d+\.\d+/
+      - radio "Half · sold out"
+      - text: Half · sold out
   - region "About this item":
     - heading "About this item" [level=2]
     - paragraph: /Naturally leavened, \d+-hour ferment, Alberta hard red wheat\. Sliced on request\./
+  - table "Product details":
+    - caption: Product details
+    - rowgroup:
+      - row /Size \d+ g loaf/:
+        - rowheader "Size"
+        - cell /\d+ g loaf/
+      - row "Department Bakery":
+        - rowheader "Department"
+        - cell "Bakery"
+      - row "Condition New":
+        - rowheader "Condition"
+        - cell "New"
+      - row "Sold by Glenmore Bakery":
+        - rowheader "Sold by"
+        - cell "Glenmore Bakery"
+      - row "Returns Final sale":
+        - rowheader "Returns"
+        - cell "Final sale"
   - complementary "Buy":
-    - text: /\$\d+\.\d+/
-    - paragraph: /Order by 5:\d+ p[\d,.]+[bkmBKM]+\. for tonight 6–9 p[\d,.]+[bkmBKM]+\. pooled \(\$\d+\.\d+\), tomorrow 8–\d+ a[\d,.]+[bkmBKM]+\., or direct courier in \d+ min\. Glenmore Bakery packs at 5:\d+ p[\d,.]+[bkmBKM]+\.; the shop is paid only after you confirm delivery\./
-    - text: In stock
+    - text: /\$\d+\.\d+ \$\d+\.\d+\/\d+ g/
+    - strong: /Delivery tonight, 6–9 p[\d,.]+[bkmBKM]+\./
+    - text: /Pooled run · \$\d+\.\d+ · or tomorrow, 8–\d+ a[\d,.]+[bkmBKM]+\. Direct courier in \d+ min · \$\d+\.\d+ In stock/
     - group "Quantity of Country sourdough":
       - button "One less Country sourdough" [disabled]
       - button "One more Country sourdough"
@@ -43,11 +61,11 @@
     - term: Sold by
     - definition:
       - link "Glenmore Bakery":
-        - /url: /search?scope=shop&q=Glenmore%20Bakery
-    - term: Returns
-    - definition: Final sale
+        - /url: /shop/stores/M1?dept=bakery
     - term: Payment
     - definition: Held until you confirm delivery
+    - term: Returns
+    - definition: Final sale
     - region "Other sellers":
       - heading "Other sellers" [level=2]
       - list:
@@ -56,12 +74,26 @@
           - text: /On tomorrow’s run \$\d+\.\d+/
           - link "Choose — Sidewalk Citizen":
             - /url: /products/P1?offer=O2
-  - region "Also from Glenmore Bakery":
-    - heading "Also from Glenmore Bakery" [level=2]
+  - region "More from Glenmore Bakery":
+    - heading "More from Glenmore Bakery" [level=2]
+    - link "Visit the store":
+      - /url: /shop/stores/M1?dept=bakery
     - list:
       - listitem:
-        - link /Rye · \$\d+\.\d+/:
-          - /url: /products/P2
+        - article "Rye":
+          - heading "Rye" [level=3]:
+            - link "Rye":
+              - /url: /products/P2
+          - text: /Glenmore Bakery \$\d+\.\d+/
       - listitem:
-        - link /Baguette · \$\d+\.\d+/:
-          - /url: /products/P3
+        - article "Baguette":
+          - heading "Baguette" [level=3]:
+            - link "Baguette":
+              - /url: /products/P3
+          - text: /Glenmore Bakery \$\d+\.\d+/
+  - region "Customer reviews":
+    - heading "Customer reviews" [level=2]
+    - img "4.8 out of 5 stars"
+    - paragraph: /4\.8 out of 5 · \d+ ratings of Glenmore Bakery/
+    - link "Visit the store":
+      - /url: /shop/stores/M1?dept=bakery
