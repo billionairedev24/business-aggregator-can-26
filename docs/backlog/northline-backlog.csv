@@ -1185,3 +1185,10 @@ Acceptance criteria:
 - No change for guests and for places chosen in the dialog
 
 Refs: docs/design/revamp-epic.md (E-15), docs/DECISIONS.md (2026-10-24 — S-180)",Medium,3,ui-revamp,food,follow-up,web,Sprint 7,2026-12-28,2027-01-08,To Do
+S-188,E-15,Story,"Plainsight + Chinook brand layer: violet chrome, ""tonight"" hero, yellow deals",,"Owner decision 2026-10-24 (design/revamp/hybrid/index.html): keep Plainsight's pages, add Chinook's brand layer. Consumer header, department strip and footer deep violet #1D1442/#2A1E5C; home opens with the hero band (headline in Archivo expanded 800, trust line, run card, three department photo tiles straddling the violet edge), then the maker-of-the-week; violet #5B34F0 is the action, link and focus colour in all apps; deals are ink-on-yellow #FFD23F stickers; Studio/Console current-page marker violet. Everything else stays Plainsight.
+
+Acceptance criteria:
+- Matches design/revamp/hybrid at 1440 and 390, web and mobile
+- Every pair passes WCAG AA; visual baselines, ui-a11y and ui-hydration green
+
+Refs: docs/design/revamp-epic.md, design/revamp/hybrid/",Highest,5,ui-revamp,design-system,brand,web,Sprint 3,2026-11-02,2026-11-13,In Progress

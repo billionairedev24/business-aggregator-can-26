@@ -11880,3 +11880,11 @@ LOCAL_DEVELOPMENT.md (`ui-a11y`, `ui-visual`, French shots, the lists), the CI r
 trailing `Status` column of `docs/a11y/tickets.csv` (S-165–S-182 Done) and S-181/S-182 regained their empty Epic Name
 cell; follow-ups S-183 (saved for later api), S-184 (device pass), S-185 (Food on the app, owner), S-186 (coordinates on
 saved addresses), a11y S-187. The owner's walkthrough: `docs/design/revamp-walkthrough.md`.
+
+## 2026-10-24 — E-15 brand layer: Plainsight + Chinook (S-188)
+
+Shown the three directions again, the owner said they love direction C (Chinook)'s home page and asked for "a stunning
+UI/UX". The lead recommended keeping Plainsight's pages and adding Chinook's brand layer rather than switching the whole
+look (Chinook's large photos expose the demo photos' quality, and a full switch redoes every screen). The owner approved
+the side-by-side mockup `design/revamp/hybrid/index.html`. Values are in `docs/design/revamp-epic.md` § Brand layer.
+
