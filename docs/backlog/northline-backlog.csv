@@ -1191,4 +1191,4 @@ Acceptance criteria:
 - Matches design/revamp/hybrid at 1440 and 390, web and mobile
 - Every pair passes WCAG AA; visual baselines, ui-a11y and ui-hydration green
 
-Refs: docs/design/revamp-epic.md, design/revamp/hybrid/",Highest,5,ui-revamp,design-system,brand,web,Sprint 3,2026-11-02,2026-11-13,In Progress
+Refs: docs/design/revamp-epic.md, design/revamp/hybrid/",Highest,5,ui-revamp,design-system,brand,web,Sprint 3,2026-11-02,2026-11-13,Done
