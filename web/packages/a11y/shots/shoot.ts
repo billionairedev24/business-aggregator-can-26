@@ -164,7 +164,8 @@ function truncated(): string[] {
     if (cs.display === 'none' || cs.visibility === 'hidden' || el.getClientRects().length === 0) continue;
     const r = el.getBoundingClientRect();
     if (r.width <= 1 || r.height <= 1) continue;
-    const wide = el.scrollWidth > el.clientWidth + 1, tall = el.scrollHeight > el.clientHeight + 2;
+    // a clamped box reports a few px more than it shows when its lines fit (rounding): a cut line is at least half a line
+    const wide = el.scrollWidth > el.clientWidth + 1, tall = el.scrollHeight > el.clientHeight + (parseFloat(cs.lineHeight) || 16) / 2;
     const clamp = cs.getPropertyValue('-webkit-line-clamp');
     const cut = (cs.textOverflow === 'ellipsis' && wide) || (clamp && clamp !== 'none' && tall)
       || (cs.overflowX !== 'visible' && cs.overflowX !== 'auto' && cs.overflowX !== 'scroll' && wide && cs.whiteSpace === 'nowrap');
