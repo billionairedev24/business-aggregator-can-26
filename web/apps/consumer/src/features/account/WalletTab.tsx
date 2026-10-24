@@ -26,7 +26,7 @@ export function WalletTab({ cards }: { cards?: React.ReactNode }) {
       </div>
       <figure className="nl-wallet-chart">
         <div className="nl-wallet-bars" role="img" aria-label={`${t('pointsChart')}: ${points.weekly.map((p, i) => t('pointsWeek', { count: number(p), weeks: points.weekly.length - 1 - i })).join(', ')}`}>
-          {points.weekly.map((p, i) => <span key={i} className="nl-wallet-bar"><span style={{ height: `${Math.round((p / max) * 100)}%` }} /></span>)}
+          {points.weekly.map((p, i) => <span key={i} className="nl-wallet-bar"><span style={{ ['--h' as string]: `${Math.round((p / max) * 100)}%` }} /></span>)}
         </div>
         <figcaption className="nl-small nl-muted">{t('pointsChart')}</figcaption>
       </figure>
@@ -50,12 +50,12 @@ export function WalletTab({ cards }: { cards?: React.ReactNode }) {
 function WalletSkeleton() {
   const t = useAccountT();
   return (
-    <div aria-busy="true">
+    <div aria-busy="true" className="nl-skel-stack">
       <span className="nl-sr-only">{t('loading')}</span>
       <Skeleton width="45%" height={40} />
-      <Skeleton width="60%" height={52} style={{ marginTop: 14 }} />
-      <Skeleton height={60} style={{ marginTop: 14, maxWidth: 520 }} />
-      <Skeleton height={64} style={{ marginTop: 22, maxWidth: 640 }} />
+      <Skeleton width="60%" height={52} />
+      <Skeleton height={60} />
+      <Skeleton height={64} />
     </div>
   );
 }

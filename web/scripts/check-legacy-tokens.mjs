@@ -67,6 +67,8 @@ if (photoProblems.length) {
 // `margin-bottom: -1px` under a tab row) stay allowed. In TSX the same goes for inline
 // `style` objects (`fontSize: 13`, `padding: 6`, `color: 'white'`).
 const S175 = ['orders', 'catalogue', 'appointments', 'kitchen'].map(f => `apps/studio/src/features/${f}`);
+const S173 = [...['cart', 'checkout', 'orders', 'tracking', 'account', 'auth', 'help', 'consent', 'promotions'].map(f => `apps/consumer/src/features/${f}`),
+  ...['CheckoutScreen.tsx', 'GroupScreen.tsx', 'TrackScreen.tsx', 'food.css'].map(f => `apps/consumer/src/features/food/${f}`), 'packages/auth-kit/src'];
 // S-176: the Studio's money, messaging, storefront, settings, account and onboarding screens, sign-in and the assistant —
 // with S-175, the dashboard and the shell, every Studio folder (checked below: a new folder must be listed)
 const S176 = ['auth', 'assistant', 'writing', 'pilot', 'finance', 'messages', 'storefront', 'reviews', 'settings', 'compliance', 'standing', 'help', 'availability', 'onboarding'].map(f => `apps/studio/src/features/${f}`);
@@ -85,13 +87,17 @@ const strictRoots = [
   ...S176,
   // S-172: the consumer detail pages (product, store, provider and its booking, the kitchen's menu, the quote flow)
   'apps/consumer/src/features/product', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking', 'apps/consumer/src/features/quotes',
-  'apps/consumer/src/features/food/RestaurantScreen.tsx', 'apps/consumer/src/features/food/restaurant.css'];
+  'apps/consumer/src/features/food/RestaurantScreen.tsx', 'apps/consumer/src/features/food/restaurant.css',
+  // S-173: the consumer cart, checkouts, orders and tracking, the account and the sign-in pages
+  ...S173];
 // S-174: no inline `style` at all in these (a class with the scale tokens instead; the Studio dashboard had a dozen).
 // S-175: the work screens too — except the calendar, whose entries are placed by custom properties from data (--top, --h).
 const noStyleRoots = ['apps/studio/src/features/shell', 'apps/studio/src/features/dashboard', ...S175.filter(r => !r.endsWith('/appointments')), ...S176,
   // S-172: the consumer detail pages
   'apps/consumer/src/features/product', 'apps/consumer/src/features/provider', 'apps/consumer/src/features/booking', 'apps/consumer/src/features/quotes',
-  'apps/consumer/src/features/shop/StorePage.tsx', 'apps/consumer/src/features/food/RestaurantScreen.tsx'];
+  'apps/consumer/src/features/shop/StorePage.tsx', 'apps/consumer/src/features/food/RestaurantScreen.tsx',
+  // S-173
+  ...S173];
 // (the server-rendered error page and the printable report are standalone documents with their own fallbacks)
 const strictSkip = [...skip, /\.stories\.tsx$/, /\.fixtures\.ts$/, /\.mdx$/, /(^|\/)server\//, /DataTable\/report\.ts$/];
 const PX = /(-?\d*\.?\d+)px/g;
@@ -134,8 +140,9 @@ for (const root of noStyleRoots) {
   for (const file of walk(path.join(webRoot, root))) {
     const rel = path.relative(webRoot, file).split(path.sep).join('/');
     if (!rel.endsWith('.tsx') || strictSkip.some(r => r.test(rel))) continue;
-    // S-176: a custom property carrying merchant data (the business's colour as --nl-brand / --nl-swatch) is not presentation
-    readFileSync(file, 'utf8').split('\n').forEach((line, i) => { if (/\sstyle=\{/.test(line) && !DATA_PROP.test(line)) raw.push(`${rel}:${i + 1}  inline style (use a class with the scale tokens)`); });
+    // S-176: a custom property carrying merchant data (the business's colour as --nl-brand / --nl-swatch) is not presentation;
+    // S-173: nor a data-driven one (`style={{ ['--h' as string]: … }}`, a bar's height): the look stays in CSS
+    readFileSync(file, 'utf8').split('\n').forEach((line, i) => { if (/\sstyle=\{/.test(line) && !DATA_PROP.test(line) && !/\sstyle=\{\{\s*\['--[\w-]+'/.test(line)) raw.push(`${rel}:${i + 1}  inline style (use a class with the scale tokens)`); });
   }
 }
 
@@ -178,6 +185,16 @@ for (const file of walk(path.join(webRoot, 'apps/console/src'))) {
 if (consoleProblems.length) {
   console.error(`Console colour roles and money (S-177): statuses take a status tone, prices formatPrice / formatCompactMoney, buttons primary | secondary | tertiary | destructive:\n${consoleProblems.map(p => '  ' + p).join('\n')}`);
   process.exit(1);
+}
+
+// ── S-173: one price format on the consumer site ($89.00, never "$89" because it is round) ───────────────────────
+// `whole` is for amounts that are choices or ranges (a tip box, "Under $10"), never a price made round when it can be.
+for (const file of walk(path.join(webRoot, 'apps/consumer/src'))) {
+  const rel = path.relative(webRoot, file).split(path.sep).join('/');
+  if (skip.some(r => r.test(rel)) || !/\.tsx?$/.test(rel)) continue;
+  readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+    if (/whole:\s*[^,}]*%\s*100/.test(line)) raw.push(`${rel}:${i + 1}  a price drawn without cents when round (use formatPrice / Price: $89.00)`);
+  });
 }
 
 // S-176: every Studio folder is strict; a new one must join a list above (S175 / S176) or this fails.

@@ -1,43 +1,50 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { LockSimple } from '@phosphor-icons/react';
+import { CreditCard, LockSimple, Plus, ShieldCheck, Truck } from '@phosphor-icons/react';
 import { newIdempotencyKey, ValidationError } from '@northline/client';
-import { Alert, EmptyState, ErrorState, Field, RadioGroup, Select, SiteLink, Skeleton, TextInput, useFormatters, useLocale, type Locale } from '@northline/ui';
+import {
+  Alert, EmptyState, ErrorState, Field, OptionCard, Price, RadioGroup, Segmented, Select, SiteLink, Skeleton, TextInput,
+  useFormatters, useLocale, type Locale,
+} from '@northline/ui';
 import { MarketZone, useRegions, useZone } from '../location/regions';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { signInHref, useViewer } from '../session/api';
 import { clock, runWhen, weekday, windowRange } from '../shop/format';
 import { addressErrors, localizeServer, trimAddress } from '../cart/address';
 import {
-  cartQuery, placeOrder, problemCode, quoteQuery, setupQuery, startCheckout,
-  type AddressInput, type Cart, type CheckoutBody, type DeliveryOption, type Started,
+  cartQuery, placeOrder, problemCode, quoteQuery, setupQuery, startCheckout, useChangeCartLine,
+  type AddressInput, type AddressView, type Cart, type CartLine, type CheckoutBody, type DeliveryOption, type Started,
 } from '../cart/api';
 import { useCartT } from '../cart/messages';
-import { FakePayment, useStripePayment } from '../cart/Payment';
+import { useStripePayment } from '../cart/Payment';
 import { CheckoutConsent, useCheckoutConsent } from '../consent/CheckoutConsent';
 import { StepUpDialog } from '../cart/StepUpDialog';
 import { AgeCheck } from '../cart/AgeCheck';
 import { ageCleared, NO_AGE } from '../cart/age';
 import { useAgeT } from '../cart/ageMessages';
-import { PromoPoints, TipPicker, type TipChoice } from '../promotions/PromoPoints';
+import { PromoPoints, type TipChoice } from '../promotions/PromoPoints';
 import { usePromoT } from '../promotions/messages';
 import { legalHref } from '../../lib/legal';
 import { PhotoWell } from '../art/PhotoWell';
 import { useCheckoutT } from './messages';
+import { Section } from './Section';
 
 type Substitution = CheckoutBody['substitution'];
-type StepKey = 'delivery' | 'payment' | 'review';
-const ORDER: StepKey[] = ['delivery', 'payment', 'review'];
+/** The tip choices drawn in design/revamp/a.html: no tip, $2, $3, $5 or another amount (100 % to the courier). */
+const TIP_CHOICES = ['none', '200', '300', '500', 'other'] as const;
+type TipKey = (typeof TIP_CHOICES)[number];
+const SUBSTITUTIONS = ['similar', 'refund', 'ask'] as const;
 
 /**
- * The 3-step checkout (redesign § 1.3 "Checkout", AT Shop:502–594; the payment that left the cart, § 3.8): "Secure
- * checkout" over three numbered sections — 1 the delivery address and time (the window, what to do when something's
- * out of stock, the courier's tip, the age check when the cart needs one), 2 the payment (promo code and points, then
- * Stripe's Payment Element, or the local stand-in), 3 the review (each shop's items beside the delivery) — and a sticky
- * summary with "Place your order". A finished step folds to one line with "Change". The same APIs as before: the
- * setup and the live quote, `POST /me/checkouts` when the payment step opens (it fixes the total; the step-up and
- * Idempotency-Key rules are unchanged), the card authorized on Place, then `…/place`. Signed in only.
+ * The one-page checkout (E-15, design/revamp/a.html "Cart and one-page checkout" and its fr-CA frame): every choice on
+ * one page, each with its selected state — 1 the address, 2 the delivery window, 3 what to do when something is out of
+ * stock, 4 the courier's tip, 5 the payment, 6 the items grouped by seller — beside a sticky summary with "Place your
+ * order", the tax lines and the total (on phones a sticky bar keeps the total and the button in reach). The same calls
+ * as before: the set-up and the live quote; "Place your order" opens the checkout (`POST /me/checkouts`, which fixes
+ * the total; step-up and Idempotency-Key unchanged) and, with the local stand-in, places it at once. Under Stripe the
+ * first press opens the Payment Element in section 5 and the next one authorizes the card and places the order. Any
+ * change after the checkout opened (address, window, tip, code) opens a new one on the next press. Signed in only.
  */
 export function CheckoutPage() {
   const t = useCheckoutT();
@@ -65,16 +72,17 @@ export function CheckoutPage() {
     );
   }
   // times on this page read in the visitor's market's zone (region model), else the platform zone
-  return <MarketZone city={city}><Checkout cart={cart.data!} /></MarketZone>;
+  return <MarketZone city={city}><Checkout cart={cart.data!} name={`${user.firstName} ${user.lastName}`.trim()} /></MarketZone>;
 }
 
-function Checkout({ cart }: { cart: Cart }) {
+function Checkout({ cart, name }: { cart: Cart; name: string }) {
   const t = useCheckoutT();
   const c = useCartT();
   const tp = usePromoT();
   const tAge = useAgeT();
   const { locale } = useLocale();
-  const { money } = useFormatters();
+  // tip amounts are choices drawn in whole dollars ($2 · $3 · $5, the mockup's); every price uses `price`
+  const { price, money } = useFormatters();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { location } = useDeliveryLocation();
@@ -84,16 +92,17 @@ function Checkout({ cart }: { cart: Cart }) {
   const provinceCodes = regions?.provinces.map(p => p.code) ?? [];
   const setup = useQuery(setupQuery(market, locale, true));
 
-  const [step, setStep] = useState<StepKey>('delivery');
   const [optionId, setOptionId] = useState<string>();
   const [substitution, setSubstitution] = useState<Substitution>('similar');
   const [addressId, setAddressId] = useState<string>();
   const [editing, setEditing] = useState(false);
+  const [choosing, setChoosing] = useState(false);
   const [draft, setDraft] = useState<AddressInput>({ province: location.status !== 'locating' ? location.province : undefined });
   useEffect(() => { if (!draft.province && regions?.defaultProvince) setDraft(d => ({ ...d, province: d.province ?? regions.defaultProvince ?? undefined })); }, [draft.province, regions?.defaultProvince]);
   const [touched, setTouched] = useState(false);
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string>();
+  const [notice, setNotice] = useState<string>();
   const [busy, setBusy] = useState(false);
   // once placed, the cart is empty: nothing may ask for a quote again (it answered 409 after a successful order)
   const [placed, setPlaced] = useState(false);
@@ -102,11 +111,12 @@ function Checkout({ cart }: { cart: Cart }) {
   const key = useRef<string>(newIdempotencyKey());
   const [promoCode, setPromoCode] = useState<string>();
   const [usePoints, setUsePoints] = useState(false);
-  const [tip, setTip] = useState<TipChoice>({ kind: 'none', value: 0 });
+  const [tipKey, setTipKey] = useState<TipKey>('none');
+  const [otherTip, setOtherTip] = useState('');
   const pay = useStripePayment(started, m => setError(m));
   const consent = useCheckoutConsent(); // S-157: the optional offers box (CASL)
-  const headings = useRef<Partial<Record<StepKey, HTMLHeadingElement | null>>>({});
-  const moved = useRef(false);
+  const addressHeading = useRef<HTMLHeadingElement>(null);
+  const paymentHeading = useRef<HTMLHeadingElement>(null);
 
   const data = setup.data;
   useEffect(() => {
@@ -117,12 +127,14 @@ function Checkout({ cart }: { cart: Cart }) {
     if (!saved) setEditing(true);
     setDraft(d => (d.city ? d : { ...d, city: location.city ?? data.market }));
   }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
-  // moving to a step puts the keyboard and the screen reader on its heading
-  useEffect(() => { if (moved.current) headings.current[step]?.focus(); moved.current = true; }, [step]);
 
   const option = data?.options.find(o => o.id === optionId);
   const address: AddressInput = !editing && addressId ? { addressId } : trimAddress(draft);
   const clientErrors = addressErrors(address, provinceCodes);
+  const otherCents = Math.round(Number(otherTip.replace(',', '.')) * 100);
+  const tip: TipChoice = tipKey === 'none' ? { kind: 'none', value: 0 }
+    : tipKey === 'other' ? (otherCents > 0 ? { kind: 'amount', value: otherCents } : { kind: 'none', value: 0 })
+      : { kind: 'amount', value: Number(tipKey) };
   const body: CheckoutBody = {
     kind: option?.kind ?? '', windowId: option?.windowId ?? null, address, substitution,
     ...(promoCode ? { promoCode } : {}), ...(usePoints ? { usePoints } : {}), ...(tip.kind !== 'none' ? { tip } : {}),
@@ -134,22 +146,24 @@ function Checkout({ cart }: { cart: Cart }) {
   const age = quote.data?.age ?? setup.data?.age ?? NO_AGE;
   const refreshAge = () => { void qc.invalidateQueries({ queryKey: ['checkout'] }); };
 
-  /** A changed delivery or code needs a new checkout: the one opened is left to expire (its total is fixed). */
-  const reopen = () => { if (started) { setStarted(null); key.current = newIdempotencyKey(); } };
-  const go = (next: StepKey) => { setError(undefined); setStep(next); };
+  // A changed choice after the checkout opened needs a new one (its total is fixed): the open one is left to expire.
+  const bodyKey = JSON.stringify(body);
+  const startedFor = useRef<string>('');
+  useEffect(() => {
+    if (started && startedFor.current !== bodyKey) { setStarted(null); setNotice(undefined); key.current = newIdempotencyKey(); }
+  }, [bodyKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fail = (e: unknown) => {
     if (e instanceof ValidationError) {
       setServerErrors(Object.fromEntries(Object.entries(e.byField()).map(([f, m]) => [f, localizeServer(m, locale)])));
       setError(c('fixFields', { count: e.errors.length }));
-      if (e.errors.some(x => x.field.startsWith('address') || x.field === 'items')) setStep('delivery');
+      if (e.errors.some(x => x.field.startsWith('address'))) addressHeading.current?.focus();
       return;
     }
     const code = problemCode(e);
     if (code === 'age_verification_required' || code === 'age_under_minimum' || code === 'restricted_hours') {
       setError(code === 'restricted_hours' ? c('err_restricted_hours') : code === 'age_under_minimum' ? tAge('underAge', { age: age.minimumAge }) : tAge('payBlocked'));
       refreshAge();
-      setStep('delivery');
       return;
     }
     setError(code && ['out_of_stock', 'window_closed', 'cart_empty', 'checkout_expired', 'payment_not_authorized'].includes(code)
@@ -158,53 +172,57 @@ function Checkout({ cart }: { cart: Cart }) {
       void qc.invalidateQueries({ queryKey: cartQuery.queryKey });
       void qc.invalidateQueries({ queryKey: ['checkout'] });
       setStarted(null);
-      setStep(code === 'window_closed' ? 'delivery' : 'payment');
     }
   };
 
-  const continueDelivery = () => {
+  /** The card authorized (Stripe), then `…/place`, then the order-placed page. */
+  const finish = async (s: Started) => {
+    if (pay.needed && !(await pay.confirm())) return;
+    const order = await placeOrder(s.checkoutId, newIdempotencyKey());
+    key.current = newIdempotencyKey();
+    setPlaced(true);
+    await consent.record(); // S-157: the ticked offers box, once the order went through
+    await qc.cancelQueries({ queryKey: ['checkout'] });
+    await navigate({ to: '/checkout/complete', search: { order: order.orderId, ref: order.ref } });
+    // after leaving: the cart is refetched (now empty) and the next checkout starts from a fresh set-up and quote
+    qc.removeQueries({ queryKey: ['checkout'] });
+    void qc.invalidateQueries({ queryKey: cartQuery.queryKey });
+  };
+
+  /**
+   * "Place your order": checks the page, opens the checkout when none is open (`POST /me/checkouts`, step-up when
+   * asked), then places it — except under Stripe the first time, when the card form opens in section 5 first.
+   */
+  const place = async (proof?: string) => {
     setTouched(true);
     setServerErrors({});
-    if (!complete) { setError(c('fixFields', { count: Math.max(1, Object.keys(clientErrors).length) })); return; }
-    go('payment');
-  };
-
-  /** Opens the payments (`POST /me/checkouts`, step-up when asked); the local stand-in goes straight to the review. */
-  const openPayment = async (proof?: string) => {
     setError(undefined);
-    setServerErrors({});
+    if (!complete) {
+      setError(c('fixFields', { count: Math.max(1, Object.keys(clientErrors).length) }));
+      addressHeading.current?.focus();
+      return;
+    }
+    if (!ageCleared(age)) { setError(tAge('payBlocked')); return; }
     setBusy(true);
     try {
-      const s = await startCheckout(body, key.current, locale, proof);
-      setStarted(s);
-      if (s.payment.provider !== 'stripe' || s.intents.every(i => i.status === 'authorized')) go('review');
-    } catch (e) {
-      const code = problemCode(e);
-      if (code === 'step_up_required' || code === 'second_factor_required') setStepUp(code === 'step_up_required' ? 'required' : 'enrol');
-      else { fail(e); key.current = newIdempotencyKey(); }
-    } finally { setBusy(false); }
-  };
-
-  const useMethod = async () => {
-    setError(undefined);
-    if (await pay.check()) go('review');
-  };
-
-  const place = async () => {
-    if (!started) return;
-    setBusy(true);
-    setError(undefined);
-    try {
-      if (pay.needed && !(await pay.confirm())) return;
-      const order = await placeOrder(started.checkoutId, newIdempotencyKey());
-      key.current = newIdempotencyKey();
-      setPlaced(true);
-      await consent.record(); // S-157: the ticked offers box, once the order went through
-      await qc.cancelQueries({ queryKey: ['checkout'] });
-      await navigate({ to: '/checkout/complete', search: { order: order.orderId, ref: order.ref } });
-      // after leaving: the cart is refetched (now empty) and the next checkout starts from a fresh set-up and quote
-      qc.removeQueries({ queryKey: ['checkout'] });
-      void qc.invalidateQueries({ queryKey: cartQuery.queryKey });
+      if (!started) {
+        let s: Started;
+        try { s = await startCheckout(body, key.current, locale, proof); } catch (e) {
+          const code = problemCode(e);
+          if (code === 'step_up_required' || code === 'second_factor_required') { setStepUp(code === 'step_up_required' ? 'required' : 'enrol'); return; }
+          throw e;
+        }
+        startedFor.current = bodyKey;
+        setStarted(s);
+        if (s.payment.provider === 'stripe' && s.intents.some(i => i.status !== 'authorized' && i.clientSecret)) {
+          setNotice(t('enterCard'));
+          paymentHeading.current?.focus();
+          return;
+        }
+        await finish(s);
+        return;
+      }
+      await finish(started);
     } catch (e) {
       fail(e);
       key.current = newIdempotencyKey();
@@ -214,194 +232,173 @@ function Checkout({ cart }: { cart: Cart }) {
   if (setup.isPending) return <CheckoutSkeleton />;
   if (setup.isError || !data) return <div className="nl-page co-page"><h1 className="co-title">{t('title')}</h1><ErrorState message={c('loadError')} onRetry={() => void setup.refetch()} /></div>;
   const view = data.cart.itemCount > 0 ? data.cart : cart;
-  const state = (k: StepKey): 'open' | 'done' | 'todo' => (k === step ? 'open' : ORDER.indexOf(k) < ORDER.indexOf(step) ? 'done' : 'todo');
-  const savedAddress = data.addresses.find(a => a.id === addressId);
-  const addressLine = !editing && savedAddress ? oneLine(savedAddress) : oneLine(trimAddress(draft));
-  const canPlace = step === 'review' && !!started && !busy;
-  const stripe = started?.payment.provider === 'stripe' && pay.needed;
+  const stripe = data.payment.provider === 'stripe';
+  const total = started ? started.totalCents : quote.data?.totalCents;
+  const placeLabel = busy ? t('placing') : t('place');
+  const taxes = quote.data?.taxes ?? [];
 
   return (
     <div className="nl-page co-page">
       <div className="co-layout">
         <div className="co-head">
-          <h1 className="co-title"><LockSimple size={26} weight="fill" aria-hidden /> {t('title')}</h1>
-          <span className="co-head-meta">{t('items', { count: view.itemCount })}</span>
+          <h1 className="co-title"><LockSimple size={22} aria-hidden /> {t('title')}</h1>
+          <span className="co-head-meta">{t('fromShops', { items: view.itemCount, shops: view.shopCount })}</span>
         </div>
 
-        <ol className="co-main" aria-label={t('steps')}>
-          <Step n={1} id="co-delivery" title={t('step1')} state={state('delivery')} headingRef={el => { headings.current.delivery = el; }}
-            onChange={() => { reopen(); go('delivery'); }} changeLabel={t('changeNamed', { step: t('step1') })}
-            summary={<><span>{addressLine}</span><span className="co-muted">{option ? <WindowName option={option} /> : null}</span></>}>
-            <section aria-labelledby="co-address" className="co-block">
-              <h3 id="co-address" className="co-h3">{c('deliverTo')}</h3>
-              {!editing && data.addresses.length > 0 ? (
-                <>
-                  <RadioGroup className="co-choices" aria-labelledby="co-address">
-                    {data.addresses.map(a => (
-                      <button key={a.id} type="button" role="radio" aria-checked={a.id === addressId} className="co-choice" onClick={() => setAddressId(a.id)}>
-                        <span className="co-radio" aria-hidden />
-                        <span className="co-choice-text"><strong>{a.unit ? `${a.street}, ${a.unit}` : a.street}</strong><span className="co-muted">{[`${a.city} ${a.province} ${a.postal}`, a.note].filter(Boolean).join(' · ')}</span></span>
-                      </button>
-                    ))}
-                  </RadioGroup>
-                  <button type="button" className="btn btn-link co-add" onClick={() => setEditing(true)}>{t('addAddress')}</button>
-                </>
-              ) : (
-                <AddressForm value={draft} provinces={provinceCodes} onChange={v => { setDraft(v); setServerErrors({}); }} errors={shownErrors} locale={locale}
-                  onCancel={data.addresses.length > 0 ? () => setEditing(false) : undefined} />
-              )}
-              {serverErrors['address.city'] && !editing ? <p className="cart-field-error" role="alert">{serverErrors['address.city']}</p> : null}
-              {serverErrors.items ? <p className="cart-field-error" role="alert">{serverErrors.items}</p> : null}
-            </section>
-
-            <section aria-labelledby="co-window" className="co-block">
-              <h3 id="co-window" className="co-h3">{c('window')}</h3>
-              {data.options.length === 0 ? <p className="co-muted">{c('noWindow')}</p> : (
-                <RadioGroup className="co-options" aria-labelledby="co-window">
-                  {data.options.map(o => <WindowOption key={o.id} option={o} selected={o.id === optionId} onPick={() => setOptionId(o.id)} />)}
+        <div className="co-main">
+          <Section n={1} id="co-address" title={t('s_address')} headingRef={addressHeading}
+            action={!editing && data.addresses.length > 0 ? <button type="button" className="btn btn-link co-change" aria-expanded={choosing} onClick={() => setChoosing(v => !v)}>{t('change')}</button> : null}>
+            {!editing && data.addresses.length > 0 ? (
+              <>
+                <RadioGroup className="co-choices" aria-labelledby="co-address">
+                  {(choosing ? data.addresses : data.addresses.filter(a => a.id === addressId)).map(a => (
+                    <OptionCard key={a.id} role="radio" mark="radio" selected={a.id === addressId} className="co-choice"
+                      onClick={() => { setAddressId(a.id); setChoosing(false); }}
+                      title={name || a.street} description={<AddressLines address={a} />} />
+                  ))}
                 </RadioGroup>
-              )}
-            </section>
-
-            <section aria-labelledby="co-subs" className="co-block">
-              <h3 id="co-subs" className="co-h3">{c('substitution')}</h3>
-              <RadioGroup className="nl-chips" aria-labelledby="co-subs">
-                {(['similar', 'refund', 'ask'] as const).map(s => (
-                  <button key={s} type="button" role="radio" aria-checked={substitution === s} className="nl-chip" onClick={() => setSubstitution(s)}>{c(s)}</button>
-                ))}
-              </RadioGroup>
-            </section>
-
-            <section aria-labelledby="co-tip" className="co-block">
-              <h3 id="co-tip" className="co-h3">{tp('tipTitle')}</h3>
-              <TipPicker value={tip} onChange={setTip} />
-            </section>
-
+                {choosing ? <button type="button" className="btn btn-link co-add" onClick={() => { setEditing(true); setChoosing(false); }}><Plus size={16} aria-hidden /> {t('addAddress')}</button> : null}
+              </>
+            ) : (
+              <AddressForm value={draft} provinces={provinceCodes} onChange={v => { setDraft(v); setServerErrors({}); }} errors={shownErrors} locale={locale}
+                onCancel={data.addresses.length > 0 ? () => setEditing(false) : undefined} />
+            )}
+            {serverErrors['address.city'] && !editing ? <p className="cart-field-error" role="alert">{serverErrors['address.city']}</p> : null}
+            {serverErrors.items ? <p className="cart-field-error" role="alert">{serverErrors.items}</p> : null}
             <AgeCheck age={age} onChanged={refreshAge} />
+          </Section>
 
-            <div className="co-actions">
-              <button type="button" className="btn btn-primary" disabled={!ageCleared(age) || data.options.length === 0} onClick={continueDelivery}>{editing ? t('useAddress') : t('continue')}</button>
-              {!ageCleared(age) ? <span className="co-muted">{tAge('payBlocked')}</span> : null}
-            </div>
-          </Step>
+          <Section n={2} id="co-window" title={t('s_window')}>
+            {data.options.length === 0 ? <p className="co-muted">{c('noWindow')}</p> : (
+              <RadioGroup className="co-choices" aria-labelledby="co-window">
+                {data.options.map(o => <WindowOption key={o.id} option={o} selected={o.id === optionId} onPick={() => setOptionId(o.id)} />)}
+              </RadioGroup>
+            )}
+            {option?.kind === 'pooled' && option.packBy ? <PackNote option={option} shops={view.shopCount} /> : null}
+          </Section>
 
-          <Step n={2} id="co-payment" title={t('step2')} state={state('payment')} headingRef={el => { headings.current.payment = el; }}
-            onChange={() => go('payment')} changeLabel={t('changeNamed', { step: t('step2') })} keepMounted={!!stripe}
-            summary={<span>{started?.payment.provider === 'stripe' ? t('methodStripe') : t('methodFake')}</span>}>
-            <section aria-labelledby="co-promo" className="co-block">
-              <h3 id="co-promo" className="co-h3">{tp('promoTitle')}</h3>
-              <PromoPoints code={promoCode} onCode={code => { setPromoCode(code); setServerErrors(({ promoCode: _, ...rest }) => rest); }}
-                error={promoError} discountCents={quote.data?.discountCents} usePoints={usePoints} onUsePoints={setUsePoints}
-                pointsAvailable={quote.data?.pointsAvailable} pointsCents={quote.data?.pointsCents} disabled={!!started} />
-              {started ? <button type="button" className="btn btn-link co-add" onClick={reopen}>{t('changePromo')}</button> : null}
-            </section>
-            <section aria-labelledby="co-method" className="co-block">
-              <h3 id="co-method" className="co-h3">{t('methodTitle')}</h3>
-              {stripe ? (
-                <div className="cart-pay-box">
-                  <div className="cart-pay-head"><span className="cart-kicker">{c('stripeKicker')}</span></div>
-                  {!pay.ready ? <p className="co-muted" role="status">{t('paymentLoading')}</p> : null}
-                  <div ref={pay.host} className="cart-stripe" data-testid="stripe-payment-element" />
-                </div>
-              ) : <FakePayment provider={data.payment.provider} />}
-              <p className="co-trust"><LockSimple size={16} aria-hidden /> {t('trust')}</p>
-            </section>
+          <Section n={3} id="co-subs" title={t('s_subs')}>
+            <Segmented name="co-substitution" stack aria-label={t('s_subs')} value={substitution} onChange={setSubstitution}
+              options={SUBSTITUTIONS.map(s => ({ value: s, label: t(`subs_${s}`) }))} />
+          </Section>
+
+          <Section n={4} id="co-tip" title={t('s_tip')} className="co-tip-seg-host">
+            <p className="co-muted co-lede">{t('tipLede')}</p>
+            <Segmented name="co-tip" aria-label={t('s_tip')} value={tipKey} onChange={setTipKey}
+              options={TIP_CHOICES.map(k => ({ value: k, label: k === 'none' ? t('tipNone') : k === 'other' ? t('tipOther') : money(Number(k), { whole: true }) }))} />
+            {tipKey === 'other' ? (
+              <Field label={t('tipAmount')} className="co-tip-other">
+                <TextInput inputMode="decimal" value={otherTip} onChange={e => setOtherTip(e.target.value.replace(/[^\d.,]/g, ''))} />
+              </Field>
+            ) : null}
+          </Section>
+
+          <Section n={5} id="co-payment" title={t('s_payment')} headingRef={paymentHeading}>
+            <RadioGroup className="co-choices" aria-labelledby="co-payment">
+              <OptionCard role="radio" mark="radio" selected className="co-choice"
+                title={<span className="co-pay-title"><CreditCard size={18} aria-hidden />{stripe ? t('methodStripe') : t('methodTest')}</span>}
+                description={stripe ? c('stripeNote') : t('methodTestNote')} />
+            </RadioGroup>
+            {stripe && started && pay.needed ? (
+              <div className="cart-pay-box">
+                {!pay.ready ? <p className="co-muted" role="status">{t('paymentLoading')}</p> : null}
+                <div ref={pay.host} className="cart-stripe" data-testid="stripe-payment-element" />
+              </div>
+            ) : null}
+            {notice ? <p className="co-notice" role="status">{notice}</p> : null}
             {data.stepUp !== 'none' && !started ? <p className="co-muted">{c('stepUpNeeded')}</p> : null}
-            <div className="co-actions">
-              {!started
-                ? <button type="button" className="btn btn-primary" disabled={busy || !complete} aria-busy={busy} onClick={() => void openPayment()}>{busy ? c('paying') : t('toPayment')}</button>
-                : stripe
-                  ? <button type="button" className="btn btn-primary" disabled={!pay.ready || busy} onClick={() => void useMethod()}>{t('useMethod')}</button>
-                  : <button type="button" className="btn btn-primary" onClick={() => go('review')}>{t('useMethod')}</button>}
-            </div>
-          </Step>
+            <p className="co-trust"><ShieldCheck size={16} aria-hidden /> {t('charged')}</p>
+          </Section>
 
-          <Step n={3} id="co-review" title={t('step3')} state={state('review')} headingRef={el => { headings.current.review = el; }}>
-            <p className="co-muted">{t('shopCount', { count: view.shopCount })}</p>
-            <ul className="co-packages">
-              {view.groups.map(g => (
-                <li key={g.merchantId || 'gone'} className="co-package">
-                  <div className="co-package-items">
-                    <h3 className="co-h3">{g.shopName || c('unavailableGroup')}</h3>
-                    <ul className="co-items">
-                      {g.items.map(i => (
-                        <li key={i.itemId} className="co-item">
-                          <span className="co-thumb" aria-hidden>{i.imageUrl ? <img src={i.imageUrl} alt="" /> : <PhotoWell subject={i.name} />}</span>
-                          <span className="co-item-text"><span>{i.name}</span><span className="co-muted">{[i.option, c('qtyValue', { qty: i.qty })].filter(Boolean).join(' · ')}</span></span>
-                          <span className="co-item-price">{money(i.lineCents)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="co-package-delivery">
-                    <span className="co-label">{t('deliveryFor', { shop: g.shopName })}</span>
-                    {option ? <span className="co-arriving"><WindowName option={option} /></span> : null}
-                    <span className="co-muted">{addressLine}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <CheckoutConsent consent={consent} />
-            <div className="co-actions">
-              <button type="button" className="btn btn-primary btn-lg" disabled={!canPlace} aria-busy={busy} onClick={() => void place()}>{busy ? t('placing') : t('place')}</button>
-            </div>
-          </Step>
-        </ol>
+          <Section n={6} id="co-review" title={t('s_review')}>
+            {view.groups.map(g => <SellerGroup key={g.merchantId || 'gone'} name={g.shopName} items={g.items} />)}
+          </Section>
+        </div>
 
-        <aside className="co-summary" aria-label={c('total')}>
+        <aside className="co-summary" aria-label={t('summary')}>
+          <button type="button" className="btn btn-primary btn-block btn-lg" disabled={busy || data.options.length === 0} aria-busy={busy} onClick={() => void place()}>{placeLabel}</button>
+          <p className="co-fine co-terms">{t('termsBefore')}<a href={legalHref('terms', locale)} target="_blank" rel="noopener" hrefLang="en-CA">{t('termsLink')}</a>{t('termsAnd')}<a href={legalHref('privacy', locale)} target="_blank" rel="noopener" hrefLang="en-CA">{t('privacyLink')}</a>{t('termsAfter')}</p>
           <dl className="co-totals">
-            <Row label={c('items')} value={money(view.subtotalCents)} />
-            <Row label={c('delivery')} value={option ? (option.feeCents === 0 ? c('free') : money(option.feeCents)) : '—'} />
-            {view.plusSavingsCents > 0 ? <Row label={tp('plusSavings')} value={`−${money(view.plusSavingsCents)}`} /> : null}
-            {quote.data && quote.data.discountCents > 0 ? <Row label={tp('discount', { code: quote.data.promoCode ?? '' })} value={`−${money(quote.data.discountCents)}`} /> : null}
+            <Row label={t('itemsCount', { count: view.itemCount })} value={price(view.subtotalCents)} />
+            <Row label={c('delivery')} value={option ? (option.feeCents === 0 ? c('free') : price(option.feeCents)) : '—'} />
+            {quote.data && quote.data.tipCents > 0 ? <Row label={t('s_tip')} value={price(quote.data.tipCents)} /> : null}
+            {view.plusSavingsCents > 0 ? <Row label={tp('plusSavings')} value={`−${price(view.plusSavingsCents)}`} /> : null}
+            {quote.data && quote.data.discountCents > 0 ? <Row label={tp('discount', { code: quote.data.promoCode ?? '' })} value={`−${price(quote.data.discountCents)}`} /> : null}
             {/* S-152: points are a discount before tax, like the code */}
-            {quote.data && quote.data.pointsCents > 0 ? <Row label={tp('pointsLine')} value={`−${money(quote.data.pointsCents)}`} /> : null}
+            {quote.data && quote.data.pointsCents > 0 ? <Row label={tp('pointsLine')} value={`−${price(quote.data.pointsCents)}`} /> : null}
             {quote.data
-              ? quote.data.taxes.map(tax => <Row key={`${tax.type}${tax.percent}`} label={taxLabel(c, tax.type, tax.percent, locale)} value={money(tax.cents)} />)
+              ? taxes.map(tax => <Row key={`${tax.type}${tax.percent}`} label={taxLabel(c, tax.type, tax.percent, locale)} value={price(tax.cents)} />)
               : <Row label={c('taxPending')} value={quote.isFetching ? <Skeleton width={48} height={14} /> : <span className="co-muted">{c('taxLater')}</span>} />}
-            {quote.data && quote.data.tipCents > 0 ? <Row label={tp('tip')} value={money(quote.data.tipCents)} /> : null}
           </dl>
-          <div className="co-total"><span>{c('total')}</span><span className="co-total-amount">{started ? money(started.totalCents) : quote.data ? money(quote.data.totalCents) : '—'}</span></div>
+          {taxes.length ? <p className="co-fine">{t('taxNote')}</p> : null}
+          <div className="co-total"><span>{t('orderTotal')}</span>{total != null ? <Price cents={total} size="lg" className="co-total-amount" /> : <span className="co-total-amount">—</span>}</div>
           {error ? <Alert tone="error" role="alert">{error}</Alert> : null}
-          <button type="button" className="btn btn-primary btn-block btn-lg" disabled={!canPlace} aria-busy={busy} onClick={() => void place()}>{busy && step === 'review' ? t('placing') : t('place')}</button>
-          {step !== 'review' ? <p className="co-fine">{t('placeFirst')}</p> : null}
-          <p className="co-fine">{t('terms')} <a href={legalHref('terms', locale)} target="_blank" rel="noopener" hrefLang="en-CA">{t('termsLink')}</a> · <a href={legalHref('privacy', locale)} target="_blank" rel="noopener" hrefLang="en-CA">{t('privacyLink')}</a></p>
-          <p className="co-fine">{c('payNote')}</p>
+          <details className="co-promo">
+            <summary>{t('promoToggle')}</summary>
+            <PromoPoints code={promoCode} onCode={code => { setPromoCode(code); setServerErrors(({ promoCode: _, ...rest }) => rest); }}
+              error={promoError} discountCents={quote.data?.discountCents} usePoints={usePoints} onUsePoints={setUsePoints}
+              pointsAvailable={quote.data?.pointsAvailable} pointsCents={quote.data?.pointsCents} />
+          </details>
+          <CheckoutConsent consent={consent} />
         </aside>
       </div>
+      {/* phones: the total and the button stay in reach (design/revamp/a.html, 390 frame) */}
+      <div className="co-bar">
+        <span className="co-bar-total"><span className="co-bar-label">{t('orderTotal')}</span>{total != null ? <Price cents={total} size="md" /> : <span>—</span>}</span>
+        <button type="button" className="btn btn-primary" disabled={busy || data.options.length === 0} aria-busy={busy} onClick={() => void place()}>{placeLabel}</button>
+      </div>
       {stepUp ? (
-        <StepUpDialog mode={stepUp} onClose={() => setStepUp(null)} onProof={proof => { setStepUp(null); void openPayment(proof); }} />
+        <StepUpDialog mode={stepUp} onClose={() => setStepUp(null)} onProof={proof => { setStepUp(null); void place(proof); }} />
       ) : null}
     </div>
   );
 }
 
-/** A numbered section (28px circle, xl H2); done = one summary line and "Change". */
-function Step({ n, id, title, state, summary, onChange, changeLabel, keepMounted, headingRef, children }: {
-  n: number; id: string; title: string; state: 'open' | 'done' | 'todo'; summary?: ReactNode; onChange?: () => void; changeLabel?: string;
-  keepMounted?: boolean; headingRef: (el: HTMLHeadingElement | null) => void; children: ReactNode;
-}) {
+function AddressLines({ address: a }: { address: AddressView }) {
+  return (
+    <>
+      <span className="co-line">{a.unit ? `${a.street}, ${a.unit}` : a.street}</span>
+      <span className="co-line">{`${a.city} ${a.province} ${a.postal}`}</span>
+      {a.note ? <span className="co-line co-muted">{a.note}</span> : null}
+    </>
+  );
+}
+
+/** Review: one block per seller ("Sold by …"), each line with its photo well, the quantity and the line's price. */
+function SellerGroup({ name, items }: { name: string; items: CartLine[] }) {
+  const c = useCartT();
   const t = useCheckoutT();
   return (
-    <li className={`co-step co-step-${state}`} aria-current={state === 'open' ? 'step' : undefined}>
-      <section aria-labelledby={id}>
-        <div className="co-step-head">
-          <span className="co-num" aria-hidden>{n}</span>
-          <h2 id={id} ref={headingRef} tabIndex={-1} className="co-step-title">{title}</h2>
-          {state === 'done' && onChange ? <button type="button" className="btn btn-link" aria-label={changeLabel} onClick={onChange}>{t('change')}</button> : null}
-        </div>
-        {state === 'done' && summary ? <div className="co-step-summary">{summary}</div> : null}
-        {/* the same element open or folded, so a kept-mounted body (Stripe's iframe) never remounts */}
-        {state === 'open' || (keepMounted && state === 'done') ? <div className="co-step-body" hidden={state !== 'open'}>{children}</div> : null}
-      </section>
+    <div className="co-seller">
+      <h3 className="co-seller-name">{name ? t('soldBy', { shop: name }) : c('unavailableGroup')}</h3>
+      <ul className="co-items">{items.map(i => <ReviewLine key={i.itemId} item={i} />)}</ul>
+    </div>
+  );
+}
+
+function ReviewLine({ item: i }: { item: CartLine }) {
+  const c = useCartT();
+  const t = useCheckoutT();
+  const { price } = useFormatters();
+  const change = useChangeCartLine();
+  const max = Math.min(99, Math.max(i.qty, i.stock, 1));
+  const qtys = Array.from({ length: Math.min(max, Math.max(10, i.qty)) }, (_, k) => String(k + 1));
+  const label = [i.name, i.option].filter(Boolean).join(', ');
+  return (
+    <li className="co-item">
+      <span className="co-thumb" aria-hidden>{i.imageUrl ? <img src={i.imageUrl} alt="" /> : <PhotoWell subject={i.name} />}</span>
+      <span className="co-item-text"><span className="co-item-name">{label}</span>{i.unit ? <span className="co-muted">{i.unit}</span> : null}</span>
+      <label className="co-qty">
+        <span aria-hidden>{t('qty')}</span>
+        <Select aria-label={c('qty', { name: i.name })} value={String(i.qty)} disabled={change.isPending} options={qtys}
+          onChange={e => change.mutate({ itemId: i.itemId, qty: Number(e.target.value) })} />
+      </label>
+      <span className="co-item-price">{price(i.lineCents)}</span>
     </li>
   );
 }
 
 const Row = ({ label, value }: { label: ReactNode; value: ReactNode }) => <div className="co-row"><dt>{label}</dt><dd>{value}</dd></div>;
-
-const oneLine = (a: { street?: string; unit?: string | null; city?: string; province?: string; postal?: string }) =>
-  [a.unit ? `${a.street}, ${a.unit}` : a.street, [a.city, a.province, a.postal].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
 
 function taxLabel(c: ReturnType<typeof useCartT>, type: string, percent: number, locale: Locale) {
   const p = new Intl.NumberFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { maximumFractionDigits: 3 }).format(percent);
@@ -421,15 +418,20 @@ function WindowOption({ option, selected, onPick }: { option: DeliveryOption; se
   const c = useCartT();
   const { locale } = useLocale();
   const zone = useZone();
-  const { money } = useFormatters();
+  const { price } = useFormatters();
   const desc = option.kind === 'direct' ? c('direct') : option.households > 0 ? c('pooledWith', { count: option.households }) : c('pooled', { time: clock(option.orderBy!, locale, zone) });
   return (
-    <button type="button" role="radio" aria-checked={selected} className="co-choice co-option" onClick={onPick}>
-      <span className="co-radio" aria-hidden />
-      <span className="co-choice-text"><strong><WindowName option={option} /></strong><span className="co-eta">{desc}</span></span>
-      <span className="co-option-fee">{option.feeCents === 0 ? c('free') : money(option.feeCents)}</span>
-    </button>
+    <OptionCard role="radio" mark="radio" selected={selected} className="co-choice" onClick={onPick}
+      title={<WindowName option={option} />} description={desc}
+      trailing={<span className="co-option-fee">{option.feeCents === 0 ? c('free') : price(option.feeCents)}</span>} />
   );
+}
+
+function PackNote({ option, shops }: { option: DeliveryOption; shops: number }) {
+  const t = useCheckoutT();
+  const { locale } = useLocale();
+  const zone = useZone();
+  return <p className="co-pack"><Truck size={16} aria-hidden /> {t('packNote', { time: clock(option.packBy!, locale, zone), count: shops })}</p>;
 }
 
 function AddressForm({ value, provinces, onChange, errors, locale, onCancel }: {
@@ -461,10 +463,9 @@ export function CheckoutSkeleton() {
       <span className="nl-sr-only">{c('loading')}</span>
       <div className="co-layout">
         <div className="co-head"><h1 className="co-title">{t('title')}</h1></div>
-        <div className="co-main">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} height={i === 0 ? 260 : 64} radius={8} style={{ marginBottom: 16 }} />)}</div>
-        <Skeleton height={280} radius={12} />
+        <div className="co-main co-skeleton">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={i === 0 ? 120 : 80} />)}</div>
+        <Skeleton height={280} />
       </div>
     </div>
   );
 }
-

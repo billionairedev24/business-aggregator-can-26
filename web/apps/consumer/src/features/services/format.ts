@@ -1,14 +1,14 @@
 import type { Locale, Translate } from '@northline/ui';
-import { formatMoney, timeZone } from '@northline/ui';
+import { formatPrice, timeZone } from '@northline/ui';
 import type { PricingMode } from './api';
 
 type PriceKeys = 'priceQuote' | 'priceFrom' | 'perHour' | 'priceFree';
 
-/** "$89" · "$45/h" · "Quote" · "Free" (whole dollars when round, as the design shows). */
+/** "$89.00" · "$45.00/h" · "Quote" · "Free" — the one price format (E-15: always with cents, `formatPrice`). */
 export function price(t: Translate<PriceKeys>, locale: Locale, mode: PricingMode, cents: number | null | undefined, from = false): string {
   if (mode === 'quote' || cents === null || cents === undefined) return t('priceQuote');
   if (cents === 0) return t('priceFree');
-  const money = formatMoney(cents, locale, { whole: cents % 100 === 0 });
+  const money = formatPrice(cents, locale);
   const text = mode === 'hourly' ? t('perHour', { price: money }) : money;
   return from ? t('priceFrom', { price: text }) : text;
 }

@@ -11670,3 +11670,116 @@ the console.
 the secondary sheets (finance day, pilot, partners, AI screening, privacy, retention, UAT feedback, appeals, card
 disputes) keep their drawer layout on the new tones. Storybook stories failing on develop before this story
 (LocationPill "Detected", SiteHeader "Narrow", Gallery "Sections" landmark-unique/banner) are untouched.
+
+## 2026-10-23 — S-173 Consumer cart, checkout, account and auth
+
+Built to "Cart and one-page checkout" and its fr-CA frame in `design/revamp/a.html` (screens 5 and 6, 1280 and 390). The
+mockups draw no cart, account or sign-in page, so those use the same system: a 24 px page title, bordered 4 px panels on
+hairlines (no shadows), ink number boxes, option cards and joined boxes that show their selected ink, `StatusTag`s, the
+one price format. No backend, BFF contract, validation or i18n rule changed; every string is en + fr-CA.
+
+**One-page checkout (`/checkout`).**
+- Six numbered sections in one panel: 1 Delivery address (the saved one as a selected `OptionCard` with the person's
+  name, street, city/province/postal and the courier note; "Change" lists the others and "Add a new address"),
+  2 Delivery window (option cards with the fee; the pooled window's "Pack by 5:45 p.m. · the courier picks up all
+  2 shops in one run" from the option's `packBy`), 3 If an item is out of stock (`Segmented`, stacked on phones),
+  4 Courier tip (`Segmented`: No tip · $2 · $3 · $5 · Other, then an amount field), 5 Payment (the method as a
+  selected option card; under Stripe the Payment Element opens here), 6 Review items **grouped by seller** ("Sold by …",
+  each line with its photo well, a Qty select that changes the cart line, and the line price). The age check sits under
+  the address.
+- The summary box (sticky): Place your order, the terms line, Items (n), Delivery, Courier tip, Plus/promo/points lines,
+  the tax lines (GST 5 % …), the tax note, Order total; then "Promo code or points" (a disclosure — the mockup has none)
+  and the CASL offers box. Phones: the summary follows the panel and a sticky bar keeps the total and Place your order.
+- **Flow (same calls):** the set-up and the live quote as before. "Place your order" checks the page (address errors
+  focus section 1; the age check must be cleared), then opens the checkout (`POST /me/checkouts`, Idempotency-Key and
+  step-up unchanged) and with the local stand-in places it at once (`…/place`). Under Stripe the first press opens the
+  checkout and mounts the Payment Element in section 5 ("Enter your card details, then place your order.", focus moves
+  to Payment); the next press authorizes every intent and places. Any change after a checkout opened (address, window,
+  rule, tip, code, points) drops it and the next press opens a new one with a new key (the old one expires, as before).
+- **Departures from the mockup:** no "+ Add a card" (the shop checkout has no saved-card choice in the api; Stripe's
+  element takes a new card); the tip defaults to No tip (the mockup pre-selects $3 — a pre-chosen tip would be added
+  without the person choosing it); tip boxes are whole dollars as drawn ($2, not $2.00: they are amounts to choose,
+  not prices); the tax note is general ("Tax is worked out item by item: basic groceries are zero-rated.") because the
+  quote does not say which lines were taxed; the window text keeps our range format ("Ce soir, 18 h – 21 h", not
+  "de 18 h à 21 h"). Window, rule and tip wording follow the mockup ("Tonight, 6–9 p.m.", "Pooled run with 5
+  neighbours", "Within 45 minutes", "Replace with similar", "Text me first"; fr "Tournée groupée avec 5 voisins",
+  "D’ici 45 minutes", "Remplacer par un article semblable", "M’écrire d’abord"). The page title is "Checkout" /
+  "Paiement" (was "Secure checkout"; the lock icon stays).
+
+**Cart (`/cart`).** Shops as bordered panels (name and item count), each line with the photo well, name, option · unit,
+stock, Plus price, the quantity stepper, Delete and **Save for later**; the pooled-run note ("Pooled run: Tonight, 6–9
+p.m. All 3 shops deliver together for one $2.99 fee. Order by 5:20 p.m." — the cut-off strip's next run, S-170); the
+subtotal box (sticky; first on phones) with Proceed to checkout. **Saved for later has no api** (no contract change in
+E-15): the saved lines live in this browser (`localStorage['nl.savedForLater']`, what is needed to show the line and to
+put it back), read after hydration; "Move to cart" is the product page's `POST /api/v1/cart/items`. They don't follow
+the person to another device — an api list is the follow-up.
+
+**Order placed, food checkout, group order.**
+- `/checkout/complete`: a bordered panel with the success check, "Thank you — your order is placed.", ref and total,
+  when it arrives, "What happens next" (three ink-numbered steps), the escrow line and the actions, beside the order's
+  summary box (items, delivery, tax, total, the shops). The illustrated banner is gone.
+- `/food/checkout` uses the checkout's sections (`checkout/Section.tsx`, `checkout.css`): When (option cards), Deliver
+  to (the saved place as a selected card, Change → the location screen; drop-off as stacked joined boxes, the note,
+  extras as chips), Courier tip (joined boxes, the food api's own choices: none · $2 · $4 · 15 % · $6), Payment (age
+  check, the Stripe element or the stand-in, promo code in a disclosure, the offers box); the summary box holds Pay, the
+  lines and the totals. `/food/group/<code>`: panels on hairlines, the host's tip as joined boxes, the placed notice on
+  the info tone (was the commerce "highlight").
+
+**Account.**
+- **Hub (audit #9):** the cards fill the row (`auto-fill, minmax(280px, 1fr)` across the page: four a row at 1440, one on
+  a phone) — the old grid stopped at 1100 px and left a dead right column. Square icons in the well grey (not brand
+  circles), the title, one line; "Sell or offer services" is a line under the grid, so the twelve cards make full rows.
+- Sections keep the account list on the left (white panel, the current one in the selected tint with an ink edge).
+  Every section's CSS is on tokens; the notifications matrix uses the library `Switch` (was a hand-made toggle).
+- **Orders & bookings:** `UnderlineTabs` with counts (Orders · Bookings · Quote requests), the views as `Chip`s, and each
+  card's status a `StatusTag` by meaning: a missed delivery, a case or a declined quote danger; waiting on someone
+  (requested, waiting for quotes, quote ready, deposit held, escrow) warning; under way info; done success; cancelled
+  and expired neutral. The api's own `tone` only breaks ties. The primary action is blue on active cards, secondary on
+  past ones.
+- **Order detail and tracking:** the head row in the well grey, the status panel and timeline (done steps success), the
+  shops on the designed photo well (was a stock shop photo — S-181) with Packed success / Packing info tags. Food
+  tracking and the courier box on the same tokens.
+- Addresses, payments, favourites, notifications, profile, security, help and report a problem: the layout pass is the
+  shared CSS (panels, rows, tags, the problem flow's selected rows in ink). Their copy and behaviour are unchanged.
+
+**Sign-in, sign-up, forgot password (audit #9).** One centred block (at most 940 px): the 440 px card first (its title
+is now the page's h1), then a narrow well-grey panel with the kicker, the heading (h2), three ink-numbered points and the
+support line; on phones the panel follows the card. The stock hero photo is gone (audit #1's flag). `/forgot-password`,
+`/reset-password` and `/verify-email` are now auth screens too (the header shows the logo only — they had the site
+navigation).
+
+**The auth server's own pages.** `server/auth` renders no HTML: it is the JSON sign-in API plus redirects, and every
+browser sign-in lands on a web app's page (`LoginPages`: the consumer site's `/sign-in` for consumer clients, couriers
+and the phone apps; the Studio's and the console's for theirs; federation callbacks back to the app that started).
+There are no templates to restyle, so "the auth server's pages match the shell" is met by those pages: the consumer's
+are rebuilt here, and the steps all three apps share come from `@northline/auth-kit` (`account.css`: the password field,
+email code, second-factor enrolment, backup codes, marketing consents), which now uses Plainsight's tokens (IBM Plex
+Sans — no display face —, 3/4 px corners, the scale) and is under `pnpm lint:tokens`. The Studio and console sign-in
+pages themselves belong to S-176/S-177. No Gradle module changed, so no server tests were run.
+
+**Price format.** The services' shared `price()` (provider page, service lists, ProviderList, ItemCard, the booking box)
+and the booking wizard drew round prices without cents ("$89"); they use `formatPrice` now ("$89.00" / "89,00 $"), as
+does the quote page's "other quotes" line. `pnpm lint:tokens` refuses a price made whole when round anywhere in the
+consumer app (`whole: … % 100`); `whole: true` stays for amounts to choose or ranges (tip boxes, "Under $10").
+
+**Wizard clock.** The booking wizard's vehicle years were a fixed list starting at 2026; they now count back from the
+render clock's year (S-182: the same on the server and in the browser's first render). The `provider-book` shot is
+taken with the pinned clock (`now`) and passes the hydration check. The wizard's server render still takes the
+server's own clock (the root loader's `renderedAt`): the shots pin the browser only.
+
+**Library (@northline/ui, additive).** `Segmented stack` (the boxes stack full width under 600 px); gallery section
+"checkout" (4 new baselines; the others unchanged). No other component changed.
+
+**Tooling.** `make ui-shots` routes take `storage` (localStorage entries set before the page loads): the cart shot has a
+saved-for-later line and the cut-off clock, the food checkout shot a food order. New shots `food-group` (fixtures for a
+group order at `/food/group/PHO123`) and `forgot-password`.
+
+**Lint (`pnpm lint:tokens`).** Strict (no raw sizes, spacing, radii or colours; no inline `style`) now also over the
+cart, checkout, orders, tracking, account, auth, help, consent and promotions features, the food checkout, group order,
+tracking and `food.css`, and `@northline/auth-kit`. A data-driven custom property (`style={{ ['--h' as string]: … }}`,
+the wallet chart's bars) is allowed by the no-style rule.
+
+**Not done / not verified.** Saved for later is per browser (needs an api). The checkout's saved cards ("+ Add a card")
+need an api for the shop checkout. French shots are still not in `make ui-shots` (fr-CA covered by the tests and the
+gallery's baselines). Storybook stories failing on develop before this story (LocationPill "Detected", SiteHeader
+"Narrow", Gallery "Sections") are untouched.

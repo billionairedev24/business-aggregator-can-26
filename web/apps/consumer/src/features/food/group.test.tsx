@@ -101,7 +101,7 @@ describe('Group food orders (S-159)', () => {
     open('/food/group/7Q2M-K4XP');
     expect(await screen.findByText(/localhost.*\/food\/group\/7Q2M-K4XP/)).toBeInTheDocument();
     expect(screen.getByText(/Code: 7Q2M-K4XP/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: '$4' }));
+    await userEvent.click(screen.getByRole('radio', { name: '$4' }));
     await userEvent.click(screen.getByRole('button', { name: 'Lock the order' }));
     expect(posts('/api/v1/me/group-orders/G1/lock')[0]?.body).toEqual({ tip: { kind: 'amount', value: 400 } });
     // the host pays their own share or a guest's

@@ -28,7 +28,7 @@ export function FavouritesTab() {
       <h1 id="acct-title" className="nl-acct-h1">{t('favouritesTitle')}</h1>
       <p className="nl-acct-lede">{t('favouritesLede')}</p>
       {list.isPending ? (
-        <div aria-busy="true"><span className="nl-sr-only">{t('loading')}</span>{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} height={52} style={{ marginTop: 12, maxWidth: 760 }} />)}</div>
+        <div aria-busy="true" className="nl-skel-stack"><span className="nl-sr-only">{t('loading')}</span>{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} height={52} />)}</div>
       ) : list.isError ? (
         <ErrorState message={t('loadError')} onRetry={() => void list.refetch()} />
       ) : list.data.length === 0 ? (

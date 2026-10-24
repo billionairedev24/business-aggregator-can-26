@@ -154,7 +154,10 @@ function Details({ facts, draft, update, kind, vehicle, cleaning, services, onNe
   const { money } = useFormatters();
   const ok = complete('details', draft, kind, vehicle, cleaning);
   const viewer = useViewer();
-  const years = ['2026', '2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', t('older')];
+  // S-173: the model years count back from the render clock's year (the same on the server and in the browser's first
+  // render, so the shot's pinned clock never meets a different list), next year's models first
+  const thisYear = Number(dayKey(useRenderNow()).slice(0, 4));
+  const years = [...Array.from({ length: 13 }, (_, i) => String(thisYear + 1 - i)), t('older')];
   const makes = ['Honda', 'Toyota', 'Ford', 'Chevrolet', 'Hyundai', 'Kia', 'Subaru', 'Tesla', t('other')];
   const hint = ok ? t('detailsHint_ok') : kind === 'visit' ? t(vehicle ? 'detailsHint_vehicle' : 'detailsHint_visit') : kind === 'home' ? t('detailsHint_home') : kind === 'consult' ? t('detailsHint_consult') : '';
   const chosen = services.find(x => x.id === draft.serviceId);
@@ -170,7 +173,7 @@ function Details({ facts, draft, update, kind, vehicle, cleaning, services, onNe
           {services.map(sv => (
             <button key={sv.id} type="button" className="nl-bk-option" aria-pressed={draft.serviceId === sv.id} onClick={() => update({ serviceId: sv.id, hold: undefined, startsAt: undefined })}>
               <span className="nl-bk-option-text"><span className="nl-bk-option-name">{sv.name}</span>{sv.included ? <span className="nl-bk-option-desc">{sv.included}</span> : null}</span>
-              <span className="nl-bk-option-price">{sv.pricingMode === 'quote' ? (sv.kind === 'consult' ? s('priceFree') : t('quoteOnly')) : sv.pricingMode === 'hourly' ? s('perHour', { price: money(sv.priceCents ?? 0, { whole: true }) }) : money(sv.priceCents ?? 0, { whole: (sv.priceCents ?? 0) % 100 === 0 })}</span>
+              <span className="nl-bk-option-price">{sv.pricingMode === 'quote' ? (sv.kind === 'consult' ? s('priceFree') : t('quoteOnly')) : sv.pricingMode === 'hourly' ? s('perHour', { price: money(sv.priceCents ?? 0) }) : money(sv.priceCents ?? 0)}</span>
             </button>
           ))}
           {facts.quoteable && categoryHref ? (
@@ -213,7 +216,7 @@ function Details({ facts, draft, update, kind, vehicle, cleaning, services, onNe
             {VALUES.addons.map((v, i) => <button key={v} type="button" className="nl-chip" aria-pressed={draft.home.addons.includes(i)} onClick={() => update({ home: { ...draft.home, addons: draft.home.addons.includes(i) ? draft.home.addons.filter(x => x !== i) : [...draft.home.addons, i] } })}>{t(`addon_${i}` as 'addon_0')}</button>)}
           </div></fieldset>
           <Chips label={t('pets')} options={[0, 1, 2, 3].map(i => t(`pet_${i}` as 'pet_0'))} value={draft.home.pets} onChange={i => update({ home: { ...draft.home, pets: i } })} />
-          {hours > 0 ? <p className="nl-bk-note">{t('estimate', { hours: hours.toFixed(1), total: money(Math.round(rate * hours)), rate: money(rate, { whole: true }) })}</p> : null}
+          {hours > 0 ? <p className="nl-bk-note">{t('estimate', { hours: hours.toFixed(1), total: money(Math.round(rate * hours)), rate: money(rate) })}</p> : null}
         </section>
       ) : null}
       {kind === 'home' && !cleaning ? (

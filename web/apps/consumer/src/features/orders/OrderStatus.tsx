@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { EmptyState, ErrorState, SiteLink, Skeleton, useFormatters, useLocale } from '@northline/ui';
+import { EmptyState, ErrorState, SiteLink, Skeleton, StatusTag, useFormatters, useLocale } from '@northline/ui';
 import { useZone } from '../location/regions';
 import { isNotFound } from '@northline/client';
 import { signInHref, useViewer } from '../session/api';
@@ -8,7 +8,7 @@ import { useConfirmDelivery, useOrder, useOrderStream, useProofPhoto, type Order
 import { useOrderT } from './messages';
 import { CourierStatus } from '../tracking/CourierStatus';
 import { Crumbs } from '../pages/Crumbs';
-import { Scene } from '../art/Scene';
+import { PhotoWell } from '../art/PhotoWell';
 import { CourierTip, ReviewPanel } from '../aftercare/Aftercare';
 import { CancelOrder, Cancellations, FailedDelivery, Returns } from './AfterSale';
 import { useAfterSaleT } from './afterSaleMessages';
@@ -49,7 +49,7 @@ function OrderView({ order }: { order: OrderTracking }) {
   const ta = useAfterSaleT();
   const { locale } = useLocale();
   const zone = useZone();
-  const { money } = useFormatters();
+  const { price: money } = useFormatters();
   const d = order.delivery;
   const when = d.startsAt && d.endsAt && d.day
     ? t(`when_${runWhen({ day: d.day, startsAt: d.startsAt }, zone)}`, { range: windowRange(d.startsAt, d.endsAt, locale, zone), weekday: weekday(d.startsAt, locale, zone) })
@@ -123,11 +123,11 @@ function OrderView({ order }: { order: OrderTracking }) {
             <ul className="order-shops">
               {order.shops.map(s => (
                 <li key={s.merchantId} className="order-shop">
-                  <span className="order-shop-pic" aria-hidden><Scene slot="banner/shop" subject={s.name} crop="square" sizes="64px" /></span>
+                  <span className="order-shop-pic" aria-hidden><PhotoWell subject={s.name} /></span>
                   <span className="order-shop-name">{s.name}</span>
                   <span className="order-shop-meta">{t('shopItems', { count: s.items })}</span>
-                  {s.cancelled ? <span className="tag tag-neutral">{ta('shopCancelled')}</span>
-                    : !done ? <span className={`tag ${s.packed ? 'tag-success' : 'tag-neutral'}`}>{s.packed ? t('shopPacked') : t('shopPacking')}</span> : null}
+                  {s.cancelled ? <StatusTag tone="neutral">{ta('shopCancelled')}</StatusTag>
+                    : !done ? <StatusTag tone={s.packed ? 'success' : 'info'}>{s.packed ? t('shopPacked') : t('shopPacking')}</StatusTag> : null}
                 </li>
               ))}
             </ul>
@@ -172,13 +172,12 @@ export function OrderSkeleton() {
     <div className="nl-page order-page" aria-busy="true">
       <span className="nl-sr-only">{t('loading')}</span>
       <div className="order-grid">
-        <div>
-          <Skeleton width={64} height={64} radius="50%" />
-          <Skeleton width="80%" height={36} style={{ marginTop: 16 }} />
-          <Skeleton width="60%" height={14} style={{ marginTop: 10 }} />
-          {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} width="70%" height={20} style={{ marginTop: 12 }} />)}
+        <div className="order-main">
+          <Skeleton height={44} />
+          <Skeleton height={220} />
+          <Skeleton height={140} />
         </div>
-        <Skeleton height={240} radius={8} />
+        <Skeleton height={240} />
       </div>
     </div>
   );

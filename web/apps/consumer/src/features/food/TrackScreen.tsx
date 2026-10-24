@@ -25,7 +25,7 @@ export function TrackScreen({ orderId }: { orderId: string }) {
   const { user, loading } = useViewer();
   const q = useQuery({ ...trackingQuery(orderId), enabled: !!user, retry: false });
   useTrackingStream(trackingStreamUrl(orderId), 'food', Tracking, trackingQuery(orderId).queryKey, !!user && q.isSuccess);
-  if (loading || (user && q.isPending)) return <div className="nl-page"><Skeleton width={120} height={20} /><Skeleton width={360} height={36} style={{ marginTop: 12 }} /><Skeleton height={180} style={{ marginTop: 20 }} /></div>;
+  if (loading || (user && q.isPending)) return <div className="nl-page nl-skel-stack"><Skeleton width={120} height={20} /><Skeleton width={360} height={36} /><Skeleton height={180} /></div>;
   if (!user) return <div className="nl-page"><EmptyState action={<SiteLink href={signInHref(`/food/orders/${orderId}`)} className="btn btn-primary">{t('signIn')}</SiteLink>}>{t('trackMissing')}</EmptyState></div>;
   if (q.isError) {
     return <div className="nl-page">{isNotFound(q.error)

@@ -100,9 +100,9 @@ function ProfileForm({ profile }: { profile: Profile }) {
 
 export function FormSkeleton({ label, rows = 4 }: { label: string; rows?: number }) {
   return (
-    <div aria-busy="true" style={{ marginTop: 18, maxWidth: 640 }}>
+    <div aria-busy="true" className="nl-skel-stack">
       <span className="nl-sr-only">{label}</span>
-      {Array.from({ length: rows }, (_, i) => <Skeleton key={i} height={44} style={{ marginTop: 12 }} />)}
+      {Array.from({ length: rows }, (_, i) => <Skeleton key={i} height={44} />)}
     </div>
   );
 }

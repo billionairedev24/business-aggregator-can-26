@@ -107,7 +107,7 @@ describe('provider page (E-15 S-172, design/revamp/a.html)', () => {
     const { router } = renderApp('/providers/prairie-wrench', { routes: { ...routes, book: () => <h1>Booking wizard</h1> } });
     const box = await screen.findByRole('complementary', { name: 'Book a time' });
     expect(within(box).getAllByText('Brake inspection')).toHaveLength(2); // the choice and the price line
-    expect(within(box).getByText('60 min · $89')).toBeInTheDocument();
+    expect(within(box).getByText('60 min · $89.00')).toBeInTheDocument();
     expect(within(box).getByRole('button', { name: 'Choose a time' })).toBeDisabled();
     const days = await within(box).findByRole('radiogroup', { name: 'Choose a day' });
     const choices = within(days).getAllByRole('radio');

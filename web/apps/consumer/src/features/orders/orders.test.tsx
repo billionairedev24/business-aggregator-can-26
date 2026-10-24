@@ -65,7 +65,7 @@ afterEach(() => {
 describe('Order detail and tracking (redesign § 2.1)', () => {
   it('shows the confirmation, the timeline and the run', async () => {
     open();
-    expect(await screen.findByRole('heading', { level: 1, name: /^Order placed\. Arriving tonight 6.9.p\.m\.$/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /^Order placed\. Arriving tonight, 6.9.p\.m\.$/ })).toBeInTheDocument();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('NL-48213 · $47.76 · 3 shops packing now. Live tracking starts when the courier leaves.')).toBeInTheDocument();
     const steps = within(screen.getAllByRole('list').filter(l => !l.closest('nav'))[0]!).getAllByRole('listitem').map(li => li.textContent);
@@ -92,7 +92,7 @@ describe('Order detail and tracking (redesign § 2.1)', () => {
     await screen.findByRole('heading', { level: 1 });
     expect(FakeEventSource.last?.url).toBe('/api/v1/me/orders/ORD1/events');
     act(() => FakeEventSource.last!.emit('order', { ...ORDER, state: 'picked_up', steps: steps(3), shops: ORDER.shops.map(s => ({ ...s, packed: true })) }));
-    expect(await screen.findByRole('heading', { level: 1, name: /^On the way\. Arriving tonight 6.9.p\.m\.$/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /^On the way\. Arriving tonight, 6.9.p\.m\.$/ })).toBeInTheDocument();
     expect(listItems()[1]).toHaveTextContent('Shops packing · 3 of 3 packed (done)');
     act(() => FakeEventSource.last!.emit('order', { ...ORDER, state: 'delivered', steps: steps(4), deliveredAt: '2026-10-01T01:10:00Z' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Delivered.' })).toBeInTheDocument();
@@ -107,7 +107,7 @@ describe('Order detail and tracking (redesign § 2.1)', () => {
 
   it('is in French', async () => {
     open('fr');
-    expect(await screen.findByRole('heading', { level: 1, name: /Commande passée\. Arrivée ce soir 18 h – 21 h\./ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /Commande passée\. Arrivée ce soir, 18 h – 21 h\./ })).toBeInTheDocument();
     expect(listItems()[0]).toHaveTextContent('Payé (fait)');
     expect(screen.getByRole('link', { name: 'Voir les commandes' })).toBeInTheDocument();
   });
@@ -133,7 +133,7 @@ describe('Order detail and tracking (redesign § 2.1)', () => {
     expect(await screen.findByText('We couldn’t load your order.')).toBeInTheDocument();
     fail = false;
     await userEvent.setup({ delay: null }).click(within(screen.getByRole('alert')).getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByRole('heading', { level: 1, name: /^Order placed\. Arriving tonight 6.9.p\.m\.$/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /^Order placed\. Arriving tonight, 6.9.p\.m\.$/ })).toBeInTheDocument();
   });
 
   it('lets the customer confirm a delivered order, which pays the shops (S-78)', async () => {
