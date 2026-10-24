@@ -57,6 +57,7 @@ export function Search() {
   const market = useMarket();
   const [text, setText] = useState(params.q ?? '');
   const [q, setQ] = useState(text);
+  const [focused, setFocused] = useState(false);
   const [kind, setKind] = useState<Kind>(params.kind === 'product' || params.kind === 'service' ? params.kind : 'all');
   const [on, setOn] = useState<Record<Filter, boolean>>({ tonight: false, under10: false });
   const [sort, setSort] = useState<Sort>('relevance');
@@ -124,7 +125,7 @@ export function Search() {
     <Screen testID="search" title={department ? (params.name ?? t('title.search')) : undefined}>
       {department ? null : (
         <View style={styles.bar}>
-          <View style={styles.input}>
+          <View style={[styles.input, focused && styles.inputFocused]}>
             <TextInput
               value={text}
               onChangeText={setText}
@@ -134,6 +135,8 @@ export function Search() {
               autoFocus={!params.q && !params.department}
               returnKeyType="search"
               onSubmitEditing={() => setQ(text.trim())}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               style={styles.inputText}
               testID="search-input"
             />
@@ -143,7 +146,7 @@ export function Search() {
               </Pressable>
             ) : null}
             <Pressable accessibilityRole="button" accessibilityLabel={t('shop.search.label')} onPress={() => setQ(text.trim())} style={styles.go}>
-              <Icon name="magnifying-glass" size={TYPE.price} color={semantic['selected-text']} />
+              <Icon name="magnifying-glass" size={TYPE.price} color={semantic['action-primary-text']} />
             </Pressable>
           </View>
           <Pressable accessibilityRole="button" accessibilityLabel={t('rd.search.cancel')} onPress={() => (router.canGoBack() ? router.back() : router.navigate('/home'))} style={styles.cancel} testID="search-cancel">
@@ -279,13 +282,15 @@ const styles = StyleSheet.create({
     minHeight: MIN_TARGET,
     borderRadius: radius.control,
     borderWidth: LINE.bold,
-    borderColor: semantic.selected,
+    borderColor: semantic['border-control'],
     backgroundColor: semantic.surface,
     overflow: 'hidden',
   },
+  // S-188: the violet focus edge while typing, the violet search button (the action)
+  inputFocused: { borderColor: semantic.focus },
   inputText: { ...StyleSheet.flatten(textStyles.sub), fontFamily: textStyles.body.fontFamily, flex: 1, minWidth: 0, minHeight: MIN_TARGET - 2 * LINE.bold, paddingHorizontal: space[3] },
   clearText: { width: MIN_TARGET, minHeight: MIN_TARGET, alignItems: 'center', justifyContent: 'center' },
-  go: { width: MIN_TARGET + space[2], minHeight: MIN_TARGET, alignItems: 'center', justifyContent: 'center', backgroundColor: semantic.selected },
+  go: { width: MIN_TARGET + space[2], minHeight: MIN_TARGET, alignItems: 'center', justifyContent: 'center', backgroundColor: semantic['action-primary'] },
   cancel: { minHeight: MIN_TARGET, justifyContent: 'center', paddingHorizontal: space[1] },
   edge: { marginHorizontal: -GUTTER },
   chipRow: { flexGrow: 0 },
