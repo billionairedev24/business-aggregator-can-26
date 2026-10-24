@@ -132,8 +132,12 @@ export function Body({ children, muted, strong, style }: { children: ReactNode; 
 }
 
 type Tone = 'primary' | 'accent' | 'secondary' | 'ghost' | 'danger';
-/** The older tone names on the kit's actions: accent = primary (one action blue), ghost = tertiary, danger = destructive (red). */
-const VARIANT: Record<Tone, ButtonVariant> = { primary: 'primary', accent: 'primary', secondary: 'secondary', ghost: 'tertiary', danger: 'destructive' };
+/**
+ * The older tone names on the kit's actions: accent = primary (the one violet action), ghost = the kit's ink tertiary
+ * (`plain`: S-188 keeps the courier's sunlight rules — ink on white, violet only for the primary action), danger =
+ * destructive (red).
+ */
+const VARIANT: Record<Tone, ButtonVariant> = { primary: 'primary', accent: 'primary', secondary: 'secondary', ghost: 'plain', danger: 'destructive' };
 
 export function Button({
   label,
@@ -265,7 +269,7 @@ export function Gap({ size = 4 }: { size?: keyof typeof space }) {
 export function Loading({ label }: { label: string }) {
   return (
     <View style={styles.loading} accessibilityLabel={label} accessibilityRole="progressbar">
-      <ActivityIndicator color={semantic['action-primary']} size="large" />
+      <ActivityIndicator color={semantic.text} size="large" />
     </View>
   );
 }

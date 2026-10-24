@@ -11,7 +11,8 @@ const LABELS: Record<string, MessageKey> = { index: 'tab.today', run: 'tab.route
 
 /**
  * The driver app's tabs: Today · Route · Profile, on the kit's BottomTabBar (S-169, the consumer app's tab bar): a
- * Phosphor icon over a short label, the current tab in ink with the filled icon and an ink bar on top. A stop and its
+ * Phosphor icon over a short label, the current tab in ink with the filled icon and an ink bar on top (S-188: the
+ * courier keeps ink; the consumer's tab bar has the violet marker). A stop and its
  * pickup / drop-off open above the tabs with the Back button.
  */
 function CourierTabBar({ state, navigation }: Pick<BottomTabBarProps, 'state' | 'navigation'>) {

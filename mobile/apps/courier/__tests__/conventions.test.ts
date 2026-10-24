@@ -64,6 +64,13 @@ describe('code rules', () => {
     expect(hits).toEqual([]);
   });
 
+  // S-188: the courier keeps its sunlight rules — ink on white, large numbers — and its only violet is the primary
+  // action (the kit's Button): no link or action colour, no violet tertiary, no display face, the tab bar in ink
+  it('draws in ink, with violet only for the primary action (S-188)', () => {
+    const violet = /semantic\.link\b|semantic\[['"](?:link|action-primary|action-accent|nav-active-marker)['"]\]|textStyles\.link\b|variant=["']tertiary["']|textStyles\.display|tone=["']brand["']/;
+    expect(source.filter((f) => violet.test(readFileSync(f, 'utf8'))).map((f) => f.slice(ROOT.length + 1))).toEqual([]);
+  });
+
   // S-169: the shared chrome draws with the kit's type roles (textStyles / TYPE), never a raw font size or the retired display face
   it('sets no raw font size in the shared chrome', () => {
     const chrome = ['src/components/ui.tsx', 'app/(app)/(tabs)/_layout.tsx'].map((f) => join(ROOT, f));
