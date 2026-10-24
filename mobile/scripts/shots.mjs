@@ -14,6 +14,7 @@
 // Writes shots-out/<app>/<nn>-<screen>.png (what the phone shows) and, when the screen scrolls, <…>-full.png (the
 // whole scroll content in one picture), the French run's screens as <…>-fr.png, and _overflow.txt listing screens
 // that scroll sideways. Native-only parts (maps, camera, the system browser, Keychain) are not on the web build.
+// The page clock is pinned (NL_SHOTS_NOW, below).
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
@@ -71,6 +72,11 @@ const W = 390;
 const H = 844;
 const browser = await chromium.launch({ executablePath: chromiumPath(), args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: W, height: H }, locale: 'en-CA', deviceScaleFactor: 2 });
+// S-188: the page's clock is pinned (timers keep running) so the pictures don't depend on when they're taken: 14:31
+// UTC today by default, 2 h 48 min before the fixture's tonight run closes (its 18:00 start − 41 min), so the home's run
+// card and the product's cut-off pill show their countdown (S-178's shots never did). NL_SHOTS_NOW=<ISO> sets another.
+const NOW = process.env.NL_SHOTS_NOW ? new Date(process.env.NL_SHOTS_NOW) : new Date(`${new Date().toISOString().slice(0, 10)}T14:31:00Z`);
+await page.clock.setFixedTime(NOW);
 // the photo library's base is another origin (the consumer web): answer its variants from disk
 const missingPhotos = new Set();
 await page.route(/\/photos\/.+\.(jpg|webp|avif)$/, async (route) => {
