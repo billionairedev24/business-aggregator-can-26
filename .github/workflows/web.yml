@@ -20,6 +20,14 @@ on:
         description: Accessibility page sweep (S-109) — builds the three apps, Playwright + axe against a mock api
         type: boolean
         default: false
+      visual:
+        description: Visual regression gate (S-180) — the component gallery's screenshot baselines (make ui-visual) and no hydration error on any consumer route (make ui-hydration)
+        type: boolean
+        default: true
+      a11y_routes:
+        description: Accessibility check of every ui-shots route, 1440 + 390, en + fr (make ui-a11y, S-180; about an hour)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -105,6 +113,62 @@ jobs:
         run: make -C .. docs DOCS_VARIANT=internal
 
   # The Studio smoke sweep (S-5) is part of the end-to-end suite now: e2e.yml, grep @smoke (S-117).
+
+  # S-180: the visual regression gate. The baselines (apps/gallery/visual/__screenshots__) are Linux renders of
+  # Playwright 1.56.1's Chromium (build 1194) with the fonts of its Ubuntu 24.04 image, so the job runs in that image:
+  # the same browser, the same fallback fonts, IBM Plex Sans self-hosted, the clock pinned and the zone UTC
+  # (visual/gallery.spec.ts). A changed pixel past 0.1 % fails; the diffs are uploaded.
+  visual:
+    name: visual regression (gallery baselines) + no hydration error on any consumer route
+    if: ${{ inputs.visual }}
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.56.1-noble
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: make
+        run: command -v make >/dev/null || (apt-get update -qq && apt-get install -y -qq --no-install-recommends make >/dev/null)
+      - uses: ./.github/actions/pnpm-setup
+      - name: make ui-visual (component gallery, en + fr-CA, 1440 + 390)
+        run: make -C .. ui-visual
+      - name: make ui-hydration (every consumer route, 1440 + 390, en + fr)
+        if: ${{ !cancelled() }}
+        run: make -C .. ui-hydration
+      - name: Upload the visual diffs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs
+          path: |
+            web/apps/gallery/node_modules/.visual-results/
+            web/packages/a11y/a11y-results/shots-artifacts/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # S-180: the accessibility check of every route `make ui-shots` photographs (findings in ui-shots/<app>/_a11y.txt).
+  a11y-routes:
+    name: accessibility of every ui-shots route (make ui-a11y)
+    if: ${{ inputs.a11y_routes }}
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.56.1-noble
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - name: make
+        run: command -v make >/dev/null || (apt-get update -qq && apt-get install -y -qq --no-install-recommends make >/dev/null)
+      - uses: ./.github/actions/pnpm-setup
+      - name: make ui-a11y
+        run: make -C .. ui-a11y
+      - name: Upload the findings
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-a11y
+          path: |
+            ui-shots/*/_a11y.txt
+            web/packages/a11y/a11y-results/pages/
+          retention-days: 7
+          if-no-files-found: ignore
 
   # S-109: WCAG 2.2 AA page sweep (docs/a11y/audit.md). No backend: the built apps answer from recorded fixtures.
   a11y:

@@ -4,6 +4,12 @@ import { GALLERY_IDS, SOLO_IDS } from './sections';
 /** Every gallery section, both languages, desktop and phone; then the overlays open (S-168, `pnpm test:visual`). */
 const WIDTHS = [{ name: 'd', width: 1440, height: 900 }, { name: 'm', width: 390, height: 844 }] as const;
 const LANGS = ['en', 'fr'] as const;
+/**
+ * S-180, deterministic baselines: one instant for every run ("today", "2 h ago", a countdown read the same clock on a
+ * laptop and in CI), with the zone (UTC), the locale, the scale and reduced motion set in playwright.config.ts.
+ */
+const NOW = new Date('2026-10-23T18:00:00Z');
+test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(NOW); });
 
 async function ready(page: Page, url: string) {
   await page.goto(url, { waitUntil: 'networkidle' });

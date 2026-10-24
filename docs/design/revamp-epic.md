@@ -1,6 +1,6 @@
 # E-15 Full UI revamp
 
-**Status: started 2026-10-23 (owner direction).** The UI across every app is not good enough. The light & photo-first /
+**Status: started 2026-10-23 (owner direction); built 2026-10-24 — S-165–S-182 merged, S-180 QA done, the owner's sign-off walkthrough is `revamp-walkthrough.md`.** The UI across every app is not good enough. The light & photo-first /
 Evergreen direction of 2026-10-19 (`redesign-spec.md`) is **reopened**: this epic picks a new visual direction, then
 rebuilds the design system and every screen on it. Where this file and `redesign-spec.md` disagree, this file wins.
 
